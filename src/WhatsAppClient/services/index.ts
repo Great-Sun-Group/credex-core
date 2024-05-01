@@ -15,25 +15,25 @@ type message_type =
   | "List"
   | "Form";
 
-type Payloads = LinkTextParams | TextParams;
+type MessageChildPayload = LinkTextParams | TextParams;
 
-type Arguments = {
+type SendWhatsappMessageArguments = {
   message: string;
   receipent: string;
   message_type: message_type;
-  payload: Payloads;
+  payload: MessageChildPayload;
 };
 
-type BasePayload = {
+type MainMessagePayload = {
   messaging_product: "whatsapp";
   recipient_type: "individual";
   to: string;
   type: string;
-  text: Payloads;
+  text: MessageChildPayload;
 };
 
-export async function SendWhatsappMessage(args: Arguments) {
-  let payload: BasePayload = {
+export async function SendWhatsappMessage(args: SendWhatsappMessageArguments) {
+  let payload: MainMessagePayload = {
     messaging_product: "whatsapp",
     recipient_type: "individual",
     to: args.receipent,
@@ -46,8 +46,8 @@ export async function SendWhatsappMessage(args: Arguments) {
 
 function determineMessagePaload(
   type: message_type,
-  specificPayload: Payloads
-): Payloads {
+  specificPayload: MessageChildPayload
+): MessageChildPayload {
   switch (type) {
     case "Link":
       return LinkWidget(specificPayload);
