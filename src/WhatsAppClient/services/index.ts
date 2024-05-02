@@ -15,9 +15,9 @@ type message_type =
   | "List"
   | "Form";
 
-type MessageChildPayload = LinkTextParams | TextParams;
+export type MessageChildPayload = LinkTextParams | TextParams;
 
-type SendWhatsappMessageArguments = {
+export type SendWhatsappMessageArguments = {
   message: string;
   receipent: string;
   message_type: message_type;
