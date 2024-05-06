@@ -4,6 +4,6 @@ export function VerificationWebhook(
   req: express.Request,
   res: express.Response
 ) {
-  const challenge: string = req.body["hub.challenge"];
+  const challenge = req.query["hub.challenge"];
   res.send(challenge).status(200);
 }

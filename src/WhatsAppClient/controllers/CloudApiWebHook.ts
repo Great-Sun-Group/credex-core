@@ -6,20 +6,22 @@ export default function CloudApiWebhook(
   res: express.Response
 ) {
   let message_type: string;
-
+  console.log("Shouldn't you be here?", req.body);
   try {
     message_type =
       req.body["entry"][0]["changes"][0]["value"]["messages"][0]["type"];
   } catch (error) {
-    res
+    // console.log(error);
+    return res
       .json({
         message: error,
         description: "We need a message type to contrinue",
         status: "error",
       })
       .status(400);
-    return;
   }
+
+  console.log(message_type);
 
   const receipent: string =
     req.body["entry"][0]["changes"][0]["value"]["messages"][0]["from"];
