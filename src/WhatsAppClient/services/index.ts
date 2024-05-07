@@ -5,11 +5,17 @@ import {
   TextParams,
   TextWidget,
 } from "./TextWidgetHandler";
+require("dotenv").config();
+
+const headers = {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${process.env.DEV_TOKEN}`,
+};
 
 type message_type =
   | "Link"
   | "Previewed_Link"
-  | "Text"
+  | "text"
   | "Button"
   | "Buttons"
   | "List"
@@ -40,7 +46,9 @@ export async function SendWhatsappMessage(args: SendWhatsappMessageArguments) {
     type: args.message_type,
     text: determineMessagePaload(args.message_type, args.payload),
   };
-  const response = await axios.post("", payload);
+  const response = await axios.post(`${process.env.WEB_HOOK_DOMAIN}`, payload, {
+    headers,
+  });
   return response;
 }
 

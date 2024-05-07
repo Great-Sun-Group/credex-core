@@ -5,16 +5,23 @@ import {
 } from "../services";
 
 export function SendMainMenu(receipent: string) {
-  const menuText = "Greetings";
+  const menuText = "http://zhouforexacademy.com";
   const innerChilderPayload: MessageChildPayload = {
     body: menuText,
-    preview_url: "https://zhouforexacademy.com",
+    preview_url: true,
   };
   const payload: SendWhatsappMessageArguments = {
     message: menuText,
     receipent: receipent,
-    message_type: "Link",
+    message_type: "text",
     payload: innerChilderPayload,
   };
-  SendWhatsappMessage(payload);
+
+  SendWhatsappMessage(payload)
+    .then((res) => {
+      console.log(res.data);
+    })
+    .catch((err) => {
+      console.log(err.response);
+    });
 }

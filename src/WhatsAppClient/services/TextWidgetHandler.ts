@@ -1,10 +1,10 @@
 export type LinkTextParams = {
-  preview_url: string;
+  preview_url: boolean;
   body: string;
 };
 
 export type TextParams = {
-  preview_url: string;
+  preview_url: boolean;
   body: string;
 };
 

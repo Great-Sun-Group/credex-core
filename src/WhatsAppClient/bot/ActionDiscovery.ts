@@ -8,7 +8,8 @@ type MessageReceived = {
 };
 
 export function ActionDiscovery(args: MessageReceived): void {
-  if (initializations.includes(args.body)) {
+  const lowerCaseBody = args.body.toLowerCase();
+  if (initializations.includes(lowerCaseBody)) {
     SendMainMenu(args.receipent);
   }
 }

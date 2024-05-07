@@ -1,12 +1,13 @@
 import express from "express";
 import { ActionDiscovery } from "../bot/ActionDiscovery";
+import { TextBody } from "../types/PayloadsFromWhatsApp";
 
 export default function CloudApiWebhook(
   req: express.Request,
   res: express.Response
 ) {
   let message_type: string;
-  console.log("Shouldn't you be here?", req.body);
+
   try {
     message_type =
       req.body["entry"][0]["changes"][0]["value"]["messages"][0]["type"];
@@ -21,14 +22,15 @@ export default function CloudApiWebhook(
       .status(400);
   }
 
-  console.log(message_type);
-
   const receipent: string =
     req.body["entry"][0]["changes"][0]["value"]["messages"][0]["from"];
-  const body: string =
+  const body: TextBody =
     req.body["entry"][0]["changes"][0]["value"]["messages"][0];
 
-  ActionDiscovery({ receipent, body });
+  if (message_type === "text") {
+    const textBody: string = body.text.body;
+    ActionDiscovery({ receipent, body: textBody });
+  }
 
   res.json({
     message: "Success",
