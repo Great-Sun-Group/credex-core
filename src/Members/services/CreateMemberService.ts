@@ -1,0 +1,3 @@
+/* 
+Create a function that creates a Member
+*/

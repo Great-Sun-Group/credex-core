@@ -1,5 +1,6 @@
 import express from "express";
 import WhatsAppClientRoutes from "./WhatsAppClient/routes";
+import MembersRoutes from "./Members/routes";
 import { Logger } from "./config/logger";
 import bodyParser from "body-parser";
 
@@ -15,6 +16,7 @@ export const apiVersionOneRoute = "/api/v1/";
 app.use(Logger);
 
 WhatsAppClientRoutes(app, jsonParser);
+MembersRoutes(app, jsonParser);
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);

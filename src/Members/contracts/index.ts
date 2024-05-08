@@ -1,0 +1,3 @@
+/* 
+    We create contract that other business domains can use. They must not access the private parts of the code but this public facing interface.
+*/
