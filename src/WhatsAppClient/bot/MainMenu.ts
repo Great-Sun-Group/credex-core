@@ -5,7 +5,8 @@ import {
 } from "../types/PayloadsToWhatsApp";
 
 export function SendMainMenu(receipent: string) {
-  const menuText = "http://zhouforexacademy.com";
+  const menuText =
+    "Welcome to the credex ecosystem. I’m the credex chatbot. I see that your number is not yet associated with a credex account. Would you like to create a new account?";
   const innerChilderPayload: MessageChildPayload = {
     body: menuText,
     preview_url: true,
@@ -13,8 +14,35 @@ export function SendMainMenu(receipent: string) {
   const payload: SendWhatsappMessageArguments = {
     message: menuText,
     receipent: receipent,
-    message_type: "text",
-    payload: innerChilderPayload,
+    message_type: "interactive",
+    payload: {
+      type: "button",
+      // header: {},
+      body: {
+        text: menuText,
+      },
+      footer: {
+        text: "",
+      },
+      action: {
+        buttons: [
+          {
+            type: "reply",
+            reply: {
+              id: "new_account",
+              title: "Create New Account",
+            },
+          },
+          {
+            type: "reply",
+            reply: {
+              id: "more_about_credex",
+              title: "More About Credex",
+            },
+          },
+        ],
+      },
+    },
   };
 
   SendWhatsappMessage(payload)
@@ -22,6 +50,6 @@ export function SendMainMenu(receipent: string) {
       console.log(res.data);
     })
     .catch((err) => {
-      console.log(err.response);
+      console.log(err.response.data);
     });
 }
