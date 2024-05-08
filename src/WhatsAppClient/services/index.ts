@@ -1,41 +1,16 @@
 import axios from "axios";
-import {
-  LinkTextParams,
-  LinkWidget,
-  TextParams,
-  TextWidget,
-} from "./TextWidgetHandler";
+import { TextWidget } from "./TextWidgetHandler";
 require("dotenv").config();
+import {
+  MainMessagePayload,
+  SendWhatsappMessageArguments,
+  message_type,
+  MessageChildPayload,
+} from "../types/PayloadsToWhatsApp";
 
 const headers = {
   "Content-Type": "application/json",
   Authorization: `Bearer ${process.env.DEV_TOKEN}`,
-};
-
-type message_type =
-  | "Link"
-  | "Previewed_Link"
-  | "text"
-  | "Button"
-  | "Buttons"
-  | "List"
-  | "Form";
-
-export type MessageChildPayload = LinkTextParams | TextParams;
-
-export type SendWhatsappMessageArguments = {
-  message: string;
-  receipent: string;
-  message_type: message_type;
-  payload: MessageChildPayload;
-};
-
-type MainMessagePayload = {
-  messaging_product: "whatsapp";
-  recipient_type: "individual";
-  to: string;
-  type: string;
-  text: MessageChildPayload;
 };
 
 export async function SendWhatsappMessage(args: SendWhatsappMessageArguments) {
@@ -58,7 +33,7 @@ function determineMessagePaload(
 ): MessageChildPayload {
   switch (type) {
     case "Link":
-      return LinkWidget(specificPayload);
+      return TextWidget(specificPayload);
     default:
       return TextWidget(specificPayload);
   }

@@ -1,8 +1,8 @@
+import { SendWhatsappMessage } from "../services";
 import {
   MessageChildPayload,
-  SendWhatsappMessage,
   SendWhatsappMessageArguments,
-} from "../services";
+} from "../types/PayloadsToWhatsApp";
 
 export function SendMainMenu(receipent: string) {
   const menuText = "http://zhouforexacademy.com";
