@@ -6,17 +6,14 @@ import {
 
 export function SendMainMenu(receipent: string) {
   const menuText =
-    "Welcome to the credex ecosystem. I’m the credex chatbot. I see that your number is not yet associated with a credex account. Would you like to create a new account?";
-  const innerChilderPayload: MessageChildPayload = {
-    body: menuText,
-    preview_url: true,
-  };
+    "Hello Firstname/Businessname, welcome to your credex account. Here’s your dashboard in USD.\n\nSecured Balance: *$123.45*\nTotal Payables: *-$12.83*\nNet Pay/Rec: *$20.57*\n\nNet Credex Assets: *$144.02*";
+
   const payload: SendWhatsappMessageArguments = {
     message: menuText,
     receipent: receipent,
-    message_type: "interactive",
+    message_type: "list",
     payload: {
-      type: "button",
+      type: "list",
       // header: {},
       body: {
         text: menuText,
@@ -25,22 +22,49 @@ export function SendMainMenu(receipent: string) {
         text: "",
       },
       action: {
-        buttons: [
+        sections: [
           {
-            type: "reply",
-            reply: {
-              id: "new_account",
-              title: "Create New Account",
-            },
+            title: "1. Notifications",
+            rows: [
+              {
+                id: "notifications",
+                title: "View Notifications",
+                description: "Review items that need your attention",
+              },
+            ],
           },
           {
-            type: "reply",
-            reply: {
-              id: "more_about_credex",
-              title: "More About Credex",
-            },
+            title: "2. Transactions",
+            rows: [
+              {
+                id: "transactions",
+                title: "View Transactions",
+                description: "View your transaction history",
+              },
+            ],
+          },
+          {
+            title: "3. Switch Account",
+            rows: [
+              {
+                id: "switch_account",
+                title: "Switch Account",
+                description: "Switch to Businessname account (if registered)",
+              },
+            ],
+          },
+          {
+            title: "4. Settings",
+            rows: [
+              {
+                id: "manage_settings_and_accounts",
+                title: "Manage Settings",
+                description: "Manage settings and accounts",
+              },
+            ],
           },
         ],
+        button: "Menu Options",
       },
     },
   };

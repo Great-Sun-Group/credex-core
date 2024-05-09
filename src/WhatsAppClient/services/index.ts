@@ -10,6 +10,7 @@ import {
   LinkTextParams,
   TextParams,
   InteractiveButtonsParams,
+  InteractiveListParams,
 } from "../types/PayloadsToWhatsApp";
 
 const headers = {
@@ -34,7 +35,12 @@ export async function SendWhatsappMessage(args: SendWhatsappMessageArguments) {
 
 function determineMessagePaload(
   type: message_type,
-  specificPayload: LinkTextParams | TextParams | InteractiveButtonsParams | any,
+  specificPayload:
+    | LinkTextParams
+    | TextParams
+    | InteractiveButtonsParams
+    | InteractiveListParams
+    | any,
   receipent: string
 ): FinalPayload {
   let payload: FinalPayload;
@@ -50,6 +56,15 @@ function determineMessagePaload(
       break;
 
     case "interactive":
+      payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: receipent,
+        type: "interactive",
+        interactive: specificPayload,
+      };
+      break;
+    case "list":
       payload = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
