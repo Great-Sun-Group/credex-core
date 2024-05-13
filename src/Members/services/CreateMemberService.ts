@@ -40,9 +40,7 @@ export async function CreateMemberService(memberData: Member) {
       }
     );
     sessionLedgerSpace.close();
-    console.log(
-      "member created: " + createMemberQuery.records[0].get("memberID")
-    );
+
     return createMemberQuery.records[0].get("memberID");
   } else {
     return false;
