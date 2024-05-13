@@ -39,7 +39,8 @@ export async function GetSingleMemberController(
         lastname: record.get('lastname')
       };
     });
-
+    
+    session.close()
     res.json(responseData); 
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });

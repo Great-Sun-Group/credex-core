@@ -6,7 +6,8 @@ export async function GetMembersController(
   res: express.Response
 ) {
   try {
-    const result = await session.run(`MATCH (n:Member) RETURN n LIMIT 25`);    
+    const result = await session.run(`MATCH (n:Member) RETURN n LIMIT 25`);   
+    session.close() 
     res.json(result.records.map(record => record.get('n').properties));
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
