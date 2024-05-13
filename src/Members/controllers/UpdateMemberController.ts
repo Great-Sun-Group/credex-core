@@ -5,6 +5,10 @@ export default function UpdateMemberController(
   req: express.Request,
   res: express.Response
 ) {
-  UpdateMemberService(req.body);
-  return res.json({ message: "Member updated successfully" }).status(200);
+  try {
+    UpdateMemberService(req.body);
+    return res.json({ message: "Member updated successfully" }).status(200);
+  } catch (error) {
+    return res.status(400).json({ message: error });
+  }
 }
