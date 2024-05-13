@@ -1,4 +1,6 @@
 import express from "express";
+import { apiVersionOneRoute } from "../..";
+import { CreateMemberController } from "../controllers/CreateMemberController";
 
 export default function MembersRoutes(
   app: express.Application,
@@ -7,5 +9,9 @@ export default function MembersRoutes(
   /* 
     
     */
-  // app.post(`${apiVersionOneRoute}createMember`, jsonParser, CreateMemberController)
+  app.post(
+    `${apiVersionOneRoute}createMember`,
+    jsonParser,
+    CreateMemberController
+  );
 }

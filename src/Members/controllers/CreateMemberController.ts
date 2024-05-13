@@ -3,14 +3,35 @@ The member controler is supposed to handle HTTP transport logic alone. This is w
 
 Example...
 
+
+*/
+
 import express from "express";
+import { CreateMemberService } from "../services/CreateMemberService";
 
 export function CreateMemberController(
-    req: express.Request,
-    res: express.Response
-){
-    // Call the service function that creates a member.
-    CreateMemberService(trq.body)
-    return res.json({...}).satatus(200)
+  req: express.Request,
+  res: express.Response
+) {
+  const fieldsRequired = [
+    "memberType",
+    "defaultDenom",
+    "handle",
+    "phone",
+    "firstname",
+    "lastname",
+    "companyname",
+    "DailyCoinOfferingGive",
+    "DailyCoinOfferingDenom",
+  ];
+  for (const field of fieldsRequired) {
+    if (!req.body[field]) {
+      return res
+        .status(400)
+        .json({ message: `${field} is required` })
+        .send();
+    }
+  }
+  CreateMemberService(req.body);
+  return res.json({ message: "Member created successfully" }).status(200);
 }
-*/
