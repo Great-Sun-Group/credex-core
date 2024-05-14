@@ -1,7 +1,7 @@
 import express from "express";
 import { UpdateMemberService } from "../services/UpdateMemberService";
 
-export default function UpdateMemberController(
+export async function UpdateMemberController(
   req: express.Request,
   res: express.Response
 ) {
