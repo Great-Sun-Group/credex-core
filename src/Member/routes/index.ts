@@ -5,7 +5,7 @@ import { GetMemberController } from "../controllers/GetMemberController";
 import { GetMembersListController } from "../controllers/GetMembersListController";
 import { UpdateMemberController } from "../controllers/UpdateMemberController";
 
-export default function MembersRoutes(
+export default function MemberRoutes(
   app: express.Application,
   jsonParser: any
 ) {

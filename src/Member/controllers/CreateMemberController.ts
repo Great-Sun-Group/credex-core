@@ -5,6 +5,7 @@ export async function CreateMemberController(
   req: express.Request,
   res: express.Response
 ) {
+
   const fieldsRequired = [
     "memberType",
     "defaultDenom",

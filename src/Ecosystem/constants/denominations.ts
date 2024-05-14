@@ -13,7 +13,7 @@ type Denominations = {
   sourceForRate: string;
 };
 
-export function getCurrencyDenominations(
+export function getDenominations(
   options: DenomOptions
 ): string | Denominations[] {
   var denominations: Denominations[] = [

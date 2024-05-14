@@ -1,4 +1,5 @@
 export type Member = {
+  memberID: string;
   memberType: string;
   defaultDenom: string;
   firstname: string;
@@ -6,6 +7,6 @@ export type Member = {
   companyname: string;
   handle: string;
   phone: string;
-  DailyCoinOfferingGive: string;
+  DailyCoinOfferingGive: number;
   DailyCoinOfferingDenom: string;
 };
