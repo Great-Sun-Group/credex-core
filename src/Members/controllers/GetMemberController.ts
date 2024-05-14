@@ -1,6 +1,6 @@
 // Controller for getting a s simgel member record 
 import express from "express";
-import { GetSingleMemberService } from "../services/GetMemberService";
+import { GetMemberService } from "../services/GetMemberService";
 
 
 export async function GetMemberController(
@@ -9,7 +9,7 @@ export async function GetMemberController(
 ) {
   const memberId = req.params.id;
   try {   
-    const responseData = await GetSingleMemberService(memberId);    
+    const responseData = await GetMemberService(memberId);    
      res.json(responseData); 
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });

@@ -1,7 +1,7 @@
 import express from "express";
 import { apiVersionOneRoute } from "../..";
 import { CreateMemberController } from "../controllers/CreateMemberController";
-import { GetSingleMemberController } from "../controllers/GetSingleMemberController";
+import { GetSingleMemberController } from "../controllers/GetMemberController";
 import { GetMembersController } from "../controllers/GetMembersController";
 import { UpdateMemberController } from "../controllers/UpdateMemberController";
 

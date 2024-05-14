@@ -1,7 +1,7 @@
 import { sessionLedgerSpace } from "../../config/neo4j/neo4j";
 
 
-export async function GetSingleMemberService(memberID: string) {
+export async function GetMemberService(memberID: string) {
   try {
     const result = await sessionLedgerSpace.run(`
     MATCH (member:Member {memberID: $memberID})
