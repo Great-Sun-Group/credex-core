@@ -40,7 +40,7 @@ export async function GetSingleMemberController(
       };
     });
     
-    session.close()
+    //session.close()
     res.json(responseData); 
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
