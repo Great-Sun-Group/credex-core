@@ -1,11 +1,3 @@
-/* 
-The member controler is supposed to handle HTTP transport logic alone. This is what the seperation of concerns principle entails. SINGLE RESPONSIBILITY
-
-Example...
-
-
-*/
-
 import express from "express";
 import { CreateMemberService } from "../services/CreateMemberService";
 
