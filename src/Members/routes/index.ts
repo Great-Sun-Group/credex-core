@@ -18,7 +18,7 @@ export default function MembersRoutes(
 
   // List view endpoint 
 app.get(
-  `${apiVersionOneRoute}members`,
+  `${apiVersionOneRoute}memberslist`,
   GetMembersController
 )
 

@@ -1,6 +1,6 @@
 // Controller for getting a s simgel member record 
 import express from "express";
-import { GetSingleMemberService } from "../services/GetSingleMemberService";
+import { GetSingleMemberService } from "../services/GetMemberService";
 
 
 export async function GetSingleMemberController(
