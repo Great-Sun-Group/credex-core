@@ -1,4 +1,4 @@
-import { session } from "../../config/neo4j/neo4j";
+import { sessionLedgerSpace } from "../../config/neo4j/neo4j";
 import { getCurrencyDenominations } from "../constants/denominations";
 import { Member } from "../types/Member";
 
@@ -11,7 +11,7 @@ export async function CreateMemberService(memberData: Member) {
     dataForCreate.defaultDenom &&
     dataForCreate.handle
   ) {
-    const createMemberQuery = await session.run(
+    const createMemberQuery = await sessionLedgerSpace.run(
       `
             MATCH (daynode:DayNode{Active:true})
             CREATE (member:Member)-[:CREATED_ON]->(daynode)
@@ -20,15 +20,14 @@ export async function CreateMemberService(memberData: Member) {
                 member.memberID = randomUUID(),
                 member.queueStatus = "PENDING_MEMBER",
                 member.createdAt = datetime(),
-                member.updatedAt = datetime(),
-                member.memberSince = datetime()
+                member.updatedAt = datetime()
             RETURN member.memberID AS memberID    
         `,
       {
         dataForCreate,
       }
     );
-    session.close();
+    sessionLedgerSpace.close();
     console.log(
       "member created: " + createMemberQuery.records[0].get("memberID")
     );

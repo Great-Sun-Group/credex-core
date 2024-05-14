@@ -1,9 +1,9 @@
-import { session } from "../../config/neo4j/neo4j";
+import { sessionLedgerSpace } from "../../config/neo4j/neo4j";
 
 
 export async function GetSingleMemberService(memberId: string) {
   try {
-    const result = await session.run(`
+    const result = await sessionLedgerSpace.run(`
     MATCH (member:Member {memberID: $memberId})
     RETURN
       member.defaultDenom AS defaultDenom,
@@ -39,4 +39,6 @@ export async function GetSingleMemberService(memberId: string) {
   } catch (error) {
     
   }
+  await sessionLedgerSpace.close(); 
+
 }
