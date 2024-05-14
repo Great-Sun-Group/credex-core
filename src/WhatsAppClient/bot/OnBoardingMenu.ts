@@ -36,20 +36,6 @@ export function SendOnBoardingMainMenu(receipent: string) {
           {
             type: "reply",
             reply: {
-              id: "more_about_credex1",
-              title: "More About Credex",
-            },
-          },
-          {
-            type: "reply",
-            reply: {
-              id: "more_about_credex2",
-              title: "More About Credex",
-            },
-          },
-          {
-            type: "reply",
-            reply: {
               id: "more_about_credex3",
               title: "More About Credex",
             },

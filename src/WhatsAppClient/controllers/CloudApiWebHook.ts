@@ -1,6 +1,6 @@
 import express from "express";
 import { ActionDiscovery } from "../bot/ActionDiscovery";
-import { TextBody } from "../types/PayloadsFromWhatsApp";
+import { Interactive, TextBody } from "../types/PayloadsFromWhatsApp";
 
 export default function CloudApiWebhook(
   req: express.Request,
@@ -24,12 +24,19 @@ export default function CloudApiWebhook(
 
   const receipent: string =
     req.body["entry"][0]["changes"][0]["value"]["messages"][0]["from"];
-  const body: TextBody =
-    req.body["entry"][0]["changes"][0]["value"]["messages"][0];
 
   if (message_type === "text") {
+    let body: TextBody;
+    body = req.body["entry"][0]["changes"][0]["value"]["messages"][0];
     const textBody: string = body.text.body;
     ActionDiscovery({ receipent, body: textBody });
+  } else if (message_type === "interactive") {
+    let body: Interactive;
+    body = req.body["entry"][0]["changes"][0]["value"]["messages"][0];
+    if (body.interactive) {
+      const interactiveBody = body.interactive;
+      ActionDiscovery({ receipent, body: interactiveBody.button_reply.id });
+    }
   }
 
   res.json({
