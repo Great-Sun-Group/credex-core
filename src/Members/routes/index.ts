@@ -1,8 +1,8 @@
 import express from "express";
 import { apiVersionOneRoute } from "../..";
 import { CreateMemberController } from "../controllers/CreateMemberController";
-import { GetSingleMemberController } from "../controllers/GetMemberController";
-import { GetMembersController } from "../controllers/GetMembersController";
+import { GetMemberController } from "../controllers/GetMemberController";
+import { GetMembersListController } from "../controllers/GetMembersListController";
 import { UpdateMemberController } from "../controllers/UpdateMemberController";
 
 export default function MembersRoutes(
@@ -19,12 +19,12 @@ export default function MembersRoutes(
   // List view endpoint 
 app.get(
   `${apiVersionOneRoute}memberslist`,
-  GetMembersController
+  GetMembersListController
 )
 
   app.get(
     `${apiVersionOneRoute}member/:id`,  
-    GetSingleMemberController 
+    GetMemberController 
   )
     
   app.patch(

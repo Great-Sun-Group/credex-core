@@ -1,7 +1,7 @@
 import express from "express";
 import { GetMembersListService } from "../services/GetMembersListService";
 
-export async function GetMembersController(
+export async function GetMembersListController(
   req: express.Request, 
   res: express.Response
 ) {
