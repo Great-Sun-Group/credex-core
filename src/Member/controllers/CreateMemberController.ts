@@ -1,20 +1,16 @@
 import express from "express";
 import { CreateMemberService } from "../services/CreateMemberService";
 
-export function CreateMemberController(
+export async function CreateMemberController(
   req: express.Request,
   res: express.Response
 ) {
+
   const fieldsRequired = [
     "memberType",
     "defaultDenom",
     "handle",
     "phone",
-    "firstname",
-    "lastname",
-    "companyname",
-    "DailyCoinOfferingGive",
-    "DailyCoinOfferingDenom",
   ];
   for (const field of fieldsRequired) {
     if (!req.body[field]) {
@@ -24,6 +20,10 @@ export function CreateMemberController(
         .send();
     }
   }
-  CreateMemberService(req.body);
-  return res.json({ message: "Member created successfully" }).status(200);
+  let newMemberID = await CreateMemberService(req.body);
+  if (newMemberID) {
+    return res.json({ newMemberID: newMemberID }).status(200);
+  } else {
+    return false
+  }
 }
