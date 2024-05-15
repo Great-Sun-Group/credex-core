@@ -2,6 +2,7 @@ import express from "express";
 import WhatsAppClientRoutes from "./WhatsAppClient/routes";
 import MemberRoutes from "./Member/routes";
 import CredexRoutes from "./Credex/routes";
+import AdminRoutes from "./Admin/routes";
 import { Logger } from "./config/logger";
 import bodyParser from "body-parser";
 
@@ -19,6 +20,7 @@ app.use(Logger);
 WhatsAppClientRoutes(app, jsonParser);
 MemberRoutes(app, jsonParser);
 CredexRoutes(app, jsonParser);
+AdminRoutes(app, jsonParser);
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);

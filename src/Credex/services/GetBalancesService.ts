@@ -1,8 +1,8 @@
-import { sessionLedgerSpace } from "../../config/neo4j/neo4j";
+import { ledgerSpaceSession } from "../../config/neo4j/neo4j";
 
 export async function GetBalancesService(memberID: string) {
   try {
-    const result = await sessionLedgerSpace.run(`
+    const result = await ledgerSpaceSession.run(`
     MATCH (daynode:DayNode{Active:true})
     OPTIONAL MATCH (member:Member{memberID:$memberID})<-[:OWES]-(owesInCredexSecured:Credex)<-[:SECURES]-()
     OPTIONAL MATCH (member)-[:OWES]->(owesOutCredexSecured:Credex)<-[:SECURES]-()
@@ -36,5 +36,5 @@ export async function GetBalancesService(memberID: string) {
   } catch (error) {
     console.log(error)
   }
-  await sessionLedgerSpace.close(); 
+  await ledgerSpaceSession.close(); 
 }
