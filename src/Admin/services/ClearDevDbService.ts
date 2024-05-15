@@ -15,5 +15,6 @@ export async function ClearDevDbService() {
   await searchSpaceSession.close();
 
   //check success first
+  console.log("LedgerSpace and SearchSpace DBs cleared")
   return true;
 }  

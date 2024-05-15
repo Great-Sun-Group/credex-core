@@ -3,6 +3,7 @@ import { MinuteTransactionQueue } from "../../Core/services/MinuteTransactionQue
 
 
 export async function ForceMtqController(
+  req: express.Request, 
   res: express.Response
 ) {
   try {   

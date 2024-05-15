@@ -3,6 +3,7 @@ import { DailyCredcoinOffering } from "../../Core/services/DailyCredcoinOffering
 
 
 export async function ForceDcoController(
+  req: express.Request, 
   res: express.Response
 ) {
   try {   

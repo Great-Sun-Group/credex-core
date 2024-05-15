@@ -2,14 +2,15 @@ import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { getDenominations } from '../constants/denominations';
 import { CreateMemberService } from '../../Member/services/CreateMemberService';
 import { CreateCompanyService } from '../../Member/services/CreateCompanyService';
-//import { OfferCredexService } from '../../Credex/services/OfferCredexService';
-//import { AcceptCredexService } from '../../Credex/services/AcceptCredexService';
-//import axios from 'axios';
-//var moment = require('moment-timezone');
-//const _ = require("lodash");
+import { OfferCredexService } from '../../Credex/services/OfferCredexService';
+import { AcceptCredexService } from '../../Credex/services/AcceptCredexService';
+import axios from 'axios';
+import { Credex } from "../../Credex/types/Credex";
+var moment = require('moment-timezone');
+const _ = require("lodash");
 
 export async function DBinitialization() {
-/*
+
   console.log("DBinitialization start")
 
   console.log("establish dayZero")
@@ -35,20 +36,22 @@ export async function DBinitialization() {
   var USDbaseRates = ratesRequest.data.rates;
 
   //convert USD base rate from query to XAU
-  var XAUbaseRates = {};
-  _.forOwn(USDbaseRates, (value, key) => {
-    XAUbaseRates[key] = parseFloat(value) / parseFloat(USDbaseRates.XAU);
+  var XAUbaseRates: any = {};
+  _.forOwn(USDbaseRates, (value: number, key: string) => {
+    XAUbaseRates[key] = value / USDbaseRates.XAU;
   });
 
   console.log('establish dayZero CXX rates using declared 1.000 CXX starting value')
-  var dayZeroCXXrates = {};
-  _.forOwn(XAUbaseRates, (value, key) => {
-    dayZeroCXXrates[key] = 1 / parseFloat(value) * OneCXXinCXXdenom * XAUbaseRates[CXXdenom];
+  var dayZeroCXXrates: any = {};
+  _.forOwn(XAUbaseRates, (value: number, key: string) => {
+    dayZeroCXXrates[key] = 1 / value * OneCXXinCXXdenom * XAUbaseRates[CXXdenom];
   });
   //add CXX to rates
   dayZeroCXXrates.CXX = 1
   console.log('dayZeroCXXrates')
   console.log(dayZeroCXXrates)
+
+  const ledgerSpaceSession = ledgerSpaceDriver.session()
 
   console.log("set CXX values on dayZero dayNode")
   var CreateDayNodeQuery = await ledgerSpaceSession.run(`
@@ -84,9 +87,8 @@ export async function DBinitialization() {
   const greatSun = await CreateCompanyService({
     "companyname": "Great Sun Financial",
     "handle": "greatsunfinancial",
-    "defaultDenom": "USD",
-    "owner": rdubsID,
-  })
+    "defaultDenom": "USD"},
+    rdubsID)
   const greatSunID = greatSun.companyID
 
   await ledgerSpaceSession.run(`
@@ -102,17 +104,17 @@ export async function DBinitialization() {
   })
 
   //charging an account for participation in first DCO
-  const DCOinitializationOfferCredex = await OfferCredexService({
+  const credexData: Credex = {
     "issuerMemberID": greatSunID,
     "receiverMemberID": rdubsID,
-    "Denomination": "CAD",
-    "Amount": OneCXXinCXXdenom*2,// *2 just to make sure secured balance is there
-    "Description": CXXdenom,
+    "Denomination": CXXdenom,
+    "InitialAmount": OneCXXinCXXdenom*2,// *2 just to make sure secured balance is there
     "credexType": "PURCHASE",
-    "dueDate": null,
+    "dueDate": "",
     "securedCredex": true
-  })
+  }
+  const DCOinitializationOfferCredex = await OfferCredexService(credexData)
   await AcceptCredexService(DCOinitializationOfferCredex)
   await ledgerSpaceSession.close()
-  */
+  
 }

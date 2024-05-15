@@ -30,6 +30,9 @@ export async function CreateCompanyService(newCompanyData: Member, ownerID: stri
 
     else {
         console.log("could not create company")
-        return false
+        return {
+            "companyID": "",
+            "ownerID": "",
+        }
     }
 }

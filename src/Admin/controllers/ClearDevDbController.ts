@@ -3,6 +3,7 @@ import { ClearDevDbService } from "../services/ClearDevDbService";
 
 
 export async function ClearDevDbController(
+  req: express.Request, 
   res: express.Response
 ) {
   try {   
