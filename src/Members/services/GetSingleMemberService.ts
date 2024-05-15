@@ -37,6 +37,6 @@ export async function GetSingleMemberService(memberId: string) {
   ))
     
   } catch (error) {
-    
+    console.log('Error fetching Member', error)
   }
 }

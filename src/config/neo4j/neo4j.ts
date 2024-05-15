@@ -10,4 +10,4 @@ const driverLedgerSpace = neo4j.driver(url,neo4j.auth.basic(user,password),
 }
 );
 
-export const session = driverLedgerSpace.session()
+export const session = driverLedgerSpace.session({ defaultAccessMode:neo4j.session.WRITE})
