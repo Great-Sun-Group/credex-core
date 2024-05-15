@@ -1,12 +1,16 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
-/*
-const transformIntegers = function (val) {
+import * as neo4j from "neo4j-driver";
+const _ = require("lodash");
+
+const transformIntegers = function (val: number) {
   return neo4j.isInt(val)
     ? (neo4j.integer.inSafeRange(val) ? val.toNumber() : val.toString())
     : val;
 };
 
-export async function loopFinder(issuerMemberID, credexID, credexAmount, credexDueDate, acceptorMemberID) {
+export async function LoopFinder(issuerMemberID: string, credexID: string, credexAmount: number, credexDueDate: string, acceptorMemberID: string) {
+  const ledgerSpaceSession = ledgerSpaceDriver.session()
+  const searchSpaceSession = searchSpaceDriver.session()
 
   var createSearchSpaceCredex = await searchSpaceSession.run(`
       MATCH (issuer:Member{memberID:$issuerMemberID})
@@ -38,18 +42,18 @@ export async function loopFinder(issuerMemberID, credexID, credexAmount, credexD
         }
       )
 
-      var credloops = [];
+      var credloops: any = [];
 
       console.log('loop count:' + credloopsQuery.records.length);
 
       if (credloopsQuery.records && credloopsQuery.records.length > 0) {
 
         // loop through records response
-        credloopsQuery.records.forEach(function (record) {
+        credloopsQuery.records.forEach(function (record: any) {
 
           record = record.get('credloops');
 
-          var segments = [];
+          var segments: any = [];
 
           // initially set obj attributes to null
           var credloopObj = {
@@ -65,17 +69,14 @@ export async function loopFinder(issuerMemberID, credexID, credexAmount, credexD
             var segs = record.segments;
 
             // loop through segments and set attributes on our object
-            segs.forEach(function (seg) {
+            segs.forEach(function (seg: any) {
 
-              var segsObj = {
-                credexDueDate: null,
-                credexAmount: null,
-                credexID: null
+              var segsObj: any = {
+                credexDueDate: "",
+                credexAmount: 0,
+                credexID: ""
               }
 
-              if (seg.relationship.properties.credexDueDate) {
-                segsObj.credexDueDate = transformIntegers(seg.relationship.properties.credexDueDate);
-              }
               if (seg.relationship.properties.credexAmount) {
                 segsObj.credexAmount = transformIntegers(seg.relationship.properties.credexAmount);
               }
@@ -135,7 +136,7 @@ export async function loopFinder(issuerMemberID, credexID, credexAmount, credexD
 
         for (let thisLoopedCredexNum = 0; thisLoopedCredexNum < loopToClose.segments.length; thisLoopedCredexNum++) {
 
-          var credexID = loopToClose.segments[thisLoopedCredexNum].credexID
+          var credexID: string = loopToClose.segments[thisLoopedCredexNum].credexID
 
           //SearchSpace: subtract valueToClear and return credexID if credex is redeemed
           var subtractValueSearchSpace = await searchSpaceSession.run(`
@@ -206,7 +207,7 @@ export async function loopFinder(issuerMemberID, credexID, credexAmount, credexD
 
         for (let thisLoopedCredexNum2 = 0; thisLoopedCredexNum2 < loopToClose.segments.length; thisLoopedCredexNum2++) {
 
-          var credexID = loopToClose.segments[thisLoopedCredexNum2].credexID
+          var credexID: string = loopToClose.segments[thisLoopedCredexNum2].credexID
           var valueToClear = loopToClose.lowestAmount
 
           //LedgerSpace: create CREDLOOP relationships between Credexes
@@ -311,7 +312,6 @@ export async function loopFinder(issuerMemberID, credexID, credexAmount, credexD
         }
 
         */
-/*
         continueLooping = true;
       }
       else {
@@ -321,4 +321,4 @@ export async function loopFinder(issuerMemberID, credexID, credexAmount, credexD
 
     return true;
   } // end if (issuerMemberID && acceptorMemberID && credexID)
-}*/
+}

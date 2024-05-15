@@ -1,15 +1,18 @@
-//import axios from 'axios';
-//var moment = require('moment-timezone');
-//const _ = require("lodash");
+import axios from 'axios';
+var moment = require('moment-timezone');
+const _ = require("lodash");
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
 import { getDenominations } from '../constants/denominations';
-//import { getSecurableData } from "./../../ledger/getSecurableData"
-//import { offerCredex } from "./../../ledger/offerCredex";
-//import { acceptCredex } from "./../../ledger/acceptCredex";
+import { GetSecurableDataService } from "../../Member/services/GetSecurableDataService"
+import { OfferCredexService } from "../../Credex/services/OfferCredexService";
+import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
+import { Credex } from "../../Credex/types/Credex";
 
 export async function DCOexecute() {
-/*
+
     console.log("DCOexecute start")
+    const ledgerSpaceSession = ledgerSpaceDriver.session()
+    const searchSpaceSession = searchSpaceDriver.session()
 
     console.log('fetch expiring daynode and set DCOrunningNow flag')
     var getPriorDaynodeData = await ledgerSpaceSession.run(`
@@ -61,8 +64,8 @@ export async function DCOexecute() {
     var USDbaseRates = ratesRequest.data.rates;
 
     //convert USD rates to XAU
-    var denomsInXAU = {};
-    _.forOwn(USDbaseRates, (value, key) => {
+    var denomsInXAU: any = {};
+    _.forOwn(USDbaseRates, (value: number, key: string) => {
         denomsInXAU[key] = value / USDbaseRates.XAU;
     });
 
@@ -82,7 +85,7 @@ export async function DCOexecute() {
     var DCOinXAU = 0
     var numberConfirmedParticiants = 0
     for (const declaredParticipant of declaredParticipants) {
-        var securableData = await getSecurableData(declaredParticipant.get("memberID"), declaredParticipant.get("DailyCoinOfferingDenom"))
+        var securableData = await GetSecurableDataService(declaredParticipant.get("memberID"), declaredParticipant.get("DailyCoinOfferingDenom"))
         if (declaredParticipant.get("DailyCoinOfferingGive") <= securableData.netSecurableInDenom) {        
             confirmedParticipants.push(declaredParticipant)
             DCOinCXX = DCOinCXX + declaredParticipant.get("DailyCoinOfferingGive")
@@ -102,9 +105,9 @@ export async function DCOexecute() {
     console.log("DCOinXAU: " + DCOinXAU)
     console.log("nextCXXinXAU: " + nextCXXinXAU);
 
-    var newCXXrates = {};
-    _.forOwn(denomsInXAU, (value, key) => {
-        newCXXrates[key] = 1 / nextCXXinXAU / parseFloat(value);
+    var newCXXrates: any = {};
+    _.forOwn(denomsInXAU, (value: number, key: string) => {
+        newCXXrates[key] = 1 / nextCXXinXAU / value;
     });
     //add CXX to rates
     newCXXrates.CXX = 1
@@ -137,18 +140,17 @@ export async function DCOexecute() {
     const foundationID = getFoundationID.records[0].get("foundationID")
     
     for (const confirmedParticipant of confirmedParticipants) {
-        const dataForDCOgive = {
+        const dataForDCOgive: Credex = {
             "issuerMemberID": confirmedParticipant.get("memberID"),
             "receiverMemberID": foundationID,
             "Denomination": "CAD",
-            "Amount": confirmedParticipant.get("DailyCoinOfferingGive"),
-            "Description": "DCO give",
+            "InitialAmount": confirmedParticipant.get("DailyCoinOfferingGive"),
             "credexType": "DCO_GIVE",
-            "dueDate": null,
+            "dueDate": "",
             "securedCredex": true
         }
-        const DCOgiveCredex = await offerCredex(dataForDCOgive)
-        await acceptCredex(DCOgiveCredex)
+        const DCOgiveCredex = await OfferCredexService(dataForDCOgive)
+        await AcceptCredexService(DCOgiveCredex)
     }
 
     console.log('new daynode initialized, DCOgive created')
@@ -245,18 +247,17 @@ export async function DCOexecute() {
 
     console.log("create DCO receive transactions")
     for (const confirmedParticipant of confirmedParticipants) {
-        const dataForDCOreceive = {
+        const dataForDCOreceive: Credex = {
             "issuerMemberID": foundationID,
             "receiverMemberID": confirmedParticipant.get("memberID"),
             "Denomination": "CXX",
-            "Amount": 1,
-            "Description": "DCO receive",
+            "InitialAmount": 1,
             "credexType": "DCO_RECEIVE",
-            "dueDate": null,
+            "dueDate": "",
             "securedCredex": true
         }
-        const DCOreceiveCredex = await offerCredex(dataForDCOreceive)
-        await acceptCredex(DCOreceiveCredex)
+        const DCOreceiveCredex = await OfferCredexService(dataForDCOreceive)
+        await AcceptCredexService(DCOreceiveCredex)
     }
     console.log('DCOreceive transactions created')
 
@@ -272,5 +273,4 @@ export async function DCOexecute() {
     searchSpaceSession.close();
 
     return true;
-    */
 }

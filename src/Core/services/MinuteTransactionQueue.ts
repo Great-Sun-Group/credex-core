@@ -1,8 +1,11 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
-//import { loopFinder } from './LoopFinder';
+import { LoopFinder } from './LoopFinder';
+const _ = require("lodash");
 
 export async function MinuteTransactionQueue() {
-/*
+  const ledgerSpaceSession = ledgerSpaceDriver.session()
+  const searchSpaceSession = searchSpaceDriver.session()
+
   console.log('check if DCO in progress');
   var DCOinProgressCheck = await ledgerSpaceSession.run(`
       OPTIONAL MATCH (dayNode:DayNode{Active:true})
@@ -27,7 +30,7 @@ export async function MinuteTransactionQueue() {
 
       //get queued actions
 
-      var queuedActions = []
+      var queuedActions: any = []
 
       //get PENDING_CREDEX queued credexes
       var getQueuedCredexes = await ledgerSpaceSession.run(`
@@ -95,7 +98,7 @@ export async function MinuteTransactionQueue() {
 
         else if (queuedActions[i].actionType == "PENDING_CREDEX") {
 
-          await loopFinder(queuedActions[i].issuerMemberID, queuedActions[i].credexID, queuedActions[i].credexAmount, queuedActions[i].credexDueDate, queuedActions[i].acceptorMemberID);
+          await LoopFinder(queuedActions[i].issuerMemberID, queuedActions[i].credexID, queuedActions[i].credexAmount, queuedActions[i].credexDueDate, queuedActions[i].acceptorMemberID);
 
           //test for successfull result, then:
           var credexID = queuedActions[i].credexID;
@@ -118,5 +121,4 @@ export async function MinuteTransactionQueue() {
       }, (1000))
     });
   }
-  */
 }
