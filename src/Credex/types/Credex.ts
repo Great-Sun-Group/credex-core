@@ -17,6 +17,11 @@ export type Credex = {
     securerID: string;
     credexType: string;
     OFFERSorREQUESTS: string;
+    offeredAt?: string;
+    requestedAt?: string;
+    acceptedAt?: string;
+    declinedAt?: string;
+    cancelledAt?: string;
     /*
     these below are multiple objects that can be attached to a credex
     not sure how to manage this in TS, which doesn't have a type of Object available?

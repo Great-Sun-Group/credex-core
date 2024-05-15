@@ -1,4 +1,3 @@
-// Controller for getting a s simgel member record 
 import express from "express";
 import { GetBalancesService } from "../services/GetBalancesService";
 

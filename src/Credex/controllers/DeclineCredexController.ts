@@ -1,16 +1,12 @@
 import express from "express";
-import { OfferCredexService } from "../services/OfferCredexService";
+import { DeclineCredexService } from "../services/DeclineCredexService";
 
-
-export async function OfferCredexController(
+export async function DeclineCredexController(
   req: express.Request, 
   res: express.Response
 ) {
     const fieldsRequired = [
-        "issuerMemberID",
-        "receiverMemberID",
-        "Denomination",
-        "InitialAmount",
+        "credexID",
       ];
       for (const field of fieldsRequired) {
         if (!req.body[field]) {
@@ -21,7 +17,7 @@ export async function OfferCredexController(
         }
       }
   try {   
-    const responseData = await OfferCredexService(req.body);    
+    const responseData = await DeclineCredexService(req.body.credexID);    
      res.json(responseData); 
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
