@@ -1,6 +1,7 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
-const cron = require('node-cron');
+import axios from 'axios';
+import cheerio from 'cheerio';
+// import cron from 'node-cron';
+
 const https = require('https');
 
 const url = 'https://www.rbz.co.zw/index.php';
@@ -9,14 +10,14 @@ const httpsAgent = new https.Agent({
   rejectUnauthorized: false, // To Ignore SSL errors in dev
 });
 
-async function fetchExchangeRates() {
+async function fetchExchangeRates(): Promise<{ currency: string; bid: string; ask: string; avg: string }[]> {
   try {
     const { data } = await axios.get(url, { httpsAgent });
-    const parsedHtml= cheerio.load(data);
+    const parsedHtml = cheerio.load(data);
 
     const rates: { currency: string; bid: string; ask: string; avg: string }[] = [];
 
-    parsedHtml('#baTab1 table tbody tr').each((index: Number, element: any) => {
+    parsedHtml('#baTab1 table tbody tr').each((index: number, element: any) => {
       const currency: string = parsedHtml(element).find('td').eq(0).text().trim();
       const bid: string = parsedHtml(element).find('td').eq(1).text().trim();
       const ask: string = parsedHtml(element).find('td').eq(2).text().trim();
