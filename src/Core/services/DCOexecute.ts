@@ -1,7 +1,7 @@
 //import axios from 'axios';
 //var moment = require('moment-timezone');
 //const _ = require("lodash");
-import { ledgerSpaceSession, searchSpaceSession } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
 import { getDenominations } from '../constants/denominations';
 //import { getSecurableData } from "./../../ledger/getSecurableData"
 //import { offerCredex } from "./../../ledger/offerCredex";

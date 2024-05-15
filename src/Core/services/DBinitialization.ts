@@ -1,7 +1,7 @@
-import { ledgerSpaceSession } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { getDenominations } from '../constants/denominations';
 import { CreateMemberService } from '../../Member/services/CreateMemberService';
-//import { CreateCompanyService } from '../../Member/services/CreateCompanyService';
+import { CreateCompanyService } from '../../Member/services/CreateCompanyService';
 //import { OfferCredexService } from '../../Credex/services/OfferCredexService';
 //import { AcceptCredexService } from '../../Credex/services/AcceptCredexService';
 //import axios from 'axios';

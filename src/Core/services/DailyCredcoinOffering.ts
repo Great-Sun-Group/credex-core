@@ -1,9 +1,10 @@
-import { ledgerSpaceSession } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 
 import { DBinitialization } from './DBinitialization';
 import { DCOexecute } from './DCOexecute';
 
 export async function DailyCredcoinOffering() {
+  const ledgerSpaceSession = ledgerSpaceDriver.session()
 
   //check for active daynode
   var dayNodeExistsQuery = await ledgerSpaceSession.run(`

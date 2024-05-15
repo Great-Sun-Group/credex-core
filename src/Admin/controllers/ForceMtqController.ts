@@ -1,5 +1,5 @@
 import express from "express";
-import { MinuteTransactionQueue } from "../../Ecosystem/services/MinuteTransactionQueue";
+import { MinuteTransactionQueue } from "../../Core/services/MinuteTransactionQueue";
 
 
 export async function ForceMtqController(

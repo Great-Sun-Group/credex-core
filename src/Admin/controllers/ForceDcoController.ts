@@ -1,5 +1,5 @@
 import express from "express";
-import { DailyCredcoinOffering } from "../../Ecosystem/services/DailyCredcoinOffering";
+import { DailyCredcoinOffering } from "../../Core/services/DailyCredcoinOffering";
 
 
 export async function ForceDcoController(

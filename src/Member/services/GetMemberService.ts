@@ -1,8 +1,9 @@
-import { ledgerSpaceSession } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 
 
 export async function GetMemberService(memberID: string) {
   try {
+    const ledgerSpaceSession = ledgerSpaceDriver.session()
     const result = await ledgerSpaceSession.run(`
     MATCH (member:Member {memberID: $memberID})
     RETURN
@@ -17,8 +18,9 @@ export async function GetMemberService(memberID: string) {
       member.updatedAt AS updatedAt,
       member.memberID AS memberID
     `, { memberID: memberID });
-
     
+    await ledgerSpaceSession.close(); 
+
     return result.records.map(record => ({
       defaultDenom: record.get('defaultDenom'),
       createdAt: record.get('createdAt'),
@@ -30,13 +32,9 @@ export async function GetMemberService(memberID: string) {
       memberType: record.get('memberType'),
       updatedAt: record.get('updatedAt'),
       memberID: record.get('memberID'),
-    }
-  
-  ))
+    }))
     
   } catch (error) {
     
   }
-  await ledgerSpaceSession.close(); 
-
 }

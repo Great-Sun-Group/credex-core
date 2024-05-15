@@ -1,4 +1,4 @@
-import { ledgerSpaceSession, searchSpaceSession } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
 //import { loopFinder } from './LoopFinder';
 
 export async function MinuteTransactionQueue() {

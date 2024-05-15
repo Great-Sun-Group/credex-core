@@ -1,7 +1,8 @@
 import { Member } from "../types/Member";
-import { ledgerSpaceSession } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 
 export async function UpdateMemberService(data: Member) {
+  const ledgerSpaceSession = ledgerSpaceDriver.session()
   const updateQuery = await ledgerSpaceSession.run(
     `
         MATCH (member:Member{memberID:$memberID})
@@ -13,6 +14,5 @@ export async function UpdateMemberService(data: Member) {
     }
   );
   await ledgerSpaceSession.close(); 
-
   return updateQuery.records[0].get("memberID");
 }

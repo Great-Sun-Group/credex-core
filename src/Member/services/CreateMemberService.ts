@@ -1,5 +1,5 @@
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
-import { getDenominations } from "../../Ecosystem/constants/denominations";
+import { getDenominations } from "../../Core/constants/denominations";
 import { Member } from "../types/Member";
 
 

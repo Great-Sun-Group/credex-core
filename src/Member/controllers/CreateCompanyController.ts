@@ -27,7 +27,7 @@ export async function CreateCompanyController(
     handle: req.body.handle,
   }
 
-  let newCompany = await CreateCompanyService(companyAsMemberData, req.body.ownerID);
+  const newCompany = await CreateCompanyService(companyAsMemberData, req.body.ownerID);
   if (newCompany) {
     return res.json(newCompany).status(200);
   } else {

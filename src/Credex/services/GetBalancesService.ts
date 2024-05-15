@@ -1,7 +1,8 @@
-import { ledgerSpaceSession } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 
 export async function GetBalancesService(memberID: string) {
   try {
+    const ledgerSpaceSession = ledgerSpaceDriver.session()
     const result = await ledgerSpaceSession.run(`
     MATCH (daynode:DayNode{Active:true})
     OPTIONAL MATCH (member:Member{memberID:$memberID})<-[:OWES]-(owesInCredexSecured:Credex)<-[:SECURES]-()
@@ -22,6 +23,7 @@ export async function GetBalancesService(memberID: string) {
         totalReceivable - totalPayable AS netPayRec,
         totalReceivable - totalPayable + sumOwesInCredexSecured - sumOwesOutCredexSecured AS totalCredexAssets
     `, { memberID: memberID });
+    await ledgerSpaceSession.close(); 
 
     return result.records.map(record => ({
         netSecured: record.get('netSecured'),
@@ -30,11 +32,9 @@ export async function GetBalancesService(memberID: string) {
         netPayRec: record.get('netPayRec'),
         totalCredexAssets: record.get('totalCredexAssets'),
     }
-  
   ))
     
   } catch (error) {
     console.log(error)
   }
-  await ledgerSpaceSession.close(); 
 }
