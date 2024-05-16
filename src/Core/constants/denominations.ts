@@ -212,10 +212,6 @@ export function getDenominations(
 
 export const denomFormatter = (amount: number, code: string) => {
 
-  //get regionalization
-  const denomData: any = getDenominations({code:code})
-  const regionalization = (denomData[0].regionalization)
-
   const formatCurrencyAmount = (amount: number, roundedTo: number, regionalization: string) => {
       const formatter = new Intl.NumberFormat(regionalization)
       const formatterResult = formatter.format(amount);
@@ -225,6 +221,10 @@ export const denomFormatter = (amount: number, code: string) => {
       return `${formattedWholeNumbers}.${formattedDecimals}`
   }
 
+  //get regionalization
+  const denomData: any = getDenominations({code:code})
+  const regionalization = (denomData[0].regionalization)
+  
   let formattedAmount
   switch (code) {
       case 'CXX':

@@ -5,6 +5,7 @@ import { AcceptCredexController } from "../controllers/AcceptCredexController";
 import { DeclineCredexController } from "../controllers/DeclineCredexController";
 import { CancelCredexController } from "../controllers/CancelCredexController";
 import { GetBalancesController } from "../controllers/GetBalancesController";
+import { GetCredexController } from "../controllers/GetCredexController";
 
 export default function CredexRoutes(
   app: express.Application,
@@ -39,6 +40,12 @@ export default function CredexRoutes(
     `${apiVersionOneRoute}getBalances`,
     jsonParser,
     GetBalancesController
+  );
+
+  app.get(
+    `${apiVersionOneRoute}getCredex`,
+    jsonParser,
+    GetCredexController
   );
 
 }

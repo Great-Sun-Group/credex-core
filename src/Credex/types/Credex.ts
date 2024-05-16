@@ -1,11 +1,16 @@
 export type Credex = {
     credexID?: string;
-    Denomination: string;
-    InitialAmount: number;
+    Denomination?: string;
+    InitialAmount?: number;
     OutstandingAmount?: number;
     RedeemedAmount?: number;
     DefaultedAmount?: number;
     WrittenOffAmount?: number;
+    formattedInitialAmount?: string;
+    formattedOutstandingAmount?: string;
+    formattedRedeemedAmount?: string;
+    formattedDefaultedAmount?: string;
+    formattedWrittenOffAmount?: string;
     dueDate?: string;
     transactionType?: string;
     debit?: boolean;
@@ -13,22 +18,15 @@ export type Credex = {
     receiverMemberID?: string;
     counterpartyDisplayname?: string;
     securedCredex?: boolean;
-    securerDisplayName?: string;
+    securerName?: string;
     securerID?: string;
-    credexType: string;
+    credexType?: string;
     OFFERSorREQUESTS?: string;
     offeredAt?: string;
     requestedAt?: string;
     acceptedAt?: string;
     declinedAt?: string;
     cancelledAt?: string;
-    /*
-    these below are multiple objects that can be attached to a credex
-    not sure how to manage this in TS, which doesn't have a type of Object available?
-    clearedAgainstCredexID: number
-    clearedAgainstCredexAmount: number;
-    clearedAgainstCredexDenomination: string;
-    clearedAgainstCounterpartyDisplayname: string;
-    */
+    clearedAgainst?: any;
 };
   
