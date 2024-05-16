@@ -1,8 +1,8 @@
-# Project Name
+# Credex Ecosystem Core
 
 ## Description
 
-This project is a typescript redo of credex.
+Credex accounting and transaction management system with WhatsApp chatbot interface.
 
 ## Prerequisites
 

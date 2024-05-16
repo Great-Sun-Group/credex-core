@@ -269,8 +269,8 @@ export async function DCOexecute() {
 
     console.log("DCOexecute done to open " + nextDate)
 
-    ledgerSpaceSession.close();
-    searchSpaceSession.close();
+    await ledgerSpaceSession.close();
+    await searchSpaceSession.close();
 
     return true;
 }

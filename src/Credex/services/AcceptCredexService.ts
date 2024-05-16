@@ -15,6 +15,7 @@ export async function AcceptCredexService(credexID: string) {
     await ledgerSpaceSession.close(); 
 
     if (result.records[0]) {
+        console.log("credex offer accepted for: " + result.records[0].get('credexID'))
         return result.records[0].get('credexID')
     } else {
         return false
