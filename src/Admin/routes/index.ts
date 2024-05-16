@@ -5,6 +5,7 @@ import { ForceDcoController } from "../controllers/ForceDcoController";
 import { ForceMtqController } from "../controllers/ForceMtqController";
 import { OfferAndAcceptCredexController } from "../controllers/OfferAndAcceptCredexController";
 import { CreateTestMembersController } from "../controllers/CreateTestMembersController";
+import { CreateTestTransactionsController } from "../controllers/CreateTestTransactionsController";
 
 export default function AdminRoutes(
     app: express.Application,
@@ -38,6 +39,12 @@ export default function AdminRoutes(
         `${apiVersionOneRoute}createTestMembers`,
         jsonParser,
         CreateTestMembersController
+    )
+    
+    app.post(
+        `${apiVersionOneRoute}createTestTransactions`,
+        jsonParser,
+        CreateTestTransactionsController
     )
     
 }
