@@ -2,7 +2,7 @@ import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { OfferCredexService } from "../../Credex/services/OfferCredexService";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
 import { FoundationAuditedCheckService } from "../../Member/services/FoundationAuditedCheckService";
-import { GetSecurableDataService } from "../../Member/services/GetSecurableDataService";
+import { GetSecurableDataService } from "../../Credex/services/GetSecurableDataService";
 import { random } from "lodash";
 import { Credex } from "../../Credex/types/Credex";
 
