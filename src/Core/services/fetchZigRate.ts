@@ -1,6 +1,5 @@
 import axios from 'axios';
 import cheerio from 'cheerio';
-// import cron from 'node-cron';
 
 const https = require('https');
 
@@ -10,7 +9,7 @@ const httpsAgent = new https.Agent({
   rejectUnauthorized: false, // To Ignore SSL errors in dev
 });
 
-async function fetchExchangeRates(): Promise<{ currency: string; bid: string; ask: string; avg: string }[]> {
+export async function fetchZigRate(): Promise<{ currency: string; bid: string; ask: string; avg: string }[]> {
   try {
     const { data } = await axios.get(url, { httpsAgent });
     const parsedHtml = cheerio.load(data);
@@ -27,24 +26,10 @@ async function fetchExchangeRates(): Promise<{ currency: string; bid: string; as
         rates.push({ currency, bid, ask, avg });
       }
     });
-    console.log(rates);
+    //console.log(rates);
     return rates;
   } catch (error) {
     console.error('Error fetching exchange rates:', error);
     return [];
   }
 }
-
-fetchExchangeRates();
-
-// // Schedule this
-// cron.schedule('0 0 * * *', () => {
-//   console.log('Fetching exchange rates...');
-//   fetchExchangeRates().then((rates) => {
-//     console.log('Exchange Rates:', rates);
-    
-//   });
-// });
-
-// // Start the cron job
-// console.log('Cron job started');

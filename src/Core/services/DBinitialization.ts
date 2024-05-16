@@ -4,6 +4,7 @@ import { CreateMemberService } from '../../Member/services/CreateMemberService';
 import { CreateCompanyService } from '../../Member/services/CreateCompanyService';
 import { OfferCredexService } from '../../Credex/services/OfferCredexService';
 import { AcceptCredexService } from '../../Credex/services/AcceptCredexService';
+import { fetchZigRate } from './fetchZigRate';
 import axios from 'axios';
 import { Credex } from "../../Credex/types/Credex";
 var moment = require('moment-timezone');
@@ -34,6 +35,10 @@ export async function DBinitialization() {
   var baseUrl = "https://openexchangerates.org/api/historical/" + dayZero + ".json?app_id=" + process.env.OPEN_EXCHANGE_RATES_API + "&symbols=" + symbolsForOpenExchangeRateApi;
   var ratesRequest = await axios.get(baseUrl);
   var USDbaseRates = ratesRequest.data.rates;
+
+  //this always gets current rates (not historical for dev)
+  const ZIGrates = await fetchZigRate()
+  USDbaseRates.ZIG = (ZIGrates[1].avg)
 
   //convert USD base rate from query to XAU
   var XAUbaseRates: any = {};
