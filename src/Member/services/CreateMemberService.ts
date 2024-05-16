@@ -1,5 +1,5 @@
-import { sessionLedgerSpace } from "../../config/neo4j/neo4j";
-import { getDenominations } from "../../Ecosystem/constants/denominations";
+import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
+import { getDenominations } from "../../Core/constants/denominations";
 import { Member } from "../types/Member";
 
 
@@ -14,7 +14,8 @@ export async function CreateMemberService(memberData: Member) {
     //denomCodes.includes(dataForCreate.defaultDenom) &&
     dataForCreate.handle.toLowerCase()
   ) {
-    const createMemberQuery = await sessionLedgerSpace.run(
+    const ledgerSpaceSession = ledgerSpaceDriver.session()
+    const createMemberQuery = await ledgerSpaceSession.run(
       `
             MATCH (daynode:DayNode{Active:true})
             CREATE (member:Member)-[:CREATED_ON]->(daynode)
@@ -30,7 +31,7 @@ export async function CreateMemberService(memberData: Member) {
         dataForCreate,
       }
     );
-    await sessionLedgerSpace.close();
+    await ledgerSpaceSession.close();
     console.log(
       "member created: " + createMemberQuery.records[0].get("memberID")
     );

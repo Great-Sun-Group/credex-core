@@ -7,13 +7,10 @@ const searchSpace_url = `${process.env.NEO_4J_SEARCH_SPACE_BOLT_URL}`;
 const searchSpace_user = `${process.env.NEO_4J_SEARCH_SPACE_USER}`;
 const searchSpace_password = `${process.env.NEO_4J_SEARCH_SPACE_PASS}`;
 
-const driverLedgerSpace = neo4j.driver(ledgerSpace_url,neo4j.auth.basic(ledgerSpace_user,ledgerSpace_password), {
+export const ledgerSpaceDriver = neo4j.driver(ledgerSpace_url,neo4j.auth.basic(ledgerSpace_user,ledgerSpace_password), {
   encrypted:true
 });
 
-const driverSearchSpace = neo4j.driver(searchSpace_url,neo4j.auth.basic(searchSpace_user,searchSpace_password), {
+export const searchSpaceDriver = neo4j.driver(searchSpace_url,neo4j.auth.basic(searchSpace_user,searchSpace_password), {
   encrypted:true
 });
-
-export const sessionLedgerSpace = driverLedgerSpace.session()
-export const sessionSearchSpace = driverSearchSpace.session()

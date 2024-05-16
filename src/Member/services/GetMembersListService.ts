@@ -1,11 +1,10 @@
-import { sessionLedgerSpace } from "../../config/neo4j/neo4j";
-
+import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 
 export async function GetMembersListService() {
-  try {
-    const result = await sessionLedgerSpace.run(`MATCH (n:Member) RETURN n LIMIT 25`);
+    const ledgerSpaceSession = ledgerSpaceDriver.session()
+    const result = await ledgerSpaceSession.run(`
+      MATCH (n:Member) RETURN n LIMIT 25
+    `);
+    await ledgerSpaceSession.close(); 
     return result.records.map(record => record.get('n').properties);
-  } finally {
-    await sessionLedgerSpace.close(); 
-  }
 }
