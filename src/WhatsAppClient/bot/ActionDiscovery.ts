@@ -1,5 +1,8 @@
 import { SendMainMenu } from "./MainMenu";
-import { SendRequestForCredexAmount } from "./OfferCredex";
+import {
+  SendRequestForCredexAmount,
+  SendTransactionConfirmationMenu,
+} from "./OfferCredex";
 import { SendOnBoardingMainMenu } from "./OnBoardingMenu";
 import { SendRequestForFirstName } from "./OnBoardingSteps";
 
@@ -18,6 +21,7 @@ export function ActionDiscovery(args: MessageReceived): void {
   }
   if (lowerCaseBody === "offer_credex") {
     SendRequestForCredexAmount(args.receipent);
+    // SendTransactionConfirmationMenu(args.receipent);
   }
   if (lowerCaseBody === "new_account") {
     SendRequestForFirstName(args.receipent);

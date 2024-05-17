@@ -7,10 +7,7 @@ import {
 export function SendOnBoardingMainMenu(receipent: string) {
   const menuText =
     "Welcome to the credex ecosystem. I’m the credex chatbot. I see that your number is not yet associated with a credex account. Would you like to create a new account?";
-  const innerChilderPayload: MessageChildPayload = {
-    body: menuText,
-    preview_url: true,
-  };
+
   const payload: SendWhatsappMessageArguments = {
     message: menuText,
     receipent: receipent,
