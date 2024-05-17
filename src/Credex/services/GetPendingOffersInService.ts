@@ -2,7 +2,7 @@ import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { denomFormatter } from '../../Core/constants/denominations';
 const _ = require("lodash");
 
-export async function GetIncomingOffersService(memberID: string) {
+export async function GetPendingOffersInService(memberID: string) {
   try {
     const ledgerSpaceSession = ledgerSpaceDriver.session()
     const result = await ledgerSpaceSession.run(`
