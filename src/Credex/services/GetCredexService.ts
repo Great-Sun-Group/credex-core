@@ -1,6 +1,7 @@
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
-import { getDenominations, denomFormatter } from '../../Core/constants/denominations';
+import { denomFormatter } from '../../Core/constants/denominations';
 import { Credex } from "../types/Credex";
+const moment = require('moment-timezone');
 
 export async function GetCredexService(credexID: string, memberID: string) {
     try {
@@ -35,6 +36,7 @@ export async function GetCredexService(credexID: string, memberID: string) {
             credex.RedeemedAmount/credex.CXXmultiplier AS RedeemedAmount,
             credex.DefaultedAmount/credex.CXXmultiplier AS DefaultedAmount,
             credex.WrittenOffAmount/credex.CXXmultiplier AS WrittenOffAmount,
+            credex.acceptedAt AS dateTime,
             clearedAgainstCredex.credexID AS clearedAgainstCredexID,
             clearedAgainstCredex.InitialAmount AS clearedAgainstCredexInitialAmount,
             clearedAgainstCredex.Denomination AS clearedAgainstCredexDenomination,
@@ -50,19 +52,19 @@ export async function GetCredexService(credexID: string, memberID: string) {
 
         // make negative if debit
         const debit = result.records[0].get('debit')
-        const InitialAmount = debit === true ? parseFloat("-" + parseFloat(result.records[0].get('InitialAmount')))
+        const InitialAmount = debit === true ? parseFloat("-" + result.records[0].get('InitialAmount'))
             : debit === false ? parseFloat(result.records[0].get('InitialAmount'))
                 : 0;;
-        const OutstandingAmount = debit === true ? parseFloat("-" + parseFloat(result.records[0].get('OutstandingAmount')))
+        const OutstandingAmount = debit === true ? parseFloat("-" + result.records[0].get('OutstandingAmount'))
             : debit === false ? parseFloat(result.records[0].get('OutstandingAmount'))
                 : 0;;
-        const RedeemedAmount = debit === true ? parseFloat("-" + parseFloat(result.records[0].get('RedeemedAmount')))
+        const RedeemedAmount = debit === true ? parseFloat("-" + result.records[0].get('RedeemedAmount'))
             : debit === false ? parseFloat(result.records[0].get('RedeemedAmount'))
                 : 0;;
-        const DefaultedAmount = debit === true ? parseFloat("-" + parseFloat(result.records[0].get('DefaultedAmount')))
+        const DefaultedAmount = debit === true ? parseFloat("-" + result.records[0].get('DefaultedAmount'))
             : debit === false ? parseFloat(result.records[0].get('DefaultedAmount'))
                 : 0;;
-        const WrittenOffAmount = debit === true ? parseFloat("-" + parseFloat(result.records[0].get('WrittenOffAmount')))
+        const WrittenOffAmount = debit === true ? parseFloat("-" + result.records[0].get('WrittenOffAmount'))
             : debit === false ? parseFloat(result.records[0].get('WrittenOffAmount'))
                 : 0;;
 
@@ -78,6 +80,11 @@ export async function GetCredexService(credexID: string, memberID: string) {
             DefaultedAmount, Denomination) + " " + Denomination
         const formattedWrittenOffAmount = denomFormatter(
             WrittenOffAmount, Denomination) + " " + Denomination
+
+        const dateTime = moment(result.records[0].get('dateTime'))
+            .month(moment(result.records[0].get('dateTime'))
+            .month()-1)//because moment uses Jan = 0 and cypher uses Jan = 1
+            .format("MMMM D, YYYY [@] hh:mm")
 
         // format counterparty name
         var counterpartyDisplayname
@@ -99,6 +106,7 @@ export async function GetCredexService(credexID: string, memberID: string) {
             "securerID": result.records[0].get('securerID'),
             "securerName": result.records[0].get('securerName'),
             "Denomination": Denomination,
+            "dateTime": dateTime,
             "InitialAmount": InitialAmount,
             "OutstandingAmount": OutstandingAmount,
             "RedeemedAmount": RedeemedAmount,

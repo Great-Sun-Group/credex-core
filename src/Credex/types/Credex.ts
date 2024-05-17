@@ -1,6 +1,8 @@
 export type Credex = {
     credexID?: string;
     Denomination?: string;
+    date?: string;
+    dateTime?: string;
     InitialAmount?: number;
     OutstandingAmount?: number;
     RedeemedAmount?: number;

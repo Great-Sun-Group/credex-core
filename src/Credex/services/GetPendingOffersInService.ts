@@ -1,5 +1,6 @@
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { denomFormatter } from '../../Core/constants/denominations';
+import { Credex } from "../types/Credex";
 const _ = require("lodash");
 
 export async function GetPendingOffersInService(memberID: string) {
@@ -46,7 +47,7 @@ export async function GetPendingOffersInService(memberID: string) {
             counterpartyDisplayname = counterpartyCompanyname
           }
 
-          const thisOfferedCredex = {
+          const thisOfferedCredex: Credex = {
               "credexID": credexID,
               "formattedInitialAmount": formattedInitialAmount,
               "counterpartyDisplayname": counterpartyDisplayname,
