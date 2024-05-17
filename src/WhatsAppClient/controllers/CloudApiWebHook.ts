@@ -35,7 +35,12 @@ export default function CloudApiWebhook(
     body = req.body["entry"][0]["changes"][0]["value"]["messages"][0];
     if (body.interactive) {
       const interactiveBody = body.interactive;
-      ActionDiscovery({ receipent, body: interactiveBody.button_reply.id });
+      if (interactiveBody.type === "list_reply") {
+        ActionDiscovery({ receipent, body: interactiveBody.list_reply.id });
+      }
+      if (interactiveBody.type === "button_reply") {
+        ActionDiscovery({ receipent, body: interactiveBody.button_reply.id });
+      }
     }
   }
 

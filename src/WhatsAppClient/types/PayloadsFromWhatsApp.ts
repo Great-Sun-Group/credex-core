@@ -6,10 +6,20 @@ export type TextBody = {
   type: string;
 };
 
+type ButtonReply = {
+  type: string;
+  button_reply: { id: string; title: string };
+};
+
+type ListReply = {
+  type: string;
+  list_reply: { id: string; title: string };
+};
+
 export type Interactive = {
   from: string;
   id: string;
   timestamp: string;
-  interactive: { type: string; button_reply: { id: string; title: string } };
+  interactive?: ButtonReply | ListReply | any;
   type: string;
 };
