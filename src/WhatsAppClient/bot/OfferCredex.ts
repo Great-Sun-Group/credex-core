@@ -96,3 +96,26 @@ export function SendTransactionConfirmationMenu(receipent: string) {
       console.log(err.response.data);
     });
 }
+
+export function SendCredexRequestSentMessage(receipent: string) {
+  const menuText =
+    "Congratulations 🎉, your credex request has been sent. We will inform you when we have any feedback on your request.";
+  const innerChilderPayload: MessageChildPayload = {
+    body: menuText,
+    preview_url: false,
+  };
+  const payload: SendWhatsappMessageArguments = {
+    message: menuText,
+    receipent: receipent,
+    message_type: "text",
+    payload: innerChilderPayload,
+  };
+
+  SendWhatsappMessage(payload)
+    .then((res) => {
+      console.log(res.data);
+    })
+    .catch((err) => {
+      console.log(err.response.data);
+    });
+}
