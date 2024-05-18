@@ -69,3 +69,45 @@ export function SendRequestDefaultCurrencyDenomination(receipent: string) {
       console.log(err.response.data);
     });
 }
+
+const ONBOARDING_SUCCESS_MESSAGE = `
+Excellent. I’ve created your account. The next step is to charge your account with USD. You can
+message Zimbabwe Change Solutions at +263123456789 any time to connect with a verified
+agent who can charge your account for you.`;
+
+export function SendOnboardingSuccessMessage(receipent: string) {
+  const payload: SendWhatsappMessageArguments = {
+    message: ONBOARDING_SUCCESS_MESSAGE,
+    receipent: receipent,
+    message_type: "interactive",
+    payload: {
+      type: "button",
+      // header: {},
+      body: {
+        text: ONBOARDING_SUCCESS_MESSAGE,
+      },
+      footer: {
+        text: "",
+      },
+      action: {
+        buttons: [
+          {
+            type: "reply",
+            reply: {
+              id: "hie",
+              title: "Menu",
+            },
+          },
+        ],
+      },
+    },
+  };
+
+  SendWhatsappMessage(payload)
+    .then((res) => {
+      console.log(res.data);
+    })
+    .catch((err) => {
+      console.log(err.response.data);
+    });
+}
