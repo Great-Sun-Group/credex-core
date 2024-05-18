@@ -1,5 +1,8 @@
 import { SendWhatsappMessage } from "../services";
-import { SendWhatsappMessageArguments } from "../types/PayloadsToWhatsApp";
+import {
+  MessageChildPayload,
+  SendWhatsappMessageArguments,
+} from "../types/PayloadsToWhatsApp";
 
 export function SendCredexOfferAlert(receipent: string) {
   const menuText =
@@ -37,6 +40,51 @@ export function SendCredexOfferAlert(receipent: string) {
         ],
       },
     },
+  };
+
+  SendWhatsappMessage(payload)
+    .then((res) => {
+      console.log(res.data);
+    })
+    .catch((err) => {
+      console.log(err.response.data);
+    });
+}
+
+export function SendCredexAcceptedMessage(receipent: string) {
+  const menuText =
+    "Congratulations 🎉, congratulations, you have accepted your credex request.";
+  const innerChilderPayload: MessageChildPayload = {
+    body: menuText,
+    preview_url: false,
+  };
+  const payload: SendWhatsappMessageArguments = {
+    message: menuText,
+    receipent: receipent,
+    message_type: "text",
+    payload: innerChilderPayload,
+  };
+
+  SendWhatsappMessage(payload)
+    .then((res) => {
+      console.log(res.data);
+    })
+    .catch((err) => {
+      console.log(err.response.data);
+    });
+}
+
+export function SendCredexDeclinedMessage(receipent: string) {
+  const menuText = "💔 you have declined your credex request...";
+  const innerChilderPayload: MessageChildPayload = {
+    body: menuText,
+    preview_url: false,
+  };
+  const payload: SendWhatsappMessageArguments = {
+    message: menuText,
+    receipent: receipent,
+    message_type: "text",
+    payload: innerChilderPayload,
   };
 
   SendWhatsappMessage(payload)
