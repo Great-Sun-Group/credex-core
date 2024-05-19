@@ -72,6 +72,7 @@ export async function CreateCredexService(credexData: Credex) {
                     newCredex.WrittenOffAmount = 0,
                     newCredex.credexType = $credexType,
                     newCredex.dueDate = $dueDate,
+                    newCredex.createdAt: DateTime(),
                     newCredex.queueStatus = "PENDING_CREDEX"
                 MERGE (newCredex)-[:CREATED_ON]->(daynode)
                 RETURN newCredex.credexID AS credexID
