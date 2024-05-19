@@ -2,10 +2,11 @@ import express from "express";
 import { apiVersionOneRoute } from "../..";
 import { CreateMemberController } from "../controllers/CreateMemberController";
 import { CreateCompanyController } from "../controllers/CreateCompanyController";
-import { AuthorizeForCompanyController } from "../controllers/AuthorizeForCompanyController";
 import { GetMemberController } from "../controllers/GetMemberController";
 import { GetMembersListController } from "../controllers/GetMembersListController";
 import { UpdateMemberController } from "../controllers/UpdateMemberController";
+import { AuthorizeForCompanyController } from "../controllers/AuthorizeForCompanyController";
+import { GetOwnedAndAuthForCompaniesController } from "../controllers/GetOwnedAndAuthForCompaniesController";
 
 export default function MemberRoutes(
   app: express.Application,
@@ -24,12 +25,6 @@ export default function MemberRoutes(
     CreateCompanyController
   );
 
-  app.post(
-    `${apiVersionOneRoute}authorizeForCompany`,
-    jsonParser,
-    AuthorizeForCompanyController
-  );
-
   // List view endpoint 
 app.get(
   `${apiVersionOneRoute}memberslist`,
@@ -46,4 +41,17 @@ app.get(
     jsonParser,
     UpdateMemberController
   );
+
+  app.post(
+    `${apiVersionOneRoute}authorizeForCompany`,
+    jsonParser,
+    AuthorizeForCompanyController
+  );
+
+  app.get(
+    `${apiVersionOneRoute}getOwnedAndAuthForCompanies`,
+    jsonParser,
+    GetOwnedAndAuthForCompaniesController
+  );
+
 }
