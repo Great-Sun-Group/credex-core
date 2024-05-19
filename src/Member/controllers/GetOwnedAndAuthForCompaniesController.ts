@@ -6,27 +6,29 @@ export async function GetOwnedAndAuthForCompaniesController(
     req: express.Request,
     res: express.Response
 ) {
-    const fieldsRequired = [
-        "memberID",
-    ];
-    for (const field of fieldsRequired) {
-        if (!req.body[field]) {
-            return res
-                .status(400)
-                .json({ message: `${field} is required` })
-                .send();
-        }
+    const { memberID } = req.body;
+
+    // Check if memberID is provided
+    if (!memberID) {
+        return res.status(400).json({ message: "MemberID is required" });
     }
-    const memberID = req.body.memberID;
+
     try {
-        const responseDataOwned = await GetOwnedCompaniesService(memberID);
-        const responseDataAuthFor = await GetAuthorizedForCompaniesService(memberID);
-        const fullResponseData = {
-            "responseDataOwned": responseDataOwned,
-            "responseDataAuthFor": responseDataAuthFor,
-        }
-        res.json(fullResponseData);
+        // Get owned companies
+        const ownedCompanies = await GetOwnedCompaniesService(memberID);
+
+        // Get authorized companies
+        const authorizedCompanies = await GetAuthorizedForCompaniesService(memberID);
+
+        // Combine the responses
+        const responseData = {
+            ownedCompanies,
+            authorizedCompanies,
+        };
+
+        res.status(200).json(responseData);
     } catch (err) {
-        res.status(500).json({ error: (err as Error).message });
+        console.error("Error retrieving owned and authorized companies:", err);
+        res.status(500).json({ error: "Internal Server Error" });
     }
 }

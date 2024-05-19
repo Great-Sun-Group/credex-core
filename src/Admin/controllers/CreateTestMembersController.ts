@@ -5,21 +5,22 @@ export async function CreateTestMembersController(
   req: express.Request, 
   res: express.Response
 ) {
-    const fieldsRequired = [
-        "numNewMembers",
-      ];
-      for (const field of fieldsRequired) {
-        if (!req.body[field]) {
-          return res
-            .status(400)
-            .json({ message: `${field} is required` })
-            .send();
-        }
-      }
+  // Check if numNewMembers is provided in the request body
+  if (!req.body.numNewMembers) {
+    return res
+      .status(400)
+      .json({ message: "numNewMembers is required" });
+  }
+
   try {   
+    // Call the service to create test members
     const responseData = await CreateTestMembersService(req.body.numNewMembers);    
-     res.json(responseData); 
+
+    // Send the response with the created test members
+    res.status(200).json(responseData); 
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    // Handle errors and send an appropriate error response
+    console.error("Error creating test members:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 }

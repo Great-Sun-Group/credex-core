@@ -5,22 +5,32 @@ export async function AuthorizeForCompanyController(
   req: express.Request, 
   res: express.Response
 ) {
-    const fieldsRequired = [
+    const requiredFields = [
         "MemberIDtoBeAuthorized",
         "companyID",
-      ];
-      for (const field of fieldsRequired) {
+        "ownerID",
+    ];
+
+    for (const field of requiredFields) {
         if (!req.body[field]) {
-          return res
-            .status(400)
-            .json({ message: `${field} is required` })
-            .send();
+            return res.status(400).json({ message: `${field} is required` });
         }
-      }
-  try {   
-    const responseData = await AuthorizeForCompanyService(req.body.MemberIDtoBeAuthorized, req.body.companyID);    
-     res.json(responseData).status(200); 
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
+    }
+
+    try {   
+        const responseData = await AuthorizeForCompanyService(
+            req.body.MemberIDtoBeAuthorized,
+            req.body.companyID,
+            req.body.ownerID
+        );
+
+        if (!responseData) {
+            return res.status(400).json({ message: "Failed to authorize member for the company" });
+        }
+
+        return res.status(200).json(responseData);
+    } catch (err) {
+        console.error("Error authorizing member for company:", err);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
 }

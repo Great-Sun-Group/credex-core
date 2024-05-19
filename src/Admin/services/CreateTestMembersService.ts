@@ -20,9 +20,8 @@ export async function CreateTestMembersService(numNewMembers: number) {
             "handle": nameObject.data.data[0].name.firstname.name_ascii+nameObject.data.data[0].name.lastname.name_ascii,
         };
         newMember = await CreateMemberService(request);
-        console.log(newMember)
-        console.log("Member created: " + request.firstname + " " + request.lastname)
-        membersCreated.push(newMember)
+        console.log("Member created: " + newMember.firstname + " " + newMember.lastname)
+        membersCreated.push(newMember.memberID)
     }
     return membersCreated
 }
