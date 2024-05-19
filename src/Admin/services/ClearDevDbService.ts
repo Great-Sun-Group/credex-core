@@ -2,7 +2,7 @@ import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
 
 export async function ClearDevDbService() {
   const ledgerSpaceSession = ledgerSpaceDriver.session()
-  const searchSpaceSession = ledgerSpaceDriver.session()
+  const searchSpaceSession = searchSpaceDriver.session()
   await ledgerSpaceSession.run(`
       MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE n,r
       `,

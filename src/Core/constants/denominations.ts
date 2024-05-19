@@ -209,3 +209,35 @@ export function getDenominations(
   }
   return returndata;
 }
+
+export const denomFormatter = (amount: number, code: string) => {
+
+  const formatCurrencyAmount = (amount: number, roundedTo: number, regionalization: string) => {
+      const formatter = new Intl.NumberFormat(regionalization)
+      const formatterResult = formatter.format(amount);
+      const formattedWholeNumbers = formatterResult.toString().split('.')[0]
+      const roundedAmount = amount.toFixed(roundedTo)
+      const formattedDecimals = roundedAmount.toString().split('.')[1]
+      return `${formattedWholeNumbers}.${formattedDecimals}`
+  }
+
+  //get regionalization
+  const denomData: any = getDenominations({code:code})
+  const regionalization = (denomData[0].regionalization)
+  
+  let formattedAmount
+  switch (code) {
+      case 'CXX':
+          formattedAmount = formatCurrencyAmount(amount, 3, regionalization)
+          break;
+      case 'BTC':
+          formattedAmount = formatCurrencyAmount(amount, 8, regionalization)
+          break;
+      case 'XAU':
+          formattedAmount = formatCurrencyAmount(amount, 4, regionalization)
+          break;
+      default:
+          formattedAmount = formatCurrencyAmount(amount, 2, regionalization)
+  }
+  return formattedAmount
+}

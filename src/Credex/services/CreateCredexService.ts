@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { getDenominations } from "../../Core/constants/denominations";
 import { FoundationAuditedCheckService } from "../../Member/services/FoundationAuditedCheckService"
-import { GetSecurableDataService } from "../../Member/services/GetSecurableDataService"
+import { GetSecurableDataService } from "./GetSecurableDataService"
 import { Credex } from "../types/Credex";
 
 
@@ -65,8 +65,8 @@ export async function CreateCredexService(credexData: Credex) {
                     newCredex.credexID = randomUUID(),
                     newCredex.Denomination = $Denomination,
                     newCredex.CXXmultiplier = daynode[$Denomination],
-                    newCredex.InitialAmount = $Amount/daynode[$Denomination],
-                    newCredex.OutstandingAmount = $Amount/daynode[$Denomination],
+                    newCredex.InitialAmount = $Amount*daynode[$Denomination],
+                    newCredex.OutstandingAmount = $Amount*daynode[$Denomination],
                     newCredex.RedeemedAmount = 0,
                     newCredex.DefaultedAmount = 0,
                     newCredex.WrittenOffAmount = 0,

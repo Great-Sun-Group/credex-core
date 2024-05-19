@@ -84,7 +84,7 @@ export async function DBinitialization() {
     "lastname": "Watson",
     "handle": "ryanlukewatson",
     "defaultDenom": "USD",
-    "phone": "+263778177125",
+    "phone": 263778177125,
     "DailyCoinOfferingGive": OneCXXinCXXdenom,
     "DailyCoinOfferingDenom": CXXdenom,
   })

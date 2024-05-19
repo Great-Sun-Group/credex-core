@@ -3,7 +3,7 @@ var moment = require('moment-timezone');
 const _ = require("lodash");
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
 import { getDenominations } from '../constants/denominations';
-import { GetSecurableDataService } from "../../Member/services/GetSecurableDataService"
+import { GetSecurableDataService } from "../../Credex/services/GetSecurableDataService"
 import { OfferCredexService } from "../../Credex/services/OfferCredexService";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
 import { Credex } from "../../Credex/types/Credex";
@@ -274,8 +274,8 @@ export async function DCOexecute() {
 
     console.log("DCOexecute done to open " + nextDate)
 
-    ledgerSpaceSession.close();
-    searchSpaceSession.close();
+    await ledgerSpaceSession.close();
+    await searchSpaceSession.close();
 
     return true;
 }
