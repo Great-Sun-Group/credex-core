@@ -6,6 +6,8 @@ import { DeclineCredexController } from "../controllers/DeclineCredexController"
 import { CancelCredexController } from "../controllers/CancelCredexController";
 import { GetBalancesController } from "../controllers/GetBalancesController";
 import { GetCredexController } from "../controllers/GetCredexController";
+import { GetPendingOffersInController } from "../controllers/GetPendingOffersInController";
+import { GetPendingOffersOutController } from "../controllers/GetPendingOffersOutController";
 
 export default function CredexRoutes(
   app: express.Application,
@@ -46,6 +48,18 @@ export default function CredexRoutes(
     `${apiVersionOneRoute}getCredex`,
     jsonParser,
     GetCredexController
+  );
+
+  app.get(
+    `${apiVersionOneRoute}getPendingOffersIn`,
+    jsonParser,
+    GetPendingOffersInController
+  );
+
+  app.get(
+    `${apiVersionOneRoute}getPendingOffersOut`,
+    jsonParser,
+    GetPendingOffersOutController
   );
 
 }
