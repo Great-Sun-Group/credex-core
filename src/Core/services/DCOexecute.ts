@@ -7,6 +7,7 @@ import { GetSecurableDataService } from "../../Credex/services/GetSecurableDataS
 import { OfferCredexService } from "../../Credex/services/OfferCredexService";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
 import { Credex } from "../../Credex/types/Credex";
+import { fetchZigRate } from './fetchZigRate';
 
 export async function DCOexecute() {
 
@@ -63,6 +64,10 @@ export async function DCOexecute() {
     var ratesRequest = await axios.get(baseUrl);
     var USDbaseRates = ratesRequest.data.rates;
 
+    //this always gets current rates (not historical for dev)
+    const ZIGrates = await fetchZigRate()
+    USDbaseRates.ZIG = (ZIGrates[1].avg)
+      
     //convert USD rates to XAU
     var denomsInXAU: any = {};
     _.forOwn(USDbaseRates, (value: number, key: string) => {

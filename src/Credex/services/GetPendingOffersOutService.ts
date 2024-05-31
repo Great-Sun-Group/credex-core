@@ -27,7 +27,7 @@ export async function GetPendingOffersOutService(memberID: string) {
     if (result.records[0].get('credexID')) {
       result.records.forEach(async function (record) {
           const credexID = record.get('credexID')
-          const InitialAmount = record.get('InitialAmount')
+          const InitialAmount = parseFloat("-" + record.get('InitialAmount'))
           const Denomination = record.get('Denomination')
           const counterpartyFirstname = record.get('counterpartyFirstname')
           const counterpartyLastname = record.get('counterpartyLastname')

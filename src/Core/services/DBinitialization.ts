@@ -4,68 +4,62 @@ import { CreateMemberService } from '../../Member/services/CreateMemberService';
 import { CreateCompanyService } from '../../Member/services/CreateCompanyService';
 import { OfferCredexService } from '../../Credex/services/OfferCredexService';
 import { AcceptCredexService } from '../../Credex/services/AcceptCredexService';
+import { fetchZigRate } from './fetchZigRate';
 import axios from 'axios';
 import { Credex } from "../../Credex/types/Credex";
 var moment = require('moment-timezone');
 const _ = require("lodash");
 
 export async function DBinitialization() {
+  console.log("DBinitialization start")
 
-    console.log("DBinitialization start")
+  console.log("establish dayZero")
+  var dayOneUnformatted = moment('2023-06-21').utc();//first day hardcoded for test runs requiring daynode progression
+  //var dayOneUnformatted = moment().utc();//first day today for prod start
+  var dayZero = dayOneUnformatted.subtract(1, "days").format('YYYY-MM-DD')
+  console.log("dayZero: " + dayZero)
 
-    console.log("establish dayZero")
-    var dayOneUnformatted = moment('2023-06-21').utc();//first day hardcoded for test runs requiring daynode progression
-    //var dayOneUnformatted = moment().utc();//first day today for prod start
-    var dayZero = dayOneUnformatted.subtract(1, "days").format('YYYY-MM-DD')
-    console.log("dayZero: " + dayZero)
+  console.log("declare 1.000 CXX starting value");
+  const OneCXXinCXXdenom = 1
+  const CXXdenom = "CAD"
+  console.log(OneCXXinCXXdenom + " CXX = 1 " + CXXdenom);
 
-    console.log("declare 1.000 CXX starting value");
-    const OneCXXinCXXdenom = 1
-    const CXXdenom = "CAD"
-    console.log(OneCXXinCXXdenom + " CXX = 1 " + CXXdenom);
+  console.log('load currencies and current rates')
+  const symbolsForOpenExchangeRateApi = getDenominations({
+    sourceForRate: "OpenExchangeRates",
+    formatAsList: true
+  });
 
-    console.log('load currencies and current rates')
-    const symbolsForOpenExchangeRateApi = getDenominations({
-        sourceForRate: "OpenExchangeRates",
-        formatAsList: true
-    });
+  // docs: https://docs.openexchangerates.org/reference/historical-json
+  var baseUrl = "https://openexchangerates.org/api/historical/" + dayZero + ".json?app_id=" + process.env.OPEN_EXCHANGE_RATES_API + "&symbols=" + symbolsForOpenExchangeRateApi;
+  var ratesRequest = await axios.get(baseUrl);
+  var USDbaseRates = ratesRequest.data.rates;
 
-    // docs: https://docs.openexchangerates.org/reference/historical-json
-    var baseUrl = "https://openexchangerates.org/api/historical/" + dayZero + ".json?app_id=" + process.env.OPEN_EXCHANGE_RATES_API + "&symbols=" + symbolsForOpenExchangeRateApi;
-    var ratesRequest = await axios.get(baseUrl);
-    var USDbaseRates = ratesRequest.data.rates;
+  //this always gets current rates (not historical for dev)
+  const ZIGrates = await fetchZigRate()
+  USDbaseRates.ZIG = (ZIGrates[1].avg)
 
-    //convert USD base rate from query to XAU
-    var XAUbaseRates: any = {};
-    _.forOwn(USDbaseRates, (value: number, key: string) => {
-        XAUbaseRates[key] = value / USDbaseRates.XAU;
-    });
+  //convert USD base rate from query to XAU
+  var XAUbaseRates: any = {};
+  _.forOwn(USDbaseRates, (value: number, key: string) => {
+    XAUbaseRates[key] = value / USDbaseRates.XAU;
+  });
 
-    console.log('establish dayZero CXX rates using declared 1.000 CXX starting value')
-    var dayZeroCXXrates: any = {};
-    _.forOwn(XAUbaseRates, (value: number, key: string) => {
-        dayZeroCXXrates[key] = 1 / value * OneCXXinCXXdenom * XAUbaseRates[CXXdenom];
-    });
-    //add CXX to rates
-    dayZeroCXXrates.CXX = 1
-    console.log('dayZeroCXXrates')
-    console.log(dayZeroCXXrates)
+  console.log('establish dayZero CXX rates using declared 1.000 CXX starting value')
+  var dayZeroCXXrates: any = {};
+  _.forOwn(XAUbaseRates, (value: number, key: string) => {
+    dayZeroCXXrates[key] = 1 / value * OneCXXinCXXdenom * XAUbaseRates[CXXdenom];
+  });
+  //add CXX to rates
+  dayZeroCXXrates.CXX = 1
+  console.log('dayZeroCXXrates')
+  console.log(dayZeroCXXrates)
 
-    const ledgerSpaceSession = ledgerSpaceDriver.session()
+  const ledgerSpaceSession = ledgerSpaceDriver.session()
 
-    console.log("set DB constraints")
-    var setHandleConstraintQuery = await ledgerSpaceSession.run(`
-        CREATE CONSTRAINT member_handle IF NOT EXISTS
-        FOR (member:Member) REQUIRE member.handle IS UNIQUE
-    `)
-    var setPhoneConstraintQuery = await ledgerSpaceSession.run(`
-        CREATE CONSTRAINT member_phone IF NOT EXISTS
-        FOR (member:Member) REQUIRE member.phone IS UNIQUE
-    `)
-
-    console.log("set CXX values on dayZero dayNode")
-    var CreateDayNodeQuery = await ledgerSpaceSession.run(`
-        CREATE(dayNode: DayNode)
+  console.log("set CXX values on dayZero dayNode")
+  var CreateDayNodeQuery = await ledgerSpaceSession.run(`
+        CREATE (dayNode:DayNode)
         SET dayNode = $dayZeroCXXrates
         SET dayNode.Date = $dayZero
         SET dayNode.Active = TRUE
