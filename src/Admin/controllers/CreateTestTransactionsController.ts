@@ -5,21 +5,22 @@ export async function CreateTestTransactionsController(
   req: express.Request, 
   res: express.Response
 ) {
-    const fieldsRequired = [
-        "numNewTransactions",
-      ];
-      for (const field of fieldsRequired) {
-        if (!req.body[field]) {
-          return res
-            .status(400)
-            .json({ message: `${field} is required` })
-            .send();
-        }
-      }
+  // Check if numNewTransactions is provided in the request body
+  if (!req.body.numNewTransactions) {
+    return res
+      .status(400)
+      .json({ message: "numNewTransactions is required" });
+  }
+
   try {   
+    // Call the service to create test transactions
     const responseData = await CreateTestTransactionsService(req.body.numNewTransactions);    
-     res.json(responseData); 
+
+    // Send the response with the created test transactions
+    res.status(200).json(responseData); 
   } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    // Handle errors and send an appropriate error response
+    console.error("Error creating test transactions:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 }
