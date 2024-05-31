@@ -1,7 +1,11 @@
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
-export async function GetSecurableDataService(memberID: string, Denomination: string) {
-    const ledgerSpaceSession =  ledgerSpaceDriver.session()
-    const getSecurableDataQuery = await ledgerSpaceSession.run(`
+export async function GetSecurableDataService(
+  memberID: string,
+  Denomination: string,
+) {
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
+  const getSecurableDataQuery = await ledgerSpaceSession.run(
+    `
         //find all inbound secured credexes of denom
         OPTIONAL MATCH
             (member:Member {memberID:$memberID})<-[:OWES]-(owesInCredex)<-[:SECURES]-(securingMember:Member)<-[:CREDEX_FOUNDATION_AUDITED]-(credexFoundation{memberType:"CREDEX_FOUNDATION"})
@@ -35,23 +39,27 @@ export async function GetSecurableDataService(memberID: string, Denomination: st
             thisNetSecurableCXX*daynode[$Denomination] AS netSecurableInDenom,
             thisSecuringMemberID AS securingMemberID
             ORDER BY netSecurableInDenom DESC LIMIT 1
-    `,{
-        memberID: memberID,
-        Denomination: Denomination,
-    })
+    `,
+    {
+      memberID: memberID,
+      Denomination: Denomination,
+    },
+  );
 
-    const securableData = {
-        netSecurableInDenom: 0,
-        securingMemberID: ""
-    }
-    if (getSecurableDataQuery.records[0]) {
-        securableData.netSecurableInDenom = getSecurableDataQuery.records[0].get("netSecurableInDenom")
-        securableData.securingMemberID = getSecurableDataQuery.records[0].get("securingMemberID")
-    }
-    else {
-        securableData.netSecurableInDenom = 0
-        securableData.securingMemberID = ""
-    }
-    ledgerSpaceSession.close()
-    return securableData
+  const securableData = {
+    netSecurableInDenom: 0,
+    securingMemberID: "",
+  };
+  if (getSecurableDataQuery.records[0]) {
+    securableData.netSecurableInDenom = getSecurableDataQuery.records[0].get(
+      "netSecurableInDenom",
+    );
+    securableData.securingMemberID =
+      getSecurableDataQuery.records[0].get("securingMemberID");
+  } else {
+    securableData.netSecurableInDenom = 0;
+    securableData.securingMemberID = "";
+  }
+  ledgerSpaceSession.close();
+  return securableData;
 }

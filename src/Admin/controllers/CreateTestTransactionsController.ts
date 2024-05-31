@@ -2,22 +2,22 @@ import express from "express";
 import { CreateTestTransactionsService } from "../services/CreateTestTransactionsService";
 
 export async function CreateTestTransactionsController(
-  req: express.Request, 
-  res: express.Response
+  req: express.Request,
+  res: express.Response,
 ) {
   // Check if numNewTransactions is provided in the request body
   if (!req.body.numNewTransactions) {
-    return res
-      .status(400)
-      .json({ message: "numNewTransactions is required" });
+    return res.status(400).json({ message: "numNewTransactions is required" });
   }
 
-  try {   
+  try {
     // Call the service to create test transactions
-    const responseData = await CreateTestTransactionsService(req.body.numNewTransactions);    
+    const responseData = await CreateTestTransactionsService(
+      req.body.numNewTransactions,
+    );
 
     // Send the response with the created test transactions
-    res.status(200).json(responseData); 
+    res.status(200).json(responseData);
   } catch (err) {
     // Handle errors and send an appropriate error response
     console.error("Error creating test transactions:", err);

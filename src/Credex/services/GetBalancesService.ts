@@ -1,10 +1,11 @@
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
-import { denomFormatter } from '../../Core/constants/denominations';
+import { denomFormatter } from "../../Core/constants/denominations";
 
 export async function GetBalancesService(memberID: string) {
   try {
-    const ledgerSpaceSession = ledgerSpaceDriver.session()
-    const result = await ledgerSpaceSession.run(`
+    const ledgerSpaceSession = ledgerSpaceDriver.session();
+    const result = await ledgerSpaceSession.run(
+      `
       MATCH (daynode:DayNode{Active:true})
       OPTIONAL MATCH (member:Member{memberID:$memberID})<-[:OWES]-(owesInCredexSecured:Credex)<-[:SECURES]-()
       OPTIONAL MATCH (member)-[:OWES]->(owesOutCredexSecured:Credex)<-[:SECURES]-()
@@ -32,19 +33,34 @@ export async function GetBalancesService(memberID: string) {
           netPayRec/daynode[member.defaultDenom] AS netPayRecInDefaultDenom,
           totalCredexAssets/daynode[member.defaultDenom] AS totalCredexAssetsInDefaultDenom,
           member.defaultDenom AS defaultDenom
-    `, { memberID: memberID });
-    await ledgerSpaceSession.close(); 
+    `,
+      { memberID: memberID },
+    );
+    await ledgerSpaceSession.close();
 
-    return result.records.map(record => ({
-        netSecured: denomFormatter(record.get('netSecuredInDefaultDenom'), record.get('defaultDenom')),
-        totalReceivable: denomFormatter(record.get('totalReceivableInDefaultDenom'), record.get('defaultDenom')),
-        totalPayable: denomFormatter(record.get('totalPayableInDefaultDenom'), record.get('defaultDenom')),
-        netPayRec: denomFormatter(record.get('netPayRecInDefaultDenom'), record.get('defaultDenom')),
-        totalCredexAssets: denomFormatter(record.get('totalCredexAssetsInDefaultDenom'), record.get('defaultDenom')),
-    }
-  ))
-    
+    return result.records.map((record) => ({
+      netSecured: denomFormatter(
+        record.get("netSecuredInDefaultDenom"),
+        record.get("defaultDenom"),
+      ),
+      totalReceivable: denomFormatter(
+        record.get("totalReceivableInDefaultDenom"),
+        record.get("defaultDenom"),
+      ),
+      totalPayable: denomFormatter(
+        record.get("totalPayableInDefaultDenom"),
+        record.get("defaultDenom"),
+      ),
+      netPayRec: denomFormatter(
+        record.get("netPayRecInDefaultDenom"),
+        record.get("defaultDenom"),
+      ),
+      totalCredexAssets: denomFormatter(
+        record.get("totalCredexAssetsInDefaultDenom"),
+        record.get("defaultDenom"),
+      ),
+    }));
   } catch (error) {
-    console.log(error)
+    console.log(error);
   }
 }

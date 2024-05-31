@@ -25,54 +25,59 @@ import { Member } from "../types/Member";
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { getDenominations } from "../../Core/constants/denominations";
 
-export async function UpdateMemberService(memberData: Member): Promise<string | null> {
-    const memberDataChecked: Partial<Member> = {};
+export async function UpdateMemberService(
+  memberData: Member,
+): Promise<string | null> {
+  const memberDataChecked: Partial<Member> = {};
 
-    if (memberData.firstname && memberData.memberType == "HUMAN") {
-        memberDataChecked.firstname = memberData.firstname;
-    }
-    if (memberData.lastname && memberData.memberType == "HUMAN") {
-        memberDataChecked.lastname = memberData.lastname;
-    }
-    if (memberData.companyname && memberData.memberType == "COMPANY") {
-        memberDataChecked.companyname = memberData.companyname;
-    }
-    if (memberData.phone && Number.isInteger(memberData.phone)) {
-        memberDataChecked.phone = memberData.phone;
-    }
-    if (memberData.handle) {
-        memberDataChecked.handle = memberData.handle.toLowerCase();
-    }
-    if (memberData.DailyCoinOfferingGive && memberData.memberType == "HUMAN") {
-        memberDataChecked.DailyCoinOfferingGive = memberData.DailyCoinOfferingGive;
-    }
-    if (memberData.DailyCoinOfferingDenom
-        && getDenominations({ code: memberData.DailyCoinOfferingDenom }).length
-        && memberData.memberType == "HUMAN") {
-        memberDataChecked.DailyCoinOfferingDenom = memberData.DailyCoinOfferingDenom;
-    }
+  if (memberData.firstname && memberData.memberType == "HUMAN") {
+    memberDataChecked.firstname = memberData.firstname;
+  }
+  if (memberData.lastname && memberData.memberType == "HUMAN") {
+    memberDataChecked.lastname = memberData.lastname;
+  }
+  if (memberData.companyname && memberData.memberType == "COMPANY") {
+    memberDataChecked.companyname = memberData.companyname;
+  }
+  if (memberData.phone && Number.isInteger(memberData.phone)) {
+    memberDataChecked.phone = memberData.phone;
+  }
+  if (memberData.handle) {
+    memberDataChecked.handle = memberData.handle.toLowerCase();
+  }
+  if (memberData.DailyCoinOfferingGive && memberData.memberType == "HUMAN") {
+    memberDataChecked.DailyCoinOfferingGive = memberData.DailyCoinOfferingGive;
+  }
+  if (
+    memberData.DailyCoinOfferingDenom &&
+    getDenominations({ code: memberData.DailyCoinOfferingDenom }).length &&
+    memberData.memberType == "HUMAN"
+  ) {
+    memberDataChecked.DailyCoinOfferingDenom =
+      memberData.DailyCoinOfferingDenom;
+  }
 
-    const ledgerSpaceSession = ledgerSpaceDriver.session();
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
 
-    try {
-        const result = await ledgerSpaceSession.run(
-            `
+  try {
+    const result = await ledgerSpaceSession.run(
+      `
             MATCH (member:Member { memberID: $memberID })
             SET member += $memberDataChecked
             RETURN member.memberID AS memberID
             `,
-            { memberID: memberData.memberID, memberDataChecked }
-        );
+      { memberID: memberData.memberID, memberDataChecked },
+    );
 
-        if (!result.records[0].get("memberID")) {
-            return null;
-        }
-
-        return result.records[0].get("memberID");
-    } catch (error) {
-        console.error("Error updating member data:", error);
-        return null;
-    } finally {
-        await ledgerSpaceSession.close();
+    if (!result.records[0].get("memberID")) {
+      return null;
     }
+
+    return result.records[0].get("memberID");
+  } catch (error) {
+    console.error("Error updating member data:", error);
+    return null;
+  } finally {
+    await ledgerSpaceSession.close();
+  }
 }

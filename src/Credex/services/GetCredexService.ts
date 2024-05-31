@@ -1,12 +1,13 @@
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
-import { denomFormatter } from '../../Core/constants/denominations';
+import { denomFormatter } from "../../Core/constants/denominations";
 import { Credex } from "../types/Credex";
-const moment = require('moment-timezone');
+const moment = require("moment-timezone");
 
 export async function GetCredexService(credexID: string, memberID: string) {
-    try {
-        const ledgerSpaceSession = ledgerSpaceDriver.session()
-        const result = await ledgerSpaceSession.run(`
+  try {
+    const ledgerSpaceSession = ledgerSpaceDriver.session();
+    const result = await ledgerSpaceSession.run(
+      `
             MATCH
             (member:Member{memberID:$memberID})
             -[transactionType:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-
@@ -44,125 +45,173 @@ export async function GetCredexService(credexID: string, memberID: string) {
             clearedAgainstCounterparty.lastname AS clearedAgainstCounterpartyLastname,
             clearedAgainstCounterparty.companyname AS clearedAgainstCounterpartyCompanyname,
             clearedAgainstCounterparty.memberType AS clearedAgainstCounterpartyMemberType
-        `, {
-            credexID: credexID,
-            memberID: memberID,
-        })
-        await ledgerSpaceSession.close();
+        `,
+      {
+        credexID: credexID,
+        memberID: memberID,
+      },
+    );
+    await ledgerSpaceSession.close();
 
-        // make negative if debit
-        const debit = result.records[0].get('debit')
-        const InitialAmount = debit === true ? parseFloat("-" + result.records[0].get('InitialAmount'))
-            : debit === false ? parseFloat(result.records[0].get('InitialAmount'))
-                : 0;;
-        const OutstandingAmount = debit === true ? parseFloat("-" + result.records[0].get('OutstandingAmount'))
-            : debit === false ? parseFloat(result.records[0].get('OutstandingAmount'))
-                : 0;;
-        const RedeemedAmount = debit === true ? parseFloat("-" + result.records[0].get('RedeemedAmount'))
-            : debit === false ? parseFloat(result.records[0].get('RedeemedAmount'))
-                : 0;;
-        const DefaultedAmount = debit === true ? parseFloat("-" + result.records[0].get('DefaultedAmount'))
-            : debit === false ? parseFloat(result.records[0].get('DefaultedAmount'))
-                : 0;;
-        const WrittenOffAmount = debit === true ? parseFloat("-" + result.records[0].get('WrittenOffAmount'))
-            : debit === false ? parseFloat(result.records[0].get('WrittenOffAmount'))
-                : 0;;
+    // make negative if debit
+    const debit = result.records[0].get("debit");
+    const InitialAmount =
+      debit === true
+        ? parseFloat("-" + result.records[0].get("InitialAmount"))
+        : debit === false
+          ? parseFloat(result.records[0].get("InitialAmount"))
+          : 0;
+    const OutstandingAmount =
+      debit === true
+        ? parseFloat("-" + result.records[0].get("OutstandingAmount"))
+        : debit === false
+          ? parseFloat(result.records[0].get("OutstandingAmount"))
+          : 0;
+    const RedeemedAmount =
+      debit === true
+        ? parseFloat("-" + result.records[0].get("RedeemedAmount"))
+        : debit === false
+          ? parseFloat(result.records[0].get("RedeemedAmount"))
+          : 0;
+    const DefaultedAmount =
+      debit === true
+        ? parseFloat("-" + result.records[0].get("DefaultedAmount"))
+        : debit === false
+          ? parseFloat(result.records[0].get("DefaultedAmount"))
+          : 0;
+    const WrittenOffAmount =
+      debit === true
+        ? parseFloat("-" + result.records[0].get("WrittenOffAmount"))
+        : debit === false
+          ? parseFloat(result.records[0].get("WrittenOffAmount"))
+          : 0;
 
-        //format amounts
-        const Denomination = result.records[0].get('Denomination')
-        const formattedInitialAmount = denomFormatter(
-            InitialAmount, Denomination) + " " + Denomination
-        const formattedOutstandingAmount = denomFormatter(
-            OutstandingAmount, Denomination) + " " + Denomination
-        const formattedRedeemedAmount = denomFormatter(
-            RedeemedAmount, Denomination) + " " + Denomination
-        const formattedDefaultedAmount = denomFormatter(
-            DefaultedAmount, Denomination) + " " + Denomination
-        const formattedWrittenOffAmount = denomFormatter(
-            WrittenOffAmount, Denomination) + " " + Denomination
+    //format amounts
+    const Denomination = result.records[0].get("Denomination");
+    const formattedInitialAmount =
+      denomFormatter(InitialAmount, Denomination) + " " + Denomination;
+    const formattedOutstandingAmount =
+      denomFormatter(OutstandingAmount, Denomination) + " " + Denomination;
+    const formattedRedeemedAmount =
+      denomFormatter(RedeemedAmount, Denomination) + " " + Denomination;
+    const formattedDefaultedAmount =
+      denomFormatter(DefaultedAmount, Denomination) + " " + Denomination;
+    const formattedWrittenOffAmount =
+      denomFormatter(WrittenOffAmount, Denomination) + " " + Denomination;
 
-        const dateTime = moment(result.records[0].get('dateTime'))
-            .month(moment(result.records[0].get('dateTime'))
-            .month()-1)//because moment uses Jan = 0 and cypher uses Jan = 1
-            .format("MMMM D, YYYY [@] hh:mm")
+    const dateTime = moment(result.records[0].get("dateTime"))
+      .month(moment(result.records[0].get("dateTime")).month() - 1) //because moment uses Jan = 0 and cypher uses Jan = 1
+      .format("MMMM D, YYYY [@] hh:mm");
 
-        // format counterparty name
-        var counterpartyDisplayname
-        const counterpartyMemberType = result.records[0].get('counterpartyMemberType')
-        if (counterpartyMemberType == "HUMAN") {
-            counterpartyDisplayname = result.records[0].get('counterpartyFirstname') + " "
-                + result.records[0].get('counterpartyLastname')
-        }
-        if (counterpartyMemberType == "COMPANY" || counterpartyMemberType == "CREDEX_FOUNDATION") {
-            counterpartyDisplayname = result.records[0].get('counterpartyCompanyname')
-        }
-
-        const credexData: Credex =
-        {
-            "credexID": result.records[0].get('credexID'),
-            "transactionType": result.records[0].get('transactionType'),
-            "debit": debit,
-            "counterpartyDisplayname": counterpartyDisplayname,
-            "securerID": result.records[0].get('securerID'),
-            "securerName": result.records[0].get('securerName'),
-            "Denomination": Denomination,
-            "dateTime": dateTime,
-            "InitialAmount": InitialAmount,
-            "OutstandingAmount": OutstandingAmount,
-            "RedeemedAmount": RedeemedAmount,
-            "DefaultedAmount": DefaultedAmount,
-            "WrittenOffAmount": WrittenOffAmount,
-            "formattedInitialAmount": formattedInitialAmount,
-            "formattedOutstandingAmount": formattedOutstandingAmount,
-            "formattedRedeemedAmount": formattedRedeemedAmount,
-            "formattedDefaultedAmount": formattedDefaultedAmount,
-            "formattedWrittenOffAmount": formattedWrittenOffAmount,
-        }
-
-        var clearedAgainstData: any = []
-        if (result.records[0].get('clearedAgainstCredexID')) {
-            result.records.forEach(async function (record) {
-                const clearedAgainstCredexID = record.get('clearedAgainstCredexID')
-                const clearedAgainstCredexInitialAmount = record.get('clearedAgainstCredexInitialAmount')
-                const clearedAgainstCredexDenomination = record.get('clearedAgainstCredexDenomination')
-                const clearedAgainstCounterpartyFirstname = record.get('clearedAgainstCounterpartyFirstname')
-                const clearedAgainstCounterpartyLastname = record.get('clearedAgainstCounterpartyLastname')
-                const clearedAgainstCounterpartyCompanyname = record.get('clearedAgainstCounterpartyCompanyname')
-                const clearedAgainstCounterpartyMemberType = record.get('clearedAgainstCounterpartyMemberType')
-
-                const signumClearedAgainstCredexInitialAmount: number =
-                    debit === false ? parseFloat("-" + clearedAgainstCredexInitialAmount) :
-                        debit === true ? parseFloat(clearedAgainstCredexInitialAmount) :
-                            0;;
-                const formattedClearedAgainstCredexInitialAmount = denomFormatter(
-                    signumClearedAgainstCredexInitialAmount,
-                    clearedAgainstCredexDenomination
-                )
-                var clearedAgainstCounterpartyDisplayname = ""
-                if (clearedAgainstCounterpartyMemberType == "HUMAN") {
-                    clearedAgainstCounterpartyDisplayname = clearedAgainstCounterpartyFirstname + " " + clearedAgainstCounterpartyLastname
-                }
-                if (clearedAgainstCounterpartyMemberType == "COMPANY" || clearedAgainstCounterpartyMemberType == "CREDEX_FOUNDATION") {
-                    clearedAgainstCounterpartyDisplayname = clearedAgainstCounterpartyCompanyname
-                }
-
-                const thisClearedAgainstCredex = {
-                    "clearedAgainstCredexID": clearedAgainstCredexID,
-                    "ClearedAgainstCredexInitialAmount": clearedAgainstCredexInitialAmount,
-                    "clearedAgainstCredexDenomination": clearedAgainstCredexDenomination,
-                    "formattedClearedAgainstCredexInitialAmount": formattedClearedAgainstCredexInitialAmount + " " + clearedAgainstCredexDenomination,
-                    "clearedAgainstCounterpartyDisplayname": clearedAgainstCounterpartyDisplayname,
-                }
-                clearedAgainstData.push(thisClearedAgainstCredex)
-
-            });
-        }
-
-        return {
-            "credexData": credexData,
-            "clearedAgainstData": clearedAgainstData,
-        }
-    } catch (error) {
-        console.log(error)
+    // format counterparty name
+    var counterpartyDisplayname;
+    const counterpartyMemberType = result.records[0].get(
+      "counterpartyMemberType",
+    );
+    if (counterpartyMemberType == "HUMAN") {
+      counterpartyDisplayname =
+        result.records[0].get("counterpartyFirstname") +
+        " " +
+        result.records[0].get("counterpartyLastname");
     }
+    if (
+      counterpartyMemberType == "COMPANY" ||
+      counterpartyMemberType == "CREDEX_FOUNDATION"
+    ) {
+      counterpartyDisplayname = result.records[0].get(
+        "counterpartyCompanyname",
+      );
+    }
+
+    const credexData: Credex = {
+      credexID: result.records[0].get("credexID"),
+      transactionType: result.records[0].get("transactionType"),
+      debit: debit,
+      counterpartyDisplayname: counterpartyDisplayname,
+      securerID: result.records[0].get("securerID"),
+      securerName: result.records[0].get("securerName"),
+      Denomination: Denomination,
+      dateTime: dateTime,
+      InitialAmount: InitialAmount,
+      OutstandingAmount: OutstandingAmount,
+      RedeemedAmount: RedeemedAmount,
+      DefaultedAmount: DefaultedAmount,
+      WrittenOffAmount: WrittenOffAmount,
+      formattedInitialAmount: formattedInitialAmount,
+      formattedOutstandingAmount: formattedOutstandingAmount,
+      formattedRedeemedAmount: formattedRedeemedAmount,
+      formattedDefaultedAmount: formattedDefaultedAmount,
+      formattedWrittenOffAmount: formattedWrittenOffAmount,
+    };
+
+    var clearedAgainstData: any = [];
+    if (result.records[0].get("clearedAgainstCredexID")) {
+      result.records.forEach(async function (record) {
+        const clearedAgainstCredexID = record.get("clearedAgainstCredexID");
+        const clearedAgainstCredexInitialAmount = record.get(
+          "clearedAgainstCredexInitialAmount",
+        );
+        const clearedAgainstCredexDenomination = record.get(
+          "clearedAgainstCredexDenomination",
+        );
+        const clearedAgainstCounterpartyFirstname = record.get(
+          "clearedAgainstCounterpartyFirstname",
+        );
+        const clearedAgainstCounterpartyLastname = record.get(
+          "clearedAgainstCounterpartyLastname",
+        );
+        const clearedAgainstCounterpartyCompanyname = record.get(
+          "clearedAgainstCounterpartyCompanyname",
+        );
+        const clearedAgainstCounterpartyMemberType = record.get(
+          "clearedAgainstCounterpartyMemberType",
+        );
+
+        const signumClearedAgainstCredexInitialAmount: number =
+          debit === false
+            ? parseFloat("-" + clearedAgainstCredexInitialAmount)
+            : debit === true
+              ? parseFloat(clearedAgainstCredexInitialAmount)
+              : 0;
+        const formattedClearedAgainstCredexInitialAmount = denomFormatter(
+          signumClearedAgainstCredexInitialAmount,
+          clearedAgainstCredexDenomination,
+        );
+        var clearedAgainstCounterpartyDisplayname = "";
+        if (clearedAgainstCounterpartyMemberType == "HUMAN") {
+          clearedAgainstCounterpartyDisplayname =
+            clearedAgainstCounterpartyFirstname +
+            " " +
+            clearedAgainstCounterpartyLastname;
+        }
+        if (
+          clearedAgainstCounterpartyMemberType == "COMPANY" ||
+          clearedAgainstCounterpartyMemberType == "CREDEX_FOUNDATION"
+        ) {
+          clearedAgainstCounterpartyDisplayname =
+            clearedAgainstCounterpartyCompanyname;
+        }
+
+        const thisClearedAgainstCredex = {
+          clearedAgainstCredexID: clearedAgainstCredexID,
+          ClearedAgainstCredexInitialAmount: clearedAgainstCredexInitialAmount,
+          clearedAgainstCredexDenomination: clearedAgainstCredexDenomination,
+          formattedClearedAgainstCredexInitialAmount:
+            formattedClearedAgainstCredexInitialAmount +
+            " " +
+            clearedAgainstCredexDenomination,
+          clearedAgainstCounterpartyDisplayname:
+            clearedAgainstCounterpartyDisplayname,
+        };
+        clearedAgainstData.push(thisClearedAgainstCredex);
+      });
+    }
+
+    return {
+      credexData: credexData,
+      clearedAgainstData: clearedAgainstData,
+    };
+  } catch (error) {
+    console.log(error);
+  }
 }

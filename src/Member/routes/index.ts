@@ -9,50 +9,44 @@ import { AuthorizeForCompanyController } from "../controllers/AuthorizeForCompan
 import { GetOwnedAndAuthForCompaniesController } from "../controllers/GetOwnedAndAuthForCompaniesController";
 
 export default function MemberRoutes(
-    app: express.Application,
-    jsonParser: any
+  app: express.Application,
+  jsonParser: any,
 ) {
+  app.post(
+    `${apiVersionOneRoute}createMember`,
+    jsonParser,
+    CreateMemberController,
+  );
 
-    app.post(
-        `${apiVersionOneRoute}createMember`,
-        jsonParser,
-        CreateMemberController
-    );
+  app.post(
+    `${apiVersionOneRoute}createCompany`,
+    jsonParser,
+    CreateCompanyController,
+  );
 
-    app.post(
-        `${apiVersionOneRoute}createCompany`,
-        jsonParser,
-        CreateCompanyController
-    );
+  app.get(
+    `${apiVersionOneRoute}getMemberList`,
+    jsonParser,
+    GetMembersListController,
+  );
 
-    app.get(
-        `${apiVersionOneRoute}getMemberList`,
-        jsonParser,
-        GetMembersListController
-    )
+  app.get(`${apiVersionOneRoute}getMember`, jsonParser, GetMemberController);
 
-    app.get(
-        `${apiVersionOneRoute}getMember`,
-        jsonParser,
-        GetMemberController
-    )
+  app.patch(
+    `${apiVersionOneRoute}updateMember`,
+    jsonParser,
+    UpdateMemberController,
+  );
 
-    app.patch(
-        `${apiVersionOneRoute}updateMember`,
-        jsonParser,
-        UpdateMemberController
-    );
+  app.post(
+    `${apiVersionOneRoute}authorizeForCompany`,
+    jsonParser,
+    AuthorizeForCompanyController,
+  );
 
-    app.post(
-        `${apiVersionOneRoute}authorizeForCompany`,
-        jsonParser,
-        AuthorizeForCompanyController
-    );
-
-    app.get(
-        `${apiVersionOneRoute}getOwnedAndAuthForCompanies`,
-        jsonParser,
-        GetOwnedAndAuthForCompaniesController
-    );
-
+  app.get(
+    `${apiVersionOneRoute}getOwnedAndAuthForCompanies`,
+    jsonParser,
+    GetOwnedAndAuthForCompaniesController,
+  );
 }

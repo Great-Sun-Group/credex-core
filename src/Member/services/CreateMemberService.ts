@@ -30,55 +30,73 @@ import { getDenominations } from "../../Core/constants/denominations";
 import { Member } from "../types/Member";
 
 export async function CreateMemberService(newMemberData: Member) {
-    const { memberType, firstname, lastname, companyname, defaultDenom, handle, phone, DailyCoinOfferingGive, DailyCoinOfferingDenom } = newMemberData;
+  const {
+    memberType,
+    firstname,
+    lastname,
+    companyname,
+    defaultDenom,
+    handle,
+    phone,
+    DailyCoinOfferingGive,
+    DailyCoinOfferingDenom,
+  } = newMemberData;
 
-    if (memberType === "HUMAN" && (!firstname || !lastname)) {
-        console.log("memberType doesn't match name info");
-        return false;
-    }
-    
-    if ((memberType === "COMPANY" || memberType === "CREDEX_FOUNDATION") && !companyname) {
-        console.log("memberType doesn't match name info");
-        return false;
-    }
-    
-    if (!getDenominations({ code: defaultDenom }).length) {
-        console.log("defaultDenom not in denoms");
-        return false;
-    }
+  if (memberType === "HUMAN" && (!firstname || !lastname)) {
+    console.log("memberType doesn't match name info");
+    return false;
+  }
 
-    if (!handle) {
-        console.log("handle not set");
-        return false;
-    }
+  if (
+    (memberType === "COMPANY" || memberType === "CREDEX_FOUNDATION") &&
+    !companyname
+  ) {
+    console.log("memberType doesn't match name info");
+    return false;
+  }
 
-    if (memberType === "HUMAN" && !Number.isInteger(phone)) {
-        console.log("phone not set or incompatible");
-        return false;
-    }    
+  if (!getDenominations({ code: defaultDenom }).length) {
+    console.log("defaultDenom not in denoms");
+    return false;
+  }
 
-    const newMemberDataChecked: Partial<Member> = {
-        memberType,
-        handle: handle.toLowerCase(),
-        defaultDenom,
-    };
+  if (!handle) {
+    console.log("handle not set");
+    return false;
+  }
 
-    if (memberType === "HUMAN") {
-        newMemberDataChecked.firstname = firstname;
-        newMemberDataChecked.lastname = lastname;
-        newMemberDataChecked.phone = phone;
-    } else if (memberType === "COMPANY" || memberType === "CREDEX_FOUNDATION") {
-        newMemberDataChecked.companyname = companyname;
-    }
+  if (memberType === "HUMAN" && !Number.isInteger(phone)) {
+    console.log("phone not set or incompatible");
+    return false;
+  }
 
-    if (DailyCoinOfferingGive && DailyCoinOfferingDenom && memberType == "HUMAN") {
-        newMemberDataChecked.DailyCoinOfferingGive = DailyCoinOfferingGive;
-        newMemberDataChecked.DailyCoinOfferingDenom = DailyCoinOfferingDenom;
-    }
+  const newMemberDataChecked: Partial<Member> = {
+    memberType,
+    handle: handle.toLowerCase(),
+    defaultDenom,
+  };
 
-    const ledgerSpaceSession = ledgerSpaceDriver.session();
-    try {
-        const result = await ledgerSpaceSession.run(`
+  if (memberType === "HUMAN") {
+    newMemberDataChecked.firstname = firstname;
+    newMemberDataChecked.lastname = lastname;
+    newMemberDataChecked.phone = phone;
+  } else if (memberType === "COMPANY" || memberType === "CREDEX_FOUNDATION") {
+    newMemberDataChecked.companyname = companyname;
+  }
+
+  if (
+    DailyCoinOfferingGive &&
+    DailyCoinOfferingDenom &&
+    memberType == "HUMAN"
+  ) {
+    newMemberDataChecked.DailyCoinOfferingGive = DailyCoinOfferingGive;
+    newMemberDataChecked.DailyCoinOfferingDenom = DailyCoinOfferingDenom;
+  }
+
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
+  try {
+    const result = await ledgerSpaceSession.run(
+      `
             MATCH (daynode:DayNode { Active: true })
             CREATE (member:Member)-[:CREATED_ON]->(daynode)
             SET
@@ -88,20 +106,22 @@ export async function CreateMemberService(newMemberData: Member) {
                 member.createdAt = datetime(),
                 member.updatedAt = datetime()
             RETURN member
-        `, { newMemberDataChecked });
+        `,
+      { newMemberDataChecked },
+    );
 
-        if (result.records[0].get("member")) {
-            const member = result.records[0].get("member").properties;
-            console.log("member created: " + member.memberID);
-            return member;
-        } else {
-            console.log("could not create member");
-            return false;
-        }
-    } catch (error) {
-        console.error("Error creating member:", error);
-        return false;
-    } finally {
-        await ledgerSpaceSession.close();
+    if (result.records[0].get("member")) {
+      const member = result.records[0].get("member").properties;
+      console.log("member created: " + member.memberID);
+      return member;
+    } else {
+      console.log("could not create member");
+      return false;
     }
+  } catch (error) {
+    console.error("Error creating member:", error);
+    return false;
+  } finally {
+    await ledgerSpaceSession.close();
+  }
 }

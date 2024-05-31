@@ -3,15 +3,9 @@ import { CreateMemberService } from "../services/CreateMemberService";
 
 export async function CreateMemberController(
   req: express.Request,
-  res: express.Response
+  res: express.Response,
 ): Promise<void> {
-
-  const fieldsRequired = [
-    "memberType",
-    "defaultDenom",
-    "handle",
-    "phone",
-  ];
+  const fieldsRequired = ["memberType", "defaultDenom", "handle", "phone"];
 
   for (const field of fieldsRequired) {
     if (!req.body[field]) {

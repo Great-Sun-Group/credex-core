@@ -4,10 +4,10 @@ import { Member } from "../types/Member";
 
 export async function CreateCompanyController(
   req: express.Request,
-  res: express.Response
+  res: express.Response,
 ): Promise<void> {
   const fieldsRequired = ["ownerID", "companyname", "defaultDenom", "handle"];
-  
+
   for (const field of fieldsRequired) {
     if (!req.body[field]) {
       res.status(400).json({ message: `${field} is required` });
@@ -23,8 +23,11 @@ export async function CreateCompanyController(
   };
 
   try {
-    const newCompany = await CreateCompanyService(companyAsMemberData, req.body.ownerID);
-    
+    const newCompany = await CreateCompanyService(
+      companyAsMemberData,
+      req.body.ownerID,
+    );
+
     if (newCompany) {
       res.status(200).json(newCompany);
     } else {
