@@ -12,61 +12,51 @@ import { GetPendingOffersOutController } from "../controllers/GetPendingOffersOu
 
 export default function CredexRoutes(
   app: express.Application,
-  jsonParser: any
+  jsonParser: any,
 ) {
-
   app.post(
     `${apiVersionOneRoute}offerCredex`,
     jsonParser,
-    OfferCredexController
+    OfferCredexController,
   );
 
   app.put(
     `${apiVersionOneRoute}acceptCredex`,
     jsonParser,
-    AcceptCredexController
+    AcceptCredexController,
   );
 
   app.put(
     `${apiVersionOneRoute}declineCredex`,
     jsonParser,
-    DeclineCredexController
+    DeclineCredexController,
   );
 
   app.put(
     `${apiVersionOneRoute}cancelCredex`,
     jsonParser,
-    CancelCredexController
+    CancelCredexController,
   );
 
-  app.get(
-    `${apiVersionOneRoute}getCredex`,
-    jsonParser,
-    GetCredexController
-  );
+  app.get(`${apiVersionOneRoute}getCredex`, jsonParser, GetCredexController);
 
-  app.get(
-    `${apiVersionOneRoute}getLEdger`,
-    jsonParser,
-    GetLedgerController
-  );
+  app.get(`${apiVersionOneRoute}getLEdger`, jsonParser, GetLedgerController);
 
   app.get(
     `${apiVersionOneRoute}getBalances`,
     jsonParser,
-    GetBalancesController
+    GetBalancesController,
   );
 
   app.get(
     `${apiVersionOneRoute}getPendingOffersIn`,
     jsonParser,
-    GetPendingOffersInController
+    GetPendingOffersInController,
   );
 
   app.get(
     `${apiVersionOneRoute}getPendingOffersOut`,
     jsonParser,
-    GetPendingOffersOutController
+    GetPendingOffersOutController,
   );
-
 }

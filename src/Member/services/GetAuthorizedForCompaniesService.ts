@@ -17,11 +17,14 @@ returns empty object if
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { Member } from "../types/Member";
 
-export async function GetAuthorizedForCompaniesService(memberID: string): Promise<Member[]> {
-    const ledgerSpaceSession = ledgerSpaceDriver.session();
+export async function GetAuthorizedForCompaniesService(
+  memberID: string,
+): Promise<Member[]> {
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
 
-    try {
-        const result = await ledgerSpaceSession.run(`
+  try {
+    const result = await ledgerSpaceSession.run(
+      `
             OPTIONAL MATCH
                 (member:Member { memberID: $memberID, memberType: "HUMAN" })
                 -[:AUTHORIZED_TO_TRANSACT_FOR]->(company:Member { memberType: "COMPANY" })
@@ -29,25 +32,26 @@ export async function GetAuthorizedForCompaniesService(memberID: string): Promis
                 company.memberID AS memberID,
                 company.companyname AS companyname,
                 company.handle AS handle
-        `, { memberID });
+        `,
+      { memberID },
+    );
 
-        if (!result.records[0].get("memberID")) {
-            console.log("no authorized companies:");
-            return [];
-        }
-
-        const companiesAuthorizedFor: Member[] = result.records.map(record => ({
-            memberID: record.get('memberID'),
-            companyname: record.get('companyname'),
-            handle: record.get('handle')
-        }));
-
-        return companiesAuthorizedFor;
-
-    } catch (error) {
-        console.error("Error fetching authorized companies:", error);
-        return [];
-    } finally {
-        await ledgerSpaceSession.close();
+    if (!result.records[0].get("memberID")) {
+      console.log("no authorized companies:");
+      return [];
     }
+
+    const companiesAuthorizedFor: Member[] = result.records.map((record) => ({
+      memberID: record.get("memberID"),
+      companyname: record.get("companyname"),
+      handle: record.get("handle"),
+    }));
+
+    return companiesAuthorizedFor;
+  } catch (error) {
+    console.error("Error fetching authorized companies:", error);
+    return [];
+  } finally {
+    await ledgerSpaceSession.close();
+  }
 }

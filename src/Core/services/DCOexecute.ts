@@ -1,33 +1,32 @@
-import axios from 'axios';
-var moment = require('moment-timezone');
+import axios from "axios";
+var moment = require("moment-timezone");
 const _ = require("lodash");
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
-import { getDenominations } from '../constants/denominations';
-import { GetSecurableDataService } from "../../Credex/services/GetSecurableDataService"
+import { getDenominations } from "../constants/denominations";
+import { GetSecurableDataService } from "../../Credex/services/GetSecurableDataService";
 import { OfferCredexService } from "../../Credex/services/OfferCredexService";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
 import { Credex } from "../../Credex/types/Credex";
-import { fetchZigRate } from './fetchZigRate';
+import { fetchZigRate } from "./fetchZigRate";
 
 export async function DCOexecute() {
+  console.log("DCOexecute start");
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
+  const searchSpaceSession = searchSpaceDriver.session();
 
-    console.log("DCOexecute start")
-    const ledgerSpaceSession = ledgerSpaceDriver.session()
-    const searchSpaceSession = searchSpaceDriver.session()
-
-    console.log('fetch expiring daynode and set DCOrunningNow flag')
-    var getPriorDaynodeData = await ledgerSpaceSession.run(`
+  console.log("fetch expiring daynode and set DCOrunningNow flag");
+  var getPriorDaynodeData = await ledgerSpaceSession.run(`
         MATCH (daynode:DayNode{Active:TRUE})
         SET daynode.DCOrunningNow = true
         RETURN daynode
-    `,)
-    const priorDaynode = getPriorDaynodeData.records[0].get("daynode").properties
-    console.log("previous day: " + priorDaynode.Date)
-    var nextDate = moment(priorDaynode.Date).add(1, 'days').format('YYYY-MM-DD');
-    console.log("new day: " + nextDate)
+    `);
+  const priorDaynode = getPriorDaynodeData.records[0].get("daynode").properties;
+  console.log("previous day: " + priorDaynode.Date);
+  var nextDate = moment(priorDaynode.Date).add(1, "days").format("YYYY-MM-DD");
+  console.log("new day: " + nextDate);
 
-    console.log("run defaults for expiring day")
-    var DCOdefaulting = await ledgerSpaceSession.run(`
+  console.log("run defaults for expiring day");
+  var DCOdefaulting = await ledgerSpaceSession.run(`
         OPTIONAL MATCH
             (member1:Member)-[rel1:OWES]->
             (defaulting:Credex)-[rel2:OWES]->
@@ -39,88 +38,105 @@ export async function DCOexecute() {
         SET defaulting.ActiveInterestRate = defaulting.rateOnDefault
         CREATE (defaulting)-[:DEFAULTED_ON]->(dayNode)
         RETURN defaulting.credexID AS defaultingCredexes
-    `,)
+    `);
 
-    //delete defaulted credexes from SearchSpace
-    if (DCOdefaulting.records[0]) {
-        DCOdefaulting.records.forEach(async function (record) {
-            var defaultingInSearchSpace = await searchSpaceSession.run(`
+  //delete defaulted credexes from SearchSpace
+  if (DCOdefaulting.records[0]) {
+    DCOdefaulting.records.forEach(async function (record) {
+      var defaultingInSearchSpace = await searchSpaceSession.run(
+        `
                 MATCH (issuer:Member)-[defaultingCredex:CREDEX WHERE defaultingCredex.credexID = $credexID]-(acceptor:Member)
                 DELETE defaultingCredex
-                `,{
-                    credexID: record.get("credexID"),
-                })
-        })
-    }
-
-    console.log('load currencies and current rates')
-    const symbolsForOpenExchangeRateApi = getDenominations({
-        sourceForRate: "OpenExchangeRates",
-        formatAsList: true
+                `,
+        {
+          credexID: record.get("credexID"),
+        },
+      );
     });
+  }
 
-    // https://exchangeratesapi.io/documentation/
-    var baseUrl = "https://openexchangerates.org/api/historical/" + nextDate + ".json?app_id=" + process.env.OPEN_EXCHANGE_RATES_API + "&symbols=" + symbolsForOpenExchangeRateApi;
-    var ratesRequest = await axios.get(baseUrl);
-    var USDbaseRates = ratesRequest.data.rates;
+  console.log("load currencies and current rates");
+  const symbolsForOpenExchangeRateApi = getDenominations({
+    sourceForRate: "OpenExchangeRates",
+    formatAsList: true,
+  });
 
-    //this always gets current rates (not historical for dev)
-    const ZIGrates = await fetchZigRate()
-    USDbaseRates.ZIG = (ZIGrates[1].avg)
-      
-    //convert USD rates to XAU
-    var denomsInXAU: any = {};
-    _.forOwn(USDbaseRates, (value: number, key: string) => {
-        denomsInXAU[key] = value / USDbaseRates.XAU;
-    });
+  // https://exchangeratesapi.io/documentation/
+  var baseUrl =
+    "https://openexchangerates.org/api/historical/" +
+    nextDate +
+    ".json?app_id=" +
+    process.env.OPEN_EXCHANGE_RATES_API +
+    "&symbols=" +
+    symbolsForOpenExchangeRateApi;
+  var ratesRequest = await axios.get(baseUrl);
+  var USDbaseRates = ratesRequest.data.rates;
 
-    console.log("get declared DCO participants")
-    var getDCOparticpantsDeclared = await ledgerSpaceSession.run(`
+  //this always gets current rates (not historical for dev)
+  const ZIGrates = await fetchZigRate();
+  USDbaseRates.ZIG = ZIGrates[1].avg;
+
+  //convert USD rates to XAU
+  var denomsInXAU: any = {};
+  _.forOwn(USDbaseRates, (value: number, key: string) => {
+    denomsInXAU[key] = value / USDbaseRates.XAU;
+  });
+
+  console.log("get declared DCO participants");
+  var getDCOparticpantsDeclared = await ledgerSpaceSession.run(`
         MATCH (DCOparticpantsDeclared:Member)
         WHERE DCOparticpantsDeclared.DailyCoinOfferingGive > 0
         RETURN
             DCOparticpantsDeclared.memberID AS memberID,
             DCOparticpantsDeclared.DailyCoinOfferingGive AS DailyCoinOfferingGive,
             DCOparticpantsDeclared.DailyCoinOfferingDenom AS DailyCoinOfferingDenom
-        `)
-    const declaredParticipants = getDCOparticpantsDeclared.records
-    console.log("filter participants for secured balance to participate in DCO")
-    const confirmedParticipants = []
-    var DCOinCXX = 0
-    var DCOinXAU = 0
-    var numberConfirmedParticiants = 0
-    for (const declaredParticipant of declaredParticipants) {
-        var securableData = await GetSecurableDataService(declaredParticipant.get("memberID"), declaredParticipant.get("DailyCoinOfferingDenom"))
-        if (declaredParticipant.get("DailyCoinOfferingGive") <= securableData.netSecurableInDenom) {        
-            confirmedParticipants.push(declaredParticipant)
-            DCOinCXX = DCOinCXX + declaredParticipant.get("DailyCoinOfferingGive")
-            DCOinXAU = DCOinXAU
-                //amount in CXX
-                + declaredParticipant.get("DailyCoinOfferingGive")
-                //converted to amount in XAU at new rate rate
-                / denomsInXAU[declaredParticipant.get("DailyCoinOfferingDenom")]
-            numberConfirmedParticiants = numberConfirmedParticiants + 1
-        }
+        `);
+  const declaredParticipants = getDCOparticpantsDeclared.records;
+  console.log("filter participants for secured balance to participate in DCO");
+  const confirmedParticipants = [];
+  var DCOinCXX = 0;
+  var DCOinXAU = 0;
+  var numberConfirmedParticiants = 0;
+  for (const declaredParticipant of declaredParticipants) {
+    var securableData = await GetSecurableDataService(
+      declaredParticipant.get("memberID"),
+      declaredParticipant.get("DailyCoinOfferingDenom"),
+    );
+    if (
+      declaredParticipant.get("DailyCoinOfferingGive") <=
+      securableData.netSecurableInDenom
+    ) {
+      confirmedParticipants.push(declaredParticipant);
+      DCOinCXX = DCOinCXX + declaredParticipant.get("DailyCoinOfferingGive");
+      DCOinXAU =
+        DCOinXAU +
+        //amount in CXX
+        declaredParticipant.get("DailyCoinOfferingGive") /
+          //converted to amount in XAU at new rate rate
+          denomsInXAU[declaredParticipant.get("DailyCoinOfferingDenom")];
+      numberConfirmedParticiants = numberConfirmedParticiants + 1;
     }
+  }
 
-    const nextCXXinXAU = DCOinXAU / numberConfirmedParticiants
-    const CXXprior_CXXcurrent = DCOinCXX / numberConfirmedParticiants
-    console.log("numberConfirmedParticiants: " + numberConfirmedParticiants)
-    console.log("DCOinCXX: " + DCOinCXX)
-    console.log("DCOinXAU: " + DCOinXAU)
-    console.log("nextCXXinXAU: " + nextCXXinXAU);
+  const nextCXXinXAU = DCOinXAU / numberConfirmedParticiants;
+  const CXXprior_CXXcurrent = DCOinCXX / numberConfirmedParticiants;
+  console.log("numberConfirmedParticiants: " + numberConfirmedParticiants);
+  console.log("DCOinCXX: " + DCOinCXX);
+  console.log("DCOinXAU: " + DCOinXAU);
+  console.log("nextCXXinXAU: " + nextCXXinXAU);
 
-    var newCXXrates: any = {};
-    _.forOwn(denomsInXAU, (value: number, key: string) => {
-        newCXXrates[key] = 1 / nextCXXinXAU / value;
-    });
-    //add CXX to rates
-    newCXXrates.CXX = 1
-    console.log("newCXXrates:")
-    console.log(newCXXrates)
+  var newCXXrates: any = {};
+  _.forOwn(denomsInXAU, (value: number, key: string) => {
+    newCXXrates[key] = 1 / nextCXXinXAU / value;
+  });
+  //add CXX to rates
+  newCXXrates.CXX = 1;
+  console.log("newCXXrates:");
+  console.log(newCXXrates);
 
-    console.log("create new daynode")
-    var newDaynodeQuery = await ledgerSpaceSession.run(`
+  console.log("create new daynode");
+  var newDaynodeQuery = await ledgerSpaceSession.run(
+    `
         MATCH (expiringDayNode:DayNode{Active:TRUE})
         CREATE (expiringDayNode)-[:NEXT_DAY]->(nextDayNode:DayNode)
         SET
@@ -131,37 +147,39 @@ export async function DCOexecute() {
             nextDayNode.Date = $nextDate,
             nextDayNode.Active = true,
             nextDayNode.DCOrunningNow = true
-    `,{
-            newCXXrates: newCXXrates,
-            nextDate: nextDate,
-            CXXprior_CXXcurrent: CXXprior_CXXcurrent
-    })
+    `,
+    {
+      newCXXrates: newCXXrates,
+      nextDate: nextDate,
+      CXXprior_CXXcurrent: CXXprior_CXXcurrent,
+    },
+  );
 
-    console.log("create DCO give transactions")
-    const getFoundationID = await ledgerSpaceSession.run(`
+  console.log("create DCO give transactions");
+  const getFoundationID = await ledgerSpaceSession.run(`
         MATCH (credexFoundation:Member{memberType:"CREDEX_FOUNDATION"})
         RETURN credexFoundation.memberID AS foundationID
-    `,)
-    const foundationID = getFoundationID.records[0].get("foundationID")
-    
-    for (const confirmedParticipant of confirmedParticipants) {
-        const dataForDCOgive: Credex = {
-            "issuerMemberID": confirmedParticipant.get("memberID"),
-            "receiverMemberID": foundationID,
-            "Denomination": "CAD",
-            "InitialAmount": confirmedParticipant.get("DailyCoinOfferingGive"),
-            "credexType": "DCO_GIVE",
-            "dueDate": "",
-            "securedCredex": true
-        }
-        const DCOgiveCredex = await OfferCredexService(dataForDCOgive)
-        await AcceptCredexService(DCOgiveCredex)
-    }
+    `);
+  const foundationID = getFoundationID.records[0].get("foundationID");
 
-    console.log('new daynode initialized, DCOgive created')
+  for (const confirmedParticipant of confirmedParticipants) {
+    const dataForDCOgive: Credex = {
+      issuerMemberID: confirmedParticipant.get("memberID"),
+      receiverMemberID: foundationID,
+      Denomination: "CAD",
+      InitialAmount: confirmedParticipant.get("DailyCoinOfferingGive"),
+      credexType: "DCO_GIVE",
+      dueDate: "",
+      securedCredex: true,
+    };
+    const DCOgiveCredex = await OfferCredexService(dataForDCOgive);
+    await AcceptCredexService(DCOgiveCredex);
+  }
 
-    console.log("updating credex and asset balances")
-    var updateLedgerSpaceBalancesQuery = await ledgerSpaceSession.run(`
+  console.log("new daynode initialized, DCOgive created");
+
+  console.log("updating credex and asset balances");
+  var updateLedgerSpaceBalancesQuery = await ledgerSpaceSession.run(`
         MATCH (newDayNode:DayNode{Active:TRUE})
 
         //update balances on all CXX credexes to the new rates
@@ -236,46 +254,49 @@ export async function DCOexecute() {
         SET thisCredloopRel.AmountRedeemed = thisCredloopRel.AmountRedeemed/thisCredloopRel.CXXmultiplier*newDayNode[thisCredloopRel.Denomination]
         SET thisCredloopRel.AmountOutstandingNow = thisCredloopRel.AmountOutstandingNow/thisCredloopRel.CXXmultiplier*newDayNode[thisCredloopRel.Denomination]
         SET thisCredloopRel.CXXmultiplier = newDayNode[thisCredloopRel.Denomination]
-    `,)
+    `);
 
-    // update balances in SearchSpace
-    var updateSearchSpaceBalancesQuery = await searchSpaceSession.run(`
+  // update balances in SearchSpace
+  var updateSearchSpaceBalancesQuery = await searchSpaceSession.run(
+    `
         MATCH (issuer:Member)-[credex:Credex]->(receiver:Member)
         WITH DISTINCT credex
         UNWIND credex as thisCredex
         SET thisCredex.Amount = thisCredex.InitialAmount/$CXXprior_CXXcurrent
-    `,{
-        CXXprior_CXXcurrent: CXXprior_CXXcurrent
-    })
+    `,
+    {
+      CXXprior_CXXcurrent: CXXprior_CXXcurrent,
+    },
+  );
 
-    console.log('...balances updated')
+  console.log("...balances updated");
 
-    console.log("create DCO receive transactions")
-    for (const confirmedParticipant of confirmedParticipants) {
-        const dataForDCOreceive: Credex = {
-            "issuerMemberID": foundationID,
-            "receiverMemberID": confirmedParticipant.get("memberID"),
-            "Denomination": "CXX",
-            "InitialAmount": 1,
-            "credexType": "DCO_RECEIVE",
-            "dueDate": "",
-            "securedCredex": true
-        }
-        const DCOreceiveCredex = await OfferCredexService(dataForDCOreceive)
-        await AcceptCredexService(DCOreceiveCredex)
-    }
-    console.log('DCOreceive transactions created')
+  console.log("create DCO receive transactions");
+  for (const confirmedParticipant of confirmedParticipants) {
+    const dataForDCOreceive: Credex = {
+      issuerMemberID: foundationID,
+      receiverMemberID: confirmedParticipant.get("memberID"),
+      Denomination: "CXX",
+      InitialAmount: 1,
+      credexType: "DCO_RECEIVE",
+      dueDate: "",
+      securedCredex: true,
+    };
+    const DCOreceiveCredex = await OfferCredexService(dataForDCOreceive);
+    await AcceptCredexService(DCOreceiveCredex);
+  }
+  console.log("DCOreceive transactions created");
 
-    console.log('turn off DCOrunningNow flag')
-    var DCOflagOff = await ledgerSpaceSession.run(`
+  console.log("turn off DCOrunningNow flag");
+  var DCOflagOff = await ledgerSpaceSession.run(`
         MATCH (daynode:DayNode{Active:TRUE})
         SET daynode.DCOrunningNow = false
-    `,)
+    `);
 
-    console.log("DCOexecute done to open " + nextDate)
+  console.log("DCOexecute done to open " + nextDate);
 
-    await ledgerSpaceSession.close();
-    await searchSpaceSession.close();
+  await ledgerSpaceSession.close();
+  await searchSpaceSession.close();
 
-    return true;
+  return true;
 }

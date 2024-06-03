@@ -7,44 +7,31 @@ import { OfferAndAcceptCredexController } from "../controllers/OfferAndAcceptCre
 import { CreateTestMembersController } from "../controllers/CreateTestMembersController";
 import { CreateTestTransactionsController } from "../controllers/CreateTestTransactionsController";
 
-export default function AdminRoutes(
-    app: express.Application,
-    jsonParser: any
-) {
+export default function AdminRoutes(app: express.Application, jsonParser: any) {
+  app.delete(
+    `${apiVersionOneRoute}clearDevDB`,
+    jsonParser,
+    ClearDevDbController,
+  );
 
-    app.delete(
-        `${apiVersionOneRoute}clearDevDB`,
-        jsonParser,
-        ClearDevDbController
-    );
+  app.post(`${apiVersionOneRoute}forceDCO`, jsonParser, ForceDcoController);
+  app.post(`${apiVersionOneRoute}forceMTQ`, jsonParser, ForceMtqController);
 
-    app.post(
-        `${apiVersionOneRoute}forceDCO`,
-        jsonParser,
-        ForceDcoController
-    )
-    app.post(
-        `${apiVersionOneRoute}forceMTQ`,
-        jsonParser,
-        ForceMtqController
-    )
+  app.post(
+    `${apiVersionOneRoute}offerAndAcceptCredex`,
+    jsonParser,
+    OfferAndAcceptCredexController,
+  );
 
-    app.post(
-        `${apiVersionOneRoute}offerAndAcceptCredex`,
-        jsonParser,
-        OfferAndAcceptCredexController
-    )
+  app.post(
+    `${apiVersionOneRoute}createTestMembers`,
+    jsonParser,
+    CreateTestMembersController,
+  );
 
-    app.post(
-        `${apiVersionOneRoute}createTestMembers`,
-        jsonParser,
-        CreateTestMembersController
-    )
-    
-    app.post(
-        `${apiVersionOneRoute}createTestTransactions`,
-        jsonParser,
-        CreateTestTransactionsController
-    )
-    
+  app.post(
+    `${apiVersionOneRoute}createTestTransactions`,
+    jsonParser,
+    CreateTestTransactionsController,
+  );
 }

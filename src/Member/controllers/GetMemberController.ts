@@ -3,9 +3,8 @@ import { GetMemberService } from "../services/GetMemberService";
 
 export async function GetMemberController(
   req: express.Request,
-  res: express.Response
+  res: express.Response,
 ): Promise<void> {
-
   const { memberID } = req.body;
 
   if (!memberID) {

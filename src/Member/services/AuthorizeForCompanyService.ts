@@ -29,14 +29,15 @@ but DB will remain unaltered
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 
 export async function AuthorizeForCompanyService(
-    MemberIDtoBeAuthorized: string,
-    companyID: string,
-    ownerID: string
+  MemberIDtoBeAuthorized: string,
+  companyID: string,
+  ownerID: string,
 ) {
-    const ledgerSpaceSession = ledgerSpaceDriver.session();
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
 
-    try {
-        const result = await ledgerSpaceSession.run(`
+  try {
+    const result = await ledgerSpaceSession.run(
+      `
             MATCH (company:Member { memberID: $companyID, memberType: "COMPANY" })
                 <-[:OWNS]-(owner:Member { memberID: $ownerID, memberType: "HUMAN" })
             MATCH (memberToAuthorize:Member { memberID: $MemberIDtoBeAuthorized, memberType: "HUMAN" })
@@ -44,28 +45,32 @@ export async function AuthorizeForCompanyService(
             RETURN
                 company.memberID AS companyID,
                 memberToAuthorize.memberID AS memberIDtoAuthorize
-        `, {
-            MemberIDtoBeAuthorized,
-            companyID,
-            ownerID
-        });
+        `,
+      {
+        MemberIDtoBeAuthorized,
+        companyID,
+        ownerID,
+      },
+    );
 
-        const record = result.records[0];
+    const record = result.records[0];
 
-        if (record.get("memberIDtoAuthorize")) {
-            console.log(`member ${record.get("memberIDtoAuthorize")} authorized to transact for ${record.get("companyID")}`);
-            return {
-                companyID: record.get("companyID"),
-                memberIDtoAuthorize: record.get("memberIDtoAuthorize")
-            };
-        } else {
-            console.log("could not authorize member");
-            return false;
-        }
-    } catch (error) {
-        console.error("Error authorizing member:", error);
-        return false;
-    } finally {
-        await ledgerSpaceSession.close();
+    if (record.get("memberIDtoAuthorize")) {
+      console.log(
+        `member ${record.get("memberIDtoAuthorize")} authorized to transact for ${record.get("companyID")}`,
+      );
+      return {
+        companyID: record.get("companyID"),
+        memberIDtoAuthorize: record.get("memberIDtoAuthorize"),
+      };
+    } else {
+      console.log("could not authorize member");
+      return false;
     }
+  } catch (error) {
+    console.error("Error authorizing member:", error);
+    return false;
+  } finally {
+    await ledgerSpaceSession.close();
+  }
 }

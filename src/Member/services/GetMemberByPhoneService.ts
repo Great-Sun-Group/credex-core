@@ -11,25 +11,29 @@ returns null if member can't be found
 
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 
-export async function GetMemberByPhoneService(phone: number): Promise<any | null> {
-    const ledgerSpaceSession = ledgerSpaceDriver.session();
+export async function GetMemberByPhoneService(
+  phone: number,
+): Promise<any | null> {
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
 
-    try {
-        const result = await ledgerSpaceSession.run(`
+  try {
+    const result = await ledgerSpaceSession.run(
+      `
             MATCH (member:Member { phone: $phone })
             RETURN member
-        `, { phone });
+        `,
+      { phone },
+    );
 
-        if (!result.records[0].length) {
-            return null;
-        }
-
-        return result.records[0].get("member").properties;
-        
-    } catch (error) {
-        console.error("Error fetching member data:", error);
-        return null;
-    } finally {
-        await ledgerSpaceSession.close();
+    if (!result.records[0].length) {
+      return null;
     }
+
+    return result.records[0].get("member").properties;
+  } catch (error) {
+    console.error("Error fetching member data:", error);
+    return null;
+  } finally {
+    await ledgerSpaceSession.close();
+  }
 }
