@@ -1,10 +1,10 @@
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { OfferCredexService } from "../../Credex/services/OfferCredexService";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
-import { FoundationAuditedCheckService } from "../../Member/services/FoundationAuditedCheckService";
-import { GetSecurableDataService } from "../../Credex/services/GetSecurableDataService";
+import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecuredAuthorizationService";
 import { random } from "lodash";
 import { Credex } from "../../Credex/types/Credex";
+var moment = require("moment-timezone");
 
 async function getRandCounterparties() {
   var ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -39,27 +39,18 @@ export async function CreateTestTransactionsService(
     const InitialAmount = random(100);
     const Denomination = "USD";
 
+    //default is unsecured credex due in one week
+    let secured = false;
+    let dueDate = moment().utc().add(7, "days").format("YYYY-MM-DD");
     //check ability to issue secured credex
-    var securedCredexApproved =
-      await FoundationAuditedCheckService(issuerMemberID);
-    if (!securedCredexApproved) {
-      const securableData = await GetSecurableDataService(
-        issuerMemberID,
-        Denomination,
-      );
-      if (securableData.netSecurableInDenom >= InitialAmount) {
-        securedCredexApproved = true;
-      } else {
-        securedCredexApproved = false;
-      }
-    }
-
-    //if able to issue secured credex, 75% chance credex is secured
-    let secured;
-    if (securedCredexApproved) {
+    var securedAuthorization = await GetSecuredAuthorizationService(
+      issuerMemberID,
+      Denomination
+    );
+    if (securedAuthorization.securableAmountInDenom >= InitialAmount) {
+      //if credex of amount can be secured by member, 75% chance credex is secured
       secured = Math.random() < 0.75;
-    } else {
-      secured = false;
+      dueDate = "";
     }
 
     const credexSpecs: Credex = {
@@ -68,11 +59,12 @@ export async function CreateTestTransactionsService(
       Denomination: Denomination,
       InitialAmount: InitialAmount,
       credexType: "PURCHASE",
-      dueDate: "2024-03-25",
+      dueDate: dueDate,
       securedCredex: secured,
     };
-    const newcredexID = await OfferCredexService(credexSpecs);
-    const acceptingID = await AcceptCredexService(newcredexID);
+    const newcredex = await OfferCredexService(credexSpecs);
+    console.log("ping")
+    const acceptingID = await AcceptCredexService(newcredex.credex.credexID);
     credexesCreated.push(acceptingID);
   }
   console.log(numNewTransactions + " new transactions created");

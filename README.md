@@ -2,7 +2,7 @@
 Credex accounting and transaction management system with WhatsApp chatbot interface.
 
 
-## To run with VS code on your local machine
+## To run in your local dev environment
 ### Prerequisites
 
 Before running this project, make sure you have the following installed:
@@ -67,10 +67,10 @@ Executed automatically via devcontainer.
 
 ## Use Postman for endpoints
 To use the web interface for postman:
-1. Make the forwarded port public in the popup after 'npm run nodemon', or navigate to the Ports tab, right click the port, and set visibility to public.
-2. In the Ports tab, copy the forwarded port address and paste it in the appropriate location in the credex-core variables in Postman
-3. In the codespaces terminal print the Github Token with
+1. In the codespaces terminal print the Github Token with
    ```
    echo $GITHUB_TOKEN
    ```
-   Copy the token and paste it the appropriate location in the credex-core variables in Postman
+   Copy the token and paste it the appropriate location in the credex-core variables in Postman.
+2. Make the forwarded port public in the popup after 'npm run nodemon', or navigate to the Ports tab, right click the port, and set visibility to public.
+3. In the Ports tab, copy the forwarded port address and paste it in the appropriate location in the credex-core variables in Postman
