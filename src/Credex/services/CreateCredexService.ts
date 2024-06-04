@@ -1,193 +1,201 @@
+/*
+Creates a credex
+
+required inputs:
+  issuerMemberID,
+  receiverMemberID,
+  InitialAmount,
+  Denomination,
+  credexType,
+  OFFERSorREQUESTS
+
+optional/conditional inputs:
+  securedCredex,
+  dueDate,
+either a credex needs to be securedCredex = true or it needs
+a due date within the credspan declared in Core/constants/credspan
+
+on success returns:
+ credex: object with all fields on the credex
+ message: "Credex created"
+
+if conditions above are not met, or if secured credex attempted but not authorized, returns:
+  credex: false
+  message: error message depending on which condition not met
+*/
+
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { getDenominations } from "../../Core/constants/denominations";
-import { FoundationAuditedCheckService } from "../../Member/services/FoundationAuditedCheckService";
-import { GetSecurableDataService } from "./GetSecurableDataService";
+import { GetSecuredAuthorizationService } from "./GetSecuredAuthorizationService";
 import { Credex } from "../types/Credex";
+import { checkDueDate, credspan } from "../../Core/constants/credspan";
+import { checkPermittedCredexType } from "../../Core/constants/credexTypes";
+import { denomFormatter } from "../../Core/constants/denominations";
 
 export async function CreateCredexService(credexData: Credex) {
+  // Destructure input data
+  const {
+    issuerMemberID,
+    receiverMemberID,
+    InitialAmount,
+    Denomination,
+    credexType,
+    OFFERSorREQUESTS,
+    securedCredex,
+    dueDate,
+  } = credexData;
+
+  // Check for required data
   if (
-    credexData.issuerMemberID &&
-    credexData.receiverMemberID &&
-    credexData.Denomination &&
-    credexData.InitialAmount &&
-    credexData.credexType &&
-    credexData.OFFERSorREQUESTS
-    /* these don't work because null and empty values have to be passed through sometimes
-        credexData.dueDate && //need to check if permitted
-        credexData.securedCredex
-        */
+    !issuerMemberID ||
+    !receiverMemberID ||
+    !InitialAmount ||
+    !Denomination ||
+    !credexType ||
+    !OFFERSorREQUESTS
   ) {
-    var securedCredexApproved = false;
-    var securableData = {
-      securingMemberID: "",
-      netSecurableInDenom: 0,
+    return {
+      credex: false,
+      message: "Error: data missing, could not create credex",
     };
-    var newCredexID = null;
+  }
 
-    //if issuer wants to pay with a secured credex
-    if (credexData.securedCredex) {
-      console.log("check for secured credex authorization");
-      //check if issuer is CREDEX_FOUNDATION_AUDITED
-      securedCredexApproved = await FoundationAuditedCheckService(
-        credexData.issuerMemberID,
-      );
-      securableData.securingMemberID = credexData.issuerMemberID;
-      console.log("Credex Foundation audited: " + securedCredexApproved);
+  // Check that the denomination code is valid
+  if (!getDenominations({ code: Denomination }).length) {
+    return {
+      credex: false,
+      message: "Error: denomination not permitted",
+    };
+  }
 
-      //if issuer not foundationAudited, verify that the required
-      //secured balance is available for the transaction
-      if (!securedCredexApproved) {
-        console.log("not Credex Foundation audited, checking secured balance");
+  //check that credex type is valid
+  if (!checkPermittedCredexType(credexType)) {
+    return {
+      credex: false,
+      message: "Error: credex type not permitted",
+    };
+  }
 
-        securableData = await GetSecurableDataService(
-          credexData.issuerMemberID,
-          credexData.Denomination,
-        );
-
-        //if securable amount is greater than amount of credex
-        if (securableData.netSecurableInDenom >= credexData.InitialAmount) {
-          console.log(
-            "securableData.netSecurableInDenom: " +
-              securableData.netSecurableInDenom,
-          );
-          securedCredexApproved = true;
-          console.log("Secured balance available");
-        } else {
-          securedCredexApproved = false;
-          console.log("Secured balance not available");
-        }
-      }
-    }
-
-    //create credex if unsecured
-    //or if the secured amount has been approved
-    if (!credexData.securedCredex || securedCredexApproved) {
-      const ledgerSpaceSession = ledgerSpaceDriver.session();
-      const createCredexQuery = await ledgerSpaceSession.run(
-        `
-                MATCH (daynode:DayNode{Active:true})
-                CREATE (newCredex:Credex)
-                SET
-                    newCredex.credexID = randomUUID(),
-                    newCredex.Denomination = $Denomination,
-                    newCredex.CXXmultiplier = daynode[$Denomination],
-                    newCredex.InitialAmount = $Amount*daynode[$Denomination],
-                    newCredex.OutstandingAmount = $Amount*daynode[$Denomination],
-                    newCredex.RedeemedAmount = 0,
-                    newCredex.DefaultedAmount = 0,
-                    newCredex.WrittenOffAmount = 0,
-                    newCredex.credexType = $credexType,
-                    newCredex.dueDate = $dueDate,
-                    newCredex.createdAt = DateTime(),
-                    newCredex.queueStatus = "PENDING_CREDEX"
-                MERGE (newCredex)-[:CREATED_ON]->(daynode)
-                RETURN newCredex.credexID AS credexID
-            `,
-        {
-          Denomination: credexData.Denomination,
-          Amount: credexData.InitialAmount,
-          credexType: credexData.credexType,
-          dueDate: credexData.dueDate,
-        },
-      );
-      newCredexID = createCredexQuery.records[0].get("credexID");
-
-      //add transaction relationships
-      if (credexData.OFFERSorREQUESTS == "OFFERS") {
-        const createOfferRelsQuery = await ledgerSpaceSession.run(
-          `
-                MATCH (issuer:Member{memberID:$issuerMemberID})
-                MATCH (receiver:Member{memberID:$receiverMemberID})
-                MATCH (newCredex:Credex{credexID:$credexID})
-                MERGE
-                    (issuer)-[:OFFERS]->
-                    (newCredex)-[:OFFERS]->
-                    (receiver)
-                MERGE
-                    (issuer)-[:OFFERED]->
-                    (newCredex)-[:OFFERED]->
-                    (receiver)
-            `,
-          {
-            issuerMemberID: credexData.issuerMemberID,
-            receiverMemberID: credexData.receiverMemberID,
-            credexID: newCredexID,
-          },
-        );
-      } else if (credexData.OFFERSorREQUESTS == "REQUESTS") {
-        const createRequestRelsQuery = await ledgerSpaceSession.run(
-          `
-                    MATCH (issuer:Member{memberID:$issuerMemberID})
-                    MATCH (receiver:Member{memberID:$receiverMemberID})
-                    MATCH (newCredex:Credex{credexID:$credexID})
-                    MERGE
-                        (issuer)-[:REQUESTS]->
-                        (newCredex)-[:REQUESTS]->
-                        (receiver)
-                    MERGE
-                        (issuer)-[:REQUESTED]->
-                        (newCredex)-[:REQUESTED]->
-                        (receiver)
-                `,
-          {
-            issuerMemberID: credexData.issuerMemberID,
-            receiverMemberID: credexData.receiverMemberID,
-            credexID: newCredexID,
-          },
-        );
-      }
-
-      //add secured relationships if appropriate
-      if (securedCredexApproved) {
-        const createSecuredRelsQuery = await ledgerSpaceSession.run(
-          `
-                    MATCH (newCredex:Credex{credexID:$credexID})
-                    MATCH (securingMember:Member{memberID:$securingMemberID})
-                    MERGE (securingMember)-[:SECURES]->(newCredex)
-                `,
-          {
-            credexID: newCredexID,
-            securingMemberID: securableData.securingMemberID,
-          },
-        );
-      }
-      await ledgerSpaceSession.close();
-    } else if (credexData.securedCredex && !securedCredexApproved) {
-      if (securableData.netSecurableInDenom > 0) {
-        console.log(
-          "Sorry, the maximum securable " +
-            credexData.Denomination +
-            " credex you can issue is " +
-            securableData.netSecurableInDenom +
-            " " +
-            credexData.Denomination +
-            ", secured by " +
-            securableData.securingMemberID,
-        );
-        return (
-          "Sorry, the maximum securable " +
-          credexData.Denomination +
-          " credex you can issue is " +
-          securableData.netSecurableInDenom +
-          " " +
-          credexData.Denomination +
-          ", secured by " +
-          securableData.securingMemberID
-        );
-      } else {
-        console.log(
-          "Sorry, you don't have a securable balance in " +
-            credexData.Denomination,
-        );
-        return (
-          "Sorry, you don't have a securable balance in " +
-          credexData.Denomination
-        );
-      }
-    }
-    console.log("credex created: " + newCredexID);
-    return newCredexID;
+  //check that offers/requests is valid and set OFFEREDorREQUESTED accordingly
+  var OFFEREDorREQUESTED = "";
+  if (OFFERSorREQUESTS == "OFFERS") {
+    OFFEREDorREQUESTED = "OFFERED";
+  } else if (OFFERSorREQUESTS == "REQUESTS") {
+    OFFEREDorREQUESTED = "REQUESTED";
   } else {
-    return false;
+    return {
+      credex: false,
+      message: "Error: invalid OFFER/REQUEST",
+    };
+  }
+
+  // Check that a secured credex isn't being created with a due date
+  if (securedCredex && dueDate) {
+    return {
+      credex: false,
+      message: "Error: secured credex can't have a due date",
+    };
+  }
+
+  // For unsecured credex, check that due date exists and is within permitted credspan
+  if (!securedCredex && !dueDate) {
+    return {
+      credex: false,
+      message: "Error: unsecured credex requires a due date",
+    };
+  } else if (!securedCredex && !checkDueDate(dueDate)) {
+    return {
+      credex: false,
+      message: `Error: due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan/7} weeks from today.`,
+    };
+  }
+
+  // For secured credex, get securingMemberID if authorized
+  let secureableData = { securerID: "", securableAmountInDenom: 0 };
+  if (securedCredex) {
+    secureableData = await GetSecuredAuthorizationService(
+      issuerMemberID,
+      Denomination
+    );
+    if (secureableData.securableAmountInDenom < InitialAmount) {
+      return {
+        credex: false,
+        message: "Error: Your secured credex for " + denomFormatter(
+          InitialAmount,
+          Denomination
+        ) + " " + Denomination + " cannot be issued because your maximum securable " +
+        Denomination + " balance is " +
+        denomFormatter(
+            secureableData.securableAmountInDenom,
+            Denomination
+          ) + " " + Denomination,
+      };
+    }
+  }
+
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
+  try {
+    // Create the credex
+    const createCredexQuery = await ledgerSpaceSession.run(
+      `
+        MATCH (daynode:DayNode {Active: true})
+        MATCH (issuer:Member {memberID: $issuerMemberID})
+        MATCH (receiver:Member {memberID: $receiverMemberID})
+        CREATE (newCredex:Credex)
+        SET
+          newCredex.credexID = randomUUID(),
+          newCredex.Denomination = $Denomination,
+          newCredex.CXXmultiplier = daynode[$Denomination],
+          newCredex.InitialAmount = $InitialAmount * daynode[$Denomination],
+          newCredex.OutstandingAmount = $InitialAmount * daynode[$Denomination],
+          newCredex.RedeemedAmount = 0,
+          newCredex.DefaultedAmount = 0,
+          newCredex.WrittenOffAmount = 0,
+          newCredex.credexType = $credexType,
+          newCredex.dueDate = $dueDate,
+          newCredex.createdAt = datetime(),
+          newCredex.queueStatus = "PENDING_CREDEX"
+        MERGE (newCredex)-[:CREATED_ON]->(daynode)
+        MERGE (issuer)-[:${OFFERSorREQUESTS}]->(newCredex)-[:${OFFERSorREQUESTS}]->(receiver)
+        MERGE (issuer)-[:${OFFEREDorREQUESTED}]->(newCredex)-[:${OFFEREDorREQUESTED}]->(receiver)
+        RETURN newCredex AS newCredex
+      `,
+      {
+        issuerMemberID,
+        receiverMemberID,
+        InitialAmount,
+        Denomination,
+        credexType,
+        dueDate,
+      }
+    );
+
+    const newCredex = createCredexQuery.records[0].get("newCredex").properties;
+
+    // Add secured relationships to secured credex
+    if (securedCredex && secureableData.securerID) {
+      await ledgerSpaceSession.run(
+        `
+          MATCH (newCredex:Credex {credexID: $newCredexID})
+          MATCH (securingMember: Member {memberID: $securingMemberID})
+          MERGE (securingMember)-[:SECURES]->(newCredex)
+        `,
+        {
+          newCredexID: newCredex.credexID,
+          securingMemberID: secureableData.securerID,
+        }
+      );
+    }
+    return {
+      credex: newCredex,
+      message: "Credex created: " + newCredex.credexID,
+    };
+  } catch (error) {
+    return {
+      credex: false,
+      message: "Error creating credex: " + error,
+    };
+  } finally {
+    await ledgerSpaceSession.close();
   }
 }

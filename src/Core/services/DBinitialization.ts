@@ -143,6 +143,6 @@ export async function DBinitialization() {
     securedCredex: true,
   };
   const DCOinitializationOfferCredex = await OfferCredexService(credexData);
-  await AcceptCredexService(DCOinitializationOfferCredex);
+  await AcceptCredexService(DCOinitializationOfferCredex.credex.credexID);
   await ledgerSpaceSession.close();
 }

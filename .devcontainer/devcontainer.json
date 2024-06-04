@@ -6,7 +6,10 @@
   "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
   "customizations": {
     "vscode": {
-      "extensions": ["esbenp.prettier-vscode"]
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "Postman.postman-for-vscode"
+      ]
     }
   },
   // Features to add to the dev container. More info: https://containers.dev/features.

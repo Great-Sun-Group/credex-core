@@ -22,7 +22,7 @@ export async function OfferAndAcceptCredexController(
   }
   try {
     const responseDataOffer = await OfferCredexService(req.body);
-    const responseDataAccept = await AcceptCredexService(responseDataOffer);
+    const responseDataAccept = await AcceptCredexService(responseDataOffer.credex.credexID);
     res.json(responseDataAccept);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });

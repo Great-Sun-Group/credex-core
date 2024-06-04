@@ -3,7 +3,7 @@ var moment = require("moment-timezone");
 const _ = require("lodash");
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
 import { getDenominations } from "../constants/denominations";
-import { GetSecurableDataService } from "../../Credex/services/GetSecurableDataService";
+import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecuredAuthorizationService";
 import { OfferCredexService } from "../../Credex/services/OfferCredexService";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
 import { Credex } from "../../Credex/types/Credex";
@@ -98,13 +98,13 @@ export async function DCOexecute() {
   var DCOinXAU = 0;
   var numberConfirmedParticiants = 0;
   for (const declaredParticipant of declaredParticipants) {
-    var securableData = await GetSecurableDataService(
+    var securableData = await GetSecuredAuthorizationService(
       declaredParticipant.get("memberID"),
-      declaredParticipant.get("DailyCoinOfferingDenom"),
+      declaredParticipant.get("DailyCoinOfferingDenom")
     );
     if (
       declaredParticipant.get("DailyCoinOfferingGive") <=
-      securableData.netSecurableInDenom
+      securableData.securableAmountInDenom
     ) {
       confirmedParticipants.push(declaredParticipant);
       DCOinCXX = DCOinCXX + declaredParticipant.get("DailyCoinOfferingGive");
@@ -173,7 +173,7 @@ export async function DCOexecute() {
       securedCredex: true,
     };
     const DCOgiveCredex = await OfferCredexService(dataForDCOgive);
-    await AcceptCredexService(DCOgiveCredex);
+    await AcceptCredexService(DCOgiveCredex.credex.credexID);
   }
 
   console.log("new daynode initialized, DCOgive created");
@@ -283,7 +283,7 @@ export async function DCOexecute() {
       securedCredex: true,
     };
     const DCOreceiveCredex = await OfferCredexService(dataForDCOreceive);
-    await AcceptCredexService(DCOreceiveCredex);
+    await AcceptCredexService(DCOreceiveCredex.credex.credexID);
   }
   console.log("DCOreceive transactions created");
 
