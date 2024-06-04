@@ -1,17 +1,16 @@
-# Project Name
+# Credex Ecosystem Core
+Credex accounting and transaction management system with WhatsApp chatbot interface.
 
-## Description
 
-This project is a typescript redo of credex.
-
-## Prerequisites
+## To run in your local dev environment
+### Prerequisites
 
 Before running this project, make sure you have the following installed:
 
 - Node.js (version 18.X.X or higher)
 - npm (version X.X.X or higher)
 
-## Installation
+### Installation
 
 1. Clone the repository:
 
@@ -32,7 +31,7 @@ Before running this project, make sure you have the following installed:
    npm install
    ```
 
-## Running the Project
+### Running the Project
 
 To run the project using nodemon, follow these steps:
 
@@ -55,3 +54,16 @@ To run the project using nodemon, follow these steps:
    This command will start the project using nodemon, which will automatically restart the server whenever changes are made to the code.
 
 4. Open postman and visit `http://localhost:5000` to access the project endpoints.
+
+## To run with a Codespaces virtual machine
+### Prerequisites and installation
+Executed automatically via devcontainer.
+
+### Start the development server
+   ```bash
+   npm run nodemon
+   ```
+   This command will start the project using nodemon, which will automatically restart the server whenever changes are made to the code.
+
+### Use Postman for endpoints
+Click the icon for the Postman extension in the sidebar, sign in, and hit endpoints with the templates provided.
