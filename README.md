@@ -65,12 +65,5 @@ Executed automatically via devcontainer.
    ```
    This command will start the project using nodemon, which will automatically restart the server whenever changes are made to the code.
 
-## Use Postman for endpoints
-To use the web interface for postman:
-1. In the codespaces terminal print the Github Token with
-   ```
-   echo $GITHUB_TOKEN
-   ```
-   Copy the token and paste it the appropriate location in the credex-core variables in Postman.
-2. Make the forwarded port public in the popup after 'npm run nodemon', or navigate to the Ports tab, right click the port, and set visibility to public.
-3. In the Ports tab, copy the forwarded port address and paste it in the appropriate location in the credex-core variables in Postman
+### Use Postman for endpoints
+Click the icon for the Postman extension in the sidebar, sign in, and hit endpoints with the templates provided.
