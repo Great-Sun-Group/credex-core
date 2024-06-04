@@ -15,10 +15,4 @@ export const ledgerSpaceDriver = neo4j.driver(
   },
 );
 
-export const searchSpaceDriver = neo4j.driver(
-  searchSpace_url,
-  neo4j.auth.basic(searchSpace_user, searchSpace_password),
-  {
-    encrypted: true,
-  },
-);
+export const session = driverLedgerSpace.session()

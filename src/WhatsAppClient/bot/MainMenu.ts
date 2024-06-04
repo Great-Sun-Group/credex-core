@@ -29,7 +29,7 @@ export function SendMainMenu(receipent: string) {
               {
                 id: "notifications",
                 title: "View Notifications",
-                description: "Review items that need your attention",
+                description: "",
               },
             ],
           },
@@ -39,27 +39,37 @@ export function SendMainMenu(receipent: string) {
               {
                 id: "transactions",
                 title: "View Transactions",
-                description: "View your transaction history",
+                description: "",
               },
             ],
           },
           {
-            title: "3. Switch Account",
+            title: "3. Offer Credex",
+            rows: [
+              {
+                id: "offer_credex",
+                title: "Offer a Credex",
+                description: "",
+              },
+            ],
+          },
+          {
+            title: "4. Switch Account",
             rows: [
               {
                 id: "switch_account",
                 title: "Switch Account",
-                description: "Switch to Businessname account (if registered)",
+                description: "",
               },
             ],
           },
           {
-            title: "4. Settings",
+            title: "5. Settings",
             rows: [
               {
                 id: "manage_settings_and_accounts",
                 title: "Manage Settings",
-                description: "Manage settings and accounts",
+                description: "",
               },
             ],
           },
