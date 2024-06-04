@@ -29,6 +29,7 @@ import { getDenominations } from "../../Core/constants/denominations";
 import { GetSecuredAuthorizationService } from "./GetSecuredAuthorizationService";
 import { Credex } from "../types/Credex";
 import { checkDueDate, credspan } from "../../Core/constants/credspan";
+import { checkPermittedCredexType } from "../../Core/constants/credexTypes";
 import { denomFormatter } from "../../Core/constants/denominations";
 
 export async function CreateCredexService(credexData: Credex) {
@@ -55,7 +56,7 @@ export async function CreateCredexService(credexData: Credex) {
   ) {
     return {
       credex: false,
-      message: "Data missing, could not create credex",
+      message: "Error: data missing, could not create credex",
     };
   }
 
@@ -63,7 +64,28 @@ export async function CreateCredexService(credexData: Credex) {
   if (!getDenominations({ code: Denomination }).length) {
     return {
       credex: false,
-      message: "Denomination not permitted",
+      message: "Error: denomination not permitted",
+    };
+  }
+
+  //check that credex type is valid
+  if (!checkPermittedCredexType(credexType)) {
+    return {
+      credex: false,
+      message: "Error: credex type not permitted",
+    };
+  }
+
+  //check that offers/requests is valid and set OFFEREDorREQUESTED accordingly
+  var OFFEREDorREQUESTED = "";
+  if (OFFERSorREQUESTS == "OFFERS") {
+    OFFEREDorREQUESTED = "OFFERED";
+  } else if (OFFERSorREQUESTS == "REQUESTS") {
+    OFFEREDorREQUESTED = "REQUESTED";
+  } else {
+    return {
+      credex: false,
+      message: "Error: invalid OFFER/REQUEST",
     };
   }
 
@@ -71,15 +93,20 @@ export async function CreateCredexService(credexData: Credex) {
   if (securedCredex && dueDate) {
     return {
       credex: false,
-      message: "Secured credex can't have a due date",
+      message: "Error: secured credex can't have a due date",
     };
   }
 
-  // For unsecured credex, check that due date is within permitted credspan
-  if (!securedCredex && dueDate && !checkDueDate(dueDate)) {
+  // For unsecured credex, check that due date exists and is within permitted credspan
+  if (!securedCredex && !dueDate) {
     return {
       credex: false,
-      message: `Due date must be within ${credspan} days of when credex is issued`,
+      message: "Error: unsecured credex requires a due date",
+    };
+  } else if (!securedCredex && !checkDueDate(dueDate)) {
+    return {
+      credex: false,
+      message: `Error: due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan/7} weeks from today.`,
     };
   }
 
@@ -93,16 +120,18 @@ export async function CreateCredexService(credexData: Credex) {
     if (secureableData.securableAmountInDenom < InitialAmount) {
       return {
         credex: false,
-        message: `Secured credex for ${InitialAmount} ${Denomination} cannot be issued
-          because your maximum securable ${Denomination} balance is
-          ${denomFormatter(secureableData.securableAmountInDenom, Denomination)}`,
+        message: "Error: Your secured credex for " + denomFormatter(
+          InitialAmount,
+          Denomination
+        ) + " " + Denomination + " cannot be issued because your maximum securable " +
+        Denomination + " balance is " +
+        denomFormatter(
+            secureableData.securableAmountInDenom,
+            Denomination
+          ) + " " + Denomination,
       };
     }
   }
-
-  // Determine OFFEREDorREQUESTED based on OFFERSorREQUESTS
-  const OFFEREDorREQUESTED =
-    OFFERSorREQUESTS === "OFFERS" ? "OFFERED" : "REQUESTED";
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
@@ -157,11 +186,9 @@ export async function CreateCredexService(credexData: Credex) {
         }
       );
     }
-
-    console.log(`credex created: ${newCredex.credexID}`);
     return {
       credex: newCredex,
-      message: "Credex created",
+      message: "Credex created: " + newCredex.credexID,
     };
   } catch (error) {
     return {

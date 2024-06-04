@@ -2,18 +2,22 @@ import moment from "moment-timezone";
 
 export const credspan = 35;
 
-export function checkDueDate(dueDate: string): boolean {
-  const dueDateMoment = moment.utc(dueDate).format("YYYY-MM-DD");
-  const lastPermittedDay = moment
-    .utc()
-    .add(credspan, "days")
-    .format("YYYY-MM-DD");
+export function checkDueDate(dueDate: any): boolean {
 
-  if (dueDateMoment >= lastPermittedDay) {
-    console.error("Due date is beyond permitted credspan");
+  const dueDateMoment = moment.utc(dueDate, "YYYY-MM-DD", true);
+  const lastPermittedDayMoment = moment.utc().add(credspan, "days");
+  const firstPermittedDayMoment = moment.utc().add(6, "days");
+
+  if (!dueDateMoment.isValid()) {
+    console.error("Due date not in valid format");
     return false;
-  } else {
-    console.log("Due date is within permitted credspan");
-    return true;
   }
+  if (
+    dueDateMoment > lastPermittedDayMoment ||
+    dueDateMoment < firstPermittedDayMoment
+  ) {
+    console.error("Due date is not within permitted credspan");
+    return false;
+  }
+  return true;
 }
