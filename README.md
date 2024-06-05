@@ -66,4 +66,12 @@ Executed automatically via devcontainer.
    This command will start the project using nodemon, which will automatically restart the server whenever changes are made to the code.
 
 ### Use Postman for endpoints
-Click the icon for the Postman extension in the sidebar, sign in, and hit endpoints with the templates provided.
+1. Click the icon for the Postman extension in the sidebar and sign in. You may need to use the authorization token provided by Postman. Open the Credex Team Workspace.
+
+2. In the codespaces terminal, print the Github Token with
+```
+echo $GITHUB_TOKEN
+```
+Copy the token and paste it the appropriate location in the credex-core variables in Postman.
+
+3. After `npm run nodemon`, copy the forwarded port address from the Ports tab and paste it in the appropriate location in the credex-core variables in Postman.
