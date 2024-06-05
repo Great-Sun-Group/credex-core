@@ -42,7 +42,7 @@ export async function CreateCredexService(credexData: Credex) {
     credexType,
     OFFERSorREQUESTS,
     securedCredex,
-    dueDate,
+    dueDate = "",
   } = credexData;
 
   // Check for required data
@@ -52,11 +52,13 @@ export async function CreateCredexService(credexData: Credex) {
     !InitialAmount ||
     !Denomination ||
     !credexType ||
-    !OFFERSorREQUESTS
+    !OFFERSorREQUESTS ||
+    (securedCredex && dueDate) ||
+    (!securedCredex && !dueDate)
   ) {
     return {
       credex: false,
-      message: "Error: data missing, could not create credex",
+      message: "Error: data missing or mismatch, could not create credex",
     };
   }
 
@@ -89,21 +91,8 @@ export async function CreateCredexService(credexData: Credex) {
     };
   }
 
-  // Check that a secured credex isn't being created with a due date
-  if (securedCredex && dueDate) {
-    return {
-      credex: false,
-      message: "Error: secured credex can't have a due date",
-    };
-  }
-
-  // For unsecured credex, check that due date exists and is within permitted credspan
-  if (!securedCredex && !dueDate) {
-    return {
-      credex: false,
-      message: "Error: unsecured credex requires a due date",
-    };
-  } else if (!securedCredex && !checkDueDate(dueDate)) {
+  // For unsecured credex, check that due date is within permitted credspan
+  if (!securedCredex && !checkDueDate(dueDate)) {
     return {
       credex: false,
       message: `Error: due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan/7} weeks from today.`,
