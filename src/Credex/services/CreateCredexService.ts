@@ -56,6 +56,7 @@ export async function CreateCredexService(credexData: Credex) {
     (securedCredex && dueDate) ||
     (!securedCredex && !dueDate)
   ) {
+    console.log(credexData)
     return {
       credex: false,
       message: "Error: data missing or mismatch, could not create credex",

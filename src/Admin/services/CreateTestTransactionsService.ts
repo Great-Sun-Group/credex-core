@@ -27,7 +27,7 @@ async function getRandCounterparties() {
 }
 
 export async function CreateTestTransactionsService(
-  numNewTransactions: number,
+  numNewTransactions: number
 ) {
   let credexesCreated = [];
 
@@ -36,7 +36,7 @@ export async function CreateTestTransactionsService(
     const counterparties = await getRandCounterparties();
     const issuerMemberID = counterparties.memberID_1;
     const receiverMemberID = counterparties.memberID_2;
-    const InitialAmount = random(100);
+    const InitialAmount = random(1, 100);
     const Denomination = "USD";
 
     //default is unsecured credex due in one week
@@ -50,7 +50,9 @@ export async function CreateTestTransactionsService(
     if (securedAuthorization.securableAmountInDenom >= InitialAmount) {
       //if credex of amount can be secured by member, 75% chance credex is secured
       secured = Math.random() < 0.75;
-      dueDate = "";
+      if (secured) {
+        dueDate = "";
+      }
     }
 
     const credexSpecs: Credex = {
@@ -63,8 +65,19 @@ export async function CreateTestTransactionsService(
       securedCredex: secured,
     };
     const newcredex = await OfferCredexService(credexSpecs);
-    const acceptingID = await AcceptCredexService(newcredex.credex.credexID);
-    credexesCreated.push(acceptingID);
+    if (newcredex.credex) {
+      const acceptingID = await AcceptCredexService(newcredex.credex.credexID);
+
+      const credexCreatedData = {
+        credexID: acceptingID,
+        amount: credexSpecs.InitialAmount,
+        denomination: credexSpecs.Denomination,
+        secured: secured,
+      };
+      credexesCreated.push(credexCreatedData);
+    } else {
+      return newcredex.message;
+    }
   }
   console.log(numNewTransactions + " new transactions created");
   return credexesCreated;
