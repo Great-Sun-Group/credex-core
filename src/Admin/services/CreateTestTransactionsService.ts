@@ -63,7 +63,6 @@ export async function CreateTestTransactionsService(
       securedCredex: secured,
     };
     const newcredex = await OfferCredexService(credexSpecs);
-    console.log("ping")
     const acceptingID = await AcceptCredexService(newcredex.credex.credexID);
     credexesCreated.push(acceptingID);
   }
