@@ -2,9 +2,9 @@ import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { OfferCredexService } from "../../Credex/services/OfferCredexService";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
 import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecuredAuthorizationService";
-import { random } from "lodash";
 import { Credex } from "../../Credex/types/Credex";
-var moment = require("moment-timezone");
+import { random } from "lodash";
+import moment from "moment-timezone";
 
 async function getRandCounterparties() {
   var ledgerSpaceSession = ledgerSpaceDriver.session();
