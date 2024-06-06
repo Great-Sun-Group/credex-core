@@ -6,10 +6,7 @@
   "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
   "customizations": {
     "vscode": {
-      "extensions": [
-        "esbenp.prettier-vscode",
-        "Postman.postman-for-vscode"
-      ]
+      "extensions": ["esbenp.prettier-vscode", "Postman.postman-for-vscode"]
     }
   },
   // Features to add to the dev container. More info: https://containers.dev/features.
@@ -23,7 +20,11 @@
   // "forwardPorts": [],
 
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "npm install -g nodemon"
+  "postCreateCommand": [
+    "/bin/sh",
+    "-c",
+    "npm install && npm install -g nodemon"
+  ]
 
   // Configure tool-specific properties.
   // "customizations": {},
