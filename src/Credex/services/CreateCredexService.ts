@@ -25,15 +25,16 @@ if conditions above are not met, or if secured credex attempted but not authoriz
 */
 
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
-import { getDenominations } from "../../Core/constants/denominations";
+import {
+  getDenominations,
+  denomFormatter,
+} from "../../Core/constants/denominations";
 import { GetSecuredAuthorizationService } from "./GetSecuredAuthorizationService";
 import { Credex } from "../types/Credex";
 import { checkDueDate, credspan } from "../../Core/constants/credspan";
 import { checkPermittedCredexType } from "../../Core/constants/credexTypes";
-import { denomFormatter } from "../../Core/constants/denominations";
 
 export async function CreateCredexService(credexData: Credex) {
-  // Destructure input data
   const {
     issuerMemberID,
     receiverMemberID,
@@ -41,11 +42,11 @@ export async function CreateCredexService(credexData: Credex) {
     Denomination,
     credexType,
     OFFERSorREQUESTS,
-    securedCredex,
+    securedCredex = false,
     dueDate = "",
   } = credexData;
 
-  // Check for required data
+  // Validate input data
   if (
     !issuerMemberID ||
     !receiverMemberID ||
@@ -56,51 +57,63 @@ export async function CreateCredexService(credexData: Credex) {
     (securedCredex && dueDate) ||
     (!securedCredex && !dueDate)
   ) {
-    console.log(credexData)
+    let failMessage = "Data missing or mismatch, could not create credex.";
+    if (!issuerMemberID) failMessage += " issuerMemberID required";
+    if (!receiverMemberID) failMessage += " receiverMemberID required";
+    if (!InitialAmount) failMessage += " InitialAmount required";
+    if (!Denomination) failMessage += " Denomination required";
+    if (!credexType) failMessage += " credexType required";
+    if (!OFFERSorREQUESTS) failMessage += " OFFERSorREQUESTS required";
+    if (securedCredex && dueDate)
+      failMessage += " Secured credex cannot have a due date";
+    if (!securedCredex && !dueDate)
+      failMessage += " Unsecured credex must have a due date";
+    console.log(credexData);
+    return { credex: false, message: failMessage };
+  }
+
+  // make sure InitialAmount is a number
+  if (typeof InitialAmount != "number") {
     return {
       credex: false,
-      message: "Error: data missing or mismatch, could not create credex",
+      message: "Error: InitialAmount must be a number",
     };
   }
 
-  // Check that the denomination code is valid
+  // Check denomination validity
   if (!getDenominations({ code: Denomination }).length) {
     return {
       credex: false,
-      message: "Error: denomination not permitted",
+      message: "Error: denomination not permitted"
     };
   }
 
-  //check that credex type is valid
+  // Check credex type validity
   if (!checkPermittedCredexType(credexType)) {
-    return {
-      credex: false,
-      message: "Error: credex type not permitted",
-    };
+    return { credex: false, message: "Error: credex type not permitted" };
   }
 
-  //check that offers/requests is valid and set OFFEREDorREQUESTED accordingly
-  var OFFEREDorREQUESTED = "";
-  if (OFFERSorREQUESTS == "OFFERS") {
+  // Validate OFFERSorREQUESTS and set OFFEREDorREQUESTED accordingly
+  let OFFEREDorREQUESTED = "";
+  if (OFFERSorREQUESTS === "OFFERS") {
     OFFEREDorREQUESTED = "OFFERED";
-  } else if (OFFERSorREQUESTS == "REQUESTS") {
+  } else if (OFFERSorREQUESTS === "REQUESTS") {
     OFFEREDorREQUESTED = "REQUESTED";
   } else {
-    return {
-      credex: false,
-      message: "Error: invalid OFFER/REQUEST",
-    };
+    return { credex: false, message: "Error: invalid OFFER/REQUEST" };
   }
 
-  // For unsecured credex, check that due date is within permitted credspan
+  // Check due date for unsecured credex
   if (!securedCredex && !checkDueDate(dueDate)) {
     return {
       credex: false,
-      message: `Error: due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan/7} weeks from today.`,
+      message: `Error: due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${
+        credspan / 7
+      } weeks from today.`,
     };
   }
 
-  // For secured credex, get securingMemberID if authorized
+  // Get securable data for secured credex
   let secureableData = { securerID: "", securableAmountInDenom: 0 };
   if (securedCredex) {
     secureableData = await GetSecuredAuthorizationService(
@@ -110,15 +123,13 @@ export async function CreateCredexService(credexData: Credex) {
     if (secureableData.securableAmountInDenom < InitialAmount) {
       return {
         credex: false,
-        message: "Error: Your secured credex for " + denomFormatter(
+        message: `Error: Your secured credex for ${denomFormatter(
           InitialAmount,
           Denomination
-        ) + " " + Denomination + " cannot be issued because your maximum securable " +
-        Denomination + " balance is " +
-        denomFormatter(
-            secureableData.securableAmountInDenom,
-            Denomination
-          ) + " " + Denomination,
+        )} ${Denomination} cannot be issued because your maximum securable ${Denomination} balance is ${denomFormatter(
+          secureableData.securableAmountInDenom,
+          Denomination
+        )} ${Denomination}`,
       };
     }
   }
@@ -162,7 +173,7 @@ export async function CreateCredexService(credexData: Credex) {
 
     const newCredex = createCredexQuery.records[0].get("newCredex").properties;
 
-    // Add secured relationships to secured credex
+    // Add secured relationships for secured credex
     if (securedCredex && secureableData.securerID) {
       await ledgerSpaceSession.run(
         `
@@ -181,10 +192,7 @@ export async function CreateCredexService(credexData: Credex) {
       message: "Credex created: " + newCredex.credexID,
     };
   } catch (error) {
-    return {
-      credex: false,
-      message: "Error creating credex: " + error,
-    };
+    return { credex: false, message: "Error creating credex: " + error };
   } finally {
     await ledgerSpaceSession.close();
   }
