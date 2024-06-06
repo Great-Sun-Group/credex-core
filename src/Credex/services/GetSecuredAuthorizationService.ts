@@ -34,30 +34,20 @@ export async function GetSecuredAuthorizationService(
   // If issuer is not CREDEX_FOUNDATION_AUDITED, verify the available secured balance in denom
   const getSecurableDataQuery = await ledgerSpaceSession.run(
     `
-      OPTIONAL MATCH
-        (member:Member {memberID: $memberID})
-        <-[:OWES]-(owesInCredex)<-[:SECURES]-(securingMember:Member)
-        <-[:CREDEX_FOUNDATION_AUDITED]-(credexFoundation {memberType: "CREDEX_FOUNDATION"})
-        WHERE owesInCredex.Denomination = $Denomination
-      WITH DISTINCT securingMember AS securingMemberDistinct, member
-      UNWIND securingMemberDistinct AS thisSecuringMember
-      OPTIONAL MATCH
-        (thisSecuringMember)-[:SECURES]->(securedCredexIn:Credex)
-        -[:OWES]->(member)
-        WHERE securedCredexIn.Denomination = $Denomination
-      OPTIONAL MATCH
-      //catch OFFERS as well as OWES for outgoing
-        (member)-[:OWES|OFFERS]->(securedCredexOut:Credex)
-        WHERE securedCredexOut.Denomination = $Denomination
+      MATCH (member:Member {memberID: $memberID})
+      OPTIONAL MATCH (member)-[transactionType:OWES]-(credex:Credex)<-[:SECURES]-(securer:Member)
+      WHERE credex.Denomination = "USD"
       WITH
-        sum(securedCredexIn.OutstandingAmount)
-        - sum(securedCredexOut.OutstandingAmount) AS thisNetSecurableCXX,
-        thisSecuringMember.memberID AS thisSecuringMemberID
+        securer.memberID AS securingMemberID,
+        SUM(CASE WHEN startNode(transactionType) = member THEN credex.OutstandingAmount ELSE 0 END) -
+        SUM(CASE WHEN endNode(transactionType) = member THEN credex.OutstandingAmount ELSE 0 END)
+        AS netSecurablePerSecurerCXX
       MATCH (daynode:DayNode {Active: true})
       RETURN
-        thisNetSecurableCXX * daynode[$Denomination] AS netSecurableInDenom,
-        thisSecuringMemberID AS securingMemberID
-      ORDER BY netSecurableInDenom DESC LIMIT 1
+        securingMemberID,
+        netSecurablePerSecurerCXX/daynode[$Denomination] AS netSecurableInDenom
+        ORDER BY netSecurableInDenom DESC
+        LIMIT 1
     `,
     {
       memberID: issuerMemberID,
