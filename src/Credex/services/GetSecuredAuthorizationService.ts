@@ -1,3 +1,16 @@
+/*
+returns information on a member's secured balance
+
+required inputs:
+  issuerMemberID,
+  Denomination,
+
+returns:
+  securerID (null if no secured balances available or error)
+  securableAmountInDenom (0 if no secured balances or error, infinity if CREDEX_FOUNDATION_AUDITED)
+    
+*/
+
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 
 export async function GetSecuredAuthorizationService(
@@ -58,7 +71,7 @@ export async function GetSecuredAuthorizationService(
   await ledgerSpaceSession.close();
 
   const securableRecord = getSecurableDataQuery.records[0];
-  if (!securableRecord) {
+  if (securableRecord.length === 0) {
     return {
       securerID: null,
       securableAmountInDenom: 0,

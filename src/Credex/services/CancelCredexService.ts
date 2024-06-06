@@ -3,13 +3,13 @@ marks a credex as cancelled by changing the relationships
 from OFFERS or REQUESTS to CANCELLED
 
 required inputs:
-    credexID
+  credexID
 
 on success returns credexID
 
 will return false if:
-    credexID not found
-    credex does not have OFFERS or REQUESTS relationships (credex already accepted/declined/cancelled)
+  credexID not found
+  credex does not have OFFERS or REQUESTS relationships (credex already accepted/declined/cancelled)
     
 */
 
