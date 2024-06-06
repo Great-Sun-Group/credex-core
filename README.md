@@ -72,6 +72,8 @@ Executed automatically via devcontainer.
 ```
 echo $GITHUB_TOKEN
 ```
-Copy the token and paste it the appropriate location in the credex-core variables in Postman.
+Copy the token and paste it the "X-Github-Token" field in the credex-core variables in Postman. These tokens expire, so if your requests aren't going through, try printing and updating the token.
 
-3. After `npm run nodemon`, copy the forwarded port address from the Ports tab and paste it in the appropriate location in the credex-core variables in Postman.
+3. After `npm run nodemon`, copy the forwarded port address from the Ports tab and paste it in the "base_url" field in the credex-core variables in Postman. This url will remain constant for this specific codespace.
+
+The github token and base_url are currently saved globally in Postman, so if multiple people are working at the same time, we'll need to update Postman to handle that.
