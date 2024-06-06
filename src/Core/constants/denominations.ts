@@ -14,9 +14,9 @@ type Denominations = {
 };
 
 export function getDenominations(
-  options: DenomOptions,
+  options: DenomOptions
 ): string | Denominations[] {
-  var denominations: Denominations[] = [
+  const denominations: Denominations[] = [
     {
       code: "CXX",
       fulldescription: "CXX (Credcoin)",
@@ -169,7 +169,7 @@ export function getDenominations(
     },
     {
       code: "TWD",
-      fulldescription: "TWD (New TAiwan Dollar)",
+      fulldescription: "TWD (New Taiwan Dollar)",
       regionalization: "zh-tw",
       sourceForRate: "OpenExchangeRates",
     },
@@ -186,7 +186,7 @@ export function getDenominations(
       sourceForRate: "OpenExchangeRates",
     },
     {
-      code: "ZIG_RBZ",
+      code: "ZIG",
       fulldescription: "ZIG (Zimbabwe Gold Official Rate)",
       regionalization: "en-CA",
       sourceForRate: "RBZ",
@@ -195,14 +195,16 @@ export function getDenominations(
 
   let returndata: Denominations[] = denominations;
   if (options.code) {
-    returndata = _.filter(returndata, function (i: Denominations) {
-      return i.code == options.code;
-    });
+    returndata = _.filter(
+      returndata,
+      (i: Denominations) => i.code === options.code
+    );
   }
   if (options.sourceForRate) {
-    returndata = _.filter(returndata, function (i: Denominations) {
-      return i.sourceForRate == options.sourceForRate;
-    });
+    returndata = _.filter(
+      returndata,
+      (i: Denominations) => i.sourceForRate === options.sourceForRate
+    );
   }
   if (options.formatAsList) {
     return returndata.map((x) => x.code).join(",");
@@ -210,12 +212,15 @@ export function getDenominations(
   return returndata;
 }
 
-export const denomFormatter = (amount: number, code: string) => {
+export const denomFormatter = (amount: number, code: string): string => {
   const formatCurrencyAmount = (
     amount: number,
     roundedTo: number,
-    regionalization: string,
-  ) => {
+    regionalization: string
+  ): string => {
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      amount = 0;
+    }
     const formatter = new Intl.NumberFormat(regionalization);
     const formatterResult = formatter.format(amount);
     const formattedWholeNumbers = formatterResult.toString().split(".")[0];
@@ -224,9 +229,9 @@ export const denomFormatter = (amount: number, code: string) => {
     return `${formattedWholeNumbers}.${formattedDecimals}`;
   };
 
-  //get regionalization
-  const denomData: any = getDenominations({ code: code });
-  const regionalization = denomData[0].regionalization;
+  const denomData: any = getDenominations({ code });
+  const regionalization =
+    denomData && denomData.length > 0 ? denomData[0].regionalization : "en-US";
 
   let formattedAmount;
   switch (code) {

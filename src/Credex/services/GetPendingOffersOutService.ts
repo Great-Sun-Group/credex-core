@@ -1,7 +1,20 @@
+/*
+returns offers made by a member and not yet accepted/declined/cancelled
+
+requires memberID
+
+returns for each pending offer:
+  credexID
+  formattedInitialAmount (eg 1,234.56 USD)
+  counterpartyDisplayname
+
+returns empty array if no pending offers out, or if memberID not found
+
+*/
+
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
 import { Credex } from "../types/Credex";
-const _ = require("lodash");
 
 export async function GetPendingOffersOutService(memberID: string) {
   try {
@@ -9,64 +22,60 @@ export async function GetPendingOffersOutService(memberID: string) {
     const result = await ledgerSpaceSession.run(
       `
         OPTIONAL MATCH
-            (member:Member{memberID:$memberID})-[:OFFERS]->(offersOutCredex:Credex)-[:OFFERS]->(counterparty:Member)
-        OPTIONAL MATCH (offersOutCredex)<-[:SECURES]-(securer:Member)
+          (member:Member{memberID:$memberID})-[:OFFERS]->(offersOutCredex:Credex)-[:OFFERS]->(counterparty:Member)
         RETURN
-            offersOutCredex.InitialAmount/offersOutCredex.CXXmultiplier AS InitialAmount,
-            offersOutCredex.credexID AS credexID,
-            offersOutCredex.Denomination AS Denomination,
-            counterparty.firstname AS counterpartyFirstname,
-            counterparty.lastname AS counterpartyLastname,
-            counterparty.companyname AS counterpartyCompanyname,
-            counterparty.memberType AS counterpartyMemberType,
-            securer.companyname AS securerName
-
-    `,
-      { memberID: memberID },
+          offersOutCredex.InitialAmount/offersOutCredex.CXXmultiplier AS InitialAmount,
+          offersOutCredex.credexID AS credexID,
+          offersOutCredex.Denomination AS Denomination,
+          counterparty.firstname AS counterpartyFirstname,
+          counterparty.lastname AS counterpartyLastname,
+          counterparty.companyname AS counterpartyCompanyname,
+          counterparty.memberType AS counterpartyMemberType
+      `,
+      { memberID }
     );
     await ledgerSpaceSession.close();
 
-    var offeredCredexData: any = [];
-    if (result.records[0].get("credexID")) {
-      result.records.forEach(async function (record) {
-        const credexID = record.get("credexID");
-        const InitialAmount = parseFloat("-" + record.get("InitialAmount"));
-        const Denomination = record.get("Denomination");
-        const counterpartyFirstname = record.get("counterpartyFirstname");
-        const counterpartyLastname = record.get("counterpartyLastname");
-        const counterpartyCompanyname = record.get("counterpartyCompanyname");
-        const counterpartyMemberType = record.get("counterpartyMemberType");
-        const securerName = record.get("securerName");
-
-        const formattedInitialAmount =
-          denomFormatter(InitialAmount, Denomination) + " " + Denomination;
-        var counterpartyDisplayname = "";
-        if (counterpartyMemberType == "HUMAN") {
-          counterpartyDisplayname =
-            counterpartyFirstname + " " + counterpartyLastname;
-        }
-        if (
-          counterpartyMemberType == "COMPANY" ||
-          counterpartyMemberType == "CREDEX_FOUNDATION"
-        ) {
-          counterpartyDisplayname = counterpartyCompanyname;
-        }
-
-        const thisOfferedCredex: Credex = {
-          credexID: credexID,
-          formattedInitialAmount: formattedInitialAmount,
-          counterpartyDisplayname: counterpartyDisplayname,
-          securerName: securerName,
-        };
-        offeredCredexData.push(thisOfferedCredex);
-      });
+    if (!result.records[0].get("credexID")) {
+      return {};
     }
 
-    return {
-      numberOfOffers: _.size(offeredCredexData),
-      offers: offeredCredexData,
-    };
+    const offeredCredexData: Credex[] = [];
+    for (const record of result.records) {
+      const credexID = record.get("credexID");
+
+      const formattedInitialAmount =
+        denomFormatter(
+          parseFloat("-" + record.get("InitialAmount")),
+          record.get("Denomination")
+        ) +
+        " " +
+        record.get("Denomination");
+
+      let counterpartyDisplayname;
+      if (record.get("counterpartyMemberType") === "HUMAN") {
+        counterpartyDisplayname =
+          record.get("counterpartyFirstname") +
+          " " +
+          record.get("counterpartyLastname");
+      } else if (
+        record.get("counterpartyCompanyname") === "COMPANY" ||
+        record.get("counterpartyCompanyname") === "CREDEX_FOUNDATION"
+      ) {
+        counterpartyDisplayname = record.get("counterpartyCompanyname");
+      }
+
+      const thisOfferedCredex: Credex = {
+        credexID: credexID,
+        formattedInitialAmount: formattedInitialAmount,
+        counterpartyDisplayname: counterpartyDisplayname,
+      };
+      offeredCredexData.push(thisOfferedCredex);
+    }
+
+    return offeredCredexData;
   } catch (error) {
-    console.log(error);
+    console.error("Error in GetPendingOffersOutService:", error);
+    throw error;
   }
 }
