@@ -5,6 +5,7 @@ import CredexRoutes from "./Credex/routes";
 import AdminRoutes from "./Admin/routes";
 import { Logger } from "./config/logger";
 import bodyParser from "body-parser";
+import startCronJobs from "./Core/services/schedulers/cronJobs";
 
 const app = express();
 const port = 5000;
@@ -21,6 +22,8 @@ WhatsAppClientRoutes(app, jsonParser);
 MemberRoutes(app, jsonParser);
 CredexRoutes(app, jsonParser);
 AdminRoutes(app, jsonParser);
+
+startCronJobs();
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
