@@ -1,10 +1,10 @@
 name: deploy_to_prod
-run-name: ${{ github.actor }} pushed to prod_auto_deploy_setup with commit message ${{ github.event.head_commit.message }}
+run-name: ${{ github.actor }} pushed to prod_auto_deploy_setup with commit message '${{ github.event.head_commit.message }}'
 
 on: 
   push: 
     branches:
-      - prod_auto_deploy_setup  # Testing branch
+      - prod
 
 jobs: 
   deploy:
@@ -16,7 +16,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with: 
-          node-version: '20'
+          node-version: '18'
 
       - name: Install dependencies
         run: npm install
