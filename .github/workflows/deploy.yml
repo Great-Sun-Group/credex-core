@@ -1,5 +1,5 @@
 name: deploy_to_prod
-run-name: ${{ github.actor }} pushed to prod
+run-name: ${{ github.actor }} pushed to prod_auto_deploy_setup
 
 on: 
   push: 
