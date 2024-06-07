@@ -29,7 +29,8 @@ export async function GetMemberService(memberID: string): Promise<any | null> {
       { memberID },
     );
 
-    if (!result.records[0].length) {
+    if (!result.records[0]) {
+      console.log("member not found");
       return null;
     }
 

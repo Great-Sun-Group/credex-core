@@ -30,11 +30,12 @@ export async function GetMemberByPhoneService(
       { phone },
     );
 
-   /* if (!result.records[0].get("memberID")) {
+    if (!result.records[0]) {
+      console.log("member not found")
       return null;
     }
-*/
-    return result.records[0]//.get("member").properties;
+
+    return result.records[0].get("member").properties;
   } catch (error) {
     console.error("Error fetching member data:", error);
     return false;
