@@ -4,7 +4,8 @@ run-name: ${{ github.actor }} pushed to prod
 on: 
   push: 
     branches:
-      - prod
+      # - prod
+     - prod_auto_deploy_setup
 
 jobs: 
   deploy:
@@ -22,7 +23,7 @@ jobs:
         run: npm install
         working-directory: .
 
-      # Uncomment and use if you want to run tests
+      # For when have tests
       # - name: Run tests
       #   run: npm test
       #   working-directory: .
