@@ -1,5 +1,6 @@
 import express from "express";
 import { GetMemberByPhoneService } from "../services/GetMemberByPhoneService";
+import { GetBalancesService } from "../../Credex/services/GetBalancesService";
 
 export async function GetMemberByPhoneController(
   req: express.Request,
@@ -7,10 +8,14 @@ export async function GetMemberByPhoneController(
 ): Promise<void> {
 
   try {
-    const responseData = await GetMemberByPhoneService(req.body.phone);
+    const memberData = await GetMemberByPhoneService(req.body.phone);
+    let balanceData
+    if (memberData) {
+      balanceData = await GetBalancesService(memberData.memberID);
+    }
 
-    if (responseData) {
-      res.status(200).json(responseData);
+    if (balanceData) {
+      res.status(200).json({memberData, balanceData});
     } else {
       res.status(404).json({ message: "Member not found" });
     }
