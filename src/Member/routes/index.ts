@@ -3,6 +3,7 @@ import { apiVersionOneRoute } from "../..";
 import { CreateMemberController } from "../controllers/CreateMemberController";
 import { CreateCompanyController } from "../controllers/CreateCompanyController";
 import { GetMemberController } from "../controllers/GetMemberController";
+import { GetMemberByPhoneController } from "../controllers/GetMemberByPhoneController";
 import { GetMembersListController } from "../controllers/GetMembersListController";
 import { UpdateMemberController } from "../controllers/UpdateMemberController";
 import { AuthorizeForCompanyController } from "../controllers/AuthorizeForCompanyController";
@@ -30,7 +31,16 @@ export default function MemberRoutes(
     GetMembersListController,
   );
 
-  app.get(`${apiVersionOneRoute}getMember`, jsonParser, GetMemberController);
+  app.get(`${apiVersionOneRoute}getMember`,
+    jsonParser,
+    GetMemberController
+  );
+
+    app.get(
+      `${apiVersionOneRoute}getMemberByPhone`,
+      jsonParser,
+      GetMemberByPhoneController
+    );
 
   app.patch(
     `${apiVersionOneRoute}updateMember`,

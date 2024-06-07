@@ -6,13 +6,19 @@ required input:
 
 returns object with fields for each member property
 
-returns null if member can't be found
+returns null if member can't be found or memberID not passed in
+
 */
 
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 
 export async function GetMemberService(memberID: string): Promise<any | null> {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
+
+  if (!memberID) {
+    console.log("memberID is required");
+    return null;
+  }
 
   try {
     const result = await ledgerSpaceSession.run(
