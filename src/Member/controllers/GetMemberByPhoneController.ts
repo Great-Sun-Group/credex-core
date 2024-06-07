@@ -1,13 +1,13 @@
 import express from "express";
-import { GetMemberService } from "../services/GetMemberService";
+import { GetMemberByPhoneService } from "../services/GetMemberByPhoneService";
 
-export async function GetMemberController(
+export async function GetMemberByPhoneController(
   req: express.Request,
-  res: express.Response,
+  res: express.Response
 ): Promise<void> {
 
   try {
-    const responseData = await GetMemberService(req.body.memberID);
+    const responseData = await GetMemberByPhoneService(req.body.phone);
 
     if (responseData) {
       res.status(200).json(responseData);

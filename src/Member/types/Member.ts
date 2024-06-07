@@ -7,7 +7,7 @@ export type Member = {
   companyname?: string;
   displayName?: string;
   handle: string;
-  phone?: number;
+  phone?: string;
   DailyCoinOfferingGive?: number;
   DailyCoinOfferingDenom?: string;
 };
