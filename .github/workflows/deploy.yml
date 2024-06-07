@@ -4,8 +4,7 @@ run-name: ${{ github.actor }} pushed to prod_auto_deploy_setup
 on: 
   push: 
     branches:
-      # - prod
-     - prod_auto_deploy_setup
+      - prod_auto_deploy_setup  # Testing branch
 
 jobs: 
   deploy:
@@ -23,14 +22,14 @@ jobs:
         run: npm install
         working-directory: .
 
-      # For when have tests
+      # For running tests
       # - name: Run tests
       #   run: npm test
       #   working-directory: .
 
-      - name: Build project
-        run: npm run build
-        working-directory: .
+      # - name: Build project
+      #   run: npm run build
+      #   working-directory: .
 
       - name: Set up SSH deploy keys
         uses: webfactory/ssh-agent@v0.5.3
