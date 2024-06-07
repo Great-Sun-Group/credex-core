@@ -12,10 +12,10 @@ export async function ClearDevDbController(
     // Send a success response
     res
       .status(200)
-      .json({ message: "Development database cleared successfully" });
+      .json({ message: "Development databases cleared successfully" });
   } catch (err) {
     // Handle errors and send an appropriate error response
-    console.error("Error clearing development database:", err);
+    console.error("Error clearing development databases:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 }

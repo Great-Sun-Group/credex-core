@@ -49,11 +49,11 @@ export async function GetSecuredAuthorizationService(
     `
       MATCH (member:Member {memberID: $memberID})
       OPTIONAL MATCH (member)-[transactionType:OWES]-(credex:Credex)<-[:SECURES]-(securer:Member)
-      WHERE credex.Denomination = "USD"
+      WHERE credex.Denomination = $Denomination
       WITH
         securer.memberID AS securingMemberID,
-        SUM(CASE WHEN startNode(transactionType) = member THEN credex.OutstandingAmount ELSE 0 END) -
-        SUM(CASE WHEN endNode(transactionType) = member THEN credex.OutstandingAmount ELSE 0 END)
+        SUM(CASE WHEN endNode(transactionType) = member THEN credex.OutstandingAmount ELSE 0 END) -
+        SUM(CASE WHEN startNode(transactionType) = member THEN credex.OutstandingAmount ELSE 0 END)
         AS netSecurablePerSecurerCXX
       MATCH (daynode:DayNode {Active: true})
       RETURN

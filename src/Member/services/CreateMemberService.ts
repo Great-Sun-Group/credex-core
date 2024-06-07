@@ -65,7 +65,7 @@ export async function CreateMemberService(newMemberData: Member) {
     return false;
   }
 
-  if (memberType === "HUMAN" && !Number.isInteger(phone)) {
+  if (memberType === "HUMAN" && !phone) {
     console.log("phone not set or incompatible");
     return false;
   }
