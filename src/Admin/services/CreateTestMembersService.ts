@@ -26,9 +26,9 @@ export async function CreateTestMembersService(numNewMembers: number) {
     };
     newMember = await CreateMemberService(request);
     console.log(
-      "Member created: " + newMember.firstname + " " + newMember.lastname,
+      "Member created: " + newMember.member.firstname + " " + newMember.member.lastname,
     );
-    membersCreated.push(newMember.memberID);
+    membersCreated.push(newMember.member.memberID);
   }
   return membersCreated;
 }

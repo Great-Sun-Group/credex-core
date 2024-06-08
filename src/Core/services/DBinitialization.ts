@@ -66,6 +66,28 @@ export async function DBinitialization() {
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
+  console.log("create db constraints");
+  const daynodeConstraintsQuery = await ledgerSpaceSession.run(
+    `
+      CREATE CONSTRAINT daynode_unique IF NOT EXISTS
+      FOR (daynode:DayNode) REQUIRE daynode.Date IS UNIQUE;
+    `
+  );
+
+  const memberConstraintsQuery = await ledgerSpaceSession.run(
+    `
+      CREATE CONSTRAINT member_unique IF NOT EXISTS
+      FOR (member:Member) REQUIRE (member.memberID, member.phone, member.handle) IS UNIQUE;
+    `
+  );
+
+  const credexConstraintsQuery = await ledgerSpaceSession.run(
+    `
+      CREATE CONSTRAINT credex_unique IF NOT EXISTS
+      FOR (credex:Credex) REQUIRE credex.credexID IS UNIQUE;
+    `
+  );
+
   console.log("set CXX values on dayZero dayNode");
   var CreateDayNodeQuery = await ledgerSpaceSession.run(
     `
@@ -78,7 +100,7 @@ export async function DBinitialization() {
     {
       dayZeroCXXrates: dayZeroCXXrates,
       dayZero: dayZero,
-    },
+    }
   );
 
   console.log("create initialization members and relationships");
@@ -89,7 +111,7 @@ export async function DBinitialization() {
     handle: "credexfoundation",
     defaultDenom: "CXX",
   });
-  const credexFoundationID: string = credexFoundation.memberID;
+  const credexFoundationID: string = credexFoundation.member.memberID;
 
   const rdubs = await CreateMemberService({
     memberType: "HUMAN",
@@ -101,7 +123,7 @@ export async function DBinitialization() {
     DailyCoinOfferingGive: OneCXXinCXXdenom,
     DailyCoinOfferingDenom: CXXdenom,
   });
-  const rdubsID: string = rdubs.memberID;
+  const rdubsID: string = rdubs.member.memberID;
 
   const greatSun = await CreateCompanyService(
     {
