@@ -32,7 +32,7 @@ export async function CreateCompanyService(
 
   const newCompany = await CreateMemberService(newCompanyData);
 
-  if (!newCompany.memberID) {
+  if (!newCompany.member.memberID) {
     console.log("could not create company");
     return false;
   }
@@ -51,7 +51,7 @@ export async function CreateCompanyService(
                 company.memberID AS companyID
         `,
       {
-        companyID: newCompany.memberID,
+        companyID: newCompany.member.memberID,
         ownerID: ownerID,
       },
     );

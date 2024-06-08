@@ -111,7 +111,7 @@ export async function DBinitialization() {
     handle: "credexfoundation",
     defaultDenom: "CXX",
   });
-  const credexFoundationID: string = credexFoundation.memberID;
+  const credexFoundationID: string = credexFoundation.member.memberID;
 
   const rdubs = await CreateMemberService({
     memberType: "HUMAN",
@@ -123,7 +123,7 @@ export async function DBinitialization() {
     DailyCoinOfferingGive: OneCXXinCXXdenom,
     DailyCoinOfferingDenom: CXXdenom,
   });
-  const rdubsID: string = rdubs.memberID;
+  const rdubsID: string = rdubs.member.memberID;
 
   const greatSun = await CreateCompanyService(
     {
