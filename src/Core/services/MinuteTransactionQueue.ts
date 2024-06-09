@@ -85,29 +85,47 @@ export async function MinuteTransactionQueue() {
     }
 
     const getQueuedCredexes = await ledgerSpaceSession.run(`
-      MATCH (issuerMember:Member)-[:OWES]->(queuedCredex:Credex {queueStatus: "PENDING_CREDEX"})-[:OWES]->(acceptorMember:Member)
+      MATCH
+        (issuerMember:Member)
+        -[:OWES]->(queuedCredex:Credex {queueStatus: "PENDING_CREDEX"})
+        -[:OWES]->(acceptorMember:Member)
+      OPTIONAL MATCH (queuedCredex)<-[:SECURES]-(securer:Member)
       RETURN queuedCredex.acceptedAt AS acceptedAt,
              issuerMember.memberID AS issuerMemberID,
              queuedCredex.credexID AS credexID,
              queuedCredex.InitialAmount AS credexAmount,
+             queuedCredex.Denomination AS credexDenomination,
+             securer.memberID AS securerID,
              queuedCredex.dueDate AS credexDueDate,
              acceptorMember.memberID AS acceptorMemberID
     `);
 
-    const sortedQueuedCredexes = _.sortBy(getQueuedCredexes.records.map(record => ({
+const sortedQueuedCredexes = _.sortBy(
+  getQueuedCredexes.records.map((record) => {
+    const credexObject = {
       acceptedAt: record.get("acceptedAt"),
       issuerMemberID: record.get("issuerMemberID"),
       credexID: record.get("credexID"),
       credexAmount: record.get("credexAmount"),
+      credexSecuredDenom: "unsecured",
       credexDueDate: record.get("credexDueDate"),
       acceptorMemberID: record.get("acceptorMemberID"),
-    })), "acceptedAt");
+    };
+    // add secured data if appropriate
+    if (record.get("securerID") !== null) {
+      credexObject.credexSecuredDenom = record.get("credexDenomination");
+    }
+    return credexObject;
+  }),
+  "acceptedAt"
+);
 
     for (const credex of sortedQueuedCredexes) {
       await LoopFinder(
         credex.issuerMemberID,
         credex.credexID,
         credex.credexAmount,
+        credex.credexSecuredDenom,
         credex.credexDueDate,
         credex.acceptorMemberID
       );

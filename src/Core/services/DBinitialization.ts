@@ -159,7 +159,7 @@ export async function DBinitialization() {
     issuerMemberID: greatSunID,
     receiverMemberID: rdubsID,
     Denomination: CXXdenom,
-    InitialAmount: OneCXXinCXXdenom * 2, // *2 just to make sure secured balance is there
+    InitialAmount: OneCXXinCXXdenom * 365, // fund DCO for a year with no adjustments
     credexType: "PURCHASE",
     securedCredex: true,
   };

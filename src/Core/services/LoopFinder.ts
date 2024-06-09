@@ -4,6 +4,7 @@ export async function LoopFinder(
   issuerMemberID: string,
   credexID: string,
   credexAmount: number,
+  credexSecuredDenom: string,
   credexDueDate: string,
   acceptorMemberID: string
 ) {
@@ -17,11 +18,19 @@ export async function LoopFinder(
       CREATE (issuer)-[credex:CREDEX {
         credexID: $credexID,
         outstandingAmount: $credexAmount,
+        securedDenom: $credexSecuredDenom,
         dueDate: date($credexDueDate)
       }]->(acceptor)
       RETURN credex.credexID AS credexID
     `,
-    { issuerMemberID, credexID, credexAmount, credexDueDate, acceptorMemberID }
+    {
+      issuerMemberID,
+      credexID,
+      credexAmount,
+      credexSecuredDenom,
+      credexDueDate,
+      acceptorMemberID,
+    }
   );
 
   const markCredexAsProcessed = await ledgerSpaceSession.run(
@@ -40,10 +49,15 @@ export async function LoopFinder(
 
   let searchForCredloops = true;
   while (searchForCredloops) {
-    console.log("finding credloops in searchSpace")
+    console.log("searching for credloops in searchSpace");
     const searchSpaceQuery = await searchSpaceSession.run(
       `
-        MATCH credloop = (issuer:Member {memberID: $issuerMemberID})-[:CREDEX {credexID: $credexID}]->(acceptor: Member)-[*]->(issuer)
+        MATCH credloop = 
+          (issuer:Member {memberID: $issuerMemberID})
+          -[:CREDEX {credexID: $credexID}]->(acceptor: Member)
+          -[*]->(issuer)
+        WHERE ALL(rel in relationships(credloop)
+        WHERE rel.securedDenom = $credexSecuredDenom)
         WITH credloop, length(credloop) AS credloopLength, 
             reduce(minDueDate = null, credex IN relationships(credloop) | 
                 CASE 
@@ -74,11 +88,11 @@ export async function LoopFinder(
         )
         RETURN lowestAmount, credexIDs, zeroCredexIDs
       `,
-      { issuerMemberID, credexID }
+      { issuerMemberID, credexID, credexSecuredDenom }
     );
 
     if (searchSpaceQuery.records.length > 0) {
-      console.log("credloop found, updating ledgerSpace")
+      console.log("credloop found and cleared, now updating ledgerSpace");
       const valueToClear = searchSpaceQuery.records[0].get("lowestAmount");
       const credexesInLoop = searchSpaceQuery.records[0].get("credexIDs");
       const credexesRedeemed = searchSpaceQuery.records[0].get("zeroCredexIDs");
@@ -137,7 +151,7 @@ export async function LoopFinder(
         "loopAnchor created: " + ledgerSpaceQuery.records[0].get("loopID")
       );
     } else {
-      console.log("no credloops exist in searchSpace")
+      console.log("no credloops currently exist in searchSpace");
       searchForCredloops = false;
     }
   }
