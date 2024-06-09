@@ -93,7 +93,7 @@ export async function DBinitialization() {
     `
         CREATE (dayNode:DayNode)
         SET dayNode = $dayZeroCXXrates
-        SET dayNode.Date = $dayZero
+        SET dayNode.Date = date($dayZero)
         SET dayNode.Active = TRUE
         SET dayNode.DCOrunningNow = TRUE
         `,
@@ -159,9 +159,8 @@ export async function DBinitialization() {
     issuerMemberID: greatSunID,
     receiverMemberID: rdubsID,
     Denomination: CXXdenom,
-    InitialAmount: OneCXXinCXXdenom * 2, // *2 just to make sure secured balance is there
+    InitialAmount: OneCXXinCXXdenom * 365, // fund DCO for a year with no adjustments
     credexType: "PURCHASE",
-    dueDate: "",
     securedCredex: true,
   };
   const DCOinitializationOfferCredex = await OfferCredexService(credexData);
