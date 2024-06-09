@@ -1,131 +1,125 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
 import { LoopFinder } from "./LoopFinder";
-const _ = require("lodash");
+import { GetDisplayNameService } from "../../Member/services/GetDisplayNameService";
+import { Member } from "../../Member/types/Member";
+import _ from "lodash";
 
 export async function MinuteTransactionQueue() {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
-  console.log("check if DCO in progress");
-  var DCOinProgressCheck = await ledgerSpaceSession.run(`
-      OPTIONAL MATCH (dayNode:DayNode{Active:true})
-      RETURN dayNode.DCOrunningNow AS DCOflag
-      `);
-  var DCOinProgress = DCOinProgressCheck.records[0].get("DCOflag");
+  console.log("Check if DCO is in progress");
+  const DCOinProgressCheck = await ledgerSpaceSession.run(`
+    MATCH (dayNode:DayNode {Active: true})
+    RETURN dayNode.DCOrunningNow AS DCOflag
+  `);
 
-  if (DCOinProgress) {
-    console.log("DCO in progress, hold loopfinder");
-  } else {
-    console.log("running loopfinder");
-    const BAIL_TIME = 60 * 1000 * 14; // 14 minutes
-    return new Promise(async (resolve, reject) => {
-      let bailTimer = setTimeout(function () {
-        // bail here... what do we do?
-        resolve(true);
-      }, BAIL_TIME);
+  if (DCOinProgressCheck.records[0]?.get("DCOflag")) {
+    console.log("DCO in progress, holding loopfinder");
+    await ledgerSpaceSession.close();
+    await searchSpaceSession.close();
+    return;
+  }
 
-      //get queued actions
+  console.log("Running loopfinder");
+  const BAIL_TIME = 60 * 1000 * 14; // 14 minutes
+  const bailTimer = setTimeout(() => {
+    console.log("Bail timer reached");
+    return true;
+  }, BAIL_TIME);
 
-      var queuedActions: any = [];
+  try {
+    const getQueuedMembers = await ledgerSpaceSession.run(`
+      MATCH (newMember:Member {queueStatus: "PENDING_MEMBER"})
+      RETURN
+        newMember.memberID AS memberID,
+        newMember.memberType AS memberType,
+        newMember.firstname AS firstname,
+        newMember.lastname AS lastname,
+        newMember.companyname AS companyname
+    `);
 
-      //get PENDING_CREDEX queued credexes
-      var getQueuedCredexes = await ledgerSpaceSession.run(`
-        MATCH (issuerMember:Member)-[:OWES]->(queuedCredex:Credex{queueStatus:"PENDING_CREDEX"})-[:OWES]->(acceptorMember:Member)
-        RETURN queuedCredex.acceptedAt AS timestamp, issuerMember.memberID AS issuerMemberID, queuedCredex.credexID AS credexID, queuedCredex.InitialAmount AS credexAmount, queuedCredex.dueDate AS credexDueDate, acceptorMember.memberID AS acceptorMemberID
-      `);
+    for (const record of getQueuedMembers.records) {
+      const queuedMember: Member = {
+        memberType: record.get("memberType"),
+        firstname: record.get("firstname"),
+        lastname: record.get("lastname"),
+        companyname: record.get("companyname"),
+      };
 
-      getQueuedCredexes.records.forEach(function (queuedCredex) {
-        queuedActions.push({
-          timestamp: 2,
-          issuerMemberID: queuedCredex.get("issuerMemberID"),
-          credexID: queuedCredex.get("credexID"),
-          credexAmount: queuedCredex.get("credexAmount"),
-          credexDueDate: queuedCredex.get("credexDueDate"),
-          acceptorMemberID: queuedCredex.get("acceptorMemberID"),
-          actionType: "PENDING_CREDEX",
-        });
-      });
+      const memberForSearchSpace = {
+        memberID: record.get("memberID"),
+        displayName: GetDisplayNameService(queuedMember),
+      };
 
-      //get PENDING_MEMBER queued members
-      var getQueuedMembers = await ledgerSpaceSession.run(`
-        MATCH (newMember:Member{queueStatus:"PENDING_MEMBER"})
-        RETURN newMember.memberSince AS timestamp, newMember.memberID AS memberID
-      `);
+      const addMember = await searchSpaceSession.run(
+        `
+          CREATE (newMember:Member)
+          SET newMember = $memberForSearchSpace
+          RETURN newMember.memberID AS memberID
+        `,
+        { memberForSearchSpace }
+      );
 
-      getQueuedMembers.records.forEach(function (queuedMember) {
-        queuedActions.push({
-          timestamp: 1,
-          memberID: queuedMember.get("memberID"),
-          actionType: "PENDING_MEMBER",
-        });
-      });
-
-      //order by timestamp
-      queuedActions = _.sortBy(queuedActions, "timestamp");
-
-      console.log("queuedActions: -------------->");
-      console.log(queuedActions);
-
-      for (let i = 0; i < queuedActions.length; i++) {
-        //test for actionType
-        if (queuedActions[i].actionType == "PENDING_MEMBER") {
-          //add member
-          var memberID = queuedActions[i].memberID;
-          var addMember = await searchSpaceSession.run(
-            `
-            CREATE (newMember:Member{memberID:$memberID})
-            RETURN newMember.memberID AS memberID
-          `,
-            {
-              memberID: memberID,
-            },
-          );
-          console.log(
-            "member created in SearchSpace: " +
-              addMember.records[0].get("memberID"),
-          );
-
-          //test for successfull result, then:
-          var markMemberProcessed = await ledgerSpaceSession.run(
-            `
-            MATCH (processedMember:Member{memberID:$memberID})
-            SET processedMember.queueStatus = "PROCESSED"
-            `,
-            {
-              memberID: memberID,
-            },
-          );
-        } else if (queuedActions[i].actionType == "PENDING_CREDEX") {
-          await LoopFinder(
-            queuedActions[i].issuerMemberID,
-            queuedActions[i].credexID,
-            queuedActions[i].credexAmount,
-            queuedActions[i].credexDueDate,
-            queuedActions[i].acceptorMemberID,
-          );
-
-          //test for successfull result, then:
-          var credexID = queuedActions[i].credexID;
-          var markCredexProcessed = await ledgerSpaceSession.run(
-            `
-            MATCH (processedCredex:Credex{credexID:$credexID})
-            SET processedCredex.queueStatus = "PROCESSED"
-          `,
-            {
-              credexID: credexID,
-            },
-          );
-        }
+      if (addMember.records.length === 0) {
+        console.log(
+          "Error creating member in searchSpace: " +
+            memberForSearchSpace.displayName
+        );
+        continue;
       }
 
-      await ledgerSpaceSession.close();
-      await searchSpaceSession.close();
+      const memberID = addMember.records[0].get("memberID");
 
-      setTimeout(function () {
-        // clear bailtimer....
-        clearTimeout(bailTimer);
-        resolve(true);
-      }, 1000);
-    });
+      await ledgerSpaceSession.run(
+        `
+          MATCH (processedMember:Member {memberID: $memberID})
+          SET processedMember.queueStatus = "PROCESSED"
+        `,
+        { memberID }
+      );
+
+      console.log(
+        "Member created in searchSpace: " + memberForSearchSpace.displayName
+      );
+    }
+
+    const getQueuedCredexes = await ledgerSpaceSession.run(`
+      MATCH (issuerMember:Member)-[:OWES]->(queuedCredex:Credex {queueStatus: "PENDING_CREDEX"})-[:OWES]->(acceptorMember:Member)
+      RETURN queuedCredex.acceptedAt AS acceptedAt,
+             issuerMember.memberID AS issuerMemberID,
+             queuedCredex.credexID AS credexID,
+             queuedCredex.InitialAmount AS credexAmount,
+             queuedCredex.dueDate AS credexDueDate,
+             acceptorMember.memberID AS acceptorMemberID
+    `);
+
+    const sortedQueuedCredexes = _.sortBy(getQueuedCredexes.records.map(record => ({
+      acceptedAt: record.get("acceptedAt"),
+      issuerMemberID: record.get("issuerMemberID"),
+      credexID: record.get("credexID"),
+      credexAmount: record.get("credexAmount"),
+      credexDueDate: record.get("credexDueDate"),
+      acceptorMemberID: record.get("acceptorMemberID"),
+    })), "acceptedAt");
+
+    for (const credex of sortedQueuedCredexes) {
+      await LoopFinder(
+        credex.issuerMemberID,
+        credex.credexID,
+        credex.credexAmount,
+        credex.credexDueDate,
+        credex.acceptorMemberID
+      );
+    }
+  } catch (error) {
+    console.error("Error in MinuteTransactionQueue:", error);
+  } finally {
+    await ledgerSpaceSession.close();
+    await searchSpaceSession.close();
+    clearTimeout(bailTimer); // Clear bail timer
+    console.log("Transaction queue processing completed");
   }
+
+  return true;
 }

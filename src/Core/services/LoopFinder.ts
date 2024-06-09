@@ -1,266 +1,159 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
-import * as neo4j from "neo4j-driver";
-const _ = require("lodash");
-
-const transformIntegers = function (val: number) {
-  return neo4j.isInt(val)
-    ? neo4j.integer.inSafeRange(val)
-      ? val.toNumber()
-      : val.toString()
-    : val;
-};
 
 export async function LoopFinder(
   issuerMemberID: string,
   credexID: string,
   credexAmount: number,
   credexDueDate: string,
-  acceptorMemberID: string,
+  acceptorMemberID: string
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
-  var createSearchSpaceCredex = await searchSpaceSession.run(
+  const createSearchSpaceCredex = await searchSpaceSession.run(
     `
-      MATCH (issuer:Member{memberID:$issuerMemberID})
-      MATCH (acceptor:Member{memberID:$acceptorMemberID})
-      CREATE (issuer)-[credex:CREDEX{credexID:$credexID, credexAmount:$credexAmount, credexDueDate:$credexDueDate}]->(acceptor)
+      MATCH (issuer:Member {memberID: $issuerMemberID})
+      MATCH (acceptor:Member {memberID: $acceptorMemberID})
+      CREATE (issuer)-[credex:CREDEX {
+        credexID: $credexID,
+        outstandingAmount: $credexAmount,
+        dueDate: date($credexDueDate)
+      }]->(acceptor)
       RETURN credex.credexID AS credexID
     `,
-    {
-      issuerMemberID: issuerMemberID,
-      credexID: credexID,
-      credexAmount: credexAmount,
-      credexDueDate: credexDueDate,
-      acceptorMemberID: acceptorMemberID,
-    },
+    { issuerMemberID, credexID, credexAmount, credexDueDate, acceptorMemberID }
   );
+
+  const markCredexAsProcessed = await ledgerSpaceSession.run(
+    `
+      MATCH (processedCredex:Credex {credexID: $credexID})
+      SET processedCredex.queueStatus = "PROCESSED"
+      RETURN processedCredex.credexID AS credexID
+    `,
+    { credexID: createSearchSpaceCredex.records[0].get("credexID") }
+  );
+
   console.log(
-    "credex created in SearchSpace: " +
-      createSearchSpaceCredex.records[0].get("credexID"),
+    "credex processed into SearchSpace: " +
+      markCredexAsProcessed.records[0].get("credexID")
   );
 
-  var continueLooping = true;
+  let searchForCredloops = true;
+  while (searchForCredloops) {
+    console.log("finding credloops in searchSpace")
+    const searchSpaceQuery = await searchSpaceSession.run(
+      `
+        MATCH credloop = (issuer:Member {memberID: $issuerMemberID})-[:CREDEX {credexID: $credexID}]->(acceptor: Member)-[*]->(issuer)
+        WITH credloop, length(credloop) AS credloopLength, 
+            reduce(minDueDate = null, credex IN relationships(credloop) | 
+                CASE 
+                    WHEN minDueDate IS NULL THEN credex.dueDate
+                    WHEN credex.dueDate < minDueDate THEN credex.dueDate
+                    ELSE minDueDate
+                END) AS earliestDueDate
+        ORDER BY credloopLength DESC, earliestDueDate ASC
+        LIMIT 1
+        WITH credloop, 
+            reduce(minAmount = null, credex IN relationships(credloop) | 
+                CASE 
+                    WHEN minAmount IS NULL THEN credex.outstandingAmount
+                    WHEN credex.outstandingAmount < minAmount THEN credex.outstandingAmount
+                    ELSE minAmount
+                END) AS lowestAmount
+        FOREACH (credex IN relationships(credloop) |
+            SET credex.outstandingAmount = credex.outstandingAmount - lowestAmount
+        )
+        WITH credloop, lowestAmount,
+          [credex IN relationships(credloop)
+          WHERE credex.outstandingAmount = 0 | credex.credexID] AS zeroCredexIDs
+        WITH credloop, lowestAmount, zeroCredexIDs, [rel IN relationships(credloop) | rel.credexID] AS credexIDs
+        FOREACH (credex IN relationships(credloop) |
+            FOREACH (_ IN CASE WHEN credex.outstandingAmount = 0 THEN [1] ELSE [] END |
+                DELETE credex
+            )
+        )
+        RETURN lowestAmount, credexIDs, zeroCredexIDs
+      `,
+      { issuerMemberID, credexID }
+    );
 
-  if (issuerMemberID && acceptorMemberID && credexID) {
-    while (continueLooping) {
-      var credloopsQuery = await searchSpaceSession.run(
+    if (searchSpaceQuery.records.length > 0) {
+      console.log("credloop found, updating ledgerSpace")
+      const valueToClear = searchSpaceQuery.records[0].get("lowestAmount");
+      const credexesInLoop = searchSpaceQuery.records[0].get("credexIDs");
+      const credexesRedeemed = searchSpaceQuery.records[0].get("zeroCredexIDs");
+
+      const ledgerSpaceQuery = await ledgerSpaceSession.run(
         `
-            MATCH credloops = (issuer)-[:CREDEX{credexID:$credexID}]->(acceptor)-[*]->(issuer)
-            RETURN credloops
-          `,
-        {
-          credexID: credexID,
-        },
-      );
+          MATCH (dayNode:DayNode {Active: true})
+          CREATE (loopAnchor:LoopAnchor {
+              loopedAt: DateTime(),
+              loopID: randomUUID(),
+              LoopedAmount: $valueToClear,
+              CXXmultiplier: 1
+          })-[to_dayNode:LOOPED_ON]->(dayNode)
+          WITH loopAnchor
 
-      var credloops: any = [];
-
-      console.log("loop count:" + credloopsQuery.records.length);
-
-      if (credloopsQuery.records && credloopsQuery.records.length > 0) {
-        // loop through records response
-        credloopsQuery.records.forEach(function (record: any) {
-          record = record.get("credloops");
-
-          var segments: any = [];
-
-          // initially set obj attributes to null
-          var credloopObj = {
-            credexDueDate: null,
-            loopLength: null,
-            lowestAmount: null,
-            segments: null,
-          };
-
-          // check for segments
-          if (record.segments && record.segments.length) {
-            var segs = record.segments;
-
-            // loop through segments and set attributes on our object
-            segs.forEach(function (seg: any) {
-              var segsObj: any = {
-                credexDueDate: "",
-                credexAmount: 0,
-                credexID: "",
-              };
-
-              if (seg.relationship.properties.credexAmount) {
-                segsObj.credexAmount = transformIntegers(
-                  seg.relationship.properties.credexAmount,
-                );
-              }
-              if (seg.relationship.properties.credexID) {
-                segsObj.credexID = seg.relationship.properties.credexID;
-              }
-              segments.push(segsObj);
-            });
-
-            // set length of loop
-            credloopObj.loopLength = segs.length;
-
-            //set lowest amount in this loop
-            segments = _.orderBy(segments, "credexAmount", "asc"); // asc, desc
-            credloopObj.lowestAmount = segments[0].credexAmount;
-
-            // order by lowest/soonest first asc (null is at the end) to set soonest demmurage date in this loop
-            segments = _.orderBy(segments, "credexDueDate", "asc"); // asc, desc
-            credloopObj.credexDueDate = segments[0].credexDueDate;
-
-            //save credexes in loop to our object
-            credloopObj.segments = segments;
-          }
-
-          credloops.push(credloopObj);
-        }); // end credloopsQuery.records foreach
-
-        // identify soonest due date
-        credloops = _.orderBy(credloops, "credexDueDate");
-        var soonestDueDate = credloops[0].credexDueDate;
-
-        // array of loops with the soonest day if there is multiple
-        var loopsWithSoonestDate = _.filter(credloops, {
-          credexDueDate: soonestDueDate,
-        });
-
-        // order them by the longest loops
-        loopsWithSoonestDate = _.orderBy(
-          loopsWithSoonestDate,
-          "loopLength",
-          "desc",
-        );
-
-        //identify loopToClose
-        //if there are multiple loops that match above criteria, this will pick one "arbitrarily." will be updated, but this meets mvp standards.
-        var loopToClose = loopsWithSoonestDate[0];
-        var valueToClear = loopToClose.lowestAmount;
-
-        //start updating the DBs with the selected loop
-
-        //LedgerSpace: Create the LoopAnchor and link it to DayNode
-        var createLoopAnchor = await ledgerSpaceSession.run(
-          `
-          MATCH (dayNode:DayNode)
-          WHERE dayNode.Active = true
-          CREATE (redeemednode:LoopAnchor { loopedAt:DateTime(), loopID:randomUUID(), LoopedAmount: $valueToClear, CXXmultiplier: 1})-[to_dayNode:LOOPED_ON]->(dayNode)
-          RETURN redeemednode.loopID AS loopID
-          `,
-          {
-            valueToClear: valueToClear,
-          },
-        );
-        var loopID = createLoopAnchor.records[0].get("loopID");
-
-        for (
-          let thisLoopedCredexNum = 0;
-          thisLoopedCredexNum < loopToClose.segments.length;
-          thisLoopedCredexNum++
-        ) {
-          var credexID: string =
-            loopToClose.segments[thisLoopedCredexNum].credexID;
-
-          //SearchSpace: subtract valueToClear and return credexID if credex is redeemed
-          var subtractValueSearchSpace = await searchSpaceSession.run(
-            `
-            MATCH ()-[thisCredex:CREDEX{credexID: $credexID}]->()
-            SET thisCredex.credexAmount = thisCredex.credexAmount - $valueToClear
-            RETURN
-            CASE thisCredex.credexAmount
-              WHEN 0  THEN thisCredex.credexID
-            END AS redeemedCredexID
-            `,
-            {
-              valueToClear: valueToClear,
-              credexID: credexID,
-            },
-          );
-          var redeemedCredexID =
-            subtractValueSearchSpace.records[0].get("redeemedCredexID");
-
-          //LedgerSpace: update with valueToClear, connect to LoopAnchor
-          var populateLoopLedgerSpace = await ledgerSpaceSession.run(
-            `
-            MATCH (thisCredex:Credex{credexID: $credexID})
-            MATCH (loopAnchor:LoopAnchor{loopID: $loopID})
-          
-            SET thisCredex.OutstandingAmount = thisCredex.OutstandingAmount - $valueToClear
-            SET thisCredex.RedeemedAmount = thisCredex.RedeemedAmount + $valueToClear
-            CREATE (thisCredex)-[:REDEEMED {
+          UNWIND $credexesInLoop AS credexID
+          MATCH (thisCredex:Credex {credexID: credexID})
+          SET thisCredex.OutstandingAmount = thisCredex.OutstandingAmount - $valueToClear,
+              thisCredex.RedeemedAmount = thisCredex.RedeemedAmount + $valueToClear
+          WITH thisCredex, loopAnchor
+          CREATE (thisCredex)-[:REDEEMED {
               AmountRedeemed: $valueToClear,
               AmountOutstandingNow: thisCredex.OutstandingAmount,
-              Denomination:thisCredex.Denomination,
+              Denomination: thisCredex.Denomination,
               CXXmultiplier: thisCredex.CXXmultiplier,
               createdAt: DateTime()
-            }]->(loopAnchor)
-            `,
-            {
-              valueToClear: valueToClear,
-              credexID: credexID,
-              loopID: loopID,
-            },
-          );
+          }]->(loopAnchor)
 
-          if (redeemedCredexID !== null) {
-            //SearchSpace: delete redeemed credex
-            var deleteRedeemed = await searchSpaceSession.run(
-              `
-              MATCH ()-[thisCredex:CREDEX{credexID: $redeemedCredexID}]->()
-              DELETE thisCredex
-              `,
-              {
-                redeemedCredexID: redeemedCredexID,
-              },
-            );
-
-            //LedgerSpace: update redeemed credex
-            var deleteRedeemed = await ledgerSpaceSession.run(
-              `
-              MATCH (owesOutMember:Member)-[owes1:OWES]->(thisCredex:Credex{credexID: $redeemedCredexID})-[owes2:OWES]->(owesInMember:Member)
-              CREATE (owesOutMember)-[:CLEARED]->(thisCredex)-[:CLEARED]->(owesInMember)
-              SET thisCredex.DateRedeemed = DateTime()
-              DELETE owes1, owes2
-              `,
-              {
-                redeemedCredexID: redeemedCredexID,
-              },
-            );
-          }
-        }
-
-        //need to loop through the same credexes again because this cypher has to be run once all the credexes have been connected to the loopanchor
-
-        for (
-          let thisLoopedCredexNum2 = 0;
-          thisLoopedCredexNum2 < loopToClose.segments.length;
-          thisLoopedCredexNum2++
-        ) {
-          var credexID: string =
-            loopToClose.segments[thisLoopedCredexNum2].credexID;
-          var valueToClear = loopToClose.lowestAmount;
-
-          //LedgerSpace: create CREDLOOP relationships between Credexes
-          var createCREDLOOPrels = await ledgerSpaceSession.run(
-            `
-            MATCH (thisCredex{credexID: $credexID})-[:OWES|CLEARED]->(:Member)-[:OWES|CLEARED]->(nextCredex:Credex)-[:REDEEMED]->(redeemednode:LoopAnchor{loopID: $loopID})
-            CREATE (thisCredex)-[:CREDLOOP {
+          WITH thisCredex, loopAnchor
+          MATCH (thisCredex)-[:OWES]->(:Member)-[:OWES]->(nextCredex:Credex)
+          CREATE (thisCredex)-[:CREDLOOP {
               AmountRedeemed: $valueToClear,
-              AmountOutstandingNow:thisCredex.OutstandingAmount,
-              Denomination:thisCredex.Denomination,
+              AmountOutstandingNow: thisCredex.OutstandingAmount,
+              Denomination: thisCredex.Denomination,
               CXXmultiplier: thisCredex.CXXmultiplier,
               createdAt: DateTime(),
-              loopAnchorID: redeemednode.loopID,
+              loopID: loopAnchor.loopID,
               credloopLinkID: randomUUID()
-            }]->(nextCredex)
-            `,
-            {
-              valueToClear: valueToClear,
-              credexID: credexID,
-              loopID: loopID,
-            },
-          );
-        }
+          }]->(nextCredex)
 
-        /*
+          WITH DISTINCT loopAnchor
+          UNWIND $credexesRedeemed AS redeemedCredexID
+          MATCH
+            (owesOutMember:Member)-[owes1:OWES]->(thisRedeemedCredex:Credex {credexID: redeemedCredexID})-[owes2:OWES]->(owesInMember:Member),
+            (thisRedeemedCredex)-[:REDEEMED]->(loopAnchor)
+          CREATE
+            (owesOutMember)-[:CLEARED]->(thisRedeemedCredex)-[:CLEARED]->(owesInMember)
+          SET thisRedeemedCredex.DateRedeemed = DateTime()
+          DELETE owes1, owes2
+
+          RETURN DISTINCT loopAnchor.loopID AS loopID
+        `,
+        { valueToClear, credexesInLoop, credexesRedeemed }
+      );
+      console.log(
+        "loopAnchor created: " + ledgerSpaceQuery.records[0].get("loopID")
+      );
+    } else {
+      console.log("no credloops exist in searchSpace")
+      searchForCredloops = false;
+    }
+  }
+
+  return true;
+}
+
+/*
+
+const transformIntegers = (val: number) =>
+  neo4j.isInt(val)
+    ? neo4j.integer.inSafeRange(val)
+      ? val.toNumber()
+      : val.toString()
+    : val;
+
 
         //create notifications for each member
         var notiFeedDataQuery = await ledgerSpaceSession.run(`
@@ -339,14 +232,4 @@ export async function LoopFinder(
 
           channel.publish('update-user', "refresh data after loop");
         }
-
-        */
-        continueLooping = true;
-      } else {
-        continueLooping = false;
-      }
-    } // end while(continueLooping)
-
-    return true;
-  } // end if (issuerMemberID && acceptorMemberID && credexID)
-}
+      */
