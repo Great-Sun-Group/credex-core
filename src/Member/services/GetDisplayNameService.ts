@@ -14,7 +14,7 @@ will return false if:
 
 import { Member } from "../types/Member";
 
-export function GetDisplayNameService(memberData: Member): string | boolean {
+export function GetDisplayNameService(memberData: Member) {
   if (
     memberData.memberType === "HUMAN" &&
     memberData.firstname &&
@@ -22,7 +22,10 @@ export function GetDisplayNameService(memberData: Member): string | boolean {
   ) {
     return `${memberData.firstname} ${memberData.lastname}`;
   }
-  if (memberData.memberType === "COMPANY" && memberData.companyname) {
+  if (
+    memberData.memberType === "COMPANY" ||
+    memberData.memberType === "CREDEX_FOUNDATION" &&
+    memberData.companyname) {
     return memberData.companyname;
   }
   console.log("memberType doesn't match name info");

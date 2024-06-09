@@ -6,7 +6,7 @@ export type Member = {
   lastname?: string;
   companyname?: string;
   displayName?: string;
-  handle: string;
+  handle?: string;
   phone?: string;
   DailyCoinOfferingGive?: number;
   DailyCoinOfferingDenom?: string;
