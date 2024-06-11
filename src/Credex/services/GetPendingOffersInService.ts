@@ -14,6 +14,7 @@ returns empty array if no pending offers in, or if memberID not found
 
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
+import { GetDisplayNameService } from "../../Member/services/GetDisplayNameService";
 import { Credex } from "../types/Credex";
 
 export async function GetPendingOffersInService(memberID: string) {
@@ -52,17 +53,16 @@ export async function GetPendingOffersInService(memberID: string) {
         " " +
         record.get("Denomination");
 
-      let counterpartyDisplayname;
-      if (record.get("counterpartyMemberType") === "HUMAN") {
-        counterpartyDisplayname =
-          record.get("counterpartyFirstname") +
-          " " +
-          record.get("counterpartyLastname");
-      } else if (
-        record.get("counterpartyCompanyname") === "COMPANY" ||
-        record.get("counterpartyCompanyname") === "CREDEX_FOUNDATION"
-      ) {
-        counterpartyDisplayname = record.get("counterpartyCompanyname");
+      const counterpartyDisplayname = GetDisplayNameService({
+        memberType: record.get("counterpartyMemberType"),
+        firstname: record.get("counterpartyFirstname"),
+        lastname: record.get("counterpartyLastname"),
+        companyname: record.get("counterpartyCompanyname"),
+      });
+
+      if (!counterpartyDisplayname) {
+        console.log("error: could not process counterparty displayname")
+        return false
       }
 
       const thisOfferedCredex: Credex = {
