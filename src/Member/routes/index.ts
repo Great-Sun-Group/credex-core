@@ -4,6 +4,7 @@ import { CreateMemberController } from "../controllers/CreateMemberController";
 import { CreateCompanyController } from "../controllers/CreateCompanyController";
 import { GetMemberController } from "../controllers/GetMemberController";
 import { GetMemberByPhoneController } from "../controllers/GetMemberByPhoneController";
+import { GetMemberByHandleController } from "../controllers/GetMemberByHandleController";
 import { GetMembersListController } from "../controllers/GetMembersListController";
 import { UpdateMemberController } from "../controllers/UpdateMemberController";
 import { AuthorizeForCompanyController } from "../controllers/AuthorizeForCompanyController";
@@ -40,6 +41,12 @@ export default function MemberRoutes(
       `${apiVersionOneRoute}getMemberByPhone`,
       jsonParser,
       GetMemberByPhoneController
+    );
+
+    app.get(
+      `${apiVersionOneRoute}getMemberByHandle`,
+      jsonParser,
+      GetMemberByHandleController
     );
 
   app.patch(
