@@ -33,6 +33,7 @@ jobs:
       # - name: Build project
       #   run: npm run build
       #   working-directory: .
+
       
       - name: Set up SSH deploy keys
         uses: webfactory/ssh-agent@v0.5.3
@@ -45,17 +46,14 @@ jobs:
           ssh-keyscan -H ${{ secrets.EC2_IP }} >> ~/.ssh/known_hosts
 
       - name: Copy Build to EC2
-        run: scp -r -o StrictHostKeyChecking=no ./build ubuntu@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
-        env:
-          EC2_IP: ${{ secrets.EC2_IP }}
-          SSH_KEY: ${{ secrets.SSH_KEY }}
-
-      - name: Set ownership on remote server
         run: |
           echo "${{ secrets.SSH_KEY }}" > private_key.pem
           chmod 600 private_key.pem
+          scp -i private_key.pem -o StrictHostKeyChecking=no -r ./build ubuntu@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
+
+      - name: Set ownership on remote server
+        run: |
           ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} \
           "sudo chown -R ubuntu:www-data /var/www/html/credex_ec2 && sudo chmod -R 755 /var/www/html/credex_ec2"
         env:
-          SSH_KEY: ${{ secrets.SSH_KEY }}
           EC2_IP: ${{ secrets.EC2_IP }}
