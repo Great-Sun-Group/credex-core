@@ -34,35 +34,31 @@ jobs:
       #   run: npm run build
       #   working-directory: .
 
+      - name: Build Project
+        run: npm run build
+
       - name: Set up SSH deploy keys
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.SSH_KEY }}
-          known-hosts: |
-            [${{ secrets.EC2_IP }}]:22 ssh-ed25519 AAAA... # Add the EC2 host key here
 
-      - name: Deploy to AWS EC2
-        uses: burnett01/rsync-deployments@5.1
-        with:
-          switches: -avzr --delete
-          path: ./*
-          remote_path: /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/
-          remote_host: ${{ secrets.EC2_IP }}
-          remote_user: ec2-user
-          remote_key: ${{ secrets.SSH_KEY }}
+      - name: Add EC2 Host to Known Hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.EC2_IP }} >> ~/.ssh/known_hosts
+
+      - name: Copy Build to EC2
+        run: scp -r -o StrictHostKeyChecking=no ./build ubuntu@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
+        env:
+          EC2_IP: ${{ secrets.EC2_IP }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
 
       - name: Set ownership on remote server
         run: |
-          echo "${{ secrets.SSH_KEY }}" > taku263_credex.pem
-          chmod 600 taku263_credex.pem
-
-          # Ensure the known_hosts file exists and is correctly set up
-          mkdir -p /home/runner/.ssh
-          touch /home/runner/.ssh/known_hosts
-          ssh-keyscan -H ${{ secrets.EC2_IP }} >> /home/runner/.ssh/known_hosts
-          
-          # Run the SSH command
-          ssh -i taku263_credex.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_IP }} \
-          "sudo chown -R ec2-user:apache /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/ && chmod 777 -R /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/storage && chmod -R 777 /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/bootstrap/cache/ && cd /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/ && sudo npm install -g vite  && npm install && sudo chown -R ec2-user:apache /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/ && chmod +x /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/dev_run.sh"
+          echo "${{ secrets.SSH_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+          ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} \
+          "sudo chown -R ubuntu:www-data /var/www/html/credex_ec2 && sudo chmod -R 755 /var/www/html/credex_ec2"
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          EC2_IP: ${{ secrets.EC2_IP }}
