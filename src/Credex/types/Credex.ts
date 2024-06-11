@@ -29,5 +29,5 @@ export type Credex = {
   acceptedAt?: string;
   declinedAt?: string;
   cancelledAt?: string;
-  clearedAgainst?: any;
+  secured?: boolean;
 };

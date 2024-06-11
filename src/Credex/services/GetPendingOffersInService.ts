@@ -7,6 +7,7 @@ returns for each pending offer:
   credexID
   formattedInitialAmount (eg 1,234.56 USD)
   counterpartyDisplayname
+  secured boolean
 
 returns empty array if no pending offers in, or if memberID not found
 
@@ -24,6 +25,8 @@ export async function GetPendingOffersInService(memberID: string) {
       `
         OPTIONAL MATCH
           (member:Member{memberID:$memberID})<-[:OFFERS]-(offersInCredex:Credex)<-[:OFFERS]-(counterparty:Member)
+        OPTIONAL MATCH
+          (offersInCredex)<-[:SECURES]-(securer:Member)
         RETURN
           offersInCredex.InitialAmount * offersInCredex.CXXmultiplier AS InitialAmount,
           offersInCredex.credexID AS credexID,
@@ -31,7 +34,8 @@ export async function GetPendingOffersInService(memberID: string) {
           counterparty.firstname AS counterpartyFirstname,
           counterparty.lastname AS counterpartyLastname,
           counterparty.companyname AS counterpartyCompanyname,
-          counterparty.memberType AS counterpartyMemberType
+          counterparty.memberType AS counterpartyMemberType,
+          securer IS NOT NULL as secured
       `,
       { memberID }
     );
@@ -43,7 +47,6 @@ export async function GetPendingOffersInService(memberID: string) {
 
     const offeredCredexData: Credex[] = [];
     for (const record of result.records) {
-      const credexID = record.get("credexID");
 
       const formattedInitialAmount =
         denomFormatter(
@@ -66,9 +69,10 @@ export async function GetPendingOffersInService(memberID: string) {
       }
 
       const thisOfferedCredex: Credex = {
-        credexID: credexID,
+        credexID: record.get("credexID"),
         formattedInitialAmount: formattedInitialAmount,
         counterpartyDisplayname: counterpartyDisplayname,
+        secured: record.get("secured"),
       };
       offeredCredexData.push(thisOfferedCredex);
     }
