@@ -23,17 +23,10 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        working-directory: .
 
       # Uncomment if you have tests to run
       # - name: Run tests
       #   run: npm test
-      #   working-directory: .
-
-      # Uncomment if you need to build the project
-      # - name: Build project
-      #   run: npm run build
-      #   working-directory: .
 
       - name: Set up SSH deploy keys
         uses: webfactory/ssh-agent@v0.5.3
@@ -45,9 +38,11 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.EC2_IP }} >> ~/.ssh/known_hosts
 
-      - name: Copy Build to EC2
+      - name: Copy Project to EC2
         run: |
-          scp -i taku263_credex.pem -o StrictHostKeyChecking=no -r ./build ec2-user@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
+          echo "${{ secrets.SSH_KEY }}" > taku263_credex.pem
+          chmod 600 taku263_credex.pem
+          scp -i taku263_credex.pem -o StrictHostKeyChecking=no -r . ec2-user@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
 
       - name: Set ownership on remote server
         run: |
