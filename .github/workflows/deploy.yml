@@ -38,31 +38,31 @@ jobs:
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.SSH_KEY }}
+          known-hosts: |
+            [${{ secrets.EC2_IP }}]:22 ssh-ed25519 AAAA... # Add the EC2 host key here
 
       - name: Deploy to AWS EC2
         uses: burnett01/rsync-deployments@5.1
         with:
           switches: -avzr --delete
           path: ./*
-          remote_path: /var/www/html/${{secrets.PROJECT_DIRECTORY}}/
+          remote_path: /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/
           remote_host: ${{ secrets.EC2_IP }}
           remote_user: ec2-user
-          remote_key: "${{ secrets.SSH_KEY }}"
+          remote_key: ${{ secrets.SSH_KEY }}
 
-      - name: 📂 Set ownership on remote server
+      - name: Set ownership on remote server
         run: |
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > taku263_credex.pem
+          echo "${{ secrets.SSH_KEY }}" > taku263_credex.pem
           chmod 600 taku263_credex.pem
 
-          # Create known_hosts file if it doesn't exist
+          # Ensure the known_hosts file exists and is correctly set up
           mkdir -p /home/runner/.ssh
-          touch /home/runner/.ssh/${{ secrets.KNOWN_HOSTS }}
+          touch /home/runner/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.EC2_IP }} >> /home/runner/.ssh/known_hosts
           
-          # Clear old key from known_hosts
-          ssh-keygen -R <your_ec2_ip_address> >> /home/runner/.ssh/known_hosts
-
           # Run the SSH command
-          ssh -i private_key.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_IP }} \
-          "sudo chown -R ec2-user:apache /var/www/html/<your_project_directory>/ && chmod 777 -R /var/www/html/<your_project_directory>/<your_code_directory>/storage && chmod -R 777 /var/www/html/<your_project_directory>/<your_code_directory>/bootstrap/cache/ && cd /var/www/html/<your_project_directory>/<your_code_directory>/ && sudo npm install -g vite  && npm install && sudo chown -R ec2-user:apache /var/www/html/<your_project_directory>/ && chmod +x /var/www/html/<your_project_directory>/<your_code_directory>/dev_run.sh"          
+          ssh -i taku263_credex.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_IP }} \
+          "sudo chown -R ec2-user:apache /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/ && chmod 777 -R /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/storage && chmod -R 777 /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/bootstrap/cache/ && cd /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/ && sudo npm install -g vite  && npm install && sudo chown -R ec2-user:apache /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/ && chmod +x /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/dev_run.sh"
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
