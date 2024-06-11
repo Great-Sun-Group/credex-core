@@ -24,7 +24,7 @@ export async function GetPendingOffersInService(memberID: string) {
         OPTIONAL MATCH
           (member:Member{memberID:$memberID})<-[:OFFERS]-(offersInCredex:Credex)<-[:OFFERS]-(counterparty:Member)
         RETURN
-          offersInCredex.InitialAmount/offersInCredex.CXXmultiplier AS InitialAmount,
+          offersInCredex.InitialAmount * offersInCredex.CXXmultiplier AS InitialAmount,
           offersInCredex.credexID AS credexID,
           offersInCredex.Denomination AS Denomination,
           counterparty.firstname AS counterpartyFirstname,

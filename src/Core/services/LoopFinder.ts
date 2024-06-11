@@ -104,7 +104,8 @@ export async function LoopFinder(
               loopedAt: DateTime(),
               loopID: randomUUID(),
               LoopedAmount: $valueToClear,
-              CXXmultiplier: 1
+              CXXmultiplier: 1,
+              Denomination: "CXX"
           })-[to_dayNode:LOOPED_ON]->(dayNode)
           WITH loopAnchor
 
@@ -118,7 +119,8 @@ export async function LoopFinder(
               AmountOutstandingNow: thisCredex.OutstandingAmount,
               Denomination: thisCredex.Denomination,
               CXXmultiplier: thisCredex.CXXmultiplier,
-              createdAt: DateTime()
+              createdAt: DateTime(),
+              redeemedRelID: randomUUID()
           }]->(loopAnchor)
 
           WITH thisCredex, loopAnchor
@@ -130,7 +132,7 @@ export async function LoopFinder(
               CXXmultiplier: thisCredex.CXXmultiplier,
               createdAt: DateTime(),
               loopID: loopAnchor.loopID,
-              credloopLinkID: randomUUID()
+              credloopRelID: randomUUID()
           }]->(nextCredex)
 
           WITH DISTINCT loopAnchor
