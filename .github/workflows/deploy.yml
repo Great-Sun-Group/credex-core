@@ -47,11 +47,13 @@ jobs:
 
       - name: Copy Build to EC2
         run: |
-          echo "${{ secrets.SSH_KEY }}" > taku263_credex.pem
-          chmod 600 taku263_credex.pem
           scp -i taku263_credex.pem -o StrictHostKeyChecking=no -r ./build ec2-user@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
 
       - name: Set ownership on remote server
         run: |
           ssh -i taku263_credex.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_IP }} \
           "sudo chown -R ec2-user:www-data /var/www/html/credex_ec2 && sudo chmod -R 755 /var/www/html/credex_ec2"
+
+      - name: Cleanup
+        run: |
+          rm taku263_credex.pem
