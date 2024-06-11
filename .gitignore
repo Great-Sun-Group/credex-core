@@ -130,3 +130,6 @@ dist
 .pnp.*
 
 .sst
+
+# Private keys5
+*.pem
