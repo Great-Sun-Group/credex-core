@@ -28,6 +28,12 @@ jobs:
       # - name: Run tests
       #   run: npm test
 
+      - name: Ensure build directory exists
+        run: |
+          if [ ! -d "./build" ]; then
+            mkdir ./build
+          fi
+
       - name: Set up SSH deploy keys
         uses: webfactory/ssh-agent@v0.5.3
         with:
@@ -42,7 +48,7 @@ jobs:
         run: |
           echo "${{ secrets.SSH_KEY }}" > taku263_credex.pem
           chmod 600 taku263_credex.pem
-          scp -i taku263_credex.pem -o StrictHostKeyChecking=no -r . ec2-user@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
+          scp -i taku263_credex.pem -o StrictHostKeyChecking=no -r ./build ec2-user@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
 
       - name: Set ownership on remote server
         run: |
