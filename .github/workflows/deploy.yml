@@ -18,23 +18,23 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
-        with: 
+        with:
           node-version: '18'
 
       - name: Install dependencies
         run: npm install
         working-directory: .
 
-      # For running tests
+      # Uncomment if you have tests to run
       # - name: Run tests
       #   run: npm test
       #   working-directory: .
 
+      # Uncomment if you need to build the project
       # - name: Build project
       #   run: npm run build
       #   working-directory: .
 
-      
       - name: Set up SSH deploy keys
         uses: webfactory/ssh-agent@v0.5.3
         with:
@@ -47,13 +47,11 @@ jobs:
 
       - name: Copy Build to EC2
         run: |
-          echo "${{ secrets.SSH_KEY }}" > private_key.pem
-          chmod 600 private_key.pem
-          scp -i private_key.pem -o StrictHostKeyChecking=no -r ./build ubuntu@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
+          echo "${{ secrets.SSH_KEY }}" > taku263_credex.pem
+          chmod 600 taku263_credex.pem
+          scp -i taku263_credex.pem -o StrictHostKeyChecking=no -r ./build ec2-user@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
 
       - name: Set ownership on remote server
         run: |
-          ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} \
-          "sudo chown -R ubuntu:www-data /var/www/html/credex_ec2 && sudo chmod -R 755 /var/www/html/credex_ec2"
-        env:
-          EC2_IP: ${{ secrets.EC2_IP }}
+          ssh -i taku263_credex.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_IP }} \
+          "sudo chown -R ec2-user:www-data /var/www/html/credex_ec2 && sudo chmod -R 755 /var/www/html/credex_ec2"
