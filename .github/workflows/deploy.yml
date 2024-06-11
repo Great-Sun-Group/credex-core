@@ -48,7 +48,7 @@ jobs:
         run: |
           echo "${{ secrets.SSH_KEY }}" > taku263_credex.pem
           chmod 600 taku263_credex.pem
-          scp -i taku263_credex.pem -o StrictHostKeyChecking=no -r . ec2-user@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
+          scp -i taku263_credex.pem -o StrictHostKeyChecking=no -r ./* ec2-user@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
 
       - name: Set ownership on remote server
         run: |
