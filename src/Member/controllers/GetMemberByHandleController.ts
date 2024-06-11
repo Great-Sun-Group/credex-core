@@ -9,7 +9,7 @@ export async function GetMemberByHandleController(
     const memberData = await GetMemberByHandleService(req.body.handle);
 
     if (memberData) {
-      res.status(200).json(memberData);
+      res.status(200).json({ memberData });
     } else {
       res.status(404).json({ message: "Member not found" });
     }
