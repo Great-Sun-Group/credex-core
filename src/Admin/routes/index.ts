@@ -6,12 +6,13 @@ import { ForceMtqController } from "../controllers/ForceMtqController";
 import { OfferAndAcceptCredexController } from "../controllers/OfferAndAcceptCredexController";
 import { CreateTestMembersController } from "../controllers/CreateTestMembersController";
 import { CreateTestTransactionsController } from "../controllers/CreateTestTransactionsController";
+import { CreateTestLoopController } from "../controllers/CreateTestLoopController";
 
 export default function AdminRoutes(app: express.Application, jsonParser: any) {
   app.delete(
     `${apiVersionOneRoute}clearDevDB`,
     jsonParser,
-    ClearDevDbController,
+    ClearDevDbController
   );
 
   app.post(`${apiVersionOneRoute}forceDCO`, jsonParser, ForceDcoController);
@@ -20,18 +21,24 @@ export default function AdminRoutes(app: express.Application, jsonParser: any) {
   app.post(
     `${apiVersionOneRoute}offerAndAcceptCredex`,
     jsonParser,
-    OfferAndAcceptCredexController,
+    OfferAndAcceptCredexController
   );
 
   app.post(
     `${apiVersionOneRoute}createTestMembers`,
     jsonParser,
-    CreateTestMembersController,
+    CreateTestMembersController
   );
 
   app.post(
     `${apiVersionOneRoute}createTestTransactions`,
     jsonParser,
-    CreateTestTransactionsController,
+    CreateTestTransactionsController
+  );
+
+  app.post(
+    `${apiVersionOneRoute}createTestLoop`,
+    jsonParser,
+    CreateTestLoopController
   );
 }

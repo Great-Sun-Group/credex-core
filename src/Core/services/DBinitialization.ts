@@ -66,19 +66,41 @@ export async function DBinitialization() {
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
+  console.log("create db constraints");
+  const daynodeConstraintsQuery = await ledgerSpaceSession.run(
+    `
+      CREATE CONSTRAINT daynode_unique IF NOT EXISTS
+      FOR (daynode:DayNode) REQUIRE daynode.Date IS UNIQUE;
+    `
+  );
+
+  const memberConstraintsQuery = await ledgerSpaceSession.run(
+    `
+      CREATE CONSTRAINT member_unique IF NOT EXISTS
+      FOR (member:Member) REQUIRE (member.memberID, member.phone, member.handle) IS UNIQUE;
+    `
+  );
+
+  const credexConstraintsQuery = await ledgerSpaceSession.run(
+    `
+      CREATE CONSTRAINT credex_unique IF NOT EXISTS
+      FOR (credex:Credex) REQUIRE credex.credexID IS UNIQUE;
+    `
+  );
+
   console.log("set CXX values on dayZero dayNode");
   var CreateDayNodeQuery = await ledgerSpaceSession.run(
     `
         CREATE (dayNode:DayNode)
         SET dayNode = $dayZeroCXXrates
-        SET dayNode.Date = $dayZero
+        SET dayNode.Date = date($dayZero)
         SET dayNode.Active = TRUE
         SET dayNode.DCOrunningNow = TRUE
         `,
     {
       dayZeroCXXrates: dayZeroCXXrates,
       dayZero: dayZero,
-    },
+    }
   );
 
   console.log("create initialization members and relationships");
@@ -89,7 +111,7 @@ export async function DBinitialization() {
     handle: "credexfoundation",
     defaultDenom: "CXX",
   });
-  const credexFoundationID: string = credexFoundation.memberID;
+  const credexFoundationID: string = credexFoundation.member.memberID;
 
   const rdubs = await CreateMemberService({
     memberType: "HUMAN",
@@ -101,7 +123,7 @@ export async function DBinitialization() {
     DailyCoinOfferingGive: OneCXXinCXXdenom,
     DailyCoinOfferingDenom: CXXdenom,
   });
-  const rdubsID: string = rdubs.memberID;
+  const rdubsID: string = rdubs.member.memberID;
 
   const greatSun = await CreateCompanyService(
     {
@@ -137,9 +159,8 @@ export async function DBinitialization() {
     issuerMemberID: greatSunID,
     receiverMemberID: rdubsID,
     Denomination: CXXdenom,
-    InitialAmount: OneCXXinCXXdenom * 2, // *2 just to make sure secured balance is there
+    InitialAmount: OneCXXinCXXdenom * 365, // fund DCO for a year with no adjustments
     credexType: "PURCHASE",
-    dueDate: "",
     securedCredex: true,
   };
   const DCOinitializationOfferCredex = await OfferCredexService(credexData);
