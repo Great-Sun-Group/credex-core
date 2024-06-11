@@ -153,7 +153,6 @@ export async function CreateCredexService(credexData: Credex) {
           newCredex.DefaultedAmount = 0,
           newCredex.WrittenOffAmount = 0,
           newCredex.credexType = $credexType,
-          newCredex.dueDate = $dueDate,
           newCredex.createdAt = datetime(),
           newCredex.queueStatus = "PENDING_CREDEX"
         MERGE (newCredex)-[:CREATED_ON]->(daynode)
@@ -167,11 +166,24 @@ export async function CreateCredexService(credexData: Credex) {
         InitialAmount,
         Denomination,
         credexType,
-        dueDate,
       }
     );
 
     const newCredex = createCredexQuery.records[0].get("newCredex").properties;
+
+    // Add dueDate for unsecured credex
+    if (!securedCredex) {
+      await ledgerSpaceSession.run(
+        `
+          MATCH (newCredex:Credex {credexID: $credexID})
+          SET newCredex.dueDate = date($dueDate)
+        `,
+        {
+          credexID: newCredex.credexID,
+          dueDate,
+        }
+      );
+    }
 
     // Add secured relationships for secured credex
     if (securedCredex && secureableData.securerID) {

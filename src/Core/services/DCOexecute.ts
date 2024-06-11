@@ -144,7 +144,7 @@ export async function DCOexecute() {
             expiringDayNode.DCOrunningNow = false,
             nextDayNode = $newCXXrates,
             nextDayNode.CXXprior_CXXcurrent = $CXXprior_CXXcurrent,
-            nextDayNode.Date = $nextDate,
+            nextDayNode.Date = date($nextDate),
             nextDayNode.Active = true,
             nextDayNode.DCOrunningNow = true
     `,
@@ -169,7 +169,6 @@ export async function DCOexecute() {
       Denomination: "CAD",
       InitialAmount: confirmedParticipant.get("DailyCoinOfferingGive"),
       credexType: "DCO_GIVE",
-      dueDate: "",
       securedCredex: true,
     };
     const DCOgiveCredex = await OfferCredexService(dataForDCOgive);
@@ -279,8 +278,8 @@ export async function DCOexecute() {
       Denomination: "CXX",
       InitialAmount: 1,
       credexType: "DCO_RECEIVE",
-      dueDate: "",
       securedCredex: true,
+      //dueDate: moment().add(1, "years").format("YYYY-MM-DD"),
     };
     const DCOreceiveCredex = await OfferCredexService(dataForDCOreceive);
     await AcceptCredexService(DCOreceiveCredex.credex.credexID);

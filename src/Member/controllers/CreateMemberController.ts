@@ -17,10 +17,10 @@ export async function CreateMemberController(
   try {
     const newMember = await CreateMemberService(req.body);
 
-    if (newMember) {
-      res.status(200).json(newMember);
+    if (newMember.member) {
+      res.status(200).json(newMember.member);
     } else {
-      res.status(400).json({ message: "Failed to create member" });
+      res.status(400).json({ message: newMember.message });
     }
   } catch (error) {
     console.error("Error creating member:", error);
