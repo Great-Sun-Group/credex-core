@@ -132,4 +132,4 @@ dist
 .sst
 
 # Private keys5
-*.pem
+# *.pem
