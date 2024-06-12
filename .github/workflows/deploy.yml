@@ -62,12 +62,16 @@ jobs:
         run: |
           ssh -i taku263_credex.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_IP }} \
           "cd /var/www/html/credex_ec2 && npm ci"
-      
 
       - name: Set ownership on remote server
         run: |
           ssh -i taku263_credex.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_IP }} \
           "sudo chown -R ec2-user:www-data /var/www/html/credex_ec2 && sudo chmod -R 755 /var/www/html/credex_ec2"
+
+      - name: Restart application using systemd
+        run: |
+          ssh -i taku263_credex.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_IP }} \
+          "sudo systemctl restart credex-coreapp.service"
 
       - name: Cleanup
         run: |
