@@ -46,12 +46,13 @@ export async function GetBalancesService(memberID: string) {
 
         MATCH (daynode:DayNode{Active:true})
 
-        RETURN denom, (sumSecuredIn - sumSecuredOut)/daynode[denom] AS netSecured
+        RETURN denom, (sumSecuredIn - sumSecuredOut) / daynode[denom] AS netSecured
       `,
       { memberID }
     );
 
-    var securedNetBalancesByDenom: string[] = [];
+    var securedNetBalancesByDenom: string[] = [
+    ];
     if (getSecuredBalancesQuery.records[0].get("denom")) {
       securedNetBalancesByDenom = getSecuredBalancesQuery.records.map(
         (record) => {
@@ -95,10 +96,10 @@ export async function GetBalancesService(memberID: string) {
         MATCH (daynode:DayNode{Active:true})
         RETURN
           defaultDenom,
-          receivablesTotalCXX/daynode[defaultDenom] AS receivablesTotalInDefaultDenom,
-          payablesTotalCXX/daynode[defaultDenom] AS payablesTotalInDefaultDenom,
-          unsecuredNetCXX/daynode[defaultDenom] AS unsecuredNetInDefaultDenom,
-          netCredexAssetsCXX/daynode[defaultDenom] AS netCredexAssetsInDefaultDenom
+          receivablesTotalCXX / daynode[defaultDenom] AS receivablesTotalInDefaultDenom,
+          payablesTotalCXX / daynode[defaultDenom] AS payablesTotalInDefaultDenom,
+          unsecuredNetCXX / daynode[defaultDenom] AS unsecuredNetInDefaultDenom,
+          netCredexAssetsCXX / daynode[defaultDenom] AS netCredexAssetsInDefaultDenom
       `,
         { memberID }
       );

@@ -42,8 +42,8 @@ export async function CreateMemberService(newMemberData: Member) {
     defaultDenom,
     handle,
     phone,
-    DailyCoinOfferingGive,
-    DailyCoinOfferingDenom,
+    DCOgiveInCXX,
+    DCOdenom,
   } = newMemberData;
 
   // Validation: Check required fields based on memberType
@@ -100,18 +100,14 @@ export async function CreateMemberService(newMemberData: Member) {
   }
 
   // Optional fields
-  if (
-    DailyCoinOfferingGive &&
-    DailyCoinOfferingDenom &&
-    memberType === "HUMAN"
-  ) {
-    if (!getDenominations({ code: DailyCoinOfferingDenom }).length) {
-      const message = "DailyCoinOfferingDenom not in denoms";
+  if (DCOgiveInCXX && DCOdenom && memberType === "HUMAN") {
+    if (!getDenominations({ code: DCOdenom }).length) {
+      const message = "DCOdenom not in denoms";
       console.log(message);
       return { member: false, message };
     }
-    newMemberDataChecked.DailyCoinOfferingGive = DailyCoinOfferingGive;
-    newMemberDataChecked.DailyCoinOfferingDenom = DailyCoinOfferingDenom;
+    newMemberDataChecked.DCOgiveInCXX = DCOgiveInCXX;
+    newMemberDataChecked.DCOdenom = DCOdenom;
   }
 
   // Database interaction
