@@ -22,7 +22,6 @@ export async function DailyCredcoinOffering(): Promise<boolean> {
     }
 
     await DCOexecute();
-    console.log("Daily Credcoin Offering complete");
   } finally {
     await ledgerSpaceSession.close();
   }

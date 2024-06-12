@@ -14,7 +14,7 @@ export async function DCOexecute() {
   const searchSpaceSession = searchSpaceDriver.session();
 
   try {
-  console.log("fetch expiring daynode and set DCOrunningNow flag");
+    console.log("fetch expiring daynode and set DCOrunningNow flag");
     const priorDaynodeData = await ledgerSpaceSession.run(`
       MATCH (daynode:DayNode {Active: TRUE})
       SET daynode.DCOrunningNow = true
@@ -113,9 +113,9 @@ export async function DCOexecute() {
     const numberConfirmedParticipants = confirmedParticipants.length;
     const nextCXXinXAU = DCOinXAU / numberConfirmedParticipants;
     const CXXprior_CXXcurrent = DCOinCXX / numberConfirmedParticipants;
-  console.log("DCOinCXX: " + DCOinCXX);
-  console.log("DCOinXAU: " + DCOinXAU);
-  console.log("nextCXXinXAU: " + nextCXXinXAU);
+    console.log("DCOinCXX: " + DCOinCXX);
+    console.log("DCOinXAU: " + DCOinXAU);
+    console.log("nextCXXinXAU: " + nextCXXinXAU);
 
     const newCXXrates = _.mapValues(
       denomsInXAU,
@@ -153,13 +153,23 @@ export async function DCOexecute() {
       const dataForDCOgive: Credex = {
         issuerMemberID: confirmedParticipant.get("memberID"),
         receiverMemberID: foundationID,
-        Denomination: "CAD",
+        Denomination: confirmedParticipant.get("DailyCoinOfferingDenom"),
         InitialAmount: confirmedParticipant.get("DailyCoinOfferingGive"),
         credexType: "DCO_GIVE",
         securedCredex: true,
       };
       const DCOgiveCredex = await OfferCredexService(dataForDCOgive);
-      await AcceptCredexService(DCOgiveCredex.credex.credexID);
+      if (typeof DCOgiveCredex.credex == "boolean") {
+        throw new Error("Invalid response from OfferCredexService");
+      }
+      if (
+        DCOgiveCredex.credex &&
+        typeof DCOgiveCredex.credex.credexID === "string"
+      ) {
+        await AcceptCredexService(DCOgiveCredex.credex.credexID);
+      } else {
+        throw new Error("Invalid credexID from OfferCredexService");
+      }
     }
 
     console.log("Updating credex and asset balances");
@@ -192,20 +202,20 @@ export async function DCOexecute() {
       WHERE currencyCredex.Denomination <> "CXX"
       SET
         currencyCredex.InitialAmount =
-          (currencyCredex.InitialAmount * currencyCredex.CXXmultiplier)
-          / newDayNode[currencyCredex.Denomination],
+          (currencyCredex.InitialAmount / currencyCredex.CXXmultiplier)
+          * newDayNode[currencyCredex.Denomination],
         currencyCredex.OutstandingAmount =
-          (currencyCredex.OutstandingAmount * currencyCredex.CXXmultiplier)
-          / newDayNode[currencyCredex.Denomination],
+          (currencyCredex.OutstandingAmount / currencyCredex.CXXmultiplier)
+          * newDayNode[currencyCredex.Denomination],
         currencyCredex.RedeemedAmount =
-          (currencyCredex.RedeemedAmount * currencyCredex.CXXmultiplier)
-          / newDayNode[currencyCredex.Denomination],
+          (currencyCredex.RedeemedAmount / currencyCredex.CXXmultiplier)
+          * newDayNode[currencyCredex.Denomination],
         currencyCredex.DefaultedAmount =
-          (currencyCredex.DefaultedAmount * currencyCredex.CXXmultiplier)
-          / newDayNode[currencyCredex.Denomination],
+          (currencyCredex.DefaultedAmount / currencyCredex.CXXmultiplier)
+          * newDayNode[currencyCredex.Denomination],
         currencyCredex.WrittenOffAmount =
-          (currencyCredex.WrittenOffAmount * currencyCredex.CXXmultiplier)
-          / newDayNode[currencyCredex.Denomination],
+          (currencyCredex.WrittenOffAmount / currencyCredex.CXXmultiplier)
+          * newDayNode[currencyCredex.Denomination],
         currencyCredex.CXXmultiplier = newDayNode[currencyCredex.Denomination]
 
       // Update balances on CXX :REDEEMED relationships
@@ -226,11 +236,11 @@ export async function DCOexecute() {
       WHERE currencyRedeemed.Denomination <> "CXX"
       SET
         currencyRedeemed.AmountOutstandingNow =
-          (currencyRedeemed.AmountOutstandingNow * currencyRedeemed.CXXmultiplier)
-          / newDayNode[currencyRedeemed.Denomination],
+          (currencyRedeemed.AmountOutstandingNow / currencyRedeemed.CXXmultiplier)
+          * newDayNode[currencyRedeemed.Denomination],
         currencyRedeemed.AmountRedeemed =
-          (currencyRedeemed.AmountRedeemed * currencyRedeemed.CXXmultiplier)
-          / newDayNode[currencyRedeemed.Denomination],
+          (currencyRedeemed.AmountRedeemed / currencyRedeemed.CXXmultiplier)
+          * newDayNode[currencyRedeemed.Denomination],
         currencyRedeemed.CXXmultiplier = newDayNode[currencyRedeemed.Denomination]
 
       // Update balances on CXX :CREDLOOP relationships
@@ -251,11 +261,11 @@ export async function DCOexecute() {
       WHERE currencyCredloop.Denomination <> "CXX"
       SET
         currencyCredloop.AmountOutstandingNow =
-          (currencyCredloop.AmountOutstandingNow * currencyCredloop.CXXmultiplier)
-          / newDayNode[currencyCredloop.Denomination],
+          (currencyCredloop.AmountOutstandingNow / currencyCredloop.CXXmultiplier)
+          * newDayNode[currencyCredloop.Denomination],
         currencyCredloop.AmountRedeemed =
-          (currencyCredloop.AmountRedeemed * currencyCredloop.CXXmultiplier)
-          / newDayNode[currencyCredloop.Denomination],
+          (currencyCredloop.AmountRedeemed / currencyCredloop.CXXmultiplier)
+          * newDayNode[currencyCredloop.Denomination],
         currencyCredloop.CXXmultiplier = newDayNode[currencyCredloop.Denomination]
 
       // Update balances on loop anchors (always CXX)
@@ -266,7 +276,7 @@ export async function DCOexecute() {
           loopAnchors.LoopedAmount
           / newDayNode.CXXprior_CXXcurrent
     `);
-    
+
     //update balances in searchSpace credexes
     await searchSpaceSession.run(
       `
@@ -285,10 +295,19 @@ export async function DCOexecute() {
         InitialAmount: 1,
         credexType: "DCO_RECEIVE",
         securedCredex: true,
-        //dueDate: moment().add(1, "years").format("YYYY-MM-DD"),
       };
       const DCOreceiveCredex = await OfferCredexService(dataForDCOreceive);
-      await AcceptCredexService(DCOreceiveCredex.credex.credexID);
+      if (typeof DCOreceiveCredex.credex == "boolean") {
+        throw new Error("Invalid response from OfferCredexService");
+      }
+      if (
+        DCOreceiveCredex.credex &&
+        typeof DCOreceiveCredex.credex.credexID === "string"
+      ) {
+        await AcceptCredexService(DCOreceiveCredex.credex.credexID);
+      } else {
+        throw new Error("Invalid credexID from OfferCredexService");
+      }
     }
 
     console.log("Turning off DCOrunningNow flag");

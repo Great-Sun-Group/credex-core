@@ -53,7 +53,7 @@ export async function DBinitialization(): Promise<void> {
     );
 
     console.log("establish dayZero");
-    const dayZero = "2023-06-21"
+    const dayZero = "2023-06-21";
     console.log("dayZero:", dayZero);
 
     const OneCXXinCXXdenom = 1;
@@ -87,7 +87,7 @@ export async function DBinitialization(): Promise<void> {
     );
     //add CXX to rates
     dayZeroCXXrates.CXX = 1;
-    console.log("dayZeroCXXrates:")
+    console.log("dayZeroCXXrates:");
     console.log(dayZeroCXXrates);
 
     console.log("Creating dayzero daynode...");
@@ -158,8 +158,19 @@ export async function DBinitialization(): Promise<void> {
       credexType: "PURCHASE",
       securedCredex: true,
     };
+
     const DCOinitializationOfferCredex = await OfferCredexService(credexData);
-    await AcceptCredexService(DCOinitializationOfferCredex.credex.credexID);
+    if (typeof DCOinitializationOfferCredex.credex == "boolean") {
+      throw new Error("Invalid response from OfferCredexService");
+    }
+    if (
+      DCOinitializationOfferCredex.credex &&
+      typeof DCOinitializationOfferCredex.credex.credexID === "string"
+    ) {
+      await AcceptCredexService(DCOinitializationOfferCredex.credex.credexID);
+    } else {
+      throw new Error("Invalid credexID from OfferCredexService");
+    }
   } catch (error) {
     console.error("Error during DBinitialization:", error);
   } finally {
