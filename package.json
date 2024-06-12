@@ -6,7 +6,7 @@
   "scripts": {
     "nodemon": "nodemon",
     "start": "node build/index.js",
-    "build": "tsc",
+    "build": "cp package.json build && tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
