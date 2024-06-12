@@ -1,7 +1,6 @@
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { OfferCredexService } from "../../Credex/services/OfferCredexService";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
-import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecuredAuthorizationService";
 import { Credex } from "../../Credex/types/Credex";
 import { random } from "lodash";
 import moment from "moment-timezone";
@@ -45,14 +44,13 @@ export async function CreateTestLoopService(numNewTransactions: number) {
       dueDate: moment().utc().add(7, "days").format("YYYY-MM-DD"),
     };
     const newcredex = await OfferCredexService(credexSpecs);
-    if (newcredex.credex) {
-      const acceptingID = await AcceptCredexService(newcredex.credex.credexID);
-
-      const credexCreatedData = {
-        credexID: acceptingID,
-        amount: credexSpecs.InitialAmount,
-        denomination: credexSpecs.Denomination,
-      };
+    if (typeof newcredex.credex == "boolean") {
+      throw new Error("Invalid response from OfferCredexService");
+    }
+    if (newcredex.credex && typeof newcredex.credex.credexID === "string") {
+      const credexCreatedData = await AcceptCredexService(
+        newcredex.credex.credexID
+      );
       credexesCreated.push(credexCreatedData);
     } else {
       return newcredex.message;

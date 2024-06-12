@@ -17,6 +17,7 @@ import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
 import { GetDisplayNameService } from "../../Member/services/GetDisplayNameService";
 import { Credex } from "../types/Credex";
+import moment from "moment-timezone";
 
 export async function GetPendingOffersInService(memberID: string) {
   try {
@@ -31,6 +32,7 @@ export async function GetPendingOffersInService(memberID: string) {
           offersInCredex.InitialAmount * offersInCredex.CXXmultiplier AS InitialAmount,
           offersInCredex.credexID AS credexID,
           offersInCredex.Denomination AS Denomination,
+          offersInCredex.dueDate AS dueDate,
           counterparty.firstname AS counterpartyFirstname,
           counterparty.lastname AS counterpartyLastname,
           counterparty.companyname AS counterpartyCompanyname,
@@ -42,12 +44,11 @@ export async function GetPendingOffersInService(memberID: string) {
     await ledgerSpaceSession.close();
 
     if (!result.records[0].get("credexID")) {
-      return {}
+      return {};
     }
 
     const offeredCredexData: Credex[] = [];
     for (const record of result.records) {
-
       const formattedInitialAmount =
         denomFormatter(
           record.get("InitialAmount"),
@@ -64,16 +65,23 @@ export async function GetPendingOffersInService(memberID: string) {
       });
 
       if (!counterpartyDisplayname) {
-        console.log("error: could not process counterparty displayname")
-        return false
+        console.log("error: could not process counterparty displayname");
+        return false;
       }
 
       const thisOfferedCredex: Credex = {
         credexID: record.get("credexID"),
         formattedInitialAmount: formattedInitialAmount,
         counterpartyDisplayname: counterpartyDisplayname,
-        secured: record.get("secured"),
       };
+      if (record.get("dueDate")) {
+        thisOfferedCredex.dueDate = moment(record.get("dueDate"))
+          .subtract(1, "months") //because moment uses Jan = 0 and neo4j uses Jan = 1
+          .format("YYYY-MM-DD");
+      }
+      if (record.get("secured")) {
+        thisOfferedCredex.secured = record.get("secured");
+      }
       offeredCredexData.push(thisOfferedCredex);
     }
 

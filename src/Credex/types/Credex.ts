@@ -18,7 +18,7 @@ export type Credex = {
   debit?: boolean;
   issuerMemberID?: string;
   receiverMemberID?: string;
-  counterpartyDisplayname?: string;
+  counterpartyDisplayname?: string | false;
   securedCredex?: boolean;
   securerName?: string;
   securerID?: string;

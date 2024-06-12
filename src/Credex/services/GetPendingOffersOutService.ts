@@ -17,6 +17,7 @@ import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
 import { GetDisplayNameService } from "../../Member/services/GetDisplayNameService";
 import { Credex } from "../types/Credex";
+import moment from "moment-timezone";
 
 export async function GetPendingOffersOutService(memberID: string) {
   try {
@@ -31,6 +32,7 @@ export async function GetPendingOffersOutService(memberID: string) {
           offersOutCredex.InitialAmount * offersOutCredex.CXXmultiplier AS InitialAmount,
           offersOutCredex.credexID AS credexID,
           offersOutCredex.Denomination AS Denomination,
+          offersOutCredex.dueDate AS dueDate,
           counterparty.firstname AS counterpartyFirstname,
           counterparty.lastname AS counterpartyLastname,
           counterparty.companyname AS counterpartyCompanyname,
@@ -47,7 +49,6 @@ export async function GetPendingOffersOutService(memberID: string) {
 
     const offeredCredexData: Credex[] = [];
     for (const record of result.records) {
-
       const formattedInitialAmount =
         denomFormatter(
           parseFloat("-" + record.get("InitialAmount")),
@@ -72,8 +73,15 @@ export async function GetPendingOffersOutService(memberID: string) {
         credexID: record.get("credexID"),
         formattedInitialAmount: formattedInitialAmount,
         counterpartyDisplayname: counterpartyDisplayname,
-        secured: record.get("secured"),
       };
+      if (record.get("dueDate")) {
+        thisOfferedCredex.dueDate = moment(record.get("dueDate"))
+          .subtract(1, "months") //because moment uses Jan = 0 and neo4j uses Jan = 1
+          .format("YYYY-MM-DD");
+      }
+      if (record.get("secured")) {
+        thisOfferedCredex.secured = record.get("secured");
+      }
       offeredCredexData.push(thisOfferedCredex);
     }
 
