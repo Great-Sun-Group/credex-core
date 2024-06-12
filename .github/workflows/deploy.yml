@@ -58,6 +58,12 @@ jobs:
           chmod 600 taku263_credex.pem
           scp -i taku263_credex.pem -o StrictHostKeyChecking=no -r ./build/* .env package-lock.json ec2-user@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
 
+      - name: Install dependencies on EC2
+        run: |
+          ssh -i taku263_credex.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_IP }} \
+          "cd /var/www/html/credex_ec2 && npm ci"
+      
+
       - name: Set ownership on remote server
         run: |
           ssh -i taku263_credex.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_IP }} \
@@ -66,6 +72,3 @@ jobs:
       - name: Cleanup
         run: |
           rm taku263_credex.pem
-
-      - run: 
-          npm ci
