@@ -76,43 +76,45 @@ export async function DCOexecute() {
 
     console.log("Fetching declared DCO participants");
     const DCOparticipantsDeclared = await ledgerSpaceSession.run(`
+      MATCH (daynode:DayNode{Active:true})
       MATCH (DCOparticpantsDeclared:Member)
-      WHERE DCOparticpantsDeclared.DailyCoinOfferingGive > 0
+      WHERE DCOparticpantsDeclared.DCOgiveInCXX > 0
       RETURN DCOparticpantsDeclared.memberID AS memberID,
-             DCOparticpantsDeclared.DailyCoinOfferingGive AS DailyCoinOfferingGive,
-             DCOparticpantsDeclared.DailyCoinOfferingDenom AS DailyCoinOfferingDenom
+             DCOparticpantsDeclared.DCOgiveInCXX AS DCOgiveInCXX,
+             DCOparticpantsDeclared.DCOgiveInCXX
+              / daynode[DCOparticpantsDeclared.DCOdenom]
+              AS DCOgiveInDenom,
+             DCOparticpantsDeclared.DCOdenom AS DCOdenom
     `);
 
     console.log("Filtering participants for available secured balance");
     const declaredParticipants = DCOparticipantsDeclared.records;
+    console.log("declaredParticipants: " + declaredParticipants.length);
     let DCOinCXX = 0;
     let DCOinXAU = 0;
     const confirmedParticipants = [];
 
     for (const declaredParticipant of declaredParticipants) {
       const memberID = declaredParticipant.get("memberID");
-      const DailyCoinOfferingDenom = declaredParticipant.get(
-        "DailyCoinOfferingDenom"
-      );
-      const DailyCoinOfferingGive = declaredParticipant.get(
-        "DailyCoinOfferingGive"
-      );
-
+      const DCOdenom = declaredParticipant.get("DCOdenom");
+      const DCOgiveInCXX = declaredParticipant.get("DCOgiveInCXX");
+      const DCOgiveInDenom = declaredParticipant.get("DCOgiveInDenom");
       const securableData = await GetSecuredAuthorizationService(
         memberID,
-        DailyCoinOfferingDenom
+        DCOdenom
       );
 
-      if (DailyCoinOfferingGive <= securableData.securableAmountInDenom) {
+      if (DCOgiveInDenom <= securableData.securableAmountInDenom) {
         confirmedParticipants.push(declaredParticipant);
-        DCOinCXX += DailyCoinOfferingGive;
-        DCOinXAU += DailyCoinOfferingGive / denomsInXAU[DailyCoinOfferingDenom];
+        DCOinCXX += DCOgiveInCXX;
+        DCOinXAU += DCOgiveInDenom / denomsInXAU[DCOdenom];
       }
     }
 
     const numberConfirmedParticipants = confirmedParticipants.length;
     const nextCXXinXAU = DCOinXAU / numberConfirmedParticipants;
     const CXXprior_CXXcurrent = DCOinCXX / numberConfirmedParticipants;
+    console.log("numberConfirmedParticipants: " + numberConfirmedParticipants);
     console.log("DCOinCXX: " + DCOinCXX);
     console.log("DCOinXAU: " + DCOinXAU);
     console.log("nextCXXinXAU: " + nextCXXinXAU);
@@ -153,8 +155,8 @@ export async function DCOexecute() {
       const dataForDCOgive: Credex = {
         issuerMemberID: confirmedParticipant.get("memberID"),
         receiverMemberID: foundationID,
-        Denomination: confirmedParticipant.get("DailyCoinOfferingDenom"),
-        InitialAmount: confirmedParticipant.get("DailyCoinOfferingGive"),
+        Denomination: confirmedParticipant.get("DCOdenom"),
+        InitialAmount: confirmedParticipant.get("DCOgiveInDenom"),
         credexType: "DCO_GIVE",
         securedCredex: true,
       };

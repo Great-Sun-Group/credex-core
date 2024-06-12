@@ -8,6 +8,7 @@ export type Member = {
   displayName?: string;
   handle?: string;
   phone?: string;
-  DailyCoinOfferingGive?: number;
-  DailyCoinOfferingDenom?: string;
+  DCOgiveInCXX?: number;
+  DCOgiveInDenom?: number;
+  DCOdenom?: string;
 };

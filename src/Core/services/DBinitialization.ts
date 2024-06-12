@@ -119,8 +119,8 @@ export async function DBinitialization(): Promise<void> {
       handle: "ryanlukewatson",
       defaultDenom: "USD",
       phone: "263778177125",
-      DailyCoinOfferingGive: OneCXXinCXXdenom,
-      DailyCoinOfferingDenom: CXXdenom,
+      DCOgiveInCXX: 1,
+      DCOdenom: CXXdenom,
     });
     const rdubsID = rdubs.member.memberID;
 
