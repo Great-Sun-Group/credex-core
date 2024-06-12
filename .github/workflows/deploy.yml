@@ -37,8 +37,8 @@ jobs:
           echo "NEO_4J_LEDGER_SPACE_USER=${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" >> .env
           echo "NEO_4J_LEDGER_SPACE_PASS=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" >> .env
           echo "NEO_4J_LEDGER_SPACE_BOLT_URL=${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}" >> .env
-          echo "NEO_4J_SEARCH_SPACE_USER_DEV=${{ secrets.NEO_4J_SEARCH_SPACE_USER_DEV }}" >> .env
-          echo "NEO_4J_SEARCH_SPACE_PASS_DEV=${{ secrets.NEO_4J_SEARCH_SPACE_PASS_DEV }}" >> .env
+          echo "NEO_4J_SEARCH_SPACE_USER_DEV=${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" >> .env
+          echo "NEO_4J_SEARCH_SPACE_PASS_DEV=${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" >> .env
           echo "NEO_4J_SEARCH_SPACE_BOLT_URL=${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}" >> .env
           echo "STAGE=${{ secrets.STAGE }}" >> .env
 
