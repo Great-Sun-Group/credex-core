@@ -24,15 +24,23 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Build project
+        run: npm run build
+        working-directory: .
+
       # Uncomment if you have tests to run
       # - name: Run tests
       #   run: npm test
 
-      # - name: Ensure build directory exists
-      #   run: |
-      #     if [ ! -d "./build" ]; then
-      #       mkdir ./build
-      #     fi
+      - name: Create .env file
+        run: |
+          echo "NEO_4J_LEDGER_SPACE_USER=${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" >> .env
+          echo "NEO_4J_LEDGER_SPACE_PASS=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" >> .env
+          echo "NEO_4J_LEDGER_SPACE_BOLT_URL=${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}" >> .env
+          echo "NEO_4J_SEARCH_SPACE_USER_DEV=${{ secrets.NEO_4J_SEARCH_SPACE_USER_DEV }}" >> .env
+          echo "NEO_4J_SEARCH_SPACE_PASS_DEV=${{ secrets.NEO_4J_SEARCH_SPACE_PASS_DEV }}" >> .env
+          echo "NEO_4J_SEARCH_SPACE_BOLT_URL=${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}" >> .env
+          echo "STAGE=${{ secrets.STAGE }}" >> .env
 
       - name: Set up SSH deploy keys
         uses: webfactory/ssh-agent@v0.5.3
@@ -48,7 +56,7 @@ jobs:
         run: |
           echo "${{ secrets.SSH_KEY }}" > taku263_credex.pem
           chmod 600 taku263_credex.pem
-          scp -i taku263_credex.pem -o StrictHostKeyChecking=no -r ./* ec2-user@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
+          scp -i taku263_credex.pem -o StrictHostKeyChecking=no -r ./build/* .env ec2-user@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
 
       - name: Set ownership on remote server
         run: |
