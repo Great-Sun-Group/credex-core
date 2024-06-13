@@ -2,25 +2,29 @@ import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { DBinitialization } from "./DBinitialization";
 import { DCOexecute } from "./DCOexecute";
 
-export async function DailyCredcoinOffering() {
+export async function DailyCredcoinOffering(): Promise<boolean> {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
-  //check for active daynode
-  var dayNodeExistsQuery = await ledgerSpaceSession.run(`
-    OPTIONAL MATCH (dayNode:DayNode{Active:true}) //check if active daynode exists
-    RETURN dayNode IS NOT NULL AS truefalse //format result as true/false
+  try {
+    //check for active daynode
+    const dayNodeExistsQuery = await ledgerSpaceSession.run(`
+      OPTIONAL MATCH (dayNode:DayNode {Active: true})
+      RETURN dayNode IS NOT NULL AS activeDayNodeExists
     `);
-  var dayNodeExists = dayNodeExistsQuery.records[0].get("truefalse");
+    const dayNodeExists = dayNodeExistsQuery.records[0].get(
+      "activeDayNodeExists"
+    );
 
-  if (!dayNodeExists) {
-    console.log("no active daynode, run DBinitialization");
-    await DBinitialization();
-    console.log("DB ready");
+    if (!dayNodeExists) {
+      console.log("No active dayNode, initializing database...");
+      await DBinitialization();
+      console.log("Database ready");
+    }
+
+    await DCOexecute();
+  } finally {
+    await ledgerSpaceSession.close();
   }
 
-  await DCOexecute();
-
-  ledgerSpaceSession.close();
-  console.log("Daily Coin Offering complete");
   return true;
 }
