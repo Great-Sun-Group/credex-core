@@ -29,7 +29,7 @@ export async function GetPendingOffersOutService(memberID: string) {
         OPTIONAL MATCH
           (offersOutCredex)<-[:SECURES]-(securer:Member)
         RETURN
-          offersOutCredex.InitialAmount * offersOutCredex.CXXmultiplier AS InitialAmount,
+          offersOutCredex.InitialAmount / offersOutCredex.CXXmultiplier AS InitialAmount,
           offersOutCredex.credexID AS credexID,
           offersOutCredex.Denomination AS Denomination,
           offersOutCredex.dueDate AS dueDate,
