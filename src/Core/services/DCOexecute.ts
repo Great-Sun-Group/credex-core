@@ -25,9 +25,10 @@ export async function DCOexecute() {
     const previousDate = priorDaynodeData.records[0].get("previousDate");
     const nextDate = priorDaynodeData.records[0].get("nextDate");
 
-    console.log(`Previous day: ${previousDate}, New day: ${nextDate}`);
+    console.log("Expiring day: " + previousDate);
 
-    console.log("Checking for defaults...")
+    //process defaulting unsecured credexes
+    let numberDefaulted = 0;
     const DCOdefaulting = await ledgerSpaceSession.run(`
       MATCH (daynode:DayNode {Active: TRUE})
       OPTIONAL MATCH (member1:Member)-[rel1:OWES]->(defaulting:Credex)-[rel2:OWES]->(member2:Member)
@@ -38,7 +39,27 @@ export async function DCOexecute() {
       CREATE (defaultingCredex)-[:DEFAULTED_ON]->(daynode)
       RETURN count(defaulting) AS numberDefaulted
     `);
-    console.log("... " + DCOdefaulting.records[0].get("numberDefaulted"));
+    if (DCOdefaulting.records.length) {
+      numberDefaulted = DCOdefaulting.records[0].get("numberDefaulted");
+    }
+    console.log("Defaults: " + numberDefaulted);
+
+    //expire offers/requests that have been pending for more than a full day
+    let numberExpiringPending = 0;
+    const DCOexpiring = await ledgerSpaceSession.run(`
+      MATCH (daynode:DayNode {Active: TRUE})
+      OPTIONAL MATCH (:Member)-[rel1:OFFERS|REQUESTS]->(expiringPending:Credex)-[rel2:OFFERS|REQUESTS]->(:Member),
+      (expiringPending)-[:CREATED_ON]->(createdDaynode:DayNode)
+      WHERE createdDaynode.Date + Duration({days: 1}) < daynode.Date
+      DELETE rel1, rel2
+      RETURN count(expiringPending) AS numberExpiringPending
+    `);
+    if (DCOexpiring.records.length) {
+      numberExpiringPending = DCOexpiring.records[0].get(
+        "numberExpiringPending"
+      );
+    }
+    console.log("Expired pending offers/requests: " + numberExpiringPending);
 
     console.log("Loading currencies and current rates");
     const symbolsForOpenExchangeRateApi = getDenominations({
