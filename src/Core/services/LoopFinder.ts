@@ -92,10 +92,10 @@ export async function LoopFinder(
     );
 
     if (searchSpaceQuery.records.length > 0) {
-      console.log("credloop found and cleared, now updating ledgerSpace");
       const valueToClear = searchSpaceQuery.records[0].get("lowestAmount");
       const credexesInLoop = searchSpaceQuery.records[0].get("credexIDs");
       const credexesRedeemed = searchSpaceQuery.records[0].get("zeroCredexIDs");
+      console.log("credloop of " + valueToClear + " CXX found and cleared, now updating ledgerSpace");
 
       const ledgerSpaceQuery = await ledgerSpaceSession.run(
         `
@@ -124,7 +124,9 @@ export async function LoopFinder(
           }]->(loopAnchor)
 
           WITH thisCredex, loopAnchor
-          MATCH (thisCredex)-[:OWES]->(:Member)-[:OWES]->(nextCredex:Credex)
+          MATCH (loopAnchor)<-[:REDEEMED]-(thisCredex)
+            -[:OWES]->(:Member)-[:OWES]->(nextCredex:Credex)
+            -[:REDEEMED]->(loopAnchor)
           CREATE (thisCredex)-[:CREDLOOP {
               AmountRedeemed: $valueToClear,
               AmountOutstandingNow: thisCredex.OutstandingAmount,

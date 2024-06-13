@@ -110,7 +110,18 @@ export async function DBinitialization(): Promise<void> {
       handle: "credexfoundation",
       defaultDenom: "CXX",
     });
-    const credexFoundationID = credexFoundation.member.memberID;
+    let credexFoundationID;
+    if (typeof credexFoundation.member == "boolean") {
+      throw new Error("credexFoundation could not be created");
+    }
+    if (
+      credexFoundation.member &&
+      typeof credexFoundation.member.memberID === "string"
+    ) {
+      credexFoundationID = credexFoundation.member.memberID;
+    } else {
+      throw new Error("credexFoundation could not be created");
+    }
 
     const rdubs = await CreateMemberService({
       memberType: "HUMAN",
@@ -122,7 +133,15 @@ export async function DBinitialization(): Promise<void> {
       DCOgiveInCXX: 1,
       DCOdenom: CXXdenom,
     });
-    const rdubsID = rdubs.member.memberID;
+    let rdubsID;
+    if (typeof rdubs.member == "boolean") {
+      throw new Error("rdubs could not be created");
+    }
+    if (rdubs.member && typeof rdubs.member.memberID === "string") {
+      rdubsID = rdubs.member.memberID;
+    } else {
+      throw new Error("rdubs could not be created");
+    }
 
     const greatSun = await CreateCompanyService(
       {
@@ -132,11 +151,10 @@ export async function DBinitialization(): Promise<void> {
       },
       rdubsID
     );
-
     if (!greatSun) {
-      throw new Error("Failed to create Great Sun Financial company.");
+      throw new Error("greatSun could not be created");
     }
-    const greatSunID = greatSun?.companyID;
+    const greatSunID = greatSun.companyID;
 
     //create to secure participation in first DCO
     await ledgerSpaceSession.run(
