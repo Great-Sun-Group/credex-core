@@ -64,16 +64,15 @@ export async function CreateTestTransactionsService(
       dueDate: dueDate,
       securedCredex: secured,
     };
-    const newcredex = await OfferCredexService(credexSpecs);
-    if (newcredex.credex) {
-      const acceptingID = await AcceptCredexService(newcredex.credex.credexID);
 
-      const credexCreatedData = {
-        credexID: acceptingID,
-        amount: credexSpecs.InitialAmount,
-        denomination: credexSpecs.Denomination,
-        secured: secured,
-      };
+    const newcredex = await OfferCredexService(credexSpecs);
+    if (typeof newcredex.credex == "boolean") {
+      throw new Error("Invalid response from OfferCredexService");
+    }
+    if (newcredex.credex && typeof newcredex.credex.credexID === "string") {
+      const credexCreatedData = await AcceptCredexService(
+        newcredex.credex.credexID
+      );
       credexesCreated.push(credexCreatedData);
     } else {
       return newcredex.message;

@@ -32,14 +32,14 @@ export async function GetCredexService(credexID: string, memberID: string) {
             securer.memberID AS securerID,
             securer.companyname AS securerName,
             credex.Denomination as Denomination,
-            credex.InitialAmount/credex.CXXmultiplier AS InitialAmount,
-            credex.OutstandingAmount/credex.CXXmultiplier AS OutstandingAmount,
-            credex.RedeemedAmount/credex.CXXmultiplier AS RedeemedAmount,
-            credex.DefaultedAmount/credex.CXXmultiplier AS DefaultedAmount,
-            credex.WrittenOffAmount/credex.CXXmultiplier AS WrittenOffAmount,
+            credex.InitialAmount / credex.CXXmultiplier AS InitialAmount,
+            credex.OutstandingAmount / credex.CXXmultiplier AS OutstandingAmount,
+            credex.RedeemedAmount / credex.CXXmultiplier AS RedeemedAmount,
+            credex.DefaultedAmount / credex.CXXmultiplier AS DefaultedAmount,
+            credex.WrittenOffAmount / credex.CXXmultiplier AS WrittenOffAmount,
             credex.acceptedAt AS dateTime,
             clearedAgainstCredex.credexID AS clearedAgainstCredexID,
-            clearedAgainstCredex.InitialAmount AS clearedAgainstCredexInitialAmount,
+            clearedAgainstCredex.InitialAmount / clearedAgainstCredex.CXXmultiplier AS clearedAgainstCredexInitialAmount,
             clearedAgainstCredex.Denomination AS clearedAgainstCredexDenomination,
             clearedAgainstCounterparty.firstname AS clearedAgainstCounterpartyFirstname,
             clearedAgainstCounterparty.lastname AS clearedAgainstCounterpartyLastname,
@@ -49,7 +49,7 @@ export async function GetCredexService(credexID: string, memberID: string) {
       {
         credexID: credexID,
         memberID: memberID,
-      },
+      }
     );
     await ledgerSpaceSession.close();
 

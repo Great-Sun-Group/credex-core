@@ -11,7 +11,9 @@ import { Credex } from "../types/Credex";
 export async function OfferCredexService(credexData: Credex) {
   try {
     credexData.OFFERSorREQUESTS = "OFFERS";
-    credexData.credexType = "PURCHASE";
+    if (!credexData.credexType) {
+      credexData.credexType = "PURCHASE";
+    }
     const newCredex = await CreateCredexService(credexData);
     console.log(newCredex.message);
     return newCredex;
