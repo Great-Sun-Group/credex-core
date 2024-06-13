@@ -17,7 +17,7 @@ optional inputs:
     DailyCredcoinOfferingDenom
 
 on success returns {
-  member: object with all fields
+  member: object with processed fields
   message: member created
 }
 
@@ -32,6 +32,8 @@ will return "member: false" and message with details if:
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { getDenominations } from "../../Core/constants/denominations";
 import { Member } from "../types/Member";
+import { GetDisplayNameService } from "./GetDisplayNameService";
+import moment from "moment-timezone";
 
 export async function CreateMemberService(newMemberData: Member) {
   const {
@@ -128,15 +130,25 @@ export async function CreateMemberService(newMemberData: Member) {
       { newMemberDataChecked }
     );
 
-    const createdMember = result.records[0]?.get("member");
+    const createdMember = result.records[0]?.get("member").properties;
     if (!createdMember) {
       const message = "could not create member";
       console.log(message);
       return { member: false, message };
     }
 
-    console.log("member created: " + createdMember.properties.memberID);
-    return { member: createdMember.properties, message: "member created" };
+    console.log("member created: " + createdMember.memberID);
+    return {
+      member: {
+        memberID: createdMember.memberID,
+        phone: createdMember.phone,
+        handle: createdMember.handle,
+        displayName: GetDisplayNameService(createdMember),
+        defaultDenom: createdMember.defaultDenom,
+        createdAt: moment(createdMember.createdAt).subtract(1, "month"),// add month to convert cypher date to moment
+      },
+      message: "member created",
+    };
   } catch (error) {
     console.error("Error creating member:", error);
 

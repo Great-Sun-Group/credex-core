@@ -4,7 +4,7 @@ returns member data
 required input:
     phone
 
-returns object with fields for each member property
+returns object with processed fields for member properties
 
 returns null if member can't be found or phone not passed in
 */
