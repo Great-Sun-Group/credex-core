@@ -10,8 +10,8 @@ export async function MinuteTransactionQueue() {
 
   console.log("Check if DCO is in progress");
   const DCOinProgressCheck = await ledgerSpaceSession.run(`
-    MATCH (dayNode:DayNode {Active: true})
-    RETURN dayNode.DCOrunningNow AS DCOflag
+    MATCH (daynode:DayNode {Active: true})
+    RETURN daynode.DCOrunningNow AS DCOflag
   `);
 
   if (DCOinProgressCheck.records[0]?.get("DCOflag")) {
@@ -100,25 +100,25 @@ export async function MinuteTransactionQueue() {
              acceptorMember.memberID AS acceptorMemberID
     `);
 
-const sortedQueuedCredexes = _.sortBy(
-  getQueuedCredexes.records.map((record) => {
-    const credexObject = {
-      acceptedAt: record.get("acceptedAt"),
-      issuerMemberID: record.get("issuerMemberID"),
-      credexID: record.get("credexID"),
-      credexAmount: record.get("credexAmount"),
-      credexSecuredDenom: "unsecured",
-      credexDueDate: record.get("credexDueDate"),
-      acceptorMemberID: record.get("acceptorMemberID"),
-    };
-    // add secured data if appropriate
-    if (record.get("securerID") !== null) {
-      credexObject.credexSecuredDenom = record.get("credexDenomination");
-    }
-    return credexObject;
-  }),
-  "acceptedAt"
-);
+    const sortedQueuedCredexes = _.sortBy(
+      getQueuedCredexes.records.map((record) => {
+        const credexObject = {
+          acceptedAt: record.get("acceptedAt"),
+          issuerMemberID: record.get("issuerMemberID"),
+          credexID: record.get("credexID"),
+          credexAmount: record.get("credexAmount"),
+          credexSecuredDenom: "unsecured",
+          credexDueDate: record.get("credexDueDate"),
+          acceptorMemberID: record.get("acceptorMemberID"),
+        };
+        // add secured data if appropriate
+        if (record.get("securerID") !== null) {
+          credexObject.credexSecuredDenom = record.get("credexDenomination");
+        }
+        return credexObject;
+      }),
+      "acceptedAt"
+    );
 
     for (const credex of sortedQueuedCredexes) {
       await LoopFinder(

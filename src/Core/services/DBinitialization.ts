@@ -93,11 +93,11 @@ export async function DBinitialization(): Promise<void> {
     console.log("Creating dayzero daynode...");
     await ledgerSpaceSession.run(
       `
-        CREATE (dayNode:DayNode)
-        SET dayNode = $dayZeroCXXrates,
-            dayNode.Date = date($dayZero),
-            dayNode.Active = TRUE,
-            dayNode.DCOrunningNow = TRUE
+        CREATE (daynode:DayNode)
+        SET daynode = $dayZeroCXXrates,
+            daynode.Date = date($dayZero),
+            daynode.Active = TRUE,
+            daynode.DCOrunningNow = TRUE
       `,
       { dayZeroCXXrates, dayZero }
     );
