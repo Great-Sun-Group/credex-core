@@ -27,29 +27,18 @@ export async function DCOexecute() {
 
     console.log(`Previous day: ${previousDate}, New day: ${nextDate}`);
 
-    // Run defaults for expiring day
+    console.log("Checking for defaults...")
     const DCOdefaulting = await ledgerSpaceSession.run(`
+      MATCH (daynode:DayNode {Active: TRUE})
       OPTIONAL MATCH (member1:Member)-[rel1:OWES]->(defaulting:Credex)-[rel2:OWES]->(member2:Member)
-      MATCH (dayNode:DayNode {Active: TRUE})
-      WHERE defaulting.DueDate <= dayNode.Date AND defaulting.DefaultedAmount <= 0
-      SET defaulting.DefaultedAmount = defaulting.OutstandingAmount,
-          defaulting.ActiveInterestRate = defaulting.rateOnDefault
-      CREATE (defaulting)-[:DEFAULTED_ON]->(dayNode)
-      RETURN defaulting.credexID AS defaultingCredexes
+      WHERE defaulting.dueDate <= daynode.Date AND defaulting.DefaultedAmount <= 0
+      SET defaulting.DefaultedAmount = defaulting.OutstandingAmount
+      WITH defaulting, daynode
+      UNWIND defaulting AS defaultingCredex
+      CREATE (defaultingCredex)-[:DEFAULTED_ON]->(daynode)
+      RETURN count(defaulting) AS numberDefaulted
     `);
-
-    // Delete defaulted credexes from SearchSpace
-    if (DCOdefaulting.records.length > 0) {
-      for (const record of DCOdefaulting.records) {
-        await searchSpaceSession.run(
-          `
-          MATCH (issuer:Member)-[defaultingCredex:CREDEX {credexID: $credexID}]-(acceptor:Member)
-          DELETE defaultingCredex
-        `,
-          { credexID: record.get("defaultingCredexes") }
-        );
-      }
-    }
+    console.log("... " + DCOdefaulting.records[0].get("numberDefaulted"));
 
     console.log("Loading currencies and current rates");
     const symbolsForOpenExchangeRateApi = getDenominations({
