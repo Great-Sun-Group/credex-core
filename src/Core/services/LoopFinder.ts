@@ -95,18 +95,22 @@ export async function LoopFinder(
       const valueToClear = searchSpaceQuery.records[0].get("lowestAmount");
       const credexesInLoop = searchSpaceQuery.records[0].get("credexIDs");
       const credexesRedeemed = searchSpaceQuery.records[0].get("zeroCredexIDs");
-      console.log("credloop of " + valueToClear + " CXX found and cleared, now updating ledgerSpace");
+      console.log(
+        "credloop of " +
+          valueToClear +
+          " CXX found and cleared, now updating ledgerSpace"
+      );
 
       const ledgerSpaceQuery = await ledgerSpaceSession.run(
         `
-          MATCH (dayNode:DayNode {Active: true})
+          MATCH (daynode:DayNode {Active: true})
           CREATE (loopAnchor:LoopAnchor {
               loopedAt: DateTime(),
               loopID: randomUUID(),
               LoopedAmount: $valueToClear,
               CXXmultiplier: 1,
               Denomination: "CXX"
-          })-[to_dayNode:LOOPED_ON]->(dayNode)
+          })-[to_daynode:LOOPED_ON]->(daynode)
           WITH loopAnchor
 
           UNWIND $credexesInLoop AS credexID
