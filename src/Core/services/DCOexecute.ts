@@ -293,7 +293,10 @@ export async function DCOexecute() {
     await searchSpaceSession.run(
       `
       MATCH (issuer:Member)-[credex:Credex]->(receiver:Member)
-      SET credex.InitialAmount = credex.InitialAmount / $CXXprior_CXXcurrent
+      SET
+        credex.outstandingAmount =
+          credex.outstandingAmount
+          / $CXXprior_CXXcurrent
     `,
       { CXXprior_CXXcurrent }
     );
