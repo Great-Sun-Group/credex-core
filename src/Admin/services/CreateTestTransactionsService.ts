@@ -6,9 +6,9 @@ import { Credex } from "../../Credex/types/Credex";
 import { random } from "lodash";
 import moment from "moment-timezone";
 
-async function getRandCounterparties() {
+async function getDateAndRandCounterparties() {
   var ledgerSpaceSession = ledgerSpaceDriver.session();
-  const getRandomCounterpartiesQuery = await ledgerSpaceSession.run(`
+  const getDateAndRandomCounterpartiesQuery = await ledgerSpaceSession.run(`
       MATCH (members1:Member)
       WITH members1, rand() AS rand1
       ORDER BY rand1
@@ -17,12 +17,17 @@ async function getRandCounterparties() {
       WHERE members2.memberID <> memberID_1
       WITH memberID_1, members2, rand() AS rand2
       ORDER BY rand2
-      RETURN memberID_1, members2.memberID AS memberID_2 LIMIT 1
+      WITH memberID_1, members2.memberID AS memberID_2 LIMIT 1
+      MATCH (daynode:DayNode{Active:true})
+      RETURN daynode.Date AS date, memberID_1, memberID_2
     `);
 
   return {
-    memberID_1: getRandomCounterpartiesQuery.records[0].get("memberID_1"),
-    memberID_2: getRandomCounterpartiesQuery.records[0].get("memberID_2"),
+    memberID_1:
+      getDateAndRandomCounterpartiesQuery.records[0].get("memberID_1"),
+    memberID_2:
+      getDateAndRandomCounterpartiesQuery.records[0].get("memberID_2"),
+    date: getDateAndRandomCounterpartiesQuery.records[0].get("date"),
   };
 }
 
@@ -33,15 +38,16 @@ export async function CreateTestTransactionsService(
 
   // Iterate numNewTransactions times
   for (let i = 0; i < numNewTransactions; i++) {
-    const counterparties = await getRandCounterparties();
-    const issuerMemberID = counterparties.memberID_1;
-    const receiverMemberID = counterparties.memberID_2;
+    const dateAndCounterparties = await getDateAndRandCounterparties();
+    const date = dateAndCounterparties.date;
+    const issuerMemberID = dateAndCounterparties.memberID_1;
+    const receiverMemberID = dateAndCounterparties.memberID_2;
     const InitialAmount = random(1, 100);
     const Denomination = "USD";
 
-    //default is unsecured credex due in one week
+    //default is unsecured credex due in 3 week
     let secured = false;
-    let dueDate = moment().utc().add(7, "days").format("YYYY-MM-DD");
+    let dueDate = moment(date).subtract(1, "months").add(21, "days").format("YYYY-MM-DD");
     //check ability to issue secured credex
     var securedAuthorization = await GetSecuredAuthorizationService(
       issuerMemberID,

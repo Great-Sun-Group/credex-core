@@ -105,13 +105,15 @@ export async function CreateCredexService(credexData: Credex) {
   }
 
   // Check due date for unsecured credex
-  if (!securedCredex && !checkDueDate(dueDate)) {
-    return {
-      credex: false,
-      message: `Error: due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${
-        credspan / 7
-      } weeks from today.`,
-    };
+  if (!securedCredex) {
+    const dueDateOK = await checkDueDate(dueDate);
+    if (!dueDateOK) {
+      return {
+        credex: false,
+        message: `Error: due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan / 7
+          } weeks from today.`,
+      };
+    }
   }
 
   // Get securable data for secured credex

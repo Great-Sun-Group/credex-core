@@ -7,6 +7,8 @@ import { OfferAndAcceptCredexController } from "../controllers/OfferAndAcceptCre
 import { CreateTestMembersController } from "../controllers/CreateTestMembersController";
 import { CreateTestTransactionsController } from "../controllers/CreateTestTransactionsController";
 import { CreateTestLoopController } from "../controllers/CreateTestLoopController";
+import { GrowthTestController } from "../controllers/GrowthTestController";
+import { CheckLedgerVsSearchBalancesController } from "../controllers/CheckLedgerVsSearchBalancesController";
 
 export default function AdminRoutes(app: express.Application, jsonParser: any) {
   app.delete(
@@ -40,5 +42,13 @@ export default function AdminRoutes(app: express.Application, jsonParser: any) {
     `${apiVersionOneRoute}createTestLoop`,
     jsonParser,
     CreateTestLoopController
+  );
+
+  app.post(`${apiVersionOneRoute}growthTest`, jsonParser, GrowthTestController);
+
+  app.get(
+    `${apiVersionOneRoute}checkLedgerVsSearchBalances`,
+    jsonParser,
+    CheckLedgerVsSearchBalancesController
   );
 }
