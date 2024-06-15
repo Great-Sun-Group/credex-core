@@ -29,7 +29,7 @@ export async function CreateCompanyService(
     newCompanyData.memberType === "CREDEX_FOUNDATION"
       ? "CREDEX_FOUNDATION"
       : "COMPANY";
-  
+
   const newCompany = await CreateMemberService(newCompanyData);
   if (typeof newCompany.member == "boolean") {
     throw new Error("Company could not be created");
@@ -39,13 +39,13 @@ export async function CreateCompanyService(
     try {
       const result = await ledgerSpaceSession.run(
         `
-            MATCH (owner:Member { memberID: $ownerID, memberType: "HUMAN" })
-            MATCH (company:Member { memberID: $companyID })
-            MERGE (owner)-[:OWNS]->(company)
-            MERGE (owner)-[:AUTHORIZED_TO_TRANSACT_FOR]->(company)
-            RETURN
-                owner.memberID AS ownerID,
-                company.memberID AS companyID
+          MATCH (owner:Member { memberID: $ownerID, memberType: "HUMAN" })
+          MATCH (company:Member { memberID: $companyID })
+          MERGE (owner)-[:OWNS]->(company)
+          MERGE (owner)-[:AUTHORIZED_TO_TRANSACT_FOR]->(company)
+          RETURN
+            owner.memberID AS ownerID,
+            company.memberID AS companyID
         `,
         {
           companyID: newCompany.member.memberID,
@@ -67,8 +67,7 @@ export async function CreateCompanyService(
         );
         return false;
       }
-    }
-    catch (error) {
+    } catch (error) {
       console.error("Error creating company relationships:", error);
       return false;
     } finally {

@@ -43,7 +43,6 @@ export async function GetMemberByHandleService(
 
     const memberID = result.records[0].get("memberID")
     const displayName = GetDisplayNameService({
-      memberID: memberID,
       memberType: result.records[0].get("memberType"),
       firstname: result.records[0].get("firstname"),
       lastname: result.records[0].get("lastname"),

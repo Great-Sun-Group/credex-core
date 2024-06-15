@@ -42,16 +42,15 @@ export async function MinuteTransactionQueue() {
     `);
 
     for (const record of getQueuedMembers.records) {
-      const queuedMember: Member = {
-        memberType: record.get("memberType"),
-        firstname: record.get("firstname"),
-        lastname: record.get("lastname"),
-        companyname: record.get("companyname"),
-      };
 
       const memberForSearchSpace = {
         memberID: record.get("memberID"),
-        displayName: GetDisplayNameService(queuedMember),
+        displayName: GetDisplayNameService({
+          memberType: record.get("memberType"),
+          firstname: record.get("firstname"),
+          lastname: record.get("lastname"),
+          companyname: record.get("companyname"),
+        }),
       };
 
       const addMember = await searchSpaceSession.run(
