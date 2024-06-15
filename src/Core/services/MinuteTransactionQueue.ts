@@ -9,8 +9,10 @@ export async function MinuteTransactionQueue() {
   const searchSpaceSession = searchSpaceDriver.session();
 
   console.log("Check if DCO is in progress");
+  //and set MTQrunningNow flag to postpone DCO
   const DCOinProgressCheck = await ledgerSpaceSession.run(`
     MATCH (daynode:DayNode {Active: true})
+    SET daynode.MTQrunningNow = true
     RETURN daynode.DCOrunningNow AS DCOflag
   `);
 
@@ -133,6 +135,13 @@ export async function MinuteTransactionQueue() {
   } catch (error) {
     console.error("Error in MinuteTransactionQueue:", error);
   } finally {
+    
+    //turn off MTQrunningNow flag
+    await ledgerSpaceSession.run(`
+      MATCH (daynode:DayNode{MTQrunningNow: true})
+      SET daynode.MTQrunningNow = false
+    `);
+
     await ledgerSpaceSession.close();
     await searchSpaceSession.close();
     clearTimeout(bailTimer); // Clear bail timer

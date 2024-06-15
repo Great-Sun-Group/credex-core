@@ -14,7 +14,7 @@ export async function LoopFinder(
   //check if credex already exists in DB
   //this happens if the loopfinder overloads the processors and
   //doesn't mark the credex as processed in ledgerSpace
-  //in this case, we don't want to recreate thje credex, just run the loopfinder.
+  //in this case, we don't want to recreate the credex, just run the loopfinder.
   const checkCredexExists = await searchSpaceSession.run(
     `
       OPTIONAL MATCH ()-[credex:CREDEX {credexID: $credexID}]->()

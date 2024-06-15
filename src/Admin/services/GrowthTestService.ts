@@ -8,9 +8,9 @@ export async function GrowthTestService(
   memberGrowthRate: number,
   dailyTransactionsPerMember: number
 ) {
-  const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
+      const ledgerSpaceSession = ledgerSpaceDriver.session();
     // Get current number of members
     const numberMembersQuery = await ledgerSpaceSession.run(`
       MATCH (member:Member)
@@ -19,6 +19,7 @@ export async function GrowthTestService(
     let numberMembers = parseFloat(
       numberMembersQuery.records[0].get("numberMembers")
     );
+    await ledgerSpaceSession.close();
 
     for (let index = 0; index < numberDays; index++) {
       let numberNewMembers = Math.round(numberMembers * memberGrowthRate);
@@ -51,7 +52,5 @@ export async function GrowthTestService(
       error
     );
     throw error;
-  } finally {
-    await ledgerSpaceSession.close();
   }
 }
