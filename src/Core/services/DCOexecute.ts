@@ -14,6 +14,24 @@ export async function DCOexecute() {
   const searchSpaceSession = searchSpaceDriver.session();
 
   try {
+    console.log("check for MTQrunningNow flag");
+    let MTQflag = true;
+    while (MTQflag) {
+      const MTQinProgressCheck = await ledgerSpaceSession.run(`
+        MATCH (daynode:DayNode {Active: true})
+        RETURN daynode.MTQrunningNow AS MTQflag
+      `);
+      MTQflag = MTQinProgressCheck.records[0]?.get("MTQflag");
+      if (MTQflag) {
+        console.log("MTQ running. Waiting 5 seconds...");
+        await new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(true);
+          }, 5000);
+        });
+      }
+    }
+    console.log("MTQ not running. Proceed...");
     console.log("fetch expiring daynode and set DCOrunningNow flag");
     const priorDaynodeData = await ledgerSpaceSession.run(`
       MATCH (daynode:DayNode {Active: TRUE})
@@ -293,7 +311,10 @@ export async function DCOexecute() {
     await searchSpaceSession.run(
       `
       MATCH (issuer:Member)-[credex:Credex]->(receiver:Member)
-      SET credex.InitialAmount = credex.InitialAmount / $CXXprior_CXXcurrent
+      SET
+        credex.outstandingAmount =
+          credex.outstandingAmount
+          / $CXXprior_CXXcurrent
     `,
       { CXXprior_CXXcurrent }
     );

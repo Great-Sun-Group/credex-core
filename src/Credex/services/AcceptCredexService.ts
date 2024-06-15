@@ -40,6 +40,8 @@ export async function AcceptCredexService(credexID: string) {
       return false;
     }
 
+    //hit credex accepted notification endpoint
+
     const acceptedCredexID = result.records[0].get("credexID");
     console.log(`Offer accepted for credexID: ${acceptedCredexID}`);
     return acceptedCredexID;

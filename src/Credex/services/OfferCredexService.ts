@@ -15,6 +15,9 @@ export async function OfferCredexService(credexData: Credex) {
       credexData.credexType = "PURCHASE";
     }
     const newCredex = await CreateCredexService(credexData);
+    if (typeof newCredex.credex != 'boolean' && newCredex.credex.credexID) {
+      //hit bot endpoint to send offer message
+    }
     console.log(newCredex.message);
     return newCredex;
   } catch (error) {
