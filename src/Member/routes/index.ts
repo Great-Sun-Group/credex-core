@@ -3,67 +3,71 @@ import { apiVersionOneRoute } from "../..";
 import { CreateMemberController } from "../controllers/CreateMemberController";
 import { CreateCompanyController } from "../controllers/CreateCompanyController";
 import { GetMemberController } from "../controllers/GetMemberController";
-import { GetMemberByPhoneController } from "../controllers/GetMemberByPhoneController";
+import { WhatsAppHumanLoginController } from "../controllers/WhatsAppHumanLoginController";
 import { GetMemberByHandleController } from "../controllers/GetMemberByHandleController";
 import { GetMembersListController } from "../controllers/GetMembersListController";
 import { UpdateMemberController } from "../controllers/UpdateMemberController";
 import { AuthorizeForCompanyController } from "../controllers/AuthorizeForCompanyController";
 import { GetOwnedAndAuthForCompaniesController } from "../controllers/GetOwnedAndAuthForCompaniesController";
+import { SetDefaultAccountController } from "../controllers/SetDefaultAccountController";
 
 export default function MemberRoutes(
   app: express.Application,
-  jsonParser: any,
+  jsonParser: any
 ) {
   app.post(
     `${apiVersionOneRoute}createMember`,
     jsonParser,
-    CreateMemberController,
+    CreateMemberController
   );
 
   app.post(
     `${apiVersionOneRoute}createCompany`,
     jsonParser,
-    CreateCompanyController,
+    CreateCompanyController
   );
 
   app.get(
     `${apiVersionOneRoute}getMemberList`,
     jsonParser,
-    GetMembersListController,
+    GetMembersListController
   );
 
-  app.get(`${apiVersionOneRoute}getMember`,
+  app.get(`${apiVersionOneRoute}getMember`, jsonParser, GetMemberController);
+
+  app.get(
+    `${apiVersionOneRoute}whatsAppHumanLogin`,
     jsonParser,
-    GetMemberController
+    WhatsAppHumanLoginController
   );
 
-    app.get(
-      `${apiVersionOneRoute}getMemberByPhone`,
-      jsonParser,
-      GetMemberByPhoneController
-    );
-
-    app.get(
-      `${apiVersionOneRoute}getMemberByHandle`,
-      jsonParser,
-      GetMemberByHandleController
-    );
+  app.get(
+    `${apiVersionOneRoute}getMemberByHandle`,
+    jsonParser,
+    GetMemberByHandleController
+  );
 
   app.patch(
     `${apiVersionOneRoute}updateMember`,
     jsonParser,
-    UpdateMemberController,
+    UpdateMemberController
   );
 
   app.post(
     `${apiVersionOneRoute}authorizeForCompany`,
     jsonParser,
-    AuthorizeForCompanyController,
+    AuthorizeForCompanyController
   );
 
   app.get(
     `${apiVersionOneRoute}getOwnedAndAuthForCompanies`,
     jsonParser,
-    GetOwnedAndAuthForCompaniesController,
+    GetOwnedAndAuthForCompaniesController
+  );
+
+  app.post(
+    `${apiVersionOneRoute}setDefaultAccount`,
+    jsonParser,
+    SetDefaultAccountController
   );
 }

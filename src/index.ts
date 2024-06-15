@@ -1,5 +1,4 @@
 import express from "express";
-import WhatsAppClientRoutes from "./WhatsAppClient/routes";
 import MemberRoutes from "./Member/routes";
 import CredexRoutes from "./Credex/routes";
 import AdminRoutes from "./Admin/routes";
@@ -18,7 +17,6 @@ export const apiVersionOneRoute = "/api/v1/";
 
 app.use(Logger);
 
-WhatsAppClientRoutes(app, jsonParser);
 MemberRoutes(app, jsonParser);
 CredexRoutes(app, jsonParser);
 AdminRoutes(app, jsonParser);

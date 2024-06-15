@@ -7,16 +7,16 @@ export async function DailyCredcoinOffering(): Promise<boolean> {
 
   try {
     //check for active daynode
-    const dayNodeExistsQuery = await ledgerSpaceSession.run(`
-      OPTIONAL MATCH (dayNode:DayNode {Active: true})
-      RETURN dayNode IS NOT NULL AS activeDayNodeExists
+    const daynodeExistsQuery = await ledgerSpaceSession.run(`
+      OPTIONAL MATCH (daynode:DayNode {Active: true})
+      RETURN daynode IS NOT NULL AS activeDayNodeExists
     `);
-    const dayNodeExists = dayNodeExistsQuery.records[0].get(
+    const daynodeExists = daynodeExistsQuery.records[0].get(
       "activeDayNodeExists"
     );
 
-    if (!dayNodeExists) {
-      console.log("No active dayNode, initializing database...");
+    if (!daynodeExists) {
+      console.log("No active daynode, initializing database...");
       await DBinitialization();
       console.log("Database ready");
     }

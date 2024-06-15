@@ -14,6 +14,24 @@ export async function DCOexecute() {
   const searchSpaceSession = searchSpaceDriver.session();
 
   try {
+    console.log("check for MTQrunningNow flag");
+    let MTQflag = true;
+    while (MTQflag) {
+      const MTQinProgressCheck = await ledgerSpaceSession.run(`
+        MATCH (daynode:DayNode {Active: true})
+        RETURN daynode.MTQrunningNow AS MTQflag
+      `);
+      MTQflag = MTQinProgressCheck.records[0]?.get("MTQflag");
+      if (MTQflag) {
+        console.log("MTQ running. Waiting 5 seconds...");
+        await new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(true);
+          }, 5000);
+        });
+      }
+    }
+    console.log("MTQ not running. Proceed...");
     console.log("fetch expiring daynode and set DCOrunningNow flag");
     const priorDaynodeData = await ledgerSpaceSession.run(`
       MATCH (daynode:DayNode {Active: TRUE})
@@ -25,31 +43,41 @@ export async function DCOexecute() {
     const previousDate = priorDaynodeData.records[0].get("previousDate");
     const nextDate = priorDaynodeData.records[0].get("nextDate");
 
-    console.log(`Previous day: ${previousDate}, New day: ${nextDate}`);
+    console.log("Expiring day: " + previousDate);
 
-    // Run defaults for expiring day
+    //process defaulting unsecured credexes
+    let numberDefaulted = 0;
     const DCOdefaulting = await ledgerSpaceSession.run(`
+      MATCH (daynode:DayNode {Active: TRUE})
       OPTIONAL MATCH (member1:Member)-[rel1:OWES]->(defaulting:Credex)-[rel2:OWES]->(member2:Member)
-      MATCH (dayNode:DayNode {Active: TRUE})
-      WHERE defaulting.DueDate <= dayNode.Date AND defaulting.DefaultedAmount <= 0
-      SET defaulting.DefaultedAmount = defaulting.OutstandingAmount,
-          defaulting.ActiveInterestRate = defaulting.rateOnDefault
-      CREATE (defaulting)-[:DEFAULTED_ON]->(dayNode)
-      RETURN defaulting.credexID AS defaultingCredexes
+      WHERE defaulting.dueDate <= daynode.Date AND defaulting.DefaultedAmount <= 0
+      SET defaulting.DefaultedAmount = defaulting.OutstandingAmount
+      WITH defaulting, daynode
+      UNWIND defaulting AS defaultingCredex
+      CREATE (defaultingCredex)-[:DEFAULTED_ON]->(daynode)
+      RETURN count(defaulting) AS numberDefaulted
     `);
-
-    // Delete defaulted credexes from SearchSpace
-    if (DCOdefaulting.records.length > 0) {
-      for (const record of DCOdefaulting.records) {
-        await searchSpaceSession.run(
-          `
-          MATCH (issuer:Member)-[defaultingCredex:CREDEX {credexID: $credexID}]-(acceptor:Member)
-          DELETE defaultingCredex
-        `,
-          { credexID: record.get("defaultingCredexes") }
-        );
-      }
+    if (DCOdefaulting.records.length) {
+      numberDefaulted = DCOdefaulting.records[0].get("numberDefaulted");
     }
+    console.log("Defaults: " + numberDefaulted);
+
+    //expire offers/requests that have been pending for more than a full day
+    let numberExpiringPending = 0;
+    const DCOexpiring = await ledgerSpaceSession.run(`
+      MATCH (daynode:DayNode {Active: TRUE})
+      OPTIONAL MATCH (:Member)-[rel1:OFFERS|REQUESTS]->(expiringPending:Credex)-[rel2:OFFERS|REQUESTS]->(:Member),
+      (expiringPending)-[:CREATED_ON]->(createdDaynode:DayNode)
+      WHERE createdDaynode.Date + Duration({days: 1}) < daynode.Date
+      DELETE rel1, rel2
+      RETURN count(expiringPending) AS numberExpiringPending
+    `);
+    if (DCOexpiring.records.length) {
+      numberExpiringPending = DCOexpiring.records[0].get(
+        "numberExpiringPending"
+      );
+    }
+    console.log("Expired pending offers/requests: " + numberExpiringPending);
 
     console.log("Loading currencies and current rates");
     const symbolsForOpenExchangeRateApi = getDenominations({
@@ -283,7 +311,10 @@ export async function DCOexecute() {
     await searchSpaceSession.run(
       `
       MATCH (issuer:Member)-[credex:Credex]->(receiver:Member)
-      SET credex.InitialAmount = credex.InitialAmount / $CXXprior_CXXcurrent
+      SET
+        credex.outstandingAmount =
+          credex.outstandingAmount
+          / $CXXprior_CXXcurrent
     `,
       { CXXprior_CXXcurrent }
     );

@@ -9,9 +9,11 @@ export async function MinuteTransactionQueue() {
   const searchSpaceSession = searchSpaceDriver.session();
 
   console.log("Check if DCO is in progress");
+  //and set MTQrunningNow flag to postpone DCO
   const DCOinProgressCheck = await ledgerSpaceSession.run(`
-    MATCH (dayNode:DayNode {Active: true})
-    RETURN dayNode.DCOrunningNow AS DCOflag
+    MATCH (daynode:DayNode {Active: true})
+    SET daynode.MTQrunningNow = true
+    RETURN daynode.DCOrunningNow AS DCOflag
   `);
 
   if (DCOinProgressCheck.records[0]?.get("DCOflag")) {
@@ -40,16 +42,15 @@ export async function MinuteTransactionQueue() {
     `);
 
     for (const record of getQueuedMembers.records) {
-      const queuedMember: Member = {
-        memberType: record.get("memberType"),
-        firstname: record.get("firstname"),
-        lastname: record.get("lastname"),
-        companyname: record.get("companyname"),
-      };
 
       const memberForSearchSpace = {
         memberID: record.get("memberID"),
-        displayName: GetDisplayNameService(queuedMember),
+        displayName: GetDisplayNameService({
+          memberType: record.get("memberType"),
+          firstname: record.get("firstname"),
+          lastname: record.get("lastname"),
+          companyname: record.get("companyname"),
+        }),
       };
 
       const addMember = await searchSpaceSession.run(
@@ -100,25 +101,25 @@ export async function MinuteTransactionQueue() {
              acceptorMember.memberID AS acceptorMemberID
     `);
 
-const sortedQueuedCredexes = _.sortBy(
-  getQueuedCredexes.records.map((record) => {
-    const credexObject = {
-      acceptedAt: record.get("acceptedAt"),
-      issuerMemberID: record.get("issuerMemberID"),
-      credexID: record.get("credexID"),
-      credexAmount: record.get("credexAmount"),
-      credexSecuredDenom: "unsecured",
-      credexDueDate: record.get("credexDueDate"),
-      acceptorMemberID: record.get("acceptorMemberID"),
-    };
-    // add secured data if appropriate
-    if (record.get("securerID") !== null) {
-      credexObject.credexSecuredDenom = record.get("credexDenomination");
-    }
-    return credexObject;
-  }),
-  "acceptedAt"
-);
+    const sortedQueuedCredexes = _.sortBy(
+      getQueuedCredexes.records.map((record) => {
+        const credexObject = {
+          acceptedAt: record.get("acceptedAt"),
+          issuerMemberID: record.get("issuerMemberID"),
+          credexID: record.get("credexID"),
+          credexAmount: record.get("credexAmount"),
+          credexSecuredDenom: "unsecured",
+          credexDueDate: record.get("credexDueDate"),
+          acceptorMemberID: record.get("acceptorMemberID"),
+        };
+        // add secured data if appropriate
+        if (record.get("securerID") !== null) {
+          credexObject.credexSecuredDenom = record.get("credexDenomination");
+        }
+        return credexObject;
+      }),
+      "acceptedAt"
+    );
 
     for (const credex of sortedQueuedCredexes) {
       await LoopFinder(
@@ -133,6 +134,13 @@ const sortedQueuedCredexes = _.sortBy(
   } catch (error) {
     console.error("Error in MinuteTransactionQueue:", error);
   } finally {
+    
+    //turn off MTQrunningNow flag
+    await ledgerSpaceSession.run(`
+      MATCH (daynode:DayNode{MTQrunningNow: true})
+      SET daynode.MTQrunningNow = false
+    `);
+
     await ledgerSpaceSession.close();
     await searchSpaceSession.close();
     clearTimeout(bailTimer); // Clear bail timer
