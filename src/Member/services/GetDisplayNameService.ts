@@ -12,8 +12,6 @@ will return false if:
     memberType incongruent with names
 */
 
-import { Member } from "../types/Member";
-
 export function GetDisplayNameService(memberData: {
   memberType: string;
   firstname: string;

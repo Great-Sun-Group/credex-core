@@ -12,19 +12,18 @@ export async function SetDefaultAccountService(
   const SetDefaultAccountQuery = await ledgerSpaceSession.run(
     `
         MATCH (member:Member{memberID: $memberID, memberType: "HUMAN"})
+          -[:OWNS|AUTHORIZED_FOR]->(newDefaultAccount:Member{memberID: $defaultAccountID})
         OPTIONAL MATCH (member)-[currentDefaultRel:DEFAULT_ACCOUNT]->(currentDefaultAccount)
         DELETE currentDefaultRel
-        WITH member
-        MATCH (defaultAccount:Member{memberID: $defaultAccountID})
-        CREATE (member)-[:DEFAULT_ACCOUNT]->(defaultAccount)
-        RETURN true AS result
+        CREATE (member)-[:DEFAULT_ACCOUNT]->(newDefaultAccount)
+        RETURN newDefaultAccount.memberID AS newDefaultAccountID
     `,
     {
       memberID,
       defaultAccountID,
     }
   );
-  if (!SetDefaultAccountQuery.records[0].get("result")) {
+  if (!SetDefaultAccountQuery.records[0]) {
     return false;
   }
   return true;

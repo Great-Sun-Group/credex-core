@@ -16,7 +16,7 @@ export async function DBinitialization(): Promise<void> {
   const searchSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    console.log("Creating database constraints...");
+    console.log("Creating database constraints and indexes...");
     await ledgerSpaceSession.run(
       `
         CREATE CONSTRAINT daynode_unique IF NOT EXISTS
@@ -38,6 +38,15 @@ export async function DBinitialization(): Promise<void> {
       `
     );
 
+    await ledgerSpaceSession.run(
+      `
+        CREATE INDEX credex_Denomination_index IF NOT EXISTS
+        FOR (credex:CREDEX)
+        ON (credex.Denomination);      `
+    );
+
+    //add indexes for other DCO balance updates
+
     await searchSpaceSession.run(
       `
         CREATE CONSTRAINT member_unique IF NOT EXISTS
@@ -50,6 +59,20 @@ export async function DBinitialization(): Promise<void> {
         CREATE CONSTRAINT credex_unique IF NOT EXISTS
         FOR ()-[credex:CREDEX]-() REQUIRE credex.credexID IS UNIQUE;
       `
+    );
+
+    await searchSpaceSession.run(
+      `
+        CREATE INDEX securedDenom_index IF NOT EXISTS
+        FOR ()-[credex:CREDEX]-()
+        ON (credex.securedDenom);      `
+    );
+
+    await searchSpaceSession.run(
+      `
+        CREATE INDEX Denomination_index IF NOT EXISTS
+        FOR ()-[credex:CREDEX]-()
+        ON (credex.Denomination);      `
     );
 
     console.log("establish dayZero");

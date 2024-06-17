@@ -2,6 +2,7 @@ import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { OfferCredexService } from "../../Credex/services/OfferCredexService";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
 import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecuredAuthorizationService";
+import { getDenominations } from "../../Core/constants/denominations";
 import { Credex } from "../../Credex/types/Credex";
 import { random } from "lodash";
 import moment from "moment-timezone";
@@ -43,7 +44,12 @@ export async function CreateTestTransactionsService(
     const issuerMemberID = dateAndCounterparties.memberID_1;
     const receiverMemberID = dateAndCounterparties.memberID_2;
     const InitialAmount = random(1, 100);
-    const Denomination = "USD";
+    let Denomination;
+    if (InitialAmount < 70) {
+      Denomination = "USD";
+    } else {
+      Denomination = "ZIG";
+    }
 
     //default is unsecured credex due in 3 week
     let secured = false;
