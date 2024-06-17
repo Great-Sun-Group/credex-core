@@ -1,29 +1,42 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
 import { LoopFinder } from "./LoopFinder";
 import { GetDisplayNameService } from "../../Member/services/GetDisplayNameService";
-import { Member } from "../../Member/types/Member";
 import _ from "lodash";
 
 export async function MinuteTransactionQueue() {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
-  console.log("Check if DCO is in progress");
+  console.log("MTQ start: check if DCO or MTQ is in progress");
   //and set MTQrunningNow flag to postpone DCO
   const DCOinProgressCheck = await ledgerSpaceSession.run(`
     MATCH (daynode:DayNode {Active: true})
-    SET daynode.MTQrunningNow = true
-    RETURN daynode.DCOrunningNow AS DCOflag
+    RETURN
+      daynode.DCOrunningNow AS DCOflag,
+      daynode.MTQrunningNow AS MTQflag
   `);
+  const DCOflag = DCOinProgressCheck.records[0].get("DCOflag");
+  const MTQflag = DCOinProgressCheck.records[0].get("MTQflag");
 
-  if (DCOinProgressCheck.records[0]?.get("DCOflag")) {
-    console.log("DCO in progress, holding loopfinder");
+  if (DCOflag || MTQflag) {
+    if (DCOflag) {
+      console.log("DCO in progress, holding MTQ");
+    }
+    if (MTQflag) {
+      console.log("MTQ in progress, holding MTQ");
+    }
     await ledgerSpaceSession.close();
     await searchSpaceSession.close();
     return;
   }
 
-  console.log("Running loopfinder");
+  console.log("Running MTQ");
+
+  await ledgerSpaceSession.run(`
+    MATCH (daynode:DayNode {Active: true})
+    SET daynode.MTQrunningNow = true
+  `);
+
   const BAIL_TIME = 60 * 1000 * 14; // 14 minutes
   const bailTimer = setTimeout(() => {
     console.log("Bail timer reached");
@@ -42,7 +55,6 @@ export async function MinuteTransactionQueue() {
     `);
 
     for (const record of getQueuedMembers.records) {
-
       const memberForSearchSpace = {
         memberID: record.get("memberID"),
         displayName: GetDisplayNameService({
@@ -96,6 +108,8 @@ export async function MinuteTransactionQueue() {
              queuedCredex.credexID AS credexID,
              queuedCredex.InitialAmount AS credexAmount,
              queuedCredex.Denomination AS credexDenomination,
+             queuedCredex.CXXmultiplier AS credexCXXmultiplier,
+             queuedCredex.CXXmultiplier AS CXXmultiplier,
              securer.memberID AS securerID,
              queuedCredex.dueDate AS credexDueDate,
              acceptorMember.memberID AS acceptorMemberID
@@ -108,6 +122,8 @@ export async function MinuteTransactionQueue() {
           issuerMemberID: record.get("issuerMemberID"),
           credexID: record.get("credexID"),
           credexAmount: record.get("credexAmount"),
+          credexDenomination: record.get("credexDenomination"),
+          credexCXXmultiplier: record.get("credexCXXmultiplier"),
           credexSecuredDenom: "unsecured",
           credexDueDate: record.get("credexDueDate"),
           acceptorMemberID: record.get("acceptorMemberID"),
@@ -126,6 +142,8 @@ export async function MinuteTransactionQueue() {
         credex.issuerMemberID,
         credex.credexID,
         credex.credexAmount,
+        credex.credexDenomination,
+        credex.credexCXXmultiplier,
         credex.credexSecuredDenom,
         credex.credexDueDate,
         credex.acceptorMemberID
@@ -134,7 +152,6 @@ export async function MinuteTransactionQueue() {
   } catch (error) {
     console.error("Error in MinuteTransactionQueue:", error);
   } finally {
-    
     //turn off MTQrunningNow flag
     await ledgerSpaceSession.run(`
       MATCH (daynode:DayNode{MTQrunningNow: true})
@@ -144,7 +161,7 @@ export async function MinuteTransactionQueue() {
     await ledgerSpaceSession.close();
     await searchSpaceSession.close();
     clearTimeout(bailTimer); // Clear bail timer
-    console.log("Transaction queue processing completed");
+    console.log("MTQ processing completed");
   }
 
   return true;

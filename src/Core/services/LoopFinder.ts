@@ -4,6 +4,8 @@ export async function LoopFinder(
   issuerMemberID: string,
   credexID: string,
   credexAmount: number,
+  Denomination: string,
+  CXXmultiplier: number,
   credexSecuredDenom: string,
   credexDueDate: string,
   acceptorMemberID: string
@@ -33,6 +35,8 @@ export async function LoopFinder(
       CREATE (issuer)-[credex:CREDEX {
         credexID: $credexID,
         outstandingAmount: $credexAmount,
+        Denomination: $Denomination,
+        CXXmultiplier: $CXXmultiplier,
         securedDenom: $credexSecuredDenom,
         dueDate: date($credexDueDate)
       }]->(acceptor)
@@ -42,6 +46,8 @@ export async function LoopFinder(
         issuerMemberID,
         credexID,
         credexAmount,
+        Denomination,
+        CXXmultiplier,
         credexSecuredDenom,
         credexDueDate,
         acceptorMemberID,
@@ -63,7 +69,7 @@ export async function LoopFinder(
         MATCH credloop = 
           (issuer:Member {memberID: $issuerMemberID})
           -[:CREDEX {credexID: $credexID}]->(acceptor: Member)
-          -[*]->(issuer)
+          -[*1..8]->(issuer)
         WHERE ALL(rel in relationships(credloop)
         WHERE rel.securedDenom = $credexSecuredDenom)
         WITH credloop, length(credloop) AS credloopLength, 
