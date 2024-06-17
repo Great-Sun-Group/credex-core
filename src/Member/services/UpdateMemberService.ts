@@ -26,7 +26,7 @@ import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { getDenominations } from "../../Core/constants/denominations";
 
 export async function UpdateMemberService(
-  memberData: Member,
+  memberData: Member
 ): Promise<string | null> {
   const memberDataChecked: Partial<Member> = {};
 
@@ -45,16 +45,15 @@ export async function UpdateMemberService(
   if (memberData.handle) {
     memberDataChecked.handle = memberData.handle.toLowerCase();
   }
-  if (memberData.DailyCoinOfferingGive && memberData.memberType == "HUMAN") {
-    memberDataChecked.DailyCoinOfferingGive = memberData.DailyCoinOfferingGive;
+  if (memberData.DCOgiveInCXX && memberData.memberType == "HUMAN") {
+    memberDataChecked.DCOgiveInCXX = memberData.DCOgiveInCXX;
   }
   if (
-    memberData.DailyCoinOfferingDenom &&
-    getDenominations({ code: memberData.DailyCoinOfferingDenom }).length &&
+    memberData.DCOdenom &&
+    getDenominations({ code: memberData.DCOdenom }).length &&
     memberData.memberType == "HUMAN"
   ) {
-    memberDataChecked.DailyCoinOfferingDenom =
-      memberData.DailyCoinOfferingDenom;
+    memberDataChecked.DCOdenom = memberData.DCOdenom;
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -66,7 +65,7 @@ export async function UpdateMemberService(
             SET member += $memberDataChecked
             RETURN member.memberID AS memberID
             `,
-      { memberID: memberData.memberID, memberDataChecked },
+      { memberID: memberData.memberID, memberDataChecked }
     );
 
     if (!result.records[0].get("memberID")) {

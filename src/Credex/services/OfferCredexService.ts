@@ -11,8 +11,13 @@ import { Credex } from "../types/Credex";
 export async function OfferCredexService(credexData: Credex) {
   try {
     credexData.OFFERSorREQUESTS = "OFFERS";
-    credexData.credexType = "PURCHASE";
+    if (!credexData.credexType) {
+      credexData.credexType = "PURCHASE";
+    }
     const newCredex = await CreateCredexService(credexData);
+    if (typeof newCredex.credex != 'boolean' && newCredex.credex.credexID) {
+      //hit bot endpoint to send offer message
+    }
     console.log(newCredex.message);
     return newCredex;
   } catch (error) {

@@ -33,6 +33,7 @@ import { GetSecuredAuthorizationService } from "./GetSecuredAuthorizationService
 import { Credex } from "../types/Credex";
 import { checkDueDate, credspan } from "../../Core/constants/credspan";
 import { checkPermittedCredexType } from "../../Core/constants/credexTypes";
+import { GetDisplayNameService } from "../../Member/services/GetDisplayNameService";
 
 export async function CreateCredexService(credexData: Credex) {
   const {
@@ -84,7 +85,7 @@ export async function CreateCredexService(credexData: Credex) {
   if (!getDenominations({ code: Denomination }).length) {
     return {
       credex: false,
-      message: "Error: denomination not permitted"
+      message: "Error: denomination not permitted",
     };
   }
 
@@ -104,13 +105,15 @@ export async function CreateCredexService(credexData: Credex) {
   }
 
   // Check due date for unsecured credex
-  if (!securedCredex && !checkDueDate(dueDate)) {
-    return {
-      credex: false,
-      message: `Error: due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${
-        credspan / 7
-      } weeks from today.`,
-    };
+  if (!securedCredex) {
+    const dueDateOK = await checkDueDate(dueDate);
+    if (!dueDateOK) {
+      return {
+        credex: false,
+        message: `Error: due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan / 7
+          } weeks from today.`,
+      };
+    }
   }
 
   // Get securable data for secured credex
@@ -158,7 +161,12 @@ export async function CreateCredexService(credexData: Credex) {
         MERGE (newCredex)-[:CREATED_ON]->(daynode)
         MERGE (issuer)-[:${OFFERSorREQUESTS}]->(newCredex)-[:${OFFERSorREQUESTS}]->(receiver)
         MERGE (issuer)-[:${OFFEREDorREQUESTED}]->(newCredex)-[:${OFFEREDorREQUESTED}]->(receiver)
-        RETURN newCredex AS newCredex
+        RETURN
+          newCredex.credexID AS credexID,
+          receiver.memberType AS receiverMemberType,
+          receiver.firstname AS receiverFirstname,
+          receiver.lastname AS receiverLastname,
+          receiver.companyname AS receiverCompanyname
       `,
       {
         issuerMemberID,
@@ -169,36 +177,54 @@ export async function CreateCredexService(credexData: Credex) {
       }
     );
 
-    const newCredex = createCredexQuery.records[0].get("newCredex").properties;
+    const credexID = createCredexQuery.records[0].get("credexID");
 
     // Add dueDate for unsecured credex
     if (!securedCredex) {
-      await ledgerSpaceSession.run(
+      const addDueDateQuery = await ledgerSpaceSession.run(
         `
           MATCH (newCredex:Credex {credexID: $credexID})
           SET newCredex.dueDate = date($dueDate)
+          RETURN newCredex.dueDate AS dueDate
         `,
         {
-          credexID: newCredex.credexID,
+          credexID,
           dueDate,
         }
       );
+      if (addDueDateQuery.records.length === 0) {
+        return { credex: false, message: "error creating credex" };
+      }
     }
 
     // Add secured relationships for secured credex
     if (securedCredex && secureableData.securerID) {
       await ledgerSpaceSession.run(
         `
-          MATCH (newCredex:Credex {credexID: $newCredexID})
+          MATCH (newCredex:Credex {credexID: $credexID})
           MATCH (securingMember: Member {memberID: $securingMemberID})
           MERGE (securingMember)-[:SECURES]->(newCredex)
         `,
         {
-          newCredexID: newCredex.credexID,
+          credexID,
           securingMemberID: secureableData.securerID,
         }
       );
     }
+
+    const newCredex: Credex = {
+      credexID: createCredexQuery.records[0].get("credexID"),
+      formattedInitialAmount: denomFormatter(InitialAmount, Denomination),
+      counterpartyDisplayname: GetDisplayNameService({
+        memberType: createCredexQuery.records[0].get("receiverMemberType"),
+        firstname: createCredexQuery.records[0].get("receiverFirstname"),
+        lastname: createCredexQuery.records[0].get("receiverLastname"),
+        companyname: createCredexQuery.records[0].get("receiverCompanyname"),
+      }),
+      secured: securedCredex,
+      dueDate: dueDate,
+    };
+
     return {
       credex: newCredex,
       message: "Credex created: " + newCredex.credexID,

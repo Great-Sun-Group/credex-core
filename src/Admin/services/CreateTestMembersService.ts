@@ -9,10 +9,9 @@ export async function CreateTestMembersService(numNewMembers: number) {
   for (let i = 0; i < numNewMembers; i++) {
     // Fetch a new name for each iteration
     const nameObject = await axios.get(
-      "https://api.parser.name/?api_key=f30409d63186d13cfa335a40e14dcd17&endpoint=generate",
+      "https://api.parser.name/?api_key=f30409d63186d13cfa335a40e14dcd17&endpoint=generate"
     );
-    const phone =
-      "263" + Math.floor(100000000 + Math.random() * 900000000);
+    const phone = "263" + Math.floor(100000000 + Math.random() * 900000000);
     //need to check if phone unique here and generate new if not
     const request: Member = {
       firstname: nameObject.data.data[0].name.firstname.name_ascii,
@@ -25,10 +24,15 @@ export async function CreateTestMembersService(numNewMembers: number) {
         nameObject.data.data[0].name.lastname.name_ascii,
     };
     newMember = await CreateMemberService(request);
-    console.log(
-      "Member created: " + newMember.member.firstname + " " + newMember.member.lastname,
-    );
-    membersCreated.push(newMember.member.memberID);
+    if (typeof newMember.member == "boolean") {
+      throw new Error("newMember could not be created");
+    }
+    if (newMember.member && typeof newMember.member.memberID === "string") {
+      console.log("Member created: " + newMember.member.displayName);
+      membersCreated.push(newMember.member.memberID);
+    } else {
+      throw new Error("newMember could not be created");
+    }
   }
   return membersCreated;
 }

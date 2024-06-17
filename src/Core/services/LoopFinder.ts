@@ -4,6 +4,8 @@ export async function LoopFinder(
   issuerMemberID: string,
   credexID: string,
   credexAmount: number,
+  Denomination: string,
+  CXXmultiplier: number,
   credexSecuredDenom: string,
   credexDueDate: string,
   acceptorMemberID: string
@@ -11,51 +13,63 @@ export async function LoopFinder(
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
-  const createSearchSpaceCredex = await searchSpaceSession.run(
+  //check if credex already exists in DB
+  //this happens if the loopfinder overloads the processors and
+  //doesn't mark the credex as processed in ledgerSpace
+  //in this case, we don't want to recreate the credex, just run the loopfinder.
+  const checkCredexExists = await searchSpaceSession.run(
     `
+      OPTIONAL MATCH ()-[credex:CREDEX {credexID: $credexID}]->()
+      RETURN credex IS NOT NULL AS credexExists
+    `,
+    { credexID }
+  );
+  const credexExists = checkCredexExists.records[0].get("credexExists");
+
+  //if the credex doesn't exist in searchSpace, create it
+  if (!credexExists) {
+    const createSearchSpaceCredex = await searchSpaceSession.run(
+      `
       MATCH (issuer:Member {memberID: $issuerMemberID})
       MATCH (acceptor:Member {memberID: $acceptorMemberID})
       CREATE (issuer)-[credex:CREDEX {
         credexID: $credexID,
         outstandingAmount: $credexAmount,
+        Denomination: $Denomination,
+        CXXmultiplier: $CXXmultiplier,
         securedDenom: $credexSecuredDenom,
         dueDate: date($credexDueDate)
       }]->(acceptor)
       RETURN credex.credexID AS credexID
     `,
-    {
-      issuerMemberID,
-      credexID,
-      credexAmount,
-      credexSecuredDenom,
-      credexDueDate,
-      acceptorMemberID,
-    }
-  );
-
-  const markCredexAsProcessed = await ledgerSpaceSession.run(
-    `
-      MATCH (processedCredex:Credex {credexID: $credexID})
-      SET processedCredex.queueStatus = "PROCESSED"
-      RETURN processedCredex.credexID AS credexID
-    `,
-    { credexID: createSearchSpaceCredex.records[0].get("credexID") }
-  );
-
-  console.log(
-    "credex processed into SearchSpace: " +
-      markCredexAsProcessed.records[0].get("credexID")
-  );
+      {
+        issuerMemberID,
+        credexID,
+        credexAmount,
+        Denomination,
+        CXXmultiplier,
+        credexSecuredDenom,
+        credexDueDate,
+        acceptorMemberID,
+      }
+    );
+    console.log(
+      "credex created in SearchSpace: " +
+        createSearchSpaceCredex.records[0].get("credexID")
+    );
+  } else {
+    console.log("credex already exists in SearchSpace: " + credexID);
+  }
 
   let searchForCredloops = true;
   while (searchForCredloops) {
-    console.log("searching for credloops in searchSpace");
+    console.log("searching for credloops...");
     const searchSpaceQuery = await searchSpaceSession.run(
       `
         MATCH credloop = 
           (issuer:Member {memberID: $issuerMemberID})
           -[:CREDEX {credexID: $credexID}]->(acceptor: Member)
-          -[*]->(issuer)
+          -[*1..8]->(issuer)
         WHERE ALL(rel in relationships(credloop)
         WHERE rel.securedDenom = $credexSecuredDenom)
         WITH credloop, length(credloop) AS credloopLength, 
@@ -92,20 +106,25 @@ export async function LoopFinder(
     );
 
     if (searchSpaceQuery.records.length > 0) {
-      console.log("credloop found and cleared, now updating ledgerSpace");
       const valueToClear = searchSpaceQuery.records[0].get("lowestAmount");
       const credexesInLoop = searchSpaceQuery.records[0].get("credexIDs");
       const credexesRedeemed = searchSpaceQuery.records[0].get("zeroCredexIDs");
+      console.log(
+        "credloop of " +
+          valueToClear +
+          " CXX found and cleared, now updating ledgerSpace"
+      );
 
       const ledgerSpaceQuery = await ledgerSpaceSession.run(
         `
-          MATCH (dayNode:DayNode {Active: true})
+          MATCH (daynode:DayNode {Active: true})
           CREATE (loopAnchor:LoopAnchor {
               loopedAt: DateTime(),
               loopID: randomUUID(),
               LoopedAmount: $valueToClear,
-              CXXmultiplier: 1
-          })-[to_dayNode:LOOPED_ON]->(dayNode)
+              CXXmultiplier: 1,
+              Denomination: "CXX"
+          })-[to_daynode:LOOPED_ON]->(daynode)
           WITH loopAnchor
 
           UNWIND $credexesInLoop AS credexID
@@ -118,11 +137,14 @@ export async function LoopFinder(
               AmountOutstandingNow: thisCredex.OutstandingAmount,
               Denomination: thisCredex.Denomination,
               CXXmultiplier: thisCredex.CXXmultiplier,
-              createdAt: DateTime()
+              createdAt: DateTime(),
+              redeemedRelID: randomUUID()
           }]->(loopAnchor)
 
           WITH thisCredex, loopAnchor
-          MATCH (thisCredex)-[:OWES]->(:Member)-[:OWES]->(nextCredex:Credex)
+          MATCH (loopAnchor)<-[:REDEEMED]-(thisCredex)
+            -[:OWES]->(:Member)-[:OWES]->(nextCredex:Credex)
+            -[:REDEEMED]->(loopAnchor)
           CREATE (thisCredex)-[:CREDLOOP {
               AmountRedeemed: $valueToClear,
               AmountOutstandingNow: thisCredex.OutstandingAmount,
@@ -130,7 +152,7 @@ export async function LoopFinder(
               CXXmultiplier: thisCredex.CXXmultiplier,
               createdAt: DateTime(),
               loopID: loopAnchor.loopID,
-              credloopLinkID: randomUUID()
+              credloopRelID: randomUUID()
           }]->(nextCredex)
 
           WITH DISTINCT loopAnchor
@@ -151,7 +173,18 @@ export async function LoopFinder(
         "loopAnchor created: " + ledgerSpaceQuery.records[0].get("loopID")
       );
     } else {
-      console.log("no credloops currently exist in searchSpace");
+      // if no credloops found this iteration
+      const markCredexAsProcessed = await ledgerSpaceSession.run(
+        `
+          MATCH (processedCredex:Credex {credexID: $credexID})
+          SET processedCredex.queueStatus = "PROCESSED"
+          RETURN processedCredex.credexID AS credexID
+      `,
+        { credexID }
+      );
+
+      console.log("...none. credex marked processed");
+
       searchForCredloops = false;
     }
   }

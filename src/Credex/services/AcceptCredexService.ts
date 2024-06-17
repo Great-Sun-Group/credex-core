@@ -16,6 +16,10 @@ will return false if:
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 
 export async function AcceptCredexService(credexID: string) {
+  if (!credexID) {
+    console.log("credexID required");
+    return false;
+  }
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
     const result = await ledgerSpaceSession.run(
@@ -30,9 +34,13 @@ export async function AcceptCredexService(credexID: string) {
     );
 
     if (result.records.length === 0) {
-      console.log(`No records found or credex no longer pending for credexID: ${credexID}`);
+      console.log(
+        `No records found or credex no longer pending for credexID: ${credexID}`
+      );
       return false;
     }
+
+    //hit credex accepted notification endpoint
 
     const acceptedCredexID = result.records[0].get("credexID");
     console.log(`Offer accepted for credexID: ${acceptedCredexID}`);

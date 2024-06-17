@@ -36,7 +36,6 @@ export async function GetSecuredAuthorizationService(
 
   // If the issuer is CREDEX_FOUNDATION_AUDITED, authorize for unlimited secured credex issuance
   if (isAudited) {
-    console.log("Issuer is Credex Foundation audited");
     await ledgerSpaceSession.close();
     return {
       securerID: issuerMemberID,
@@ -58,7 +57,7 @@ export async function GetSecuredAuthorizationService(
       MATCH (daynode:DayNode {Active: true})
       RETURN
         securingMemberID,
-        netSecurablePerSecurerCXX/daynode[$Denomination] AS netSecurableInDenom
+        netSecurablePerSecurerCXX * daynode[$Denomination] AS netSecurableInDenom
         ORDER BY netSecurableInDenom DESC
         LIMIT 1
     `,

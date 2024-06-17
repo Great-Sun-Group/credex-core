@@ -23,7 +23,7 @@ import { Member } from "../types/Member";
 
 export async function CreateCompanyService(
   newCompanyData: Member,
-  ownerID: string,
+  ownerID: string
 ) {
   newCompanyData.memberType =
     newCompanyData.memberType === "CREDEX_FOUNDATION"
@@ -31,51 +31,47 @@ export async function CreateCompanyService(
       : "COMPANY";
 
   const newCompany = await CreateMemberService(newCompanyData);
-
-  if (!newCompany.member.memberID) {
-    console.log("could not create company");
-    return false;
+  if (typeof newCompany.member == "boolean") {
+    throw new Error("Company could not be created");
   }
-
-  const ledgerSpaceSession = ledgerSpaceDriver.session();
-
-  try {
-    const result = await ledgerSpaceSession.run(
-      `
-            MATCH (owner:Member { memberID: $ownerID, memberType: "HUMAN" })
-            MATCH (company:Member { memberID: $companyID })
-            MERGE (owner)-[:OWNS]->(company)
-            MERGE (owner)-[:AUTHORIZED_TO_TRANSACT_FOR]->(company)
-            RETURN
-                owner.memberID AS ownerID,
-                company.memberID AS companyID
+  if (newCompany.member && typeof newCompany.member.memberID === "string") {
+    const ledgerSpaceSession = ledgerSpaceDriver.session();
+    try {
+      const result = await ledgerSpaceSession.run(
+        `
+          MATCH (owner:Member { memberID: $ownerID, memberType: "HUMAN" })
+          MATCH (company:Member { memberID: $companyID })
+          MERGE (owner)-[:OWNS]->(company)
+          MERGE (owner)-[:AUTHORIZED_TO_TRANSACT_FOR]->(company)
+          RETURN
+            owner.memberID AS ownerID,
+            company.memberID AS companyID
         `,
-      {
-        companyID: newCompany.member.memberID,
-        ownerID: ownerID,
-      },
-    );
-
-    const record = result.records[0];
-
-    if (record.get("ownerID")) {
-      console.log(
-        `member above is company created for owner: ${record.get("ownerID")}`,
+        {
+          companyID: newCompany.member.memberID,
+          ownerID: ownerID,
+        }
       );
-      return {
-        companyID: record.get("companyID"),
-        ownerID: record.get("ownerID"),
-      };
-    } else {
-      console.log(
-        "company created, but ownership relationships failed. company is orphaned.",
-      );
+      const record = result.records[0];
+      if (record.get("ownerID")) {
+        console.log(
+          `member above is company created for owner: ${record.get("ownerID")}`
+        );
+        return {
+          companyID: record.get("companyID"),
+          ownerID: record.get("ownerID"),
+        };
+      } else {
+        console.log(
+          "company created, but ownership relationships failed. company is orphaned."
+        );
+        return false;
+      }
+    } catch (error) {
+      console.error("Error creating company relationships:", error);
       return false;
+    } finally {
+      await ledgerSpaceSession.close();
     }
-  } catch (error) {
-    console.error("Error creating company relationships:", error);
-    return false;
-  } finally {
-    await ledgerSpaceSession.close();
   }
 }
