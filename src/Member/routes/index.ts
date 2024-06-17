@@ -8,6 +8,7 @@ import { GetMemberByHandleController } from "../controllers/GetMemberByHandleCon
 import { GetMembersListController } from "../controllers/GetMembersListController";
 import { UpdateMemberController } from "../controllers/UpdateMemberController";
 import { AuthorizeForCompanyController } from "../controllers/AuthorizeForCompanyController";
+import { UnauthorizeForCompanyController } from "../controllers/UnauthorizeForCompanyController";
 import { GetOwnedAndAuthForCompaniesController } from "../controllers/GetOwnedAndAuthForCompaniesController";
 import { SetDefaultAccountController } from "../controllers/SetDefaultAccountController";
 
@@ -57,6 +58,12 @@ export default function MemberRoutes(
     `${apiVersionOneRoute}authorizeForCompany`,
     jsonParser,
     AuthorizeForCompanyController
+  );
+
+  app.post(
+    `${apiVersionOneRoute}unauthorizeForCompany`,
+    jsonParser,
+    UnauthorizeForCompanyController
   );
 
   app.get(
