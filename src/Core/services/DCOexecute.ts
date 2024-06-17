@@ -307,16 +307,31 @@ export async function DCOexecute() {
           / newDayNode.CXXprior_CXXcurrent
     `);
 
-    //update balances in searchSpace credexes
+    //update balances in searchSpace CXX credexes
     await searchSpaceSession.run(
       `
       MATCH (issuer:Member)-[credex:Credex]->(receiver:Member)
+      WHERE credex.Denomination = "CXX"
       SET
         credex.outstandingAmount =
           credex.outstandingAmount
           / $CXXprior_CXXcurrent
     `,
       { CXXprior_CXXcurrent }
+    );
+
+    //update balances in searchSpace currency credexes
+    await searchSpaceSession.run(
+      `
+        MATCH (issuer:Member)-[credex:CREDEX]->(receiver:Member)
+        WHERE credex.Denomination <> "CXX"
+        WITH credex, $newCXXrates AS rates
+        SET credex.outstandingAmount = 
+              (credex.outstandingAmount / credex.CXXmultiplier) * 
+              coalesce(rates[credex.Denomination], 1),
+            credex.CXXmultiplier = coalesce(rates[credex.Denomination], 1)
+      `,
+      { newCXXrates }
     );
 
     console.log("Creating DCO receive transactions");

@@ -10,7 +10,6 @@ returns null if member can't be found or phone not passed in
 */
 
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
-import { GetDisplayNameService } from "./GetDisplayNameService";
 
 export async function GetHumanMemberByPhoneService(
   phone: number
