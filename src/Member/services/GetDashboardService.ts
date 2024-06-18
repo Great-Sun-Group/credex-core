@@ -1,51 +1,46 @@
-/*
-returns member data
-
-required input:
-    memberID
-
-returns object with fields for each member property
-
-returns null if member can't be found or memberID not passed in
-
-*/
-
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { GetDisplayNameService } from "./GetDisplayNameService";
 import { GetBalancesService } from "../../Credex/services/GetBalancesService";
 import { GetPendingOffersInService } from "../../Credex/services/GetPendingOffersInService";
 import { GetPendingOffersOutService } from "../../Credex/services/GetPendingOffersOutService";
 
-export async function GetMemberService(memberID: string): Promise<any | null> {
+export async function GetDashboardService(
+  memberID: string,
+  authorizedForID: string
+) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-
-  if (!memberID) {
-    console.log("memberID is required");
-    return null;
-  }
-
   try {
     const result = await ledgerSpaceSession.run(
       `
-        MATCH (member:Member { memberID: $memberID })
+        MATCH (member:Member {memberID: $authorizedForID})
+        OPTIONAL MATCH (member)<-[:OWNS]-(owner:Member { memberID: $memberID})
+        OPTIONAL MATCH (humanMember:Member { memberID: $memberID})
+        WITH CASE
+            WHEN member = humanMember THEN "human"
+            WHEN owner IS NOT NULL THEN "owned"
+            ELSE "authorizedFor"
+        END AS dashboardType,
+        member
         RETURN
+          dashboardType,
           member.memberID AS memberID,
           member.memberType AS memberType,
           member.firstname AS firstname,
           member.lastname AS lastname,
           member.companyname AS companyname,
-          member.defaultDenom AS defaultDenom,
-          member.handle AS handle
+          member.handle AS handle,
+          member.defaultDenom AS defaultDenom
       `,
-      { memberID }
+      { memberID, authorizedForID }
     );
 
-    if (!result.records[0]) {
+    if (!result.records.length) {
       console.log("member not found");
       return null;
     }
 
-    const memberData: any = {
+    const accountData: any = {
+      dashboardType: result.records[0].get("dashboardType"),
       memberID: result.records[0].get("memberID"),
       displayName: GetDisplayNameService({
         memberType: result.records[0].get("memberType"),
@@ -53,22 +48,17 @@ export async function GetMemberService(memberID: string): Promise<any | null> {
         lastname: result.records[0].get("lastname"),
         companyname: result.records[0].get("companyname"),
       }),
-      defaultDenom: result.records[0].get("defaultDenom"),
       handle: result.records[0].get("handle"),
+      defaultDenom: result.records[0].get("defaultDenom"),
     };
 
-    const balanceData = await GetBalancesService(memberData.memberID);
-    const pendingInData = await GetPendingOffersInService(memberData.memberID);
-    const pendingOutData = await GetPendingOffersOutService(
-      memberData.memberID
+    accountData.balanceData = await GetBalancesService(accountData.memberID);
+    accountData.pendingInData = await GetPendingOffersInService(accountData.memberID);
+    accountData.pendingOutData = await GetPendingOffersOutService(
+      accountData.memberID
     );
 
-    return {
-      memberData: memberData,
-      balanceData: balanceData,
-      pendingInData: pendingInData,
-      pendingOutData: pendingOutData,
-    };
+    return accountData;
   } catch (error) {
     console.error("Error fetching member data:", error);
     return null;
