@@ -1,9 +1,9 @@
 /*
 authorizes a human member to transact on behalf of a company by
-adding an AUTHORIZED_TO_TRANSACT_FOR relationship
+adding an AUTHORIZED_FOR relationship
 
 required inputs:
-    memberID for human member to be authorized
+    handle for human member to be authorized
     memberID for company
     memberID of human company owner as authorizer
 
@@ -29,9 +29,9 @@ but DB will remain unaltered
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 
 export async function AuthorizeForCompanyService(
-  MemberIDtoBeAuthorized: string,
+  MemberHandleToBeAuthorized: string,
   companyID: string,
-  ownerID: string,
+  ownerID: string
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
@@ -40,24 +40,31 @@ export async function AuthorizeForCompanyService(
       `
             MATCH (company:Member { memberID: $companyID, memberType: "COMPANY" })
                 <-[:OWNS]-(owner:Member { memberID: $ownerID, memberType: "HUMAN" })
-            MATCH (memberToAuthorize:Member { memberID: $MemberIDtoBeAuthorized, memberType: "HUMAN" })
-            MERGE (memberToAuthorize)-[:AUTHORIZED_TO_TRANSACT_FOR]->(company)
+            MATCH (memberToAuthorize:Member { handle: $MemberHandleToBeAuthorized, memberType: "HUMAN" })
+            MERGE (memberToAuthorize)-[:AUTHORIZED_FOR]->(company)
             RETURN
                 company.memberID AS companyID,
                 memberToAuthorize.memberID AS memberIDtoAuthorize
         `,
       {
-        MemberIDtoBeAuthorized,
+        MemberHandleToBeAuthorized,
         companyID,
         ownerID,
-      },
+      }
     );
+
+    if (!result.records.length) {
+      console.log("members or company not found");
+      return null;
+    }
 
     const record = result.records[0];
 
     if (record.get("memberIDtoAuthorize")) {
       console.log(
-        `member ${record.get("memberIDtoAuthorize")} authorized to transact for ${record.get("companyID")}`,
+        `member ${record.get(
+          "memberIDtoAuthorize"
+        )} authorized to transact for ${record.get("companyID")}`
       );
       return {
         companyID: record.get("companyID"),

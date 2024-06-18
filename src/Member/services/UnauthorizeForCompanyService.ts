@@ -38,7 +38,7 @@ export async function UnauthorizeForCompanyService(
       `
             MATCH
                 (memberToUnauthorize:Member { memberID: $MemberIDtoBeUnauthorized, memberType: "HUMAN" })
-                -[authRel:AUTHORIZED_TO_TRANSACT_FOR]->(company:Member { memberID: $companyID, memberType: "COMPANY" })
+                -[authRel:AUTHORIZED_FOR]->(company:Member { memberID: $companyID, memberType: "COMPANY" })
                 <-[:OWNS]-(owner:Member { memberID: $ownerID, memberType: "HUMAN" })
             DELETE authRel
             RETURN
