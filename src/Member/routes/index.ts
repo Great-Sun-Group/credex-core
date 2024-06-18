@@ -3,13 +3,12 @@ import { apiVersionOneRoute } from "../..";
 import { CreateMemberController } from "../controllers/CreateMemberController";
 import { CreateCompanyController } from "../controllers/CreateCompanyController";
 import { GetMemberController } from "../controllers/GetMemberController";
-import { WhatsAppHumanLoginController } from "../controllers/WhatsAppHumanLoginController";
+import { WhatsAppLoginController } from "../controllers/WhatsAppLoginController";
 import { GetMemberByHandleController } from "../controllers/GetMemberByHandleController";
 import { GetMembersListController } from "../controllers/GetMembersListController";
 import { UpdateMemberController } from "../controllers/UpdateMemberController";
 import { AuthorizeForCompanyController } from "../controllers/AuthorizeForCompanyController";
 import { UnauthorizeForCompanyController } from "../controllers/UnauthorizeForCompanyController";
-import { GetOwnedAndAuthForCompaniesController } from "../controllers/GetOwnedAndAuthForCompaniesController";
 
 export default function MemberRoutes(
   app: express.Application,
@@ -36,9 +35,9 @@ export default function MemberRoutes(
   app.get(`${apiVersionOneRoute}getMember`, jsonParser, GetMemberController);
 
   app.get(
-    `${apiVersionOneRoute}whatsAppHumanLogin`,
+    `${apiVersionOneRoute}whatsAppLogin`,
     jsonParser,
-    WhatsAppHumanLoginController
+    WhatsAppLoginController
   );
 
   app.get(
@@ -65,9 +64,4 @@ export default function MemberRoutes(
     UnauthorizeForCompanyController
   );
 
-  app.get(
-    `${apiVersionOneRoute}getOwnedAndAuthForCompanies`,
-    jsonParser,
-    GetOwnedAndAuthForCompaniesController
-  );
 }
