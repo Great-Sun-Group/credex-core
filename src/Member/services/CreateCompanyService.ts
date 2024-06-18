@@ -42,7 +42,7 @@ export async function CreateCompanyService(
           MATCH (owner:Member { memberID: $ownerID, memberType: "HUMAN" })
           MATCH (company:Member { memberID: $companyID })
           MERGE (owner)-[:OWNS]->(company)
-          MERGE (owner)-[:AUTHORIZED_TO_TRANSACT_FOR]->(company)
+          MERGE (owner)-[:AUTHORIZED_FOR]->(company)
           RETURN
             owner.memberID AS ownerID,
             company.memberID AS companyID

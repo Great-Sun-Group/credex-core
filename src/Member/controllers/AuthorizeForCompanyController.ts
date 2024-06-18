@@ -5,7 +5,7 @@ export async function AuthorizeForCompanyController(
   req: express.Request,
   res: express.Response,
 ) {
-  const requiredFields = ["MemberIDtoBeAuthorized", "companyID", "ownerID"];
+  const requiredFields = ["MemberHandleToBeAuthorized", "companyID", "ownerID"];
 
   for (const field of requiredFields) {
     if (!req.body[field]) {
@@ -15,9 +15,9 @@ export async function AuthorizeForCompanyController(
 
   try {
     const responseData = await AuthorizeForCompanyService(
-      req.body.MemberIDtoBeAuthorized,
+      req.body.MemberHandleToBeAuthorized,
       req.body.companyID,
-      req.body.ownerID,
+      req.body.ownerID
     );
 
     if (!responseData) {
