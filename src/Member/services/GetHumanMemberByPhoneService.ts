@@ -24,14 +24,12 @@ export async function GetHumanMemberByPhoneService(
   try {
     const result = await ledgerSpaceSession.run(
       `
-        MATCH (member:Member { phone: $phone })-[:DEFAULT_ACCOUNT]->(defaultAccount:Member)
+        MATCH (member:Member { phone: $phone })
         RETURN
           member.memberID AS memberID,
           member.firstname AS firstname,
           member.lastname AS lastname,
-          member.handle AS handle,
-          defaultAccount.memberID AS defaultAccountID
-      `,
+          member.handle AS handle      `,
       { phone }
     );
 
@@ -47,7 +45,6 @@ export async function GetHumanMemberByPhoneService(
         " " +
         result.records[0].get("lastname"),
       handle: result.records[0].get("handle"),
-      defaultAccountID: result.records[0].get("defaultAccountID"),
     };
   } catch (error) {
     console.error("Error fetching member data:", error);

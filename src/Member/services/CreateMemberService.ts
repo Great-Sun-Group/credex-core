@@ -34,7 +34,6 @@ import { getDenominations } from "../../Core/constants/denominations";
 import { Member } from "../types/Member";
 import { GetDisplayNameService } from "./GetDisplayNameService";
 import moment from "moment-timezone";
-import { SetDefaultAccountService } from "./SetDefaultAccountService";
 
 export async function CreateMemberService(newMemberData: Member) {
   const {
@@ -137,10 +136,6 @@ export async function CreateMemberService(newMemberData: Member) {
       const message = "could not create member";
       console.log(message);
       return { member: false, message };
-    }
-
-    if (createdMember.memberType == "HUMAN") {
-      SetDefaultAccountService(createdMember.memberID, createdMember.memberID);
     }
 
     console.log("member created: " + createdMember.memberID);
