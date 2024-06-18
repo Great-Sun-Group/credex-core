@@ -93,10 +93,59 @@ export async function DCOexecute() {
         },
       }
     );
-    const USDbaseRates = ratesRequest.data.rates;
-    const ZIGrates = await fetchZigRate();
-    USDbaseRates.ZIG = ZIGrates[1].avg;
 
+    var USDbaseRates = ratesRequest.data.rates;
+    const ZIGrates = await fetchZigRate();
+    if (ZIGrates.length > 0) {
+      USDbaseRates.ZIG = parseFloat(ZIGrates[1].avg);
+    } else {
+      console.log("error fetching ZIG");
+      USDbaseRates.ZIG = "error fetching ZIG";
+    }
+
+    // Make sure that all required data exists in the required format
+    var alldenoms = getDenominations({ formatAsList: true });
+
+    if (typeof alldenoms === "string") {
+      // Remove CXX from string
+      alldenoms = alldenoms
+        .replace("CXX,", "")
+        .replace(",CXX", "")
+        .replace("CXX", "");
+
+      const requiredDenoms = alldenoms.split(",");
+
+      // Check if every required denomination is present in USDbaseRates and has a number value
+      let allValid = true;
+
+      requiredDenoms.forEach((code) => {
+        if (
+          !USDbaseRates.hasOwnProperty(code) ||
+          typeof USDbaseRates[code] !== "number"
+        ) {
+          allValid = false;
+        }
+      });
+
+      if (!allValid) {
+        console.error(
+          "Error in fetching and processing USD base rates. Some required denominations are missing or have non-numeric values:",
+          {
+            USDbaseRates,
+            requiredDenoms,
+          }
+        );
+        console.log("Aborting DCO and turning off DCOrunningNow flag");
+        await ledgerSpaceSession.run(`
+          MATCH (daynode:DayNode {Active: TRUE})
+          SET daynode.DCOrunningNow = false
+        `);
+        return false;
+      }
+
+      console.log("Exchange rates fetched and checked.");
+    }
+    
     const denomsInXAU = _.mapValues(
       USDbaseRates,
       (value) => value / USDbaseRates.XAU
