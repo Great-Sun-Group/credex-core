@@ -10,7 +10,6 @@ import { UpdateMemberController } from "../controllers/UpdateMemberController";
 import { AuthorizeForCompanyController } from "../controllers/AuthorizeForCompanyController";
 import { UnauthorizeForCompanyController } from "../controllers/UnauthorizeForCompanyController";
 import { GetOwnedAndAuthForCompaniesController } from "../controllers/GetOwnedAndAuthForCompaniesController";
-import { SetDefaultAccountController } from "../controllers/SetDefaultAccountController";
 
 export default function MemberRoutes(
   app: express.Application,
@@ -70,11 +69,5 @@ export default function MemberRoutes(
     `${apiVersionOneRoute}getOwnedAndAuthForCompanies`,
     jsonParser,
     GetOwnedAndAuthForCompaniesController
-  );
-
-  app.post(
-    `${apiVersionOneRoute}setDefaultAccount`,
-    jsonParser,
-    SetDefaultAccountController
   );
 }
