@@ -1,6 +1,6 @@
 /*
-authorizes a human member to transact on behalf of a company by
-adding an AUTHORIZED_FOR relationship
+authorizes a human member to transact on behalf of a company
+maximum 5 members (including owner) can be authorized for a company
 
 required inputs:
     handle for human member to be authorized
@@ -38,14 +38,31 @@ export async function AuthorizeForCompanyService(
   try {
     const result = await ledgerSpaceSession.run(
       `
-            MATCH (company:Member { memberID: $companyID, memberType: "COMPANY" })
-                <-[:OWNS]-(owner:Member { memberID: $ownerID, memberType: "HUMAN" })
-            MATCH (memberToAuthorize:Member { handle: $MemberHandleToBeAuthorized, memberType: "HUMAN" })
-            MERGE (memberToAuthorize)-[:AUTHORIZED_FOR]->(company)
+        MATCH (company:Member { memberID: $companyID, memberType: "COMPANY" })
+            <-[:OWNS]-(owner:Member { memberID: $ownerID, memberType: "HUMAN" })
+        MATCH (memberToAuthorize:Member { handle: $MemberHandleToBeAuthorized, memberType: "HUMAN" })
+        MATCH (:Member)-[currentAuthForRel:AUTHORIZED_FOR]->(company)
+        WITH count (currentAuthForRel) AS numAuthorized, memberToAuthorize, company
+        CALL apoc.do.when(
+          numAuthorized >= 5,
+          'RETURN "limitReached" AS message',
+          'MERGE (memberToAuthorize)-[:AUTHORIZED_FOR]->(company)
             RETURN
-                company.memberID AS companyID,
-                memberToAuthorize.memberID AS memberIDtoAuthorize
-        `,
+              "memberAuthorized" AS message,
+              company.memberID AS companyID,
+              memberToAuthorize.memberID AS memberIDtoAuthorize',
+          {
+            numAuthorized: numAuthorized,
+            memberToAuthorize: memberToAuthorize,
+            company: company
+          }
+        )
+        YIELD value
+        RETURN
+          value.message AS message,
+          value.companyID AS companyID,
+          value.memberIDtoAuthorize AS memberIDtoAuthorize
+      `,
       {
         MemberHandleToBeAuthorized,
         companyID,
@@ -54,21 +71,28 @@ export async function AuthorizeForCompanyService(
     );
 
     if (!result.records.length) {
-      console.log("members or company not found");
-      return null;
+      return "members or company not found";
     }
 
     const record = result.records[0];
 
-    if (record.get("memberIDtoAuthorize")) {
+    if (record.get("message") == "limitReached") {
+      return {
+        message:
+          "Limit of 5 authorized members reached. Remove an authorized member if you want to add another.",
+      };
+    }
+
+    if (record.get("message") == "memberAuthorized") {
       console.log(
         `member ${record.get(
           "memberIDtoAuthorize"
         )} authorized to transact for ${record.get("companyID")}`
       );
       return {
+        message: "member authorized",
         companyID: record.get("companyID"),
-        memberIDtoAuthorize: record.get("memberIDtoAuthorize"),
+        memberIdAuthorized: record.get("memberIDtoAuthorize"),
       };
     } else {
       console.log("could not authorize member");
