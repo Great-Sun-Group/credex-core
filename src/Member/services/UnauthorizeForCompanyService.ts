@@ -2,17 +2,12 @@
 unauthorizes a human member so they can no longer transact on behalf of a company
 
 required inputs:
-    memberID for human member to be unauthorized
+    handle for human member to be unauthorized
     memberID for company
     memberID of human company owner as authorizer
 
-on success returns object with fields:
-    companyID
-    companyname
-    memberIdUnauthorized
-    memberNameUnauthorized
-    authorizerID
-    authorizerName
+on success returns true
+    
 
 will return false if:
     member to be unauthorized is not memberType = HUMAN
@@ -20,8 +15,6 @@ will return false if:
     authorizer is not the human owner of company
     any of the memberIDs are not found
 
-will return as success if member is already authorized to transact for company
-but DB will remain unaltered
 */
 
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
@@ -52,22 +45,18 @@ export async function UnauthorizeForCompanyService(
       }
     );
 
-    const record = result.records[0];
-
-    if (record.get("memberIDtoUnauthorize")) {
-      console.log(
-        `member ${record.get(
-          "memberIDtoUnauthorize"
-        )} unauthorized to transact for ${record.get("companyID")}`
-      );
-      return {
-        companyID: record.get("companyID"),
-        memberIDtoAuthorize: record.get("memberIDtoUnauthorize"),
-      };
-    } else {
+    if (!result.records.length) {
       console.log("could not unauthorize member");
       return false;
     }
+    const record = result.records[0];
+
+    console.log(
+      `member ${record.get(
+        "memberIDtoUnauthorize"
+      )} unauthorized to transact for ${record.get("companyID")}`
+    );
+    return true;
   } catch (error) {
     console.error("Error unauthorizing member:", error);
     return false;
