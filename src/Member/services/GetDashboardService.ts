@@ -15,11 +15,17 @@ export async function GetDashboardService(
         MATCH (member:Member {memberID: $authorizedForID})
         OPTIONAL MATCH (member)<-[:OWNS]-(owner:Member { memberID: $memberID})
         OPTIONAL MATCH (humanMember:Member { memberID: $memberID})
+        OPTIONAL MATCH (member)-[:SEND_OFFERS_TO]->(offerRecipient:Member)
         WITH CASE
             WHEN member = humanMember THEN "human"
             WHEN owner IS NOT NULL THEN "owned"
             ELSE "authorizedFor"
         END AS dashboardType,
+        CASE
+            WHEN member = humanMember THEN member
+            WHEN offerRecipient IS NOT NULL THEN offerRecipient
+            ELSE "error in finding offer recipient"
+        END AS offerRecipient,
         member
         RETURN
           dashboardType,
@@ -29,7 +35,9 @@ export async function GetDashboardService(
           member.lastname AS lastname,
           member.companyname AS companyname,
           member.handle AS handle,
-          member.defaultDenom AS defaultDenom
+          member.defaultDenom AS defaultDenom,
+          offerRecipient.memberID AS offerRecipientID,
+          offerRecipient.firstname + " " + offerRecipient.lastname AS offerRecipientDisplayname
       `,
       { memberID, authorizedForID }
     );
@@ -50,6 +58,10 @@ export async function GetDashboardService(
       }),
       handle: result.records[0].get("handle"),
       defaultDenom: result.records[0].get("defaultDenom"),
+      offerRecipientID: result.records[0].get("offerRecipientID"),
+      offerRecipientDisplayname: result.records[0].get(
+        "offerRecipientDisplayname"
+      ),
     };
 
     accountData.balanceData = await GetBalancesService(accountData.memberID);

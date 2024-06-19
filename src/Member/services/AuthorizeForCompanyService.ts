@@ -9,13 +9,9 @@ required inputs:
 
 on success returns object with fields:
     companyID
-    companyname
     memberIdAuthorized
-    memberNameAuthorized
-    authorizerID
-    authorizerName
 
-will return false if:
+will return failure message if:
     member to be authorized is not memberType = HUMAN
     company is not memberType = COMPANY
     authorizer is not memberType = HUMAN
@@ -71,7 +67,9 @@ export async function AuthorizeForCompanyService(
     );
 
     if (!result.records.length) {
-      return "members or company not found";
+      return {
+        message: "members or company not found"
+      };
     }
 
     const record = result.records[0];
