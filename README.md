@@ -1,5 +1,5 @@
 # Credex Ecosystem Core
-Credex accounting and transaction management system with WhatsApp chatbot interface.
+Credex accounting and transaction management server.
 
 
 ## To run in your local dev environment
