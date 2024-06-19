@@ -16,17 +16,26 @@ export async function GetDashboardService(
         OPTIONAL MATCH (member)<-[:OWNS]-(owner:Member { memberID: $memberID})
         OPTIONAL MATCH (humanMember:Member { memberID: $memberID})
         OPTIONAL MATCH (member)-[:SEND_OFFERS_TO]->(offerRecipient:Member)
-        WITH CASE
-            WHEN member = humanMember THEN "human"
-            WHEN owner IS NOT NULL THEN "owned"
-            ELSE "authorizedFor"
-        END AS dashboardType,
-        CASE
-            WHEN member = humanMember THEN member
-            WHEN offerRecipient IS NOT NULL THEN offerRecipient
-            ELSE "error in finding offer recipient"
-        END AS offerRecipient,
-        member
+        OPTIONAL MATCH (member)<-[:AUTHORIZED_FOR]-(authFor:Member)
+        WITH member, owner, humanMember, offerRecipient, collect(authFor) AS authForList
+        CALL apoc.do.when(
+          size(authForList) > 0,
+          'RETURN [auth IN $authForList | { memberID: auth.memberID, displayName: auth.firstname + " " + auth.lastname }] AS authorizedMembers',
+          'RETURN [] AS authorizedMembers',
+          { authForList: authForList }
+        ) YIELD value
+        WITH
+          CASE
+              WHEN member = humanMember THEN "human"
+              WHEN owner IS NOT NULL THEN "owned"
+              ELSE "authorizedFor"
+          END AS dashboardType,
+          CASE
+              WHEN member = humanMember THEN member
+              WHEN offerRecipient IS NOT NULL THEN offerRecipient
+              ELSE null
+          END AS offerRecipient,
+          member, value
         RETURN
           dashboardType,
           member.memberID AS memberID,
@@ -37,7 +46,8 @@ export async function GetDashboardService(
           member.handle AS handle,
           member.defaultDenom AS defaultDenom,
           offerRecipient.memberID AS offerRecipientID,
-          offerRecipient.firstname + " " + offerRecipient.lastname AS offerRecipientDisplayname
+          offerRecipient.firstname + " " + offerRecipient.lastname AS offerRecipientDisplayname,
+          value.authorizedMembers AS authorizedMembers
       `,
       { memberID, authorizedForID }
     );
@@ -62,10 +72,13 @@ export async function GetDashboardService(
       offerRecipientDisplayname: result.records[0].get(
         "offerRecipientDisplayname"
       ),
+      authorizedMembers: result.records[0].get("authorizedMembers"),
     };
 
     accountData.balanceData = await GetBalancesService(accountData.memberID);
-    accountData.pendingInData = await GetPendingOffersInService(accountData.memberID);
+    accountData.pendingInData = await GetPendingOffersInService(
+      accountData.memberID
+    );
     accountData.pendingOutData = await GetPendingOffersOutService(
       accountData.memberID
     );
