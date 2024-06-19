@@ -8,6 +8,7 @@ import { GetMembersListController } from "../controllers/GetMembersListControlle
 import { UpdateMemberController } from "../controllers/UpdateMemberController";
 import { AuthorizeForCompanyController } from "../controllers/AuthorizeForCompanyController";
 import { UnauthorizeForCompanyController } from "../controllers/UnauthorizeForCompanyController";
+import { UpdateSendOffersToController } from "../controllers/UpdateSendOffersToController";
 
 export default function MemberRoutes(
   app: express.Application,
@@ -60,5 +61,12 @@ export default function MemberRoutes(
     jsonParser,
     UnauthorizeForCompanyController
   );
+
+    app.post(
+      `${apiVersionOneRoute}updateSendOffersTo`,
+      jsonParser,
+      UpdateSendOffersToController
+    );
+
 
 }
