@@ -55,8 +55,8 @@ export async function MinuteTransactionQueue() {
     `);
 
     for (const record of getQueuedMembers.records) {
-      const memberForSearchSpace = {
-        memberID: record.get("memberID"),
+      const accountForSearchSpace = {
+        accountID: record.get("memberID"),
         displayName: GetDisplayNameService({
           memberType: record.get("memberType"),
           firstname: record.get("firstname"),
@@ -65,24 +65,24 @@ export async function MinuteTransactionQueue() {
         }),
       };
 
-      const addMember = await searchSpaceSession.run(
+      const addAccount = await searchSpaceSession.run(
         `
-          CREATE (newMember:Member)
-          SET newMember = $memberForSearchSpace
-          RETURN newMember.memberID AS memberID
+          CREATE (newAccount:Account)
+          SET newAccount = $accountForSearchSpace
+          RETURN newAccount.accountID AS accountID
         `,
-        { memberForSearchSpace }
+        { accountForSearchSpace }
       );
 
-      if (addMember.records.length === 0) {
+      if (addAccount.records.length === 0) {
         console.log(
-          "Error creating member in searchSpace: " +
-            memberForSearchSpace.displayName
+          "Error creating account in searchSpace: " +
+            accountForSearchSpace.displayName
         );
         continue;
       }
 
-      const memberID = addMember.records[0].get("memberID");
+      const memberID = addAccount.records[0].get("accountID");
 
       await ledgerSpaceSession.run(
         `
@@ -93,7 +93,7 @@ export async function MinuteTransactionQueue() {
       );
 
       console.log(
-        "Member created in searchSpace: " + memberForSearchSpace.displayName
+        "Account created in searchSpace: " + accountForSearchSpace.displayName
       );
     }
 
@@ -119,14 +119,14 @@ export async function MinuteTransactionQueue() {
       getQueuedCredexes.records.map((record) => {
         const credexObject = {
           acceptedAt: record.get("acceptedAt"),
-          issuerMemberID: record.get("issuerMemberID"),
+          issuerAccountID: record.get("issuerMemberID"),
           credexID: record.get("credexID"),
           credexAmount: record.get("credexAmount"),
           credexDenomination: record.get("credexDenomination"),
           credexCXXmultiplier: record.get("credexCXXmultiplier"),
           credexSecuredDenom: "unsecured",
           credexDueDate: record.get("credexDueDate"),
-          acceptorMemberID: record.get("acceptorMemberID"),
+          acceptorAccountID: record.get("acceptorMemberID"),
         };
         // add secured data if appropriate
         if (record.get("securerID") !== null) {
@@ -139,14 +139,14 @@ export async function MinuteTransactionQueue() {
 
     for (const credex of sortedQueuedCredexes) {
       await LoopFinder(
-        credex.issuerMemberID,
+        credex.issuerAccountID,
         credex.credexID,
         credex.credexAmount,
         credex.credexDenomination,
         credex.credexCXXmultiplier,
         credex.credexSecuredDenom,
         credex.credexDueDate,
-        credex.acceptorMemberID
+        credex.acceptorAccountID
       );
     }
   } catch (error) {

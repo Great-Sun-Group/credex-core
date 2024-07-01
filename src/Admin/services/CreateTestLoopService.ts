@@ -41,7 +41,7 @@ export async function CreateTestLoopService(numNewTransactions: number) {
       Denomination: "USD",
       InitialAmount: random(1, 100),
       credexType: "PURCHASE",
-      dueDate: moment().utc().add(7, "days").format("YYYY-MM-DD"),
+      dueDate: moment("2023-07-09").utc().add(7, "days").format("YYYY-MM-DD"),
     };
     const newcredex = await OfferCredexService(credexSpecs);
     if (typeof newcredex.credex == "boolean") {
