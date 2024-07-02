@@ -38,11 +38,14 @@ export async function CreateTestLoopService(numNewTransactions: number) {
     const credexSpecs: Credex = {
       issuerMemberID: issuerMemberID,
       receiverMemberID: receiverMemberID,
-      Denomination: "USD",
+      Denomination: "CAD",
       InitialAmount: random(1, 100),
       credexType: "PURCHASE",
       dueDate: moment("2023-07-09").utc().add(7, "days").format("YYYY-MM-DD"),
     };
+    console.log(
+      "Amount: " + credexSpecs.InitialAmount + " " + credexSpecs.Denomination
+    );
     const newcredex = await OfferCredexService(credexSpecs);
     if (typeof newcredex.credex == "boolean") {
       throw new Error("Invalid response from OfferCredexService");

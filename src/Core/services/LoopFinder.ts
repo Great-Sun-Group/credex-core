@@ -95,20 +95,21 @@ export async function LoopFinder(
     console.log("searching for credloops...");
     const searchSpaceQuery = await searchSpaceSession.run(
       `
-      // Step 1: Find all loops starting and ending at the specified account
-      MATCH credloops = (issuer:Account {accountID:$issuerAccountID})-[:${searchOwesType}*]->(issuer)
+      // Step 1: Find all loops starting and ending at the specified account, with the specified searchOwesType
+      MATCH credloops = (issuer:Account {accountID: $issuerAccountID})-[:${searchOwesType}*]->(issuer)
+      
       WITH credloops, nodes(credloops) AS loopNodes
       UNWIND loopNodes AS node
       WITH credloops, node
       WHERE node.earliestDueDate IS NOT NULL
       WITH credloops, MIN(node.earliestDueDate) AS earliestDueDate
 
-      // Step 3: Filter loops to include only those containing the node with the earliest earliestDueDate
+      // Step 3: Filter loops to include only those containing a node with the earliest earliestDueDate
       WITH credloops, earliestDueDate, nodes(credloops) AS loopNodes
       UNWIND loopNodes AS node
       WITH credloops, node
       WHERE node.earliestDueDate = earliestDueDate
-      WITH DISTINCT credloops, length(credloops) AS loopLength
+      WITH credloops, length(credloops) AS loopLength
 
       // Step 4: Return only the longest loop, breaking ties with rand()
       ORDER BY loopLength DESC, rand()
@@ -116,33 +117,65 @@ export async function LoopFinder(
       WITH nodes(credloops) AS credloopNodes
 
       // Step 5: Each node returns the credex it is connected to with the earliest dueDate
+      // on tie, credex with largest amount
       UNWIND credloopNodes AS loopNode
       MATCH (loopNode)<-[:IN_THIS_OWES_TYPE]-(credex:Credex)
-      WITH loopNode, credex
-      ORDER BY credex.dueDate
-      WITH loopNode, COLLECT(credex)[0] AS earliestCredexes
-      WITH COLLECT(earliestCredexes) AS finalCredexes, COLLECT(earliestCredexes.credexID) AS credexIDs
+      WITH loopNode, collect(credex) AS credexList
+      WITH 
+             reduce(minCredex = credexList[0], c IN credexList | 
+                    CASE 
+                      WHEN c.dueDate < minCredex.dueDate THEN c
+                      WHEN c.dueDate = minCredex.dueDate AND c.outstandingAmount > minCredex.outstandingAmount THEN c
+                      ELSE minCredex 
+                    END) AS earliestCredex
+      WITH collect(earliestCredex) AS finalCredexes, COLLECT(earliestCredex.credexID) AS credexIDs
 
       // Step 6: Identify the minimum outstandingAmount and subtract it from all credexes
       UNWIND finalCredexes AS credexInLoop
       WITH finalCredexes, min(credexInLoop.outstandingAmount) AS lowestAmount, credexIDs
+
       UNWIND finalCredexes AS credex
       SET credex.outstandingAmount = credex.outstandingAmount - lowestAmount
-      // Collect all credexes and filter those with outstandingAmount = 0
+
+      // Step 7: Collect all credexes and filter those with outstandingAmount = 0.
       WITH lowestAmount, COLLECT(credex) AS allCredexes, credexIDs
       WITH lowestAmount, allCredexes, [credex IN allCredexes WHERE credex.outstandingAmount = 0] AS zeroCredexes, credexIDs
 
-      WITH lowestAmount, allCredexes, zeroCredexes, credexIDs
+      //Step 8: collect credexIDs of the zeroCredexes and delete them from searchSpace
       UNWIND zeroCredexes as credexToDelete
       WITH credexToDelete, credexToDelete.credexID AS zeroCredexIDs1, lowestAmount, credexIDs
+
+      //Step 9: delete credexes with zero outstanding
       MATCH (credexToDelete)-[:IN_THIS_OWES_TYPE]->(owesTypeNode)
       DETACH DELETE credexToDelete
-      WITH owesTypeNode AS owesTypeNodeToDelete, lowestAmount, credexIDs, collect(zeroCredexIDs1) AS zeroCredexIDs
+
+      //Step 10: Identify and delete any orphaned loop components
+      WITH owesTypeNode, owesTypeNode AS owesTypeNodeToDelete, lowestAmount, credexIDs, collect(zeroCredexIDs1) AS zeroCredexIDs
       MATCH (owesTypeNodeToDelete)
       WHERE NOT EXISTS {
           (owesTypeNodeToDelete)<-[:IN_THIS_OWES_TYPE]-(credex:Credex)
       }
       DETACH DELETE owesTypeNodeToDelete
+      WITH owesTypeNode, lowestAmount, credexIDs, zeroCredexIDs
+      
+      //Step 11: Update earliestDueDate on searchAnchors
+      MATCH (owesTypeNode)<-[:IN_THIS_OWES_TYPE]-(credex:Credex)
+      CALL apoc.do.case(
+          [
+              owesTypeNode.earliestDueDate IS NULL
+              OR owesTypeNode.earliestDueDate > date(credex.dueDate)
+              AND owesTypeNode:UNSECURED, 
+              'SET owesTypeNode.earliestDueDate = date(credex.dueDate) RETURN true'
+          ],
+          'RETURN false',
+          {
+            owesTypeNode: owesTypeNode,
+            credex: credex
+          }
+      ) YIELD value
+      WITH lowestAmount, credexIDs, zeroCredexIDs
+
+      //Step 12: Return data for updating ledgerSpace
       RETURN lowestAmount, credexIDs, zeroCredexIDs
       `,
       { issuerAccountID, searchOwesType }
@@ -157,7 +190,9 @@ export async function LoopFinder(
           valueToClear +
           " CXX found and cleared, now updating ledgerSpace"
       );
+      console.log("credexesInLoop:");
       console.log(credexesInLoop);
+      console.log("credexesRedeemed:");
       console.log(credexesRedeemed);
 
       const ledgerSpaceQuery = await ledgerSpaceSession.run(
@@ -216,7 +251,6 @@ export async function LoopFinder(
         `,
         { valueToClear, credexesInLoop, credexesRedeemed }
       );
-      console.log(ledgerSpaceQuery);
       console.log(
         "loopAnchor created: " + ledgerSpaceQuery.records[0].get("loopID")
       );
