@@ -57,7 +57,7 @@ export async function GetSecuredAuthorizationService(
       MATCH (daynode:DayNode {Active: true})
       RETURN
         securingMemberID,
-        netSecurablePerSecurerCXX * daynode[$Denomination] AS netSecurableInDenom
+        netSecurablePerSecurerCXX / daynode[$Denomination] AS netSecurableInDenom
         ORDER BY netSecurableInDenom DESC
         LIMIT 1
     `,

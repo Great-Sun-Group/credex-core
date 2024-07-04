@@ -38,10 +38,11 @@ export async function CreateTestLoopService(numNewTransactions: number) {
     const credexSpecs: Credex = {
       issuerMemberID: issuerMemberID,
       receiverMemberID: receiverMemberID,
-      Denomination: "CXX",
+      Denomination: "USD",
       InitialAmount: random(1, 100),
       credexType: "PURCHASE",
-      dueDate: moment("2023-07-09").utc().add(7, "days").format("YYYY-MM-DD"),
+      securedCredex: true,
+      //dueDate: moment("2023-07-09").utc().add(7, "days").format("YYYY-MM-DD"),
     };
     console.log(
       "Amount: " + credexSpecs.InitialAmount + " " + credexSpecs.Denomination

@@ -124,7 +124,7 @@ export async function MinuteTransactionQueue() {
           credexAmount: record.get("credexAmount"),
           credexDenomination: record.get("credexDenomination"),
           credexCXXmultiplier: record.get("credexCXXmultiplier"),
-          credexSecuredDenom: "unsecured",
+          credexSecuredDenom: "floating",
           credexDueDate: record.get("credexDueDate"),
           acceptorAccountID: record.get("acceptorMemberID"),
         };

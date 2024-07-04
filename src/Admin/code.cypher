@@ -2,7 +2,7 @@
     MATCH (issuer:Account {accountID: $issuerAccountID})
     MATCH (acceptor:Account {accountID: $acceptorAccountID})
     MERGE (issuer)-[:${searchOwesType}]->(searchOwesType:${searchOwesType})-[:${searchOwesType}]->(acceptor)
-    CREATE (searchOwesType)<-[:IN_THIS_OWES_TYPE]-(credex:Credex {
+    CREATE (searchOwesType)<-[:SEARCH_ANCHORED]-(credex:Credex {
         credexID: $credexID,
         outstandingAmount: $credexAmount,
         Denomination: $Denomination,

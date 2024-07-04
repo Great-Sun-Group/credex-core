@@ -124,6 +124,11 @@ export async function CreateCredexService(credexData: Credex) {
       Denomination
     );
     if (secureableData.securableAmountInDenom < InitialAmount) {
+          console.log("secureableData.securableAmountInDenom: ");
+          console.log(secureableData.securableAmountInDenom);
+          console.log("InitialAmount: ");
+          console.log(InitialAmount);
+
       return {
         credex: false,
         message: `Error: Your secured credex for ${denomFormatter(

@@ -1,3 +1,4 @@
+import moment from "moment-timezone";
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
 
 export async function LoopFinder(
@@ -10,16 +11,26 @@ export async function LoopFinder(
   credexDueDate: string,
   acceptorAccountID: string
 ) {
-  var searchOwesType = "UNSECURED";
-  if (credexSecuredDenom != "unsecured") {
-    searchOwesType = credexSecuredDenom + "_SECURED";
-  }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
+  var searchOwesType = "FLOATING";
+  if (credexSecuredDenom != "floating") {
+    searchOwesType = credexSecuredDenom + "_ANCHORED";
+
+    //this is a bit of a hack for anchored credexes, assigning them a due date of today
+    //as per daynode, so that they can be processed through the loopfinder and will be
+    //prioritized by oldest outstanding credex
+    const getDaynodeDate = await ledgerSpaceSession.run(`
+      MATCH (daynode:DayNode {Active: true})
+      RETURN daynode.Date AS today
+      `);
+    credexDueDate = getDaynodeDate.records[0].get("today");
+  }
+
   //check if credex already exists in DB
-  //this happens if the loopfinder overloads the processors and
+  //this happens if the loopfinder overloads the processors or otherwise fails and
   //doesn't mark the credex as processed in ledgerSpace
   //in this case, we don't want to recreate the credex, just run the loopfinder.
   const checkCredexExists = await searchSpaceSession.run(
@@ -40,7 +51,7 @@ export async function LoopFinder(
         MATCH (acceptor:Account {accountID: $acceptorAccountID})
         MERGE (issuer)-[:${searchOwesType}]->(searchOwesType:${searchOwesType})-[:${searchOwesType}]->(acceptor)
           ON CREATE SET searchOwesType.searchAnchorID = randomUUID()
-        CREATE (searchOwesType)<-[:IN_THIS_OWES_TYPE]-(credex:Credex {
+        CREATE (searchOwesType)<-[:SEARCH_ANCHORED]-(credex:Credex {
             credexID: $credexID,
             outstandingAmount: $credexAmount,
             Denomination: $Denomination,
@@ -51,8 +62,7 @@ export async function LoopFinder(
         CALL apoc.do.case(
             [
                 searchOwesType.earliestDueDate IS NULL
-                OR searchOwesType.earliestDueDate > date($credexDueDate)
-                AND searchOwesType:UNSECURED, 
+                OR searchOwesType.earliestDueDate > date($credexDueDate), 
                 'SET searchOwesType.earliestDueDate = date($credexDueDate) RETURN true'
             ],
             'RETURN false',
@@ -102,7 +112,6 @@ export async function LoopFinder(
       WITH credloops, nodes(credloops) AS loopNodes
       UNWIND loopNodes AS node
       WITH credloops, node
-      WHERE node.earliestDueDate IS NOT NULL
       WITH credloops, MIN(node.earliestDueDate) AS earliestDueDate
 
       // Step 3: Filter loops to include only those containing a node with the earliest earliestDueDate
@@ -120,7 +129,7 @@ export async function LoopFinder(
       // Step 5: Each node returns the credex it is connected to with the earliest dueDate
       // on tie, credex with largest amount
       UNWIND credloopNodes AS loopNode
-      MATCH (loopNode)<-[:IN_THIS_OWES_TYPE]-(credex:Credex)
+      MATCH (loopNode)<-[:SEARCH_ANCHORED]-(credex:Credex)
       WITH loopNode, collect(credex) AS credexList
       WITH 
              reduce(minCredex = credexList[0], c IN credexList | 
@@ -159,45 +168,39 @@ export async function LoopFinder(
       console.log("credexesRedeemed:");
       console.log(credexesRedeemed);
 
-      //this should be run at the end of the above query, but then I can't get the
-      //found loop data returned, so making it a separate query for now.
       const deleteQuery = await searchSpaceSession.run(
         `
         // Step 10: Delete zeroCredexes
         UNWIND $credexesRedeemed AS credexRedeemedID
-        MATCH (credex:Credex {credexID: credexRedeemedID})-[:IN_THIS_OWES_TYPE]->(searchAnchor)
+        MATCH (credex:Credex {credexID: credexRedeemedID})-[:SEARCH_ANCHORED]->(searchAnchor)
         DETACH DELETE credex
-        WITH searchAnchor
+        WITH DISTINCT searchAnchor
 
-        //Step 11: Delete orphaned searchAnchors and update earliestDueDate on searchAnchors connected to deleted credexes
-        OPTIONAL MATCH (searchAnchor)<-[:IN_THIS_OWES_TYPE]-(otherCredex:Credex)
-        SET searchAnchor.earliestDueDate = null
-        WITH searchAnchor, otherCredex
-        CALL apoc.do.case(
-          [
-            otherCredex IS NULL,
-            'DETACH DELETE searchAnchor RETURN "searchAnchorDeleted"',
+        // Step 11: Handle orphaned searchAnchors
+        OPTIONAL MATCH (searchAnchor)<-[:SEARCH_ANCHORED]-(otherCredex:Credex)
+        WITH searchAnchor, collect(otherCredex) AS otherCredexes
+        CALL apoc.do.when(
+          size(otherCredexes) = 0,
+          'DETACH DELETE searchAnchor RETURN "searchAnchorDeleted" AS result',
+          'RETURN "noChanges" AS result',
+          {searchAnchor: searchAnchor}
+        ) YIELD value AS deleteValue
+        WITH deleteValue, searchAnchor, otherCredexes
+        WHERE deleteValue <> "searchAnchorDeleted"
 
-            searchAnchor:UNSECURED
-            AND searchAnchor.earliestDueDate IS NULL
-            OR searchAnchor.earliestDueDate > date(otherCredex.dueDate),
-            'SET searchAnchor.earliestDueDate = date(otherCredex.dueDate) RETURN "searchAnchorEarliestUpdated"'
-          ],
-          'RETURN "noChanges"',
-          {
-            searchAnchor: searchAnchor,
-            otherCredex: otherCredex
-          }
-        ) YIELD value
-        RETURN value
+        // Step 12: Update earliestDueDate on remaining searchAnchors
+        UNWIND otherCredexes AS otherCredex
+        WITH DISTINCT searchAnchor, otherCredex
+        CALL apoc.do.when(
+          (searchAnchor.earliestDueDate IS NULL OR searchAnchor.earliestDueDate > date(otherCredex.dueDate)),
+          'SET searchAnchor.earliestDueDate = date(otherCredex.dueDate) RETURN "searchAnchorEarliestUpdated" AS result',
+          'RETURN "noChanges" AS result',
+          {searchAnchor: searchAnchor, otherCredex: otherCredex}
+        ) YIELD value AS updateValue
+        RETURN searchAnchor
         `,
         { credexesRedeemed }
       );
-
-      if (deleteQuery.records.length === 0) {
-        console.log("deleteQuery failed");
-        return false;
-      }
 
       console.log(
         "credloop of " +
