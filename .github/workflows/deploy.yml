@@ -22,26 +22,10 @@ jobs:
         run: npm install
         working-directory: .
 
-      # For running tests
-      # - name: Run tests
-      #   run: npm test
-      #   working-directory: .
-
-      # - name: Build project
-      #   run: npm run build
-      #   working-directory: .
-
       - name: Set up SSH deploy keys
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.SSH_KEY }}
-
-      - name: Deploy to AWS EC2
-        run: |
-          scp -r -o StrictHostKeyChecking=no ./build ubuntu@${{ secrets.EC2_IP }}:/var/www/html
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
-          KNOWN_HOSTS: ${{ secrets.KNOWN_HOSTS }}
 
       - name: Set ownership on remote server
         run: |
@@ -57,6 +41,7 @@ jobs:
 
           # Run the SSH command
           ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} \
-          "sudo chown -R ubuntu:apache /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/ && chmod 777 -R /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/storage && chmod -R 777 /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/bootstrap/cache/ && cd /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/ && sudo npm install -g vite && npm install && sudo chown -R ubuntu:apache /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/ && chmod +x /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/dev_run.sh"
+          "cd credex-core &&
+            docker-compose up --build"
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
