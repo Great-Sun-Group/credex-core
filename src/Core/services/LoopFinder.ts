@@ -168,7 +168,7 @@ export async function LoopFinder(
       console.log("credexesRedeemed:");
       console.log(credexesRedeemed);
 
-      const deleteQuery = await searchSpaceSession.run(
+      const cleanupQuery = await searchSpaceSession.run(
         `
         // Step 10: Delete zeroCredexes
         UNWIND $credexesRedeemed AS credexRedeemedID

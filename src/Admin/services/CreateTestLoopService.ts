@@ -20,6 +20,12 @@ export async function CreateTestLoopService(numNewTransactions: number) {
     }
   );
 
+  const getDaynodeDate = await ledgerSpaceSession.run(`
+      MATCH (daynode:DayNode {Active: true})
+      RETURN daynode.Date AS today
+  `);
+  const today = getDaynodeDate.records[0].get("today");
+
   let credexesCreated = [];
   // Iterate numNewTransactions times
   for (let i = 0; i < numNewTransactions; i++) {
@@ -41,9 +47,14 @@ export async function CreateTestLoopService(numNewTransactions: number) {
       Denomination: "USD",
       InitialAmount: random(1, 100),
       credexType: "PURCHASE",
-      securedCredex: true,
-      //dueDate: moment("2023-07-09").utc().add(7, "days").format("YYYY-MM-DD"),
+      //securedCredex: true,
+      dueDate: moment(today)
+        .utc()
+        .add(8, "days")
+        .subtract(1, "month")
+        .format("YYYY-MM-DD"),
     };
+
     console.log(
       "Amount: " + credexSpecs.InitialAmount + " " + credexSpecs.Denomination
     );

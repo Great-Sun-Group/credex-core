@@ -145,7 +145,7 @@ export async function DCOexecute() {
 
       console.log("Exchange rates fetched and checked.");
     }
-    
+
     const denomsInXAU = _.mapValues(
       USDbaseRates,
       (value) => value / USDbaseRates.XAU
@@ -228,28 +228,33 @@ export async function DCOexecute() {
     `)
     ).records[0].get("foundationID");
 
-    for (const confirmedParticipant of confirmedParticipants) {
-      const dataForDCOgive: Credex = {
-        issuerMemberID: confirmedParticipant.get("memberID"),
-        receiverMemberID: foundationID,
-        Denomination: confirmedParticipant.get("DCOdenom"),
-        InitialAmount: confirmedParticipant.get("DCOgiveInDenom"),
-        credexType: "DCO_GIVE",
-        securedCredex: true,
-      };
-      const DCOgiveCredex = await OfferCredexService(dataForDCOgive);
-      if (typeof DCOgiveCredex.credex == "boolean") {
-        throw new Error("Invalid response from OfferCredexService");
+    const offerAndAcceptPromisesDCOgive = confirmedParticipants.map(
+      async (confirmedParticipant) => {
+        const dataForDCOgive: Credex = {
+          issuerMemberID: confirmedParticipant.get("memberID"),
+          receiverMemberID: foundationID,
+          Denomination: confirmedParticipant.get("DCOdenom"),
+          InitialAmount: confirmedParticipant.get("DCOgiveInDenom"),
+          credexType: "DCO_GIVE",
+          securedCredex: true,
+        };
+
+        const DCOgiveCredex = await OfferCredexService(dataForDCOgive);
+        if (typeof DCOgiveCredex.credex == "boolean") {
+          throw new Error("Invalid response from OfferCredexService");
+        }
+        if (
+          DCOgiveCredex.credex &&
+          typeof DCOgiveCredex.credex.credexID === "string"
+        ) {
+          return AcceptCredexService(DCOgiveCredex.credex.credexID);
+        } else {
+          throw new Error("Invalid credexID from OfferCredexService");
+        }
       }
-      if (
-        DCOgiveCredex.credex &&
-        typeof DCOgiveCredex.credex.credexID === "string"
-      ) {
-        await AcceptCredexService(DCOgiveCredex.credex.credexID);
-      } else {
-        throw new Error("Invalid credexID from OfferCredexService");
-      }
-    }
+    );
+
+    await Promise.all(offerAndAcceptPromisesDCOgive);
 
     console.log("Updating credex and asset balances");
     await ledgerSpaceSession.run(`
@@ -359,7 +364,7 @@ export async function DCOexecute() {
     //update balances in searchSpace CXX credexes
     await searchSpaceSession.run(
       `
-      MATCH (issuer:Member)-[credex:Credex]->(receiver:Member)
+      MATCH (credex:Credex)
       WHERE credex.Denomination = "CXX"
       SET
         credex.outstandingAmount =
@@ -372,7 +377,7 @@ export async function DCOexecute() {
     //update balances in searchSpace currency credexes
     await searchSpaceSession.run(
       `
-        MATCH (issuer:Member)-[credex:CREDEX]->(receiver:Member)
+        MATCH (credex:Credex)
         WHERE credex.Denomination <> "CXX"
         WITH credex, $newCXXrates AS rates
         SET credex.outstandingAmount = 
@@ -384,28 +389,33 @@ export async function DCOexecute() {
     );
 
     console.log("Creating DCO receive transactions");
-    for (const confirmedParticipant of confirmedParticipants) {
-      const dataForDCOreceive: Credex = {
-        issuerMemberID: foundationID,
-        receiverMemberID: confirmedParticipant.get("memberID"),
-        Denomination: "CXX",
-        InitialAmount: 1,
-        credexType: "DCO_RECEIVE",
-        securedCredex: true,
-      };
-      const DCOreceiveCredex = await OfferCredexService(dataForDCOreceive);
-      if (typeof DCOreceiveCredex.credex == "boolean") {
-        throw new Error("Invalid response from OfferCredexService");
+    const offerAndAcceptPromisesDCOreceive = confirmedParticipants.map(
+      async (confirmedParticipant) => {
+        const dataForDCOreceive: Credex = {
+          issuerMemberID: foundationID,
+          receiverMemberID: confirmedParticipant.get("memberID"),
+          Denomination: "CXX",
+          InitialAmount: 1,
+          credexType: "DCO_RECEIVE",
+          securedCredex: true,
+        };
+
+        const DCOreceiveCredex = await OfferCredexService(dataForDCOreceive);
+        if (typeof DCOreceiveCredex.credex == "boolean") {
+          throw new Error("Invalid response from OfferCredexService");
+        }
+        if (
+          DCOreceiveCredex.credex &&
+          typeof DCOreceiveCredex.credex.credexID === "string"
+        ) {
+          return AcceptCredexService(DCOreceiveCredex.credex.credexID);
+        } else {
+          throw new Error("Invalid credexID from OfferCredexService");
+        }
       }
-      if (
-        DCOreceiveCredex.credex &&
-        typeof DCOreceiveCredex.credex.credexID === "string"
-      ) {
-        await AcceptCredexService(DCOreceiveCredex.credex.credexID);
-      } else {
-        throw new Error("Invalid credexID from OfferCredexService");
-      }
-    }
+    );
+
+    await Promise.all(offerAndAcceptPromisesDCOreceive);
 
     console.log("Turning off DCOrunningNow flag");
     await ledgerSpaceSession.run(`

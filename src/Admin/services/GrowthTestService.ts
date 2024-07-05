@@ -1,16 +1,23 @@
 import { CreateTestMembersService } from "./CreateTestMembersService";
 import { CreateTestTransactionsService } from "./CreateTestTransactionsService";
 import { DailyCredcoinOffering } from "../../Core/services/DailyCredcoinOffering";
+import { MinuteTransactionQueue } from "../../Core/services/MinuteTransactionQueue";
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
+import { BuyAnchoredCredexesService } from "./BuyAnchoredCredexesService";
 
 export async function GrowthTestService(
   numberDays: number,
   memberGrowthRate: number,
-  dailyTransactionsPerMember: number
+  dailyFractionOfMembersToConvertUSDcash: number,
+  amountConvertedUSDlow: number,
+  amountConvertedUSDhigh: number,
+  dailyFractionOfMembersToConvertZIGcash: number,
+  amountConvertedZIGlow: number,
+  amountConvertedZIGhigh: number,
+  dailyEcosystemTransactionsPerMember: number
 ) {
-
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
-      const ledgerSpaceSession = ledgerSpaceDriver.session();
     // Get current number of members
     const numberMembersQuery = await ledgerSpaceSession.run(`
       MATCH (member:Member)
@@ -19,7 +26,6 @@ export async function GrowthTestService(
     let numberMembers = parseFloat(
       numberMembersQuery.records[0].get("numberMembers")
     );
-    await ledgerSpaceSession.close();
 
     for (let index = 0; index < numberDays; index++) {
       let numberNewMembers = Math.round(numberMembers * memberGrowthRate);
@@ -34,15 +40,36 @@ export async function GrowthTestService(
 
       await CreateTestMembersService(numberNewMembers);
 
-      const numberTransactions = Math.round(
-        numberMembers * dailyTransactionsPerMember
+      const numberUSDconversions = Math.round(
+        numberMembers * dailyFractionOfMembersToConvertUSDcash
       );
-      console.log(`Creating credexes: ${numberTransactions}`);
-      if (numberTransactions > 0) {
-        await CreateTestTransactionsService(numberTransactions);
+      await BuyAnchoredCredexesService(
+        "USD",
+        numberUSDconversions,
+        amountConvertedUSDlow,
+        amountConvertedUSDhigh
+      );
+
+      const numberZIGconversions = Math.round(
+        numberMembers * dailyFractionOfMembersToConvertZIGcash
+      );
+      await BuyAnchoredCredexesService(
+        "ZIG",
+        numberZIGconversions,
+        amountConvertedZIGlow,
+        amountConvertedZIGhigh
+      );
+
+      const numberEcosystemTransactions = Math.round(
+        numberMembers * dailyEcosystemTransactionsPerMember
+      );
+      console.log(`Creating in-ecosystem credexes: ${numberEcosystemTransactions}`);
+      if (numberEcosystemTransactions > 0) {
+        await CreateTestTransactionsService(numberEcosystemTransactions);
       }
 
       await DailyCredcoinOffering();
+      await MinuteTransactionQueue();
     }
 
     console.log("This run of GrowthTestService is complete");
@@ -52,5 +79,7 @@ export async function GrowthTestService(
       error
     );
     throw error;
+  } finally {
+    await ledgerSpaceSession.close();
   }
 }
