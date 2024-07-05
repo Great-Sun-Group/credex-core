@@ -69,29 +69,42 @@ export async function CreateCredexService(credexData: Credex) {
       failMessage += " Secured credex cannot have a due date";
     if (!securedCredex && !dueDate)
       failMessage += " Unsecured credex must have a due date";
+    console.log(failMessage);
     console.log(credexData);
     return { credex: false, message: failMessage };
   }
 
   // make sure InitialAmount is a number
   if (typeof InitialAmount != "number") {
+    const message = "Error: InitialAmount must be a number";
+    console.log(message);
+    console.log(credexData);
     return {
       credex: false,
-      message: "Error: InitialAmount must be a number",
+      message: message,
     };
   }
 
   // Check denomination validity
   if (!getDenominations({ code: Denomination }).length) {
+    const message = "Error: denomination not permitted";
+    console.log(message);
+    console.log(credexData);
     return {
       credex: false,
-      message: "Error: denomination not permitted",
+      message: message,
     };
   }
 
   // Check credex type validity
   if (!checkPermittedCredexType(credexType)) {
-    return { credex: false, message: "Error: credex type not permitted" };
+    const message = "Error: credex type not permitted";
+    console.log(message);
+    console.log(credexData);
+    return {
+      credex: false,
+      message: message,
+    };
   }
 
   // Validate OFFERSorREQUESTS and set OFFEREDorREQUESTED accordingly
@@ -101,17 +114,27 @@ export async function CreateCredexService(credexData: Credex) {
   } else if (OFFERSorREQUESTS === "REQUESTS") {
     OFFEREDorREQUESTED = "REQUESTED";
   } else {
-    return { credex: false, message: "Error: invalid OFFER/REQUEST" };
+    const message = "Error: invalid OFFER/REQUEST";
+    console.log(message);
+    console.log(credexData);
+    return {
+      credex: false,
+      message: message,
+    };
   }
 
   // Check due date for unsecured credex
   if (!securedCredex) {
     const dueDateOK = await checkDueDate(dueDate);
     if (!dueDateOK) {
+      const message = `Error: due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${
+        credspan / 7
+      } weeks from today.`;
+      console.log(message);
+      console.log(credexData);
       return {
         credex: false,
-        message: `Error: due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan / 7
-          } weeks from today.`,
+        message: message,
       };
     }
   }
@@ -124,10 +147,10 @@ export async function CreateCredexService(credexData: Credex) {
       Denomination
     );
     if (secureableData.securableAmountInDenom < InitialAmount) {
-          console.log("secureableData.securableAmountInDenom: ");
-          console.log(secureableData.securableAmountInDenom);
-          console.log("InitialAmount: ");
-          console.log(InitialAmount);
+      console.log("secureableData.securableAmountInDenom: ");
+      console.log(secureableData.securableAmountInDenom);
+      console.log("InitialAmount: ");
+      console.log(InitialAmount);
 
       return {
         credex: false,

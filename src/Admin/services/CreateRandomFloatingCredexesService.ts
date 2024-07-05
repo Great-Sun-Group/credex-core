@@ -1,7 +1,6 @@
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { OfferCredexService } from "../../Credex/services/OfferCredexService";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
-import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecuredAuthorizationService";
 import { Credex } from "../../Credex/types/Credex";
 import { random } from "lodash";
 import moment from "moment-timezone";
@@ -33,9 +32,11 @@ async function getDateAndRandCounterparties() {
   };
 }
 
-export async function CreateTestTransactionsService(numNewTransactions: number) {
-  let credexesCreated = [];
-
+export async function CreateRandomFloatingCredexesService(
+  numNewTransactions: number
+) {
+  const credexesCreated = [];
+  const batchSize = 5;
   const transactionPromises = [];
 
   for (let i = 0; i < numNewTransactions; i++) {
@@ -46,27 +47,14 @@ export async function CreateTestTransactionsService(numNewTransactions: number) 
         const issuerMemberID = dateAndCounterparties.memberID_1;
         const receiverMemberID = dateAndCounterparties.memberID_2;
         const InitialAmount = random(1, 100);
-        let Denomination = InitialAmount < 70 ? "USD" : "ZIG";
+        const Denomination = InitialAmount < 80 ? "USD" : "ZIG";
 
-        // default is unsecured credex due in 3 weeks
-        let secured = false;
-        let dueDate = moment(date)
+        // floating credex due in 8-34 days
+        const credspanDays = random(8, 34);
+        const dueDate = moment(date)
           .subtract(1, "months")
-          .add(21, "days")
+          .add(credspanDays, "days")
           .format("YYYY-MM-DD");
-
-        // check ability to issue secured credex
-        const securedAuthorization = await GetSecuredAuthorizationService(
-          issuerMemberID,
-          Denomination
-        );
-        if (securedAuthorization.securableAmountInDenom >= InitialAmount) {
-          // if credex of amount can be secured by member, 75% chance credex is secured
-          secured = Math.random() < 0.75;
-          if (secured) {
-            dueDate = "";
-          }
-        }
 
         const credexSpecs: Credex = {
           issuerMemberID: issuerMemberID,
@@ -75,7 +63,7 @@ export async function CreateTestTransactionsService(numNewTransactions: number) 
           InitialAmount: InitialAmount,
           credexType: "PURCHASE",
           dueDate: dueDate,
-          securedCredex: secured,
+          securedCredex: false,
         };
 
         const newcredex = await OfferCredexService(credexSpecs);
@@ -92,13 +80,17 @@ export async function CreateTestTransactionsService(numNewTransactions: number) 
         }
       })()
     );
+
+    // Process in batches of `batchSize`
+    if ((i + 1) % batchSize === 0 || i === numNewTransactions - 1) {
+      const batchResults = await Promise.all(transactionPromises);
+      credexesCreated.push(
+        ...batchResults.filter((result) => result !== undefined)
+      );
+      transactionPromises.length = 0; // Clear the array for the next batch
+    }
   }
 
-  const credexesCreatedArray = await Promise.all(transactionPromises);
-  credexesCreated.push(
-    ...credexesCreatedArray.filter((result) => result !== undefined)
-  );
-
-  console.log(`${numNewTransactions} new transactions created`);
+  console.log(`${numNewTransactions} new floating transactions created`);
   return credexesCreated;
 }

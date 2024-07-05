@@ -87,6 +87,14 @@ export async function LoopFinder(
 
       if (createSearchSpaceCredex.records.length === 0) {
         console.log("Unable to create SearchSpace credex");
+        console.log("issuerAccountID: " + issuerAccountID);
+        console.log("acceptorAccountID: " + acceptorAccountID);
+        console.log("credexID: " + credexID);
+        console.log("credexAmount: " + credexAmount);
+        console.log("Denomination: " + Denomination);
+        console.log("CXXmultiplier: " + CXXmultiplier);
+        console.log("credexDueDate: " + credexDueDate);
+        console.log("searchOwesType: " + searchOwesType);
         return false;
       }
       console.log(

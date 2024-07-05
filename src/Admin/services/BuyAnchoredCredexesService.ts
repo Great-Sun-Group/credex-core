@@ -12,6 +12,7 @@ export async function BuyAnchoredCredexesService(
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   console.log(`Creating ${denom} anchored credexes: ${number}`);
+
   if (number > 0) {
     const getAnchoredUSDCounterparties = await ledgerSpaceSession.run(
       `
@@ -25,7 +26,7 @@ export async function BuyAnchoredCredexesService(
         WHERE accounts.memberID <> auditedAccount.memberID
         WITH auditedAccount, collect(accounts.memberID) AS allaccounts
         RETURN auditedAccount.memberID AS auditedID, allaccounts[0..$numberUSDconversions] AS accountsToConvertUSD
-        `,
+      `,
       {
         numberUSDconversions: neo4j.int(number),
       }
@@ -37,8 +38,12 @@ export async function BuyAnchoredCredexesService(
       "accountsToConvertUSD"
     );
 
-    const offerPromises = accountsToConvertUSD.map(
-      (receiverMemberID: string) => {
+    const batchSize = 5;
+
+    for (let i = 0; i < accountsToConvertUSD.length; i += batchSize) {
+      const batch = accountsToConvertUSD.slice(i, i + batchSize);
+
+      const offerPromises = batch.map((receiverMemberID: string) => {
         const InitialAmount = random(lowValue, highValue);
 
         const credexSpecs = {
@@ -51,23 +56,24 @@ export async function BuyAnchoredCredexesService(
         };
 
         return OfferCredexService(credexSpecs);
-      }
-    );
+      });
 
-    const offerCredexArray = await Promise.all(offerPromises);
+      const offerCredexArray = await Promise.all(offerPromises);
 
-    // Accept offers by processing the results in offerCredexArray
-    const acceptPromises = offerCredexArray.map((newcredex) => {
-      if (typeof newcredex.credex == "boolean") {
-        throw new Error("Invalid response from OfferCredexService");
-      }
-      if (newcredex.credex && typeof newcredex.credex.credexID === "string") {
-        return AcceptCredexService(newcredex.credex.credexID);
-      } else {
-        return newcredex.message;
-      }
-    });
+      const acceptPromises = offerCredexArray.map((newcredex) => {
+        if (typeof newcredex.credex == "boolean") {
+          throw new Error("Invalid response from OfferCredexService");
+        }
+        if (newcredex.credex && typeof newcredex.credex.credexID === "string") {
+          return AcceptCredexService(newcredex.credex.credexID);
+        } else {
+          return Promise.reject(newcredex.message);
+        }
+      });
 
-    await Promise.all(acceptPromises);
+      await Promise.all(acceptPromises);
+    }
   }
+
+  await ledgerSpaceSession.close();
 }

@@ -1,5 +1,5 @@
 import { CreateTestMembersService } from "./CreateTestMembersService";
-import { CreateTestTransactionsService } from "./CreateTestTransactionsService";
+import { CreateRandomFloatingCredexesService } from "./CreateRandomFloatingCredexesService";
 import { DailyCredcoinOffering } from "../../Core/services/DailyCredcoinOffering";
 import { MinuteTransactionQueue } from "../../Core/services/MinuteTransactionQueue";
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
@@ -14,7 +14,7 @@ export async function GrowthTestService(
   dailyFractionOfMembersToConvertZIGcash: number,
   amountConvertedZIGlow: number,
   amountConvertedZIGhigh: number,
-  dailyEcosystemTransactionsPerMember: number
+  dailyFloatingRandomTransactionsPerMember: number
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
@@ -60,12 +60,16 @@ export async function GrowthTestService(
         amountConvertedZIGhigh
       );
 
-      const numberEcosystemTransactions = Math.round(
-        numberMembers * dailyEcosystemTransactionsPerMember
+      const numberRandomFloatingTransactions = Math.round(
+        numberMembers * dailyFloatingRandomTransactionsPerMember
       );
-      console.log(`Creating in-ecosystem credexes: ${numberEcosystemTransactions}`);
-      if (numberEcosystemTransactions > 0) {
-        await CreateTestTransactionsService(numberEcosystemTransactions);
+      console.log(
+        `Creating random floating credexes: ${numberRandomFloatingTransactions}`
+      );
+      if (numberRandomFloatingTransactions > 0) {
+        await CreateRandomFloatingCredexesService(
+          numberRandomFloatingTransactions
+        );
       }
 
       await DailyCredcoinOffering();

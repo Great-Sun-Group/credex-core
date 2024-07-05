@@ -14,7 +14,7 @@ export async function GrowthTestController(
       "dailyFractionOfMembersToConvertZIGcash",
       "amountConvertedZIGlow",
       "amountConvertedZIGhigh",
-      "dailyEcosystemTransactionsPerMember",
+      "dailyFloatingRandomTransactionsPerMember",
     ];
   for (const field of fieldsRequired) {
     if (!req.body[field]) {
@@ -34,7 +34,7 @@ export async function GrowthTestController(
         req.body.dailyFractionOfMembersToConvertZIGcash,
         req.body.amountConvertedZIGlow,
         req.body.amountConvertedZIGhigh,
-        req.body.dailyEcosystemTransactionsPerMember
+        req.body.dailyFloatingRandomTransactionsPerMember
       );
     res.status(200).json(responseData);
   } catch (err) {
