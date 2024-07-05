@@ -1,12 +1,12 @@
 name: deploy_to_prod
 run-name: ${{ github.actor }} pushed to prod_auto_deploy_setup with commit message '${{ github.event.head_commit.message }}'
 
-on: 
-  push: 
+on:
+  push:
     branches:
       - prod
 
-jobs: 
+jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
@@ -15,8 +15,8 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
-        with: 
-          node-version: '18'
+        with:
+          node-version: "18"
 
       - name: Install dependencies
         run: npm install
@@ -42,6 +42,7 @@ jobs:
           # Run the SSH command
           ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} \
           "cd credex-core &&
+            git checkout dev &&
             docker-compose up --build"
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
