@@ -5,17 +5,17 @@ import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecured
 import * as neo4j from "neo4j-driver";
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 
-export async function CirculateAnchoredCredexesService(
+export async function InEcosystemAnchoredCredexesService(
   denom: string,
   number: number
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-  console.log(`Circulating ${denom} anchored credexes: ${number}`);
+  console.log(`Creating in-ecosystem ${denom} anchored credexes: ${number}`);
 
   try {
     if (number > 0) {
-const result = await ledgerSpaceSession.run(
-  `
+      const result = await ledgerSpaceSession.run(
+        `
   MATCH
     (issuer:Member)<-[transactionType:OWES]-
     (inCredex:Credex{Denomination:$denom})<-[:SECURES]-(securer:Member)
@@ -39,11 +39,11 @@ const result = await ledgerSpaceSession.run(
   RETURN issuerMemberID, receiverMemberID
   LIMIT $number
   `,
-  {
-    number: neo4j.int(number),
-    denom,
-  }
-);
+        {
+          number: neo4j.int(number),
+          denom,
+        }
+      );
 
       if (result.records.length === 0) {
         console.log("No records found for circulation.");
@@ -66,10 +66,8 @@ const result = await ledgerSpaceSession.run(
               denom
             );
 
-            const InitialAmount = random(
-              1,
-              securableData.securableAmountInDenom || 1
-            );
+            const InitialAmount = random(securableData.securableAmountInDenom);
+            console.log("random initialAmount: " + InitialAmount);
 
             const credexSpecs = {
               issuerMemberID: issuerMemberID,
@@ -100,7 +98,7 @@ const result = await ledgerSpaceSession.run(
       }
     }
   } catch (error) {
-    console.error("Error in CirculateAnchoredCredexesService:", error);
+    console.error("Error in InEcosystemAnchoredCredexesService:", error);
   } finally {
     await ledgerSpaceSession.close();
   }

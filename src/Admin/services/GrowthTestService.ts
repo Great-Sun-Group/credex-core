@@ -5,7 +5,7 @@ import { MinuteTransactionQueue } from "../../Core/services/MinuteTransactionQue
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { PurchaseAnchoredCredexesService } from "./PurchaseAnchoredCredexesService";
 import { SellAnchoredCredexesService } from "./SellAnchoredCredexesService";
-import { CirculateAnchoredCredexesService } from "./CirculateAnchoredCredexesService";
+import { InEcosystemAnchoredCredexesService } from "./InEcosystemAnchoredCredexesService";
 
 export async function GrowthTestService(variables: any) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -47,7 +47,10 @@ export async function GrowthTestService(variables: any) {
       const numberUSDanchoredCirculate = Math.round(
         numberMembers * variables.USD_ANCHORED_fractionToCirculate
       );
-      await CirculateAnchoredCredexesService("USD", numberUSDanchoredCirculate);
+      await InEcosystemAnchoredCredexesService(
+        "USD",
+        numberUSDanchoredCirculate
+      );
 
       const numberUSDsales = Math.round(
         numberMembers * variables.USD_ANCHORED_fractionToSell
@@ -67,7 +70,10 @@ export async function GrowthTestService(variables: any) {
       const numberZIGanchoredCirculate = Math.round(
         numberMembers * variables.ZIG_ANCHORED_fractionToCirculate
       );
-      await CirculateAnchoredCredexesService("ZIG", numberZIGanchoredCirculate);
+      await InEcosystemAnchoredCredexesService(
+        "ZIG",
+        numberZIGanchoredCirculate
+      );
 
       const numberZIGsales = Math.round(
         numberMembers * variables.ZIG_ANCHORED_fractionToSell
