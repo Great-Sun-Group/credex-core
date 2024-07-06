@@ -57,7 +57,7 @@ export async function GetSecuredAuthorizationService(
       MATCH (daynode:DayNode {Active: true})
       RETURN
         securingMemberID,
-        netSecurablePerSecurerCXX * daynode[$Denomination] AS netSecurableInDenom
+        netSecurablePerSecurerCXX / daynode[$Denomination] AS netSecurableInDenom
         ORDER BY netSecurableInDenom DESC
         LIMIT 1
     `,
@@ -70,7 +70,7 @@ export async function GetSecuredAuthorizationService(
   await ledgerSpaceSession.close();
 
   const securableRecord = getSecurableDataQuery.records[0];
-  if (securableRecord.length === 0) {
+  if (!securableRecord || securableRecord.length === 0) {
     return {
       securerID: null,
       securableAmountInDenom: 0,

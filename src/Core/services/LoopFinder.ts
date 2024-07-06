@@ -1,25 +1,41 @@
+import moment from "moment-timezone";
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
 
 export async function LoopFinder(
-  issuerMemberID: string,
+  issuerAccountID: string,
   credexID: string,
   credexAmount: number,
   Denomination: string,
   CXXmultiplier: number,
   credexSecuredDenom: string,
   credexDueDate: string,
-  acceptorMemberID: string
+  acceptorAccountID: string
 ) {
+
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
+  var searchOwesType = "FLOATING";
+  if (credexSecuredDenom != "floating") {
+    searchOwesType = credexSecuredDenom + "_ANCHORED";
+
+    //this is a bit of a hack for anchored credexes, assigning them a due date of today
+    //as per daynode, so that they can be processed through the loopfinder and will be
+    //prioritized by oldest outstanding credex
+    const getDaynodeDate = await ledgerSpaceSession.run(`
+      MATCH (daynode:DayNode {Active: true})
+      RETURN daynode.Date AS today
+      `);
+    credexDueDate = getDaynodeDate.records[0].get("today");
+  }
+
   //check if credex already exists in DB
-  //this happens if the loopfinder overloads the processors and
+  //this happens if the loopfinder overloads the processors or otherwise fails and
   //doesn't mark the credex as processed in ledgerSpace
   //in this case, we don't want to recreate the credex, just run the loopfinder.
   const checkCredexExists = await searchSpaceSession.run(
     `
-      OPTIONAL MATCH ()-[credex:CREDEX {credexID: $credexID}]->()
+      OPTIONAL MATCH (credex:Credex {credexID: $credexID})
       RETURN credex IS NOT NULL AS credexExists
     `,
     { credexID }
@@ -28,35 +44,67 @@ export async function LoopFinder(
 
   //if the credex doesn't exist in searchSpace, create it
   if (!credexExists) {
-    const createSearchSpaceCredex = await searchSpaceSession.run(
-      `
-      MATCH (issuer:Member {memberID: $issuerMemberID})
-      MATCH (acceptor:Member {memberID: $acceptorMemberID})
-      CREATE (issuer)-[credex:CREDEX {
-        credexID: $credexID,
-        outstandingAmount: $credexAmount,
-        Denomination: $Denomination,
-        CXXmultiplier: $CXXmultiplier,
-        securedDenom: $credexSecuredDenom,
-        dueDate: date($credexDueDate)
-      }]->(acceptor)
-      RETURN credex.credexID AS credexID
-    `,
-      {
-        issuerMemberID,
-        credexID,
-        credexAmount,
-        Denomination,
-        CXXmultiplier,
-        credexSecuredDenom,
-        credexDueDate,
-        acceptorMemberID,
+    try {
+      const createSearchSpaceCredex = await searchSpaceSession.run(
+        `
+        MATCH (issuer:Account {accountID: $issuerAccountID})
+        MATCH (acceptor:Account {accountID: $acceptorAccountID})
+        MERGE (issuer)-[:${searchOwesType}]->(searchOwesType:${searchOwesType})-[:${searchOwesType}]->(acceptor)
+          ON CREATE SET searchOwesType.searchAnchorID = randomUUID()
+        CREATE (searchOwesType)<-[:SEARCH_ANCHORED]-(credex:Credex {
+            credexID: $credexID,
+            outstandingAmount: $credexAmount,
+            Denomination: $Denomination,
+            CXXmultiplier: $CXXmultiplier,
+            dueDate: date($credexDueDate)
+        })
+        WITH searchOwesType, credex
+        CALL apoc.do.case(
+            [
+                searchOwesType.earliestDueDate IS NULL
+                OR searchOwesType.earliestDueDate > date($credexDueDate), 
+                'SET searchOwesType.earliestDueDate = date($credexDueDate) RETURN true'
+            ],
+            'RETURN false',
+            {
+              searchOwesType: searchOwesType,
+              credexDueDate: credex.dueDate
+            }
+        ) YIELD value
+        RETURN credex.credexID AS credexID
+        `,
+        {
+          issuerAccountID: issuerAccountID,
+          acceptorAccountID: acceptorAccountID,
+          credexID: credexID,
+          credexAmount: credexAmount,
+          Denomination: Denomination,
+          CXXmultiplier: CXXmultiplier,
+          credexDueDate: credexDueDate,
+          searchOwesType: searchOwesType,
+        }
+      );
+
+      if (createSearchSpaceCredex.records.length === 0) {
+        console.log("Unable to create SearchSpace credex");
+        console.log("issuerAccountID: " + issuerAccountID);
+        console.log("acceptorAccountID: " + acceptorAccountID);
+        console.log("credexID: " + credexID);
+        console.log("credexAmount: " + credexAmount);
+        console.log("Denomination: " + Denomination);
+        console.log("CXXmultiplier: " + CXXmultiplier);
+        console.log("credexDueDate: " + credexDueDate);
+        console.log("searchOwesType: " + searchOwesType);
+        return false;
       }
-    );
-    console.log(
-      "credex created in SearchSpace: " +
-        createSearchSpaceCredex.records[0].get("credexID")
-    );
+      console.log(
+        "Credex created in SearchSpace: " +
+          createSearchSpaceCredex.records[0].get("credexID")
+      );
+    } catch (error) {
+      console.error("Error creating SearchSpace credex:", error);
+      return false;
+    }
   } else {
     console.log("credex already exists in SearchSpace: " + credexID);
   }
@@ -66,49 +114,102 @@ export async function LoopFinder(
     console.log("searching for credloops...");
     const searchSpaceQuery = await searchSpaceSession.run(
       `
-        MATCH credloop = 
-          (issuer:Member {memberID: $issuerMemberID})
-          -[:CREDEX {credexID: $credexID}]->(acceptor: Member)
-          -[*1..8]->(issuer)
-        WHERE ALL(rel in relationships(credloop)
-        WHERE rel.securedDenom = $credexSecuredDenom)
-        WITH credloop, length(credloop) AS credloopLength, 
-            reduce(minDueDate = null, credex IN relationships(credloop) | 
-                CASE 
-                    WHEN minDueDate IS NULL THEN credex.dueDate
-                    WHEN credex.dueDate < minDueDate THEN credex.dueDate
-                    ELSE minDueDate
-                END) AS earliestDueDate
-        ORDER BY credloopLength DESC, earliestDueDate ASC
-        LIMIT 1
-        WITH credloop, 
-            reduce(minAmount = null, credex IN relationships(credloop) | 
-                CASE 
-                    WHEN minAmount IS NULL THEN credex.outstandingAmount
-                    WHEN credex.outstandingAmount < minAmount THEN credex.outstandingAmount
-                    ELSE minAmount
-                END) AS lowestAmount
-        FOREACH (credex IN relationships(credloop) |
-            SET credex.outstandingAmount = credex.outstandingAmount - lowestAmount
-        )
-        WITH credloop, lowestAmount,
-          [credex IN relationships(credloop)
-          WHERE credex.outstandingAmount = 0 | credex.credexID] AS zeroCredexIDs
-        WITH credloop, lowestAmount, zeroCredexIDs, [rel IN relationships(credloop) | rel.credexID] AS credexIDs
-        FOREACH (credex IN relationships(credloop) |
-            FOREACH (_ IN CASE WHEN credex.outstandingAmount = 0 THEN [1] ELSE [] END |
-                DELETE credex
-            )
-        )
-        RETURN lowestAmount, credexIDs, zeroCredexIDs
+      // Step 1: Find all loops starting and ending at the specified account, with the specified searchOwesType
+      MATCH credloops = (issuer:Account {accountID: $issuerAccountID})-[:${searchOwesType}*]->(issuer)
+      
+      WITH credloops, nodes(credloops) AS loopNodes
+      UNWIND loopNodes AS node
+      WITH credloops, node
+      WITH credloops, MIN(node.earliestDueDate) AS earliestDueDate
+
+      // Step 3: Filter loops to include only those containing a node with the earliest earliestDueDate
+      WITH credloops, earliestDueDate, nodes(credloops) AS loopNodes
+      UNWIND loopNodes AS node
+      WITH credloops, node
+      WHERE node.earliestDueDate = earliestDueDate
+      WITH credloops, length(credloops) AS loopLength
+
+      // Step 4: Return only the longest loop, breaking ties with rand()
+      ORDER BY loopLength DESC, rand()
+      LIMIT 1
+      WITH nodes(credloops) AS credloopNodes
+
+      // Step 5: Each node returns the credex it is connected to with the earliest dueDate
+      // on tie, credex with largest amount
+      UNWIND credloopNodes AS loopNode
+      MATCH (loopNode)<-[:SEARCH_ANCHORED]-(credex:Credex)
+      WITH loopNode, collect(credex) AS credexList
+      WITH 
+             reduce(minCredex = credexList[0], c IN credexList | 
+                    CASE 
+                      WHEN c.dueDate < minCredex.dueDate THEN c
+                      WHEN c.dueDate = minCredex.dueDate AND c.outstandingAmount > minCredex.outstandingAmount THEN c
+                      ELSE minCredex 
+                    END) AS earliestCredex
+      WITH collect(earliestCredex) AS finalCredexes, COLLECT(earliestCredex.credexID) AS credexIDs
+
+      // Step 6: Identify the minimum outstandingAmount and subtract it from all credexes
+      UNWIND finalCredexes AS credexInLoop
+      WITH finalCredexes, min(credexInLoop.outstandingAmount) AS lowestAmount, credexIDs
+
+      UNWIND finalCredexes AS credex
+      SET credex.outstandingAmount = credex.outstandingAmount - lowestAmount
+
+      // Step 7: Collect all credexes and filter those with outstandingAmount = 0.
+      WITH lowestAmount, COLLECT(credex) AS allCredexes, credexIDs
+      WITH lowestAmount, allCredexes, [credex IN allCredexes WHERE credex.outstandingAmount = 0] AS zeroCredexes, credexIDs
+
+      //Step 8: collect credexIDs of the zeroCredexes
+      UNWIND zeroCredexes as zeroCredex
+      RETURN collect(zeroCredex.credexID) AS zeroCredexIDs, lowestAmount, credexIDs
+
       `,
-      { issuerMemberID, credexID, credexSecuredDenom }
+      { issuerAccountID, searchOwesType }
     );
 
     if (searchSpaceQuery.records.length > 0) {
       const valueToClear = searchSpaceQuery.records[0].get("lowestAmount");
       const credexesInLoop = searchSpaceQuery.records[0].get("credexIDs");
       const credexesRedeemed = searchSpaceQuery.records[0].get("zeroCredexIDs");
+      console.log("credexesInLoop:");
+      console.log(credexesInLoop);
+      console.log("credexesRedeemed:");
+      console.log(credexesRedeemed);
+
+      const cleanupQuery = await searchSpaceSession.run(
+        `
+        // Step 10: Delete zeroCredexes
+        UNWIND $credexesRedeemed AS credexRedeemedID
+        MATCH (credex:Credex {credexID: credexRedeemedID})-[:SEARCH_ANCHORED]->(searchAnchor)
+        DETACH DELETE credex
+        WITH DISTINCT searchAnchor
+
+        // Step 11: Handle orphaned searchAnchors
+        OPTIONAL MATCH (searchAnchor)<-[:SEARCH_ANCHORED]-(otherCredex:Credex)
+        WITH searchAnchor, collect(otherCredex) AS otherCredexes
+        CALL apoc.do.when(
+          size(otherCredexes) = 0,
+          'DETACH DELETE searchAnchor RETURN "searchAnchorDeleted" AS result',
+          'RETURN "noChanges" AS result',
+          {searchAnchor: searchAnchor}
+        ) YIELD value AS deleteValue
+        WITH deleteValue, searchAnchor, otherCredexes
+        WHERE deleteValue <> "searchAnchorDeleted"
+
+        // Step 12: Update earliestDueDate on remaining searchAnchors
+        UNWIND otherCredexes AS otherCredex
+        WITH DISTINCT searchAnchor, otherCredex
+        CALL apoc.do.when(
+          (searchAnchor.earliestDueDate IS NULL OR searchAnchor.earliestDueDate > date(otherCredex.dueDate)),
+          'SET searchAnchor.earliestDueDate = date(otherCredex.dueDate) RETURN "searchAnchorEarliestUpdated" AS result',
+          'RETURN "noChanges" AS result',
+          {searchAnchor: searchAnchor, otherCredex: otherCredex}
+        ) YIELD value AS updateValue
+        RETURN searchAnchor
+        `,
+        { credexesRedeemed }
+      );
+
       console.log(
         "credloop of " +
           valueToClear +
@@ -158,7 +259,9 @@ export async function LoopFinder(
           WITH DISTINCT loopAnchor
           UNWIND $credexesRedeemed AS redeemedCredexID
           MATCH
-            (owesOutMember:Member)-[owes1:OWES]->(thisRedeemedCredex:Credex {credexID: redeemedCredexID})-[owes2:OWES]->(owesInMember:Member),
+            (owesOutMember:Member)-[owes1:OWES]->
+              (thisRedeemedCredex:Credex {credexID: redeemedCredexID})-[owes2:OWES]->
+              (owesInMember:Member),
             (thisRedeemedCredex)-[:REDEEMED]->(loopAnchor)
           CREATE
             (owesOutMember)-[:CLEARED]->(thisRedeemedCredex)-[:CLEARED]->(owesInMember)
@@ -202,26 +305,26 @@ const transformIntegers = (val: number) =>
     : val;
 
 
-        //create notifications for each member
+        //create notifications for each account
         var notiFeedDataQuery = await ledgerSpaceSession.run(`
-            MATCH (loopAnchor:LoopAnchor{loopID:$loopID})<-[:REDEEMED]-(everyLoopedCredex:Credex)-[:OWES|CLEARED]->(NotiMember:Member)
+            MATCH (loopAnchor:LoopAnchor{loopID:$loopID})<-[:REDEEMED]-(everyLoopedCredex:Credex)-[:OWES|CLEARED]->(NotiAccount:Account)
             
-            MATCH (NotiMember)-[:OWES|CLEARED]->(payableCredex:Credex)-[redeemedPayable:REDEEMED]->(loopAnchor), (payableCredex:Credex)-[:OWES|CLEARED]->(payableMember:Member)
+            MATCH (NotiAccount)-[:OWES|CLEARED]->(payableCredex:Credex)-[redeemedPayable:REDEEMED]->(loopAnchor), (payableCredex:Credex)-[:OWES|CLEARED]->(payableAccount:Account)
             
-            MATCH (NotiMember)<-[:OWES|CLEARED]-(receivableCredex:Credex)-[redeemedReceivable:REDEEMED]->(loopAnchor), (receivableCredex:Credex)<-[:OWES|CLEARED]-(receivableMember:Member)
+            MATCH (NotiAccount)<-[:OWES|CLEARED]-(receivableCredex:Credex)-[redeemedReceivable:REDEEMED]->(loopAnchor), (receivableCredex:Credex)<-[:OWES|CLEARED]-(receivableAccount:Account)
             
             RETURN
-              NotiMember.memberID AS notiMemberID,
+              NotiAccount.accountID AS notiAccountID,
               redeemedPayable.AmountRedeemed AS payableRedeemed,
               redeemedPayable.Denomination AS payableDenom,
               redeemedPayable.CXXmultiplier AS payableCXXmult,
-              payableMember.firstname AS payableMemberFirstname,
-              payableMember.lastname AS payableMemberLastname,
+              payableAccount.firstname AS payableAccountFirstname,
+              payableAccount.lastname AS payableAccountLastname,
               redeemedReceivable.AmountRedeemed AS receivableRedeemed,
               redeemedReceivable.Denomination AS receivableDenom,
               redeemedReceivable.CXXmultiplier AS receivableCXXmult,
-              receivableMember.firstname AS receivableMemberFirstname,
-              receivableMember.lastname AS receivableMemberLastname
+              receivableAccount.firstname AS receivableAccountFirstname,
+              receivableAccount.lastname AS receivableAccountLastname
   
             `,
           {
@@ -231,17 +334,17 @@ const transformIntegers = (val: number) =>
         for (let notiIndex = 0; notiIndex < notiFeedDataQuery.records.length; notiIndex++) {
           var notiData = notiFeedDataQuery.records[notiIndex];
 
-          var notiMemberID = notiData.get("notiMemberID")
+          var notiAccountID = notiData.get("notiAccountID")
           var amountPayableCXX = notiData.get("payableRedeemed")
           var payableDenom = notiData.get("payableDenom")
           var payableCXXmult = notiData.get("payableCXXmult")
-          var payableMemberFirstname = notiData.get("payableMemberFirstname")
-          var payableMemberLastname = notiData.get("payableMemberLastname")
+          var payableAccountFirstname = notiData.get("payableAccountFirstname")
+          var payableAccountLastname = notiData.get("payableAccountLastname")
           var amountReceivableCXX = notiData.get("receivableRedeemed")
           var receivableDenom = notiData.get("receivableDenom")
           var receivableCXXmult = notiData.get("receivableCXXmult")
-          var receivableMemberFirstname = notiData.get("receivableMemberFirstname")
-          var receivableMemberLastname = notiData.get("receivableMemberLastname")
+          var receivableAccountFirstname = notiData.get("receivableAccountFirstname")
+          var receivableAccountLastname = notiData.get("receivableAccountLastname")
 
           //get denom data based on denom code for each
           var payableDenomData = getDenoms({ 'code': payableDenom });
@@ -265,17 +368,17 @@ const transformIntegers = (val: number) =>
           var amountPayableFormatted = denomAmountProcessor(amountPayableCXX, payableDenomDataFull, payableDenomDataFull)
           var amountReceivableFormatted = denomAmountProcessor(amountReceivableCXX, receivableDenomDataFull, receivableDenomDataFull)
 
-          var notiFeedText = amountPayableFormatted + " that you owed to " + payableMemberFirstname + " " + payableMemberLastname + " has been credlooped against " + amountReceivableFormatted + " that " + receivableMemberFirstname + " " + receivableMemberLastname + " owed you.";
+          var notiFeedText = amountPayableFormatted + " that you owed to " + payableAccountFirstname + " " + payableAccountLastname + " has been credlooped against " + amountReceivableFormatted + " that " + receivableAccountFirstname + " " + receivableAccountLastname + " owed you.";
 
 
-          console.log(notiMemberID)
+          console.log(notiAccountID)
           console.log(notiFeedText)
 
-          //push noti to member
+          //push noti to account
           var rest = new Ably.Rest({ key: process.env.ABLY_API_KEY });
-          var channel = rest.channels.get('credex-user-' + notiMemberID);
+          var channel = rest.channels.get('credex-user-' + notiAccountID);
 
-          channel.publish('user-notification', JSON.stringify({ notiMemberID: null, message: notiFeedText }));
+          channel.publish('user-notification', JSON.stringify({ notiAccountID: null, message: notiFeedText }));
 
           channel.publish('update-user', "refresh data after loop");
         }
