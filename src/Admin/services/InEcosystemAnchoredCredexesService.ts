@@ -16,29 +16,29 @@ export async function InEcosystemAnchoredCredexesService(
     if (number > 0) {
       const result = await ledgerSpaceSession.run(
         `
-  MATCH
-    (issuer:Member)<-[transactionType:OWES]-
-    (inCredex:Credex{Denomination:$denom})<-[:SECURES]-(securer:Member)
-  OPTIONAL MATCH
-    (issuer)-[transactionType:OWES]->
-    (outCredex:Credex{Denomination: $denom})<-[:SECURES]-(securer)
-  WITH
-    issuer,
-    sum(inCredex.OutstandingAmount) - sum(outCredex.OutstandingAmount) AS netIn
-  WHERE netIn > 0
-  WITH
-    issuer.memberID AS issuerMemberID
-  ORDER BY rand() 
-  LIMIT $number
-  WITH collect(issuerMemberID) AS issuerMemberIDs
-  UNWIND issuerMemberIDs AS issuerMemberID
-  MATCH (randomCounterparty:Member)
-  WHERE randomCounterparty.memberID <> issuerMemberID
-  WITH issuerMemberID, randomCounterparty.memberID AS receiverMemberID
-  ORDER BY rand()
-  RETURN issuerMemberID, receiverMemberID
-  LIMIT $number
-  `,
+        MATCH
+          (issuer:Member)<-[transactionType:OWES]-
+          (inCredex:Credex{Denomination:$denom})<-[:SECURES]-(securer:Member)
+        OPTIONAL MATCH
+          (issuer)-[transactionType:OWES]->
+          (outCredex:Credex{Denomination: $denom})<-[:SECURES]-(securer)
+        WITH
+          issuer,
+          sum(inCredex.OutstandingAmount) - sum(outCredex.OutstandingAmount) AS netIn
+        WHERE netIn > 0
+        WITH
+          issuer.memberID AS issuerMemberID
+        ORDER BY rand() 
+        LIMIT $number
+        WITH collect(issuerMemberID) AS issuerMemberIDs
+        UNWIND issuerMemberIDs AS issuerMemberID
+        MATCH (randomCounterparty:Member)
+        WHERE randomCounterparty.memberID <> issuerMemberID
+        WITH issuerMemberID, randomCounterparty.memberID AS receiverMemberID
+        ORDER BY rand()
+        RETURN issuerMemberID, receiverMemberID
+        LIMIT $number
+        `,
         {
           number: neo4j.int(number),
           denom,
