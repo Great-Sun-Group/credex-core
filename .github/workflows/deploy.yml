@@ -5,6 +5,9 @@ on:
   push: 
     branches:
       - prod
+  pull_request:
+    branches:
+      - prod
 
 jobs: 
   deploy:
@@ -15,48 +18,61 @@ jobs:
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
-        with: 
+        with:
           node-version: '18'
 
       - name: Install dependencies
         run: npm install
+
+      - name: Build project
+        run: npm run build
         working-directory: .
 
-      # For running tests
+      # Uncomment if you have tests to run
       # - name: Run tests
       #   run: npm test
-      #   working-directory: .
 
-      # - name: Build project
-      #   run: npm run build
-      #   working-directory: .
+      - name: Create .env file
+        run: |
+          echo "NEO_4J_LEDGER_SPACE_USER=${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" >> .env
+          echo "NEO_4J_LEDGER_SPACE_PASS=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" >> .env
+          echo "NEO_4J_LEDGER_SPACE_BOLT_URL=${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}" >> .env
+          echo "NEO_4J_SEARCH_SPACE_USER=${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" >> .env
+          echo "NEO_4J_SEARCH_SPACE_PASS=${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" >> .env
+          echo "NEO_4J_SEARCH_SPACE_BOLT_URL=${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}" >> .env
+          echo "STAGE=${{ secrets.STAGE }}" >> .env
 
       - name: Set up SSH deploy keys
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.SSH_KEY }}
 
-      - name: Deploy to AWS EC2
+      - name: Add EC2 Host to Known Hosts
         run: |
-          scp -r -o StrictHostKeyChecking=no ./build ubuntu@${{ secrets.EC2_IP }}:/var/www/html
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
-          KNOWN_HOSTS: ${{ secrets.KNOWN_HOSTS }}
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.EC2_IP }} >> ~/.ssh/known_hosts
+
+      - name: Copy Project to EC2
+        run: |
+          echo "${{ secrets.SSH_KEY }}" > taku263_credex.pem
+          chmod 600 taku263_credex.pem
+          scp -i taku263_credex.pem -o StrictHostKeyChecking=no -r ./build/* .env package-lock.json ec2-user@${{ secrets.EC2_IP }}:/var/www/html/credex_ec2
+
+      - name: Install dependencies on EC2
+        run: |
+          ssh -i taku263_credex.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_IP }} \
+          "cd /var/www/html/credex_ec2 && npm ci"
 
       - name: Set ownership on remote server
         run: |
-          echo "${{ secrets.SSH_KEY }}" > private_key.pem
-          chmod 600 private_key.pem
+          ssh -i taku263_credex.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_IP }} \
+          "sudo chown -R ec2-user:www-data /var/www/html/credex_ec2 && sudo chmod -R 755 /var/www/html/credex_ec2"
 
-          # Create known_hosts file if it doesn't exist
-          mkdir -p /home/runner/.ssh
-          touch /home/runner/.ssh/known_hosts
-          # Clear old key from known_hosts
-          ssh-keygen -R ${{ secrets.EC2_IP }} >> /home/runner/.ssh/known_hosts
-          ssh-keyscan -H ${{ secrets.EC2_IP }} >> /home/runner/.ssh/known_hosts
+      - name: Restart application using systemd
+        run: |
+          ssh -i taku263_credex.pem -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_IP }} \
+          "sudo systemctl restart credex-coreapp.service"
 
-          # Run the SSH command
-          ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} \
-          "sudo chown -R ubuntu:apache /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/ && chmod 777 -R /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/storage && chmod -R 777 /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/bootstrap/cache/ && cd /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/ && sudo npm install -g vite && npm install && sudo chown -R ubuntu:apache /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/ && chmod +x /var/www/html/${{ secrets.PROJECT_DIRECTORY }}/dev_run.sh"
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
+      - name: Cleanup
+        run: |
+          rm taku263_credex.pem
