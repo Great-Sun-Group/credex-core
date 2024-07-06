@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export async function CreateTestMembersService(numNewMembers: number) {
   const memberPromises = [];
-  const batchSize = 5; // Size of each batch
+  const batchSize = 3; // Size of each batch
 
   for (let i = 0; i < numNewMembers; i++) {
     memberPromises.push(

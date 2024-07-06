@@ -36,7 +36,7 @@ export async function CreateRandomFloatingCredexesService(
   numNewTransactions: number
 ) {
   const credexesCreated = [];
-  const batchSize = 5;
+  const batchSize = 3;
   const transactionPromises = [];
 
   for (let i = 0; i < numNewTransactions; i++) {

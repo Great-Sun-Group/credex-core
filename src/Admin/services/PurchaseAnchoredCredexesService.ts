@@ -4,44 +4,45 @@ import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
 import * as neo4j from "neo4j-driver";
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 
-export async function BuyAnchoredCredexesService(
+export async function PurchaseAnchoredCredexesService(
   denom: string,
   number: number,
   lowValue: number,
   highValue: number
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-  console.log(`Creating ${denom} anchored credexes: ${number}`);
+  console.log(`Purchasing ${denom} anchored credexes: ${number}`);
 
   if (number > 0) {
     const getAnchoredUSDCounterparties = await ledgerSpaceSession.run(
       `
         // Step 1: Select a random audited account
         MATCH (auditedAccount:Member)<-[:CREDEX_FOUNDATION_AUDITED]-(foundation:Member)
-        WITH auditedAccount, rand() AS rand1
-        ORDER BY rand1 LIMIT 1
+        WITH auditedAccount, rand() AS rand
+        ORDER BY rand LIMIT 1
 
-        // Step 2: Collect account IDs for conversion
+        // Step 2: Collect account IDs for purchasers
         MATCH (accounts:Member)
         WHERE accounts.memberID <> auditedAccount.memberID
         WITH auditedAccount, collect(accounts.memberID) AS allaccounts
-        RETURN auditedAccount.memberID AS auditedID, allaccounts[0..$numberUSDconversions] AS accountsToConvertUSD
+        RETURN auditedAccount.memberID AS auditedID, allaccounts[0..$number] AS accountsToPurchaseUSDanchored
       `,
       {
-        numberUSDconversions: neo4j.int(number),
+        number: neo4j.int(number),
       }
     );
 
     const issuerMemberID =
       getAnchoredUSDCounterparties.records[0].get("auditedID");
-    const accountsToConvertUSD = getAnchoredUSDCounterparties.records[0].get(
-      "accountsToConvertUSD"
-    );
+    const accountsToPurchaseUSDanchored =
+      getAnchoredUSDCounterparties.records[0].get(
+        "accountsToPurchaseUSDanchored"
+      );
 
-    const batchSize = 5;
+    const batchSize = 3;
 
-    for (let i = 0; i < accountsToConvertUSD.length; i += batchSize) {
-      const batch = accountsToConvertUSD.slice(i, i + batchSize);
+    for (let i = 0; i < accountsToPurchaseUSDanchored.length; i += batchSize) {
+      const batch = accountsToPurchaseUSDanchored.slice(i, i + batchSize);
 
       const offerPromises = batch.map((receiverMemberID: string) => {
         const InitialAmount = random(lowValue, highValue);

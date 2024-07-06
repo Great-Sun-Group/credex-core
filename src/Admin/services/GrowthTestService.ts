@@ -3,19 +3,11 @@ import { CreateRandomFloatingCredexesService } from "./CreateRandomFloatingCrede
 import { DailyCredcoinOffering } from "../../Core/services/DailyCredcoinOffering";
 import { MinuteTransactionQueue } from "../../Core/services/MinuteTransactionQueue";
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
-import { BuyAnchoredCredexesService } from "./BuyAnchoredCredexesService";
+import { PurchaseAnchoredCredexesService } from "./PurchaseAnchoredCredexesService";
+import { SellAnchoredCredexesService } from "./SellAnchoredCredexesService";
+import { CirculateAnchoredCredexesService } from "./CirculateAnchoredCredexesService";
 
-export async function GrowthTestService(
-  numberDays: number,
-  memberGrowthRate: number,
-  dailyFractionOfMembersToConvertUSDcash: number,
-  amountConvertedUSDlow: number,
-  amountConvertedUSDhigh: number,
-  dailyFractionOfMembersToConvertZIGcash: number,
-  amountConvertedZIGlow: number,
-  amountConvertedZIGhigh: number,
-  dailyFloatingRandomTransactionsPerMember: number
-) {
+export async function GrowthTestService(variables: any) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
     // Get current number of members
@@ -27,8 +19,10 @@ export async function GrowthTestService(
       numberMembersQuery.records[0].get("numberMembers")
     );
 
-    for (let index = 0; index < numberDays; index++) {
-      let numberNewMembers = Math.round(numberMembers * memberGrowthRate);
+    for (let index = 0; index < variables.numberDays; index++) {
+      let numberNewMembers = Math.round(
+        numberMembers * variables.memberGrowthRate
+      );
       if (numberNewMembers < 1) {
         numberNewMembers = 1;
       }
@@ -40,28 +34,48 @@ export async function GrowthTestService(
 
       await CreateTestMembersService(numberNewMembers);
 
-      const numberUSDconversions = Math.round(
-        numberMembers * dailyFractionOfMembersToConvertUSDcash
+      const numberUSDpurchases = Math.round(
+        numberMembers * variables.USD_ANCHORED_fractionToPurchase
       );
-      await BuyAnchoredCredexesService(
+      await PurchaseAnchoredCredexesService(
         "USD",
-        numberUSDconversions,
-        amountConvertedUSDlow,
-        amountConvertedUSDhigh
+        numberUSDpurchases,
+        variables.USD_ANCHORED_amountPerPurchaseLow,
+        variables.USD_ANCHORED_amountPerPurchaseHigh
       );
 
-      const numberZIGconversions = Math.round(
-        numberMembers * dailyFractionOfMembersToConvertZIGcash
+      const numberUSDanchoredCirculate = Math.round(
+        numberMembers * variables.USD_ANCHORED_fractionToCirculate
       );
-      await BuyAnchoredCredexesService(
+      await CirculateAnchoredCredexesService("USD", numberUSDanchoredCirculate);
+
+      const numberUSDsales = Math.round(
+        numberMembers * variables.USD_ANCHORED_fractionToSell
+      );
+      await SellAnchoredCredexesService("USD", numberUSDsales);
+
+      const numberZIGpurchases = Math.round(
+        numberMembers * variables.ZIG_ANCHORED_fractionToPurchase
+      );
+      await PurchaseAnchoredCredexesService(
         "ZIG",
-        numberZIGconversions,
-        amountConvertedZIGlow,
-        amountConvertedZIGhigh
+        numberZIGpurchases,
+        variables.ZIG_ANCHORED_amountPerPurchaseLow,
+        variables.ZIG_ANCHORED_amountPerPurchaseHigh
       );
+
+      const numberZIGanchoredCirculate = Math.round(
+        numberMembers * variables.ZIG_ANCHORED_fractionToCirculate
+      );
+      await CirculateAnchoredCredexesService("ZIG", numberZIGanchoredCirculate);
+
+      const numberZIGsales = Math.round(
+        numberMembers * variables.ZIG_ANCHORED_fractionToSell
+      );
+      await SellAnchoredCredexesService("ZIG", numberZIGsales);
 
       const numberRandomFloatingTransactions = Math.round(
-        numberMembers * dailyFloatingRandomTransactionsPerMember
+        numberMembers * variables.dailyFloatingRandomTransactionsPerMember
       );
       console.log(
         `Creating random floating credexes: ${numberRandomFloatingTransactions}`
