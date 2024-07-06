@@ -1,9 +1,9 @@
 import express from "express";
-import { CreateTestTransactionsService } from "../services/CreateTestTransactionsService";
+import { CreateRandomFloatingCredexesService } from "../services/CreateRandomFloatingCredexesService";
 
 export async function CreateTestTransactionsController(
   req: express.Request,
-  res: express.Response,
+  res: express.Response
 ) {
   // Check if numNewTransactions is provided in the request body
   if (!req.body.numNewTransactions) {
@@ -12,8 +12,8 @@ export async function CreateTestTransactionsController(
 
   try {
     // Call the service to create test transactions
-    const responseData = await CreateTestTransactionsService(
-      req.body.numNewTransactions,
+    const responseData = await CreateRandomFloatingCredexesService(
+      req.body.numNewTransactions
     );
 
     // Send the response with the created test transactions
