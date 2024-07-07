@@ -4,7 +4,7 @@ import { MinuteTransactionQueue } from "../MinuteTransactionQueue";
 
 
 export default function startCronJobs() {
-  /*
+  
   // Running DailyCredcoinOffering every day at midnight UTC
   cron.schedule('0 0 * * *', async () => {
     try {
@@ -24,5 +24,4 @@ export default function startCronJobs() {
       console.error('Error running MinuteTransactionQueue:', error);
     }
   });
-  */
 }

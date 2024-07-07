@@ -15,7 +15,7 @@ export async function CheckLedgerVsSearchBalances() {
 
     // Query searchSpace for credex data
     const searchSpaceCredexesQuery = await searchSpaceSession.run(`
-      MATCH ()-[credex:CREDEX]->()
+      MATCH (credex:Credex)
       RETURN
         credex.credexID AS credexIDsearch,
         credex.outstandingAmount AS OutstandingAmountSearch

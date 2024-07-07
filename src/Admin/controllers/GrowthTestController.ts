@@ -5,11 +5,19 @@ export async function GrowthTestController(
   req: express.Request,
   res: express.Response
 ) {
-    const fieldsRequired = [
-        "numberDays",
-        "memberGrowthRate",
-        "dailyTransactionsPerMember",
-    ];
+  const fieldsRequired = [
+    "numberDays",
+    "memberGrowthRate",
+    "USD_ANCHORED_fractionToPurchase",
+    "USD_ANCHORED_amountPerPurchaseLow",
+    "USD_ANCHORED_amountPerPurchaseHigh",
+    "USD_ANCHORED_fractionToSell",
+    "ZIG_ANCHORED_fractionToPurchase",
+    "ZIG_ANCHORED_amountPerPurchaseLow",
+    "ZIG_ANCHORED_amountPerPurchaseHigh",
+    "ZIG_ANCHORED_fractionToSell",
+    "dailyFloatingRandomTransactionsPerMember",
+  ];
   for (const field of fieldsRequired) {
     if (!req.body[field]) {
       return res
@@ -19,11 +27,7 @@ export async function GrowthTestController(
     }
   }
   try {
-      const responseData = await GrowthTestService(
-        req.body.numberDays,
-        req.body.memberGrowthRate,
-        req.body.dailyTransactionsPerMember,
-      );
+    const responseData = await GrowthTestService(req.body);
     res.status(200).json(responseData);
   } catch (err) {
     // Handle errors and send an appropriate error response
