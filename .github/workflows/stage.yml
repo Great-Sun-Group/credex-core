@@ -4,7 +4,7 @@ run-name: ${{ github.actor }} pushed to prod_auto_deploy_setup with commit messa
 on:
   push:
     branches:
-      - testing
+      - stage
 
 jobs:
   deploy:
@@ -42,8 +42,8 @@ jobs:
           # Run the SSH command
           ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} \
           "cd credex-core &&
-            git checkout testing &&
-            git pull origin testing &&
+            git checkout stage &&
+            git pull origin stage &&
             docker-compose up --build"
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
