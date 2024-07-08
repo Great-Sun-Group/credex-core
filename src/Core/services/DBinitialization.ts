@@ -1,4 +1,4 @@
-import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
 import { getDenominations } from "../constants/denominations";
 import { CreateMemberService } from "../../Member/services/CreateMemberService";
 import { CreateCompanyService } from "../../Member/services/CreateCompanyService";
@@ -13,7 +13,7 @@ export async function DBinitialization(): Promise<void> {
   console.log("DBinitialization start");
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-  const searchSpaceSession = ledgerSpaceDriver.session();
+  const searchSpaceSession = searchSpaceDriver.session();
 
   try {
     console.log("Creating database constraints and indexes...");
@@ -49,23 +49,30 @@ export async function DBinitialization(): Promise<void> {
 
     await searchSpaceSession.run(
       `
-        CREATE CONSTRAINT member_unique IF NOT EXISTS
-        FOR (member:Member) REQUIRE member.memberID IS UNIQUE;
+        CREATE CONSTRAINT account_unique IF NOT EXISTS
+        FOR (account:Account) REQUIRE account.accountID IS UNIQUE;
       `
     );
 
     await searchSpaceSession.run(
       `
         CREATE CONSTRAINT credex_unique IF NOT EXISTS
-        FOR ()-[credex:CREDEX]-() REQUIRE credex.credexID IS UNIQUE;
+        FOR (credex:Credex) REQUIRE credex.credexID IS UNIQUE;
+      `
+    );
+
+    await searchSpaceSession.run(
+      `
+        CREATE INDEX credex_dueDate_index IF NOT EXISTS
+        FOR (credex:Credex) ON credex.dueDate;
       `
     );
 
     await searchSpaceSession.run(
       `
         CREATE INDEX securedDenom_index IF NOT EXISTS
-        FOR ()-[credex:CREDEX]-()
-        ON (credex.securedDenom);      `
+        FOR (credex:CREDEX)
+        ON credex.securedDenom;      `
     );
 
     await searchSpaceSession.run(
