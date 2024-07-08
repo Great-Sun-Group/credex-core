@@ -1,6 +1,6 @@
-export type Member = {
-  memberID?: string;
-  memberType?: string;
+export type Account = {
+  accountID?: string;
+  accountType?: string;
   defaultDenom?: string;
   firstname?: string;
   lastname?: string;

@@ -1,5 +1,5 @@
 import express from "express";
-import MemberRoutes from "./Member/routes";
+import AccountRoutes from "./Account/routes";
 import CredexRoutes from "./Credex/routes";
 import AdminRoutes from "./Admin/routes";
 import { Logger } from "./config/logger";
@@ -17,7 +17,7 @@ export const apiVersionOneRoute = "/api/v1/";
 
 app.use(Logger);
 
-MemberRoutes(app, jsonParser);
+AccountRoutes(app, jsonParser);
 CredexRoutes(app, jsonParser);
 AdminRoutes(app, jsonParser);
 

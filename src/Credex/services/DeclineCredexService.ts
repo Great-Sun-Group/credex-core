@@ -20,7 +20,7 @@ export async function DeclineCredexService(credexID: string) {
     const ledgerSpaceSession = ledgerSpaceDriver.session();
     const result = await ledgerSpaceSession.run(
       `
-        MATCH (issuer:Member)-[rel1:OFFERS|REQUESTS]->(credex:Credex{credexID:$credexID})-[rel2:OFFERS|REQUESTS]->(acceptor:Member)
+        MATCH (issuer:Account)-[rel1:OFFERS|REQUESTS]->(credex:Credex{credexID:$credexID})-[rel2:OFFERS|REQUESTS]->(acceptor:Account)
         DELETE rel1, rel2
         CREATE (issuer)-[:DECLINED]->(credex)-[:DECLINED]->(acceptor)
         WITH credex

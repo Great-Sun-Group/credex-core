@@ -1,15 +1,15 @@
 import express from "express";
 import { AcceptCredexService } from "../services/AcceptCredexService";
-import { GetDashboardService } from "../../Member/services/GetDashboardService";
+import { GetDashboardService } from "../../Account/services/GetDashboardService";
 
 export async function AcceptCredexController(
   req: express.Request,
-  res: express.Response,
+  res: express.Response
 ) {
   try {
     const acceptCredexData = await AcceptCredexService(req.body.credexID);
     const dashboardData = await GetDashboardService(
-      req.body.memberID,
+      req.body.accountID,
       req.body.accountID
     );
     res.json({

@@ -10,10 +10,10 @@ export async function CreateTestLoopService(numNewTransactions: number) {
   var ledgerSpaceSession = ledgerSpaceDriver.session();
   const getRandomCounterpartiesQuery = await ledgerSpaceSession.run(
     `
-      MATCH (member:Member)
-      WITH member, rand() AS rand1
+      MATCH (account:Account)
+      WITH account, rand() AS rand1
       ORDER BY rand1
-      RETURN member.memberID AS memberID LIMIT $numNewTransactions
+      RETURN account.accountID AS accountID LIMIT $numNewTransactions
     `,
     {
       numNewTransactions: neo4j.int(numNewTransactions),
@@ -29,21 +29,21 @@ export async function CreateTestLoopService(numNewTransactions: number) {
   let credexesCreated = [];
   // Iterate numNewTransactions times
   for (let i = 0; i < numNewTransactions; i++) {
-    const issuerMemberID =
-      getRandomCounterpartiesQuery.records[i].get("memberID");
+    const issuerAccountID =
+      getRandomCounterpartiesQuery.records[i].get("accountID");
 
-    let receiverMemberID;
+    let receiverAccountID;
     if (getRandomCounterpartiesQuery.records[i + 1]) {
-      receiverMemberID =
-        getRandomCounterpartiesQuery.records[i + 1].get("memberID");
+      receiverAccountID =
+        getRandomCounterpartiesQuery.records[i + 1].get("accountID");
     } else {
-      receiverMemberID =
-        getRandomCounterpartiesQuery.records[0].get("memberID");
+      receiverAccountID =
+        getRandomCounterpartiesQuery.records[0].get("accountID");
     }
 
     const credexSpecs: Credex = {
-      issuerMemberID: issuerMemberID,
-      receiverMemberID: receiverMemberID,
+      issuerAccountID: issuerAccountID,
+      receiverAccountID: receiverAccountID,
       Denomination: "USD",
       InitialAmount: random(1, 100),
       credexType: "PURCHASE",

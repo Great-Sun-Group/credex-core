@@ -1,8 +1,8 @@
 /*
-returns information on a member's secured balance
+returns information on a account's secured balance
 
 required inputs:
-  issuerMemberID,
+  issuerAccountID,
   Denomination,
 
 returns:
@@ -14,7 +14,7 @@ returns:
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 
 export async function GetSecuredAuthorizationService(
-  issuerMemberID: string,
+  issuerAccountID: string,
   Denomination: string
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -23,12 +23,12 @@ export async function GetSecuredAuthorizationService(
   const isFoundationAuditedQuery = await ledgerSpaceSession.run(
     `
       OPTIONAL MATCH
-        (issuer:Member { memberID: $issuerMemberID })
+        (issuer:Account { accountID: $issuerAccountID })
         <-[:CREDEX_FOUNDATION_AUDITED]-
-        (credexFoundation:Member { memberType: "CREDEX_FOUNDATION" })
+        (credexFoundation:Account { accountType: "CREDEX_FOUNDATION" })
       RETURN issuer IS NOT NULL AS isAudited
     `,
-    { issuerMemberID }
+    { issuerAccountID }
   );
 
   const record = isFoundationAuditedQuery.records[0];
@@ -38,7 +38,7 @@ export async function GetSecuredAuthorizationService(
   if (isAudited) {
     await ledgerSpaceSession.close();
     return {
-      securerID: issuerMemberID,
+      securerID: issuerAccountID,
       securableAmountInDenom: Infinity,
     };
   }
@@ -46,23 +46,23 @@ export async function GetSecuredAuthorizationService(
   // If issuer is not CREDEX_FOUNDATION_AUDITED, verify the available secured balance in denom
   const getSecurableDataQuery = await ledgerSpaceSession.run(
     `
-      MATCH (member:Member {memberID: $memberID})
-      OPTIONAL MATCH (member)-[transactionType:OWES]-(credex:Credex)<-[:SECURES]-(securer:Member)
+      MATCH (account:Account {accountID: $accountID})
+      OPTIONAL MATCH (account)-[transactionType:OWES]-(credex:Credex)<-[:SECURES]-(securer:Account)
       WHERE credex.Denomination = $Denomination
       WITH
-        securer.memberID AS securingMemberID,
-        SUM(CASE WHEN endNode(transactionType) = member THEN credex.OutstandingAmount ELSE 0 END) -
-        SUM(CASE WHEN startNode(transactionType) = member THEN credex.OutstandingAmount ELSE 0 END)
+        securer.accountID AS securingAccountID,
+        SUM(CASE WHEN endNode(transactionType) = account THEN credex.OutstandingAmount ELSE 0 END) -
+        SUM(CASE WHEN startNode(transactionType) = account THEN credex.OutstandingAmount ELSE 0 END)
         AS netSecurablePerSecurerCXX
       MATCH (daynode:DayNode {Active: true})
       RETURN
-        securingMemberID,
+        securingAccountID,
         netSecurablePerSecurerCXX / daynode[$Denomination] AS netSecurableInDenom
         ORDER BY netSecurableInDenom DESC
         LIMIT 1
     `,
     {
-      memberID: issuerMemberID,
+      accountID: issuerAccountID,
       Denomination: Denomination,
     }
   );
@@ -78,7 +78,7 @@ export async function GetSecuredAuthorizationService(
   }
 
   return {
-    securerID: securableRecord.get("securingMemberID"),
+    securerID: securableRecord.get("securingAccountID"),
     securableAmountInDenom: securableRecord.get("netSecurableInDenom"),
   };
 }

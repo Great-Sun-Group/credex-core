@@ -1,23 +1,23 @@
 import express from "express";
 import { apiVersionOneRoute } from "../..";
-import { CreateMemberController } from "../controllers/CreateMemberController";
+import { CreateAccountController } from "../controllers/CreateAccountController";
 import { CreateCompanyController } from "../controllers/CreateCompanyController";
 import { WhatsAppLoginController } from "../controllers/WhatsAppLoginController";
-import { GetMemberByHandleController } from "../controllers/GetMemberByHandleController";
-import { GetMembersListController } from "../controllers/GetMembersListController"; 
-import { UpdateMemberController } from "../controllers/UpdateMemberController";
+import { GetAccountByHandleController } from "../controllers/GetAccountByHandleController";
+import { GetAccountsListController } from "../controllers/GetAccountsListController";
+import { UpdateAccountController } from "../controllers/UpdateAccountController";
 import { AuthorizeForCompanyController } from "../controllers/AuthorizeForCompanyController";
 import { UnauthorizeForCompanyController } from "../controllers/UnauthorizeForCompanyController";
 import { UpdateSendOffersToController } from "../controllers/UpdateSendOffersToController";
 
-export default function MemberRoutes(
+export default function AccountRoutes(
   app: express.Application,
   jsonParser: any
 ) {
   app.post(
-    `${apiVersionOneRoute}createMember`,
+    `${apiVersionOneRoute}createAccount`,
     jsonParser,
-    CreateMemberController
+    CreateAccountController
   );
 
   app.post(
@@ -33,21 +33,21 @@ export default function MemberRoutes(
   );
 
   app.get(
-    `${apiVersionOneRoute}getMemberByHandle`,
+    `${apiVersionOneRoute}getAccountByHandle`,
     jsonParser,
-    GetMemberByHandleController
+    GetAccountByHandleController
   );
 
   app.get(
-    `${apiVersionOneRoute}getMembersList`,
+    `${apiVersionOneRoute}getAccountsList`,
     jsonParser,
-    GetMembersListController
+    GetAccountsListController
   );
 
   app.patch(
-    `${apiVersionOneRoute}updateMember`,
+    `${apiVersionOneRoute}updateAccount`,
     jsonParser,
-    UpdateMemberController
+    UpdateAccountController
   );
 
   app.post(
@@ -62,11 +62,9 @@ export default function MemberRoutes(
     UnauthorizeForCompanyController
   );
 
-    app.post(
-      `${apiVersionOneRoute}updateSendOffersTo`,
-      jsonParser,
-      UpdateSendOffersToController
-    );
-
-
+  app.post(
+    `${apiVersionOneRoute}updateSendOffersTo`,
+    jsonParser,
+    UpdateSendOffersToController
+  );
 }

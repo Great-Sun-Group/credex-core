@@ -1,6 +1,6 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
 import { LoopFinder } from "./LoopFinder";
-import { GetDisplayNameService } from "../../Member/services/GetDisplayNameService";
+import { GetDisplayNameService } from "../../Account/services/GetDisplayNameService";
 import _ from "lodash";
 
 export async function MinuteTransactionQueue() {
@@ -44,21 +44,21 @@ export async function MinuteTransactionQueue() {
   }, BAIL_TIME);
 
   try {
-    const getQueuedMembers = await ledgerSpaceSession.run(`
-      MATCH (newMember:Member {queueStatus: "PENDING_MEMBER"})
+    const getQueuedAccounts = await ledgerSpaceSession.run(`
+      MATCH (newAccount:Account {queueStatus: "PENDING_MEMBER"})
       RETURN
-        newMember.memberID AS memberID,
-        newMember.memberType AS memberType,
-        newMember.firstname AS firstname,
-        newMember.lastname AS lastname,
-        newMember.companyname AS companyname
+        newAccount.accountID AS accountID,
+        newAccount.accountType AS accountType,
+        newAccount.firstname AS firstname,
+        newAccount.lastname AS lastname,
+        newAccount.companyname AS companyname
     `);
 
-    for (const record of getQueuedMembers.records) {
+    for (const record of getQueuedAccounts.records) {
       const accountForSearchSpace = {
-        accountID: record.get("memberID"),
+        accountID: record.get("accountID"),
         displayName: GetDisplayNameService({
-          memberType: record.get("memberType"),
+          accountType: record.get("accountType"),
           firstname: record.get("firstname"),
           lastname: record.get("lastname"),
           companyname: record.get("companyname"),
@@ -82,14 +82,14 @@ export async function MinuteTransactionQueue() {
         continue;
       }
 
-      const memberID = addAccount.records[0].get("accountID");
+      const accountID = addAccount.records[0].get("accountID");
 
       await ledgerSpaceSession.run(
         `
-          MATCH (processedMember:Member {memberID: $memberID})
-          SET processedMember.queueStatus = "PROCESSED"
+          MATCH (processedAccount:Account {accountID: $accountID})
+          SET processedAccount.queueStatus = "PROCESSED"
         `,
-        { memberID }
+        { accountID }
       );
 
       console.log(
@@ -99,34 +99,34 @@ export async function MinuteTransactionQueue() {
 
     const getQueuedCredexes = await ledgerSpaceSession.run(`
       MATCH
-        (issuerMember:Member)
+        (issuerAccount:Account)
         -[:OWES]->(queuedCredex:Credex {queueStatus: "PENDING_CREDEX"})
-        -[:OWES]->(acceptorMember:Member)
-      OPTIONAL MATCH (queuedCredex)<-[:SECURES]-(securer:Member)
+        -[:OWES]->(acceptorAccount:Account)
+      OPTIONAL MATCH (queuedCredex)<-[:SECURES]-(securer:Account)
       RETURN queuedCredex.acceptedAt AS acceptedAt,
-             issuerMember.memberID AS issuerMemberID,
+             issuerAccount.accountID AS issuerAccountID,
              queuedCredex.credexID AS credexID,
              queuedCredex.InitialAmount AS credexAmount,
              queuedCredex.Denomination AS credexDenomination,
              queuedCredex.CXXmultiplier AS credexCXXmultiplier,
              queuedCredex.CXXmultiplier AS CXXmultiplier,
-             securer.memberID AS securerID,
+             securer.accountID AS securerID,
              queuedCredex.dueDate AS credexDueDate,
-             acceptorMember.memberID AS acceptorMemberID
+             acceptorAccount.accountID AS acceptorAccountID
     `);
 
     const sortedQueuedCredexes = _.sortBy(
       getQueuedCredexes.records.map((record) => {
         const credexObject = {
           acceptedAt: record.get("acceptedAt"),
-          issuerAccountID: record.get("issuerMemberID"),
+          issuerAccountID: record.get("issuerAccountID"),
           credexID: record.get("credexID"),
           credexAmount: record.get("credexAmount"),
           credexDenomination: record.get("credexDenomination"),
           credexCXXmultiplier: record.get("credexCXXmultiplier"),
           credexSecuredDenom: "floating",
           credexDueDate: record.get("credexDueDate"),
-          acceptorAccountID: record.get("acceptorMemberID"),
+          acceptorAccountID: record.get("acceptorAccountID"),
         };
         // add secured data if appropriate
         if (record.get("securerID") !== null) {

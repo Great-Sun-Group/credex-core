@@ -1,7 +1,7 @@
 /*
 requires
   credexID
-  memberID
+  accountID
 
 returns
   formatted credex data
@@ -11,28 +11,28 @@ returns
 
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
-import { GetDisplayNameService } from "../../Member/services/GetDisplayNameService";
+import { GetDisplayNameService } from "../../Account/services/GetDisplayNameService";
 import { Credex } from "../types/Credex";
 import moment from "moment-timezone";
 
-export async function GetCredexService(credexID: string, memberID: string) {
+export async function GetCredexService(credexID: string, accountID: string) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
     const result = await ledgerSpaceSession.run(
       `
         MATCH
-        (member:Member {memberID: $memberID})-[transactionType:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-(credex:Credex {credexID: $credexID})-[:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-(counterparty:Member)
-        OPTIONAL MATCH (credex)<-[:SECURES]-(securer:Member)
-        OPTIONAL MATCH (credex)-[credloopRel:CREDLOOP]-(clearedAgainstCredex:Credex)-[:OWES|CLEARED]-(member), (clearedAgainstCredex)-[:OWES|CLEARED]-(clearedAgainstCounterparty:Member)
+        (account:Account {accountID: $accountID})-[transactionType:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-(credex:Credex {credexID: $credexID})-[:OWES|CLEARED|REQUESTS|OFFERS|DECLINED|CANCELLED]-(counterparty:Account)
+        OPTIONAL MATCH (credex)<-[:SECURES]-(securer:Account)
+        OPTIONAL MATCH (credex)-[credloopRel:CREDLOOP]-(clearedAgainstCredex:Credex)-[:OWES|CLEARED]-(account), (clearedAgainstCredex)-[:OWES|CLEARED]-(clearedAgainstCounterparty:Account)
         RETURN
         credex.credexID AS credexID,
         type(transactionType) AS transactionType,
-        (startNode(transactionType) = member) AS debit,
+        (startNode(transactionType) = account) AS debit,
         counterparty.firstname AS counterpartyFirstname,
         counterparty.lastname AS counterpartyLastname,
         counterparty.companyname AS counterpartyCompanyname,
-        counterparty.memberType AS counterpartyMemberType,
-        securer.memberID AS securerID,
+        counterparty.accountType AS counterpartyAccountType,
+        securer.accountID AS securerID,
         securer.companyname AS securerName,
         credex.Denomination AS Denomination,
         credex.InitialAmount / credex.CXXmultiplier AS InitialAmount,
@@ -49,9 +49,9 @@ export async function GetCredexService(credexID: string, memberID: string) {
         clearedAgainstCounterparty.firstname AS clearedAgainstCounterpartyFirstname,
         clearedAgainstCounterparty.lastname AS clearedAgainstCounterpartyLastname,
         clearedAgainstCounterparty.companyname AS clearedAgainstCounterpartyCompanyname,
-        clearedAgainstCounterparty.memberType AS clearedAgainstCounterpartyMemberType
+        clearedAgainstCounterparty.accountType AS clearedAgainstCounterpartyAccountType
       `,
-      { credexID, memberID }
+      { credexID, accountID }
     );
 
     if (result.records.length === 0) {
@@ -101,12 +101,14 @@ export async function GetCredexService(credexID: string, memberID: string) {
       return acc;
     }, {} as Record<string, string>);
 
-    const acceptedAt = moment(record.get("acceptedAt")).subtract(1, "month").format("YYYY-MM-DD");
+    const acceptedAt = moment(record.get("acceptedAt"))
+      .subtract(1, "month")
+      .format("YYYY-MM-DD");
     const dueDate = moment(record.get("dueDate"))
       .subtract(1, "month")
       .format("YYYY-MM-DD");
     const counterpartyDisplayname = GetDisplayNameService({
-      memberType: record.get("counterpartyMemberType"),
+      accountType: record.get("counterpartyAccountType"),
       firstname: record.get("counterpartyFirstname"),
       lastname: record.get("counterpartyLastname"),
       companyname: record.get("counterpartyCompanyname"),
@@ -140,7 +142,7 @@ export async function GetCredexService(credexID: string, memberID: string) {
         );
 
         const clearedAgainstCounterpartyDisplayname = GetDisplayNameService({
-          memberType: record.get("clearedAgainstCounterpartyMemberType"),
+          accountType: record.get("clearedAgainstCounterpartyAccountType"),
           firstname: record.get("clearedAgainstCounterpartyFirstname"),
           lastname: record.get("clearedAgainstCounterpartyLastname"),
           companyname: record.get("clearedAgainstCounterpartyCompanyname"),

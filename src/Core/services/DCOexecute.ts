@@ -49,7 +49,7 @@ export async function DCOexecute() {
     let numberDefaulted = 0;
     const DCOdefaulting = await ledgerSpaceSession.run(`
       MATCH (daynode:DayNode {Active: TRUE})
-      OPTIONAL MATCH (member1:Member)-[rel1:OWES]->(defaulting:Credex)-[rel2:OWES]->(member2:Member)
+      OPTIONAL MATCH (account1:Account)-[rel1:OWES]->(defaulting:Credex)-[rel2:OWES]->(account2:Account)
       WHERE defaulting.dueDate <= daynode.Date AND defaulting.DefaultedAmount <= 0
       SET defaulting.DefaultedAmount = defaulting.OutstandingAmount
       WITH defaulting, daynode
@@ -66,7 +66,7 @@ export async function DCOexecute() {
     let numberExpiringPending = 0;
     const DCOexpiring = await ledgerSpaceSession.run(`
       MATCH (daynode:DayNode {Active: TRUE})
-      OPTIONAL MATCH (:Member)-[rel1:OFFERS|REQUESTS]->(expiringPending:Credex)-[rel2:OFFERS|REQUESTS]->(:Member),
+      OPTIONAL MATCH (:Account)-[rel1:OFFERS|REQUESTS]->(expiringPending:Credex)-[rel2:OFFERS|REQUESTS]->(:Account),
       (expiringPending)-[:CREATED_ON]->(createdDaynode:DayNode)
       WHERE createdDaynode.Date + Duration({days: 1}) < daynode.Date
       DELETE rel1, rel2
@@ -154,9 +154,9 @@ export async function DCOexecute() {
     console.log("Fetching declared DCO participants");
     const DCOparticipantsDeclared = await ledgerSpaceSession.run(`
       MATCH (daynode:DayNode{Active:true})
-      MATCH (DCOparticpantsDeclared:Member)
+      MATCH (DCOparticpantsDeclared:Account)
       WHERE DCOparticpantsDeclared.DCOgiveInCXX > 0
-      RETURN DCOparticpantsDeclared.memberID AS memberID,
+      RETURN DCOparticpantsDeclared.accountID AS accountID,
              DCOparticpantsDeclared.DCOgiveInCXX AS DCOgiveInCXX,
              DCOparticpantsDeclared.DCOgiveInCXX
               / daynode[DCOparticpantsDeclared.DCOdenom]
@@ -172,12 +172,12 @@ export async function DCOexecute() {
     const confirmedParticipants = [];
 
     for (const declaredParticipant of declaredParticipants) {
-      const memberID = declaredParticipant.get("memberID");
+      const accountID = declaredParticipant.get("accountID");
       const DCOdenom = declaredParticipant.get("DCOdenom");
       const DCOgiveInCXX = declaredParticipant.get("DCOgiveInCXX");
       const DCOgiveInDenom = declaredParticipant.get("DCOgiveInDenom");
       const securableData = await GetSecuredAuthorizationService(
-        memberID,
+        accountID,
         DCOdenom
       );
 
@@ -223,16 +223,16 @@ export async function DCOexecute() {
     console.log("Creating DCO give transactions");
     const foundationID = (
       await ledgerSpaceSession.run(`
-      MATCH (credexFoundation:Member {memberType: "CREDEX_FOUNDATION"})
-      RETURN credexFoundation.memberID AS foundationID
+      MATCH (credexFoundation:Account {accountType: "CREDEX_FOUNDATION"})
+      RETURN credexFoundation.accountID AS foundationID
     `)
     ).records[0].get("foundationID");
 
     const offerAndAcceptPromisesDCOgive = confirmedParticipants.map(
       async (confirmedParticipant) => {
         const dataForDCOgive: Credex = {
-          issuerMemberID: confirmedParticipant.get("memberID"),
-          receiverMemberID: foundationID,
+          issuerAccountID: confirmedParticipant.get("accountID"),
+          receiverAccountID: foundationID,
           Denomination: confirmedParticipant.get("DCOdenom"),
           InitialAmount: confirmedParticipant.get("DCOgiveInDenom"),
           credexType: "DCO_GIVE",
@@ -392,8 +392,8 @@ export async function DCOexecute() {
     const offerAndAcceptPromisesDCOreceive = confirmedParticipants.map(
       async (confirmedParticipant) => {
         const dataForDCOreceive: Credex = {
-          issuerMemberID: foundationID,
-          receiverMemberID: confirmedParticipant.get("memberID"),
+          issuerAccountID: foundationID,
+          receiverAccountID: confirmedParticipant.get("accountID"),
           Denomination: "CXX",
           InitialAmount: 1,
           credexType: "DCO_RECEIVE",

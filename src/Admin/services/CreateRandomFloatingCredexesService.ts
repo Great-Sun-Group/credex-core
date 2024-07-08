@@ -8,26 +8,26 @@ import moment from "moment-timezone";
 async function getDateAndRandCounterparties() {
   var ledgerSpaceSession = ledgerSpaceDriver.session();
   const getDateAndRandomCounterpartiesQuery = await ledgerSpaceSession.run(`
-    MATCH (members1:Member)
-    WITH members1, rand() AS rand1
+    MATCH (accounts1:Account)
+    WITH accounts1, rand() AS rand1
     ORDER BY rand1
-    WITH members1.memberID AS memberID_1 LIMIT 1
-    MATCH (members2:Member)
-    WHERE members2.memberID <> memberID_1
-    WITH memberID_1, members2, rand() AS rand2
+    WITH accounts1.accountID AS accountID_1 LIMIT 1
+    MATCH (accounts2:Account)
+    WHERE accounts2.accountID <> accountID_1
+    WITH accountID_1, accounts2, rand() AS rand2
     ORDER BY rand2
-    WITH memberID_1, members2.memberID AS memberID_2 LIMIT 1
+    WITH accountID_1, accounts2.accountID AS accountID_2 LIMIT 1
     MATCH (daynode:DayNode{Active:true})
-    RETURN daynode.Date AS date, memberID_1, memberID_2
+    RETURN daynode.Date AS date, accountID_1, accountID_2
   `);
 
   await ledgerSpaceSession.close();
 
   return {
-    memberID_1:
-      getDateAndRandomCounterpartiesQuery.records[0].get("memberID_1"),
-    memberID_2:
-      getDateAndRandomCounterpartiesQuery.records[0].get("memberID_2"),
+    accountID_1:
+      getDateAndRandomCounterpartiesQuery.records[0].get("accountID_1"),
+    accountID_2:
+      getDateAndRandomCounterpartiesQuery.records[0].get("accountID_2"),
     date: getDateAndRandomCounterpartiesQuery.records[0].get("date"),
   };
 }
@@ -44,8 +44,8 @@ export async function CreateRandomFloatingCredexesService(
       (async () => {
         const dateAndCounterparties = await getDateAndRandCounterparties();
         const date = dateAndCounterparties.date;
-        const issuerMemberID = dateAndCounterparties.memberID_1;
-        const receiverMemberID = dateAndCounterparties.memberID_2;
+        const issuerAccountID = dateAndCounterparties.accountID_1;
+        const receiverAccountID = dateAndCounterparties.accountID_2;
         const InitialAmount = random(1, 100);
         const Denomination = InitialAmount < 80 ? "USD" : "ZIG";
 
@@ -57,8 +57,8 @@ export async function CreateRandomFloatingCredexesService(
           .format("YYYY-MM-DD");
 
         const credexSpecs: Credex = {
-          issuerMemberID: issuerMemberID,
-          receiverMemberID: receiverMemberID,
+          issuerAccountID: issuerAccountID,
+          receiverAccountID: receiverAccountID,
           Denomination: Denomination,
           InitialAmount: InitialAmount,
           credexType: "PURCHASE",

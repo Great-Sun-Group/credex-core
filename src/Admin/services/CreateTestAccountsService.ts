@@ -1,15 +1,15 @@
 import axios from "axios";
-import { CreateMemberService } from "../../Member/services/CreateMemberService";
-import { Member } from "../../Member/types/Member";
+import { CreateAccountService } from "../../Account/services/CreateAccountService";
+import { Account } from "../../Account/types/Account";
 import { random } from "lodash";
 import { v4 as uuidv4 } from "uuid";
 
-export async function CreateTestMembersService(numNewMembers: number) {
-  const memberPromises = [];
+export async function CreateTestAccountsService(numNewAccounts: number) {
+  const accountPromises = [];
   const batchSize = 3; // Size of each batch
 
-  for (let i = 0; i < numNewMembers; i++) {
-    memberPromises.push(
+  for (let i = 0; i < numNewAccounts; i++) {
+    accountPromises.push(
       (async () => {
         // Fetch a new name for each iteration
         /*
@@ -21,38 +21,41 @@ export async function CreateTestMembersService(numNewMembers: number) {
         const lastname = nameObject.data.data[0].name.lastname.name_ascii;
                 */
         // comment out when name coming from query above
-        const randomNum = random(10-99)
+        const randomNum = random(10 - 99);
         const firstname = "first" + randomNum;
         const lastname = "last" + randomNum;
 
         const phone = "263" + Math.floor(100000000 + Math.random() * 900000000);
         // need to check if phone unique here and generate new if not
-        const request: Member = {
+        const request: Account = {
           firstname: firstname,
           lastname: lastname,
           phone: phone,
           defaultDenom: "USD",
-          memberType: "HUMAN",
+          accountType: "HUMAN",
           handle: firstname + "_" + uuidv4(),
         };
 
-        const newMember = await CreateMemberService(request);
-        if (typeof newMember.member == "boolean") {
-          throw new Error("newMember could not be created");
+        const newAccount = await CreateAccountService(request);
+        if (typeof newAccount.account == "boolean") {
+          throw new Error("newAccount could not be created");
         }
-        if (newMember.member && typeof newMember.member.memberID === "string") {
-          console.log("Member created: " + newMember.member.displayName);
-          return newMember.member.memberID;
+        if (
+          newAccount.account &&
+          typeof newAccount.account.accountID === "string"
+        ) {
+          console.log("Account created: " + newAccount.account.displayName);
+          return newAccount.account.accountID;
         } else {
-          throw new Error("newMember could not be created");
+          throw new Error("newAccount could not be created");
         }
       })()
     );
 
     // Process in batches of `batchSize`
-    if ((i + 1) % batchSize === 0 || i === numNewMembers - 1) {
-      await Promise.all(memberPromises);
-      memberPromises.length = 0; // Clear the array for the next batch
+    if ((i + 1) % batchSize === 0 || i === numNewAccounts - 1) {
+      await Promise.all(accountPromises);
+      accountPromises.length = 0; // Clear the array for the next batch
     }
   }
 }

@@ -7,7 +7,7 @@ export async function GrowthTestController(
 ) {
   const fieldsRequired = [
     "numberDays",
-    "memberGrowthRate",
+    "accountGrowthRate",
     "USD_ANCHORED_fractionToPurchase",
     "USD_ANCHORED_amountPerPurchaseLow",
     "USD_ANCHORED_amountPerPurchaseHigh",
@@ -16,7 +16,7 @@ export async function GrowthTestController(
     "ZIG_ANCHORED_amountPerPurchaseLow",
     "ZIG_ANCHORED_amountPerPurchaseHigh",
     "ZIG_ANCHORED_fractionToSell",
-    "dailyFloatingRandomTransactionsPerMember",
+    "dailyFloatingRandomTransactionsPerAccount",
   ];
   for (const field of fieldsRequired) {
     if (!req.body[field]) {

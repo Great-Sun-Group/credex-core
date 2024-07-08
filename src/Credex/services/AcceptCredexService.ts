@@ -24,7 +24,7 @@ export async function AcceptCredexService(credexID: string) {
   try {
     const result = await ledgerSpaceSession.run(
       `
-        MATCH (issuer:Member)-[rel1:OFFERS|REQUESTS]->(acceptedCredex:Credex {credexID: $credexID})-[rel2:OFFERS|REQUESTS]->(acceptor:Member)
+        MATCH (issuer:Account)-[rel1:OFFERS|REQUESTS]->(acceptedCredex:Credex {credexID: $credexID})-[rel2:OFFERS|REQUESTS]->(acceptor:Account)
         DELETE rel1, rel2
         CREATE (issuer)-[:OWES]->(acceptedCredex)-[:OWES]->(acceptor)
         SET acceptedCredex.acceptedAt = datetime()

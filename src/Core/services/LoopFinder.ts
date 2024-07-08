@@ -11,7 +11,6 @@ export async function LoopFinder(
   credexDueDate: string,
   acceptorAccountID: string
 ) {
-
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
@@ -244,7 +243,7 @@ export async function LoopFinder(
 
           WITH thisCredex, loopAnchor
           MATCH (loopAnchor)<-[:REDEEMED]-(thisCredex)
-            -[:OWES]->(:Member)-[:OWES]->(nextCredex:Credex)
+            -[:OWES]->(:Account)-[:OWES]->(nextCredex:Credex)
             -[:REDEEMED]->(loopAnchor)
           CREATE (thisCredex)-[:CREDLOOP {
               AmountRedeemed: $valueToClear,
@@ -259,12 +258,12 @@ export async function LoopFinder(
           WITH DISTINCT loopAnchor
           UNWIND $credexesRedeemed AS redeemedCredexID
           MATCH
-            (owesOutMember:Member)-[owes1:OWES]->
+            (owesOutAccount:Account)-[owes1:OWES]->
               (thisRedeemedCredex:Credex {credexID: redeemedCredexID})-[owes2:OWES]->
-              (owesInMember:Member),
+              (owesInAccount:Account),
             (thisRedeemedCredex)-[:REDEEMED]->(loopAnchor)
           CREATE
-            (owesOutMember)-[:CLEARED]->(thisRedeemedCredex)-[:CLEARED]->(owesInMember)
+            (owesOutAccount)-[:CLEARED]->(thisRedeemedCredex)-[:CLEARED]->(owesInAccount)
           SET thisRedeemedCredex.DateRedeemed = DateTime()
           DELETE owes1, owes2
 

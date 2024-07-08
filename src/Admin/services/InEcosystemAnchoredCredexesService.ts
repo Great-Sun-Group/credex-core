@@ -17,8 +17,8 @@ export async function InEcosystemAnchoredCredexesService(
       const result = await ledgerSpaceSession.run(
         `
         MATCH
-          (issuer:Member)<-[transactionType:OWES]-
-          (inCredex:Credex{Denomination:$denom})<-[:SECURES]-(securer:Member)
+          (issuer:Account)<-[transactionType:OWES]-
+          (inCredex:Credex{Denomination:$denom})<-[:SECURES]-(securer:Account)
         OPTIONAL MATCH
           (issuer)-[transactionType:OWES]->
           (outCredex:Credex{Denomination: $denom})<-[:SECURES]-(securer)
@@ -27,16 +27,16 @@ export async function InEcosystemAnchoredCredexesService(
           sum(inCredex.OutstandingAmount) - sum(outCredex.OutstandingAmount) AS netIn
         WHERE netIn > 0
         WITH
-          issuer.memberID AS issuerMemberID
+          issuer.accountID AS issuerAccountID
         ORDER BY rand() 
         LIMIT $number
-        WITH collect(issuerMemberID) AS issuerMemberIDs
-        UNWIND issuerMemberIDs AS issuerMemberID
-        MATCH (randomCounterparty:Member)
-        WHERE randomCounterparty.memberID <> issuerMemberID
-        WITH issuerMemberID, randomCounterparty.memberID AS receiverMemberID
+        WITH collect(issuerAccountID) AS issuerAccountIDs
+        UNWIND issuerAccountIDs AS issuerAccountID
+        MATCH (randomCounterparty:Account)
+        WHERE randomCounterparty.accountID <> issuerAccountID
+        WITH issuerAccountID, randomCounterparty.accountID AS receiverAccountID
         ORDER BY rand()
-        RETURN issuerMemberID, receiverMemberID
+        RETURN issuerAccountID, receiverAccountID
         LIMIT $number
         `,
         {
@@ -57,12 +57,12 @@ export async function InEcosystemAnchoredCredexesService(
         const batch = records.slice(i, i + batchSize);
 
         const offerPromises = batch.map(async (record) => {
-          const issuerMemberID: string = record.get("issuerMemberID");
-          const receiverMemberID: string = record.get("receiverMemberID");
+          const issuerAccountID: string = record.get("issuerAccountID");
+          const receiverAccountID: string = record.get("receiverAccountID");
 
           try {
             const securableData = await GetSecuredAuthorizationService(
-              issuerMemberID,
+              issuerAccountID,
               denom
             );
 
@@ -70,8 +70,8 @@ export async function InEcosystemAnchoredCredexesService(
             console.log("random initialAmount: " + InitialAmount);
 
             const credexSpecs = {
-              issuerMemberID: issuerMemberID,
-              receiverMemberID: receiverMemberID,
+              issuerAccountID: issuerAccountID,
+              receiverAccountID: receiverAccountID,
               Denomination: denom,
               InitialAmount: InitialAmount,
               credexType: "PURCHASE",

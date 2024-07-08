@@ -2,8 +2,8 @@
 Creates a credex
 
 required inputs:
-  issuerMemberID,
-  receiverMemberID,
+  issuerAccountID,
+  receiverAccountID,
   InitialAmount,
   Denomination,
   credexType,
@@ -33,12 +33,12 @@ import { GetSecuredAuthorizationService } from "./GetSecuredAuthorizationService
 import { Credex } from "../types/Credex";
 import { checkDueDate, credspan } from "../../Core/constants/credspan";
 import { checkPermittedCredexType } from "../../Core/constants/credexTypes";
-import { GetDisplayNameService } from "../../Member/services/GetDisplayNameService";
+import { GetDisplayNameService } from "../../Account/services/GetDisplayNameService";
 
 export async function CreateCredexService(credexData: Credex) {
   const {
-    issuerMemberID,
-    receiverMemberID,
+    issuerAccountID,
+    receiverAccountID,
     InitialAmount,
     Denomination,
     credexType,
@@ -49,8 +49,8 @@ export async function CreateCredexService(credexData: Credex) {
 
   // Validate input data
   if (
-    !issuerMemberID ||
-    !receiverMemberID ||
+    !issuerAccountID ||
+    !receiverAccountID ||
     !InitialAmount ||
     !Denomination ||
     !credexType ||
@@ -59,8 +59,8 @@ export async function CreateCredexService(credexData: Credex) {
     (!securedCredex && !dueDate)
   ) {
     let failMessage = "Data missing or mismatch, could not create credex.";
-    if (!issuerMemberID) failMessage += " issuerMemberID required";
-    if (!receiverMemberID) failMessage += " receiverMemberID required";
+    if (!issuerAccountID) failMessage += " issuerAccountID required";
+    if (!receiverAccountID) failMessage += " receiverAccountID required";
     if (!InitialAmount) failMessage += " InitialAmount required";
     if (!Denomination) failMessage += " Denomination required";
     if (!credexType) failMessage += " credexType required";
@@ -143,7 +143,7 @@ export async function CreateCredexService(credexData: Credex) {
   let secureableData = { securerID: "", securableAmountInDenom: 0 };
   if (securedCredex) {
     secureableData = await GetSecuredAuthorizationService(
-      issuerMemberID,
+      issuerAccountID,
       Denomination
     );
     if (secureableData.securableAmountInDenom < InitialAmount) {
@@ -171,8 +171,8 @@ export async function CreateCredexService(credexData: Credex) {
     const createCredexQuery = await ledgerSpaceSession.run(
       `
         MATCH (daynode:DayNode {Active: true})
-        MATCH (issuer:Member {memberID: $issuerMemberID})
-        MATCH (receiver:Member {memberID: $receiverMemberID})
+        MATCH (issuer:Account {accountID: $issuerAccountID})
+        MATCH (receiver:Account {accountID: $receiverAccountID})
         CREATE (newCredex:Credex)
         SET
           newCredex.credexID = randomUUID(),
@@ -191,14 +191,14 @@ export async function CreateCredexService(credexData: Credex) {
         MERGE (issuer)-[:${OFFEREDorREQUESTED}]->(newCredex)-[:${OFFEREDorREQUESTED}]->(receiver)
         RETURN
           newCredex.credexID AS credexID,
-          receiver.memberType AS receiverMemberType,
+          receiver.accountType AS receiverAccountType,
           receiver.firstname AS receiverFirstname,
           receiver.lastname AS receiverLastname,
           receiver.companyname AS receiverCompanyname
       `,
       {
-        issuerMemberID,
-        receiverMemberID,
+        issuerAccountID,
+        receiverAccountID,
         InitialAmount,
         Denomination,
         credexType,
@@ -230,12 +230,12 @@ export async function CreateCredexService(credexData: Credex) {
       await ledgerSpaceSession.run(
         `
           MATCH (newCredex:Credex {credexID: $credexID})
-          MATCH (securingMember: Member {memberID: $securingMemberID})
-          MERGE (securingMember)-[:SECURES]->(newCredex)
+          MATCH (securingAccount: Account {accountID: $securingAccountID})
+          MERGE (securingAccount)-[:SECURES]->(newCredex)
         `,
         {
           credexID,
-          securingMemberID: secureableData.securerID,
+          securingAccountID: secureableData.securerID,
         }
       );
     }
@@ -244,7 +244,7 @@ export async function CreateCredexService(credexData: Credex) {
       credexID: createCredexQuery.records[0].get("credexID"),
       formattedInitialAmount: denomFormatter(InitialAmount, Denomination),
       counterpartyDisplayname: GetDisplayNameService({
-        memberType: createCredexQuery.records[0].get("receiverMemberType"),
+        accountType: createCredexQuery.records[0].get("receiverAccountType"),
         firstname: createCredexQuery.records[0].get("receiverFirstname"),
         lastname: createCredexQuery.records[0].get("receiverLastname"),
         companyname: createCredexQuery.records[0].get("receiverCompanyname"),

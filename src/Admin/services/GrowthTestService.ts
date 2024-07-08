@@ -1,4 +1,4 @@
-import { CreateTestMembersService } from "./CreateTestMembersService";
+import { CreateTestAccountsService } from "./CreateTestAccountsService";
 import { CreateRandomFloatingCredexesService } from "./CreateRandomFloatingCredexesService";
 import { DailyCredcoinOffering } from "../../Core/services/DailyCredcoinOffering";
 import { MinuteTransactionQueue } from "../../Core/services/MinuteTransactionQueue";
@@ -10,32 +10,32 @@ import { InEcosystemAnchoredCredexesService } from "./InEcosystemAnchoredCredexe
 export async function GrowthTestService(variables: any) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
-    // Get current number of members
-    const numberMembersQuery = await ledgerSpaceSession.run(`
-      MATCH (member:Member)
-      RETURN count(member) AS numberMembers
+    // Get current number of accounts
+    const numberAccountsQuery = await ledgerSpaceSession.run(`
+      MATCH (account:Account)
+      RETURN count(account) AS numberAccounts
     `);
-    let numberMembers = parseFloat(
-      numberMembersQuery.records[0].get("numberMembers")
+    let numberAccounts = parseFloat(
+      numberAccountsQuery.records[0].get("numberAccounts")
     );
 
     for (let index = 0; index < variables.numberDays; index++) {
-      let numberNewMembers = Math.round(
-        numberMembers * variables.memberGrowthRate
+      let numberNewAccounts = Math.round(
+        numberAccounts * variables.accountGrowthRate
       );
-      if (numberNewMembers < 1) {
-        numberNewMembers = 1;
+      if (numberNewAccounts < 1) {
+        numberNewAccounts = 1;
       }
 
       console.log(`Day ${index + 1}`);
-      console.log(`Current number of members: ${numberMembers}`);
-      console.log(`Creating new members: ${numberNewMembers}`);
-      numberMembers += numberNewMembers;
+      console.log(`Current number of accounts: ${numberAccounts}`);
+      console.log(`Creating new accounts: ${numberNewAccounts}`);
+      numberAccounts += numberNewAccounts;
 
-      await CreateTestMembersService(numberNewMembers);
+      await CreateTestAccountsService(numberNewAccounts);
 
       const numberUSDpurchases = Math.round(
-        numberMembers * variables.USD_ANCHORED_fractionToPurchase
+        numberAccounts * variables.USD_ANCHORED_fractionToPurchase
       );
       await PurchaseAnchoredCredexesService(
         "USD",
@@ -45,7 +45,7 @@ export async function GrowthTestService(variables: any) {
       );
 
       const numberUSDanchoredCirculate = Math.round(
-        numberMembers * variables.USD_ANCHORED_fractionToCirculate
+        numberAccounts * variables.USD_ANCHORED_fractionToCirculate
       );
       await InEcosystemAnchoredCredexesService(
         "USD",
@@ -53,12 +53,12 @@ export async function GrowthTestService(variables: any) {
       );
 
       const numberUSDsales = Math.round(
-        numberMembers * variables.USD_ANCHORED_fractionToSell
+        numberAccounts * variables.USD_ANCHORED_fractionToSell
       );
       await SellAnchoredCredexesService("USD", numberUSDsales);
 
       const numberZIGpurchases = Math.round(
-        numberMembers * variables.ZIG_ANCHORED_fractionToPurchase
+        numberAccounts * variables.ZIG_ANCHORED_fractionToPurchase
       );
       await PurchaseAnchoredCredexesService(
         "ZIG",
@@ -68,7 +68,7 @@ export async function GrowthTestService(variables: any) {
       );
 
       const numberZIGanchoredCirculate = Math.round(
-        numberMembers * variables.ZIG_ANCHORED_fractionToCirculate
+        numberAccounts * variables.ZIG_ANCHORED_fractionToCirculate
       );
       await InEcosystemAnchoredCredexesService(
         "ZIG",
@@ -76,12 +76,12 @@ export async function GrowthTestService(variables: any) {
       );
 
       const numberZIGsales = Math.round(
-        numberMembers * variables.ZIG_ANCHORED_fractionToSell
+        numberAccounts * variables.ZIG_ANCHORED_fractionToSell
       );
       await SellAnchoredCredexesService("ZIG", numberZIGsales);
 
       const numberRandomFloatingTransactions = Math.round(
-        numberMembers * variables.dailyFloatingRandomTransactionsPerMember
+        numberAccounts * variables.dailyFloatingRandomTransactionsPerAccount
       );
       console.log(
         `Creating random floating credexes: ${numberRandomFloatingTransactions}`

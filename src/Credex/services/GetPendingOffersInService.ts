@@ -1,7 +1,7 @@
 /*
-returns offers made to a member and not yet accepted/declined/cancelled
+returns offers made to a account and not yet accepted/declined/cancelled
 
-requires memberID
+requires accountID
 
 returns for each pending offer:
   credexID
@@ -9,25 +9,25 @@ returns for each pending offer:
   counterpartyDisplayname
   secured boolean
 
-returns empty array if no pending offers in, or if memberID not found
+returns empty array if no pending offers in, or if accountID not found
 
 */
 
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
-import { GetDisplayNameService } from "../../Member/services/GetDisplayNameService";
+import { GetDisplayNameService } from "../../Account/services/GetDisplayNameService";
 import { Credex } from "../types/Credex";
 import moment from "moment-timezone";
 
-export async function GetPendingOffersInService(memberID: string) {
+export async function GetPendingOffersInService(accountID: string) {
   try {
     const ledgerSpaceSession = ledgerSpaceDriver.session();
     const result = await ledgerSpaceSession.run(
       `
         OPTIONAL MATCH
-          (member:Member{memberID:$memberID})<-[:OFFERS]-(offersInCredex:Credex)<-[:OFFERS]-(counterparty:Member)
+          (account:Account{accountID:$accountID})<-[:OFFERS]-(offersInCredex:Credex)<-[:OFFERS]-(counterparty:Account)
         OPTIONAL MATCH
-          (offersInCredex)<-[:SECURES]-(securer:Member)
+          (offersInCredex)<-[:SECURES]-(securer:Account)
         RETURN
           offersInCredex.InitialAmount / offersInCredex.CXXmultiplier AS InitialAmount,
           offersInCredex.credexID AS credexID,
@@ -36,10 +36,10 @@ export async function GetPendingOffersInService(memberID: string) {
           counterparty.firstname AS counterpartyFirstname,
           counterparty.lastname AS counterpartyLastname,
           counterparty.companyname AS counterpartyCompanyname,
-          counterparty.memberType AS counterpartyMemberType,
+          counterparty.accountType AS counterpartyAccountType,
           securer IS NOT NULL as secured
       `,
-      { memberID }
+      { accountID }
     );
     await ledgerSpaceSession.close();
 
@@ -58,7 +58,7 @@ export async function GetPendingOffersInService(memberID: string) {
         record.get("Denomination");
 
       const counterpartyDisplayname = GetDisplayNameService({
-        memberType: record.get("counterpartyMemberType"),
+        accountType: record.get("counterpartyAccountType"),
         firstname: record.get("counterpartyFirstname"),
         lastname: record.get("counterpartyLastname"),
         companyname: record.get("counterpartyCompanyname"),

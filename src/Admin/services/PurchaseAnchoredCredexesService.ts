@@ -17,22 +17,22 @@ export async function PurchaseAnchoredCredexesService(
     const getAnchoredUSDCounterparties = await ledgerSpaceSession.run(
       `
         // Step 1: Select a random audited account
-        MATCH (auditedAccount:Member)<-[:CREDEX_FOUNDATION_AUDITED]-(foundation:Member)
+        MATCH (auditedAccount:Account)<-[:CREDEX_FOUNDATION_AUDITED]-(foundation:Account)
         WITH auditedAccount, rand() AS rand
         ORDER BY rand LIMIT 1
 
         // Step 2: Collect account IDs for purchasers
-        MATCH (accounts:Member)
-        WHERE accounts.memberID <> auditedAccount.memberID
-        WITH auditedAccount, collect(accounts.memberID) AS allaccounts
-        RETURN auditedAccount.memberID AS auditedID, allaccounts[0..$number] AS accountsToPurchaseUSDanchored
+        MATCH (accounts:Account)
+        WHERE accounts.accountID <> auditedAccount.accountID
+        WITH auditedAccount, collect(accounts.accountID) AS allaccounts
+        RETURN auditedAccount.accountID AS auditedID, allaccounts[0..$number] AS accountsToPurchaseUSDanchored
       `,
       {
         number: neo4j.int(number),
       }
     );
 
-    const issuerMemberID =
+    const issuerAccountID =
       getAnchoredUSDCounterparties.records[0].get("auditedID");
     const accountsToPurchaseUSDanchored =
       getAnchoredUSDCounterparties.records[0].get(
@@ -44,12 +44,12 @@ export async function PurchaseAnchoredCredexesService(
     for (let i = 0; i < accountsToPurchaseUSDanchored.length; i += batchSize) {
       const batch = accountsToPurchaseUSDanchored.slice(i, i + batchSize);
 
-      const offerPromises = batch.map((receiverMemberID: string) => {
+      const offerPromises = batch.map((receiverAccountID: string) => {
         const InitialAmount = random(lowValue, highValue);
 
         const credexSpecs = {
-          issuerMemberID: issuerMemberID,
-          receiverMemberID: receiverMemberID,
+          issuerAccountID: issuerAccountID,
+          receiverAccountID: receiverAccountID,
           Denomination: denom,
           InitialAmount: InitialAmount,
           credexType: "PURCHASE",

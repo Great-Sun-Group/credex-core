@@ -1,12 +1,12 @@
 /*
-returns member data
+returns account data
 
 required input:
-    memberID
+    accountID
 
-returns object with fields for each member property
+returns object with fields for each account property
 
-returns null if member can't be found or memberID not passed in
+returns null if account can't be found or accountID not passed in
 
 */
 
@@ -14,42 +14,42 @@ import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { GetDisplayNameService } from "./GetDisplayNameService";
 import { GetDashboardService } from "./GetDashboardService";
 
-export async function GetMemberAndDashboardsService(
+export async function GetAccountAndDashboardsService(
   phone: string
 ): Promise<any | null> {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   if (!phone) {
-    console.log("memberID is required");
+    console.log("accountID is required");
     return null;
   }
 
   try {
     const result = await ledgerSpaceSession.run(
       `
-        MATCH (human:Member { phone: $phone })
-        OPTIONAL MATCH (human)-[:AUTHORIZED_FOR]->(company:Member)
-        WITH human, COLLECT(company.memberID) AS companyMemberIDs
+        MATCH (human:Account { phone: $phone })
+        OPTIONAL MATCH (human)-[:AUTHORIZED_FOR]->(company:Account)
+        WITH human, COLLECT(company.accountID) AS companyAccountIDs
         RETURN
-          human.memberID AS memberID,
-          human.memberType AS memberType,
+          human.accountID AS accountID,
+          human.accountType AS accountType,
           human.firstname AS firstname,
           human.lastname AS lastname,
           human.companyname AS companyname,
-          [human.memberID] + companyMemberIDs AS authorizedFor
+          [human.accountID] + companyAccountIDs AS authorizedFor
       `,
       { phone }
     );
 
     if (!result.records.length) {
-      console.log("member not found");
+      console.log("account not found");
       return null;
     }
 
-    const humanMemberData: any = {
-      memberID: result.records[0].get("memberID"),
+    const humanAccountData: any = {
+      accountID: result.records[0].get("accountID"),
       displayName: GetDisplayNameService({
-        memberType: result.records[0].get("memberType"),
+        accountType: result.records[0].get("accountType"),
         firstname: result.records[0].get("firstname"),
         lastname: result.records[0].get("lastname"),
         companyname: result.records[0].get("companyname"),
@@ -59,21 +59,21 @@ export async function GetMemberAndDashboardsService(
     const authorizedFor = result.records[0].get("authorizedFor");
 
     const allDashboardData = await Promise.all(
-      authorizedFor.map(async (memberID: string) => {
+      authorizedFor.map(async (accountID: string) => {
         const dashboardData = await GetDashboardService(
-          humanMemberData.memberID,
-          memberID
+          humanAccountData.accountID,
+          accountID
         );
         return dashboardData;
       })
     );
 
     return {
-      humanMemberData: humanMemberData,
+      humanAccountData: humanAccountData,
       dashboardData: allDashboardData,
     };
   } catch (error) {
-    console.error("Error fetching member data:", error);
+    console.error("Error fetching account data:", error);
     return null;
   } finally {
     await ledgerSpaceSession.close();

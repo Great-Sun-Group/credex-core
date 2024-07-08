@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
 import { getDenominations } from "../constants/denominations";
-import { CreateMemberService } from "../../Member/services/CreateMemberService";
-import { CreateCompanyService } from "../../Member/services/CreateCompanyService";
+import { CreateAccountService } from "../../Account/services/CreateAccountService";
+import { CreateCompanyService } from "../../Account/services/CreateCompanyService";
 import { OfferCredexService } from "../../Credex/services/OfferCredexService";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
 import { fetchZigRate } from "./fetchZigRate";
@@ -26,8 +26,8 @@ export async function DBinitialization(): Promise<void> {
 
     await ledgerSpaceSession.run(
       `
-        CREATE CONSTRAINT member_unique IF NOT EXISTS
-        FOR (member:Member) REQUIRE (member.memberID, member.phone, member.handle) IS UNIQUE;
+        CREATE CONSTRAINT account_unique IF NOT EXISTS
+        FOR (account:Account) REQUIRE (account.accountID, account.phone, account.handle) IS UNIQUE;
       `
     );
 
@@ -132,29 +132,29 @@ export async function DBinitialization(): Promise<void> {
       { dayZeroCXXrates, dayZero }
     );
 
-    console.log("Creating initialization members and relationships...");
-    // uses createMember instead of createCompany because OWNS relationships should not be created
-    const credexFoundation = await CreateMemberService({
-      memberType: "CREDEX_FOUNDATION",
+    console.log("Creating initialization accounts and relationships...");
+    // uses createAccount instead of createCompany because OWNS relationships should not be created
+    const credexFoundation = await CreateAccountService({
+      accountType: "CREDEX_FOUNDATION",
       companyname: "Credex Foundation",
       handle: "credexfoundation",
       defaultDenom: "CXX",
     });
     let credexFoundationID;
-    if (typeof credexFoundation.member == "boolean") {
+    if (typeof credexFoundation.account == "boolean") {
       throw new Error("credexFoundation could not be created");
     }
     if (
-      credexFoundation.member &&
-      typeof credexFoundation.member.memberID === "string"
+      credexFoundation.account &&
+      typeof credexFoundation.account.accountID === "string"
     ) {
-      credexFoundationID = credexFoundation.member.memberID;
+      credexFoundationID = credexFoundation.account.accountID;
     } else {
       throw new Error("credexFoundation could not be created");
     }
 
-    const rdubs = await CreateMemberService({
-      memberType: "HUMAN",
+    const rdubs = await CreateAccountService({
+      accountType: "HUMAN",
       firstname: "Ryan",
       lastname: "Watson",
       handle: "ryanlukewatson",
@@ -164,11 +164,11 @@ export async function DBinitialization(): Promise<void> {
       DCOdenom: CXXdenom,
     });
     let rdubsID;
-    if (typeof rdubs.member == "boolean") {
+    if (typeof rdubs.account == "boolean") {
       throw new Error("rdubs could not be created");
     }
-    if (rdubs.member && typeof rdubs.member.memberID === "string") {
-      rdubsID = rdubs.member.memberID;
+    if (rdubs.account && typeof rdubs.account.accountID === "string") {
+      rdubsID = rdubs.account.accountID;
     } else {
       throw new Error("rdubs could not be created");
     }
@@ -189,8 +189,8 @@ export async function DBinitialization(): Promise<void> {
     //create to secure participation in first DCO
     await ledgerSpaceSession.run(
       `
-        MATCH (credexFoundation: Member { memberID: $credexFoundationID })
-        MATCH (greatSun: Member { memberID: $greatSunID })
+        MATCH (credexFoundation: Account { accountID: $credexFoundationID })
+        MATCH (greatSun: Account { accountID: $greatSunID })
         MERGE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (greatSun)
         MERGE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (credexFoundation)
       `,
@@ -199,8 +199,8 @@ export async function DBinitialization(): Promise<void> {
 
     //charging an account for participation in first DCO
     const credexData: Credex = {
-      issuerMemberID: greatSunID,
-      receiverMemberID: rdubsID,
+      issuerAccountID: greatSunID,
+      receiverAccountID: rdubsID,
       Denomination: CXXdenom,
       InitialAmount: OneCXXinCXXdenom * 365, // fund DCO for a year with no adjustments
       credexType: "PURCHASE",

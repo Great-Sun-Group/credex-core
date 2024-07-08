@@ -1,18 +1,18 @@
 /*
 returns
-  memberID
-  member display name
+  accountID
+  account display name
 
 required input:
     handle
 
-returns null if member can't be found or handle not passed in
+returns null if account can't be found or handle not passed in
 */
 
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
 import { GetDisplayNameService } from "./GetDisplayNameService";
 
-export async function GetMemberByHandleService(
+export async function GetAccountByHandleService(
   handle: string
 ): Promise<any | null> {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -25,36 +25,36 @@ export async function GetMemberByHandleService(
   try {
     const result = await ledgerSpaceSession.run(
       `
-            MATCH (member:Member { handle: $handle })
+            MATCH (account:Account { handle: $handle })
             RETURN
-              member.memberID AS memberID,
-              member.memberType AS memberType,
-              member.firstname AS firstname,
-              member.lastname AS lastname,
-              member.companyname AS companyname
+              account.accountID AS accountID,
+              account.accountType AS accountType,
+              account.firstname AS firstname,
+              account.lastname AS lastname,
+              account.companyname AS companyname
         `,
       { handle }
     );
 
     if (!result.records[0]) {
-      console.log("member not found");
+      console.log("account not found");
       return null;
     }
 
-    const memberID = result.records[0].get("memberID")
+    const accountID = result.records[0].get("accountID");
     const displayName = GetDisplayNameService({
-      memberType: result.records[0].get("memberType"),
+      accountType: result.records[0].get("accountType"),
       firstname: result.records[0].get("firstname"),
       lastname: result.records[0].get("lastname"),
       companyname: result.records[0].get("companyname"),
     });
 
     return {
-      memberID: memberID,
+      accountID: accountID,
       displayName: displayName,
-    }
+    };
   } catch (error) {
-    console.error("Error fetching member data:", error);
+    console.error("Error fetching account data:", error);
     return false;
   } finally {
     await ledgerSpaceSession.close();

@@ -1,9 +1,9 @@
 /*
-creates a new company, owned by the member that creates it
-for now companies can only be owned by a single human member
+creates a new company, owned by the account that creates it
+for now companies can only be owned by a single human account
 
 required inputs:
-    newCompanyData of type Member that meets criteria in CreateMemberService
+    newCompanyData of type Account that meets criteria in CreateAccountService
     ownerID
 
 on success returns object with fields:
@@ -11,52 +11,52 @@ on success returns object with fields:
     ownerID
 
 will return false if:
-    owner is not memberType human
+    owner is not accountType human
     ownerID doesn't exist
         if either of above false conditions, the company will still be created,
         but ownership relationships will not be created, and company will be orphaned
 */
 
 import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
-import { CreateMemberService } from "./CreateMemberService";
-import { Member } from "../types/Member";
+import { CreateAccountService } from "./CreateAccountService";
+import { Account } from "../types/Account";
 
 export async function CreateCompanyService(
-  newCompanyData: Member,
+  newCompanyData: Account,
   ownerID: string
 ) {
-  newCompanyData.memberType =
-    newCompanyData.memberType === "CREDEX_FOUNDATION"
+  newCompanyData.accountType =
+    newCompanyData.accountType === "CREDEX_FOUNDATION"
       ? "CREDEX_FOUNDATION"
       : "COMPANY";
 
-  const newCompany = await CreateMemberService(newCompanyData);
-  if (typeof newCompany.member == "boolean") {
+  const newCompany = await CreateAccountService(newCompanyData);
+  if (typeof newCompany.account == "boolean") {
     throw new Error("Company could not be created");
   }
-  if (newCompany.member && typeof newCompany.member.memberID === "string") {
+  if (newCompany.account && typeof newCompany.account.accountID === "string") {
     const ledgerSpaceSession = ledgerSpaceDriver.session();
     try {
       const result = await ledgerSpaceSession.run(
         `
-          MATCH (owner:Member { memberID: $ownerID, memberType: "HUMAN" })
-          MATCH (company:Member { memberID: $companyID })
+          MATCH (owner:Account { accountID: $ownerID, accountType: "HUMAN" })
+          MATCH (company:Account { accountID: $companyID })
           MERGE (owner)-[:OWNS]->(company)
           MERGE (owner)-[:AUTHORIZED_FOR]->(company)
           MERGE (owner)<-[:SEND_OFFERS_TO]-(company)
           RETURN
-            owner.memberID AS ownerID,
-            company.memberID AS companyID
+            owner.accountID AS ownerID,
+            company.accountID AS companyID
         `,
         {
-          companyID: newCompany.member.memberID,
+          companyID: newCompany.account.accountID,
           ownerID: ownerID,
         }
       );
       const record = result.records[0];
       if (record.get("ownerID")) {
         console.log(
-          `member above is company created for owner: ${record.get("ownerID")}`
+          `account above is company created for owner: ${record.get("ownerID")}`
         );
         return {
           companyID: record.get("companyID"),

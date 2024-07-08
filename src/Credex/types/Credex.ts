@@ -16,8 +16,8 @@ export type Credex = {
   dueDate?: string;
   transactionType?: string;
   debit?: boolean;
-  issuerMemberID?: string;
-  receiverMemberID?: string;
+  issuerAccountID?: string;
+  receiverAccountID?: string;
   counterpartyDisplayname?: string | false;
   securedCredex?: boolean;
   securerName?: string;

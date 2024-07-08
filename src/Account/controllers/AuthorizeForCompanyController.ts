@@ -3,9 +3,13 @@ import { AuthorizeForCompanyService } from "../services/AuthorizeForCompanyServi
 
 export async function AuthorizeForCompanyController(
   req: express.Request,
-  res: express.Response,
+  res: express.Response
 ) {
-  const requiredFields = ["MemberHandleToBeAuthorized", "companyID", "ownerID"];
+  const requiredFields = [
+    "AccountHandleToBeAuthorized",
+    "companyID",
+    "ownerID",
+  ];
 
   for (const field of requiredFields) {
     if (!req.body[field]) {
@@ -15,7 +19,7 @@ export async function AuthorizeForCompanyController(
 
   try {
     const responseData = await AuthorizeForCompanyService(
-      req.body.MemberHandleToBeAuthorized,
+      req.body.AccountHandleToBeAuthorized,
       req.body.companyID,
       req.body.ownerID
     );
@@ -23,12 +27,12 @@ export async function AuthorizeForCompanyController(
     if (!responseData) {
       return res
         .status(400)
-        .json({ message: "Failed to authorize member for the company" });
+        .json({ message: "Failed to authorize account for the company" });
     }
 
     return res.status(200).json(responseData);
   } catch (err) {
-    console.error("Error authorizing member for company:", err);
+    console.error("Error authorizing account for company:", err);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 }

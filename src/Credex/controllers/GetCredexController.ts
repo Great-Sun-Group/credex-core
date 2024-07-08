@@ -3,12 +3,12 @@ import { GetCredexService } from "../services/GetCredexService";
 
 export async function GetCredexController(
   req: express.Request,
-  res: express.Response,
+  res: express.Response
 ) {
   try {
     const responseData = await GetCredexService(
       req.body.credexID,
-      req.body.memberID,
+      req.body.accountID
     );
     res.json(responseData);
   } catch (err) {

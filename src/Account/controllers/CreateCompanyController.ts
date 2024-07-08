@@ -1,10 +1,10 @@
 import express from "express";
 import { CreateCompanyService } from "../services/CreateCompanyService";
-import { Member } from "../types/Member";
+import { Account } from "../types/Account";
 
 export async function CreateCompanyController(
   req: express.Request,
-  res: express.Response,
+  res: express.Response
 ): Promise<void> {
   const fieldsRequired = ["ownerID", "companyname", "defaultDenom", "handle"];
 
@@ -15,8 +15,8 @@ export async function CreateCompanyController(
     }
   }
 
-  const companyAsMemberData: Member = {
-    memberType: "COMPANY",
+  const companyAsAccountData: Account = {
+    accountType: "COMPANY",
     companyname: req.body.companyname,
     defaultDenom: req.body.defaultDenom,
     handle: req.body.handle,
@@ -24,8 +24,8 @@ export async function CreateCompanyController(
 
   try {
     const newCompany = await CreateCompanyService(
-      companyAsMemberData,
-      req.body.ownerID,
+      companyAsAccountData,
+      req.body.ownerID
     );
 
     if (newCompany) {

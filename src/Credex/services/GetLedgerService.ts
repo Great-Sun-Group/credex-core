@@ -3,7 +3,7 @@
 returns details to display a ledger list of transactions
 
 requires:
-  memberID
+  accountID
 
 requires (with defaults if not included)
   numRows (number of transactions to return, default is 10)
@@ -17,7 +17,7 @@ returns for each credex:
 returns empty array if no credexes
 
 returns error message if numRows or startRows can't be coerced into numbers
-returns empty array if memberID not valid
+returns empty array if accountID not valid
 
 */
 
@@ -27,7 +27,7 @@ import { denomFormatter } from "../../Core/constants/denominations";
 import { Credex } from "../types/Credex";
 
 export async function GetLedgerService(
-  memberID: string,
+  accountID: string,
   numRows: number = 10,
   startRow: number = 0
 ) {
@@ -38,74 +38,74 @@ export async function GetLedgerService(
     return "numRows and startRows must be numbers";
   }
 
-    try {
-      const ledgerSpaceSession = ledgerSpaceDriver.session();
-      const result = await ledgerSpaceSession.run(
-        `
+  try {
+    const ledgerSpaceSession = ledgerSpaceDriver.session();
+    const result = await ledgerSpaceSession.run(
+      `
         OPTIONAL MATCH
-            (member:Member{memberID:$memberID})-[transactionType:OWES|CLEARED]-(credex:Credex)-[:OWES|CLEARED]-(counterparty:Member)
-        OPTIONAL MATCH (credex)<-[:SECURES]-(securer:Member)
+            (account:Account{accountID:$accountID})-[transactionType:OWES|CLEARED]-(credex:Credex)-[:OWES|CLEARED]-(counterparty:Account)
+        OPTIONAL MATCH (credex)<-[:SECURES]-(securer:Account)
         RETURN
             credex.credexID AS credexID,
             credex.InitialAmount/credex.CXXmultiplier AS InitialAmount,
             credex.Denomination AS Denomination,
-            (startNode(transactionType) = member) as debit,
+            (startNode(transactionType) = account) as debit,
             counterparty.firstname AS counterpartyFirstname,
             counterparty.lastname AS counterpartyLastname,
             counterparty.companyname AS counterpartyCompanyname,
-            counterparty.memberType AS counterpartyMemberType
+            counterparty.accountType AS counterpartyAccountType
             ORDER BY credex.acceptedAt
             SKIP $startRow
             LIMIT $numRows
     `,
-        {
-          memberID: memberID,
-          numRows: neo4j.int(numRows),
-          startRow: neo4j.int(startRow),
-        }
-      );
+      {
+        accountID: accountID,
+        numRows: neo4j.int(numRows),
+        startRow: neo4j.int(startRow),
+      }
+    );
 
-      await ledgerSpaceSession.close();
+    await ledgerSpaceSession.close();
 
-      if (!result.records[0].get("credexID")) {
-        return {};
+    if (!result.records[0].get("credexID")) {
+      return {};
+    }
+
+    const credexes = result.records.map((record) => {
+      const credexID = record.get("credexID");
+      const InitialAmount = record.get("debit")
+        ? -parseFloat(record.get("InitialAmount"))
+        : record.get("InitialAmount");
+      const Denomination = record.get("Denomination");
+      const counterpartyFirstname = record.get("counterpartyFirstname");
+      const counterpartyLastname = record.get("counterpartyLastname");
+      const counterpartyCompanyname = record.get("counterpartyCompanyname");
+      const counterpartyAccountType = record.get("counterpartyAccountType");
+
+      const formattedInitialAmount =
+        denomFormatter(InitialAmount, Denomination) + " " + Denomination;
+
+      let counterpartyDisplayname = "";
+      if (counterpartyAccountType === "HUMAN") {
+        counterpartyDisplayname =
+          counterpartyFirstname + " " + counterpartyLastname;
+      } else if (
+        counterpartyAccountType === "COMPANY" ||
+        counterpartyAccountType === "CREDEX_FOUNDATION"
+      ) {
+        counterpartyDisplayname = counterpartyCompanyname;
       }
 
-      const credexes = result.records.map((record) => {
-        const credexID = record.get("credexID");
-        const InitialAmount = record.get("debit")
-          ? -parseFloat(record.get("InitialAmount"))
-          : record.get("InitialAmount");
-        const Denomination = record.get("Denomination");
-        const counterpartyFirstname = record.get("counterpartyFirstname");
-        const counterpartyLastname = record.get("counterpartyLastname");
-        const counterpartyCompanyname = record.get("counterpartyCompanyname");
-        const counterpartyMemberType = record.get("counterpartyMemberType");
+      return {
+        credexID,
+        formattedInitialAmount,
+        counterpartyDisplayname,
+      } as Credex;
+    });
 
-        const formattedInitialAmount =
-          denomFormatter(InitialAmount, Denomination) + " " + Denomination;
-
-        let counterpartyDisplayname = "";
-        if (counterpartyMemberType === "HUMAN") {
-          counterpartyDisplayname =
-            counterpartyFirstname + " " + counterpartyLastname;
-        } else if (
-          counterpartyMemberType === "COMPANY" ||
-          counterpartyMemberType === "CREDEX_FOUNDATION"
-        ) {
-          counterpartyDisplayname = counterpartyCompanyname;
-        }
-
-        return {
-          credexID,
-          formattedInitialAmount,
-          counterpartyDisplayname,
-        } as Credex;
-      });
-
-      return credexes;
-    } catch (error) {
-      console.error("Error in GetLedgerService:", error);
-      throw error;
-    }
+    return credexes;
+  } catch (error) {
+    console.error("Error in GetLedgerService:", error);
+    throw error;
+  }
 }
