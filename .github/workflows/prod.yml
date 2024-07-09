@@ -42,7 +42,7 @@ jobs:
           # Run the SSH command
           ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} \
           "cd credex-core &&
-            git checkout dev &&
+            git checkout prod &&
             docker-compose up --build"
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
