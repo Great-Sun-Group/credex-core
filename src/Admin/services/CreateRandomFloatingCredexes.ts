@@ -1,4 +1,4 @@
-import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver } from "../config/neo4j";
 import { OfferCredexService } from "../../Credex/services/OfferCredexService";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
 import { Credex } from "../../Credex/types/Credex";

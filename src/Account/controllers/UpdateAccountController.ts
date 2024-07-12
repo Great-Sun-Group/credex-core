@@ -13,7 +13,13 @@ export async function UpdateAccountController(
   }
 
   try {
-    const updatedAccountID = await UpdateAccountService(req.body);
+    const updatedAccountID = await UpdateAccountService(
+      req.body.ownerID,
+      req.body.accountID,
+      req.body.phone,
+      req.body.handle,
+      req.body.defaultDenom
+    );
 
     if (updatedAccountID) {
       res

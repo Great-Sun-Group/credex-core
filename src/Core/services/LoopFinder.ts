@@ -1,5 +1,5 @@
 import moment from "moment-timezone";
-import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver, searchSpaceDriver } from "../../Admin/config/neo4j";
 
 export async function LoopFinder(
   issuerAccountID: string,

@@ -14,7 +14,7 @@ returns:
 on error returns empty object
 */
 
-import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
 import * as neo4j from "neo4j-driver";
 
 export async function GetAccountsListService(

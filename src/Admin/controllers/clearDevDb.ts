@@ -1,5 +1,5 @@
 import express from "express";
-import { ClearDevDbService } from "../services/ClearDevDbService";
+import { ClearDevDbService } from "../services/ClearDevDb";
 
 export async function ClearDevDbController(
   req: express.Request,

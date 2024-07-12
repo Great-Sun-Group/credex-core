@@ -1,11 +1,11 @@
-import { CreateTestAccountsService } from "./CreateTestAccountsService";
-import { CreateRandomFloatingCredexesService } from "./CreateRandomFloatingCredexesService";
+import { CreateTestAccountsService } from "./CreateTestAccounts";
+import { CreateRandomFloatingCredexesService } from "./CreateRandomFloatingCredexes";
 import { DailyCredcoinOffering } from "../../Core/services/DailyCredcoinOffering";
 import { MinuteTransactionQueue } from "../../Core/services/MinuteTransactionQueue";
-import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
-import { PurchaseAnchoredCredexesService } from "./PurchaseAnchoredCredexesService";
-import { SellAnchoredCredexesService } from "./SellAnchoredCredexesService";
-import { InEcosystemAnchoredCredexesService } from "./InEcosystemAnchoredCredexesService";
+import { ledgerSpaceDriver } from "../config/neo4j";
+import { PurchaseAnchoredCredexesService } from "./PurchaseAnchoredCredexes";
+import { SellAnchoredCredexesService } from "./SellAnchoredCredexes";
+import { InEcosystemAnchoredCredexesService } from "./InEcosystemAnchoredCredexes";
 
 export async function GrowthTestService(variables: any) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();

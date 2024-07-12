@@ -1,5 +1,5 @@
 import express from "express";
-import { GrowthTestService } from "../services/GrowthTestService";
+import { GrowthTestService } from "../services/GrowthTest";
 
 export async function GrowthTestController(
   req: express.Request,

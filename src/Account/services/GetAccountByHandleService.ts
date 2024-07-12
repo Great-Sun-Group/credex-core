@@ -9,7 +9,7 @@ required input:
 returns null if account can't be found or handle not passed in
 */
 
-import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
 import { GetDisplayNameService } from "./GetDisplayNameService";
 
 export async function GetAccountByHandleService(

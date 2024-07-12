@@ -1,7 +1,7 @@
 import express from "express";
-import { CreateRandomFloatingCredexesService } from "../services/CreateRandomFloatingCredexesService";
+import { CreateTestLoopService } from "../services/CreateTestLoop";
 
-export async function CreateTestTransactionsController(
+export async function CreateTestLoopController(
   req: express.Request,
   res: express.Response
 ) {
@@ -12,7 +12,7 @@ export async function CreateTestTransactionsController(
 
   try {
     // Call the service to create test transactions
-    const responseData = await CreateRandomFloatingCredexesService(
+    const responseData = await CreateTestLoopService(
       req.body.numNewTransactions
     );
 

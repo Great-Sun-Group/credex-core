@@ -1,10 +1,10 @@
-import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
 import { GetDisplayNameService } from "./GetDisplayNameService";
 import { GetBalancesService } from "../../Credex/services/GetBalancesService";
 import { GetPendingOffersInService } from "../../Credex/services/GetPendingOffersInService";
 import { GetPendingOffersOutService } from "../../Credex/services/GetPendingOffersOutService";
 
-export async function GetDashboardService(
+export async function GetAccountDashboardService(
   accountID: string,
   authorizedForID: string
 ) {

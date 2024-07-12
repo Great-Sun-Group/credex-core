@@ -1,5 +1,5 @@
 import express from "express";
-import { CheckLedgerVsSearchBalances } from "../services/CheckLedgerVsSearchBalancesService";
+import { CheckLedgerVsSearchBalances } from "../services/CheckLedgerVsSearchBalances";
 
 export async function CheckLedgerVsSearchBalancesController(
   req: express.Request,

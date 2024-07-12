@@ -1,5 +1,5 @@
 import express from "express";
-import { CreateTestAccountsService } from "../services/CreateTestAccountsService";
+import { CreateTestAccountsService } from "../services/CreateTestAccounts";
 
 export async function CreateTestAccountsController(
   req: express.Request,

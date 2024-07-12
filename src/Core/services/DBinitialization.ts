@@ -1,7 +1,7 @@
-import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver, searchSpaceDriver } from "../../Admin/config/neo4j";
 import { getDenominations } from "../constants/denominations";
-import { CreateAccountService } from "../../Account/services/CreateAccountService";
-import { CreateCompanyService } from "../../Account/services/CreateCompanyService";
+import { OnboardHumanService } from "../../Human/services/OnboardHuman";
+import { CreateAccountService } from "../../Account/services/CreateAccount";
 import { OfferCredexService } from "../../Credex/services/OfferCredexService";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
 import { fetchZigRate } from "./fetchZigRate";
@@ -133,58 +133,55 @@ export async function DBinitialization(): Promise<void> {
     );
 
     console.log("Creating initialization accounts and relationships...");
-    // uses createAccount instead of createCompany because OWNS relationships should not be created
-    const credexFoundation = await CreateAccountService({
-      accountType: "CREDEX_FOUNDATION",
-      companyname: "Credex Foundation",
-      handle: "credexfoundation",
-      defaultDenom: "CXX",
-    });
+    const rdubs = await OnboardHumanService(
+      "Ryan", 
+      "Watson",
+      "USD",
+      "263778177125",
+      1,
+      CXXdenom
+    );
+    let rdubsID;
+    if (typeof rdubs.onboardedHumanID == "boolean") {
+      throw new Error("rdubs could not be created");
+    }
+    if (rdubs.onboardedHumanID && typeof rdubs.onboardedHumanID === "string") {
+      rdubsID = rdubs.onboardedHumanID;
+    } else {
+      throw new Error("rdubs could not be created");
+    }
+
+    const credexFoundation = await CreateAccountService(
+      rdubsID,
+      "CREDEX_FOUNDATION",
+      "Credex Foundation",
+      "credexfoundation",
+      "CXX",
+    );
     let credexFoundationID;
     if (typeof credexFoundation.account == "boolean") {
       throw new Error("credexFoundation could not be created");
     }
     if (
-      credexFoundation.account &&
-      typeof credexFoundation.account.accountID === "string"
+      credexFoundation.accountID &&
+      typeof credexFoundation.accountID === "string"
     ) {
-      credexFoundationID = credexFoundation.account.accountID;
+      credexFoundationID = credexFoundation.accountID;
     } else {
       throw new Error("credexFoundation could not be created");
     }
 
-    const rdubs = await CreateAccountService({
-      accountType: "HUMAN",
-      firstname: "Ryan",
-      lastname: "Watson",
-      handle: "ryanlukewatson",
-      defaultDenom: "USD",
-      phone: "263778177125",
-      DCOgiveInCXX: 1,
-      DCOdenom: CXXdenom,
-    });
-    let rdubsID;
-    if (typeof rdubs.account == "boolean") {
-      throw new Error("rdubs could not be created");
-    }
-    if (rdubs.account && typeof rdubs.account.accountID === "string") {
-      rdubsID = rdubs.account.accountID;
-    } else {
-      throw new Error("rdubs could not be created");
-    }
-
-    const greatSun = await CreateCompanyService(
-      {
-        companyname: "Great Sun Financial",
-        handle: "greatsunfinancial",
-        defaultDenom: "USD",
-      },
-      rdubsID
+    const greatSun = await CreateAccountService(
+      rdubsID,
+      "COMPANY",
+      "Great Sun Financial",
+      "greatsunfinancial",
+      "CAD",
     );
     if (!greatSun) {
       throw new Error("greatSun could not be created");
     }
-    const greatSunID = greatSun.companyID;
+    const greatSunID = greatSun.accountID;
 
     //create to secure participation in first DCO
     await ledgerSpaceSession.run(

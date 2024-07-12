@@ -1,4 +1,4 @@
-import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver, searchSpaceDriver } from "../config/neo4j";
 
 export async function ClearDevDbService() {
   const ledgerSpaceSession = ledgerSpaceDriver.session();

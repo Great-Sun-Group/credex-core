@@ -11,7 +11,7 @@ on success returns true
 on failure returns false
 */
 
-import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
 
 export async function UpdateSendOffersToService(
   accountIDtoSendOffers: string,

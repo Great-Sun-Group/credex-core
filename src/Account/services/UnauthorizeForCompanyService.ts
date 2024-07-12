@@ -17,7 +17,7 @@ will return false if:
 
 */
 
-import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
 
 export async function UnauthorizeForCompanyService(
   AccountIDtoBeUnauthorized: string,

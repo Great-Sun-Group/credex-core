@@ -21,55 +21,46 @@ returns accountID of updated account
 returns null on error
 */
 
-import { Account } from "../types/Account";
-import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
 import { getDenominations } from "../../Core/constants/denominations";
 
 export async function UpdateAccountService(
-  accountData: Account
-): Promise<string | null> {
-  const accountDataChecked: Partial<Account> = {};
+  ownerID: string,
+  accountID: string,
+  phone: string,
+  handle: string,
+  defaultDenom: string
+) {
+  // Validation: Check defaultDenom in denominations
+  if (!getDenominations({ code: defaultDenom }).length) {
+    const message = "defaultDenom not in denoms";
+    console.log(message);
+    return false;
+  }
 
-  if (accountData.firstname && accountData.accountType == "HUMAN") {
-    accountDataChecked.firstname = accountData.firstname;
-  }
-  if (accountData.lastname && accountData.accountType == "HUMAN") {
-    accountDataChecked.lastname = accountData.lastname;
-  }
-  if (accountData.companyname && accountData.accountType == "COMPANY") {
-    accountDataChecked.companyname = accountData.companyname;
-  }
-  if (accountData.phone && Number.isInteger(accountData.phone)) {
-    accountDataChecked.phone = accountData.phone;
-  }
-  if (accountData.handle) {
-    accountDataChecked.handle = accountData.handle.toLowerCase();
-  }
-  if (accountData.DCOgiveInCXX && accountData.accountType == "HUMAN") {
-    accountDataChecked.DCOgiveInCXX = accountData.DCOgiveInCXX;
-  }
-  if (
-    accountData.DCOdenom &&
-    getDenominations({ code: accountData.DCOdenom }).length &&
-    accountData.accountType == "HUMAN"
-  ) {
-    accountDataChecked.DCOdenom = accountData.DCOdenom;
-  }
+  const dataToUpdate = {
+    phone: phone,
+    handle: handle,
+    defaultDenom: defaultDenom,
+  };
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
     const result = await ledgerSpaceSession.run(
       `
-            MATCH (account:Account { accountID: $accountID })
-            SET account += $accountDataChecked
-            RETURN account.accountID AS accountID
+        MATCH
+          (owner:Human { uniqueHumanID: $ownerID })
+          -[:OWNS]->
+          (account:Account { accountID: $accountID })
+        SET account += $dataToUpdate
+        RETURN account.accountID AS accountID
             `,
-      { accountID: accountData.accountID, accountDataChecked }
+      { ownerID, accountID, dataToUpdate }
     );
 
     if (!result.records[0].get("accountID")) {
-      return null;
+      return false;
     }
 
     return result.records[0].get("accountID");

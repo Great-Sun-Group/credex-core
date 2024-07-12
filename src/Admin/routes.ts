@@ -1,14 +1,14 @@
 import express from "express";
-import { apiVersionOneRoute } from "../..";
-import { ClearDevDbController } from "../controllers/ClearDevDbController";
-import { ForceDcoController } from "../controllers/ForceDcoController";
-import { ForceMtqController } from "../controllers/ForceMtqController";
-import { OfferAndAcceptCredexController } from "../controllers/OfferAndAcceptCredexController";
-import { CreateTestAccountsController } from "../controllers/CreateTestAccountsController";
-import { CreateTestTransactionsController } from "../controllers/CreateTestTransactionsController";
-import { CreateTestLoopController } from "../controllers/CreateTestLoopController";
-import { GrowthTestController } from "../controllers/GrowthTestController";
-import { CheckLedgerVsSearchBalancesController } from "../controllers/CheckLedgerVsSearchBalancesController";
+import { apiVersionOneRoute } from "..";
+import { ClearDevDbController } from "./controllers/clearDevDb";
+import { ForceDcoController } from "./controllers/forceDCO";
+import { ForceMtqController } from "./controllers/forceMTQ";
+import { OfferAndAcceptCredexController } from "./controllers/offerAndAcceptCredex";
+import { CreateTestAccountsController } from "./controllers/createTestAccounts";
+import { CreateTestTransactionsController } from "./controllers/createTestTransactions";
+import { CreateTestLoopController } from "./controllers/createTestLoop";
+import { GrowthTestController } from "./controllers/growthTest";
+import { CheckLedgerVsSearchBalancesController } from "./controllers/checkLedgerVsSearchBalances";
 
 export default function AdminRoutes(app: express.Application, jsonParser: any) {
   app.delete(

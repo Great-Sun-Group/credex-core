@@ -1,6 +1,6 @@
 import express from "express";
 import { OfferCredexService } from "../services/OfferCredexService";
-import { GetDashboardService } from "../../Account/services/GetDashboardService";
+import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 
 export async function OfferCredexController(
   req: express.Request,
@@ -8,7 +8,7 @@ export async function OfferCredexController(
 ) {
   try {
     const offerCredexData = await OfferCredexService(req.body);
-    const dashboardData = await GetDashboardService(
+    const dashboardData = await GetAccountDashboardService(
       req.body.issuerAccountID,
       req.body.authorizerAccountID
     );

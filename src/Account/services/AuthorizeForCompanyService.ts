@@ -22,7 +22,7 @@ will return as success if account is already authorized to transact for company
 but DB will remain unaltered
 */
 
-import { ledgerSpaceDriver } from "../../config/neo4j/neo4j";
+import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
 
 export async function AuthorizeForCompanyService(
   AccountHandleToBeAuthorized: string,
