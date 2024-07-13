@@ -3,7 +3,7 @@ import { OfferCredexService } from "../../Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
 import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecuredAuthorization";
 import * as neo4j from "neo4j-driver";
-import { ledgerSpaceDriver } from "../config/neo4j";
+import { ledgerSpaceDriver } from "../../../config/neo4j";
 
 export async function InEcosystemAnchoredCredexesService(
   denom: string,

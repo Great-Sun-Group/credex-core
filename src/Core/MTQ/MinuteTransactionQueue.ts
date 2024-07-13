@@ -1,4 +1,4 @@
-import { ledgerSpaceDriver, searchSpaceDriver } from "../../Admin/config/neo4j";
+import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { LoopFinder } from "./LoopFinder";
 import { GetDisplayNameService } from "../../Account/services/GetDisplayNameService";
 import _ from "lodash";

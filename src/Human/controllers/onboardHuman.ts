@@ -1,7 +1,7 @@
 import express from "express";
 import { OnboardHumanService } from "../services/OnboardHuman";
 import { CreateAccountService } from "../../Account/services/CreateAccount";
-import { GetHumanDashboardService } from "../services/GetHumanDashboard";
+import { GetHumanDashboardService } from "../services/GetHumanDashboardByPhone";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 
 export async function OnboardHumanController(

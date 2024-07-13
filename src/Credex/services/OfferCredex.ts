@@ -6,7 +6,7 @@ returns data passed out from CreateCredexService
 */
 
 import { CreateCredexService } from "./CreateCredex";
-import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
+import { ledgerSpaceDriver } from "../../../config/neo4j";
 
 export async function OfferCredexService(credexData: any) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();

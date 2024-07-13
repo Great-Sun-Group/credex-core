@@ -2,7 +2,6 @@ import express from "express";
 import { apiVersionOneRoute } from "..";
 import { CreateAccountController } from "./controllers/createAccount";
 import { GetAccountByHandleController } from "./controllers/getAccountByHandle";
-import { GetAccountsListController } from "./controllers/GetAccountsListController";
 import { UpdateAccountController } from "./controllers/updateAccount";
 import { AuthorizeForCompanyController } from "./controllers/authorizeForAccount";
 import { UnauthorizeForCompanyController } from "./controllers/unauthorizeForAccount";
@@ -22,12 +21,6 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}getAccountByHandle`,
     jsonParser,
     GetAccountByHandleController
-  );
-
-  app.get(
-    `${apiVersionOneRoute}getAccountsList`,
-    jsonParser,
-    GetAccountsListController
   );
 
   app.patch(

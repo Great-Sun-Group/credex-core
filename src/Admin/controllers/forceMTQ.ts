@@ -1,9 +1,9 @@
 import express from "express";
-import { MinuteTransactionQueue } from "../../Core/services/MinuteTransactionQueue";
+import { MinuteTransactionQueue } from "../../Core/MTQ/MinuteTransactionQueue";
 
 export async function ForceMtqController(
   req: express.Request,
-  res: express.Response,
+  res: express.Response
 ) {
   try {
     const responseData = await MinuteTransactionQueue();

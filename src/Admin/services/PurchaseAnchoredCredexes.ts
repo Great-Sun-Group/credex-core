@@ -2,7 +2,7 @@ import { random } from "lodash";
 import { OfferCredexService } from "../../Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
 import * as neo4j from "neo4j-driver";
-import { ledgerSpaceDriver } from "../config/neo4j";
+import { ledgerSpaceDriver } from "../../../config/neo4j";
 
 export async function PurchaseAnchoredCredexesService(
   denom: string,

@@ -13,7 +13,7 @@ will return false if:
 
 */
 
-import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
+import { ledgerSpaceDriver } from "../../../config/neo4j";
 
 export async function AcceptCredexService(credexID: string) {
   if (!credexID) {

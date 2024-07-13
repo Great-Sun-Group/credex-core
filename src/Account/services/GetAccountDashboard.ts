@@ -1,4 +1,4 @@
-import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
+import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { GetDisplayNameService } from "./GetDisplayNameService";
 import { GetBalancesService } from "../../Credex/services/GetBalances";
 import { GetPendingOffersInService } from "../../Credex/services/GetPendingOffersIn";

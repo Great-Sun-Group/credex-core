@@ -1,8 +1,8 @@
 import { CreateTestAccountsService } from "./CreateTestAccounts";
 import { CreateRandomFloatingCredexesService } from "./CreateRandomFloatingCredexes";
-import { DailyCredcoinOffering } from "../../Core/services/DailyCredcoinOffering";
-import { MinuteTransactionQueue } from "../../Core/services/MinuteTransactionQueue";
-import { ledgerSpaceDriver } from "../config/neo4j";
+import { DailyCredcoinOffering } from "../../Core/DCO/DailyCredcoinOffering";
+import { MinuteTransactionQueue } from "../../Core/MTQ/MinuteTransactionQueue";
+import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { PurchaseAnchoredCredexesService } from "./PurchaseAnchoredCredexes";
 import { SellAnchoredCredexesService } from "./SellAnchoredCredexes";
 import { InEcosystemAnchoredCredexesService } from "./InEcosystemAnchoredCredexes";

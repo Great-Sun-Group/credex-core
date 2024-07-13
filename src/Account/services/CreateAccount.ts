@@ -1,4 +1,4 @@
-import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
+import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { getDenominations } from "../../Core/constants/denominations";
 
 export async function CreateAccountService(

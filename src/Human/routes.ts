@@ -1,7 +1,7 @@
 import express from "express";
 import { apiVersionOneRoute } from "..";
 import { OnboardHumanController } from "./controllers/onboardHuman";
-import { WhatsappLoginHumanController } from "./controllers/whatsappLoginHuman";
+import { GetHumanDashboardByPhoneController } from "./controllers/getHumanDashboardByPhone";
 
 export default function HumanRoutes(app: express.Application, jsonParser: any) {
   app.post(
@@ -10,12 +10,11 @@ export default function HumanRoutes(app: express.Application, jsonParser: any) {
     OnboardHumanController
   );
 
-    app.get(
-      `${apiVersionOneRoute}whatsAppLogin`,
-      jsonParser,
-      WhatsappLoginHumanController
-    );
-
+  app.get(
+    `${apiVersionOneRoute}whatsAppLogin`,
+    jsonParser,
+    GetHumanDashboardByPhoneController
+  );
 
   /*
 

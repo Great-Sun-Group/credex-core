@@ -21,7 +21,7 @@ returns accountID of updated account
 returns null on error
 */
 
-import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
+import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { getDenominations } from "../../Core/constants/denominations";
 
 export async function UpdateAccountService(

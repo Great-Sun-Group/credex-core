@@ -3,7 +3,7 @@ import HumanRoutes from "./Human/routes";
 import AccountRoutes from "./Account/routes";
 import CredexRoutes from "./Credex/routes";
 import AdminRoutes from "./Admin/routes";
-import { Logger } from "./Admin/config/logger";
+import { Logger } from "../config/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./Core/cronJobs";
 

@@ -1,6 +1,6 @@
 const cron = require("node-cron");
-import { DailyCredcoinOffering } from "./services/DailyCredcoinOffering";
-import { MinuteTransactionQueue } from "./services/MinuteTransactionQueue";
+import { DailyCredcoinOffering } from "./DCO/DailyCredcoinOffering";
+import { MinuteTransactionQueue } from "./MTQ/MinuteTransactionQueue";
 
 export default function startCronJobs() {
   // Running DailyCredcoinOffering every day at midnight UTC

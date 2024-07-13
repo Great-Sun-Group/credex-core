@@ -11,7 +11,7 @@ returns:
     
 */
 
-import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
+import { ledgerSpaceDriver } from "../../../config/neo4j";
 
 export async function GetSecuredAuthorizationService(
   issuerAccountID: string,

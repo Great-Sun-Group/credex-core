@@ -1,4 +1,4 @@
-import { ledgerSpaceDriver, searchSpaceDriver } from "../../Admin/config/neo4j";
+import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { getDenominations } from "../constants/denominations";
 import { OnboardHumanService } from "../../Human/services/OnboardHuman";
 import { CreateAccountService } from "../../Account/services/CreateAccount";

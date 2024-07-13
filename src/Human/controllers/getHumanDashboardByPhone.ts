@@ -1,13 +1,13 @@
 import express from "express";
-import { GetHumanDashboardService } from "../services/GetHumanDashboard";
+import { GetHumanDashboardByPhoneService } from "../services/GetHumanDashboardByPhone";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 
-export async function WhatsappLoginHumanController(
+export async function GetHumanDashboardByPhoneController(
   req: express.Request,
   res: express.Response
 ): Promise<void> {
   try {
-    const humanDashboard = await GetHumanDashboardService(req.body.phone);
+    const humanDashboard = await GetHumanDashboardByPhoneService(req.body.phone);
     if (!humanDashboard) {
       res.status(400).json({ message: "Could not retrieve human dashboard" });
       return;

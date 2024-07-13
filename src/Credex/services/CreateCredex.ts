@@ -24,7 +24,7 @@ if conditions above are not met, or if secured credex attempted but not authoriz
   message: error message depending on which condition not met
 */
 
-import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
+import { ledgerSpaceDriver } from "../../../config/neo4j";
 import {
   getDenominations,
   denomFormatter,

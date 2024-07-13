@@ -1,4 +1,4 @@
-import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
+import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
 import moment from "moment-timezone";
 

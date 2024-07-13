@@ -1,6 +1,6 @@
-import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
+import { ledgerSpaceDriver } from "../../../config/neo4j";
 
-export async function GetHumanDashboardService(phone: string) {
+export async function GetHumanDashboardByPhoneService(phone: string) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {

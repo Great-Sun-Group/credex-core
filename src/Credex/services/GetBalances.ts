@@ -25,7 +25,7 @@ on success returns formatted strings:
 
 */
 
-import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
+import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
 
 export async function GetBalancesService(accountID: string) {
