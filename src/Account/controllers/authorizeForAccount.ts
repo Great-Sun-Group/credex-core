@@ -1,5 +1,5 @@
 import express from "express";
-import { AuthorizeForCompanyService } from "../services/AuthorizeForCompanyService";
+import { AuthorizeForAccountService } from "../services/AuthorizeForAccount";
 
 export async function AuthorizeForCompanyController(
   req: express.Request,
@@ -7,7 +7,7 @@ export async function AuthorizeForCompanyController(
 ) {
   const requiredFields = [
     "AccountHandleToBeAuthorized",
-    "companyID",
+    "accountID",
     "ownerID",
   ];
 
@@ -18,9 +18,9 @@ export async function AuthorizeForCompanyController(
   }
 
   try {
-    const responseData = await AuthorizeForCompanyService(
+    const responseData = await AuthorizeForAccountService(
       req.body.AccountHandleToBeAuthorized,
-      req.body.companyID,
+      req.body.accountID,
       req.body.ownerID
     );
 

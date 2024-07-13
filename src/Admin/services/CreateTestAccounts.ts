@@ -18,20 +18,20 @@ export async function CreateTestAccountsService(numNewAccounts: number) {
         const nameObject = await axios.get(
           "https://api.parser.name/?api_key=f30409d63186d13cfa335a40e14dcd17&endpoint=generate"
         );
-        const firstName = nameObject.data.data[0].name.firstName.name_ascii;
-        const lastName = nameObject.data.data[0].name.lastName.name_ascii;
+        const firstname = nameObject.data.data[0].name.firstname.name_ascii;
+        const lastname = nameObject.data.data[0].name.lastname.name_ascii;
                 */
         // comment out when name coming from query above
         const randomNum = random(10 - 99);
-        const firstName = "first" + randomNum;
-        const lastName = "last" + randomNum;
+        const firstname = "first" + randomNum;
+        const lastname = "last" + randomNum;
 
         const phone = "263" + Math.floor(100000000 + Math.random() * 900000000);
         // need to check if phone unique here and generate new if not
 
         const onboardedHuman = await OnboardHumanService(
-          firstName,
-          lastName,
+          firstname,
+          lastname,
           "USD",
           phone,
           null,
@@ -44,8 +44,8 @@ export async function CreateTestAccountsService(numNewAccounts: number) {
         const consumptionAccount = await CreateAccountService(
           onboardedHuman.onboardedHumanID,
           "CONSUMPTION",
-          `${firstName} ${lastName}`,
-          `${firstName}_${lastName}`,
+          `${firstname} ${lastname}`,
+          `${firstname}_${lastname}`,
           "USD"
         );
 

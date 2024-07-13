@@ -1,12 +1,12 @@
 import express from "express";
 import { apiVersionOneRoute } from "..";
-import { OfferCredexController } from "./controllers/OfferCredexController";
-import { AcceptCredexController } from "./controllers/AcceptCredexController";
-import { AcceptCredexBulkController } from "./controllers/AcceptCredexBulkController";
-import { DeclineCredexController } from "./controllers/DeclineCredexController";
-import { CancelCredexController } from "./controllers/CancelCredexController";
-import { GetCredexController } from "./controllers/GetCredexController";
-import { GetLedgerController } from "./controllers/GetLedgerController";
+import { OfferCredexController } from "./controllers/offerCredex";
+import { AcceptCredexController } from "./controllers/acceptCredex";
+import { AcceptCredexBulkController } from "./controllers/acceptCredexBulk";
+import { DeclineCredexController } from "./controllers/declineCredex";
+import { CancelCredexController } from "./controllers/cancelCredex";
+import { GetCredexController } from "./controllers/getCredex";
+import { GetLedgerController } from "./controllers/getLedger";
 
 export default function CredexRoutes(
   app: express.Application,

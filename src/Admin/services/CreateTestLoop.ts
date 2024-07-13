@@ -1,7 +1,6 @@
 import { ledgerSpaceDriver } from "../config/neo4j";
-import { OfferCredexService } from "../../Credex/services/OfferCredexService";
-import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
-import { Credex } from "../../Credex/types/Credex";
+import { OfferCredexService } from "../../Credex/services/OfferCredex";
+import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
 import { random } from "lodash";
 import moment from "moment-timezone";
 import * as neo4j from "neo4j-driver";
@@ -41,7 +40,7 @@ export async function CreateTestLoopService(numNewTransactions: number) {
         getRandomCounterpartiesQuery.records[0].get("accountID");
     }
 
-    const credexSpecs: Credex = {
+    const credexSpecs = {
       issuerAccountID: issuerAccountID,
       receiverAccountID: receiverAccountID,
       Denomination: "USD",

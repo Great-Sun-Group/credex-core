@@ -2,12 +2,13 @@ import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
 import { getDenominations } from "../../Core/constants/denominations";
 
 export async function OnboardHumanService(
-  firstName: string,
-  lastName: string,
+  firstname: string,
+  lastname: string,
+  handle: string,
   defaultDenom: string,
   phone: string,
-  DCOgiveInCXX: number|null,
-  DCOdenom: string|null
+  DCOgiveInCXX: number | null,
+  DCOdenom: string | null
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
@@ -18,12 +19,18 @@ export async function OnboardHumanService(
       return { onboardedHumanID: false, message };
     }
 
+    if (DCOdenom && !getDenominations({ code: DCOdenom }).length) {
+      const message = "DCOdenom not in denoms";
+      console.log(message);
+      return { onboardedHumanID: false, message };
+    }
+
     const result = await ledgerSpaceSession.run(
       `
         MATCH (daynode:DayNode { Active: true })
         CREATE (human:Human{
-          firstName: $firstName,
-          lastName: $lastName,
+          firstname: $firstname,
+          lastname: $lastname,
           defaultDenom: $defaultDenom,
           phone: $phone,
           DCOgiveInCXX: $DCOgiveInCXX,
@@ -37,7 +44,15 @@ export async function OnboardHumanService(
           human.uniqueHumanID AS uniqueHumanID,
           human.phone AS phone
       `,
-      { firstName, lastName, defaultDenom, phone }
+      {
+        firstname,
+        lastname,
+        handle,
+        defaultDenom,
+        phone,
+        DCOgiveInCXX,
+        DCOdenom,
+      }
     );
 
     if (!result.records.length) {

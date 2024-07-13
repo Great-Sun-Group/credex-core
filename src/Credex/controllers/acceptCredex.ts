@@ -1,23 +1,22 @@
 import express from "express";
-import { OfferCredexService } from "../services/OfferCredexService";
+import { AcceptCredexService } from "../services/AcceptCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 
-export async function OfferCredexController(
+export async function AcceptCredexController(
   req: express.Request,
   res: express.Response
 ) {
   try {
-    const offerCredexData = await OfferCredexService(req.body);
+    const acceptCredexData = await AcceptCredexService(req.body.credexID);
     const dashboardData = await GetAccountDashboardService(
-      req.body.issuerAccountID,
-      req.body.authorizerAccountID
+      req.body.accountID,
+      req.body.accountID
     );
     res.json({
-      offerCredexData: offerCredexData,
+      acceptCredexData: acceptCredexData,
       dashboardData: dashboardData,
     });
   } catch (err) {
-    console.error("Error in OfferCredexController:", err);
     res.status(500).json({ error: (err as Error).message });
   }
 }

@@ -1,23 +1,14 @@
-/*
-returns offers made to a account and not yet accepted/declined/cancelled
-
-requires accountID
-
-returns for each pending offer:
-  credexID
-  formattedInitialAmount (eg 1,234.56 USD)
-  counterpartyDisplayname
-  secured boolean
-
-returns empty array if no pending offers in, or if accountID not found
-
-*/
-
 import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
-import { GetDisplayNameService } from "../../Account/services/GetDisplayNameService";
-import { Credex } from "../types/Credex";
 import moment from "moment-timezone";
+
+interface OfferedCredex {
+  credexID: string;
+  formattedInitialAmount: string;
+  counterpartyAccountName: string;
+  dueDate?: string; // optional field
+  secured?: boolean; // optional field
+}
 
 export async function GetPendingOffersInService(accountID: string) {
   try {
@@ -33,10 +24,7 @@ export async function GetPendingOffersInService(accountID: string) {
           offersInCredex.credexID AS credexID,
           offersInCredex.Denomination AS Denomination,
           offersInCredex.dueDate AS dueDate,
-          counterparty.firstname AS counterpartyFirstname,
-          counterparty.lastname AS counterpartyLastname,
-          counterparty.companyname AS counterpartyCompanyname,
-          counterparty.accountType AS counterpartyAccountType,
+          counterparty.accountName AS counterpartyAccountName,
           securer IS NOT NULL as secured
       `,
       { accountID }
@@ -47,7 +35,7 @@ export async function GetPendingOffersInService(accountID: string) {
       return {};
     }
 
-    const offeredCredexData: Credex[] = [];
+    const offeredCredexData = [];
     for (const record of result.records) {
       const formattedInitialAmount =
         denomFormatter(
@@ -57,22 +45,10 @@ export async function GetPendingOffersInService(accountID: string) {
         " " +
         record.get("Denomination");
 
-      const counterpartyDisplayname = GetDisplayNameService({
-        accountType: record.get("counterpartyAccountType"),
-        firstname: record.get("counterpartyFirstname"),
-        lastname: record.get("counterpartyLastname"),
-        companyname: record.get("counterpartyCompanyname"),
-      });
-
-      if (!counterpartyDisplayname) {
-        console.log("error: could not process counterparty displayname");
-        return false;
-      }
-
-      const thisOfferedCredex: Credex = {
+      const thisOfferedCredex: OfferedCredex = {
         credexID: record.get("credexID"),
         formattedInitialAmount: formattedInitialAmount,
-        counterpartyDisplayname: counterpartyDisplayname,
+        counterpartyAccountName: record.get("counterpartyAccountName"),
       };
       if (record.get("dueDate")) {
         thisOfferedCredex.dueDate = moment(record.get("dueDate"))

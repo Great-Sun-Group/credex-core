@@ -9,11 +9,11 @@ export async function OnboardHumanController(
   res: express.Response
 ): Promise<void> {
   const fieldsRequired = [
-    "firstName",
-    "lastName",
+    "firstname",
+    "lastname",
     "defaultDenom",
     "phone",
-    "handleForConsumptionAccount",
+    "handle",
   ];
 
   for (const field of fieldsRequired) {
@@ -25,8 +25,9 @@ export async function OnboardHumanController(
 
   try {
     const onboardedHuman = await OnboardHumanService(
-      req.body.firstName,
-      req.body.lastName,
+      req.body.firstname,
+      req.body.lastname,
+      req.body.handle,
       req.body.defaultDenom,
       req.body.phone,
       req.body.DCOgiveInCXX,
@@ -41,8 +42,8 @@ export async function OnboardHumanController(
     const consumptionAccount = await CreateAccountService(
       onboardedHuman.onboardedHumanID,
       "CONSUMPTION",
-      `${req.body.firstName} ${req.body.lastName}`,
-      req.body.handleForConsumptionAccount,
+      `${req.body.firstname} ${req.body.lastname}`,
+      req.body.handle,
       req.body.defaultDenom
     );
 

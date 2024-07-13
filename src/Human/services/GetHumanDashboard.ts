@@ -11,8 +11,8 @@ export async function GetHumanDashboardService(phone: string) {
       WITH human, COLLECT(account.accountID) AS accountIDs
       RETURN
         human.uniqueHumanID AS uniqueHumanID,
-        human.firstName AS firstName,
-        human.lastName AS lastName,
+        human.firstname AS firstname,
+        human.lastname AS lastname,
         human.defaultDenom AS defaultDenom,
         [human.uniqueHumanID] + accountIDs AS authorizedFor
       `,
@@ -26,8 +26,8 @@ export async function GetHumanDashboardService(phone: string) {
 
     return {
       uniqueHumanID: result.records[0].get("uniqueHumanID"),
-      firstName: result.records[0].get("firstName"),
-      lastName: result.records[0].get("lastName"),
+      firstname: result.records[0].get("firstname"),
+      lastname: result.records[0].get("lastname"),
       defaultDenom: result.records[0].get("defaultDenom"),
       authorizedFor: result.records[0].get("authorizedFor"),
     };

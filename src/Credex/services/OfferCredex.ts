@@ -5,11 +5,10 @@ adds fields to indicate credex is an offer and a purchase
 returns data passed out from CreateCredexService
 */
 
-import { CreateCredexService } from "./CreateCredexService";
-import { Credex } from "../types/Credex";
+import { CreateCredexService } from "./CreateCredex";
 import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
 
-export async function OfferCredexService(credexData: Credex) {
+export async function OfferCredexService(credexData: any) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
     credexData.OFFERSorREQUESTS = "OFFERS";

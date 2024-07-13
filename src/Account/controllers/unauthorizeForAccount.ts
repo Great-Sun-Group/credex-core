@@ -1,11 +1,11 @@
 import express from "express";
-import { UnauthorizeForCompanyService } from "../services/UnauthorizeForCompanyService";
+import { UnauthorizeForCompanyService } from "../services/UnauthorizeForAccount";
 
 export async function UnauthorizeForCompanyController(
   req: express.Request,
   res: express.Response
 ) {
-  const requiredFields = ["AccountIDtoBeUnauthorized", "companyID", "ownerID"];
+  const requiredFields = ["AccountIDtoBeUnauthorized", "accountID", "ownerID"];
 
   for (const field of requiredFields) {
     if (!req.body[field]) {
@@ -16,7 +16,7 @@ export async function UnauthorizeForCompanyController(
   try {
     const responseData = await UnauthorizeForCompanyService(
       req.body.AccountIDtoBeUnauthorized,
-      req.body.companyID,
+      req.body.accountID,
       req.body.ownerID
     );
 

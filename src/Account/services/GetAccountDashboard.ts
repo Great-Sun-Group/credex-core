@@ -1,8 +1,8 @@
 import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
 import { GetDisplayNameService } from "./GetDisplayNameService";
-import { GetBalancesService } from "../../Credex/services/GetBalancesService";
-import { GetPendingOffersInService } from "../../Credex/services/GetPendingOffersInService";
-import { GetPendingOffersOutService } from "../../Credex/services/GetPendingOffersOutService";
+import { GetBalancesService } from "../../Credex/services/GetBalances";
+import { GetPendingOffersInService } from "../../Credex/services/GetPendingOffersIn";
+import { GetPendingOffersOutService } from "../../Credex/services/GetPendingOffersOut";
 
 export async function GetAccountDashboardService(
   accountID: string,

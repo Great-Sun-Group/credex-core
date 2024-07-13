@@ -1,5 +1,5 @@
 import express from "express";
-import { UpdateAccountService } from "../services/UpdateAccountService";
+import { UpdateAccountService } from "../services/UpdateAccount";
 
 export async function UpdateAccountController(
   req: express.Request,
@@ -16,9 +16,8 @@ export async function UpdateAccountController(
     const updatedAccountID = await UpdateAccountService(
       req.body.ownerID,
       req.body.accountID,
-      req.body.phone,
-      req.body.handle,
-      req.body.defaultDenom
+      req.body.accountName,
+      req.body.accountHandle,      req.body.defaultDenom
     );
 
     if (updatedAccountID) {

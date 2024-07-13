@@ -1,11 +1,11 @@
 import express from "express";
-import { UpdateSendOffersToService } from "../services/UpdateSendOffersToService";
+import { UpdateSendOffersToService } from "../services/UpdateSendOffersTo";
 
 export async function UpdateSendOffersToController(
   req: express.Request,
   res: express.Response
 ) {
-  const requiredFields = ["accountIDtoSendOffers", "companyID", "ownerID"];
+  const requiredFields = ["humanIDtoSendOffers", "accountID", "ownerID"];
 
   for (const field of requiredFields) {
     if (!req.body[field]) {
@@ -15,8 +15,8 @@ export async function UpdateSendOffersToController(
 
   try {
     const responseData = await UpdateSendOffersToService(
-      req.body.accountIDtoSendOffers,
-      req.body.companyID,
+      req.body.humanIDtoSendOffers,
+      req.body.accountID,
       req.body.ownerID
     );
 

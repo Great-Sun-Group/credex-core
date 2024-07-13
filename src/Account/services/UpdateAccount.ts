@@ -9,7 +9,7 @@ fields that can be updated:
     lastname
     companyname
     phone
-    handle
+    accountHandle
     DailyCredcoinOfferingGive
     DailyCredcoinOfferingDenom
 
@@ -27,8 +27,8 @@ import { getDenominations } from "../../Core/constants/denominations";
 export async function UpdateAccountService(
   ownerID: string,
   accountID: string,
-  phone: string,
-  handle: string,
+  accountName: string,
+  accountHandle: string,
   defaultDenom: string
 ) {
   // Validation: Check defaultDenom in denominations
@@ -39,8 +39,8 @@ export async function UpdateAccountService(
   }
 
   const dataToUpdate = {
-    phone: phone,
-    handle: handle,
+    accountName: accountName,
+    accountHandle: accountHandle,
     defaultDenom: defaultDenom,
   };
 

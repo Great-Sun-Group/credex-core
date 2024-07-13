@@ -2,10 +2,9 @@ import axios from "axios";
 import _ from "lodash";
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../Admin/config/neo4j";
 import { getDenominations } from "../constants/denominations";
-import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecuredAuthorizationService";
-import { OfferCredexService } from "../../Credex/services/OfferCredexService";
-import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
-import { Credex } from "../../Credex/types/Credex";
+import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecuredAuthorization";
+import { OfferCredexService } from "../../Credex/services/OfferCredex";
+import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
 import { fetchZigRate } from "./fetchZigRate";
 
 export async function DCOexecute() {
@@ -230,7 +229,7 @@ export async function DCOexecute() {
 
     const offerAndAcceptPromisesDCOgive = confirmedParticipants.map(
       async (confirmedParticipant) => {
-        const dataForDCOgive: Credex = {
+        const dataForDCOgive = {
           issuerAccountID: confirmedParticipant.get("accountID"),
           receiverAccountID: foundationID,
           Denomination: confirmedParticipant.get("DCOdenom"),
@@ -391,7 +390,7 @@ export async function DCOexecute() {
     console.log("Creating DCO receive transactions");
     const offerAndAcceptPromisesDCOreceive = confirmedParticipants.map(
       async (confirmedParticipant) => {
-        const dataForDCOreceive: Credex = {
+        const dataForDCOreceive = {
           issuerAccountID: foundationID,
           receiverAccountID: confirmedParticipant.get("accountID"),
           Denomination: "CXX",

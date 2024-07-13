@@ -1,7 +1,7 @@
 import express from "express";
-import { CancelCredexService } from "../services/CancelCredexService";
+import { DeclineCredexService } from "../services/DeclineCredex";
 
-export async function CancelCredexController(
+export async function DeclineCredexController(
   req: express.Request,
   res: express.Response,
 ) {
@@ -15,7 +15,7 @@ export async function CancelCredexController(
     }
   }
   try {
-    const responseData = await CancelCredexService(req.body.credexID);
+    const responseData = await DeclineCredexService(req.body.credexID);
     res.json(responseData);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });

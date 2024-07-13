@@ -12,7 +12,6 @@ returns
 import { ledgerSpaceDriver } from "../../Admin/config/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
 import { GetDisplayNameService } from "../../Account/services/GetDisplayNameService";
-import { Credex } from "../types/Credex";
 import moment from "moment-timezone";
 
 export async function GetCredexService(credexID: string, accountID: string) {
@@ -114,7 +113,7 @@ export async function GetCredexService(credexID: string, accountID: string) {
       companyname: record.get("counterpartyCompanyname"),
     });
 
-    const credexData: Credex = {
+    const credexData = {
       credexID: record.get("credexID"),
       transactionType: record.get("transactionType"),
       debit,

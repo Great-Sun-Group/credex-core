@@ -2,11 +2,10 @@ import { ledgerSpaceDriver, searchSpaceDriver } from "../../Admin/config/neo4j";
 import { getDenominations } from "../constants/denominations";
 import { OnboardHumanService } from "../../Human/services/OnboardHuman";
 import { CreateAccountService } from "../../Account/services/CreateAccount";
-import { OfferCredexService } from "../../Credex/services/OfferCredexService";
-import { AcceptCredexService } from "../../Credex/services/AcceptCredexService";
+import { OfferCredexService } from "../../Credex/services/OfferCredex";
+import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
 import { fetchZigRate } from "./fetchZigRate";
 import axios from "axios";
-import { Credex } from "../../Credex/types/Credex";
 import _ from "lodash";
 
 export async function DBinitialization(): Promise<void> {
@@ -134,7 +133,7 @@ export async function DBinitialization(): Promise<void> {
 
     console.log("Creating initialization accounts and relationships...");
     const rdubs = await OnboardHumanService(
-      "Ryan", 
+      "Ryan",
       "Watson",
       "USD",
       "263778177125",
@@ -156,7 +155,7 @@ export async function DBinitialization(): Promise<void> {
       "CREDEX_FOUNDATION",
       "Credex Foundation",
       "credexfoundation",
-      "CXX",
+      "CXX"
     );
     let credexFoundationID;
     if (typeof credexFoundation.account == "boolean") {
@@ -176,7 +175,7 @@ export async function DBinitialization(): Promise<void> {
       "COMPANY",
       "Great Sun Financial",
       "greatsunfinancial",
-      "CAD",
+      "CAD"
     );
     if (!greatSun) {
       throw new Error("greatSun could not be created");
@@ -195,7 +194,7 @@ export async function DBinitialization(): Promise<void> {
     );
 
     //charging an account for participation in first DCO
-    const credexData: Credex = {
+    const credexData = {
       issuerAccountID: greatSunID,
       receiverAccountID: rdubsID,
       Denomination: CXXdenom,

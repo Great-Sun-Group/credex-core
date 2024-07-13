@@ -1,5 +1,5 @@
 import express from "express";
-import { GetAccountByHandleService } from "../services/GetAccountByHandleService";
+import { GetAccountByHandleService } from "../services/GetAccountByHandle";
 
 export async function GetAccountByHandleController(
   req: express.Request,

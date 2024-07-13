@@ -1,5 +1,5 @@
 import express from "express";
-import { AcceptCredexService } from "../services/AcceptCredexService";
+import { AcceptCredexService } from "../services/AcceptCredex";
 
 export async function AcceptCredexBulkController(
   req: express.Request,

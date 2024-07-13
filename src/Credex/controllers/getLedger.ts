@@ -1,5 +1,5 @@
 import express from "express";
-import { GetLedgerService } from "../services/GetLedgerService";
+import { GetLedgerService } from "../services/GetLedger";
 
 export async function GetLedgerController(
   req: express.Request,

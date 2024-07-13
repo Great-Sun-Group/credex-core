@@ -1,12 +1,12 @@
 import express from "express";
 import { apiVersionOneRoute } from "..";
-import { CreateAccountController } from "./controllers/CreateAccountController";
-import { GetAccountByHandleController } from "./controllers/GetAccountByHandleController";
+import { CreateAccountController } from "./controllers/createAccount";
+import { GetAccountByHandleController } from "./controllers/getAccountByHandle";
 import { GetAccountsListController } from "./controllers/GetAccountsListController";
-import { UpdateAccountController } from "./controllers/UpdateAccountController";
-import { AuthorizeForCompanyController } from "./controllers/AuthorizeForCompanyController";
-import { UnauthorizeForCompanyController } from "./controllers/UnauthorizeForCompanyController";
-import { UpdateSendOffersToController } from "./controllers/UpdateSendOffersToController";
+import { UpdateAccountController } from "./controllers/updateAccount";
+import { AuthorizeForCompanyController } from "./controllers/authorizeForAccount";
+import { UnauthorizeForCompanyController } from "./controllers/unauthorizeForAccount";
+import { UpdateSendOffersToController } from "./controllers/updateSendOffersTo";
 
 export default function AccountRoutes(
   app: express.Application,

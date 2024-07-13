@@ -29,13 +29,12 @@ import {
   getDenominations,
   denomFormatter,
 } from "../../Core/constants/denominations";
-import { GetSecuredAuthorizationService } from "./GetSecuredAuthorizationService";
-import { Credex } from "../types/Credex";
+import { GetSecuredAuthorizationService } from "./GetSecuredAuthorization";
 import { checkDueDate, credspan } from "../../Core/constants/credspan";
 import { checkPermittedCredexType } from "../../Core/constants/credexTypes";
 import { GetDisplayNameService } from "../../Account/services/GetDisplayNameService";
 
-export async function CreateCredexService(credexData: Credex) {
+export async function CreateCredexService(credexData: any) {
   const {
     issuerAccountID,
     receiverAccountID,
@@ -240,7 +239,7 @@ export async function CreateCredexService(credexData: Credex) {
       );
     }
 
-    const newCredex: Credex = {
+    const newCredex = {
       credexID: createCredexQuery.records[0].get("credexID"),
       formattedInitialAmount: denomFormatter(InitialAmount, Denomination),
       counterpartyDisplayname: GetDisplayNameService({
