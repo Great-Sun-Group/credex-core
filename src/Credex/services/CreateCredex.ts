@@ -32,7 +32,6 @@ import {
 import { GetSecuredAuthorizationService } from "./GetSecuredAuthorization";
 import { checkDueDate, credspan } from "../../Core/constants/credspan";
 import { checkPermittedCredexType } from "../../Core/constants/credexTypes";
-import { GetDisplayNameService } from "../../Account/services/GetDisplayNameService";
 
 export async function CreateCredexService(credexData: any) {
   const {
@@ -169,7 +168,7 @@ export async function CreateCredexService(credexData: any) {
     // Create the credex
     const createCredexQuery = await ledgerSpaceSession.run(
       `
-        MATCH (daynode:DayNode {Active: true})
+        MATCH (daynode:Daynode {Active: true})
         MATCH (issuer:Account {accountID: $issuerAccountID})
         MATCH (receiver:Account {accountID: $receiverAccountID})
         CREATE (newCredex:Credex)
@@ -190,10 +189,7 @@ export async function CreateCredexService(credexData: any) {
         MERGE (issuer)-[:${OFFEREDorREQUESTED}]->(newCredex)-[:${OFFEREDorREQUESTED}]->(receiver)
         RETURN
           newCredex.credexID AS credexID,
-          receiver.accountType AS receiverAccountType,
-          receiver.firstname AS receiverFirstname,
-          receiver.lastname AS receiverLastname,
-          receiver.companyname AS receiverCompanyname
+          receiver.accountName AS receiverAccountName,
       `,
       {
         issuerAccountID,
@@ -242,12 +238,9 @@ export async function CreateCredexService(credexData: any) {
     const newCredex = {
       credexID: createCredexQuery.records[0].get("credexID"),
       formattedInitialAmount: denomFormatter(InitialAmount, Denomination),
-      counterpartyDisplayname: GetDisplayNameService({
-        accountType: createCredexQuery.records[0].get("receiverAccountType"),
-        firstname: createCredexQuery.records[0].get("receiverFirstname"),
-        lastname: createCredexQuery.records[0].get("receiverLastname"),
-        companyname: createCredexQuery.records[0].get("receiverCompanyname"),
-      }),
+      counterpartyAccountName: createCredexQuery.records[0].get(
+        "receiverAccountName"
+      ),
       secured: securedCredex,
       dueDate: dueDate,
     };

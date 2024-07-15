@@ -11,7 +11,6 @@ returns
 
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
-import { GetDisplayNameService } from "../../Account/services/GetDisplayNameService";
 import moment from "moment-timezone";
 
 export async function GetCredexService(credexID: string, accountID: string) {
@@ -27,10 +26,7 @@ export async function GetCredexService(credexID: string, accountID: string) {
         credex.credexID AS credexID,
         type(transactionType) AS transactionType,
         (startNode(transactionType) = account) AS debit,
-        counterparty.firstname AS counterpartyFirstname,
-        counterparty.lastname AS counterpartyLastname,
-        counterparty.companyname AS counterpartyCompanyname,
-        counterparty.accountType AS counterpartyAccountType,
+        counterparty.accountName AS counterpartyAccountName,
         securer.accountID AS securerID,
         securer.companyname AS securerName,
         credex.Denomination AS Denomination,
@@ -45,10 +41,7 @@ export async function GetCredexService(credexID: string, accountID: string) {
         credloopRel.AmountRedeemed / credloopRel.CXXmultiplier AS clearedAmount,
         clearedAgainstCredex.InitialAmount / clearedAgainstCredex.CXXmultiplier AS clearedAgainstCredexInitialAmount,
         clearedAgainstCredex.Denomination AS clearedAgainstCredexDenomination,
-        clearedAgainstCounterparty.firstname AS clearedAgainstCounterpartyFirstname,
-        clearedAgainstCounterparty.lastname AS clearedAgainstCounterpartyLastname,
-        clearedAgainstCounterparty.companyname AS clearedAgainstCounterpartyCompanyname,
-        clearedAgainstCounterparty.accountType AS clearedAgainstCounterpartyAccountType
+        clearedAgainstCounterparty.accountName AS clearedAgainstCounterpartyAccountName
       `,
       { credexID, accountID }
     );
@@ -106,18 +99,13 @@ export async function GetCredexService(credexID: string, accountID: string) {
     const dueDate = moment(record.get("dueDate"))
       .subtract(1, "month")
       .format("YYYY-MM-DD");
-    const counterpartyDisplayname = GetDisplayNameService({
-      accountType: record.get("counterpartyAccountType"),
-      firstname: record.get("counterpartyFirstname"),
-      lastname: record.get("counterpartyLastname"),
-      companyname: record.get("counterpartyCompanyname"),
-    });
+    const counterpartyAccountName = record.get("counterpartyAccountName")
 
     const credexData = {
       credexID: record.get("credexID"),
       transactionType: record.get("transactionType"),
       debit,
-      counterpartyDisplayname,
+      counterpartyAccountName,
       securerID: record.get("securerID"),
       securerName: record.get("securerName"),
       Denomination,
@@ -140,12 +128,7 @@ export async function GetCredexService(credexID: string, accountID: string) {
           "clearedAgainstCredexDenomination"
         );
 
-        const clearedAgainstCounterpartyDisplayname = GetDisplayNameService({
-          accountType: record.get("clearedAgainstCounterpartyAccountType"),
-          firstname: record.get("clearedAgainstCounterpartyFirstname"),
-          lastname: record.get("clearedAgainstCounterpartyLastname"),
-          companyname: record.get("clearedAgainstCounterpartyCompanyname"),
-        });
+        const clearedAgainstCounterpartyAccountName = record.get("clearedAgainstCounterpartyAccountName")
 
         return {
           clearedAgainstCredexID: record.get("clearedAgainstCredexID"),
@@ -157,7 +140,7 @@ export async function GetCredexService(credexID: string, accountID: string) {
             signumClearedAgainstCredexInitialAmount,
             clearedAgainstCredexDenomination
           )} ${clearedAgainstCredexDenomination}`,
-          clearedAgainstCounterpartyDisplayname,
+          clearedAgainstCounterpartyAccountName,
         };
       });
 

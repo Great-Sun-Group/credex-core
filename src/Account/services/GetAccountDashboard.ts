@@ -1,5 +1,4 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
-import { GetDisplayNameService } from "./GetDisplayNameService";
 import { GetBalancesService } from "../../Credex/services/GetBalances";
 import { GetPendingOffersInService } from "../../Credex/services/GetPendingOffersIn";
 import { GetPendingOffersOutService } from "../../Credex/services/GetPendingOffersOut";
@@ -40,10 +39,8 @@ export async function GetAccountDashboardService(
           dashboardType,
           account.accountID AS accountID,
           account.accountType AS accountType,
-          account.firstname AS firstname,
-          account.lastname AS lastname,
-          account.companyname AS companyname,
-          account.handle AS handle,
+          account.accountName AS accountName,
+          account.accountHandle AS handle,
           account.defaultDenom AS defaultDenom,
           offerRecipient.accountID AS offerRecipientID,
           offerRecipient.firstname + " " + offerRecipient.lastname AS offerRecipientDisplayname,
@@ -60,13 +57,8 @@ export async function GetAccountDashboardService(
     const accountData: any = {
       dashboardType: result.records[0].get("dashboardType"),
       accountID: result.records[0].get("accountID"),
-      displayName: GetDisplayNameService({
-        accountType: result.records[0].get("accountType"),
-        firstname: result.records[0].get("firstname"),
-        lastname: result.records[0].get("lastname"),
-        companyname: result.records[0].get("companyname"),
-      }),
-      handle: result.records[0].get("handle"),
+      accountName: result.records[0].get("accountName"),
+      accountHandle: result.records[0].get("accountHandle"),
       defaultDenom: result.records[0].get("defaultDenom"),
       offerRecipientID: result.records[0].get("offerRecipientID"),
       offerRecipientDisplayname: result.records[0].get(

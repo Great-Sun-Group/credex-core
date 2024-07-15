@@ -27,7 +27,7 @@ export async function OnboardHumanService(
 
     const result = await ledgerSpaceSession.run(
       `
-        MATCH (daynode:DayNode { Active: true })
+        MATCH (daynode:Daynode { Active: true })
         CREATE (human:Human{
           firstname: $firstname,
           lastname: $lastname,

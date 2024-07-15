@@ -21,7 +21,7 @@ export async function LoopFinder(
     //as per daynode, so that they can be processed through the loopfinder and will be
     //prioritized by oldest outstanding credex
     const getDaynodeDate = await ledgerSpaceSession.run(`
-      MATCH (daynode:DayNode {Active: true})
+      MATCH (daynode:Daynode {Active: true})
       RETURN daynode.Date AS today
       `);
     credexDueDate = getDaynodeDate.records[0].get("today");
@@ -216,7 +216,7 @@ export async function LoopFinder(
 
       const ledgerSpaceQuery = await ledgerSpaceSession.run(
         `
-          MATCH (daynode:DayNode {Active: true})
+          MATCH (daynode:Daynode {Active: true})
           CREATE (loopAnchor:LoopAnchor {
               loopedAt: DateTime(),
               loopID: randomUUID(),

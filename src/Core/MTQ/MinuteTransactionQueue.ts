@@ -1,6 +1,5 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { LoopFinder } from "./LoopFinder";
-import { GetDisplayNameService } from "../../Account/services/GetDisplayNameService";
 import _ from "lodash";
 
 export async function MinuteTransactionQueue() {
@@ -10,7 +9,7 @@ export async function MinuteTransactionQueue() {
   console.log("MTQ start: check if DCO or MTQ is in progress");
   //and set MTQrunningNow flag to postpone DCO
   const DCOinProgressCheck = await ledgerSpaceSession.run(`
-    MATCH (daynode:DayNode {Active: true})
+    MATCH (daynode:Daynode {Active: true})
     RETURN
       daynode.DCOrunningNow AS DCOflag,
       daynode.MTQrunningNow AS MTQflag
@@ -33,7 +32,7 @@ export async function MinuteTransactionQueue() {
   console.log("Running MTQ");
 
   await ledgerSpaceSession.run(`
-    MATCH (daynode:DayNode {Active: true})
+    MATCH (daynode:Daynode {Active: true})
     SET daynode.MTQrunningNow = true
   `);
 
@@ -48,21 +47,13 @@ export async function MinuteTransactionQueue() {
       MATCH (newAccount:Account {queueStatus: "PENDING_MEMBER"})
       RETURN
         newAccount.accountID AS accountID,
-        newAccount.accountType AS accountType,
-        newAccount.firstname AS firstname,
-        newAccount.lastname AS lastname,
-        newAccount.companyname AS companyname
+        newAccount.accountName AS accountName,
     `);
 
     for (const record of getQueuedAccounts.records) {
       const accountForSearchSpace = {
         accountID: record.get("accountID"),
-        displayName: GetDisplayNameService({
-          accountType: record.get("accountType"),
-          firstname: record.get("firstname"),
-          lastname: record.get("lastname"),
-          companyname: record.get("companyname"),
-        }),
+        accountName: record.get("accountName"),
       };
 
       const addAccount = await searchSpaceSession.run(
@@ -77,7 +68,7 @@ export async function MinuteTransactionQueue() {
       if (addAccount.records.length === 0) {
         console.log(
           "Error creating account in searchSpace: " +
-            accountForSearchSpace.displayName
+            accountForSearchSpace.accountName
         );
         continue;
       }
@@ -93,7 +84,7 @@ export async function MinuteTransactionQueue() {
       );
 
       console.log(
-        "Account created in searchSpace: " + accountForSearchSpace.displayName
+        "Account created in searchSpace: " + accountForSearchSpace.accountName
       );
     }
 
@@ -105,14 +96,13 @@ export async function MinuteTransactionQueue() {
       OPTIONAL MATCH (queuedCredex)<-[:SECURES]-(securer:Account)
       RETURN queuedCredex.acceptedAt AS acceptedAt,
              issuerAccount.accountID AS issuerAccountID,
-             queuedCredex.credexID AS credexID,
-             queuedCredex.InitialAmount AS credexAmount,
-             queuedCredex.Denomination AS credexDenomination,
-             queuedCredex.CXXmultiplier AS credexCXXmultiplier,
-             queuedCredex.CXXmultiplier AS CXXmultiplier,
+             acceptorAccount.accountID AS acceptorAccountID,
              securer.accountID AS securerID,
-             queuedCredex.dueDate AS credexDueDate,
-             acceptorAccount.accountID AS acceptorAccountID
+             queuedCredex.credexID AS credexID,
+             queuedCredex.InitialAmount AS amount,
+             queuedCredex.Denomination AS denomination,
+             queuedCredex.CXXmultiplier AS CXXmultiplier,
+             queuedCredex.dueDate AS dueDate
     `);
 
     const sortedQueuedCredexes = _.sortBy(
@@ -120,17 +110,17 @@ export async function MinuteTransactionQueue() {
         const credexObject = {
           acceptedAt: record.get("acceptedAt"),
           issuerAccountID: record.get("issuerAccountID"),
-          credexID: record.get("credexID"),
-          credexAmount: record.get("credexAmount"),
-          credexDenomination: record.get("credexDenomination"),
-          credexCXXmultiplier: record.get("credexCXXmultiplier"),
-          credexSecuredDenom: "floating",
-          credexDueDate: record.get("credexDueDate"),
           acceptorAccountID: record.get("acceptorAccountID"),
+          credexID: record.get("credexID"),
+          amount: record.get("amount"),
+          denomination: record.get("denomination"),
+          CXXmultiplier: record.get("CXXmultiplier"),
+          credexSecuredDenom: "floating",
+          dueDate: record.get("dueDate"),
         };
         // add secured data if appropriate
         if (record.get("securerID") !== null) {
-          credexObject.credexSecuredDenom = record.get("credexDenomination");
+          credexObject.credexSecuredDenom = record.get("denomination");
         }
         return credexObject;
       }),
@@ -141,11 +131,11 @@ export async function MinuteTransactionQueue() {
       await LoopFinder(
         credex.issuerAccountID,
         credex.credexID,
-        credex.credexAmount,
-        credex.credexDenomination,
-        credex.credexCXXmultiplier,
+        credex.amount,
+        credex.denomination,
+        credex.CXXmultiplier,
         credex.credexSecuredDenom,
-        credex.credexDueDate,
+        credex.dueDate,
         credex.acceptorAccountID
       );
     }
@@ -154,7 +144,7 @@ export async function MinuteTransactionQueue() {
   } finally {
     //turn off MTQrunningNow flag
     await ledgerSpaceSession.run(`
-      MATCH (daynode:DayNode{MTQrunningNow: true})
+      MATCH (daynode:Daynode{MTQrunningNow: true})
       SET daynode.MTQrunningNow = false
     `);
 

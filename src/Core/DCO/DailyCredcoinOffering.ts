@@ -8,11 +8,11 @@ export async function DailyCredcoinOffering(): Promise<boolean> {
   try {
     //check for active daynode
     const daynodeExistsQuery = await ledgerSpaceSession.run(`
-      OPTIONAL MATCH (daynode:DayNode {Active: true})
-      RETURN daynode IS NOT NULL AS activeDayNodeExists
+      OPTIONAL MATCH (daynode:Daynode {Active: true})
+      RETURN daynode IS NOT NULL AS activeDaynodeExists
     `);
     const daynodeExists = daynodeExistsQuery.records[0].get(
-      "activeDayNodeExists"
+      "activeDaynodeExists"
     );
 
     if (!daynodeExists) {

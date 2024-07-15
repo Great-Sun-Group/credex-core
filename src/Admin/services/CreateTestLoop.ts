@@ -20,7 +20,7 @@ export async function CreateTestLoopService(numNewTransactions: number) {
   );
 
   const getDaynodeDate = await ledgerSpaceSession.run(`
-      MATCH (daynode:DayNode {Active: true})
+      MATCH (daynode:Daynode {Active: true})
       RETURN daynode.Date AS today
   `);
   const today = getDaynodeDate.records[0].get("today");

@@ -19,7 +19,7 @@ export async function DBinitialization(): Promise<void> {
     await ledgerSpaceSession.run(
       `
         CREATE CONSTRAINT daynode_unique IF NOT EXISTS
-        FOR (daynode:DayNode) REQUIRE daynode.Date IS UNIQUE;
+        FOR (daynode:Daynode) REQUIRE daynode.Date IS UNIQUE;
       `
     );
 
@@ -122,7 +122,7 @@ export async function DBinitialization(): Promise<void> {
     console.log("Creating dayzero daynode...");
     await ledgerSpaceSession.run(
       `
-        CREATE (daynode:DayNode)
+        CREATE (daynode:Daynode)
         SET daynode = $dayZeroCXXrates,
             daynode.Date = date($dayZero),
             daynode.Active = TRUE,
@@ -135,6 +135,7 @@ export async function DBinitialization(): Promise<void> {
     const rdubs = await OnboardHumanService(
       "Ryan",
       "Watson",
+      "ryanlukewatson",
       "USD",
       "263778177125",
       1,

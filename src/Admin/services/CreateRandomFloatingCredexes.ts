@@ -16,7 +16,7 @@ async function getDateAndRandCounterparties() {
     WITH accountID_1, accounts2, rand() AS rand2
     ORDER BY rand2
     WITH accountID_1, accounts2.accountID AS accountID_2 LIMIT 1
-    MATCH (daynode:DayNode{Active:true})
+    MATCH (daynode:Daynode{Active:true})
     RETURN daynode.Date AS date, accountID_1, accountID_2
   `);
 

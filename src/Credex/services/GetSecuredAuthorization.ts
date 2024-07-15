@@ -54,7 +54,7 @@ export async function GetSecuredAuthorizationService(
         SUM(CASE WHEN endNode(transactionType) = account THEN credex.OutstandingAmount ELSE 0 END) -
         SUM(CASE WHEN startNode(transactionType) = account THEN credex.OutstandingAmount ELSE 0 END)
         AS netSecurablePerSecurerCXX
-      MATCH (daynode:DayNode {Active: true})
+      MATCH (daynode:Daynode {Active: true})
       RETURN
         securingAccountID,
         netSecurablePerSecurerCXX / daynode[$Denomination] AS netSecurableInDenom

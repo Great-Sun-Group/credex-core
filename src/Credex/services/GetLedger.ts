@@ -24,7 +24,6 @@ returns empty array if accountID not valid
 import * as neo4j from "neo4j-driver";
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
-import { Credex } from "../types/Credex";
 
 export async function GetLedgerService(
   accountID: string,
@@ -50,10 +49,7 @@ export async function GetLedgerService(
             credex.InitialAmount/credex.CXXmultiplier AS InitialAmount,
             credex.Denomination AS Denomination,
             (startNode(transactionType) = account) as debit,
-            counterparty.firstname AS counterpartyFirstname,
-            counterparty.lastname AS counterpartyLastname,
-            counterparty.companyname AS counterpartyCompanyname,
-            counterparty.accountType AS counterpartyAccountType
+            counterparty.accountType AS counterpartyAccountName
             ORDER BY credex.acceptedAt
             SKIP $startRow
             LIMIT $numRows
@@ -77,30 +73,16 @@ export async function GetLedgerService(
         ? -parseFloat(record.get("InitialAmount"))
         : record.get("InitialAmount");
       const Denomination = record.get("Denomination");
-      const counterpartyFirstname = record.get("counterpartyFirstname");
-      const counterpartyLastname = record.get("counterpartyLastname");
-      const counterpartyCompanyname = record.get("counterpartyCompanyname");
-      const counterpartyAccountType = record.get("counterpartyAccountType");
+      const counterpartyAccountName = record.get("counterpartyAccountName");
 
       const formattedInitialAmount =
         denomFormatter(InitialAmount, Denomination) + " " + Denomination;
 
-      let counterpartyDisplayname = "";
-      if (counterpartyAccountType === "HUMAN") {
-        counterpartyDisplayname =
-          counterpartyFirstname + " " + counterpartyLastname;
-      } else if (
-        counterpartyAccountType === "COMPANY" ||
-        counterpartyAccountType === "CREDEX_FOUNDATION"
-      ) {
-        counterpartyDisplayname = counterpartyCompanyname;
-      }
-
       return {
         credexID,
         formattedInitialAmount,
-        counterpartyDisplayname,
-      } as Credex;
+        counterpartyAccountName,
+      };
     });
 
     return credexes;

@@ -12,7 +12,7 @@ export async function checkDueDate(dueDate: any): Promise<boolean> {
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const currentDateQuery = await ledgerSpaceSession.run(`
-      MATCH (daynode:DayNode {Active: TRUE})
+      MATCH (daynode:Daynode {Active: TRUE})
       RETURN daynode.Date AS today
     `);
   const today = currentDateQuery.records[0].get("today");

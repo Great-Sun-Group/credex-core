@@ -20,7 +20,7 @@ export async function CreateAccountService(
   try {
     const result = await ledgerSpaceSession.run(
       `
-        MATCH (daynode:DayNode { Active: true })
+        MATCH (daynode:Daynode { Active: true })
         MATCH (owner:Human { uniqueHumanID: $ownerID })
         CREATE (owner)-[:OWNS]->(account:Account {
           accountType: $accountType,

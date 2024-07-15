@@ -32,6 +32,7 @@ export async function CreateTestAccountsService(numNewAccounts: number) {
         const onboardedHuman = await OnboardHumanService(
           firstname,
           lastname,
+          firstname + "_" + lastname,
           "USD",
           phone,
           null,

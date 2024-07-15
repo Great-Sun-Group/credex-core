@@ -44,7 +44,7 @@ export async function GetBalancesService(accountID: string) {
         OPTIONAL MATCH (account)-[:OWES]->(outSecuredCredex:Credex{Denomination:denom})<-[:SECURES]-()
         WITH sum(outSecuredCredex.OutstandingAmount) as sumSecuredOut, denom, sumSecuredIn
 
-        MATCH (daynode:DayNode{Active:true})
+        MATCH (daynode:Daynode{Active:true})
 
         RETURN denom, (sumSecuredIn - sumSecuredOut) / daynode[denom] AS netSecured
       `,
@@ -92,7 +92,7 @@ export async function GetBalancesService(accountID: string) {
             - REDUCE(total = 0, credex IN unsecuredCredexesOut | total + credex.OutstandingAmount) AS unsecuredNetCXX,
           REDUCE(total = 0, credex IN owesInCredexesAll | total + credex.OutstandingAmount)
             - REDUCE(total = 0, credex IN owesOutCredexesAll | total + credex.OutstandingAmount) AS netCredexAssetsCXX
-        MATCH (daynode:DayNode{Active:true})
+        MATCH (daynode:Daynode{Active:true})
         RETURN
           defaultDenom,
           receivablesTotalCXX / daynode[defaultDenom] AS receivablesTotalInDefaultDenom,

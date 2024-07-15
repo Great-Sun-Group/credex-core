@@ -17,7 +17,7 @@ export async function DCOexecute() {
     let MTQflag = true;
     while (MTQflag) {
       const MTQinProgressCheck = await ledgerSpaceSession.run(`
-        MATCH (daynode:DayNode {Active: true})
+        MATCH (daynode:Daynode {Active: true})
         RETURN daynode.MTQrunningNow AS MTQflag
       `);
       MTQflag = MTQinProgressCheck.records[0]?.get("MTQflag");
@@ -33,7 +33,7 @@ export async function DCOexecute() {
     console.log("MTQ not running. Proceed...");
     console.log("fetch expiring daynode and set DCOrunningNow flag");
     const priorDaynodeData = await ledgerSpaceSession.run(`
-      MATCH (daynode:DayNode {Active: TRUE})
+      MATCH (daynode:Daynode {Active: TRUE})
       SET daynode.DCOrunningNow = true
       RETURN
         daynode.Date AS previousDate,
@@ -47,7 +47,7 @@ export async function DCOexecute() {
     //process defaulting unsecured credexes
     let numberDefaulted = 0;
     const DCOdefaulting = await ledgerSpaceSession.run(`
-      MATCH (daynode:DayNode {Active: TRUE})
+      MATCH (daynode:Daynode {Active: TRUE})
       OPTIONAL MATCH (account1:Account)-[rel1:OWES]->(defaulting:Credex)-[rel2:OWES]->(account2:Account)
       WHERE defaulting.dueDate <= daynode.Date AND defaulting.DefaultedAmount <= 0
       SET defaulting.DefaultedAmount = defaulting.OutstandingAmount
@@ -64,9 +64,9 @@ export async function DCOexecute() {
     //expire offers/requests that have been pending for more than a full day
     let numberExpiringPending = 0;
     const DCOexpiring = await ledgerSpaceSession.run(`
-      MATCH (daynode:DayNode {Active: TRUE})
+      MATCH (daynode:Daynode {Active: TRUE})
       OPTIONAL MATCH (:Account)-[rel1:OFFERS|REQUESTS]->(expiringPending:Credex)-[rel2:OFFERS|REQUESTS]->(:Account),
-      (expiringPending)-[:CREATED_ON]->(createdDaynode:DayNode)
+      (expiringPending)-[:CREATED_ON]->(createdDaynode:Daynode)
       WHERE createdDaynode.Date + Duration({days: 1}) < daynode.Date
       DELETE rel1, rel2
       RETURN count(expiringPending) AS numberExpiringPending
@@ -136,7 +136,7 @@ export async function DCOexecute() {
         );
         console.log("Aborting DCO and turning off DCOrunningNow flag");
         await ledgerSpaceSession.run(`
-          MATCH (daynode:DayNode {Active: TRUE})
+          MATCH (daynode:Daynode {Active: TRUE})
           SET daynode.DCOrunningNow = false
         `);
         return false;
@@ -152,7 +152,7 @@ export async function DCOexecute() {
 
     console.log("Fetching declared DCO participants");
     const DCOparticipantsDeclared = await ledgerSpaceSession.run(`
-      MATCH (daynode:DayNode{Active:true})
+      MATCH (daynode:Daynode{Active:true})
       MATCH (DCOparticpantsDeclared:Account)
       WHERE DCOparticpantsDeclared.DCOgiveInCXX > 0
       RETURN DCOparticpantsDeclared.accountID AS accountID,
@@ -206,15 +206,15 @@ export async function DCOexecute() {
     console.log("Creating new daynode");
     await ledgerSpaceSession.run(
       `
-      MATCH (expiringDayNode:DayNode {Active: TRUE})
-      CREATE (expiringDayNode)-[:NEXT_DAY]->(nextDayNode:DayNode)
-      SET expiringDayNode.Active = false,
-          expiringDayNode.DCOrunningNow = false,
-          nextDayNode = $newCXXrates,
-          nextDayNode.CXXprior_CXXcurrent = $CXXprior_CXXcurrent,
-          nextDayNode.Date = date($nextDate),
-          nextDayNode.Active = true,
-          nextDayNode.DCOrunningNow = true
+      MATCH (expiringDaynode:Daynode {Active: TRUE})
+      CREATE (expiringDaynode)-[:NEXT_DAY]->(nextDaynode:Daynode)
+      SET expiringDaynode.Active = false,
+          expiringDaynode.DCOrunningNow = false,
+          nextDaynode = $newCXXrates,
+          nextDaynode.CXXprior_CXXcurrent = $CXXprior_CXXcurrent,
+          nextDaynode.Date = date($nextDate),
+          nextDaynode.Active = true,
+          nextDaynode.DCOrunningNow = true
     `,
       { newCXXrates, nextDate, CXXprior_CXXcurrent }
     );
@@ -257,7 +257,7 @@ export async function DCOexecute() {
 
     console.log("Updating credex and asset balances");
     await ledgerSpaceSession.run(`
-      MATCH (newDayNode:DayNode {Active: TRUE})
+      MATCH (newDaynode:Daynode {Active: TRUE})
 
       // Update balances on CXX credexes
       MATCH (credcoinCredex:Credex)
@@ -265,99 +265,99 @@ export async function DCOexecute() {
       SET 
         credcoinCredex.InitialAmount =
           credcoinCredex.InitialAmount
-          / newDayNode.CXXprior_CXXcurrent,
+          / newDaynode.CXXprior_CXXcurrent,
         credcoinCredex.OutstandingAmount =
           credcoinCredex.OutstandingAmount
-          / newDayNode.CXXprior_CXXcurrent,
+          / newDaynode.CXXprior_CXXcurrent,
         credcoinCredex.RedeemedAmount =
           credcoinCredex.RedeemedAmount
-          / newDayNode.CXXprior_CXXcurrent,
+          / newDaynode.CXXprior_CXXcurrent,
         credcoinCredex.DefaultedAmount =
           credcoinCredex.DefaultedAmount
-          / newDayNode.CXXprior_CXXcurrent,
+          / newDaynode.CXXprior_CXXcurrent,
         credcoinCredex.WrittenOffAmount =
           credcoinCredex.WrittenOffAmount
-          / newDayNode.CXXprior_CXXcurrent
+          / newDaynode.CXXprior_CXXcurrent
 
       // Update balances on currency credexes
-      WITH newDayNode
+      WITH newDaynode
       MATCH (currencyCredex:Credex)
       WHERE currencyCredex.Denomination <> "CXX"
       SET
         currencyCredex.InitialAmount =
           (currencyCredex.InitialAmount / currencyCredex.CXXmultiplier)
-          * newDayNode[currencyCredex.Denomination],
+          * newDaynode[currencyCredex.Denomination],
         currencyCredex.OutstandingAmount =
           (currencyCredex.OutstandingAmount / currencyCredex.CXXmultiplier)
-          * newDayNode[currencyCredex.Denomination],
+          * newDaynode[currencyCredex.Denomination],
         currencyCredex.RedeemedAmount =
           (currencyCredex.RedeemedAmount / currencyCredex.CXXmultiplier)
-          * newDayNode[currencyCredex.Denomination],
+          * newDaynode[currencyCredex.Denomination],
         currencyCredex.DefaultedAmount =
           (currencyCredex.DefaultedAmount / currencyCredex.CXXmultiplier)
-          * newDayNode[currencyCredex.Denomination],
+          * newDaynode[currencyCredex.Denomination],
         currencyCredex.WrittenOffAmount =
           (currencyCredex.WrittenOffAmount / currencyCredex.CXXmultiplier)
-          * newDayNode[currencyCredex.Denomination],
-        currencyCredex.CXXmultiplier = newDayNode[currencyCredex.Denomination]
+          * newDaynode[currencyCredex.Denomination],
+        currencyCredex.CXXmultiplier = newDaynode[currencyCredex.Denomination]
 
       // Update balances on CXX :REDEEMED relationships
-      WITH newDayNode
+      WITH newDaynode
       MATCH ()-[CXXredeemed:REDEEMED]-()
       WHERE CXXredeemed.Denomination = "CXX"
       SET
         CXXredeemed.AmountRedeemed =
           CXXredeemed.AmountRedeemed
-          / newDayNode.CXXprior_CXXcurrent,
+          / newDaynode.CXXprior_CXXcurrent,
         CXXredeemed.AmountOutstandingNow =
           CXXredeemed.AmountOutstandingNow
-          / newDayNode.CXXprior_CXXcurrent
+          / newDaynode.CXXprior_CXXcurrent
 
       // Update balances on currency :REDEEMED relationships
-      WITH newDayNode
+      WITH newDaynode
       MATCH ()-[currencyRedeemed:REDEEMED]-()
       WHERE currencyRedeemed.Denomination <> "CXX"
       SET
         currencyRedeemed.AmountOutstandingNow =
           (currencyRedeemed.AmountOutstandingNow / currencyRedeemed.CXXmultiplier)
-          * newDayNode[currencyRedeemed.Denomination],
+          * newDaynode[currencyRedeemed.Denomination],
         currencyRedeemed.AmountRedeemed =
           (currencyRedeemed.AmountRedeemed / currencyRedeemed.CXXmultiplier)
-          * newDayNode[currencyRedeemed.Denomination],
-        currencyRedeemed.CXXmultiplier = newDayNode[currencyRedeemed.Denomination]
+          * newDaynode[currencyRedeemed.Denomination],
+        currencyRedeemed.CXXmultiplier = newDaynode[currencyRedeemed.Denomination]
 
       // Update balances on CXX :CREDLOOP relationships
-      WITH newDayNode
+      WITH newDaynode
       MATCH ()-[CXXcredloop:CREDLOOP]-()
       WHERE CXXcredloop.Denomination = "CXX"
       SET
         CXXcredloop.AmountRedeemed =
           CXXcredloop.AmountRedeemed
-          / newDayNode.CXXprior_CXXcurrent,
+          / newDaynode.CXXprior_CXXcurrent,
         CXXcredloop.AmountOutstandingNow =
           CXXcredloop.AmountOutstandingNow
-          / newDayNode.CXXprior_CXXcurrent
+          / newDaynode.CXXprior_CXXcurrent
 
       // Update balances on currency :CREDLOOP relationships
-      WITH newDayNode
+      WITH newDaynode
       MATCH ()-[currencyCredloop:CREDLOOP]-()
       WHERE currencyCredloop.Denomination <> "CXX"
       SET
         currencyCredloop.AmountOutstandingNow =
           (currencyCredloop.AmountOutstandingNow / currencyCredloop.CXXmultiplier)
-          * newDayNode[currencyCredloop.Denomination],
+          * newDaynode[currencyCredloop.Denomination],
         currencyCredloop.AmountRedeemed =
           (currencyCredloop.AmountRedeemed / currencyCredloop.CXXmultiplier)
-          * newDayNode[currencyCredloop.Denomination],
-        currencyCredloop.CXXmultiplier = newDayNode[currencyCredloop.Denomination]
+          * newDaynode[currencyCredloop.Denomination],
+        currencyCredloop.CXXmultiplier = newDaynode[currencyCredloop.Denomination]
 
       // Update balances on loop anchors (always CXX)
-      WITH newDayNode
+      WITH newDaynode
       MATCH (loopAnchors:LoopAnchor)
       SET
         loopAnchors.LoopedAmount =
           loopAnchors.LoopedAmount
-          / newDayNode.CXXprior_CXXcurrent
+          / newDaynode.CXXprior_CXXcurrent
     `);
 
     //update balances in searchSpace CXX credexes
@@ -418,7 +418,7 @@ export async function DCOexecute() {
 
     console.log("Turning off DCOrunningNow flag");
     await ledgerSpaceSession.run(`
-      MATCH (daynode:DayNode {Active: TRUE})
+      MATCH (daynode:Daynode {Active: TRUE})
       SET daynode.DCOrunningNow = false
     `);
 
