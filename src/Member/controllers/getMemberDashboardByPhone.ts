@@ -1,14 +1,12 @@
 import express from "express";
-import { GetHumanDashboardByPhoneService } from "../services/GetHumanDashboardByPhone";
+import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 
-export async function GetHumanDashboardByPhoneController(
+export async function GetMemberDashboardByPhoneController(
   req: express.Request,
   res: express.Response
 ) {
-  const fieldsRequired = [
-    "phone",
-  ];
+  const fieldsRequired = ["phone"];
   for (const field of fieldsRequired) {
     if (!req.body[field]) {
       return res
@@ -17,21 +15,23 @@ export async function GetHumanDashboardByPhoneController(
         .send();
     }
   }
-  
+
   try {
-    const humanDashboard = await GetHumanDashboardByPhoneService(req.body.phone);
-    if (!humanDashboard) {
-      res.status(400).json({ message: "Could not retrieve human dashboard" });
+    const memberDashboard = await GetMemberDashboardByPhoneService(
+      req.body.phone
+    );
+    if (!memberDashboard) {
+      res.status(400).json({ message: "Could not retrieve member dashboard" });
       return;
     }
 
     const accountDashboards = await Promise.all(
-      humanDashboard.authorizedFor.map((accountId: string) =>
-        GetAccountDashboardService(humanDashboard.uniqueHumanID, accountId)
+      memberDashboard.accountIDS.map((accountId: string) =>
+        GetAccountDashboardService(memberDashboard.memberID, accountId)
       )
     );
 
-    res.status(200).json({ humanDashboard, accountDashboards });
+    res.status(200).json({ memberDashboard, accountDashboards });
   } catch (err) {
     console.error("Error retrieving account:", err);
     res.status(500).json({ error: "Internal Server Error" });

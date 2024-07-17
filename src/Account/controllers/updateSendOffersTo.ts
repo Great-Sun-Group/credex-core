@@ -5,7 +5,7 @@ export async function UpdateSendOffersToController(
   req: express.Request,
   res: express.Response
 ) {
-  const requiredFields = ["humanIDtoSendOffers", "accountID", "ownerID"];
+  const requiredFields = ["memberIDtoSendOffers", "accountID", "ownerID"];
 
   for (const field of requiredFields) {
     if (!req.body[field]) {
@@ -15,7 +15,7 @@ export async function UpdateSendOffersToController(
 
   try {
     const responseData = await UpdateSendOffersToService(
-      req.body.humanIDtoSendOffers,
+      req.body.memberIDtoSendOffers,
       req.body.accountID,
       req.body.ownerID
     );

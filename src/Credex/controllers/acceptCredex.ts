@@ -6,16 +6,29 @@ export async function AcceptCredexController(
   req: express.Request,
   res: express.Response
 ) {
+  const fieldsRequired = ["credexID"];
+  for (const field of fieldsRequired) {
+    if (!req.body[field]) {
+      return res
+        .status(400)
+        .json({ message: `${field} is required` })
+        .send();
+    }
+  }
+
   try {
     const acceptCredexData = await AcceptCredexService(req.body.credexID);
-    const dashboardData = await GetAccountDashboardService(
-      req.body.accountID,
-      req.body.accountID
-    );
-    res.json({
-      acceptCredexData: acceptCredexData,
-      dashboardData: dashboardData,
-    });
+    
+    if (acceptCredexData) {
+      const dashboardData = await GetAccountDashboardService(
+        acceptCredexData.memberID,
+        acceptCredexData.acceptorAccountID
+      );
+      res.json({
+        acceptCredexData: acceptCredexData,
+        dashboardData: dashboardData,
+      });
+    }
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }

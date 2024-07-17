@@ -1,10 +1,10 @@
 import express from "express";
-import { OnboardHumanService } from "../services/OnboardHuman";
+import { OnboardMemberService } from "../services/OnboardMember";
 import { CreateAccountService } from "../../Account/services/CreateAccount";
-import { GetHumanDashboardByPhoneService } from "../services/GetHumanDashboardByPhone";
+import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 
-export async function OnboardHumanController(
+export async function OnboardMemberController(
   req: express.Request,
   res: express.Response
 ): Promise<void> {
@@ -13,7 +13,7 @@ export async function OnboardHumanController(
     "lastname",
     "defaultDenom",
     "phone",
-    "handle",
+    "memberHandle",
   ];
 
   for (const field of fieldsRequired) {
@@ -24,24 +24,24 @@ export async function OnboardHumanController(
   }
 
   try {
-    const onboardedHuman = await OnboardHumanService(
+    const onboardedMember = await OnboardMemberService(
       req.body.firstname,
       req.body.lastname,
-      req.body.handle,
+      req.body.memberHandle,
       req.body.defaultDenom,
-      req.body.phone,
+      req.body.phone
     );
 
-    if (!onboardedHuman.onboardedHumanID) {
-      res.status(400).json({ message: onboardedHuman.message });
+    if (!onboardedMember.onboardedMemberID) {
+      res.status(400).json({ message: onboardedMember.message });
       return;
     }
 
     const consumptionAccount = await CreateAccountService(
-      onboardedHuman.onboardedHumanID,
+      onboardedMember.onboardedMemberID,
       "PERSONAL_CONSUMPTION",
-      `${req.body.firstname} ${req.body.lastname}`,
-      req.body.handle,
+      `${req.body.firstname} ${req.body.lastname} Personal`,
+      req.body.memberHandle,
       req.body.defaultDenom,
       req.body.DCOgiveInCXX,
       req.body.DCOdenom
@@ -52,23 +52,23 @@ export async function OnboardHumanController(
       return;
     }
 
-    const humanDashboard = await GetHumanDashboardByPhoneService(
+    const memberDashboard = await GetMemberDashboardByPhoneService(
       req.body.phone
     );
-    if (!humanDashboard) {
-      res.status(400).json({ message: "Could not retrieve human dashboard" });
+    if (!memberDashboard) {
+      res.status(400).json({ message: "Could not retrieve member dashboard" });
       return;
     }
 
     const accountDashboards = await Promise.all(
-      humanDashboard.authorizedFor.map((accountId: string) =>
-        GetAccountDashboardService(humanDashboard.uniqueHumanID, accountId)
+      memberDashboard.accountIDS.map((accountId: string) =>
+        GetAccountDashboardService(memberDashboard.memberID, accountId)
       )
     );
 
-    res.status(200).json({ humanDashboard, accountDashboards });
+    res.status(200).json({ memberDashboard, accountDashboards });
   } catch (error) {
-    console.error("Error onboarding human:", error);
+    console.error("Error onboarding member:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 }

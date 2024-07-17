@@ -18,7 +18,9 @@ export async function OfferAndAcceptCredexController(
       const responseDataAccept = await AcceptCredexService(
         responseDataOffer.credex.credexID
       );
-      res.json(responseDataAccept);
+      if (responseDataAccept) {
+        res.json(responseDataAccept.acceptedCredexID);
+      }
     } else {
       res.status(500).json(responseDataOffer.message);
     }

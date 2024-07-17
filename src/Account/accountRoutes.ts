@@ -3,8 +3,8 @@ import { apiVersionOneRoute } from "..";
 import { CreateAccountController } from "./controllers/createAccount";
 import { GetAccountByHandleController } from "./controllers/getAccountByHandle";
 import { UpdateAccountController } from "./controllers/updateAccount";
-import { AuthorizeForCompanyController } from "./controllers/authorizeForAccount";
-import { UnauthorizeForCompanyController } from "./controllers/unauthorizeForAccount";
+import { AuthorizeForAccountController } from "./controllers/authorizeForAccount";
+import { UnauthorizeForAccountController } from "./controllers/unauthorizeForAccount";
 import { UpdateSendOffersToController } from "./controllers/updateSendOffersTo";
 
 export default function AccountRoutes(
@@ -30,15 +30,15 @@ export default function AccountRoutes(
   );
 
   app.post(
-    `${apiVersionOneRoute}authorizeForCompany`,
+    `${apiVersionOneRoute}authorizeForAccount`,
     jsonParser,
-    AuthorizeForCompanyController
+    AuthorizeForAccountController
   );
 
   app.post(
-    `${apiVersionOneRoute}unauthorizeForCompany`,
+    `${apiVersionOneRoute}unauthorizeForAccount`,
     jsonParser,
-    UnauthorizeForCompanyController
+    UnauthorizeForAccountController
   );
 
   app.post(

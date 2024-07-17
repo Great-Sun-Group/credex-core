@@ -33,36 +33,50 @@ export async function GetBalancesService(accountID: string) {
   try {
     const getSecuredBalancesQuery = await ledgerSpaceSession.run(
       `
-        MATCH (account:Account{accountID:$accountID})
-        
-        OPTIONAL MATCH (account)-[:OWES|OFFERED]-(securedCredex:Credex)<-[:SECURES]-()
-        WITH DISTINCT securedCredex.Denomination AS denom, account
+      MATCH (account:Account {accountID: $accountID})
 
-        OPTIONAL MATCH (account)<-[:OWES]-(inSecuredCredex:Credex{Denomination:denom})<-[:SECURES]-()
-        WITH sum(inSecuredCredex.OutstandingAmount) as sumSecuredIn, denom, account
-        
-        OPTIONAL MATCH (account)-[:OWES]->(outSecuredCredex:Credex{Denomination:denom})<-[:SECURES]-()
-        WITH sum(outSecuredCredex.OutstandingAmount) as sumSecuredOut, denom, sumSecuredIn
+      MATCH (account:Account {accountID: $accountID})
 
-        MATCH (daynode:Daynode{Active:true})
+      // Get all unique denominations from Credex nodes related to the account
+      OPTIONAL MATCH (account)-[:OWES|OFFERED]-(securedCredex:Credex)<-[:SECURES]-()
+      WITH DISTINCT securedCredex.Denomination AS denom, account
 
-        RETURN denom, (sumSecuredIn - sumSecuredOut) / daynode[denom] AS netSecured
+      // Aggregate incoming secured amounts for each denomination ensuring uniqueness
+      OPTIONAL MATCH (account)<-[:OWES]-(inSecuredCredex:Credex {Denomination: denom})<-[:SECURES]-()
+      WITH denom, account, 
+          collect(DISTINCT inSecuredCredex) AS inSecuredCredexes
+
+      // Aggregate outgoing secured amounts for each denomination ensuring uniqueness
+      OPTIONAL MATCH (account)-[:OWES|OFFERED]->(outSecuredCredex:Credex {Denomination: denom})<-[:SECURES]-()
+      WITH denom, 
+          reduce(s = 0, n IN inSecuredCredexes | s + n.OutstandingAmount) AS sumSecuredIn, 
+          collect(DISTINCT outSecuredCredex) AS outSecuredCredexes
+
+      // Calculate the total outgoing amount
+      WITH denom, sumSecuredIn, 
+          reduce(s = 0, n IN outSecuredCredexes | s + n.OutstandingAmount) AS sumSecuredOut
+
+      // Get the current day node which should have active status
+      MATCH (daynode:Daynode {Active: true})
+
+      // Calculate the net secured balance for each denomination and return the result
+      RETURN denom, (sumSecuredIn - sumSecuredOut) / daynode[denom] AS netSecured
       `,
       { accountID }
     );
 
     var securedNetBalancesByDenom: string[] = [];
     if (getSecuredBalancesQuery.records[0].get("denom")) {
-      securedNetBalancesByDenom = getSecuredBalancesQuery.records.map(
-        (record) => {
+      securedNetBalancesByDenom = getSecuredBalancesQuery.records
+        .filter((record) => {
+          const amount = record["_fields"][1];
+          return typeof amount === "number" && !isNaN(amount) && amount !== 0;
+        })
+        .map((record) => {
           const [currency, amount] = record["_fields"];
-          const formattedAmount =
-            typeof amount === "number" && !isNaN(amount)
-              ? denomFormatter(amount, currency)
-              : "0";
+          const formattedAmount = denomFormatter(amount, currency);
           return `${formattedAmount} ${currency}`;
-        }
-      );
+        });
     }
 
     const getUnsecuredBalancesAndTotalAssetsQuery =

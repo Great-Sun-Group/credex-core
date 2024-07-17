@@ -1,4 +1,4 @@
-import { CreateTestAccountsService } from "./CreateTestAccounts";
+import { CreateTestMembersAndAccountsService } from "./CreateTestMembersAndAccounts";
 import { CreateRandomFloatingCredexesService } from "./CreateRandomFloatingCredexes";
 import { DailyCredcoinOffering } from "../../Core/DCO/DailyCredcoinOffering";
 import { MinuteTransactionQueue } from "../../Core/MTQ/MinuteTransactionQueue";
@@ -32,7 +32,7 @@ export async function GrowthTestService(variables: any) {
       console.log(`Creating new accounts: ${numberNewAccounts}`);
       numberAccounts += numberNewAccounts;
 
-      await CreateTestAccountsService(numberNewAccounts);
+      await CreateTestMembersAndAccountsService(numberNewAccounts);
 
       const numberUSDpurchases = Math.round(
         numberAccounts * variables.USD_ANCHORED_fractionToPurchase

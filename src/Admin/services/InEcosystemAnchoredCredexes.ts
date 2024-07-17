@@ -66,7 +66,14 @@ export async function InEcosystemAnchoredCredexesService(
               denom
             );
 
-            const InitialAmount = random(securableData.securableAmountInDenom);
+            const maxSecurable = securableData.securableAmountInDenom;
+            let InitialAmount
+            if (maxSecurable >= 1) {
+              InitialAmount = random(maxSecurable);
+            }
+            else {
+              InitialAmount = random(0.1, maxSecurable);
+            }
             console.log("random initialAmount: " + InitialAmount);
 
             const credexSpecs = {
