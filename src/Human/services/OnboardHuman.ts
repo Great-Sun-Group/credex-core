@@ -6,7 +6,7 @@ export async function OnboardHumanService(
   lastname: string,
   handle: string,
   defaultDenom: string,
-  phone: string,
+  phone: string
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
@@ -26,7 +26,7 @@ export async function OnboardHumanService(
           defaultDenom: $defaultDenom,
           phone: $phone,
           uniqueHumanID: randomUUID(),
-          queueStatus: "PENDING_MEMBER",
+          queueStatus: "PENDING_ACCOUNT",
           createdAt: datetime(),
           updatedAt: datetime()
         })-[:CREATED_ON]->(daynode)

@@ -26,12 +26,17 @@ export async function GetHumanDashboardByPhoneController(
     }
 
     const accountDashboards = await Promise.all(
-      humanDashboard.authorizedFor.map((accountId: string) =>
+      humanDashboard.accountIDS.map((accountId: string) =>
         GetAccountDashboardService(humanDashboard.uniqueHumanID, accountId)
       )
     );
 
-    res.status(200).json({ humanDashboard, accountDashboards });
+    res
+      .status(200)
+      .json({
+        humanDashboard: humanDashboard,
+        accountDashboards: accountDashboards,
+      });
   } catch (err) {
     console.error("Error retrieving account:", err);
     res.status(500).json({ error: "Internal Server Error" });

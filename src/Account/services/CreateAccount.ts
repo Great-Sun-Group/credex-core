@@ -51,7 +51,7 @@ export async function CreateAccountService(
           DCOgiveInCXX: $DCOgiveInCXX,
           DCOdenom: $DCOdenom,
           accountID: randomUUID(),
-          queueStatus: "PENDING_MEMBER",
+          queueStatus: "PENDING_ACCOUNT",
           createdAt: datetime(),
           updatedAt: datetime()
         })-[:CREATED_ON]->(daynode)

@@ -11,7 +11,7 @@ export default function HumanRoutes(app: express.Application, jsonParser: any) {
   );
 
   app.get(
-    `${apiVersionOneRoute}whatsAppLogin`,
+    `${apiVersionOneRoute}getHumanDashboardByPhone`,
     jsonParser,
     GetHumanDashboardByPhoneController
   );

@@ -14,7 +14,7 @@ export async function GetHumanDashboardByPhoneService(phone: string) {
         human.firstname AS firstname,
         human.lastname AS lastname,
         human.defaultDenom AS defaultDenom,
-        [human.uniqueHumanID] + accountIDs AS authorizedFor
+        accountIDs AS accountIDS
       `,
       { phone }
     );
@@ -29,7 +29,7 @@ export async function GetHumanDashboardByPhoneService(phone: string) {
       firstname: result.records[0].get("firstname"),
       lastname: result.records[0].get("lastname"),
       defaultDenom: result.records[0].get("defaultDenom"),
-      authorizedFor: result.records[0].get("authorizedFor"),
+      accountIDS: result.records[0].get("accountIDS"),
     };
   } catch (error) {
     console.error("Error fetching account data:", error);

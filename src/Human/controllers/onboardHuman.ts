@@ -61,7 +61,7 @@ export async function OnboardHumanController(
     }
 
     const accountDashboards = await Promise.all(
-      humanDashboard.authorizedFor.map((accountId: string) =>
+      humanDashboard.accountIDS.map((accountId: string) =>
         GetAccountDashboardService(humanDashboard.uniqueHumanID, accountId)
       )
     );
