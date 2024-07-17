@@ -1,14 +1,3 @@
-/*
-requires
-  credexID
-  accountID
-
-returns
-  formatted credex data
-  formatted data for each clearedAgainst credex, if any
-
-*/
-
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
 import moment from "moment-timezone";
@@ -28,7 +17,7 @@ export async function GetCredexService(credexID: string, accountID: string) {
         (startNode(transactionType) = account) AS debit,
         counterparty.accountName AS counterpartyAccountName,
         securer.accountID AS securerID,
-        securer.companyname AS securerName,
+        securer.accountName AS securerName,
         credex.Denomination AS Denomination,
         credex.InitialAmount / credex.CXXmultiplier AS InitialAmount,
         credex.OutstandingAmount / credex.CXXmultiplier AS OutstandingAmount,
@@ -36,6 +25,8 @@ export async function GetCredexService(credexID: string, accountID: string) {
         credex.DefaultedAmount / credex.CXXmultiplier AS DefaultedAmount,
         credex.WrittenOffAmount / credex.CXXmultiplier AS WrittenOffAmount,
         credex.acceptedAt AS acceptedAt,
+        credex.declinedAt AS declinedAt,
+        credex.cancelledAt AS cancelledAt,
         credex.dueDate AS dueDate,
         clearedAgainstCredex.credexID AS clearedAgainstCredexID,
         credloopRel.AmountRedeemed / credloopRel.CXXmultiplier AS clearedAmount,
@@ -96,6 +87,12 @@ export async function GetCredexService(credexID: string, accountID: string) {
     const acceptedAt = moment(record.get("acceptedAt"))
       .subtract(1, "month")
       .format("YYYY-MM-DD");
+    const declinedAt = moment(record.get("declinedAt"))
+      .subtract(1, "month")
+      .format("YYYY-MM-DD");
+    const cancelledAt = moment(record.get("cancelledAt"))
+      .subtract(1, "month")
+      .format("YYYY-MM-DD");
     const dueDate = moment(record.get("dueDate"))
       .subtract(1, "month")
       .format("YYYY-MM-DD");
@@ -110,6 +107,8 @@ export async function GetCredexService(credexID: string, accountID: string) {
       securerName: record.get("securerName"),
       Denomination,
       acceptedAt: acceptedAt,
+      declinedAt: declinedAt,
+      cancelledAt: cancelledAt,
       dueDate: dueDate,
       ...formattedAmounts,
     };

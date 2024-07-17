@@ -49,6 +49,7 @@ export async function CreateCredexService(credexData: any) {
   if (
     !issuerAccountID ||
     !receiverAccountID ||
+    issuerAccountID == receiverAccountID ||
     !InitialAmount ||
     !Denomination ||
     !credexType ||
@@ -59,7 +60,8 @@ export async function CreateCredexService(credexData: any) {
     let failMessage = "Data missing or mismatch, could not create credex.";
     if (!issuerAccountID) failMessage += " issuerAccountID required";
     if (!receiverAccountID) failMessage += " receiverAccountID required";
-    if (!InitialAmount) failMessage += " InitialAmount required";
+    if (issuerAccountID == receiverAccountID) failMessage += " issuer and receiver cannot be the same account";
+      if (!InitialAmount) failMessage += " InitialAmount required";
     if (!Denomination) failMessage += " Denomination required";
     if (!credexType) failMessage += " credexType required";
     if (!OFFERSorREQUESTS) failMessage += " OFFERSorREQUESTS required";

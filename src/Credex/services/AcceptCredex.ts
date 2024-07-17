@@ -1,18 +1,3 @@
-/*
-marks a credex as accepted by changing the relationships
-from OFFERS or REQUESTS to OWES
-
-required inputs:
-  credexID
-
-on success returns credexID
-
-will return false if:
-  credexID not found
-  credex does not have OFFERS or REQUESTS relationships (credex already accepted/declined/cancelled)
-
-*/
-
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 
 export async function AcceptCredexService(credexID: string) {
@@ -24,11 +9,18 @@ export async function AcceptCredexService(credexID: string) {
   try {
     const result = await ledgerSpaceSession.run(
       `
-        MATCH (issuer:Account)-[rel1:OFFERS|REQUESTS]->(acceptedCredex:Credex {credexID: $credexID})-[rel2:OFFERS|REQUESTS]->(acceptor:Account)
+        MATCH
+          (member:Member)-[:OWNS]->
+          (issuer:Account)-[rel1:OFFERS|REQUESTS]->
+          (acceptedCredex:Credex {credexID: $credexID})-[rel2:OFFERS|REQUESTS]->
+          (acceptor:Account)
         DELETE rel1, rel2
         CREATE (issuer)-[:OWES]->(acceptedCredex)-[:OWES]->(acceptor)
         SET acceptedCredex.acceptedAt = datetime()
-        RETURN acceptedCredex.credexID AS credexID
+        RETURN
+          acceptedCredex.credexID AS credexID,
+          acceptor.accountID AS acceptorAccountID,
+          member.memberID AS memberID
       `,
       { credexID }
     );
@@ -43,8 +35,15 @@ export async function AcceptCredexService(credexID: string) {
     //hit credex accepted notification endpoint
 
     const acceptedCredexID = result.records[0].get("credexID");
+    const acceptorAccountID = result.records[0].get("acceptorAccountID");
+    const memberID = result.records[0].get("memberID");
+
     console.log(`Offer accepted for credexID: ${acceptedCredexID}`);
-    return acceptedCredexID;
+    return {
+      acceptedCredexID: acceptedCredexID,
+      acceptorAccountID: acceptorAccountID,
+      memberID: memberID,
+    };
   } catch (error) {
     console.error(`Error accepting credex for credexID ${credexID}:`, error);
     throw error; // Optionally rethrow to allow further handling upstream
