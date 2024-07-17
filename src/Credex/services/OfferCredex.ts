@@ -34,7 +34,7 @@ export async function OfferCredexService(credexData: any) {
         break sendNoti;
       }
       const notiPhone = getSendOfferToQuery.records[0].get("notiPhone");
-      console.log("sending offer notification to " + notiPhone);
+      //console.log("sending offer notification to " + notiPhone);
       //hit offer noti endpoint
     }
     console.log(newCredex.message);
