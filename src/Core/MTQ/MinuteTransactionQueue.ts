@@ -44,7 +44,7 @@ export async function MinuteTransactionQueue() {
 
   try {
     const getQueuedAccounts = await ledgerSpaceSession.run(`
-      MATCH (newAccount:Account {queueStatus: "PENDING_MEMBER"})
+      MATCH (newAccount:Account {queueStatus: "PENDING_ACCOUNT"})
       RETURN
         newAccount.accountID AS accountID,
         newAccount.accountName AS accountName

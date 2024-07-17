@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 
 export async function UpdateSendOffersToService(
-  humanIDtoSendOffers: string,
+  memberIDtoSendOffers: string,
   accountID: string,
   ownerID: string
 ) {
@@ -11,16 +11,16 @@ export async function UpdateSendOffersToService(
     const result = await ledgerSpaceSession.run(
       `
             MATCH
-                (newHumanForOffers: Human { uniqueHumanID: $humanIDtoSendOffers})
+                (newMemberForOffers: Member { memberID: $memberIDtoSendOffers})
                 -[:AUTHORIZED_FOR]->(account:Account { accountID: $companyID})
-                <-[:OWNS]-(owner:Human { uniqueHumanID: $ownerID}),
+                <-[:OWNS]-(owner:Member { memberID: $ownerID}),
                 (company)-[currentAccountForOffersRel:SEND_OFFERS_TO]->(:Account)
             DELETE currentAccountForOffersRel
-            CREATE (account)-[:SEND_OFFERS_TO]->(newHumanForOffers)
+            CREATE (account)-[:SEND_OFFERS_TO]->(newMemberForOffers)
             RETURN true
             `,
       {
-        humanIDtoSendOffers,
+        memberIDtoSendOffers,
         accountID,
         ownerID,
       }

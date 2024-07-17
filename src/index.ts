@@ -1,5 +1,5 @@
 import express from "express";
-import HumanRoutes from "./Human/humanRoutes";
+import MemberRoutes from "./Member/memberRoutes";
 import AccountRoutes from "./Account/accountRoutes";
 import CredexRoutes from "./Credex/credexRoutes";
 import AdminRoutes from "./Admin/adminRoutes";
@@ -16,7 +16,7 @@ export const apiVersionOneRoute = "/api/v1/";
 
 app.use(Logger);
 
-HumanRoutes(app, jsonParser);
+MemberRoutes(app, jsonParser);
 AccountRoutes(app, jsonParser);
 CredexRoutes(app, jsonParser);
 AdminRoutes(app, jsonParser);

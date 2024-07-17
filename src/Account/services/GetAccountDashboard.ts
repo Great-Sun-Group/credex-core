@@ -4,49 +4,25 @@ import { GetPendingOffersInService } from "../../Credex/services/GetPendingOffer
 import { GetPendingOffersOutService } from "../../Credex/services/GetPendingOffersOut";
 
 export async function GetAccountDashboardService(
-  accountID: string,
-  authorizedForID: string
+  memberID: string,
+  accountID: string
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
     const result = await ledgerSpaceSession.run(
       `
-        MATCH (account:Account {accountID: $authorizedForID})
-        OPTIONAL MATCH (account)<-[:OWNS]-(owner:Account { accountID: $accountID})
-        OPTIONAL MATCH (humanAccount:Account { accountID: $accountID})
-        OPTIONAL MATCH (account)-[:SEND_OFFERS_TO]->(offerRecipient:Account)
-        OPTIONAL MATCH (account)<-[:AUTHORIZED_FOR]-(authFor:Account)
-        WITH account, owner, humanAccount, offerRecipient, collect(authFor) AS authForList
-        CALL apoc.do.when(
-          size(authForList) > 0,
-          'RETURN [auth IN $authForList | { accountID: auth.accountID, displayName: auth.firstname + " " + auth.lastname }] AS authorizedAccounts',
-          'RETURN [] AS authorizedAccounts',
-          { authForList: authForList }
-        ) YIELD value
-        WITH
-          CASE
-              WHEN account = humanAccount THEN "human"
-              WHEN owner IS NOT NULL THEN "owned"
-              ELSE "authorizedFor"
-          END AS dashboardType,
-          CASE
-              WHEN account = humanAccount THEN account
-              WHEN offerRecipient IS NOT NULL THEN offerRecipient
-              ELSE null
-          END AS offerRecipient,
-          account, value
+        MATCH
+          (account:Account { accountID: $accountID })\
+          <-[:AUTHORIZED_FOR]-
+          (member:Member { memberID: $memberID})
         RETURN
-          dashboardType,
           account.accountID AS accountID,
           account.accountType AS accountType,
           account.accountName AS accountName,
-          account.accountHandle AS handle,
-          account.defaultDenom AS defaultDenom,
-          offerRecipient.accountID AS offerRecipientID,
-          offerRecipient.firstname + " " + offerRecipient.lastname AS offerRecipientDisplayname,
-          value.authorizedAccounts AS authorizedAccounts
+          account.accountHandle AS accountHandle,
+          account.defaultDenom AS defaultDenom
       `,
-      { accountID, authorizedForID }
+      { memberID, accountID }
     );
 
     if (!result.records.length) {
@@ -55,16 +31,10 @@ export async function GetAccountDashboardService(
     }
 
     const accountData: any = {
-      dashboardType: result.records[0].get("dashboardType"),
       accountID: result.records[0].get("accountID"),
       accountName: result.records[0].get("accountName"),
       accountHandle: result.records[0].get("accountHandle"),
       defaultDenom: result.records[0].get("defaultDenom"),
-      offerRecipientID: result.records[0].get("offerRecipientID"),
-      offerRecipientDisplayname: result.records[0].get(
-        "offerRecipientDisplayname"
-      ),
-      authorizedAccounts: result.records[0].get("authorizedAccounts"),
     };
 
     accountData.balanceData = await GetBalancesService(accountData.accountID);

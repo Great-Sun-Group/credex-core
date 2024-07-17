@@ -1,15 +1,15 @@
 import axios from "axios";
-import { OnboardHumanService } from "../../Human/services/OnboardHuman";
+import { OnboardMemberService } from "../../Member/services/OnboardMember";
 import { CreateAccountService } from "../../Account/services/CreateAccount";
 import { random } from "lodash";
 
 export async function CreateTestAccountsService(numNewAccounts: number) {
-  const numNewHumans = Math.round(numNewAccounts * 0.75); // 75% of new accounts new humans
-  const numNewAccountsForExistingHumans = numNewAccounts - numNewHumans; // remainder new accounts for existing humans
+  const numNewMembers = Math.round(numNewAccounts * 0.75); // 75% of new accounts new members
+  const numNewAccountsForExistingMembers = numNewAccounts - numNewMembers; // remainder new accounts for existing members
   const accountPromises = [];
   const batchSize = 3; // Size of each batch
 
-  for (let i = 0; i < numNewHumans; i++) {
+  for (let i = 0; i < numNewMembers; i++) {
     accountPromises.push(
       (async () => {
         // Fetch a new name for each iteration
@@ -29,19 +29,19 @@ export async function CreateTestAccountsService(numNewAccounts: number) {
         const phone = "263" + Math.floor(100000000 + Math.random() * 900000000);
         // need to check if phone unique here and generate new if not
 
-        const onboardedHuman = await OnboardHumanService(
+        const onboardedMember = await OnboardMemberService(
           firstname,
           lastname,
           firstname + "_" + lastname,
           "USD",
-          phone,
+          phone
         );
-        if (!onboardedHuman.onboardedHumanID) {
-          throw new Error("human could not be onboarded");
+        if (!onboardedMember.onboardedMemberID) {
+          throw new Error("member could not be onboarded");
         }
 
         const consumptionAccount = await CreateAccountService(
-          onboardedHuman.onboardedHumanID,
+          onboardedMember.onboardedMemberID,
           "PERSONAL_CONSUMPTION",
           `${firstname} ${lastname}`,
           `${firstname}_${lastname}`,
@@ -54,7 +54,7 @@ export async function CreateTestAccountsService(numNewAccounts: number) {
         }
 
         return {
-          onboardedHumanID: onboardedHuman.onboardedHumanID,
+          onboardedMemberID: onboardedMember.onboardedMemberID,
           consumptionAccountID: consumptionAccount.accountID,
         };
       })()

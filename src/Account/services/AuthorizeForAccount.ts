@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 
 export async function AuthorizeForAccountService(
-  humanHandleToBeAuthorized: string,
+  memberHandleToBeAuthorized: string,
   accountID: string,
   ownerID: string
 ) {
@@ -11,21 +11,21 @@ export async function AuthorizeForAccountService(
     const result = await ledgerSpaceSession.run(
       `
         MATCH (account:Account { accountID: $accountID })
-            <-[:OWNS]-(owner:Human { uniqueHumanID: $ownerID })
-        MATCH (humanToAuthorize:Human { handle: $humanHandleToBeAuthorized })
-        MATCH (:Human)-[currentAuthForRel:AUTHORIZED_FOR]->(account)
-        WITH count (currentAuthForRel) AS numAuthorized, humanToAuthorize, account
+            <-[:OWNS]-(owner:Member { memberID: $ownerID })
+        MATCH (memberToAuthorize:Member { handle: $memberHandleToBeAuthorized })
+        MATCH (:Member)-[currentAuthForRel:AUTHORIZED_FOR]->(account)
+        WITH count (currentAuthForRel) AS numAuthorized, memberToAuthorize, account
         CALL apoc.do.when(
           numAuthorized >= 5,
           'RETURN "limitReached" AS message',
-          'MERGE (humanToAuthorize)-[:AUTHORIZED_FOR]->(account)
+          'MERGE (memberToAuthorize)-[:AUTHORIZED_FOR]->(account)
             RETURN
               "accountAuthorized" AS message,
               account.accountID AS accountID,
-              humanToAuthorize.accountID AS humanIDtoAuthorize',
+              memberToAuthorize.accountID AS memberIDtoAuthorize',
           {
             numAuthorized: numAuthorized,
-            humanToAuthorize: humanToAuthorize,
+            memberToAuthorize: memberToAuthorize,
             account: account
           }
         )
@@ -33,10 +33,10 @@ export async function AuthorizeForAccountService(
         RETURN
           value.message AS message,
           value.accountID AS accountID,
-          value.humanIDtoAuthorize AS humanIDtoAuthorize
+          value.memberIDtoAuthorize AS memberIDtoAuthorize
       `,
       {
-        humanHandleToBeAuthorized,
+        memberHandleToBeAuthorized,
         accountID,
         ownerID,
       }
@@ -60,13 +60,13 @@ export async function AuthorizeForAccountService(
     if (record.get("message") == "accountAuthorized") {
       console.log(
         `account ${record.get(
-          "humanIDtoAuthorize"
+          "memberIDtoAuthorize"
         )} authorized to transact for ${record.get("accountID")}`
       );
       return {
         message: "account authorized",
         accountID: record.get("accountID"),
-        humanIdAuthorized: record.get("humanIDtoAuthorize"),
+        memberIdAuthorized: record.get("memberIDtoAuthorize"),
       };
     } else {
       console.log("could not authorize account");

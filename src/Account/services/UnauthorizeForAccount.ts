@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 
 export async function UnauthorizeForCompanyService(
-  humanIDtoBeUnauthorized: string,
+  memberIDtoBeUnauthorized: string,
   accountID: string,
   ownerID: string
 ) {
@@ -11,16 +11,16 @@ export async function UnauthorizeForCompanyService(
     const result = await ledgerSpaceSession.run(
       `
             MATCH
-                (humanToUnauthorize:Human { uniqueHumanID: $humanIDtoBeUnauthorized })
+                (memberToUnauthorize:Member { memberID: $memberIDtoBeUnauthorized })
                 -[authRel:AUTHORIZED_FOR]->(account:Account { accountID: $accountID })
-                <-[:OWNS]-(owner:Human { uniqueHumanID: $ownerID })
+                <-[:OWNS]-(owner:Member { memberID: $ownerID })
             DELETE authRel
             RETURN
                 account.accountID AS accountID,
-                humanToUnauthorize.accountID AS humanToUnauthorize
+                memberToUnauthorize.accountID AS memberToUnauthorize
         `,
       {
-        humanIDtoBeUnauthorized,
+        memberIDtoBeUnauthorized,
         accountID,
         ownerID,
       }
@@ -34,7 +34,7 @@ export async function UnauthorizeForCompanyService(
 
     console.log(
       `account ${record.get(
-        "humanToUnauthorize"
+        "memberToUnauthorize"
       )} unauthorized to transact for ${record.get("accountID")}`
     );
     return true;

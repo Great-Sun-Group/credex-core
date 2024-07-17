@@ -1,6 +1,6 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { getDenominations } from "../constants/denominations";
-import { OnboardHumanService } from "../../Human/services/OnboardHuman";
+import { OnboardMemberService } from "../../Member/services/OnboardMember";
 import { CreateAccountService } from "../../Account/services/CreateAccount";
 import { OfferCredexService } from "../../Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
@@ -132,34 +132,37 @@ export async function DBinitialization(): Promise<void> {
     );
 
     console.log("Creating initialization accounts and relationships...");
-    const rdubs = await OnboardHumanService(
+    const rdubs = await OnboardMemberService(
       "Ryan",
       "Watson",
       "ryanlukewatson",
       "USD",
-      "263778177125",
+      "263778177125"
     );
     let rdubsID;
-    if (typeof rdubs.onboardedHumanID == "boolean") {
+    if (typeof rdubs.onboardedMemberID == "boolean") {
       throw new Error("rdubs could not be created");
     }
-    if (rdubs.onboardedHumanID && typeof rdubs.onboardedHumanID === "string") {
-    const rdubsConsumptionAccount = await CreateAccountService(
-      rdubs.onboardedHumanID,
-      "PERSONAL_CONSUMPTION",
-      "Ryan Watson Personal",
-      "ryanlukewatson",
-      "USD",
-      1,
-      CXXdenom
-    );
+    if (
+      rdubs.onboardedMemberID &&
+      typeof rdubs.onboardedMemberID === "string"
+    ) {
+      const rdubsConsumptionAccount = await CreateAccountService(
+        rdubs.onboardedMemberID,
+        "PERSONAL_CONSUMPTION",
+        "Ryan Watson Personal",
+        "ryanlukewatson",
+        "USD",
+        1,
+        CXXdenom
+      );
 
       rdubsID = rdubsConsumptionAccount.accountID;
     } else {
       throw new Error("rdubs could not be created");
     }
     const credexFoundation = await CreateAccountService(
-      rdubs.onboardedHumanID,
+      rdubs.onboardedMemberID,
       "CREDEX_FOUNDATION",
       "Credex Foundation",
       "credexfoundation",
@@ -179,7 +182,7 @@ export async function DBinitialization(): Promise<void> {
     }
 
     const greatSun = await CreateAccountService(
-      rdubs.onboardedHumanID,
+      rdubs.onboardedMemberID,
       "BUSINESS",
       "Great Sun Financial",
       "greatsunfinancial",

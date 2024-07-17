@@ -1,5 +1,7 @@
 import * as neo4j from "neo4j-driver";
 
+require('dotenv').config()
+
 const ledgerSpace_url = `${process.env.NEO_4J_LEDGER_SPACE_BOLT_URL}`;
 const ledgerSpace_user = `${process.env.NEO_4J_LEDGER_SPACE_USER}`;
 const ledgerSpace_password = `${process.env.NEO_4J_LEDGER_SPACE_PASS}`;
