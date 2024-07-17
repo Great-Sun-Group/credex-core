@@ -1,33 +1,35 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 
-export async function GetHumanDashboardByPhoneService(phone: string) {
+export async function GetMemberDashboardByPhoneService(phone: string) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
     const result = await ledgerSpaceSession.run(
       `
-      MATCH (human:Human { phone: $phone })
-      OPTIONAL MATCH (human)-[:AUTHORIZED_FOR]->(account:Account)
-      WITH human, COLLECT(account.accountID) AS accountIDs
+      MATCH (member:Member { phone: $phone })
+      OPTIONAL MATCH (member)-[:AUTHORIZED_FOR]->(account:Account)
+      WITH member, COLLECT(account.accountID) AS accountIDs
       RETURN
-        human.uniqueHumanID AS uniqueHumanID,
-        human.firstname AS firstname,
-        human.lastname AS lastname,
-        human.defaultDenom AS defaultDenom,
+        member.memberID AS memberID,
+        member.firstname AS firstname,
+        member.lastname AS lastname,
+        member.memberHandle AS memberHandle,
+        member.defaultDenom AS defaultDenom,
         accountIDs AS accountIDS
       `,
       { phone }
     );
 
     if (!result.records.length) {
-      console.log("human not found by phone");
+      console.log("member not found by phone");
       return false;
     }
 
     return {
-      uniqueHumanID: result.records[0].get("uniqueHumanID"),
+      memberID: result.records[0].get("memberID"),
       firstname: result.records[0].get("firstname"),
       lastname: result.records[0].get("lastname"),
+      memberHandle: result.records[0].get("memberHandle"),
       defaultDenom: result.records[0].get("defaultDenom"),
       accountIDS: result.records[0].get("accountIDS"),
     };

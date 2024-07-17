@@ -33,7 +33,7 @@ export async function CreateAccountService(
   if (DCOdenom && !getDenominations({ code: DCOdenom }).length) {
     const message = "DCOdenom not in denoms";
     console.log(message);
-    return { onboardedHumanID: false, message: message };
+    return { onboardedMemberID: false, message: message };
   }
 
   // Database interaction
@@ -42,7 +42,7 @@ export async function CreateAccountService(
     const result = await ledgerSpaceSession.run(
       `
         MATCH (daynode:Daynode { Active: true })
-        MATCH (owner:Human { uniqueHumanID: $ownerID })
+        MATCH (owner:Member { memberID: $ownerID })
         CREATE (owner)-[:OWNS]->(account:Account {
           accountType: $accountType,
           accountName: $accountName,

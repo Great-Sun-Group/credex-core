@@ -1,10 +1,10 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { getDenominations } from "../../Core/constants/denominations";
 
-export async function OnboardHumanService(
+export async function OnboardMemberService(
   firstname: string,
   lastname: string,
-  handle: string,
+  memberHandle: string,
   defaultDenom: string,
   phone: string
 ) {
@@ -14,49 +14,50 @@ export async function OnboardHumanService(
     if (!getDenominations({ code: defaultDenom }).length) {
       const message = "defaultDenom not in denoms";
       console.log(message);
-      return { onboardedHumanID: false, message: message };
+      return { onboardedMemberID: false, message: message };
     }
 
     const result = await ledgerSpaceSession.run(
       `
         MATCH (daynode:Daynode { Active: true })
-        CREATE (human:Human{
+        CREATE (member:Member{
           firstname: $firstname,
           lastname: $lastname,
+          memberHandle: $memberHandle,
           defaultDenom: $defaultDenom,
           phone: $phone,
-          uniqueHumanID: randomUUID(),
+          memberID: randomUUID(),
           queueStatus: "PENDING_ACCOUNT",
           createdAt: datetime(),
           updatedAt: datetime()
         })-[:CREATED_ON]->(daynode)
         RETURN
-          human.uniqueHumanID AS uniqueHumanID
+          member.memberID AS memberID
       `,
       {
         firstname,
         lastname,
-        handle,
+        memberHandle,
         defaultDenom,
         phone,
       }
     );
 
     if (!result.records.length) {
-      const message = "could not onboard human";
+      const message = "could not onboard member";
       console.log(message);
-      return { onboardedHumanID: false, message: message };
+      return { onboardedMemberID: false, message: message };
     }
 
-    const uniqueHumanID = result.records[0].get("uniqueHumanID");
+    const memberID = result.records[0].get("memberID");
 
-    console.log("human onboarded: " + uniqueHumanID);
+    console.log("member onboarded: " + memberID);
     return {
-      onboardedHumanID: uniqueHumanID,
-      message: "human onboarded",
+      onboardedMemberID: memberID,
+      message: "member onboarded",
     };
   } catch (error) {
-    console.error("Error onboarding human:", error);
+    console.error("Error onboarding member:", error);
 
     // Type guard to narrow the type of error
     if (
@@ -65,18 +66,18 @@ export async function OnboardHumanService(
     ) {
       if (error.message.includes("phone")) {
         return {
-          onboardedHumanID: false,
+          onboardedMemberID: false,
           message: "Phone number already in use",
         };
       }
       return {
-        onboardedHumanID: false,
+        onboardedMemberID: false,
         message: "Required unique field not unique",
       };
     }
 
     return {
-      onboardedHumanID: false,
+      onboardedMemberID: false,
       message:
         "Error: " + (error instanceof Error ? error.message : "Unknown error"),
     };

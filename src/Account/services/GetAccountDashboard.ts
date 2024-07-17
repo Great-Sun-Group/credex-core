@@ -4,8 +4,8 @@ import { GetPendingOffersInService } from "../../Credex/services/GetPendingOffer
 import { GetPendingOffersOutService } from "../../Credex/services/GetPendingOffersOut";
 
 export async function GetAccountDashboardService(
-  uniqueHumanID: string,
-  accountID: string,
+  memberID: string,
+  accountID: string
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
@@ -14,7 +14,7 @@ export async function GetAccountDashboardService(
         MATCH
           (account:Account { accountID: $accountID })\
           <-[:AUTHORIZED_FOR]-
-          (human:Human { uniqueHumanID: $uniqueHumanID})
+          (member:Member { memberID: $memberID})
         RETURN
           account.accountID AS accountID,
           account.accountType AS accountType,
@@ -22,7 +22,7 @@ export async function GetAccountDashboardService(
           account.accountHandle AS accountHandle,
           account.defaultDenom AS defaultDenom
       `,
-      { uniqueHumanID, accountID }
+      { memberID, accountID }
     );
 
     if (!result.records.length) {

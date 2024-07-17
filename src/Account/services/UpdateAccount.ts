@@ -50,7 +50,7 @@ export async function UpdateAccountService(
     const result = await ledgerSpaceSession.run(
       `
         MATCH
-          (owner:Human { uniqueHumanID: $ownerID })
+          (owner:Member { memberID: $ownerID })
           -[:OWNS]->
           (account:Account { accountID: $accountID })
         SET account += $dataToUpdate
