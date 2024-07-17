@@ -42,10 +42,10 @@ COPY package*.json .
 
 RUN npm ci --only=production
 
-COPY --from=build /app/dist ./dist
+COPY --from=build /app/build ./build
 
 # Expose the port that the application listens on.
 EXPOSE 5000
 
 # Run the application.
-CMD node dist/index.js
+CMD node build/index.js
