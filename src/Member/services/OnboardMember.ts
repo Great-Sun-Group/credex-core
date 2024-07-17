@@ -27,7 +27,6 @@ export async function OnboardMemberService(
           defaultDenom: $defaultDenom,
           phone: $phone,
           memberID: randomUUID(),
-          queueStatus: "PENDING_ACCOUNT",
           createdAt: datetime(),
           updatedAt: datetime()
         })-[:CREATED_ON]->(daynode)

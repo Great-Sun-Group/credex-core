@@ -65,8 +65,6 @@ export async function GetBalancesService(accountID: string) {
       { accountID }
     );
 
-    console.log(getSecuredBalancesQuery.records);
-
     var securedNetBalancesByDenom: string[] = [];
     if (getSecuredBalancesQuery.records[0].get("denom")) {
       securedNetBalancesByDenom = getSecuredBalancesQuery.records

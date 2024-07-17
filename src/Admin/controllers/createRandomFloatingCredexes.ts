@@ -1,7 +1,7 @@
 import express from "express";
 import { CreateRandomFloatingCredexesService } from "../services/CreateRandomFloatingCredexes";
 
-export async function CreateTestTransactionsController(
+export async function CreateRandomFloatingCredexesController(
   req: express.Request,
   res: express.Response
 ) {
