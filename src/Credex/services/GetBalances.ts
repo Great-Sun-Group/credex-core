@@ -67,16 +67,16 @@ export async function GetBalancesService(accountID: string) {
 
     var securedNetBalancesByDenom: string[] = [];
     if (getSecuredBalancesQuery.records[0].get("denom")) {
-      securedNetBalancesByDenom = getSecuredBalancesQuery.records.map(
-        (record) => {
+      securedNetBalancesByDenom = getSecuredBalancesQuery.records
+        .filter((record) => {
+          const amount = record["_fields"][1];
+          return typeof amount === "number" && !isNaN(amount) && amount !== 0;
+        })
+        .map((record) => {
           const [currency, amount] = record["_fields"];
-          const formattedAmount =
-            typeof amount === "number" && !isNaN(amount)
-              ? denomFormatter(amount, currency)
-              : "0";
+          const formattedAmount = denomFormatter(amount, currency);
           return `${formattedAmount} ${currency}`;
-        }
-      );
+        });
     }
 
     const getUnsecuredBalancesAndTotalAssetsQuery =

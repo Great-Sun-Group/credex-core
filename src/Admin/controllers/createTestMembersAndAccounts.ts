@@ -1,7 +1,7 @@
 import express from "express";
-import { CreateTestAccountsService } from "../services/CreateTestAccounts";
+import { CreateTestMembersAndAccountsService } from "../services/CreateTestMembersAndAccounts";
 
-export async function CreateTestAccountsController(
+export async function CreateTestMembersAndAccountsController(
   req: express.Request,
   res: express.Response
 ) {
@@ -12,7 +12,7 @@ export async function CreateTestAccountsController(
 
   try {
     // Call the service to create test accounts
-    const responseData = await CreateTestAccountsService(
+    const responseData = await CreateTestMembersAndAccountsService(
       req.body.numNewAccounts
     );
 

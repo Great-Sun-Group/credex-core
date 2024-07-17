@@ -49,7 +49,7 @@ export async function GetLedgerService(
             credex.InitialAmount/credex.CXXmultiplier AS InitialAmount,
             credex.Denomination AS Denomination,
             (startNode(transactionType) = account) as debit,
-            counterparty.accountType AS counterpartyAccountName
+            counterparty.accountName AS counterpartyAccountName
             ORDER BY credex.acceptedAt
             SKIP $startRow
             LIMIT $numRows

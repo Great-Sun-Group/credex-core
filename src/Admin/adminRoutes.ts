@@ -4,8 +4,8 @@ import { ClearDevDbController } from "./controllers/clearDevDb";
 import { ForceDcoController } from "./controllers/forceDCO";
 import { ForceMtqController } from "./controllers/forceMTQ";
 import { OfferAndAcceptCredexController } from "./controllers/offerAndAcceptCredex";
-import { CreateTestAccountsController } from "./controllers/createTestAccounts";
-import { CreateTestTransactionsController } from "./controllers/createTestTransactions";
+import { CreateTestMembersAndAccountsController } from "./controllers/createTestMembersAndAccounts";
+import { CreateRandomFloatingCredexesController } from "./controllers/createRandomFloatingCredexes";
 import { CreateTestLoopController } from "./controllers/createTestLoop";
 import { GrowthTestController } from "./controllers/growthTest";
 import { CheckLedgerVsSearchBalancesController } from "./controllers/checkLedgerVsSearchBalances";
@@ -27,15 +27,15 @@ export default function AdminRoutes(app: express.Application, jsonParser: any) {
   );
 
   app.post(
-    `${apiVersionOneRoute}createTestAccounts`,
+    `${apiVersionOneRoute}createTestMembersAndAccounts`,
     jsonParser,
-    CreateTestAccountsController
+    CreateTestMembersAndAccountsController
   );
 
   app.post(
-    `${apiVersionOneRoute}createTestTransactions`,
+    `${apiVersionOneRoute}createRandomFloatingCredexes`,
     jsonParser,
-    CreateTestTransactionsController
+    CreateRandomFloatingCredexesController
   );
 
   app.post(

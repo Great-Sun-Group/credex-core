@@ -40,7 +40,7 @@ export async function OnboardMemberController(
     const consumptionAccount = await CreateAccountService(
       onboardedMember.onboardedMemberID,
       "PERSONAL_CONSUMPTION",
-      `${req.body.firstname} ${req.body.lastname}`,
+      `${req.body.firstname} ${req.body.lastname} Personal`,
       req.body.memberHandle,
       req.body.defaultDenom,
       req.body.DCOgiveInCXX,

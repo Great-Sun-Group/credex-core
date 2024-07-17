@@ -12,9 +12,9 @@ export async function UpdateSendOffersToService(
       `
             MATCH
                 (newMemberForOffers: Member { memberID: $memberIDtoSendOffers})
-                -[:AUTHORIZED_FOR]->(account:Account { accountID: $companyID})
+                -[:AUTHORIZED_FOR]->(account:Account { accountID: $accountID})
                 <-[:OWNS]-(owner:Member { memberID: $ownerID}),
-                (company)-[currentAccountForOffersRel:SEND_OFFERS_TO]->(:Account)
+                (account)-[currentAccountForOffersRel:SEND_OFFERS_TO]->(:Member)
             DELETE currentAccountForOffersRel
             CREATE (account)-[:SEND_OFFERS_TO]->(newMemberForOffers)
             RETURN true
