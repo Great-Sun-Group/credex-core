@@ -12,7 +12,7 @@ export async function AuthorizeForAccountService(
       `
         MATCH (account:Account { accountID: $accountID })
             <-[:OWNS]-(owner:Member { memberID: $ownerID })
-        MATCH (memberToAuthorize:Member { handle: $memberHandleToBeAuthorized })
+        MATCH (memberToAuthorize:Member { memberHandle: $memberHandleToBeAuthorized })
         MATCH (:Member)-[currentAuthForRel:AUTHORIZED_FOR]->(account)
         WITH count (currentAuthForRel) AS numAuthorized, memberToAuthorize, account
         CALL apoc.do.when(
@@ -22,7 +22,7 @@ export async function AuthorizeForAccountService(
             RETURN
               "accountAuthorized" AS message,
               account.accountID AS accountID,
-              memberToAuthorize.accountID AS memberIDtoAuthorize',
+              memberToAuthorize.memberID AS memberIDtoAuthorize',
           {
             numAuthorized: numAuthorized,
             memberToAuthorize: memberToAuthorize,

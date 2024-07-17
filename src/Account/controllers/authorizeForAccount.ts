@@ -1,7 +1,7 @@
 import express from "express";
 import { AuthorizeForAccountService } from "../services/AuthorizeForAccount";
 
-export async function AuthorizeForCompanyController(
+export async function AuthorizeForAccountController(
   req: express.Request,
   res: express.Response
 ) {
