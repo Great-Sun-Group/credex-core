@@ -1,18 +1,39 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { getDenominations } from "../../Core/constants/denominations";
+import { checkPermittedAccountType } from "../../Core/constants/accountTypes";
 
 export async function CreateAccountService(
   ownerID: string,
   accountType: string,
   accountName: string,
   accountHandle: string,
-  defaultDenom: string
+  defaultDenom: string,
+  DCOgiveInCXX: number | null = null,
+  DCOdenom: string | null = null
 ) {
   // Validation: Check defaultDenom in denominations
   if (!getDenominations({ code: defaultDenom }).length) {
     const message = "defaultDenom not in denoms";
     console.log(message);
-    return { account: false, message };
+    return { account: false, message: message };
+  }
+
+  // Check credex type validity
+  if (!checkPermittedAccountType(accountType)) {
+    const message = "Error: accountType not permitted";
+    console.log(message);
+    console.log("accountType: " + accountType);
+    return {
+      account: false,
+      message: message,
+    };
+  }
+
+  // Validation: Check DCOdenom in denominations
+  if (DCOdenom && !getDenominations({ code: DCOdenom }).length) {
+    const message = "DCOdenom not in denoms";
+    console.log(message);
+    return { onboardedHumanID: false, message: message };
   }
 
   // Database interaction
@@ -28,7 +49,7 @@ export async function CreateAccountService(
           accountHandle: $accountHandle,
           defaultDenom: $defaultDenom,
           DCOgiveInCXX: $DCOgiveInCXX,
-          DCOdenom: $DCOdenom
+          DCOdenom: $DCOdenom,
           accountID: randomUUID(),
           queueStatus: "PENDING_MEMBER",
           createdAt: datetime(),
@@ -40,7 +61,15 @@ export async function CreateAccountService(
           -[:SEND_OFFERS_TO]->(owner)
         RETURN account.accountID AS accountID
       `,
-      { ownerID, accountType, accountName, accountHandle, defaultDenom }
+      {
+        ownerID,
+        accountType,
+        accountName,
+        accountHandle,
+        defaultDenom,
+        DCOgiveInCXX,
+        DCOdenom,
+      }
     );
 
     if (!result.records.length) {

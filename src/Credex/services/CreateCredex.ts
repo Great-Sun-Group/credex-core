@@ -189,7 +189,7 @@ export async function CreateCredexService(credexData: any) {
         MERGE (issuer)-[:${OFFEREDorREQUESTED}]->(newCredex)-[:${OFFEREDorREQUESTED}]->(receiver)
         RETURN
           newCredex.credexID AS credexID,
-          receiver.accountName AS receiverAccountName,
+          receiver.accountName AS receiverAccountName
       `,
       {
         issuerAccountID,

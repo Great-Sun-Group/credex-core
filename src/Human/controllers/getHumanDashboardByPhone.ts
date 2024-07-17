@@ -5,7 +5,19 @@ import { GetAccountDashboardService } from "../../Account/services/GetAccountDas
 export async function GetHumanDashboardByPhoneController(
   req: express.Request,
   res: express.Response
-): Promise<void> {
+) {
+  const fieldsRequired = [
+    "phone",
+  ];
+  for (const field of fieldsRequired) {
+    if (!req.body[field]) {
+      return res
+        .status(400)
+        .json({ message: `${field} is required` })
+        .send();
+    }
+  }
+  
   try {
     const humanDashboard = await GetHumanDashboardByPhoneService(req.body.phone);
     if (!humanDashboard) {

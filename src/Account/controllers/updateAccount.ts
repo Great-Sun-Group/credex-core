@@ -4,12 +4,13 @@ import { UpdateAccountService } from "../services/UpdateAccount";
 export async function UpdateAccountController(
   req: express.Request,
   res: express.Response
-): Promise<void> {
-  const { accountID } = req.body;
+) {
+  const requiredFields = ["ownerID", "accountID"];
 
-  if (!accountID) {
-    res.status(400).json({ message: "accountID is required" });
-    return;
+  for (const field of requiredFields) {
+    if (!req.body[field]) {
+      return res.status(400).json({ message: `${field} is required` });
+    }
   }
 
   try {
@@ -17,7 +18,8 @@ export async function UpdateAccountController(
       req.body.ownerID,
       req.body.accountID,
       req.body.accountName,
-      req.body.accountHandle,      req.body.defaultDenom
+      req.body.accountHandle,
+      req.body.defaultDenom
     );
 
     if (updatedAccountID) {

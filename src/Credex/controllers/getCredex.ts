@@ -5,6 +5,16 @@ export async function GetCredexController(
   req: express.Request,
   res: express.Response
 ) {
+  const fieldsRequired = ["credexID", "accountID"];
+  for (const field of fieldsRequired) {
+    if (!req.body[field]) {
+      return res
+        .status(400)
+        .json({ message: `${field} is required` })
+        .send();
+    }
+  }
+
   try {
     const responseData = await GetCredexService(
       req.body.credexID,

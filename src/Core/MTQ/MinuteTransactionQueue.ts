@@ -47,7 +47,7 @@ export async function MinuteTransactionQueue() {
       MATCH (newAccount:Account {queueStatus: "PENDING_MEMBER"})
       RETURN
         newAccount.accountID AS accountID,
-        newAccount.accountName AS accountName,
+        newAccount.accountName AS accountName
     `);
 
     for (const record of getQueuedAccounts.records) {

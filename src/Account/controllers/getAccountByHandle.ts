@@ -4,9 +4,17 @@ import { GetAccountByHandleService } from "../services/GetAccountByHandle";
 export async function GetAccountByHandleController(
   req: express.Request,
   res: express.Response
-): Promise<void> {
+) {
+    const requiredFields = ["accountHandle"];
+
+  for (const field of requiredFields) {
+    if (!req.body[field]) {
+      return res.status(400).json({ message: `${field} is required` });
+    }
+  }
+
   try {
-    const accountData = await GetAccountByHandleService(req.body.handle);
+    const accountData = await GetAccountByHandleService(req.body.accountHandle);
 
     if (accountData) {
       res.status(200).json({ accountData });

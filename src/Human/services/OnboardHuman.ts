@@ -7,8 +7,6 @@ export async function OnboardHumanService(
   handle: string,
   defaultDenom: string,
   phone: string,
-  DCOgiveInCXX: number | null,
-  DCOdenom: string | null
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
@@ -16,13 +14,7 @@ export async function OnboardHumanService(
     if (!getDenominations({ code: defaultDenom }).length) {
       const message = "defaultDenom not in denoms";
       console.log(message);
-      return { onboardedHumanID: false, message };
-    }
-
-    if (DCOdenom && !getDenominations({ code: DCOdenom }).length) {
-      const message = "DCOdenom not in denoms";
-      console.log(message);
-      return { onboardedHumanID: false, message };
+      return { onboardedHumanID: false, message: message };
     }
 
     const result = await ledgerSpaceSession.run(
@@ -33,16 +25,13 @@ export async function OnboardHumanService(
           lastname: $lastname,
           defaultDenom: $defaultDenom,
           phone: $phone,
-          DCOgiveInCXX: $DCOgiveInCXX,
-          DCOdenom: $DCOdenom,
-          uniqueHumanID = randomUUID(),
-          queueStatus = "PENDING_MEMBER",
-          createdAt = datetime(),
-          updatedAt = datetime()
+          uniqueHumanID: randomUUID(),
+          queueStatus: "PENDING_MEMBER",
+          createdAt: datetime(),
+          updatedAt: datetime()
         })-[:CREATED_ON]->(daynode)
         RETURN
-          human.uniqueHumanID AS uniqueHumanID,
-          human.phone AS phone
+          human.uniqueHumanID AS uniqueHumanID
       `,
       {
         firstname,
@@ -50,15 +39,13 @@ export async function OnboardHumanService(
         handle,
         defaultDenom,
         phone,
-        DCOgiveInCXX,
-        DCOdenom,
       }
     );
 
     if (!result.records.length) {
       const message = "could not onboard human";
       console.log(message);
-      return { onboardedHumanID: false, message };
+      return { onboardedHumanID: false, message: message };
     }
 
     const uniqueHumanID = result.records[0].get("uniqueHumanID");

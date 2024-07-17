@@ -35,8 +35,6 @@ export async function CreateTestAccountsService(numNewAccounts: number) {
           firstname + "_" + lastname,
           "USD",
           phone,
-          null,
-          null
         );
         if (!onboardedHuman.onboardedHumanID) {
           throw new Error("human could not be onboarded");
@@ -44,7 +42,7 @@ export async function CreateTestAccountsService(numNewAccounts: number) {
 
         const consumptionAccount = await CreateAccountService(
           onboardedHuman.onboardedHumanID,
-          "CONSUMPTION",
+          "PERSONAL_CONSUMPTION",
           `${firstname} ${lastname}`,
           `${firstname}_${lastname}`,
           "USD"

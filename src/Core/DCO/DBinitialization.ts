@@ -138,21 +138,28 @@ export async function DBinitialization(): Promise<void> {
       "ryanlukewatson",
       "USD",
       "263778177125",
-      1,
-      CXXdenom
     );
     let rdubsID;
     if (typeof rdubs.onboardedHumanID == "boolean") {
       throw new Error("rdubs could not be created");
     }
     if (rdubs.onboardedHumanID && typeof rdubs.onboardedHumanID === "string") {
-      rdubsID = rdubs.onboardedHumanID;
+    const rdubsConsumptionAccount = await CreateAccountService(
+      rdubs.onboardedHumanID,
+      "PERSONAL_CONSUMPTION",
+      "Ryan Watson Personal",
+      "ryanlukewatson",
+      "USD",
+      1,
+      CXXdenom
+    );
+
+      rdubsID = rdubsConsumptionAccount.accountID;
     } else {
       throw new Error("rdubs could not be created");
     }
-
     const credexFoundation = await CreateAccountService(
-      rdubsID,
+      rdubs.onboardedHumanID,
       "CREDEX_FOUNDATION",
       "Credex Foundation",
       "credexfoundation",
@@ -172,8 +179,8 @@ export async function DBinitialization(): Promise<void> {
     }
 
     const greatSun = await CreateAccountService(
-      rdubsID,
-      "COMPANY",
+      rdubs.onboardedHumanID,
+      "BUSINESS",
       "Great Sun Financial",
       "greatsunfinancial",
       "CAD"

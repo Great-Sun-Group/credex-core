@@ -30,8 +30,6 @@ export async function OnboardHumanController(
       req.body.handle,
       req.body.defaultDenom,
       req.body.phone,
-      req.body.DCOgiveInCXX,
-      req.body.DCOdenom
     );
 
     if (!onboardedHuman.onboardedHumanID) {
@@ -41,10 +39,12 @@ export async function OnboardHumanController(
 
     const consumptionAccount = await CreateAccountService(
       onboardedHuman.onboardedHumanID,
-      "CONSUMPTION",
+      "PERSONAL_CONSUMPTION",
       `${req.body.firstname} ${req.body.lastname}`,
       req.body.handle,
-      req.body.defaultDenom
+      req.body.defaultDenom,
+      req.body.DCOgiveInCXX,
+      req.body.DCOdenom
     );
 
     if (!consumptionAccount.accountID) {

@@ -160,7 +160,6 @@ export async function LoopFinder(
       //Step 8: collect credexIDs of the zeroCredexes
       UNWIND zeroCredexes as zeroCredex
       RETURN collect(zeroCredex.credexID) AS zeroCredexIDs, lowestAmount, credexIDs
-
       `,
       { issuerAccountID, searchOwesType }
     );
