@@ -7,10 +7,11 @@ export async function OfferCredexController(
   res: express.Response
 ) {
   const fieldsRequired = [
-    "issuerMemberID",
-    "receiverMemberID",
+    "memberID",
+    "issuerAccountID",
+    "receiverAccountID",
     "Denomination",
-    "InitialAmount"
+    "InitialAmount",
   ];
   for (const field of fieldsRequired) {
     if (!req.body[field]) {
@@ -24,8 +25,8 @@ export async function OfferCredexController(
   try {
     const offerCredexData = await OfferCredexService(req.body);
     const dashboardData = await GetAccountDashboardService(
-      req.body.issuerAccountID,
-      req.body.authorizerAccountID
+      req.body.memberID,
+      req.body.issuerAccountID
     );
     res.json({
       offerCredexData: offerCredexData,
