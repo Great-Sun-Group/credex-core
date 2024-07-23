@@ -29,8 +29,8 @@ export async function CreateAccountController(
       req.body.defaultDenom
     );
 
-    if (newAccount.account) {
-      res.status(200).json(newAccount.account);
+    if (newAccount.accountID) {
+      res.status(200).json(newAccount.accountID);
     } else {
       res.status(400).json({ message: newAccount.message });
     }
