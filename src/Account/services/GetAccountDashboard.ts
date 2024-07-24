@@ -68,14 +68,18 @@ const accountData: AccountData = {
   pendingOutData: [],
 };
 
-result.records.forEach((record) => {
-  accountData.authFor.push({
-    memberID: record.get("authMemberID"),
-    firstname: record.get("authMemberFirst"),
-    lastname: record.get("authMemberLast"),
-  });
-});
-
+    if (accountData.isOwnedAccount) {
+      result.records.forEach((record) => {
+        accountData.authFor.push({
+          memberID: record.get("authMemberID"),
+          firstname: record.get("authMemberFirst"),
+          lastname: record.get("authMemberLast"),
+        });
+      });
+    }
+    else {
+      accountData.authFor = [];
+    }
     accountData.balanceData = await GetBalancesService(accountData.accountID);
     accountData.pendingInData = await GetPendingOffersInService(
       accountData.accountID
