@@ -9,26 +9,29 @@ export async function GetAccountDashboardService(
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
-interface AuthMember {
-  memberID: string;
-  firstname: string;
-  lastname: string;
-}
+    interface AuthMember {
+      memberID: string;
+      firstname: string;
+      lastname: string;
+    }
 
-interface AccountData {
-  accountID: string;
-  accountName: string;
-  accountHandle: string;
-  defaultDenom: string;
-  isOwnedAccount: boolean;
-  authFor: AuthMember[];
-  balanceData: any;
-  pendingInData: any;
-  pendingOutData: any;
-}
+    interface AccountData {
+      accountID: string;
+      accountName: string;
+      accountHandle: string;
+      defaultDenom: string;
+      isOwnedAccount: boolean;
+      sendOffersToFirstname: string;
+      sendOffersToLastname: string;
+      sendOffersToMemberID: string;
+      authFor: AuthMember[];
+      balanceData: any;
+      pendingInData: any;
+      pendingOutData: any;
+    }
 
-const result = await ledgerSpaceSession.run(
-  `
+    const result = await ledgerSpaceSession.run(
+      `
     MATCH
       (account:Account { accountID: $accountID })
       <-[:AUTHORIZED_FOR]-
@@ -37,47 +40,63 @@ const result = await ledgerSpaceSession.run(
       (account)<-[:AUTHORIZED_FOR]-(allAuthMembers)
     OPTIONAL MATCH
       (account)<-[owns:OWNS]-(member)
+    OPTIONAL MATCH
+      (account)-[:SEND_OFFERS_TO]->(sendOffersTo:Member)
     RETURN
       account.accountID AS accountID,
       account.accountType AS accountType,
       account.accountName AS accountName,
       account.accountHandle AS accountHandle,
       account.defaultDenom AS defaultDenom,
+      sendOffersTo.firstname AS sendOffersToFirstname,
+      sendOffersTo.lastname AS sendOffersToLastname,
+      sendOffersTo.memberID AS sendOffersToMemberID,
       owns IS NOT NULL AS isOwnedAccount,
-      allAuthMembers.firstname AS authMemberFirst,
-      allAuthMembers.lastname AS authMemberLast,
+      allAuthMembers.firstname AS authMemberFirstname,
+      allAuthMembers.lastname AS authMemberLastname,
       allAuthMembers.memberID AS authMemberID
   `,
-  { memberID, accountID }
-);
+      { memberID, accountID }
+    );
 
-if (!result.records.length) {
-  console.log("account not found");
-  return null;
-}
+    if (!result.records.length) {
+      console.log("account not found");
+      return null;
+    }
 
-const accountData: AccountData = {
-  accountID: result.records[0].get("accountID"),
-  accountName: result.records[0].get("accountName"),
-  accountHandle: result.records[0].get("accountHandle"),
-  defaultDenom: result.records[0].get("defaultDenom"),
-  isOwnedAccount: result.records[0].get("isOwnedAccount"),
-  authFor: [],
-  balanceData: [],
-  pendingInData: [],
-  pendingOutData: [],
-};
+    const accountData: AccountData = {
+      accountID: result.records[0].get("accountID"),
+      accountName: result.records[0].get("accountName"),
+      accountHandle: result.records[0].get("accountHandle"),
+      defaultDenom: result.records[0].get("defaultDenom"),
+      isOwnedAccount: result.records[0].get("isOwnedAccount"),
+      sendOffersToFirstname: "",
+      sendOffersToLastname: "",
+      sendOffersToMemberID: "",
+      authFor: [],
+      balanceData: [],
+      pendingInData: [],
+      pendingOutData: [],
+    };
 
     if (accountData.isOwnedAccount) {
-      result.records.forEach((record) => {
-        accountData.authFor.push({
-          memberID: record.get("authMemberID"),
-          firstname: record.get("authMemberFirst"),
-          lastname: record.get("authMemberLast"),
+      (accountData.sendOffersToFirstname = result.records[0].get(
+        "sendOffersToFirstname"
+      )),
+        (accountData.sendOffersToLastname = result.records[0].get(
+          "sendOffersToLastname"
+        )),
+        (accountData.sendOffersToMemberID = result.records[0].get(
+          "sendOffersToMemberID"
+        )),
+        result.records.forEach((record) => {
+          accountData.authFor.push({
+            memberID: record.get("authMemberID"),
+            firstname: record.get("authMemberFirstname"),
+            lastname: record.get("authMemberLastname"),
+          });
         });
-      });
-    }
-    else {
+    } else {
       accountData.authFor = [];
     }
     accountData.balanceData = await GetBalancesService(accountData.accountID);
