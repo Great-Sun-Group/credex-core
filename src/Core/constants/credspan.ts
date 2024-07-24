@@ -1,19 +1,33 @@
+import { ledgerSpaceDriver } from "../../../config/neo4j";
 import moment from "moment-timezone";
 
 export const credspan = 35;
 
-export function checkDueDate(dueDate: any): boolean {
-
+export async function checkDueDate(dueDate: any): Promise<boolean> {
   const dueDateMoment = moment.utc(dueDate, "YYYY-MM-DD", true);
-  const lastPermittedDayMoment = moment.utc().add(credspan, "days");
-  const firstPermittedDayMoment = moment.utc().add(6, "days");
-
   if (!dueDateMoment.isValid()) {
     console.error("Due date not in valid format");
     return false;
   }
+
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
+  const currentDateQuery = await ledgerSpaceSession.run(`
+      MATCH (daynode:Daynode {Active: TRUE})
+      RETURN daynode.Date AS today
+    `);
+  const today = currentDateQuery.records[0].get("today");
+  if (!today) {
+    console.log("could not get date from daynode");
+    return false;
+  }
+  const lastPermittedDayMoment = moment(today)
+    .subtract(1, "months") // because of diff date formats
+    .add(credspan, "days");
+  const firstPermittedDayMoment = moment(today)
+    .subtract(1, "months") // because of diff date formats
+    .add(7, "days");
   if (
-    dueDateMoment > lastPermittedDayMoment ||
+    dueDateMoment >= lastPermittedDayMoment ||
     dueDateMoment < firstPermittedDayMoment
   ) {
     console.error("Due date is not within permitted credspan");

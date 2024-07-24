@@ -1,10 +1,12 @@
 export const credexTypes = [
-    "PURCHASE",
-    "GIFT",
-]
+  "PURCHASE",
+  "GIFT",
+  "DCO_GIVE",
+  "DCO_RECEIVE"
+];
 
 export function checkPermittedCredexType(credexTypeToCheck: string) {
-    if (credexTypes.includes(credexTypeToCheck)) {
-      return true;
-    }
+  if (credexTypes.includes(credexTypeToCheck)) {
+    return true;
+  }
 }

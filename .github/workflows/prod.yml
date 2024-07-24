@@ -1,0 +1,48 @@
+name: deploy_to_prod
+run-name: ${{ github.actor }} pushed to prod_auto_deploy_setup with commit message '${{ github.event.head_commit.message }}'
+
+on:
+  push:
+    branches:
+      - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: .
+
+      - name: Set up SSH deploy keys
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Set ownership on remote server
+        run: |
+          echo "${{ secrets.SSH_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+
+          # Create known_hosts file if it doesn't exist
+          mkdir -p /home/runner/.ssh
+          touch /home/runner/.ssh/known_hosts
+          # Clear old key from known_hosts
+          ssh-keygen -R ${{ secrets.EC2_IP }} >> /home/runner/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.EC2_IP }} >> /home/runner/.ssh/known_hosts
+
+          # Run the SSH command
+          ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_IP }} \
+          "cd credex-core &&
+            git checkout prod &&
+            docker-compose up --build"
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
