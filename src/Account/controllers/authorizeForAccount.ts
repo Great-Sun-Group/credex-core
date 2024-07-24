@@ -5,11 +5,7 @@ export async function AuthorizeForAccountController(
   req: express.Request,
   res: express.Response
 ) {
-  const requiredFields = [
-    "AccountHandleToBeAuthorized",
-    "accountID",
-    "ownerID",
-  ];
+  const requiredFields = ["memberHandleToBeAuthorized", "accountID", "ownerID"];
 
   for (const field of requiredFields) {
     if (!req.body[field]) {
@@ -19,7 +15,7 @@ export async function AuthorizeForAccountController(
 
   try {
     const responseData = await AuthorizeForAccountService(
-      req.body.AccountHandleToBeAuthorized,
+      req.body.memberHandleToBeAuthorized,
       req.body.accountID,
       req.body.ownerID
     );
