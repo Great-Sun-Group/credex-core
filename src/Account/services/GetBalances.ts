@@ -1,30 +1,3 @@
-/*
-Returns balance information for a account
-
-required input: accountID,
-
-on success returns formatted strings:
-{
-    //secured balances held in all currencies are returned here
-    //if none, empty securedNetBalancesByDenom array returned
-    "securedNetBalancesByDenom": [
-        "3,450.57 USD",
-        "14.00 ZIG"
-    ],
-    //unsecured balances in any denom are converted to the account's defaultDenom at current rates
-    //if no balance, string returned with 0 and denom, eg "0.00 USD"
-    "unsecuredBalancesinDefaultDenom": {
-        "totalPayables": "200.00 USD",
-        "totalReceivables": "20.00 USD",
-        "netPayRec": "-180.00 USD"
-    },
-    //secured and unsecured balances netted in account's defaultDenom
-    //if no balance, string returned with 0 and denom, eg "0.00 USD"
-    "netCredexAssetsInDefaultDenom": "3,271.61 USD"
-}
-
-*/
-
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
 
@@ -33,8 +6,6 @@ export async function GetBalancesService(accountID: string) {
   try {
     const getSecuredBalancesQuery = await ledgerSpaceSession.run(
       `
-      MATCH (account:Account {accountID: $accountID})
-
       MATCH (account:Account {accountID: $accountID})
 
       // Get all unique denominations from Credex nodes related to the account
@@ -65,19 +36,16 @@ export async function GetBalancesService(accountID: string) {
       { accountID }
     );
 
-    var securedNetBalancesByDenom: string[] = [];
-    if (getSecuredBalancesQuery.records[0].get("denom")) {
-      securedNetBalancesByDenom = getSecuredBalancesQuery.records
-        .filter((record) => {
-          const amount = record["_fields"][1];
-          return typeof amount === "number" && !isNaN(amount) && amount !== 0;
-        })
-        .map((record) => {
-          const [currency, amount] = record["_fields"];
-          const formattedAmount = denomFormatter(amount, currency);
-          return `${formattedAmount} ${currency}`;
-        });
-    }
+    const securedNetBalancesByDenom: string[] = getSecuredBalancesQuery.records
+      .filter((record) => {
+        const amount = record.get("netSecured");
+        return typeof amount === "number" && isFinite(amount) && amount !== 0;
+      })
+      .map((record) => {
+        const denom = record.get("denom");
+        const amount = record.get("netSecured");
+        return `${denomFormatter(amount, denom)} ${denom}`;
+      });
 
     const getUnsecuredBalancesAndTotalAssetsQuery =
       await ledgerSpaceSession.run(
