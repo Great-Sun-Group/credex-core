@@ -6,6 +6,7 @@ import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecured
 import { OfferCredexService } from "../../Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
 import { fetchZigRate } from "./fetchZigRate";
+import { createNeo4jBackup } from "./DBbackup";
 
 export async function DCOexecute() {
   console.log("DCOexecute start");
@@ -43,6 +44,10 @@ export async function DCOexecute() {
     const nextDate = priorDaynodeData.records[0].get("nextDate");
 
     console.log("Expiring day: " + previousDate);
+
+    console.log("Starting Neo4j backup...");
+    await createNeo4jBackup(previousDate);
+    console.log("Neo4j backup completed.");
 
     //process defaulting unsecured credexes
     let numberDefaulted = 0;
