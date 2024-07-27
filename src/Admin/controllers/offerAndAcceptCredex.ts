@@ -7,6 +7,7 @@ export async function OfferAndAcceptCredexController(
   res: express.Response
 ) {
   try {
+    /*
     const responseDataOffer = await OfferCredexService(req.body);
     if (typeof responseDataOffer.credex == "boolean") {
       throw new Error("Invalid response from OfferCredexService");
@@ -24,6 +25,7 @@ export async function OfferAndAcceptCredexController(
     } else {
       res.status(500).json(responseDataOffer.message);
     }
+      */
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }

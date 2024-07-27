@@ -21,7 +21,7 @@ export async function OfferCredexService(credexData: any) {
           (recipient:Account { accountID: $recipientID })-[:SEND_OFFERS_TO]->
           (notiMember:Member)
         MATCH (signer:Member { memberID: $signingMemberID })
-        CREATE (credex)<-[:SIGNED]-(signer)
+        CREATE (credex)<-[:MAKE_OFFER_SIGNED]-(signer)
         RETURN notiMember.phone AS notiPhone
         `,
         {
