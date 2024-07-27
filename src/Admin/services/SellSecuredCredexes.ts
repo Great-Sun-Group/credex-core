@@ -9,6 +9,7 @@ export async function SellSecuredCredexesService(
   denom: string,
   number: number
 ) {
+  /*
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   console.log(`Selling ${denom} secured credexes for cash: ${number}`);
 
@@ -96,4 +97,5 @@ export async function SellSecuredCredexesService(
   } finally {
     await ledgerSpaceSession.close();
   }
+  */
 }

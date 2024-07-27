@@ -7,8 +7,8 @@ export async function AcceptCredexBulkController(
   res: express.Response
 ) {
   if (
-    !Array.isArray(req.body) ||
-    !req.body.every((id) => typeof id === "string")
+    !Array.isArray(req.body.credexIDs) ||
+    !req.body.credexIDs.every((id: any) => typeof id === "string")
   ) {
     return res
       .status(400)
@@ -17,8 +17,8 @@ export async function AcceptCredexBulkController(
 
   try {
 const acceptCredexData = await Promise.all(
-  req.body.map(async (credexID) => {
-    const data = await AcceptCredexService(credexID);
+  req.body.credexIDs.map(async (credexID: string) => {
+    const data = await AcceptCredexService(credexID, req.body.signerID);
     if (data) {
       return data;
     }

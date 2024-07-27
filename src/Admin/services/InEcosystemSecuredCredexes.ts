@@ -9,6 +9,7 @@ export async function InEcosystemSecuredCredexesService(
   denom: string,
   number: number
 ) {
+  /*
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   console.log(`Creating in-ecosystem ${denom} secured credexes: ${number}`);
 
@@ -108,4 +109,5 @@ export async function InEcosystemSecuredCredexesService(
   } finally {
     await ledgerSpaceSession.close();
   }
+*/
 }

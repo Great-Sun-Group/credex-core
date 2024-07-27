@@ -6,7 +6,7 @@ export async function AcceptCredexController(
   req: express.Request,
   res: express.Response
 ) {
-  const fieldsRequired = ["credexID"];
+  const fieldsRequired = ["credexID", "signerID"];
   for (const field of fieldsRequired) {
     if (!req.body[field]) {
       return res
@@ -17,11 +17,14 @@ export async function AcceptCredexController(
   }
 
   try {
-    const acceptCredexData = await AcceptCredexService(req.body.credexID);
+    const acceptCredexData = await AcceptCredexService(
+      req.body.credexID,
+      req.body.signerID,
+    );
     
     if (acceptCredexData) {
       const dashboardData = await GetAccountDashboardService(
-        acceptCredexData.memberID,
+        req.body.signerID,
         acceptCredexData.acceptorAccountID
       );
       res.json({

@@ -10,6 +10,7 @@ export async function PurchaseSecuredCredexesService(
   lowValue: number,
   highValue: number
 ) {
+  /*
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   console.log(`Purchasing ${denom} secured credexes: ${number}`);
 
@@ -77,4 +78,5 @@ export async function PurchaseSecuredCredexesService(
   }
 
   await ledgerSpaceSession.close();
+  */
 }

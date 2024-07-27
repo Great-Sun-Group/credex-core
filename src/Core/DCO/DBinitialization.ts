@@ -139,7 +139,7 @@ export async function DBinitialization(): Promise<void> {
       "USD",
       "263778177125"
     );
-    let rdubsID;
+    let rdubsAccountID;
     if (typeof rdubs.onboardedMemberID == "boolean") {
       throw new Error("rdubs could not be created");
     }
@@ -147,7 +147,7 @@ export async function DBinitialization(): Promise<void> {
       rdubs.onboardedMemberID &&
       typeof rdubs.onboardedMemberID === "string"
     ) {
-      const rdubsConsumptionAccount = await CreateAccountService(
+      const rdubsPersonalAccount = await CreateAccountService(
         rdubs.onboardedMemberID,
         "PERSONAL_CONSUMPTION",
         "Ryan Watson Personal",
@@ -157,7 +157,7 @@ export async function DBinitialization(): Promise<void> {
         CXXdenom
       );
 
-      rdubsID = rdubsConsumptionAccount.accountID;
+      rdubsAccountID = rdubsPersonalAccount.accountID;
     } else {
       throw new Error("rdubs could not be created");
     }
@@ -206,8 +206,9 @@ export async function DBinitialization(): Promise<void> {
 
     //charging an account for participation in first DCO
     const credexData = {
+      memberID: rdubs.onboardedMemberID,
       issuerAccountID: greatSunID,
-      receiverAccountID: rdubsID,
+      receiverAccountID: rdubsAccountID,
       Denomination: CXXdenom,
       InitialAmount: OneCXXinCXXdenom * 365, // fund DCO for a year with no adjustments
       credexType: "PURCHASE",
@@ -222,7 +223,10 @@ export async function DBinitialization(): Promise<void> {
       DCOinitializationOfferCredex.credex &&
       typeof DCOinitializationOfferCredex.credex.credexID === "string"
     ) {
-      await AcceptCredexService(DCOinitializationOfferCredex.credex.credexID);
+      await AcceptCredexService(
+        DCOinitializationOfferCredex.credex.credexID,
+        rdubs.onboardedMemberID
+      );
     } else {
       throw new Error("Invalid credexID from OfferCredexService");
     }
