@@ -5,12 +5,13 @@ import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecured
 import * as neo4j from "neo4j-driver";
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 
-export async function SellAnchoredCredexesService(
+export async function SellSecuredCredexesService(
   denom: string,
   number: number
 ) {
+  /*
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-  console.log(`Selling ${denom} anchored credexes for cash: ${number}`);
+  console.log(`Selling ${denom} secured credexes for cash: ${number}`);
 
   try {
     if (number > 0) {
@@ -38,7 +39,7 @@ export async function SellAnchoredCredexesService(
       );
 
       if (result.records.length === 0) {
-        console.log("No records found for selling anchored credexes.");
+        console.log("No records found for selling secured credexes.");
         return;
       }
 
@@ -92,8 +93,9 @@ export async function SellAnchoredCredexesService(
       }
     }
   } catch (error) {
-    console.error("Error in SellAnchoredCredexesService:", error);
+    console.error("Error in SellSecuredCredexesService:", error);
   } finally {
     await ledgerSpaceSession.close();
   }
+  */
 }

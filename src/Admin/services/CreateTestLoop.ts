@@ -6,6 +6,7 @@ import moment from "moment-timezone";
 import * as neo4j from "neo4j-driver";
 
 export async function CreateTestLoopService(numNewTransactions: number) {
+  /*
   var ledgerSpaceSession = ledgerSpaceDriver.session();
   const getRandomCounterpartiesQuery = await ledgerSpaceSession.run(
     `
@@ -72,4 +73,5 @@ export async function CreateTestLoopService(numNewTransactions: number) {
   }
   console.log(numNewTransactions + " new transactions created");
   return credexesCreated;
+  */
 }
