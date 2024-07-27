@@ -15,9 +15,9 @@ export async function LoopFinder(
 
   var searchOwesType = "FLOATING";
   if (credexSecuredDenom != "floating") {
-    searchOwesType = credexSecuredDenom + "_ANCHORED";
+    searchOwesType = credexSecuredDenom + "_SECURED";
 
-    //this is a bit of a hack for anchored credexes, assigning them a due date of today
+    //this is a bit of a hack for secured credexes, assigning them a due date of today
     //as per daynode, so that they can be processed through the loopfinder and will be
     //prioritized by oldest outstanding credex
     const getDaynodeDate = await ledgerSpaceSession.run(`
@@ -49,7 +49,7 @@ export async function LoopFinder(
         MATCH (acceptor:Account {accountID: $acceptorAccountID})
         MERGE (issuer)-[:${searchOwesType}]->(searchOwesType:${searchOwesType})-[:${searchOwesType}]->(acceptor)
           ON CREATE SET searchOwesType.searchAnchorID = randomUUID()
-        CREATE (searchOwesType)<-[:SEARCH_ANCHORED]-(credex:Credex {
+        CREATE (searchOwesType)<-[:SEARCH_SECURED]-(credex:Credex {
             credexID: $credexID,
             outstandingAmount: $credexAmount,
             Denomination: $Denomination,
@@ -135,7 +135,7 @@ export async function LoopFinder(
       // Step 5: Each node returns the credex it is connected to with the earliest dueDate
       // on tie, credex with largest amount
       UNWIND credloopNodes AS loopNode
-      MATCH (loopNode)<-[:SEARCH_ANCHORED]-(credex:Credex)
+      MATCH (loopNode)<-[:SEARCH_SECURED]-(credex:Credex)
       WITH loopNode, collect(credex) AS credexList
       WITH 
              reduce(minCredex = credexList[0], c IN credexList | 
@@ -177,12 +177,12 @@ export async function LoopFinder(
         `
         // Step 10: Delete zeroCredexes
         UNWIND $credexesRedeemed AS credexRedeemedID
-        MATCH (credex:Credex {credexID: credexRedeemedID})-[:SEARCH_ANCHORED]->(searchAnchor)
+        MATCH (credex:Credex {credexID: credexRedeemedID})-[:SEARCH_SECURED]->(searchAnchor)
         DETACH DELETE credex
         WITH DISTINCT searchAnchor
 
         // Step 11: Handle orphaned searchAnchors
-        OPTIONAL MATCH (searchAnchor)<-[:SEARCH_ANCHORED]-(otherCredex:Credex)
+        OPTIONAL MATCH (searchAnchor)<-[:SEARCH_SECURED]-(otherCredex:Credex)
         WITH searchAnchor, collect(otherCredex) AS otherCredexes
         CALL apoc.do.when(
           size(otherCredexes) = 0,

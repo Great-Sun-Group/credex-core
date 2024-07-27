@@ -5,12 +5,12 @@ import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecured
 import * as neo4j from "neo4j-driver";
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 
-export async function InEcosystemAnchoredCredexesService(
+export async function SellSecuredCredexesService(
   denom: string,
   number: number
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-  console.log(`Creating in-ecosystem ${denom} anchored credexes: ${number}`);
+  console.log(`Selling ${denom} secured credexes for cash: ${number}`);
 
   try {
     if (number > 0) {
@@ -23,21 +23,13 @@ export async function InEcosystemAnchoredCredexesService(
           (issuer)-[transactionType:OWES]->
           (outCredex:Credex{Denomination: $denom})<-[:SECURES]-(securer)
         WITH
-          issuer,
+          issuer, securer,
           sum(inCredex.OutstandingAmount) - sum(outCredex.OutstandingAmount) AS netIn
         WHERE netIn > 0
-        WITH
-          issuer.accountID AS issuerAccountID
-        ORDER BY rand() 
-        LIMIT $number
-        WITH collect(issuerAccountID) AS issuerAccountIDs
-        UNWIND issuerAccountIDs AS issuerAccountID
-        MATCH (randomCounterparty:Account)
-        WHERE randomCounterparty.accountID <> issuerAccountID
-        WITH issuerAccountID, randomCounterparty.accountID AS receiverAccountID
-        ORDER BY rand()
-        RETURN issuerAccountID, receiverAccountID
-        LIMIT $number
+        RETURN
+          issuer.accountID AS issuerAccountID,
+          securer.accountID AS receiverAccountID
+          ORDER BY rand() LIMIT $number;
         `,
         {
           number: neo4j.int(number),
@@ -46,7 +38,7 @@ export async function InEcosystemAnchoredCredexesService(
       );
 
       if (result.records.length === 0) {
-        console.log("No records found for circulation.");
+        console.log("No records found for selling secured credexes.");
         return;
       }
 
@@ -66,15 +58,10 @@ export async function InEcosystemAnchoredCredexesService(
               denom
             );
 
-            const maxSecurable = securableData.securableAmountInDenom;
-            let InitialAmount
-            if (maxSecurable >= 1) {
-              InitialAmount = random(maxSecurable);
-            }
-            else {
-              InitialAmount = random(0.1, maxSecurable);
-            }
-            console.log("random initialAmount: " + InitialAmount);
+            const InitialAmount = random(
+              1,
+              securableData.securableAmountInDenom || 1
+            );
 
             const credexSpecs = {
               issuerAccountID: issuerAccountID,
@@ -105,7 +92,7 @@ export async function InEcosystemAnchoredCredexesService(
       }
     }
   } catch (error) {
-    console.error("Error in InEcosystemAnchoredCredexesService:", error);
+    console.error("Error in SellSecuredCredexesService:", error);
   } finally {
     await ledgerSpaceSession.close();
   }
