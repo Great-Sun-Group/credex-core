@@ -4,17 +4,17 @@ import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
 import * as neo4j from "neo4j-driver";
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 
-export async function PurchaseAnchoredCredexesService(
+export async function PurchaseSecuredCredexesService(
   denom: string,
   number: number,
   lowValue: number,
   highValue: number
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-  console.log(`Purchasing ${denom} anchored credexes: ${number}`);
+  console.log(`Purchasing ${denom} secured credexes: ${number}`);
 
   if (number > 0) {
-    const getAnchoredUSDCounterparties = await ledgerSpaceSession.run(
+    const getSecuredUSDCounterparties = await ledgerSpaceSession.run(
       `
         // Step 1: Select a random audited account
         MATCH (auditedAccount:Account)<-[:CREDEX_FOUNDATION_AUDITED]-(foundation:Account)
@@ -25,7 +25,7 @@ export async function PurchaseAnchoredCredexesService(
         MATCH (accounts:Account)
         WHERE accounts.accountID <> auditedAccount.accountID
         WITH auditedAccount, collect(accounts.accountID) AS allaccounts
-        RETURN auditedAccount.accountID AS auditedID, allaccounts[0..$number] AS accountsToPurchaseUSDanchored
+        RETURN auditedAccount.accountID AS auditedID, allaccounts[0..$number] AS accountsToPurchaseUSDsecured
       `,
       {
         number: neo4j.int(number),
@@ -33,16 +33,16 @@ export async function PurchaseAnchoredCredexesService(
     );
 
     const issuerAccountID =
-      getAnchoredUSDCounterparties.records[0].get("auditedID");
-    const accountsToPurchaseUSDanchored =
-      getAnchoredUSDCounterparties.records[0].get(
-        "accountsToPurchaseUSDanchored"
+      getSecuredUSDCounterparties.records[0].get("auditedID");
+    const accountsToPurchaseUSDsecured =
+      getSecuredUSDCounterparties.records[0].get(
+        "accountsToPurchaseUSDsecured"
       );
 
     const batchSize = 3;
 
-    for (let i = 0; i < accountsToPurchaseUSDanchored.length; i += batchSize) {
-      const batch = accountsToPurchaseUSDanchored.slice(i, i + batchSize);
+    for (let i = 0; i < accountsToPurchaseUSDsecured.length; i += batchSize) {
+      const batch = accountsToPurchaseUSDsecured.slice(i, i + batchSize);
 
       const offerPromises = batch.map((receiverAccountID: string) => {
         const InitialAmount = random(lowValue, highValue);
