@@ -14,26 +14,28 @@ export async function OfferCredexService(credexData: any) {
       typeof newCredex.credex != "boolean" &&
       newCredex.credex.credexID
     ) {
-      const getSendOfferToQuery = await ledgerSpaceSession.run(
+      const signAndGetSendOfferToQuery = await ledgerSpaceSession.run(
         `
-      MATCH (recipient:Account {accountID: $recipientID})
-      OPTIONAL MATCH (recipient)-[:SEND_OFFERS_TO]->(notiAccount:Account)
-        RETURN
-          CASE
-            WHEN notiAccount IS NOT NULL THEN notiAccount.phone
-            ELSE recipient.phone
-          END AS notiPhone
-      `,
+        MATCH
+          (credex:Credex { credexID: $credexID })-[:OFFERS]->
+          (recipient:Account { accountID: $recipientID })-[:SEND_OFFERS_TO]->
+          (notiMember:Member)
+        MATCH (signer:Member { memberID: $signingMemberID })
+        CREATE (credex)<-[:SIGNED]-(signer)
+        RETURN notiMember.phone AS notiPhone
+        `,
         {
           recipientID: credexData.receiverAccountID,
+          credexID: newCredex.credex.credexID,
+          signingMemberID: credexData.memberID,
         }
       );
 
-      if (!getSendOfferToQuery.records.length) {
+      if (!signAndGetSendOfferToQuery.records.length) {
         console.log("could not get notiPhone");
         break sendNoti;
       }
-      const notiPhone = getSendOfferToQuery.records[0].get("notiPhone");
+      const notiPhone = signAndGetSendOfferToQuery.records[0].get("notiPhone");
       //console.log("sending offer notification to " + notiPhone);
       //hit offer noti endpoint
     }
