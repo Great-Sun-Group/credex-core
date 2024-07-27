@@ -24,7 +24,7 @@ export async function AcceptCredexController(
     
     if (acceptCredexData) {
       const dashboardData = await GetAccountDashboardService(
-        acceptCredexData.memberID,
+        req.body.signerID,
         acceptCredexData.acceptorAccountID
       );
       res.json({
