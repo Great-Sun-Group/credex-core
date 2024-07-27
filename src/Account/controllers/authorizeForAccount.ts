@@ -23,12 +23,12 @@ export async function AuthorizeForAccountController(
     if (!responseData) {
       return res
         .status(400)
-        .json({ message: "Failed to authorize account for the company" });
+        .json({ message: "Failed to authorize member for account" });
     }
 
     return res.status(200).json(responseData);
   } catch (err) {
-    console.error("Error authorizing account for company:", err);
+    console.error("Error authorizing member for account:", err);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 }
