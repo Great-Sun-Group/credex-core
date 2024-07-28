@@ -29,12 +29,14 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+startCronJobs();
 MemberRoutes(app, jsonParser);
 AccountRoutes(app, jsonParser);
 CredexRoutes(app, jsonParser);
-AdminRoutes(app, jsonParser);
 
-startCronJobs();
+if (process.env.DEPLOYMENT === "demo") {
+  AdminRoutes(app, jsonParser);
+}
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);

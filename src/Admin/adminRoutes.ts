@@ -11,7 +11,6 @@ import { GrowthTestController } from "./controllers/growthTest";
 import { CheckLedgerVsSearchBalancesController } from "./controllers/checkLedgerVsSearchBalances";
 
 export default function AdminRoutes(app: express.Application, jsonParser: any) {
-  if (process.env.DEPLOYMENT === "demo") {
     app.delete(
       `${apiVersionOneRoute}clearDevDB`,
       jsonParser,
@@ -56,5 +55,4 @@ export default function AdminRoutes(app: express.Application, jsonParser: any) {
       jsonParser,
       CheckLedgerVsSearchBalancesController
     );
-  }
 }
