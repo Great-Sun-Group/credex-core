@@ -20,7 +20,7 @@ services:
       NEO_4J_SEARCH_SPACE_BOLT_URL: ${NEO_4J_SEARCH_SPACE_BOLT_URL}
       NEO_4J_SEARCH_SPACE_USER: ${NEO_4J_SEARCH_SPACE_USER}
       NEO_4J_SEARCH_SPACE_PASS: ${NEO_4J_SEARCH_SPACE_PASS}
-      STAGE: ${STAGE}
+      DEPLOYMENT: ${DEPLOYMENT}
     ports:
       - 5000:5000
 # The commented out section below is an example of how to define a PostgreSQL
