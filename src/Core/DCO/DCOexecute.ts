@@ -45,9 +45,9 @@ export async function DCOexecute() {
 
     console.log("Expiring day: " + previousDate);
 
-    console.log("Starting Neo4j backup...");
-    await createNeo4jBackup(previousDate);
-    console.log("Neo4j backup completed.");
+    console.log("End of day backup...");
+    await createNeo4jBackup(previousDate, "_end");
+    console.log("End of day backup completed.");
 
     //process defaulting unsecured credexes
     let numberDefaulted = 0;
@@ -421,16 +421,19 @@ export async function DCOexecute() {
 
     await Promise.all(offerAndAcceptPromisesDCOreceive);
 
-    console.log("Turning off DCOrunningNow flag");
-    await ledgerSpaceSession.run(`
-      MATCH (daynode:Daynode {Active: TRUE})
-      SET daynode.DCOrunningNow = false
-    `);
+    console.log("Start of day backup...");
+    await createNeo4jBackup(nextDate, "_start");
+    console.log("Start of day backup completed.");
 
     console.log(`DCOexecute done to open ${nextDate}`);
   } catch (error) {
     console.error("Error during DCOexecute:", error);
   } finally {
+    console.log("Turning off DCOrunningNow flag");
+    await ledgerSpaceSession.run(`
+      MATCH (daynode:Daynode {Active: TRUE})
+      SET daynode.DCOrunningNow = false
+    `);
     await ledgerSpaceSession.close();
     await searchSpaceSession.close();
   }

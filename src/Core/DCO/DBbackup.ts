@@ -5,11 +5,12 @@ import path from "path";
 const exportDatabase = async (
   driver: any,
   databaseName: string,
-  previousDate: string
+  previousDate: string,
+  append: string
 ): Promise<void> => {
   const session = driver.session();
   try {
-    const fileName = `${previousDate}_${databaseName}.json`;
+    const fileName = `${previousDate}_${databaseName}${append}.json`;
     const filePath = path.join(__dirname, "DCOsnapshots", fileName);
 
     const result = await session.run(`
@@ -33,11 +34,17 @@ const exportDatabase = async (
 };
 
 export const createNeo4jBackup = async (
-  previousDate: string
+  previousDate: string,
+  append: string
 ): Promise<void> => {
   try {
-    await exportDatabase(ledgerSpaceDriver, "ledgerSpace_dev", previousDate);
-    await exportDatabase(searchSpaceDriver, "searchSpace_dev", previousDate);
+    await exportDatabase(ledgerSpaceDriver, "ledgerSpace_dev", previousDate, append);
+    await exportDatabase(
+      searchSpaceDriver,
+      "searchSpace_dev",
+      previousDate,
+      append
+    );
     console.log("Both databases backed up successfully.");
   } catch (error) {
     console.error("Error creating backups:", error);
