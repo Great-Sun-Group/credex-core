@@ -432,12 +432,6 @@ export async function DCOexecute() {
 
     await Promise.all(offerAndAcceptPromisesDCOreceive);
 
-    console.log("Turning off DCOrunningNow flag");
-    await ledgerSpaceSession.run(`
-      MATCH (daynode:Daynode {Active: TRUE})
-      SET daynode.DCOrunningNow = false
-    `);
-
     console.log(`DCOexecute done to open ${nextDate}`);
   } catch (error) {
     console.error("Error during DCOexecute:", error);
