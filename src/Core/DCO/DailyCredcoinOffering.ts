@@ -23,6 +23,12 @@ export async function DailyCredcoinOffering(): Promise<boolean> {
 
     await DCOexecute();
   } finally {
+    console.log("Turning off DCOrunningNow flag");
+    await ledgerSpaceSession.run(`
+      MATCH (daynode:Daynode {Active: TRUE})
+      SET daynode.DCOrunningNow = false
+    `);
+
     await ledgerSpaceSession.close();
   }
 
