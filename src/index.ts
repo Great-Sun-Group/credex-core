@@ -6,7 +6,7 @@ import AdminRoutes from "./Admin/adminRoutes";
 import { Logger } from "../config/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./Core/cronJobs";
-import authenticate from "./middleware/authenticate";
+import authenticate from "../config/authenticate";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
@@ -25,7 +25,7 @@ app.use(apiVersionOneRoute, authenticate);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 100, // limit each IP to 100 requests per windowMs
 });
 app.use(limiter);
 
