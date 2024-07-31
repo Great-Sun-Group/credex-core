@@ -25,26 +25,17 @@ export async function DBinitialization(): Promise<void> {
 
     await ledgerSpaceSession.run(
       `
+        CREATE CONSTRAINT member_unique IF NOT EXISTS
+        FOR (member:Member) REQUIRE (member.memberID, member.memberHandle) IS UNIQUE;
+      `
+    );
+
+    await ledgerSpaceSession.run(
+      `
         CREATE CONSTRAINT account_unique IF NOT EXISTS
-        FOR (account:Account) REQUIRE (account.accountID, account.phone, account.handle) IS UNIQUE;
+        FOR (account:Account) REQUIRE (account.accountID, account.phone, account.accountHandle) IS UNIQUE;
       `
     );
-
-    await ledgerSpaceSession.run(
-      `
-        CREATE CONSTRAINT credex_unique IF NOT EXISTS
-        FOR (credex:Credex) REQUIRE credex.credexID IS UNIQUE;
-      `
-    );
-
-    await ledgerSpaceSession.run(
-      `
-        CREATE INDEX credex_Denomination_index IF NOT EXISTS
-        FOR (credex:CREDEX)
-        ON (credex.Denomination);      `
-    );
-
-    //add indexes for other DCO balance updates
 
     await searchSpaceSession.run(
       `
@@ -59,6 +50,15 @@ export async function DBinitialization(): Promise<void> {
         FOR (credex:Credex) REQUIRE credex.credexID IS UNIQUE;
       `
     );
+
+    await ledgerSpaceSession.run(
+      `
+        CREATE INDEX credex_Denomination_index IF NOT EXISTS
+        FOR (credex:CREDEX)
+        ON (credex.Denomination);      `
+    );
+
+    //add indexes for other DCO balance updates
 
     await searchSpaceSession.run(
       `
