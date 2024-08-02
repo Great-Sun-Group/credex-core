@@ -10,7 +10,7 @@ export async function OnboardMemberService(
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
-  memberHandle = memberHandle.toLowerCase();
+  memberHandle = memberHandle.toLowerCase().replace(/\s/g, "");
   //need some other validation here letters, numbers, periods allowed.
 
   try {
