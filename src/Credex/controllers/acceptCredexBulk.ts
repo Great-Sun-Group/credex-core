@@ -6,7 +6,7 @@ export async function AcceptCredexBulkController(
   req: express.Request,
   res: express.Response
 ) {
-  const fieldsRequired = ["credexID", "signerID"];
+  const fieldsRequired = ["credexIDs", "signerID"];
   for (const field of fieldsRequired) {
     if (!req.body[field]) {
       return res

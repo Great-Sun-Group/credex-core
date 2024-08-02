@@ -132,6 +132,8 @@ export async function DBinitialization(): Promise<void> {
     );
 
     console.log("Creating initialization accounts and relationships...");
+
+    //create initial member
     const rdubs = await OnboardMemberService(
       "Ryan",
       "Watson",
@@ -161,6 +163,8 @@ export async function DBinitialization(): Promise<void> {
     } else {
       throw new Error("rdubs could not be created");
     }
+
+    //create credex foundation
     const credexFoundation = await CreateAccountService(
       rdubs.onboardedMemberID,
       "CREDEX_FOUNDATION",
@@ -181,6 +185,7 @@ export async function DBinitialization(): Promise<void> {
       throw new Error("credexFoundation could not be created");
     }
 
+    //create great sun
     const greatSun = await CreateAccountService(
       rdubs.onboardedMemberID,
       "BUSINESS",
@@ -193,15 +198,30 @@ export async function DBinitialization(): Promise<void> {
     }
     const greatSunID = greatSun.accountID;
 
+    //create vimbisopay
+    const vimbisoPay = await CreateAccountService(
+      rdubs.onboardedMemberID,
+      "BUSINESS",
+      "VimbisoPay",
+      "vimbisopay.audited",
+      "CAD"
+    );
+    if (!greatSun) {
+      throw new Error("vimbisoPay could not be created");
+    }
+    const vimbisoPayID = vimbisoPay.accountID;
+
     //create to secure participation in first DCO
     await ledgerSpaceSession.run(
       `
         MATCH (credexFoundation: Account { accountID: $credexFoundationID })
         MATCH (greatSun: Account { accountID: $greatSunID })
-        MERGE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (greatSun)
+        MATCH (vimbisoPay: Account { accountID: $vimbisoPayID })
         MERGE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (credexFoundation)
+        MERGE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (greatSun)
+        MERGE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (vimbisoPay)
       `,
-      { credexFoundationID, greatSunID }
+      { credexFoundationID, greatSunID, vimbisoPayID }
     );
 
     //charging an account for participation in first DCO
