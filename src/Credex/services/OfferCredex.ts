@@ -17,7 +17,7 @@ export async function OfferCredexService(credexData: any) {
       const signAndGetSendOfferToQuery = await ledgerSpaceSession.run(
         `
         MATCH
-          (credex:Credex { credexID: $credexID })-[:OFFERS]->
+          (credex:Credex { credexID: $credexID })
           (signer:Member { memberID: $signingMemberID })
         CREATE (credex)<-[:MAKE_OFFER_SIGNED]-(signer)
         RETURN signer.memberID AS signerID
