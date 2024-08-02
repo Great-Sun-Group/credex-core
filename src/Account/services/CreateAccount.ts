@@ -29,6 +29,9 @@ export async function CreateAccountService(
     };
   }
 
+  accountHandle = accountHandle.toLowerCase().replace(/\s/g, "");
+  //need some other validation here letters, numbers, periods allowed.
+
   // Validation: Check DCOdenom in denominations
   if (DCOdenom && !getDenominations({ code: DCOdenom }).length) {
     const message = "DCOdenom not in denoms";

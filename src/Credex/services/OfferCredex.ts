@@ -18,11 +18,9 @@ export async function OfferCredexService(credexData: any) {
         `
         MATCH
           (credex:Credex { credexID: $credexID })-[:OFFERS]->
-          (recipient:Account { accountID: $recipientID })-[:SEND_OFFERS_TO]->
-          (notiMember:Member)
-        MATCH (signer:Member { memberID: $signingMemberID })
+          (signer:Member { memberID: $signingMemberID })
         CREATE (credex)<-[:MAKE_OFFER_SIGNED]-(signer)
-        RETURN notiMember.phone AS notiPhone
+        RETURN signer.memberID AS signerID
         `,
         {
           recipientID: credexData.receiverAccountID,
@@ -35,7 +33,7 @@ export async function OfferCredexService(credexData: any) {
         console.log("could not get notiPhone");
         break sendNoti;
       }
-      const notiPhone = signAndGetSendOfferToQuery.records[0].get("notiPhone");
+      //const notiPhone = signAndGetSendOfferToQuery.records[0].get("notiPhone");
       //console.log("sending offer notification to " + notiPhone);
       //hit offer noti endpoint
     }
