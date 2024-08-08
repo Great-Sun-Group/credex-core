@@ -16,73 +16,89 @@ export async function DBinitialization(): Promise<void> {
 
   try {
     console.log("Creating database constraints and indexes...");
-    await ledgerSpaceSession.run(
-      `
-        CREATE CONSTRAINT daynode_unique IF NOT EXISTS
-        FOR (daynode:Daynode) REQUIRE daynode.Date IS UNIQUE;
-      `
-    );
 
+    //remove any current db constraints
     await ledgerSpaceSession.run(
       `
-        CREATE CONSTRAINT member_unique IF NOT EXISTS
-        FOR (member:Member) REQUIRE (member.memberID, member.memberHandle) IS UNIQUE;
-      `
-    );
-
-    await ledgerSpaceSession.run(
-      `
-        CREATE CONSTRAINT account_unique IF NOT EXISTS
-        FOR (account:Account) REQUIRE (account.accountID, account.phone, account.accountHandle) IS UNIQUE;
+      CALL apoc.schema.assert({}, {})
       `
     );
 
     await searchSpaceSession.run(
       `
-        CREATE CONSTRAINT account_unique IF NOT EXISTS
-        FOR (account:Account) REQUIRE account.accountID IS UNIQUE;
+      CALL apoc.schema.assert({}, {})
       `
     );
 
-    await searchSpaceSession.run(
+    //set constraints
+    await ledgerSpaceSession.run(
       `
-        CREATE CONSTRAINT credex_unique IF NOT EXISTS
-        FOR (credex:Credex) REQUIRE credex.credexID IS UNIQUE;
+      CREATE CONSTRAINT daynode_unique IF NOT EXISTS
+      FOR (daynode:Daynode) REQUIRE daynode.Date IS UNIQUE
       `
     );
 
     await ledgerSpaceSession.run(
       `
-        CREATE INDEX credex_Denomination_index IF NOT EXISTS
-        FOR (credex:CREDEX)
-        ON (credex.Denomination);      `
+      CREATE CONSTRAINT member_unique IF NOT EXISTS
+      FOR (member:Member) REQUIRE (member.memberID, member.memberHandle) IS UNIQUE
+      `
+    );
+
+    await ledgerSpaceSession.run(
+      `
+      CREATE CONSTRAINT account_unique IF NOT EXISTS
+      FOR (account:Account) REQUIRE (account.accountID, account.phone, account.accountHandle) IS UNIQUE
+      `
+    );
+
+    await searchSpaceSession.run(
+      `
+      CREATE CONSTRAINT account_unique IF NOT EXISTS
+      FOR (account:Account) REQUIRE account.accountID IS UNIQUE
+      `
+    );
+
+    await searchSpaceSession.run(
+      `
+      CREATE CONSTRAINT credex_unique IF NOT EXISTS
+      FOR (credex:Credex) REQUIRE credex.credexID IS UNIQUE
+      `
+    );
+
+    await ledgerSpaceSession.run(
+      `
+      CREATE INDEX credex_Denomination_index IF NOT EXISTS
+      FOR (credex:CREDEX)
+      ON (credex.Denomination) `
     );
 
     //add indexes for other DCO balance updates
-
     await searchSpaceSession.run(
       `
-        CREATE INDEX credex_dueDate_index IF NOT EXISTS
-        FOR (credex:Credex) ON credex.dueDate;
+      CREATE INDEX credex_dueDate_index IF NOT EXISTS
+      FOR (credex:Credex) ON credex.dueDate
       `
     );
 
     await searchSpaceSession.run(
       `
-        CREATE INDEX securedDenom_index IF NOT EXISTS
-        FOR (credex:CREDEX)
-        ON credex.securedDenom;      `
+      CREATE INDEX securedDenom_index IF NOT EXISTS
+      FOR (credex:CREDEX)
+      ON credex.securedDenom
+      `
     );
 
     await searchSpaceSession.run(
       `
-        CREATE INDEX Denomination_index IF NOT EXISTS
-        FOR ()-[credex:CREDEX]-()
-        ON (credex.Denomination);      `
+      CREATE INDEX Denomination_index IF NOT EXISTS
+      FOR ()-[credex:CREDEX]-()
+      ON (credex.Denomination);
+      `
     );
 
     console.log("establish dayZero");
-    const dayZero = "2023-06-21";
+    const dayZero = "2024-08-08";
     console.log("dayZero:", dayZero);
 
     const OneCXXinCXXdenom = 1;
