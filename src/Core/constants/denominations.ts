@@ -69,20 +69,21 @@ export function getDenominations(
 }
 
 export const denomFormatter = (amount: number, code: string): string => {
+  // Ensure amount is a finite number
+  if (!isFinite(amount)) {
+    amount = 0;
+  }
+
+  // Function to format currency amounts
   const formatCurrencyAmount = (
     amount: number,
     roundedTo: number,
     regionalization: string
   ): string => {
-    if (amount === null || amount === undefined || isNaN(amount)) {
-      amount = 0;
-    }
+    const roundedAmount =
+      Math.round(amount * Math.pow(10, roundedTo)) / Math.pow(10, roundedTo);
     const formatter = new Intl.NumberFormat(regionalization);
-    const formatterResult = formatter.format(amount);
-    const formattedWholeNumbers = formatterResult.toString().split(".")[0];
-    const roundedAmount = amount.toFixed(roundedTo);
-    const formattedDecimals = roundedAmount.toString().split(".")[1];
-    return `${formattedWholeNumbers}.${formattedDecimals}`;
+    return formatter.format(roundedAmount);
   };
 
   const denomData: any = getDenominations({ code });

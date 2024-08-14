@@ -48,4 +48,4 @@ COPY --from=build /app/build ./build
 EXPOSE 5000
 
 # Run the application.
-CMD node build/index.js
+CMD node build/src/index.js

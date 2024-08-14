@@ -3,9 +3,9 @@ import { CreateRandomFloatingCredexesService } from "./CreateRandomFloatingCrede
 import { DailyCredcoinOffering } from "../../Core/DCO/DailyCredcoinOffering";
 import { MinuteTransactionQueue } from "../../Core/MTQ/MinuteTransactionQueue";
 import { ledgerSpaceDriver } from "../../../config/neo4j";
-import { PurchaseAnchoredCredexesService } from "./PurchaseAnchoredCredexes";
-import { SellAnchoredCredexesService } from "./SellAnchoredCredexes";
-import { InEcosystemAnchoredCredexesService } from "./InEcosystemAnchoredCredexes";
+import { PurchaseSecuredCredexesService } from "./PurchaseSecuredCredexes";
+import { SellSecuredCredexesService } from "./SellSecuredCredexes";
+import { InEcosystemSecuredCredexesService } from "./InEcosystemSecuredCredexes";
 
 export async function GrowthTestService(variables: any) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -35,50 +35,44 @@ export async function GrowthTestService(variables: any) {
       await CreateTestMembersAndAccountsService(numberNewAccounts);
 
       const numberUSDpurchases = Math.round(
-        numberAccounts * variables.USD_ANCHORED_fractionToPurchase
+        numberAccounts * variables.USD_SECURED_fractionToPurchase
       );
-      await PurchaseAnchoredCredexesService(
+      await PurchaseSecuredCredexesService(
         "USD",
         numberUSDpurchases,
-        variables.USD_ANCHORED_amountPerPurchaseLow,
-        variables.USD_ANCHORED_amountPerPurchaseHigh
+        variables.USD_SECURED_amountPerPurchaseLow,
+        variables.USD_SECURED_amountPerPurchaseHigh
       );
 
-      const numberUSDanchoredCirculate = Math.round(
-        numberAccounts * variables.USD_ANCHORED_fractionToCirculate
+      const numberUSDsecuredCirculate = Math.round(
+        numberAccounts * variables.USD_SECURED_fractionToCirculate
       );
-      await InEcosystemAnchoredCredexesService(
-        "USD",
-        numberUSDanchoredCirculate
-      );
+      await InEcosystemSecuredCredexesService("USD", numberUSDsecuredCirculate);
 
       const numberUSDsales = Math.round(
-        numberAccounts * variables.USD_ANCHORED_fractionToSell
+        numberAccounts * variables.USD_SECURED_fractionToSell
       );
-      await SellAnchoredCredexesService("USD", numberUSDsales);
+      await SellSecuredCredexesService("USD", numberUSDsales);
 
       const numberZIGpurchases = Math.round(
-        numberAccounts * variables.ZIG_ANCHORED_fractionToPurchase
+        numberAccounts * variables.ZIG_SECURED_fractionToPurchase
       );
-      await PurchaseAnchoredCredexesService(
+      await PurchaseSecuredCredexesService(
         "ZIG",
         numberZIGpurchases,
-        variables.ZIG_ANCHORED_amountPerPurchaseLow,
-        variables.ZIG_ANCHORED_amountPerPurchaseHigh
+        variables.ZIG_SECURED_amountPerPurchaseLow,
+        variables.ZIG_SECURED_amountPerPurchaseHigh
       );
 
-      const numberZIGanchoredCirculate = Math.round(
-        numberAccounts * variables.ZIG_ANCHORED_fractionToCirculate
+      const numberZIGsecuredCirculate = Math.round(
+        numberAccounts * variables.ZIG_SECURED_fractionToCirculate
       );
-      await InEcosystemAnchoredCredexesService(
-        "ZIG",
-        numberZIGanchoredCirculate
-      );
+      await InEcosystemSecuredCredexesService("ZIG", numberZIGsecuredCirculate);
 
       const numberZIGsales = Math.round(
-        numberAccounts * variables.ZIG_ANCHORED_fractionToSell
+        numberAccounts * variables.ZIG_SECURED_fractionToSell
       );
-      await SellAnchoredCredexesService("ZIG", numberZIGsales);
+      await SellSecuredCredexesService("ZIG", numberZIGsales);
 
       const numberRandomFloatingTransactions = Math.round(
         numberAccounts * variables.dailyFloatingRandomTransactionsPerAccount

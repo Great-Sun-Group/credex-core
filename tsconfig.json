@@ -8,6 +8,6 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "./build"
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "config/authenticate.ts"],
   "exclude": ["node_modules"]
 }

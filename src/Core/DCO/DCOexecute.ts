@@ -158,14 +158,16 @@ export async function DCOexecute() {
     console.log("Fetching declared DCO participants");
     const DCOparticipantsDeclared = await ledgerSpaceSession.run(`
       MATCH (daynode:Daynode{Active:true})
-      MATCH (DCOparticpantsDeclared:Account)
+      MATCH (DCOparticpantsDeclared:Account)<-[:OWNS]-(DCOmember:Member)
       WHERE DCOparticpantsDeclared.DCOgiveInCXX > 0
-      RETURN DCOparticpantsDeclared.accountID AS accountID,
-             DCOparticpantsDeclared.DCOgiveInCXX AS DCOgiveInCXX,
-             DCOparticpantsDeclared.DCOgiveInCXX
-              / daynode[DCOparticpantsDeclared.DCOdenom]
-              AS DCOgiveInDenom,
-             DCOparticpantsDeclared.DCOdenom AS DCOdenom
+      RETURN
+        DCOparticpantsDeclared.accountID AS accountID,
+        DCOmember.memberID AS DCOmemberID,
+        DCOparticpantsDeclared.DCOgiveInCXX AS DCOgiveInCXX,
+        DCOparticpantsDeclared.DCOgiveInCXX
+          / daynode[DCOparticpantsDeclared.DCOdenom]
+          AS DCOgiveInDenom,
+        DCOparticpantsDeclared.DCOdenom AS DCOdenom
     `);
 
     console.log("Filtering participants for available secured balance");
@@ -177,6 +179,7 @@ export async function DCOexecute() {
 
     for (const declaredParticipant of declaredParticipants) {
       const accountID = declaredParticipant.get("accountID");
+      const DCOmemberID = declaredParticipant.get("DCOmemberID");
       const DCOdenom = declaredParticipant.get("DCOdenom");
       const DCOgiveInCXX = declaredParticipant.get("DCOgiveInCXX");
       const DCOgiveInDenom = declaredParticipant.get("DCOgiveInDenom");
@@ -225,16 +228,22 @@ export async function DCOexecute() {
     );
 
     console.log("Creating DCO give transactions");
-    const foundationID = (
+    const getFoundationData = (
       await ledgerSpaceSession.run(`
-      MATCH (credexFoundation:Account {accountType: "CREDEX_FOUNDATION"})
-      RETURN credexFoundation.accountID AS foundationID
+      MATCH (credexFoundation:Account {accountType: "CREDEX_FOUNDATION"})<-[:OWNS]-(foundationXO:Member)
+      RETURN
+        credexFoundation.accountID AS foundationID,
+        foundationXO.memberID AS foundationXOid
     `)
-    ).records[0].get("foundationID");
+    )
+    
+    const foundationID = getFoundationData.records[0].get("foundationID");
+    const foundationXOid = getFoundationData.records[0].get("foundationXOid");
 
     const offerAndAcceptPromisesDCOgive = confirmedParticipants.map(
       async (confirmedParticipant) => {
         const dataForDCOgive = {
+          memberID: confirmedParticipant.get("DCOmemberID"),
           issuerAccountID: confirmedParticipant.get("accountID"),
           receiverAccountID: foundationID,
           Denomination: confirmedParticipant.get("DCOdenom"),
@@ -251,7 +260,10 @@ export async function DCOexecute() {
           DCOgiveCredex.credex &&
           typeof DCOgiveCredex.credex.credexID === "string"
         ) {
-          return AcceptCredexService(DCOgiveCredex.credex.credexID);
+          return AcceptCredexService(
+            DCOgiveCredex.credex.credexID,
+            foundationXOid
+          );
         } else {
           throw new Error("Invalid credexID from OfferCredexService");
         }
@@ -396,6 +408,7 @@ export async function DCOexecute() {
     const offerAndAcceptPromisesDCOreceive = confirmedParticipants.map(
       async (confirmedParticipant) => {
         const dataForDCOreceive = {
+          memberID: foundationXOid,
           issuerAccountID: foundationID,
           receiverAccountID: confirmedParticipant.get("accountID"),
           Denomination: "CXX",
@@ -412,7 +425,10 @@ export async function DCOexecute() {
           DCOreceiveCredex.credex &&
           typeof DCOreceiveCredex.credex.credexID === "string"
         ) {
-          return AcceptCredexService(DCOreceiveCredex.credex.credexID);
+          return AcceptCredexService(
+            DCOreceiveCredex.credex.credexID,
+            foundationXOid
+          );
         } else {
           throw new Error("Invalid credexID from OfferCredexService");
         }
@@ -424,7 +440,6 @@ export async function DCOexecute() {
     console.log("Start of day backup...");
     await createNeo4jBackup(nextDate, "_start");
     console.log("Start of day backup completed.");
-
     console.log(`DCOexecute done to open ${nextDate}`);
   } catch (error) {
     console.error("Error during DCOexecute:", error);

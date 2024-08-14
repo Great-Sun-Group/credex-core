@@ -34,6 +34,7 @@ async function getDateAndRandCounterparties() {
 export async function CreateRandomFloatingCredexesService(
   numNewTransactions: number
 ) {
+  /*
   const credexesCreated = [];
   const batchSize = 3;
   const transactionPromises = [];
@@ -92,4 +93,5 @@ export async function CreateRandomFloatingCredexesService(
 
   console.log(`${numNewTransactions} new floating transactions created`);
   return credexesCreated;
+  */
 }

@@ -3,8 +3,6 @@ name: Credex Staging Deployment
 on:
   push:
     branches: [stage]
-  pull_request:
-    branches: [stage]
 
 jobs:
   build:

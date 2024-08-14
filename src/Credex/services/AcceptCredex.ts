@@ -1,8 +1,12 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 
-export async function AcceptCredexService(credexID: string) {
+export async function AcceptCredexService(credexID: string, signerID: string) {
   if (!credexID) {
     console.log("credexID required");
+    return false;
+  }
+  if (!signerID) {
+    console.log("signerID required");
     return false;
   }
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -11,18 +15,20 @@ export async function AcceptCredexService(credexID: string) {
       `
         MATCH
           (member:Member)-[:OWNS]->
-          (issuer:Account)-[rel1:OFFERS|REQUESTS]->
-          (acceptedCredex:Credex {credexID: $credexID})-[rel2:OFFERS|REQUESTS]->
+          (issuer:Account)-[rel1:OFFERS]->
+          (acceptedCredex:Credex {credexID: $credexID})-[rel2:OFFERS]->
           (acceptor:Account)
+        MATCH (signer:Member { memberID: $signerID })
         DELETE rel1, rel2
         CREATE (issuer)-[:OWES]->(acceptedCredex)-[:OWES]->(acceptor)
+        CREATE (acceptedCredex)<-[:ACCEPT_OFFER_SIGNED]-(signer)
         SET acceptedCredex.acceptedAt = datetime()
         RETURN
           acceptedCredex.credexID AS credexID,
           acceptor.accountID AS acceptorAccountID,
           member.memberID AS memberID
       `,
-      { credexID }
+      { credexID, signerID }
     );
 
     if (result.records.length === 0) {

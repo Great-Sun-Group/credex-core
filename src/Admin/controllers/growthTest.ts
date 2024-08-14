@@ -8,14 +8,14 @@ export async function GrowthTestController(
   const fieldsRequired = [
     "numberDays",
     "accountGrowthRate",
-    "USD_ANCHORED_fractionToPurchase",
-    "USD_ANCHORED_amountPerPurchaseLow",
-    "USD_ANCHORED_amountPerPurchaseHigh",
-    "USD_ANCHORED_fractionToSell",
-    "ZIG_ANCHORED_fractionToPurchase",
-    "ZIG_ANCHORED_amountPerPurchaseLow",
-    "ZIG_ANCHORED_amountPerPurchaseHigh",
-    "ZIG_ANCHORED_fractionToSell",
+    "USD_SECURED_fractionToPurchase",
+    "USD_SECURED_amountPerPurchaseLow",
+    "USD_SECURED_amountPerPurchaseHigh",
+    "USD_SECURED_fractionToSell",
+    "ZIG_SECURED_fractionToPurchase",
+    "ZIG_SECURED_amountPerPurchaseLow",
+    "ZIG_SECURED_amountPerPurchaseHigh",
+    "ZIG_SECURED_fractionToSell",
     "dailyFloatingRandomTransactionsPerAccount",
   ];
   for (const field of fieldsRequired) {

@@ -9,6 +9,10 @@ export async function OnboardMemberService(
   phone: string
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
+
+  memberHandle = memberHandle.toLowerCase().replace(/\s/g, "");
+  //need some other validation here letters, numbers, periods allowed.
+
   try {
     // Validation: Check defaultDenom in denominations
     if (!getDenominations({ code: defaultDenom }).length) {

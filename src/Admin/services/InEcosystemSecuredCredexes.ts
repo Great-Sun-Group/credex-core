@@ -5,12 +5,13 @@ import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecured
 import * as neo4j from "neo4j-driver";
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 
-export async function InEcosystemAnchoredCredexesService(
+export async function InEcosystemSecuredCredexesService(
   denom: string,
   number: number
 ) {
+  /*
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-  console.log(`Creating in-ecosystem ${denom} anchored credexes: ${number}`);
+  console.log(`Creating in-ecosystem ${denom} secured credexes: ${number}`);
 
   try {
     if (number > 0) {
@@ -67,11 +68,10 @@ export async function InEcosystemAnchoredCredexesService(
             );
 
             const maxSecurable = securableData.securableAmountInDenom;
-            let InitialAmount
+            let InitialAmount;
             if (maxSecurable >= 1) {
               InitialAmount = random(maxSecurable);
-            }
-            else {
+            } else {
               InitialAmount = random(0.1, maxSecurable);
             }
             console.log("random initialAmount: " + InitialAmount);
@@ -105,8 +105,9 @@ export async function InEcosystemAnchoredCredexesService(
       }
     }
   } catch (error) {
-    console.error("Error in InEcosystemAnchoredCredexesService:", error);
+    console.error("Error in InEcosystemSecuredCredexesService:", error);
   } finally {
     await ledgerSpaceSession.close();
   }
+*/
 }
