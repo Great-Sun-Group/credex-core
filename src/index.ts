@@ -2,7 +2,7 @@ import express from "express";
 import MemberRoutes from "./Member/memberRoutes";
 import AccountRoutes from "./Account/accountRoutes";
 import CredexRoutes from "./Credex/credexRoutes";
-import AdminRoutes from "./Admin/adminRoutes";
+import AdminRoutes from "./DevAdmin/devAdminRoutes";
 import { Logger } from "../config/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./Core/cronJobs";
