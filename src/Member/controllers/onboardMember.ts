@@ -37,8 +37,8 @@ export async function OnboardMemberController(
       onboardedMember.onboardedMemberID,
       "PERSONAL_CONSUMPTION",
       `${req.body.firstname} ${req.body.lastname} Personal`,
-      req.body.memberHandle,
-      req.body.defaultDenom,
+      req.body.phone,
+      "USD",
       req.body.DCOgiveInCXX,
       req.body.DCOdenom
     );
