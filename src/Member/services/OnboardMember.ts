@@ -4,14 +4,10 @@ import { getDenominations } from "../../Core/constants/denominations";
 export async function OnboardMemberService(
   firstname: string,
   lastname: string,
-  memberHandle: string,
-  defaultDenom: string,
   phone: string
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-
-  memberHandle = memberHandle.toLowerCase().replace(/\s/g, "");
-  //need some other validation here letters, numbers, periods allowed.
+  const defaultDenom = "USD";
 
   try {
     // Validation: Check defaultDenom in denominations
@@ -27,7 +23,7 @@ export async function OnboardMemberService(
         CREATE (member:Member{
           firstname: $firstname,
           lastname: $lastname,
-          memberHandle: $memberHandle,
+          memberHandle: $phone,
           defaultDenom: $defaultDenom,
           phone: $phone,
           memberID: randomUUID(),
@@ -40,7 +36,6 @@ export async function OnboardMemberService(
       {
         firstname,
         lastname,
-        memberHandle,
         defaultDenom,
         phone,
       }
@@ -71,6 +66,12 @@ export async function OnboardMemberService(
         return {
           onboardedMemberID: false,
           message: "Phone number already in use",
+        };
+      }
+      if (error.message.includes("memberHandle")) {
+        return {
+          onboardedMemberID: false,
+          message: "Member handle already in use",
         };
       }
       return {
