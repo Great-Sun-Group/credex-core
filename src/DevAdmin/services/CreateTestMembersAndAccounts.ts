@@ -35,8 +35,6 @@ export async function CreateTestMembersAndAccountsService(numNewAccounts: number
         const onboardedMember = await OnboardMemberService(
           firstname,
           lastname,
-          firstname + "_" + lastname,
-          "USD",
           phone
         );
         if (!onboardedMember.onboardedMemberID) {
