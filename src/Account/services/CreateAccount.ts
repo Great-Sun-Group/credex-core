@@ -29,8 +29,17 @@ export async function CreateAccountService(
     };
   }
 
+  // Transform to lowercase and remove spaces
   accountHandle = accountHandle.toLowerCase().replace(/\s/g, "");
-  //need some other validation here letters, numbers, periods allowed.
+
+  // Validate the accountHandle
+  const isValid = /^[a-z0-9._]+$/.test(accountHandle);
+
+  if (!isValid) {
+    throw new Error(
+      "Invalid account handle. Only lowercase letters, numbers, periods, and underscores are allowed."
+    );
+  }
 
   // Validation: Check DCOdenom in denominations
   if (DCOdenom && !getDenominations({ code: DCOdenom }).length) {
@@ -46,6 +55,7 @@ export async function CreateAccountService(
       `
         MATCH (daynode:Daynode { Active: true })
         MATCH (owner:Member { memberID: $ownerID })
+        WHERE memberTier >=3
         CREATE (owner)-[:OWNS]->(account:Account {
           accountType: $accountType,
           accountName: $accountName,

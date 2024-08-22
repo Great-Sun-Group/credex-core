@@ -27,6 +27,7 @@ export async function OnboardMemberService(
           defaultDenom: $defaultDenom,
           phone: $phone,
           memberID: randomUUID(),
+          memberTier: 1,
           createdAt: datetime(),
           updatedAt: datetime()
         })-[:CREATED_ON]->(daynode)

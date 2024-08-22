@@ -15,6 +15,7 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
         member.lastname AS lastname,
         member.memberHandle AS memberHandle,
         member.defaultDenom AS defaultDenom,
+        member.memberTier AS memberTier,
         accountIDs AS accountIDS
       `,
       { phone }
@@ -31,6 +32,7 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
       lastname: result.records[0].get("lastname"),
       memberHandle: result.records[0].get("memberHandle"),
       defaultDenom: result.records[0].get("defaultDenom"),
+      memberTier: result.records[0].get("memberTier"),
       accountIDS: result.records[0].get("accountIDS"),
     };
   } catch (error) {
