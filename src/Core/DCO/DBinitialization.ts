@@ -152,9 +152,7 @@ export async function DBinitialization(): Promise<void> {
     //create initial member
     const rdubs = await OnboardMemberService(
       "Ryan",
-      "Watson",
-      "ryanlukewatson",
-      "USD",
+      "Watson",  
       "263778177125"
     );
     let rdubsAccountID;
