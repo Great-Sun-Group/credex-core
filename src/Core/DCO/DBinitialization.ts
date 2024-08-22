@@ -73,23 +73,16 @@ export async function DBinitialization(): Promise<void> {
       `
     );
 
-    await ledgerSpaceSession.run(
-      `
-      CREATE CONSTRAINT account_unique IF NOT EXISTS
-      FOR (account:Account) REQUIRE (account.accountID, account.accountHandle) IS UNIQUE
-      `
-    );
-
     await searchSpaceSession.run(
       `
-      CREATE CONSTRAINT account_unique IF NOT EXISTS
+      CREATE CONSTRAINT accountID_unique IF NOT EXISTS
       FOR (account:Account) REQUIRE account.accountID IS UNIQUE
       `
     );
 
     await searchSpaceSession.run(
       `
-      CREATE CONSTRAINT credex_unique IF NOT EXISTS
+      CREATE CONSTRAINT credexID_unique IF NOT EXISTS
       FOR (credex:Credex) REQUIRE credex.credexID IS UNIQUE
       `
     );

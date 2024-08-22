@@ -55,7 +55,7 @@ export async function CreateAccountService(
       `
         MATCH (daynode:Daynode { Active: true })
         MATCH (owner:Member { memberID: $ownerID })
-        WHERE memberTier >=3
+        WHERE owner.memberTier >= 3
         CREATE (owner)-[:OWNS]->(account:Account {
           accountType: $accountType,
           accountName: $accountName,
