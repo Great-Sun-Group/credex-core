@@ -1,6 +1,7 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { getDenominations } from "../constants/denominations";
 import { OnboardMemberService } from "../../Member/services/OnboardMember";
+import { UpdateMemberTierService } from "../../Member/services/UpdateMemberTier";
 import { CreateAccountService } from "../../Account/services/CreateAccount";
 import { OfferCredexService } from "../../Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
@@ -166,6 +167,15 @@ export async function DBinitialization(): Promise<void> {
       rdubsAccountID = rdubsPersonalAccount.accountID;
     } else {
       throw new Error("rdubs could not be created");
+    }
+
+    //update rdubs member tier to enable account creation below
+    const tierUpdated = await UpdateMemberTierService(
+      rdubs.onboardedMemberID,
+      5
+    );
+    if (!tierUpdated) {
+      throw new Error("rdubs memberTier could not be updated");
     }
 
     //create credex foundation

@@ -1,4 +1,5 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
+import { denomFormatter } from "../../Core/constants/denominations";
 
 export async function GetMemberDashboardByPhoneService(phone: string) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -8,8 +9,8 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
       `
       MATCH (daynode:Daynode { Active: true })
       MATCH (member:Member { phone: $phone })
-      OPTIONAL MATCH (member)-[:AUTHORIZED_FOR]->(account:Account)
-      OPTIONAL MATCH (account)-[:OWES|OFFERS]->(credex:Credex)<-[:CREATED_ON]-(daynode)
+      OPTIONAL MATCH (member)-[:OWNS]->(account:Account)
+      OPTIONAL MATCH (account)-[:OWES|OFFERS]->(credex:Credex)-[:CREATED_ON]->(daynode)
       WITH
         member, daynode,
         COLLECT(account.accountID) AS accountIDs,
@@ -21,7 +22,7 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
         member.memberHandle AS memberHandle,
         member.defaultDenom AS defaultDenom,
         member.memberTier AS memberTier,
-        totalIssuedTodayCXX*daynode["USD"] AS totalIssuedTodayUSD,
+        totalIssuedTodayCXX/daynode["USD"] AS totalIssuedTodayUSD,
         accountIDs AS accountIDS
       `,
       { phone }
@@ -32,17 +33,21 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
       return false;
     }
 
-    const memberTier = result.records[0].get("memberTier").low
-    const totalIssuedTodayUSD = result.records[0].get("totalIssuedTodayUSD")
+    const memberTier = result.records[0].get("memberTier").low;
+    const totalIssuedTodayUSD = result.records[0].get("totalIssuedTodayUSD");
     console.log(totalIssuedTodayUSD);
-    var remainingAvailable = Infinity;
+    let remainingAvailableUSD: number = Infinity;
     if (memberTier == 1) {
-      remainingAvailable = 10 - totalIssuedTodayUSD;
+      remainingAvailableUSD = parseFloat(
+        denomFormatter(10 - totalIssuedTodayUSD, "USD")
+      );
     }
     if (memberTier == 2) {
-      remainingAvailable = 100 - totalIssuedTodayUSD;
+      remainingAvailableUSD = parseFloat(
+        denomFormatter(100 - totalIssuedTodayUSD, "USD")
+      );
     }
-    
+
     return {
       memberID: result.records[0].get("memberID"),
       firstname: result.records[0].get("firstname"),
@@ -50,7 +55,7 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
       memberHandle: result.records[0].get("memberHandle"),
       defaultDenom: result.records[0].get("defaultDenom"),
       memberTier: memberTier,
-      remainingAvailable: remainingAvailable,
+      remainingAvailableUSD: remainingAvailableUSD,
       accountIDS: result.records[0].get("accountIDS"),
     };
   } catch (error) {

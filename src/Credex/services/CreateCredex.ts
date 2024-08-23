@@ -1,29 +1,3 @@
-/*
-Creates a credex
-
-required inputs:
-  issuerAccountID,
-  receiverAccountID,
-  InitialAmount,
-  Denomination,
-  credexType,
-  OFFERSorREQUESTS
-
-optional/conditional inputs:
-  securedCredex,
-  dueDate,
-either a credex needs to be securedCredex = true or it needs
-a due date within the credspan declared in Core/constants/credspan
-
-on success returns:
- credex: object with all fields on the credex
- message: "Credex created"
-
-if conditions above are not met, or if secured credex attempted but not authorized, returns:
-  credex: false
-  message: error message depending on which condition not met
-*/
-
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import {
   getDenominations,
@@ -32,6 +6,7 @@ import {
 import { GetSecuredAuthorizationService } from "./GetSecuredAuthorization";
 import { checkDueDate, credspan } from "../../Core/constants/credspan";
 import { checkPermittedCredexType } from "../../Core/constants/credexTypes";
+import { SecuredCredexAuthForTier } from "../../Member/services/SecuredCredexAuthForTier";
 
 export async function CreateCredexService(credexData: any) {
   const {
@@ -60,8 +35,9 @@ export async function CreateCredexService(credexData: any) {
     let failMessage = "Data missing or mismatch, could not create credex.";
     if (!issuerAccountID) failMessage += " issuerAccountID required";
     if (!receiverAccountID) failMessage += " receiverAccountID required";
-    if (issuerAccountID == receiverAccountID) failMessage += " issuer and receiver cannot be the same account";
-      if (!InitialAmount) failMessage += " InitialAmount required";
+    if (issuerAccountID == receiverAccountID)
+      failMessage += " issuer and receiver cannot be the same account";
+    if (!InitialAmount) failMessage += " InitialAmount required";
     if (!Denomination) failMessage += " Denomination required";
     if (!credexType) failMessage += " credexType required";
     if (!OFFERSorREQUESTS) failMessage += " OFFERSorREQUESTS required";
@@ -137,6 +113,19 @@ export async function CreateCredexService(credexData: any) {
         message: message,
       };
     }
+  }
+
+  //check that credex is within limits of membership tier
+  const tierAuth = await SecuredCredexAuthForTier(
+    issuerAccountID,
+    InitialAmount,
+    Denomination
+  );
+  if (tierAuth != true) {
+    return {
+      credex: false,
+      message: tierAuth,
+    };
   }
 
   // Get securable data for secured credex

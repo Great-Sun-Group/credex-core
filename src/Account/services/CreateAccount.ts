@@ -36,26 +36,48 @@ export async function CreateAccountService(
   const isValid = /^[a-z0-9._]+$/.test(accountHandle);
 
   if (!isValid) {
-    throw new Error(
-      "Invalid account handle. Only lowercase letters, numbers, periods, and underscores are allowed."
-    );
+    return {
+      account: false,
+      message:
+        "Invalid account handle. Only lowercase letters, numbers, periods, and underscores are allowed.",
+    };
   }
 
   // Validation: Check DCOdenom in denominations
   if (DCOdenom && !getDenominations({ code: DCOdenom }).length) {
     const message = "DCOdenom not in denoms";
     console.log(message);
-    return { onboardedMemberID: false, message: message };
+    return { account: false, message: message };
   }
 
   // Database interaction
   const ledgerSpaceSession = ledgerSpaceDriver.session();
+
+  //check if member permitted to open a new account based on member tier and number of accounts
+  const checkPermission = await ledgerSpaceSession.run(
+    `
+      MATCH (owner:Member { memberID: $ownerID })
+      OPTIONAL MATCH (owner)-[:OWNS]->(account:Account)
+      RETURN
+        COUNT(account) AS numAccounts,
+        owner.memberTier as memberTier
+    `,
+    { ownerID }
+  );
+  const numAccounts = checkPermission.records[0].get("numAccounts");
+  const memberTier = checkPermission.records[0].get("memberTier");
+  if (numAccounts >= 1 && memberTier <= 2) {
+    return {
+      account: false,
+      message: "Member does not have permission to create an account",
+    };
+  }
+
   try {
     const result = await ledgerSpaceSession.run(
       `
         MATCH (daynode:Daynode { Active: true })
         MATCH (owner:Member { memberID: $ownerID })
-        WHERE owner.memberTier >= 3
         CREATE (owner)-[:OWNS]->(account:Account {
           accountType: $accountType,
           accountName: $accountName,
