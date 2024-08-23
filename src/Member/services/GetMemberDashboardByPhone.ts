@@ -36,14 +36,16 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
     const memberTier = result.records[0].get("memberTier").low;
     const totalIssuedTodayUSD = result.records[0].get("totalIssuedTodayUSD");
     console.log(totalIssuedTodayUSD);
-    let remainingAvailable: string | number = Infinity;
+    let remainingAvailableUSD: number = Infinity;
     if (memberTier == 1) {
-      remainingAvailable =
-        denomFormatter(10 - totalIssuedTodayUSD, "USD") + " USD";
+      remainingAvailableUSD = parseFloat(
+        denomFormatter(10 - totalIssuedTodayUSD, "USD")
+      );
     }
     if (memberTier == 2) {
-      remainingAvailable =
-        denomFormatter(100 - totalIssuedTodayUSD, "USD") + " USD";
+      remainingAvailableUSD = parseFloat(
+        denomFormatter(100 - totalIssuedTodayUSD, "USD")
+      );
     }
 
     return {
@@ -53,7 +55,7 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
       memberHandle: result.records[0].get("memberHandle"),
       defaultDenom: result.records[0].get("defaultDenom"),
       memberTier: memberTier,
-      remainingAvailable: remainingAvailable,
+      remainingAvailableUSD: remainingAvailableUSD,
       accountIDS: result.records[0].get("accountIDS"),
     };
   } catch (error) {
