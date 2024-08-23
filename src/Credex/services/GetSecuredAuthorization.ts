@@ -47,7 +47,7 @@ export async function GetSecuredAuthorizationService(
   const getSecurableDataQuery = await ledgerSpaceSession.run(
     `
       MATCH (account:Account {accountID: $accountID})
-      OPTIONAL MATCH (account)-[transactionType:OWES]-(credex:Credex)<-[:SECURES]-(securer:Account)
+      OPTIONAL MATCH (account)-[transactionType:OWES|OFFERS]-(credex:Credex)<-[:SECURES]-(securer:Account)
       WHERE credex.Denomination = $Denomination
       WITH
         securer.accountID AS securingAccountID,
@@ -76,6 +76,10 @@ export async function GetSecuredAuthorizationService(
       securableAmountInDenom: 0,
     };
   }
+    console.log({
+      securerID: securableRecord.get("securingAccountID"),
+      securableAmountInDenom: securableRecord.get("netSecurableInDenom"),
+    });
 
   return {
     securerID: securableRecord.get("securingAccountID"),
