@@ -20,6 +20,8 @@ export async function CreateCredexService(credexData: any) {
     dueDate = "",
   } = credexData;
 
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
+
   // Validate input data
   if (
     !issuerAccountID ||
@@ -115,17 +117,38 @@ export async function CreateCredexService(credexData: any) {
     }
   }
 
-  //check that credex is within limits of membership tier
-  const tierAuth = await SecuredCredexAuthForTier(
-    issuerAccountID,
-    InitialAmount,
-    Denomination
-  );
-  if (tierAuth != true) {
-    return {
-      credex: false,
-      message: tierAuth,
-    };
+  //check that secured credex is within limits of membership tier
+  if (securedCredex) {
+    const tierAuth = await SecuredCredexAuthForTier(
+      issuerAccountID,
+      InitialAmount,
+      Denomination
+    );
+    if (tierAuth != true) {
+      return {
+        credex: false,
+        message: tierAuth,
+      };
+    }
+  }
+
+  //check that unsecured credex is permitted on membership tier
+  if (!securedCredex) {
+    const getMemberTier = await ledgerSpaceSession.run(
+      `
+        MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
+        RETURN member.memberTier as memberTier
+      `,
+      { issuerAccountID }
+    );
+
+    const memberTier = getMemberTier.records[0].get("memberTier");
+    if (memberTier == 1) {
+      return {
+        credex: false,
+        message: "Members on the Open Tier cannot issue unsecured credexes",
+      };
+    }
   }
 
   // Get securable data for secured credex
@@ -154,7 +177,6 @@ export async function CreateCredexService(credexData: any) {
     }
   }
 
-  const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
     // Create the credex
     const createCredexQuery = await ledgerSpaceSession.run(

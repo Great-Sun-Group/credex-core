@@ -11,6 +11,26 @@ export async function CreateAccountService(
   DCOgiveInCXX: number | null = null,
   DCOdenom: string | null = null
 ) {
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
+
+  //check that account creation is permitted on membership tier
+  const getMemberTier = await ledgerSpaceSession.run(
+    `
+        MATCH (member:Member{ memberID: $ownerID })
+        RETURN member.memberTier as memberTier
+      `,
+    { ownerID }
+  );
+
+  const memberTier = getMemberTier.records[0].get("memberTier");
+  if (memberTier <= 2) {
+    return {
+      account: false,
+      message:
+        "You cannot create an account on the Open or Verified membership tiers.",
+    };
+  }
+
   // Validation: Check defaultDenom in denominations
   if (!getDenominations({ code: defaultDenom }).length) {
     const message = "defaultDenom not in denoms";
@@ -48,29 +68,6 @@ export async function CreateAccountService(
     const message = "DCOdenom not in denoms";
     console.log(message);
     return { account: false, message: message };
-  }
-
-  // Database interaction
-  const ledgerSpaceSession = ledgerSpaceDriver.session();
-
-  //check if member permitted to open a new account based on member tier and number of accounts
-  const checkPermission = await ledgerSpaceSession.run(
-    `
-      MATCH (owner:Member { memberID: $ownerID })
-      OPTIONAL MATCH (owner)-[:OWNS]->(account:Account)
-      RETURN
-        COUNT(account) AS numAccounts,
-        owner.memberTier as memberTier
-    `,
-    { ownerID }
-  );
-  const numAccounts = checkPermission.records[0].get("numAccounts");
-  const memberTier = checkPermission.records[0].get("memberTier");
-  if (numAccounts >= 1 && memberTier <= 2) {
-    return {
-      account: false,
-      message: "Member does not have permission to create an account",
-    };
   }
 
   try {
