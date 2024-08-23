@@ -7,6 +7,23 @@ export async function AuthorizeForAccountService(
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
+  //check that account authorization is permitted on membership tier
+  const getMemberTier = await ledgerSpaceSession.run(
+    `
+        MATCH (member:Member{ memberID: $ownerID })
+        RETURN member.memberTier as memberTier
+      `,
+    { ownerID }
+  );
+
+  const memberTier = getMemberTier.records[0].get("memberTier");
+  if (memberTier <= 3) {
+    return {
+      message:
+        "You can only authorize someone to transact on behalf of your account when you are on the Entrepreneur tier or above.",
+    };
+  }
+
   try {
     const result = await ledgerSpaceSession.run(
       `
