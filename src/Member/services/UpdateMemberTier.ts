@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import * as neo4j from "neo4j-driver";
 
-export async function UpdateMemberTier(
+export async function UpdateMemberTierService(
   memberIDtoUpdate: string,
   newTier: number
 ) {
