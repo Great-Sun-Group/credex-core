@@ -17,13 +17,17 @@ export async function CreateAccountService(
   const getMemberTier = await ledgerSpaceSession.run(
     `
         MATCH (member:Member{ memberID: $ownerID })
-        RETURN member.memberTier as memberTier
+        OPTIONAL MATCH (member)-[:OWNS]->(account:Account)
+        RETURN
+          member.memberTier AS memberTier,
+          COUNT(account) AS numAccounts
       `,
     { ownerID }
   );
 
   const memberTier = getMemberTier.records[0].get("memberTier");
-  if (memberTier <= 2) {
+  const numAccounts = getMemberTier.records[0].get("numAccounts");
+  if (memberTier <= 2 && numAccounts >= 1) {
     return {
       account: false,
       message:
