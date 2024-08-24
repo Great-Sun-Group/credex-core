@@ -14,19 +14,18 @@ export async function AcceptCredexService(credexID: string, signerID: string) {
     const result = await ledgerSpaceSession.run(
       `
         MATCH
-          (member:Member)-[:OWNS]->
           (issuer:Account)-[rel1:OFFERS]->
           (acceptedCredex:Credex {credexID: $credexID})-[rel2:OFFERS]->
-          (acceptor:Account)
-        MATCH (signer:Member { memberID: $signerID })
+          (acceptor:Account)<-[:AUTHORIZED_FOR]-
+          (signer:Member { memberID: $signerID })
         DELETE rel1, rel2
         CREATE (issuer)-[:OWES]->(acceptedCredex)-[:OWES]->(acceptor)
-        CREATE (acceptedCredex)<-[:ACCEPT_OFFER_SIGNED]-(signer)
+        CREATE (acceptedCredex)<-[:SIGNED]-(signer)
         SET acceptedCredex.acceptedAt = datetime()
         RETURN
           acceptedCredex.credexID AS credexID,
           acceptor.accountID AS acceptorAccountID,
-          member.memberID AS memberID
+          signer.memberID AS signerID
       `,
       { credexID, signerID }
     );
@@ -42,13 +41,13 @@ export async function AcceptCredexService(credexID: string, signerID: string) {
 
     const acceptedCredexID = result.records[0].get("credexID");
     const acceptorAccountID = result.records[0].get("acceptorAccountID");
-    const memberID = result.records[0].get("memberID");
+    const acceptorSignerID = result.records[0].get("signerID");
 
     console.log(`Offer accepted for credexID: ${acceptedCredexID}`);
     return {
       acceptedCredexID: acceptedCredexID,
       acceptorAccountID: acceptorAccountID,
-      memberID: memberID,
+      acceptorSignerID: acceptorSignerID,
     };
   } catch (error) {
     console.error(`Error accepting credex for credexID ${credexID}:`, error);
