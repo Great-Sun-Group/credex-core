@@ -141,31 +141,8 @@ export async function DBinitialization(): Promise<void> {
     console.log("Creating initialization accounts and relationships...");
 
     //create initial member
-    const rdubs = await OnboardMemberService(
-      "Ryan",
-      "Watson",  
-      "263778177125"
-    );
-    let rdubsAccountID;
+    const rdubs = await OnboardMemberService("Ryan", "Watson", "263778177125");
     if (typeof rdubs.onboardedMemberID == "boolean") {
-      throw new Error("rdubs could not be created");
-    }
-    if (
-      rdubs.onboardedMemberID &&
-      typeof rdubs.onboardedMemberID === "string"
-    ) {
-      const rdubsPersonalAccount = await CreateAccountService(
-        rdubs.onboardedMemberID,
-        "PERSONAL_CONSUMPTION",
-        "Ryan Watson Personal",
-        "ryanlukewatson",
-        "USD",
-        1,
-        CXXdenom
-      );
-
-      rdubsAccountID = rdubsPersonalAccount.accountID;
-    } else {
       throw new Error("rdubs could not be created");
     }
 
@@ -177,6 +154,18 @@ export async function DBinitialization(): Promise<void> {
     if (!tierUpdated) {
       throw new Error("rdubs memberTier could not be updated");
     }
+
+    const rdubsPersonalAccount = await CreateAccountService(
+      rdubs.onboardedMemberID,
+      "PERSONAL_CONSUMPTION",
+      "Ryan Watson Personal",
+      "ryanlukewatson",
+      "USD",
+      1,
+      CXXdenom
+    );
+
+    const rdubsAccountID = rdubsPersonalAccount.accountID;
 
     //create credex foundation
     const credexFoundation = await CreateAccountService(
