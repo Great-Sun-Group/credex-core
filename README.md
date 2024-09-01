@@ -3,16 +3,19 @@
 The codebase in this credex-core repository actualizes two principles:
 
 ## Credex Principle
+
 **If I owe you,**\
 **and you owe them,**\
 **and they owe me,**\
 **we're square.**
 
 ## Credcoin Principle
+
 **Every human is entitled to one equal share of the value of the natural wealth entering the organic economy.**\
 **Every human is responsible to provide value equal to the amount of natural wealth that they consume.**
 
 # Overview
+
 The credex ecosystem actualizes the Credex Principle in the Minute Transaction Queue (MTQ), which tracks payable and receivable invoices for members' accounts, finds loops of value creation, and cancels payable and receivable invoices against each other in "credloops" in which every debt is reduced by an equal value. This is a GAAP-compliant accounting process that any person and any business can benefit from.
 
 The ecosystem actualizes the Credcoin Principle in the Daily Credcoin Offering (DCO), which updates exchange rates across the ecosystem daily. Every 24h, the DCO makes this equation true: one credcoin today equals the number of members participating in the DCO today divided by the value of natural wealth entering the organic economy through the DCO today.
@@ -26,9 +29,11 @@ The credex ecosystem stores values in credcoin (CXX). In order to natively enabl
 The system manages the balance between local truth (preserving the face value of contracts in their specified denomination) and global truth (adjusting all values relative to credcoin) through the daily rate and value adjustments in the DCO. This implementation creates a robust ecosystem that manages accounting processes across any denomination, clears debts automatically, and adjusts values dynamically.
 
 ## express.js server
+
 The express.js server is initialized with index.ts, which provides the cronjobs and endpoints that power the ecosystem and enable members and client apps to interact with its ledger.
 
 ## cronjobs
+
 The Core module hosts the cronjobs.
 
 DailyCredcoinOffering() runs every day at midnight UTC. First, DBinitialization() is run if there is no active daynode in the database. DCOexecute() then runs the Daily Credcoin Offering.
@@ -36,12 +41,15 @@ DailyCredcoinOffering() runs every day at midnight UTC. First, DBinitialization(
 MinuteTransactionQueue() runs every minute, clearing credloops of value creation across the ecosystem.
 
 ## endpoints
+
 Controllers for the endpoints are imported, and endpoints created for the various modules: Member, Account, Recurring, Admin, and DevAdmin.
 
 # Daily Credcoin Offering (DCO)
+
 Runs every 24h at midnight UTC, while most of the world's population centres are in darkness.
 
 ## DBinitialize.ts
+
 The DBinitialization file sets up the initial state of the database for the Credex ecosystem.
 
 1. Sets up database constraints and indexes for various entities (Daynode, Member, Account).
@@ -59,6 +67,7 @@ The DBinitialization file sets up the initial state of the database for the Cred
 This initialization process sets up the basic structure and relationships needed for the Credex ecosystem to function, including the establishment of exchange rates and the creation of foundational accounts and transactions.
 
 ## DCOexecute.ts
+
 The DCOexecute function implements the Daily Credcoin Offering (DCO) process.
 
 1. Check if the Minute Transaction Queue (MTQ) is running and wait if it is and retry in a few seconds.
@@ -86,6 +95,7 @@ The DCO process ensures that the value of one Credcoin is always equal to the nu
 This implementation allows for a dynamic, daily adjustment of the ecosystem's internal economy, reflecting the contributions and participation of its members while maintaining the relative value of existing transactions and balances.
 
 # MinuteTransactionQueue (MTQ)
+
 The Minute Transaction Queue is a crucial part of the Credex ecosystem that runs every minute. It links the main ledgerSpace database (the source of truth and full information) to a searchSpace database (optimized to find credloops). New accounts are first added to the searchSpace, then new credexes. After each new credex is added, the ecosystem finds and clears all possible loops created by the new credex.
 
 1. Processing new accounts:
@@ -100,6 +110,7 @@ The Minute Transaction Queue is a crucial part of the Credex ecosystem that runs
    - For each Credex, it calls the LoopFinder function.
 
 ## LoopFinder.ts
+
 Checks if the credex already exists in the search space. If not, it creates it.
 
 1. Finds all loops starting and ending at the specified account.
@@ -119,9 +130,11 @@ This implementation actualizes the Credex Principle by finding loops where "If I
 The LoopFinder is called by the MinuteTransactionQueue for each new Credex, ensuring that loops are found and cleared as soon as possible after new Credexes are created.
 
 # Member
+
 This module handles member-related operations in the Credex ecosystem. It exposes the following endpoints:
 
 1. **onboardMember** (POST)
+
    - Function: Registers a new member in the Credex ecosystem and creates their personal consumption account.
    - Required variables:
      - firstname: string
@@ -132,11 +145,13 @@ This module handles member-related operations in the Credex ecosystem. It expose
      - DCOdenom: string (denomination for DCO contribution)
 
 2. **getMemberDashboardByPhone** (GET)
+
    - Function: Retrieves a member's dashboard information and associated account dashboards using their phone number.
    - Required variables:
      - phone: string
 
 3. **getMemberByHandle** (GET)
+
    - Function: Retrieves member information using their unique handle.
    - Required variables:
      - memberHandle: string
@@ -150,9 +165,11 @@ This module handles member-related operations in the Credex ecosystem. It expose
 These endpoints allow for member registration, information retrieval, and tier management within the Credex ecosystem. The onboardMember endpoint not only creates a new member but also sets up their personal consumption account, integrating the member into the ecosystem. The getMemberDashboardByPhone endpoint provides comprehensive information about the member and their associated accounts, while getMemberByHandle allows for quick member lookup. The updateMemberTier endpoint enables the system to adjust a member's status within the ecosystem.
 
 # Account
+
 This module handles account-related operations in the Credex ecosystem. It exposes the following endpoints:
 
 1. **createAccount** (POST)
+
    - Function: Creates a new account in the Credex ecosystem.
    - Required variables:
      - ownerID: string
@@ -162,11 +179,13 @@ This module handles account-related operations in the Credex ecosystem. It expos
      - defaultDenom: string
 
 2. **getAccountByHandle** (GET)
+
    - Function: Retrieves account information using the account handle.
    - Required variables:
      - accountHandle: string
 
 3. **updateAccount** (PATCH)
+
    - Function: Updates an existing account's information.
    - Required variables:
      - accountID: string
@@ -176,12 +195,14 @@ This module handles account-related operations in the Credex ecosystem. It expos
      - defaultDenom: string
 
 4. **authorizeForAccount** (POST)
+
    - Function: Authorizes a member to perform actions on behalf of an account.
    - Required variables:
      - accountID: string
      - memberID: string
 
 5. **unauthorizeForAccount** (POST)
+
    - Function: Removes authorization for a member to act on behalf of an account.
    - Required variables:
      - accountID: string
@@ -196,9 +217,11 @@ This module handles account-related operations in the Credex ecosystem. It expos
 These endpoints provide comprehensive account management capabilities within the Credex ecosystem. The createAccount endpoint allows for the creation of new accounts, while getAccountByHandle facilitates easy retrieval of account information. The updateAccount endpoint enables modifications to existing accounts. The authorizeForAccount and unauthorizeForAccount endpoints manage access control for accounts, allowing or revoking permissions for members to act on behalf of an account. Finally, the updateSendOffersTo endpoint allows accounts to specify their preferences for receiving offers, enhancing user control over interactions within the ecosystem.
 
 # Credex
+
 This module handles Credex-related operations in the Credex ecosystem. It exposes the following endpoints:
 
 1. **offerCredex** (POST)
+
    - Function: Creates a new Credex offer.
    - Required variables:
      - memberID: string
@@ -208,28 +231,33 @@ This module handles Credex-related operations in the Credex ecosystem. It expose
      - InitialAmount: number
 
 2. **acceptCredex** (PUT)
+
    - Function: Accepts a Credex offer.
    - Required variables:
      - credexID: string
      - signerID: string
 
 3. **acceptCredexBulk** (PUT)
+
    - Function: Accepts multiple Credex offers in bulk.
    - Required variables:
      - credexIDs: string[] (Array of credex IDs to accept)
      - signerID: string
 
 4. **declineCredex** (PUT)
+
    - Function: Declines a Credex offer.
    - Required variables:
      - credexID: string
 
 5. **cancelCredex** (PUT)
+
    - Function: Cancels a Credex offer.
    - Required variables:
      - credexID: string
 
 6. **getCredex** (GET)
+
    - Function: Retrieves information about a specific Credex.
    - Required variables:
      - credexID: string
@@ -246,12 +274,15 @@ This module handles Credex-related operations in the Credex ecosystem. It expose
 These endpoints provide comprehensive Credex management capabilities within the ecosystem. The offerCredex endpoint allows for the creation of new Credex offers, while acceptCredex and acceptCredexBulk facilitate the acceptance of these offers individually or in bulk. The declineCredex and cancelCredex endpoints provide options for rejecting or withdrawing Credex offers. The getCredex endpoint allows for retrieving detailed information about a specific Credex, and getLedger provides access to an account's transaction history. Together, these endpoints enable the full lifecycle management of Credexes within the ecosystem, from creation and acceptance to cancellation and historical tracking.
 
 # Admin
+
 This module is coming soon.
 
 # DevAdmin
+
 This module is under construction.
 
 # To run the credex ecosystem in your local dev environment
+
 ### Prerequisites
 
 Before running this project, make sure you have the following installed:
@@ -272,6 +303,7 @@ Before running this project, make sure you have the following installed:
    ```bash
    cd credex-core
    ```
+
    Create a branch from the 'dev' branch.
 
 3. Install the dependencies:
@@ -305,28 +337,34 @@ To run the project using nodemon, follow these steps:
 4. Open postman and visit `http://localhost:5000` to access the project endpoints.
 
 # To run on a Codespaces virtual machine
+
 ### Prerequisites and installation
+
 Executed automatically via devcontainer.
 
 ### Start the development server
-   ```bash
-   npm run nodemon
-   ```
-   This command will start the project using nodemon, which will automatically restart the server whenever changes are made to the code.
+
+```bash
+npm run nodemon
+```
+
+This command will start the project using nodemon, which will automatically restart the server whenever changes are made to the code.
 
 ### Use Postman for endpoints
+
 1. Click the icon for the Postman extension in the sidebar and sign in. You may need to use the authorization token provided by Postman. Open the Credex Team Workspace.
 
 2. In the codespaces terminal, print the Github Token with
+
 ```
 echo $GITHUB_TOKEN
 ```
+
 Copy the token and paste it the "X-Github-Token" field in the credex-core variables in Postman. A new token is created every codespae session. If the codespace stops, this step has to be completed again.
 
 3. After `npm run nodemon`, copy the forwarded port address from the Ports tab and paste it in the "base_url" field in the credex-core variables in Postman. This url will remain constant for this specific codespace, even across multiple sessions.
 
 The github token and base_url are currently saved globally in Postman, so if multiple people are working at the same time, we'll need to update Postman to handle that.
-
 
 # ledgerSpace schema
 
@@ -396,7 +434,7 @@ graph TB
     LA --> |CREATED_ON| D
 ```
 
-** relationship names separated by "/" indicates that only one of those relationship types can exist between the two nodes.
+\*\* relationship names separated by "/" indicates that only one of those relationship types can exist between the two nodes.
 
 ## Node Properties
 
@@ -500,44 +538,61 @@ graph TB
 
 - (No properties)
 
+# searchSpace schema
 
-# SearchSpace schema
+The SearchSpace schema represents a simplified and optimized version of the ledger space, designed for efficient loop finding in the Credex ecosystem. This schema is optimized to facilitate the resource-efficient identification of credloops for the Minute Transaction Queue (MTQ) process.
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#ff0000', 'nodeBorder': '#ff0000', 'nodeTextColor': '#ffffff'}}}%%
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#4a4a4a', 'primaryTextColor': '#fff', 'primaryBorderColor': '#7C0000', 'lineColor': '#F8B229', 'secondaryColor': '#006100', 'tertiaryColor': '#fff'}}}%%
+
 graph TD
-    classDef accountNode fill:#red,stroke:#blue,color:#yellow,rx:10,ry:10;
-    classDef searchAnchorFloating fill:#006400,stroke:#008000,color:#ffffff,rx:10,ry:10;
-    classDef otherNode fill:#f9f,stroke:#333,rx:10,ry:10;
-    linkStyle default rx:10,ry:10;
+    %% Nodes
+    A1[Account 1]:::accountNode
+    A2[Account 2]:::accountNode
+    A3[Account 3]:::accountNode
+    SA1[FLOATING]:::searchAnchorFloating
+    SA2[USD_SECURED]:::searchAnchorUSDSecured
+    SA3[CAD_SECURED]:::searchAnchorCADSecured
+    C1[Credex 1]:::credexNode
+    C2[Credex 2]:::credexNode
+    C3[Credex 3]:::credexNode
+    C4[Credex 4]:::credexNode
 
-    A1[Account 1]:::accountNode --> |FLOATING| SA1[FLOATING]:::searchAnchorFloating
-    SA1 --> |FLOATING| A2[Account 2]:::accountNode
-    A2 --> |USD_SECURED| SA2[USD_SECURED]:::otherNode
-    SA2 --> |USD_SECURED| A3[Account 3]:::accountNode
-    A3 --> |CAD_SECURED| SA3[CAD_SECURED]:::otherNode
+    %% Relationships
+    A1 --> |FLOATING| SA1
+    SA1 --> |FLOATING| A2
+    A2 --> |USD_SECURED| SA2
+    SA2 --> |USD_SECURED| A3
+    A3 --> |CAD_SECURED| SA3
     SA3 --> |CAD_SECURED| A1
-    SA1 --> |SEARCH_SECURED| C1[Credex 1]:::otherNode
-    SA2 --> |SEARCH_SECURED| C2[Credex 2]:::otherNode
-    SA3 --> |SEARCH_SECURED| C3[Credex 3]:::otherNode
-    SA3 --> |SEARCH_SECURED| C4[Credex 4]:::otherNode
+    SA1 --> |SEARCH_SECURED| C1
+    SA2 --> |SEARCH_SECURED| C2
+    SA3 --> |SEARCH_SECURED| C3
+    SA3 --> |SEARCH_SECURED| C4
 
-    classDef floatingRelationship stroke:#006400,color:#006400;
-    class A1,SA1 floatingRelationship;
-    class SA1,A2 floatingRelationship;
+    %% Styles
+    classDef accountNode fill:#3498db,stroke:#2980b9,color:#fff,rx:10,ry:10;
+    classDef searchAnchorFloating fill:#006400,stroke:#004d00,color:#fff,rx:10,ry:10;
+    classDef searchAnchorUSDSecured fill:#b87333,stroke:#a66a2e,color:#fff,rx:10,ry:10;
+    classDef searchAnchorCADSecured fill:#008080,stroke:#006666,color:#fff,rx:10,ry:10;
+    classDef credexNode fill:#4B0082,stroke:#3B0062,color:#fff,rx:10,ry:10;
+
 ```
 
-## Node Properties
+## Node properties
 
 ### Account
+
 - accountID: string
 - accountName: string
 
 ### SearchAnchor
+
 - searchAnchorID: string
 - earliestDueDate: Date
 
 ### Credex
+
 - credexID: string
 - outstandingAmount: number
 - Denomination: string
@@ -547,10 +602,33 @@ graph TD
 ## Relationship Properties
 
 ### FLOATING
+
 - (No properties)
 
 ### USD_SECURED, CAD_SECURED
+
 - (No properties)
 
 ### SEARCH_SECURED
+
 - (No properties)
+
+## Explanation
+
+1. **Accounts**: Represented by blue nodes, these are simplified versions of the accounts in the ledger space. They contain only essential information needed for loop finding.
+
+2. **SearchAnchors**: These nodes come in three types:
+
+   - Floating (dark green): Represent unsecured credit relationships between accounts.
+   - USD_SECURED (copper): Represent secured credit relationships in USD.
+   - CAD_SECURED (teal): Represent secured credit relationships in CAD.
+
+3. **Credexes**: Shown as dark purple nodes, these represent individual credit transactions in the system.
+
+4. **Relationships**:
+   - FLOATING (dark green): Connects accounts to floating SearchAnchors, representing unsecured credit relationships.
+   - USD_SECURED (copper): Connect accounts to USD_SECURED SearchAnchors, representing secured credit relationships in USD.
+   - CAD_SECURED (teal): Connect accounts to CAD_SECURED SearchAnchors, representing secured credit relationships in CAD.
+   - SEARCH_SECURED (dark purple): Links SearchAnchors to Credexes, allowing for efficient traversal during loop finding.
+
+This optimized structure allows the Minute Transaction Queue to quickly identify potential credit loops by traversing the relationships between Accounts, SearchAnchors, and Credexes. The use of SearchAnchors as intermediary nodes between Accounts and Credexes significantly reduces the complexity of loop finding algorithms, enabling faster processing of transactions in the Credex ecosystem.
