@@ -42,7 +42,7 @@ MinuteTransactionQueue() runs every minute, clearing credloops of value creation
 
 ## endpoints
 
-Controllers for the endpoints are imported, and endpoints created for the various modules: Member, Account, Recurring, Admin, and DevAdmin.
+Controllers for the endpoints are imported, and endpoints created for the various modules: Member, Account, Avatar, Admin, and DevAdmin.
 
 # Daily Credcoin Offering (DCO)
 
@@ -272,6 +272,48 @@ This module handles Credex-related operations in the Credex ecosystem. It expose
      - startRow: number
 
 These endpoints provide comprehensive Credex management capabilities within the ecosystem. The offerCredex endpoint allows for the creation of new Credex offers, while acceptCredex and acceptCredexBulk facilitate the acceptance of these offers individually or in bulk. The declineCredex and cancelCredex endpoints provide options for rejecting or withdrawing Credex offers. The getCredex endpoint allows for retrieving detailed information about a specific Credex, and getLedger provides access to an account's transaction history. Together, these endpoints enable the full lifecycle management of Credexes within the ecosystem, from creation and acceptance to cancellation and historical tracking.
+
+# Avatar
+
+This module handles operations related to Avatars in the Credex ecosystem. Avatars are nodes that members can delegate signing authority to. Currently, the only Avatar implemented is a Recurring transaction. Once this Avatar is signed by the counterparties, it activates on the schedule agreed by the counterparties to create a Credex using the data agreed between the counterparties. The trail of accountability is maintained because the creation of an Avatar must be signed by the counterparties, and the Avatar signs every Credex it creates.
+
+The Avatar module exposes the following endpoints:
+
+1. **requestRecurring** (POST)
+
+   - Function: Creates a new recurring transaction request.
+   - Required variables:
+     - memberID: string
+     - issuerAccountID: string
+     - receiverAccountID: string
+     - Denomination: string
+     - InitialAmount: number
+     - frequency: string (e.g., "daily", "weekly", "monthly")
+     - startDate: Date
+     - endDate: Date (optional)
+
+2. **acceptRecurring** (PUT)
+
+   - Function: Accepts a recurring transaction request.
+   - Required variables:
+     - recurringID: string
+     - signerID: string
+
+3. **declineRecurring** (PUT)
+
+   - Function: Declines a recurring transaction request.
+   - Required variables:
+     - recurringID: string
+
+4. **cancelRecurring** (PUT)
+   - Function: Cancels an active recurring transaction.
+   - Required variables:
+     - recurringID: string
+     - signerID: string
+
+These endpoints provide functionality for managing recurring transactions within the Credex ecosystem. The requestRecurring endpoint allows for the creation of new recurring transaction requests, while acceptRecurring and declineRecurring facilitate the acceptance or rejection of these requests. The cancelRecurring endpoint enables the termination of an active recurring transaction.
+
+The Avatar module enhances the flexibility and automation of transactions within the Credex ecosystem by allowing members to set up recurring transactions. This feature is particularly useful for regular payments, subscriptions, or any other scenario where periodic transactions are required.
 
 # Admin
 

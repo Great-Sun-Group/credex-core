@@ -19,7 +19,7 @@ export async function OfferCredexService(credexData: any) {
         MATCH
           (credex:Credex { credexID: $credexID })<-[:OFFERS]-
           (Account)<-[:AUTHORIZED_FOR]-
-          (signer:Member { memberID: $signingMemberID })
+          (signer:Member|Avatar { memberID: $signingMemberID })
         CREATE (credex)<-[:SIGNED]-(signer)
         RETURN signer.memberID AS signerID
         `,
