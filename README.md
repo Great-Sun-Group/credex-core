@@ -563,8 +563,8 @@ graph TD
     SA1 --> |FLOATING| A2
     A2 --> |USD_SECURED| SA2
     SA2 --> |USD_SECURED| A3
-    A3 --> |CAD_SECURED| SA3
-    SA3 --> |CAD_SECURED| A1
+    A2 --> |CAD_SECURED| SA3
+    SA3 --> |CAD_SECURED| A3
     SA1 --> |SEARCH_SECURED| C1
     SA2 --> |SEARCH_SECURED| C2
     SA3 --> |SEARCH_SECURED| C3
@@ -619,7 +619,7 @@ graph TD
 
 2. **SearchAnchors**: These nodes come in three types:
 
-   - Floating (dark green): Represent unsecured credit relationships between accounts.
+   - FLOATING (dark green): Represent unsecured credit relationships between accounts.
    - USD_SECURED (copper): Represent secured credit relationships in USD.
    - CAD_SECURED (teal): Represent secured credit relationships in CAD.
 
