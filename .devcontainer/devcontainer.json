@@ -9,7 +9,7 @@
       "extensions": [
         "esbenp.prettier-vscode",
         "Postman.postman-for-vscode",
-        "anthropic.claude-dev"
+        "saoudrizwan.claude-dev"
       ]
     }
   },
