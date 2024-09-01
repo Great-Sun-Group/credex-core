@@ -222,7 +222,7 @@ export async function LoopFinder(
               LoopedAmount: $valueToClear,
               CXXmultiplier: 1,
               Denomination: "CXX"
-          })-[to_daynode:LOOPED_ON]->(daynode)
+          })-[to_daynode:CREATED_ON]->(daynode)
           WITH loopAnchor
 
           UNWIND $credexesInLoop AS credexID
