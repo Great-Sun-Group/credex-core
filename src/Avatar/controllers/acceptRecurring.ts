@@ -6,7 +6,7 @@ export async function AcceptRecurringController(
   req: express.Request,
   res: express.Response
 ) {
-  const fieldsRequired = ["memberID", "acceptorAccountID"];
+  const fieldsRequired = ["avatarID", "signerID"];
   for (const field of fieldsRequired) {
     if (!req.body[field]) {
       return res
@@ -18,23 +18,33 @@ export async function AcceptRecurringController(
 
   try {
     const acceptRecurringData = await AcceptRecurringService(
-      req.body.memberID,
-      req.body.acceptorAccountID
+      req.body.avatarID,
+      req.body.signerID
     );
 
-    if (!acceptRecurringData.recurring) {
+    if (!acceptRecurringData) {
       return res.status(400).json(acceptRecurringData);
     }
 
-    const dashboardData = await GetAccountDashboardService(
-      req.body.acceptorAccountID,
-      req.body.acceptorAccountID
-    );
+    if (typeof acceptRecurringData.recurring == "boolean") {
+      throw new Error("Recurring transaction could not be created");
+    }
+    if (
+      acceptRecurringData.recurring.acceptorAccountID &&
+      typeof acceptRecurringData.recurring.acceptorAccountID === "string"
+    ) {
+      const dashboardData = await GetAccountDashboardService(
+        req.body.signerID,
+        acceptRecurringData.recurring.acceptorAccountID
+      );
 
-    res.json({
-      acceptRecurringData: acceptRecurringData,
-      dashboardData: dashboardData,
-    });
+      res.json({
+        acceptRecurringData: acceptRecurringData,
+        dashboardData: dashboardData,
+      });
+    } else {
+      throw new Error("credexFoundation could not be created");
+    }
   } catch (err) {
     console.error("Error in AcceptRecurringController:", err);
     res.status(500).json({ error: (err as Error).message });

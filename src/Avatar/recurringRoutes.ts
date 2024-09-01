@@ -14,13 +14,13 @@ export default function RecurringRoutes(
     RequestRecurringController
   );
 
-  app.post(
+  app.put(
     `${apiVersionOneRoute}acceptRecurring`,
     jsonParser,
     AcceptRecurringController
   );
 
-  app.post(
+  app.put(
     `${apiVersionOneRoute}declineRecurring`,
     jsonParser,
     DeclineRecurringController

@@ -1,63 +1,59 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
-import { denomFormatter } from "../../Core/constants/denominations";
 
-export async function AcceptRecurringService(
-  memberID: string,
-  acceptorAccountID: string
-) {
+export async function AcceptRecurringService(avatarID: string, signerID: string) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
     // Validate and update the Recurring node
     const acceptRecurringQuery = await ledgerSpaceSession.run(
       `
-      MATCH (acceptor:Account {accountID: $acceptorAccountID})
-      MATCH (recurring:Recurring {memberID: $memberID})
-      WHERE (acceptor)<-[:REQUESTS]-(recurring) OR (recurring)-[:REQUESTS]->(acceptor)
-      WITH acceptor, recurring
-      OPTIONAL MATCH (recurring)-[r:REQUESTS]-()
-      DELETE r
-      MERGE (acceptor)<-[:ACTIVE_AUTHORIZATION]-(recurring)-[:ACTIVE_AUTHORIZATION]->(otherAccount)
-      WHERE otherAccount <> acceptor
+      MATCH
+        (signer:Member { memberID: $signerID })-[:AUTHORIZED_FOR]->
+        (acceptor:Account)-[rel1:REQUESTS]->
+        (recurring:Avatar { memberID: $avatarID })-[rel2:REQUESTS]->
+        (requestor:Account)
+      MERGE (signer)-[:SIGNED]->(recurring)
+      MERGE (acceptor)-[:ACTIVE]->(recurring)-[:ACTIVE]->(requestor)
+      DELETE rel1, rel2
       RETURN
-        recurring.memberID AS memberID,
-        recurring.Denomination AS Denomination,
-        recurring.InitialAmount AS InitialAmount,
-        recurring.nextPayDate AS nextPayDate,
-        recurring.daysBetweenPays AS daysBetweenPays,
-        recurring.remainingPays AS remainingPays,
-        otherAccount.accountName AS otherAccountName
+        recurring.memberID AS avatarID,
+        acceptor.accountID AS acceptorAccountID,
+        signer.memberID AS signerID
       `,
       {
-        memberID,
-        acceptorAccountID,
+        avatarID,
+        signerID,
       }
     );
 
     if (acceptRecurringQuery.records.length === 0) {
+      console.log(
+        `No records found or recurring transaction no longer pending for avatarID: ${avatarID}`
+      );
       return {
         recurring: false,
-        message: "Recurring template not found or not authorized to accept",
+        message:
+          "No records found or recurring transaction no longer pending for avatarID: " + avatarID,
       };
     }
 
-    const record = acceptRecurringQuery.records[0];
-    const updatedRecurring = {
-      memberID: record.get("memberID"),
-      formattedInitialAmount: denomFormatter(
-        record.get("InitialAmount"),
-        record.get("Denomination")
-      ),
-      otherAccountName: record.get("otherAccountName"),
-      nextPayDate: record.get("nextPayDate"),
-      daysBetweenPays: record.get("daysBetweenPays"),
-      remainingPays: record.get("remainingPays") || "Indefinite",
+    //hit credex accepted notification endpoint
+
+    const acceptedRecurringID = acceptRecurringQuery.records[0].get("avatarID");
+    const acceptorAccountID =
+      acceptRecurringQuery.records[0].get("acceptorAccountID");
+    const acceptorSignerID = acceptRecurringQuery.records[0].get("signerID");
+
+    console.log(`Reccuring request accepted for avatarID: ${acceptedRecurringID}`);
+    return {
+      recurring: {
+        acceptedRecurringID: acceptedRecurringID,
+        acceptorAccountID: acceptorAccountID,
+        acceptorSignerID: acceptorSignerID,
+      },
+      message: "Recurring template created",
     };
 
-    return {
-      recurring: updatedRecurring,
-      message: "Recurring template accepted: " + updatedRecurring.memberID,
-    };
   } catch (error) {
     return {
       recurring: false,
