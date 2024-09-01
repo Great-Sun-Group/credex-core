@@ -2,7 +2,7 @@ import express from "express";
 import { apiVersionOneRoute } from "..";
 import { RequestRecurringController } from "./controllers/requestRecurring";
 import { AcceptRecurringController } from "./controllers/acceptRecurring";
-import { DeclineRecurringController } from "./controllers/declineRecurring";
+import { DeclineRecurringController } from "./controllers/cancelRecurring";
 
 export default function RecurringRoutes(
   app: express.Application,
@@ -21,7 +21,7 @@ export default function RecurringRoutes(
   );
 
   app.put(
-    `${apiVersionOneRoute}declineRecurring`,
+    `${apiVersionOneRoute}cancelRecurring`,
     jsonParser,
     DeclineRecurringController
   );

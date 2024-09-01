@@ -6,7 +6,7 @@ export async function DeclineRecurringController(
   req: express.Request,
   res: express.Response
 ) {
-  const fieldsRequired = ["memberID", "declinerAccountID"];
+  const fieldsRequired = ["signerID", "cancelerAccountID", "avatarID"];
   for (const field of fieldsRequired) {
     if (!req.body[field]) {
       return res
@@ -18,17 +18,18 @@ export async function DeclineRecurringController(
 
   try {
     const cancelRecurringData = await CancelRecurringService(
-      req.body.memberID,
-      req.body.declinerAccountID
+      req.body.signerID,
+      req.body.cancelerAccountID,
+      req.body.avatarID
     );
 
-    if (!cancelRecurringData.recurring) {
+    if (!cancelRecurringData) {
       return res.status(400).json(cancelRecurringData);
     }
 
     const dashboardData = await GetAccountDashboardService(
-      req.body.declinerAccountID,
-      req.body.declinerAccountID
+      req.body.signerID,
+      req.body.cancelerAccountID
     );
 
     res.json({

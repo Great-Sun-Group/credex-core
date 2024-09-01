@@ -299,7 +299,7 @@ The Avatar module exposes the following endpoints:
      - recurringID: string
      - signerID: string
 
-3. **declineRecurring** (PUT)
+3. **cancelRecurring** (PUT)
 
    - Function: Declines a recurring transaction request.
    - Required variables:
@@ -311,7 +311,7 @@ The Avatar module exposes the following endpoints:
      - recurringID: string
      - signerID: string
 
-These endpoints provide functionality for managing recurring transactions within the Credex ecosystem. The requestRecurring endpoint allows for the creation of new recurring transaction requests, while acceptRecurring and declineRecurring facilitate the acceptance or rejection of these requests. The cancelRecurring endpoint enables the termination of an active recurring transaction.
+These endpoints provide functionality for managing recurring transactions within the Credex ecosystem. The requestRecurring endpoint allows for the creation of new recurring transaction requests, while acceptRecurring and cancelRecurring facilitate the acceptance or rejection of these requests. The cancelRecurring endpoint enables the termination of an active recurring transaction.
 
 The Avatar module enhances the flexibility and automation of transactions within the Credex ecosystem by allowing members to set up recurring transactions. This feature is particularly useful for regular payments, subscriptions, or any other scenario where periodic transactions are required.
 

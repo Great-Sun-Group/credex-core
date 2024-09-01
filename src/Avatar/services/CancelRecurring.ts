@@ -2,8 +2,9 @@ import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { denomFormatter } from "../../Core/constants/denominations";
 
 export async function CancelRecurringService(
-  memberID: string,
-  cancelerAccountID: string
+  signerID: string,
+  cancelerAccountID: string,
+  avatarID: string
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
@@ -11,58 +12,35 @@ export async function CancelRecurringService(
     // Validate and update the Recurring node
     const cancelRecurringQuery = await ledgerSpaceSession.run(
       `
-      MATCH (canceler:Account {accountID: $cancelerAccountID})
-      MATCH (recurring:Recurring {memberID: $memberID})
-      WHERE (canceler)<-[:REQUESTS|ACTIVE_AUTHORIZATION]-(recurring) OR (recurring)-[:REQUESTS|ACTIVE_AUTHORIZATION]->(canceler)
-      WITH canceler, recurring
-      OPTIONAL MATCH (recurring)-[r:REQUESTS|ACTIVE_AUTHORIZATION]-()
-      DELETE r
-      MERGE (canceler)<-[:CANCELED_AUTHORIZATION]-(recurring)-[:CANCELED_AUTHORIZATION]->(otherAccount)
-      WHERE otherAccount <> canceler
-      RETURN
-        recurring.memberID AS memberID,
-        recurring.Denomination AS Denomination,
-        recurring.InitialAmount AS InitialAmount,
-        recurring.nextPayDate AS nextPayDate,
-        recurring.daysBetweenPays AS daysBetweenPays,
-        recurring.remainingPays AS remainingPays,
-        otherAccount.accountName AS otherAccountName
+      MATCH
+        (signer:Member { memberID: $signerID })-[:AUTHORIZED_FOR]->
+        (cancelingAccount:Account { accountID: $cancelerAccountID })-[rel1:ACTIVE|REQUESTS]-
+        (recurring:Avatar { memberID: $avatarID})-[rel2:ACTIVE|REQUESTS]-
+        (counterparty:Account)
+      WITH cancelingAccount, recurring, counterparty, rel1, rel2
+      CALL apoc.create.relationship(recurring, 'CANCELED', {}, cancelingAccount) YIELD rel as canceledRel1
+      CALL apoc.create.relationship(counterparty, 'CANCELED', {}, recurring) YIELD rel as canceledRel2
+      DELETE rel1, rel2
+      RETURN recurring.memberID AS deactivatedAvatarID
       `,
       {
-        memberID,
+        signerID,
         cancelerAccountID,
+        avatarID,
       }
     );
 
     if (cancelRecurringQuery.records.length === 0) {
-      return {
-        recurring: false,
-        message: "Recurring template not found or not authorized to cancel",
-      };
+      return "Recurring template not found or not authorized to cancel";
     }
 
-    const record = cancelRecurringQuery.records[0];
-    const updatedRecurring = {
-      memberID: record.get("memberID"),
-      formattedInitialAmount: denomFormatter(
-        record.get("InitialAmount"),
-        record.get("Denomination")
-      ),
-      otherAccountName: record.get("otherAccountName"),
-      nextPayDate: record.get("nextPayDate"),
-      daysBetweenPays: record.get("daysBetweenPays"),
-      remainingPays: record.get("remainingPays") || "Indefinite",
-    };
+    const deactivatedAvatarID = cancelRecurringQuery.records[0].get(
+      "deactivatedAvatarID"
+    );
 
-    return {
-      recurring: updatedRecurring,
-      message: "Recurring template canceled: " + updatedRecurring.memberID,
-    };
+    return deactivatedAvatarID;
   } catch (error) {
-    return {
-      recurring: false,
-      message: "Error canceling recurring template: " + error,
-    };
+    return error;
   } finally {
     await ledgerSpaceSession.close();
   }
