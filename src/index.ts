@@ -36,7 +36,7 @@ AccountRoutes(app, jsonParser);
 CredexRoutes(app, jsonParser);
 RecurringRoutes(app, jsonParser);
 
-if (process.env.DEPLOYMENT === "demo") {
+if (process.env.DEPLOYMENT === "demo" || process.env.DEPLOYMENT === "dev") {
   DevAdminRoutes(app, jsonParser);
 }
 
