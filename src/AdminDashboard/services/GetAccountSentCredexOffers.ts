@@ -1,11 +1,17 @@
+/*
+  ToDo:
+    - Add the accountID to the query
+    
+*/
+
 /* 
  Query an account to get all sent credex offers
 */
 
 import { ledgerSpaceDriver } from "../../../config/neo4j"
 
-export default async function GetAccountService(accountID: string, accountHandle: string): Promise<any> {
-  if(!accountID && !accountHandle){
+export default async function GetAccountService( accountHandle: string): Promise<any> {
+  if(!accountHandle){
     return {
       message: 'The AccountID or accountHandle is required'
     }
@@ -15,7 +21,7 @@ export default async function GetAccountService(accountID: string, accountHandle
   // Get all outgoing credex offers from the account using the accountID or accountHandle to get the account and then get the receivingNode which can be a member or an account
   try {
     const accountOfferedCredexResult = await ledgerSpaceSession.run(
-      `MATCH (account:Account {accountID:$accountID})-[:OFFERED]->(offeredCredex)-[:OFFERED]->(receivingAccount) 
+      `MATCH (account:Account {accountHandle:$accountHandle})-[:OFFERED]->(offeredCredex)-[:OFFERED]->(receivingAccount) 
         RETURN
         offeredCredex.credexID AS offeredCredexID,
         offeredCredex.credexType AS offeredCredexType,
@@ -33,7 +39,7 @@ export default async function GetAccountService(accountID: string, accountHandle
         receivingAccount.defaultDenom AS receivingAccountDefaultDenom,
         receivingAccount.accountHandle AS receivingAccountHandle
 
-      `,{ accountID, accountHandle }
+      `,{ accountHandle }
     );
    const accountOfferedCredex = accountOfferedCredexResult.records.map((record) => {
     return {

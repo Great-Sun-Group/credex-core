@@ -2,7 +2,6 @@ import express from "express";
 import MemberRoutes from "./Member/memberRoutes";
 import AccountRoutes from "./Account/accountRoutes";
 import CredexRoutes from "./Credex/credexRoutes";
-import AdminRoutes from "./Admin/adminRoutes";
 import { Logger } from "../config/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./Core/cronJobs";
@@ -10,6 +9,8 @@ import authenticate from "../config/authenticate";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
+import AdminDashboardRoutes from "./AdminDashboard/adminDashboardRoutes";
+import AdminRoutes from "./DevelopmentAdmin/adminRoutes";
 
 const app = express();
 const port = 5000;
@@ -33,6 +34,7 @@ startCronJobs();
 MemberRoutes(app, jsonParser);
 AccountRoutes(app, jsonParser);
 CredexRoutes(app, jsonParser);
+AdminDashboardRoutes(app, jsonParser);
 
 if (process.env.DEPLOYMENT === "demo") {
   AdminRoutes(app, jsonParser);

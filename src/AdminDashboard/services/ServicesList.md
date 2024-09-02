@@ -1,4 +1,4 @@
-1. GetAccountService:
+1. GetAccountService: 
   - Retrieve details of the account
   - 
 2. GetMemberAccounts:

@@ -1,11 +1,17 @@
+/*
+  ToDo:
+    - Add the accountID to the query
+    
+*/
+
 /* 
  Query an account using the accountID or accountHandle to get all information associated with the account
 */
 
 import { ledgerSpaceDriver } from "../../../config/neo4j"
 
-export default async function GetAccount(accountID: string, accountHandle: string): Promise<any> {
-  if(!accountID && !accountHandle){
+export default async function GetAccount(accountHandle: string): Promise<any> {
+  if(!accountHandle){
     return {
       message: 'The AccountID or accountHandle is required'
     }
@@ -15,7 +21,7 @@ export default async function GetAccount(accountID: string, accountHandle: strin
 
  try {
   const accountResult = await ledgerSpaceSession.run(
-  `MATCH (account:Account {accountID: $accountID})<-[:OWNS]-(member:Member)
+  `MATCH (account:Account {accountHandle: $accountHandle})<-[:OWNS]-(member:Member)
     WITH account, member
     MATCH (account)-[:OWES]->(owedCredex)-[:OWES]->(owedAccount)
     WITH member, account, COLLECT(owedCredex.credexID) AS owedCredexes, COLLECT(owedAccount.accountID) AS owedAccounts
@@ -32,7 +38,8 @@ export default async function GetAccount(accountID: string, accountHandle: strin
       COUNT(owedCredexes) AS numberOfCredexOwed,
       owedCredexes,
       owedAccounts
-    `, { accountID, accountHandle }
+
+    `, { accountHandle }
   )
 
   const account = accountResult.records.map((record) => {
