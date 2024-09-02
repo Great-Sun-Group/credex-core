@@ -1,65 +1,66 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
-import { CreateRecurringService } from "./CreateRecurring";
+import * as neo4j from "neo4j-driver";
 
 export async function RequestRecurringService(
-  signerID: string,
+  signerMemberID: string,
   requestorAccountID: string,
   counterpartyAccountID: string,
-  Denomination: string,
   InitialAmount: number,
-  firstPayDate: string,
+  Denomination: string,
+  securedCredex: boolean = false,
+  credspan: number = 0,
+  nextPayDate: string,
   daysBetweenPays: number,
-  remainingPays: number = 0
+  remainingPays: number
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
+
   try {
-    const newRecurring = await CreateRecurringService(
-      signerID,
-      requestorAccountID,
-      counterpartyAccountID,
-      Denomination,
-      InitialAmount,
-      "REQUESTS",
-      "PURCHASE",
-      firstPayDate,
-      daysBetweenPays,
-      remainingPays
+    const createRecurringQuery = await ledgerSpaceSession.run(
+      `
+      MATCH
+        (requestor:Account {accountID: $requestorAccountID})<-[:AUTHORIZED_FOR]-
+        (signer:Member|Avatar { memberID: $signerMemberID })
+      MATCH (counterparty:Account {accountID: $counterpartyAccountID})
+      MATCH (daynode:Daynode { Active: true })
+      CREATE (recurring:Avatar)
+      SET
+        recurring.avatarType = "RECURRING",
+        recurring.memberID = randomUUID(),
+        recurring.Denomination = $Denomination,
+        recurring.InitialAmount = $InitialAmount,
+        recurring.securedCredex = $securedCredex,
+        recurring.credspan = $credspan,
+        recurring.nextPayDate = date($nextPayDate),
+        recurring.daysBetweenPays = $daysBetweenPays,
+        recurring.createdAt = datetime(),
+        recurring.remainingPays = $remainingPays,
+        recurring.memberTier = 3
+      CREATE (requestor)<-[:REQUESTS]-(recurring)<-[:REQUESTS]-(counterparty)
+      CREATE (requestor)<-[:REQUESTED]-(recurring)<-[:REQUESTED]-(counterparty)
+      CREATE (requestor)<-[:AUTHORIZED_FOR]-(recurring)
+      CREATE (signer)-[:SIGNED]->(recurring)
+      CREATE (recurring)-[:CREATED_ON]->(daynode)
+      RETURN
+        recurring.memberID AS avatarID
+      `,
+      {
+        signerMemberID,
+        requestorAccountID,
+        counterpartyAccountID,
+        InitialAmount,
+        Denomination,
+        securedCredex,
+        credspan: neo4j.int(credspan),
+        nextPayDate,
+        daysBetweenPays: neo4j.int(daysBetweenPays),
+        remainingPays: neo4j.int(remainingPays),
+      }
     );
 
-    sendNoti: if (
-      typeof newRecurring.recurring != "boolean" &&
-      newRecurring.recurring.counterpartyNotiID &&
-      newRecurring.recurring.memberID
-    ) {
-      const signAndGetSendOfferToQuery = await ledgerSpaceSession.run(
-        `
-        MATCH
-          (credex:Credex { credexID: $credexID })<-[:OFFERS]-
-          (Account)<-[:AUTHORIZED_FOR]-
-          (signer:Member { memberID: $signingMemberID })
-        CREATE (credex)<-[:SIGNED]-(signer)
-        RETURN signer.memberID AS signerID
-        `,
-        {
-          recipientID: "credexData.receiverAccountID",
-          credexID: "newCredex.credex.credexID",
-          signingMemberID: "credexData.memberID",
-        }
-      );
-
-      if (!signAndGetSendOfferToQuery.records.length) {
-        console.log("could not get notiPhone");
-        break sendNoti;
-      }
-      //const notiPhone = signAndGetSendOfferToQuery.records[0].get("notiPhone");
-      //console.log("sending offer notification to " + notiPhone);
-      //hit request noti endpoint
-    }
-
-    return newRecurring;
+    return createRecurringQuery.records[0].get("avatarID");
   } catch (error) {
-    console.error("Error requesting recurring:", error);
-    throw error; // Optionally rethrow to allow further handling upstream
+    return "Error creating recurring avatar: " + error;
   } finally {
     await ledgerSpaceSession.close();
   }

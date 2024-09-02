@@ -17,10 +17,14 @@ export async function CancelRecurringService(
         (cancelingAccount:Account { accountID: $cancelerAccountID })-[rel1:ACTIVE|REQUESTS]-
         (recurring:Avatar { memberID: $avatarID})-[rel2:ACTIVE|REQUESTS]-
         (counterparty:Account)
-      WITH cancelingAccount, recurring, counterparty, rel1, rel2
-      CALL apoc.create.relationship(recurring, 'CANCELED', {}, cancelingAccount) YIELD rel as canceledRel1
-      CALL apoc.create.relationship(counterparty, 'CANCELED', {}, recurring) YIELD rel as canceledRel2
-      DELETE rel1, rel2
+      MATCH
+        (cancelingAccount)<-[authRel1:AUTHORIZED_FOR]-
+        (recurring)-[authRel2:AUTHORIZED_FOR]->
+        (counterparty)
+      WITH cancelingAccount, recurring, counterparty, rel1, rel2, authRel1, authRel2
+      CALL apoc.create.relationship(cancelingAccount, 'CANCELED', {}, recurring) YIELD rel as canceledRel1
+      CALL apoc.create.relationship(recurring, 'CANCELED', {}, counterparty) YIELD rel as canceledRel2
+      DELETE rel1, rel2, authRel1, authRel2
       RETURN recurring.memberID AS deactivatedAvatarID
       `,
       {

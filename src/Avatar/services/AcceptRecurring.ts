@@ -12,8 +12,9 @@ export async function AcceptRecurringService(avatarID: string, signerID: string)
         (acceptor:Account)-[rel1:REQUESTS]->
         (recurring:Avatar { memberID: $avatarID })-[rel2:REQUESTS]->
         (requestor:Account)
-      MERGE (signer)-[:SIGNED]->(recurring)
-      MERGE (acceptor)-[:ACTIVE]->(recurring)-[:ACTIVE]->(requestor)
+      CREATE (signer)-[:SIGNED]->(recurring)
+      CREATE (acceptor)<-[:AUTHORIZED_FOR]-(recurring)
+      CREATE (acceptor)-[:ACTIVE]->(recurring)-[:ACTIVE]->(requestor)
       DELETE rel1, rel2
       RETURN
         recurring.memberID AS avatarID,
