@@ -15,7 +15,6 @@ export async function RequestRecurringController(
     "Denomination",
     "nextPayDate",
     "daysBetweenPays",
-    "remainingPays",
   ];
   for (const field of fieldsRequired) {
     if (!req.body[field]) {
@@ -33,6 +32,34 @@ export async function RequestRecurringController(
     return { recurring: false, message };
   }
 
+  // Validate optional parameters
+  if (req.body.securedCredex !== undefined && typeof req.body.securedCredex !== 'boolean') {
+    return res.status(400).json({ message: "securedCredex must be a boolean" });
+  }
+
+  if (req.body.credspan !== undefined) {
+    const credspan = Number(req.body.credspan);
+    if (isNaN(credspan) || credspan < 7 || credspan > 35) {
+      return res.status(400).json({ message: "credspan must be a number between 7 and 35" });
+    }
+  }
+
+  if (req.body.remainingPays !== undefined) {
+    const remainingPays = Number(req.body.remainingPays);
+    if (isNaN(remainingPays) || remainingPays < 0) {
+      return res.status(400).json({ message: "remainingPays must be a positive number" });
+    }
+  }
+
+  // Check securedCredex and credspan relationship
+  if (req.body.securedCredex === true && req.body.credspan !== undefined) {
+    return res.status(400).json({ message: "credspan must be null when securedCredex is true" });
+  }
+
+  if (req.body.securedCredex !== true && req.body.credspan === undefined) {
+    return res.status(400).json({ message: "credspan must be provided when securedCredex is not true" });
+  }
+
   try {
     const createRecurringData = await RequestRecurringService(
       req.body.signerMemberID,
@@ -40,11 +67,11 @@ export async function RequestRecurringController(
       req.body.counterpartyAccountID,
       req.body.InitialAmount,
       req.body.Denomination,
-      req.body.secured,
-      req.body.credspan,
       req.body.nextPayDate,
       req.body.daysBetweenPays,
-      req.body.remainingPays
+      req.body.securedCredex,
+      req.body.credspan,
+      req.body.remainingPays,
     );
 
     if (!createRecurringData) {

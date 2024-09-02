@@ -1,10 +1,20 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 
+/**
+ * AcceptRecurringService
+ * 
+ * This service handles the acceptance of a recurring transaction.
+ * It updates the database to reflect the acceptance of the recurring avatar.
+ * 
+ * @param avatarID - The ID of the recurring avatar to be accepted
+ * @param signerID - The ID of the member signing (accepting) the recurring transaction
+ * @returns An object containing the result of the acceptance operation
+ */
 export async function AcceptRecurringService(avatarID: string, signerID: string) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    // Validate and update the Recurring node
+    // Execute Cypher query to validate and update the Recurring avatar
     const acceptRecurringQuery = await ledgerSpaceSession.run(
       `
       MATCH
@@ -27,6 +37,7 @@ export async function AcceptRecurringService(avatarID: string, signerID: string)
       }
     );
 
+    // Check if the query returned any records
     if (acceptRecurringQuery.records.length === 0) {
       console.log(
         `No records found or recurring transaction no longer pending for avatarID: ${avatarID}`
@@ -38,14 +49,17 @@ export async function AcceptRecurringService(avatarID: string, signerID: string)
       };
     }
 
-    //hit credex accepted notification endpoint
+    // TODO: Implement notification for credex acceptance
 
+    // Extract relevant data from the query result
     const acceptedRecurringID = acceptRecurringQuery.records[0].get("avatarID");
     const acceptorAccountID =
       acceptRecurringQuery.records[0].get("acceptorAccountID");
     const acceptorSignerID = acceptRecurringQuery.records[0].get("signerID");
 
-    console.log(`Reccuring request accepted for avatarID: ${acceptedRecurringID}`);
+    console.log(`Recurring request accepted for avatarID: ${acceptedRecurringID}`);
+    
+    // Return the result of the acceptance operation
     return {
       recurring: {
         acceptedRecurringID: acceptedRecurringID,
@@ -56,11 +70,13 @@ export async function AcceptRecurringService(avatarID: string, signerID: string)
     };
 
   } catch (error) {
+    // Handle any errors that occur during the process
     return {
       recurring: false,
       message: "Error accepting recurring template: " + error,
     };
   } finally {
+    // Ensure the database session is closed
     await ledgerSpaceSession.close();
   }
 }

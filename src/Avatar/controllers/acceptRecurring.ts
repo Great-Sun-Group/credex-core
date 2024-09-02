@@ -2,10 +2,21 @@ import express from "express";
 import { AcceptRecurringService } from "../services/AcceptRecurring";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 
+/**
+ * AcceptRecurringController
+ * 
+ * This controller handles the acceptance of recurring transactions.
+ * It validates the required fields, calls the AcceptRecurringService,
+ * and returns the result along with updated dashboard data.
+ * 
+ * @param req - Express request object
+ * @param res - Express response object
+ */
 export async function AcceptRecurringController(
   req: express.Request,
   res: express.Response
 ) {
+  // Validate required fields
   const fieldsRequired = ["avatarID", "signerID"];
   for (const field of fieldsRequired) {
     if (!req.body[field]) {
@@ -17,18 +28,23 @@ export async function AcceptRecurringController(
   }
 
   try {
+    // Call AcceptRecurringService to process the acceptance
     const acceptRecurringData = await AcceptRecurringService(
       req.body.avatarID,
       req.body.signerID
     );
 
+    // Check if the service call was successful
     if (!acceptRecurringData) {
       return res.status(400).json(acceptRecurringData);
     }
 
+    // Handle errors in recurring transaction creation
     if (typeof acceptRecurringData.recurring == "boolean") {
       throw new Error("Recurring transaction could not be created");
     }
+
+    // If acceptorAccountID exists and is a string, fetch dashboard data
     if (
       acceptRecurringData.recurring.acceptorAccountID &&
       typeof acceptRecurringData.recurring.acceptorAccountID === "string"
@@ -38,6 +54,7 @@ export async function AcceptRecurringController(
         acceptRecurringData.recurring.acceptorAccountID
       );
 
+      // Return the acceptance data and dashboard data
       res.json({
         acceptRecurringData: acceptRecurringData,
         dashboardData: dashboardData,

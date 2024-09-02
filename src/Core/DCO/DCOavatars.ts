@@ -3,11 +3,18 @@ import { OfferCredexService } from "../../Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
 import moment from "moment-timezone";
 
+/**
+ * DCOavatars function
+ * This function is run as a cronjob every 24 hours to process recurring avatars.
+ * It identifies active recurring avatars, creates credexes, and updates their status.
+ */
 export async function DCOavatars() {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    console.log("Check for activated recurring avatars...");
+    console.log("Checking for activated recurring avatars...");
+    
+    // Query to get active recurring avatars that are due for processing
     const GetActiveRecurringAvatars = await ledgerSpaceSession.run(`
       MATCH (daynode:Daynode {Active: true})
       MATCH
@@ -19,20 +26,35 @@ export async function DCOavatars() {
         (avatar)-[authRel2:AUTHORIZED_FOR]->
         (counterparty)
       WITH daynode, issuer, avatar, acceptor, rel1, rel2, authRel1, authRel2
-      SET avatar.remainingPays = avatar.remainingPays - 1
+      
+      // Reduce remainingPays by 1 if it exists
+      SET avatar.remainingPays = 
+        CASE
+          WHEN avatar.remainingPays IS NOT NULL THEN toString(toInteger(avatar.remainingPays) - 1)
+          ELSE null
+        END
+      
+      // Calculate the new nextPayDate
       WITH daynode, issuer, avatar, acceptor, rel1, rel2, authRel1, authRel2,
            CASE
-             WHEN avatar.remainingPays > 0 THEN date(avatar.nextPayDate) + duration({days: avatar.daysBetweenPays})
+             WHEN avatar.remainingPays IS NULL OR toInteger(avatar.remainingPays) > 0 
+             THEN toString(date(avatar.nextPayDate) + duration({days: toInteger(avatar.daysBetweenPays)}))
              ELSE null
            END AS newNextPayDate
+      
+      // Update nextPayDate
       SET avatar.nextPayDate = newNextPayDate
+      
       WITH daynode, issuer, avatar, acceptor, rel1, rel2, authRel1, authRel2, newNextPayDate
+      
+      // Check if the avatar should be marked as completed
       OPTIONAL MATCH (issuer)-[completed1:COMPLETED]->(avatar)-[completed2:COMPLETED]->(acceptor)
       FOREACH(ignoreMe IN CASE WHEN newNextPayDate IS NULL AND completed1 IS NULL
                THEN [1] ELSE [] END |
         DELETE rel1, rel2, authRel1, authRel2
         CREATE (issuer)-[:COMPLETED]->(avatar)-[:COMPLETED]->(acceptor)
       )
+      
       RETURN
         avatar {
           .*,
@@ -44,11 +66,13 @@ export async function DCOavatars() {
         daynode.Date AS Date    
     `);
 
+    // Process each active recurring avatar
     for (const record of GetActiveRecurringAvatars.records) {
       const avatar = record.get("avatar");
       const issuerAccountID = record.get("issuerAccountID");
       const acceptorAccountID = record.get("acceptorAccountID");
 
+      // Prepare data for creating a new credex
       const offerData: any = {
         memberID: avatar.memberID,
         issuerAccountID: issuerAccountID,
@@ -58,21 +82,24 @@ export async function DCOavatars() {
         credexType: "PURCHASE",
         OFFERSorREQUESTS: "OFFERS",
       };
-      if (avatar.secured) {
-        offerData.securedCredex = avatar.securedCredex;
+
+      // Handle secured and unsecured credexes differently
+      if (avatar.securedCredex) {
+        offerData.securedCredex = true;
       } else {
+        // Calculate dueDate for unsecured credexes using the avatar's credspan
         avatar.dueDate = moment(record.get("Date"))
-          .subtract(1, "month")
-          .add(7, "days")
+          .add(parseInt(avatar.credspan), "days")
+          .subtract(parseInt("1"), "month")
           .format("YYYY-MM-DD");
         
         offerData.dueDate = avatar.dueDate;
       }
 
-      // Call the OfferCredex service with the data returned
+      // Create a new credex offer
       const offerResult = await OfferCredexService(offerData);
 
-      // Check if offer is made successfully, if so then call the AcceptCredex service
+      // If offer is successful, automatically accept it
       if (
         offerResult &&
         typeof offerResult.credex === "object" &&
