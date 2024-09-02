@@ -9,7 +9,8 @@
       "extensions": [
         "esbenp.prettier-vscode",
         "Postman.postman-for-vscode",
-        "saoudrizwan.claude-dev"
+        "saoudrizwan.claude-dev",
+        "GitHub.copilot"
       ]
     }
   },
