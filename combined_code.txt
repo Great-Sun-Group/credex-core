@@ -2237,21 +2237,6 @@ export async function AuthorizeForAccountService(
 
 
 
-File: ./src/runDCOavatars.ts
-----------------------------------------
-import { DCOavatars } from './Core/DCO/DCOavatars';
-
-(async () => {
-  console.log('Starting DCOavatars process...');
-  try {
-    await DCOavatars();
-    console.log('DCOavatars process completed.');
-  } catch (error) {
-    console.error('Error running DCOavatars:', error);
-  }
-})();
-
-
 File: ./src/Member/memberRoutes.ts
 ----------------------------------------
 import express from "express";
