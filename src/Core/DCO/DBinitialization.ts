@@ -8,6 +8,7 @@ import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
 import { fetchZigRate } from "./fetchZigRate";
 import axios from "axios";
 import _ from "lodash";
+import moment from "moment-timezone";
 
 export async function DBinitialization(): Promise<void> {
   console.log("DBinitialization start");
@@ -89,9 +90,16 @@ export async function DBinitialization(): Promise<void> {
     );
 
     console.log("establish dayZero");
-    const dayZero = "2024-08-15";
+    var dayZero = moment
+      .utc()
+      .subtract(1, "days")
+      .format("YYYY-MM-DD");
     console.log("dayZero:", dayZero);
 
+    if (process.env.DEPLOYMENT === "dev") {
+      dayZero = "2021-01-01";
+    }
+    
     const OneCXXinCXXdenom = 1;
     const CXXdenom = "CAD";
     console.log(OneCXXinCXXdenom + " CXX = 1 " + CXXdenom);

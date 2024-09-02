@@ -3606,6 +3606,11 @@ File: ./src/Core/DCO/DCOsnapshots/2024-08-28_ledgerSpace_dev_end.json
 null
 
 
+File: ./src/Core/DCO/DCOsnapshots/2021-01-01_ledgerSpace_dev_end.json
+----------------------------------------
+null
+
+
 File: ./src/Core/DCO/DCOsnapshots/2024-08-25_searchSpace_dev_start.json
 ----------------------------------------
 null
@@ -3617,6 +3622,11 @@ null
 
 
 File: ./src/Core/DCO/DCOsnapshots/2024-08-29_ledgerSpace_dev_start.json
+----------------------------------------
+null
+
+
+File: ./src/Core/DCO/DCOsnapshots/2024-09-01_ledgerSpace_dev_end.json
 ----------------------------------------
 null
 
@@ -3662,6 +3672,11 @@ null
 
 
 File: ./src/Core/DCO/DCOsnapshots/2024-08-18_searchSpace_dev_start.json
+----------------------------------------
+null
+
+
+File: ./src/Core/DCO/DCOsnapshots/2021-01-02_searchSpace_dev_start.json
 ----------------------------------------
 null
 
@@ -3746,7 +3761,17 @@ File: ./src/Core/DCO/DCOsnapshots/2024-08-31_searchSpace_dev_start.json
 null
 
 
+File: ./src/Core/DCO/DCOsnapshots/2024-09-01_searchSpace_dev_end.json
+----------------------------------------
+null
+
+
 File: ./src/Core/DCO/DCOsnapshots/2024-08-15_searchSpace_dev_end.json
+----------------------------------------
+null
+
+
+File: ./src/Core/DCO/DCOsnapshots/2024-08-03_searchSpace_dev_start.json
 ----------------------------------------
 null
 
@@ -3776,7 +3801,17 @@ File: ./src/Core/DCO/DCOsnapshots/2024-08-26_searchSpace_dev_start.json
 null
 
 
+File: ./src/Core/DCO/DCOsnapshots/2024-08-03_ledgerSpace_dev_start.json
+----------------------------------------
+null
+
+
 File: ./src/Core/DCO/DCOsnapshots/2024-08-25_ledgerSpace_dev_start.json
+----------------------------------------
+null
+
+
+File: ./src/Core/DCO/DCOsnapshots/2024-08-02_ledgerSpace_dev_end.json
 ----------------------------------------
 null
 
@@ -3807,6 +3842,11 @@ null
 
 
 File: ./src/Core/DCO/DCOsnapshots/2024-08-31_ledgerSpace_dev_end.json
+----------------------------------------
+null
+
+
+File: ./src/Core/DCO/DCOsnapshots/2024-09-02_ledgerSpace_dev_start.json
 ----------------------------------------
 null
 
@@ -3896,6 +3936,21 @@ File: ./src/Core/DCO/DCOsnapshots/2024-08-23_ledgerSpace_dev_end.json
 null
 
 
+File: ./src/Core/DCO/DCOsnapshots/2021-01-01_searchSpace_dev_end.json
+----------------------------------------
+null
+
+
+File: ./src/Core/DCO/DCOsnapshots/2024-08-02_searchSpace_dev_end.json
+----------------------------------------
+null
+
+
+File: ./src/Core/DCO/DCOsnapshots/2024-09-02_searchSpace_dev_start.json
+----------------------------------------
+null
+
+
 File: ./src/Core/DCO/DCOsnapshots/2024-08-23_searchSpace_dev_end.json
 ----------------------------------------
 null
@@ -3927,6 +3982,11 @@ null
 
 
 File: ./src/Core/DCO/DCOsnapshots/2024-08-22_searchSpace_dev_start.json
+----------------------------------------
+null
+
+
+File: ./src/Core/DCO/DCOsnapshots/2021-01-02_ledgerSpace_dev_start.json
 ----------------------------------------
 null
 
@@ -4507,6 +4567,7 @@ import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
 import { fetchZigRate } from "./fetchZigRate";
 import axios from "axios";
 import _ from "lodash";
+import moment from "moment-timezone";
 
 export async function DBinitialization(): Promise<void> {
   console.log("DBinitialization start");
@@ -4588,9 +4649,16 @@ export async function DBinitialization(): Promise<void> {
     );
 
     console.log("establish dayZero");
-    const dayZero = "2024-08-15";
+    var dayZero = moment
+      .utc()
+      .subtract(1, "days")
+      .format("YYYY-MM-DD");
     console.log("dayZero:", dayZero);
 
+    if (process.env.DEPLOYMENT === "dev") {
+      dayZero = "2021-01-01";
+    }
+    
     const OneCXXinCXXdenom = 1;
     const CXXdenom = "CAD";
     console.log(OneCXXinCXXdenom + " CXX = 1 " + CXXdenom);
