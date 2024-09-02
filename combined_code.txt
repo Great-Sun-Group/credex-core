@@ -4817,7 +4817,10 @@ export async function DCOavatars() {
       OPTIONAL MATCH (issuer)-[completed1:COMPLETED]->(avatar)-[completed2:COMPLETED]->(acceptor)
       FOREACH(ignoreMe IN CASE WHEN newNextPayDate IS NULL AND completed1 IS NULL
                THEN [1] ELSE [] END |
-        DELETE rel1, rel2, authRel1, authRel2
+        DELETE rel1, rel2
+        SET
+          authRel1.markedToDelete = true,
+          authRel2.markedToDelete = true
         CREATE (issuer)-[:COMPLETED]->(avatar)-[:COMPLETED]->(acceptor)
       )
       
@@ -4886,6 +4889,12 @@ export async function DCOavatars() {
         } else {
           throw new Error(`Failed to create offer for avatar: ${avatar.memberID}`);
         }
+
+        const deleteAvatarAuths = await ledgerSpaceSession.run(`
+          MATCH ()-[rel:AUTHORIZED_FOR {markedToDelete: true}]->()
+          DELETE rel
+          `);
+
       } catch (error) {
         console.error(`Error processing avatar ${avatar.memberID}:`, error);
         // TODO: Implement member notification about the failure
