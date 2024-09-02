@@ -42,7 +42,7 @@ MinuteTransactionQueue() runs every minute, clearing credloops of value creation
 
 ## endpoints
 
-Controllers for the endpoints are imported, and endpoints created for the various modules: Member, Account, Recurring, Admin, and DevAdmin.
+Controllers for the endpoints are imported, and endpoints created for the various modules: Member, Account, Avatar, Admin, and DevAdmin.
 
 # Daily Credcoin Offering (DCO)
 
@@ -272,6 +272,54 @@ This module handles Credex-related operations in the Credex ecosystem. It expose
      - startRow: number
 
 These endpoints provide comprehensive Credex management capabilities within the ecosystem. The offerCredex endpoint allows for the creation of new Credex offers, while acceptCredex and acceptCredexBulk facilitate the acceptance of these offers individually or in bulk. The declineCredex and cancelCredex endpoints provide options for rejecting or withdrawing Credex offers. The getCredex endpoint allows for retrieving detailed information about a specific Credex, and getLedger provides access to an account's transaction history. Together, these endpoints enable the full lifecycle management of Credexes within the ecosystem, from creation and acceptance to cancellation and historical tracking.
+
+# Avatar
+
+This module handles operations related to Avatars in the Credex ecosystem. Avatars are nodes that members can delegate signing authority to. Currently, the only Avatar implemented is a Recurring transaction. Once this Avatar is signed by the counterparties, it activates on the schedule agreed by the counterparties to create a Credex using the data agreed between the counterparties. The trail of accountability is maintained because the creation of an Avatar must be signed by the counterparties, and the Avatar signs every Credex it creates.
+
+The Avatar module exposes the following endpoints:
+
+1. **requestRecurring** (POST)
+
+   - Function: Creates a new recurring transaction request.
+   - Required variables:
+     - signerMemberID: string
+     - requestorAccountID: string
+     - counterpartyAccountID: string
+     - InitialAmount: number
+     - Denomination: string
+     - credexType: string
+     - nextPayDate: string
+     - daysBetweenPays: number
+     - securedCredex: boolean (optional)
+     - credspan: number (optional)
+     - remainingPays: number (optional)
+   - Requires either securedCredex = true or a credspan between 7 and 35.
+   - remainingPays is set when the avatar will run a specific number of times before completion, and not set when the avatar is to continue indefinitely.
+
+2. **acceptRecurring** (POST)
+
+   - Function: Accepts a recurring transaction request.
+   - Required variables:
+     - avatarID: string
+     - signerID: string
+
+3. **cancelRecurring** (POST)
+   - Function: Cancels an active recurring transaction or declines a pending request.
+   - Required variables:
+     - signerID: string
+     - cancelerAccountID: string
+     - avatarID: string
+
+These endpoints provide functionality for managing recurring transactions within the Credex ecosystem:
+
+- The requestRecurring endpoint allows for the creation of new recurring transaction requests. It sets up the details of the recurring transaction, including the accounts involved, the amount, denomination, frequency, and duration.
+
+- The acceptRecurring endpoint facilitates the acceptance of these requests. When a recurring transaction is accepted, it becomes active and will automatically create Credex transactions according to the specified schedule.
+
+- The cancelRecurring endpoint enables the cancellation of an active recurring transaction or the declination of a pending request. This provides flexibility for users to modify or end recurring arrangements as needed.
+
+The Avatar module enhances the automation and flexibility of transactions within the Credex ecosystem by allowing members to set up recurring transactions. This feature is particularly useful for regular payments, subscriptions, or any other scenario where periodic transactions are required. The implementation maintains accountability by requiring explicit acceptance of recurring transaction requests and allowing for their cancellation at any time.
 
 # Admin
 
@@ -563,8 +611,8 @@ graph TD
     SA1 --> |FLOATING| A2
     A2 --> |USD_SECURED| SA2
     SA2 --> |USD_SECURED| A3
-    A3 --> |CAD_SECURED| SA3
-    SA3 --> |CAD_SECURED| A1
+    A2 --> |CAD_SECURED| SA3
+    SA3 --> |CAD_SECURED| A3
     SA1 --> |SEARCH_SECURED| C1
     SA2 --> |SEARCH_SECURED| C2
     SA3 --> |SEARCH_SECURED| C3
@@ -619,7 +667,7 @@ graph TD
 
 2. **SearchAnchors**: These nodes come in three types:
 
-   - Floating (dark green): Represent unsecured credit relationships between accounts.
+   - FLOATING (dark green): Represent unsecured credit relationships between accounts.
    - USD_SECURED (copper): Represent secured credit relationships in USD.
    - CAD_SECURED (teal): Represent secured credit relationships in CAD.
 

@@ -17,7 +17,7 @@ export async function AcceptCredexService(credexID: string, signerID: string) {
           (issuer:Account)-[rel1:OFFERS]->
           (acceptedCredex:Credex {credexID: $credexID})-[rel2:OFFERS]->
           (acceptor:Account)<-[:AUTHORIZED_FOR]-
-          (signer:Member { memberID: $signerID })
+          (signer:Member|Avatar { memberID: $signerID })
         DELETE rel1, rel2
         CREATE (issuer)-[:OWES]->(acceptedCredex)-[:OWES]->(acceptor)
         CREATE (acceptedCredex)<-[:SIGNED]-(signer)

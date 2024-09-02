@@ -1,6 +1,7 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { DBinitialization } from "./DBinitialization";
 import { DCOexecute } from "./DCOexecute";
+import { DCOavatars } from "./DCOavatars";
 
 export async function DailyCredcoinOffering(): Promise<boolean> {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -22,6 +23,7 @@ export async function DailyCredcoinOffering(): Promise<boolean> {
     }
 
     await DCOexecute();
+    await DCOavatars();
   } finally {
     console.log("Turning off DCOrunningNow flag");
     await ledgerSpaceSession.run(`
