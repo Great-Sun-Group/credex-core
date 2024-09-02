@@ -30,15 +30,15 @@ export async function DCOavatars() {
       // Reduce remainingPays by 1 if it exists
       SET avatar.remainingPays = 
         CASE
-          WHEN avatar.remainingPays IS NOT NULL THEN toString(toInteger(avatar.remainingPays) - 1)
+          WHEN avatar.remainingPays IS NOT NULL THEN avatar.remainingPays - 1
           ELSE null
         END
       
       // Calculate the new nextPayDate
       WITH daynode, issuer, avatar, acceptor, rel1, rel2, authRel1, authRel2,
            CASE
-             WHEN avatar.remainingPays IS NULL OR toInteger(avatar.remainingPays) > 0 
-             THEN toString(date(avatar.nextPayDate) + duration({days: toInteger(avatar.daysBetweenPays)}))
+             WHEN avatar.remainingPays IS NULL OR avatar.remainingPays > 0 
+             THEN date(avatar.nextPayDate) + duration({days: avatar.daysBetweenPays})
              ELSE null
            END AS newNextPayDate
       
@@ -72,54 +72,58 @@ export async function DCOavatars() {
       const issuerAccountID = record.get("issuerAccountID");
       const acceptorAccountID = record.get("acceptorAccountID");
 
-      // Prepare data for creating a new credex
-      const offerData: any = {
-        memberID: avatar.memberID,
-        issuerAccountID: issuerAccountID,
-        receiverAccountID: acceptorAccountID,
-        Denomination: avatar.Denomination,
-        InitialAmount: avatar.InitialAmount,
-        credexType: "PURCHASE",
-        OFFERSorREQUESTS: "OFFERS",
-      };
+      try {
+        // Prepare data for creating a new credex
+        const offerData: any = {
+          memberID: avatar.memberID,
+          issuerAccountID: issuerAccountID,
+          receiverAccountID: acceptorAccountID,
+          Denomination: avatar.Denomination,
+          InitialAmount: avatar.InitialAmount,
+          credexType: "PURCHASE",
+          OFFERSorREQUESTS: "OFFERS",
+        };
 
-      // Handle secured and unsecured credexes differently
-      if (avatar.securedCredex) {
-        offerData.securedCredex = true;
-      } else {
-        // Calculate dueDate for unsecured credexes using the avatar's credspan
-        avatar.dueDate = moment(record.get("Date"))
-          .add(parseInt(avatar.credspan), "days")
-          .subtract(parseInt("1"), "month")
-          .format("YYYY-MM-DD");
-        
-        offerData.dueDate = avatar.dueDate;
-      }
-
-      // Create a new credex offer
-      const offerResult = await OfferCredexService(offerData);
-
-      // If offer is successful, automatically accept it
-      if (
-        offerResult &&
-        typeof offerResult.credex === "object" &&
-        offerResult.credex.credexID
-      ) {
-        const acceptResult = await AcceptCredexService(
-          offerResult.credex.credexID,
-          avatar.memberID
-        );
-        if (acceptResult) {
-          console.log(
-            `Successfully created credex for recurring avatar: ${avatar.memberID}. Remaining pays: ${avatar.remainingPays}, Next pay date: ${avatar.nextPayDate}`
-          );
+        // Handle secured and unsecured credexes differently
+        if (avatar.securedCredex) {
+          offerData.securedCredex = true;
         } else {
-          console.error(
-            `Failed to accept credex for avatar: ${avatar.memberID}`
-          );
+          // Calculate dueDate for unsecured credexes using the avatar's credspan
+          avatar.dueDate = moment(record.get("Date"))
+            .add(parseInt(avatar.credspan), "days")
+            .subtract(parseInt("1"), "month")
+            .format("YYYY-MM-DD");
+          
+          offerData.dueDate = avatar.dueDate;
         }
-      } else {
-        console.error(`Failed to create offer for avatar: ${avatar.memberID}`);
+
+        // Create a new credex offer
+        const offerResult = await OfferCredexService(offerData);
+
+        // If offer is successful, automatically accept it
+        if (
+          offerResult &&
+          typeof offerResult.credex === "object" &&
+          offerResult.credex.credexID
+        ) {
+          const acceptResult = await AcceptCredexService(
+            offerResult.credex.credexID,
+            avatar.memberID
+          );
+          if (acceptResult) {
+            console.log(
+              `Successfully created credex for recurring avatar: ${avatar.memberID}. Remaining pays: ${avatar.remainingPays}, Next pay date: ${avatar.nextPayDate}`
+            );
+          } else {
+            throw new Error(`Failed to accept credex for avatar: ${avatar.memberID}`);
+          }
+        } else {
+          throw new Error(`Failed to create offer for avatar: ${avatar.memberID}`);
+        }
+      } catch (error) {
+        console.error(`Error processing avatar ${avatar.memberID}:`, error);
+        // TODO: Implement member notification about the failure
+        console.log(`Placeholder: Notify member ${avatar.memberID} about the failure in processing their recurring avatar.`);
       }
     }
   } catch (error) {
