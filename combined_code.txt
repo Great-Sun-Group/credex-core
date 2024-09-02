@@ -7417,10 +7417,13 @@ The Avatar module exposes the following endpoints:
      - InitialAmount: number
      - Denomination: string
      - credexType: string
-     - OFFERSorREQUESTS: string
-     - nextPayDate: date
+     - nextPayDate: string
      - daysBetweenPays: number
+     - securedCredex: boolean (optional)
+     - credspan: number (optional)
      - remainingPays: number (optional)
+   - Requires either securedCredex = true or a credspan between 7 and 35.
+   - remainingPays is set when the avatar will run a specific number of times before completion, and not set when the avatar is to continue indefinitely.
 
 2. **acceptRecurring** (POST)
 
