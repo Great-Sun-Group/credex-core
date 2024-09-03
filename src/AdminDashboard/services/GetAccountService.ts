@@ -10,8 +10,8 @@
 
 import { ledgerSpaceDriver } from "../../../config/neo4j"
 
-export default async function GetAccount(accountHandle: string): Promise<any> {
-  if(!accountHandle){
+export default async function GetAccount(accountHandle: string, accountID: string): Promise<any> {
+  if(!accountHandle && !accountID){
     return {
       message: 'The AccountID or accountHandle is required'
     }
@@ -19,9 +19,12 @@ export default async function GetAccount(accountHandle: string): Promise<any> {
 
   const ledgerSpaceSession = ledgerSpaceDriver.session()
 
+  const accountMatchCondition = accountHandle ? "accountHandle:$accountHandle" : "accountID: $accountID";
+  const parameters = accountHandle ? { accountHandle } : { accountID };
+
  try {
-  const accountResult = await ledgerSpaceSession.run(
-  `MATCH (account:Account {accountHandle: $accountHandle})<-[:OWNS]-(member:Member)
+  const query =
+  `MATCH (account:Account {${accountMatchCondition}})<-[:OWNS]-(member:Member)
     WITH account, member
     MATCH (account)-[:OWES]->(owedCredex)-[:OWES]->(owedAccount)
     WITH member, account, COLLECT(owedCredex.credexID) AS owedCredexes, COLLECT(owedAccount.accountID) AS owedAccounts
@@ -39,8 +42,9 @@ export default async function GetAccount(accountHandle: string): Promise<any> {
       owedCredexes,
       owedAccounts
 
-    `, { accountHandle }
-  )
+    `;
+
+    const  accountResult = await ledgerSpaceSession.run(query, parameters)  
 
   const account = accountResult.records.map((record) => {
     return {

@@ -6,14 +6,14 @@ import GetAccountSentCredexOffers from '../services/GetAccountSentCredexOffers';
 export async function getAccountDetails(req: Request, res: Response) {
   const { accountID, accountHandle } = req.query;
 
-  if (!accountHandle) {
+  if (!accountHandle && !accountID) {
     return res.status(400).json({
       message: 'The AccountID or accountHandle is required'
     });
   }
 
   try {
-    const result = await GetAccountService(accountHandle as string);
+    const result = await GetAccountService(accountHandle as string, accountID as string);
     return res.status(200).json(result);
   } catch (error) {
     console.error('Error in getAccountDetails controller:', error);
@@ -25,16 +25,16 @@ export async function getAccountDetails(req: Request, res: Response) {
 }
 
 export async function getReceivedCredexOffers(req: Request, res: Response) {
-  const {accountHandle } = req.query;
+  const {accountHandle, accountID } = req.query;
 
-  if (!accountHandle) {
+  if (!accountHandle && !accountID) {
     return res.status(400).json({
       message: 'The AccountID or accountHandle is required'
     });
   }
 
   try {
-    const result = await GetAccountReceivedCredexOffers(accountHandle as string);
+    const result = await GetAccountReceivedCredexOffers(accountHandle as string, accountID as string);
     return res.status(200).json(result);
   } catch (error) {
     console.error('Error in getReceivedCredexOffers controller:', error);
@@ -55,7 +55,7 @@ export async function getSentCredexOffers(req: Request, res: Response) {
   }
 
   try {
-    const result = await GetAccountSentCredexOffers(accountHandle as string);
+    const result = await GetAccountSentCredexOffers(accountHandle as string, accountID as string);
     return res.status(200).json(result);
   } catch (error) {
     console.error('Error in getSentCredexOffers controller:', error);

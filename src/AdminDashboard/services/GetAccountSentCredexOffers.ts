@@ -10,7 +10,7 @@
 
 import { ledgerSpaceDriver } from "../../../config/neo4j"
 
-export default async function GetAccountService( accountHandle: string): Promise<any> {
+export default async function GetAccountService( accountHandle: string, accountID: string): Promise<any> {
   if(!accountHandle){
     return {
       message: 'The AccountID or accountHandle is required'
@@ -19,9 +19,14 @@ export default async function GetAccountService( accountHandle: string): Promise
 
   const ledgerSpaceSession = ledgerSpaceDriver.session()
   // Get all outgoing credex offers from the account using the accountID or accountHandle to get the account and then get the receivingNode which can be a member or an account
+  
+   
+  const accountMatchCondition = accountHandle ? "accountHandle:$accountHandle" : "accountID: $accountID";
+  const parameters = accountHandle ? { accountHandle } : { accountID };
+  
   try {
-    const accountOfferedCredexResult = await ledgerSpaceSession.run(
-      `MATCH (account:Account {accountHandle:$accountHandle})-[:OFFERED]->(offeredCredex)-[:OFFERED]->(receivingAccount) 
+    const query = 
+      `MATCH (account:Account {${accountMatchCondition}})-[:OFFERED]->(offeredCredex)-[:OFFERED]->(receivingAccount) 
         RETURN
         offeredCredex.credexID AS offeredCredexID,
         offeredCredex.credexType AS offeredCredexType,
@@ -39,8 +44,9 @@ export default async function GetAccountService( accountHandle: string): Promise
         receivingAccount.defaultDenom AS receivingAccountDefaultDenom,
         receivingAccount.accountHandle AS receivingAccountHandle
 
-      `,{ accountHandle }
-    );
+      `;
+      const accountOfferedCredexResult = await ledgerSpaceSession.run(query, parameters)
+    
    const accountOfferedCredex = accountOfferedCredexResult.records.map((record) => {
     return {
      offeredCredexID: record.get("offeredCredexID"),
