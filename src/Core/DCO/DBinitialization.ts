@@ -167,7 +167,7 @@ export async function DBinitialization(): Promise<void> {
       rdubs.onboardedMemberID,
       "PERSONAL_CONSUMPTION",
       "Ryan Watson Personal",
-      "ryanlukewatson",
+      "263778177125",
       "USD",
       1,
       CXXdenom
