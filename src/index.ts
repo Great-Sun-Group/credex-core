@@ -41,6 +41,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use(apiVersionOneRoute, authenticate);
 
 // Set up rate limiting to prevent abuse
+// With all requests coming from a single WhatsApp chatbot, rate limiting might cause issues?
 const limiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.max,
