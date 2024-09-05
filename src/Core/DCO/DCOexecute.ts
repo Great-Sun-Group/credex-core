@@ -7,6 +7,7 @@ import { OfferCredexService } from "../../Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
 import { fetchZigRate } from "./fetchZigRate";
 import { createNeo4jBackup } from "./DBbackup";
+import { logDCORates } from "../../../config/logger";
 
 export async function DCOexecute() {
   console.log("DCOexecute start");
@@ -206,6 +207,9 @@ export async function DCOexecute() {
     newCXXrates.CXX = 1;
     console.log("newCXXrates:");
     console.log(newCXXrates);
+
+    // Log DCO rates
+    logDCORates(denomsInXAU.XAU, newCXXrates.CXX, CXXprior_CXXcurrent);
 
     console.log("Creating new daynode");
     await ledgerSpaceSession.run(
