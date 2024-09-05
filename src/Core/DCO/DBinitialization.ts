@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { getDenominations } from "../constants/denominations";
-import { OnboardMemberService } from "../../Member/services/OnboardMember";
-import { UpdateMemberTierService } from "../../Member/services/UpdateMemberTier";
+import { OnboardMemberController } from "../../Member/controllers/onboardMember";
+import { UpdateMemberTierController } from "../../Member/controllers/updateMemberTier";
 import { CreateAccountService } from "../../Account/services/CreateAccount";
 import { OfferCredexService } from "../../Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
@@ -40,7 +40,10 @@ export async function DBinitialization(): Promise<void> {
 /**
  * Sets up necessary database constraints and indexes.
  */
-async function setupDatabaseConstraints(ledgerSpaceSession: any, searchSpaceSession: any): Promise<void> {
+async function setupDatabaseConstraints(
+  ledgerSpaceSession: any,
+  searchSpaceSession: any
+): Promise<void> {
   console.log("Creating database constraints and indexes...");
 
   // Remove any current db constraints
@@ -54,15 +57,19 @@ async function setupDatabaseConstraints(ledgerSpaceSession: any, searchSpaceSess
     "CREATE CONSTRAINT memberHandle_unique IF NOT EXISTS FOR (member:Member) REQUIRE member.memberHandle IS UNIQUE",
     "CREATE CONSTRAINT memberPhone_unique IF NOT EXISTS FOR (member:Member) REQUIRE member.phone IS UNIQUE",
     "CREATE CONSTRAINT accountID_unique IF NOT EXISTS FOR (account:Account) REQUIRE account.accountID IS UNIQUE",
-    "CREATE CONSTRAINT accountHandle_unique IF NOT EXISTS FOR (account:Account) REQUIRE account.accountHandle IS UNIQUE"
+    "CREATE CONSTRAINT accountHandle_unique IF NOT EXISTS FOR (account:Account) REQUIRE account.accountHandle IS UNIQUE",
   ];
 
   for (const constraint of constraints) {
     await ledgerSpaceSession.run(constraint);
   }
 
-  await searchSpaceSession.run("CREATE CONSTRAINT accountID_unique IF NOT EXISTS FOR (account:Account) REQUIRE account.accountID IS UNIQUE");
-  await searchSpaceSession.run("CREATE CONSTRAINT credexID_unique IF NOT EXISTS FOR (credex:Credex) REQUIRE credex.credexID IS UNIQUE");
+  await searchSpaceSession.run(
+    "CREATE CONSTRAINT accountID_unique IF NOT EXISTS FOR (account:Account) REQUIRE account.accountID IS UNIQUE"
+  );
+  await searchSpaceSession.run(
+    "CREATE CONSTRAINT credexID_unique IF NOT EXISTS FOR (credex:Credex) REQUIRE credex.credexID IS UNIQUE"
+  );
 }
 
 /**
@@ -70,7 +77,10 @@ async function setupDatabaseConstraints(ledgerSpaceSession: any, searchSpaceSess
  */
 function establishDayZero(): string {
   console.log("Establishing day zero");
-  const dayZero = process.env.DEPLOYMENT === "dev" ? "2021-01-01" : moment.utc().subtract(1, "days").format("YYYY-MM-DD");
+  const dayZero =
+    process.env.DEPLOYMENT === "dev"
+      ? "2021-01-01"
+      : moment.utc().subtract(1, "days").format("YYYY-MM-DD");
   console.log("Day zero:", dayZero);
   return dayZero;
 }
@@ -80,18 +90,29 @@ function establishDayZero(): string {
  */
 async function fetchAndProcessRates(dayZero: string): Promise<any> {
   console.log("Loading currencies and current rates...");
-  const symbols = getDenominations({ sourceForRate: "OpenExchangeRates", formatAsList: true });
+  const symbols = getDenominations({
+    sourceForRate: "OpenExchangeRates",
+    formatAsList: true,
+  });
   const baseUrl = `https://openexchangerates.org/api/historical/${dayZero}.json?app_id=${process.env.OPEN_EXCHANGE_RATES_API}&symbols=${symbols}`;
-  
-  const { data: { rates: USDbaseRates } } = await axios.get(baseUrl);
+
+  const {
+    data: { rates: USDbaseRates },
+  } = await axios.get(baseUrl);
   USDbaseRates.ZIG = (await fetchZigRate())[1].avg;
 
   const OneCXXinCXXdenom = 1;
   const CXXdenom = "CAD";
   console.log(OneCXXinCXXdenom + " CXX = 1 " + CXXdenom);
 
-  const XAUbaseRates = _.mapValues(USDbaseRates, (value) => value / USDbaseRates.XAU);
-  const dayZeroCXXrates = _.mapValues(XAUbaseRates, (value) => (1 / value) * OneCXXinCXXdenom * XAUbaseRates[CXXdenom]);
+  const XAUbaseRates = _.mapValues(
+    USDbaseRates,
+    (value) => value / USDbaseRates.XAU
+  );
+  const dayZeroCXXrates = _.mapValues(
+    XAUbaseRates,
+    (value) => (1 / value) * OneCXXinCXXdenom * XAUbaseRates[CXXdenom]
+  );
   dayZeroCXXrates.CXX = 1;
 
   console.log("Day zero CXX rates:", dayZeroCXXrates);
@@ -101,15 +122,22 @@ async function fetchAndProcessRates(dayZero: string): Promise<any> {
 /**
  * Creates the day zero daynode in the database.
  */
-async function createDayZeroDaynode(session: any, dayZero: string, dayZeroCXXrates: any): Promise<void> {
+async function createDayZeroDaynode(
+  session: any,
+  dayZero: string,
+  dayZeroCXXrates: any
+): Promise<void> {
   console.log("Creating day zero daynode...");
-  await session.run(`
+  await session.run(
+    `
     CREATE (daynode:Daynode)
     SET daynode = $dayZeroCXXrates,
         daynode.Date = date($dayZero),
         daynode.Active = TRUE,
         daynode.DCOrunningNow = TRUE
-  `, { dayZeroCXXrates, dayZero });
+  `,
+    { dayZeroCXXrates, dayZero }
+  );
 }
 
 /**
@@ -119,24 +147,48 @@ async function createInitialAccounts(session: any): Promise<void> {
   console.log("Creating initialization accounts and relationships...");
 
   const rdubs = await createRdubsAccount();
-  const credexFoundationID = await createCredexFoundation(rdubs.onboardedMemberID);
+  const credexFoundationID = await createCredexFoundation(
+    rdubs.onboardedMemberID
+  );
   const greatSunID = await createGreatSun(rdubs.onboardedMemberID);
   const vimbisoPayID = await createVimbisoPay(rdubs.onboardedMemberID);
 
-  await createInitialRelationships(session, credexFoundationID, greatSunID, vimbisoPayID);
-  await createInitialCredex(rdubs.onboardedMemberID, greatSunID, rdubs.personalAccountID);
+  await createInitialRelationships(
+    session,
+    credexFoundationID,
+    greatSunID,
+    vimbisoPayID
+  );
+  await createInitialCredex(
+    rdubs.onboardedMemberID,
+    greatSunID,
+    rdubs.personalAccountID
+  );
 }
 
-async function createRdubsAccount(): Promise<{ onboardedMemberID: string; personalAccountID: string }> {
-  const rdubs = await OnboardMemberService("Ryan", "Watson", "263778177125");
-  if (typeof rdubs.onboardedMemberID === "boolean") {
-    throw new Error("Failed to create rdubs account");
+async function createRdubsAccount(): Promise<{
+  onboardedMemberID: string;
+  personalAccountID: string;
+}> {
+  const result = await OnboardMemberController(
+    "Ryan",
+    "Watson",
+    "263778177125"
+  );
+
+  if ("error" in result) {
+    throw new Error(`Failed to create rdubs account: ${result.error}`);
   }
 
-  await UpdateMemberTierService(rdubs.onboardedMemberID, 5);
+  const onboardedMemberID = result.memberDashboard.memberID;
+
+  const updateTierResult = await UpdateMemberTierController(onboardedMemberID, 5);
+  if (!updateTierResult.success) {
+    throw new Error(`Failed to update member tier: ${updateTierResult.message}`);
+  }
 
   const rdubsPersonalAccount = await CreateAccountService(
-    rdubs.onboardedMemberID,
+    onboardedMemberID,
     "PERSONAL_CONSUMPTION",
     "Ryan Watson Personal",
     "263778177125",
@@ -145,7 +197,10 @@ async function createRdubsAccount(): Promise<{ onboardedMemberID: string; person
     "CAD"
   );
 
-  return { onboardedMemberID: rdubs.onboardedMemberID, personalAccountID: rdubsPersonalAccount.accountID };
+  return {
+    onboardedMemberID,
+    personalAccountID: rdubsPersonalAccount.accountID,
+  };
 }
 
 async function createCredexFoundation(memberID: string): Promise<string> {
@@ -157,7 +212,10 @@ async function createCredexFoundation(memberID: string): Promise<string> {
     "CXX"
   );
 
-  if (typeof credexFoundation.account === "boolean" || !credexFoundation.accountID) {
+  if (
+    typeof credexFoundation.account === "boolean" ||
+    !credexFoundation.accountID
+  ) {
     throw new Error("Failed to create Credex Foundation account");
   }
 
@@ -196,18 +254,30 @@ async function createVimbisoPay(memberID: string): Promise<string> {
   return vimbisoPay.accountID;
 }
 
-async function createInitialRelationships(session: any, credexFoundationID: string, greatSunID: string, vimbisoPayID: string): Promise<void> {
-  await session.run(`
+async function createInitialRelationships(
+  session: any,
+  credexFoundationID: string,
+  greatSunID: string,
+  vimbisoPayID: string
+): Promise<void> {
+  await session.run(
+    `
     MATCH (credexFoundation: Account { accountID: $credexFoundationID })
     MATCH (greatSun: Account { accountID: $greatSunID })
     MATCH (vimbisoPay: Account { accountID: $vimbisoPayID })
     MERGE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (credexFoundation)
     MERGE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (greatSun)
     MERGE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (vimbisoPay)
-  `, { credexFoundationID, greatSunID, vimbisoPayID });
+  `,
+    { credexFoundationID, greatSunID, vimbisoPayID }
+  );
 }
 
-async function createInitialCredex(memberID: string, issuerAccountID: string, receiverAccountID: string): Promise<void> {
+async function createInitialCredex(
+  memberID: string,
+  issuerAccountID: string,
+  receiverAccountID: string
+): Promise<void> {
   const credexData = {
     memberID,
     issuerAccountID,
@@ -222,8 +292,14 @@ async function createInitialCredex(memberID: string, issuerAccountID: string, re
   if (typeof DCOinitializationOfferCredex.credex === "boolean") {
     throw new Error("Invalid response from OfferCredexService");
   }
-  if (DCOinitializationOfferCredex.credex && typeof DCOinitializationOfferCredex.credex.credexID === "string") {
-    await AcceptCredexService(DCOinitializationOfferCredex.credex.credexID, memberID);
+  if (
+    DCOinitializationOfferCredex.credex &&
+    typeof DCOinitializationOfferCredex.credex.credexID === "string"
+  ) {
+    await AcceptCredexService(
+      DCOinitializationOfferCredex.credex.credexID,
+      memberID
+    );
   } else {
     throw new Error("Invalid credexID from OfferCredexService");
   }

@@ -54,7 +54,7 @@ app.use(limiter);
 startCronJobs();
 
 // Apply route handlers for different modules
-MemberRoutes(app, jsonParser);
+app.use(`${apiVersionOneRoute}member`, jsonParser, MemberRoutes);
 AccountRoutes(app, jsonParser);
 CredexRoutes(app, jsonParser);
 RecurringRoutes(app, jsonParser);

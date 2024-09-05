@@ -1,31 +1,43 @@
 import express from "express";
 import { UpdateMemberTierService } from "../services/UpdateMemberTier";
+import logger from "../../../config/logger";
 
 export async function UpdateMemberTierController(
+  memberID: string,
+  tier: number
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const result = await UpdateMemberTierService(memberID, tier);
+    if (result) {
+      return { success: true, message: "Member tier updated successfully" };
+    } else {
+      return { success: false, message: "Failed to update member tier" };
+    }
+  } catch (error) {
+    logger.error("Error updating member tier:", error);
+    return { success: false, message: "Internal Server Error" };
+  }
+}
+
+// Express middleware wrapper
+export async function updateMemberTierExpressHandler(
   req: express.Request,
   res: express.Response
-) {
-  const requiredFields = ["memberID", "newTier"];
+): Promise<void> {
+  const { memberID, tier } = req.body;
 
-  for (const field of requiredFields) {
-    if (!req.body[field]) {
-      return res.status(400).json({ message: `${field} is required` });
-    }
+  if (!memberID || typeof tier !== "number") {
+    res
+      .status(400)
+      .json({ message: "Invalid input. memberID and tier are required." });
+    return;
   }
 
-  try {
-    const memberData = await UpdateMemberTierService(
-      req.body.memberID,
-      req.body.newTier
-    );
+  const result = await UpdateMemberTierController(memberID, tier);
 
-    if (memberData) {
-      res.status(200).json( true );
-    } else {
-      res.status(404).json({ message: "Member not found" });
-    }
-  } catch (err) {
-    console.error("Error retrieving member:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+  if (result.success) {
+    res.status(200).json({ message: result.message });
+  } else {
+    res.status(400).json({ message: result.message });
   }
 }

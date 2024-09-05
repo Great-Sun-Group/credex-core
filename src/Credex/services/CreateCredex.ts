@@ -6,7 +6,7 @@ import {
 import { GetSecuredAuthorizationService } from "./GetSecuredAuthorization";
 import { checkDueDate, credspan } from "../../Core/constants/credspan";
 import { checkPermittedCredexType } from "../../Core/constants/credexTypes";
-import { SecuredCredexAuthForTier } from "../../Member/services/SecuredCredexAuthForTier";
+import { SecuredCredexAuthForTierController } from "../../Member/controllers/securedCredexAuthForTier";
 
 export async function CreateCredexService(credexData: any) {
   const {
@@ -119,15 +119,25 @@ export async function CreateCredexService(credexData: any) {
 
   //check that secured credex is within limits of membership tier
   if (securedCredex) {
-    const tierAuth = await SecuredCredexAuthForTier(
+    const getMemberTier = await ledgerSpaceSession.run(
+      `
+        MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
+        RETURN member.memberTier as memberTier
+      `,
+      { issuerAccountID }
+    );
+
+    const memberTier = getMemberTier.records[0].get("memberTier");
+    const tierAuth = await SecuredCredexAuthForTierController(
       issuerAccountID,
+      memberTier,
       InitialAmount,
       Denomination
     );
-    if (tierAuth != true) {
+    if (!tierAuth.isAuthorized) {
       return {
         credex: false,
-        message: tierAuth,
+        message: tierAuth.message,
       };
     }
   }

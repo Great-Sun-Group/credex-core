@@ -1,70 +1,80 @@
 import express from "express";
 import { OnboardMemberService } from "../services/OnboardMember";
-import { CreateAccountService } from "../../Account/services/CreateAccount";
 import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import logger from "../../../config/logger";
+
+function validateInput(
+  firstname: string,
+  lastname: string,
+  phone: string
+): string | null {
+  if (!firstname || !lastname || !phone) {
+    return "firstname, lastname, and phone are required";
+  }
+  if (
+    typeof firstname !== "string" ||
+    typeof lastname !== "string" ||
+    typeof phone !== "string"
+  ) {
+    return "firstname, lastname, and phone must be strings";
+  }
+  if (firstname.length > 50 || lastname.length > 50) {
+    return "First name and last name must be 50 characters or less";
+  }
+
+  // Phone number validation (without '+' prefix)
+  const phoneRegex = /^[1-9]\d{1,14}$/;
+  if (!phoneRegex.test(phone)) {
+    return "Invalid phone number format. It should be a sequence of 2 to 15 digits, not starting with 0.";
+  }
+
+  return null;
+}
 
 export async function OnboardMemberController(
-  req: express.Request,
-  res: express.Response
-): Promise<void> {
-  const fieldsRequired = [
-    "firstname",
-    "lastname",
-    "phone",
-  ];
-
-  for (const field of fieldsRequired) {
-    if (!req.body[field]) {
-      res.status(400).json({ message: `${field} is required` });
-      return;
-    }
+  firstname: string,
+  lastname: string,
+  phone: string
+): Promise<{ memberDashboard: any } | { error: string }> {
+  const validationError = validateInput(firstname, lastname, phone);
+  if (validationError) {
+    return { error: validationError };
   }
 
   try {
     const onboardedMember = await OnboardMemberService(
-      req.body.firstname,
-      req.body.lastname,
-      req.body.phone
+      firstname,
+      lastname,
+      phone
     );
 
     if (!onboardedMember.onboardedMemberID) {
-      res.status(400).json({ message: onboardedMember.message });
-      return;
+      return { error: onboardedMember.message || "Failed to onboard member" };
     }
 
-    const consumptionAccount = await CreateAccountService(
-      onboardedMember.onboardedMemberID,
-      "PERSONAL_CONSUMPTION",
-      `${req.body.firstname} ${req.body.lastname} Personal`,
-      req.body.phone,
-      "USD",
-      req.body.DCOgiveInCXX,
-      req.body.DCOdenom
-    );
-
-    if (!consumptionAccount.accountID) {
-      res.status(400).json({ message: consumptionAccount.message });
-      return;
-    }
-
-    const memberDashboard = await GetMemberDashboardByPhoneService(
-      req.body.phone
-    );
+    const memberDashboard = await GetMemberDashboardByPhoneService(phone);
     if (!memberDashboard) {
-      res.status(400).json({ message: "Could not retrieve member dashboard" });
-      return;
+      return { error: "Could not retrieve member dashboard" };
     }
 
-    const accountDashboards = await Promise.all(
-      memberDashboard.accountIDS.map((accountId: string) =>
-        GetAccountDashboardService(memberDashboard.memberID, accountId)
-      )
-    );
-
-    res.status(200).json({ memberDashboard, accountDashboards });
+    return { memberDashboard };
   } catch (error) {
-    console.error("Error onboarding member:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    logger.error("Error onboarding member:", error);
+    return { error: "Internal Server Error" };
+  }
+}
+
+// Express middleware wrapper
+export async function onboardMemberExpressHandler(
+  req: express.Request,
+  res: express.Response
+): Promise<void> {
+  const { firstname, lastname, phone } = req.body;
+  const result = await OnboardMemberController(firstname, lastname, phone);
+
+  if ("error" in result) {
+    res.status(400).json({ message: result.error });
+  } else {
+    res.status(200).json(result);
   }
 }
