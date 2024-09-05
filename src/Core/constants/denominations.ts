@@ -12,7 +12,7 @@ type DenomOptions = {
 /**
  * Represents a currency denomination.
  */
-type Denomination = {
+export type Denomination = {
   code: string;
   fulldescription: string;
   regionalization: string;
@@ -70,7 +70,9 @@ export function getDenominations(
   }
 
   if (options.sourceForRate) {
-    result = result.filter((denom) => denom.sourceForRate === options.sourceForRate);
+    result = result.filter(
+      (denom) => denom.sourceForRate === options.sourceForRate
+    );
   }
 
   if (options.formatAsList) {
@@ -109,7 +111,8 @@ export const denomFormatter = (amount: number, code: string): string => {
   };
 
   const denomData = getDenominations({ code }) as Denomination[];
-  const regionalization = denomData.length > 0 ? denomData[0].regionalization : "en-US";
+  const regionalization =
+    denomData.length > 0 ? denomData[0].regionalization : "en-US";
 
   let formattedAmount: string;
   switch (code) {
