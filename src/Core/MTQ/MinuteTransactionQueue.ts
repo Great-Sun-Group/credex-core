@@ -30,6 +30,11 @@ export async function MinuteTransactionQueue(): Promise<boolean> {
   try {
     const { DCOflag, MTQflag } = await checkDCOAndMTQStatus(ledgerSpaceSession);
 
+    if (DCOflag === null || MTQflag === null) {
+      logger.warn("No active daynode found. Skipping MTQ.");
+      return false;
+    }
+
     if (DCOflag || MTQflag) {
       if (DCOflag) logger.info("DCO in progress, holding MTQ");
       if (MTQflag) logger.info("MTQ already in progress, holding new MTQ");
@@ -65,27 +70,49 @@ export async function MinuteTransactionQueue(): Promise<boolean> {
   }
 }
 
-async function checkDCOAndMTQStatus(session: Session): Promise<{ DCOflag: boolean; MTQflag: boolean }> {
+async function checkDCOAndMTQStatus(
+  session: Session
+): Promise<{ DCOflag: boolean | null; MTQflag: boolean | null }> {
   const result = await session.run(`
     MATCH (daynode:Daynode {Active: true})
     RETURN
       daynode.DCOrunningNow AS DCOflag,
       daynode.MTQrunningNow AS MTQflag
   `);
+
+  if (result.records.length === 0) {
+    logger.warn("No active daynode found");
+    return { DCOflag: null, MTQflag: null };
+  }
+
   return {
     DCOflag: result.records[0].get("DCOflag"),
-    MTQflag: result.records[0].get("MTQflag")
+    MTQflag: result.records[0].get("MTQflag"),
   };
 }
 
-async function setMTQRunningFlag(session: Session, value: boolean): Promise<void> {
-  await session.run(`
+async function setMTQRunningFlag(
+  session: Session,
+  value: boolean
+): Promise<void> {
+  const result = await session.run(
+    `
     MATCH (daynode:Daynode {Active: true})
     SET daynode.MTQrunningNow = $value
-  `, { value });
+    RETURN daynode
+  `,
+    { value }
+  );
+
+  if (result.records.length === 0) {
+    logger.warn("No active daynode found when setting MTQ running flag");
+  }
 }
 
-async function processQueuedAccounts(ledgerSpaceSession: Session, searchSpaceSession: Session): Promise<void> {
+async function processQueuedAccounts(
+  ledgerSpaceSession: Session,
+  searchSpaceSession: Session
+): Promise<void> {
   const queuedAccounts = await getQueuedAccounts(ledgerSpaceSession);
 
   for (const account of queuedAccounts) {
@@ -108,11 +135,14 @@ async function getQueuedAccounts(session: Session): Promise<Account[]> {
   `);
   return result.records.map((record: any) => ({
     accountID: record.get("accountID"),
-    accountName: record.get("accountName")
+    accountName: record.get("accountName"),
   }));
 }
 
-async function createAccountInSearchSpace(session: Session, account: Account): Promise<void> {
+async function createAccountInSearchSpace(
+  session: Session,
+  account: Account
+): Promise<void> {
   const result = await session.run(
     `
     CREATE (newAccount:Account)
@@ -123,11 +153,16 @@ async function createAccountInSearchSpace(session: Session, account: Account): P
   );
 
   if (result.records.length === 0) {
-    throw new Error(`Failed to create account in searchSpace: ${account.accountName}`);
+    throw new Error(
+      `Failed to create account in searchSpace: ${account.accountName}`
+    );
   }
 }
 
-async function markAccountAsProcessed(session: Session, accountID: string): Promise<void> {
+async function markAccountAsProcessed(
+  session: Session,
+  accountID: string
+): Promise<void> {
   await session.run(
     `
     MATCH (processedAccount:Account {accountID: $accountID})
@@ -137,7 +172,10 @@ async function markAccountAsProcessed(session: Session, accountID: string): Prom
   );
 }
 
-async function processQueuedCredexes(ledgerSpaceSession: Session, searchSpaceSession: Session): Promise<void> {
+async function processQueuedCredexes(
+  ledgerSpaceSession: Session,
+  searchSpaceSession: Session
+): Promise<void> {
   const queuedCredexes = await getQueuedCredexes(ledgerSpaceSession);
   const sortedQueuedCredexes = _.sortBy(queuedCredexes, "acceptedAt");
 
@@ -185,7 +223,10 @@ async function getQueuedCredexes(session: Session): Promise<Credex[]> {
     amount: record.get("amount").toNumber(),
     denomination: record.get("denomination"),
     CXXmultiplier: record.get("CXXmultiplier").toNumber(),
-    credexSecuredDenom: record.get("securerID") !== null ? record.get("denomination") : "floating",
-    dueDate: record.get("dueDate")
+    credexSecuredDenom:
+      record.get("securerID") !== null
+        ? record.get("denomination")
+        : "floating",
+    dueDate: record.get("dueDate"),
   }));
 }
