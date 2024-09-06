@@ -1,6 +1,6 @@
 import express from "express";
 import { OfferCredexService } from "../services/OfferCredex";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { GetAccountDashboardController } from "../../Account/controllers/getAccountDashboard";
 
 /**
  * OfferCredexController
@@ -38,10 +38,19 @@ export async function OfferCredexController(
     const offerCredexData = await OfferCredexService(req.body);
     
     // Fetch updated dashboard data
-    const dashboardData = await GetAccountDashboardService(
-      req.body.memberID,
-      req.body.issuerAccountID
-    );
+    const dashboardReq = {
+      body: {
+        memberID: req.body.memberID,
+        accountID: req.body.issuerAccountID
+      }
+    } as express.Request;
+    const dashboardRes = {
+      status: (code: number) => ({
+        json: (data: any) => data
+      })
+    } as express.Response;
+
+    const dashboardData = await GetAccountDashboardController(dashboardReq, dashboardRes);
     
     // Return the offer data and updated dashboard data
     res.json({

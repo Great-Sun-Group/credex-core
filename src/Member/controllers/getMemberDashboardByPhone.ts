@@ -1,6 +1,6 @@
 import express from "express";
 import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { GetAccountDashboardController } from "../../Account/controllers/getAccountDashboard";
 
 export async function GetMemberDashboardByPhoneController(
   req: express.Request,
@@ -26,9 +26,21 @@ export async function GetMemberDashboardByPhoneController(
     }
 
     const accountDashboards = await Promise.all(
-      memberDashboard.accountIDS.map((accountId: string) =>
-        GetAccountDashboardService(memberDashboard.memberID, accountId)
-      )
+      memberDashboard.accountIDS.map(async (accountId: string) => {
+        const accountReq = {
+          body: {
+            memberID: memberDashboard.memberID,
+            accountID: accountId
+          }
+        } as express.Request;
+        const accountRes = {
+          status: (code: number) => ({
+            json: (data: any) => data
+          })
+        } as express.Response;
+
+        return GetAccountDashboardController(accountReq, accountRes);
+      })
     );
 
     res.status(200).json({ memberDashboard, accountDashboards });

@@ -1,6 +1,6 @@
 import express from "express";
 import { RequestRecurringService } from "../services/RequestRecurring";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { GetAccountDashboardController } from "../../Account/controllers/getAccountDashboard";
 import { getDenominations } from "../../Core/constants/denominations";
 
 export async function RequestRecurringController(
@@ -29,7 +29,7 @@ export async function RequestRecurringController(
   if (!getDenominations({ code: req.body.Denomination }).length) {
     const message = "Error: denomination not permitted";
     console.log(message);
-    return { recurring: false, message };
+    return res.status(400).json({ recurring: false, message });
   }
 
   // Validate optional parameters
@@ -75,13 +75,22 @@ export async function RequestRecurringController(
     );
 
     if (!createRecurringData) {
-      return res.status(400).json(createRecurringData);
+      return res.status(400).json({ recurring: false, message: "Failed to create recurring payment" });
     }
 
-    const dashboardData = await GetAccountDashboardService(
-      req.body.signerMemberID,
-      req.body.requestorAccountID
-    );
+    const dashboardReq = {
+      body: {
+        memberID: req.body.signerMemberID,
+        accountID: req.body.requestorAccountID
+      }
+    } as express.Request;
+    const dashboardRes = {
+      status: (code: number) => ({
+        json: (data: any) => data
+      })
+    } as express.Response;
+
+    const dashboardData = await GetAccountDashboardController(dashboardReq, dashboardRes);
 
     res.json({
       avatarMemberID: createRecurringData,

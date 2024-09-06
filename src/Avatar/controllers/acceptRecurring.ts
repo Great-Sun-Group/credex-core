@@ -1,6 +1,6 @@
 import express from "express";
 import { AcceptRecurringService } from "../services/AcceptRecurring";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { GetAccountDashboardController } from "../../Account/controllers/getAccountDashboard";
 
 /**
  * AcceptRecurringController
@@ -49,10 +49,19 @@ export async function AcceptRecurringController(
       acceptRecurringData.recurring.acceptorAccountID &&
       typeof acceptRecurringData.recurring.acceptorAccountID === "string"
     ) {
-      const dashboardData = await GetAccountDashboardService(
-        req.body.signerID,
-        acceptRecurringData.recurring.acceptorAccountID
-      );
+      const dashboardReq = {
+        body: {
+          memberID: req.body.signerID,
+          accountID: acceptRecurringData.recurring.acceptorAccountID
+        }
+      } as express.Request;
+      const dashboardRes = {
+        status: (code: number) => ({
+          json: (data: any) => data
+        })
+      } as express.Response;
+
+      const dashboardData = await GetAccountDashboardController(dashboardReq, dashboardRes);
 
       // Return the acceptance data and dashboard data
       res.json({
