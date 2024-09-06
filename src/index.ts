@@ -11,6 +11,8 @@ import authenticate from "../config/authenticate";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
+import AdminDashboardRoutes from "./AdminDashboard/adminDashboardRoutes";
+import AdminRoutes from "./DevelopmentAdmin/adminRoutes";
 
 const app = express();
 const port = 5000;
@@ -34,6 +36,7 @@ startCronJobs();
 MemberRoutes(app, jsonParser);
 AccountRoutes(app, jsonParser);
 CredexRoutes(app, jsonParser);
+AdminDashboardRoutes(app, jsonParser);
 RecurringRoutes(app, jsonParser);
 
 if (process.env.DEPLOYMENT === "demo" || process.env.DEPLOYMENT === "dev") {
