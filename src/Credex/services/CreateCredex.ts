@@ -1,12 +1,6 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
-import {
-  getDenominations,
-  denomFormatter,
-} from "../../Core/constants/denominations";
+import { denomFormatter } from "../../Core/constants/denominations";
 import { GetSecuredAuthorizationService } from "./GetSecuredAuthorization";
-import { checkDueDate, credspan } from "../../Core/constants/credspan";
-import { checkPermittedCredexType } from "../../Core/constants/credexTypes";
-import { SecuredCredexAuthForTierController } from "../../Member/controllers/securedCredexAuthForTier";
 
 export async function CreateCredexService(credexData: any) {
   const {
@@ -22,172 +16,30 @@ export async function CreateCredexService(credexData: any) {
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
-  // Validate input data
-  if (
-    !issuerAccountID ||
-    !receiverAccountID ||
-    issuerAccountID == receiverAccountID ||
-    !InitialAmount ||
-    !Denomination ||
-    !credexType ||
-    !OFFERSorREQUESTS ||
-    (securedCredex && dueDate) ||
-    (!securedCredex && !dueDate)
-  ) {
-    let failMessage = "Data missing or mismatch, could not create credex.";
-    if (!issuerAccountID) failMessage += " issuerAccountID required";
-    if (!receiverAccountID) failMessage += " receiverAccountID required";
-    if (issuerAccountID == receiverAccountID)
-      failMessage += " issuer and receiver cannot be the same account";
-    if (!InitialAmount) failMessage += " InitialAmount required";
-    if (!Denomination) failMessage += " Denomination required";
-    if (!credexType) failMessage += " credexType required";
-    if (!OFFERSorREQUESTS) failMessage += " OFFERSorREQUESTS required";
-    if (securedCredex && dueDate)
-      failMessage += " Secured credex cannot have a due date";
-    if (!securedCredex && !dueDate)
-      failMessage += " Unsecured credex must have a due date";
-    console.log(failMessage);
-    console.log(credexData);
-    return { credex: false, message: failMessage };
-  }
-
-  // make sure InitialAmount is a number
-  if (typeof InitialAmount != "number") {
-    const message = "Error: InitialAmount must be a number";
-    console.log(message);
-    console.log(credexData);
-    return {
-      credex: false,
-      message: message,
-    };
-  }
-
-  // Check denomination validity
-  if (!getDenominations({ code: Denomination }).length) {
-    const message = "Error: denomination not permitted";
-    console.log(message);
-    console.log(credexData);
-    return {
-      credex: false,
-      message: message,
-    };
-  }
-
-  // Check credex type validity
-  if (!checkPermittedCredexType(credexType)) {
-    const message = "Error: credex type not permitted";
-    console.log(message);
-    console.log(credexData);
-    return {
-      credex: false,
-      message: message,
-    };
-  }
-
-  // Validate OFFERSorREQUESTS and set OFFEREDorREQUESTED accordingly
-  let OFFEREDorREQUESTED = "";
-  if (OFFERSorREQUESTS === "OFFERS") {
-    OFFEREDorREQUESTED = "OFFERED";
-  } else if (OFFERSorREQUESTS === "REQUESTS") {
-    OFFEREDorREQUESTED = "REQUESTED";
-  } else {
-    const message = "Error: invalid OFFER/REQUEST";
-    console.log(message);
-    console.log(credexData);
-    return {
-      credex: false,
-      message: message,
-    };
-  }
-
-  // Check due date for unsecured credex
-  if (!securedCredex) {
-    const dueDateOK = await checkDueDate(dueDate);
-    if (!dueDateOK) {
-      const message = `Error: due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${
-        credspan / 7
-      } weeks from today.`;
-      console.log(message);
-      console.log(credexData);
-      return {
-        credex: false,
-        message: message,
-      };
-    }
-  }
-
-  //check that secured credex is within limits of membership tier
-  if (securedCredex) {
-    const getMemberTier = await ledgerSpaceSession.run(
-      `
-        MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
-        RETURN member.memberTier as memberTier
-      `,
-      { issuerAccountID }
-    );
-
-    const memberTier = getMemberTier.records[0].get("memberTier");
-    const tierAuth = await SecuredCredexAuthForTierController(
-      issuerAccountID,
-      memberTier,
-      InitialAmount,
-      Denomination
-    );
-    if (!tierAuth.isAuthorized) {
-      return {
-        credex: false,
-        message: tierAuth.message,
-      };
-    }
-  }
-
-  //check that unsecured credex is permitted on membership tier
-  if (!securedCredex) {
-    const getMemberTier = await ledgerSpaceSession.run(
-      `
-        MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
-        RETURN member.memberTier as memberTier
-      `,
-      { issuerAccountID }
-    );
-
-    const memberTier = getMemberTier.records[0].get("memberTier");
-    if (memberTier == 1) {
-      return {
-        credex: false,
-        message: "Members on the Open Tier cannot issue unsecured credexes",
-      };
-    }
-  }
-
-  // Get securable data for secured credex
-  let secureableData = { securerID: "", securableAmountInDenom: 0 };
-  if (securedCredex) {
-    secureableData = await GetSecuredAuthorizationService(
-      issuerAccountID,
-      Denomination
-    );
-    if (secureableData.securableAmountInDenom < InitialAmount) {
-      console.log("secureableData.securableAmountInDenom: ");
-      console.log(secureableData.securableAmountInDenom);
-      console.log("InitialAmount: ");
-      console.log(InitialAmount);
-
-      return {
-        credex: false,
-        message: `Error: Your secured credex for ${denomFormatter(
-          InitialAmount,
-          Denomination
-        )} ${Denomination} cannot be issued because your maximum securable ${Denomination} balance is ${denomFormatter(
-          secureableData.securableAmountInDenom,
-          Denomination
-        )} ${Denomination}`,
-      };
-    }
-  }
+  let OFFEREDorREQUESTED = OFFERSorREQUESTS === "OFFERS" ? "OFFERED" : "REQUESTED";
 
   try {
+    // Get securable data for secured credex
+    let secureableData = { securerID: "", securableAmountInDenom: 0 };
+    if (securedCredex) {
+      secureableData = await GetSecuredAuthorizationService(
+        issuerAccountID,
+        Denomination
+      );
+      if (secureableData.securableAmountInDenom < InitialAmount) {
+        return {
+          credex: false,
+          message: `Error: Your secured credex for ${denomFormatter(
+            InitialAmount,
+            Denomination
+          )} ${Denomination} cannot be issued because your maximum securable ${Denomination} balance is ${denomFormatter(
+            secureableData.securableAmountInDenom,
+            Denomination
+          )} ${Denomination}`,
+        };
+      }
+    }
+
     // Create the credex
     const createCredexQuery = await ledgerSpaceSession.run(
       `

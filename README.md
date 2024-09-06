@@ -28,18 +28,6 @@ The credex ecosystem stores values in credcoin (CXX). In order to natively enabl
 
 The system manages the balance between local truth (preserving the face value of contracts in their specified denomination) and global truth (adjusting all values relative to credcoin) through the daily rate and value adjustments in the DCO. This implementation creates a robust ecosystem that manages accounting processes across any denomination, clears debts automatically, and adjusts values dynamically.
 
-## Recent Improvements
-
-The Credex and Avatar modules have been updated for improved resilience, reliability, and clarity. These updates include:
-
-- Enhanced error handling and input validation in all controllers
-- Standardized parameter passing in services (using object parameters)
-- Improved consistency across different services and controllers
-- Better type checking and TypeScript integration
-- More comprehensive logging for easier debugging and monitoring
-
-These improvements make the system more robust and easier to maintain, while also providing a more consistent developer experience across different parts of the codebase.
-
 ## express.js server
 
 The express.js server is initialized with index.ts, which provides the cronjobs and endpoints that power the ecosystem and enable members and client apps to interact with its ledger.
