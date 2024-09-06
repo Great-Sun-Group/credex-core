@@ -11,9 +11,7 @@ export async function OnboardMemberController(
   const fieldsRequired = [
     "firstname",
     "lastname",
-    "defaultDenom",
     "phone",
-    "memberHandle",
   ];
 
   for (const field of fieldsRequired) {
@@ -27,8 +25,6 @@ export async function OnboardMemberController(
     const onboardedMember = await OnboardMemberService(
       req.body.firstname,
       req.body.lastname,
-      req.body.memberHandle,
-      req.body.defaultDenom,
       req.body.phone
     );
 
@@ -41,8 +37,8 @@ export async function OnboardMemberController(
       onboardedMember.onboardedMemberID,
       "PERSONAL_CONSUMPTION",
       `${req.body.firstname} ${req.body.lastname} Personal`,
-      req.body.memberHandle,
-      req.body.defaultDenom,
+      req.body.phone,
+      "USD",
       req.body.DCOgiveInCXX,
       req.body.DCOdenom
     );

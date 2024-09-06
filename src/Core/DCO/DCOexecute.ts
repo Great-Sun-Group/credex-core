@@ -6,6 +6,7 @@ import { GetSecuredAuthorizationService } from "../../Credex/services/GetSecured
 import { OfferCredexService } from "../../Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
 import { fetchZigRate } from "./fetchZigRate";
+import { createNeo4jBackup } from "./DBbackup";
 
 export async function DCOexecute() {
   console.log("DCOexecute start");
@@ -43,6 +44,10 @@ export async function DCOexecute() {
     const nextDate = priorDaynodeData.records[0].get("nextDate");
 
     console.log("Expiring day: " + previousDate);
+
+    console.log("End of day backup...");
+    await createNeo4jBackup(previousDate, "_end");
+    console.log("End of day backup completed.");
 
     //process defaulting unsecured credexes
     let numberDefaulted = 0;
@@ -134,11 +139,7 @@ export async function DCOexecute() {
             requiredDenoms,
           }
         );
-        console.log("Aborting DCO and turning off DCOrunningNow flag");
-        await ledgerSpaceSession.run(`
-          MATCH (daynode:Daynode {Active: TRUE})
-          SET daynode.DCOrunningNow = false
-        `);
+        console.log("Aborting DCO");
         return false;
       }
 
@@ -432,6 +433,9 @@ export async function DCOexecute() {
 
     await Promise.all(offerAndAcceptPromisesDCOreceive);
 
+    console.log("Start of day backup...");
+    await createNeo4jBackup(nextDate, "_start");
+    console.log("Start of day backup completed.");
     console.log(`DCOexecute done to open ${nextDate}`);
   } catch (error) {
     console.error("Error during DCOexecute:", error);

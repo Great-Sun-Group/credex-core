@@ -11,6 +11,30 @@ export async function CreateAccountService(
   DCOgiveInCXX: number | null = null,
   DCOdenom: string | null = null
 ) {
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
+
+  //check that account creation is permitted on membership tier
+  const getMemberTier = await ledgerSpaceSession.run(
+    `
+        MATCH (member:Member{ memberID: $ownerID })
+        OPTIONAL MATCH (member)-[:OWNS]->(account:Account)
+        RETURN
+          member.memberTier AS memberTier,
+          COUNT(account) AS numAccounts
+      `,
+    { ownerID }
+  );
+
+  const memberTier = getMemberTier.records[0].get("memberTier");
+  const numAccounts = getMemberTier.records[0].get("numAccounts");
+  if (memberTier <= 2 && numAccounts >= 1) {
+    return {
+      account: false,
+      message:
+        "You cannot create an account on the Open or Verified membership tiers.",
+    };
+  }
+
   // Validation: Check defaultDenom in denominations
   if (!getDenominations({ code: defaultDenom }).length) {
     const message = "defaultDenom not in denoms";
@@ -29,18 +53,27 @@ export async function CreateAccountService(
     };
   }
 
+  // Transform to lowercase and remove spaces
   accountHandle = accountHandle.toLowerCase().replace(/\s/g, "");
-  //need some other validation here letters, numbers, periods allowed.
+
+  // Validate the accountHandle
+  const isValid = /^[a-z0-9._]+$/.test(accountHandle);
+
+  if (!isValid) {
+    return {
+      account: false,
+      message:
+        "Invalid account handle. Only lowercase letters, numbers, periods, and underscores are allowed.",
+    };
+  }
 
   // Validation: Check DCOdenom in denominations
   if (DCOdenom && !getDenominations({ code: DCOdenom }).length) {
     const message = "DCOdenom not in denoms";
     console.log(message);
-    return { onboardedMemberID: false, message: message };
+    return { account: false, message: message };
   }
 
-  // Database interaction
-  const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
     const result = await ledgerSpaceSession.run(
       `

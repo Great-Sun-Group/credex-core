@@ -1,12 +1,14 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { getDenominations } from "../constants/denominations";
 import { OnboardMemberService } from "../../Member/services/OnboardMember";
+import { UpdateMemberTierService } from "../../Member/services/UpdateMemberTier";
 import { CreateAccountService } from "../../Account/services/CreateAccount";
 import { OfferCredexService } from "../../Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
 import { fetchZigRate } from "./fetchZigRate";
 import axios from "axios";
 import _ from "lodash";
+import moment from "moment-timezone";
 
 export async function DBinitialization(): Promise<void> {
   console.log("DBinitialization start");
@@ -33,74 +35,71 @@ export async function DBinitialization(): Promise<void> {
     //set constraints
     await ledgerSpaceSession.run(
       `
-      CREATE CONSTRAINT daynode_unique IF NOT EXISTS
+      CREATE CONSTRAINT daynodeDate_unique IF NOT EXISTS
       FOR (daynode:Daynode) REQUIRE daynode.Date IS UNIQUE
       `
     );
 
     await ledgerSpaceSession.run(
       `
-      CREATE CONSTRAINT member_unique IF NOT EXISTS
-      FOR (member:Member) REQUIRE (member.memberID, member.memberHandle) IS UNIQUE
+      CREATE CONSTRAINT memberID_unique IF NOT EXISTS
+      FOR (member:Member) REQUIRE member.memberID IS UNIQUE
       `
     );
 
     await ledgerSpaceSession.run(
       `
-      CREATE CONSTRAINT account_unique IF NOT EXISTS
-      FOR (account:Account) REQUIRE (account.accountID, account.phone, account.accountHandle) IS UNIQUE
+      CREATE CONSTRAINT memberHandle_unique IF NOT EXISTS
+      FOR (member:Member) REQUIRE member.memberHandle IS UNIQUE
+      `
+    );
+
+    await ledgerSpaceSession.run(
+      `
+      CREATE CONSTRAINT memberPhone_unique IF NOT EXISTS
+      FOR (member:Member) REQUIRE member.phone IS UNIQUE
+      `
+    );
+
+    await ledgerSpaceSession.run(
+      `
+      CREATE CONSTRAINT accountID_unique IF NOT EXISTS
+      FOR (account:Account) REQUIRE account.accountID IS UNIQUE
+      `
+    );
+
+    await ledgerSpaceSession.run(
+      `
+      CREATE CONSTRAINT accountHandle_unique IF NOT EXISTS
+      FOR (account:Account) REQUIRE account.accountHandle IS UNIQUE
       `
     );
 
     await searchSpaceSession.run(
       `
-      CREATE CONSTRAINT account_unique IF NOT EXISTS
+      CREATE CONSTRAINT accountID_unique IF NOT EXISTS
       FOR (account:Account) REQUIRE account.accountID IS UNIQUE
       `
     );
 
     await searchSpaceSession.run(
       `
-      CREATE CONSTRAINT credex_unique IF NOT EXISTS
+      CREATE CONSTRAINT credexID_unique IF NOT EXISTS
       FOR (credex:Credex) REQUIRE credex.credexID IS UNIQUE
       `
     );
 
-    await ledgerSpaceSession.run(
-      `
-      CREATE INDEX credex_Denomination_index IF NOT EXISTS
-      FOR (credex:CREDEX)
-      ON (credex.Denomination) `
-    );
-
-    //add indexes for other DCO balance updates
-    await searchSpaceSession.run(
-      `
-      CREATE INDEX credex_dueDate_index IF NOT EXISTS
-      FOR (credex:Credex) ON credex.dueDate
-      `
-    );
-
-    await searchSpaceSession.run(
-      `
-      CREATE INDEX securedDenom_index IF NOT EXISTS
-      FOR (credex:CREDEX)
-      ON credex.securedDenom
-      `
-    );
-
-    await searchSpaceSession.run(
-      `
-      CREATE INDEX Denomination_index IF NOT EXISTS
-      FOR ()-[credex:CREDEX]-()
-      ON (credex.Denomination);
-      `
-    );
-
     console.log("establish dayZero");
-    const dayZero = "2024-08-08";
+    var dayZero = moment
+      .utc()
+      .subtract(1, "days")
+      .format("YYYY-MM-DD");
     console.log("dayZero:", dayZero);
 
+    if (process.env.DEPLOYMENT === "dev") {
+      dayZero = "2021-01-01";
+    }
+    
     const OneCXXinCXXdenom = 1;
     const CXXdenom = "CAD";
     console.log(OneCXXinCXXdenom + " CXX = 1 " + CXXdenom);
@@ -150,35 +149,31 @@ export async function DBinitialization(): Promise<void> {
     console.log("Creating initialization accounts and relationships...");
 
     //create initial member
-    const rdubs = await OnboardMemberService(
-      "Ryan",
-      "Watson",
-      "ryanlukewatson",
-      "USD",
-      "263778177125"
-    );
-    let rdubsAccountID;
+    const rdubs = await OnboardMemberService("Ryan", "Watson", "263778177125");
     if (typeof rdubs.onboardedMemberID == "boolean") {
       throw new Error("rdubs could not be created");
     }
-    if (
-      rdubs.onboardedMemberID &&
-      typeof rdubs.onboardedMemberID === "string"
-    ) {
-      const rdubsPersonalAccount = await CreateAccountService(
-        rdubs.onboardedMemberID,
-        "PERSONAL_CONSUMPTION",
-        "Ryan Watson Personal",
-        "ryanlukewatson",
-        "USD",
-        1,
-        CXXdenom
-      );
 
-      rdubsAccountID = rdubsPersonalAccount.accountID;
-    } else {
-      throw new Error("rdubs could not be created");
+    //update rdubs member tier to enable account creation below
+    const tierUpdated = await UpdateMemberTierService(
+      rdubs.onboardedMemberID,
+      5
+    );
+    if (!tierUpdated) {
+      throw new Error("rdubs memberTier could not be updated");
     }
+
+    const rdubsPersonalAccount = await CreateAccountService(
+      rdubs.onboardedMemberID,
+      "PERSONAL_CONSUMPTION",
+      "Ryan Watson Personal",
+      "ryanlukewatson",
+      "USD",
+      1,
+      CXXdenom
+    );
+
+    const rdubsAccountID = rdubsPersonalAccount.accountID;
 
     //create credex foundation
     const credexFoundation = await CreateAccountService(

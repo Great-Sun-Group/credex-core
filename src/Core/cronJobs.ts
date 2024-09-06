@@ -1,4 +1,4 @@
-const cron = require("node-cron");
+import cron from "node-cron";
 import { DailyCredcoinOffering } from "./DCO/DailyCredcoinOffering";
 import { MinuteTransactionQueue } from "./MTQ/MinuteTransactionQueue";
 
