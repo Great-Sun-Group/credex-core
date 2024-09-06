@@ -1,26 +1,28 @@
-/*
-marks a credex as cancelled by changing the relationships
-from OFFERS or REQUESTS to CANCELLED
-
-required inputs:
-  credexID
-
-on success returns credexID
-
-will return false if:
-  credexID not found
-  credex does not have OFFERS or REQUESTS relationships (credex already accepted/declined/cancelled)
-    
-*/
-
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 
-export async function CancelCredexService(credexID: string) {
+/**
+ * CancelCredexService
+ * 
+ * This service handles the cancellation of a Credex offer or request.
+ * It changes the relationships from OFFERS or REQUESTS to CANCELLED.
+ * 
+ * @param credexID - The ID of the Credex to be cancelled
+ * @returns The ID of the cancelled Credex or null if the operation fails
+ * @throws Error if there's an issue with the database operation
+ */
+export async function CancelCredexService(credexID: string): Promise<string | null> {
+  if (!credexID) {
+    console.error("CancelCredexService: credexID is required");
+    return null;
+  }
+
   const ledgerSpaceSession = ledgerSpaceDriver.session();
+
   try {
-    const result = await ledgerSpaceSession.run(
-      `
+    const result = await ledgerSpaceSession.executeWrite(async (tx) => {
+      const query = `
         MATCH (issuer:Account)-[rel1:OFFERS|REQUESTS]->(credex:Credex {credexID: $credexID})-[rel2:OFFERS|REQUESTS]->(acceptor:Account)
+        WHERE credex.queueStatus <> "PROCESSED"
         DELETE rel1, rel2
         CREATE (issuer)-[:CANCELLED]->(credex)-[:CANCELLED]->(acceptor)
         SET
@@ -28,23 +30,26 @@ export async function CancelCredexService(credexID: string) {
           credex.OutstandingAmount = 0,
           credex.queueStatus = "PROCESSED"
         RETURN credex.credexID AS credexID
-      `,
-      { credexID }
-    );
+      `;
 
-    if (result.records.length === 0) {
-      console.log(
-        `No records found or credex no longer pending for credexID: ${credexID}`
-      );
-      return false;
+      const queryResult = await tx.run(query, { credexID });
+
+      if (queryResult.records.length === 0) {
+        console.warn(`No records found or credex no longer pending for credexID: ${credexID}`);
+        return null;
+      }
+
+      return queryResult.records[0].get("credexID") as string;
+    });
+
+    if (result) {
+      console.log(`Credex cancelled successfully: ${result}`);
     }
 
-    const cancelledCredexID = result.records[0].get("credexID");
-    console.log(`Offer declined for credexID: ${cancelledCredexID}`);
-    return cancelledCredexID;
+    return result;
   } catch (error) {
     console.error(`Error cancelling credex for credexID ${credexID}:`, error);
-    throw error; // Optionally rethrow to allow further handling upstream
+    throw new Error(`Failed to cancel Credex: ${(error as Error).message}`);
   } finally {
     await ledgerSpaceSession.close();
   }

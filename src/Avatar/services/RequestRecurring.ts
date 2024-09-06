@@ -1,31 +1,20 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import * as neo4j from "neo4j-driver";
 
-type RecurringParams = {
+interface RecurringParams {
   signerMemberID: string;
   requestorAccountID: string;
   counterpartyAccountID: string;
   InitialAmount: number;
   Denomination: string;
   nextPayDate: string;
-  daysBetweenPays: neo4j.Integer;
+  daysBetweenPays: number;
   securedCredex?: boolean;
-  credspan?: neo4j.Integer;
-  remainingPays?: neo4j.Integer;
-};
+  credspan?: number;
+  remainingPays?: number;
+}
 
-export async function RequestRecurringService(
-  signerMemberID: string,
-  requestorAccountID: string,
-  counterpartyAccountID: string,
-  InitialAmount: number,
-  Denomination: string,
-  nextPayDate: string,
-  daysBetweenPays: number,
-  securedCredex?: boolean,
-  credspan?: number,
-  remainingPays?: number,
-) {
+export async function RequestRecurringService(params: RecurringParams): Promise<string | null> {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -47,15 +36,15 @@ export async function RequestRecurringService(
         recurring.memberTier = 3
     `;
 
-    if (securedCredex !== undefined) {
+    if (params.securedCredex !== undefined) {
       cypher += `SET recurring.securedCredex = $securedCredex `;
     }
 
-    if (credspan !== undefined) {
+    if (params.credspan !== undefined) {
       cypher += `SET recurring.credspan = $credspan `;
     }
 
-    if (remainingPays !== undefined) {
+    if (params.remainingPays !== undefined) {
       cypher += `SET recurring.remainingPays = $remainingPays `;
     }
 
@@ -63,31 +52,25 @@ export async function RequestRecurringService(
       CREATE (requestor)<-[:REQUESTS]-(recurring)<-[:REQUESTS]-(counterparty)
       CREATE (requestor)<-[:REQUESTED]-(recurring)<-[:REQUESTED]-(counterparty)
       CREATE (requestor)<-[:AUTHORIZED_FOR]-(recurring)
-      CREATE (signer)-[:SIGNED]->(recurring)
-      CREATE (recurring)-[:CREATED_ON]->(daynode)
+      CREATE (signer)-[:SIGNED]--(recurring)
+      CREATE (recurring)-[:CREATED_ON]--(daynode)
       RETURN
         recurring.memberID AS avatarID
     `;
 
-    const params: RecurringParams = {
-      signerMemberID,
-      requestorAccountID,
-      counterpartyAccountID,
-      InitialAmount,
-      Denomination,
-      nextPayDate,
-      daysBetweenPays: neo4j.int(daysBetweenPays),
+    const neo4jParams = {
+      ...params,
+      daysBetweenPays: neo4j.int(params.daysBetweenPays),
+      credspan: params.credspan ? neo4j.int(params.credspan) : undefined,
+      remainingPays: params.remainingPays ? neo4j.int(params.remainingPays) : undefined
     };
 
-    if (securedCredex !== undefined) params.securedCredex = securedCredex;
-    if (credspan !== undefined) params.credspan = neo4j.int(credspan);
-    if (remainingPays !== undefined) params.remainingPays = neo4j.int(remainingPays);
+    const createRecurringQuery = await ledgerSpaceSession.run(cypher, neo4jParams);
 
-    const createRecurringQuery = await ledgerSpaceSession.run(cypher, params);
-
-    return createRecurringQuery.records[0].get("avatarID");
+    return createRecurringQuery.records[0]?.get("avatarID") || null;
   } catch (error) {
-    return "Error creating recurring avatar: " + error;
+    console.error("Error creating recurring avatar:", error);
+    return null;
   } finally {
     await ledgerSpaceSession.close();
   }

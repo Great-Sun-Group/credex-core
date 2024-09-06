@@ -28,6 +28,18 @@ The credex ecosystem stores values in credcoin (CXX). In order to natively enabl
 
 The system manages the balance between local truth (preserving the face value of contracts in their specified denomination) and global truth (adjusting all values relative to credcoin) through the daily rate and value adjustments in the DCO. This implementation creates a robust ecosystem that manages accounting processes across any denomination, clears debts automatically, and adjusts values dynamically.
 
+## Recent Improvements
+
+The Credex and Avatar modules have been updated for improved resilience, reliability, and clarity. These updates include:
+
+- Enhanced error handling and input validation in all controllers
+- Standardized parameter passing in services (using object parameters)
+- Improved consistency across different services and controllers
+- Better type checking and TypeScript integration
+- More comprehensive logging for easier debugging and monitoring
+
+These improvements make the system more robust and easier to maintain, while also providing a more consistent developer experience across different parts of the codebase.
+
 ## express.js server
 
 The express.js server is initialized with index.ts, which provides the cronjobs and endpoints that power the ecosystem and enable members and client apps to interact with its ledger.
@@ -166,10 +178,9 @@ This module handles member-related operations in the Credex ecosystem. It expose
 5. **securedCredexAuthForTier** (POST)
    - Function: Authorizes secured credex for a member's tier.
    - Required variables:
-     - memberID: string
-     - tier: number
-     - Amount: number
-     - Denomination: string
+     - issuerAccountID: string
+     - amount: number
+     - denom: string
 
 These endpoints allow for member registration, information retrieval, tier management, and secured credex authorization within the Credex ecosystem. All controllers now include improved input validation, error handling, and logging for better reliability and maintainability.
 
@@ -304,12 +315,12 @@ The Avatar module exposes the following endpoints:
      - counterpartyAccountID: string
      - InitialAmount: number
      - Denomination: string
-     - credexType: string
      - nextPayDate: string
      - daysBetweenPays: number
-     - securedCredex: boolean (optional)
-     - credspan: number (optional)
-     - remainingPays: number (optional)
+   - Optional variables:
+     - securedCredex: boolean
+     - credspan: number
+     - remainingPays: number
    - Requires either securedCredex = true or a credspan between 7 and 35.
    - remainingPays is set when the avatar will run a specific number of times before completion, and not set when the avatar is to continue indefinitely.
 

@@ -1,18 +1,33 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 
-export async function AcceptCredexService(credexID: string, signerID: string) {
-  if (!credexID) {
-    console.log("credexID required");
-    return false;
+interface AcceptCredexResult {
+  acceptedCredexID: string;
+  acceptorAccountID: string;
+  acceptorSignerID: string;
+}
+
+/**
+ * AcceptCredexService
+ * 
+ * This service handles the acceptance of a Credex offer.
+ * It updates the Credex status from OFFERS to OWES and signs the acceptance.
+ * 
+ * @param credexID - The ID of the Credex to be accepted
+ * @param signerID - The ID of the Member or Avatar signing the acceptance
+ * @returns An object with the accepted Credex details or null if the operation fails
+ * @throws Error if there's an issue with the database operation
+ */
+export async function AcceptCredexService(credexID: string, signerID: string): Promise<AcceptCredexResult | null> {
+  if (!credexID || !signerID) {
+    console.error("AcceptCredexService: credexID and signerID are required");
+    return null;
   }
-  if (!signerID) {
-    console.log("signerID required");
-    return false;
-  }
+
   const ledgerSpaceSession = ledgerSpaceDriver.session();
+
   try {
-    const result = await ledgerSpaceSession.run(
-      `
+    const result = await ledgerSpaceSession.executeWrite(async (tx) => {
+      const query = `
         MATCH
           (issuer:Account)-[rel1:OFFERS]->
           (acceptedCredex:Credex {credexID: $credexID})-[rel2:OFFERS]->
@@ -26,32 +41,32 @@ export async function AcceptCredexService(credexID: string, signerID: string) {
           acceptedCredex.credexID AS credexID,
           acceptor.accountID AS acceptorAccountID,
           signer.memberID AS signerID
-      `,
-      { credexID, signerID }
-    );
+      `;
 
-    if (result.records.length === 0) {
-      console.log(
-        `No records found or credex no longer pending for credexID: ${credexID}`
-      );
-      return false;
+      const queryResult = await tx.run(query, { credexID, signerID });
+
+      if (queryResult.records.length === 0) {
+        console.warn(`No records found or credex no longer pending for credexID: ${credexID}`);
+        return null;
+      }
+
+      const record = queryResult.records[0];
+      return {
+        acceptedCredexID: record.get('credexID'),
+        acceptorAccountID: record.get('acceptorAccountID'),
+        acceptorSignerID: record.get('signerID')
+      };
+    });
+
+    if (result) {
+      console.log(`Offer accepted for credexID: ${result.acceptedCredexID}`);
+      // TODO: Implement credex accepted notification here
     }
 
-    //hit credex accepted notification endpoint
-
-    const acceptedCredexID = result.records[0].get("credexID");
-    const acceptorAccountID = result.records[0].get("acceptorAccountID");
-    const acceptorSignerID = result.records[0].get("signerID");
-
-    console.log(`Offer accepted for credexID: ${acceptedCredexID}`);
-    return {
-      acceptedCredexID: acceptedCredexID,
-      acceptorAccountID: acceptorAccountID,
-      acceptorSignerID: acceptorSignerID,
-    };
+    return result;
   } catch (error) {
     console.error(`Error accepting credex for credexID ${credexID}:`, error);
-    throw error; // Optionally rethrow to allow further handling upstream
+    throw new Error(`Failed to accept Credex: ${(error as Error).message}`);
   } finally {
     await ledgerSpaceSession.close();
   }
