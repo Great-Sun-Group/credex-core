@@ -26,7 +26,7 @@ export default async function GetAccount(accountHandle: string, accountID: strin
   const query =
   `MATCH (account:Account {${accountMatchCondition}})<-[:OWNS]-(member:Member)
     WITH account, member
-    MATCH (account)-[:OWES]->(owedCredex)-[:OWES]->(owedAccount)
+    OPTIONAL MATCH (account)-[:OWES]->(owedCredex)-[:OWES]->(owedAccount)
     WITH member, account, COLLECT(owedCredex.credexID) AS owedCredexes, COLLECT(owedAccount.accountID) AS owedAccounts
     RETURN
       member.memberID AS accountOwnerID,
@@ -62,6 +62,12 @@ export default async function GetAccount(accountHandle: string, accountID: strin
       owedAccounts: record.get("owedAccounts")
     }
   })
+
+  if(!account.length) {
+    return {
+      message: 'Account not found'
+    }
+  }
 
   return {
     message: 'Account fetched successfully',

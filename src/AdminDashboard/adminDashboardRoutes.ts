@@ -25,7 +25,7 @@ export default function AdminDashboardRoutes(app: express.Application, jsonParse
   );
 
   
-  app.put(`${apiVersionOneRoute}updateMemberTier`,
+  app.patch(`${apiVersionOneRoute}updateMemberTier`,
     jsonParser,    
     updateMemberTier
   );

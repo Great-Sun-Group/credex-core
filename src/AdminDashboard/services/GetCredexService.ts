@@ -68,6 +68,12 @@ export default async function GetCredexService(credexID: string): Promise<any> {
       }
     }); 
 
+    if(!credex.length) {
+      return {
+        message: 'Credex not found'
+      }
+    }
+
     return {
       message: 'Credex retrieved successfully',
       data: {

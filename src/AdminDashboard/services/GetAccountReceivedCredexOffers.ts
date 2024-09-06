@@ -53,6 +53,12 @@ export default async function GetAccountReceivedCredexOffers( accountHandle?: st
       sendingAccountHandle: record.get("sendingAccountHandle")
     }));
 
+    if(!accountReceivedCredexOffers.length) {
+      return {
+        message: 'Account received credex offers not found'
+      }
+    }
+
     return {
       message: 'Account received credex offers fetched successfully',
       data: {

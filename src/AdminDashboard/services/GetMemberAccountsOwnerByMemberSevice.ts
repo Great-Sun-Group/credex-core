@@ -41,6 +41,12 @@ export default async function GetMemberAccountsOwnerByMemberSevice(memberID:stri
         updatedAt: record.get("updatedAt")
       }
     })
+
+    if(!accountsOwnedByMember.length) {
+      return {
+        message: 'Accounts owned by member not found'
+      }
+    }
   
     return {
       message:'Accounts owned by member fetched successfully',
