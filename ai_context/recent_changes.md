@@ -3,8 +3,8 @@
 ```
 #!/bin/bash
 
-# Run the update_combined_code.sh script
-./update_combined_code.sh
+# Run the update_ai_context.sh script
+./update_ai_context.sh
 
 # Add the updated AI context files
 git add ai_context
@@ -30,7 +30,7 @@ if [[ "$(git log -1 --pretty=%B)" == "Update AI context" ]]; then
 fi
 
 # Run the update script and capture any errors
-if ! ./update_combined_code.sh >> "$LOG_FILE" 2>&1; then
+if ! ./update_ai_context.sh >> "$LOG_FILE" 2>&1; then
     echo "Error: Failed to update AI context" >> "$LOG_FILE"
     exit 1
 fi
@@ -68,8 +68,8 @@ set +x```
 ```
 #!/bin/bash
 
-# Run the update_combined_code.sh script
-./update_combined_code.sh
+# Run the update_ai_context.sh script
+./update_ai_context.sh
 
 # Add the updated AI context files
 git add ai_context
@@ -4551,11 +4551,11 @@ const server = http_1.default.createServer(exports.app);
 ```
 # Git Context
 ## Recent Commits
+712ed54 Update AI context
 667a8c7 update combined
 835afd8 still on update combined code
 540dab9 combined code fix again
 cc4ea4c Final test commit
-e0f7e9a test
 
 ## Recent File Changes
 M	.githooks/post-checkout

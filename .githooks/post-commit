@@ -14,7 +14,7 @@ if [[ "$(git log -1 --pretty=%B)" == "Update AI context" ]]; then
 fi
 
 # Run the update script and capture any errors
-if ! ./update_combined_code.sh >> "$LOG_FILE" 2>&1; then
+if ! ./update_ai_context.sh >> "$LOG_FILE" 2>&1; then
     echo "Error: Failed to update AI context" >> "$LOG_FILE"
     exit 1
 fi
