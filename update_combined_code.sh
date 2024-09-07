@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the output file
-output_file="src/tests/combined_src_code.txt"
+output_file="combined_code.txt"
 
 # Get the current branch name
 current_branch=$(git rev-parse --abbrev-ref HEAD)
@@ -14,9 +14,9 @@ echo "Current Branch: $current_branch" >> "$output_file"
 echo "----------------------------------------" >> "$output_file"
 
 # Find all files with extensions .ts, .js, .json, .yaml, .yml, .md, and .sh
-# Limit the search to the src directory
+# Include the specified directories: src, middleware, config, build, .devcontainer, .githooks, .github
 # Exclude node_modules directory and .git directory
-find src -type f \( -name "*.ts" -o -name "*.js" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" -o -name "*.md" -o -name "*.sh" \) -not -path "*/node_modules/*" -not -path "*/.git/*" | while read -r file; do
+find src middleware config build .devcontainer .githooks .github -type f \( -name "*.ts" -o -name "*.js" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" -o -name "*.md" -o -name "*.sh" \) -not -path "*/node_modules/*" -not -path "*/.git/*" | while read -r file; do
     echo "File: $file" >> "$output_file"
     echo "----------------------------------------" >> "$output_file"
     cat "$file" >> "$output_file"

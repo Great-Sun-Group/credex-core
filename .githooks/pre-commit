@@ -1,6 +1,6 @@
 #!/bin/bash
 
-/workspaces/credex-core/src/tests/update_combined_code.sh
+/workspaces/credex-core/update_combined_code.sh
 
 # Add the updated combined code file to the commit
 git add src/tests/combined_code.txt

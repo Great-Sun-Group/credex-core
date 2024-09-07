@@ -1,6 +1,6 @@
 #!/bin/bash
 
-/workspaces/credex-core/src/tests/update_combined_code.sh
+/workspaces/credex-core/update_combined_code.sh
 
 # Check if there are changes to combined_code.txt
 if git diff --exit-code src/tests/combined_code.txt; then
