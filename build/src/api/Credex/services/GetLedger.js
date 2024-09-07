@@ -48,7 +48,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetLedgerService = GetLedgerService;
 const neo4j = __importStar(require("neo4j-driver"));
 const neo4j_1 = require("../../../../config/neo4j");
-const denominations_1 = require("../../../constants/denominations");
+const denomUtils_1 = require("../../../utils/denomUtils");
 async function GetLedgerService(accountID, numRows = 10, startRow = 0) {
     numRows = Math.round(Number(numRows));
     startRow = Math.round(Number(startRow));
@@ -86,7 +86,7 @@ async function GetLedgerService(accountID, numRows = 10, startRow = 0) {
                 : record.get("InitialAmount");
             const Denomination = record.get("Denomination");
             const counterpartyAccountName = record.get("counterpartyAccountName");
-            const formattedInitialAmount = (0, denominations_1.denomFormatter)(InitialAmount, Denomination) + " " + Denomination;
+            const formattedInitialAmount = (0, denomUtils_1.denomFormatter)(InitialAmount, Denomination) + " " + Denomination;
             return {
                 credexID,
                 formattedInitialAmount,

@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetPendingOffersInService = GetPendingOffersInService;
 const neo4j_1 = require("../../../../config/neo4j");
-const denominations_1 = require("../../../constants/denominations");
+const denomUtils_1 = require("../../../utils/denomUtils");
 const moment_timezone_1 = __importDefault(require("moment-timezone"));
 async function GetPendingOffersInService(accountID) {
     try {
@@ -29,7 +29,7 @@ async function GetPendingOffersInService(accountID) {
         }
         const offeredCredexData = [];
         for (const record of result.records) {
-            const formattedInitialAmount = (0, denominations_1.denomFormatter)(record.get("InitialAmount"), record.get("Denomination")) +
+            const formattedInitialAmount = (0, denomUtils_1.denomFormatter)(record.get("InitialAmount"), record.get("Denomination")) +
                 " " +
                 record.get("Denomination");
             const thisOfferedCredex = {

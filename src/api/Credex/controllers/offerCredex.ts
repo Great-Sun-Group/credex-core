@@ -1,7 +1,7 @@
 import express from "express";
 import { OfferCredexService } from "../services/OfferCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
-import { getDenominations, denomFormatter } from "../../../constants/denominations";
+import { getDenominations } from "../../../constants/denominations";
 import { checkDueDate, credspan } from "../../../constants/credspan";
 import { checkPermittedCredexType } from "../../../constants/credexTypes";
 import { SecuredCredexAuthForTierController } from "../../Member/controllers/securedCredexAuthForTier";

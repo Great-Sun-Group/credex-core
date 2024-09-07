@@ -1,3 +1,24 @@
+Recommended functions to move to a shared src/utils folder:
 
-5. Group common utilities:
-   - Create a 'utils' folder inside 'src' for common utility functions
+2. Date Handling Functions:
+   Create src/utils/dateUtils.ts with common date operations used in DCO and MTQ files.
+
+3. Validation Functions:
+   Create src/utils/validationUtils.ts, including functions like `validateInput` from src/api/Member/controllers/onboardMember.ts.
+
+4. Error Handling:
+   Move `isNeo4jError` to src/utils/errorUtils.ts.
+
+5. Logging Wrapper:
+   Create src/utils/logger.ts with standardized logging functions.
+
+6. HTTP Request Helper:
+   Create src/utils/httpUtils.ts for handling axios requests like those in src/core-cron/DCO/fetchZigRate.ts and src/core-cron/DCO/DCOexecute.ts.
+
+7. Config Loading:
+   Create src/utils/configUtils.ts for centralized configuration loading.
+
+8. Type Guards:
+   Include type guard functions like `isNeo4jError` in src/utils/typeGuards.ts.
+
+These changes will improve code reusability, reduce duplication, and make it easier to maintain and update common functionalities across the application.

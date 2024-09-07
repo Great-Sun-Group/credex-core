@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetMemberDashboardByPhoneService = GetMemberDashboardByPhoneService;
 const neo4j_1 = require("../../../../config/neo4j");
-const denominations_1 = require("../../../constants/denominations");
+const denomUtils_1 = require("../../../utils/denomUtils");
 async function GetMemberDashboardByPhoneService(phone) {
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     try {
@@ -34,10 +34,10 @@ async function GetMemberDashboardByPhoneService(phone) {
         console.log(totalIssuedTodayUSD);
         let remainingAvailableUSD = Infinity;
         if (memberTier == 1) {
-            remainingAvailableUSD = parseFloat((0, denominations_1.denomFormatter)(10 - totalIssuedTodayUSD, "USD"));
+            remainingAvailableUSD = parseFloat((0, denomUtils_1.denomFormatter)(10 - totalIssuedTodayUSD, "USD"));
         }
         if (memberTier == 2) {
-            remainingAvailableUSD = parseFloat((0, denominations_1.denomFormatter)(100 - totalIssuedTodayUSD, "USD"));
+            remainingAvailableUSD = parseFloat((0, denomUtils_1.denomFormatter)(100 - totalIssuedTodayUSD, "USD"));
         }
         return {
             memberID: result.records[0].get("memberID"),

@@ -23,7 +23,7 @@ returns empty array if accountID not valid
 
 import * as neo4j from "neo4j-driver";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { denomFormatter } from "../../../constants/denominations";
+import { denomFormatter } from "../../../utils/denomUtils";
 
 export async function GetLedgerService(
   accountID: string,

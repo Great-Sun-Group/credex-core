@@ -1,5 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { denomFormatter } from "../../../constants/denominations";
+import { denomFormatter } from "../../../utils/denomUtils";
 import moment from "moment-timezone";
 
 export async function GetCredexService(credexID: string, accountID: string) {

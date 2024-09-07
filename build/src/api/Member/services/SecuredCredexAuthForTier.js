@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SecuredCredexAuthForTier = SecuredCredexAuthForTier;
 const neo4j_1 = require("../../../../config/neo4j");
-const denominations_1 = require("../../../constants/denominations");
+const denomUtils_1 = require("../../../utils/denomUtils");
 async function SecuredCredexAuthForTier(issuerAccountID, amount, denom) {
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     try {
@@ -58,7 +58,7 @@ async function SecuredCredexAuthForTier(issuerAccountID, amount, denom) {
         }
         else {
             return ("You are only able to issue " +
-                (0, denominations_1.denomFormatter)(amountAvailableUSD, "USD") +
+                (0, denomUtils_1.denomFormatter)(amountAvailableUSD, "USD") +
                 " USD until tomorrow. Limits renew at midnight UTC.");
         }
     }

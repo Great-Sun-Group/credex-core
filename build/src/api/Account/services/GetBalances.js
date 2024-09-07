@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetBalancesService = GetBalancesService;
 const neo4j_1 = require("../../../../config/neo4j");
-const denominations_1 = require("../../../constants/denominations");
+const denomUtils_1 = require("../../../utils/denomUtils");
 async function GetBalancesService(accountID) {
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     try {
@@ -42,7 +42,7 @@ async function GetBalancesService(accountID) {
             .map((record) => {
             const denom = record.get("denom");
             const amount = record.get("netSecured");
-            return `${(0, denominations_1.denomFormatter)(amount, denom)} ${denom}`;
+            return `${(0, denomUtils_1.denomFormatter)(amount, denom)} ${denom}`;
         });
         const getUnsecuredBalancesAndTotalAssetsQuery = await ledgerSpaceSession.run(`
         MATCH (account:Account{accountID:$accountID})
@@ -80,14 +80,14 @@ async function GetBalancesService(accountID) {
         const unsecuredBalancesAndTotalAssets = getUnsecuredBalancesAndTotalAssetsQuery.records[0];
         const defaultDenom = unsecuredBalancesAndTotalAssets.get("defaultDenom");
         const unsecuredBalancesInDefaultDenom = {
-            totalPayables: `${(0, denominations_1.denomFormatter)(unsecuredBalancesAndTotalAssets.get("payablesTotalInDefaultDenom"), defaultDenom)} ${defaultDenom}`,
-            totalReceivables: `${(0, denominations_1.denomFormatter)(unsecuredBalancesAndTotalAssets.get("receivablesTotalInDefaultDenom"), defaultDenom)} ${defaultDenom}`,
-            netPayRec: `${(0, denominations_1.denomFormatter)(unsecuredBalancesAndTotalAssets.get("unsecuredNetInDefaultDenom"), defaultDenom)} ${defaultDenom}`,
+            totalPayables: `${(0, denomUtils_1.denomFormatter)(unsecuredBalancesAndTotalAssets.get("payablesTotalInDefaultDenom"), defaultDenom)} ${defaultDenom}`,
+            totalReceivables: `${(0, denomUtils_1.denomFormatter)(unsecuredBalancesAndTotalAssets.get("receivablesTotalInDefaultDenom"), defaultDenom)} ${defaultDenom}`,
+            netPayRec: `${(0, denomUtils_1.denomFormatter)(unsecuredBalancesAndTotalAssets.get("unsecuredNetInDefaultDenom"), defaultDenom)} ${defaultDenom}`,
         };
         return {
             securedNetBalancesByDenom,
             unsecuredBalancesInDefaultDenom,
-            netCredexAssetsInDefaultDenom: `${(0, denominations_1.denomFormatter)(unsecuredBalancesAndTotalAssets.get("netCredexAssetsInDefaultDenom"), defaultDenom)} ${defaultDenom}`,
+            netCredexAssetsInDefaultDenom: `${(0, denomUtils_1.denomFormatter)(unsecuredBalancesAndTotalAssets.get("netCredexAssetsInDefaultDenom"), defaultDenom)} ${defaultDenom}`,
         };
     }
     catch (error) {

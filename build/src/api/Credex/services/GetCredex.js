@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetCredexService = GetCredexService;
 const neo4j_1 = require("../../../../config/neo4j");
-const denominations_1 = require("../../../constants/denominations");
+const denomUtils_1 = require("../../../utils/denomUtils");
 const moment_timezone_1 = __importDefault(require("moment-timezone"));
 async function GetCredexService(credexID, accountID) {
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
@@ -62,7 +62,7 @@ async function GetCredexService(credexID, accountID) {
         });
         const Denomination = record.get("Denomination");
         const formattedAmounts = Object.entries(amounts).reduce((acc, [key, value]) => {
-            acc[`formatted${key}`] = `${(0, denominations_1.denomFormatter)(value, Denomination)} ${Denomination}`;
+            acc[`formatted${key}`] = `${(0, denomUtils_1.denomFormatter)(value, Denomination)} ${Denomination}`;
             return acc;
         }, {});
         const acceptedAt = (0, moment_timezone_1.default)(record.get("acceptedAt"))
@@ -104,8 +104,8 @@ async function GetCredexService(credexID, accountID) {
             const clearedAgainstCounterpartyAccountName = record.get("clearedAgainstCounterpartyAccountName");
             return {
                 clearedAgainstCredexID: record.get("clearedAgainstCredexID"),
-                formattedClearedAmount: `${(0, denominations_1.denomFormatter)(clearedAmount, clearedAgainstCredexDenomination)} ${clearedAgainstCredexDenomination}`,
-                formattedClearedAgainstCredexInitialAmount: `${(0, denominations_1.denomFormatter)(signumClearedAgainstCredexInitialAmount, clearedAgainstCredexDenomination)} ${clearedAgainstCredexDenomination}`,
+                formattedClearedAmount: `${(0, denomUtils_1.denomFormatter)(clearedAmount, clearedAgainstCredexDenomination)} ${clearedAgainstCredexDenomination}`,
+                formattedClearedAgainstCredexInitialAmount: `${(0, denomUtils_1.denomFormatter)(signumClearedAgainstCredexInitialAmount, clearedAgainstCredexDenomination)} ${clearedAgainstCredexDenomination}`,
                 clearedAgainstCounterpartyAccountName,
             };
         });

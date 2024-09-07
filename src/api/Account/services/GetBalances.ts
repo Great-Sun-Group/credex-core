@@ -1,5 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { denomFormatter } from "../../../constants/denominations";
+import { denomFormatter } from "../../../utils/denomUtils";
 
 export async function GetBalancesService(accountID: string) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();

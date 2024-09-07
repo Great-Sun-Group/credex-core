@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateCredexService = CreateCredexService;
 const neo4j_1 = require("../../../../config/neo4j");
-const denominations_1 = require("../../../constants/denominations");
+const denomUtils_1 = require("../../../utils/denomUtils");
 const GetSecuredAuthorization_1 = require("./GetSecuredAuthorization");
 async function CreateCredexService(credexData) {
     const { issuerAccountID, receiverAccountID, InitialAmount, Denomination, credexType, OFFERSorREQUESTS, securedCredex = false, dueDate = "", } = credexData;
@@ -16,7 +16,7 @@ async function CreateCredexService(credexData) {
             if (secureableData.securableAmountInDenom < InitialAmount) {
                 return {
                     credex: false,
-                    message: `Error: Your secured credex for ${(0, denominations_1.denomFormatter)(InitialAmount, Denomination)} ${Denomination} cannot be issued because your maximum securable ${Denomination} balance is ${(0, denominations_1.denomFormatter)(secureableData.securableAmountInDenom, Denomination)} ${Denomination}`,
+                    message: `Error: Your secured credex for ${(0, denomUtils_1.denomFormatter)(InitialAmount, Denomination)} ${Denomination} cannot be issued because your maximum securable ${Denomination} balance is ${(0, denomUtils_1.denomFormatter)(secureableData.securableAmountInDenom, Denomination)} ${Denomination}`,
                 };
             }
         }
@@ -79,7 +79,7 @@ async function CreateCredexService(credexData) {
         }
         const newCredex = {
             credexID: createCredexQuery.records[0].get("credexID"),
-            formattedInitialAmount: (0, denominations_1.denomFormatter)(InitialAmount, Denomination),
+            formattedInitialAmount: (0, denomUtils_1.denomFormatter)(InitialAmount, Denomination),
             counterpartyAccountName: createCredexQuery.records[0].get("receiverAccountName"),
             secured: securedCredex,
             dueDate: dueDate,

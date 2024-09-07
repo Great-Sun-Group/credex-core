@@ -83,53 +83,6 @@ export function getDenominations(
 }
 
 /**
- * Formats a numerical amount according to the specified denomination.
- * @param amount - The numerical amount to format.
- * @param code - The denomination code.
- * @returns A formatted string representation of the amount.
- */
-export const denomFormatter = (amount: number, code: string): string => {
-  // Ensure amount is a finite number
-  if (!isFinite(amount)) {
-    amount = 0;
-  }
-
-  /**
-   * Formats a currency amount with the specified precision and regionalization.
-   * @param amount - The amount to format.
-   * @param precision - The number of decimal places to round to.
-   * @param regionalization - The locale string for number formatting.
-   * @returns A formatted string representation of the amount.
-   */
-  const formatCurrencyAmount = (
-    amount: number,
-    precision: number,
-    regionalization: string
-  ): string => {
-    const roundedAmount = Number(amount.toFixed(precision));
-    return new Intl.NumberFormat(regionalization).format(roundedAmount);
-  };
-
-  const denomData = getDenominations({ code }) as Denomination[];
-  const regionalization =
-    denomData.length > 0 ? denomData[0].regionalization : "en-US";
-
-  let formattedAmount: string;
-  switch (code) {
-    case "CXX":
-      formattedAmount = formatCurrencyAmount(amount, 3, regionalization);
-      break;
-    case "XAU":
-      formattedAmount = formatCurrencyAmount(amount, 4, regionalization);
-      break;
-    default:
-      formattedAmount = formatCurrencyAmount(amount, 2, regionalization);
-  }
-
-  return formattedAmount;
-};
-
-/**
  * Retrieves the full description of a denomination by its code.
  * @param code - The denomination code.
  * @returns The full description of the denomination, or undefined if not found.
