@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the output file
-output_file="combined_code.txt"
+output_file="src/tests/combined_code.txt"
 
 # Get the current branch name
 current_branch=$(git rev-parse --abbrev-ref HEAD)

@@ -1,14 +1,7 @@
-3. Organize source code:
-   Inside the 'src' folder:
-   a. Create an 'api' folder to group all API-related code
-   b. Move Account, Avatar, Credex, DevAdmin, and Member folders into the 'api' folder
-   c. Keep the Core folder outside of the 'api' folder
 
 5. Group common utilities:
    - Create a 'utils' folder inside 'src' for common utility functions
 
-6. Separate test files:
-   - Create a 'tests' folder at the root level, mirroring the 'src' folder structure
 
 Proposed New Structure:
 
