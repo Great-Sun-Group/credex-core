@@ -1,4 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import { isNeo4jError } from "../../../utils/errorUtils";
 
 export async function CreateAccountService(
   ownerID: string,
@@ -106,16 +107,4 @@ export async function CreateAccountService(
   } finally {
     await ledgerSpaceSession.close();
   }
-}
-
-// Type guard to check if an error is a Neo4j error
-function isNeo4jError(
-  error: unknown
-): error is { code: string; message: string } {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    "message" in error
-  );
 }

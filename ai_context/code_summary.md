@@ -39,6 +39,12 @@ export const denomFormatter = (amount: number, code: string): string => {
     // For now, we'll just return a mock implementation
 ```
 
+## src/utils/errorUtils.ts
+```
+export function isNeo4jError(
+// Type guard to check if an error is a Neo4j error
+```
+
 ## src/index.ts
 ```
 export const app = express();
@@ -578,9 +584,7 @@ export async function AuthorizeForAccountService(
 ## src/api/Account/services/CreateAccount.ts
 ```
 export async function CreateAccountService(
-function isNeo4jError(
   //check that account creation is permitted on membership tier
-// Type guard to check if an error is a Neo4j error
 ```
 
 ## src/api/Avatar/controllers/acceptRecurring.ts
@@ -1247,10 +1251,8 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
 ## src/api/Member/services/OnboardMember.ts
 ```
 export async function OnboardMemberService(
-function isNeo4jError(
     // Validation: Check defaultDenom in denominations
     // Type guard to narrow the type of error
-// Type guard to check if an error is a Neo4j error
 ```
 
 ## src/api/Member/memberRoutes.ts

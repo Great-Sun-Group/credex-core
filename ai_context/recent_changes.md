@@ -1,82 +1,4 @@
 # Recent Changes
-## .githooks/post-checkout
-```
-#!/bin/bash
-
-# Run the update_ai_context.sh script
-./update_ai_context.sh
-
-# Add the updated AI context files
-git add ai_context
-
-# Exit with a success status
-exit 0```
-
-## .githooks/post-commit
-```
-#!/bin/bash
-
-# Enable debugging
-set -x
-
-LOG_FILE="post-commit.log"
-
-echo "Running post-commit hook" >> "$LOG_FILE"
-
-# Check if this is an AI context update commit
-if [[ "$(git log -1 --pretty=%B)" == "Update AI context" ]]; then
-    echo "Skipping AI context update for AI context commit" >> "$LOG_FILE"
-    exit 0
-fi
-
-# Run the update script and capture any errors
-if ! ./update_ai_context.sh >> "$LOG_FILE" 2>&1; then
-    echo "Error: Failed to update AI context" >> "$LOG_FILE"
-    exit 1
-fi
-
-echo "AI context updated after commit" >> "$LOG_FILE"
-
-# Check if there are changes to ai_context directory
-if git status --porcelain ai_context | grep -q '^??'; then
-    echo "New files detected in AI context" >> "$LOG_FILE"
-    git add ai_context
-elif git diff --quiet ai_context; then
-    echo "No changes to AI context" >> "$LOG_FILE"
-else
-    echo "Changes detected in AI context" >> "$LOG_FILE"
-    git add ai_context
-fi
-
-if git diff --staged --quiet; then
-    echo "No staged changes for AI context" >> "$LOG_FILE"
-else
-    echo "Committing AI context changes" >> "$LOG_FILE"
-    if ! git commit -m "Update AI context" --no-verify >> "$LOG_FILE" 2>&1; then
-        echo "Failed to commit AI context changes" >> "$LOG_FILE"
-        exit 1
-    fi
-    echo "AI context committed after main commit" >> "$LOG_FILE"
-fi
-
-echo "Post-commit hook completed" >> "$LOG_FILE"
-
-# Disable debugging
-set +x```
-
-## .githooks/pre-commit
-```
-#!/bin/bash
-
-# Run the update_ai_context.sh script
-./update_ai_context.sh
-
-# Add the updated AI context files
-git add ai_context
-
-# Exit with a success status
-exit 0```
-
 ## ai_context/code_summary.md
 ```
 # Code Summary
@@ -118,6 +40,12 @@ export const denomFormatter = (amount: number, code: string): string => {
    */
     // This function needs to be imported from denominations.ts
     // For now, we'll just return a mock implementation
+```
+
+## src/utils/errorUtils.ts
+```
+export function isNeo4jError(
+// Type guard to check if an error is a Neo4j error
 ```
 
 ## src/index.ts
@@ -659,9 +587,7 @@ export async function AuthorizeForAccountService(
 ## src/api/Account/services/CreateAccount.ts
 ```
 export async function CreateAccountService(
-function isNeo4jError(
   //check that account creation is permitted on membership tier
-// Type guard to check if an error is a Neo4j error
 ```
 
 ## src/api/Avatar/controllers/acceptRecurring.ts
@@ -1328,10 +1254,8 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
 ## src/api/Member/services/OnboardMember.ts
 ```
 export async function OnboardMemberService(
-function isNeo4jError(
     // Validation: Check defaultDenom in denominations
     // Type guard to narrow the type of error
-// Type guard to check if an error is a Neo4j error
 ```
 
 ## src/api/Member/memberRoutes.ts
@@ -4559,16 +4483,13 @@ const server = http_1.default.createServer(exports.app);
 ```
 # Git Context
 ## Recent Commits
+8877c65 Update AI context
 4666e29 final validation stuff
 9d7d985 Update AI context
 7d44e6a validation
 e786ef8 Update AI context
-3af3290 ai context
 
 ## Recent File Changes
-M	.githooks/post-checkout
-M	.githooks/post-commit
-M	.githooks/pre-commit
 M	ai_context/code_summary.md
 M	ai_context/git_context.md
 M	ai_context/recent_changes.md
@@ -4585,6 +4506,164 @@ M	src/api/Member/controllers/onboardMember.ts
 M	src/api/Member/controllers/updateMemberTier.ts
 M	src/core-cron/DCO/DCOexecute.ts
 M	src/utils/validators.ts
-R100	update_combined_code.sh	update_ai_context.sh
+```
+
+## ai_context/recent_changes.md
+```
+```
+
+## src/api/Account/controllers/createAccount.ts
+```
+import express from "express";
+import { CreateAccountService } from "../services/CreateAccount";
+import { checkPermittedAccountType } from "../../../constants/accountTypes";
+import logger from "../../../../config/logger";
+import {
+  validateUUID,
+  validateAccountName,
+  validateAccountHandle,
+  validateDenomination,
+  validateAmount
+} from "../../../utils/validators";
+
+export async function CreateAccountController(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): Promise<void> {
+  const { ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX, DCOdenom } = req.body;
+
+  try {
+    // Validate input
+    if (!validateUUID(ownerID)) {
+      res.status(400).json({ message: "Invalid ownerID" });
+      return;
+    }
+    if (!checkPermittedAccountType(accountType)) {
+      res.status(400).json({ message: "Invalid accountType" });
+      return;
+    }
+    if (!validateAccountName(accountName)) {
+      res.status(400).json({ message: "Invalid accountName" });
+      return;
+    }
+    if (!validateAccountHandle(accountHandle)) {
+      res.status(400).json({ message: "Invalid accountHandle" });
+      return;
+    }
+    if (!validateDenomination(defaultDenom)) {
+      res.status(400).json({ message: "Invalid defaultDenom" });
+      return;
+    }
+    if (DCOdenom && !validateDenomination(DCOdenom)) {
+      res.status(400).json({ message: "Invalid DCOdenom" });
+      return;
+    }
+    if (DCOgiveInCXX && !validateAmount(DCOgiveInCXX)) {
+      res.status(400).json({ message: "Invalid DCOgiveInCXX" });
+      return;
+    }
+
+    logger.info("Creating new account", {
+      ownerID,
+      accountType,
+      accountName,
+      accountHandle,
+      defaultDenom,
+      DCOdenom,
+    });
+
+    const newAccount = await CreateAccountService(
+      ownerID,
+      accountType,
+      accountName,
+      accountHandle,
+      defaultDenom,
+      DCOgiveInCXX,
+      DCOdenom
+    );
+
+    if (newAccount.accountID) {
+      logger.info("Account created successfully", { accountID: newAccount.accountID });
+      res.status(201).json({ accountID: newAccount.accountID, message: "Account created successfully" });
+    } else {
+      res.status(400).json({ message: newAccount.message || "Failed to create account" });
+    }
+  } catch (error) {
+    logger.error("Error in CreateAccountController", { error });
+    next(error);
+  }
+}
+```
+
+## src/api/Account/controllers/unauthorizeForAccount.ts
+```
+import express from "express";
+import { UnauthorizeForCompanyService } from "../services/UnauthorizeForAccount";
+import logger from "../../../../config/logger";
+import { validateUUID } from "../../../utils/validators";
+
+/**
+ * Controller for unauthorizing a member for an account
+ * @param req - Express request object
+ * @param res - Express response object
+ * @param next - Express next function
+ */
+export async function UnauthorizeForAccountController(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) {
+  const requiredFields = ["memberIDtoBeUnauthorized", "accountID", "ownerID"];
+
+  try {
+    for (const field of requiredFields) {
+      if (!req.body[field]) {
+        res.status(400).json({ message: `${field} is required` });
+        return;
+      }
+    }
+
+    const { memberIDtoBeUnauthorized, accountID, ownerID } = req.body;
+
+    // Validate memberIDtoBeUnauthorized
+    if (!validateUUID(memberIDtoBeUnauthorized)) {
+      res.status(400).json({ message: "Invalid memberIDtoBeUnauthorized. Must be a valid UUID." });
+      return;
+    }
+
+    // Validate accountID
+    if (!validateUUID(accountID)) {
+      res.status(400).json({ message: "Invalid accountID. Must be a valid UUID." });
+      return;
+    }
+
+    // Validate ownerID
+    if (!validateUUID(ownerID)) {
+      res.status(400).json({ message: "Invalid ownerID. Must be a valid UUID." });
+      return;
+    }
+
+    logger.info("Unauthorizing member for account", { memberIDtoBeUnauthorized, accountID, ownerID });
+
+    const responseData = await UnauthorizeForCompanyService(
+      memberIDtoBeUnauthorized,
+      accountID,
+      ownerID
+    );
+
+    if (!responseData) {
+      logger.warn("Failed to unauthorize member for account", { memberIDtoBeUnauthorized, accountID, ownerID });
+      res.status(400).json({ message: "Failed to unauthorize member for the account" });
+      return;
+    }
+
+    logger.info("Member unauthorized for account successfully", { memberIDtoBeUnauthorized, accountID, ownerID });
+    res.status(200).json(responseData);
+  } catch (error) {
+    logger.error("Error in UnauthorizeForAccountController", { error, memberIDtoBeUnauthorized: req.body.memberIDtoBeUnauthorized, accountID: req.body.accountID, ownerID: req.body.ownerID });
+    next(error);
+  }
+}
 ```
 

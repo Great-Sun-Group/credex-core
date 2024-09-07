@@ -1,5 +1,6 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { getDenominations } from "../../../constants/denominations";
+import { isNeo4jError } from "../../../utils/errorUtils";
 
 export async function OnboardMemberService(
   firstname: string,
@@ -89,16 +90,4 @@ export async function OnboardMemberService(
   } finally {
     await ledgerSpaceSession.close();
   }
-}
-
-// Type guard to check if an error is a Neo4j error
-function isNeo4jError(
-  error: unknown
-): error is { code: string; message: string } {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    "message" in error
-  );
 }

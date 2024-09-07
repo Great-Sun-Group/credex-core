@@ -1,11 +1,3 @@
-Recommended functions to move to a shared src/utils folder:
-
-3. Validation Functions:
-   Create src/utils/validationUtils.ts, including functions like `validateInput` from src/api/Member/controllers/onboardMember.ts.
-
-4. Error Handling:
-   Move `isNeo4jError` to src/utils/errorUtils.ts.
-
 5. Logging Wrapper:
    Create src/utils/logger.ts with standardized logging functions.
 
