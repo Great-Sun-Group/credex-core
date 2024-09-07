@@ -33,11 +33,11 @@ const http_1 = __importDefault(require("http"));
 const memberRoutes_1 = __importDefault(require("./api/Member/memberRoutes"));
 const accountRoutes_1 = __importDefault(require("./api/Account/accountRoutes"));
 const credexRoutes_1 = __importDefault(require("./api/Credex/credexRoutes"));
-const devAdminRoutes_1 = __importDefault(require("./DevAdmin/devAdminRoutes"));
+const testRoutes_1 = __importDefault(require("./tests/testRoutes"));
 const recurringRoutes_1 = __importDefault(require("./api/Avatar/recurringRoutes"));
 const logger_1 = __importStar(require("../config/logger"));
 const body_parser_1 = __importDefault(require("body-parser"));
-const cronJobs_1 = __importDefault(require("./Core/cronJobs"));
+const cronJobs_1 = __importDefault(require("./core-cron/cronJobs"));
 const authenticate_1 = __importDefault(require("../config/authenticate"));
 const helmet_1 = __importDefault(require("helmet"));
 const cors_1 = __importDefault(require("cors"));
@@ -79,9 +79,9 @@ app.use(`${exports.apiVersionOneRoute}member`, jsonParser, memberRoutes_1.defaul
 (0, credexRoutes_1.default)(app, jsonParser);
 (0, adminDashboardRoutes_1.default)(app, jsonParser);
 (0, recurringRoutes_1.default)(app, jsonParser);
-// Conditionally apply DevAdmin routes based on deployment environment
+// Conditionally apply Test routes based on deployment environment
 if (config_1.config.deployment === "demo" || config_1.config.deployment === "dev") {
-    (0, devAdminRoutes_1.default)(app, jsonParser);
+    (0, testRoutes_1.default)(app, jsonParser);
 }
 // Apply error handling middleware
 app.use(errorHandler_1.notFoundHandler); // Handle 404 errors

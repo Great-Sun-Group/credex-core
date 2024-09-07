@@ -10,7 +10,7 @@ import { CreateTestLoopController } from "./controllers/createTestLoop";
 import { GrowthTestController } from "./controllers/growthTest";
 import { CheckLedgerVsSearchBalancesController } from "./controllers/checkLedgerVsSearchBalances";
 
-export default function DevAdminRoutes(app: express.Application, jsonParser: any) {
+export default function TestRoutes(app: express.Application, jsonParser: any) {
     app.delete(
       `${apiVersionOneRoute}clearDevDB`,
       jsonParser,

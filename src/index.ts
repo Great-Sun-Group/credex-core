@@ -4,7 +4,7 @@ import http from "http";
 import MemberRoutes from "./api/Member/memberRoutes";
 import AccountRoutes from "./api/Account/accountRoutes";
 import CredexRoutes from "./api/Credex/credexRoutes";
-import DevAdminRoutes from "./DevAdmin/devAdminRoutes";
+import TestRoutes from "./tests/testRoutes";
 import RecurringRoutes from "./api/Avatar/recurringRoutes";
 import logger, { expressLogger } from "../config/logger";
 import bodyParser from "body-parser";
@@ -61,9 +61,9 @@ CredexRoutes(app, jsonParser);
 AdminDashboardRoutes(app, jsonParser);
 RecurringRoutes(app, jsonParser);
 
-// Conditionally apply DevAdmin routes based on deployment environment
+// Conditionally apply Test routes based on deployment environment
 if (config.deployment === "demo" || config.deployment === "dev") {
-  DevAdminRoutes(app, jsonParser);
+  TestRoutes(app, jsonParser);
 }
 
 // Apply error handling middleware
