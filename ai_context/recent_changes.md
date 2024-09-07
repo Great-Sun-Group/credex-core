@@ -4508,11 +4508,11 @@ const server = http_1.default.createServer(exports.app);
 ```
 # Git Context
 ## Recent Commits
+0a714ce logger util
 9fb293c Update AI context
 fed43a7 isNeo4jError to utils
 8877c65 Update AI context
 4666e29 final validation stuff
-9d7d985 Update AI context
 
 ## Recent File Changes
 M	ai_context/code_summary.md
@@ -4524,6 +4524,7 @@ M	src/api/Credex/controllers/acceptCredexBulk.ts
 M	src/api/Member/controllers/getMemberDashboardByPhone.ts
 M	src/api/Member/services/OnboardMember.ts
 A	src/utils/errorUtils.ts
+A	src/utils/logger.ts
 M	todo.txt
 ```
 
