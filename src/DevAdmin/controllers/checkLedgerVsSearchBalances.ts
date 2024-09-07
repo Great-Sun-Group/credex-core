@@ -2,7 +2,7 @@ import express from "express";
 import { CheckLedgerVsSearchBalances } from "../services/CheckLedgerVsSearchBalances";
 
 export async function CheckLedgerVsSearchBalancesController(
-  req: express.Request,
+  _req: express.Request,
   res: express.Response
 ) {
   try {

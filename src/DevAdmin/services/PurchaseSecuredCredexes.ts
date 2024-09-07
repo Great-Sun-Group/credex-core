@@ -1,6 +1,6 @@
 import { random } from "lodash";
-import { OfferCredexService } from "../../Credex/services/OfferCredex";
-import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
+import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
+import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
 import * as neo4j from "neo4j-driver";
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 

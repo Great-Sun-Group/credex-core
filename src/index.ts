@@ -1,11 +1,11 @@
 // Import required modules and dependencies
 import express from "express";
 import http from "http";
-import MemberRoutes from "./Member/memberRoutes";
-import AccountRoutes from "./Account/accountRoutes";
-import CredexRoutes from "./Credex/credexRoutes";
+import MemberRoutes from "./api/Member/memberRoutes";
+import AccountRoutes from "./api/Account/accountRoutes";
+import CredexRoutes from "./api/Credex/credexRoutes";
 import DevAdminRoutes from "./DevAdmin/devAdminRoutes";
-import RecurringRoutes from "./Avatar/recurringRoutes";
+import RecurringRoutes from "./api/Avatar/recurringRoutes";
 import logger, { expressLogger } from "../config/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./Core/cronJobs";
@@ -13,8 +13,7 @@ import authenticate from "../config/authenticate";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import AdminDashboardRoutes from "./AdminDashboard/adminDashboardRoutes";
-import devAdminRoutes from "./DevAdmin/devAdminRoutes";
+import AdminDashboardRoutes from "./api/AdminDashboard/adminDashboardRoutes";
 import { errorHandler, notFoundHandler } from "../middleware/errorHandler";
 import { config } from "../config/config";
 import swaggerUi from "swagger-ui-express";

@@ -5,8 +5,6 @@ export const credexTypes = [
   "DCO_RECEIVE"
 ];
 
-export function checkPermittedCredexType(credexTypeToCheck: string) {
-  if (credexTypes.includes(credexTypeToCheck)) {
-    return true;
-  }
+export function checkPermittedCredexType(credexTypeToCheck: string): boolean {
+  return credexTypes.includes(credexTypeToCheck);
 }

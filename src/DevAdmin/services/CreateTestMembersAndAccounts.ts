@@ -1,7 +1,7 @@
 import axios from "axios";
 import { ledgerSpaceDriver } from "../../../config/neo4j";
-import { OnboardMemberService } from "../../Member/services/OnboardMember";
-import { CreateAccountService } from "../../Account/services/CreateAccount";
+import { OnboardMemberService } from "../../api/Member/services/OnboardMember";
+import { CreateAccountService } from "../../api/Account/services/CreateAccount";
 import { random } from "lodash";
 
 export async function CreateTestMembersAndAccountsService(numNewAccounts: number) {

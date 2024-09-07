@@ -1,19 +1,8 @@
-Folder Structure Improvement Instructions
-
-
-2. Separate documentation:
-   - Create a 'docs' folder at the root level
-   - Move README.md and README.Docker.md into it
-
 3. Organize source code:
    Inside the 'src' folder:
    a. Create an 'api' folder to group all API-related code
    b. Move Account, Avatar, Credex, DevAdmin, and Member folders into the 'api' folder
    c. Keep the Core folder outside of the 'api' folder
-
-4. Ensure consistent file naming:
-   - Use camelCase for files (e.g., accountRoutes.ts)
-   - Use PascalCase for classes and interfaces
 
 5. Group common utilities:
    - Create a 'utils' folder inside 'src' for common utility functions
@@ -23,23 +12,6 @@ Folder Structure Improvement Instructions
 
 Proposed New Structure:
 
-/workspaces/credex-core/
-├── config/
-│   ├── .dockerignore
-│   ├── .gitignore
-│   ├── nodemon.json
-│   └── tsconfig.json
-├── docs/
-│   ├── README.md
-│   └── README.Docker.md
-├── app-config/
-│   ├── authenticate.ts
-│   ├── config.ts
-│   ├── logger.ts
-│   ├── neo4j.ts
-│   └── swagger.ts
-├── middleware/
-│   └── errorHandler.ts
 ├── src/
 │   ├── index.ts
 │   ├── api/

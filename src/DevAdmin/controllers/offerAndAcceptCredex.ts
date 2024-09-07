@@ -1,6 +1,6 @@
 import express from "express";
-import { OfferCredexService } from "../../Credex/services/OfferCredex";
-import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
+import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
+import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
 
 export async function OfferAndAcceptCredexController(
   req: express.Request,

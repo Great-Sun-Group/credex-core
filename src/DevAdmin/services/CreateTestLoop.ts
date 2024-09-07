@@ -1,6 +1,6 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
-import { OfferCredexService } from "../../Credex/services/OfferCredex";
-import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
+import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
+import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
 import { random } from "lodash";
 import moment from "moment-timezone";
 import * as neo4j from "neo4j-driver";
