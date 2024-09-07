@@ -3,9 +3,9 @@
 ./update_combined_code.sh
 
 # Check if there are changes to combined_code.txt
-if git diff --exit-code src/tests/combined_code.txt; then
+if git diff --exit-code combined_code.txt; then
     echo "No changes to combined_code.txt"
 else
-    git add src/tests/combined_code.txt
+    git add combined_code.txt
     git commit --amend --no-edit
 fi
