@@ -1,6 +1,7 @@
 import express from "express";
 import { AcceptRecurringService } from "../services/AcceptRecurring";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { validateUUID } from "../../../utils/validators";
 
 /**
  * AcceptRecurringController
@@ -17,18 +18,25 @@ export async function AcceptRecurringController(
   res: express.Response
 ) {
   try {
+    const { avatarID, signerID } = req.body;
+
     // Validate required fields
-    const fieldsRequired = ["avatarID", "signerID"];
-    for (const field of fieldsRequired) {
-      if (!req.body[field]) {
-        return res.status(400).json({ error: `${field} is required` });
-      }
+    if (!avatarID || !signerID) {
+      return res.status(400).json({ error: "avatarID and signerID are required" });
+    }
+
+    // Validate UUIDs
+    if (!validateUUID(avatarID)) {
+      return res.status(400).json({ error: "Invalid avatarID" });
+    }
+    if (!validateUUID(signerID)) {
+      return res.status(400).json({ error: "Invalid signerID" });
     }
 
     // Call AcceptRecurringService to process the acceptance
     const acceptRecurringData = await AcceptRecurringService({
-      avatarID: req.body.avatarID,
-      signerID: req.body.signerID
+      avatarID,
+      signerID
     });
 
     // Check if the service call was successful
@@ -38,7 +46,7 @@ export async function AcceptRecurringController(
 
     // Fetch dashboard data
     const dashboardData = await GetAccountDashboardService(
-      req.body.signerID,
+      signerID,
       acceptRecurringData.recurring.acceptorAccountID
     );
 

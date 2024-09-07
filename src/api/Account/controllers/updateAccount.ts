@@ -1,8 +1,7 @@
 import express from "express";
 import { UpdateAccountService } from "../services/UpdateAccount";
 import logger from "../../../../config/logger";
-import { getDenominations } from "../../../constants/denominations";
-import { validateUUID, validateAccountName, validateAccountHandle } from "../../../utils/validators";
+import { validateUUID, validateAccountName, validateAccountHandle, validateDenomination } from "../../../utils/validators";
 
 export async function UpdateAccountController(
   req: express.Request,
@@ -25,7 +24,7 @@ export async function UpdateAccountController(
     if (accountHandle && !validateAccountHandle(accountHandle)) {
       return res.status(400).json({ message: "Invalid accountHandle" });
     }
-    if (defaultDenom && !getDenominations({ code: defaultDenom }).length) {
+    if (defaultDenom && !validateDenomination(defaultDenom)) {
       return res.status(400).json({ message: "Invalid defaultDenom" });
     }
 

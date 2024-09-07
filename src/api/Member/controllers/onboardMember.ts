@@ -2,7 +2,7 @@ import express from "express";
 import { OnboardMemberService } from "../services/OnboardMember";
 import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
 import logger from "../../../../config/logger";
-import { validateAccountName } from "../../../utils/validators";
+import { validateAccountName, validatePhone } from "../../../utils/validators";
 
 function validateInput(
   firstname: string,
@@ -23,9 +23,7 @@ function validateInput(
     return "First name and last name must be between 3 and 50 characters";
   }
 
-  // Phone number validation (with optional '+' prefix)
-  const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-  if (!phoneRegex.test(phone)) {
+  if (!validatePhone(phone)) {
     return "Invalid phone number format. It should be a valid international phone number.";
   }
 

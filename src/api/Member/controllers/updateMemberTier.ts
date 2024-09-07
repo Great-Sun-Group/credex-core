@@ -1,6 +1,7 @@
 import express from "express";
 import { UpdateMemberTierService } from "../services/UpdateMemberTier";
 import logger from "../../../../config/logger";
+import { validateUUID } from "../../../utils/validators";
 
 /**
  * Controller for updating a member's tier
@@ -14,7 +15,7 @@ export async function UpdateMemberTierController(
 ): Promise<{ success: boolean; message: string }> {
   try {
     // Input validation
-    if (!memberID || typeof memberID !== 'string') {
+    if (!validateUUID(memberID)) {
       return { success: false, message: "Invalid memberID" };
     }
 
@@ -52,8 +53,8 @@ export async function updateMemberTierExpressHandler(
   const { memberID, tier } = req.body;
 
   try {
-    if (!memberID || typeof memberID !== 'string') {
-      res.status(400).json({ message: "Invalid memberID. Must be a string." });
+    if (!validateUUID(memberID)) {
+      res.status(400).json({ message: "Invalid memberID. Must be a valid UUID." });
       return;
     }
 

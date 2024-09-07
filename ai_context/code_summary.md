@@ -11,6 +11,11 @@ export function validateUUID(uuid: string): boolean {
 export function validateMemberHandle(handle: string): boolean {
 export function validateAccountName(name: string): boolean {
 export function validateAccountHandle(handle: string): boolean {
+export function validateEmail(email: string): boolean {
+export function validatePhone(phone: string): boolean {
+export function validateAmount(amount: number): boolean {
+export function validateDenomination(denomination: string): boolean {
+export function validateCredexType(type: string): boolean {
 ```
 
 ## src/utils/denomUtils.ts
@@ -592,6 +597,7 @@ export async function AcceptRecurringController(
  * @param res - Express response object
  */
     // Validate required fields
+    // Validate UUIDs
     // Call AcceptRecurringService to process the acceptance
     // Check if the service call was successful
     // Fetch dashboard data
@@ -618,6 +624,7 @@ export async function RequestRecurringController(
  */
     // Validate required fields
     // Check denomination validity
+    // Validate InitialAmount
     // Validate optional parameters
     // Check securedCredex and credspan relationship
 ```
@@ -778,6 +785,7 @@ export async function AcceptCredexController(
  * @param res - Express response object
  */
     // Validate required fields
+    // Validate UUIDs
 ```
 
 ## src/api/Credex/controllers/cancelCredex.ts
@@ -810,8 +818,9 @@ export async function OfferCredexController(
  * @param res - Express response object
  */
     // Validate required fields
+    // Validate UUIDs
     // Check if issuerAccountID and receiverAccountID are the same
-    // Validate InitialAmount is a number
+    // Validate InitialAmount
     // Check denomination validity
     // Check credex type validity
     // Validate OFFERSorREQUESTS
@@ -1185,7 +1194,6 @@ export async function GetMemberDashboardByPhoneController(
 function validateInput(
 export async function OnboardMemberController(
 export async function onboardMemberExpressHandler(
-  // Phone number validation (with optional '+' prefix)
 ```
 
 ## src/api/Member/controllers/getMemberByHandle.ts

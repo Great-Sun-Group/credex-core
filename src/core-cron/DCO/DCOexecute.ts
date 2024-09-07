@@ -8,6 +8,7 @@ import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
 import { fetchZigRate } from "./fetchZigRate";
 import { createNeo4jBackup } from "./DBbackup";
 import logger from "../../../config/logger";
+import { validateAmount, validateDenomination } from "../../utils/validators";
 
 interface Rates {
   [key: string]: number;
@@ -181,8 +182,8 @@ function validateRates(rates: Rates): void {
   const allValid = denomsToCheck.every(
     (denom: Denomination) =>
       rates.hasOwnProperty(denom.code) &&
-      typeof rates[denom.code] === "number" &&
-      !isNaN(rates[denom.code])
+      validateDenomination(denom.code) &&
+      validateAmount(rates[denom.code])
   );
 
   if (!allValid) {
@@ -222,6 +223,12 @@ async function processDCOParticipants(
   for (const participant of declaredParticipants) {
     const { accountID, DCOmemberID, DCOdenom, DCOgiveInCXX, DCOgiveInDenom } =
       participant.toObject();
+    
+    if (!validateDenomination(DCOdenom) || !validateAmount(DCOgiveInCXX) || !validateAmount(DCOgiveInDenom)) {
+      logger.warn("Invalid participant data", { accountID, DCOmemberID, DCOdenom, DCOgiveInCXX, DCOgiveInDenom });
+      continue;
+    }
+
     const { securableAmountInDenom } = await GetSecuredAuthorizationService(
       accountID,
       DCOdenom
@@ -424,6 +431,11 @@ async function processDCOTransactions(
   // Process DCO give transactions
   await Promise.all(
     confirmedParticipants.map(async (participant: Participant) => {
+      if (!validateDenomination(participant.DCOdenom) || !validateAmount(participant.DCOgiveInDenom)) {
+        logger.warn("Invalid participant data for DCO give", participant);
+        return;
+      }
+
       const dataForDCOgive = {
         memberID: participant.DCOmemberID,
         issuerAccountID: participant.accountID,
@@ -450,12 +462,18 @@ async function processDCOTransactions(
   // Process DCO receive transactions
   await Promise.all(
     confirmedParticipants.map(async (participant: Participant) => {
+      const receiveAmount = DCOinCXX / numberConfirmedParticipants;
+      if (!validateAmount(receiveAmount)) {
+        logger.warn("Invalid receive amount for DCO receive", { receiveAmount, participant });
+        return;
+      }
+
       const dataForDCOreceive = {
         memberID: foundationXOid,
         issuerAccountID: foundationID,
         receiverAccountID: participant.accountID,
         Denomination: "CXX",
-        InitialAmount: DCOinCXX / numberConfirmedParticipants,
+        InitialAmount: receiveAmount,
         credexType: "DCO_RECEIVE",
         securedCredex: true,
       };

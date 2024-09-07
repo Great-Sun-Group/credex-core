@@ -1,11 +1,15 @@
 import express from "express";
 import { OfferCredexService } from "../services/OfferCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
-import { getDenominations } from "../../../constants/denominations";
 import { checkDueDate, credspan } from "../../../constants/credspan";
-import { checkPermittedCredexType } from "../../../constants/credexTypes";
 import { SecuredCredexAuthForTierController } from "../../Member/controllers/securedCredexAuthForTier";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import {
+  validateUUID,
+  validateDenomination,
+  validateAmount,
+  validateCredexType
+} from "../../../utils/validators";
 
 /**
  * OfferCredexController
@@ -52,23 +56,28 @@ export async function OfferCredexController(
       dueDate = "",
     } = req.body;
 
+    // Validate UUIDs
+    if (!validateUUID(memberID) || !validateUUID(issuerAccountID) || !validateUUID(receiverAccountID)) {
+      return res.status(400).json({ error: "Invalid UUID provided" });
+    }
+
     // Check if issuerAccountID and receiverAccountID are the same
     if (issuerAccountID === receiverAccountID) {
       return res.status(400).json({ error: "Issuer and receiver cannot be the same account" });
     }
 
-    // Validate InitialAmount is a number
-    if (typeof InitialAmount !== "number") {
-      return res.status(400).json({ error: "InitialAmount must be a number" });
+    // Validate InitialAmount
+    if (!validateAmount(InitialAmount)) {
+      return res.status(400).json({ error: "Invalid InitialAmount" });
     }
 
     // Check denomination validity
-    if (!getDenominations({ code: Denomination }).length) {
+    if (!validateDenomination(Denomination)) {
       return res.status(400).json({ error: "Invalid denomination" });
     }
 
     // Check credex type validity
-    if (!checkPermittedCredexType(credexType)) {
+    if (!validateCredexType(credexType)) {
       return res.status(400).json({ error: "Invalid credex type" });
     }
 

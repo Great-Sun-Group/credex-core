@@ -1,10 +1,10 @@
 # Git Context
 ## Recent Commits
+e786ef8 Update AI context
 3af3290 ai context
 712ed54 Update AI context
 667a8c7 update combined
 835afd8 still on update combined code
-540dab9 combined code fix again
 
 ## Recent File Changes
 M	.githooks/post-checkout

@@ -1,9 +1,14 @@
 import express from "express";
 import { CreateAccountService } from "../services/CreateAccount";
-import { getDenominations } from "../../../constants/denominations";
 import { checkPermittedAccountType } from "../../../constants/accountTypes";
 import logger from "../../../../config/logger";
-import { validateUUID, validateAccountName, validateAccountHandle } from "../../../utils/validators";
+import {
+  validateUUID,
+  validateAccountName,
+  validateAccountHandle,
+  validateDenomination,
+  validateAmount
+} from "../../../utils/validators";
 
 export async function CreateAccountController(
   req: express.Request,
@@ -30,15 +35,15 @@ export async function CreateAccountController(
       res.status(400).json({ message: "Invalid accountHandle" });
       return;
     }
-    if (!getDenominations({ code: defaultDenom }).length) {
+    if (!validateDenomination(defaultDenom)) {
       res.status(400).json({ message: "Invalid defaultDenom" });
       return;
     }
-    if (DCOdenom && !getDenominations({ code: DCOdenom }).length) {
+    if (DCOdenom && !validateDenomination(DCOdenom)) {
       res.status(400).json({ message: "Invalid DCOdenom" });
       return;
     }
-    if (DCOgiveInCXX && (isNaN(DCOgiveInCXX) || DCOgiveInCXX < 0)) {
+    if (DCOgiveInCXX && !validateAmount(DCOgiveInCXX)) {
       res.status(400).json({ message: "Invalid DCOgiveInCXX" });
       return;
     }

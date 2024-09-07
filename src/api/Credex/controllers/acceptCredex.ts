@@ -1,6 +1,7 @@
 import express from "express";
 import { AcceptCredexService } from "../services/AcceptCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { validateUUID } from "../../../utils/validators";
 
 /**
  * AcceptCredexController
@@ -17,25 +18,29 @@ export async function AcceptCredexController(
   res: express.Response
 ) {
   try {
+    const { credexID, signerID } = req.body;
+
     // Validate required fields
-    const fieldsRequired = ["credexID", "signerID"];
-    for (const field of fieldsRequired) {
-      if (!req.body[field]) {
-        return res.status(400).json({ error: `${field} is required` });
-      }
+    if (!credexID || !signerID) {
+      return res.status(400).json({ error: "credexID and signerID are required" });
     }
 
-    const acceptCredexData = await AcceptCredexService(
-      req.body.credexID,
-      req.body.signerID
-    );
+    // Validate UUIDs
+    if (!validateUUID(credexID)) {
+      return res.status(400).json({ error: "Invalid credexID" });
+    }
+    if (!validateUUID(signerID)) {
+      return res.status(400).json({ error: "Invalid signerID" });
+    }
+
+    const acceptCredexData = await AcceptCredexService(credexID, signerID);
     
     if (!acceptCredexData) {
       return res.status(400).json({ error: "Failed to accept Credex" });
     }
 
     const dashboardData = await GetAccountDashboardService(
-      req.body.signerID,
+      signerID,
       acceptCredexData.acceptorAccountID
     );
 

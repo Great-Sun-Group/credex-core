@@ -1,7 +1,7 @@
 import express from "express";
 import { RequestRecurringService } from "../services/RequestRecurring";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
-import { getDenominations } from "../../../constants/denominations";
+import { validateAmount, validateDenomination } from "../../../utils/validators";
 
 /**
  * RequestRecurringController
@@ -35,8 +35,13 @@ export async function RequestRecurringController(
     }
 
     // Check denomination validity
-    if (!getDenominations({ code: req.body.Denomination }).length) {
-      return res.status(400).json({ error: "Denomination not permitted" });
+    if (!validateDenomination(req.body.Denomination)) {
+      return res.status(400).json({ error: "Invalid denomination" });
+    }
+
+    // Validate InitialAmount
+    if (!validateAmount(req.body.InitialAmount)) {
+      return res.status(400).json({ error: "Invalid InitialAmount" });
     }
 
     // Validate optional parameters
