@@ -13,6 +13,8 @@ import authenticate from "../config/authenticate";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
+import AdminDashboardRoutes from "./AdminDashboard/adminDashboardRoutes";
+import AdminRoutes from "./DevelopmentAdmin/adminRoutes";
 import { errorHandler, notFoundHandler } from "../middleware/errorHandler";
 import { config } from "../config/config";
 import swaggerUi from "swagger-ui-express";
@@ -57,6 +59,7 @@ startCronJobs();
 app.use(`${apiVersionOneRoute}member`, jsonParser, MemberRoutes);
 AccountRoutes(app, jsonParser);
 CredexRoutes(app, jsonParser);
+AdminDashboardRoutes(app, jsonParser);
 RecurringRoutes(app, jsonParser);
 
 // Conditionally apply DevAdmin routes based on deployment environment

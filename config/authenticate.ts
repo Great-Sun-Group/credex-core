@@ -22,6 +22,19 @@ const authenticate = (req: UserRequest, res: Response, next: NextFunction) => {
     console.error(
       "WHATSAPP_BOT_API_KEY is not defined in environment variables"
     );
+
+    return res.status(500).json({ message: "Server configuration error" });
+  }
+
+  // Request was hanging if the header was empty or did'nt have whatsappBotAPIkey in it
+  if (!apiKeySubmitted) {
+    console.warn("Authentication failed: API key not provided.");
+    return res.status(401).json({ message: "API key is required" });
+  }
+
+  if (apiKeySubmitted === validApiKey) {
+    next();
+  } else {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 
