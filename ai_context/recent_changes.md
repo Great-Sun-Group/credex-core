@@ -8,6 +8,31 @@ Current Branch: 273-update-folder-structure
 ```
 ```
 
+## src/utils/logger.ts
+```
+const logger = winston.createLogger({
+function sanitizeData(data: any): any {
+export const logInfo = (message: string, meta?: any) => {
+export const logError = (message: string, error: Error, meta?: any) => {
+export const logWarning = (message: string, meta?: any) => {
+export const logDebug = (message: string, meta?: any) => {
+export const addRequestId = (req: any, res: any, next: any) => {
+export const expressLogger = (req: any, res: any, next: any) => {
+export const errorLogger = (err: Error, req: any, res: any, next: any) => {
+export const logDCORates = (
+// Configure the logger
+// Add console transport for non-production environments
+// Standardized logging functions
+// Request ID middleware
+// Express request logger middleware
+// Error logger middleware
+// Function to log DCO rates
+// TODO: Implement log aggregation and centralized logging for production environments
+// TODO: Implement log retention policies based on compliance requirements
+// TODO: Add performance monitoring for database queries and external API calls
+// TODO: Implement log analysis tools to detect patterns, anomalies, and potential security threats
+```
+
 ## src/utils/validators.ts
 ```
 export function validateUUID(uuid: string): boolean {
@@ -4483,121 +4508,27 @@ const server = http_1.default.createServer(exports.app);
 ```
 # Git Context
 ## Recent Commits
+9fb293c Update AI context
 fed43a7 isNeo4jError to utils
 8877c65 Update AI context
 4666e29 final validation stuff
 9d7d985 Update AI context
-7d44e6a validation
 
 ## Recent File Changes
 M	ai_context/code_summary.md
 M	ai_context/git_context.md
 M	ai_context/recent_changes.md
-M	src/api/Account/controllers/createAccount.ts
 M	src/api/Account/controllers/unauthorizeForAccount.ts
-M	src/api/Account/controllers/updateAccount.ts
 M	src/api/Account/services/CreateAccount.ts
-M	src/api/Avatar/controllers/acceptRecurring.ts
-M	src/api/Avatar/controllers/requestRecurring.ts
-M	src/api/Credex/controllers/acceptCredex.ts
 M	src/api/Credex/controllers/acceptCredexBulk.ts
-M	src/api/Credex/controllers/offerCredex.ts
 M	src/api/Member/controllers/getMemberDashboardByPhone.ts
-M	src/api/Member/controllers/onboardMember.ts
-M	src/api/Member/controllers/updateMemberTier.ts
 M	src/api/Member/services/OnboardMember.ts
-M	src/core-cron/DCO/DCOexecute.ts
 A	src/utils/errorUtils.ts
-M	src/utils/validators.ts
 M	todo.txt
 ```
 
 ## ai_context/recent_changes.md
 ```
-```
-
-## src/api/Account/controllers/createAccount.ts
-```
-import express from "express";
-import { CreateAccountService } from "../services/CreateAccount";
-import { checkPermittedAccountType } from "../../../constants/accountTypes";
-import logger from "../../../../config/logger";
-import {
-  validateUUID,
-  validateAccountName,
-  validateAccountHandle,
-  validateDenomination,
-  validateAmount
-} from "../../../utils/validators";
-
-export async function CreateAccountController(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-): Promise<void> {
-  const { ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX, DCOdenom } = req.body;
-
-  try {
-    // Validate input
-    if (!validateUUID(ownerID)) {
-      res.status(400).json({ message: "Invalid ownerID" });
-      return;
-    }
-    if (!checkPermittedAccountType(accountType)) {
-      res.status(400).json({ message: "Invalid accountType" });
-      return;
-    }
-    if (!validateAccountName(accountName)) {
-      res.status(400).json({ message: "Invalid accountName" });
-      return;
-    }
-    if (!validateAccountHandle(accountHandle)) {
-      res.status(400).json({ message: "Invalid accountHandle" });
-      return;
-    }
-    if (!validateDenomination(defaultDenom)) {
-      res.status(400).json({ message: "Invalid defaultDenom" });
-      return;
-    }
-    if (DCOdenom && !validateDenomination(DCOdenom)) {
-      res.status(400).json({ message: "Invalid DCOdenom" });
-      return;
-    }
-    if (DCOgiveInCXX && !validateAmount(DCOgiveInCXX)) {
-      res.status(400).json({ message: "Invalid DCOgiveInCXX" });
-      return;
-    }
-
-    logger.info("Creating new account", {
-      ownerID,
-      accountType,
-      accountName,
-      accountHandle,
-      defaultDenom,
-      DCOdenom,
-    });
-
-    const newAccount = await CreateAccountService(
-      ownerID,
-      accountType,
-      accountName,
-      accountHandle,
-      defaultDenom,
-      DCOgiveInCXX,
-      DCOdenom
-    );
-
-    if (newAccount.accountID) {
-      logger.info("Account created successfully", { accountID: newAccount.accountID });
-      res.status(201).json({ accountID: newAccount.accountID, message: "Account created successfully" });
-    } else {
-      res.status(400).json({ message: newAccount.message || "Failed to create account" });
-    }
-  } catch (error) {
-    logger.error("Error in CreateAccountController", { error });
-    next(error);
-  }
-}
 ```
 
 ## src/api/Account/controllers/unauthorizeForAccount.ts
@@ -4667,6 +4598,120 @@ export async function UnauthorizeForAccountController(
   } catch (error) {
     logger.error("Error in UnauthorizeForAccountController", { error, memberIDtoBeUnauthorized: req.body.memberIDtoBeUnauthorized, accountID: req.body.accountID, ownerID: req.body.ownerID });
     next(error);
+  }
+}
+```
+
+## src/api/Account/services/CreateAccount.ts
+```
+import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import { isNeo4jError } from "../../../utils/errorUtils";
+
+export async function CreateAccountService(
+  ownerID: string,
+  accountType: string,
+  accountName: string,
+  accountHandle: string,
+  defaultDenom: string,
+  DCOgiveInCXX: number | null = null,
+  DCOdenom: string | null = null
+) {
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
+
+  //check that account creation is permitted on membership tier
+  const getMemberTier = await ledgerSpaceSession.run(
+    `
+        MATCH (member:Member{ memberID: $ownerID })
+        OPTIONAL MATCH (member)-[:OWNS]->(account:Account)
+        RETURN
+          member.memberTier AS memberTier,
+          COUNT(account) AS numAccounts
+      `,
+    { ownerID }
+  );
+
+  const memberTier = getMemberTier.records[0].get("memberTier");
+  const numAccounts = getMemberTier.records[0].get("numAccounts");
+  if (memberTier <= 2 && numAccounts >= 1) {
+    return {
+      account: false,
+      message:
+        "You cannot create an account on the Open or Verified membership tiers.",
+    };
+  }
+
+  try {
+    const result = await ledgerSpaceSession.run(
+      `
+        MATCH (daynode:Daynode { Active: true })
+        MATCH (owner:Member { memberID: $ownerID })
+        CREATE (owner)-[:OWNS]->(account:Account {
+          accountType: $accountType,
+          accountName: $accountName,
+          accountHandle: $accountHandle,
+          defaultDenom: $defaultDenom,
+          DCOgiveInCXX: $DCOgiveInCXX,
+          DCOdenom: $DCOdenom,
+          accountID: randomUUID(),
+          queueStatus: "PENDING_ACCOUNT",
+          createdAt: datetime(),
+          updatedAt: datetime()
+        })-[:CREATED_ON]->(daynode)
+        CREATE
+          (owner)-[:AUTHORIZED_FOR]->
+          (account)
+          -[:SEND_OFFERS_TO]->(owner)
+        RETURN account.accountID AS accountID
+      `,
+      {
+        ownerID,
+        accountType,
+        accountName,
+        accountHandle,
+        defaultDenom,
+        DCOgiveInCXX,
+        DCOdenom,
+      }
+    );
+
+    if (!result.records.length) {
+      const message = "could not create account";
+      console.log(message);
+      return { account: false, message };
+    }
+
+    const createdAccountID = result.records[0].get("accountID");
+    console.log(accountType + " account created: " + createdAccountID);
+    return {
+      accountID: createdAccountID,
+      message: "account created",
+    };
+  } catch (error) {
+    console.error("Error creating account:", error);
+
+    if (
+      isNeo4jError(error) &&
+      error.code === "Neo.ClientError.Schema.ConstraintValidationFailed"
+    ) {
+      if (error.message.includes("phone")) {
+        return { account: false, message: "Phone number already in use" };
+      }
+      if (error.message.includes("handle")) {
+        return {
+          account: false,
+          message: "Sorry, that handle is already in use",
+        };
+      }
+      return { account: false, message: "Required unique field not unique" };
+    }
+
+    return {
+      account: false,
+      message:
+        "Error: " + (error instanceof Error ? error.message : "Unknown error"),
+    };
+  } finally {
+    await ledgerSpaceSession.close();
   }
 }
 ```
