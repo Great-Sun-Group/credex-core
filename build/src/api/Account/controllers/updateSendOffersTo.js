@@ -6,36 +6,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpdateSendOffersToController = UpdateSendOffersToController;
 const UpdateSendOffersTo_1 = require("../services/UpdateSendOffersTo");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-/**
- * Controller for updating the recipient of offers for an account
- * @param req - Express request object
- * @param res - Express response object
- * @param next - Express next function
- */
+const validators_1 = require("../../../utils/validators");
 async function UpdateSendOffersToController(req, res, next) {
-    const requiredFields = ["memberIDtoSendOffers", "accountID", "ownerID"];
+    const { memberIDtoSendOffers, accountID, ownerID } = req.body;
     try {
-        for (const field of requiredFields) {
-            if (!req.body[field]) {
-                res.status(400).json({ message: `${field} is required` });
-                return;
-            }
+        // Validate input
+        if (!(0, validators_1.validateUUID)(memberIDtoSendOffers)) {
+            return res.status(400).json({ message: "Invalid memberIDtoSendOffers" });
         }
-        const { memberIDtoSendOffers, accountID, ownerID } = req.body;
-        // Validate memberIDtoSendOffers
-        if (typeof memberIDtoSendOffers !== 'string' || !/^[a-f0-9-]{36}$/.test(memberIDtoSendOffers)) {
-            res.status(400).json({ message: "Invalid memberIDtoSendOffers. Must be a valid UUID." });
-            return;
+        if (!(0, validators_1.validateUUID)(accountID)) {
+            return res.status(400).json({ message: "Invalid accountID" });
         }
-        // Validate accountID
-        if (typeof accountID !== 'string' || !/^[a-f0-9-]{36}$/.test(accountID)) {
-            res.status(400).json({ message: "Invalid accountID. Must be a valid UUID." });
-            return;
-        }
-        // Validate ownerID
-        if (typeof ownerID !== 'string' || !/^[a-f0-9-]{36}$/.test(ownerID)) {
-            res.status(400).json({ message: "Invalid ownerID. Must be a valid UUID." });
-            return;
+        if (!(0, validators_1.validateUUID)(ownerID)) {
+            return res.status(400).json({ message: "Invalid ownerID" });
         }
         logger_1.default.info("Updating offer recipient for account", { memberIDtoSendOffers, accountID, ownerID });
         const responseData = await (0, UpdateSendOffersTo_1.UpdateSendOffersToService)(memberIDtoSendOffers, accountID, ownerID);

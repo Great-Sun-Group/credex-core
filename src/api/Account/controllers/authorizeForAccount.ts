@@ -1,46 +1,25 @@
 import express from "express";
 import { AuthorizeForAccountService } from "../services/AuthorizeForAccount";
 import logger from "../../../../config/logger";
+import { validateUUID, validateMemberHandle } from "../../../utils/validators";
 
-/**
- * Controller for authorizing a member for an account
- * @param req - Express request object
- * @param res - Express response object
- * @param next - Express next function
- */
 export async function AuthorizeForAccountController(
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ) {
-  const requiredFields = ["memberHandleToBeAuthorized", "accountID", "ownerID"];
+  const { memberHandleToBeAuthorized, accountID, ownerID } = req.body;
 
   try {
-    for (const field of requiredFields) {
-      if (!req.body[field]) {
-        res.status(400).json({ message: `${field} is required` });
-        return;
-      }
+    // Validate input
+    if (!validateMemberHandle(memberHandleToBeAuthorized)) {
+      return res.status(400).json({ message: "Invalid memberHandleToBeAuthorized" });
     }
-
-    const { memberHandleToBeAuthorized, accountID, ownerID } = req.body;
-
-    // Validate memberHandleToBeAuthorized
-    if (typeof memberHandleToBeAuthorized !== 'string' || !/^[a-z0-9._]{3,30}$/.test(memberHandleToBeAuthorized)) {
-      res.status(400).json({ message: "Invalid memberHandleToBeAuthorized. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters." });
-      return;
+    if (!validateUUID(accountID)) {
+      return res.status(400).json({ message: "Invalid accountID" });
     }
-
-    // Validate accountID
-    if (typeof accountID !== 'string' || !/^[a-f0-9-]{36}$/.test(accountID)) {
-      res.status(400).json({ message: "Invalid accountID. Must be a valid UUID." });
-      return;
-    }
-
-    // Validate ownerID
-    if (typeof ownerID !== 'string' || !/^[a-f0-9-]{36}$/.test(ownerID)) {
-      res.status(400).json({ message: "Invalid ownerID. Must be a valid UUID." });
-      return;
+    if (!validateUUID(ownerID)) {
+      return res.status(400).json({ message: "Invalid ownerID" });
     }
 
     logger.info("Authorizing member for account", { memberHandleToBeAuthorized, accountID, ownerID });

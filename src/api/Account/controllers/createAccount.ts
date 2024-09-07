@@ -3,72 +3,43 @@ import { CreateAccountService } from "../services/CreateAccount";
 import { getDenominations } from "../../../constants/denominations";
 import { checkPermittedAccountType } from "../../../constants/accountTypes";
 import logger from "../../../../config/logger";
+import { validateUUID, validateAccountName, validateAccountHandle } from "../../../utils/validators";
 
-/**
- * Controller for creating a new account
- * @param req - Express request object
- * @param res - Express response object
- */
 export async function CreateAccountController(
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ): Promise<void> {
-  const fieldsRequired = [
-    "ownerID",
-    "accountType",
-    "accountName",
-    "accountHandle",
-    "defaultDenom",
-  ];
+  const { ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX, DCOdenom } = req.body;
 
   try {
-    // Validate required fields
-    for (const field of fieldsRequired) {
-      if (!req.body[field]) {
-        res.status(400).json({ message: `${field} is required` });
-        return;
-      }
-    }
-
-    const { ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX, DCOdenom } = req.body;
-
-    // Validate defaultDenom
-    if (!getDenominations({ code: defaultDenom }).length) {
-      res.status(400).json({ message: "defaultDenom not in denoms" });
+    // Validate input
+    if (!validateUUID(ownerID)) {
+      res.status(400).json({ message: "Invalid ownerID" });
       return;
     }
-
-    // Validate accountType
     if (!checkPermittedAccountType(accountType)) {
-      res.status(400).json({ message: "accountType not permitted" });
+      res.status(400).json({ message: "Invalid accountType" });
       return;
     }
-
-    // Validate and transform accountHandle
-    const transformedAccountHandle = accountHandle.toLowerCase().replace(/\s/g, "");
-    if (!/^[a-z0-9._]{3,30}$/.test(transformedAccountHandle)) {
-      res.status(400).json({
-        message: "Invalid account handle. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters.",
-      });
+    if (!validateAccountName(accountName)) {
+      res.status(400).json({ message: "Invalid accountName" });
       return;
     }
-
-    // Validate accountName length
-    if (accountName.length < 4 || accountName.length > 30) {
-      res.status(400).json({ message: "accountName must be between 4 and 30 characters" });
+    if (!validateAccountHandle(accountHandle)) {
+      res.status(400).json({ message: "Invalid accountHandle" });
       return;
     }
-
-    // Validate DCOdenom if provided
+    if (!getDenominations({ code: defaultDenom }).length) {
+      res.status(400).json({ message: "Invalid defaultDenom" });
+      return;
+    }
     if (DCOdenom && !getDenominations({ code: DCOdenom }).length) {
-      res.status(400).json({ message: "DCOdenom not in denoms" });
+      res.status(400).json({ message: "Invalid DCOdenom" });
       return;
     }
-
-    // Validate DCOgiveInCXX if provided
     if (DCOgiveInCXX && (isNaN(DCOgiveInCXX) || DCOgiveInCXX < 0)) {
-      res.status(400).json({ message: "DCOgiveInCXX must be a non-negative number" });
+      res.status(400).json({ message: "Invalid DCOgiveInCXX" });
       return;
     }
 
@@ -76,7 +47,7 @@ export async function CreateAccountController(
       ownerID,
       accountType,
       accountName,
-      accountHandle: transformedAccountHandle,
+      accountHandle,
       defaultDenom,
       DCOdenom,
     });
@@ -85,7 +56,7 @@ export async function CreateAccountController(
       ownerID,
       accountType,
       accountName,
-      transformedAccountHandle,
+      accountHandle,
       defaultDenom,
       DCOgiveInCXX,
       DCOdenom

@@ -1,46 +1,25 @@
 import express from "express";
 import { UpdateSendOffersToService } from "../services/UpdateSendOffersTo";
 import logger from "../../../../config/logger";
+import { validateUUID } from "../../../utils/validators";
 
-/**
- * Controller for updating the recipient of offers for an account
- * @param req - Express request object
- * @param res - Express response object
- * @param next - Express next function
- */
 export async function UpdateSendOffersToController(
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ) {
-  const requiredFields = ["memberIDtoSendOffers", "accountID", "ownerID"];
+  const { memberIDtoSendOffers, accountID, ownerID } = req.body;
 
   try {
-    for (const field of requiredFields) {
-      if (!req.body[field]) {
-        res.status(400).json({ message: `${field} is required` });
-        return;
-      }
+    // Validate input
+    if (!validateUUID(memberIDtoSendOffers)) {
+      return res.status(400).json({ message: "Invalid memberIDtoSendOffers" });
     }
-
-    const { memberIDtoSendOffers, accountID, ownerID } = req.body;
-
-    // Validate memberIDtoSendOffers
-    if (typeof memberIDtoSendOffers !== 'string' || !/^[a-f0-9-]{36}$/.test(memberIDtoSendOffers)) {
-      res.status(400).json({ message: "Invalid memberIDtoSendOffers. Must be a valid UUID." });
-      return;
+    if (!validateUUID(accountID)) {
+      return res.status(400).json({ message: "Invalid accountID" });
     }
-
-    // Validate accountID
-    if (typeof accountID !== 'string' || !/^[a-f0-9-]{36}$/.test(accountID)) {
-      res.status(400).json({ message: "Invalid accountID. Must be a valid UUID." });
-      return;
-    }
-
-    // Validate ownerID
-    if (typeof ownerID !== 'string' || !/^[a-f0-9-]{36}$/.test(ownerID)) {
-      res.status(400).json({ message: "Invalid ownerID. Must be a valid UUID." });
-      return;
+    if (!validateUUID(ownerID)) {
+      return res.status(400).json({ message: "Invalid ownerID" });
     }
 
     logger.info("Updating offer recipient for account", { memberIDtoSendOffers, accountID, ownerID });

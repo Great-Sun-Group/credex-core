@@ -1,8 +1,5 @@
 Recommended functions to move to a shared src/utils folder:
 
-2. Date Handling Functions:
-   Create src/utils/dateUtils.ts with common date operations used in DCO and MTQ files.
-
 3. Validation Functions:
    Create src/utils/validationUtils.ts, including functions like `validateInput` from src/api/Member/controllers/onboardMember.ts.
 

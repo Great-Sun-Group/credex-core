@@ -8,70 +8,48 @@ const CreateAccount_1 = require("../services/CreateAccount");
 const denominations_1 = require("../../../constants/denominations");
 const accountTypes_1 = require("../../../constants/accountTypes");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-/**
- * Controller for creating a new account
- * @param req - Express request object
- * @param res - Express response object
- */
+const validators_1 = require("../../../utils/validators");
 async function CreateAccountController(req, res, next) {
-    const fieldsRequired = [
-        "ownerID",
-        "accountType",
-        "accountName",
-        "accountHandle",
-        "defaultDenom",
-    ];
+    const { ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX, DCOdenom } = req.body;
     try {
-        // Validate required fields
-        for (const field of fieldsRequired) {
-            if (!req.body[field]) {
-                res.status(400).json({ message: `${field} is required` });
-                return;
-            }
-        }
-        const { ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX, DCOdenom } = req.body;
-        // Validate defaultDenom
-        if (!(0, denominations_1.getDenominations)({ code: defaultDenom }).length) {
-            res.status(400).json({ message: "defaultDenom not in denoms" });
+        // Validate input
+        if (!(0, validators_1.validateUUID)(ownerID)) {
+            res.status(400).json({ message: "Invalid ownerID" });
             return;
         }
-        // Validate accountType
         if (!(0, accountTypes_1.checkPermittedAccountType)(accountType)) {
-            res.status(400).json({ message: "accountType not permitted" });
+            res.status(400).json({ message: "Invalid accountType" });
             return;
         }
-        // Validate and transform accountHandle
-        const transformedAccountHandle = accountHandle.toLowerCase().replace(/\s/g, "");
-        if (!/^[a-z0-9._]{3,30}$/.test(transformedAccountHandle)) {
-            res.status(400).json({
-                message: "Invalid account handle. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters.",
-            });
+        if (!(0, validators_1.validateAccountName)(accountName)) {
+            res.status(400).json({ message: "Invalid accountName" });
             return;
         }
-        // Validate accountName length
-        if (accountName.length < 4 || accountName.length > 30) {
-            res.status(400).json({ message: "accountName must be between 4 and 30 characters" });
+        if (!(0, validators_1.validateAccountHandle)(accountHandle)) {
+            res.status(400).json({ message: "Invalid accountHandle" });
             return;
         }
-        // Validate DCOdenom if provided
+        if (!(0, denominations_1.getDenominations)({ code: defaultDenom }).length) {
+            res.status(400).json({ message: "Invalid defaultDenom" });
+            return;
+        }
         if (DCOdenom && !(0, denominations_1.getDenominations)({ code: DCOdenom }).length) {
-            res.status(400).json({ message: "DCOdenom not in denoms" });
+            res.status(400).json({ message: "Invalid DCOdenom" });
             return;
         }
-        // Validate DCOgiveInCXX if provided
         if (DCOgiveInCXX && (isNaN(DCOgiveInCXX) || DCOgiveInCXX < 0)) {
-            res.status(400).json({ message: "DCOgiveInCXX must be a non-negative number" });
+            res.status(400).json({ message: "Invalid DCOgiveInCXX" });
             return;
         }
         logger_1.default.info("Creating new account", {
             ownerID,
             accountType,
             accountName,
-            accountHandle: transformedAccountHandle,
+            accountHandle,
             defaultDenom,
             DCOdenom,
         });
-        const newAccount = await (0, CreateAccount_1.CreateAccountService)(ownerID, accountType, accountName, transformedAccountHandle, defaultDenom, DCOgiveInCXX, DCOdenom);
+        const newAccount = await (0, CreateAccount_1.CreateAccountService)(ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX, DCOdenom);
         if (newAccount.accountID) {
             logger_1.default.info("Account created successfully", { accountID: newAccount.accountID });
             res.status(201).json({ accountID: newAccount.accountID, message: "Account created successfully" });

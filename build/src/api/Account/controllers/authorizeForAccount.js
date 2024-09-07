@@ -6,36 +6,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthorizeForAccountController = AuthorizeForAccountController;
 const AuthorizeForAccount_1 = require("../services/AuthorizeForAccount");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-/**
- * Controller for authorizing a member for an account
- * @param req - Express request object
- * @param res - Express response object
- * @param next - Express next function
- */
+const validators_1 = require("../../../utils/validators");
 async function AuthorizeForAccountController(req, res, next) {
-    const requiredFields = ["memberHandleToBeAuthorized", "accountID", "ownerID"];
+    const { memberHandleToBeAuthorized, accountID, ownerID } = req.body;
     try {
-        for (const field of requiredFields) {
-            if (!req.body[field]) {
-                res.status(400).json({ message: `${field} is required` });
-                return;
-            }
+        // Validate input
+        if (!(0, validators_1.validateMemberHandle)(memberHandleToBeAuthorized)) {
+            return res.status(400).json({ message: "Invalid memberHandleToBeAuthorized" });
         }
-        const { memberHandleToBeAuthorized, accountID, ownerID } = req.body;
-        // Validate memberHandleToBeAuthorized
-        if (typeof memberHandleToBeAuthorized !== 'string' || !/^[a-z0-9._]{3,30}$/.test(memberHandleToBeAuthorized)) {
-            res.status(400).json({ message: "Invalid memberHandleToBeAuthorized. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters." });
-            return;
+        if (!(0, validators_1.validateUUID)(accountID)) {
+            return res.status(400).json({ message: "Invalid accountID" });
         }
-        // Validate accountID
-        if (typeof accountID !== 'string' || !/^[a-f0-9-]{36}$/.test(accountID)) {
-            res.status(400).json({ message: "Invalid accountID. Must be a valid UUID." });
-            return;
-        }
-        // Validate ownerID
-        if (typeof ownerID !== 'string' || !/^[a-f0-9-]{36}$/.test(ownerID)) {
-            res.status(400).json({ message: "Invalid ownerID. Must be a valid UUID." });
-            return;
+        if (!(0, validators_1.validateUUID)(ownerID)) {
+            return res.status(400).json({ message: "Invalid ownerID" });
         }
         logger_1.default.info("Authorizing member for account", { memberHandleToBeAuthorized, accountID, ownerID });
         const responseData = await (0, AuthorizeForAccount_1.AuthorizeForAccountService)(memberHandleToBeAuthorized, accountID, ownerID);

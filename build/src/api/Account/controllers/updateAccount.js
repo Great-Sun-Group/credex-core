@@ -7,46 +7,25 @@ exports.UpdateAccountController = UpdateAccountController;
 const UpdateAccount_1 = require("../services/UpdateAccount");
 const logger_1 = __importDefault(require("../../../../config/logger"));
 const denominations_1 = require("../../../constants/denominations");
-/**
- * Controller for updating an account
- * @param req - Express request object
- * @param res - Express response object
- * @param next - Express next function
- */
+const validators_1 = require("../../../utils/validators");
 async function UpdateAccountController(req, res, next) {
-    const requiredFields = ["ownerID", "accountID"];
+    const { ownerID, accountID, accountName, accountHandle, defaultDenom } = req.body;
     try {
-        for (const field of requiredFields) {
-            if (!req.body[field]) {
-                res.status(400).json({ message: `${field} is required` });
-                return;
-            }
+        // Validate input
+        if (!(0, validators_1.validateUUID)(ownerID)) {
+            return res.status(400).json({ message: "Invalid ownerID" });
         }
-        const { ownerID, accountID, accountName, accountHandle, defaultDenom } = req.body;
-        // Validate ownerID
-        if (typeof ownerID !== 'string' || !/^[a-f0-9-]{36}$/.test(ownerID)) {
-            res.status(400).json({ message: "Invalid ownerID. Must be a valid UUID." });
-            return;
+        if (!(0, validators_1.validateUUID)(accountID)) {
+            return res.status(400).json({ message: "Invalid accountID" });
         }
-        // Validate accountID
-        if (typeof accountID !== 'string' || !/^[a-f0-9-]{36}$/.test(accountID)) {
-            res.status(400).json({ message: "Invalid accountID. Must be a valid UUID." });
-            return;
+        if (accountName && !(0, validators_1.validateAccountName)(accountName)) {
+            return res.status(400).json({ message: "Invalid accountName" });
         }
-        // Validate accountName if provided
-        if (accountName && (typeof accountName !== 'string' || accountName.length < 3 || accountName.length > 50)) {
-            res.status(400).json({ message: "Invalid accountName. Must be a string between 3 and 50 characters." });
-            return;
+        if (accountHandle && !(0, validators_1.validateAccountHandle)(accountHandle)) {
+            return res.status(400).json({ message: "Invalid accountHandle" });
         }
-        // Validate accountHandle if provided
-        if (accountHandle && (typeof accountHandle !== 'string' || !/^[a-z0-9._]{3,30}$/.test(accountHandle))) {
-            res.status(400).json({ message: "Invalid accountHandle. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters." });
-            return;
-        }
-        // Validate defaultDenom if provided
-        if (defaultDenom && (!(0, denominations_1.getDenominations)({ code: defaultDenom }).length)) {
-            res.status(400).json({ message: "Invalid defaultDenom. Must be a valid denomination." });
-            return;
+        if (defaultDenom && !(0, denominations_1.getDenominations)({ code: defaultDenom }).length) {
+            return res.status(400).json({ message: "Invalid defaultDenom" });
         }
         logger_1.default.info("Updating account", { ownerID, accountID, accountName, accountHandle, defaultDenom });
         const updatedAccountID = await (0, UpdateAccount_1.UpdateAccountService)(ownerID, accountID, accountName, accountHandle, defaultDenom);

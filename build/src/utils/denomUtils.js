@@ -20,8 +20,10 @@ const denomFormatter = (amount, code) => {
      * @returns A formatted string representation of the amount.
      */
     const formatCurrencyAmount = (amount, precision, regionalization) => {
-        const roundedAmount = Number(amount.toFixed(precision));
-        return new Intl.NumberFormat(regionalization).format(roundedAmount);
+        return new Intl.NumberFormat(regionalization, {
+            minimumFractionDigits: precision,
+            maximumFractionDigits: precision,
+        }).format(amount);
     };
     const getDenominations = (options) => {
         // This function needs to be imported from denominations.ts
@@ -30,18 +32,18 @@ const denomFormatter = (amount, code) => {
     };
     const denomData = getDenominations({ code });
     const regionalization = denomData.length > 0 ? denomData[0].regionalization : "en-US";
-    let formattedAmount;
+    let precision;
     switch (code) {
         case "CXX":
-            formattedAmount = formatCurrencyAmount(amount, 3, regionalization);
+            precision = 3;
             break;
         case "XAU":
-            formattedAmount = formatCurrencyAmount(amount, 4, regionalization);
+            precision = 4;
             break;
         default:
-            formattedAmount = formatCurrencyAmount(amount, 2, regionalization);
+            precision = 2;
     }
-    return formattedAmount;
+    return formatCurrencyAmount(amount, precision, regionalization);
 };
 exports.denomFormatter = denomFormatter;
 //# sourceMappingURL=denomUtils.js.map
