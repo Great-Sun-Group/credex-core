@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RequestRecurringController = RequestRecurringController;
 const RequestRecurring_1 = require("../services/RequestRecurring");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
-const denominations_1 = require("../../../Core/constants/denominations");
+const denominations_1 = require("../../../constants/denominations");
 /**
  * RequestRecurringController
  *

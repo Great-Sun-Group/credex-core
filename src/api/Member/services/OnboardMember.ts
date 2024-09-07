@@ -1,5 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { getDenominations } from "../../../Core/constants/denominations";
+import { getDenominations } from "../../../constants/denominations";
 
 export async function OnboardMemberService(
   firstname: string,

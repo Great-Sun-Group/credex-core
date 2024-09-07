@@ -1,7 +1,7 @@
 import express from "express";
 import { RequestRecurringService } from "../services/RequestRecurring";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
-import { getDenominations } from "../../../Core/constants/denominations";
+import { getDenominations } from "../../../constants/denominations";
 
 /**
  * RequestRecurringController

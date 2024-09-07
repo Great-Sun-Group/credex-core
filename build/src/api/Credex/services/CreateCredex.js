@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateCredexService = CreateCredexService;
 const neo4j_1 = require("../../../../config/neo4j");
-const denominations_1 = require("../../../Core/constants/denominations");
+const denominations_1 = require("../../../constants/denominations");
 const GetSecuredAuthorization_1 = require("./GetSecuredAuthorization");
 async function CreateCredexService(credexData) {
     const { issuerAccountID, receiverAccountID, InitialAmount, Denomination, credexType, OFFERSorREQUESTS, securedCredex = false, dueDate = "", } = credexData;

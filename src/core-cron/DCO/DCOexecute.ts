@@ -1,7 +1,7 @@
 import axios from "axios";
 import _ from "lodash";
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
-import { getDenominations, Denomination } from "../constants/denominations";
+import { getDenominations, Denomination } from "../../constants/denominations";
 import { GetSecuredAuthorizationService } from "../../api/Credex/services/GetSecuredAuthorization";
 import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";

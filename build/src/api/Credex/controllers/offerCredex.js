@@ -3,9 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OfferCredexController = OfferCredexController;
 const OfferCredex_1 = require("../services/OfferCredex");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
-const denominations_1 = require("../../../Core/constants/denominations");
-const credspan_1 = require("../../../Core/constants/credspan");
-const credexTypes_1 = require("../../../Core/constants/credexTypes");
+const denominations_1 = require("../../../constants/denominations");
+const credspan_1 = require("../../../constants/credspan");
+const credexTypes_1 = require("../../../constants/credexTypes");
 const securedCredexAuthForTier_1 = require("../../Member/controllers/securedCredexAuthForTier");
 const neo4j_1 = require("../../../../config/neo4j");
 /**

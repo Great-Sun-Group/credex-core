@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpdateAccountController = UpdateAccountController;
 const UpdateAccount_1 = require("../services/UpdateAccount");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-const denominations_1 = require("../../../Core/constants/denominations");
+const denominations_1 = require("../../../constants/denominations");
 /**
  * Controller for updating an account
  * @param req - Express request object

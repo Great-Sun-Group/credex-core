@@ -1,5 +1,5 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
-import { getDenominations } from "../constants/denominations";
+import { getDenominations } from "../../constants/denominations";
 import { OnboardMemberController } from "../../api/Member/controllers/onboardMember";
 import { UpdateMemberTierController } from "../../api/Member/controllers/updateMemberTier";
 import { CreateAccountService } from "../../api/Account/services/CreateAccount";

@@ -1,5 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { denomFormatter } from "../../../Core/constants/denominations";
+import { denomFormatter } from "../../../constants/denominations";
 import { GetSecuredAuthorizationService } from "./GetSecuredAuthorization";
 
 export async function CreateCredexService(credexData: any) {

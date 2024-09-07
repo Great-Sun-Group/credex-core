@@ -1,9 +1,9 @@
 import express from "express";
 import { OfferCredexService } from "../services/OfferCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
-import { getDenominations, denomFormatter } from "../../../Core/constants/denominations";
-import { checkDueDate, credspan } from "../../../Core/constants/credspan";
-import { checkPermittedCredexType } from "../../../Core/constants/credexTypes";
+import { getDenominations, denomFormatter } from "../../../constants/denominations";
+import { checkDueDate, credspan } from "../../../constants/credspan";
+import { checkPermittedCredexType } from "../../../constants/credexTypes";
 import { SecuredCredexAuthForTierController } from "../../Member/controllers/securedCredexAuthForTier";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 

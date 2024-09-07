@@ -1,5 +1,5 @@
 import express from "express";
-import { DailyCredcoinOffering } from "../../Core/DCO/DailyCredcoinOffering";
+import { DailyCredcoinOffering } from "../../core-cron/DCO/DailyCredcoinOffering";
 
 export async function ForceDcoController(
   req: express.Request,

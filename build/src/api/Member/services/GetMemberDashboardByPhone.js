@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetMemberDashboardByPhoneService = GetMemberDashboardByPhoneService;
 const neo4j_1 = require("../../../../config/neo4j");
-const denominations_1 = require("../../../Core/constants/denominations");
+const denominations_1 = require("../../../constants/denominations");
 async function GetMemberDashboardByPhoneService(phone) {
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     try {

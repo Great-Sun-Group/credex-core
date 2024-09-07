@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DBinitialization = DBinitialization;
 const neo4j_1 = require("../../../config/neo4j");
-const denominations_1 = require("../constants/denominations");
+const denominations_1 = require("../../constants/denominations");
 const onboardMember_1 = require("../../api/Member/controllers/onboardMember");
 const updateMemberTier_1 = require("../../api/Member/controllers/updateMemberTier");
 const CreateAccount_1 = require("../../api/Account/services/CreateAccount");

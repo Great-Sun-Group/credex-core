@@ -1,7 +1,7 @@
 import express from "express";
 import { CreateAccountService } from "../services/CreateAccount";
-import { getDenominations } from "../../../Core/constants/denominations";
-import { checkPermittedAccountType } from "../../../Core/constants/accountTypes";
+import { getDenominations } from "../../../constants/denominations";
+import { checkPermittedAccountType } from "../../../constants/accountTypes";
 import logger from "../../../../config/logger";
 
 /**

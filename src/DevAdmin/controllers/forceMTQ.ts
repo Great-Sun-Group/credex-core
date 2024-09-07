@@ -1,5 +1,5 @@
 import express from "express";
-import { MinuteTransactionQueue } from "../../Core/MTQ/MinuteTransactionQueue";
+import { MinuteTransactionQueue } from "../../core-cron/MTQ/MinuteTransactionQueue";
 
 export async function ForceMtqController(
   req: express.Request,

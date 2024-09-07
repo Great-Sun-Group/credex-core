@@ -1,5 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { denomFormatter } from "../../../Core/constants/denominations";
+import { denomFormatter } from "../../../constants/denominations";
 
 export async function GetMemberDashboardByPhoneService(phone: string) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();

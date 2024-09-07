@@ -5,8 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateAccountController = CreateAccountController;
 const CreateAccount_1 = require("../services/CreateAccount");
-const denominations_1 = require("../../../Core/constants/denominations");
-const accountTypes_1 = require("../../../Core/constants/accountTypes");
+const denominations_1 = require("../../../constants/denominations");
+const accountTypes_1 = require("../../../constants/accountTypes");
 const logger_1 = __importDefault(require("../../../../config/logger"));
 /**
  * Controller for creating a new account

@@ -22,7 +22,7 @@ returns null on error
 */
 
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { getDenominations } from "../../../Core/constants/denominations";
+import { getDenominations } from "../../../constants/denominations";
 
 export async function UpdateAccountService(
   ownerID: string,

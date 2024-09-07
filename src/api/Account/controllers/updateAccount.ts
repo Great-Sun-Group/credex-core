@@ -1,7 +1,7 @@
 import express from "express";
 import { UpdateAccountService } from "../services/UpdateAccount";
 import logger from "../../../../config/logger";
-import { getDenominations } from "../../../Core/constants/denominations";
+import { getDenominations } from "../../../constants/denominations";
 
 /**
  * Controller for updating an account

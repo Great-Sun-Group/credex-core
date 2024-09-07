@@ -24,7 +24,7 @@ returns null on error
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpdateAccountService = UpdateAccountService;
 const neo4j_1 = require("../../../../config/neo4j");
-const denominations_1 = require("../../../Core/constants/denominations");
+const denominations_1 = require("../../../constants/denominations");
 async function UpdateAccountService(ownerID, accountID, accountName, accountHandle, defaultDenom) {
     // Validation: Check defaultDenom in denominations
     if (!(0, denominations_1.getDenominations)({ code: defaultDenom }).length) {

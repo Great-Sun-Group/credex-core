@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SecuredCredexAuthForTier = SecuredCredexAuthForTier;
 const neo4j_1 = require("../../../../config/neo4j");
-const denominations_1 = require("../../../Core/constants/denominations");
+const denominations_1 = require("../../../constants/denominations");
 async function SecuredCredexAuthForTier(issuerAccountID, amount, denom) {
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     try {

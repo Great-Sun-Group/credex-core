@@ -1,7 +1,7 @@
 import express from "express";
 import { SecuredCredexAuthForTier } from "../services/SecuredCredexAuthForTier";
 import logger from "../../../../config/logger";
-import { getDenominations } from "../../../Core/constants/denominations";
+import { getDenominations } from "../../../constants/denominations";
 
 /**
  * Controller for authorizing secured credex for a member's tier

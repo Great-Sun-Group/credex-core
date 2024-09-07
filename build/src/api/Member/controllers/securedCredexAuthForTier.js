@@ -7,7 +7,7 @@ exports.SecuredCredexAuthForTierController = SecuredCredexAuthForTierController;
 exports.securedCredexAuthForTierExpressHandler = securedCredexAuthForTierExpressHandler;
 const SecuredCredexAuthForTier_1 = require("../services/SecuredCredexAuthForTier");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-const denominations_1 = require("../../../Core/constants/denominations");
+const denominations_1 = require("../../../constants/denominations");
 /**
  * Controller for authorizing secured credex for a member's tier
  * @param memberID - ID of the member
