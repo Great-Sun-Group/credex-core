@@ -6,7 +6,7 @@ import moment from "moment-timezone";
 /**
  * DCOavatars function
  * This function is run as a cronjob every 24 hours to process recurring avatars.
- * It identifies active recurring avatars, creates credexes, and updates their status.
+ * It identifies active recurring avatars, creates credexes, and updates there status.
  */
 export async function DCOavatars() {
   const ledgerSpaceSession = ledgerSpaceDriver.session();

@@ -1,6 +1,4 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
-import { getDenominations } from "../../Core/constants/denominations";
-import { checkPermittedAccountType } from "../../Core/constants/accountTypes";
 
 export async function CreateAccountService(
   ownerID: string,
@@ -33,45 +31,6 @@ export async function CreateAccountService(
       message:
         "You cannot create an account on the Open or Verified membership tiers.",
     };
-  }
-
-  // Validation: Check defaultDenom in denominations
-  if (!getDenominations({ code: defaultDenom }).length) {
-    const message = "defaultDenom not in denoms";
-    console.log(message);
-    return { account: false, message: message };
-  }
-
-  // Check credex type validity
-  if (!checkPermittedAccountType(accountType)) {
-    const message = "Error: accountType not permitted";
-    console.log(message);
-    console.log("accountType: " + accountType);
-    return {
-      account: false,
-      message: message,
-    };
-  }
-
-  // Transform to lowercase and remove spaces
-  accountHandle = accountHandle.toLowerCase().replace(/\s/g, "");
-
-  // Validate the accountHandle
-  const isValid = /^[a-z0-9._]+$/.test(accountHandle);
-
-  if (!isValid) {
-    return {
-      account: false,
-      message:
-        "Invalid account handle. Only lowercase letters, numbers, periods, and underscores are allowed.",
-    };
-  }
-
-  // Validation: Check DCOdenom in denominations
-  if (DCOdenom && !getDenominations({ code: DCOdenom }).length) {
-    const message = "DCOdenom not in denoms";
-    console.log(message);
-    return { account: false, message: message };
   }
 
   try {
@@ -123,7 +82,6 @@ export async function CreateAccountService(
   } catch (error) {
     console.error("Error creating account:", error);
 
-    // Type guard to narrow the type of error
     if (
       isNeo4jError(error) &&
       error.code === "Neo.ClientError.Schema.ConstraintValidationFailed"

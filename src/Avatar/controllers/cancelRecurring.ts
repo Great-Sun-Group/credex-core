@@ -1,7 +1,7 @@
 import express from "express";
 import { CancelRecurringService } from "../services/CancelRecurring";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
-//comment here
+import { GetAccountDashboardController } from "../../Account/controllers/getAccountDashboard";
+
 export async function DeclineRecurringController(
   req: express.Request,
   res: express.Response
@@ -27,10 +27,19 @@ export async function DeclineRecurringController(
       return res.status(400).json(cancelRecurringData);
     }
 
-    const dashboardData = await GetAccountDashboardService(
-      req.body.signerID,
-      req.body.cancelerAccountID
-    );
+    const dashboardReq = {
+      body: {
+        memberID: req.body.signerID,
+        accountID: req.body.cancelerAccountID
+      }
+    } as express.Request;
+    const dashboardRes = {
+      status: (code: number) => ({
+        json: (data: any) => data
+      })
+    } as express.Response;
+
+    const dashboardData = await GetAccountDashboardController(dashboardReq, dashboardRes);
 
     res.json({
       cancelRecurringData: cancelRecurringData,

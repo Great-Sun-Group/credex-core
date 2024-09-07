@@ -157,12 +157,20 @@ This module handles member-related operations in the Credex ecosystem. It expose
      - memberHandle: string
 
 4. **updateMemberTier** (POST)
+
    - Function: Updates a member's tier status.
    - Required variables:
      - memberID: string
      - newTier: number
 
-These endpoints allow for member registration, information retrieval, and tier management within the Credex ecosystem. The onboardMember endpoint not only creates a new member but also sets up their personal consumption account, integrating the member into the ecosystem. The getMemberDashboardByPhone endpoint provides comprehensive information about the member and their associated accounts, while getMemberByHandle allows for quick member lookup. The updateMemberTier endpoint enables the system to adjust a member's status within the ecosystem.
+5. **securedCredexAuthForTier** (POST)
+   - Function: Authorizes secured credex for a member's tier.
+   - Required variables:
+     - issuerAccountID: string
+     - amount: number
+     - denom: string
+
+These endpoints allow for member registration, information retrieval, tier management, and secured credex authorization within the Credex ecosystem. All controllers now include improved input validation, error handling, and logging for better reliability and maintainability.
 
 # Account
 
@@ -177,6 +185,9 @@ This module handles account-related operations in the Credex ecosystem. It expos
      - accountName: string
      - accountHandle: string
      - defaultDenom: string
+   - Optional variables:
+     - DCOgiveInCXX: number
+     - DCOdenom: string
 
 2. **getAccountByHandle** (GET)
 
@@ -188,33 +199,37 @@ This module handles account-related operations in the Credex ecosystem. It expos
 
    - Function: Updates an existing account's information.
    - Required variables:
+     - ownerID: string
      - accountID: string
    - Optional variables:
      - accountName: string
-     - accountType: string
+     - accountHandle: string
      - defaultDenom: string
 
 4. **authorizeForAccount** (POST)
 
    - Function: Authorizes a member to perform actions on behalf of an account.
    - Required variables:
+     - memberHandleToBeAuthorized: string
      - accountID: string
-     - memberID: string
+     - ownerID: string
 
 5. **unauthorizeForAccount** (POST)
 
    - Function: Removes authorization for a member to act on behalf of an account.
    - Required variables:
+     - memberIDtoBeUnauthorized: string
      - accountID: string
-     - memberID: string
+     - ownerID: string
 
 6. **updateSendOffersTo** (POST)
    - Function: Updates the account's preference for receiving offers.
    - Required variables:
+     - memberIDtoSendOffers: string
      - accountID: string
-     - sendOffersTo: string
+     - ownerID: string
 
-These endpoints provide comprehensive account management capabilities within the Credex ecosystem. The createAccount endpoint allows for the creation of new accounts, while getAccountByHandle facilitates easy retrieval of account information. The updateAccount endpoint enables modifications to existing accounts. The authorizeForAccount and unauthorizeForAccount endpoints manage access control for accounts, allowing or revoking permissions for members to act on behalf of an account. Finally, the updateSendOffersTo endpoint allows accounts to specify their preferences for receiving offers, enhancing user control over interactions within the ecosystem.
+These endpoints provide comprehensive account management capabilities within the Credex ecosystem. All controllers now include improved input validation, error handling, and logging for better reliability and maintainability. The controllers ensure that all calls to Account services go through them, enforcing proper access control and data validation.
 
 # Credex
 
@@ -288,12 +303,12 @@ The Avatar module exposes the following endpoints:
      - counterpartyAccountID: string
      - InitialAmount: number
      - Denomination: string
-     - credexType: string
      - nextPayDate: string
      - daysBetweenPays: number
-     - securedCredex: boolean (optional)
-     - credspan: number (optional)
-     - remainingPays: number (optional)
+   - Optional variables:
+     - securedCredex: boolean
+     - credspan: number
+     - remainingPays: number
    - Requires either securedCredex = true or a credspan between 7 and 35.
    - remainingPays is set when the avatar will run a specific number of times before completion, and not set when the avatar is to continue indefinitely.
 

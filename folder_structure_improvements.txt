@@ -1,0 +1,77 @@
+Folder Structure Improvement Instructions
+
+1. Group configuration files:
+   - Create a new 'config' folder at the root level
+   - Move .dockerignore, .gitignore, nodemon.json, and tsconfig.json into it
+   - Rename the existing 'config' folder to 'app-config'
+
+2. Separate documentation:
+   - Create a 'docs' folder at the root level
+   - Move README.md and README.Docker.md into it
+
+3. Organize source code:
+   Inside the 'src' folder:
+   a. Create an 'api' folder to group all API-related code
+   b. Move Account, Avatar, Credex, DevAdmin, and Member folders into the 'api' folder
+   c. Keep the Core folder outside of the 'api' folder
+
+4. Ensure consistent file naming:
+   - Use camelCase for files (e.g., accountRoutes.ts)
+   - Use PascalCase for classes and interfaces
+
+5. Group common utilities:
+   - Create a 'utils' folder inside 'src' for common utility functions
+
+6. Separate test files:
+   - Create a 'tests' folder at the root level, mirroring the 'src' folder structure
+
+Proposed New Structure:
+
+/workspaces/credex-core/
+├── config/
+│   ├── .dockerignore
+│   ├── .gitignore
+│   ├── nodemon.json
+│   └── tsconfig.json
+├── docs/
+│   ├── README.md
+│   └── README.Docker.md
+├── app-config/
+│   ├── authenticate.ts
+│   ├── config.ts
+│   ├── logger.ts
+│   ├── neo4j.ts
+│   └── swagger.ts
+├── middleware/
+│   └── errorHandler.ts
+├── src/
+│   ├── index.ts
+│   ├── api/
+│   │   ├── Account/
+│   │   ├── Avatar/
+│   │   ├── Credex/
+│   │   ├── DevAdmin/
+│   │   └── Member/
+│   ├── Core/
+│   └── utils/
+├── tests/
+├── compose.yaml
+├── Dockerfile
+├── package-lock.json
+├── package.json
+└── update_combined_code.sh
+
+Implementation Notes:
+1. Move files and folders according to the new structure
+2. Update import statements in your code to reflect new file locations
+3. Update build and run scripts to work with the new folder structure
+4. Ensure all developers are aware of the new structure
+
+Benefits:
+- Better organization of configuration files
+- Clear separation of documentation
+- Grouped API-related code
+- Consistent naming conventions
+- Dedicated space for common utilities
+- Separate area for tests
+- Enhanced clarity and easier navigation for developers

@@ -1,6 +1,6 @@
 import express from "express";
 import { AcceptCredexService } from "../services/AcceptCredex";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { GetAccountDashboardController } from "../../Account/controllers/getAccountDashboard";
 
 export async function AcceptCredexBulkController(
   req: express.Request,
@@ -51,10 +51,19 @@ export async function AcceptCredexBulkController(
       // Assuming that memberID and acceptorAccountID are the same for all returned objects
       const { memberID, acceptorAccountID } = validCredexData[0];
 
-      const dashboardData = await GetAccountDashboardService(
-        memberID,
-        acceptorAccountID
-      );
+      const dashboardReq = {
+        body: {
+          memberID,
+          accountID: acceptorAccountID
+        }
+      } as express.Request;
+      const dashboardRes = {
+        status: (code: number) => ({
+          json: (data: any) => data
+        })
+      } as express.Response;
+
+      const dashboardData = await GetAccountDashboardController(dashboardReq, dashboardRes);
       res.json({
         acceptCredexData: validCredexData,
         dashboardData: dashboardData,
