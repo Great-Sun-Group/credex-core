@@ -1186,7 +1186,7 @@ export async function GetMemberDashboardByPhoneController(
  * @param res - Express response object
  * @param next - Express next function
  */
-    // Validate phone number format (simple regex for demonstration, adjust as needed)
+    // Validate phone number format using the validatePhone function
 ```
 
 ## src/api/Member/controllers/onboardMember.ts

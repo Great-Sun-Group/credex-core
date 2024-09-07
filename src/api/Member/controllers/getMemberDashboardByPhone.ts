@@ -2,6 +2,7 @@ import express from "express";
 import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
 import { GetAccountDashboardController } from "../../Account/controllers/getAccountDashboard";
 import logger from "../../../../config/logger";
+import { validatePhone } from "../../../utils/validators";
 
 /**
  * Controller for retrieving a member's dashboard by phone number
@@ -22,8 +23,8 @@ export async function GetMemberDashboardByPhoneController(
       return;
     }
 
-    // Validate phone number format (simple regex for demonstration, adjust as needed)
-    if (!/^\+?[1-9]\d{1,14}$/.test(phone)) {
+    // Validate phone number format using the validatePhone function
+    if (!validatePhone(phone)) {
       res.status(400).json({
         message: "Invalid phone number format. Please provide a valid international phone number.",
       });

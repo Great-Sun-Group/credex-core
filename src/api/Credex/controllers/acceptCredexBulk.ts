@@ -1,6 +1,7 @@
 import express from "express";
 import { AcceptCredexService } from "../services/AcceptCredex";
 import { GetAccountDashboardController } from "../../Account/controllers/getAccountDashboard";
+import { validateUUID } from "../../../utils/validators";
 
 export async function AcceptCredexBulkController(
   req: express.Request,
@@ -18,11 +19,17 @@ export async function AcceptCredexBulkController(
 
   if (
     !Array.isArray(req.body.credexIDs) ||
-    !req.body.credexIDs.every((id: any) => typeof id === "string")
+    !req.body.credexIDs.every((id: any) => typeof id === "string" && validateUUID(id))
   ) {
     return res
       .status(400)
-      .json({ message: "Array of credexIDs to accept is required" });
+      .json({ message: "Array of valid credexIDs (UUIDs) to accept is required" });
+  }
+
+  if (!validateUUID(req.body.signerID)) {
+    return res
+      .status(400)
+      .json({ message: "Invalid signerID. Must be a valid UUID." });
   }
 
   try {
