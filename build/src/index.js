@@ -26,7 +26,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.apiVersionOneRoute = void 0;
+exports.apiVersionOneRoute = exports.app = void 0;
 // Import required modules and dependencies
 const express_1 = __importDefault(require("express"));
 const http_1 = __importDefault(require("http"));
@@ -48,20 +48,20 @@ const config_1 = require("../config/config");
 const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
 const swagger_1 = require("../config/swagger");
 // Create an Express application
-const app = (0, express_1.default)();
+exports.app = (0, express_1.default)();
 // Create a JSON parser middleware
 const jsonParser = body_parser_1.default.json();
 // Define the API version route prefix
 exports.apiVersionOneRoute = "/api/v1/";
 // Apply security middleware
-app.use((0, helmet_1.default)()); // Helps secure Express apps with various HTTP headers
-app.use((0, cors_1.default)()); // Enable Cross-Origin Resource Sharing (CORS)
+exports.app.use((0, helmet_1.default)()); // Helps secure Express apps with various HTTP headers
+exports.app.use((0, cors_1.default)()); // Enable Cross-Origin Resource Sharing (CORS)
 // Apply custom logging middleware
-app.use(logger_1.expressLogger);
+exports.app.use(logger_1.expressLogger);
 // Serve Swagger UI for API documentation
-app.use("/api-docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_1.swaggerSpec));
+exports.app.use("/api-docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_1.swaggerSpec));
 // Apply authentication middleware to all routes under the API version prefix
-app.use(exports.apiVersionOneRoute, authenticate_1.default);
+exports.app.use(exports.apiVersionOneRoute, authenticate_1.default);
 // Set up rate limiting to prevent abuse
 // NOTE: With all requests coming from a single WhatsApp chatbot, rate limiting might cause issues
 // Consider adjusting or removing rate limiting based on your specific use case
@@ -70,32 +70,34 @@ const limiter = (0, express_rate_limit_1.default)({
     max: config_1.config.rateLimit.max, // Maximum number of requests per window
     message: "Too many requests from this IP, please try again after 15 minutes",
 });
-app.use(limiter);
+exports.app.use(limiter);
 // Start cron jobs for scheduled tasks (e.g., daily credcoin offering, minute transaction queue)
 (0, cronJobs_1.default)();
 // Apply route handlers for different modules
-app.use(`${exports.apiVersionOneRoute}member`, jsonParser, memberRoutes_1.default);
-(0, accountRoutes_1.default)(app, jsonParser);
-(0, credexRoutes_1.default)(app, jsonParser);
-(0, adminDashboardRoutes_1.default)(app, jsonParser);
-(0, recurringRoutes_1.default)(app, jsonParser);
+exports.app.use(`${exports.apiVersionOneRoute}member`, jsonParser, memberRoutes_1.default);
+(0, accountRoutes_1.default)(exports.app, jsonParser);
+(0, credexRoutes_1.default)(exports.app, jsonParser);
+(0, adminDashboardRoutes_1.default)(exports.app, jsonParser);
+(0, recurringRoutes_1.default)(exports.app, jsonParser);
 // Conditionally apply Test routes based on deployment environment
 if (config_1.config.deployment === "demo" || config_1.config.deployment === "dev") {
-    (0, testRoutes_1.default)(app, jsonParser);
+    (0, testRoutes_1.default)(exports.app, jsonParser);
 }
 // Apply error handling middleware
-app.use(errorHandler_1.notFoundHandler); // Handle 404 errors
-app.use(errorHandler_1.errorHandler); // Handle all other errors
+exports.app.use(errorHandler_1.notFoundHandler); // Handle 404 errors
+exports.app.use(errorHandler_1.errorHandler); // Handle all other errors
 // Create HTTP server
-const server = http_1.default.createServer(app);
+const server = http_1.default.createServer(exports.app);
 // Start the server
-server.listen(config_1.config.port, () => {
-    logger_1.default.info(`Server is running on http://localhost:${config_1.config.port}`);
-    logger_1.default.info(`API documentation available at http://localhost:${config_1.config.port}/api-docs`);
-    logger_1.default.info(`Server started at ${new Date().toISOString()}`);
-    logger_1.default.info(`Environment: ${config_1.config.nodeEnv}`);
-    logger_1.default.info(`Deployment type: ${config_1.config.deployment}`);
-});
+if (require.main === module) {
+    server.listen(config_1.config.port, () => {
+        logger_1.default.info(`Server is running on http://localhost:${config_1.config.port}`);
+        logger_1.default.info(`API documentation available at http://localhost:${config_1.config.port}/api-docs`);
+        logger_1.default.info(`Server started at ${new Date().toISOString()}`);
+        logger_1.default.info(`Environment: ${config_1.config.nodeEnv}`);
+        logger_1.default.info(`Deployment type: ${config_1.config.deployment}`);
+    });
+}
 // Handle uncaught exceptions
 process.on("uncaughtException", (error) => {
     logger_1.default.error("Uncaught Exception:", error);

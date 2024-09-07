@@ -8,13 +8,7 @@ exports.onboardMemberExpressHandler = onboardMemberExpressHandler;
 const OnboardMember_1 = require("../services/OnboardMember");
 const GetMemberDashboardByPhone_1 = require("../services/GetMemberDashboardByPhone");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-/**
- * Validates input for onboarding a new member
- * @param firstname - First name of the member
- * @param lastname - Last name of the member
- * @param phone - Phone number of the member
- * @returns null if valid, error message string if invalid
- */
+const validators_1 = require("../../../utils/validators");
 function validateInput(firstname, lastname, phone) {
     if (!firstname || !lastname || !phone) {
         return "firstname, lastname, and phone are required";
@@ -24,8 +18,8 @@ function validateInput(firstname, lastname, phone) {
         typeof phone !== "string") {
         return "firstname, lastname, and phone must be strings";
     }
-    if (firstname.length < 2 || firstname.length > 50 || lastname.length < 2 || lastname.length > 50) {
-        return "First name and last name must be between 2 and 50 characters";
+    if (!(0, validators_1.validateAccountName)(firstname) || !(0, validators_1.validateAccountName)(lastname)) {
+        return "First name and last name must be between 3 and 50 characters";
     }
     // Phone number validation (with optional '+' prefix)
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
@@ -34,13 +28,6 @@ function validateInput(firstname, lastname, phone) {
     }
     return null;
 }
-/**
- * Controller for onboarding a new member
- * @param firstname - First name of the member
- * @param lastname - Last name of the member
- * @param phone - Phone number of the member
- * @returns Object containing member dashboard or error message
- */
 async function OnboardMemberController(firstname, lastname, phone) {
     const validationError = validateInput(firstname, lastname, phone);
     if (validationError) {
@@ -68,12 +55,6 @@ async function OnboardMemberController(firstname, lastname, phone) {
         return { error: "Internal Server Error" };
     }
 }
-/**
- * Express middleware wrapper for onboarding a new member
- * @param req - Express request object
- * @param res - Express response object
- * @param next - Express next function
- */
 async function onboardMemberExpressHandler(req, res, next) {
     const { firstname, lastname, phone } = req.body;
     try {

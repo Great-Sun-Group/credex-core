@@ -2,14 +2,8 @@ import express from "express";
 import { OnboardMemberService } from "../services/OnboardMember";
 import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
 import logger from "../../../../config/logger";
+import { validateAccountName } from "../../../utils/validators";
 
-/**
- * Validates input for onboarding a new member
- * @param firstname - First name of the member
- * @param lastname - Last name of the member
- * @param phone - Phone number of the member
- * @returns null if valid, error message string if invalid
- */
 function validateInput(
   firstname: string,
   lastname: string,
@@ -25,8 +19,8 @@ function validateInput(
   ) {
     return "firstname, lastname, and phone must be strings";
   }
-  if (firstname.length < 2 || firstname.length > 50 || lastname.length < 2 || lastname.length > 50) {
-    return "First name and last name must be between 2 and 50 characters";
+  if (!validateAccountName(firstname) || !validateAccountName(lastname)) {
+    return "First name and last name must be between 3 and 50 characters";
   }
 
   // Phone number validation (with optional '+' prefix)
@@ -38,13 +32,6 @@ function validateInput(
   return null;
 }
 
-/**
- * Controller for onboarding a new member
- * @param firstname - First name of the member
- * @param lastname - Last name of the member
- * @param phone - Phone number of the member
- * @returns Object containing member dashboard or error message
- */
 export async function OnboardMemberController(
   firstname: string,
   lastname: string,
@@ -86,12 +73,6 @@ export async function OnboardMemberController(
   }
 }
 
-/**
- * Express middleware wrapper for onboarding a new member
- * @param req - Express request object
- * @param res - Express response object
- * @param next - Express next function
- */
 export async function onboardMemberExpressHandler(
   req: express.Request,
   res: express.Response,

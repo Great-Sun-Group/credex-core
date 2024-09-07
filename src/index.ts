@@ -20,7 +20,7 @@ import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "../config/swagger";
 
 // Create an Express application
-const app = express();
+export const app = express();
 
 // Create a JSON parser middleware
 const jsonParser = bodyParser.json();
@@ -74,15 +74,17 @@ app.use(errorHandler); // Handle all other errors
 const server = http.createServer(app);
 
 // Start the server
-server.listen(config.port, () => {
-  logger.info(`Server is running on http://localhost:${config.port}`);
-  logger.info(
-    `API documentation available at http://localhost:${config.port}/api-docs`
-  );
-  logger.info(`Server started at ${new Date().toISOString()}`);
-  logger.info(`Environment: ${config.nodeEnv}`);
-  logger.info(`Deployment type: ${config.deployment}`);
-});
+if (require.main === module) {
+  server.listen(config.port, () => {
+    logger.info(`Server is running on http://localhost:${config.port}`);
+    logger.info(
+      `API documentation available at http://localhost:${config.port}/api-docs`
+    );
+    logger.info(`Server started at ${new Date().toISOString()}`);
+    logger.info(`Environment: ${config.nodeEnv}`);
+    logger.info(`Deployment type: ${config.deployment}`);
+  });
+}
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (error) => {
