@@ -3,5 +3,8 @@
 # Run the update_combined_code.sh script
 ./update_combined_code.sh
 
-# Add the updated combined code file
-git add combined_code.txt
+# Add the updated AI context files
+git add ai_context
+
+# Exit with a success status
+exit 0

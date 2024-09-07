@@ -1,19 +1,49 @@
 #!/bin/bash
 
-echo "Running post-commit hook" >> post-commit.log
+# Enable debugging
+set -x
 
-./update_combined_code.sh
+LOG_FILE="post-commit.log"
 
-echo "AI context updated after commit" >> post-commit.log
+echo "Running post-commit hook" >> "$LOG_FILE"
 
-# Check if there are changes to ai_context directory
-if git diff --exit-code ai_context; then
-    echo "No changes to AI context" >> post-commit.log
-else
-    echo "Changes detected in AI context" >> post-commit.log
-    git add ai_context
-    git commit -m "Update AI context" --no-verify
-    echo "AI context committed after main commit" >> post-commit.log
+# Check if this is an AI context update commit
+if [[ "$(git log -1 --pretty=%B)" == "Update AI context" ]]; then
+    echo "Skipping AI context update for AI context commit" >> "$LOG_FILE"
+    exit 0
 fi
 
-echo "Post-commit hook completed" >> post-commit.log
+# Run the update script and capture any errors
+if ! ./update_combined_code.sh >> "$LOG_FILE" 2>&1; then
+    echo "Error: Failed to update AI context" >> "$LOG_FILE"
+    exit 1
+fi
+
+echo "AI context updated after commit" >> "$LOG_FILE"
+
+# Check if there are changes to ai_context directory
+if git status --porcelain ai_context | grep -q '^??'; then
+    echo "New files detected in AI context" >> "$LOG_FILE"
+    git add ai_context
+elif git diff --quiet ai_context; then
+    echo "No changes to AI context" >> "$LOG_FILE"
+else
+    echo "Changes detected in AI context" >> "$LOG_FILE"
+    git add ai_context
+fi
+
+if git diff --staged --quiet; then
+    echo "No staged changes for AI context" >> "$LOG_FILE"
+else
+    echo "Committing AI context changes" >> "$LOG_FILE"
+    if ! git commit -m "Update AI context" --no-verify >> "$LOG_FILE" 2>&1; then
+        echo "Failed to commit AI context changes" >> "$LOG_FILE"
+        exit 1
+    fi
+    echo "AI context committed after main commit" >> "$LOG_FILE"
+fi
+
+echo "Post-commit hook completed" >> "$LOG_FILE"
+
+# Disable debugging
+set +x
