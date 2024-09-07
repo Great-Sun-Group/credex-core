@@ -4,13 +4,16 @@ echo "Running post-commit hook" >> post-commit.log
 
 ./update_combined_code.sh
 
-# Check if there are changes to combined_code.txt
-if git diff --exit-code combined_code.txt; then
-    echo "No changes to combined_code.txt" >> post-commit.log
+echo "AI context updated after commit" >> post-commit.log
+
+# Check if there are changes to ai_context directory
+if git diff --exit-code ai_context; then
+    echo "No changes to AI context" >> post-commit.log
 else
-    echo "Changes detected in combined_code.txt" >> post-commit.log
-    git add combined_code.txt
-    echo "combined_code.txt updated after commit" >> post-commit.log
+    echo "Changes detected in AI context" >> post-commit.log
+    git add ai_context
+    git commit -m "Update AI context" --no-verify
+    echo "AI context committed after main commit" >> post-commit.log
 fi
 
 echo "Post-commit hook completed" >> post-commit.log
