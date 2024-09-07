@@ -1,9 +1,5 @@
 Folder Structure Improvement Instructions
 
-1. Group configuration files:
-   - Create a new 'config' folder at the root level
-   - Move .dockerignore, .gitignore, nodemon.json, and tsconfig.json into it
-   - Rename the existing 'config' folder to 'app-config'
 
 2. Separate documentation:
    - Create a 'docs' folder at the root level

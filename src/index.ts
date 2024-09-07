@@ -14,7 +14,7 @@ import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import AdminDashboardRoutes from "./AdminDashboard/adminDashboardRoutes";
-import AdminRoutes from "./DevelopmentAdmin/adminRoutes";
+import devAdminRoutes from "./DevAdmin/devAdminRoutes";
 import { errorHandler, notFoundHandler } from "../middleware/errorHandler";
 import { config } from "../config/config";
 import swaggerUi from "swagger-ui-express";

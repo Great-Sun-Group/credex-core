@@ -1,8 +1,5 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/typescript-node
 {
-  "name": "Node.js & TypeScript",
-  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+  "name": "Credex Core Dev Container",
   "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
   "customizations": {
     "vscode": {
@@ -10,30 +7,29 @@
         "esbenp.prettier-vscode",
         "Postman.postman-for-vscode",
         "saoudrizwan.claude-dev",
-        "GitHub.copilot"
-      ]
+        "GitHub.copilot",
+        "dbaeumer.vscode-eslint",
+        "ms-azuretools.vscode-docker",
+        "eamodio.gitlens",
+        "yzhang.markdown-all-in-one"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": true
+        }
+      }
     }
   },
-  // Features to add to the dev container. More info: https://containers.dev/features.
   "features": {
-    "node": {
-      "version": "18",
-      "nodeGypDependencies": true
-    }
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    },
+    "ghcr.io/devcontainers/features/git:1": {}
   },
-  // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  // "forwardPorts": [],
-
-  // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": [
-    "/bin/sh",
-    "-c",
-    "npm install && npm install -g nodemon"
-  ]
-
-  // Configure tool-specific properties.
-  // "customizations": {},
-
-  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-  // "remoteUser": "root"
+  "forwardPorts": [5000],
+  "postCreateCommand": "npm install && npm install -g nodemon",
+  "remoteEnv": {
+    "NODE_ENV": "development"
+  }
 }
