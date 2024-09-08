@@ -1,5 +1,6 @@
 import swaggerJsdoc from "swagger-jsdoc";
 import { config } from "./config";
+import logger from "./logger";
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -53,3 +54,5 @@ const options: swaggerJsdoc.Options = {
 };
 
 export const swaggerSpec = swaggerJsdoc(options);
+
+logger.info("Swagger specification generated");

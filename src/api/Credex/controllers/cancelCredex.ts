@@ -1,7 +1,7 @@
 import express from "express";
 import { CancelCredexService } from "../services/CancelCredex";
-import { logError, logInfo } from "../../../utils/logger";
 import { validateUUID } from "../../../utils/validators";
+import logger from "../../../../config/logger";
 
 /**
  * CancelCredexController
@@ -18,31 +18,36 @@ export async function CancelCredexController(
   res: express.Response
 ) {
   const requestId = req.id;
+  logger.debug('Entering CancelCredexController', { requestId });
   
   try {
     const { credexID, signerID } = req.body;
+    logger.debug('Received cancellation request', { requestId, credexID, signerID });
 
     if (!validateUUID(credexID)) {
-      logError("CancelCredexController: Invalid credexID", new Error(), { credexID, requestId });
+      logger.warn("Invalid credexID", { credexID, requestId });
       return res.status(400).json({ error: "Invalid credexID" });
     }
 
     if (!validateUUID(signerID)) {
-      logError("CancelCredexController: Invalid signerID", new Error(), { signerID, requestId });
+      logger.warn("Invalid signerID", { signerID, requestId });
       return res.status(400).json({ error: "Invalid signerID" });
     }
 
+    logger.debug('Calling CancelCredexService', { requestId, credexID, signerID });
     const responseData = await CancelCredexService(credexID, signerID, requestId);
     
     if (!responseData) {
-      logError("CancelCredexController: Credex not found or already processed", new Error(), { credexID, requestId });
+      logger.warn("Credex not found or already processed", { credexID, requestId });
       return res.status(404).json({ error: "Credex not found or already processed" });
     }
 
-    logInfo("CancelCredexController: Credex cancelled successfully", { credexID, requestId });
+    logger.info("Credex cancelled successfully", { credexID, requestId });
+    logger.debug('Exiting CancelCredexController with success', { requestId });
     return res.status(200).json({ message: "Credex cancelled successfully", credexID: responseData });
   } catch (err) {
-    logError("CancelCredexController: Unhandled error", err as Error, { requestId });
+    logger.error("Unhandled error in CancelCredexController", { error: (err as Error).message, stack: (err as Error).stack, requestId });
+    logger.debug('Exiting CancelCredexController with error', { requestId });
     return res.status(500).json({ error: "Internal server error" });
   }
 }

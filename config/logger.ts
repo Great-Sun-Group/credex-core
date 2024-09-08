@@ -2,19 +2,14 @@ import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 import { config } from "./config";
 import { v4 as uuidv4 } from 'uuid';
+import baseLogger from "./baseLogger";
 
-// Configure the logger
-const logger = winston.createLogger({
-  level: config.nodeEnv === "production" ? "info" : "debug",
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.splat(),
-    winston.format.json()
-  ),
-  defaultMeta: { service: "credex-core" },
-  transports: [
-    // Rotate error logs daily
+// Enhance the baseLogger with additional configuration
+const logger = baseLogger;
+
+// Add file transports for production environment
+if (config.nodeEnv === "production") {
+  logger.add(
     new DailyRotateFile({
       filename: "logs/error-%DATE%.log",
       datePattern: "YYYY-MM-DD",
@@ -22,25 +17,20 @@ const logger = winston.createLogger({
       maxSize: "20m",
       maxFiles: "14d",
       level: "error",
-    }),
-    // Rotate combined logs daily
+    })
+  );
+  logger.add(
     new DailyRotateFile({
       filename: "logs/combined-%DATE%.log",
       datePattern: "YYYY-MM-DD",
       zippedArchive: true,
       maxSize: "20m",
       maxFiles: "14d",
-    }),
-  ],
-});
-
-// Add console transport for non-production environments
-if (config.nodeEnv !== "production") {
-  logger.add(
-    new winston.transports.Console({
-      format: winston.format.simple(),
     })
   );
+} else {
+  // For non-production environments, we've already added Console transport in baseLogger
+  logger.level = "debug";
 }
 
 function sanitizeData(data: any): any {

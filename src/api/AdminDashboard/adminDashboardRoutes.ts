@@ -18,62 +18,75 @@ import {
   updateMemberTierSchema,
   getAccountSchema,
 } from "./adminDashboardValidationSchemas";
-
-// Define route constants
-const ROUTES = {
-  GET_CREDEX_DETAILS: `${apiVersionOneRoute}getCredexDetails`,
-  GET_MEMBER_DETAILS: `${apiVersionOneRoute}getMemberDetails`,
-  UPDATE_MEMBER_TIER: `${apiVersionOneRoute}updateMemberTier`,
-  GET_ACCOUNT_DETAILS: `${apiVersionOneRoute}getAccountDetails`,
-  GET_RECEIVED_CREDEX_OFFERS: `${apiVersionOneRoute}getReceivedCredexOffers`,
-  GET_SENT_CREDEX_OFFERS: `${apiVersionOneRoute}getSentCredexOffers`,
-};
+import logger from "../../utils/logger";
 
 export default function AdminDashboardRoutes(
   app: express.Application,
   jsonParser: express.RequestHandler
 ) {
+  logger.info("Initializing AdminDashboard routes");
+
   app.get(
-    ROUTES.GET_CREDEX_DETAILS,
+    `${apiVersionOneRoute}getCredexDetails`,
     jsonParser,
     validateRequest(getCredexSchema, 'query'),
-    getCredexDetails
+    (req, res, next) => {
+      logger.debug(`GET ${apiVersionOneRoute}getCredexDetails called`, { requestId: req.id });
+      getCredexDetails(req, res, next);
+    }
   );
 
   app.get(
-    ROUTES.GET_MEMBER_DETAILS,
+    `${apiVersionOneRoute}getMemberDetails`,
     jsonParser,
     validateRequest(getMemberSchema, 'query'),
-    getMemberDetails
+    (req, res, next) => {
+      logger.debug(`GET ${apiVersionOneRoute}getMemberDetails called`, { requestId: req.id });
+      getMemberDetails(req, res, next);
+    }
   );
 
   app.patch(
-    ROUTES.UPDATE_MEMBER_TIER,
+    `${apiVersionOneRoute}updateMemberTier`,
     jsonParser,
     validateRequest(updateMemberTierSchema),
-    updateMemberTier
+    (req, res, next) => {
+      logger.debug(`PATCH ${apiVersionOneRoute}updateMemberTier called`, { requestId: req.id });
+      updateMemberTier(req, res, next);
+    }
   );
 
   app.get(
-    ROUTES.GET_ACCOUNT_DETAILS,
+    `${apiVersionOneRoute}getAccountDetails`,
     jsonParser,
     validateRequest(getAccountSchema, 'query'),
-    getAccountDetails
+    (req, res, next) => {
+      logger.debug(`GET ${apiVersionOneRoute}getAccountDetails called`, { requestId: req.id });
+      getAccountDetails(req, res, next);
+    }
   );
 
   app.get(
-    ROUTES.GET_RECEIVED_CREDEX_OFFERS,
+    `${apiVersionOneRoute}getReceivedCredexOffers`,
     jsonParser,
     validateRequest(getAccountSchema, 'query'),
-    getReceivedCredexOffers
+    (req, res, next) => {
+      logger.debug(`GET ${apiVersionOneRoute}getReceivedCredexOffers called`, { requestId: req.id });
+      getReceivedCredexOffers(req, res, next);
+    }
   );
 
   app.get(
-    ROUTES.GET_SENT_CREDEX_OFFERS,
+    `${apiVersionOneRoute}getSentCredexOffers`,
     jsonParser,
     validateRequest(getAccountSchema, 'query'),
-    getSentCredexOffers
+    (req, res, next) => {
+      logger.debug(`GET ${apiVersionOneRoute}getSentCredexOffers called`, { requestId: req.id });
+      getSentCredexOffers(req, res, next);
+    }
   );
 
   app.use(errorHandler);
+
+  logger.info("AdminDashboard routes initialized");
 }

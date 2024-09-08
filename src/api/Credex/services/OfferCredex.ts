@@ -1,6 +1,6 @@
 import { CreateCredexService } from "./CreateCredex";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { logInfo, logWarning, logError } from "../../../utils/logger";
+import logger from "../../../../config/logger";
 import { digitallySign } from "../../../utils/digitalSignature";
 
 interface CredexData {
@@ -23,6 +23,13 @@ interface CredexData {
  * @returns The result of the Credex offer creation
  */
 export async function OfferCredexService(credexData: CredexData) {
+  logger.debug("Entering OfferCredexService", { 
+    memberID: credexData.memberID, 
+    receiverAccountID: credexData.receiverAccountID, 
+    credexType: credexData.credexType,
+    requestId: credexData.requestId 
+  });
+  
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
     // Set default values for the Credex
@@ -30,9 +37,21 @@ export async function OfferCredexService(credexData: CredexData) {
     credexData.credexType = credexData.credexType || "PURCHASE";
 
     // Create the new Credex
+    logger.debug("Creating new Credex", { 
+      memberID: credexData.memberID, 
+      receiverAccountID: credexData.receiverAccountID, 
+      credexType: credexData.credexType,
+      requestId: credexData.requestId 
+    });
     const newCredex = await CreateCredexService(credexData);
 
     if (typeof newCredex.credex === "boolean" || !newCredex.credex?.credexID) {
+      logger.error("Failed to create Credex", { 
+        memberID: credexData.memberID, 
+        receiverAccountID: credexData.receiverAccountID, 
+        credexType: credexData.credexType,
+        requestId: credexData.requestId 
+      });
       throw new Error("Failed to create Credex");
     }
 
@@ -44,6 +63,11 @@ export async function OfferCredexService(credexData: CredexData) {
         createdAt: new Date().toISOString()
       });
 
+      logger.debug("Signing Credex", { 
+        memberID: credexData.memberID, 
+        credexID: newCredex.credex.credexID, 
+        requestId: credexData.requestId 
+      });
       await digitallySign(
         ledgerSpaceSession,
         credexData.memberID,
@@ -53,22 +77,47 @@ export async function OfferCredexService(credexData: CredexData) {
         inputData,
         credexData.requestId
       );
-      logInfo(`Credex signed successfully. Request ID: ${credexData.requestId}`);
+      logger.info("Credex signed successfully", { 
+        memberID: credexData.memberID, 
+        credexID: newCredex.credex.credexID, 
+        requestId: credexData.requestId 
+      });
     } catch (error) {
-      logWarning(
-        "Failed to sign Credex, but Credex was created successfully",
-        { error, requestId: credexData.requestId }
-      );
+      logger.warn("Failed to sign Credex, but Credex was created successfully", { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        memberID: credexData.memberID,
+        credexID: newCredex.credex.credexID,
+        requestId: credexData.requestId
+      });
     }
 
     // TODO: Implement offer notification here
 
-    logInfo(newCredex.message, { requestId: credexData.requestId });
+    logger.info(newCredex.message, { 
+      memberID: credexData.memberID, 
+      credexID: newCredex.credex.credexID, 
+      requestId: credexData.requestId 
+    });
     return newCredex;
   } catch (error) {
-    logError("Error offering credex", error as Error, { requestId: credexData.requestId });
+    logger.error("Error offering credex", { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      memberID: credexData.memberID,
+      receiverAccountID: credexData.receiverAccountID,
+      credexType: credexData.credexType,
+      requestId: credexData.requestId 
+    });
     throw error;
   } finally {
+    logger.debug("Closing database session", { requestId: credexData.requestId });
     await ledgerSpaceSession.close();
+    logger.debug("Exiting OfferCredexService", { 
+      memberID: credexData.memberID, 
+      receiverAccountID: credexData.receiverAccountID, 
+      credexType: credexData.credexType,
+      requestId: credexData.requestId 
+    });
   }
 }

@@ -118,8 +118,15 @@ Note: The GitHub token needs to be updated for each new Codespace session. The b
 - [Credex](docs/Credex.md)
 - [Avatar](docs/Avatar.md)
 - [AdminDashboard](docs/AdminDashboard.md)
+
+## Schemas
+
 - [ledgerSpace Schema](docs/ledgerSpace_schema.md)
 - [searchSpace Schema](docs/searchSpace_schema.md)
+
+## Developer Guides
+
+- [Logging Best Practices](docs/logging_best_practices.md)
 
 ## Project Structure
 
@@ -148,6 +155,7 @@ credex-core/
 1. Create a branch from the 'dev' branch.
 2. Make your changes and commit them with clear, concise commit messages.
 3. Push your changes and create a pull request against the 'dev' branch.
+4. Follow the [Logging Best Practices](docs/logging_best_practices.md) when adding or modifying code.
 
 ## License
 

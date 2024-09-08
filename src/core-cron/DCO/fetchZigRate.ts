@@ -1,5 +1,6 @@
 import axios from "axios";
 import cheerio from "cheerio";
+import logger from "../../../config/logger";
 
 const https = require("https");
 
@@ -13,6 +14,7 @@ export async function fetchZigRate(): Promise<
   { currency: string; bid: string; ask: string; avg: string }[]
 > {
   try {
+    logger.info("Fetching ZIG rate from RBZ website");
     const { data } = await axios.get(url, { httpsAgent });
     const parsedHtml = cheerio.load(data);
 
@@ -33,10 +35,11 @@ export async function fetchZigRate(): Promise<
         rates.push({ currency, bid, ask, avg });
       }
     });
-    //console.log(rates);
+    
+    logger.info("ZIG rates fetched successfully", { ratesCount: rates.length });
     return rates;
   } catch (error) {
-    console.error("Error fetching exchange rates:", error);
+    logger.error("Error fetching exchange rates", { error });
     return [];
   }
 }

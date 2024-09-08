@@ -1,10 +1,13 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { denomFormatter } from "../../../utils/denomUtils";
+import logger from "../../../../config/logger";
 
 export async function GetMemberDashboardByPhoneService(phone: string) {
+  logger.debug("GetMemberDashboardByPhoneService called", { phone });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
+    logger.debug("Executing database query", { phone });
     const result = await ledgerSpaceSession.run(
       `
       MATCH (daynode:Daynode { Active: true })
@@ -29,13 +32,14 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
     );
 
     if (!result.records.length) {
-      console.log("member not found by phone");
+      logger.info("Member not found by phone", { phone });
       return false;
     }
 
     const memberTier = result.records[0].get("memberTier").low;
     const totalIssuedTodayUSD = result.records[0].get("totalIssuedTodayUSD");
-    console.log(totalIssuedTodayUSD);
+    logger.debug("Total issued today in USD", { totalIssuedTodayUSD, phone });
+    
     let remainingAvailableUSD: number = Infinity;
     if (memberTier == 1) {
       remainingAvailableUSD = parseFloat(
@@ -48,7 +52,7 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
       );
     }
 
-    return {
+    const memberDashboard = {
       memberID: result.records[0].get("memberID"),
       firstname: result.records[0].get("firstname"),
       lastname: result.records[0].get("lastname"),
@@ -58,10 +62,24 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
       remainingAvailableUSD: remainingAvailableUSD,
       accountIDS: result.records[0].get("accountIDS"),
     };
+
+    logger.info("Member dashboard retrieved successfully", { 
+      memberID: memberDashboard.memberID, 
+      phone, 
+      memberTier, 
+      remainingAvailableUSD 
+    });
+
+    return memberDashboard;
   } catch (error) {
-    console.error("Error fetching account data:", error);
+    logger.error("Error fetching member dashboard", { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      phone 
+    });
     return false;
   } finally {
+    logger.debug("Closing database session", { phone });
     await ledgerSpaceSession.close();
   }
 }

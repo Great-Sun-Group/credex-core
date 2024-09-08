@@ -17,11 +17,14 @@ import {
   unauthorizeForAccountSchema,
   updateSendOffersToSchema
 } from "./accountValidationSchemas";
+import logger from "../../../config/logger";
 
 export default function AccountRoutes(
   app: express.Application,
   jsonParser: express.RequestHandler
 ) {
+  logger.info("Initializing Account routes");
+
   /**
    * @swagger
    * /api/v1/createAccount:
@@ -50,6 +53,7 @@ export default function AccountRoutes(
     CreateAccountController,
     errorHandler
   );
+  logger.debug("Registered route: POST /api/v1/createAccount");
 
   /**
    * @swagger
@@ -80,6 +84,7 @@ export default function AccountRoutes(
     GetAccountByHandleController,
     errorHandler
   );
+  logger.debug("Registered route: GET /api/v1/getAccountByHandle");
 
   /**
    * @swagger
@@ -111,6 +116,7 @@ export default function AccountRoutes(
     UpdateAccountController,
     errorHandler
   );
+  logger.debug("Registered route: PATCH /api/v1/updateAccount");
 
   /**
    * @swagger
@@ -140,6 +146,7 @@ export default function AccountRoutes(
     AuthorizeForAccountController,
     errorHandler
   );
+  logger.debug("Registered route: POST /api/v1/authorizeForAccount");
 
   /**
    * @swagger
@@ -169,6 +176,7 @@ export default function AccountRoutes(
     UnauthorizeForAccountController,
     errorHandler
   );
+  logger.debug("Registered route: POST /api/v1/unauthorizeForAccount");
 
   /**
    * @swagger
@@ -198,4 +206,7 @@ export default function AccountRoutes(
     UpdateSendOffersToController,
     errorHandler
   );
+  logger.debug("Registered route: POST /api/v1/updateSendOffersTo");
+
+  logger.info("Account routes initialized successfully");
 }

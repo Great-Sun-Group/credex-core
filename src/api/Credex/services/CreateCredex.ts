@@ -1,8 +1,11 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { denomFormatter } from "../../../utils/denomUtils";
 import { GetSecuredAuthorizationService } from "./GetSecuredAuthorization";
+import { logDebug, logInfo, logWarning, logError } from "../../../utils/logger";
 
 export async function CreateCredexService(credexData: any) {
+  logDebug(`Entering CreateCredexService`, { credexData });
+
   const {
     issuerAccountID,
     receiverAccountID,
@@ -22,11 +25,18 @@ export async function CreateCredexService(credexData: any) {
     // Get securable data for secured credex
     let secureableData = { securerID: "", securableAmountInDenom: 0 };
     if (securedCredex) {
+      logDebug(`Attempting to get secured authorization`, { issuerAccountID, Denomination });
       secureableData = await GetSecuredAuthorizationService(
         issuerAccountID,
         Denomination
       );
       if (secureableData.securableAmountInDenom < InitialAmount) {
+        logWarning(`Insufficient securable amount for secured credex`, { 
+          issuerAccountID, 
+          InitialAmount, 
+          Denomination, 
+          securableAmountInDenom: secureableData.securableAmountInDenom 
+        });
         return {
           credex: false,
           message: `Error: Your secured credex for ${denomFormatter(
@@ -41,6 +51,13 @@ export async function CreateCredexService(credexData: any) {
     }
 
     // Create the credex
+    logDebug(`Attempting to create credex in database`, { 
+      issuerAccountID, 
+      receiverAccountID, 
+      InitialAmount, 
+      Denomination, 
+      credexType 
+    });
     const createCredexQuery = await ledgerSpaceSession.run(
       `
         MATCH (daynode:Daynode {Active: true})
@@ -76,9 +93,11 @@ export async function CreateCredexService(credexData: any) {
     );
 
     const credexID = createCredexQuery.records[0].get("credexID");
+    logInfo(`Credex created successfully`, { credexID });
 
     // Add dueDate for unsecured credex
     if (!securedCredex) {
+      logDebug(`Adding due date for unsecured credex`, { credexID, dueDate });
       const addDueDateQuery = await ledgerSpaceSession.run(
         `
           MATCH (newCredex:Credex {credexID: $credexID})
@@ -91,12 +110,14 @@ export async function CreateCredexService(credexData: any) {
         }
       );
       if (addDueDateQuery.records.length === 0) {
+        logError(`Failed to add due date for credex`, new Error("No records returned"), { credexID, dueDate });
         return { credex: false, message: "error creating credex" };
       }
     }
 
     // Add secured relationships for secured credex
     if (securedCredex && secureableData.securerID) {
+      logDebug(`Adding secured relationship for credex`, { credexID, securerID: secureableData.securerID });
       await ledgerSpaceSession.run(
         `
           MATCH (newCredex:Credex {credexID: $credexID})
@@ -120,13 +141,16 @@ export async function CreateCredexService(credexData: any) {
       dueDate: dueDate,
     };
 
+    logInfo(`Credex creation completed`, { credexID: newCredex.credexID });
     return {
       credex: newCredex,
       message: "Credex created: " + newCredex.credexID,
     };
   } catch (error) {
-    return { credex: false, message: "Error creating credex: " + error };
+    logError(`Error creating credex`, error as Error, { credexData });
+    return { credex: false, message: "Error creating credex: " + (error as Error).message };
   } finally {
     await ledgerSpaceSession.close();
+    logDebug(`Exiting CreateCredexService`);
   }
 }

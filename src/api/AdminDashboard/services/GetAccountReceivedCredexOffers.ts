@@ -1,8 +1,11 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j"
-import { logError } from "../../../utils/logger";
+import logger from "../../../utils/logger";
 
-export default async function GetAccountReceivedCredexOffers( accountHandle?: string, accountID?: string): Promise<any> {
+export default async function GetAccountReceivedCredexOffers(accountHandle?: string, accountID?: string): Promise<any> {
+  logger.debug('GetAccountReceivedCredexOffers service called', { accountHandle, accountID });
+
   if (!accountHandle && !accountID) {
+    logger.warn('No accountHandle or accountID provided');
     return {
       message: 'Either accountHandle or accountID is required'
     }
@@ -14,6 +17,8 @@ export default async function GetAccountReceivedCredexOffers( accountHandle?: st
   const parameters = accountHandle ? { accountHandle } : { accountID };
 
   try {
+    logger.info('Executing query to fetch account received credex offers', { accountMatchCondition });
+
     const query = `
       MATCH (account:Account {${accountMatchCondition}})<-[:OFFERED]-(receivedCredexOffer)<-[:OFFERED]-(sendingAccount)
       RETURN
@@ -55,11 +60,17 @@ export default async function GetAccountReceivedCredexOffers( accountHandle?: st
     }));
 
     if(!accountReceivedCredexOffers.length) {
+      logger.warn('No received credex offers found for account', { accountHandle, accountID });
       return {
         message: 'Account received credex offers not found'
       }
     }
 
+    logger.info('Account received credex offers fetched successfully', { 
+      accountHandle, 
+      accountID, 
+      offersCount: accountReceivedCredexOffers.length 
+    });
     return {
       message: 'Account received credex offers fetched successfully',
       data: {
@@ -67,12 +78,18 @@ export default async function GetAccountReceivedCredexOffers( accountHandle?: st
       }
     }
   } catch (error) {
-    logError('Error fetching account received credex offers', error as Error);
+    logger.error('Error fetching account received credex offers', { 
+      accountHandle, 
+      accountID, 
+      error: (error as Error).message,
+      stack: (error as Error).stack
+    });
     return {
       message: 'Error fetching account received credex offers',
       error: error
     }
   } finally {
     await ledgerSpaceSession.close()
+    logger.debug('LedgerSpace session closed');
   }
 }

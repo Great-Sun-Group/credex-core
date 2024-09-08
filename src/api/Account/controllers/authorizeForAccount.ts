@@ -8,17 +8,22 @@ export async function AuthorizeForAccountController(
   res: express.Response,
   next: express.NextFunction
 ) {
+  logger.debug("AuthorizeForAccountController called", { body: req.body });
+
   const { memberHandleToBeAuthorized, accountID, ownerID } = req.body;
 
   try {
     // Validate input
     if (!validateMemberHandle(memberHandleToBeAuthorized)) {
+      logger.warn("Invalid memberHandleToBeAuthorized provided", { memberHandleToBeAuthorized });
       return res.status(400).json({ message: "Invalid memberHandleToBeAuthorized" });
     }
     if (!validateUUID(accountID)) {
+      logger.warn("Invalid accountID provided", { accountID });
       return res.status(400).json({ message: "Invalid accountID" });
     }
     if (!validateUUID(ownerID)) {
+      logger.warn("Invalid ownerID provided", { ownerID });
       return res.status(400).json({ message: "Invalid ownerID" });
     }
 
@@ -57,7 +62,13 @@ export async function AuthorizeForAccountController(
     logger.info("Member authorized for account successfully", { memberHandleToBeAuthorized, accountID, ownerID });
     res.status(200).json(responseData);
   } catch (error) {
-    logger.error("Error in AuthorizeForAccountController", { error, memberHandleToBeAuthorized: req.body.memberHandleToBeAuthorized, accountID: req.body.accountID, ownerID: req.body.ownerID });
+    logger.error("Error in AuthorizeForAccountController", { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      memberHandleToBeAuthorized: req.body.memberHandleToBeAuthorized, 
+      accountID: req.body.accountID, 
+      ownerID: req.body.ownerID 
+    });
     next(error);
   }
 }

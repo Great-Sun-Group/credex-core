@@ -19,20 +19,24 @@ export async function AcceptRecurringController(
   res: express.Response
 ) {
   const requestId = req.id;
+  logger.debug('AcceptRecurringController called', { requestId });
 
   try {
     const { avatarID, signerID } = req.body;
 
+    logger.debug('Validating input parameters', { requestId, avatarID, signerID });
+
     if (!validateUUID(avatarID)) {
-      logger.warn("Invalid avatarID", { requestId });
+      logger.warn("Invalid avatarID", { requestId, avatarID });
       return res.status(400).json({ error: "Invalid avatarID" });
     }
 
     if (!validateUUID(signerID)) {
-      logger.warn("Invalid signerID", { requestId });
+      logger.warn("Invalid signerID", { requestId, signerID });
       return res.status(400).json({ error: "Invalid signerID" });
     }
 
+    logger.info('Calling AcceptRecurringService', { requestId, avatarID, signerID });
     // Call AcceptRecurringService to process the acceptance
     const acceptRecurringData = await AcceptRecurringService({
       avatarID,
@@ -45,10 +49,17 @@ export async function AcceptRecurringController(
       logger.error("Failed to accept recurring payment", {
         error: acceptRecurringData.message,
         requestId,
+        avatarID,
+        signerID
       });
       return res.status(400).json({ error: acceptRecurringData.message });
     }
 
+    logger.info('Calling GetAccountDashboardService', { 
+      requestId, 
+      signerID, 
+      acceptorAccountID: acceptRecurringData.recurring.acceptorAccountID 
+    });
     // Fetch dashboard data
     const dashboardData = await GetAccountDashboardService(
       signerID,
@@ -59,6 +70,8 @@ export async function AcceptRecurringController(
       logger.error("Failed to fetch dashboard data", {
         error: "GetAccountDashboardService returned null",
         requestId,
+        signerID,
+        acceptorAccountID: acceptRecurringData.recurring.acceptorAccountID
       });
       return res.status(500).json({ error: "Failed to fetch dashboard data" });
     }
@@ -67,6 +80,7 @@ export async function AcceptRecurringController(
       avatarID,
       signerID,
       requestId,
+      acceptorAccountID: acceptRecurringData.recurring.acceptorAccountID
     });
     // Return the acceptance data and dashboard data
     return res.status(200).json({
@@ -76,6 +90,7 @@ export async function AcceptRecurringController(
   } catch (err) {
     logger.error("Error in AcceptRecurringController", {
       error: (err as Error).message,
+      stack: (err as Error).stack,
       requestId,
     });
     return res.status(500).json({ error: "Internal server error" });

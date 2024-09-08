@@ -18,6 +18,8 @@ export async function RequestRecurringController(
   req: express.Request,
   res: express.Response
 ) {
+  logger.debug('RequestRecurringController called', { requestId: req.id });
+
   try {
     const { 
       signerMemberID, 
@@ -32,37 +34,61 @@ export async function RequestRecurringController(
       remainingPays 
     } = req.body;
 
+    logger.debug('Validating input parameters', { 
+      signerMemberID, 
+      requestorAccountID, 
+      counterpartyAccountID, 
+      InitialAmount, 
+      Denomination, 
+      nextPayDate, 
+      daysBetweenPays, 
+      securedCredex, 
+      credspan, 
+      remainingPays 
+    });
+
     if (!validateUUID(signerMemberID)) {
+      logger.warn('Invalid signerMemberID', { signerMemberID });
       return res.status(400).json({ error: "Invalid signerMemberID" });
     }
     if (!validateUUID(requestorAccountID)) {
+      logger.warn('Invalid requestorAccountID', { requestorAccountID });
       return res.status(400).json({ error: "Invalid requestorAccountID" });
     }
     if (!validateUUID(counterpartyAccountID)) {
+      logger.warn('Invalid counterpartyAccountID', { counterpartyAccountID });
       return res.status(400).json({ error: "Invalid counterpartyAccountID" });
     }
     if (!validateAmount(InitialAmount)) {
+      logger.warn('Invalid InitialAmount', { InitialAmount });
       return res.status(400).json({ error: "Invalid InitialAmount" });
     }
     if (!validateDenomination(Denomination)) {
+      logger.warn('Invalid Denomination', { Denomination });
       return res.status(400).json({ error: "Invalid Denomination" });
     }
     if (isNaN(Date.parse(nextPayDate))) {
+      logger.warn('Invalid nextPayDate', { nextPayDate });
       return res.status(400).json({ error: "Invalid nextPayDate" });
     }
     if (!validatePositiveInteger(daysBetweenPays)) {
+      logger.warn('Invalid daysBetweenPays', { daysBetweenPays });
       return res.status(400).json({ error: "Invalid daysBetweenPays" });
     }
     if (securedCredex === true && credspan !== undefined) {
+      logger.warn('credspan is not allowed when securedCredex is true', { securedCredex, credspan });
       return res.status(400).json({ error: "credspan is not allowed when securedCredex is true" });
     }
     if (securedCredex === false && (credspan === undefined || credspan < 7 || credspan > 35)) {
+      logger.warn('Invalid credspan for non-secured Credex', { securedCredex, credspan });
       return res.status(400).json({ error: "credspan must be between 7 and 35 when securedCredex is false" });
     }
     if (remainingPays !== undefined && !validatePositiveInteger(remainingPays)) {
+      logger.warn('Invalid remainingPays', { remainingPays });
       return res.status(400).json({ error: "Invalid remainingPays" });
     }
 
+    logger.info('Calling RequestRecurringService');
     const createRecurringData = await RequestRecurringService(req.body);
 
     if (!createRecurringData) {
@@ -70,6 +96,7 @@ export async function RequestRecurringController(
       return res.status(500).json({ error: "Failed to create recurring payment" });
     }
 
+    logger.info('Calling GetAccountDashboardService');
     const dashboardData = await GetAccountDashboardService(signerMemberID, requestorAccountID);
 
     if (!dashboardData) {
@@ -83,7 +110,10 @@ export async function RequestRecurringController(
       dashboardData: dashboardData,
     });
   } catch (err) {
-    logger.error("Error in RequestRecurringController", { error: (err as Error).message });
+    logger.error("Error in RequestRecurringController", { 
+      error: (err as Error).message,
+      stack: (err as Error).stack
+    });
     return res.status(500).json({ error: "Internal server error" });
   }
 }

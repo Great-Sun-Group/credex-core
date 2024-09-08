@@ -1,10 +1,14 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { denomFormatter } from "../../../utils/denomUtils";
 import moment from "moment-timezone";
+import { logDebug, logInfo, logWarning, logError } from "../../../utils/logger";
 
 export async function GetCredexService(credexID: string, accountID: string) {
+  logDebug(`Entering GetCredexService`, { credexID, accountID });
+
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
+    logDebug(`Attempting to fetch Credex data from database`, { credexID, accountID });
     const result = await ledgerSpaceSession.run(
       `
         MATCH
@@ -38,8 +42,11 @@ export async function GetCredexService(credexID: string, accountID: string) {
     );
 
     if (result.records.length === 0) {
+      logWarning(`No records found for credexID: ${credexID}`, { credexID, accountID });
       throw new Error("No records found");
     }
+
+    logInfo(`Successfully fetched Credex data`, { credexID, accountID });
 
     const record = result.records[0];
     const debit = record.get("debit");
@@ -143,9 +150,10 @@ export async function GetCredexService(credexID: string, accountID: string) {
         };
       });
 
+    logDebug(`Exiting GetCredexService`, { credexID, accountID });
     return { credexData, clearedAgainstData };
   } catch (error) {
-    console.error("Error in GetCredexService:", error);
+    logError(`Error in GetCredexService:`, error as Error, { credexID, accountID });
     throw error;
   } finally {
     await ledgerSpaceSession.close();

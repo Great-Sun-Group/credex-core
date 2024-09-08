@@ -1,8 +1,11 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j"
-import { logError } from "../../../utils/logger";
+import logger from "../../../utils/logger";
 
 export default async function GetMemberService(memberHandle: string):Promise<any> {
+  logger.debug('GetMemberService called', { memberHandle });
+
   if(!memberHandle){
+    logger.warn('memberHandle not provided');
     return {
       message: 'The memberHandle is required'
     }
@@ -10,6 +13,8 @@ export default async function GetMemberService(memberHandle: string):Promise<any
   
   const ledgerSpaceSession = ledgerSpaceDriver.session()
   try {
+    logger.info('Executing query to fetch member details', { memberHandle });
+
     const result = await ledgerSpaceSession.run(
       `Match (member:Member)
           WHERE member.memberHandle = $memberHandle
@@ -17,7 +22,7 @@ export default async function GetMemberService(memberHandle: string):Promise<any
           MATCH (member)-[:OWNS]->(account:Account)
             Return
               member.memberID AS memberID,
-              member.memberHandle AS memmberHandle,
+              member.memberHandle AS memberHandle,
               member.firstname AS firstname,
               member.lastname AS lastname,
               member.phone AS phone, 
@@ -33,7 +38,7 @@ export default async function GetMemberService(memberHandle: string):Promise<any
     const records = result.records.map((record) => {
       return {
        memberID: record.get("memberID"),
-       memberHandle: record.get("memmberHandle"),
+       memberHandle: record.get("memberHandle"),
        firstname: record.get("firstname"),
        lastname: record.get("lastname"),
        phone: record.get("phone"),
@@ -45,18 +50,24 @@ export default async function GetMemberService(memberHandle: string):Promise<any
     });
 
     if(!records.length){
+      logger.warn('Member not found', { memberHandle });
       return {
         message: 'User not found',
       }
     }
 
+    logger.info('Member fetched successfully', { memberHandle });
     return {
       message: 'User fetched successfully',
       data: records
     }
   
   } catch (error) {
-    logError('Error fetching user', error as Error);
+    logger.error('Error fetching member', { 
+      memberHandle, 
+      error: (error as Error).message,
+      stack: (error as Error).stack
+    });
     return {
       message: 'Error fetching user',
       error: error,
@@ -65,5 +76,6 @@ export default async function GetMemberService(memberHandle: string):Promise<any
   }
   finally {
     await ledgerSpaceSession.close()
+    logger.debug('LedgerSpace session closed');
   }
 }

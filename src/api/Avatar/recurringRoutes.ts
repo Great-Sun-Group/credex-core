@@ -10,11 +10,14 @@ import {
   acceptRecurringSchema,
   cancelRecurringSchema,
 } from "./avatarValidationSchemas";
+import logger from "../../utils/logger";
 
 export default function RecurringRoutes(
   app: express.Application,
   jsonParser: express.RequestHandler
 ) {
+  logger.info('Initializing Recurring Routes');
+
   /**
    * @swagger
    * /api/v1/requestRecurring:
@@ -37,7 +40,10 @@ export default function RecurringRoutes(
     `${apiVersionOneRoute}requestRecurring`,
     jsonParser,
     validateRequest(requestRecurringSchema),
-    RequestRecurringController,
+    (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      logger.debug('POST /requestRecurring called', { requestId: req.id });
+      RequestRecurringController(req, res);
+    },
     errorHandler
   );
 
@@ -63,7 +69,10 @@ export default function RecurringRoutes(
     `${apiVersionOneRoute}acceptRecurring`,
     jsonParser,
     validateRequest(acceptRecurringSchema),
-    AcceptRecurringController,
+    (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      logger.debug('PUT /acceptRecurring called', { requestId: req.id });
+      AcceptRecurringController(req, res);
+    },
     errorHandler
   );
 
@@ -89,9 +98,14 @@ export default function RecurringRoutes(
     `${apiVersionOneRoute}cancelRecurring`,
     jsonParser,
     validateRequest(cancelRecurringSchema),
-    DeclineRecurringController,
+    (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      logger.debug('DELETE /cancelRecurring called', { requestId: req.id });
+      DeclineRecurringController(req, res);
+    },
     errorHandler
   );
+
+  logger.info('Recurring Routes initialized');
 }
 
 /**

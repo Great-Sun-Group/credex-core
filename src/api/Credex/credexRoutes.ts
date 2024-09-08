@@ -16,11 +16,14 @@ import {
   getCredexSchema,
   getLedgerSchema,
 } from "./credexValidationSchemas";
+import logger from "../../../config/logger";
 
 export default function CredexRoutes(
   app: express.Application,
   jsonParser: any
 ) {
+  logger.info("Initializing Credex routes");
+
   /**
    * @swagger
    * /api/v1/offerCredex:
@@ -67,8 +70,12 @@ export default function CredexRoutes(
     `${apiVersionOneRoute}offerCredex`,
     jsonParser,
     validateRequest(offerCredexSchema),
-    OfferCredexController
+    (req: express.Request, res: express.Response) => {
+      logger.debug('POST /offerCredex called', { requestId: req.id });
+      OfferCredexController(req, res);
+    }
   );
+  logger.debug("Registered route: POST /api/v1/offerCredex");
 
   /**
    * @swagger
@@ -100,8 +107,12 @@ export default function CredexRoutes(
     `${apiVersionOneRoute}acceptCredex`,
     jsonParser,
     validateRequest(acceptCredexSchema),
-    AcceptCredexController
+    (req: express.Request, res: express.Response) => {
+      logger.debug('PUT /acceptCredex called', { requestId: req.id });
+      AcceptCredexController(req, res);
+    }
   );
+  logger.debug("Registered route: PUT /api/v1/acceptCredex");
 
   /**
    * @swagger
@@ -138,8 +149,12 @@ export default function CredexRoutes(
       credexIDs: (value: any) => Array.isArray(value) && value.every((id: string) => acceptCredexSchema.credexID(id)),
       signerID: acceptCredexSchema.signerID,
     }),
-    AcceptCredexBulkController
+    (req: express.Request, res: express.Response) => {
+      logger.debug('PUT /acceptCredexBulk called', { requestId: req.id });
+      AcceptCredexBulkController(req, res);
+    }
   );
+  logger.debug("Registered route: PUT /api/v1/acceptCredexBulk");
 
   /**
    * @swagger
@@ -168,8 +183,12 @@ export default function CredexRoutes(
     `${apiVersionOneRoute}declineCredex`,
     jsonParser,
     validateRequest(declineCredexSchema),
-    DeclineCredexController
+    (req: express.Request, res: express.Response) => {
+      logger.debug('PUT /declineCredex called', { requestId: req.id });
+      DeclineCredexController(req, res);
+    }
   );
+  logger.debug("Registered route: PUT /api/v1/declineCredex");
 
   /**
    * @swagger
@@ -198,8 +217,12 @@ export default function CredexRoutes(
     `${apiVersionOneRoute}cancelCredex`,
     jsonParser,
     validateRequest(cancelCredexSchema),
-    CancelCredexController
+    (req: express.Request, res: express.Response) => {
+      logger.debug('PUT /cancelCredex called', { requestId: req.id });
+      CancelCredexController(req, res);
+    }
   );
+  logger.debug("Registered route: PUT /api/v1/cancelCredex");
 
   /**
    * @swagger
@@ -229,8 +252,12 @@ export default function CredexRoutes(
   app.get(
     `${apiVersionOneRoute}getCredex`,
     validateRequest(getCredexSchema, 'query'),
-    GetCredexController
+    (req: express.Request, res: express.Response) => {
+      logger.debug('GET /getCredex called', { requestId: req.id });
+      GetCredexController(req, res);
+    }
   );
+  logger.debug("Registered route: GET /api/v1/getCredex");
 
   /**
    * @swagger
@@ -261,6 +288,12 @@ export default function CredexRoutes(
   app.get(
     `${apiVersionOneRoute}getLedger`,
     validateRequest(getLedgerSchema, 'query'),
-    GetLedgerController
+    (req: express.Request, res: express.Response) => {
+      logger.debug('GET /getLedger called', { requestId: req.id });
+      GetLedgerController(req, res);
+    }
   );
+  logger.debug("Registered route: GET /api/v1/getLedger");
+
+  logger.info("Credex routes initialized successfully");
 }

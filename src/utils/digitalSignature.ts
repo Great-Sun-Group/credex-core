@@ -1,4 +1,5 @@
 import { Session } from "neo4j-driver";
+import logger from '../../config/logger';
 
 export async function digitallySign(
   session: Session,
@@ -9,6 +10,8 @@ export async function digitallySign(
   inputData: string,
   requestId: string
 ): Promise<void> {
+  logger.debug('Attempting to create digital signature', { signerID, entityType, entityId, actionType, requestId });
+
   const query = `
     MATCH (signer:Member|Avatar {id: $signerID})
     MATCH (entity:${entityType} {id: $entityId})
@@ -21,13 +24,29 @@ export async function digitallySign(
     })-[:SIGNED]->(entity)
   `;
 
-  await session.run(query, { signerID, entityId, actionType, inputData, requestId });
+  try {
+    await session.run(query, { signerID, entityId, actionType, inputData, requestId });
+    logger.info('Digital signature created successfully', { signerID, entityType, entityId, actionType, requestId });
+  } catch (error) {
+    logger.error('Error creating digital signature', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      signerID,
+      entityType,
+      entityId,
+      actionType,
+      requestId
+    });
+    throw error;
+  }
 }
 
 export async function getSignerMember(
   session: Session,
   signerID: string
 ): Promise<string> {
+  logger.debug('Attempting to get signer member', { signerID });
+
   const query = `
     MATCH (signer:Member|Avatar {id: $signerID})
     RETURN 
@@ -37,6 +56,17 @@ export async function getSignerMember(
       END AS memberID
   `;
 
-  const result = await session.run(query, { signerID });
-  return result.records[0].get('memberID');
+  try {
+    const result = await session.run(query, { signerID });
+    const memberID = result.records[0].get('memberID');
+    logger.info('Signer member retrieved successfully', { signerID, memberID });
+    return memberID;
+  } catch (error) {
+    logger.error('Error getting signer member', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      signerID
+    });
+    throw error;
+  }
 }

@@ -1,5 +1,6 @@
 import * as neo4j from "neo4j-driver";
 import configUtils from "../src/utils/configUtils";
+import logger from "./logger";
 
 const ledgerSpace = configUtils.get('ledgerSpace');
 const searchSpace = configUtils.get('searchSpace');
@@ -14,9 +15,9 @@ const createDriverWithRetry = (url: string, user: string, password: string) => {
   // Verify connectivity on first use
   driver
     .verifyConnectivity()
-    .then(() => console.log(`Successfully connected to Neo4j at ${url}`))
+    .then(() => logger.info(`Successfully connected to Neo4j`, { url }))
     .catch((error) =>
-      console.error(`Failed to connect to Neo4j at ${url}:`, error)
+      logger.error(`Failed to connect to Neo4j`, { url, error })
     );
 
   return driver;
@@ -36,14 +37,14 @@ export const searchSpaceDriver = createDriverWithRetry(
 
 // Graceful shutdown
 process.on("SIGINT", () => {
-  console.log("Closing Neo4j drivers...");
+  logger.info("Closing Neo4j drivers...");
   Promise.all([ledgerSpaceDriver.close(), searchSpaceDriver.close()])
     .then(() => {
-      console.log("Neo4j drivers closed.");
+      logger.info("Neo4j drivers closed.");
       process.exit(0);
     })
     .catch((error) => {
-      console.error("Error closing Neo4j drivers:", error);
+      logger.error("Error closing Neo4j drivers:", { error });
       process.exit(1);
     });
 });

@@ -1,13 +1,16 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import logger from "../../../../config/logger";
 
 export async function UnauthorizeForCompanyService(
   memberIDtoBeUnauthorized: string,
   accountID: string,
   ownerID: string
 ) {
+  logger.debug("UnauthorizeForCompanyService called", { memberIDtoBeUnauthorized, accountID, ownerID });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
+    logger.debug("Executing database query to unauthorize account");
     const result = await ledgerSpaceSession.run(
       `
             MATCH
@@ -17,7 +20,7 @@ export async function UnauthorizeForCompanyService(
             DELETE authRel
             RETURN
                 account.accountID AS accountID,
-                memberToUnauthorize.accountID AS memberToUnauthorize
+                memberToUnauthorize.memberID AS memberToUnauthorize
         `,
       {
         memberIDtoBeUnauthorized,
@@ -27,21 +30,27 @@ export async function UnauthorizeForCompanyService(
     );
 
     if (!result.records.length) {
-      console.log("could not unauthorize account");
+      logger.warn("Could not unauthorize account", { memberIDtoBeUnauthorized, accountID, ownerID });
       return false;
     }
     const record = result.records[0];
 
-    console.log(
-      `account ${record.get(
-        "memberToUnauthorize"
-      )} unauthorized to transact for ${record.get("accountID")}`
-    );
+    logger.info("Account unauthorized successfully", {
+      memberToUnauthorize: record.get("memberToUnauthorize"),
+      accountID: record.get("accountID")
+    });
     return true;
   } catch (error) {
-    console.error("Error unauthorizing account:", error);
+    logger.error("Error unauthorizing account", { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      memberIDtoBeUnauthorized, 
+      accountID, 
+      ownerID 
+    });
     return false;
   } finally {
+    logger.debug("Closing database session", { memberIDtoBeUnauthorized, accountID, ownerID });
     await ledgerSpaceSession.close();
   }
 }

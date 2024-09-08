@@ -12,8 +12,11 @@ import {
   updateMemberTierSchema,
   authForTierSpendLimitSchema,
 } from "./memberValidationSchemas";
+import logger from "../../../config/logger";
 
 const router = express.Router();
+
+logger.info("Initializing Member routes", { module: "memberRoutes" });
 
 /**
  * @openapi
@@ -44,6 +47,7 @@ router.post(
   validateRequest(getMemberByHandleSchema),
   GetMemberByHandleController
 );
+logger.debug("Registered route: POST /member/getMemberByHandle", { module: "memberRoutes", route: "/getMemberByHandle", method: "POST" });
 
 /**
  * @openapi
@@ -74,6 +78,7 @@ router.post(
   validateRequest(getMemberDashboardByPhoneSchema),
   GetMemberDashboardByPhoneController
 );
+logger.debug("Registered route: POST /member/getMemberDashboardByPhone", { module: "memberRoutes", route: "/getMemberDashboardByPhone", method: "POST" });
 
 /**
  * @openapi
@@ -110,6 +115,7 @@ router.post(
   validateRequest(onboardMemberSchema),
   onboardMemberExpressHandler
 );
+logger.debug("Registered route: POST /member/onboardMember", { module: "memberRoutes", route: "/onboardMember", method: "POST" });
 
 /**
  * @openapi
@@ -143,6 +149,7 @@ router.post(
   validateRequest(updateMemberTierSchema),
   updateMemberTierExpressHandler
 );
+logger.debug("Registered route: POST /member/updateMemberTier", { module: "memberRoutes", route: "/updateMemberTier", method: "POST" });
 
 /**
  * @openapi
@@ -182,5 +189,8 @@ router.post(
   validateRequest(authForTierSpendLimitSchema),
   authForTierSpendLimitExpressHandler
 );
+logger.debug("Registered route: POST /member/authForTierSpendLimit", { module: "memberRoutes", route: "/authForTierSpendLimit", method: "POST" });
+
+logger.info("Member routes initialized successfully", { module: "memberRoutes", routesCount: 5 });
 
 export default router;

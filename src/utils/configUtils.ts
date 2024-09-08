@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import logger from '../../config/logger';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -32,6 +33,7 @@ class ConfigUtils {
   private config: Config;
 
   private constructor() {
+    logger.debug('Initializing ConfigUtils');
     this.config = {
       port: parseInt(process.env.PORT || '3000', 10),
       nodeEnv: process.env.NODE_ENV || 'development',
@@ -54,6 +56,7 @@ class ConfigUtils {
       },
       // Initialize other configuration properties here
     };
+    logger.info('ConfigUtils initialized', { nodeEnv: this.config.nodeEnv, logLevel: this.config.logLevel });
   }
 
   public static getInstance(): ConfigUtils {
@@ -68,19 +71,23 @@ class ConfigUtils {
   }
 
   public get<K extends keyof Config>(key: K): Config[K] {
+    logger.debug(`Getting config value for key: ${key as string}`);
     return this.config[key];
   }
 
   public set<K extends keyof Config>(key: K, value: Config[K]): void {
+    logger.debug(`Setting config value for key: ${key as string}`);
     this.config[key] = value;
   }
 
   // Add basic validation for required fields
   public validate(): void {
+    logger.debug('Validating configuration');
     const requiredFields: (keyof Config)[] = ['ledgerSpace', 'searchSpace', 'jwtSecret'];
     for (const field of requiredFields) {
       if (!this.config[field]) {
-        throw new Error(`Missing required configuration: ${field}`);
+        logger.error(`Missing required configuration: ${field as string}`);
+        throw new Error(`Missing required configuration: ${field as string}`);
       }
     }
 
@@ -88,6 +95,7 @@ class ConfigUtils {
     const validateNestedObject = (obj: any, prefix: string) => {
       for (const key in obj) {
         if (obj[key] === '') {
+          logger.error(`Missing required configuration: ${prefix}${key}`);
           throw new Error(`Missing required configuration: ${prefix}${key}`);
         }
       }
@@ -95,6 +103,7 @@ class ConfigUtils {
 
     validateNestedObject(this.config.ledgerSpace, 'ledgerSpace.');
     validateNestedObject(this.config.searchSpace, 'searchSpace.');
+    logger.info('Configuration validation completed successfully');
   }
 }
 
