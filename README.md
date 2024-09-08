@@ -18,26 +18,26 @@ The ecosystem actualizes the Credcoin Principle in the Daily Credcoin Offering (
 
 The organic economy is a subset of the credex ecosystem, which is a subset of the global economy, which is the human-enhanced subset of the world that is given to us by nature. The organic economy is an economy in which wealth circulates, profit accumulates, investment is made, and gifts are given in alignment and long-term harmony with the biological environment of our habitat and the physical laws that bind us.
 
-The value of the natural wealth processed by the DCO is split into two portions: gift portion and market portion. Currently, in the mvp version we've developed in this repository, only the gift portion of the DCO is implemented. The market portion will be added later.
+The value of the natural wealth processed by the DCO is split into two portions: gift portion and market portion. Currently, in the MVP version we've developed in this repository, only the gift portion of the DCO is implemented. The market portion will be added later.
 
 The credex ecosystem stores values in credcoin (CXX). In order to natively enable multi-denominational accounting, a CXXmultiplier value is stored alongside every CXX value. Both of these values are updated in every DCO so that the credex remains true to the face value in the denomination specified, and to other values stored in the ecosystem. A value expressed in CXX represents that value in relationship to every other value stored in the ecosystem. A value in CXX divided by its CXX multiplier expresses the value in the chosen denomination (face value).
 
 The system manages the balance between local truth (preserving the face value of contracts in their specified denomination) and global truth (adjusting all values relative to credcoin) through the daily rate and value adjustments in the DCO. This implementation creates a robust ecosystem that manages accounting processes across any denomination, clears debts automatically, and adjusts values dynamically.
 
-## express.js server
+## Express.js Server
 
-The express.js server is initialized with index.ts, which provides the cronjobs and endpoints that power the ecosystem and enable members and client apps to interact with its ledger.
+The express.js server is initialized in `src/index.ts`, which provides the cronjobs and endpoints that power the ecosystem and enable members and client apps to interact with its ledger.
 
-## cronjobs
+## Cronjobs
 
 The Core module hosts the cronjobs:
 
 - DailyCredcoinOffering() runs every day at midnight UTC.
 - MinuteTransactionQueue() runs every minute, clearing credloops of value creation across the ecosystem.
 
-### endpoints
+### Endpoints
 
-Controllers for the endpoints are imported, and endpoints created for the various modules: Member, Account, Avatar, Admin, and DevAdmin.
+Controllers for the endpoints are imported, and endpoints created for the various modules: Member, Account, Avatar, Credex, and AdminDashboard.
 
 ## Development Setup
 
@@ -117,10 +117,31 @@ Note: The GitHub token needs to be updated for each new Codespace session. The b
 - [Account](docs/Account.md)
 - [Credex](docs/Credex.md)
 - [Avatar](docs/Avatar.md)
-- [Admin](docs/Admin.md)
-- [DevAdmin](docs/DevAdmin.md)
+- [AdminDashboard](docs/AdminDashboard.md)
 - [ledgerSpace Schema](docs/ledgerSpace_schema.md)
 - [searchSpace Schema](docs/searchSpace_schema.md)
+
+## Project Structure
+
+```
+credex-core/
+├── src/
+│   ├── api/
+│   │   ├── Account/
+│   │   ├── AdminDashboard/
+│   │   ├── Avatar/
+│   │   ├── Credex/
+│   │   └── Member/
+│   ├── constants/
+│   ├── core-cron/
+│   │   ├── DCO/
+│   │   └── MTQ/
+│   ├── tests/
+│   └── utils/
+├── config/
+├── docs/
+└── middleware/
+```
 
 ## Contributing
 
