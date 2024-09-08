@@ -1,15 +1,17 @@
 # Git Context
 ## Recent Commits
+e6c04eb consolidate tests
 d742915 Update AI context
 003ba3f logging2
 dafaac8 Update AI context
 2aa19d8 logging
-c4ada94 Update AI context
 
 ## Recent File Changes
 M	ai_context/code_summary.md
 M	ai_context/git_context.md
 M	ai_context/recent_changes.md
+M	build/config/neo4j.js
+M	build/config/neo4j.js.map
 M	build/src/api/Account/controllers/createAccount.js
 M	build/src/api/Account/controllers/createAccount.js.map
 M	build/src/api/Account/controllers/unauthorizeForAccount.js
@@ -18,6 +20,24 @@ M	build/src/api/Account/controllers/updateAccount.js
 M	build/src/api/Account/controllers/updateAccount.js.map
 M	build/src/api/Account/services/CreateAccount.js
 M	build/src/api/Account/services/CreateAccount.js.map
+M	build/src/api/AdminDashboard/controllers/AccountController.js
+M	build/src/api/AdminDashboard/controllers/AccountController.js.map
+M	build/src/api/AdminDashboard/controllers/CredexController.js
+M	build/src/api/AdminDashboard/controllers/CredexController.js.map
+M	build/src/api/AdminDashboard/controllers/MemberController.js
+M	build/src/api/AdminDashboard/controllers/MemberController.js.map
+M	build/src/api/AdminDashboard/services/GetAccountReceivedCredexOffers.js
+M	build/src/api/AdminDashboard/services/GetAccountReceivedCredexOffers.js.map
+M	build/src/api/AdminDashboard/services/GetAccountSentCredexOffers.js
+M	build/src/api/AdminDashboard/services/GetAccountSentCredexOffers.js.map
+M	build/src/api/AdminDashboard/services/GetAccountService.js
+M	build/src/api/AdminDashboard/services/GetAccountService.js.map
+M	build/src/api/AdminDashboard/services/GetCredexService.js
+M	build/src/api/AdminDashboard/services/GetCredexService.js.map
+M	build/src/api/AdminDashboard/services/GetMemberService.js
+M	build/src/api/AdminDashboard/services/GetMemberService.js.map
+M	build/src/api/AdminDashboard/services/UpdateMemberTierService.js
+M	build/src/api/AdminDashboard/services/UpdateMemberTierService.js.map
 M	build/src/api/Avatar/controllers/acceptRecurring.js
 M	build/src/api/Avatar/controllers/acceptRecurring.js.map
 M	build/src/api/Avatar/controllers/requestRecurring.js
@@ -52,6 +72,10 @@ M	build/src/core-cron/cronJobs.js
 M	build/src/core-cron/cronJobs.js.map
 M	build/src/index.js
 M	build/src/index.js.map
+A	build/src/tests/utils/denomUtils.test.js
+A	build/src/tests/utils/denomUtils.test.js.map
+A	build/src/tests/utils/validators.test.js
+A	build/src/tests/utils/validators.test.js.map
 A	build/src/utils/errorUtils.js
 A	build/src/utils/errorUtils.js.map
 A	build/src/utils/logger.js
@@ -77,4 +101,9 @@ M	src/core-cron/DCO/DailyCredcoinOffering.ts
 M	src/core-cron/MTQ/LoopFinder.ts
 M	src/core-cron/MTQ/MinuteTransactionQueue.ts
 M	src/core-cron/cronJobs.ts
+M	src/index.ts
+D	src/tests/testDenomFormatter.ts
+D	src/tests/testRoutes.ts
+R090	src/tests/denomUtils.test.ts	src/tests/utils/denomUtils.test.ts
+R097	src/utils/__tests__/validators.test.ts	src/tests/utils/validators.test.ts
 M	tsconfig.json

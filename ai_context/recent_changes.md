@@ -4547,16 +4547,18 @@ const server = http_1.default.createServer(exports.app);
 ```
 # Git Context
 ## Recent Commits
+e6c04eb consolidate tests
 d742915 Update AI context
 003ba3f logging2
 dafaac8 Update AI context
 2aa19d8 logging
-c4ada94 Update AI context
 
 ## Recent File Changes
 M	ai_context/code_summary.md
 M	ai_context/git_context.md
 M	ai_context/recent_changes.md
+M	build/config/neo4j.js
+M	build/config/neo4j.js.map
 M	build/src/api/Account/controllers/createAccount.js
 M	build/src/api/Account/controllers/createAccount.js.map
 M	build/src/api/Account/controllers/unauthorizeForAccount.js
@@ -4565,6 +4567,24 @@ M	build/src/api/Account/controllers/updateAccount.js
 M	build/src/api/Account/controllers/updateAccount.js.map
 M	build/src/api/Account/services/CreateAccount.js
 M	build/src/api/Account/services/CreateAccount.js.map
+M	build/src/api/AdminDashboard/controllers/AccountController.js
+M	build/src/api/AdminDashboard/controllers/AccountController.js.map
+M	build/src/api/AdminDashboard/controllers/CredexController.js
+M	build/src/api/AdminDashboard/controllers/CredexController.js.map
+M	build/src/api/AdminDashboard/controllers/MemberController.js
+M	build/src/api/AdminDashboard/controllers/MemberController.js.map
+M	build/src/api/AdminDashboard/services/GetAccountReceivedCredexOffers.js
+M	build/src/api/AdminDashboard/services/GetAccountReceivedCredexOffers.js.map
+M	build/src/api/AdminDashboard/services/GetAccountSentCredexOffers.js
+M	build/src/api/AdminDashboard/services/GetAccountSentCredexOffers.js.map
+M	build/src/api/AdminDashboard/services/GetAccountService.js
+M	build/src/api/AdminDashboard/services/GetAccountService.js.map
+M	build/src/api/AdminDashboard/services/GetCredexService.js
+M	build/src/api/AdminDashboard/services/GetCredexService.js.map
+M	build/src/api/AdminDashboard/services/GetMemberService.js
+M	build/src/api/AdminDashboard/services/GetMemberService.js.map
+M	build/src/api/AdminDashboard/services/UpdateMemberTierService.js
+M	build/src/api/AdminDashboard/services/UpdateMemberTierService.js.map
 M	build/src/api/Avatar/controllers/acceptRecurring.js
 M	build/src/api/Avatar/controllers/acceptRecurring.js.map
 M	build/src/api/Avatar/controllers/requestRecurring.js
@@ -4599,6 +4619,10 @@ M	build/src/core-cron/cronJobs.js
 M	build/src/core-cron/cronJobs.js.map
 M	build/src/index.js
 M	build/src/index.js.map
+A	build/src/tests/utils/denomUtils.test.js
+A	build/src/tests/utils/denomUtils.test.js.map
+A	build/src/tests/utils/validators.test.js
+A	build/src/tests/utils/validators.test.js.map
 A	build/src/utils/errorUtils.js
 A	build/src/utils/errorUtils.js.map
 A	build/src/utils/logger.js
@@ -4624,6 +4648,11 @@ M	src/core-cron/DCO/DailyCredcoinOffering.ts
 M	src/core-cron/MTQ/LoopFinder.ts
 M	src/core-cron/MTQ/MinuteTransactionQueue.ts
 M	src/core-cron/cronJobs.ts
+M	src/index.ts
+D	src/tests/testDenomFormatter.ts
+D	src/tests/testRoutes.ts
+R090	src/tests/denomUtils.test.ts	src/tests/utils/denomUtils.test.ts
+R097	src/utils/__tests__/validators.test.ts	src/tests/utils/validators.test.ts
 M	tsconfig.json
 ```
 
@@ -4631,75 +4660,73 @@ M	tsconfig.json
 ```
 ```
 
-## build/src/api/Account/controllers/createAccount.js
+## build/config/neo4j.js
 ```
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CreateAccountController = CreateAccountController;
-const CreateAccount_1 = require("../services/CreateAccount");
-const accountTypes_1 = require("../../../constants/accountTypes");
-const logger_1 = __importDefault(require("../../../../config/logger"));
-const validators_1 = require("../../../utils/validators");
-async function CreateAccountController(req, res, next) {
-    const { ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX, DCOdenom } = req.body;
-    try {
-        // Validate input
-        if (!(0, validators_1.validateUUID)(ownerID)) {
-            res.status(400).json({ message: "Invalid ownerID" });
-            return;
-        }
-        if (!(0, accountTypes_1.checkPermittedAccountType)(accountType)) {
-            res.status(400).json({ message: "Invalid accountType" });
-            return;
-        }
-        if (!(0, validators_1.validateAccountName)(accountName)) {
-            res.status(400).json({ message: "Invalid accountName" });
-            return;
-        }
-        if (!(0, validators_1.validateAccountHandle)(accountHandle)) {
-            res.status(400).json({ message: "Invalid accountHandle" });
-            return;
-        }
-        if (!(0, validators_1.validateDenomination)(defaultDenom)) {
-            res.status(400).json({ message: "Invalid defaultDenom" });
-            return;
-        }
-        if (DCOdenom && !(0, validators_1.validateDenomination)(DCOdenom)) {
-            res.status(400).json({ message: "Invalid DCOdenom" });
-            return;
-        }
-        if (DCOgiveInCXX && !(0, validators_1.validateAmount)(DCOgiveInCXX)) {
-            res.status(400).json({ message: "Invalid DCOgiveInCXX" });
-            return;
-        }
-        logger_1.default.info("Creating new account", {
-            ownerID,
-            accountType,
-            accountName,
-            accountHandle,
-            defaultDenom,
-            DCOdenom,
-        });
-        const newAccount = await (0, CreateAccount_1.CreateAccountService)(ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX, DCOdenom);
-        if (newAccount.accountID) {
-            logger_1.default.info("Account created successfully", { accountID: newAccount.accountID });
-            res.status(201).json({ accountID: newAccount.accountID, message: "Account created successfully" });
-        }
-        else {
-            res.status(400).json({ message: newAccount.message || "Failed to create account" });
-        }
-    }
-    catch (error) {
-        logger_1.default.error("Error in CreateAccountController", { error });
-        next(error);
-    }
-}
-//# sourceMappingURL=createAccount.js.map```
+exports.searchSpaceDriver = exports.ledgerSpaceDriver = void 0;
+const neo4j = __importStar(require("neo4j-driver"));
+require("dotenv").config();
+const ledgerSpace_url = `${process.env.NEO_4J_LEDGER_SPACE_BOLT_URL}`;
+const ledgerSpace_user = `${process.env.NEO_4J_LEDGER_SPACE_USER}`;
+const ledgerSpace_password = `${process.env.NEO_4J_LEDGER_SPACE_PASS}`;
+const searchSpace_url = `${process.env.NEO_4J_SEARCH_SPACE_BOLT_URL}`;
+const searchSpace_user = `${process.env.NEO_4J_SEARCH_SPACE_USER}`;
+const searchSpace_password = `${process.env.NEO_4J_SEARCH_SPACE_PASS}`;
+const createDriverWithRetry = (url, user, password) => {
+    const driver = neo4j.driver(url, neo4j.auth.basic(user, password), {
+        maxConnectionPoolSize: 50,
+        connectionAcquisitionTimeout: 30000,
+        maxTransactionRetryTime: 30000,
+    });
+    // Verify connectivity on first use
+    driver
+        .verifyConnectivity()
+        .then(() => console.log(`Successfully connected to Neo4j at ${url}`))
+        .catch((error) => console.error(`Failed to connect to Neo4j at ${url}:`, error));
+    return driver;
+};
+exports.ledgerSpaceDriver = createDriverWithRetry(ledgerSpace_url, ledgerSpace_user, ledgerSpace_password);
+exports.searchSpaceDriver = createDriverWithRetry(searchSpace_url, searchSpace_user, searchSpace_password);
+// Graceful shutdown
+process.on("SIGINT", () => {
+    console.log("Closing Neo4j drivers...");
+    Promise.all([exports.ledgerSpaceDriver.close(), exports.searchSpaceDriver.close()])
+        .then(() => {
+        console.log("Neo4j drivers closed.");
+        process.exit(0);
+    })
+        .catch((error) => {
+        console.error("Error closing Neo4j drivers:", error);
+        process.exit(1);
+    });
+});
+//# sourceMappingURL=neo4j.js.map```
 
-## build/src/api/Account/controllers/createAccount.js.map
+## build/config/neo4j.js.map
 ```
-{"version":3,"file":"createAccount.js","sourceRoot":"","sources":["../../../../../src/api/Account/controllers/createAccount.ts"],"names":[],"mappings":"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"}```
+{"version":3,"file":"neo4j.js","sourceRoot":"","sources":["../../config/neo4j.ts"],"names":[],"mappings":";;;;;;;;;;;;;;;;;;;;;;;;;;AAAA,oDAAsC;AAEtC,OAAO,CAAC,QAAQ,CAAC,CAAC,MAAM,EAAE,CAAC;AAE3B,MAAM,eAAe,GAAG,GAAG,OAAO,CAAC,GAAG,CAAC,4BAA4B,EAAE,CAAC;AACtE,MAAM,gBAAgB,GAAG,GAAG,OAAO,CAAC,GAAG,CAAC,wBAAwB,EAAE,CAAC;AACnE,MAAM,oBAAoB,GAAG,GAAG,OAAO,CAAC,GAAG,CAAC,wBAAwB,EAAE,CAAC;AACvE,MAAM,eAAe,GAAG,GAAG,OAAO,CAAC,GAAG,CAAC,4BAA4B,EAAE,CAAC;AACtE,MAAM,gBAAgB,GAAG,GAAG,OAAO,CAAC,GAAG,CAAC,wBAAwB,EAAE,CAAC;AACnE,MAAM,oBAAoB,GAAG,GAAG,OAAO,CAAC,GAAG,CAAC,wBAAwB,EAAE,CAAC;AAEvE,MAAM,qBAAqB,GAAG,CAAC,GAAW,EAAE,IAAY,EAAE,QAAgB,EAAE,EAAE;IAC5E,MAAM,MAAM,GAAG,KAAK,CAAC,MAAM,CAAC,GAAG,EAAE,KAAK,CAAC,IAAI,CAAC,KAAK,CAAC,IAAI,EAAE,QAAQ,CAAC,EAAE;QACjE,qBAAqB,EAAE,EAAE;QACzB,4BAA4B,EAAE,KAAK;QACnC,uBAAuB,EAAE,KAAK;KAC/B,CAAC,CAAC;IAEH,mCAAmC;IACnC,MAAM;SACH,kBAAkB,EAAE;SACpB,IAAI,CAAC,GAAG,EAAE,CAAC,OAAO,CAAC,GAAG,CAAC,sCAAsC,GAAG,EAAE,CAAC,CAAC;SACpE,KAAK,CAAC,CAAC,KAAK,EAAE,EAAE,CACf,OAAO,CAAC,KAAK,CAAC,iCAAiC,GAAG,GAAG,EAAE,KAAK,CAAC,CAC9D,CAAC;IAEJ,OAAO,MAAM,CAAC;AAChB,CAAC,CAAC;AAEW,QAAA,iBAAiB,GAAG,qBAAqB,CACpD,eAAe,EACf,gBAAgB,EAChB,oBAAoB,CACrB,CAAC;AACW,QAAA,iBAAiB,GAAG,qBAAqB,CACpD,eAAe,EACf,gBAAgB,EAChB,oBAAoB,CACrB,CAAC;AAEF,oBAAoB;AACpB,OAAO,CAAC,EAAE,CAAC,QAAQ,EAAE,GAAG,EAAE;IACxB,OAAO,CAAC,GAAG,CAAC,0BAA0B,CAAC,CAAC;IACxC,OAAO,CAAC,GAAG,CAAC,CAAC,yBAAiB,CAAC,KAAK,EAAE,EAAE,yBAAiB,CAAC,KAAK,EAAE,CAAC,CAAC;SAChE,IAAI,CAAC,GAAG,EAAE;QACT,OAAO,CAAC,GAAG,CAAC,uBAAuB,CAAC,CAAC;QACrC,OAAO,CAAC,IAAI,CAAC,CAAC,CAAC,CAAC;IAClB,CAAC,CAAC;SACD,KAAK,CAAC,CAAC,KAAK,EAAE,EAAE;QACf,OAAO,CAAC,KAAK,CAAC,8BAA8B,EAAE,KAAK,CAAC,CAAC;QACrD,OAAO,CAAC,IAAI,CAAC,CAAC,CAAC,CAAC;IAClB,CAAC,CAAC,CAAC;AACP,CAAC,CAAC,CAAC"}```
 
