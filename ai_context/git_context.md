@@ -1,13 +1,81 @@
 # Git Context
 ## Recent Commits
+003ba3f logging2
 dafaac8 Update AI context
 2aa19d8 logging
 c4ada94 Update AI context
 0a714ce logger util
-9fb293c Update AI context
 
 ## Recent File Changes
 M	ai_context/code_summary.md
 M	ai_context/git_context.md
 M	ai_context/recent_changes.md
+M	build/src/api/Account/controllers/createAccount.js
+M	build/src/api/Account/controllers/createAccount.js.map
+M	build/src/api/Account/controllers/unauthorizeForAccount.js
+M	build/src/api/Account/controllers/unauthorizeForAccount.js.map
+M	build/src/api/Account/controllers/updateAccount.js
+M	build/src/api/Account/controllers/updateAccount.js.map
+M	build/src/api/Account/services/CreateAccount.js
+M	build/src/api/Account/services/CreateAccount.js.map
+M	build/src/api/Avatar/controllers/acceptRecurring.js
+M	build/src/api/Avatar/controllers/acceptRecurring.js.map
+M	build/src/api/Avatar/controllers/requestRecurring.js
+M	build/src/api/Avatar/controllers/requestRecurring.js.map
+M	build/src/api/Credex/controllers/acceptCredex.js
+M	build/src/api/Credex/controllers/acceptCredex.js.map
+M	build/src/api/Credex/controllers/acceptCredexBulk.js
+M	build/src/api/Credex/controllers/acceptCredexBulk.js.map
+M	build/src/api/Credex/controllers/offerCredex.js
+M	build/src/api/Credex/controllers/offerCredex.js.map
+M	build/src/api/Credex/services/OfferCredex.js
+M	build/src/api/Credex/services/OfferCredex.js.map
+M	build/src/api/Member/controllers/getMemberDashboardByPhone.js
+M	build/src/api/Member/controllers/getMemberDashboardByPhone.js.map
+M	build/src/api/Member/controllers/onboardMember.js
+M	build/src/api/Member/controllers/onboardMember.js.map
+M	build/src/api/Member/controllers/updateMemberTier.js
+M	build/src/api/Member/controllers/updateMemberTier.js.map
+M	build/src/api/Member/services/OnboardMember.js
+M	build/src/api/Member/services/OnboardMember.js.map
+M	build/src/core-cron/DCO/DCOavatars.js
+M	build/src/core-cron/DCO/DCOavatars.js.map
+M	build/src/core-cron/DCO/DCOexecute.js
+M	build/src/core-cron/DCO/DCOexecute.js.map
+M	build/src/core-cron/DCO/DailyCredcoinOffering.js
+M	build/src/core-cron/DCO/DailyCredcoinOffering.js.map
+M	build/src/core-cron/MTQ/LoopFinder.js
+M	build/src/core-cron/MTQ/LoopFinder.js.map
+M	build/src/core-cron/MTQ/MinuteTransactionQueue.js
+M	build/src/core-cron/MTQ/MinuteTransactionQueue.js.map
+M	build/src/core-cron/cronJobs.js
+M	build/src/core-cron/cronJobs.js.map
+M	build/src/index.js
+M	build/src/index.js.map
+A	build/src/utils/errorUtils.js
+A	build/src/utils/errorUtils.js.map
+A	build/src/utils/logger.js
+A	build/src/utils/logger.js.map
+M	build/src/utils/validators.js
+M	build/src/utils/validators.js.map
+M	config/neo4j.ts
+M	src/api/Account/services/CreateAccount.ts
+M	src/api/AdminDashboard/controllers/AccountController.ts
+M	src/api/AdminDashboard/controllers/CredexController.ts
+M	src/api/AdminDashboard/controllers/MemberController.ts
+M	src/api/AdminDashboard/services/GetAccountReceivedCredexOffers.ts
+M	src/api/AdminDashboard/services/GetAccountSentCredexOffers.ts
+M	src/api/AdminDashboard/services/GetAccountService.ts
+M	src/api/AdminDashboard/services/GetCredexService.ts
+M	src/api/AdminDashboard/services/GetMemberService.ts
+M	src/api/AdminDashboard/services/UpdateMemberTierService.ts
+M	src/api/Credex/services/OfferCredex.ts
+M	src/core-cron/DCO/DCOavatars.ts
+M	src/core-cron/DCO/DCOexecute.ts
+A	src/core-cron/DCO/DCOsnapshots/2021-01-02_ledgerSpace_dev_end.json
+M	src/core-cron/DCO/DailyCredcoinOffering.ts
+M	src/core-cron/MTQ/LoopFinder.ts
+M	src/core-cron/MTQ/MinuteTransactionQueue.ts
+M	src/core-cron/cronJobs.ts
 A	src/utils/logger.ts
+M	tsconfig.json

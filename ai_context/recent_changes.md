@@ -4552,172 +4552,160 @@ const server = http_1.default.createServer(exports.app);
 ```
 # Git Context
 ## Recent Commits
+003ba3f logging2
 dafaac8 Update AI context
 2aa19d8 logging
 c4ada94 Update AI context
 0a714ce logger util
-9fb293c Update AI context
 
 ## Recent File Changes
 M	ai_context/code_summary.md
 M	ai_context/git_context.md
 M	ai_context/recent_changes.md
+M	build/src/api/Account/controllers/createAccount.js
+M	build/src/api/Account/controllers/createAccount.js.map
+M	build/src/api/Account/controllers/unauthorizeForAccount.js
+M	build/src/api/Account/controllers/unauthorizeForAccount.js.map
+M	build/src/api/Account/controllers/updateAccount.js
+M	build/src/api/Account/controllers/updateAccount.js.map
+M	build/src/api/Account/services/CreateAccount.js
+M	build/src/api/Account/services/CreateAccount.js.map
+M	build/src/api/Avatar/controllers/acceptRecurring.js
+M	build/src/api/Avatar/controllers/acceptRecurring.js.map
+M	build/src/api/Avatar/controllers/requestRecurring.js
+M	build/src/api/Avatar/controllers/requestRecurring.js.map
+M	build/src/api/Credex/controllers/acceptCredex.js
+M	build/src/api/Credex/controllers/acceptCredex.js.map
+M	build/src/api/Credex/controllers/acceptCredexBulk.js
+M	build/src/api/Credex/controllers/acceptCredexBulk.js.map
+M	build/src/api/Credex/controllers/offerCredex.js
+M	build/src/api/Credex/controllers/offerCredex.js.map
+M	build/src/api/Credex/services/OfferCredex.js
+M	build/src/api/Credex/services/OfferCredex.js.map
+M	build/src/api/Member/controllers/getMemberDashboardByPhone.js
+M	build/src/api/Member/controllers/getMemberDashboardByPhone.js.map
+M	build/src/api/Member/controllers/onboardMember.js
+M	build/src/api/Member/controllers/onboardMember.js.map
+M	build/src/api/Member/controllers/updateMemberTier.js
+M	build/src/api/Member/controllers/updateMemberTier.js.map
+M	build/src/api/Member/services/OnboardMember.js
+M	build/src/api/Member/services/OnboardMember.js.map
+M	build/src/core-cron/DCO/DCOavatars.js
+M	build/src/core-cron/DCO/DCOavatars.js.map
+M	build/src/core-cron/DCO/DCOexecute.js
+M	build/src/core-cron/DCO/DCOexecute.js.map
+M	build/src/core-cron/DCO/DailyCredcoinOffering.js
+M	build/src/core-cron/DCO/DailyCredcoinOffering.js.map
+M	build/src/core-cron/MTQ/LoopFinder.js
+M	build/src/core-cron/MTQ/LoopFinder.js.map
+M	build/src/core-cron/MTQ/MinuteTransactionQueue.js
+M	build/src/core-cron/MTQ/MinuteTransactionQueue.js.map
+M	build/src/core-cron/cronJobs.js
+M	build/src/core-cron/cronJobs.js.map
+M	build/src/index.js
+M	build/src/index.js.map
+A	build/src/utils/errorUtils.js
+A	build/src/utils/errorUtils.js.map
+A	build/src/utils/logger.js
+A	build/src/utils/logger.js.map
+M	build/src/utils/validators.js
+M	build/src/utils/validators.js.map
+M	config/neo4j.ts
+M	src/api/Account/services/CreateAccount.ts
+M	src/api/AdminDashboard/controllers/AccountController.ts
+M	src/api/AdminDashboard/controllers/CredexController.ts
+M	src/api/AdminDashboard/controllers/MemberController.ts
+M	src/api/AdminDashboard/services/GetAccountReceivedCredexOffers.ts
+M	src/api/AdminDashboard/services/GetAccountSentCredexOffers.ts
+M	src/api/AdminDashboard/services/GetAccountService.ts
+M	src/api/AdminDashboard/services/GetCredexService.ts
+M	src/api/AdminDashboard/services/GetMemberService.ts
+M	src/api/AdminDashboard/services/UpdateMemberTierService.ts
+M	src/api/Credex/services/OfferCredex.ts
+M	src/core-cron/DCO/DCOavatars.ts
+M	src/core-cron/DCO/DCOexecute.ts
+A	src/core-cron/DCO/DCOsnapshots/2021-01-02_ledgerSpace_dev_end.json
+M	src/core-cron/DCO/DailyCredcoinOffering.ts
+M	src/core-cron/MTQ/LoopFinder.ts
+M	src/core-cron/MTQ/MinuteTransactionQueue.ts
+M	src/core-cron/cronJobs.ts
 A	src/utils/logger.ts
+M	tsconfig.json
 ```
 
 ## ai_context/recent_changes.md
 ```
 ```
 
-## src/utils/logger.ts
+## build/src/api/Account/controllers/createAccount.js
 ```
-import winston from "winston";
-import DailyRotateFile from "winston-daily-rotate-file";
-import { config } from "../../config/config";
-import { v4 as uuidv4 } from "uuid";
-
-// Configure the logger
-const logger = winston.createLogger({
-  level: config.nodeEnv === "production" ? "info" : "debug",
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.splat(),
-    winston.format.json()
-  ),
-  defaultMeta: { service: "credex-core" },
-  transports: [
-    new DailyRotateFile({
-      filename: "logs/error-%DATE%.log",
-      datePattern: "YYYY-MM-DD",
-      zippedArchive: true,
-      maxSize: "20m",
-      maxFiles: "14d",
-      level: "error",
-    }),
-    new DailyRotateFile({
-      filename: "logs/combined-%DATE%.log",
-      datePattern: "YYYY-MM-DD",
-      zippedArchive: true,
-      maxSize: "20m",
-      maxFiles: "14d",
-    }),
-  ],
-});
-
-// Add console transport for non-production environments
-if (config.nodeEnv !== "production") {
-  logger.add(
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      ),
-    })
-  );
-}
-
-function sanitizeData(data: any): any {
-  const sensitiveFields = ["password", "token", "apiKey", "creditCard"];
-  if (typeof data === "object" && data !== null) {
-    return Object.keys(data).reduce(
-      (acc: { [key: string]: any }, key: string) => {
-        if (sensitiveFields.includes(key)) {
-          acc[key] = "[REDACTED]";
-        } else if (typeof data[key] === "object") {
-          acc[key] = sanitizeData(data[key]);
-        } else {
-          acc[key] = data[key];
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CreateAccountController = CreateAccountController;
+const CreateAccount_1 = require("../services/CreateAccount");
+const accountTypes_1 = require("../../../constants/accountTypes");
+const logger_1 = __importDefault(require("../../../../config/logger"));
+const validators_1 = require("../../../utils/validators");
+async function CreateAccountController(req, res, next) {
+    const { ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX, DCOdenom } = req.body;
+    try {
+        // Validate input
+        if (!(0, validators_1.validateUUID)(ownerID)) {
+            res.status(400).json({ message: "Invalid ownerID" });
+            return;
         }
-        return acc;
-      },
-      {}
-    );
-  }
-  return data;
+        if (!(0, accountTypes_1.checkPermittedAccountType)(accountType)) {
+            res.status(400).json({ message: "Invalid accountType" });
+            return;
+        }
+        if (!(0, validators_1.validateAccountName)(accountName)) {
+            res.status(400).json({ message: "Invalid accountName" });
+            return;
+        }
+        if (!(0, validators_1.validateAccountHandle)(accountHandle)) {
+            res.status(400).json({ message: "Invalid accountHandle" });
+            return;
+        }
+        if (!(0, validators_1.validateDenomination)(defaultDenom)) {
+            res.status(400).json({ message: "Invalid defaultDenom" });
+            return;
+        }
+        if (DCOdenom && !(0, validators_1.validateDenomination)(DCOdenom)) {
+            res.status(400).json({ message: "Invalid DCOdenom" });
+            return;
+        }
+        if (DCOgiveInCXX && !(0, validators_1.validateAmount)(DCOgiveInCXX)) {
+            res.status(400).json({ message: "Invalid DCOgiveInCXX" });
+            return;
+        }
+        logger_1.default.info("Creating new account", {
+            ownerID,
+            accountType,
+            accountName,
+            accountHandle,
+            defaultDenom,
+            DCOdenom,
+        });
+        const newAccount = await (0, CreateAccount_1.CreateAccountService)(ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX, DCOdenom);
+        if (newAccount.accountID) {
+            logger_1.default.info("Account created successfully", { accountID: newAccount.accountID });
+            res.status(201).json({ accountID: newAccount.accountID, message: "Account created successfully" });
+        }
+        else {
+            res.status(400).json({ message: newAccount.message || "Failed to create account" });
+        }
+    }
+    catch (error) {
+        logger_1.default.error("Error in CreateAccountController", { error });
+        next(error);
+    }
 }
+//# sourceMappingURL=createAccount.js.map```
 
-// Standardized logging functions
-export const logInfo = (message: string, meta?: any) => {
-  logger.info(message, { ...meta, timestamp: new Date().toISOString() });
-};
-
-export const logError = (message: string, error: Error, meta?: any) => {
-  logger.error(message, {
-    ...meta,
-    error: {
-      message: error.message,
-      stack: error.stack,
-    },
-    timestamp: new Date().toISOString(),
-  });
-};
-
-export const logWarning = (message: string, meta?: any) => {
-  logger.warn(message, { ...meta, timestamp: new Date().toISOString() });
-};
-
-export const logDebug = (message: string, meta?: any) => {
-  logger.debug(message, { ...meta, timestamp: new Date().toISOString() });
-};
-
-// Request ID middleware
-export const addRequestId = (req: any, res: any, next: any) => {
-  req.id = uuidv4();
-  res.setHeader("X-Request-ID", req.id);
-  next();
-};
-
-// Express request logger middleware
-export const expressLogger = (req: any, res: any, next: any) => {
-  const start = Date.now();
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    logInfo("HTTP Request", {
-      requestId: req.id,
-      method: req.method,
-      url: req.originalUrl,
-      statusCode: res.statusCode,
-      duration: `${duration}ms`,
-      body: sanitizeData(req.body),
-      params: sanitizeData(req.params),
-      query: sanitizeData(req.query),
-      headers: sanitizeData(req.headers),
-      ip: req.ip,
-      userAgent: req.get("User-Agent"),
-    });
-  });
-  next();
-};
-
-// Error logger middleware
-export const errorLogger = (err: Error, req: any, res: any, next: any) => {
-  logError("Request Error", err, {
-    requestId: req.id,
-    method: req.method,
-    url: req.originalUrl,
-    body: sanitizeData(req.body),
-    params: sanitizeData(req.params),
-    query: sanitizeData(req.query),
-    headers: sanitizeData(req.headers),
-  });
-  next(err);
-};
-
-// Function to log DCO rates
-export const logDCORates = (
-  XAUrate: number,
-  CXXrate: number,
-  CXXmultiplier: number
-) => {
-  logInfo("DCO Rates", { XAUrate, CXXrate, CXXmultiplier });
-};
-
-export default logger;
-
-// TODO: Implement log aggregation and centralized logging for production environments
-// TODO: Implement log retention policies based on compliance requirements
-// TODO: Add performance monitoring for database queries and external API calls
-// TODO: Implement log analysis tools to detect patterns, anomalies, and potential security threats
+## build/src/api/Account/controllers/createAccount.js.map
 ```
+{"version":3,"file":"createAccount.js","sourceRoot":"","sources":["../../../../../src/api/Account/controllers/createAccount.ts"],"names":[],"mappings":"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"}```
 
