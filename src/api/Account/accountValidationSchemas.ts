@@ -1,4 +1,4 @@
-import { v } from "../../../middleware/validateRequest";
+import { v } from "../../middleware/validateRequest";
 
 export const createAccountSchema = {
   ownerID: v.validateUUID,

@@ -6,9 +6,9 @@ import { UpdateAccountController } from "./controllers/updateAccount";
 import { AuthorizeForAccountController } from "./controllers/authorizeForAccount";
 import { UnauthorizeForAccountController } from "./controllers/unauthorizeForAccount";
 import { UpdateSendOffersToController } from "./controllers/updateSendOffersTo";
-import { rateLimiter } from "../../../middleware/rateLimiter";
-import { errorHandler } from "../../../middleware/errorHandler";
-import { validateRequest } from "../../../middleware/validateRequest";
+import { rateLimiter } from "../../middleware/rateLimiter";
+import { errorHandler } from "../../middleware/errorHandler";
+import { validateRequest } from "../../middleware/validateRequest";
 import {
   createAccountSchema,
   getAccountByHandleSchema,

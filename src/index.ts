@@ -13,7 +13,7 @@ import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import AdminDashboardRoutes from "./api/AdminDashboard/adminDashboardRoutes";
-import { errorHandler, notFoundHandler } from "../middleware/errorHandler";
+import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "../config/swagger";
 import configUtils from "./utils/configUtils";
