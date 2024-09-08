@@ -1,13 +1,7 @@
 import express from "express";
 import { GetLedgerService } from "../services/GetLedger";
 import { logError, logInfo } from "../../../utils/logger";
-import Joi from "joi";
-
-const getLedgerSchema = Joi.object({
-  accountID: Joi.string().uuid().required(),
-  numRows: Joi.number().integer().min(1).default(10),
-  startRow: Joi.number().integer().min(0).default(0)
-});
+import { validateUUID, validatePositiveInteger } from "../../../utils/validators";
 
 /**
  * GetLedgerController
@@ -24,23 +18,34 @@ export async function GetLedgerController(
   res: express.Response
 ) {
   try {
-    // Validate input using Joi
-    const { error, value } = getLedgerSchema.validate(req.query);
-    if (error) {
-      logError("GetLedgerController input validation failed", error);
-      return res.status(400).json({ error: error.details[0].message });
+    const { accountID, numRows, startRow } = req.query;
+
+    if (!validateUUID(accountID as string)) {
+      logError("GetLedgerController: Invalid accountID", new Error(), { accountID });
+      return res.status(400).json({ error: "Invalid accountID" });
     }
 
-    const { accountID, numRows, startRow } = value;
+    const parsedNumRows = numRows ? parseInt(numRows as string, 10) : 10;
+    const parsedStartRow = startRow ? parseInt(startRow as string, 10) : 0;
 
-    const responseData = await GetLedgerService(accountID, numRows, startRow);
+    if (!validatePositiveInteger(parsedNumRows)) {
+      logError("GetLedgerController: Invalid numRows", new Error(), { numRows });
+      return res.status(400).json({ error: "Invalid numRows. Must be a positive integer." });
+    }
+
+    if (!Number.isInteger(parsedStartRow) || parsedStartRow < 0) {
+      logError("GetLedgerController: Invalid startRow", new Error(), { startRow });
+      return res.status(400).json({ error: "Invalid startRow. Must be a non-negative integer." });
+    }
+
+    const responseData = await GetLedgerService(accountID as string, parsedNumRows, parsedStartRow);
     
     if (!responseData) {
-      logError("GetLedgerController: Failed to retrieve ledger", new Error(), { accountID, numRows, startRow });
+      logError("GetLedgerController: Failed to retrieve ledger", new Error(), { accountID, numRows: parsedNumRows, startRow: parsedStartRow });
       return res.status(404).json({ error: "Failed to retrieve ledger" });
     }
 
-    logInfo("GetLedgerController: Ledger retrieved successfully", { accountID, numRows, startRow });
+    logInfo("GetLedgerController: Ledger retrieved successfully", { accountID, numRows: parsedNumRows, startRow: parsedStartRow });
     return res.status(200).json(responseData);
   } catch (err) {
     logError("GetLedgerController: Unhandled error", err as Error);

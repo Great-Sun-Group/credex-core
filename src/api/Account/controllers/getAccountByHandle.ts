@@ -1,6 +1,7 @@
 import express from "express";
 import { GetAccountByHandleService } from "../services/GetAccountByHandle";
 import logger from "../../../../config/logger";
+import { validateAccountHandle } from "../../../utils/validators";
 
 /**
  * Controller for retrieving an account by its handle
@@ -16,6 +17,11 @@ export async function GetAccountByHandleController(
   const { accountHandle } = req.query;
 
   try {
+    if (!validateAccountHandle(accountHandle as string)) {
+      res.status(400).json({ message: "Invalid account handle" });
+      return;
+    }
+
     logger.info("Retrieving account by handle", { accountHandle });
 
     const accountData = await GetAccountByHandleService(accountHandle as string);

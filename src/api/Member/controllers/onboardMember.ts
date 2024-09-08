@@ -2,7 +2,7 @@ import express from "express";
 import { OnboardMemberService } from "../services/OnboardMember";
 import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
 import logger from "../../../../config/logger";
-import { onboardMemberSchema } from "../validators/memberSchemas";
+import { validateName, validatePhone } from "../../../utils/validators";
 
 export async function OnboardMemberController(
   firstname: string,
@@ -45,13 +45,23 @@ export async function onboardMemberExpressHandler(
   next: express.NextFunction
 ): Promise<void> {
   try {
-    const { error, value } = onboardMemberSchema.validate(req.body);
-    if (error) {
-      res.status(400).json({ message: error.details[0].message });
+    const { firstname, lastname, phone } = req.body;
+
+    if (!validateName(firstname)) {
+      res.status(400).json({ message: 'First name must be between 3 and 50 characters long' });
       return;
     }
 
-    const { firstname, lastname, phone } = value;
+    if (!validateName(lastname)) {
+      res.status(400).json({ message: 'Last name must be between 3 and 50 characters long' });
+      return;
+    }
+
+    if (!validatePhone(phone)) {
+      res.status(400).json({ message: 'Invalid phone number. Please provide a valid international phone number.' });
+      return;
+    }
+
     const result = await OnboardMemberController(firstname, lastname, phone);
 
     if ("error" in result) {

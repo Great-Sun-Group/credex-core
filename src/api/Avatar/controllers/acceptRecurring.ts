@@ -2,7 +2,7 @@ import express from "express";
 import { AcceptRecurringService } from "../services/AcceptRecurring";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import logger from "../../../../config/logger";
-import { acceptRecurringSchema } from "../validators/avatarSchemas";
+import { validateUUID } from "../../../utils/validators";
 
 /**
  * AcceptRecurringController
@@ -19,13 +19,15 @@ export async function AcceptRecurringController(
   res: express.Response
 ) {
   try {
-    const { error, value } = acceptRecurringSchema.validate(req.body, { abortEarly: false });
+    const { avatarID, signerID } = req.body;
 
-    if (error) {
-      return res.status(400).json({ error: error.details.map(detail => detail.message) });
+    if (!validateUUID(avatarID)) {
+      return res.status(400).json({ error: "Invalid avatarID" });
     }
 
-    const { avatarID, signerID } = value;
+    if (!validateUUID(signerID)) {
+      return res.status(400).json({ error: "Invalid signerID" });
+    }
 
     // Call AcceptRecurringService to process the acceptance
     const acceptRecurringData = await AcceptRecurringService({ avatarID, signerID });

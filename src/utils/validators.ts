@@ -41,3 +41,15 @@ export function validateDenomination(denomination: string): boolean {
 export function validateCredexType(type: string): boolean {
   return credexTypes.includes(type);
 }
+
+export function validateName(name: string): boolean {
+  return name.length >= 3 && name.length <= 50;
+}
+
+export function validateTier(tier: number): boolean {
+  return Number.isInteger(tier) && tier >= 1;
+}
+
+export function validatePositiveInteger(value: number): boolean {
+  return Number.isInteger(value) && value > 0;
+}

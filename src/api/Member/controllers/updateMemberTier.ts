@@ -1,7 +1,7 @@
 import express from "express";
 import { UpdateMemberTierService } from "../services/UpdateMemberTier";
 import logger from "../../../../config/logger";
-import { updateMemberTierSchema } from "../validators/memberSchemas";
+import { validateUUID, validateTier } from "../../../utils/validators";
 
 /**
  * Controller for updating a member's tier
@@ -42,13 +42,18 @@ export async function updateMemberTierExpressHandler(
   next: express.NextFunction
 ): Promise<void> {
   try {
-    const { error, value } = updateMemberTierSchema.validate(req.body);
-    if (error) {
-      res.status(400).json({ message: error.details[0].message });
+    const { memberID, tier } = req.body;
+
+    if (!validateUUID(memberID)) {
+      res.status(400).json({ message: 'Invalid memberID' });
       return;
     }
 
-    const { memberID, tier } = value;
+    if (!validateTier(tier)) {
+      res.status(400).json({ message: 'Invalid tier' });
+      return;
+    }
+
     const result = await UpdateMemberTierController(memberID, tier);
 
     if (result.success) {

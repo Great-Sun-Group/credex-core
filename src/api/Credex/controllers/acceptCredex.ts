@@ -2,12 +2,7 @@ import express from "express";
 import { AcceptCredexService } from "../services/AcceptCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { logError, logInfo } from "../../../utils/logger";
-import Joi from "joi";
-
-const acceptCredexSchema = Joi.object({
-  credexID: Joi.string().uuid().required(),
-  signerID: Joi.string().uuid().required()
-});
+import { validateUUID } from "../../../utils/validators";
 
 /**
  * AcceptCredexController
@@ -24,14 +19,17 @@ export async function AcceptCredexController(
   res: express.Response
 ) {
   try {
-    // Validate input using Joi
-    const { error, value } = acceptCredexSchema.validate(req.body);
-    if (error) {
-      logError("AcceptCredexController input validation failed", error);
-      return res.status(400).json({ error: error.details[0].message });
+    const { credexID, signerID } = req.body;
+
+    if (!validateUUID(credexID)) {
+      logError("AcceptCredexController: Invalid credexID", new Error(), { credexID });
+      return res.status(400).json({ error: "Invalid credexID" });
     }
 
-    const { credexID, signerID } = value;
+    if (!validateUUID(signerID)) {
+      logError("AcceptCredexController: Invalid signerID", new Error(), { signerID });
+      return res.status(400).json({ error: "Invalid signerID" });
+    }
 
     const acceptCredexData = await AcceptCredexService(credexID, signerID);
     

@@ -1,11 +1,7 @@
 import express from "express";
 import { CancelCredexService } from "../services/CancelCredex";
 import { logError, logInfo } from "../../../utils/logger";
-import Joi from "joi";
-
-const cancelCredexSchema = Joi.object({
-  credexID: Joi.string().uuid().required()
-});
+import { validateUUID } from "../../../utils/validators";
 
 /**
  * CancelCredexController
@@ -22,14 +18,12 @@ export async function CancelCredexController(
   res: express.Response
 ) {
   try {
-    // Validate input using Joi
-    const { error, value } = cancelCredexSchema.validate(req.body);
-    if (error) {
-      logError("CancelCredexController input validation failed", error);
-      return res.status(400).json({ error: error.details[0].message });
-    }
+    const { credexID } = req.body;
 
-    const { credexID } = value;
+    if (!validateUUID(credexID)) {
+      logError("CancelCredexController: Invalid credexID", new Error(), { credexID });
+      return res.status(400).json({ error: "Invalid credexID" });
+    }
 
     const responseData = await CancelCredexService(credexID);
     

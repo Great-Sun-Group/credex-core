@@ -5,23 +5,7 @@ import { checkDueDate, credspan } from "../../../constants/credspan";
 import { SecuredCredexAuthForTierController } from "../../Member/controllers/securedCredexAuthForTier";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { logError, logInfo } from "../../../utils/logger";
-import Joi from "joi";
-
-const offerCredexSchema = Joi.object({
-  memberID: Joi.string().uuid().required(),
-  issuerAccountID: Joi.string().uuid().required(),
-  receiverAccountID: Joi.string().uuid().required(),
-  Denomination: Joi.string().required(),
-  InitialAmount: Joi.number().positive().required(),
-  credexType: Joi.string().required(),
-  OFFERSorREQUESTS: Joi.string().valid("OFFERS", "REQUESTS").required(),
-  securedCredex: Joi.boolean().default(false),
-  dueDate: Joi.when("securedCredex", {
-    is: false,
-    then: Joi.date().iso().required(),
-    otherwise: Joi.forbidden()
-  })
-});
+import { validateUUID, validateDenomination, validateAmount, validateCredexType } from "../../../utils/validators";
 
 /**
  * OfferCredexController
@@ -40,13 +24,6 @@ export async function OfferCredexController(
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    // Validate input using Joi
-    const { error, value } = offerCredexSchema.validate(req.body);
-    if (error) {
-      logError("OfferCredexController input validation failed", error);
-      return res.status(400).json({ error: error.details[0].message });
-    }
-
     const {
       memberID,
       issuerAccountID,
@@ -57,7 +34,39 @@ export async function OfferCredexController(
       OFFERSorREQUESTS,
       securedCredex,
       dueDate
-    } = value;
+    } = req.body;
+
+    // Validate input
+    if (!validateUUID(memberID)) {
+      return res.status(400).json({ error: "Invalid memberID" });
+    }
+    if (!validateUUID(issuerAccountID)) {
+      return res.status(400).json({ error: "Invalid issuerAccountID" });
+    }
+    if (!validateUUID(receiverAccountID)) {
+      return res.status(400).json({ error: "Invalid receiverAccountID" });
+    }
+    if (!validateDenomination(Denomination)) {
+      return res.status(400).json({ error: "Invalid Denomination" });
+    }
+    if (!validateAmount(InitialAmount)) {
+      return res.status(400).json({ error: "Invalid InitialAmount" });
+    }
+    if (!validateCredexType(credexType)) {
+      return res.status(400).json({ error: "Invalid credexType" });
+    }
+    if (OFFERSorREQUESTS !== "OFFERS" && OFFERSorREQUESTS !== "REQUESTS") {
+      return res.status(400).json({ error: "Invalid OFFERSorREQUESTS value" });
+    }
+    if (typeof securedCredex !== "boolean") {
+      return res.status(400).json({ error: "Invalid securedCredex value" });
+    }
+    if (!securedCredex && !dueDate) {
+      return res.status(400).json({ error: "dueDate is required for unsecured credex" });
+    }
+    if (securedCredex && dueDate) {
+      return res.status(400).json({ error: "dueDate is not allowed for secured credex" });
+    }
 
     // Check if issuerAccountID and receiverAccountID are the same
     if (issuerAccountID === receiverAccountID) {
@@ -127,7 +136,7 @@ export async function OfferCredexController(
     }
 
     // Call OfferCredexService to create the Credex offer
-    const offerCredexData = await OfferCredexService(value);
+    const offerCredexData = await OfferCredexService(req.body);
     
     if (!offerCredexData || typeof offerCredexData.credex === 'boolean') {
       logError("OfferCredexController: Failed to create Credex offer", new Error(), { offerCredexData });

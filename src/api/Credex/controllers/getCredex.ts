@@ -1,12 +1,7 @@
 import express from "express";
 import { GetCredexService } from "../services/GetCredex";
 import { logError, logInfo } from "../../../utils/logger";
-import Joi from "joi";
-
-const getCredexSchema = Joi.object({
-  credexID: Joi.string().uuid().required(),
-  accountID: Joi.string().uuid().required()
-});
+import { validateUUID } from "../../../utils/validators";
 
 /**
  * GetCredexController
@@ -23,16 +18,19 @@ export async function GetCredexController(
   res: express.Response
 ) {
   try {
-    // Validate input using Joi
-    const { error, value } = getCredexSchema.validate(req.query);
-    if (error) {
-      logError("GetCredexController input validation failed", error);
-      return res.status(400).json({ error: error.details[0].message });
+    const { credexID, accountID } = req.query;
+
+    if (!validateUUID(credexID as string)) {
+      logError("GetCredexController: Invalid credexID", new Error(), { credexID });
+      return res.status(400).json({ error: "Invalid credexID" });
     }
 
-    const { credexID, accountID } = value;
+    if (!validateUUID(accountID as string)) {
+      logError("GetCredexController: Invalid accountID", new Error(), { accountID });
+      return res.status(400).json({ error: "Invalid accountID" });
+    }
 
-    const responseData = await GetCredexService(credexID, accountID);
+    const responseData = await GetCredexService(credexID as string, accountID as string);
     
     if (!responseData) {
       logError("GetCredexController: Credex not found", new Error(), { credexID, accountID });

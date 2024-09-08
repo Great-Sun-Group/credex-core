@@ -1,7 +1,7 @@
 import express from "express";
 import { SecuredCredexAuthForTier } from "../services/SecuredCredexAuthForTier";
 import logger from "../../../../config/logger";
-import { securedCredexAuthForTierSchema } from "../validators/memberSchemas";
+import { validateUUID, validateTier, validateAmount, validateDenomination } from "../../../utils/validators";
 
 /**
  * Controller for authorizing secured credex for a member's tier
@@ -47,13 +47,28 @@ export async function securedCredexAuthForTierExpressHandler(
   next: express.NextFunction
 ): Promise<void> {
   try {
-    const { error, value } = securedCredexAuthForTierSchema.validate(req.body);
-    if (error) {
-      res.status(400).json({ message: error.details[0].message });
+    const { memberID, tier, Amount, Denomination } = req.body;
+
+    if (!validateUUID(memberID)) {
+      res.status(400).json({ message: 'Invalid memberID' });
       return;
     }
 
-    const { memberID, tier, Amount, Denomination } = value;
+    if (!validateTier(tier)) {
+      res.status(400).json({ message: 'Invalid tier' });
+      return;
+    }
+
+    if (!validateAmount(Amount)) {
+      res.status(400).json({ message: 'Invalid Amount' });
+      return;
+    }
+
+    if (!validateDenomination(Denomination)) {
+      res.status(400).json({ message: 'Invalid Denomination' });
+      return;
+    }
+
     const result = await SecuredCredexAuthForTierController(memberID, tier, Amount, Denomination);
 
     if (result.isAuthorized) {

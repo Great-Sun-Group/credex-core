@@ -2,20 +2,26 @@ import express from "express";
 import { CancelRecurringService } from "../services/CancelRecurring";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import logger from "../../../../config/logger";
-import { cancelRecurringSchema } from "../validators/avatarSchemas";
+import { validateUUID } from "../../../utils/validators";
 
 export async function DeclineRecurringController(
   req: express.Request,
   res: express.Response
 ) {
   try {
-    const { error, value } = cancelRecurringSchema.validate(req.body, { abortEarly: false });
+    const { signerID, cancelerAccountID, avatarID } = req.body;
 
-    if (error) {
-      return res.status(400).json({ error: error.details.map(detail => detail.message) });
+    if (!validateUUID(signerID)) {
+      return res.status(400).json({ error: "Invalid signerID" });
     }
 
-    const { signerID, cancelerAccountID, avatarID } = value;
+    if (!validateUUID(cancelerAccountID)) {
+      return res.status(400).json({ error: "Invalid cancelerAccountID" });
+    }
+
+    if (!validateUUID(avatarID)) {
+      return res.status(400).json({ error: "Invalid avatarID" });
+    }
 
     const cancelRecurringData = await CancelRecurringService(
       signerID,

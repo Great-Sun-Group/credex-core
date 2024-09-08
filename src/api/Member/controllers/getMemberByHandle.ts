@@ -1,7 +1,7 @@
 import express from "express";
 import { GetMemberByHandleService } from "../services/GetMemberByHandle";
 import logger from "../../../../config/logger";
-import { getMemberByHandleSchema } from "../validators/memberSchemas";
+import { validateMemberHandle } from "../../../utils/validators";
 
 export const GetMemberByHandleController = async (
   req: express.Request,
@@ -11,9 +11,8 @@ export const GetMemberByHandleController = async (
   const { memberHandle } = req.body;
 
   try {
-    const { error } = getMemberByHandleSchema.validate({ memberHandle });
-    if (error) {
-      res.status(400).json({ message: error.details[0].message });
+    if (!validateMemberHandle(memberHandle)) {
+      res.status(400).json({ message: 'Invalid member handle. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters.' });
       return;
     }
 
