@@ -1,11 +1,8 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LoopFinder = LoopFinder;
 const neo4j_1 = require("../../../config/neo4j");
-const logger_1 = __importDefault(require("../../../config/logger"));
+const logger_1 = require("../../utils/logger");
 async function LoopFinder(issuerAccountID, credexID, credexAmount, Denomination, CXXmultiplier, credexSecuredDenom, credexDueDate, acceptorAccountID) {
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     const searchSpaceSession = neo4j_1.searchSpaceDriver.session();
@@ -15,21 +12,21 @@ async function LoopFinder(issuerAccountID, credexID, credexAmount, Denomination,
         await createOrUpdateSearchSpaceCredex(searchSpaceSession, issuerAccountID, acceptorAccountID, credexID, credexAmount, Denomination, CXXmultiplier, credexDueDate, searchOwesType);
         let searchForCredloops = true;
         while (searchForCredloops) {
-            logger_1.default.info("Searching for credloops...");
+            (0, logger_1.logInfo)("Searching for credloops...");
             const { valueToClear, credexesInLoop, credexesRedeemed } = await findCredloop(searchSpaceSession, issuerAccountID, searchOwesType);
             if (credexesInLoop.length > 0) {
                 await processCredloop(ledgerSpaceSession, searchSpaceSession, valueToClear, credexesInLoop, credexesRedeemed);
             }
             else {
                 await markCredexAsProcessed(ledgerSpaceSession, credexID);
-                logger_1.default.info("No credloops found. Credex marked as processed.");
+                (0, logger_1.logInfo)("No credloops found. Credex marked as processed.");
                 searchForCredloops = false;
             }
         }
         return true;
     }
     catch (error) {
-        logger_1.default.error("Error in LoopFinder:", error);
+        (0, logger_1.logError)("Error in LoopFinder", error);
         return false;
     }
     finally {
@@ -56,7 +53,7 @@ async function createOrUpdateSearchSpaceCredex(session, issuerAccountID, accepto
         await createSearchSpaceCredex(session, issuerAccountID, acceptorAccountID, credexID, credexAmount, Denomination, CXXmultiplier, credexDueDate, searchOwesType);
     }
     else {
-        logger_1.default.info(`Credex already exists in SearchSpace: ${credexID}`);
+        (0, logger_1.logInfo)(`Credex already exists in SearchSpace: ${credexID}`);
     }
 }
 async function checkCredexExists(session, credexID) {
@@ -107,10 +104,10 @@ async function createSearchSpaceCredex(session, issuerAccountID, acceptorAccount
         if (result.records.length === 0) {
             throw new Error("Unable to create SearchSpace credex");
         }
-        logger_1.default.info(`Credex created in SearchSpace: ${result.records[0].get("credexID")}`);
+        (0, logger_1.logInfo)(`Credex created in SearchSpace: ${result.records[0].get("credexID")}`);
     }
     catch (error) {
-        logger_1.default.error("Error creating SearchSpace credex:", error);
+        (0, logger_1.logError)("Error creating SearchSpace credex", error);
         throw error;
     }
 }
@@ -175,8 +172,8 @@ async function findCredloop(session, issuerAccountID, searchOwesType) {
     return { valueToClear: 0, credexesInLoop: [], credexesRedeemed: [] };
 }
 async function processCredloop(ledgerSpaceSession, searchSpaceSession, valueToClear, credexesInLoop, credexesRedeemed) {
-    logger_1.default.info("Credexes in loop:", credexesInLoop);
-    logger_1.default.info("Credexes redeemed:", credexesRedeemed);
+    (0, logger_1.logInfo)("Credexes in loop:", { credexesInLoop });
+    (0, logger_1.logInfo)("Credexes redeemed:", { credexesRedeemed });
     await cleanupSearchSpace(searchSpaceSession, credexesRedeemed);
     await updateLedgerSpace(ledgerSpaceSession, valueToClear, credexesInLoop, credexesRedeemed);
 }
@@ -213,7 +210,7 @@ async function cleanupSearchSpace(session, credexesRedeemed) {
     `, { credexesRedeemed });
 }
 async function updateLedgerSpace(session, valueToClear, credexesInLoop, credexesRedeemed) {
-    logger_1.default.info(`Credloop of ${valueToClear} CXX found and cleared, now updating ledgerSpace`);
+    (0, logger_1.logInfo)(`Credloop of ${valueToClear} CXX found and cleared, now updating ledgerSpace`);
     const result = await session.run(`
     MATCH (daynode:Daynode {Active: true})
     CREATE (loopAnchor:LoopAnchor {
@@ -267,7 +264,7 @@ async function updateLedgerSpace(session, valueToClear, credexesInLoop, credexes
 
     RETURN DISTINCT loopAnchor.loopID AS loopID
     `, { valueToClear, credexesInLoop, credexesRedeemed });
-    logger_1.default.info(`LoopAnchor created: ${result.records[0].get("loopID")}`);
+    (0, logger_1.logInfo)(`LoopAnchor created: ${result.records[0].get("loopID")}`);
 }
 async function markCredexAsProcessed(session, credexID) {
     await session.run(`
@@ -278,7 +275,7 @@ async function markCredexAsProcessed(session, credexID) {
 }
 // TODO: Implement notification system
 /*
-async function createNotifications(session: Session, loopID: string): Promise<void> {
+async function createNotifications(session: neo4j.Session, loopID: string): Promise<void> {
   // Implementation for creating notifications
 }
 */

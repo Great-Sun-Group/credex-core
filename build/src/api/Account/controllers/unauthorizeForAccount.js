@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UnauthorizeForAccountController = UnauthorizeForAccountController;
 const UnauthorizeForAccount_1 = require("../services/UnauthorizeForAccount");
 const logger_1 = __importDefault(require("../../../../config/logger"));
+const validators_1 = require("../../../utils/validators");
 /**
  * Controller for unauthorizing a member for an account
  * @param req - Express request object
@@ -23,17 +24,17 @@ async function UnauthorizeForAccountController(req, res, next) {
         }
         const { memberIDtoBeUnauthorized, accountID, ownerID } = req.body;
         // Validate memberIDtoBeUnauthorized
-        if (typeof memberIDtoBeUnauthorized !== 'string' || !/^[a-f0-9-]{36}$/.test(memberIDtoBeUnauthorized)) {
+        if (!(0, validators_1.validateUUID)(memberIDtoBeUnauthorized)) {
             res.status(400).json({ message: "Invalid memberIDtoBeUnauthorized. Must be a valid UUID." });
             return;
         }
         // Validate accountID
-        if (typeof accountID !== 'string' || !/^[a-f0-9-]{36}$/.test(accountID)) {
+        if (!(0, validators_1.validateUUID)(accountID)) {
             res.status(400).json({ message: "Invalid accountID. Must be a valid UUID." });
             return;
         }
         // Validate ownerID
-        if (typeof ownerID !== 'string' || !/^[a-f0-9-]{36}$/.test(ownerID)) {
+        if (!(0, validators_1.validateUUID)(ownerID)) {
             res.status(400).json({ message: "Invalid ownerID. Must be a valid UUID." });
             return;
         }

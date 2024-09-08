@@ -2,6 +2,7 @@ import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
 import moment from "moment-timezone";
+import { logInfo, logError, logWarning } from "../../utils/logger";
 
 /**
  * DCOavatars function
@@ -12,7 +13,7 @@ export async function DCOavatars() {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    console.log("Checking for activated recurring avatars...");
+    logInfo("Checking for activated recurring avatars...");
     
     // Query to get active recurring avatars that are due for processing
     const GetActiveRecurringAvatars = await ledgerSpaceSession.run(`
@@ -114,7 +115,7 @@ export async function DCOavatars() {
             avatar.memberID
           );
           if (acceptResult) {
-            console.log(
+            logInfo(
               `Successfully created credex for recurring avatar: ${avatar.memberID}. Remaining pays: ${avatar.remainingPays}, Next pay date: ${avatar.nextPayDate}`
             );
           } else {
@@ -130,13 +131,13 @@ export async function DCOavatars() {
           `);
 
       } catch (error) {
-        console.error(`Error processing avatar ${avatar.memberID}:`, error);
+        logError(`Error processing avatar ${avatar.memberID}`, error as Error);
         // TODO: Implement member notification about the failure
-        console.log(`Placeholder: Notify member ${avatar.memberID} about the failure in processing their recurring avatar.`);
+        logWarning(`Placeholder: Notify member ${avatar.memberID} about the failure in processing their recurring avatar.`);
       }
     }
   } catch (error) {
-    console.error("Error in DCOavatars:", error);
+    logError("Error in DCOavatars", error as Error);
   } finally {
     await ledgerSpaceSession.close();
   }

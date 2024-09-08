@@ -7,7 +7,7 @@ import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
 import { fetchZigRate } from "./fetchZigRate";
 import { createNeo4jBackup } from "./DBbackup";
-import logger from "../../../config/logger";
+import { logInfo, logError, logWarning, logDebug, logDCORates } from "../../utils/logger";
 import { validateAmount, validateDenomination } from "../../utils/validators";
 
 interface Rates {
@@ -28,7 +28,7 @@ interface Participant {
  * including rate updates, participant validation, and transaction processing.
  */
 export async function DCOexecute(): Promise<boolean> {
-  console.log("Starting DCOexecute");
+  logInfo("Starting DCOexecute");
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
@@ -76,11 +76,11 @@ export async function DCOexecute(): Promise<boolean> {
     );
 
     await createNeo4jBackup(nextDate, "_start");
-    console.log(`DCOexecute completed for ${nextDate}`);
+    logInfo(`DCOexecute completed for ${nextDate}`);
 
     return true;
   } catch (error) {
-    logger.error("Error during DCOexecute", error);
+    logError("Error during DCOexecute", error as Error);
     return false;
   } finally {
     await ledgerSpaceSession.close();
@@ -89,7 +89,7 @@ export async function DCOexecute(): Promise<boolean> {
 }
 
 async function waitForMTQCompletion(session: any): Promise<void> {
-  console.log("Waiting for MTQ completion");
+  logInfo("Waiting for MTQ completion");
   let MTQflag = true;
   while (MTQflag) {
     const result = await session.run(`
@@ -98,17 +98,17 @@ async function waitForMTQCompletion(session: any): Promise<void> {
     `);
     MTQflag = result.records[0]?.get("MTQflag");
     if (MTQflag) {
-      console.log("MTQ running. Waiting 5 seconds...");
+      logDebug("MTQ running. Waiting 5 seconds...");
       await new Promise((resolve) => setTimeout(resolve, 5000));
     }
   }
-  console.log("MTQ not running. Proceeding...");
+  logInfo("MTQ not running. Proceeding...");
 }
 
 async function setDCORunningFlag(
   session: any
 ): Promise<{ previousDate: string; nextDate: string }> {
-  console.log("Setting DCOrunningNow flag");
+  logInfo("Setting DCOrunningNow flag");
   const result = await session.run(`
     MATCH (daynode:Daynode {Active: TRUE})
     SET daynode.DCOrunningNow = true
@@ -118,12 +118,12 @@ async function setDCORunningFlag(
   `);
   const previousDate = result.records[0].get("previousDate");
   const nextDate = result.records[0].get("nextDate");
-  console.log(`Expiring day: ${previousDate}`);
+  logInfo(`Expiring day: ${previousDate}`);
   return { previousDate, nextDate };
 }
 
 async function handleDefaultingCredexes(session: any): Promise<void> {
-  console.log("Processing defaulting unsecured credexes");
+  logInfo("Processing defaulting unsecured credexes");
   const result = await session.run(`
     MATCH (daynode:Daynode {Active: TRUE})
     OPTIONAL MATCH (account1:Account)-[rel1:OWES]->(defaulting:Credex)-[rel2:OWES]->(account2:Account)
@@ -135,11 +135,11 @@ async function handleDefaultingCredexes(session: any): Promise<void> {
     RETURN count(defaulting) AS numberDefaulted
   `);
   const numberDefaulted = result.records[0]?.get("numberDefaulted") || 0;
-  console.log(`Defaults: ${numberDefaulted}`);
+  logInfo(`Defaults: ${numberDefaulted}`);
 }
 
 async function expirePendingOffers(session: any): Promise<void> {
-  console.log("Expiring pending offers/requests");
+  logInfo("Expiring pending offers/requests");
   const result = await session.run(`
     MATCH (daynode:Daynode {Active: TRUE})
     OPTIONAL MATCH (:Account)-[rel1:OFFERS|REQUESTS]->(expiringPending:Credex)-[rel2:OFFERS|REQUESTS]->(:Account),
@@ -150,11 +150,11 @@ async function expirePendingOffers(session: any): Promise<void> {
   `);
   const numberExpiringPending =
     result.records[0]?.get("numberExpiringPending") || 0;
-  console.log(`Expired pending offers/requests: ${numberExpiringPending}`);
+  logInfo(`Expired pending offers/requests: ${numberExpiringPending}`);
 }
 
 async function fetchCurrencyRates(nextDate: string): Promise<Rates> {
-  console.log("Fetching currency rates");
+  logInfo("Fetching currency rates");
   const symbols = getDenominations({
     sourceForRate: "OpenExchangeRates",
     formatAsList: true,
@@ -195,7 +195,7 @@ async function processDCOParticipants(
   session: any,
   USDbaseRates: Rates
 ): Promise<any> {
-  console.log("Processing DCO participants");
+  logInfo("Processing DCO participants");
   const denomsInXAU = _.mapValues(
     USDbaseRates,
     (value) => value / USDbaseRates.XAU
@@ -214,7 +214,7 @@ async function processDCOParticipants(
   `);
 
   const declaredParticipants = result.records;
-  console.log(`Declared participants: ${declaredParticipants.length}`);
+  logInfo(`Declared participants: ${declaredParticipants.length}`);
 
   let DCOinCXX = 0;
   let DCOinXAU = 0;
@@ -225,7 +225,7 @@ async function processDCOParticipants(
       participant.toObject();
     
     if (!validateDenomination(DCOdenom) || !validateAmount(DCOgiveInCXX) || !validateAmount(DCOgiveInDenom)) {
-      logger.warn("Invalid participant data", { accountID, DCOmemberID, DCOdenom, DCOgiveInCXX, DCOgiveInDenom });
+      logWarning("Invalid participant data", { accountID, DCOmemberID, DCOdenom, DCOgiveInCXX, DCOgiveInDenom });
       continue;
     }
 
@@ -251,10 +251,10 @@ async function processDCOParticipants(
   const nextCXXinXAU = DCOinXAU / numberConfirmedParticipants;
   const CXXprior_CXXcurrent = DCOinCXX / numberConfirmedParticipants;
 
-  console.log(`Confirmed participants: ${numberConfirmedParticipants}`);
-  console.log(`DCO in CXX: ${DCOinCXX}`);
-  console.log(`DCO in XAU: ${DCOinXAU}`);
-  console.log(`Next CXX in XAU: ${nextCXXinXAU}`);
+  logInfo(`Confirmed participants: ${numberConfirmedParticipants}`);
+  logInfo(`DCO in CXX: ${DCOinCXX}`);
+  logInfo(`DCO in XAU: ${DCOinXAU}`);
+  logInfo(`Next CXX in XAU: ${nextCXXinXAU}`);
 
   const newCXXrates = _.mapValues(
     denomsInXAU,
@@ -262,11 +262,11 @@ async function processDCOParticipants(
   );
   newCXXrates.CXX = 1;
 
-  logger.info("DCO Rates", {
-    USDinXAU: denomsInXAU.XAU,
-    CXXinXAU: newCXXrates.CXX,
-    CXXprior_CXXcurrent,
-  });
+  logDCORates(
+    denomsInXAU.XAU,
+    newCXXrates.CXX,
+    CXXprior_CXXcurrent
+  );
 
   return {
     newCXXrates,
@@ -284,7 +284,7 @@ async function createNewDaynode(
   nextDate: string,
   CXXprior_CXXcurrent: number
 ): Promise<void> {
-  console.log("Creating new daynode");
+  logInfo("Creating new daynode");
   await session.run(
     `
     MATCH (expiringDaynode:Daynode {Active: TRUE})
@@ -307,7 +307,7 @@ async function updateCredexBalances(
   newCXXrates: Rates,
   CXXprior_CXXcurrent: number
 ): Promise<void> {
-  console.log("Updating credex and asset balances");
+  logInfo("Updating credex and asset balances");
 
   // Update ledger space
   await ledgerSession.run(`
@@ -412,7 +412,7 @@ async function processDCOTransactions(
   DCOinCXX: number,
   numberConfirmedParticipants: number
 ): Promise<void> {
-  console.log("Processing DCO transactions");
+  logInfo("Processing DCO transactions");
 
   const confirmedParticipants: Participant[] = (
     await session.run(`
@@ -432,7 +432,7 @@ async function processDCOTransactions(
   await Promise.all(
     confirmedParticipants.map(async (participant: Participant) => {
       if (!validateDenomination(participant.DCOdenom) || !validateAmount(participant.DCOgiveInDenom)) {
-        logger.warn("Invalid participant data for DCO give", participant);
+        logWarning("Invalid participant data for DCO give", participant);
         return;
       }
 
@@ -464,7 +464,7 @@ async function processDCOTransactions(
     confirmedParticipants.map(async (participant: Participant) => {
       const receiveAmount = DCOinCXX / numberConfirmedParticipants;
       if (!validateAmount(receiveAmount)) {
-        logger.warn("Invalid receive amount for DCO receive", { receiveAmount, participant });
+        logWarning("Invalid receive amount for DCO receive", { receiveAmount, participant });
         return;
       }
 

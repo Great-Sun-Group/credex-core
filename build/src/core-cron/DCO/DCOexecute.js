@@ -13,14 +13,15 @@ const OfferCredex_1 = require("../../api/Credex/services/OfferCredex");
 const AcceptCredex_1 = require("../../api/Credex/services/AcceptCredex");
 const fetchZigRate_1 = require("./fetchZigRate");
 const DBbackup_1 = require("./DBbackup");
-const logger_1 = __importDefault(require("../../../config/logger"));
+const logger_1 = require("../../utils/logger");
+const validators_1 = require("../../utils/validators");
 /**
  * Executes the Daily Credcoin Offering (DCO) process.
  * This function handles the daily operations of the Credcoin system,
  * including rate updates, participant validation, and transaction processing.
  */
 async function DCOexecute() {
-    console.log("Starting DCOexecute");
+    (0, logger_1.logInfo)("Starting DCOexecute");
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     const searchSpaceSession = neo4j_1.searchSpaceDriver.session();
     try {
@@ -36,11 +37,11 @@ async function DCOexecute() {
         const { foundationID, foundationXOid } = await getFoundationData(ledgerSpaceSession);
         await processDCOTransactions(ledgerSpaceSession, foundationID, foundationXOid, DCOinCXX, numberConfirmedParticipants);
         await (0, DBbackup_1.createNeo4jBackup)(nextDate, "_start");
-        console.log(`DCOexecute completed for ${nextDate}`);
+        (0, logger_1.logInfo)(`DCOexecute completed for ${nextDate}`);
         return true;
     }
     catch (error) {
-        logger_1.default.error("Error during DCOexecute", error);
+        (0, logger_1.logError)("Error during DCOexecute", error);
         return false;
     }
     finally {
@@ -49,7 +50,7 @@ async function DCOexecute() {
     }
 }
 async function waitForMTQCompletion(session) {
-    console.log("Waiting for MTQ completion");
+    (0, logger_1.logInfo)("Waiting for MTQ completion");
     let MTQflag = true;
     while (MTQflag) {
         const result = await session.run(`
@@ -58,14 +59,14 @@ async function waitForMTQCompletion(session) {
     `);
         MTQflag = result.records[0]?.get("MTQflag");
         if (MTQflag) {
-            console.log("MTQ running. Waiting 5 seconds...");
+            (0, logger_1.logDebug)("MTQ running. Waiting 5 seconds...");
             await new Promise((resolve) => setTimeout(resolve, 5000));
         }
     }
-    console.log("MTQ not running. Proceeding...");
+    (0, logger_1.logInfo)("MTQ not running. Proceeding...");
 }
 async function setDCORunningFlag(session) {
-    console.log("Setting DCOrunningNow flag");
+    (0, logger_1.logInfo)("Setting DCOrunningNow flag");
     const result = await session.run(`
     MATCH (daynode:Daynode {Active: TRUE})
     SET daynode.DCOrunningNow = true
@@ -75,11 +76,11 @@ async function setDCORunningFlag(session) {
   `);
     const previousDate = result.records[0].get("previousDate");
     const nextDate = result.records[0].get("nextDate");
-    console.log(`Expiring day: ${previousDate}`);
+    (0, logger_1.logInfo)(`Expiring day: ${previousDate}`);
     return { previousDate, nextDate };
 }
 async function handleDefaultingCredexes(session) {
-    console.log("Processing defaulting unsecured credexes");
+    (0, logger_1.logInfo)("Processing defaulting unsecured credexes");
     const result = await session.run(`
     MATCH (daynode:Daynode {Active: TRUE})
     OPTIONAL MATCH (account1:Account)-[rel1:OWES]->(defaulting:Credex)-[rel2:OWES]->(account2:Account)
@@ -91,10 +92,10 @@ async function handleDefaultingCredexes(session) {
     RETURN count(defaulting) AS numberDefaulted
   `);
     const numberDefaulted = result.records[0]?.get("numberDefaulted") || 0;
-    console.log(`Defaults: ${numberDefaulted}`);
+    (0, logger_1.logInfo)(`Defaults: ${numberDefaulted}`);
 }
 async function expirePendingOffers(session) {
-    console.log("Expiring pending offers/requests");
+    (0, logger_1.logInfo)("Expiring pending offers/requests");
     const result = await session.run(`
     MATCH (daynode:Daynode {Active: TRUE})
     OPTIONAL MATCH (:Account)-[rel1:OFFERS|REQUESTS]->(expiringPending:Credex)-[rel2:OFFERS|REQUESTS]->(:Account),
@@ -104,10 +105,10 @@ async function expirePendingOffers(session) {
     RETURN count(expiringPending) AS numberExpiringPending
   `);
     const numberExpiringPending = result.records[0]?.get("numberExpiringPending") || 0;
-    console.log(`Expired pending offers/requests: ${numberExpiringPending}`);
+    (0, logger_1.logInfo)(`Expired pending offers/requests: ${numberExpiringPending}`);
 }
 async function fetchCurrencyRates(nextDate) {
-    console.log("Fetching currency rates");
+    (0, logger_1.logInfo)("Fetching currency rates");
     const symbols = (0, denominations_1.getDenominations)({
         sourceForRate: "OpenExchangeRates",
         formatAsList: true,
@@ -122,14 +123,14 @@ function validateRates(rates) {
     const allDenoms = (0, denominations_1.getDenominations)({});
     const denomsToCheck = allDenoms.filter((denom) => denom.code !== "CXX");
     const allValid = denomsToCheck.every((denom) => rates.hasOwnProperty(denom.code) &&
-        typeof rates[denom.code] === "number" &&
-        !isNaN(rates[denom.code]));
+        (0, validators_1.validateDenomination)(denom.code) &&
+        (0, validators_1.validateAmount)(rates[denom.code]));
     if (!allValid) {
         throw new Error("Invalid or missing currency rates");
     }
 }
 async function processDCOParticipants(session, USDbaseRates) {
-    console.log("Processing DCO participants");
+    (0, logger_1.logInfo)("Processing DCO participants");
     const denomsInXAU = lodash_1.default.mapValues(USDbaseRates, (value) => value / USDbaseRates.XAU);
     const result = await session.run(`
     MATCH (daynode:Daynode{Active:true})
@@ -143,12 +144,16 @@ async function processDCOParticipants(session, USDbaseRates) {
       DCOparticpantsDeclared.DCOdenom AS DCOdenom
   `);
     const declaredParticipants = result.records;
-    console.log(`Declared participants: ${declaredParticipants.length}`);
+    (0, logger_1.logInfo)(`Declared participants: ${declaredParticipants.length}`);
     let DCOinCXX = 0;
     let DCOinXAU = 0;
     const confirmedParticipants = [];
     for (const participant of declaredParticipants) {
         const { accountID, DCOmemberID, DCOdenom, DCOgiveInCXX, DCOgiveInDenom } = participant.toObject();
+        if (!(0, validators_1.validateDenomination)(DCOdenom) || !(0, validators_1.validateAmount)(DCOgiveInCXX) || !(0, validators_1.validateAmount)(DCOgiveInDenom)) {
+            (0, logger_1.logWarning)("Invalid participant data", { accountID, DCOmemberID, DCOdenom, DCOgiveInCXX, DCOgiveInDenom });
+            continue;
+        }
         const { securableAmountInDenom } = await (0, GetSecuredAuthorization_1.GetSecuredAuthorizationService)(accountID, DCOdenom);
         if (DCOgiveInDenom <= securableAmountInDenom) {
             confirmedParticipants.push({
@@ -165,17 +170,13 @@ async function processDCOParticipants(session, USDbaseRates) {
     const numberConfirmedParticipants = confirmedParticipants.length;
     const nextCXXinXAU = DCOinXAU / numberConfirmedParticipants;
     const CXXprior_CXXcurrent = DCOinCXX / numberConfirmedParticipants;
-    console.log(`Confirmed participants: ${numberConfirmedParticipants}`);
-    console.log(`DCO in CXX: ${DCOinCXX}`);
-    console.log(`DCO in XAU: ${DCOinXAU}`);
-    console.log(`Next CXX in XAU: ${nextCXXinXAU}`);
+    (0, logger_1.logInfo)(`Confirmed participants: ${numberConfirmedParticipants}`);
+    (0, logger_1.logInfo)(`DCO in CXX: ${DCOinCXX}`);
+    (0, logger_1.logInfo)(`DCO in XAU: ${DCOinXAU}`);
+    (0, logger_1.logInfo)(`Next CXX in XAU: ${nextCXXinXAU}`);
     const newCXXrates = lodash_1.default.mapValues(denomsInXAU, (value) => 1 / nextCXXinXAU / value);
     newCXXrates.CXX = 1;
-    logger_1.default.info("DCO Rates", {
-        USDinXAU: denomsInXAU.XAU,
-        CXXinXAU: newCXXrates.CXX,
-        CXXprior_CXXcurrent,
-    });
+    (0, logger_1.logDCORates)(denomsInXAU.XAU, newCXXrates.CXX, CXXprior_CXXcurrent);
     return {
         newCXXrates,
         CXXprior_CXXcurrent,
@@ -186,7 +187,7 @@ async function processDCOParticipants(session, USDbaseRates) {
     };
 }
 async function createNewDaynode(session, newCXXrates, nextDate, CXXprior_CXXcurrent) {
-    console.log("Creating new daynode");
+    (0, logger_1.logInfo)("Creating new daynode");
     await session.run(`
     MATCH (expiringDaynode:Daynode {Active: TRUE})
     CREATE (expiringDaynode)-[:NEXT_DAY]->(nextDaynode:Daynode)
@@ -200,7 +201,7 @@ async function createNewDaynode(session, newCXXrates, nextDate, CXXprior_CXXcurr
   `, { newCXXrates, nextDate, CXXprior_CXXcurrent });
 }
 async function updateCredexBalances(ledgerSession, searchSession, newCXXrates, CXXprior_CXXcurrent) {
-    console.log("Updating credex and asset balances");
+    (0, logger_1.logInfo)("Updating credex and asset balances");
     // Update ledger space
     await ledgerSession.run(`
     MATCH (newDaynode:Daynode {Active: TRUE})
@@ -286,7 +287,7 @@ async function getFoundationData(session) {
     };
 }
 async function processDCOTransactions(session, foundationID, foundationXOid, DCOinCXX, numberConfirmedParticipants) {
-    console.log("Processing DCO transactions");
+    (0, logger_1.logInfo)("Processing DCO transactions");
     const confirmedParticipants = (await session.run(`
     MATCH (daynode:Daynode{Active:true})
     MATCH (DCOparticpantsDeclared:Account)<-[:OWNS]-(DCOmember:Member)
@@ -300,6 +301,10 @@ async function processDCOTransactions(session, foundationID, foundationXOid, DCO
   `)).records.map((record) => record.toObject());
     // Process DCO give transactions
     await Promise.all(confirmedParticipants.map(async (participant) => {
+        if (!(0, validators_1.validateDenomination)(participant.DCOdenom) || !(0, validators_1.validateAmount)(participant.DCOgiveInDenom)) {
+            (0, logger_1.logWarning)("Invalid participant data for DCO give", participant);
+            return;
+        }
         const dataForDCOgive = {
             memberID: participant.DCOmemberID,
             issuerAccountID: participant.accountID,
@@ -318,12 +323,17 @@ async function processDCOTransactions(session, foundationID, foundationXOid, DCO
     }));
     // Process DCO receive transactions
     await Promise.all(confirmedParticipants.map(async (participant) => {
+        const receiveAmount = DCOinCXX / numberConfirmedParticipants;
+        if (!(0, validators_1.validateAmount)(receiveAmount)) {
+            (0, logger_1.logWarning)("Invalid receive amount for DCO receive", { receiveAmount, participant });
+            return;
+        }
         const dataForDCOreceive = {
             memberID: foundationXOid,
             issuerAccountID: foundationID,
             receiverAccountID: participant.accountID,
             Denomination: "CXX",
-            InitialAmount: DCOinCXX / numberConfirmedParticipants,
+            InitialAmount: receiveAmount,
             credexType: "DCO_RECEIVE",
             securedCredex: true,
         };

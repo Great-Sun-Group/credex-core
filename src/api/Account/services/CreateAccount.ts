@@ -1,5 +1,6 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { isNeo4jError } from "../../../utils/errorUtils";
+import { logInfo, logError } from "../../../utils/logger";
 
 export async function CreateAccountService(
   ownerID: string,
@@ -70,18 +71,18 @@ export async function CreateAccountService(
 
     if (!result.records.length) {
       const message = "could not create account";
-      console.log(message);
+      logInfo(message);
       return { account: false, message };
     }
 
     const createdAccountID = result.records[0].get("accountID");
-    console.log(accountType + " account created: " + createdAccountID);
+    logInfo(`${accountType} account created: ${createdAccountID}`);
     return {
       accountID: createdAccountID,
       message: "account created",
     };
   } catch (error) {
-    console.error("Error creating account:", error);
+    logError("Error creating account", error as Error);
 
     if (
       isNeo4jError(error) &&

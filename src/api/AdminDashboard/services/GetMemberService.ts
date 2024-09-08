@@ -1,10 +1,5 @@
-/*
- Query a member using memberHandle  
-
-*/
-
 import { ledgerSpaceDriver } from "../../../../config/neo4j"
-
+import { logError } from "../../../utils/logger";
 
 export default async function GetMemberService(memberHandle: string):Promise<any> {
   if(!memberHandle){
@@ -61,7 +56,7 @@ export default async function GetMemberService(memberHandle: string):Promise<any
     }
   
   } catch (error) {
-    console.error('Error fetching user:', error);
+    logError('Error fetching user', error as Error);
     return {
       message: 'Error fetching user',
       error: error,

@@ -1,14 +1,11 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DailyCredcoinOffering = DailyCredcoinOffering;
 const neo4j_1 = require("../../../config/neo4j");
 const DBinitialization_1 = require("./DBinitialization");
 const DCOexecute_1 = require("./DCOexecute");
 const DCOavatars_1 = require("./DCOavatars");
-const logger_1 = __importDefault(require("../../../config/logger"));
+const logger_1 = require("../../utils/logger");
 /**
  * Executes the Daily Credcoin Offering (DCO) process.
  * This function checks for an active daynode, initializes the database if necessary,
@@ -17,22 +14,22 @@ const logger_1 = __importDefault(require("../../../config/logger"));
  * @returns {Promise<boolean>} Returns true if the DCO process completes successfully, false otherwise.
  */
 async function DailyCredcoinOffering() {
-    console.log("Starting Daily Credcoin Offering process");
+    (0, logger_1.logInfo)("Starting Daily Credcoin Offering process");
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     try {
         // Check for active daynode
         const daynodeExists = await checkActiveDaynode(ledgerSpaceSession);
         if (!daynodeExists) {
-            console.log("No active daynode found. Initializing database...");
+            (0, logger_1.logInfo)("No active daynode found. Initializing database...");
             await (0, DBinitialization_1.DBinitialization)();
-            console.log("Database initialization complete");
+            (0, logger_1.logInfo)("Database initialization complete");
         }
         await (0, DCOexecute_1.DCOexecute)();
         await (0, DCOavatars_1.DCOavatars)();
         return true;
     }
     catch (error) {
-        logger_1.default.error("Error in DailyCredcoinOffering", error);
+        (0, logger_1.logError)("Error in DailyCredcoinOffering", error);
         return false;
     }
     finally {
@@ -59,7 +56,7 @@ async function checkActiveDaynode(session) {
  * @param {Neo4jSession} session - The Neo4j session to use for the query.
  */
 async function resetDCORunningFlag(session) {
-    console.log("Resetting DCOrunningNow flag");
+    (0, logger_1.logInfo)("Resetting DCOrunningNow flag");
     await session.run(`
     MATCH (daynode:Daynode {Active: TRUE})
     SET daynode.DCOrunningNow = false

@@ -7,6 +7,7 @@ exports.UpdateMemberTierController = UpdateMemberTierController;
 exports.updateMemberTierExpressHandler = updateMemberTierExpressHandler;
 const UpdateMemberTier_1 = require("../services/UpdateMemberTier");
 const logger_1 = __importDefault(require("../../../../config/logger"));
+const validators_1 = require("../../../utils/validators");
 /**
  * Controller for updating a member's tier
  * @param memberID - ID of the member
@@ -16,7 +17,7 @@ const logger_1 = __importDefault(require("../../../../config/logger"));
 async function UpdateMemberTierController(memberID, tier) {
     try {
         // Input validation
-        if (!memberID || typeof memberID !== 'string') {
+        if (!(0, validators_1.validateUUID)(memberID)) {
             return { success: false, message: "Invalid memberID" };
         }
         if (!Number.isInteger(tier) || tier < 1) {
@@ -47,8 +48,8 @@ async function UpdateMemberTierController(memberID, tier) {
 async function updateMemberTierExpressHandler(req, res, next) {
     const { memberID, tier } = req.body;
     try {
-        if (!memberID || typeof memberID !== 'string') {
-            res.status(400).json({ message: "Invalid memberID. Must be a string." });
+        if (!(0, validators_1.validateUUID)(memberID)) {
+            res.status(400).json({ message: "Invalid memberID. Must be a valid UUID." });
             return;
         }
         if (!Number.isInteger(tier) || tier < 1) {

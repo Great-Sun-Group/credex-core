@@ -2,6 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateAccountService = CreateAccountService;
 const neo4j_1 = require("../../../../config/neo4j");
+const errorUtils_1 = require("../../../utils/errorUtils");
+const logger_1 = require("../../../utils/logger");
 async function CreateAccountService(ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX = null, DCOdenom = null) {
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     //check that account creation is permitted on membership tier
@@ -52,19 +54,19 @@ async function CreateAccountService(ownerID, accountType, accountName, accountHa
         });
         if (!result.records.length) {
             const message = "could not create account";
-            console.log(message);
+            (0, logger_1.logInfo)(message);
             return { account: false, message };
         }
         const createdAccountID = result.records[0].get("accountID");
-        console.log(accountType + " account created: " + createdAccountID);
+        (0, logger_1.logInfo)(`${accountType} account created: ${createdAccountID}`);
         return {
             accountID: createdAccountID,
             message: "account created",
         };
     }
     catch (error) {
-        console.error("Error creating account:", error);
-        if (isNeo4jError(error) &&
+        (0, logger_1.logError)("Error creating account", error);
+        if ((0, errorUtils_1.isNeo4jError)(error) &&
             error.code === "Neo.ClientError.Schema.ConstraintValidationFailed") {
             if (error.message.includes("phone")) {
                 return { account: false, message: "Phone number already in use" };
@@ -85,12 +87,5 @@ async function CreateAccountService(ownerID, accountType, accountName, accountHa
     finally {
         await ledgerSpaceSession.close();
     }
-}
-// Type guard to check if an error is a Neo4j error
-function isNeo4jError(error) {
-    return (typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        "message" in error);
 }
 //# sourceMappingURL=CreateAccount.js.map

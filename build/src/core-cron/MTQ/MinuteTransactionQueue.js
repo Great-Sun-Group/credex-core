@@ -7,29 +7,29 @@ exports.MinuteTransactionQueue = MinuteTransactionQueue;
 const neo4j_1 = require("../../../config/neo4j");
 const LoopFinder_1 = require("./LoopFinder");
 const lodash_1 = __importDefault(require("lodash"));
-const logger_1 = __importDefault(require("../../../config/logger"));
+const logger_1 = require("../../utils/logger");
 async function MinuteTransactionQueue() {
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     const searchSpaceSession = neo4j_1.searchSpaceDriver.session();
-    logger_1.default.info("MTQ start: checking if DCO or MTQ is in progress");
+    (0, logger_1.logInfo)("MTQ start: checking if DCO or MTQ is in progress");
     try {
         const { DCOflag, MTQflag } = await checkDCOAndMTQStatus(ledgerSpaceSession);
         if (DCOflag === null || MTQflag === null) {
-            logger_1.default.warn("No active daynode found. Skipping MTQ.");
+            (0, logger_1.logWarning)("No active daynode found. Skipping MTQ.");
             return false;
         }
         if (DCOflag || MTQflag) {
             if (DCOflag)
-                logger_1.default.info("DCO in progress, holding MTQ");
+                (0, logger_1.logInfo)("DCO in progress, holding MTQ");
             if (MTQflag)
-                logger_1.default.info("MTQ already in progress, holding new MTQ");
+                (0, logger_1.logInfo)("MTQ already in progress, holding new MTQ");
             return false;
         }
-        logger_1.default.info("Running MTQ");
+        (0, logger_1.logInfo)("Running MTQ");
         await setMTQRunningFlag(ledgerSpaceSession, true);
         const BAIL_TIME = 14 * 60 * 1000; // 14 minutes
         const bailTimer = setTimeout(() => {
-            logger_1.default.warn("Bail timer reached");
+            (0, logger_1.logWarning)("Bail timer reached");
             return true;
         }, BAIL_TIME);
         try {
@@ -40,11 +40,11 @@ async function MinuteTransactionQueue() {
             clearTimeout(bailTimer);
             await setMTQRunningFlag(ledgerSpaceSession, false);
         }
-        logger_1.default.info("MTQ processing completed");
+        (0, logger_1.logInfo)("MTQ processing completed");
         return true;
     }
     catch (error) {
-        logger_1.default.error("Error in MinuteTransactionQueue:", error);
+        (0, logger_1.logError)("Error in MinuteTransactionQueue", error);
         return false;
     }
     finally {
@@ -60,7 +60,7 @@ async function checkDCOAndMTQStatus(session) {
       daynode.MTQrunningNow AS MTQflag
   `);
     if (result.records.length === 0) {
-        logger_1.default.warn("No active daynode found");
+        (0, logger_1.logWarning)("No active daynode found");
         return { DCOflag: null, MTQflag: null };
     }
     return {
@@ -75,7 +75,7 @@ async function setMTQRunningFlag(session, value) {
     RETURN daynode
   `, { value });
     if (result.records.length === 0) {
-        logger_1.default.warn("No active daynode found when setting MTQ running flag");
+        (0, logger_1.logWarning)("No active daynode found when setting MTQ running flag");
     }
 }
 async function processQueuedAccounts(ledgerSpaceSession, searchSpaceSession) {
@@ -84,10 +84,10 @@ async function processQueuedAccounts(ledgerSpaceSession, searchSpaceSession) {
         try {
             await createAccountInSearchSpace(searchSpaceSession, account);
             await markAccountAsProcessed(ledgerSpaceSession, account.accountID);
-            logger_1.default.info(`Account created in searchSpace: ${account.accountName}`);
+            (0, logger_1.logInfo)(`Account created in searchSpace: ${account.accountName}`);
         }
         catch (error) {
-            logger_1.default.error(`Error processing account ${account.accountName}:`, error);
+            (0, logger_1.logError)(`Error processing account ${account.accountName}`, error);
         }
     }
 }
@@ -127,7 +127,7 @@ async function processQueuedCredexes(ledgerSpaceSession, searchSpaceSession) {
             await (0, LoopFinder_1.LoopFinder)(credex.issuerAccountID, credex.credexID, credex.amount, credex.denomination, credex.CXXmultiplier, credex.credexSecuredDenom, credex.dueDate, credex.acceptorAccountID);
         }
         catch (error) {
-            logger_1.default.error(`Error processing credex ${credex.credexID}:`, error);
+            (0, logger_1.logError)(`Error processing credex ${credex.credexID}`, error);
         }
     }
 }

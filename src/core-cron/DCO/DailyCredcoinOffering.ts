@@ -2,7 +2,7 @@ import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { DBinitialization } from "./DBinitialization";
 import { DCOexecute } from "./DCOexecute";
 import { DCOavatars } from "./DCOavatars";
-import logger from "../../../config/logger";
+import { logInfo, logError } from "../../utils/logger";
 
 /**
  * Executes the Daily Credcoin Offering (DCO) process.
@@ -12,7 +12,7 @@ import logger from "../../../config/logger";
  * @returns {Promise<boolean>} Returns true if the DCO process completes successfully, false otherwise.
  */
 export async function DailyCredcoinOffering(): Promise<boolean> {
-  console.log("Starting Daily Credcoin Offering process");
+  logInfo("Starting Daily Credcoin Offering process");
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -20,9 +20,9 @@ export async function DailyCredcoinOffering(): Promise<boolean> {
     const daynodeExists = await checkActiveDaynode(ledgerSpaceSession);
 
     if (!daynodeExists) {
-      console.log("No active daynode found. Initializing database...");
+      logInfo("No active daynode found. Initializing database...");
       await DBinitialization();
-      console.log("Database initialization complete");
+      logInfo("Database initialization complete");
     }
 
     await DCOexecute();
@@ -30,7 +30,7 @@ export async function DailyCredcoinOffering(): Promise<boolean> {
 
     return true;
   } catch (error) {
-    logger.error("Error in DailyCredcoinOffering", error);
+    logError("Error in DailyCredcoinOffering", error as Error);
     return false;
   } finally {
     await resetDCORunningFlag(ledgerSpaceSession);
@@ -58,7 +58,7 @@ async function checkActiveDaynode(session: any): Promise<boolean> {
  * @param {Neo4jSession} session - The Neo4j session to use for the query.
  */
 async function resetDCORunningFlag(session: any): Promise<void> {
-  console.log("Resetting DCOrunningNow flag");
+  logInfo("Resetting DCOrunningNow flag");
   await session.run(`
     MATCH (daynode:Daynode {Active: TRUE})
     SET daynode.DCOrunningNow = false

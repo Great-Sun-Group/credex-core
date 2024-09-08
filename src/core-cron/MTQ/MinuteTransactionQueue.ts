@@ -1,8 +1,7 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
-import { Session } from "neo4j-driver";
 import { LoopFinder } from "./LoopFinder";
 import _ from "lodash";
-import logger from "../../../config/logger";
+import { logInfo, logWarning, logError } from "../../utils/logger";
 
 interface Account {
   accountID: string;
@@ -25,29 +24,29 @@ export async function MinuteTransactionQueue(): Promise<boolean> {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
-  logger.info("MTQ start: checking if DCO or MTQ is in progress");
+  logInfo("MTQ start: checking if DCO or MTQ is in progress");
 
   try {
     const { DCOflag, MTQflag } = await checkDCOAndMTQStatus(ledgerSpaceSession);
 
     if (DCOflag === null || MTQflag === null) {
-      logger.warn("No active daynode found. Skipping MTQ.");
+      logWarning("No active daynode found. Skipping MTQ.");
       return false;
     }
 
     if (DCOflag || MTQflag) {
-      if (DCOflag) logger.info("DCO in progress, holding MTQ");
-      if (MTQflag) logger.info("MTQ already in progress, holding new MTQ");
+      if (DCOflag) logInfo("DCO in progress, holding MTQ");
+      if (MTQflag) logInfo("MTQ already in progress, holding new MTQ");
       return false;
     }
 
-    logger.info("Running MTQ");
+    logInfo("Running MTQ");
 
     await setMTQRunningFlag(ledgerSpaceSession, true);
 
     const BAIL_TIME = 14 * 60 * 1000; // 14 minutes
     const bailTimer = setTimeout(() => {
-      logger.warn("Bail timer reached");
+      logWarning("Bail timer reached");
       return true;
     }, BAIL_TIME);
 
@@ -59,10 +58,10 @@ export async function MinuteTransactionQueue(): Promise<boolean> {
       await setMTQRunningFlag(ledgerSpaceSession, false);
     }
 
-    logger.info("MTQ processing completed");
+    logInfo("MTQ processing completed");
     return true;
   } catch (error) {
-    logger.error("Error in MinuteTransactionQueue:", error);
+    logError("Error in MinuteTransactionQueue", error as Error);
     return false;
   } finally {
     await ledgerSpaceSession.close();
@@ -71,7 +70,7 @@ export async function MinuteTransactionQueue(): Promise<boolean> {
 }
 
 async function checkDCOAndMTQStatus(
-  session: Session
+  session: any
 ): Promise<{ DCOflag: boolean | null; MTQflag: boolean | null }> {
   const result = await session.run(`
     MATCH (daynode:Daynode {Active: true})
@@ -81,7 +80,7 @@ async function checkDCOAndMTQStatus(
   `);
 
   if (result.records.length === 0) {
-    logger.warn("No active daynode found");
+    logWarning("No active daynode found");
     return { DCOflag: null, MTQflag: null };
   }
 
@@ -92,7 +91,7 @@ async function checkDCOAndMTQStatus(
 }
 
 async function setMTQRunningFlag(
-  session: Session,
+  session: any,
   value: boolean
 ): Promise<void> {
   const result = await session.run(
@@ -105,13 +104,13 @@ async function setMTQRunningFlag(
   );
 
   if (result.records.length === 0) {
-    logger.warn("No active daynode found when setting MTQ running flag");
+    logWarning("No active daynode found when setting MTQ running flag");
   }
 }
 
 async function processQueuedAccounts(
-  ledgerSpaceSession: Session,
-  searchSpaceSession: Session
+  ledgerSpaceSession: any,
+  searchSpaceSession: any
 ): Promise<void> {
   const queuedAccounts = await getQueuedAccounts(ledgerSpaceSession);
 
@@ -119,14 +118,14 @@ async function processQueuedAccounts(
     try {
       await createAccountInSearchSpace(searchSpaceSession, account);
       await markAccountAsProcessed(ledgerSpaceSession, account.accountID);
-      logger.info(`Account created in searchSpace: ${account.accountName}`);
+      logInfo(`Account created in searchSpace: ${account.accountName}`);
     } catch (error) {
-      logger.error(`Error processing account ${account.accountName}:`, error);
+      logError(`Error processing account ${account.accountName}`, error as Error);
     }
   }
 }
 
-async function getQueuedAccounts(session: Session): Promise<Account[]> {
+async function getQueuedAccounts(session: any): Promise<Account[]> {
   const result = await session.run(`
     MATCH (newAccount:Account {queueStatus: "PENDING_ACCOUNT"})
     RETURN
@@ -140,7 +139,7 @@ async function getQueuedAccounts(session: Session): Promise<Account[]> {
 }
 
 async function createAccountInSearchSpace(
-  session: Session,
+  session: any,
   account: Account
 ): Promise<void> {
   const result = await session.run(
@@ -160,7 +159,7 @@ async function createAccountInSearchSpace(
 }
 
 async function markAccountAsProcessed(
-  session: Session,
+  session: any,
   accountID: string
 ): Promise<void> {
   await session.run(
@@ -173,8 +172,8 @@ async function markAccountAsProcessed(
 }
 
 async function processQueuedCredexes(
-  ledgerSpaceSession: Session,
-  searchSpaceSession: Session
+  ledgerSpaceSession: any,
+  searchSpaceSession: any
 ): Promise<void> {
   const queuedCredexes = await getQueuedCredexes(ledgerSpaceSession);
   const sortedQueuedCredexes = _.sortBy(queuedCredexes, "acceptedAt");
@@ -192,12 +191,12 @@ async function processQueuedCredexes(
         credex.acceptorAccountID
       );
     } catch (error) {
-      logger.error(`Error processing credex ${credex.credexID}:`, error);
+      logError(`Error processing credex ${credex.credexID}`, error as Error);
     }
   }
 }
 
-async function getQueuedCredexes(session: Session): Promise<Credex[]> {
+async function getQueuedCredexes(session: any): Promise<Credex[]> {
   const result = await session.run(`
     MATCH
       (issuerAccount:Account)

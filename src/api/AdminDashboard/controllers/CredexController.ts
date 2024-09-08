@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import GetCredexService from '../services/GetCredexService';
- 
+import { logInfo, logError } from '../../../utils/logger';
 
 export async function getCredexDetails(req: Request, res: Response) {
-  console.log("getCredexDetails controller hit");
+  logInfo("getCredexDetails controller hit");
   const { credexID } = req.query;
 
   if (!credexID) {
@@ -16,7 +16,7 @@ export async function getCredexDetails(req: Request, res: Response) {
     const result = await GetCredexService(credexID as string);
     return res.status(200).json(result);
   } catch (error) {
-    console.error('Error in getCredexDetails controller:', error);
+    logError('Error in getCredexDetails controller', error as Error);
     return res.status(500).json({
       message: 'Error fetching credex details',
       error: (error as Error).message 

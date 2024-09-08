@@ -8,6 +8,7 @@ const neo4j_1 = require("../../../config/neo4j");
 const OfferCredex_1 = require("../../api/Credex/services/OfferCredex");
 const AcceptCredex_1 = require("../../api/Credex/services/AcceptCredex");
 const moment_timezone_1 = __importDefault(require("moment-timezone"));
+const logger_1 = require("../../utils/logger");
 /**
  * DCOavatars function
  * This function is run as a cronjob every 24 hours to process recurring avatars.
@@ -16,7 +17,7 @@ const moment_timezone_1 = __importDefault(require("moment-timezone"));
 async function DCOavatars() {
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     try {
-        console.log("Checking for activated recurring avatars...");
+        (0, logger_1.logInfo)("Checking for activated recurring avatars...");
         // Query to get active recurring avatars that are due for processing
         const GetActiveRecurringAvatars = await ledgerSpaceSession.run(`
       MATCH (daynode:Daynode {Active: true})
@@ -107,7 +108,7 @@ async function DCOavatars() {
                     offerResult.credex.credexID) {
                     const acceptResult = await (0, AcceptCredex_1.AcceptCredexService)(offerResult.credex.credexID, avatar.memberID);
                     if (acceptResult) {
-                        console.log(`Successfully created credex for recurring avatar: ${avatar.memberID}. Remaining pays: ${avatar.remainingPays}, Next pay date: ${avatar.nextPayDate}`);
+                        (0, logger_1.logInfo)(`Successfully created credex for recurring avatar: ${avatar.memberID}. Remaining pays: ${avatar.remainingPays}, Next pay date: ${avatar.nextPayDate}`);
                     }
                     else {
                         throw new Error(`Failed to accept credex for avatar: ${avatar.memberID}`);
@@ -122,14 +123,14 @@ async function DCOavatars() {
           `);
             }
             catch (error) {
-                console.error(`Error processing avatar ${avatar.memberID}:`, error);
+                (0, logger_1.logError)(`Error processing avatar ${avatar.memberID}`, error);
                 // TODO: Implement member notification about the failure
-                console.log(`Placeholder: Notify member ${avatar.memberID} about the failure in processing their recurring avatar.`);
+                (0, logger_1.logWarning)(`Placeholder: Notify member ${avatar.memberID} about the failure in processing their recurring avatar.`);
             }
         }
     }
     catch (error) {
-        console.error("Error in DCOavatars:", error);
+        (0, logger_1.logError)("Error in DCOavatars", error);
     }
     finally {
         await ledgerSpaceSession.close();

@@ -1,7 +1,5 @@
-/* 
-Update a members tier using the memberHandle or memberID
-*/
 import { ledgerSpaceDriver } from "../../../../config/neo4j"
+import { logError } from "../../../utils/logger";
 
 export default async function UpdateMemberTierService(memberHandle: string, newTier: string): Promise<any> {
   if(!memberHandle || !newTier){
@@ -33,6 +31,7 @@ export default async function UpdateMemberTierService(memberHandle: string, newT
       data: member
     }
   } catch (error) {
+    logError(`Error updating member tier for ${memberHandle} to ${newTier}`, error as Error);
     return {
       message: `Error updating member tier ${memberHandle}, ${newTier}`,
       error: error

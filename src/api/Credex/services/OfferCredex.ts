@@ -1,5 +1,6 @@
 import { CreateCredexService } from "./CreateCredex";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import { logInfo, logWarning, logError } from "../../../utils/logger";
 
 interface CredexData {
   memberID: string;
@@ -37,15 +38,15 @@ export async function OfferCredexService(credexData: CredexData) {
     const signResult = await signCredex(ledgerSpaceSession, newCredex.credex.credexID, credexData.memberID);
     
     if (!signResult) {
-      console.warn("Failed to sign Credex, but Credex was created successfully");
+      logWarning("Failed to sign Credex, but Credex was created successfully");
     }
 
     // TODO: Implement offer notification here
 
-    console.log(newCredex.message);
+    logInfo(newCredex.message);
     return newCredex;
   } catch (error) {
-    console.error("Error offering credex:", error);
+    logError("Error offering credex", error as Error);
     throw error;
   } finally {
     await ledgerSpaceSession.close();
@@ -68,7 +69,7 @@ async function signCredex(session: any, credexID: string, signingMemberID: strin
 
     return signQuery.records.length > 0;
   } catch (error) {
-    console.error("Error signing Credex:", error);
+    logError("Error signing Credex", error as Error);
     return false;
   }
 }

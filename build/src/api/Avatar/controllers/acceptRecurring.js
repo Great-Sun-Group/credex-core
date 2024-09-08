@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AcceptRecurringController = AcceptRecurringController;
 const AcceptRecurring_1 = require("../services/AcceptRecurring");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
+const validators_1 = require("../../../utils/validators");
 /**
  * AcceptRecurringController
  *
@@ -15,24 +16,29 @@ const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboar
  */
 async function AcceptRecurringController(req, res) {
     try {
+        const { avatarID, signerID } = req.body;
         // Validate required fields
-        const fieldsRequired = ["avatarID", "signerID"];
-        for (const field of fieldsRequired) {
-            if (!req.body[field]) {
-                return res.status(400).json({ error: `${field} is required` });
-            }
+        if (!avatarID || !signerID) {
+            return res.status(400).json({ error: "avatarID and signerID are required" });
+        }
+        // Validate UUIDs
+        if (!(0, validators_1.validateUUID)(avatarID)) {
+            return res.status(400).json({ error: "Invalid avatarID" });
+        }
+        if (!(0, validators_1.validateUUID)(signerID)) {
+            return res.status(400).json({ error: "Invalid signerID" });
         }
         // Call AcceptRecurringService to process the acceptance
         const acceptRecurringData = await (0, AcceptRecurring_1.AcceptRecurringService)({
-            avatarID: req.body.avatarID,
-            signerID: req.body.signerID
+            avatarID,
+            signerID
         });
         // Check if the service call was successful
         if (typeof acceptRecurringData.recurring === "boolean") {
             return res.status(400).json({ error: acceptRecurringData.message });
         }
         // Fetch dashboard data
-        const dashboardData = await (0, GetAccountDashboard_1.GetAccountDashboardService)(req.body.signerID, acceptRecurringData.recurring.acceptorAccountID);
+        const dashboardData = await (0, GetAccountDashboard_1.GetAccountDashboardService)(signerID, acceptRecurringData.recurring.acceptorAccountID);
         if (!dashboardData) {
             return res.status(404).json({ error: "Failed to fetch dashboard data" });
         }

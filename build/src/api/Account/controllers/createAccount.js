@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateAccountController = CreateAccountController;
 const CreateAccount_1 = require("../services/CreateAccount");
-const denominations_1 = require("../../../constants/denominations");
 const accountTypes_1 = require("../../../constants/accountTypes");
 const logger_1 = __importDefault(require("../../../../config/logger"));
 const validators_1 = require("../../../utils/validators");
@@ -29,15 +28,15 @@ async function CreateAccountController(req, res, next) {
             res.status(400).json({ message: "Invalid accountHandle" });
             return;
         }
-        if (!(0, denominations_1.getDenominations)({ code: defaultDenom }).length) {
+        if (!(0, validators_1.validateDenomination)(defaultDenom)) {
             res.status(400).json({ message: "Invalid defaultDenom" });
             return;
         }
-        if (DCOdenom && !(0, denominations_1.getDenominations)({ code: DCOdenom }).length) {
+        if (DCOdenom && !(0, validators_1.validateDenomination)(DCOdenom)) {
             res.status(400).json({ message: "Invalid DCOdenom" });
             return;
         }
-        if (DCOgiveInCXX && (isNaN(DCOgiveInCXX) || DCOgiveInCXX < 0)) {
+        if (DCOgiveInCXX && !(0, validators_1.validateAmount)(DCOgiveInCXX)) {
             res.status(400).json({ message: "Invalid DCOgiveInCXX" });
             return;
         }

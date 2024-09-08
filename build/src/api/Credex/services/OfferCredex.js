@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OfferCredexService = OfferCredexService;
 const CreateCredex_1 = require("./CreateCredex");
 const neo4j_1 = require("../../../../config/neo4j");
+const logger_1 = require("../../../utils/logger");
 /**
  * OfferCredexService
  *
@@ -27,14 +28,14 @@ async function OfferCredexService(credexData) {
         // Sign the Credex and prepare for notification
         const signResult = await signCredex(ledgerSpaceSession, newCredex.credex.credexID, credexData.memberID);
         if (!signResult) {
-            console.warn("Failed to sign Credex, but Credex was created successfully");
+            (0, logger_1.logWarning)("Failed to sign Credex, but Credex was created successfully");
         }
         // TODO: Implement offer notification here
-        console.log(newCredex.message);
+        (0, logger_1.logInfo)(newCredex.message);
         return newCredex;
     }
     catch (error) {
-        console.error("Error offering credex:", error);
+        (0, logger_1.logError)("Error offering credex", error);
         throw error;
     }
     finally {
@@ -54,7 +55,7 @@ async function signCredex(session, credexID, signingMemberID) {
         return signQuery.records.length > 0;
     }
     catch (error) {
-        console.error("Error signing Credex:", error);
+        (0, logger_1.logError)("Error signing Credex", error);
         return false;
     }
 }

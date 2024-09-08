@@ -1,14 +1,5 @@
-/*
-  ToDo:
-    - Add the accountID to the query
-    
-*/
-
-/* 
- Query an account to get all sent credex offers
-*/
-
 import { ledgerSpaceDriver } from "../../../../config/neo4j"
+import { logError } from "../../../utils/logger";
 
 export default async function GetAccountService( accountHandle: string, accountID: string): Promise<any> {
   if(!accountHandle){
@@ -18,9 +9,7 @@ export default async function GetAccountService( accountHandle: string, accountI
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session()
-  // Get all outgoing credex offers from the account using the accountID or accountHandle to get the account and then get the receivingNode which can be a member or an account
   
-   
   const accountMatchCondition = accountHandle ? "accountHandle:$accountHandle" : "accountID: $accountID";
   const parameters = accountHandle ? { accountHandle } : { accountID };
   
@@ -43,7 +32,6 @@ export default async function GetAccountService( accountHandle: string, accountI
         receivingAccount.accountID AS receivingAccountID,
         receivingAccount.defaultDenom AS receivingAccountDefaultDenom,
         receivingAccount.accountHandle AS receivingAccountHandle
-
       `;
       const accountOfferedCredexResult = await ledgerSpaceSession.run(query, parameters)
     
@@ -73,7 +61,6 @@ export default async function GetAccountService( accountHandle: string, accountI
     }
    }
   
-
     return {
       message: 'Account credex offers fetched successfully',
       data: {
@@ -82,9 +69,9 @@ export default async function GetAccountService( accountHandle: string, accountI
     }
 
   } catch (error) {
-    console.error('Error fetching account:', error);
+    logError('Error fetching account sent credex offers', error as Error);
     return {
-      message: 'Error fetching account',
+      message: 'Error fetching account sent credex offers',
       error: error,
     };
   } finally {

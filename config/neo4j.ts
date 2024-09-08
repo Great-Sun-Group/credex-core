@@ -17,26 +17,37 @@ const createDriverWithRetry = (url: string, user: string, password: string) => {
   });
 
   // Verify connectivity on first use
-  driver.verifyConnectivity()
+  driver
+    .verifyConnectivity()
     .then(() => console.log(`Successfully connected to Neo4j at ${url}`))
-    .catch(error => console.error(`Failed to connect to Neo4j at ${url}:`, error));
+    .catch((error) =>
+      console.error(`Failed to connect to Neo4j at ${url}:`, error)
+    );
 
   return driver;
 };
 
-export const ledgerSpaceDriver = createDriverWithRetry(ledgerSpace_url, ledgerSpace_user, ledgerSpace_password);
-export const searchSpaceDriver = createDriverWithRetry(searchSpace_url, searchSpace_user, searchSpace_password);
+export const ledgerSpaceDriver = createDriverWithRetry(
+  ledgerSpace_url,
+  ledgerSpace_user,
+  ledgerSpace_password
+);
+export const searchSpaceDriver = createDriverWithRetry(
+  searchSpace_url,
+  searchSpace_user,
+  searchSpace_password
+);
 
 // Graceful shutdown
-process.on('SIGINT', () => {
-  console.log('Closing Neo4j drivers...');
+process.on("SIGINT", () => {
+  console.log("Closing Neo4j drivers...");
   Promise.all([ledgerSpaceDriver.close(), searchSpaceDriver.close()])
     .then(() => {
-      console.log('Neo4j drivers closed.');
+      console.log("Neo4j drivers closed.");
       process.exit(0);
     })
-    .catch(error => {
-      console.error('Error closing Neo4j drivers:', error);
+    .catch((error) => {
+      console.error("Error closing Neo4j drivers:", error);
       process.exit(1);
     });
 });

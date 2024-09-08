@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AcceptCredexBulkController = AcceptCredexBulkController;
 const AcceptCredex_1 = require("../services/AcceptCredex");
 const getAccountDashboard_1 = require("../../Account/controllers/getAccountDashboard");
+const validators_1 = require("../../../utils/validators");
 async function AcceptCredexBulkController(req, res) {
     const fieldsRequired = ["credexIDs", "signerID"];
     for (const field of fieldsRequired) {
@@ -14,10 +15,15 @@ async function AcceptCredexBulkController(req, res) {
         }
     }
     if (!Array.isArray(req.body.credexIDs) ||
-        !req.body.credexIDs.every((id) => typeof id === "string")) {
+        !req.body.credexIDs.every((id) => typeof id === "string" && (0, validators_1.validateUUID)(id))) {
         return res
             .status(400)
-            .json({ message: "Array of credexIDs to accept is required" });
+            .json({ message: "Array of valid credexIDs (UUIDs) to accept is required" });
+    }
+    if (!(0, validators_1.validateUUID)(req.body.signerID)) {
+        return res
+            .status(400)
+            .json({ message: "Invalid signerID. Must be a valid UUID." });
     }
     try {
         const acceptCredexData = await Promise.all(req.body.credexIDs.map(async (credexID) => {

@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpdateAccountController = UpdateAccountController;
 const UpdateAccount_1 = require("../services/UpdateAccount");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-const denominations_1 = require("../../../constants/denominations");
 const validators_1 = require("../../../utils/validators");
 async function UpdateAccountController(req, res, next) {
     const { ownerID, accountID, accountName, accountHandle, defaultDenom } = req.body;
@@ -24,7 +23,7 @@ async function UpdateAccountController(req, res, next) {
         if (accountHandle && !(0, validators_1.validateAccountHandle)(accountHandle)) {
             return res.status(400).json({ message: "Invalid accountHandle" });
         }
-        if (defaultDenom && !(0, denominations_1.getDenominations)({ code: defaultDenom }).length) {
+        if (defaultDenom && !(0, validators_1.validateDenomination)(defaultDenom)) {
             return res.status(400).json({ message: "Invalid defaultDenom" });
         }
         logger_1.default.info("Updating account", { ownerID, accountID, accountName, accountHandle, defaultDenom });

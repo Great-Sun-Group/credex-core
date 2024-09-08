@@ -21,9 +21,7 @@ function validateInput(firstname, lastname, phone) {
     if (!(0, validators_1.validateAccountName)(firstname) || !(0, validators_1.validateAccountName)(lastname)) {
         return "First name and last name must be between 3 and 50 characters";
     }
-    // Phone number validation (with optional '+' prefix)
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-    if (!phoneRegex.test(phone)) {
+    if (!(0, validators_1.validatePhone)(phone)) {
         return "Invalid phone number format. It should be a valid international phone number.";
     }
     return null;

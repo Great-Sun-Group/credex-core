@@ -7,6 +7,7 @@ exports.GetMemberDashboardByPhoneController = GetMemberDashboardByPhoneControlle
 const GetMemberDashboardByPhone_1 = require("../services/GetMemberDashboardByPhone");
 const getAccountDashboard_1 = require("../../Account/controllers/getAccountDashboard");
 const logger_1 = __importDefault(require("../../../../config/logger"));
+const validators_1 = require("../../../utils/validators");
 /**
  * Controller for retrieving a member's dashboard by phone number
  * @param req - Express request object
@@ -20,8 +21,8 @@ async function GetMemberDashboardByPhoneController(req, res, next) {
             res.status(400).json({ message: "phone is required and must be a string" });
             return;
         }
-        // Validate phone number format (simple regex for demonstration, adjust as needed)
-        if (!/^\+?[1-9]\d{1,14}$/.test(phone)) {
+        // Validate phone number format using the validatePhone function
+        if (!(0, validators_1.validatePhone)(phone)) {
             res.status(400).json({
                 message: "Invalid phone number format. Please provide a valid international phone number.",
             });

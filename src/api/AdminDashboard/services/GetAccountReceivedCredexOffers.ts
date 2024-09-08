@@ -1,4 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j"
+import { logError } from "../../../utils/logger";
 
 export default async function GetAccountReceivedCredexOffers( accountHandle?: string, accountID?: string): Promise<any> {
   if (!accountHandle && !accountID) {
@@ -66,7 +67,7 @@ export default async function GetAccountReceivedCredexOffers( accountHandle?: st
       }
     }
   } catch (error) {
-    console.error('Error fetching account received credex offers:', error);
+    logError('Error fetching account received credex offers', error as Error);
     return {
       message: 'Error fetching account received credex offers',
       error: error

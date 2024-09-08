@@ -1,9 +1,5 @@
-/* 
-GetCredexService:
-- Retrieve details of a credex using the credexID
-*/
-
 import { ledgerSpaceDriver } from "../../../../config/neo4j"
+import { logError } from "../../../utils/logger";
 
 export default async function GetCredexService(credexID: string): Promise<any> {
   if(!credexID){
@@ -82,10 +78,12 @@ export default async function GetCredexService(credexID: string): Promise<any> {
     }
   }
   catch (error) {
-    console.error(error)
+    logError('Error retrieving credex', error as Error);
     return {
       message: 'Error retrieving credex',
       error: error
     }
+  } finally {
+    await ledgerSpaceSession.close();
   }
 }

@@ -3,11 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OfferCredexController = OfferCredexController;
 const OfferCredex_1 = require("../services/OfferCredex");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
-const denominations_1 = require("../../../constants/denominations");
 const credspan_1 = require("../../../constants/credspan");
-const credexTypes_1 = require("../../../constants/credexTypes");
 const securedCredexAuthForTier_1 = require("../../Member/controllers/securedCredexAuthForTier");
 const neo4j_1 = require("../../../../config/neo4j");
+const validators_1 = require("../../../utils/validators");
 /**
  * OfferCredexController
  *
@@ -37,20 +36,24 @@ async function OfferCredexController(req, res) {
             }
         }
         const { memberID, issuerAccountID, receiverAccountID, Denomination, InitialAmount, credexType, OFFERSorREQUESTS, securedCredex = false, dueDate = "", } = req.body;
+        // Validate UUIDs
+        if (!(0, validators_1.validateUUID)(memberID) || !(0, validators_1.validateUUID)(issuerAccountID) || !(0, validators_1.validateUUID)(receiverAccountID)) {
+            return res.status(400).json({ error: "Invalid UUID provided" });
+        }
         // Check if issuerAccountID and receiverAccountID are the same
         if (issuerAccountID === receiverAccountID) {
             return res.status(400).json({ error: "Issuer and receiver cannot be the same account" });
         }
-        // Validate InitialAmount is a number
-        if (typeof InitialAmount !== "number") {
-            return res.status(400).json({ error: "InitialAmount must be a number" });
+        // Validate InitialAmount
+        if (!(0, validators_1.validateAmount)(InitialAmount)) {
+            return res.status(400).json({ error: "Invalid InitialAmount" });
         }
         // Check denomination validity
-        if (!(0, denominations_1.getDenominations)({ code: Denomination }).length) {
+        if (!(0, validators_1.validateDenomination)(Denomination)) {
             return res.status(400).json({ error: "Invalid denomination" });
         }
         // Check credex type validity
-        if (!(0, credexTypes_1.checkPermittedCredexType)(credexType)) {
+        if (!(0, validators_1.validateCredexType)(credexType)) {
             return res.status(400).json({ error: "Invalid credex type" });
         }
         // Validate OFFERSorREQUESTS

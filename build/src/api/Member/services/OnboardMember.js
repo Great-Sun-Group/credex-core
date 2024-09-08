@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OnboardMemberService = OnboardMemberService;
 const neo4j_1 = require("../../../../config/neo4j");
 const denominations_1 = require("../../../constants/denominations");
+const errorUtils_1 = require("../../../utils/errorUtils");
 async function OnboardMemberService(firstname, lastname, phone) {
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     const defaultDenom = "USD";
@@ -49,7 +50,7 @@ async function OnboardMemberService(firstname, lastname, phone) {
     catch (error) {
         console.error("Error onboarding member:", error);
         // Type guard to narrow the type of error
-        if (isNeo4jError(error) &&
+        if ((0, errorUtils_1.isNeo4jError)(error) &&
             error.code === "Neo.ClientError.Schema.ConstraintValidationFailed") {
             if (error.message.includes("phone")) {
                 return {
@@ -76,12 +77,5 @@ async function OnboardMemberService(firstname, lastname, phone) {
     finally {
         await ledgerSpaceSession.close();
     }
-}
-// Type guard to check if an error is a Neo4j error
-function isNeo4jError(error) {
-    return (typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        "message" in error);
 }
 //# sourceMappingURL=OnboardMember.js.map

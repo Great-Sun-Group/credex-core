@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RequestRecurringController = RequestRecurringController;
 const RequestRecurring_1 = require("../services/RequestRecurring");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
-const denominations_1 = require("../../../constants/denominations");
+const validators_1 = require("../../../utils/validators");
 /**
  * RequestRecurringController
  *
@@ -32,8 +32,12 @@ async function RequestRecurringController(req, res) {
             }
         }
         // Check denomination validity
-        if (!(0, denominations_1.getDenominations)({ code: req.body.Denomination }).length) {
-            return res.status(400).json({ error: "Denomination not permitted" });
+        if (!(0, validators_1.validateDenomination)(req.body.Denomination)) {
+            return res.status(400).json({ error: "Invalid denomination" });
+        }
+        // Validate InitialAmount
+        if (!(0, validators_1.validateAmount)(req.body.InitialAmount)) {
+            return res.status(400).json({ error: "Invalid InitialAmount" });
         }
         // Validate optional parameters
         if (req.body.securedCredex !== undefined && typeof req.body.securedCredex !== 'boolean') {

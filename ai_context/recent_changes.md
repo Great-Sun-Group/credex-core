@@ -4552,236 +4552,172 @@ const server = http_1.default.createServer(exports.app);
 ```
 # Git Context
 ## Recent Commits
+dafaac8 Update AI context
 2aa19d8 logging
 c4ada94 Update AI context
 0a714ce logger util
 9fb293c Update AI context
-fed43a7 isNeo4jError to utils
 
 ## Recent File Changes
 M	ai_context/code_summary.md
 M	ai_context/git_context.md
 M	ai_context/recent_changes.md
-M	src/api/Account/services/CreateAccount.ts
-M	src/api/Member/services/OnboardMember.ts
-A	src/utils/errorUtils.ts
 A	src/utils/logger.ts
-M	todo.txt
 ```
 
 ## ai_context/recent_changes.md
 ```
 ```
 
-## src/api/Account/services/CreateAccount.ts
+## src/utils/logger.ts
 ```
-import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { isNeo4jError } from "../../../utils/errorUtils";
-import { logInfo, logError } from "../../../utils/logger";
+import winston from "winston";
+import DailyRotateFile from "winston-daily-rotate-file";
+import { config } from "../../config/config";
+import { v4 as uuidv4 } from "uuid";
 
-export async function CreateAccountService(
-  ownerID: string,
-  accountType: string,
-  accountName: string,
-  accountHandle: string,
-  defaultDenom: string,
-  DCOgiveInCXX: number | null = null,
-  DCOdenom: string | null = null
-) {
-  const ledgerSpaceSession = ledgerSpaceDriver.session();
+// Configure the logger
+const logger = winston.createLogger({
+  level: config.nodeEnv === "production" ? "info" : "debug",
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.splat(),
+    winston.format.json()
+  ),
+  defaultMeta: { service: "credex-core" },
+  transports: [
+    new DailyRotateFile({
+      filename: "logs/error-%DATE%.log",
+      datePattern: "YYYY-MM-DD",
+      zippedArchive: true,
+      maxSize: "20m",
+      maxFiles: "14d",
+      level: "error",
+    }),
+    new DailyRotateFile({
+      filename: "logs/combined-%DATE%.log",
+      datePattern: "YYYY-MM-DD",
+      zippedArchive: true,
+      maxSize: "20m",
+      maxFiles: "14d",
+    }),
+  ],
+});
 
-  //check that account creation is permitted on membership tier
-  const getMemberTier = await ledgerSpaceSession.run(
-    `
-        MATCH (member:Member{ memberID: $ownerID })
-        OPTIONAL MATCH (member)-[:OWNS]->(account:Account)
-        RETURN
-          member.memberTier AS memberTier,
-          COUNT(account) AS numAccounts
-      `,
-    { ownerID }
+// Add console transport for non-production environments
+if (config.nodeEnv !== "production") {
+  logger.add(
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      ),
+    })
   );
-
-  const memberTier = getMemberTier.records[0].get("memberTier");
-  const numAccounts = getMemberTier.records[0].get("numAccounts");
-  if (memberTier <= 2 && numAccounts >= 1) {
-    return {
-      account: false,
-      message:
-        "You cannot create an account on the Open or Verified membership tiers.",
-    };
-  }
-
-  try {
-    const result = await ledgerSpaceSession.run(
-      `
-        MATCH (daynode:Daynode { Active: true })
-        MATCH (owner:Member { memberID: $ownerID })
-        CREATE (owner)-[:OWNS]->(account:Account {
-          accountType: $accountType,
-          accountName: $accountName,
-          accountHandle: $accountHandle,
-          defaultDenom: $defaultDenom,
-          DCOgiveInCXX: $DCOgiveInCXX,
-          DCOdenom: $DCOdenom,
-          accountID: randomUUID(),
-          queueStatus: "PENDING_ACCOUNT",
-          createdAt: datetime(),
-          updatedAt: datetime()
-        })-[:CREATED_ON]->(daynode)
-        CREATE
-          (owner)-[:AUTHORIZED_FOR]->
-          (account)
-          -[:SEND_OFFERS_TO]->(owner)
-        RETURN account.accountID AS accountID
-      `,
-      {
-        ownerID,
-        accountType,
-        accountName,
-        accountHandle,
-        defaultDenom,
-        DCOgiveInCXX,
-        DCOdenom,
-      }
-    );
-
-    if (!result.records.length) {
-      const message = "could not create account";
-      logInfo(message);
-      return { account: false, message };
-    }
-
-    const createdAccountID = result.records[0].get("accountID");
-    logInfo(`${accountType} account created: ${createdAccountID}`);
-    return {
-      accountID: createdAccountID,
-      message: "account created",
-    };
-  } catch (error) {
-    logError("Error creating account", error as Error);
-
-    if (
-      isNeo4jError(error) &&
-      error.code === "Neo.ClientError.Schema.ConstraintValidationFailed"
-    ) {
-      if (error.message.includes("phone")) {
-        return { account: false, message: "Phone number already in use" };
-      }
-      if (error.message.includes("handle")) {
-        return {
-          account: false,
-          message: "Sorry, that handle is already in use",
-        };
-      }
-      return { account: false, message: "Required unique field not unique" };
-    }
-
-    return {
-      account: false,
-      message:
-        "Error: " + (error instanceof Error ? error.message : "Unknown error"),
-    };
-  } finally {
-    await ledgerSpaceSession.close();
-  }
 }
-```
 
-## src/api/Member/services/OnboardMember.ts
-```
-import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { getDenominations } from "../../../constants/denominations";
-import { isNeo4jError } from "../../../utils/errorUtils";
-
-export async function OnboardMemberService(
-  firstname: string,
-  lastname: string,
-  phone: string
-) {
-  const ledgerSpaceSession = ledgerSpaceDriver.session();
-  const defaultDenom = "USD";
-
-  try {
-    // Validation: Check defaultDenom in denominations
-    if (!getDenominations({ code: defaultDenom }).length) {
-      const message = "defaultDenom not in denoms";
-      console.log(message);
-      return { onboardedMemberID: false, message: message };
-    }
-
-    const result = await ledgerSpaceSession.run(
-      `
-        MATCH (daynode:Daynode { Active: true })
-        CREATE (member:Member{
-          firstname: $firstname,
-          lastname: $lastname,
-          memberHandle: $phone,
-          defaultDenom: $defaultDenom,
-          phone: $phone,
-          memberID: randomUUID(),
-          memberTier: 1,
-          createdAt: datetime(),
-          updatedAt: datetime()
-        })-[:CREATED_ON]->(daynode)
-        RETURN
-          member.memberID AS memberID
-      `,
-      {
-        firstname,
-        lastname,
-        defaultDenom,
-        phone,
-      }
+function sanitizeData(data: any): any {
+  const sensitiveFields = ["password", "token", "apiKey", "creditCard"];
+  if (typeof data === "object" && data !== null) {
+    return Object.keys(data).reduce(
+      (acc: { [key: string]: any }, key: string) => {
+        if (sensitiveFields.includes(key)) {
+          acc[key] = "[REDACTED]";
+        } else if (typeof data[key] === "object") {
+          acc[key] = sanitizeData(data[key]);
+        } else {
+          acc[key] = data[key];
+        }
+        return acc;
+      },
+      {}
     );
-
-    if (!result.records.length) {
-      const message = "could not onboard member";
-      console.log(message);
-      return { onboardedMemberID: false, message: message };
-    }
-
-    const memberID = result.records[0].get("memberID");
-
-    console.log("member onboarded: " + memberID);
-    return {
-      onboardedMemberID: memberID,
-      message: "member onboarded",
-    };
-  } catch (error) {
-    console.error("Error onboarding member:", error);
-
-    // Type guard to narrow the type of error
-    if (
-      isNeo4jError(error) &&
-      error.code === "Neo.ClientError.Schema.ConstraintValidationFailed"
-    ) {
-      if (error.message.includes("phone")) {
-        return {
-          onboardedMemberID: false,
-          message: "Phone number already in use",
-        };
-      }
-      if (error.message.includes("memberHandle")) {
-        return {
-          onboardedMemberID: false,
-          message: "Member handle already in use",
-        };
-      }
-      return {
-        onboardedMemberID: false,
-        message: "Required unique field not unique",
-      };
-    }
-
-    return {
-      onboardedMemberID: false,
-      message:
-        "Error: " + (error instanceof Error ? error.message : "Unknown error"),
-    };
-  } finally {
-    await ledgerSpaceSession.close();
   }
+  return data;
 }
+
+// Standardized logging functions
+export const logInfo = (message: string, meta?: any) => {
+  logger.info(message, { ...meta, timestamp: new Date().toISOString() });
+};
+
+export const logError = (message: string, error: Error, meta?: any) => {
+  logger.error(message, {
+    ...meta,
+    error: {
+      message: error.message,
+      stack: error.stack,
+    },
+    timestamp: new Date().toISOString(),
+  });
+};
+
+export const logWarning = (message: string, meta?: any) => {
+  logger.warn(message, { ...meta, timestamp: new Date().toISOString() });
+};
+
+export const logDebug = (message: string, meta?: any) => {
+  logger.debug(message, { ...meta, timestamp: new Date().toISOString() });
+};
+
+// Request ID middleware
+export const addRequestId = (req: any, res: any, next: any) => {
+  req.id = uuidv4();
+  res.setHeader("X-Request-ID", req.id);
+  next();
+};
+
+// Express request logger middleware
+export const expressLogger = (req: any, res: any, next: any) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    logInfo("HTTP Request", {
+      requestId: req.id,
+      method: req.method,
+      url: req.originalUrl,
+      statusCode: res.statusCode,
+      duration: `${duration}ms`,
+      body: sanitizeData(req.body),
+      params: sanitizeData(req.params),
+      query: sanitizeData(req.query),
+      headers: sanitizeData(req.headers),
+      ip: req.ip,
+      userAgent: req.get("User-Agent"),
+    });
+  });
+  next();
+};
+
+// Error logger middleware
+export const errorLogger = (err: Error, req: any, res: any, next: any) => {
+  logError("Request Error", err, {
+    requestId: req.id,
+    method: req.method,
+    url: req.originalUrl,
+    body: sanitizeData(req.body),
+    params: sanitizeData(req.params),
+    query: sanitizeData(req.query),
+    headers: sanitizeData(req.headers),
+  });
+  next(err);
+};
+
+// Function to log DCO rates
+export const logDCORates = (
+  XAUrate: number,
+  CXXrate: number,
+  CXXmultiplier: number
+) => {
+  logInfo("DCO Rates", { XAUrate, CXXrate, CXXmultiplier });
+};
+
+export default logger;
+
+// TODO: Implement log aggregation and centralized logging for production environments
+// TODO: Implement log retention policies based on compliance requirements
+// TODO: Add performance monitoring for database queries and external API calls
+// TODO: Implement log analysis tools to detect patterns, anomalies, and potential security threats
 ```
 
