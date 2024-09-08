@@ -24,7 +24,7 @@ The credex ecosystem stores values in credcoin (CXX). In order to natively enabl
 
 The system manages the balance between local truth (preserving the face value of contracts in their specified denomination) and global truth (adjusting all values relative to credcoin) through the daily rate and value adjustments in the DCO. This implementation creates a robust ecosystem that manages accounting processes across any denomination, clears debts automatically, and adjusts values dynamically.
 
-## Express.js Server
+## Express.js server
 
 The express.js server is initialized in `src/index.ts`, which provides the cronjobs and endpoints that power the ecosystem and enable members and client apps to interact with its ledger.
 
@@ -35,7 +35,7 @@ The Core module hosts the cronjobs:
 - DailyCredcoinOffering() runs every day at midnight UTC.
 - MinuteTransactionQueue() runs every minute, clearing credloops of value creation across the ecosystem.
 
-### Endpoints
+## Endpoints
 
 Controllers for the endpoints are imported, and endpoints created for the various modules: Member, Account, Avatar, Credex, and AdminDashboard.
 
