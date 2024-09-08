@@ -1,5 +1,7 @@
 # Credex Ecosystem Core API
 
+The credex ecosystem is a shared ledger that enables the efficient circulation of value, accumulation of capital, investment of profits, and giving of gifts.
+
 ## Credex Principle
 
 **If I owe you,**\
@@ -127,28 +129,49 @@ Note: The GitHub token needs to be updated for each new Codespace session. The b
 ## Developer Guides
 
 - [Logging Best Practices](docs/logging_best_practices.md)
+// to be added: auth, testing
 
 ## Project Structure
 
 ```
 credex-core/
-├── src/
-│   ├── api/
-│   │   ├── Account/
-│   │   ├── AdminDashboard/
-│   │   ├── Avatar/
-│   │   ├── Credex/
-│   │   └── Member/
-│   ├── constants/
-│   ├── core-cron/
-│   │   ├── DCO/
-│   │   └── MTQ/
-│   ├── tests/
-│   └── utils/
-├── config/
-├── docs/
-└── middleware/
+├── ai_context/            # AI-related context files
+├── build/                 # Compiled output
+├── config/                # Configuration files
+├── docs/                  # Documentation files
+├── src/                   # Source code
+│   ├── api/               # API-related code
+│   │   ├── Account/       # Account-related endpoints and services
+│   │   ├── AdminDashboard/# Admin dashboard endpoints and services
+│   │   ├── Avatar/        # Avatar-related endpoints and services
+│   │   ├── Credex/        # Credex-related endpoints and services
+│   │   └── Member/        # Member-related endpoints and services
+│   ├── constants/         # Constant values used across the application
+│   ├── core-cron/         # Core cron jobs (DCO and MTQ)
+│   │   ├── DCO/           # Daily Credcoin Offering related code
+│   │   └── MTQ/           # Minute Transaction Queue related code
+│   ├── middleware/        # Express middleware
+│   ├── tests/             # Test files
+│   │   ├── controllers/   # Test controllers
+│   │   ├── integration/   # Integration tests
+│   │   ├── services/      # Test services
+│   │   └── utils/         # Test utilities
+│   └── utils/             # Utility functions and helpers
 ```
+
+### Folder Descriptions
+
+- **ai_context**: Contains AI-related context files for improved development assistance.
+- **build**: Stores the compiled output of the TypeScript code.
+- **config**: Houses configuration files for various aspects of the application.
+- **docs**: Contains documentation files for different modules and processes.
+- **src**: The main source code directory.
+  - **api**: Contains all API-related code, organized by module (Account, AdminDashboard, Avatar, Credex, Member).
+  - **constants**: Stores constant values used throughout the application.
+  - **core-cron**: Contains the core cron jobs, including the Daily Credcoin Offering (DCO) and Minute Transaction Queue (MTQ).
+  - **middleware**: Houses Express middleware used in the application.
+  - **tests**: Contains various test files, including controllers, integration tests, services, and utilities.
+  - **utils**: Stores utility functions and helpers used across the application.
 
 ## Contributing
 
