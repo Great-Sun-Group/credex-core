@@ -1,10 +1,12 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { digitallySign } from "../../../utils/digitalSignature";
+import { logInfo, logError } from "../../../utils/logger";
 
 export async function CancelRecurringService(
   signerID: string,
   cancelerAccountID: string,
-  avatarID: string
+  avatarID: string,
+  requestId: string // Add requestId as a parameter
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
@@ -35,6 +37,7 @@ export async function CancelRecurringService(
     );
 
     if (cancelRecurringQuery.records.length === 0) {
+      logInfo("Recurring template not found or not authorized to cancel", { requestId });
       return "Recurring template not found or not authorized to cancel";
     }
 
@@ -56,12 +59,14 @@ export async function CancelRecurringService(
       "Avatar",
       deactivatedAvatarID,
       "CANCEL_RECURRING",
-      inputData
+      inputData,
+      requestId
     );
 
+    logInfo(`Recurring avatar cancelled: ${deactivatedAvatarID}`, { requestId });
     return deactivatedAvatarID;
   } catch (error) {
-    console.error("Error cancelling recurring avatar:", error);
+    logError("Error cancelling recurring avatar", error as Error, { requestId });
     throw error;
   } finally {
     await ledgerSpaceSession.close();

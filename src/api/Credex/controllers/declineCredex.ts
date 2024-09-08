@@ -17,30 +17,32 @@ export async function DeclineCredexController(
   req: express.Request,
   res: express.Response
 ) {
+  const requestId = req.id;
+  
   try {
     const { credexID, signerID } = req.body;
 
     if (!validateUUID(credexID)) {
-      logError("DeclineCredexController: Invalid credexID", new Error(), { credexID });
+      logError("DeclineCredexController: Invalid credexID", new Error(), { credexID, requestId });
       return res.status(400).json({ error: "Invalid credexID" });
     }
 
     if (!validateUUID(signerID)) {
-      logError("DeclineCredexController: Invalid signerID", new Error(), { signerID });
+      logError("DeclineCredexController: Invalid signerID", new Error(), { signerID, requestId });
       return res.status(400).json({ error: "Invalid signerID" });
     }
 
-    const responseData = await DeclineCredexService(credexID, signerID);
+    const responseData = await DeclineCredexService(credexID, signerID, requestId);
     
     if (!responseData) {
-      logError("DeclineCredexController: Failed to decline Credex", new Error(), { credexID });
+      logError("DeclineCredexController: Failed to decline Credex", new Error(), { credexID, requestId });
       return res.status(404).json({ error: "Credex not found or already processed" });
     }
 
-    logInfo("DeclineCredexController: Credex declined successfully", { credexID });
+    logInfo("DeclineCredexController: Credex declined successfully", { credexID, requestId });
     return res.status(200).json({ message: "Credex declined successfully", data: responseData });
   } catch (err) {
-    logError("DeclineCredexController: Unhandled error", err as Error);
+    logError("DeclineCredexController: Unhandled error", err as Error, { requestId });
     return res.status(500).json({ error: "Internal server error" });
   }
 }

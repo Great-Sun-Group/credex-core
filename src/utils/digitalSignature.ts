@@ -6,7 +6,8 @@ export async function digitallySign(
   entityType: string,
   entityId: string,
   actionType: string,
-  inputData: string
+  inputData: string,
+  requestId: string
 ): Promise<void> {
   const query = `
     MATCH (signer:Member|Avatar {id: $signerID})
@@ -15,11 +16,12 @@ export async function digitallySign(
       id: apoc.create.uuid(),
       createdAt: datetime(),
       actionType: $actionType,
-      inputData: $inputData
+      inputData: $inputData,
+      requestId: $requestId
     })-[:SIGNED]->(entity)
   `;
 
-  await session.run(query, { signerID, entityId, actionType, inputData });
+  await session.run(query, { signerID, entityId, actionType, inputData, requestId });
 }
 
 export async function getSignerMember(

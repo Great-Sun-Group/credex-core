@@ -9,6 +9,7 @@ import { fetchZigRate } from "./fetchZigRate";
 import { createNeo4jBackup } from "./DBbackup";
 import { logInfo, logError, logWarning, logDebug, logDCORates } from "../../utils/logger";
 import { validateAmount, validateDenomination } from "../../utils/validators";
+import { v4 as uuidv4 } from "uuid";
 
 interface Rates {
   [key: string]: number;
@@ -449,6 +450,7 @@ async function processDCOTransactions(
         return;
       }
 
+      const requestId = uuidv4(); // Generate a unique requestId for this operation
       const dataForDCOgive = {
         memberID: participant.DCOmemberID,
         issuerAccountID: participant.accountID,
@@ -457,6 +459,7 @@ async function processDCOTransactions(
         InitialAmount: participant.DCOgiveInDenom,
         credexType: "DCO_GIVE",
         securedCredex: true,
+        requestId, // Add the requestId to the dataForDCOgive
       };
 
       const DCOgiveCredex = await OfferCredexService(dataForDCOgive);
@@ -468,7 +471,26 @@ async function processDCOTransactions(
           "Invalid response from OfferCredexService for DCO give"
         );
       }
-      await AcceptCredexService(DCOgiveCredex.credex.credexID, foundationXOid);
+      
+      // Log the offer creation
+      logInfo("DCO give credex offer created", {
+        requestId,
+        credexID: DCOgiveCredex.credex.credexID,
+        participantID: participant.DCOmemberID,
+        action: "OFFER_CREDEX",
+        data: JSON.stringify(dataForDCOgive)
+      });
+
+      await AcceptCredexService(DCOgiveCredex.credex.credexID, foundationXOid, requestId);
+      
+      // Log the credex acceptance
+      logInfo("DCO give credex accepted", {
+        requestId,
+        credexID: DCOgiveCredex.credex.credexID,
+        participantID: participant.DCOmemberID,
+        action: "ACCEPT_CREDEX",
+        data: JSON.stringify({ acceptedBy: foundationXOid })
+      });
     })
   );
 
@@ -481,6 +503,7 @@ async function processDCOTransactions(
         return;
       }
 
+      const requestId = uuidv4(); // Generate a unique requestId for this operation
       const dataForDCOreceive = {
         memberID: foundationXOid,
         issuerAccountID: foundationID,
@@ -489,6 +512,7 @@ async function processDCOTransactions(
         InitialAmount: receiveAmount,
         credexType: "DCO_RECEIVE",
         securedCredex: true,
+        requestId, // Add the requestId to the dataForDCOreceive
       };
 
       const DCOreceiveCredex = await OfferCredexService(dataForDCOreceive);
@@ -500,10 +524,32 @@ async function processDCOTransactions(
           "Invalid response from OfferCredexService for DCO receive"
         );
       }
+      
+      // Log the offer creation
+      logInfo("DCO receive credex offer created", {
+        requestId,
+        credexID: DCOreceiveCredex.credex.credexID,
+        participantID: participant.DCOmemberID,
+        action: "OFFER_CREDEX",
+        data: JSON.stringify(dataForDCOreceive)
+      });
+
       await AcceptCredexService(
         DCOreceiveCredex.credex.credexID,
-        foundationXOid
+        foundationXOid,
+        requestId
       );
+      
+      // Log the credex acceptance
+      logInfo("DCO receive credex accepted", {
+        requestId,
+        credexID: DCOreceiveCredex.credex.credexID,
+        participantID: participant.DCOmemberID,
+        action: "ACCEPT_CREDEX",
+        data: JSON.stringify({ acceptedBy: foundationXOid })
+      });
     })
   );
 }
+
+// ... [rest of the file remains unchanged]

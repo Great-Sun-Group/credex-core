@@ -1,9 +1,11 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { digitallySign } from "../../../utils/digitalSignature";
+import { logInfo, logError, logWarning } from "../../../utils/logger";
 
 interface AcceptRecurringParams {
   avatarID: string;
   signerID: string;
+  requestId: string; // Add requestId to the params
 }
 
 interface AcceptRecurringResult {
@@ -23,7 +25,7 @@ interface AcceptRecurringResult {
  * This service handles the acceptance of a recurring transaction.
  * It updates the database to reflect the acceptance of the recurring avatar.
  *
- * @param params - An object containing avatarID and signerID
+ * @param params - An object containing avatarID, signerID, and requestId
  * @returns An object containing the result of the acceptance operation
  */
 export async function AcceptRecurringService(
@@ -32,7 +34,7 @@ export async function AcceptRecurringService(
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    const { avatarID, signerID } = params;
+    const { avatarID, signerID, requestId } = params;
 
     // Execute Cypher query to validate and update the Recurring avatar
     const acceptRecurringQuery = await ledgerSpaceSession.run(
@@ -55,8 +57,9 @@ export async function AcceptRecurringService(
 
     // Check if the query returned any records
     if (acceptRecurringQuery.records.length === 0) {
-      console.log(
-        `No records found or recurring transaction no longer pending for avatarID: ${avatarID}`
+      logInfo(
+        `No records found or recurring transaction no longer pending for avatarID: ${avatarID}`,
+        { requestId }
       );
       return {
         recurring: false,
@@ -82,13 +85,15 @@ export async function AcceptRecurringService(
       "Avatar",
       acceptedRecurringID,
       "ACCEPT_RECURRING",
-      inputData
+      inputData,
+      requestId
     );
 
     // TODO: Implement notification for recurring acceptance
 
-    console.log(
-      `Recurring request accepted for avatarID: ${acceptedRecurringID}`
+    logInfo(
+      `Recurring request accepted for avatarID: ${acceptedRecurringID}`,
+      { requestId }
     );
 
     // Return the result of the acceptance operation
@@ -102,7 +107,7 @@ export async function AcceptRecurringService(
     };
   } catch (error) {
     // Handle any errors that occur during the process
-    console.error("Error accepting recurring template:", error);
+    logError("Error accepting recurring template", error as Error, { requestId: params.requestId });
     return {
       recurring: false,
       message: `Error accepting recurring template: ${error}`,

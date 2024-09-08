@@ -10,6 +10,7 @@ import axios from "axios";
 import _ from "lodash";
 import moment from "moment-timezone";
 import logger from "../../../config/logger";
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Initializes the database for the Daily Credcoin Offering (DCO) process.
@@ -278,6 +279,9 @@ async function createInitialCredex(
   issuerAccountID: string,
   receiverAccountID: string
 ): Promise<void> {
+  const requestId = uuidv4(); // Generate a unique requestId for this operation
+  logger.info("Creating initial Credex for DBinitialization", { requestId });
+
   const credexData = {
     memberID,
     issuerAccountID,
@@ -286,21 +290,46 @@ async function createInitialCredex(
     InitialAmount: 365, // fund DCO for a year with no adjustments
     credexType: "PURCHASE",
     securedCredex: true,
+    requestId, // Add the requestId to the credexData
   };
 
+  logger.debug("Offering initial Credex", { requestId, credexData });
   const DCOinitializationOfferCredex = await OfferCredexService(credexData);
+
   if (typeof DCOinitializationOfferCredex.credex === "boolean") {
+    logger.error("Invalid response from OfferCredexService", { requestId });
     throw new Error("Invalid response from OfferCredexService");
   }
+
   if (
     DCOinitializationOfferCredex.credex &&
     typeof DCOinitializationOfferCredex.credex.credexID === "string"
   ) {
+    logger.info("Initial Credex offered successfully", { 
+      requestId, 
+      credexID: DCOinitializationOfferCredex.credex.credexID 
+    });
+
+    logger.debug("Accepting initial Credex", { 
+      requestId, 
+      credexID: DCOinitializationOfferCredex.credex.credexID,
+      memberID 
+    });
     await AcceptCredexService(
       DCOinitializationOfferCredex.credex.credexID,
-      memberID
+      memberID,
+      requestId // Pass the same requestId to AcceptCredexService
     );
+    logger.info("Initial Credex accepted successfully", { 
+      requestId, 
+      credexID: DCOinitializationOfferCredex.credex.credexID 
+    });
   } else {
+    logger.error("Invalid credexID from OfferCredexService", { requestId });
     throw new Error("Invalid credexID from OfferCredexService");
   }
+
+  logger.info("Initial Credex creation completed", { requestId });
 }
+
+// ... [rest of the code remains unchanged] ...

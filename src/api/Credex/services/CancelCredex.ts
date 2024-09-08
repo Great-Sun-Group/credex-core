@@ -1,5 +1,6 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { digitallySign } from "../../../utils/digitalSignature";
+import { logInfo, logWarning, logError } from "../../../utils/logger";
 
 /**
  * CancelCredexService
@@ -9,12 +10,13 @@ import { digitallySign } from "../../../utils/digitalSignature";
  * 
  * @param credexID - The ID of the Credex to be cancelled
  * @param signerID - The ID of the member or avatar cancelling the Credex
+ * @param requestId - The ID of the HTTP request that initiated this operation
  * @returns The ID of the cancelled Credex or null if the operation fails
  * @throws Error if there's an issue with the database operation
  */
-export async function CancelCredexService(credexID: string, signerID: string): Promise<string | null> {
+export async function CancelCredexService(credexID: string, signerID: string, requestId: string): Promise<string | null> {
   if (!credexID || !signerID) {
-    console.error("CancelCredexService: credexID and signerID are required");
+    logError("CancelCredexService: credexID and signerID are required", new Error("Missing parameters"), { requestId });
     return null;
   }
 
@@ -37,7 +39,7 @@ export async function CancelCredexService(credexID: string, signerID: string): P
       const queryResult = await tx.run(query, { credexID });
 
       if (queryResult.records.length === 0) {
-        console.warn(`No records found or credex no longer pending for credexID: ${credexID}`);
+        logWarning(`No records found or credex no longer pending for credexID: ${credexID}`, { requestId });
         return null;
       }
 
@@ -45,7 +47,7 @@ export async function CancelCredexService(credexID: string, signerID: string): P
     });
 
     if (result) {
-      console.log(`Credex cancelled successfully: ${result}`);
+      logInfo(`Credex cancelled successfully: ${result}`, { requestId });
 
       // Create digital signature with audit log
       const inputData = JSON.stringify({
@@ -59,13 +61,14 @@ export async function CancelCredexService(credexID: string, signerID: string): P
         "Credex",
         result,
         "CANCEL_CREDEX",
-        inputData
+        inputData,
+        requestId
       );
     }
 
     return result;
   } catch (error) {
-    console.error(`Error cancelling credex for credexID ${credexID}:`, error);
+    logError(`Error cancelling credex for credexID ${credexID}`, error as Error, { requestId });
     throw new Error(`Failed to cancel Credex: ${(error as Error).message}`);
   } finally {
     await ledgerSpaceSession.close();

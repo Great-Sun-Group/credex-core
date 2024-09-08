@@ -2,6 +2,7 @@ import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 import { config } from "../../config/config";
 import { v4 as uuidv4 } from "uuid";
+import { Request, Response, NextFunction } from 'express';
 
 // Configure the logger
 const logger = winston.createLogger({
@@ -88,15 +89,24 @@ export const logDebug = (message: string, meta?: any) => {
   logger.debug(message, { ...meta, timestamp: new Date().toISOString() });
 };
 
+// Extend the Express Request interface
+declare global {
+  namespace Express {
+    interface Request {
+      id: string;
+    }
+  }
+}
+
 // Request ID middleware
-export const addRequestId = (req: any, res: any, next: any) => {
+export const addRequestId = (req: Request, res: Response, next: NextFunction) => {
   req.id = uuidv4();
   res.setHeader("X-Request-ID", req.id);
   next();
 };
 
 // Express request logger middleware
-export const expressLogger = (req: any, res: any, next: any) => {
+export const expressLogger = (req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   res.on("finish", () => {
     const duration = Date.now() - start;
@@ -118,7 +128,7 @@ export const expressLogger = (req: any, res: any, next: any) => {
 };
 
 // Error logger middleware
-export const errorLogger = (err: Error, req: any, res: any, next: any) => {
+export const errorLogger = (err: Error, req: Request, res: Response, next: NextFunction) => {
   logError("Request Error", err, {
     requestId: req.id,
     method: req.method,

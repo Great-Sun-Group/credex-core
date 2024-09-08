@@ -8,6 +8,7 @@ interface CredexData {
   receiverAccountID: string;
   credexType?: string;
   OFFERSorREQUESTS?: string;
+  requestId: string;
   [key: string]: any;
 }
 
@@ -49,22 +50,23 @@ export async function OfferCredexService(credexData: CredexData) {
         "Credex",
         newCredex.credex.credexID,
         "OFFER_CREDEX",
-        inputData
+        inputData,
+        credexData.requestId
       );
-      logInfo("Credex signed successfully");
+      logInfo(`Credex signed successfully. Request ID: ${credexData.requestId}`);
     } catch (error) {
       logWarning(
         "Failed to sign Credex, but Credex was created successfully",
-        error as Error
+        { error, requestId: credexData.requestId }
       );
     }
 
     // TODO: Implement offer notification here
 
-    logInfo(newCredex.message);
+    logInfo(newCredex.message, { requestId: credexData.requestId });
     return newCredex;
   } catch (error) {
-    logError("Error offering credex", error as Error);
+    logError("Error offering credex", error as Error, { requestId: credexData.requestId });
     throw error;
   } finally {
     await ledgerSpaceSession.close();

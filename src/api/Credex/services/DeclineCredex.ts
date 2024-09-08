@@ -1,7 +1,8 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { digitallySign } from "../../../utils/digitalSignature";
+import { logInfo, logError } from "../../../utils/logger";
 
-export async function DeclineCredexService(credexID: string, signerID: string) {
+export async function DeclineCredexService(credexID: string, signerID: string, requestId: string) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -21,8 +22,9 @@ export async function DeclineCredexService(credexID: string, signerID: string) {
     );
 
     if (result.records.length === 0) {
-      console.log(
-        `No records found or credex no longer pending for credexID: ${credexID}`
+      logInfo(
+        `No records found or credex no longer pending for credexID: ${credexID}`,
+        { requestId }
       );
       return false;
     }
@@ -41,13 +43,14 @@ export async function DeclineCredexService(credexID: string, signerID: string) {
       "Credex",
       declinedCredexID,
       "DECLINE_CREDEX",
-      inputData
+      inputData,
+      requestId
     );
 
-    console.log(`Offer declined for credexID: ${declinedCredexID}`);
+    logInfo(`Offer declined for credexID: ${declinedCredexID}`, { requestId });
     return declinedCredexID;
   } catch (error) {
-    console.error(`Error declining credex for credexID ${credexID}:`, error);
+    logError(`Error declining credex for credexID ${credexID}`, error as Error, { requestId });
     throw error;
   } finally {
     await ledgerSpaceSession.close();

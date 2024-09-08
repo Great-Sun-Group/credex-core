@@ -3,6 +3,7 @@ import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
 import moment from "moment-timezone";
 import { logInfo, logError, logWarning } from "../../utils/logger";
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * DCOavatars function
@@ -77,6 +78,8 @@ export async function DCOavatars() {
       const acceptorAccountID = record.get("acceptorAccountID");
 
       try {
+        const requestId = uuidv4(); // Generate a unique requestId for this operation
+        
         // Prepare data for creating a new credex
         const offerData: any = {
           memberID: avatar.memberID,
@@ -86,6 +89,7 @@ export async function DCOavatars() {
           InitialAmount: avatar.InitialAmount,
           credexType: "PURCHASE",
           OFFERSorREQUESTS: "OFFERS",
+          requestId, // Add the requestId to the offerData
         };
 
         // Handle secured and unsecured credexes differently
@@ -110,13 +114,33 @@ export async function DCOavatars() {
           typeof offerResult.credex === "object" &&
           offerResult.credex.credexID
         ) {
+          // Log the offer creation
+          logInfo("Credex offer created", {
+            requestId,
+            credexID: offerResult.credex.credexID,
+            avatarID: avatar.memberID,
+            action: "OFFER_CREDEX",
+            data: JSON.stringify(offerData)
+          });
+
           const acceptResult = await AcceptCredexService(
             offerResult.credex.credexID,
-            avatar.memberID
+            avatar.memberID,
+            requestId // Pass the same requestId to AcceptCredexService
           );
           if (acceptResult) {
+            // Log the credex acceptance
+            logInfo("Credex accepted", {
+              requestId,
+              credexID: offerResult.credex.credexID,
+              avatarID: avatar.memberID,
+              action: "ACCEPT_CREDEX",
+              data: JSON.stringify(acceptResult)
+            });
+
             logInfo(
-              `Successfully created credex for recurring avatar: ${avatar.memberID}. Remaining pays: ${avatar.remainingPays}, Next pay date: ${avatar.nextPayDate}`
+              `Successfully created and accepted credex for recurring avatar: ${avatar.memberID}. Remaining pays: ${avatar.remainingPays}, Next pay date: ${avatar.nextPayDate}`,
+              { requestId }
             );
           } else {
             throw new Error(`Failed to accept credex for avatar: ${avatar.memberID}`);
@@ -131,9 +155,9 @@ export async function DCOavatars() {
           `);
 
       } catch (error) {
-        logError(`Error processing avatar ${avatar.memberID}`, error as Error);
+        logError(`Error processing avatar ${avatar.memberID}`, error as Error, { avatarId: avatar.memberID });
         // TODO: Implement member notification about the failure
-        logWarning(`Placeholder: Notify member ${avatar.memberID} about the failure in processing their recurring avatar.`);
+        logWarning(`Placeholder: Notify member ${avatar.memberID} about the failure in processing their recurring avatar.`, { avatarId: avatar.memberID });
       }
     }
   } catch (error) {
