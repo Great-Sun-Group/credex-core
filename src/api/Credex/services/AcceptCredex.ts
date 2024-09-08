@@ -1,4 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import { createDigitalSignature } from "../../../utils/digitalSignature";
 
 interface AcceptCredexResult {
   acceptedCredexID: string;
@@ -35,7 +36,6 @@ export async function AcceptCredexService(credexID: string, signerID: string): P
           (signer:Member|Avatar { memberID: $signerID })
         DELETE rel1, rel2
         CREATE (issuer)-[:OWES]->(acceptedCredex)-[:OWES]->(acceptor)
-        CREATE (acceptedCredex)<-[:SIGNED]-(signer)
         SET acceptedCredex.acceptedAt = datetime()
         RETURN
           acceptedCredex.credexID AS credexID,
@@ -60,6 +60,10 @@ export async function AcceptCredexService(credexID: string, signerID: string): P
 
     if (result) {
       console.log(`Offer accepted for credexID: ${result.acceptedCredexID}`);
+      
+      // Create digital signature
+      await createDigitalSignature(ledgerSpaceSession, signerID, 'Credex', result.acceptedCredexID);
+      
       // TODO: Implement credex accepted notification here
     }
 

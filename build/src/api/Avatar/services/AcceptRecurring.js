@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AcceptRecurringService = AcceptRecurringService;
 const neo4j_1 = require("../../../../config/neo4j");
+const digitalSignature_1 = require("../../../utils/digitalSignature");
 /**
  * AcceptRecurringService
  *
@@ -22,7 +23,6 @@ async function AcceptRecurringService(params) {
         (acceptor:Account)-[rel1:REQUESTS]->
         (recurring:Avatar { memberID: $avatarID })-[rel2:REQUESTS]->
         (requestor:Account)
-      CREATE (signer)-[:SIGNED]->(recurring)
       CREATE (acceptor)<-[:AUTHORIZED_FOR]-(recurring)
       CREATE (acceptor)-[:ACTIVE]->(recurring)-[:ACTIVE]->(requestor)
       DELETE rel1, rel2
@@ -39,6 +39,8 @@ async function AcceptRecurringService(params) {
                 message: `No records found or recurring transaction no longer pending for avatarID: ${avatarID}`,
             };
         }
+        // Create digital signature
+        await (0, digitalSignature_1.createDigitalSignature)(ledgerSpaceSession, signerID, 'Avatar', avatarID);
         // TODO: Implement notification for recurring acceptance
         // Extract relevant data from the query result
         const record = acceptRecurringQuery.records[0];

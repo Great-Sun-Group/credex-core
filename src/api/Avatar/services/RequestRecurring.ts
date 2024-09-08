@@ -1,5 +1,6 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import * as neo4j from "neo4j-driver";
+import { createDigitalSignature } from "../../../utils/digitalSignature";
 
 interface RecurringParams {
   signerMemberID: string;
@@ -52,7 +53,6 @@ export async function RequestRecurringService(params: RecurringParams): Promise<
       CREATE (requestor)<-[:REQUESTS]-(recurring)<-[:REQUESTS]-(counterparty)
       CREATE (requestor)<-[:REQUESTED]-(recurring)<-[:REQUESTED]-(counterparty)
       CREATE (requestor)<-[:AUTHORIZED_FOR]-(recurring)
-      CREATE (signer)-[:SIGNED]--(recurring)
       CREATE (recurring)-[:CREATED_ON]--(daynode)
       RETURN
         recurring.memberID AS avatarID
@@ -66,8 +66,14 @@ export async function RequestRecurringService(params: RecurringParams): Promise<
     };
 
     const createRecurringQuery = await ledgerSpaceSession.run(cypher, neo4jParams);
+    const avatarID = createRecurringQuery.records[0]?.get("avatarID");
 
-    return createRecurringQuery.records[0]?.get("avatarID") || null;
+    if (avatarID) {
+      // Create digital signature
+      await createDigitalSignature(ledgerSpaceSession, params.signerMemberID, 'Avatar', avatarID);
+    }
+
+    return avatarID || null;
   } catch (error) {
     console.error("Error creating recurring avatar:", error);
     return null;

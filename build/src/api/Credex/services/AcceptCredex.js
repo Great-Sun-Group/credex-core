@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AcceptCredexService = AcceptCredexService;
 const neo4j_1 = require("../../../../config/neo4j");
+const digitalSignature_1 = require("../../../utils/digitalSignature");
 /**
  * AcceptCredexService
  *
@@ -29,7 +30,6 @@ async function AcceptCredexService(credexID, signerID) {
           (signer:Member|Avatar { memberID: $signerID })
         DELETE rel1, rel2
         CREATE (issuer)-[:OWES]->(acceptedCredex)-[:OWES]->(acceptor)
-        CREATE (acceptedCredex)<-[:SIGNED]-(signer)
         SET acceptedCredex.acceptedAt = datetime()
         RETURN
           acceptedCredex.credexID AS credexID,
@@ -50,6 +50,8 @@ async function AcceptCredexService(credexID, signerID) {
         });
         if (result) {
             console.log(`Offer accepted for credexID: ${result.acceptedCredexID}`);
+            // Create digital signature
+            await (0, digitalSignature_1.createDigitalSignature)(ledgerSpaceSession, signerID, 'Credex', result.acceptedCredexID);
             // TODO: Implement credex accepted notification here
         }
         return result;

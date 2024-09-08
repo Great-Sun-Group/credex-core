@@ -26,6 +26,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RequestRecurringService = RequestRecurringService;
 const neo4j_1 = require("../../../../config/neo4j");
 const neo4j = __importStar(require("neo4j-driver"));
+const digitalSignature_1 = require("../../../utils/digitalSignature");
 async function RequestRecurringService(params) {
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     try {
@@ -59,7 +60,6 @@ async function RequestRecurringService(params) {
       CREATE (requestor)<-[:REQUESTS]-(recurring)<-[:REQUESTS]-(counterparty)
       CREATE (requestor)<-[:REQUESTED]-(recurring)<-[:REQUESTED]-(counterparty)
       CREATE (requestor)<-[:AUTHORIZED_FOR]-(recurring)
-      CREATE (signer)-[:SIGNED]--(recurring)
       CREATE (recurring)-[:CREATED_ON]--(daynode)
       RETURN
         recurring.memberID AS avatarID
@@ -71,7 +71,12 @@ async function RequestRecurringService(params) {
             remainingPays: params.remainingPays ? neo4j.int(params.remainingPays) : undefined
         };
         const createRecurringQuery = await ledgerSpaceSession.run(cypher, neo4jParams);
-        return createRecurringQuery.records[0]?.get("avatarID") || null;
+        const avatarID = createRecurringQuery.records[0]?.get("avatarID");
+        if (avatarID) {
+            // Create digital signature
+            await (0, digitalSignature_1.createDigitalSignature)(ledgerSpaceSession, params.signerMemberID, 'Avatar', avatarID);
+        }
+        return avatarID || null;
     }
     catch (error) {
         console.error("Error creating recurring avatar:", error);

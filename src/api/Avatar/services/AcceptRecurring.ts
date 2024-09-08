@@ -1,4 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import { createDigitalSignature } from "../../../utils/digitalSignature";
 
 interface AcceptRecurringParams {
   avatarID: string;
@@ -37,7 +38,6 @@ export async function AcceptRecurringService(params: AcceptRecurringParams): Pro
         (acceptor:Account)-[rel1:REQUESTS]->
         (recurring:Avatar { memberID: $avatarID })-[rel2:REQUESTS]->
         (requestor:Account)
-      CREATE (signer)-[:SIGNED]->(recurring)
       CREATE (acceptor)<-[:AUTHORIZED_FOR]-(recurring)
       CREATE (acceptor)-[:ACTIVE]->(recurring)-[:ACTIVE]->(requestor)
       DELETE rel1, rel2
@@ -59,6 +59,9 @@ export async function AcceptRecurringService(params: AcceptRecurringParams): Pro
         message: `No records found or recurring transaction no longer pending for avatarID: ${avatarID}`,
       };
     }
+
+    // Create digital signature
+    await createDigitalSignature(ledgerSpaceSession, signerID, 'Avatar', avatarID);
 
     // TODO: Implement notification for recurring acceptance
 

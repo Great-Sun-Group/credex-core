@@ -4,6 +4,7 @@ exports.OfferCredexService = OfferCredexService;
 const CreateCredex_1 = require("./CreateCredex");
 const neo4j_1 = require("../../../../config/neo4j");
 const logger_1 = require("../../../utils/logger");
+const digitalSignature_1 = require("../../../utils/digitalSignature");
 /**
  * OfferCredexService
  *
@@ -25,10 +26,13 @@ async function OfferCredexService(credexData) {
         if (typeof newCredex.credex === "boolean" || !newCredex.credex?.credexID) {
             throw new Error("Failed to create Credex");
         }
-        // Sign the Credex and prepare for notification
-        const signResult = await signCredex(ledgerSpaceSession, newCredex.credex.credexID, credexData.memberID);
-        if (!signResult) {
-            (0, logger_1.logWarning)("Failed to sign Credex, but Credex was created successfully");
+        // Sign the Credex using the new digital signature utility
+        try {
+            await (0, digitalSignature_1.createDigitalSignature)(ledgerSpaceSession, credexData.memberID, 'Credex', newCredex.credex.credexID);
+            (0, logger_1.logInfo)("Credex signed successfully");
+        }
+        catch (error) {
+            (0, logger_1.logWarning)("Failed to sign Credex, but Credex was created successfully", error);
         }
         // TODO: Implement offer notification here
         (0, logger_1.logInfo)(newCredex.message);
@@ -40,23 +44,6 @@ async function OfferCredexService(credexData) {
     }
     finally {
         await ledgerSpaceSession.close();
-    }
-}
-async function signCredex(session, credexID, signingMemberID) {
-    try {
-        const signQuery = await session.run(`
-      MATCH
-        (credex:Credex { credexID: $credexID })<-[:OFFERS]-
-        (Account)<-[:AUTHORIZED_FOR]-
-        (signer:Member|Avatar { memberID: $signingMemberID })
-      CREATE (credex)<-[:SIGNED]-(signer)
-      RETURN signer.memberID AS signerID
-      `, { credexID, signingMemberID });
-        return signQuery.records.length > 0;
-    }
-    catch (error) {
-        (0, logger_1.logError)("Error signing Credex", error);
-        return false;
     }
 }
 //# sourceMappingURL=OfferCredex.js.map
