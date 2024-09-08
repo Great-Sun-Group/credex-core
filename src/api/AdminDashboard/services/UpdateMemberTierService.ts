@@ -1,10 +1,19 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j"
 import { logError } from "../../../utils/logger";
+import { validateTier } from "../../../utils/validators";
 
 export default async function UpdateMemberTierService(memberHandle: string, newTier: string): Promise<any> {
   if(!memberHandle || !newTier){
     return {
       message: 'The memberHandle and memberTier are required'
+    }
+  }
+
+  // Validate newTier
+  const newTierInt = parseInt(newTier, 10);
+  if (!validateTier(newTierInt) || newTierInt > 5) {
+    return {
+      message: 'Invalid memberTier. It must be an integer between 1 and 5 inclusive.'
     }
   }
 
@@ -15,7 +24,7 @@ export default async function UpdateMemberTierService(memberHandle: string, newT
       `MATCH (member:Member {memberHandle: $memberHandle})
        SET member.memberTier = $newTier 
        RETURN member.memberID AS memberID, member.memberHandle AS memberHandle, member.memberTier AS memberTier`,
-       {memberHandle, newTier}
+       {memberHandle, newTier: newTierInt}
     )
 
     const member = result.records.map((record) => {
