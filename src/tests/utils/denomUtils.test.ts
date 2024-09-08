@@ -1,4 +1,4 @@
-import { denomFormatter } from '../utils/denomUtils';
+import { denomFormatter } from '../../utils/denomUtils';
 
 describe('denomFormatter', () => {
   test('formats USD correctly', () => {

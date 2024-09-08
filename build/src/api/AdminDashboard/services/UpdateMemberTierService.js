@@ -1,10 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = UpdateMemberTierService;
-/*
-Update a members tier using the memberHandle or memberID
-*/
 const neo4j_1 = require("../../../../config/neo4j");
+const logger_1 = require("../../../utils/logger");
 async function UpdateMemberTierService(memberHandle, newTier) {
     if (!memberHandle || !newTier) {
         return {
@@ -29,6 +27,7 @@ async function UpdateMemberTierService(memberHandle, newTier) {
         };
     }
     catch (error) {
+        (0, logger_1.logError)(`Error updating member tier for ${memberHandle} to ${newTier}`, error);
         return {
             message: `Error updating member tier ${memberHandle}, ${newTier}`,
             error: error

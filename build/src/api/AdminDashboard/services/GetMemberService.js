@@ -1,11 +1,8 @@
 "use strict";
-/*
- Query a member using memberHandle
-
-*/
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = GetMemberService;
 const neo4j_1 = require("../../../../config/neo4j");
+const logger_1 = require("../../../utils/logger");
 async function GetMemberService(memberHandle) {
     if (!memberHandle) {
         return {
@@ -54,7 +51,7 @@ async function GetMemberService(memberHandle) {
         };
     }
     catch (error) {
-        console.error('Error fetching user:', error);
+        (0, logger_1.logError)('Error fetching user', error);
         return {
             message: 'Error fetching user',
             error: error,

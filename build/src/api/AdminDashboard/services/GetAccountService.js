@@ -1,23 +1,18 @@
 "use strict";
-/*
-  ToDo:
-    - Add the accountID to the query
-    
-*/
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = GetAccount;
-/*
- Query an account using the accountID or accountHandle to get all information associated with the account
-*/
 const neo4j_1 = require("../../../../config/neo4j");
+const logger_1 = require("../../../utils/logger");
 async function GetAccount(accountHandle, accountID) {
     if (!accountHandle && !accountID) {
         return {
-            message: 'The AccountID or accountHandle is required'
+            message: "The AccountID or accountHandle is required",
         };
     }
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
-    const accountMatchCondition = accountHandle ? "accountHandle:$accountHandle" : "accountID: $accountID";
+    const accountMatchCondition = accountHandle
+        ? "accountHandle:$accountHandle"
+        : "accountID: $accountID";
     const parameters = accountHandle ? { accountHandle } : { accountID };
     try {
         const query = `MATCH (account:Account {${accountMatchCondition}})<-[:OWNS]-(member:Member)
@@ -37,7 +32,6 @@ async function GetAccount(accountHandle, accountID) {
       COUNT(owedCredexes) AS numberOfCredexOwed,
       owedCredexes,
       owedAccounts
-
     `;
         const accountResult = await ledgerSpaceSession.run(query, parameters);
         const account = accountResult.records.map((record) => {
@@ -53,24 +47,28 @@ async function GetAccount(accountHandle, accountID) {
                 accountUpdatedAt: record.get("accountUpdatedAt"),
                 numberOfCredexOwed: record.get("numberOfCredexOwed"),
                 owedCredexes: record.get("owedCredexes"),
-                owedAccounts: record.get("owedAccounts")
+                owedAccounts: record.get("owedAccounts"),
             };
         });
         if (!account.length) {
             return {
-                message: 'Account not found'
+                message: "Account not found",
             };
         }
         return {
-            message: 'Account fetched successfully',
-            data: account
+            message: "Account fetched successfully",
+            data: account,
         };
     }
     catch (error) {
+        (0, logger_1.logError)("Error fetching account", error);
         return {
-            message: 'Error fetching account',
-            error: error
+            message: "Error fetching account",
+            error: error,
         };
+    }
+    finally {
+        await ledgerSpaceSession.close();
     }
 }
 //# sourceMappingURL=GetAccountService.js.map

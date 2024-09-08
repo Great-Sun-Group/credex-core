@@ -9,6 +9,7 @@ exports.getSentCredexOffers = getSentCredexOffers;
 const GetAccountService_1 = __importDefault(require("../services/GetAccountService"));
 const GetAccountReceivedCredexOffers_1 = __importDefault(require("../services/GetAccountReceivedCredexOffers"));
 const GetAccountSentCredexOffers_1 = __importDefault(require("../services/GetAccountSentCredexOffers"));
+const logger_1 = require("../../../utils/logger");
 async function getAccountDetails(req, res) {
     const { accountID, accountHandle } = req.query;
     if (!accountHandle && !accountID) {
@@ -21,7 +22,7 @@ async function getAccountDetails(req, res) {
         return res.status(200).json(result);
     }
     catch (error) {
-        console.error('Error in getAccountDetails controller:', error);
+        (0, logger_1.logError)('Error in getAccountDetails controller', error);
         return res.status(500).json({
             message: 'Error fetching account details',
             error: error.message
@@ -40,7 +41,7 @@ async function getReceivedCredexOffers(req, res) {
         return res.status(200).json(result);
     }
     catch (error) {
-        console.error('Error in getReceivedCredexOffers controller:', error);
+        (0, logger_1.logError)('Error in getReceivedCredexOffers controller', error);
         return res.status(500).json({
             message: 'Error fetching received credex offers',
             error: error.message
@@ -59,7 +60,7 @@ async function getSentCredexOffers(req, res) {
         return res.status(200).json(result);
     }
     catch (error) {
-        console.error('Error in getSentCredexOffers controller:', error);
+        (0, logger_1.logError)('Error in getSentCredexOffers controller', error);
         return res.status(500).json({
             message: 'Error fetching sent credex offers',
             error: error.message

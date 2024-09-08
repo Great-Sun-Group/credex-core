@@ -1,11 +1,8 @@
 "use strict";
-/*
-GetCredexService:
-- Retrieve details of a credex using the credexID
-*/
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = GetCredexService;
 const neo4j_1 = require("../../../../config/neo4j");
+const logger_1 = require("../../../utils/logger");
 async function GetCredexService(credexID) {
     if (!credexID) {
         return {
@@ -75,11 +72,14 @@ async function GetCredexService(credexID) {
         };
     }
     catch (error) {
-        console.error(error);
+        (0, logger_1.logError)('Error retrieving credex', error);
         return {
             message: 'Error retrieving credex',
             error: error
         };
+    }
+    finally {
+        await ledgerSpaceSession.close();
     }
 }
 //# sourceMappingURL=GetCredexService.js.map

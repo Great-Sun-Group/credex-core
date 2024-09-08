@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = GetAccountReceivedCredexOffers;
 const neo4j_1 = require("../../../../config/neo4j");
+const logger_1 = require("../../../utils/logger");
 async function GetAccountReceivedCredexOffers(accountHandle, accountID) {
     if (!accountHandle && !accountID) {
         return {
@@ -62,7 +63,7 @@ async function GetAccountReceivedCredexOffers(accountHandle, accountID) {
         };
     }
     catch (error) {
-        console.error('Error fetching account received credex offers:', error);
+        (0, logger_1.logError)('Error fetching account received credex offers', error);
         return {
             message: 'Error fetching account received credex offers',
             error: error

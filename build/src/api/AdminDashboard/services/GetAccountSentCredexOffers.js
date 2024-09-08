@@ -1,15 +1,8 @@
 "use strict";
-/*
-  ToDo:
-    - Add the accountID to the query
-    
-*/
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = GetAccountService;
-/*
- Query an account to get all sent credex offers
-*/
 const neo4j_1 = require("../../../../config/neo4j");
+const logger_1 = require("../../../utils/logger");
 async function GetAccountService(accountHandle, accountID) {
     if (!accountHandle) {
         return {
@@ -17,7 +10,6 @@ async function GetAccountService(accountHandle, accountID) {
         };
     }
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
-    // Get all outgoing credex offers from the account using the accountID or accountHandle to get the account and then get the receivingNode which can be a member or an account
     const accountMatchCondition = accountHandle ? "accountHandle:$accountHandle" : "accountID: $accountID";
     const parameters = accountHandle ? { accountHandle } : { accountID };
     try {
@@ -38,7 +30,6 @@ async function GetAccountService(accountHandle, accountID) {
         receivingAccount.accountID AS receivingAccountID,
         receivingAccount.defaultDenom AS receivingAccountDefaultDenom,
         receivingAccount.accountHandle AS receivingAccountHandle
-
       `;
         const accountOfferedCredexResult = await ledgerSpaceSession.run(query, parameters);
         const accountOfferedCredex = accountOfferedCredexResult.records.map((record) => {
@@ -73,9 +64,9 @@ async function GetAccountService(accountHandle, accountID) {
         };
     }
     catch (error) {
-        console.error('Error fetching account:', error);
+        (0, logger_1.logError)('Error fetching account sent credex offers', error);
         return {
-            message: 'Error fetching account',
+            message: 'Error fetching account sent credex offers',
             error: error,
         };
     }

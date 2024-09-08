@@ -7,6 +7,7 @@ exports.getMemberDetails = getMemberDetails;
 exports.updateMemberTier = updateMemberTier;
 const GetMemberService_1 = __importDefault(require("../services/GetMemberService"));
 const UpdateMemberTierService_1 = __importDefault(require("../services/UpdateMemberTierService"));
+const logger_1 = require("../../../utils/logger");
 async function getMemberDetails(req, res) {
     const { memberHandle } = req.query;
     if (!memberHandle) {
@@ -19,7 +20,7 @@ async function getMemberDetails(req, res) {
         return res.status(200).json(result);
     }
     catch (error) {
-        console.error('Error in getMemberDetails controller:', error);
+        (0, logger_1.logError)('Error in getMemberDetails controller', error);
         return res.status(500).json({
             message: 'Error fetching member details',
             error: error.message
@@ -38,7 +39,7 @@ async function updateMemberTier(req, res) {
         return res.status(200).json(result);
     }
     catch (error) {
-        console.error('Error in updateMemberTier controller:', error);
+        (0, logger_1.logError)('Error in updateMemberTier controller', error);
         return res.status(500).json({
             message: 'Error updating member tier',
             error: error.message
@@ -59,14 +60,13 @@ export async function updateMemberStatus(req: Request, res: Response) {
     const result = await UpdateMemberStatusService(memberHandle, newStatus);
     return res.status(200).json(result);
   } catch (error) {
-    console.error('Error in updateMemberStatus controller:', error);
+    logError('Error in updateMemberStatus controller', error as Error);
     return res.status(500).json({
       message: 'Error updating member status',
       error: (error as Error).message
     });
   }
 }
-
 
 export async function logMemberInteraction(req: Request, res: Response) {
   const { memberHandle, interactionType, interactionDetails } = req.body;
@@ -81,12 +81,12 @@ export async function logMemberInteraction(req: Request, res: Response) {
     const result = await LogMemberInteractionService(memberHandle, interactionType, interactionDetails);
     return res.status(200).json(result);
   } catch (error) {
-    console.error('Error in logMemberInteraction controller:', error);
+    logError('Error in logMemberInteraction controller', error as Error);
     return res.status(500).json({
       message: 'Error logging member interaction',
       error: (error as Error).message
     });
   }
 }
-  */
+*/
 //# sourceMappingURL=MemberController.js.map

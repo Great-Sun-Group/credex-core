@@ -4,10 +4,6 @@
 # Code Summary
 Current Branch: 273-update-folder-structure
 
-## src/utils/__tests__/validators.test.ts
-```
-```
-
 ## src/utils/logger.ts
 ```
 const logger = winston.createLogger({
@@ -93,7 +89,6 @@ const server = http.createServer(app);
 // Consider adjusting or removing rate limiting based on your specific use case
 // Start cron jobs for scheduled tasks (e.g., daily credcoin offering, minute transaction queue)
 // Apply route handlers for different modules
-// Conditionally apply Test routes based on deployment environment
 // Apply error handling middleware
 // Create HTTP server
 // Start the server
@@ -163,6 +158,14 @@ export const credexTypes = [
 export function checkPermittedCredexType(credexTypeToCheck: string): boolean {
 ```
 
+## src/tests/utils/validators.test.ts
+```
+```
+
+## src/tests/utils/denomUtils.test.ts
+```
+```
+
 ## src/tests/controllers/createTestMembersAndAccounts.ts
 ```
 export async function CreateTestMembersAndAccountsController(
@@ -226,14 +229,6 @@ export async function CreateTestLoopController(
     // Call the service to create test transactions
     // Send the response with the created test transactions
     // Handle errors and send an appropriate error response
-```
-
-## src/tests/testDenomFormatter.ts
-```
-```
-
-## src/tests/testRoutes.ts
-```
 ```
 
 ## src/tests/services/InEcosystemSecuredCredexes.ts
@@ -323,10 +318,6 @@ export async function ClearDevDbService() {
     // Set up any necessary test data
     // Clean up test data and close connections
   // Add more test cases for other account-related endpoints
-```
-
-## src/tests/denomUtils.test.ts
-```
 ```
 
 ## src/api/Account/controllers/authorizeForAccount.ts
@@ -2367,6 +2358,18 @@ async function createNotifications(session: Session, loopID: string): Promise<vo
 //# sourceMappingURL=LoopFinder.js.map
 ```
 
+## build/src/tests/utils/validators.test.js
+```
+const validators_1 = require("../../utils/validators");
+//# sourceMappingURL=validators.test.js.map
+```
+
+## build/src/tests/utils/denomUtils.test.js
+```
+const denomUtils_1 = require("../../utils/denomUtils");
+//# sourceMappingURL=denomUtils.test.js.map
+```
+
 ## build/src/tests/controllers/forceMTQ.js
 ```
 const MinuteTransactionQueue_1 = require("../../core-cron/MTQ/MinuteTransactionQueue");
@@ -4078,6 +4081,7 @@ const router = express_1.default.Router();
 ```
 var __importDefault = (this && this.__importDefault) || function (mod) {
 const GetCredexService_1 = __importDefault(require("../services/GetCredexService"));
+const logger_1 = require("../../../utils/logger");
 async function getCredexDetails(req, res) {
 //# sourceMappingURL=CredexController.js.map
 ```
@@ -4087,12 +4091,13 @@ async function getCredexDetails(req, res) {
 var __importDefault = (this && this.__importDefault) || function (mod) {
 const GetMemberService_1 = __importDefault(require("../services/GetMemberService"));
 const UpdateMemberTierService_1 = __importDefault(require("../services/UpdateMemberTierService"));
+const logger_1 = require("../../../utils/logger");
 async function getMemberDetails(req, res) {
 async function updateMemberTier(req, res) {
 export async function updateMemberStatus(req: Request, res: Response) {
 export async function logMemberInteraction(req: Request, res: Response) {
 /*
-  */
+*/
 //# sourceMappingURL=MemberController.js.map
 ```
 
@@ -4102,6 +4107,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 const GetAccountService_1 = __importDefault(require("../services/GetAccountService"));
 const GetAccountReceivedCredexOffers_1 = __importDefault(require("../services/GetAccountReceivedCredexOffers"));
 const GetAccountSentCredexOffers_1 = __importDefault(require("../services/GetAccountSentCredexOffers"));
+const logger_1 = require("../../../utils/logger");
 async function getAccountDetails(req, res) {
 async function getReceivedCredexOffers(req, res) {
 async function getSentCredexOffers(req, res) {
@@ -4153,17 +4159,15 @@ function authMiddleware(req, res, next) {
 ## build/src/api/AdminDashboard/services/GetAccountService.js
 ```
 const neo4j_1 = require("../../../../config/neo4j");
+const logger_1 = require("../../../utils/logger");
 async function GetAccount(accountHandle, accountID) {
-/*
-*/
-/*
-*/
 //# sourceMappingURL=GetAccountService.js.map
 ```
 
 ## build/src/api/AdminDashboard/services/GetAccountReceivedCredexOffers.js
 ```
 const neo4j_1 = require("../../../../config/neo4j");
+const logger_1 = require("../../../utils/logger");
 async function GetAccountReceivedCredexOffers(accountHandle, accountID) {
 //# sourceMappingURL=GetAccountReceivedCredexOffers.js.map
 ```
@@ -4171,27 +4175,24 @@ async function GetAccountReceivedCredexOffers(accountHandle, accountID) {
 ## build/src/api/AdminDashboard/services/GetMemberService.js
 ```
 const neo4j_1 = require("../../../../config/neo4j");
+const logger_1 = require("../../../utils/logger");
 async function GetMemberService(memberHandle) {
-/*
-*/
 //# sourceMappingURL=GetMemberService.js.map
 ```
 
 ## build/src/api/AdminDashboard/services/UpdateMemberTierService.js
 ```
 const neo4j_1 = require("../../../../config/neo4j");
+const logger_1 = require("../../../utils/logger");
 async function UpdateMemberTierService(memberHandle, newTier) {
-/*
-*/
 //# sourceMappingURL=UpdateMemberTierService.js.map
 ```
 
 ## build/src/api/AdminDashboard/services/GetCredexService.js
 ```
 const neo4j_1 = require("../../../../config/neo4j");
+const logger_1 = require("../../../utils/logger");
 async function GetCredexService(credexID) {
-/*
-*/
 //# sourceMappingURL=GetCredexService.js.map
 ```
 
@@ -4207,12 +4208,8 @@ async function GetMemberAccountsOwnerByMemberSevice(memberID) {
 ## build/src/api/AdminDashboard/services/GetAccountSentCredexOffers.js
 ```
 const neo4j_1 = require("../../../../config/neo4j");
+const logger_1 = require("../../../utils/logger");
 async function GetAccountService(accountHandle, accountID) {
-/*
-*/
-/*
-*/
-    // Get all outgoing credex offers from the account using the accountID or accountHandle to get the account and then get the receivingNode which can be a member or an account
 //# sourceMappingURL=GetAccountSentCredexOffers.js.map
 ```
 
@@ -4481,7 +4478,6 @@ const http_1 = __importDefault(require("http"));
 const memberRoutes_1 = __importDefault(require("./api/Member/memberRoutes"));
 const accountRoutes_1 = __importDefault(require("./api/Account/accountRoutes"));
 const credexRoutes_1 = __importDefault(require("./api/Credex/credexRoutes"));
-const testRoutes_1 = __importDefault(require("./tests/testRoutes"));
 const recurringRoutes_1 = __importDefault(require("./api/Avatar/recurringRoutes"));
 const logger_1 = __importStar(require("../config/logger"));
 const body_parser_1 = __importDefault(require("body-parser"));
@@ -4511,7 +4507,6 @@ const server = http_1.default.createServer(exports.app);
 // Consider adjusting or removing rate limiting based on your specific use case
 // Start cron jobs for scheduled tasks (e.g., daily credcoin offering, minute transaction queue)
 // Apply route handlers for different modules
-// Conditionally apply Test routes based on deployment environment
 // Apply error handling middleware
 // Create HTTP server
 // Start the server
@@ -4552,11 +4547,11 @@ const server = http_1.default.createServer(exports.app);
 ```
 # Git Context
 ## Recent Commits
+d742915 Update AI context
 003ba3f logging2
 dafaac8 Update AI context
 2aa19d8 logging
 c4ada94 Update AI context
-0a714ce logger util
 
 ## Recent File Changes
 M	ai_context/code_summary.md
@@ -4629,7 +4624,6 @@ M	src/core-cron/DCO/DailyCredcoinOffering.ts
 M	src/core-cron/MTQ/LoopFinder.ts
 M	src/core-cron/MTQ/MinuteTransactionQueue.ts
 M	src/core-cron/cronJobs.ts
-A	src/utils/logger.ts
 M	tsconfig.json
 ```
 

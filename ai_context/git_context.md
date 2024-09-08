@@ -1,10 +1,10 @@
 # Git Context
 ## Recent Commits
+d742915 Update AI context
 003ba3f logging2
 dafaac8 Update AI context
 2aa19d8 logging
 c4ada94 Update AI context
-0a714ce logger util
 
 ## Recent File Changes
 M	ai_context/code_summary.md
@@ -77,5 +77,4 @@ M	src/core-cron/DCO/DailyCredcoinOffering.ts
 M	src/core-cron/MTQ/LoopFinder.ts
 M	src/core-cron/MTQ/MinuteTransactionQueue.ts
 M	src/core-cron/cronJobs.ts
-A	src/utils/logger.ts
 M	tsconfig.json
