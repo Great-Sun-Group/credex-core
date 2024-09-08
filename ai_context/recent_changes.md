@@ -1404,7 +1404,7 @@ export async function updateMemberTier(req: Request, res: Response) {
 export async function updateMemberStatus(req: Request, res: Response) {
 export async function logMemberInteraction(req: Request, res: Response) {
 /*
-  */
+*/
 ```
 
 ## src/api/AdminDashboard/controllers/CredexController.ts
@@ -1439,28 +1439,18 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
 
 ## src/api/AdminDashboard/services/GetCredexService.ts
 ```
-/* 
-*/
 ```
 
 ## src/api/AdminDashboard/services/GetAccountService.ts
 ```
-/*
-*/
-/* 
-*/
 ```
 
 ## src/api/AdminDashboard/services/GetMemberService.ts
 ```
-/*
-*/
 ```
 
 ## src/api/AdminDashboard/services/UpdateMemberTierService.ts
 ```
-/* 
-*/
 ```
 
 ## src/api/AdminDashboard/services/ServicesList.md
@@ -1491,11 +1481,6 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
 
 ## src/api/AdminDashboard/services/GetAccountSentCredexOffers.ts
 ```
-/*
-*/
-/* 
-*/
-  // Get all outgoing credex offers from the account using the accountID or accountHandle to get the account and then get the receivingNode which can be a member or an account
 ```
 
 ## src/api/AdminDashboard/adminDashboardRoutes.ts
@@ -1601,6 +1586,10 @@ async function processDCOTransactions(
   // Process DCO receive transactions
 ```
 
+## src/core-cron/DCO/DCOsnapshots/2021-01-02_ledgerSpace_dev_end.json
+```
+```
+
 ## src/core-cron/DCO/DCOsnapshots/placeholder.ts
 ```
 //placeholder
@@ -1658,27 +1647,27 @@ export async function MinuteTransactionQueue(): Promise<boolean> {
 async function checkDCOAndMTQStatus(
 async function setMTQRunningFlag(
 async function processQueuedAccounts(
-async function getQueuedAccounts(session: Session): Promise<Account[]> {
+async function getQueuedAccounts(session: any): Promise<Account[]> {
 async function createAccountInSearchSpace(
 async function markAccountAsProcessed(
 async function processQueuedCredexes(
-async function getQueuedCredexes(session: Session): Promise<Credex[]> {
+async function getQueuedCredexes(session: any): Promise<Credex[]> {
 ```
 
 ## src/core-cron/MTQ/LoopFinder.ts
 ```
 export async function LoopFinder(
 function getSearchOwesType(credexSecuredDenom: string): string {
-async function adjustCredexDueDate(session: Session, credexSecuredDenom: string, credexDueDate: string): Promise<string> {
+async function adjustCredexDueDate(session: neo4j.Session, credexSecuredDenom: string, credexDueDate: string): Promise<string> {
 async function createOrUpdateSearchSpaceCredex(
-async function checkCredexExists(session: Session, credexID: string): Promise<boolean> {
+async function checkCredexExists(session: neo4j.Session, credexID: string): Promise<boolean> {
 async function createSearchSpaceCredex(
-async function findCredloop(session: Session, issuerAccountID: string, searchOwesType: string): Promise<{ valueToClear: number; credexesInLoop: string[]; credexesRedeemed: string[] }> {
-async function processCredloop(ledgerSpaceSession: Session, searchSpaceSession: Session, valueToClear: number, credexesInLoop: string[], credexesRedeemed: string[]): Promise<void> {
-async function cleanupSearchSpace(session: Session, credexesRedeemed: string[]): Promise<void> {
-async function updateLedgerSpace(session: Session, valueToClear: number, credexesInLoop: string[], credexesRedeemed: string[]): Promise<void> {
-async function markCredexAsProcessed(session: Session, credexID: string): Promise<void> {
-async function createNotifications(session: Session, loopID: string): Promise<void> {
+async function findCredloop(session: neo4j.Session, issuerAccountID: string, searchOwesType: string): Promise<{ valueToClear: number; credexesInLoop: string[]; credexesRedeemed: string[] }> {
+async function processCredloop(ledgerSpaceSession: neo4j.Session, searchSpaceSession: neo4j.Session, valueToClear: number, credexesInLoop: string[], credexesRedeemed: string[]): Promise<void> {
+async function cleanupSearchSpace(session: neo4j.Session, credexesRedeemed: string[]): Promise<void> {
+async function updateLedgerSpace(session: neo4j.Session, valueToClear: number, credexesInLoop: string[], credexesRedeemed: string[]): Promise<void> {
+async function markCredexAsProcessed(session: neo4j.Session, credexID: string): Promise<void> {
+async function createNotifications(session: neo4j.Session, loopID: string): Promise<void> {
     // Step 1: Find all loops starting and ending at the specified account, with the specified searchOwesType
     // Step 3: Filter loops to include only those containing a node with the earliest earliestDueDate
     // Step 4: Return only the longest loop, breaking ties with rand()
@@ -1771,8 +1760,8 @@ const searchSpace_url = `${process.env.NEO_4J_SEARCH_SPACE_BOLT_URL}`;
 const searchSpace_user = `${process.env.NEO_4J_SEARCH_SPACE_USER}`;
 const searchSpace_password = `${process.env.NEO_4J_SEARCH_SPACE_PASS}`;
 const createDriverWithRetry = (url: string, user: string, password: string) => {
-export const ledgerSpaceDriver = createDriverWithRetry(ledgerSpace_url, ledgerSpace_user, ledgerSpace_password);
-export const searchSpaceDriver = createDriverWithRetry(searchSpace_url, searchSpace_user, searchSpace_password);
+export const ledgerSpaceDriver = createDriverWithRetry(
+export const searchSpaceDriver = createDriverWithRetry(
   // Verify connectivity on first use
 // Graceful shutdown
 ```
@@ -1932,10 +1921,48 @@ function notFoundHandler(req, _res, next) {
 //# sourceMappingURL=errorHandler.js.map
 ```
 
+## build/src/utils/errorUtils.js
+```
+function isNeo4jError(error) {
+// Type guard to check if an error is a Neo4j error
+//# sourceMappingURL=errorUtils.js.map
+```
+
 ## build/src/utils/__tests__/validators.test.js
 ```
 const validators_1 = require("../validators");
 //# sourceMappingURL=validators.test.js.map
+```
+
+## build/src/utils/logger.js
+```
+var __importDefault = (this && this.__importDefault) || function (mod) {
+const winston_1 = __importDefault(require("winston"));
+const winston_daily_rotate_file_1 = __importDefault(require("winston-daily-rotate-file"));
+const config_1 = require("../../config/config");
+const uuid_1 = require("uuid");
+const logger = winston_1.default.createLogger({
+function sanitizeData(data) {
+const logInfo = (message, meta) => {
+const logError = (message, error, meta) => {
+const logWarning = (message, meta) => {
+const logDebug = (message, meta) => {
+const addRequestId = (req, res, next) => {
+const expressLogger = (req, res, next) => {
+const errorLogger = (err, req, res, next) => {
+const logDCORates = (XAUrate, CXXrate, CXXmultiplier) => {
+// Configure the logger
+// Add console transport for non-production environments
+// Standardized logging functions
+// Request ID middleware
+// Express request logger middleware
+// Error logger middleware
+// Function to log DCO rates
+// TODO: Implement log aggregation and centralized logging for production environments
+// TODO: Implement log retention policies based on compliance requirements
+// TODO: Add performance monitoring for database queries and external API calls
+// TODO: Implement log analysis tools to detect patterns, anomalies, and potential security threats
+//# sourceMappingURL=logger.js.map
 ```
 
 ## build/src/utils/denomUtils.js
@@ -1962,10 +1989,17 @@ const denomFormatter = (amount, code) => {
 
 ## build/src/utils/validators.js
 ```
+const credexTypes_1 = require("../constants/credexTypes");
+const denominations_1 = require("../constants/denominations");
 function validateUUID(uuid) {
 function validateMemberHandle(handle) {
 function validateAccountName(name) {
 function validateAccountHandle(handle) {
+function validateEmail(email) {
+function validatePhone(phone) {
+function validateAmount(amount) {
+function validateDenomination(denomination) {
+function validateCredexType(type) {
 //# sourceMappingURL=validators.js.map
 ```
 
@@ -2774,6 +2808,7 @@ async function CreateRandomFloatingCredexesService(numNewTransactions) {
 var __importDefault = (this && this.__importDefault) || function (mod) {
 const UnauthorizeForAccount_1 = require("../services/UnauthorizeForAccount");
 const logger_1 = __importDefault(require("../../../../config/logger"));
+const validators_1 = require("../../../utils/validators");
 async function UnauthorizeForAccountController(req, res, next) {
 /**
  * Controller for unauthorizing a member for an account
@@ -2813,7 +2848,6 @@ async function UpdateSendOffersToController(req, res, next) {
 ```
 var __importDefault = (this && this.__importDefault) || function (mod) {
 const CreateAccount_1 = require("../services/CreateAccount");
-const denominations_1 = require("../../../constants/denominations");
 const accountTypes_1 = require("../../../constants/accountTypes");
 const logger_1 = __importDefault(require("../../../../config/logger"));
 const validators_1 = require("../../../utils/validators");
@@ -2850,7 +2884,6 @@ async function GetAccountDashboardController(req, res) {
 var __importDefault = (this && this.__importDefault) || function (mod) {
 const UpdateAccount_1 = require("../services/UpdateAccount");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-const denominations_1 = require("../../../constants/denominations");
 const validators_1 = require("../../../utils/validators");
 async function UpdateAccountController(req, res, next) {
         // Validate input
@@ -3081,10 +3114,10 @@ async function UpdateSendOffersToService(memberIDtoSendOffers, accountID, ownerI
 ## build/src/api/Account/services/CreateAccount.js
 ```
 const neo4j_1 = require("../../../../config/neo4j");
+const errorUtils_1 = require("../../../utils/errorUtils");
+const logger_1 = require("../../../utils/logger");
 async function CreateAccountService(ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX = null, DCOdenom = null) {
-function isNeo4jError(error) {
     //check that account creation is permitted on membership tier
-// Type guard to check if an error is a Neo4j error
 //# sourceMappingURL=CreateAccount.js.map
 ```
 
@@ -3132,6 +3165,7 @@ async function DeclineRecurringController(req, res) {
 ```
 const AcceptRecurring_1 = require("../services/AcceptRecurring");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
+const validators_1 = require("../../../utils/validators");
 async function AcceptRecurringController(req, res) {
 /**
  * AcceptRecurringController
@@ -3144,6 +3178,7 @@ async function AcceptRecurringController(req, res) {
  * @param res - Express response object
  */
         // Validate required fields
+        // Validate UUIDs
         // Call AcceptRecurringService to process the acceptance
         // Check if the service call was successful
         // Fetch dashboard data
@@ -3155,7 +3190,7 @@ async function AcceptRecurringController(req, res) {
 ```
 const RequestRecurring_1 = require("../services/RequestRecurring");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
-const denominations_1 = require("../../../constants/denominations");
+const validators_1 = require("../../../utils/validators");
 async function RequestRecurringController(req, res) {
 /**
  * RequestRecurringController
@@ -3169,6 +3204,7 @@ async function RequestRecurringController(req, res) {
  */
         // Validate required fields
         // Check denomination validity
+        // Validate InitialAmount
         // Validate optional parameters
         // Check securedCredex and credspan relationship
 //# sourceMappingURL=requestRecurring.js.map
@@ -3358,6 +3394,7 @@ async function CancelCredexController(req, res) {
 ```
 const AcceptCredex_1 = require("../services/AcceptCredex");
 const getAccountDashboard_1 = require("../../Account/controllers/getAccountDashboard");
+const validators_1 = require("../../../utils/validators");
 async function AcceptCredexBulkController(req, res) {
         // Filter out any null values
             // Assuming that memberID and acceptorAccountID are the same for all returned objects
@@ -3376,6 +3413,7 @@ async function DeclineCredexController(req, res) {
 ```
 const AcceptCredex_1 = require("../services/AcceptCredex");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
+const validators_1 = require("../../../utils/validators");
 async function AcceptCredexController(req, res) {
 /**
  * AcceptCredexController
@@ -3388,6 +3426,7 @@ async function AcceptCredexController(req, res) {
  * @param res - Express response object
  */
         // Validate required fields
+        // Validate UUIDs
 //# sourceMappingURL=acceptCredex.js.map
 ```
 
@@ -3404,11 +3443,10 @@ async function GetLedgerController(req, res) {
 ```
 const OfferCredex_1 = require("../services/OfferCredex");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
-const denominations_1 = require("../../../constants/denominations");
 const credspan_1 = require("../../../constants/credspan");
-const credexTypes_1 = require("../../../constants/credexTypes");
 const securedCredexAuthForTier_1 = require("../../Member/controllers/securedCredexAuthForTier");
 const neo4j_1 = require("../../../../config/neo4j");
+const validators_1 = require("../../../utils/validators");
 async function OfferCredexController(req, res) {
 /**
  * OfferCredexController
@@ -3421,8 +3459,9 @@ async function OfferCredexController(req, res) {
  * @param res - Express response object
  */
         // Validate required fields
+        // Validate UUIDs
         // Check if issuerAccountID and receiverAccountID are the same
-        // Validate InitialAmount is a number
+        // Validate InitialAmount
         // Check denomination validity
         // Check credex type validity
         // Validate OFFERSorREQUESTS
@@ -3679,6 +3718,7 @@ async function AcceptCredexService(credexID, signerID) {
 ```
 const CreateCredex_1 = require("./CreateCredex");
 const neo4j_1 = require("../../../../config/neo4j");
+const logger_1 = require("../../../utils/logger");
 async function OfferCredexService(credexData) {
 async function signCredex(session, credexID, signingMemberID) {
 /**
@@ -3799,7 +3839,6 @@ const validators_1 = require("../../../utils/validators");
 function validateInput(firstname, lastname, phone) {
 async function OnboardMemberController(firstname, lastname, phone) {
 async function onboardMemberExpressHandler(req, res, next) {
-    // Phone number validation (with optional '+' prefix)
 //# sourceMappingURL=onboardMember.js.map
 ```
 
@@ -3834,6 +3873,7 @@ async function securedCredexAuthForTierExpressHandler(req, res, next) {
 var __importDefault = (this && this.__importDefault) || function (mod) {
 const UpdateMemberTier_1 = require("../services/UpdateMemberTier");
 const logger_1 = __importDefault(require("../../../../config/logger"));
+const validators_1 = require("../../../utils/validators");
 async function UpdateMemberTierController(memberID, tier) {
 async function updateMemberTierExpressHandler(req, res, next) {
 /**
@@ -3858,6 +3898,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 const GetMemberDashboardByPhone_1 = require("../services/GetMemberDashboardByPhone");
 const getAccountDashboard_1 = require("../../Account/controllers/getAccountDashboard");
 const logger_1 = __importDefault(require("../../../../config/logger"));
+const validators_1 = require("../../../utils/validators");
 async function GetMemberDashboardByPhoneController(req, res, next) {
 /**
  * Controller for retrieving a member's dashboard by phone number
@@ -3865,7 +3906,7 @@ async function GetMemberDashboardByPhoneController(req, res, next) {
  * @param res - Express response object
  * @param next - Express next function
  */
-        // Validate phone number format (simple regex for demonstration, adjust as needed)
+        // Validate phone number format using the validatePhone function
 //# sourceMappingURL=getMemberDashboardByPhone.js.map
 ```
 
@@ -3873,11 +3914,10 @@ async function GetMemberDashboardByPhoneController(req, res, next) {
 ```
 const neo4j_1 = require("../../../../config/neo4j");
 const denominations_1 = require("../../../constants/denominations");
+const errorUtils_1 = require("../../../utils/errorUtils");
 async function OnboardMemberService(firstname, lastname, phone) {
-function isNeo4jError(error) {
         // Validation: Check defaultDenom in denominations
         // Type guard to narrow the type of error
-// Type guard to check if an error is a Neo4j error
 //# sourceMappingURL=OnboardMember.js.map
 ```
 
@@ -4182,6 +4222,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 const node_cron_1 = __importDefault(require("node-cron"));
 const DailyCredcoinOffering_1 = require("./DCO/DailyCredcoinOffering");
 const MinuteTransactionQueue_1 = require("./MTQ/MinuteTransactionQueue");
+const logger_1 = require("../utils/logger");
 function startCronJobs() {
     // Running DailyCredcoinOffering every day at midnight UTC
     // Running MinuteTransactionQueue every minute
@@ -4195,6 +4236,7 @@ const neo4j_1 = require("../../../config/neo4j");
 const OfferCredex_1 = require("../../api/Credex/services/OfferCredex");
 const AcceptCredex_1 = require("../../api/Credex/services/AcceptCredex");
 const moment_timezone_1 = __importDefault(require("moment-timezone"));
+const logger_1 = require("../../utils/logger");
 async function DCOavatars() {
 /**
  * DCOavatars function
@@ -4218,12 +4260,11 @@ async function DCOavatars() {
 
 ## build/src/core-cron/DCO/DailyCredcoinOffering.js
 ```
-var __importDefault = (this && this.__importDefault) || function (mod) {
 const neo4j_1 = require("../../../config/neo4j");
 const DBinitialization_1 = require("./DBinitialization");
 const DCOexecute_1 = require("./DCOexecute");
 const DCOavatars_1 = require("./DCOavatars");
-const logger_1 = __importDefault(require("../../../config/logger"));
+const logger_1 = require("../../utils/logger");
 async function DailyCredcoinOffering() {
 async function checkActiveDaynode(session) {
 async function resetDCORunningFlag(session) {
@@ -4278,7 +4319,8 @@ const OfferCredex_1 = require("../../api/Credex/services/OfferCredex");
 const AcceptCredex_1 = require("../../api/Credex/services/AcceptCredex");
 const fetchZigRate_1 = require("./fetchZigRate");
 const DBbackup_1 = require("./DBbackup");
-const logger_1 = __importDefault(require("../../../config/logger"));
+const logger_1 = require("../../utils/logger");
+const validators_1 = require("../../utils/validators");
 async function DCOexecute() {
 async function waitForMTQCompletion(session) {
 async function setDCORunningFlag(session) {
@@ -4381,7 +4423,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 const neo4j_1 = require("../../../config/neo4j");
 const LoopFinder_1 = require("./LoopFinder");
 const lodash_1 = __importDefault(require("lodash"));
-const logger_1 = __importDefault(require("../../../config/logger"));
+const logger_1 = require("../../utils/logger");
 async function MinuteTransactionQueue() {
 async function checkDCOAndMTQStatus(session) {
 async function setMTQRunningFlag(session, value) {
@@ -4396,9 +4438,8 @@ async function getQueuedCredexes(session) {
 
 ## build/src/core-cron/MTQ/LoopFinder.js
 ```
-var __importDefault = (this && this.__importDefault) || function (mod) {
 const neo4j_1 = require("../../../config/neo4j");
-const logger_1 = __importDefault(require("../../../config/logger"));
+const logger_1 = require("../../utils/logger");
 async function LoopFinder(issuerAccountID, credexID, credexAmount, Denomination, CXXmultiplier, credexSecuredDenom, credexDueDate, acceptorAccountID) {
 function getSearchOwesType(credexSecuredDenom) {
 async function adjustCredexDueDate(session, credexSecuredDenom, credexDueDate) {
@@ -4410,7 +4451,7 @@ async function processCredloop(ledgerSpaceSession, searchSpaceSession, valueToCl
 async function cleanupSearchSpace(session, credexesRedeemed) {
 async function updateLedgerSpace(session, valueToClear, credexesInLoop, credexesRedeemed) {
 async function markCredexAsProcessed(session, credexID) {
-async function createNotifications(session: Session, loopID: string): Promise<void> {
+async function createNotifications(session: neo4j.Session, loopID: string): Promise<void> {
     // Step 1: Find all loops starting and ending at the specified account, with the specified searchOwesType
     // Step 3: Filter loops to include only those containing a node with the earliest earliestDueDate
     // Step 4: Return only the longest loop, breaking ties with rand()
@@ -4483,6 +4524,9 @@ const server = http_1.default.createServer(exports.app);
     // TODO: Implement a more robust error reporting mechanism (e.g., send to a monitoring service)
 // Implement graceful shutdown
         // Perform any additional cleanup (e.g., close database connections)
+// Test comment
+// Another test comment
+// Final test comment
 //# sourceMappingURL=index.js.map
 ```
 
@@ -4508,20 +4552,17 @@ const server = http_1.default.createServer(exports.app);
 ```
 # Git Context
 ## Recent Commits
+c4ada94 Update AI context
 0a714ce logger util
 9fb293c Update AI context
 fed43a7 isNeo4jError to utils
 8877c65 Update AI context
-4666e29 final validation stuff
 
 ## Recent File Changes
 M	ai_context/code_summary.md
 M	ai_context/git_context.md
 M	ai_context/recent_changes.md
-M	src/api/Account/controllers/unauthorizeForAccount.ts
 M	src/api/Account/services/CreateAccount.ts
-M	src/api/Credex/controllers/acceptCredexBulk.ts
-M	src/api/Member/controllers/getMemberDashboardByPhone.ts
 M	src/api/Member/services/OnboardMember.ts
 A	src/utils/errorUtils.ts
 A	src/utils/logger.ts
@@ -4532,81 +4573,11 @@ M	todo.txt
 ```
 ```
 
-## src/api/Account/controllers/unauthorizeForAccount.ts
-```
-import express from "express";
-import { UnauthorizeForCompanyService } from "../services/UnauthorizeForAccount";
-import logger from "../../../../config/logger";
-import { validateUUID } from "../../../utils/validators";
-
-/**
- * Controller for unauthorizing a member for an account
- * @param req - Express request object
- * @param res - Express response object
- * @param next - Express next function
- */
-export async function UnauthorizeForAccountController(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-) {
-  const requiredFields = ["memberIDtoBeUnauthorized", "accountID", "ownerID"];
-
-  try {
-    for (const field of requiredFields) {
-      if (!req.body[field]) {
-        res.status(400).json({ message: `${field} is required` });
-        return;
-      }
-    }
-
-    const { memberIDtoBeUnauthorized, accountID, ownerID } = req.body;
-
-    // Validate memberIDtoBeUnauthorized
-    if (!validateUUID(memberIDtoBeUnauthorized)) {
-      res.status(400).json({ message: "Invalid memberIDtoBeUnauthorized. Must be a valid UUID." });
-      return;
-    }
-
-    // Validate accountID
-    if (!validateUUID(accountID)) {
-      res.status(400).json({ message: "Invalid accountID. Must be a valid UUID." });
-      return;
-    }
-
-    // Validate ownerID
-    if (!validateUUID(ownerID)) {
-      res.status(400).json({ message: "Invalid ownerID. Must be a valid UUID." });
-      return;
-    }
-
-    logger.info("Unauthorizing member for account", { memberIDtoBeUnauthorized, accountID, ownerID });
-
-    const responseData = await UnauthorizeForCompanyService(
-      memberIDtoBeUnauthorized,
-      accountID,
-      ownerID
-    );
-
-    if (!responseData) {
-      logger.warn("Failed to unauthorize member for account", { memberIDtoBeUnauthorized, accountID, ownerID });
-      res.status(400).json({ message: "Failed to unauthorize member for the account" });
-      return;
-    }
-
-    logger.info("Member unauthorized for account successfully", { memberIDtoBeUnauthorized, accountID, ownerID });
-    res.status(200).json(responseData);
-  } catch (error) {
-    logger.error("Error in UnauthorizeForAccountController", { error, memberIDtoBeUnauthorized: req.body.memberIDtoBeUnauthorized, accountID: req.body.accountID, ownerID: req.body.ownerID });
-    next(error);
-  }
-}
-```
-
 ## src/api/Account/services/CreateAccount.ts
 ```
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { isNeo4jError } from "../../../utils/errorUtils";
+import { logInfo, logError } from "../../../utils/logger";
 
 export async function CreateAccountService(
   ownerID: string,
@@ -4677,18 +4648,18 @@ export async function CreateAccountService(
 
     if (!result.records.length) {
       const message = "could not create account";
-      console.log(message);
+      logInfo(message);
       return { account: false, message };
     }
 
     const createdAccountID = result.records[0].get("accountID");
-    console.log(accountType + " account created: " + createdAccountID);
+    logInfo(`${accountType} account created: ${createdAccountID}`);
     return {
       accountID: createdAccountID,
       message: "account created",
     };
   } catch (error) {
-    console.error("Error creating account:", error);
+    logError("Error creating account", error as Error);
 
     if (
       isNeo4jError(error) &&
@@ -4708,6 +4679,103 @@ export async function CreateAccountService(
 
     return {
       account: false,
+      message:
+        "Error: " + (error instanceof Error ? error.message : "Unknown error"),
+    };
+  } finally {
+    await ledgerSpaceSession.close();
+  }
+}
+```
+
+## src/api/Member/services/OnboardMember.ts
+```
+import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import { getDenominations } from "../../../constants/denominations";
+import { isNeo4jError } from "../../../utils/errorUtils";
+
+export async function OnboardMemberService(
+  firstname: string,
+  lastname: string,
+  phone: string
+) {
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
+  const defaultDenom = "USD";
+
+  try {
+    // Validation: Check defaultDenom in denominations
+    if (!getDenominations({ code: defaultDenom }).length) {
+      const message = "defaultDenom not in denoms";
+      console.log(message);
+      return { onboardedMemberID: false, message: message };
+    }
+
+    const result = await ledgerSpaceSession.run(
+      `
+        MATCH (daynode:Daynode { Active: true })
+        CREATE (member:Member{
+          firstname: $firstname,
+          lastname: $lastname,
+          memberHandle: $phone,
+          defaultDenom: $defaultDenom,
+          phone: $phone,
+          memberID: randomUUID(),
+          memberTier: 1,
+          createdAt: datetime(),
+          updatedAt: datetime()
+        })-[:CREATED_ON]->(daynode)
+        RETURN
+          member.memberID AS memberID
+      `,
+      {
+        firstname,
+        lastname,
+        defaultDenom,
+        phone,
+      }
+    );
+
+    if (!result.records.length) {
+      const message = "could not onboard member";
+      console.log(message);
+      return { onboardedMemberID: false, message: message };
+    }
+
+    const memberID = result.records[0].get("memberID");
+
+    console.log("member onboarded: " + memberID);
+    return {
+      onboardedMemberID: memberID,
+      message: "member onboarded",
+    };
+  } catch (error) {
+    console.error("Error onboarding member:", error);
+
+    // Type guard to narrow the type of error
+    if (
+      isNeo4jError(error) &&
+      error.code === "Neo.ClientError.Schema.ConstraintValidationFailed"
+    ) {
+      if (error.message.includes("phone")) {
+        return {
+          onboardedMemberID: false,
+          message: "Phone number already in use",
+        };
+      }
+      if (error.message.includes("memberHandle")) {
+        return {
+          onboardedMemberID: false,
+          message: "Member handle already in use",
+        };
+      }
+      return {
+        onboardedMemberID: false,
+        message: "Required unique field not unique",
+      };
+    }
+
+    return {
+      onboardedMemberID: false,
       message:
         "Error: " + (error instanceof Error ? error.message : "Unknown error"),
     };
