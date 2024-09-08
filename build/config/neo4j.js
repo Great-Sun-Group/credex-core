@@ -22,16 +22,15 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.searchSpaceDriver = exports.ledgerSpaceDriver = void 0;
 const neo4j = __importStar(require("neo4j-driver"));
-require("dotenv").config();
-const ledgerSpace_url = `${process.env.NEO_4J_LEDGER_SPACE_BOLT_URL}`;
-const ledgerSpace_user = `${process.env.NEO_4J_LEDGER_SPACE_USER}`;
-const ledgerSpace_password = `${process.env.NEO_4J_LEDGER_SPACE_PASS}`;
-const searchSpace_url = `${process.env.NEO_4J_SEARCH_SPACE_BOLT_URL}`;
-const searchSpace_user = `${process.env.NEO_4J_SEARCH_SPACE_USER}`;
-const searchSpace_password = `${process.env.NEO_4J_SEARCH_SPACE_PASS}`;
+const configUtils_1 = __importDefault(require("../src/utils/configUtils"));
+const ledgerSpace = configUtils_1.default.get('ledgerSpace');
+const searchSpace = configUtils_1.default.get('searchSpace');
 const createDriverWithRetry = (url, user, password) => {
     const driver = neo4j.driver(url, neo4j.auth.basic(user, password), {
         maxConnectionPoolSize: 50,
@@ -45,8 +44,8 @@ const createDriverWithRetry = (url, user, password) => {
         .catch((error) => console.error(`Failed to connect to Neo4j at ${url}:`, error));
     return driver;
 };
-exports.ledgerSpaceDriver = createDriverWithRetry(ledgerSpace_url, ledgerSpace_user, ledgerSpace_password);
-exports.searchSpaceDriver = createDriverWithRetry(searchSpace_url, searchSpace_user, searchSpace_password);
+exports.ledgerSpaceDriver = createDriverWithRetry(ledgerSpace.uri, ledgerSpace.user, ledgerSpace.password);
+exports.searchSpaceDriver = createDriverWithRetry(searchSpace.uri, searchSpace.user, searchSpace.password);
 // Graceful shutdown
 process.on("SIGINT", () => {
     console.log("Closing Neo4j drivers...");

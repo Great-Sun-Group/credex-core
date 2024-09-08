@@ -6,10 +6,14 @@ import { UpdateAccountController } from "./controllers/updateAccount";
 import { AuthorizeForAccountController } from "./controllers/authorizeForAccount";
 import { UnauthorizeForAccountController } from "./controllers/unauthorizeForAccount";
 import { UpdateSendOffersToController } from "./controllers/updateSendOffersTo";
+import { validateRequest } from "../../../middleware/validateRequest";
+import { rateLimiter } from "../../../middleware/rateLimiter";
+import { accountSchemas } from "./validators/accountSchemas";
+import { errorHandler } from "../../../middleware/errorHandler";
 
 export default function AccountRoutes(
   app: express.Application,
-  jsonParser: any
+  jsonParser: express.RequestHandler
 ) {
   /**
    * @swagger
@@ -22,34 +26,22 @@ export default function AccountRoutes(
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required:
-   *               - ownerID
-   *               - accountType
-   *               - accountName
-   *               - accountHandle
-   *               - defaultDenom
-   *             properties:
-   *               ownerID:
-   *                 type: string
-   *               accountType:
-   *                 type: string
-   *               accountName:
-   *                 type: string
-   *               accountHandle:
-   *                 type: string
-   *               defaultDenom:
-   *                 type: string
+   *             $ref: '#/components/schemas/CreateAccountRequest'
    *     responses:
    *       200:
    *         description: Account created successfully
    *       400:
    *         description: Bad request
+   *       429:
+   *         description: Too many requests
    */
   app.post(
     `${apiVersionOneRoute}createAccount`,
+    rateLimiter,
     jsonParser,
-    CreateAccountController
+    validateRequest(accountSchemas.createAccount),
+    CreateAccountController,
+    errorHandler
   );
 
   /**
@@ -71,11 +63,15 @@ export default function AccountRoutes(
    *         description: Bad request
    *       404:
    *         description: Account not found
+   *       429:
+   *         description: Too many requests
    */
   app.get(
     `${apiVersionOneRoute}getAccountByHandle`,
-    jsonParser,
-    GetAccountByHandleController
+    rateLimiter,
+    validateRequest(accountSchemas.getAccountByHandle),
+    GetAccountByHandleController,
+    errorHandler
   );
 
   /**
@@ -89,21 +85,7 @@ export default function AccountRoutes(
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required:
-   *               - ownerID
-   *               - accountID
-   *             properties:
-   *               ownerID:
-   *                 type: string
-   *               accountID:
-   *                 type: string
-   *               accountName:
-   *                 type: string
-   *               accountHandle:
-   *                 type: string
-   *               defaultDenom:
-   *                 type: string
+   *             $ref: '#/components/schemas/UpdateAccountRequest'
    *     responses:
    *       200:
    *         description: Account updated successfully
@@ -111,11 +93,16 @@ export default function AccountRoutes(
    *         description: Bad request
    *       404:
    *         description: Account not found
+   *       429:
+   *         description: Too many requests
    */
   app.patch(
     `${apiVersionOneRoute}updateAccount`,
+    rateLimiter,
     jsonParser,
-    UpdateAccountController
+    validateRequest(accountSchemas.updateAccount),
+    UpdateAccountController,
+    errorHandler
   );
 
   /**
@@ -129,28 +116,22 @@ export default function AccountRoutes(
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required:
-   *               - memberHandleToBeAuthorized
-   *               - accountID
-   *               - ownerID
-   *             properties:
-   *               memberHandleToBeAuthorized:
-   *                 type: string
-   *               accountID:
-   *                 type: string
-   *               ownerID:
-   *                 type: string
+   *             $ref: '#/components/schemas/AuthorizeForAccountRequest'
    *     responses:
    *       200:
    *         description: Member authorized successfully
    *       400:
    *         description: Bad request
+   *       429:
+   *         description: Too many requests
    */
   app.post(
     `${apiVersionOneRoute}authorizeForAccount`,
+    rateLimiter,
     jsonParser,
-    AuthorizeForAccountController
+    validateRequest(accountSchemas.authorizeForAccount),
+    AuthorizeForAccountController,
+    errorHandler
   );
 
   /**
@@ -164,28 +145,22 @@ export default function AccountRoutes(
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required:
-   *               - memberIDtoBeUnauthorized
-   *               - accountID
-   *               - ownerID
-   *             properties:
-   *               memberIDtoBeUnauthorized:
-   *                 type: string
-   *               accountID:
-   *                 type: string
-   *               ownerID:
-   *                 type: string
+   *             $ref: '#/components/schemas/UnauthorizeForAccountRequest'
    *     responses:
    *       200:
    *         description: Member unauthorized successfully
    *       400:
    *         description: Bad request
+   *       429:
+   *         description: Too many requests
    */
   app.post(
     `${apiVersionOneRoute}unauthorizeForAccount`,
+    rateLimiter,
     jsonParser,
-    UnauthorizeForAccountController
+    validateRequest(accountSchemas.unauthorizeForAccount),
+    UnauthorizeForAccountController,
+    errorHandler
   );
 
   /**
@@ -199,27 +174,21 @@ export default function AccountRoutes(
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required:
-   *               - memberIDtoSendOffers
-   *               - accountID
-   *               - ownerID
-   *             properties:
-   *               memberIDtoSendOffers:
-   *                 type: string
-   *               accountID:
-   *                 type: string
-   *               ownerID:
-   *                 type: string
+   *             $ref: '#/components/schemas/UpdateSendOffersToRequest'
    *     responses:
    *       200:
    *         description: Send offers recipient updated successfully
    *       400:
    *         description: Bad request
+   *       429:
+   *         description: Too many requests
    */
   app.post(
     `${apiVersionOneRoute}updateSendOffersTo`,
+    rateLimiter,
     jsonParser,
-    UpdateSendOffersToController
+    validateRequest(accountSchemas.updateSendOffersTo),
+    UpdateSendOffersToController,
+    errorHandler
   );
 }

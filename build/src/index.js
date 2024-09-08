@@ -43,9 +43,9 @@ const cors_1 = __importDefault(require("cors"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const adminDashboardRoutes_1 = __importDefault(require("./api/AdminDashboard/adminDashboardRoutes"));
 const errorHandler_1 = require("../middleware/errorHandler");
-const config_1 = require("../config/config");
 const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
 const swagger_1 = require("../config/swagger");
+const configUtils_1 = __importDefault(require("./utils/configUtils"));
 // Create an Express application
 exports.app = (0, express_1.default)();
 // Create a JSON parser middleware
@@ -65,8 +65,8 @@ exports.app.use(exports.apiVersionOneRoute, authenticate_1.default);
 // NOTE: With all requests coming from a single WhatsApp chatbot, rate limiting might cause issues
 // Consider adjusting or removing rate limiting based on your specific use case
 const limiter = (0, express_rate_limit_1.default)({
-    windowMs: config_1.config.rateLimit.windowMs, // Time window for rate limiting
-    max: config_1.config.rateLimit.max, // Maximum number of requests per window
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
     message: "Too many requests from this IP, please try again after 15 minutes",
 });
 exports.app.use(limiter);
@@ -85,12 +85,13 @@ exports.app.use(errorHandler_1.errorHandler); // Handle all other errors
 const server = http_1.default.createServer(exports.app);
 // Start the server
 if (require.main === module) {
-    server.listen(config_1.config.port, () => {
-        logger_1.default.info(`Server is running on http://localhost:${config_1.config.port}`);
-        logger_1.default.info(`API documentation available at http://localhost:${config_1.config.port}/api-docs`);
+    const port = configUtils_1.default.get('port');
+    server.listen(port, () => {
+        logger_1.default.info(`Server is running on http://localhost:${port}`);
+        logger_1.default.info(`API documentation available at http://localhost:${port}/api-docs`);
         logger_1.default.info(`Server started at ${new Date().toISOString()}`);
-        logger_1.default.info(`Environment: ${config_1.config.nodeEnv}`);
-        logger_1.default.info(`Deployment type: ${config_1.config.deployment}`);
+        logger_1.default.info(`Environment: ${configUtils_1.default.get('nodeEnv')}`);
+        logger_1.default.info(`Log level: ${configUtils_1.default.get('logLevel')}`);
     });
 }
 // Handle uncaught exceptions
@@ -119,7 +120,4 @@ process.on("SIGTERM", () => {
         process.exit(0);
     });
 });
-// Test comment
-// Another test comment
-// Final test comment
 //# sourceMappingURL=index.js.map

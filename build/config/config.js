@@ -13,6 +13,7 @@ exports.config = {
     deployment: process.env.DEPLOYMENT || 'dev',
     // WhatsApp Bot API configuration
     whatsappBotApiKey: process.env.WHATSAPP_BOT_API_KEY,
+    whatsappBotIps: process.env.WHATSAPP_BOT_IPS ? process.env.WHATSAPP_BOT_IPS.split(',') : [],
     // Neo4j database configuration
     neo4j: {
         ledgerSpace: {

@@ -13,25 +13,12 @@ export async function GetAccountByHandleController(
   res: express.Response,
   next: express.NextFunction
 ) {
-  const { accountHandle } = req.body;
+  const { accountHandle } = req.query;
 
   try {
-    if (!accountHandle || typeof accountHandle !== 'string') {
-      res.status(400).json({ message: "accountHandle is required and must be a string" });
-      return;
-    }
-
-    // Validate accountHandle format
-    if (!/^[a-z0-9._]{3,30}$/.test(accountHandle)) {
-      res.status(400).json({
-        message: "Invalid account handle. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters.",
-      });
-      return;
-    }
-
     logger.info("Retrieving account by handle", { accountHandle });
 
-    const accountData = await GetAccountByHandleService(accountHandle);
+    const accountData = await GetAccountByHandleService(accountHandle as string);
 
     if (accountData) {
       logger.info("Account retrieved successfully", { accountHandle });

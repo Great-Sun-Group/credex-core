@@ -8,6 +8,10 @@ const updateAccount_1 = require("./controllers/updateAccount");
 const authorizeForAccount_1 = require("./controllers/authorizeForAccount");
 const unauthorizeForAccount_1 = require("./controllers/unauthorizeForAccount");
 const updateSendOffersTo_1 = require("./controllers/updateSendOffersTo");
+const validateRequest_1 = require("../../../middleware/validateRequest");
+const rateLimiter_1 = require("../../../middleware/rateLimiter");
+const accountSchemas_1 = require("./validators/accountSchemas");
+const errorHandler_1 = require("../../../middleware/errorHandler");
 function AccountRoutes(app, jsonParser) {
     /**
      * @swagger
@@ -20,31 +24,16 @@ function AccountRoutes(app, jsonParser) {
      *       content:
      *         application/json:
      *           schema:
-     *             type: object
-     *             required:
-     *               - ownerID
-     *               - accountType
-     *               - accountName
-     *               - accountHandle
-     *               - defaultDenom
-     *             properties:
-     *               ownerID:
-     *                 type: string
-     *               accountType:
-     *                 type: string
-     *               accountName:
-     *                 type: string
-     *               accountHandle:
-     *                 type: string
-     *               defaultDenom:
-     *                 type: string
+     *             $ref: '#/components/schemas/CreateAccountRequest'
      *     responses:
      *       200:
      *         description: Account created successfully
      *       400:
      *         description: Bad request
+     *       429:
+     *         description: Too many requests
      */
-    app.post(`${index_1.apiVersionOneRoute}createAccount`, jsonParser, createAccount_1.CreateAccountController);
+    app.post(`${index_1.apiVersionOneRoute}createAccount`, rateLimiter_1.rateLimiter, jsonParser, (0, validateRequest_1.validateRequest)(accountSchemas_1.accountSchemas.createAccount), createAccount_1.CreateAccountController, errorHandler_1.errorHandler);
     /**
      * @swagger
      * /api/v1/getAccountByHandle:
@@ -64,8 +53,10 @@ function AccountRoutes(app, jsonParser) {
      *         description: Bad request
      *       404:
      *         description: Account not found
+     *       429:
+     *         description: Too many requests
      */
-    app.get(`${index_1.apiVersionOneRoute}getAccountByHandle`, jsonParser, getAccountByHandle_1.GetAccountByHandleController);
+    app.get(`${index_1.apiVersionOneRoute}getAccountByHandle`, rateLimiter_1.rateLimiter, (0, validateRequest_1.validateRequest)(accountSchemas_1.accountSchemas.getAccountByHandle), getAccountByHandle_1.GetAccountByHandleController, errorHandler_1.errorHandler);
     /**
      * @swagger
      * /api/v1/updateAccount:
@@ -77,21 +68,7 @@ function AccountRoutes(app, jsonParser) {
      *       content:
      *         application/json:
      *           schema:
-     *             type: object
-     *             required:
-     *               - ownerID
-     *               - accountID
-     *             properties:
-     *               ownerID:
-     *                 type: string
-     *               accountID:
-     *                 type: string
-     *               accountName:
-     *                 type: string
-     *               accountHandle:
-     *                 type: string
-     *               defaultDenom:
-     *                 type: string
+     *             $ref: '#/components/schemas/UpdateAccountRequest'
      *     responses:
      *       200:
      *         description: Account updated successfully
@@ -99,8 +76,10 @@ function AccountRoutes(app, jsonParser) {
      *         description: Bad request
      *       404:
      *         description: Account not found
+     *       429:
+     *         description: Too many requests
      */
-    app.patch(`${index_1.apiVersionOneRoute}updateAccount`, jsonParser, updateAccount_1.UpdateAccountController);
+    app.patch(`${index_1.apiVersionOneRoute}updateAccount`, rateLimiter_1.rateLimiter, jsonParser, (0, validateRequest_1.validateRequest)(accountSchemas_1.accountSchemas.updateAccount), updateAccount_1.UpdateAccountController, errorHandler_1.errorHandler);
     /**
      * @swagger
      * /api/v1/authorizeForAccount:
@@ -112,25 +91,16 @@ function AccountRoutes(app, jsonParser) {
      *       content:
      *         application/json:
      *           schema:
-     *             type: object
-     *             required:
-     *               - memberHandleToBeAuthorized
-     *               - accountID
-     *               - ownerID
-     *             properties:
-     *               memberHandleToBeAuthorized:
-     *                 type: string
-     *               accountID:
-     *                 type: string
-     *               ownerID:
-     *                 type: string
+     *             $ref: '#/components/schemas/AuthorizeForAccountRequest'
      *     responses:
      *       200:
      *         description: Member authorized successfully
      *       400:
      *         description: Bad request
+     *       429:
+     *         description: Too many requests
      */
-    app.post(`${index_1.apiVersionOneRoute}authorizeForAccount`, jsonParser, authorizeForAccount_1.AuthorizeForAccountController);
+    app.post(`${index_1.apiVersionOneRoute}authorizeForAccount`, rateLimiter_1.rateLimiter, jsonParser, (0, validateRequest_1.validateRequest)(accountSchemas_1.accountSchemas.authorizeForAccount), authorizeForAccount_1.AuthorizeForAccountController, errorHandler_1.errorHandler);
     /**
      * @swagger
      * /api/v1/unauthorizeForAccount:
@@ -142,25 +112,16 @@ function AccountRoutes(app, jsonParser) {
      *       content:
      *         application/json:
      *           schema:
-     *             type: object
-     *             required:
-     *               - memberIDtoBeUnauthorized
-     *               - accountID
-     *               - ownerID
-     *             properties:
-     *               memberIDtoBeUnauthorized:
-     *                 type: string
-     *               accountID:
-     *                 type: string
-     *               ownerID:
-     *                 type: string
+     *             $ref: '#/components/schemas/UnauthorizeForAccountRequest'
      *     responses:
      *       200:
      *         description: Member unauthorized successfully
      *       400:
      *         description: Bad request
+     *       429:
+     *         description: Too many requests
      */
-    app.post(`${index_1.apiVersionOneRoute}unauthorizeForAccount`, jsonParser, unauthorizeForAccount_1.UnauthorizeForAccountController);
+    app.post(`${index_1.apiVersionOneRoute}unauthorizeForAccount`, rateLimiter_1.rateLimiter, jsonParser, (0, validateRequest_1.validateRequest)(accountSchemas_1.accountSchemas.unauthorizeForAccount), unauthorizeForAccount_1.UnauthorizeForAccountController, errorHandler_1.errorHandler);
     /**
      * @swagger
      * /api/v1/updateSendOffersTo:
@@ -172,24 +133,15 @@ function AccountRoutes(app, jsonParser) {
      *       content:
      *         application/json:
      *           schema:
-     *             type: object
-     *             required:
-     *               - memberIDtoSendOffers
-     *               - accountID
-     *               - ownerID
-     *             properties:
-     *               memberIDtoSendOffers:
-     *                 type: string
-     *               accountID:
-     *                 type: string
-     *               ownerID:
-     *                 type: string
+     *             $ref: '#/components/schemas/UpdateSendOffersToRequest'
      *     responses:
      *       200:
      *         description: Send offers recipient updated successfully
      *       400:
      *         description: Bad request
+     *       429:
+     *         description: Too many requests
      */
-    app.post(`${index_1.apiVersionOneRoute}updateSendOffersTo`, jsonParser, updateSendOffersTo_1.UpdateSendOffersToController);
+    app.post(`${index_1.apiVersionOneRoute}updateSendOffersTo`, rateLimiter_1.rateLimiter, jsonParser, (0, validateRequest_1.validateRequest)(accountSchemas_1.accountSchemas.updateSendOffersTo), updateSendOffersTo_1.UpdateSendOffersToController, errorHandler_1.errorHandler);
 }
 //# sourceMappingURL=accountRoutes.js.map

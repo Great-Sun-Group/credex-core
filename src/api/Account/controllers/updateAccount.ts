@@ -46,7 +46,7 @@ export async function UpdateAccountController(
       res.status(404).json({ message: "Account not found or no update performed" });
     }
   } catch (error) {
-    logger.error("Error in UpdateAccountController", { error, ownerID: req.body.ownerID, accountID: req.body.accountID });
+    logger.error("Error in UpdateAccountController", { error, ownerID, accountID });
     next(error);
   }
 }
