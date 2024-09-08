@@ -80,14 +80,9 @@ Controllers for the endpoints are imported, and endpoints created for the variou
    npm run dev
    ```
 
-4. To access the forwarded port:
-   - Click on the "Ports" tab in the Codespaces interface
-   - Find the forwarded port for the application (usually 5000)
-   - Click on the link to open the application in a new tab
-
 ### Using Postman for API Testing
 
-1. Install the Postman extension in VS Code and sign in to your Postman account.
+1. Navigate to the Postman extension in VS Code and sign in to your Postman account.
 
 2. Open the Credex Team Workspace in Postman.
 
@@ -100,7 +95,7 @@ Controllers for the endpoints are imported, and endpoints created for the variou
 
 5. After starting the development server, copy the forwarded port address from the "Ports" tab and paste it into the "base_url" field in the credex-core variables in Postman.
 
-Note: The GitHub token needs to be updated for each new Codespace session. The base_url will remain constant for a specific Codespace, even across multiple sessions.
+Note: The GitHub token needs to be updated for each new Codespace session. The base_url will remain constant for a specific Codespace, even across multiple sessions. If there are multiple team members using Postman at the same time, there may be conflicts in the tokens and base_urls.
 
 ## Available Scripts
 
