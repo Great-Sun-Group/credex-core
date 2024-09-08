@@ -3,14 +3,14 @@ import { GetMemberByHandleController } from "./controllers/getMemberByHandle";
 import { GetMemberDashboardByPhoneController } from "./controllers/getMemberDashboardByPhone";
 import { updateMemberTierExpressHandler } from "./controllers/updateMemberTier";
 import { onboardMemberExpressHandler } from "./controllers/onboardMember";
-import { securedCredexAuthForTierExpressHandler } from "./controllers/securedCredexAuthForTier";
+import { authForTierSpendLimitExpressHandler } from "./controllers/authForTierSpendLimit";
 import { validateRequest } from "../../middleware/validateRequest";
 import {
   getMemberByHandleSchema,
   getMemberDashboardByPhoneSchema,
   onboardMemberSchema,
   updateMemberTierSchema,
-  securedCredexAuthForTierSchema
+  authForTierSpendLimitSchema,
 } from "./memberValidationSchemas";
 
 const router = express.Router();
@@ -39,7 +39,11 @@ const router = express.Router();
  *       400:
  *         description: Bad request
  */
-router.post("/getMemberByHandle", validateRequest(getMemberByHandleSchema), GetMemberByHandleController);
+router.post(
+  "/getMemberByHandle",
+  validateRequest(getMemberByHandleSchema),
+  GetMemberByHandleController
+);
 
 /**
  * @openapi
@@ -65,7 +69,11 @@ router.post("/getMemberByHandle", validateRequest(getMemberByHandleSchema), GetM
  *       400:
  *         description: Bad request
  */
-router.post("/getMemberDashboardByPhone", validateRequest(getMemberDashboardByPhoneSchema), GetMemberDashboardByPhoneController);
+router.post(
+  "/getMemberDashboardByPhone",
+  validateRequest(getMemberDashboardByPhoneSchema),
+  GetMemberDashboardByPhoneController
+);
 
 /**
  * @openapi
@@ -97,7 +105,11 @@ router.post("/getMemberDashboardByPhone", validateRequest(getMemberDashboardByPh
  *       400:
  *         description: Bad request
  */
-router.post("/onboardMember", validateRequest(onboardMemberSchema), onboardMemberExpressHandler);
+router.post(
+  "/onboardMember",
+  validateRequest(onboardMemberSchema),
+  onboardMemberExpressHandler
+);
 
 /**
  * @openapi
@@ -126,11 +138,15 @@ router.post("/onboardMember", validateRequest(onboardMemberSchema), onboardMembe
  *       400:
  *         description: Bad request
  */
-router.post("/updateMemberTier", validateRequest(updateMemberTierSchema), updateMemberTierExpressHandler);
+router.post(
+  "/updateMemberTier",
+  validateRequest(updateMemberTierSchema),
+  updateMemberTierExpressHandler
+);
 
 /**
  * @openapi
- * /member/securedCredexAuthForTier:
+ * /member/authForTierSpendLimit:
  *   post:
  *     tags:
  *       - Member
@@ -161,6 +177,10 @@ router.post("/updateMemberTier", validateRequest(updateMemberTierSchema), update
  *       400:
  *         description: Bad request
  */
-router.post("/securedCredexAuthForTier", validateRequest(securedCredexAuthForTierSchema), securedCredexAuthForTierExpressHandler);
+router.post(
+  "/authForTierSpendLimit",
+  validateRequest(authForTierSpendLimitSchema),
+  authForTierSpendLimitExpressHandler
+);
 
 export default router;

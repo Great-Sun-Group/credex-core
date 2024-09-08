@@ -19,7 +19,7 @@ export const updateMemberTierSchema = {
   tier: v.validateTier,
 };
 
-export const securedCredexAuthForTierSchema = {
+export const authForTierSpendLimitSchema = {
   memberID: v.validateUUID,
   tier: v.validateTier,
   Amount: v.validateAmount,

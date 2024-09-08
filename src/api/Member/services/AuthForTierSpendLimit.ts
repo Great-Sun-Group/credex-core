@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { denomFormatter } from "../../../utils/denomUtils";
 
-export async function SecuredCredexAuthForTier(
+export async function AuthForTierSpendLimitService(
   issuerAccountID: string,
   amount: number,
   denom: string
@@ -27,7 +27,7 @@ export async function SecuredCredexAuthForTier(
         MATCH (daynode:Daynode { Active: true })
         OPTIONAL MATCH (member)-[:OWNS]->(allAccounts:Account)
         OPTIONAL MATCH
-          (allAccounts)-[:OWES|OFFERS]->(credex:Credex)<-[:SECURES]-(Account),
+          (allAccounts)-[:OWES|OFFERS]->(credex:Credex),
           (credex)-[:CREATED_ON]->(daynode)
         WITH
           daynode.USD AS daynodeUSD,
