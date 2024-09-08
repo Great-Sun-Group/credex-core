@@ -9,7 +9,7 @@ const declineCredex_1 = require("./controllers/declineCredex");
 const cancelCredex_1 = require("./controllers/cancelCredex");
 const getCredex_1 = require("./controllers/getCredex");
 const getLedger_1 = require("./controllers/getLedger");
-const validateRequest_1 = require("../../../middleware/validateRequest");
+const validateRequest_1 = require("../../middleware/validateRequest");
 const credexValidationSchemas_1 = require("./credexValidationSchemas");
 function CredexRoutes(app, jsonParser) {
     /**

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
-import { config } from '../config/config';
+import { config } from '../../config/config';
 
 const isWhatsAppBot = (req: Request): boolean => {
   // Check if the request has the correct API key for the WhatsApp bot

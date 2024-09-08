@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.securedCredexAuthForTierSchema = exports.updateMemberTierSchema = exports.onboardMemberSchema = exports.getMemberDashboardByPhoneSchema = exports.getMemberByHandleSchema = void 0;
-const validateRequest_1 = require("../../../middleware/validateRequest");
+const validateRequest_1 = require("../../middleware/validateRequest");
 exports.getMemberByHandleSchema = {
     memberHandle: validateRequest_1.v.validateMemberHandle,
 };

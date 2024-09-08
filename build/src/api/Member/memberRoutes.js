@@ -9,7 +9,7 @@ const getMemberDashboardByPhone_1 = require("./controllers/getMemberDashboardByP
 const updateMemberTier_1 = require("./controllers/updateMemberTier");
 const onboardMember_1 = require("./controllers/onboardMember");
 const securedCredexAuthForTier_1 = require("./controllers/securedCredexAuthForTier");
-const validateRequest_1 = require("../../../middleware/validateRequest");
+const validateRequest_1 = require("../../middleware/validateRequest");
 const memberValidationSchemas_1 = require("./memberValidationSchemas");
 const router = express_1.default.Router();
 /**

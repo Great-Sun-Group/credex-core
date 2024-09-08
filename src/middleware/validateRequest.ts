@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import * as validators from '../src/utils/validators';
+import * as validators from '../utils/validators';
 
 type ValidatorFunction = (value: any) => boolean;
 

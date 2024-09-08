@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getLedgerSchema = exports.getCredexSchema = exports.cancelCredexSchema = exports.declineCredexSchema = exports.acceptCredexSchema = exports.offerCredexSchema = void 0;
-const validateRequest_1 = require("../../../middleware/validateRequest");
+const validateRequest_1 = require("../../middleware/validateRequest");
 exports.offerCredexSchema = {
     offerorAccountID: validateRequest_1.v.validateUUID,
     receiverAccountID: validateRequest_1.v.validateUUID,
