@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CancelCredexService = CancelCredexService;
 const neo4j_1 = require("../../../../config/neo4j");
+const digitalSignature_1 = require("../../../utils/digitalSignature");
 /**
  * CancelCredexService
  *
@@ -9,12 +10,13 @@ const neo4j_1 = require("../../../../config/neo4j");
  * It changes the relationships from OFFERS or REQUESTS to CANCELLED.
  *
  * @param credexID - The ID of the Credex to be cancelled
+ * @param signerID - The ID of the member or avatar cancelling the Credex
  * @returns The ID of the cancelled Credex or null if the operation fails
  * @throws Error if there's an issue with the database operation
  */
-async function CancelCredexService(credexID) {
-    if (!credexID) {
-        console.error("CancelCredexService: credexID is required");
+async function CancelCredexService(credexID, signerID) {
+    if (!credexID || !signerID) {
+        console.error("CancelCredexService: credexID and signerID are required");
         return null;
     }
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
@@ -40,6 +42,12 @@ async function CancelCredexService(credexID) {
         });
         if (result) {
             console.log(`Credex cancelled successfully: ${result}`);
+            // Create digital signature with audit log
+            const inputData = JSON.stringify({
+                credexID: result,
+                cancelledAt: new Date().toISOString()
+            });
+            await (0, digitalSignature_1.digitallySign)(ledgerSpaceSession, signerID, "Credex", result, "CANCEL_CREDEX", inputData);
         }
         return result;
     }

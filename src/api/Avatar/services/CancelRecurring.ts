@@ -1,4 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import { digitallySign } from "../../../utils/digitalSignature";
 
 export async function CancelRecurringService(
   signerID: string,
@@ -41,9 +42,27 @@ export async function CancelRecurringService(
       "deactivatedAvatarID"
     );
 
+    // Create digital signature
+    const inputData = JSON.stringify({
+      signerID,
+      cancelerAccountID,
+      avatarID: deactivatedAvatarID,
+      cancelledAt: new Date().toISOString()
+    });
+
+    await digitallySign(
+      ledgerSpaceSession,
+      signerID,
+      "Avatar",
+      deactivatedAvatarID,
+      "CANCEL_RECURRING",
+      inputData
+    );
+
     return deactivatedAvatarID;
   } catch (error) {
-    return error;
+    console.error("Error cancelling recurring avatar:", error);
+    throw error;
   } finally {
     await ledgerSpaceSession.close();
   }

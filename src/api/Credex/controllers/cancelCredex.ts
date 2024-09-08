@@ -18,14 +18,19 @@ export async function CancelCredexController(
   res: express.Response
 ) {
   try {
-    const { credexID } = req.body;
+    const { credexID, signerID } = req.body;
 
     if (!validateUUID(credexID)) {
       logError("CancelCredexController: Invalid credexID", new Error(), { credexID });
       return res.status(400).json({ error: "Invalid credexID" });
     }
 
-    const responseData = await CancelCredexService(credexID);
+    if (!validateUUID(signerID)) {
+      logError("CancelCredexController: Invalid signerID", new Error(), { signerID });
+      return res.status(400).json({ error: "Invalid signerID" });
+    }
+
+    const responseData = await CancelCredexService(credexID, signerID);
     
     if (!responseData) {
       logError("CancelCredexController: Credex not found or already processed", new Error(), { credexID });

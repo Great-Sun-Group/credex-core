@@ -76,12 +76,26 @@ export async function RequestRecurringService(
     const avatarID = createRecurringQuery.records[0]?.get("avatarID");
 
     if (avatarID) {
-      // Create digital signature
+      // Create digital signature with audit log
+      const inputData = JSON.stringify({
+        requestorAccountID: params.requestorAccountID,
+        counterpartyAccountID: params.counterpartyAccountID,
+        InitialAmount: params.InitialAmount,
+        Denomination: params.Denomination,
+        nextPayDate: params.nextPayDate,
+        daysBetweenPays: params.daysBetweenPays,
+        securedCredex: params.securedCredex,
+        credspan: params.credspan,
+        remainingPays: params.remainingPays
+      });
+
       await digitallySign(
         ledgerSpaceSession,
         params.signerMemberID,
         "Avatar",
-        avatarID
+        avatarID,
+        "CREATE_RECURRING_AVATAR",
+        inputData
       );
     }
 

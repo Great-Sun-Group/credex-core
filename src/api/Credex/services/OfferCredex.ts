@@ -37,11 +37,19 @@ export async function OfferCredexService(credexData: CredexData) {
 
     // Sign the Credex using the new digital signature utility
     try {
+      const inputData = JSON.stringify({
+        ...credexData,
+        credexID: newCredex.credex.credexID,
+        createdAt: new Date().toISOString()
+      });
+
       await digitallySign(
         ledgerSpaceSession,
         credexData.memberID,
         "Credex",
-        newCredex.credex.credexID
+        newCredex.credex.credexID,
+        "OFFER_CREDEX",
+        inputData
       );
       logInfo("Credex signed successfully");
     } catch (error) {

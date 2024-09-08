@@ -15,14 +15,14 @@ const digitalSignature_1 = require("../../../utils/digitalSignature");
  * @throws Error if there's an issue with the database operation
  */
 async function AcceptCredexService(credexID, signerID) {
-  if (!credexID || !signerID) {
-    console.error("AcceptCredexService: credexID and signerID are required");
-    return null;
-  }
-  const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
-  try {
-    const result = await ledgerSpaceSession.executeWrite(async (tx) => {
-      const query = `
+    if (!credexID || !signerID) {
+        console.error("AcceptCredexService: credexID and signerID are required");
+        return null;
+    }
+    const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
+    try {
+        const result = await ledgerSpaceSession.executeWrite(async (tx) => {
+            const query = `
         MATCH
           (issuer:Account)-[rel1:OFFERS]->
           (acceptedCredex:Credex {credexID: $credexID})-[rel2:OFFERS]->
@@ -36,37 +36,38 @@ async function AcceptCredexService(credexID, signerID) {
           acceptor.accountID AS acceptorAccountID,
           signer.memberID AS signerID
       `;
-      const queryResult = await tx.run(query, { credexID, signerID });
-      if (queryResult.records.length === 0) {
-        console.warn(
-          `No records found or credex no longer pending for credexID: ${credexID}`
-        );
-        return null;
-      }
-      const record = queryResult.records[0];
-      return {
-        acceptedCredexID: record.get("credexID"),
-        acceptorAccountID: record.get("acceptorAccountID"),
-        acceptorSignerID: record.get("signerID"),
-      };
-    });
-    if (result) {
-      console.log(`Offer accepted for credexID: ${result.acceptedCredexID}`);
-      // Create digital signature
-      await (0, digitalSignature_1.digitallySign)(
-        ledgerSpaceSession,
-        signerID,
-        "Credex",
-        result.acceptedCredexID
-      );
-      // TODO: Implement credex accepted notification here
+            const queryResult = await tx.run(query, { credexID, signerID });
+            if (queryResult.records.length === 0) {
+                console.warn(`No records found or credex no longer pending for credexID: ${credexID}`);
+                return null;
+            }
+            const record = queryResult.records[0];
+            return {
+                acceptedCredexID: record.get("credexID"),
+                acceptorAccountID: record.get("acceptorAccountID"),
+                acceptorSignerID: record.get("signerID"),
+            };
+        });
+        if (result) {
+            console.log(`Offer accepted for credexID: ${result.acceptedCredexID}`);
+            // Create digital signature
+            const inputData = JSON.stringify({
+                acceptedCredexID: result.acceptedCredexID,
+                acceptorAccountID: result.acceptorAccountID,
+                acceptorSignerID: result.acceptorSignerID,
+                acceptedAt: new Date().toISOString()
+            });
+            await (0, digitalSignature_1.digitallySign)(ledgerSpaceSession, signerID, "Credex", result.acceptedCredexID, "ACCEPT_CREDEX", inputData);
+            // TODO: Implement credex accepted notification here
+        }
+        return result;
     }
-    return result;
-  } catch (error) {
-    console.error(`Error accepting credex for credexID ${credexID}:`, error);
-    throw new Error(`Failed to accept Credex: ${error.message}`);
-  } finally {
-    await ledgerSpaceSession.close();
-  }
+    catch (error) {
+        console.error(`Error accepting credex for credexID ${credexID}:`, error);
+        throw new Error(`Failed to accept Credex: ${error.message}`);
+    }
+    finally {
+        await ledgerSpaceSession.close();
+    }
 }
 //# sourceMappingURL=AcceptCredex.js.map

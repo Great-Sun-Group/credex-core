@@ -64,16 +64,28 @@ export async function AcceptRecurringService(
       };
     }
 
-    // Create digital signature
-    await digitallySign(ledgerSpaceSession, signerID, "Avatar", avatarID);
-
-    // TODO: Implement notification for recurring acceptance
-
     // Extract relevant data from the query result
     const record = acceptRecurringQuery.records[0];
     const acceptedRecurringID = record.get("avatarID");
     const acceptorAccountID = record.get("acceptorAccountID");
     const acceptorSignerID = record.get("signerID");
+
+    // Create digital signature
+    const inputData = JSON.stringify({
+      avatarID: acceptedRecurringID,
+      acceptorAccountID,
+      acceptorSignerID
+    });
+    await digitallySign(
+      ledgerSpaceSession,
+      signerID,
+      "Avatar",
+      acceptedRecurringID,
+      "ACCEPT_RECURRING",
+      inputData
+    );
+
+    // TODO: Implement notification for recurring acceptance
 
     console.log(
       `Recurring request accepted for avatarID: ${acceptedRecurringID}`

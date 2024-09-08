@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CancelRecurringService = CancelRecurringService;
 const neo4j_1 = require("../../../../config/neo4j");
+const digitalSignature_1 = require("../../../utils/digitalSignature");
 async function CancelRecurringService(signerID, cancelerAccountID, avatarID) {
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     try {
@@ -30,10 +31,19 @@ async function CancelRecurringService(signerID, cancelerAccountID, avatarID) {
             return "Recurring template not found or not authorized to cancel";
         }
         const deactivatedAvatarID = cancelRecurringQuery.records[0].get("deactivatedAvatarID");
+        // Create digital signature
+        const inputData = JSON.stringify({
+            signerID,
+            cancelerAccountID,
+            avatarID: deactivatedAvatarID,
+            cancelledAt: new Date().toISOString()
+        });
+        await (0, digitalSignature_1.digitallySign)(ledgerSpaceSession, signerID, "Avatar", deactivatedAvatarID, "CANCEL_RECURRING", inputData);
         return deactivatedAvatarID;
     }
     catch (error) {
-        return error;
+        console.error("Error cancelling recurring avatar:", error);
+        throw error;
     }
     finally {
         await ledgerSpaceSession.close();

@@ -67,11 +67,20 @@ export async function AcceptCredexService(
       console.log(`Offer accepted for credexID: ${result.acceptedCredexID}`);
 
       // Create digital signature
+      const inputData = JSON.stringify({
+        acceptedCredexID: result.acceptedCredexID,
+        acceptorAccountID: result.acceptorAccountID,
+        acceptorSignerID: result.acceptorSignerID,
+        acceptedAt: new Date().toISOString()
+      });
+
       await digitallySign(
         ledgerSpaceSession,
         signerID,
         "Credex",
-        result.acceptedCredexID
+        result.acceptedCredexID,
+        "ACCEPT_CREDEX",
+        inputData
       );
 
       // TODO: Implement credex accepted notification here

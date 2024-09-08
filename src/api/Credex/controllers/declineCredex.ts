@@ -18,14 +18,19 @@ export async function DeclineCredexController(
   res: express.Response
 ) {
   try {
-    const { credexID } = req.body;
+    const { credexID, signerID } = req.body;
 
     if (!validateUUID(credexID)) {
       logError("DeclineCredexController: Invalid credexID", new Error(), { credexID });
       return res.status(400).json({ error: "Invalid credexID" });
     }
 
-    const responseData = await DeclineCredexService(credexID);
+    if (!validateUUID(signerID)) {
+      logError("DeclineCredexController: Invalid signerID", new Error(), { signerID });
+      return res.status(400).json({ error: "Invalid signerID" });
+    }
+
+    const responseData = await DeclineCredexService(credexID, signerID);
     
     if (!responseData) {
       logError("DeclineCredexController: Failed to decline Credex", new Error(), { credexID });

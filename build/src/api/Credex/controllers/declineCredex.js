@@ -16,12 +16,16 @@ const validators_1 = require("../../../utils/validators");
  */
 async function DeclineCredexController(req, res) {
     try {
-        const { credexID } = req.body;
+        const { credexID, signerID } = req.body;
         if (!(0, validators_1.validateUUID)(credexID)) {
             (0, logger_1.logError)("DeclineCredexController: Invalid credexID", new Error(), { credexID });
             return res.status(400).json({ error: "Invalid credexID" });
         }
-        const responseData = await (0, DeclineCredex_1.DeclineCredexService)(credexID);
+        if (!(0, validators_1.validateUUID)(signerID)) {
+            (0, logger_1.logError)("DeclineCredexController: Invalid signerID", new Error(), { signerID });
+            return res.status(400).json({ error: "Invalid signerID" });
+        }
+        const responseData = await (0, DeclineCredex_1.DeclineCredexService)(credexID, signerID);
         if (!responseData) {
             (0, logger_1.logError)("DeclineCredexController: Failed to decline Credex", new Error(), { credexID });
             return res.status(404).json({ error: "Credex not found or already processed" });
