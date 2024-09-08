@@ -45,23 +45,32 @@ export async function MinuteTransactionQueue(): Promise<boolean> {
     await setMTQRunningFlag(ledgerSpaceSession, true);
 
     const BAIL_TIME = 14 * 60 * 1000; // 14 minutes
+    let bailTimerReached = false;
     const bailTimer = setTimeout(() => {
       logWarning("Bail timer reached");
-      return true;
+      bailTimerReached = true;
     }, BAIL_TIME);
 
     try {
       await processQueuedAccounts(ledgerSpaceSession, searchSpaceSession);
       await processQueuedCredexes(ledgerSpaceSession, searchSpaceSession);
+
+      if (bailTimerReached) {
+        logWarning("MTQ processing completed after bail timer was reached");
+      } else {
+        logInfo("MTQ processing completed successfully");
+      }
+      return true;
+    } catch (error) {
+      logError("Error in MinuteTransactionQueue processing", error as Error);
+      return false;
     } finally {
       clearTimeout(bailTimer);
       await setMTQRunningFlag(ledgerSpaceSession, false);
     }
-
-    logInfo("MTQ processing completed");
-    return true;
   } catch (error) {
-    logError("Error in MinuteTransactionQueue", error as Error);
+    logError("Unhandled error in MinuteTransactionQueue", error as Error);
+    await setMTQRunningFlag(ledgerSpaceSession, false);
     return false;
   } finally {
     await ledgerSpaceSession.close();

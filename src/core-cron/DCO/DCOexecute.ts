@@ -83,6 +83,11 @@ export async function DCOexecute(): Promise<boolean> {
     logError("Error during DCOexecute", error as Error);
     return false;
   } finally {
+    try {
+      await resetDCORunningFlag(ledgerSpaceSession);
+    } catch (resetError) {
+      logError("Error resetting DCO running flag", resetError as Error);
+    }
     await ledgerSpaceSession.close();
     await searchSpaceSession.close();
   }
@@ -120,6 +125,14 @@ async function setDCORunningFlag(
   const nextDate = result.records[0].get("nextDate");
   logInfo(`Expiring day: ${previousDate}`);
   return { previousDate, nextDate };
+}
+
+async function resetDCORunningFlag(session: any): Promise<void> {
+  logInfo("Resetting DCOrunningNow flag");
+  await session.run(`
+    MATCH (daynode:Daynode {Active: TRUE})
+    SET daynode.DCOrunningNow = false
+  `);
 }
 
 async function handleDefaultingCredexes(session: any): Promise<void> {
