@@ -51,6 +51,7 @@ Controllers for the endpoints are imported, and endpoints created for the variou
 #### Steps
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/Credex/credex-core.git
    ```
@@ -60,6 +61,7 @@ Controllers for the endpoints are imported, and endpoints created for the variou
 3. When prompted, click "Reopen in Container" to start the dev container. This will set up a consistent development environment with all necessary dependencies.
 
 4. Once the container is ready, copy the `.env.example` file to `.env` and fill in the necessary environment variables:
+
    ```bash
    cp .env.example .env
    ```
@@ -87,6 +89,7 @@ Controllers for the endpoints are imported, and endpoints created for the variou
 2. Open the Credex Team Workspace in Postman.
 
 3. In the terminal, print the GitHub Token:
+
    ```bash
    echo $GITHUB_TOKEN
    ```
@@ -108,8 +111,8 @@ Note: The GitHub token needs to be updated for each new Codespace session. The b
 
 ## Module Documentation
 
-- [Daily Credcoin Offering (DCO)](docs/Daily_Credcoin_Offering_(DCO).md)
-- [Minute Transaction Queue (MTQ)](docs/MinuteTransactionQueue_(MTQ).md)
+- [Daily Credcoin Offering (DCO)](<docs/Daily_Credcoin_Offering_(DCO).md>)
+- [Minute Transaction Queue (MTQ)](<docs/MinuteTransactionQueue_(MTQ).md>)
 - [Member](docs/Member.md)
 - [Account](docs/Account.md)
 - [Credex](docs/Credex.md)

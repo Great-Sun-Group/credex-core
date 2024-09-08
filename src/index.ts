@@ -14,9 +14,9 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import AdminDashboardRoutes from "./api/AdminDashboard/adminDashboardRoutes";
 import { errorHandler, notFoundHandler } from "../middleware/errorHandler";
-import { config } from "../config/config";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "../config/swagger";
+import configUtils from "./utils/configUtils";
 
 // Create an Express application
 export const app = express();
@@ -44,8 +44,8 @@ app.use(apiVersionOneRoute, authenticate);
 // NOTE: With all requests coming from a single WhatsApp chatbot, rate limiting might cause issues
 // Consider adjusting or removing rate limiting based on your specific use case
 const limiter = rateLimit({
-  windowMs: config.rateLimit.windowMs, // Time window for rate limiting
-  max: config.rateLimit.max, // Maximum number of requests per window
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
   message: "Too many requests from this IP, please try again after 15 minutes",
 });
 app.use(limiter);
@@ -69,14 +69,15 @@ const server = http.createServer(app);
 
 // Start the server
 if (require.main === module) {
-  server.listen(config.port, () => {
-    logger.info(`Server is running on http://localhost:${config.port}`);
+  const port = configUtils.get('port');
+  server.listen(port, () => {
+    logger.info(`Server is running on http://localhost:${port}`);
     logger.info(
-      `API documentation available at http://localhost:${config.port}/api-docs`
+      `API documentation available at http://localhost:${port}/api-docs`
     );
     logger.info(`Server started at ${new Date().toISOString()}`);
-    logger.info(`Environment: ${config.nodeEnv}`);
-    logger.info(`Deployment type: ${config.deployment}`);
+    logger.info(`Environment: ${configUtils.get('nodeEnv')}`);
+    logger.info(`Log level: ${configUtils.get('logLevel')}`);
   });
 }
 
@@ -108,6 +109,3 @@ process.on("SIGTERM", () => {
     process.exit(0);
   });
 });
-// Test comment
-// Another test comment
-// Final test comment
