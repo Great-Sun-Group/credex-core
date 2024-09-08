@@ -1,7 +1,7 @@
 import { CreateCredexService } from "./CreateCredex";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { logInfo, logWarning, logError } from "../../../utils/logger";
-import { createDigitalSignature } from "../../../utils/digitalSignature";
+import { digitallySign } from "../../../utils/digitalSignature";
 
 interface CredexData {
   memberID: string;
@@ -13,11 +13,11 @@ interface CredexData {
 
 /**
  * OfferCredexService
- * 
+ *
  * This service handles the creation of a new Credex offer.
  * It uses the CreateCredexService to create the Credex and then
  * signs the offer and prepares it for notification.
- * 
+ *
  * @param credexData - An object containing the data for the new Credex
  * @returns The result of the Credex offer creation
  */
@@ -27,7 +27,7 @@ export async function OfferCredexService(credexData: CredexData) {
     // Set default values for the Credex
     credexData.OFFERSorREQUESTS = "OFFERS";
     credexData.credexType = credexData.credexType || "PURCHASE";
-    
+
     // Create the new Credex
     const newCredex = await CreateCredexService(credexData);
 
@@ -37,10 +37,18 @@ export async function OfferCredexService(credexData: CredexData) {
 
     // Sign the Credex using the new digital signature utility
     try {
-      await createDigitalSignature(ledgerSpaceSession, credexData.memberID, 'Credex', newCredex.credex.credexID);
+      await digitallySign(
+        ledgerSpaceSession,
+        credexData.memberID,
+        "Credex",
+        newCredex.credex.credexID
+      );
       logInfo("Credex signed successfully");
     } catch (error) {
-      logWarning("Failed to sign Credex, but Credex was created successfully", error as Error);
+      logWarning(
+        "Failed to sign Credex, but Credex was created successfully",
+        error as Error
+      );
     }
 
     // TODO: Implement offer notification here

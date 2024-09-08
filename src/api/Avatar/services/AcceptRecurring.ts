@@ -1,5 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { createDigitalSignature } from "../../../utils/digitalSignature";
+import { digitallySign } from "../../../utils/digitalSignature";
 
 interface AcceptRecurringParams {
   avatarID: string;
@@ -7,24 +7,28 @@ interface AcceptRecurringParams {
 }
 
 interface AcceptRecurringResult {
-  recurring: {
-    acceptedRecurringID: string;
-    acceptorAccountID: string;
-    acceptorSignerID: string;
-  } | boolean;
+  recurring:
+    | {
+        acceptedRecurringID: string;
+        acceptorAccountID: string;
+        acceptorSignerID: string;
+      }
+    | boolean;
   message: string;
 }
 
 /**
  * AcceptRecurringService
- * 
+ *
  * This service handles the acceptance of a recurring transaction.
  * It updates the database to reflect the acceptance of the recurring avatar.
- * 
+ *
  * @param params - An object containing avatarID and signerID
  * @returns An object containing the result of the acceptance operation
  */
-export async function AcceptRecurringService(params: AcceptRecurringParams): Promise<AcceptRecurringResult> {
+export async function AcceptRecurringService(
+  params: AcceptRecurringParams
+): Promise<AcceptRecurringResult> {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -61,7 +65,7 @@ export async function AcceptRecurringService(params: AcceptRecurringParams): Pro
     }
 
     // Create digital signature
-    await createDigitalSignature(ledgerSpaceSession, signerID, 'Avatar', avatarID);
+    await digitallySign(ledgerSpaceSession, signerID, "Avatar", avatarID);
 
     // TODO: Implement notification for recurring acceptance
 
@@ -71,8 +75,10 @@ export async function AcceptRecurringService(params: AcceptRecurringParams): Pro
     const acceptorAccountID = record.get("acceptorAccountID");
     const acceptorSignerID = record.get("signerID");
 
-    console.log(`Recurring request accepted for avatarID: ${acceptedRecurringID}`);
-    
+    console.log(
+      `Recurring request accepted for avatarID: ${acceptedRecurringID}`
+    );
+
     // Return the result of the acceptance operation
     return {
       recurring: {
@@ -82,7 +88,6 @@ export async function AcceptRecurringService(params: AcceptRecurringParams): Pro
       },
       message: "Recurring template created",
     };
-
   } catch (error) {
     // Handle any errors that occur during the process
     console.error("Error accepting recurring template:", error);

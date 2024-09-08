@@ -1,6 +1,6 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import * as neo4j from "neo4j-driver";
-import { createDigitalSignature } from "../../../utils/digitalSignature";
+import { digitallySign } from "../../../utils/digitalSignature";
 
 interface RecurringParams {
   signerMemberID: string;
@@ -15,7 +15,9 @@ interface RecurringParams {
   remainingPays?: number;
 }
 
-export async function RequestRecurringService(params: RecurringParams): Promise<string | null> {
+export async function RequestRecurringService(
+  params: RecurringParams
+): Promise<string | null> {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -62,15 +64,25 @@ export async function RequestRecurringService(params: RecurringParams): Promise<
       ...params,
       daysBetweenPays: neo4j.int(params.daysBetweenPays),
       credspan: params.credspan ? neo4j.int(params.credspan) : undefined,
-      remainingPays: params.remainingPays ? neo4j.int(params.remainingPays) : undefined
+      remainingPays: params.remainingPays
+        ? neo4j.int(params.remainingPays)
+        : undefined,
     };
 
-    const createRecurringQuery = await ledgerSpaceSession.run(cypher, neo4jParams);
+    const createRecurringQuery = await ledgerSpaceSession.run(
+      cypher,
+      neo4jParams
+    );
     const avatarID = createRecurringQuery.records[0]?.get("avatarID");
 
     if (avatarID) {
       // Create digital signature
-      await createDigitalSignature(ledgerSpaceSession, params.signerMemberID, 'Avatar', avatarID);
+      await digitallySign(
+        ledgerSpaceSession,
+        params.signerMemberID,
+        "Avatar",
+        avatarID
+      );
     }
 
     return avatarID || null;

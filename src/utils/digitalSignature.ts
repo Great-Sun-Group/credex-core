@@ -1,6 +1,6 @@
-import { Session } from 'neo4j-driver';
+import { Session } from "neo4j-driver";
 
-export async function createDigitalSignature(
+export async function digitallySign(
   session: Session,
   memberID: string,
   entityType: string,
