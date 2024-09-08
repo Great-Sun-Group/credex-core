@@ -9,9 +9,9 @@ import { logInfo, logError } from "../../utils/logger";
  * This function checks for an active daynode, initializes the database if necessary,
  * and runs the DCO execution and avatar update processes.
  * 
- * @returns {Promise<boolean>} Returns true if the DCO process completes successfully, false otherwise.
+ * @returns {Promise<{ success: boolean, error?: string }>} Returns an object indicating success and any error message.
  */
-export async function DailyCredcoinOffering(): Promise<boolean> {
+export async function DailyCredcoinOffering(): Promise<{ success: boolean, error?: string }> {
   logInfo("Starting Daily Credcoin Offering process");
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
@@ -28,10 +28,11 @@ export async function DailyCredcoinOffering(): Promise<boolean> {
     await DCOexecute();
     await DCOavatars();
 
-    return true;
+    return { success: true };
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     logError("Error in DailyCredcoinOffering", error as Error);
-    return false;
+    return { success: false, error: errorMessage };
   } finally {
     await resetDCORunningFlag(ledgerSpaceSession);
     await ledgerSpaceSession.close();
