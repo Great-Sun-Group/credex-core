@@ -1,32 +1,49 @@
 import express from "express";
 import { GetLedgerService } from "../services/GetLedger";
+import { logError, logInfo } from "../../../utils/logger";
+import Joi from "joi";
 
+const getLedgerSchema = Joi.object({
+  accountID: Joi.string().uuid().required(),
+  numRows: Joi.number().integer().min(1).default(10),
+  startRow: Joi.number().integer().min(0).default(0)
+});
+
+/**
+ * GetLedgerController
+ * 
+ * This controller handles retrieving the ledger for an account.
+ * It validates the required fields, calls the GetLedgerService,
+ * and returns the result.
+ * 
+ * @param req - Express request object
+ * @param res - Express response object
+ */
 export async function GetLedgerController(
   req: express.Request,
   res: express.Response
 ) {
   try {
-    // Validate required fields
-    if (!req.body.accountID) {
-      return res.status(400).json({ error: "accountID is required" });
+    // Validate input using Joi
+    const { error, value } = getLedgerSchema.validate(req.query);
+    if (error) {
+      logError("GetLedgerController input validation failed", error);
+      return res.status(400).json({ error: error.details[0].message });
     }
 
-    // Validate and set default values for optional fields
-    const numRows = req.body.numRows ? parseInt(req.body.numRows) : 10;
-    const startRow = req.body.startRow ? parseInt(req.body.startRow) : 0;
+    const { accountID, numRows, startRow } = value;
 
-    if (isNaN(numRows) || isNaN(startRow) || numRows < 1 || startRow < 0) {
-      return res.status(400).json({ error: "Invalid numRows or startRow" });
+    const responseData = await GetLedgerService(accountID, numRows, startRow);
+    
+    if (!responseData) {
+      logError("GetLedgerController: Failed to retrieve ledger", new Error(), { accountID, numRows, startRow });
+      return res.status(404).json({ error: "Failed to retrieve ledger" });
     }
 
-    const responseData = await GetLedgerService(
-      req.body.accountID,
-      numRows,
-      startRow
-    );
-    res.json(responseData);
+    logInfo("GetLedgerController: Ledger retrieved successfully", { accountID, numRows, startRow });
+    return res.status(200).json(responseData);
   } catch (err) {
-    console.error("Error in GetLedgerController:", err);
-    res.status(500).json({ error: "Internal server error" });
+    logError("GetLedgerController: Unhandled error", err as Error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }

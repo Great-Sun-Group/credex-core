@@ -8,6 +8,7 @@ const getMemberByHandle_1 = require("./controllers/getMemberByHandle");
 const getMemberDashboardByPhone_1 = require("./controllers/getMemberDashboardByPhone");
 const updateMemberTier_1 = require("./controllers/updateMemberTier");
 const onboardMember_1 = require("./controllers/onboardMember");
+const securedCredexAuthForTier_1 = require("./controllers/securedCredexAuthForTier");
 const router = express_1.default.Router();
 /**
  * @openapi
@@ -118,5 +119,39 @@ router.post("/onboardMember", onboardMember_1.onboardMemberExpressHandler);
  *         description: Bad request
  */
 router.post("/updateMemberTier", updateMemberTier_1.updateMemberTierExpressHandler);
+/**
+ * @openapi
+ * /member/securedCredexAuthForTier:
+ *   post:
+ *     tags:
+ *       - Member
+ *     summary: Authorize secured credex for member's tier
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - memberID
+ *               - tier
+ *               - Amount
+ *               - Denomination
+ *             properties:
+ *               memberID:
+ *                 type: string
+ *               tier:
+ *                 type: number
+ *               Amount:
+ *                 type: number
+ *               Denomination:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successful response
+ *       400:
+ *         description: Bad request
+ */
+router.post("/securedCredexAuthForTier", securedCredexAuthForTier_1.securedCredexAuthForTierExpressHandler);
 exports.default = router;
 //# sourceMappingURL=memberRoutes.js.map

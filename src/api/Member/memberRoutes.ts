@@ -3,6 +3,7 @@ import { GetMemberByHandleController } from "./controllers/getMemberByHandle";
 import { GetMemberDashboardByPhoneController } from "./controllers/getMemberDashboardByPhone";
 import { updateMemberTierExpressHandler } from "./controllers/updateMemberTier";
 import { onboardMemberExpressHandler } from "./controllers/onboardMember";
+import { securedCredexAuthForTierExpressHandler } from "./controllers/securedCredexAuthForTier";
 
 const router = express.Router();
 
@@ -118,5 +119,40 @@ router.post("/onboardMember", onboardMemberExpressHandler);
  *         description: Bad request
  */
 router.post("/updateMemberTier", updateMemberTierExpressHandler);
+
+/**
+ * @openapi
+ * /member/securedCredexAuthForTier:
+ *   post:
+ *     tags:
+ *       - Member
+ *     summary: Authorize secured credex for member's tier
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - memberID
+ *               - tier
+ *               - Amount
+ *               - Denomination
+ *             properties:
+ *               memberID:
+ *                 type: string
+ *               tier:
+ *                 type: number
+ *               Amount:
+ *                 type: number
+ *               Denomination:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successful response
+ *       400:
+ *         description: Bad request
+ */
+router.post("/securedCredexAuthForTier", securedCredexAuthForTierExpressHandler);
 
 export default router;

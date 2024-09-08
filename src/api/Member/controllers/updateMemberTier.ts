@@ -1,7 +1,7 @@
 import express from "express";
 import { UpdateMemberTierService } from "../services/UpdateMemberTier";
 import logger from "../../../../config/logger";
-import { validateUUID } from "../../../utils/validators";
+import { updateMemberTierSchema } from "../validators/memberSchemas";
 
 /**
  * Controller for updating a member's tier
@@ -14,15 +14,6 @@ export async function UpdateMemberTierController(
   tier: number
 ): Promise<{ success: boolean; message: string }> {
   try {
-    // Input validation
-    if (!validateUUID(memberID)) {
-      return { success: false, message: "Invalid memberID" };
-    }
-
-    if (!Number.isInteger(tier) || tier < 1) {
-      return { success: false, message: "Invalid tier. Must be a positive integer." };
-    }
-
     logger.info("Updating member tier", { memberID, tier });
 
     const result = await UpdateMemberTierService(memberID, tier);
@@ -50,19 +41,14 @@ export async function updateMemberTierExpressHandler(
   res: express.Response,
   next: express.NextFunction
 ): Promise<void> {
-  const { memberID, tier } = req.body;
-
   try {
-    if (!validateUUID(memberID)) {
-      res.status(400).json({ message: "Invalid memberID. Must be a valid UUID." });
+    const { error, value } = updateMemberTierSchema.validate(req.body);
+    if (error) {
+      res.status(400).json({ message: error.details[0].message });
       return;
     }
 
-    if (!Number.isInteger(tier) || tier < 1) {
-      res.status(400).json({ message: "Invalid tier. Must be a positive integer." });
-      return;
-    }
-
+    const { memberID, tier } = value;
     const result = await UpdateMemberTierController(memberID, tier);
 
     if (result.success) {
@@ -71,7 +57,7 @@ export async function updateMemberTierExpressHandler(
       res.status(400).json({ message: result.message });
     }
   } catch (error) {
-    logger.error("Error in updateMemberTierExpressHandler", { error, memberID, tier });
+    logger.error("Error in updateMemberTierExpressHandler", { error, body: req.body });
     next(error);
   }
 }

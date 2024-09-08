@@ -1,25 +1,19 @@
 import express from "express";
 import { GetMemberByHandleService } from "../services/GetMemberByHandle";
 import logger from "../../../../config/logger";
-import { validateMemberHandle } from "../../../utils/validators";
+import { getMemberByHandleSchema } from "../validators/memberSchemas";
 
-export async function GetMemberByHandleController(
+export const GetMemberByHandleController = async (
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
-) {
+): Promise<void> => {
   const { memberHandle } = req.body;
 
   try {
-    if (!memberHandle || typeof memberHandle !== 'string') {
-      res.status(400).json({ message: "memberHandle is required and must be a string" });
-      return;
-    }
-
-    if (!validateMemberHandle(memberHandle)) {
-      res.status(400).json({
-        message: "Invalid member handle. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters.",
-      });
+    const { error } = getMemberByHandleSchema.validate({ memberHandle });
+    if (error) {
+      res.status(400).json({ message: error.details[0].message });
       return;
     }
 
@@ -38,4 +32,4 @@ export async function GetMemberByHandleController(
     logger.error("Error in GetMemberByHandleController", { error, memberHandle });
     next(error);
   }
-}
+};

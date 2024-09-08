@@ -1,7 +1,13 @@
 import express from "express";
 import { AcceptCredexService } from "../services/AcceptCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
-import { validateUUID } from "../../../utils/validators";
+import { logError, logInfo } from "../../../utils/logger";
+import Joi from "joi";
+
+const acceptCredexSchema = Joi.object({
+  credexID: Joi.string().uuid().required(),
+  signerID: Joi.string().uuid().required()
+});
 
 /**
  * AcceptCredexController
@@ -18,24 +24,19 @@ export async function AcceptCredexController(
   res: express.Response
 ) {
   try {
-    const { credexID, signerID } = req.body;
-
-    // Validate required fields
-    if (!credexID || !signerID) {
-      return res.status(400).json({ error: "credexID and signerID are required" });
+    // Validate input using Joi
+    const { error, value } = acceptCredexSchema.validate(req.body);
+    if (error) {
+      logError("AcceptCredexController input validation failed", error);
+      return res.status(400).json({ error: error.details[0].message });
     }
 
-    // Validate UUIDs
-    if (!validateUUID(credexID)) {
-      return res.status(400).json({ error: "Invalid credexID" });
-    }
-    if (!validateUUID(signerID)) {
-      return res.status(400).json({ error: "Invalid signerID" });
-    }
+    const { credexID, signerID } = value;
 
     const acceptCredexData = await AcceptCredexService(credexID, signerID);
     
     if (!acceptCredexData) {
+      logError("AcceptCredexController: Failed to accept Credex", new Error(), { credexID, signerID });
       return res.status(400).json({ error: "Failed to accept Credex" });
     }
 
@@ -45,15 +46,18 @@ export async function AcceptCredexController(
     );
 
     if (!dashboardData) {
+      logError("AcceptCredexController: Failed to fetch dashboard data", new Error(), { signerID, acceptorAccountID: acceptCredexData.acceptorAccountID });
       return res.status(404).json({ error: "Failed to fetch dashboard data" });
     }
+
+    logInfo("AcceptCredexController: Credex accepted successfully", { credexID, signerID });
 
     return res.status(200).json({
       acceptCredexData: acceptCredexData,
       dashboardData: dashboardData,
     });
   } catch (err) {
-    console.error("Error in AcceptCredexController:", err);
+    logError("AcceptCredexController: Unhandled error", err as Error);
     return res.status(500).json({ error: "Internal server error" });
   }
 }

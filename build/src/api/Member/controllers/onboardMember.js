@@ -8,30 +8,8 @@ exports.onboardMemberExpressHandler = onboardMemberExpressHandler;
 const OnboardMember_1 = require("../services/OnboardMember");
 const GetMemberDashboardByPhone_1 = require("../services/GetMemberDashboardByPhone");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-const validators_1 = require("../../../utils/validators");
-function validateInput(firstname, lastname, phone) {
-    if (!firstname || !lastname || !phone) {
-        return "firstname, lastname, and phone are required";
-    }
-    if (typeof firstname !== "string" ||
-        typeof lastname !== "string" ||
-        typeof phone !== "string") {
-        return "firstname, lastname, and phone must be strings";
-    }
-    if (!(0, validators_1.validateAccountName)(firstname) || !(0, validators_1.validateAccountName)(lastname)) {
-        return "First name and last name must be between 3 and 50 characters";
-    }
-    if (!(0, validators_1.validatePhone)(phone)) {
-        return "Invalid phone number format. It should be a valid international phone number.";
-    }
-    return null;
-}
+const memberSchemas_1 = require("../validators/memberSchemas");
 async function OnboardMemberController(firstname, lastname, phone) {
-    const validationError = validateInput(firstname, lastname, phone);
-    if (validationError) {
-        logger_1.default.warn("Invalid input for onboarding member", { firstname, lastname, phone, error: validationError });
-        return { error: validationError };
-    }
     try {
         logger_1.default.info("Onboarding new member", { firstname, lastname, phone });
         const onboardedMember = await (0, OnboardMember_1.OnboardMemberService)(firstname, lastname, phone);
@@ -54,8 +32,13 @@ async function OnboardMemberController(firstname, lastname, phone) {
     }
 }
 async function onboardMemberExpressHandler(req, res, next) {
-    const { firstname, lastname, phone } = req.body;
     try {
+        const { error, value } = memberSchemas_1.onboardMemberSchema.validate(req.body);
+        if (error) {
+            res.status(400).json({ message: error.details[0].message });
+            return;
+        }
+        const { firstname, lastname, phone } = value;
         const result = await OnboardMemberController(firstname, lastname, phone);
         if ("error" in result) {
             res.status(400).json({ message: result.error });
@@ -65,7 +48,7 @@ async function onboardMemberExpressHandler(req, res, next) {
         }
     }
     catch (error) {
-        logger_1.default.error("Error in onboardMemberExpressHandler", { error, firstname, lastname, phone });
+        logger_1.default.error("Error in onboardMemberExpressHandler", { error, body: req.body });
         next(error);
     }
 }

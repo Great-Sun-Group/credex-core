@@ -7,7 +7,7 @@ exports.GetMemberDashboardByPhoneController = GetMemberDashboardByPhoneControlle
 const GetMemberDashboardByPhone_1 = require("../services/GetMemberDashboardByPhone");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-const validators_1 = require("../../../utils/validators");
+const memberSchemas_1 = require("../validators/memberSchemas");
 /**
  * Controller for retrieving a member's dashboard by phone number
  * @param req - Express request object
@@ -15,19 +15,13 @@ const validators_1 = require("../../../utils/validators");
  * @param next - Express next function
  */
 async function GetMemberDashboardByPhoneController(req, res, next) {
-    const { phone } = req.body;
     try {
-        if (!phone || typeof phone !== 'string') {
-            res.status(400).json({ message: "phone is required and must be a string" });
+        const { error, value } = memberSchemas_1.getMemberDashboardByPhoneSchema.validate(req.body);
+        if (error) {
+            res.status(400).json({ message: error.details[0].message });
             return;
         }
-        // Validate phone number format using the validatePhone function
-        if (!(0, validators_1.validatePhone)(phone)) {
-            res.status(400).json({
-                message: "Invalid phone number format. Please provide a valid international phone number.",
-            });
-            return;
-        }
+        const { phone } = value;
         logger_1.default.info("Retrieving member dashboard by phone", { phone });
         const memberDashboard = await (0, GetMemberDashboardByPhone_1.GetMemberDashboardByPhoneService)(phone);
         if (!memberDashboard) {
@@ -42,7 +36,7 @@ async function GetMemberDashboardByPhoneController(req, res, next) {
         res.status(200).json({ memberDashboard, accountDashboards });
     }
     catch (error) {
-        logger_1.default.error("Error in GetMemberDashboardByPhoneController", { error: error.message, phone });
+        logger_1.default.error("Error in GetMemberDashboardByPhoneController", { error: error.message, phone: req.body.phone });
         next(error);
     }
 }

@@ -2,7 +2,7 @@ import express from "express";
 import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import logger from "../../../../config/logger";
-import { validatePhone } from "../../../utils/validators";
+import { getMemberDashboardByPhoneSchema } from "../validators/memberSchemas";
 
 /**
  * Controller for retrieving a member's dashboard by phone number
@@ -14,22 +14,15 @@ export async function GetMemberDashboardByPhoneController(
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
-) {
-  const { phone } = req.body;
-
+): Promise<void> {
   try {
-    if (!phone || typeof phone !== 'string') {
-      res.status(400).json({ message: "phone is required and must be a string" });
+    const { error, value } = getMemberDashboardByPhoneSchema.validate(req.body);
+    if (error) {
+      res.status(400).json({ message: error.details[0].message });
       return;
     }
 
-    // Validate phone number format using the validatePhone function
-    if (!validatePhone(phone)) {
-      res.status(400).json({
-        message: "Invalid phone number format. Please provide a valid international phone number.",
-      });
-      return;
-    }
+    const { phone } = value;
 
     logger.info("Retrieving member dashboard by phone", { phone });
 
@@ -49,7 +42,7 @@ export async function GetMemberDashboardByPhoneController(
     logger.info("Member dashboard retrieved successfully", { phone, memberID: memberDashboard.memberID });
     res.status(200).json({ memberDashboard, accountDashboards });
   } catch (error) {
-    logger.error("Error in GetMemberDashboardByPhoneController", { error: (error as Error).message, phone });
+    logger.error("Error in GetMemberDashboardByPhoneController", { error: (error as Error).message, phone: req.body.phone });
     next(error);
   }
 }

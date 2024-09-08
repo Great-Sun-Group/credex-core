@@ -3,21 +3,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GetMemberByHandleController = GetMemberByHandleController;
+exports.GetMemberByHandleController = void 0;
 const GetMemberByHandle_1 = require("../services/GetMemberByHandle");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-const validators_1 = require("../../../utils/validators");
-async function GetMemberByHandleController(req, res, next) {
+const memberSchemas_1 = require("../validators/memberSchemas");
+const GetMemberByHandleController = async (req, res, next) => {
     const { memberHandle } = req.body;
     try {
-        if (!memberHandle || typeof memberHandle !== 'string') {
-            res.status(400).json({ message: "memberHandle is required and must be a string" });
-            return;
-        }
-        if (!(0, validators_1.validateMemberHandle)(memberHandle)) {
-            res.status(400).json({
-                message: "Invalid member handle. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters.",
-            });
+        const { error } = memberSchemas_1.getMemberByHandleSchema.validate({ memberHandle });
+        if (error) {
+            res.status(400).json({ message: error.details[0].message });
             return;
         }
         logger_1.default.info("Retrieving member by handle", { memberHandle });
@@ -35,5 +30,6 @@ async function GetMemberByHandleController(req, res, next) {
         logger_1.default.error("Error in GetMemberByHandleController", { error, memberHandle });
         next(error);
     }
-}
+};
+exports.GetMemberByHandleController = GetMemberByHandleController;
 //# sourceMappingURL=getMemberByHandle.js.map

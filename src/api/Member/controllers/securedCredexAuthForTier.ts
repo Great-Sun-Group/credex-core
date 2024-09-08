@@ -1,7 +1,7 @@
 import express from "express";
 import { SecuredCredexAuthForTier } from "../services/SecuredCredexAuthForTier";
 import logger from "../../../../config/logger";
-import { getDenominations } from "../../../constants/denominations";
+import { securedCredexAuthForTierSchema } from "../validators/memberSchemas";
 
 /**
  * Controller for authorizing secured credex for a member's tier
@@ -18,23 +18,6 @@ export async function SecuredCredexAuthForTierController(
   Denomination: string
 ): Promise<{ isAuthorized: boolean; message: string }> {
   try {
-    // Input validation
-    if (!memberID || typeof memberID !== 'string') {
-      return { isAuthorized: false, message: "Invalid memberID" };
-    }
-
-    if (!Number.isInteger(tier) || tier < 1) {
-      return { isAuthorized: false, message: "Invalid tier" };
-    }
-
-    if (typeof Amount !== 'number' || Amount <= 0) {
-      return { isAuthorized: false, message: "Invalid Amount" };
-    }
-
-    if (!Denomination || typeof Denomination !== 'string' || !getDenominations({ code: Denomination }).length) {
-      return { isAuthorized: false, message: "Invalid Denomination" };
-    }
-
     logger.info("Authorizing secured credex for tier", { memberID, tier, Amount, Denomination });
 
     const result = await SecuredCredexAuthForTier(memberID, Amount, Denomination);
@@ -63,9 +46,14 @@ export async function securedCredexAuthForTierExpressHandler(
   res: express.Response,
   next: express.NextFunction
 ): Promise<void> {
-  const { memberID, tier, Amount, Denomination } = req.body;
-
   try {
+    const { error, value } = securedCredexAuthForTierSchema.validate(req.body);
+    if (error) {
+      res.status(400).json({ message: error.details[0].message });
+      return;
+    }
+
+    const { memberID, tier, Amount, Denomination } = value;
     const result = await SecuredCredexAuthForTierController(memberID, tier, Amount, Denomination);
 
     if (result.isAuthorized) {
@@ -74,7 +62,7 @@ export async function securedCredexAuthForTierExpressHandler(
       res.status(400).json(result);
     }
   } catch (error) {
-    logger.error("Error in securedCredexAuthForTierExpressHandler", { error, memberID, tier, Amount, Denomination });
+    logger.error("Error in securedCredexAuthForTierExpressHandler", { error, body: req.body });
     next(error);
   }
 }
