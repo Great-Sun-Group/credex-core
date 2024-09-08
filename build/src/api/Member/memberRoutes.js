@@ -9,6 +9,8 @@ const getMemberDashboardByPhone_1 = require("./controllers/getMemberDashboardByP
 const updateMemberTier_1 = require("./controllers/updateMemberTier");
 const onboardMember_1 = require("./controllers/onboardMember");
 const securedCredexAuthForTier_1 = require("./controllers/securedCredexAuthForTier");
+const validateRequest_1 = require("../../middleware/validateRequest");
+const memberValidationSchemas_1 = require("./memberValidationSchemas");
 const router = express_1.default.Router();
 /**
  * @openapi
@@ -34,7 +36,7 @@ const router = express_1.default.Router();
  *       400:
  *         description: Bad request
  */
-router.post("/getMemberByHandle", getMemberByHandle_1.GetMemberByHandleController);
+router.post("/getMemberByHandle", (0, validateRequest_1.validateRequest)(memberValidationSchemas_1.getMemberByHandleSchema), getMemberByHandle_1.GetMemberByHandleController);
 /**
  * @openapi
  * /member/getMemberDashboardByPhone:
@@ -59,7 +61,7 @@ router.post("/getMemberByHandle", getMemberByHandle_1.GetMemberByHandleControlle
  *       400:
  *         description: Bad request
  */
-router.post("/getMemberDashboardByPhone", getMemberDashboardByPhone_1.GetMemberDashboardByPhoneController);
+router.post("/getMemberDashboardByPhone", (0, validateRequest_1.validateRequest)(memberValidationSchemas_1.getMemberDashboardByPhoneSchema), getMemberDashboardByPhone_1.GetMemberDashboardByPhoneController);
 /**
  * @openapi
  * /member/onboardMember:
@@ -90,7 +92,7 @@ router.post("/getMemberDashboardByPhone", getMemberDashboardByPhone_1.GetMemberD
  *       400:
  *         description: Bad request
  */
-router.post("/onboardMember", onboardMember_1.onboardMemberExpressHandler);
+router.post("/onboardMember", (0, validateRequest_1.validateRequest)(memberValidationSchemas_1.onboardMemberSchema), onboardMember_1.onboardMemberExpressHandler);
 /**
  * @openapi
  * /member/updateMemberTier:
@@ -118,7 +120,7 @@ router.post("/onboardMember", onboardMember_1.onboardMemberExpressHandler);
  *       400:
  *         description: Bad request
  */
-router.post("/updateMemberTier", updateMemberTier_1.updateMemberTierExpressHandler);
+router.post("/updateMemberTier", (0, validateRequest_1.validateRequest)(memberValidationSchemas_1.updateMemberTierSchema), updateMemberTier_1.updateMemberTierExpressHandler);
 /**
  * @openapi
  * /member/securedCredexAuthForTier:
@@ -152,6 +154,6 @@ router.post("/updateMemberTier", updateMemberTier_1.updateMemberTierExpressHandl
  *       400:
  *         description: Bad request
  */
-router.post("/securedCredexAuthForTier", securedCredexAuthForTier_1.securedCredexAuthForTierExpressHandler);
+router.post("/securedCredexAuthForTier", (0, validateRequest_1.validateRequest)(memberValidationSchemas_1.securedCredexAuthForTierSchema), securedCredexAuthForTier_1.securedCredexAuthForTierExpressHandler);
 exports.default = router;
 //# sourceMappingURL=memberRoutes.js.map

@@ -11,6 +11,13 @@ import {
   getSentCredexOffers,
 } from "./controllers/AccountController";
 import { errorHandler } from "../../../middleware/errorHandler";
+import { validateRequest } from "../../middleware/validateRequest";
+import {
+  getCredexSchema,
+  getMemberSchema,
+  updateMemberTierSchema,
+  getAccountSchema,
+} from "./adminDashboardValidationSchemas";
 
 // Define route constants
 const ROUTES = {
@@ -29,36 +36,42 @@ export default function AdminDashboardRoutes(
   app.get(
     ROUTES.GET_CREDEX_DETAILS,
     jsonParser,
+    validateRequest(getCredexSchema, 'query'),
     getCredexDetails
   );
 
   app.get(
     ROUTES.GET_MEMBER_DETAILS,
     jsonParser,
+    validateRequest(getMemberSchema, 'query'),
     getMemberDetails
   );
 
   app.patch(
     ROUTES.UPDATE_MEMBER_TIER,
     jsonParser,
+    validateRequest(updateMemberTierSchema),
     updateMemberTier
   );
 
   app.get(
     ROUTES.GET_ACCOUNT_DETAILS,
     jsonParser,
+    validateRequest(getAccountSchema, 'query'),
     getAccountDetails
   );
 
   app.get(
     ROUTES.GET_RECEIVED_CREDEX_OFFERS,
     jsonParser,
+    validateRequest(getAccountSchema, 'query'),
     getReceivedCredexOffers
   );
 
   app.get(
     ROUTES.GET_SENT_CREDEX_OFFERS,
     jsonParser,
+    validateRequest(getAccountSchema, 'query'),
     getSentCredexOffers
   );
 

@@ -9,6 +9,8 @@ const declineCredex_1 = require("./controllers/declineCredex");
 const cancelCredex_1 = require("./controllers/cancelCredex");
 const getCredex_1 = require("./controllers/getCredex");
 const getLedger_1 = require("./controllers/getLedger");
+const validateRequest_1 = require("../../middleware/validateRequest");
+const credexValidationSchemas_1 = require("./credexValidationSchemas");
 function CredexRoutes(app, jsonParser) {
     /**
      * @swagger
@@ -52,7 +54,7 @@ function CredexRoutes(app, jsonParser) {
      *       400:
      *         description: Bad request
      */
-    app.post(`${index_1.apiVersionOneRoute}offerCredex`, jsonParser, offerCredex_1.OfferCredexController);
+    app.post(`${index_1.apiVersionOneRoute}offerCredex`, jsonParser, (0, validateRequest_1.validateRequest)(credexValidationSchemas_1.offerCredexSchema), offerCredex_1.OfferCredexController);
     /**
      * @swagger
      * /api/v1/acceptCredex:
@@ -79,7 +81,7 @@ function CredexRoutes(app, jsonParser) {
      *       400:
      *         description: Bad request
      */
-    app.put(`${index_1.apiVersionOneRoute}acceptCredex`, jsonParser, acceptCredex_1.AcceptCredexController);
+    app.put(`${index_1.apiVersionOneRoute}acceptCredex`, jsonParser, (0, validateRequest_1.validateRequest)(credexValidationSchemas_1.acceptCredexSchema), acceptCredex_1.AcceptCredexController);
     /**
      * @swagger
      * /api/v1/acceptCredexBulk:
@@ -108,7 +110,10 @@ function CredexRoutes(app, jsonParser) {
      *       400:
      *         description: Bad request
      */
-    app.put(`${index_1.apiVersionOneRoute}acceptCredexBulk`, jsonParser, acceptCredexBulk_1.AcceptCredexBulkController);
+    app.put(`${index_1.apiVersionOneRoute}acceptCredexBulk`, jsonParser, (0, validateRequest_1.validateRequest)({
+        credexIDs: (value) => Array.isArray(value) && value.every((id) => credexValidationSchemas_1.acceptCredexSchema.credexID(id)),
+        signerID: credexValidationSchemas_1.acceptCredexSchema.signerID,
+    }), acceptCredexBulk_1.AcceptCredexBulkController);
     /**
      * @swagger
      * /api/v1/declineCredex:
@@ -132,7 +137,7 @@ function CredexRoutes(app, jsonParser) {
      *       400:
      *         description: Bad request
      */
-    app.put(`${index_1.apiVersionOneRoute}declineCredex`, jsonParser, declineCredex_1.DeclineCredexController);
+    app.put(`${index_1.apiVersionOneRoute}declineCredex`, jsonParser, (0, validateRequest_1.validateRequest)(credexValidationSchemas_1.declineCredexSchema), declineCredex_1.DeclineCredexController);
     /**
      * @swagger
      * /api/v1/cancelCredex:
@@ -156,7 +161,7 @@ function CredexRoutes(app, jsonParser) {
      *       400:
      *         description: Bad request
      */
-    app.put(`${index_1.apiVersionOneRoute}cancelCredex`, jsonParser, cancelCredex_1.CancelCredexController);
+    app.put(`${index_1.apiVersionOneRoute}cancelCredex`, jsonParser, (0, validateRequest_1.validateRequest)(credexValidationSchemas_1.cancelCredexSchema), cancelCredex_1.CancelCredexController);
     /**
      * @swagger
      * /api/v1/getCredex:
@@ -182,7 +187,7 @@ function CredexRoutes(app, jsonParser) {
      *       404:
      *         description: Credex not found
      */
-    app.get(`${index_1.apiVersionOneRoute}getCredex`, jsonParser, getCredex_1.GetCredexController);
+    app.get(`${index_1.apiVersionOneRoute}getCredex`, (0, validateRequest_1.validateRequest)(credexValidationSchemas_1.getCredexSchema, 'query'), getCredex_1.GetCredexController);
     /**
      * @swagger
      * /api/v1/getLedger:
@@ -209,6 +214,6 @@ function CredexRoutes(app, jsonParser) {
      *       400:
      *         description: Bad request
      */
-    app.get(`${index_1.apiVersionOneRoute}getLedger`, jsonParser, getLedger_1.GetLedgerController);
+    app.get(`${index_1.apiVersionOneRoute}getLedger`, (0, validateRequest_1.validateRequest)(credexValidationSchemas_1.getLedgerSchema, 'query'), getLedger_1.GetLedgerController);
 }
 //# sourceMappingURL=credexRoutes.js.map

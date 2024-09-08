@@ -4,6 +4,12 @@ import { RequestRecurringController } from "./controllers/requestRecurring";
 import { AcceptRecurringController } from "./controllers/acceptRecurring";
 import { DeclineRecurringController } from "./controllers/cancelRecurring";
 import { errorHandler } from "../../../middleware/errorHandler";
+import { validateRequest } from "../../middleware/validateRequest";
+import {
+  requestRecurringSchema,
+  acceptRecurringSchema,
+  cancelRecurringSchema,
+} from "./avatarValidationSchemas";
 
 export default function RecurringRoutes(
   app: express.Application,
@@ -30,6 +36,7 @@ export default function RecurringRoutes(
   app.post(
     `${apiVersionOneRoute}requestRecurring`,
     jsonParser,
+    validateRequest(requestRecurringSchema),
     RequestRecurringController,
     errorHandler
   );
@@ -55,6 +62,7 @@ export default function RecurringRoutes(
   app.put(
     `${apiVersionOneRoute}acceptRecurring`,
     jsonParser,
+    validateRequest(acceptRecurringSchema),
     AcceptRecurringController,
     errorHandler
   );
@@ -80,6 +88,7 @@ export default function RecurringRoutes(
   app.delete(
     `${apiVersionOneRoute}cancelRecurring`,
     jsonParser,
+    validateRequest(cancelRecurringSchema),
     DeclineRecurringController,
     errorHandler
   );

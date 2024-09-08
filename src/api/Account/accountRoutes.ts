@@ -8,6 +8,15 @@ import { UnauthorizeForAccountController } from "./controllers/unauthorizeForAcc
 import { UpdateSendOffersToController } from "./controllers/updateSendOffersTo";
 import { rateLimiter } from "../../../middleware/rateLimiter";
 import { errorHandler } from "../../../middleware/errorHandler";
+import { validateRequest } from "../../middleware/validateRequest";
+import {
+  createAccountSchema,
+  getAccountByHandleSchema,
+  updateAccountSchema,
+  authorizeForAccountSchema,
+  unauthorizeForAccountSchema,
+  updateSendOffersToSchema
+} from "./accountValidationSchemas";
 
 export default function AccountRoutes(
   app: express.Application,
@@ -37,6 +46,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}createAccount`,
     rateLimiter,
     jsonParser,
+    validateRequest(createAccountSchema),
     CreateAccountController,
     errorHandler
   );
@@ -66,6 +76,7 @@ export default function AccountRoutes(
   app.get(
     `${apiVersionOneRoute}getAccountByHandle`,
     rateLimiter,
+    validateRequest(getAccountByHandleSchema, 'query'),
     GetAccountByHandleController,
     errorHandler
   );
@@ -96,6 +107,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}updateAccount`,
     rateLimiter,
     jsonParser,
+    validateRequest(updateAccountSchema),
     UpdateAccountController,
     errorHandler
   );
@@ -124,6 +136,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}authorizeForAccount`,
     rateLimiter,
     jsonParser,
+    validateRequest(authorizeForAccountSchema),
     AuthorizeForAccountController,
     errorHandler
   );
@@ -152,6 +165,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}unauthorizeForAccount`,
     rateLimiter,
     jsonParser,
+    validateRequest(unauthorizeForAccountSchema),
     UnauthorizeForAccountController,
     errorHandler
   );
@@ -180,6 +194,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}updateSendOffersTo`,
     rateLimiter,
     jsonParser,
+    validateRequest(updateSendOffersToSchema),
     UpdateSendOffersToController,
     errorHandler
   );

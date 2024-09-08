@@ -7,6 +7,15 @@ import { DeclineCredexController } from "./controllers/declineCredex";
 import { CancelCredexController } from "./controllers/cancelCredex";
 import { GetCredexController } from "./controllers/getCredex";
 import { GetLedgerController } from "./controllers/getLedger";
+import { validateRequest } from "../../middleware/validateRequest";
+import {
+  offerCredexSchema,
+  acceptCredexSchema,
+  declineCredexSchema,
+  cancelCredexSchema,
+  getCredexSchema,
+  getLedgerSchema,
+} from "./credexValidationSchemas";
 
 export default function CredexRoutes(
   app: express.Application,
@@ -57,6 +66,7 @@ export default function CredexRoutes(
   app.post(
     `${apiVersionOneRoute}offerCredex`,
     jsonParser,
+    validateRequest(offerCredexSchema),
     OfferCredexController
   );
 
@@ -89,6 +99,7 @@ export default function CredexRoutes(
   app.put(
     `${apiVersionOneRoute}acceptCredex`,
     jsonParser,
+    validateRequest(acceptCredexSchema),
     AcceptCredexController
   );
 
@@ -123,6 +134,10 @@ export default function CredexRoutes(
   app.put(
     `${apiVersionOneRoute}acceptCredexBulk`,
     jsonParser,
+    validateRequest({
+      credexIDs: (value: any) => Array.isArray(value) && value.every((id: string) => acceptCredexSchema.credexID(id)),
+      signerID: acceptCredexSchema.signerID,
+    }),
     AcceptCredexBulkController
   );
 
@@ -152,6 +167,7 @@ export default function CredexRoutes(
   app.put(
     `${apiVersionOneRoute}declineCredex`,
     jsonParser,
+    validateRequest(declineCredexSchema),
     DeclineCredexController
   );
 
@@ -181,6 +197,7 @@ export default function CredexRoutes(
   app.put(
     `${apiVersionOneRoute}cancelCredex`,
     jsonParser,
+    validateRequest(cancelCredexSchema),
     CancelCredexController
   );
 
@@ -209,7 +226,11 @@ export default function CredexRoutes(
    *       404:
    *         description: Credex not found
    */
-  app.get(`${apiVersionOneRoute}getCredex`, jsonParser, GetCredexController);
+  app.get(
+    `${apiVersionOneRoute}getCredex`,
+    validateRequest(getCredexSchema, 'query'),
+    GetCredexController
+  );
 
   /**
    * @swagger
@@ -237,5 +258,9 @@ export default function CredexRoutes(
    *       400:
    *         description: Bad request
    */
-  app.get(`${apiVersionOneRoute}getLedger`, jsonParser, GetLedgerController);
+  app.get(
+    `${apiVersionOneRoute}getLedger`,
+    validateRequest(getLedgerSchema, 'query'),
+    GetLedgerController
+  );
 }

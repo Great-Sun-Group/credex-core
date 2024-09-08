@@ -10,6 +10,8 @@ const unauthorizeForAccount_1 = require("./controllers/unauthorizeForAccount");
 const updateSendOffersTo_1 = require("./controllers/updateSendOffersTo");
 const rateLimiter_1 = require("../../../middleware/rateLimiter");
 const errorHandler_1 = require("../../../middleware/errorHandler");
+const validateRequest_1 = require("../../middleware/validateRequest");
+const accountValidationSchemas_1 = require("./accountValidationSchemas");
 function AccountRoutes(app, jsonParser) {
     /**
      * @swagger
@@ -31,7 +33,7 @@ function AccountRoutes(app, jsonParser) {
      *       429:
      *         description: Too many requests
      */
-    app.post(`${index_1.apiVersionOneRoute}createAccount`, rateLimiter_1.rateLimiter, jsonParser, createAccount_1.CreateAccountController, errorHandler_1.errorHandler);
+    app.post(`${index_1.apiVersionOneRoute}createAccount`, rateLimiter_1.rateLimiter, jsonParser, (0, validateRequest_1.validateRequest)(accountValidationSchemas_1.createAccountSchema), createAccount_1.CreateAccountController, errorHandler_1.errorHandler);
     /**
      * @swagger
      * /api/v1/getAccountByHandle:
@@ -54,7 +56,7 @@ function AccountRoutes(app, jsonParser) {
      *       429:
      *         description: Too many requests
      */
-    app.get(`${index_1.apiVersionOneRoute}getAccountByHandle`, rateLimiter_1.rateLimiter, getAccountByHandle_1.GetAccountByHandleController, errorHandler_1.errorHandler);
+    app.get(`${index_1.apiVersionOneRoute}getAccountByHandle`, rateLimiter_1.rateLimiter, (0, validateRequest_1.validateRequest)(accountValidationSchemas_1.getAccountByHandleSchema, 'query'), getAccountByHandle_1.GetAccountByHandleController, errorHandler_1.errorHandler);
     /**
      * @swagger
      * /api/v1/updateAccount:
@@ -77,7 +79,7 @@ function AccountRoutes(app, jsonParser) {
      *       429:
      *         description: Too many requests
      */
-    app.patch(`${index_1.apiVersionOneRoute}updateAccount`, rateLimiter_1.rateLimiter, jsonParser, updateAccount_1.UpdateAccountController, errorHandler_1.errorHandler);
+    app.patch(`${index_1.apiVersionOneRoute}updateAccount`, rateLimiter_1.rateLimiter, jsonParser, (0, validateRequest_1.validateRequest)(accountValidationSchemas_1.updateAccountSchema), updateAccount_1.UpdateAccountController, errorHandler_1.errorHandler);
     /**
      * @swagger
      * /api/v1/authorizeForAccount:
@@ -98,7 +100,7 @@ function AccountRoutes(app, jsonParser) {
      *       429:
      *         description: Too many requests
      */
-    app.post(`${index_1.apiVersionOneRoute}authorizeForAccount`, rateLimiter_1.rateLimiter, jsonParser, authorizeForAccount_1.AuthorizeForAccountController, errorHandler_1.errorHandler);
+    app.post(`${index_1.apiVersionOneRoute}authorizeForAccount`, rateLimiter_1.rateLimiter, jsonParser, (0, validateRequest_1.validateRequest)(accountValidationSchemas_1.authorizeForAccountSchema), authorizeForAccount_1.AuthorizeForAccountController, errorHandler_1.errorHandler);
     /**
      * @swagger
      * /api/v1/unauthorizeForAccount:
@@ -119,7 +121,7 @@ function AccountRoutes(app, jsonParser) {
      *       429:
      *         description: Too many requests
      */
-    app.post(`${index_1.apiVersionOneRoute}unauthorizeForAccount`, rateLimiter_1.rateLimiter, jsonParser, unauthorizeForAccount_1.UnauthorizeForAccountController, errorHandler_1.errorHandler);
+    app.post(`${index_1.apiVersionOneRoute}unauthorizeForAccount`, rateLimiter_1.rateLimiter, jsonParser, (0, validateRequest_1.validateRequest)(accountValidationSchemas_1.unauthorizeForAccountSchema), unauthorizeForAccount_1.UnauthorizeForAccountController, errorHandler_1.errorHandler);
     /**
      * @swagger
      * /api/v1/updateSendOffersTo:
@@ -140,6 +142,6 @@ function AccountRoutes(app, jsonParser) {
      *       429:
      *         description: Too many requests
      */
-    app.post(`${index_1.apiVersionOneRoute}updateSendOffersTo`, rateLimiter_1.rateLimiter, jsonParser, updateSendOffersTo_1.UpdateSendOffersToController, errorHandler_1.errorHandler);
+    app.post(`${index_1.apiVersionOneRoute}updateSendOffersTo`, rateLimiter_1.rateLimiter, jsonParser, (0, validateRequest_1.validateRequest)(accountValidationSchemas_1.updateSendOffersToSchema), updateSendOffersTo_1.UpdateSendOffersToController, errorHandler_1.errorHandler);
 }
 //# sourceMappingURL=accountRoutes.js.map
