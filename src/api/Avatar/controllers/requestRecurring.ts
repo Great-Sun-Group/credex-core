@@ -1,7 +1,8 @@
 import express from "express";
 import { RequestRecurringService } from "../services/RequestRecurring";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
-import { validateAmount, validateDenomination } from "../../../utils/validators";
+import logger from "../../../../config/logger";
+import { requestRecurringSchema } from "../validators/avatarSchemas";
 
 /**
  * RequestRecurringController
@@ -18,81 +19,33 @@ export async function RequestRecurringController(
   res: express.Response
 ) {
   try {
-    // Validate required fields
-    const fieldsRequired = [
-      "signerMemberID",
-      "requestorAccountID",
-      "counterpartyAccountID",
-      "InitialAmount",
-      "Denomination",
-      "nextPayDate",
-      "daysBetweenPays",
-    ];
-    for (const field of fieldsRequired) {
-      if (!req.body[field]) {
-        return res.status(400).json({ error: `${field} is required` });
-      }
+    const { error, value } = requestRecurringSchema.validate(req.body, { abortEarly: false });
+
+    if (error) {
+      return res.status(400).json({ error: error.details.map(detail => detail.message) });
     }
 
-    // Check denomination validity
-    if (!validateDenomination(req.body.Denomination)) {
-      return res.status(400).json({ error: "Invalid denomination" });
-    }
-
-    // Validate InitialAmount
-    if (!validateAmount(req.body.InitialAmount)) {
-      return res.status(400).json({ error: "Invalid InitialAmount" });
-    }
-
-    // Validate optional parameters
-    if (req.body.securedCredex !== undefined && typeof req.body.securedCredex !== 'boolean') {
-      return res.status(400).json({ error: "securedCredex must be a boolean" });
-    }
-
-    if (req.body.credspan !== undefined) {
-      const credspan = Number(req.body.credspan);
-      if (isNaN(credspan) || credspan < 7 || credspan > 35) {
-        return res.status(400).json({ error: "credspan must be a number between 7 and 35" });
-      }
-    }
-
-    if (req.body.remainingPays !== undefined) {
-      const remainingPays = Number(req.body.remainingPays);
-      if (isNaN(remainingPays) || remainingPays < 0) {
-        return res.status(400).json({ error: "remainingPays must be a positive number" });
-      }
-    }
-
-    // Check securedCredex and credspan relationship
-    if (req.body.securedCredex === true && req.body.credspan !== undefined) {
-      return res.status(400).json({ error: "credspan must be null when securedCredex is true" });
-    }
-
-    if (req.body.securedCredex !== true && req.body.credspan === undefined) {
-      return res.status(400).json({ error: "credspan must be provided when securedCredex is not true" });
-    }
-
-    const createRecurringData = await RequestRecurringService(req.body);
+    const createRecurringData = await RequestRecurringService(value);
 
     if (!createRecurringData) {
-      return res.status(400).json({ error: "Failed to create recurring payment" });
+      logger.error("Failed to create recurring payment", { error: "RequestRecurringService returned null" });
+      return res.status(500).json({ error: "Failed to create recurring payment" });
     }
 
-    const dashboardData = await GetAccountDashboardService(
-      req.body.signerMemberID,
-      req.body.requestorAccountID
-    );
+    const dashboardData = await GetAccountDashboardService(value.signerMemberID, value.requestorAccountID);
 
     if (!dashboardData) {
-      return res.status(404).json({ error: "Failed to fetch dashboard data" });
+      logger.error("Failed to fetch dashboard data", { error: "GetAccountDashboardService returned null" });
+      return res.status(500).json({ error: "Failed to fetch dashboard data" });
     }
 
+    logger.info("Recurring payment requested successfully", { avatarMemberID: createRecurringData });
     return res.status(200).json({
       avatarMemberID: createRecurringData,
       dashboardData: dashboardData,
     });
   } catch (err) {
-    console.error("Error in RequestRecurringController:", err);
+    logger.error("Error in RequestRecurringController", { error: (err as Error).message });
     return res.status(500).json({ error: "Internal server error" });
   }
 }

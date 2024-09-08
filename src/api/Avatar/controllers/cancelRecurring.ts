@@ -1,52 +1,47 @@
 import express from "express";
 import { CancelRecurringService } from "../services/CancelRecurring";
-import { GetAccountDashboardController } from "../../Account/controllers/getAccountDashboard";
+import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import logger from "../../../../config/logger";
+import { cancelRecurringSchema } from "../validators/avatarSchemas";
 
 export async function DeclineRecurringController(
   req: express.Request,
   res: express.Response
 ) {
-  const fieldsRequired = ["signerID", "cancelerAccountID", "avatarID"];
-  for (const field of fieldsRequired) {
-    if (!req.body[field]) {
-      return res
-        .status(400)
-        .json({ message: `${field} is required` })
-        .send();
-    }
-  }
-
   try {
+    const { error, value } = cancelRecurringSchema.validate(req.body, { abortEarly: false });
+
+    if (error) {
+      return res.status(400).json({ error: error.details.map(detail => detail.message) });
+    }
+
+    const { signerID, cancelerAccountID, avatarID } = value;
+
     const cancelRecurringData = await CancelRecurringService(
-      req.body.signerID,
-      req.body.cancelerAccountID,
-      req.body.avatarID
+      signerID,
+      cancelerAccountID,
+      avatarID
     );
 
     if (!cancelRecurringData) {
-      return res.status(400).json(cancelRecurringData);
+      logger.error("Failed to cancel recurring payment", { error: "CancelRecurringService returned null" });
+      return res.status(400).json({ error: "Failed to cancel recurring payment" });
     }
 
-    const dashboardReq = {
-      body: {
-        memberID: req.body.signerID,
-        accountID: req.body.cancelerAccountID
-      }
-    } as express.Request;
-    const dashboardRes = {
-      status: (code: number) => ({
-        json: (data: any) => data
-      })
-    } as express.Response;
+    const dashboardData = await GetAccountDashboardService(signerID, cancelerAccountID);
 
-    const dashboardData = await GetAccountDashboardController(dashboardReq, dashboardRes);
+    if (!dashboardData) {
+      logger.error("Failed to fetch dashboard data", { error: "GetAccountDashboardService returned null" });
+      return res.status(500).json({ error: "Failed to fetch dashboard data" });
+    }
 
-    res.json({
+    logger.info("Recurring payment cancelled successfully", { avatarID, signerID, cancelerAccountID });
+    return res.status(200).json({
       cancelRecurringData: cancelRecurringData,
       dashboardData: dashboardData,
     });
   } catch (err) {
-    console.error("Error in DeclineRecurringController:", err);
-    res.status(500).json({ error: (err as Error).message });
+    logger.error("Error in DeclineRecurringController", { error: (err as Error).message });
+    return res.status(500).json({ error: "Internal server error" });
   }
 }

@@ -38,7 +38,7 @@ async function UpdateAccountController(req, res, next) {
         }
     }
     catch (error) {
-        logger_1.default.error("Error in UpdateAccountController", { error, ownerID: req.body.ownerID, accountID: req.body.accountID });
+        logger_1.default.error("Error in UpdateAccountController", { error, ownerID, accountID });
         next(error);
     }
 }

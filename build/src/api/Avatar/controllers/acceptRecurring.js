@@ -1,9 +1,13 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AcceptRecurringController = AcceptRecurringController;
 const AcceptRecurring_1 = require("../services/AcceptRecurring");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
-const validators_1 = require("../../../utils/validators");
+const logger_1 = __importDefault(require("../../../../config/logger"));
+const avatarSchemas_1 = require("../validators/avatarSchemas");
 /**
  * AcceptRecurringController
  *
@@ -16,32 +20,25 @@ const validators_1 = require("../../../utils/validators");
  */
 async function AcceptRecurringController(req, res) {
     try {
-        const { avatarID, signerID } = req.body;
-        // Validate required fields
-        if (!avatarID || !signerID) {
-            return res.status(400).json({ error: "avatarID and signerID are required" });
+        const { error, value } = avatarSchemas_1.acceptRecurringSchema.validate(req.body, { abortEarly: false });
+        if (error) {
+            return res.status(400).json({ error: error.details.map(detail => detail.message) });
         }
-        // Validate UUIDs
-        if (!(0, validators_1.validateUUID)(avatarID)) {
-            return res.status(400).json({ error: "Invalid avatarID" });
-        }
-        if (!(0, validators_1.validateUUID)(signerID)) {
-            return res.status(400).json({ error: "Invalid signerID" });
-        }
+        const { avatarID, signerID } = value;
         // Call AcceptRecurringService to process the acceptance
-        const acceptRecurringData = await (0, AcceptRecurring_1.AcceptRecurringService)({
-            avatarID,
-            signerID
-        });
+        const acceptRecurringData = await (0, AcceptRecurring_1.AcceptRecurringService)({ avatarID, signerID });
         // Check if the service call was successful
         if (typeof acceptRecurringData.recurring === "boolean") {
+            logger_1.default.error("Failed to accept recurring payment", { error: acceptRecurringData.message });
             return res.status(400).json({ error: acceptRecurringData.message });
         }
         // Fetch dashboard data
         const dashboardData = await (0, GetAccountDashboard_1.GetAccountDashboardService)(signerID, acceptRecurringData.recurring.acceptorAccountID);
         if (!dashboardData) {
-            return res.status(404).json({ error: "Failed to fetch dashboard data" });
+            logger_1.default.error("Failed to fetch dashboard data", { error: "GetAccountDashboardService returned null" });
+            return res.status(500).json({ error: "Failed to fetch dashboard data" });
         }
+        logger_1.default.info("Recurring payment accepted successfully", { avatarID, signerID });
         // Return the acceptance data and dashboard data
         return res.status(200).json({
             acceptRecurringData: acceptRecurringData,
@@ -49,7 +46,7 @@ async function AcceptRecurringController(req, res) {
         });
     }
     catch (err) {
-        console.error("Error in AcceptRecurringController:", err);
+        logger_1.default.error("Error in AcceptRecurringController", { error: err.message });
         return res.status(500).json({ error: "Internal server error" });
     }
 }

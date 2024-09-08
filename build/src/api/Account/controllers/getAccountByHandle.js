@@ -13,19 +13,8 @@ const logger_1 = __importDefault(require("../../../../config/logger"));
  * @param next - Express next function
  */
 async function GetAccountByHandleController(req, res, next) {
-    const { accountHandle } = req.body;
+    const { accountHandle } = req.query;
     try {
-        if (!accountHandle || typeof accountHandle !== 'string') {
-            res.status(400).json({ message: "accountHandle is required and must be a string" });
-            return;
-        }
-        // Validate accountHandle format
-        if (!/^[a-z0-9._]{3,30}$/.test(accountHandle)) {
-            res.status(400).json({
-                message: "Invalid account handle. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters.",
-            });
-            return;
-        }
         logger_1.default.info("Retrieving account by handle", { accountHandle });
         const accountData = await (0, GetAccountByHandle_1.GetAccountByHandleService)(accountHandle);
         if (accountData) {

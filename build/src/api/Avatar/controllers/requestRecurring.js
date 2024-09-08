@@ -1,9 +1,13 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RequestRecurringController = RequestRecurringController;
 const RequestRecurring_1 = require("../services/RequestRecurring");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
-const validators_1 = require("../../../utils/validators");
+const logger_1 = __importDefault(require("../../../../config/logger"));
+const avatarSchemas_1 = require("../validators/avatarSchemas");
 /**
  * RequestRecurringController
  *
@@ -16,67 +20,28 @@ const validators_1 = require("../../../utils/validators");
  */
 async function RequestRecurringController(req, res) {
     try {
-        // Validate required fields
-        const fieldsRequired = [
-            "signerMemberID",
-            "requestorAccountID",
-            "counterpartyAccountID",
-            "InitialAmount",
-            "Denomination",
-            "nextPayDate",
-            "daysBetweenPays",
-        ];
-        for (const field of fieldsRequired) {
-            if (!req.body[field]) {
-                return res.status(400).json({ error: `${field} is required` });
-            }
+        const { error, value } = avatarSchemas_1.requestRecurringSchema.validate(req.body, { abortEarly: false });
+        if (error) {
+            return res.status(400).json({ error: error.details.map(detail => detail.message) });
         }
-        // Check denomination validity
-        if (!(0, validators_1.validateDenomination)(req.body.Denomination)) {
-            return res.status(400).json({ error: "Invalid denomination" });
-        }
-        // Validate InitialAmount
-        if (!(0, validators_1.validateAmount)(req.body.InitialAmount)) {
-            return res.status(400).json({ error: "Invalid InitialAmount" });
-        }
-        // Validate optional parameters
-        if (req.body.securedCredex !== undefined && typeof req.body.securedCredex !== 'boolean') {
-            return res.status(400).json({ error: "securedCredex must be a boolean" });
-        }
-        if (req.body.credspan !== undefined) {
-            const credspan = Number(req.body.credspan);
-            if (isNaN(credspan) || credspan < 7 || credspan > 35) {
-                return res.status(400).json({ error: "credspan must be a number between 7 and 35" });
-            }
-        }
-        if (req.body.remainingPays !== undefined) {
-            const remainingPays = Number(req.body.remainingPays);
-            if (isNaN(remainingPays) || remainingPays < 0) {
-                return res.status(400).json({ error: "remainingPays must be a positive number" });
-            }
-        }
-        // Check securedCredex and credspan relationship
-        if (req.body.securedCredex === true && req.body.credspan !== undefined) {
-            return res.status(400).json({ error: "credspan must be null when securedCredex is true" });
-        }
-        if (req.body.securedCredex !== true && req.body.credspan === undefined) {
-            return res.status(400).json({ error: "credspan must be provided when securedCredex is not true" });
-        }
-        const createRecurringData = await (0, RequestRecurring_1.RequestRecurringService)(req.body);
+        const createRecurringData = await (0, RequestRecurring_1.RequestRecurringService)(value);
         if (!createRecurringData) {
-            return res.status(400).json({ error: "Failed to create recurring payment" });
+            logger_1.default.error("Failed to create recurring payment", { error: "RequestRecurringService returned null" });
+            return res.status(500).json({ error: "Failed to create recurring payment" });
         }
-        const dashboardData = await (0, GetAccountDashboard_1.GetAccountDashboardService)(req.body.signerMemberID, req.body.requestorAccountID);
+        const dashboardData = await (0, GetAccountDashboard_1.GetAccountDashboardService)(value.signerMemberID, value.requestorAccountID);
         if (!dashboardData) {
-            return res.status(404).json({ error: "Failed to fetch dashboard data" });
+            logger_1.default.error("Failed to fetch dashboard data", { error: "GetAccountDashboardService returned null" });
+            return res.status(500).json({ error: "Failed to fetch dashboard data" });
         }
+        logger_1.default.info("Recurring payment requested successfully", { avatarMemberID: createRecurringData });
         return res.status(200).json({
             avatarMemberID: createRecurringData,
             dashboardData: dashboardData,
         });
     }
     catch (err) {
-        console.error("Error in RequestRecurringController:", err);
+        logger_1.default.error("Error in RequestRecurringController", { error: err.message });
         return res.status(500).json({ error: "Internal server error" });
     }
 }

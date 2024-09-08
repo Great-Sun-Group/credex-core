@@ -1,43 +1,39 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DeclineRecurringController = DeclineRecurringController;
 const CancelRecurring_1 = require("../services/CancelRecurring");
-const getAccountDashboard_1 = require("../../Account/controllers/getAccountDashboard");
+const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
+const logger_1 = __importDefault(require("../../../../config/logger"));
+const avatarSchemas_1 = require("../validators/avatarSchemas");
 async function DeclineRecurringController(req, res) {
-    const fieldsRequired = ["signerID", "cancelerAccountID", "avatarID"];
-    for (const field of fieldsRequired) {
-        if (!req.body[field]) {
-            return res
-                .status(400)
-                .json({ message: `${field} is required` })
-                .send();
-        }
-    }
     try {
-        const cancelRecurringData = await (0, CancelRecurring_1.CancelRecurringService)(req.body.signerID, req.body.cancelerAccountID, req.body.avatarID);
-        if (!cancelRecurringData) {
-            return res.status(400).json(cancelRecurringData);
+        const { error, value } = avatarSchemas_1.cancelRecurringSchema.validate(req.body, { abortEarly: false });
+        if (error) {
+            return res.status(400).json({ error: error.details.map(detail => detail.message) });
         }
-        const dashboardReq = {
-            body: {
-                memberID: req.body.signerID,
-                accountID: req.body.cancelerAccountID
-            }
-        };
-        const dashboardRes = {
-            status: (code) => ({
-                json: (data) => data
-            })
-        };
-        const dashboardData = await (0, getAccountDashboard_1.GetAccountDashboardController)(dashboardReq, dashboardRes);
-        res.json({
+        const { signerID, cancelerAccountID, avatarID } = value;
+        const cancelRecurringData = await (0, CancelRecurring_1.CancelRecurringService)(signerID, cancelerAccountID, avatarID);
+        if (!cancelRecurringData) {
+            logger_1.default.error("Failed to cancel recurring payment", { error: "CancelRecurringService returned null" });
+            return res.status(400).json({ error: "Failed to cancel recurring payment" });
+        }
+        const dashboardData = await (0, GetAccountDashboard_1.GetAccountDashboardService)(signerID, cancelerAccountID);
+        if (!dashboardData) {
+            logger_1.default.error("Failed to fetch dashboard data", { error: "GetAccountDashboardService returned null" });
+            return res.status(500).json({ error: "Failed to fetch dashboard data" });
+        }
+        logger_1.default.info("Recurring payment cancelled successfully", { avatarID, signerID, cancelerAccountID });
+        return res.status(200).json({
             cancelRecurringData: cancelRecurringData,
             dashboardData: dashboardData,
         });
     }
     catch (err) {
-        console.error("Error in DeclineRecurringController:", err);
-        res.status(500).json({ error: err.message });
+        logger_1.default.error("Error in DeclineRecurringController", { error: err.message });
+        return res.status(500).json({ error: "Internal server error" });
     }
 }
 //# sourceMappingURL=cancelRecurring.js.map

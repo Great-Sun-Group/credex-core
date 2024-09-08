@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetMemberDashboardByPhoneController = GetMemberDashboardByPhoneController;
 const GetMemberDashboardByPhone_1 = require("../services/GetMemberDashboardByPhone");
-const getAccountDashboard_1 = require("../../Account/controllers/getAccountDashboard");
+const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
 const logger_1 = __importDefault(require("../../../../config/logger"));
 const validators_1 = require("../../../utils/validators");
 /**
@@ -36,24 +36,13 @@ async function GetMemberDashboardByPhoneController(req, res, next) {
             return;
         }
         const accountDashboards = await Promise.all(memberDashboard.accountIDS.map(async (accountId) => {
-            const accountReq = {
-                body: {
-                    memberID: memberDashboard.memberID,
-                    accountID: accountId
-                }
-            };
-            const accountRes = {
-                status: (code) => ({
-                    json: (data) => data
-                })
-            };
-            return (0, getAccountDashboard_1.GetAccountDashboardController)(accountReq, accountRes);
+            return (0, GetAccountDashboard_1.GetAccountDashboardService)(memberDashboard.memberID, accountId);
         }));
         logger_1.default.info("Member dashboard retrieved successfully", { phone, memberID: memberDashboard.memberID });
         res.status(200).json({ memberDashboard, accountDashboards });
     }
     catch (error) {
-        logger_1.default.error("Error in GetMemberDashboardByPhoneController", { error, phone });
+        logger_1.default.error("Error in GetMemberDashboardByPhoneController", { error: error.message, phone });
         next(error);
     }
 }

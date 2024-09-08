@@ -1,6 +1,6 @@
 import express from "express";
 import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
-import { GetAccountDashboardController } from "../../Account/controllers/getAccountDashboard";
+import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import logger from "../../../../config/logger";
 import { validatePhone } from "../../../utils/validators";
 
@@ -42,26 +42,14 @@ export async function GetMemberDashboardByPhoneController(
 
     const accountDashboards = await Promise.all(
       memberDashboard.accountIDS.map(async (accountId: string) => {
-        const accountReq = {
-          body: {
-            memberID: memberDashboard.memberID,
-            accountID: accountId
-          }
-        } as express.Request;
-        const accountRes = {
-          status: (code: number) => ({
-            json: (data: any) => data
-          })
-        } as express.Response;
-
-        return GetAccountDashboardController(accountReq, accountRes);
+        return GetAccountDashboardService(memberDashboard.memberID, accountId);
       })
     );
 
     logger.info("Member dashboard retrieved successfully", { phone, memberID: memberDashboard.memberID });
     res.status(200).json({ memberDashboard, accountDashboards });
   } catch (error) {
-    logger.error("Error in GetMemberDashboardByPhoneController", { error, phone });
+    logger.error("Error in GetMemberDashboardByPhoneController", { error: (error as Error).message, phone });
     next(error);
   }
 }
