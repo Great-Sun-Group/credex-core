@@ -5,34 +5,23 @@ const index_1 = require("../../index");
 const CredexController_1 = require("./controllers/CredexController");
 const MemberController_1 = require("./controllers/MemberController");
 const AccountController_1 = require("./controllers/AccountController");
-/*
-function logRoute(req: express.Request, res: express.Response, next: express.NextFunction) {
-  console.log("getCredexDetails route hit");
-  next();
-}
-*/
+const errorHandler_1 = require("../../../middleware/errorHandler");
+// Define route constants
+const ROUTES = {
+    GET_CREDEX_DETAILS: `${index_1.apiVersionOneRoute}getCredexDetails`,
+    GET_MEMBER_DETAILS: `${index_1.apiVersionOneRoute}getMemberDetails`,
+    UPDATE_MEMBER_TIER: `${index_1.apiVersionOneRoute}updateMemberTier`,
+    GET_ACCOUNT_DETAILS: `${index_1.apiVersionOneRoute}getAccountDetails`,
+    GET_RECEIVED_CREDEX_OFFERS: `${index_1.apiVersionOneRoute}getReceivedCredexOffers`,
+    GET_SENT_CREDEX_OFFERS: `${index_1.apiVersionOneRoute}getSentCredexOffers`,
+};
 function AdminDashboardRoutes(app, jsonParser) {
-    app.get(`${index_1.apiVersionOneRoute}getCredexDetails`, 
-    //logRoute,
-    jsonParser, CredexController_1.getCredexDetails);
-    app.get(`${index_1.apiVersionOneRoute}getMemberDetails`, jsonParser, MemberController_1.getMemberDetails);
-    app.patch(`${index_1.apiVersionOneRoute}updateMemberTier`, jsonParser, MemberController_1.updateMemberTier);
-    app.get(`${index_1.apiVersionOneRoute}getAccountDetails`, jsonParser, AccountController_1.getAccountDetails);
-    app.get(`${index_1.apiVersionOneRoute}getReceivedCredexOffers`, jsonParser, AccountController_1.getReceivedCredexOffers);
-    app.get(`${index_1.apiVersionOneRoute}getSentCredexOffers`, jsonParser, AccountController_1.getSentCredexOffers);
-    /*
-    app.get(`${apiVersionOneRoute}getAccountActivityLog`,
-      jsonParser,
-      authMiddleware,
-      getAccountActivityLog
-    );
-    */
-    /*
-    app.put(`${apiVersionOneRoute}updateMemberStatus`,
-      jsonParser,
-      authMiddleware,
-      updateMemberStatus
-    );
-    */
+    app.get(ROUTES.GET_CREDEX_DETAILS, jsonParser, CredexController_1.getCredexDetails);
+    app.get(ROUTES.GET_MEMBER_DETAILS, jsonParser, MemberController_1.getMemberDetails);
+    app.patch(ROUTES.UPDATE_MEMBER_TIER, jsonParser, MemberController_1.updateMemberTier);
+    app.get(ROUTES.GET_ACCOUNT_DETAILS, jsonParser, AccountController_1.getAccountDetails);
+    app.get(ROUTES.GET_RECEIVED_CREDEX_OFFERS, jsonParser, AccountController_1.getReceivedCredexOffers);
+    app.get(ROUTES.GET_SENT_CREDEX_OFFERS, jsonParser, AccountController_1.getSentCredexOffers);
+    app.use(errorHandler_1.errorHandler);
 }
 //# sourceMappingURL=adminDashboardRoutes.js.map

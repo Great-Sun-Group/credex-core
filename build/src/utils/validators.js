@@ -9,6 +9,9 @@ exports.validatePhone = validatePhone;
 exports.validateAmount = validateAmount;
 exports.validateDenomination = validateDenomination;
 exports.validateCredexType = validateCredexType;
+exports.validateName = validateName;
+exports.validateTier = validateTier;
+exports.validatePositiveInteger = validatePositiveInteger;
 const credexTypes_1 = require("../constants/credexTypes");
 const denominations_1 = require("../constants/denominations");
 function validateUUID(uuid) {
@@ -42,5 +45,14 @@ function validateDenomination(denomination) {
 }
 function validateCredexType(type) {
     return credexTypes_1.credexTypes.includes(type);
+}
+function validateName(name) {
+    return name.length >= 3 && name.length <= 50;
+}
+function validateTier(tier) {
+    return Number.isInteger(tier) && tier >= 1;
+}
+function validatePositiveInteger(value) {
+    return Number.isInteger(value) && value > 0;
 }
 //# sourceMappingURL=validators.js.map

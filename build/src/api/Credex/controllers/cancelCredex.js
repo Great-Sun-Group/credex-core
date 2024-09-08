@@ -1,15 +1,9 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CancelCredexController = CancelCredexController;
 const CancelCredex_1 = require("../services/CancelCredex");
 const logger_1 = require("../../../utils/logger");
-const joi_1 = __importDefault(require("joi"));
-const cancelCredexSchema = joi_1.default.object({
-    credexID: joi_1.default.string().uuid().required()
-});
+const validators_1 = require("../../../utils/validators");
 /**
  * CancelCredexController
  *
@@ -22,13 +16,11 @@ const cancelCredexSchema = joi_1.default.object({
  */
 async function CancelCredexController(req, res) {
     try {
-        // Validate input using Joi
-        const { error, value } = cancelCredexSchema.validate(req.body);
-        if (error) {
-            (0, logger_1.logError)("CancelCredexController input validation failed", error);
-            return res.status(400).json({ error: error.details[0].message });
+        const { credexID } = req.body;
+        if (!(0, validators_1.validateUUID)(credexID)) {
+            (0, logger_1.logError)("CancelCredexController: Invalid credexID", new Error(), { credexID });
+            return res.status(400).json({ error: "Invalid credexID" });
         }
-        const { credexID } = value;
         const responseData = await (0, CancelCredex_1.CancelCredexService)(credexID);
         if (!responseData) {
             (0, logger_1.logError)("CancelCredexController: Credex not found or already processed", new Error(), { credexID });

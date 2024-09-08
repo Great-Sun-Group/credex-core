@@ -1,17 +1,9 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetLedgerController = GetLedgerController;
 const GetLedger_1 = require("../services/GetLedger");
 const logger_1 = require("../../../utils/logger");
-const joi_1 = __importDefault(require("joi"));
-const getLedgerSchema = joi_1.default.object({
-    accountID: joi_1.default.string().uuid().required(),
-    numRows: joi_1.default.number().integer().min(1).default(10),
-    startRow: joi_1.default.number().integer().min(0).default(0)
-});
+const validators_1 = require("../../../utils/validators");
 /**
  * GetLedgerController
  *
@@ -24,19 +16,27 @@ const getLedgerSchema = joi_1.default.object({
  */
 async function GetLedgerController(req, res) {
     try {
-        // Validate input using Joi
-        const { error, value } = getLedgerSchema.validate(req.query);
-        if (error) {
-            (0, logger_1.logError)("GetLedgerController input validation failed", error);
-            return res.status(400).json({ error: error.details[0].message });
+        const { accountID, numRows, startRow } = req.query;
+        if (!(0, validators_1.validateUUID)(accountID)) {
+            (0, logger_1.logError)("GetLedgerController: Invalid accountID", new Error(), { accountID });
+            return res.status(400).json({ error: "Invalid accountID" });
         }
-        const { accountID, numRows, startRow } = value;
-        const responseData = await (0, GetLedger_1.GetLedgerService)(accountID, numRows, startRow);
+        const parsedNumRows = numRows ? parseInt(numRows, 10) : 10;
+        const parsedStartRow = startRow ? parseInt(startRow, 10) : 0;
+        if (!(0, validators_1.validatePositiveInteger)(parsedNumRows)) {
+            (0, logger_1.logError)("GetLedgerController: Invalid numRows", new Error(), { numRows });
+            return res.status(400).json({ error: "Invalid numRows. Must be a positive integer." });
+        }
+        if (!Number.isInteger(parsedStartRow) || parsedStartRow < 0) {
+            (0, logger_1.logError)("GetLedgerController: Invalid startRow", new Error(), { startRow });
+            return res.status(400).json({ error: "Invalid startRow. Must be a non-negative integer." });
+        }
+        const responseData = await (0, GetLedger_1.GetLedgerService)(accountID, parsedNumRows, parsedStartRow);
         if (!responseData) {
-            (0, logger_1.logError)("GetLedgerController: Failed to retrieve ledger", new Error(), { accountID, numRows, startRow });
+            (0, logger_1.logError)("GetLedgerController: Failed to retrieve ledger", new Error(), { accountID, numRows: parsedNumRows, startRow: parsedStartRow });
             return res.status(404).json({ error: "Failed to retrieve ledger" });
         }
-        (0, logger_1.logInfo)("GetLedgerController: Ledger retrieved successfully", { accountID, numRows, startRow });
+        (0, logger_1.logInfo)("GetLedgerController: Ledger retrieved successfully", { accountID, numRows: parsedNumRows, startRow: parsedStartRow });
         return res.status(200).json(responseData);
     }
     catch (err) {

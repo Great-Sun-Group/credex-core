@@ -6,8 +6,6 @@ const requestRecurring_1 = require("./controllers/requestRecurring");
 const acceptRecurring_1 = require("./controllers/acceptRecurring");
 const cancelRecurring_1 = require("./controllers/cancelRecurring");
 const errorHandler_1 = require("../../../middleware/errorHandler");
-const validateRequest_1 = require("../../../middleware/validateRequest");
-const avatarSchemas_1 = require("./validators/avatarSchemas");
 function RecurringRoutes(app, jsonParser) {
     /**
      * @swagger
@@ -27,7 +25,7 @@ function RecurringRoutes(app, jsonParser) {
      *       400:
      *         description: Bad request
      */
-    app.post(`${index_1.apiVersionOneRoute}requestRecurring`, jsonParser, (0, validateRequest_1.validateRequest)(avatarSchemas_1.requestRecurringSchema), requestRecurring_1.RequestRecurringController, errorHandler_1.errorHandler);
+    app.post(`${index_1.apiVersionOneRoute}requestRecurring`, jsonParser, requestRecurring_1.RequestRecurringController, errorHandler_1.errorHandler);
     /**
      * @swagger
      * /api/v1/acceptRecurring:
@@ -46,7 +44,7 @@ function RecurringRoutes(app, jsonParser) {
      *       400:
      *         description: Bad request
      */
-    app.put(`${index_1.apiVersionOneRoute}acceptRecurring`, jsonParser, (0, validateRequest_1.validateRequest)(avatarSchemas_1.acceptRecurringSchema), acceptRecurring_1.AcceptRecurringController, errorHandler_1.errorHandler);
+    app.put(`${index_1.apiVersionOneRoute}acceptRecurring`, jsonParser, acceptRecurring_1.AcceptRecurringController, errorHandler_1.errorHandler);
     /**
      * @swagger
      * /api/v1/cancelRecurring:
@@ -65,7 +63,7 @@ function RecurringRoutes(app, jsonParser) {
      *       400:
      *         description: Bad request
      */
-    app.delete(`${index_1.apiVersionOneRoute}cancelRecurring`, jsonParser, (0, validateRequest_1.validateRequest)(avatarSchemas_1.cancelRecurringSchema), cancelRecurring_1.DeclineRecurringController, errorHandler_1.errorHandler);
+    app.delete(`${index_1.apiVersionOneRoute}cancelRecurring`, jsonParser, cancelRecurring_1.DeclineRecurringController, errorHandler_1.errorHandler);
 }
 /**
  * @swagger

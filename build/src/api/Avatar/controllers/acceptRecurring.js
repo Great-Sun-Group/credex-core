@@ -7,7 +7,7 @@ exports.AcceptRecurringController = AcceptRecurringController;
 const AcceptRecurring_1 = require("../services/AcceptRecurring");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-const avatarSchemas_1 = require("../validators/avatarSchemas");
+const validators_1 = require("../../../utils/validators");
 /**
  * AcceptRecurringController
  *
@@ -20,11 +20,13 @@ const avatarSchemas_1 = require("../validators/avatarSchemas");
  */
 async function AcceptRecurringController(req, res) {
     try {
-        const { error, value } = avatarSchemas_1.acceptRecurringSchema.validate(req.body, { abortEarly: false });
-        if (error) {
-            return res.status(400).json({ error: error.details.map(detail => detail.message) });
+        const { avatarID, signerID } = req.body;
+        if (!(0, validators_1.validateUUID)(avatarID)) {
+            return res.status(400).json({ error: "Invalid avatarID" });
         }
-        const { avatarID, signerID } = value;
+        if (!(0, validators_1.validateUUID)(signerID)) {
+            return res.status(400).json({ error: "Invalid signerID" });
+        }
         // Call AcceptRecurringService to process the acceptance
         const acceptRecurringData = await (0, AcceptRecurring_1.AcceptRecurringService)({ avatarID, signerID });
         // Check if the service call was successful

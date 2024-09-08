@@ -7,7 +7,6 @@ exports.GetMemberDashboardByPhoneController = GetMemberDashboardByPhoneControlle
 const GetMemberDashboardByPhone_1 = require("../services/GetMemberDashboardByPhone");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-const memberSchemas_1 = require("../validators/memberSchemas");
 /**
  * Controller for retrieving a member's dashboard by phone number
  * @param req - Express request object
@@ -16,12 +15,11 @@ const memberSchemas_1 = require("../validators/memberSchemas");
  */
 async function GetMemberDashboardByPhoneController(req, res, next) {
     try {
-        const { error, value } = memberSchemas_1.getMemberDashboardByPhoneSchema.validate(req.body);
-        if (error) {
-            res.status(400).json({ message: error.details[0].message });
+        const { phone } = req.body;
+        if (!phone) {
+            res.status(400).json({ message: "Phone number is required" });
             return;
         }
-        const { phone } = value;
         logger_1.default.info("Retrieving member dashboard by phone", { phone });
         const memberDashboard = await (0, GetMemberDashboardByPhone_1.GetMemberDashboardByPhoneService)(phone);
         if (!memberDashboard) {

@@ -1,7 +1,4 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OfferCredexController = OfferCredexController;
 const OfferCredex_1 = require("../services/OfferCredex");
@@ -10,22 +7,7 @@ const credspan_1 = require("../../../constants/credspan");
 const securedCredexAuthForTier_1 = require("../../Member/controllers/securedCredexAuthForTier");
 const neo4j_1 = require("../../../../config/neo4j");
 const logger_1 = require("../../../utils/logger");
-const joi_1 = __importDefault(require("joi"));
-const offerCredexSchema = joi_1.default.object({
-    memberID: joi_1.default.string().uuid().required(),
-    issuerAccountID: joi_1.default.string().uuid().required(),
-    receiverAccountID: joi_1.default.string().uuid().required(),
-    Denomination: joi_1.default.string().required(),
-    InitialAmount: joi_1.default.number().positive().required(),
-    credexType: joi_1.default.string().required(),
-    OFFERSorREQUESTS: joi_1.default.string().valid("OFFERS", "REQUESTS").required(),
-    securedCredex: joi_1.default.boolean().default(false),
-    dueDate: joi_1.default.when("securedCredex", {
-        is: false,
-        then: joi_1.default.date().iso().required(),
-        otherwise: joi_1.default.forbidden()
-    })
-});
+const validators_1 = require("../../../utils/validators");
 /**
  * OfferCredexController
  *
@@ -39,13 +21,38 @@ const offerCredexSchema = joi_1.default.object({
 async function OfferCredexController(req, res) {
     const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
     try {
-        // Validate input using Joi
-        const { error, value } = offerCredexSchema.validate(req.body);
-        if (error) {
-            (0, logger_1.logError)("OfferCredexController input validation failed", error);
-            return res.status(400).json({ error: error.details[0].message });
+        const { memberID, issuerAccountID, receiverAccountID, Denomination, InitialAmount, credexType, OFFERSorREQUESTS, securedCredex, dueDate } = req.body;
+        // Validate input
+        if (!(0, validators_1.validateUUID)(memberID)) {
+            return res.status(400).json({ error: "Invalid memberID" });
         }
-        const { memberID, issuerAccountID, receiverAccountID, Denomination, InitialAmount, credexType, OFFERSorREQUESTS, securedCredex, dueDate } = value;
+        if (!(0, validators_1.validateUUID)(issuerAccountID)) {
+            return res.status(400).json({ error: "Invalid issuerAccountID" });
+        }
+        if (!(0, validators_1.validateUUID)(receiverAccountID)) {
+            return res.status(400).json({ error: "Invalid receiverAccountID" });
+        }
+        if (!(0, validators_1.validateDenomination)(Denomination)) {
+            return res.status(400).json({ error: "Invalid Denomination" });
+        }
+        if (!(0, validators_1.validateAmount)(InitialAmount)) {
+            return res.status(400).json({ error: "Invalid InitialAmount" });
+        }
+        if (!(0, validators_1.validateCredexType)(credexType)) {
+            return res.status(400).json({ error: "Invalid credexType" });
+        }
+        if (OFFERSorREQUESTS !== "OFFERS" && OFFERSorREQUESTS !== "REQUESTS") {
+            return res.status(400).json({ error: "Invalid OFFERSorREQUESTS value" });
+        }
+        if (typeof securedCredex !== "boolean") {
+            return res.status(400).json({ error: "Invalid securedCredex value" });
+        }
+        if (!securedCredex && !dueDate) {
+            return res.status(400).json({ error: "dueDate is required for unsecured credex" });
+        }
+        if (securedCredex && dueDate) {
+            return res.status(400).json({ error: "dueDate is not allowed for secured credex" });
+        }
         // Check if issuerAccountID and receiverAccountID are the same
         if (issuerAccountID === receiverAccountID) {
             (0, logger_1.logError)("OfferCredexController: Issuer and receiver are the same account", new Error(), { issuerAccountID, receiverAccountID });
@@ -95,7 +102,7 @@ async function OfferCredexController(req, res) {
             }
         }
         // Call OfferCredexService to create the Credex offer
-        const offerCredexData = await (0, OfferCredex_1.OfferCredexService)(value);
+        const offerCredexData = await (0, OfferCredex_1.OfferCredexService)(req.body);
         if (!offerCredexData || typeof offerCredexData.credex === 'boolean') {
             (0, logger_1.logError)("OfferCredexController: Failed to create Credex offer", new Error(), { offerCredexData });
             return res.status(400).json({ error: offerCredexData.message || "Failed to create Credex offer" });

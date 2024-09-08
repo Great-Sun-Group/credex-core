@@ -7,7 +7,7 @@ exports.UpdateMemberTierController = UpdateMemberTierController;
 exports.updateMemberTierExpressHandler = updateMemberTierExpressHandler;
 const UpdateMemberTier_1 = require("../services/UpdateMemberTier");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-const memberSchemas_1 = require("../validators/memberSchemas");
+const validators_1 = require("../../../utils/validators");
 /**
  * Controller for updating a member's tier
  * @param memberID - ID of the member
@@ -40,12 +40,15 @@ async function UpdateMemberTierController(memberID, tier) {
  */
 async function updateMemberTierExpressHandler(req, res, next) {
     try {
-        const { error, value } = memberSchemas_1.updateMemberTierSchema.validate(req.body);
-        if (error) {
-            res.status(400).json({ message: error.details[0].message });
+        const { memberID, tier } = req.body;
+        if (!(0, validators_1.validateUUID)(memberID)) {
+            res.status(400).json({ message: 'Invalid memberID' });
             return;
         }
-        const { memberID, tier } = value;
+        if (!(0, validators_1.validateTier)(tier)) {
+            res.status(400).json({ message: 'Invalid tier' });
+            return;
+        }
         const result = await UpdateMemberTierController(memberID, tier);
         if (result.success) {
             res.status(200).json({ message: result.message });

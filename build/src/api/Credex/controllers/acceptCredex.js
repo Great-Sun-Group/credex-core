@@ -1,17 +1,10 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AcceptCredexController = AcceptCredexController;
 const AcceptCredex_1 = require("../services/AcceptCredex");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
 const logger_1 = require("../../../utils/logger");
-const joi_1 = __importDefault(require("joi"));
-const acceptCredexSchema = joi_1.default.object({
-    credexID: joi_1.default.string().uuid().required(),
-    signerID: joi_1.default.string().uuid().required()
-});
+const validators_1 = require("../../../utils/validators");
 /**
  * AcceptCredexController
  *
@@ -24,13 +17,15 @@ const acceptCredexSchema = joi_1.default.object({
  */
 async function AcceptCredexController(req, res) {
     try {
-        // Validate input using Joi
-        const { error, value } = acceptCredexSchema.validate(req.body);
-        if (error) {
-            (0, logger_1.logError)("AcceptCredexController input validation failed", error);
-            return res.status(400).json({ error: error.details[0].message });
+        const { credexID, signerID } = req.body;
+        if (!(0, validators_1.validateUUID)(credexID)) {
+            (0, logger_1.logError)("AcceptCredexController: Invalid credexID", new Error(), { credexID });
+            return res.status(400).json({ error: "Invalid credexID" });
         }
-        const { credexID, signerID } = value;
+        if (!(0, validators_1.validateUUID)(signerID)) {
+            (0, logger_1.logError)("AcceptCredexController: Invalid signerID", new Error(), { signerID });
+            return res.status(400).json({ error: "Invalid signerID" });
+        }
         const acceptCredexData = await (0, AcceptCredex_1.AcceptCredexService)(credexID, signerID);
         if (!acceptCredexData) {
             (0, logger_1.logError)("AcceptCredexController: Failed to accept Credex", new Error(), { credexID, signerID });

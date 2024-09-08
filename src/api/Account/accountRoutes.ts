@@ -6,9 +6,7 @@ import { UpdateAccountController } from "./controllers/updateAccount";
 import { AuthorizeForAccountController } from "./controllers/authorizeForAccount";
 import { UnauthorizeForAccountController } from "./controllers/unauthorizeForAccount";
 import { UpdateSendOffersToController } from "./controllers/updateSendOffersTo";
-import { validateRequest } from "../../../middleware/validateRequest";
 import { rateLimiter } from "../../../middleware/rateLimiter";
-import { accountSchemas } from "./validators/accountSchemas";
 import { errorHandler } from "../../../middleware/errorHandler";
 
 export default function AccountRoutes(
@@ -39,7 +37,6 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}createAccount`,
     rateLimiter,
     jsonParser,
-    validateRequest(accountSchemas.createAccount),
     CreateAccountController,
     errorHandler
   );
@@ -69,7 +66,6 @@ export default function AccountRoutes(
   app.get(
     `${apiVersionOneRoute}getAccountByHandle`,
     rateLimiter,
-    validateRequest(accountSchemas.getAccountByHandle),
     GetAccountByHandleController,
     errorHandler
   );
@@ -100,7 +96,6 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}updateAccount`,
     rateLimiter,
     jsonParser,
-    validateRequest(accountSchemas.updateAccount),
     UpdateAccountController,
     errorHandler
   );
@@ -129,7 +124,6 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}authorizeForAccount`,
     rateLimiter,
     jsonParser,
-    validateRequest(accountSchemas.authorizeForAccount),
     AuthorizeForAccountController,
     errorHandler
   );
@@ -158,7 +152,6 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}unauthorizeForAccount`,
     rateLimiter,
     jsonParser,
-    validateRequest(accountSchemas.unauthorizeForAccount),
     UnauthorizeForAccountController,
     errorHandler
   );
@@ -187,7 +180,6 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}updateSendOffersTo`,
     rateLimiter,
     jsonParser,
-    validateRequest(accountSchemas.updateSendOffersTo),
     UpdateSendOffersToController,
     errorHandler
   );

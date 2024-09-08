@@ -7,14 +7,19 @@ exports.DeclineRecurringController = DeclineRecurringController;
 const CancelRecurring_1 = require("../services/CancelRecurring");
 const GetAccountDashboard_1 = require("../../Account/services/GetAccountDashboard");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-const avatarSchemas_1 = require("../validators/avatarSchemas");
+const validators_1 = require("../../../utils/validators");
 async function DeclineRecurringController(req, res) {
     try {
-        const { error, value } = avatarSchemas_1.cancelRecurringSchema.validate(req.body, { abortEarly: false });
-        if (error) {
-            return res.status(400).json({ error: error.details.map(detail => detail.message) });
+        const { signerID, cancelerAccountID, avatarID } = req.body;
+        if (!(0, validators_1.validateUUID)(signerID)) {
+            return res.status(400).json({ error: "Invalid signerID" });
         }
-        const { signerID, cancelerAccountID, avatarID } = value;
+        if (!(0, validators_1.validateUUID)(cancelerAccountID)) {
+            return res.status(400).json({ error: "Invalid cancelerAccountID" });
+        }
+        if (!(0, validators_1.validateUUID)(avatarID)) {
+            return res.status(400).json({ error: "Invalid avatarID" });
+        }
         const cancelRecurringData = await (0, CancelRecurring_1.CancelRecurringService)(signerID, cancelerAccountID, avatarID);
         if (!cancelRecurringData) {
             logger_1.default.error("Failed to cancel recurring payment", { error: "CancelRecurringService returned null" });

@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetAccountByHandleController = GetAccountByHandleController;
 const GetAccountByHandle_1 = require("../services/GetAccountByHandle");
 const logger_1 = __importDefault(require("../../../../config/logger"));
+const validators_1 = require("../../../utils/validators");
 /**
  * Controller for retrieving an account by its handle
  * @param req - Express request object
@@ -15,6 +16,10 @@ const logger_1 = __importDefault(require("../../../../config/logger"));
 async function GetAccountByHandleController(req, res, next) {
     const { accountHandle } = req.query;
     try {
+        if (!(0, validators_1.validateAccountHandle)(accountHandle)) {
+            res.status(400).json({ message: "Invalid account handle" });
+            return;
+        }
         logger_1.default.info("Retrieving account by handle", { accountHandle });
         const accountData = await (0, GetAccountByHandle_1.GetAccountByHandleService)(accountHandle);
         if (accountData) {

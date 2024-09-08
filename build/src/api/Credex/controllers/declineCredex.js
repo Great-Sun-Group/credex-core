@@ -1,15 +1,9 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DeclineCredexController = DeclineCredexController;
 const DeclineCredex_1 = require("../services/DeclineCredex");
 const logger_1 = require("../../../utils/logger");
-const joi_1 = __importDefault(require("joi"));
-const declineCredexSchema = joi_1.default.object({
-    credexID: joi_1.default.string().uuid().required()
-});
+const validators_1 = require("../../../utils/validators");
 /**
  * DeclineCredexController
  *
@@ -22,13 +16,11 @@ const declineCredexSchema = joi_1.default.object({
  */
 async function DeclineCredexController(req, res) {
     try {
-        // Validate input using Joi
-        const { error, value } = declineCredexSchema.validate(req.body);
-        if (error) {
-            (0, logger_1.logError)("DeclineCredexController input validation failed", error);
-            return res.status(400).json({ error: error.details[0].message });
+        const { credexID } = req.body;
+        if (!(0, validators_1.validateUUID)(credexID)) {
+            (0, logger_1.logError)("DeclineCredexController: Invalid credexID", new Error(), { credexID });
+            return res.status(400).json({ error: "Invalid credexID" });
         }
-        const { credexID } = value;
         const responseData = await (0, DeclineCredex_1.DeclineCredexService)(credexID);
         if (!responseData) {
             (0, logger_1.logError)("DeclineCredexController: Failed to decline Credex", new Error(), { credexID });

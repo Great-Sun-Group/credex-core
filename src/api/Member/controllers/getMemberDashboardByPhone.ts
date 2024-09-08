@@ -2,7 +2,6 @@ import express from "express";
 import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import logger from "../../../../config/logger";
-import { getMemberDashboardByPhoneSchema } from "../validators/memberSchemas";
 
 /**
  * Controller for retrieving a member's dashboard by phone number
@@ -16,13 +15,12 @@ export async function GetMemberDashboardByPhoneController(
   next: express.NextFunction
 ): Promise<void> {
   try {
-    const { error, value } = getMemberDashboardByPhoneSchema.validate(req.body);
-    if (error) {
-      res.status(400).json({ message: error.details[0].message });
+    const { phone } = req.body;
+
+    if (!phone) {
+      res.status(400).json({ message: "Phone number is required" });
       return;
     }
-
-    const { phone } = value;
 
     logger.info("Retrieving member dashboard by phone", { phone });
 

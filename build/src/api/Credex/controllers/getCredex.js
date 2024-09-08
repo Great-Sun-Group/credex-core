@@ -1,16 +1,9 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetCredexController = GetCredexController;
 const GetCredex_1 = require("../services/GetCredex");
 const logger_1 = require("../../../utils/logger");
-const joi_1 = __importDefault(require("joi"));
-const getCredexSchema = joi_1.default.object({
-    credexID: joi_1.default.string().uuid().required(),
-    accountID: joi_1.default.string().uuid().required()
-});
+const validators_1 = require("../../../utils/validators");
 /**
  * GetCredexController
  *
@@ -23,13 +16,15 @@ const getCredexSchema = joi_1.default.object({
  */
 async function GetCredexController(req, res) {
     try {
-        // Validate input using Joi
-        const { error, value } = getCredexSchema.validate(req.query);
-        if (error) {
-            (0, logger_1.logError)("GetCredexController input validation failed", error);
-            return res.status(400).json({ error: error.details[0].message });
+        const { credexID, accountID } = req.query;
+        if (!(0, validators_1.validateUUID)(credexID)) {
+            (0, logger_1.logError)("GetCredexController: Invalid credexID", new Error(), { credexID });
+            return res.status(400).json({ error: "Invalid credexID" });
         }
-        const { credexID, accountID } = value;
+        if (!(0, validators_1.validateUUID)(accountID)) {
+            (0, logger_1.logError)("GetCredexController: Invalid accountID", new Error(), { accountID });
+            return res.status(400).json({ error: "Invalid accountID" });
+        }
         const responseData = await (0, GetCredex_1.GetCredexService)(credexID, accountID);
         if (!responseData) {
             (0, logger_1.logError)("GetCredexController: Credex not found", new Error(), { credexID, accountID });

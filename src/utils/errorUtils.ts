@@ -9,3 +9,14 @@ export function isNeo4jError(
     "message" in error
   );
 }
+
+export class ApiError extends Error {
+  statusCode: number;
+  constructor(message: string, statusCode: number, details?: string) {
+    super(message);
+    this.statusCode = statusCode;
+    if (details) {
+      this.message = `${message}: ${details}`;
+    }
+  }
+}

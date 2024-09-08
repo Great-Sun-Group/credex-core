@@ -8,7 +8,7 @@ exports.onboardMemberExpressHandler = onboardMemberExpressHandler;
 const OnboardMember_1 = require("../services/OnboardMember");
 const GetMemberDashboardByPhone_1 = require("../services/GetMemberDashboardByPhone");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-const memberSchemas_1 = require("../validators/memberSchemas");
+const validators_1 = require("../../../utils/validators");
 async function OnboardMemberController(firstname, lastname, phone) {
     try {
         logger_1.default.info("Onboarding new member", { firstname, lastname, phone });
@@ -33,12 +33,19 @@ async function OnboardMemberController(firstname, lastname, phone) {
 }
 async function onboardMemberExpressHandler(req, res, next) {
     try {
-        const { error, value } = memberSchemas_1.onboardMemberSchema.validate(req.body);
-        if (error) {
-            res.status(400).json({ message: error.details[0].message });
+        const { firstname, lastname, phone } = req.body;
+        if (!(0, validators_1.validateName)(firstname)) {
+            res.status(400).json({ message: 'First name must be between 3 and 50 characters long' });
             return;
         }
-        const { firstname, lastname, phone } = value;
+        if (!(0, validators_1.validateName)(lastname)) {
+            res.status(400).json({ message: 'Last name must be between 3 and 50 characters long' });
+            return;
+        }
+        if (!(0, validators_1.validatePhone)(phone)) {
+            res.status(400).json({ message: 'Invalid phone number. Please provide a valid international phone number.' });
+            return;
+        }
         const result = await OnboardMemberController(firstname, lastname, phone);
         if ("error" in result) {
             res.status(400).json({ message: result.error });

@@ -6,13 +6,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetMemberByHandleController = void 0;
 const GetMemberByHandle_1 = require("../services/GetMemberByHandle");
 const logger_1 = __importDefault(require("../../../../config/logger"));
-const memberSchemas_1 = require("../validators/memberSchemas");
+const validators_1 = require("../../../utils/validators");
 const GetMemberByHandleController = async (req, res, next) => {
     const { memberHandle } = req.body;
     try {
-        const { error } = memberSchemas_1.getMemberByHandleSchema.validate({ memberHandle });
-        if (error) {
-            res.status(400).json({ message: error.details[0].message });
+        if (!(0, validators_1.validateMemberHandle)(memberHandle)) {
+            res.status(400).json({ message: 'Invalid member handle. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters.' });
             return;
         }
         logger_1.default.info("Retrieving member by handle", { memberHandle });
