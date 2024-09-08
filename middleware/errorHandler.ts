@@ -11,9 +11,9 @@ export interface AppError extends Error {
  * @param err - Error object
  * @param req - Express request object
  * @param res - Express response object
- * @param next - Next middleware function
+ * @param _ - Next middleware function (unused)
  */
-export function errorHandler(err: AppError, req: Request, res: Response, next: NextFunction) {
+export function errorHandler(err: AppError, req: Request, res: Response, _: NextFunction) {
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
 
@@ -37,10 +37,10 @@ export function errorHandler(err: AppError, req: Request, res: Response, next: N
 /**
  * Middleware to handle 404 Not Found errors
  * @param req - Express request object
- * @param res - Express response object
+ * @param _res - Express response object (unused)
  * @param next - Next middleware function
  */
-export function notFoundHandler(req: Request, res: Response, next: NextFunction) {
+export function notFoundHandler(req: Request, _res: Response, next: NextFunction) {
   const err: AppError = new Error(`Not Found - ${req.originalUrl}`);
   err.statusCode = 404;
   next(err);

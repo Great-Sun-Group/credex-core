@@ -1,0 +1,13 @@
+5. Logging Wrapper:
+   Create src/utils/logger.ts with standardized logging functions.
+
+6. HTTP Request Helper:
+   Create src/utils/httpUtils.ts for handling axios requests like those in src/core-cron/DCO/fetchZigRate.ts and src/core-cron/DCO/DCOexecute.ts.
+
+7. Config Loading:
+   Create src/utils/configUtils.ts for centralized configuration loading.
+
+8. Type Guards:
+   Include type guard functions like `isNeo4jError` in src/utils/typeGuards.ts.
+
+These changes will improve code reusability, reduce duplication, and make it easier to maintain and update common functionalities across the application.

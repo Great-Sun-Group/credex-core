@@ -1,0 +1,101 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.GetBalancesService = GetBalancesService;
+const neo4j_1 = require("../../../../config/neo4j");
+const denomUtils_1 = require("../../../utils/denomUtils");
+async function GetBalancesService(accountID) {
+    const ledgerSpaceSession = neo4j_1.ledgerSpaceDriver.session();
+    try {
+        const getSecuredBalancesQuery = await ledgerSpaceSession.run(`
+      MATCH (account:Account {accountID: $accountID})
+
+      // Get all unique denominations from Credex nodes related to the account
+      OPTIONAL MATCH (account)-[:OWES|OFFERED]-(securedCredex:Credex)<-[:SECURES]-()
+      WITH DISTINCT securedCredex.Denomination AS denom, account
+
+      // Aggregate incoming secured amounts for each denomination ensuring uniqueness
+      OPTIONAL MATCH (account)<-[:OWES]-(inSecuredCredex:Credex {Denomination: denom})<-[:SECURES]-()
+      WITH denom, account, 
+          collect(DISTINCT inSecuredCredex) AS inSecuredCredexes
+
+      // Aggregate outgoing secured amounts for each denomination ensuring uniqueness
+      OPTIONAL MATCH (account)-[:OWES|OFFERED]->(outSecuredCredex:Credex {Denomination: denom})<-[:SECURES]-()
+      WITH denom, 
+          reduce(s = 0, n IN inSecuredCredexes | s + n.OutstandingAmount) AS sumSecuredIn, 
+          collect(DISTINCT outSecuredCredex) AS outSecuredCredexes
+
+      // Calculate the total outgoing amount
+      WITH denom, sumSecuredIn, 
+          reduce(s = 0, n IN outSecuredCredexes | s + n.OutstandingAmount) AS sumSecuredOut
+
+      // Get the current day node which should have active status
+      MATCH (daynode:Daynode {Active: true})
+
+      // Calculate the net secured balance for each denomination and return the result
+      RETURN denom, (sumSecuredIn - sumSecuredOut) / daynode[denom] AS netSecured
+      `, { accountID });
+        const securedNetBalancesByDenom = getSecuredBalancesQuery.records
+            .filter((record) => {
+            const amount = record.get("netSecured");
+            return typeof amount === "number" && isFinite(amount) && amount !== 0;
+        })
+            .map((record) => {
+            const denom = record.get("denom");
+            const amount = record.get("netSecured");
+            return `${(0, denomUtils_1.denomFormatter)(amount, denom)} ${denom}`;
+        });
+        const getUnsecuredBalancesAndTotalAssetsQuery = await ledgerSpaceSession.run(`
+        MATCH (account:Account{accountID:$accountID})
+
+        OPTIONAL MATCH (account)<-[:OWES]-(owesInCredexUnsecured:Credex)
+        WHERE NOT (owesInCredexUnsecured)<-[:SECURES]-()
+        WITH account, COLLECT(DISTINCT owesInCredexUnsecured) AS unsecuredCredexesIn
+
+        OPTIONAL MATCH (account)-[:OWES]->(owesOutCredexUnsecured:Credex)
+        WHERE NOT (owesOutCredexUnsecured)<-[:SECURES]-()
+        WITH account, unsecuredCredexesIn, COLLECT(DISTINCT owesOutCredexUnsecured) AS unsecuredCredexesOut
+
+        OPTIONAL MATCH (account)<-[:OWES]-(owesInCredexAll:Credex)
+        WITH account, unsecuredCredexesIn, unsecuredCredexesOut, COLLECT(DISTINCT owesInCredexAll) AS owesInCredexesAll
+
+        OPTIONAL MATCH (account)-[:OWES]->(owesOutCredexAll:Credex)
+        WITH account, unsecuredCredexesIn, unsecuredCredexesOut, owesInCredexesAll, COLLECT(DISTINCT owesOutCredexAll) AS owesOutCredexesAll
+
+        WITH
+          account.defaultDenom AS defaultDenom,
+          REDUCE(total = 0, credex IN unsecuredCredexesIn | total + credex.OutstandingAmount) AS receivablesTotalCXX,
+          REDUCE(total = 0, credex IN unsecuredCredexesOut | total + credex.OutstandingAmount) AS payablesTotalCXX,
+          REDUCE(total = 0, credex IN unsecuredCredexesIn | total + credex.OutstandingAmount)
+            - REDUCE(total = 0, credex IN unsecuredCredexesOut | total + credex.OutstandingAmount) AS unsecuredNetCXX,
+          REDUCE(total = 0, credex IN owesInCredexesAll | total + credex.OutstandingAmount)
+            - REDUCE(total = 0, credex IN owesOutCredexesAll | total + credex.OutstandingAmount) AS netCredexAssetsCXX
+        MATCH (daynode:Daynode{Active:true})
+        RETURN
+          defaultDenom,
+          receivablesTotalCXX / daynode[defaultDenom] AS receivablesTotalInDefaultDenom,
+          payablesTotalCXX / daynode[defaultDenom] AS payablesTotalInDefaultDenom,
+          unsecuredNetCXX / daynode[defaultDenom] AS unsecuredNetInDefaultDenom,
+          netCredexAssetsCXX / daynode[defaultDenom] AS netCredexAssetsInDefaultDenom
+      `, { accountID });
+        const unsecuredBalancesAndTotalAssets = getUnsecuredBalancesAndTotalAssetsQuery.records[0];
+        const defaultDenom = unsecuredBalancesAndTotalAssets.get("defaultDenom");
+        const unsecuredBalancesInDefaultDenom = {
+            totalPayables: `${(0, denomUtils_1.denomFormatter)(unsecuredBalancesAndTotalAssets.get("payablesTotalInDefaultDenom"), defaultDenom)} ${defaultDenom}`,
+            totalReceivables: `${(0, denomUtils_1.denomFormatter)(unsecuredBalancesAndTotalAssets.get("receivablesTotalInDefaultDenom"), defaultDenom)} ${defaultDenom}`,
+            netPayRec: `${(0, denomUtils_1.denomFormatter)(unsecuredBalancesAndTotalAssets.get("unsecuredNetInDefaultDenom"), defaultDenom)} ${defaultDenom}`,
+        };
+        return {
+            securedNetBalancesByDenom,
+            unsecuredBalancesInDefaultDenom,
+            netCredexAssetsInDefaultDenom: `${(0, denomUtils_1.denomFormatter)(unsecuredBalancesAndTotalAssets.get("netCredexAssetsInDefaultDenom"), defaultDenom)} ${defaultDenom}`,
+        };
+    }
+    catch (error) {
+        console.error("Error fetching balances:", error);
+        throw new Error("Failed to fetch balances. Please try again later.");
+    }
+    finally {
+        await ledgerSpaceSession.close();
+    }
+}
+//# sourceMappingURL=GetBalances.js.map

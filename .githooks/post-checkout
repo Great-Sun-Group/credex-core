@@ -1,13 +1,10 @@
 #!/bin/bash
 
-/workspaces/credex-core/update_combined_code.sh
+# Run the update_ai_context.sh script
+./update_ai_context.sh
 
-# Add the updated combined code file
-git add combined_code.txt
+# Add the updated AI context files
+git add ai_context
 
-# Commit the changes if there are any
-if git diff --cached --exit-code; then
-    echo "No changes to combined_code.txt"
-else
-    git commit -m "Update combined_code.txt for branch $(git rev-parse --abbrev-ref HEAD)"
-fi
+# Exit with a success status
+exit 0

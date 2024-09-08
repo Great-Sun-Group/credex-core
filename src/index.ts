@@ -1,27 +1,25 @@
 // Import required modules and dependencies
 import express from "express";
 import http from "http";
-import MemberRoutes from "./Member/memberRoutes";
-import AccountRoutes from "./Account/accountRoutes";
-import CredexRoutes from "./Credex/credexRoutes";
-import DevAdminRoutes from "./DevAdmin/devAdminRoutes";
-import RecurringRoutes from "./Avatar/recurringRoutes";
+import MemberRoutes from "./api/Member/memberRoutes";
+import AccountRoutes from "./api/Account/accountRoutes";
+import CredexRoutes from "./api/Credex/credexRoutes";
+import RecurringRoutes from "./api/Avatar/recurringRoutes";
 import logger, { expressLogger } from "../config/logger";
 import bodyParser from "body-parser";
-import startCronJobs from "./Core/cronJobs";
+import startCronJobs from "./core-cron/cronJobs";
 import authenticate from "../config/authenticate";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import AdminDashboardRoutes from "./AdminDashboard/adminDashboardRoutes";
-import AdminRoutes from "./DevelopmentAdmin/adminRoutes";
+import AdminDashboardRoutes from "./api/AdminDashboard/adminDashboardRoutes";
 import { errorHandler, notFoundHandler } from "../middleware/errorHandler";
 import { config } from "../config/config";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "../config/swagger";
 
 // Create an Express application
-const app = express();
+export const app = express();
 
 // Create a JSON parser middleware
 const jsonParser = bodyParser.json();
@@ -62,11 +60,6 @@ CredexRoutes(app, jsonParser);
 AdminDashboardRoutes(app, jsonParser);
 RecurringRoutes(app, jsonParser);
 
-// Conditionally apply DevAdmin routes based on deployment environment
-if (config.deployment === "demo" || config.deployment === "dev") {
-  DevAdminRoutes(app, jsonParser);
-}
-
 // Apply error handling middleware
 app.use(notFoundHandler); // Handle 404 errors
 app.use(errorHandler); // Handle all other errors
@@ -75,15 +68,17 @@ app.use(errorHandler); // Handle all other errors
 const server = http.createServer(app);
 
 // Start the server
-server.listen(config.port, () => {
-  logger.info(`Server is running on http://localhost:${config.port}`);
-  logger.info(
-    `API documentation available at http://localhost:${config.port}/api-docs`
-  );
-  logger.info(`Server started at ${new Date().toISOString()}`);
-  logger.info(`Environment: ${config.nodeEnv}`);
-  logger.info(`Deployment type: ${config.deployment}`);
-});
+if (require.main === module) {
+  server.listen(config.port, () => {
+    logger.info(`Server is running on http://localhost:${config.port}`);
+    logger.info(
+      `API documentation available at http://localhost:${config.port}/api-docs`
+    );
+    logger.info(`Server started at ${new Date().toISOString()}`);
+    logger.info(`Environment: ${config.nodeEnv}`);
+    logger.info(`Deployment type: ${config.deployment}`);
+  });
+}
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (error) => {
@@ -113,3 +108,6 @@ process.on("SIGTERM", () => {
     process.exit(0);
   });
 });
+// Test comment
+// Another test comment
+// Final test comment
