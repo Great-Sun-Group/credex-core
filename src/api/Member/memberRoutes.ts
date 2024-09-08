@@ -1,10 +1,12 @@
 import express from "express";
+import { apiVersionOneRoute } from "../../index";
 import { GetMemberByHandleController } from "./controllers/getMemberByHandle";
+import { OnboardMemberController } from "./controllers/onboardMember";
 import { GetMemberDashboardByPhoneController } from "./controllers/getMemberDashboardByPhone";
 import { updateMemberTierExpressHandler } from "./controllers/updateMemberTier";
 import { onboardMemberExpressHandler } from "./controllers/onboardMember";
 import { securedCredexAuthForTierExpressHandler } from "./controllers/securedCredexAuthForTier";
-import { validateRequest } from "../../middleware/validateRequest";
+import { validateRequest } from "../../../middleware/validateRequest";
 import {
   getMemberByHandleSchema,
   getMemberDashboardByPhoneSchema,

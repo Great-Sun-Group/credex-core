@@ -10,7 +10,7 @@ const unauthorizeForAccount_1 = require("./controllers/unauthorizeForAccount");
 const updateSendOffersTo_1 = require("./controllers/updateSendOffersTo");
 const rateLimiter_1 = require("../../../middleware/rateLimiter");
 const errorHandler_1 = require("../../../middleware/errorHandler");
-const validateRequest_1 = require("../../middleware/validateRequest");
+const validateRequest_1 = require("../../../middleware/validateRequest");
 const accountValidationSchemas_1 = require("./accountValidationSchemas");
 function AccountRoutes(app, jsonParser) {
     /**

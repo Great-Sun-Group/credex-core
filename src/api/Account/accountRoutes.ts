@@ -8,7 +8,7 @@ import { UnauthorizeForAccountController } from "./controllers/unauthorizeForAcc
 import { UpdateSendOffersToController } from "./controllers/updateSendOffersTo";
 import { rateLimiter } from "../../../middleware/rateLimiter";
 import { errorHandler } from "../../../middleware/errorHandler";
-import { validateRequest } from "../../middleware/validateRequest";
+import { validateRequest } from "../../../middleware/validateRequest";
 import {
   createAccountSchema,
   getAccountByHandleSchema,

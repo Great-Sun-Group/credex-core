@@ -4,7 +4,7 @@ import { RequestRecurringController } from "./controllers/requestRecurring";
 import { AcceptRecurringController } from "./controllers/acceptRecurring";
 import { DeclineRecurringController } from "./controllers/cancelRecurring";
 import { errorHandler } from "../../../middleware/errorHandler";
-import { validateRequest } from "../../middleware/validateRequest";
+import { validateRequest } from "../../../middleware/validateRequest";
 import {
   requestRecurringSchema,
   acceptRecurringSchema,

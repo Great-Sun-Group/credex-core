@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateSendOffersToSchema = exports.unauthorizeForAccountSchema = exports.authorizeForAccountSchema = exports.updateAccountSchema = exports.getAccountByHandleSchema = exports.createAccountSchema = void 0;
-const validateRequest_1 = require("../../middleware/validateRequest");
+const validateRequest_1 = require("../../../middleware/validateRequest");
 exports.createAccountSchema = {
     ownerID: validateRequest_1.v.validateUUID,
     accountName: validateRequest_1.v.validateAccountName,

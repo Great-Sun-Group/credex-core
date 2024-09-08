@@ -1,4 +1,4 @@
-import { v } from '../../middleware/validateRequest';
+import { v } from "../../../middleware/validateRequest";
 
 export const getMemberByHandleSchema = {
   memberHandle: v.validateMemberHandle,
@@ -9,20 +9,19 @@ export const getMemberDashboardByPhoneSchema = {
 };
 
 export const onboardMemberSchema = {
-  name: v.validateName,
-  email: v.validateEmail,
+  firstname: v.validateName,
+  lastname: v.validateName,
   phone: v.validatePhone,
-  handle: v.validateMemberHandle,
 };
 
 export const updateMemberTierSchema = {
   memberID: v.validateUUID,
-  newTier: v.validateTier,
+  tier: v.validateTier,
 };
 
 export const securedCredexAuthForTierSchema = {
   memberID: v.validateUUID,
   tier: v.validateTier,
+  Amount: v.validateAmount,
+  Denomination: v.validateDenomination,
 };
-
-// Add more schemas as needed for other Member operations

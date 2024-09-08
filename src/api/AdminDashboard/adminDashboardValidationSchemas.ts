@@ -1,8 +1,4 @@
-import { v } from '../../middleware/validateRequest';
-
-export const getAccountSchema = {
-  accountID: v.validateUUID,
-};
+import { v } from "../../../middleware/validateRequest";
 
 export const getCredexSchema = {
   credexID: v.validateUUID,
@@ -14,7 +10,9 @@ export const getMemberSchema = {
 
 export const updateMemberTierSchema = {
   memberID: v.validateUUID,
-  newTier: v.validateTier,
+  tier: v.validateTier,
 };
 
-// Add more schemas as needed for other AdminDashboard operations
+export const getAccountSchema = {
+  accountID: v.validateUUID,
+};

@@ -6,7 +6,7 @@ const requestRecurring_1 = require("./controllers/requestRecurring");
 const acceptRecurring_1 = require("./controllers/acceptRecurring");
 const cancelRecurring_1 = require("./controllers/cancelRecurring");
 const errorHandler_1 = require("../../../middleware/errorHandler");
-const validateRequest_1 = require("../../middleware/validateRequest");
+const validateRequest_1 = require("../../../middleware/validateRequest");
 const avatarValidationSchemas_1 = require("./avatarValidationSchemas");
 function RecurringRoutes(app, jsonParser) {
     /**

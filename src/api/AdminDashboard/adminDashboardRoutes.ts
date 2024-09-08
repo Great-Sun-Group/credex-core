@@ -11,7 +11,7 @@ import {
   getSentCredexOffers,
 } from "./controllers/AccountController";
 import { errorHandler } from "../../../middleware/errorHandler";
-import { validateRequest } from "../../middleware/validateRequest";
+import { validateRequest } from "../../../middleware/validateRequest";
 import {
   getCredexSchema,
   getMemberSchema,

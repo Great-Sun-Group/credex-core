@@ -6,7 +6,7 @@ const CredexController_1 = require("./controllers/CredexController");
 const MemberController_1 = require("./controllers/MemberController");
 const AccountController_1 = require("./controllers/AccountController");
 const errorHandler_1 = require("../../../middleware/errorHandler");
-const validateRequest_1 = require("../../middleware/validateRequest");
+const validateRequest_1 = require("../../../middleware/validateRequest");
 const adminDashboardValidationSchemas_1 = require("./adminDashboardValidationSchemas");
 // Define route constants
 const ROUTES = {
