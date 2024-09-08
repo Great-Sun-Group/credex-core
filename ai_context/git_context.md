@@ -1,10 +1,10 @@
 # Git Context
 ## Recent Commits
+2aa19d8 logging
 c4ada94 Update AI context
 0a714ce logger util
 9fb293c Update AI context
 fed43a7 isNeo4jError to utils
-8877c65 Update AI context
 
 ## Recent File Changes
 M	ai_context/code_summary.md
