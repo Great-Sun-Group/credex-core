@@ -10,6 +10,7 @@ import { createNeo4jBackup } from "./DBbackup";
 import { logInfo, logError, logWarning, logDebug, logDCORates } from "../../utils/logger";
 import { validateAmount, validateDenomination } from "../../utils/validators";
 import { v4 as uuidv4 } from "uuid";
+import crypto from 'crypto';
 
 interface Rates {
   [key: string]: number;
@@ -29,17 +30,23 @@ interface Participant {
  * including rate updates, participant validation, and transaction processing.
  */
 export async function DCOexecute(): Promise<boolean> {
-  logInfo("Starting DCOexecute");
+  const dcoProcessId = uuidv4();
+  const startTime = new Date();
+  logInfo(`Starting DCOexecute. Process ID: ${dcoProcessId}`, { dcoProcessId, startTime });
+  
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
   try {
     await waitForMTQCompletion(ledgerSpaceSession);
-    const { previousDate, nextDate } = await setDCORunningFlag(
-      ledgerSpaceSession
-    );
+    const { previousDate, nextDate } = await setDCORunningFlag(ledgerSpaceSession);
+
+    const initialChecksum = await calculateSystemChecksum(ledgerSpaceSession);
+    logInfo(`Initial system checksum: ${initialChecksum}`, { dcoProcessId, checksum: initialChecksum });
 
     await createNeo4jBackup(previousDate, "_end");
+    logInfo(`Created Neo4j backup for ${previousDate}_end`, { dcoProcessId });
+
     await handleDefaultingCredexes(ledgerSpaceSession);
     await expirePendingOffers(ledgerSpaceSession);
 
@@ -65,9 +72,7 @@ export async function DCOexecute(): Promise<boolean> {
       CXXprior_CXXcurrent
     );
 
-    const { foundationID, foundationXOid } = await getFoundationData(
-      ledgerSpaceSession
-    );
+    const { foundationID, foundationXOid } = await getFoundationData(ledgerSpaceSession);
     await processDCOTransactions(
       ledgerSpaceSession,
       foundationID,
@@ -77,21 +82,46 @@ export async function DCOexecute(): Promise<boolean> {
     );
 
     await createNeo4jBackup(nextDate, "_start");
-    logInfo(`DCOexecute completed for ${nextDate}`);
+    logInfo(`Created Neo4j backup for ${nextDate}_start`, { dcoProcessId });
+
+    const finalChecksum = await calculateSystemChecksum(ledgerSpaceSession);
+    logInfo(`Final system checksum: ${finalChecksum}`, { dcoProcessId, checksum: finalChecksum });
+
+    const endTime = new Date();
+    const duration = endTime.getTime() - startTime.getTime();
+    logInfo(`DCOexecute completed for ${nextDate}`, { 
+      dcoProcessId, 
+      startTime, 
+      endTime, 
+      duration,
+      numberConfirmedParticipants,
+      DCOinCXX,
+      DCOinXAU,
+      CXXprior_CXXcurrent
+    });
 
     return true;
   } catch (error) {
-    logError("Error during DCOexecute", error as Error);
+    logError("Error during DCOexecute", error as Error, { dcoProcessId });
     return false;
   } finally {
     try {
       await resetDCORunningFlag(ledgerSpaceSession);
     } catch (resetError) {
-      logError("Error resetting DCO running flag", resetError as Error);
+      logError("Error resetting DCO running flag", resetError as Error, { dcoProcessId });
     }
     await ledgerSpaceSession.close();
     await searchSpaceSession.close();
   }
+}
+
+async function calculateSystemChecksum(session: any): Promise<string> {
+  const result = await session.run(`
+    MATCH (n)
+    WITH collect(n) AS nodes, [(n)-[r]-() | r] AS relationships
+    RETURN apoc.util.md5(apoc.convert.toJson(nodes + relationships)) AS checksum
+  `);
+  return result.records[0].get('checksum');
 }
 
 async function waitForMTQCompletion(session: any): Promise<void> {
@@ -331,7 +361,7 @@ async function updateCredexBalances(
   newCXXrates: Rates,
   CXXprior_CXXcurrent: number
 ): Promise<void> {
-  logInfo("Updating credex and asset balances");
+  logInfo("Updating credex and asset balances", { CXXprior_CXXcurrent, newCXXrates });
 
   // Update ledger space
   await ledgerSession.run(`
@@ -561,5 +591,3 @@ async function processDCOTransactions(
     })
   );
 }
-
-// ... [rest of the file remains unchanged]
