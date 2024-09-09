@@ -5,7 +5,7 @@ import { UpdateMemberTierController } from "../../api/Member/controllers/updateM
 import { CreateAccountService } from "../../api/Account/services/CreateAccount";
 import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
-import { fetchZigRate } from "./fetchZigRate";
+import { fetchZigRate, ZigRateError } from "./fetchZigRate";
 import axios from "axios";
 import _ from "lodash";
 import moment from "moment-timezone";
@@ -25,13 +25,26 @@ export async function DBinitialization(): Promise<void> {
   const searchSpaceSession = searchSpaceDriver.session();
 
   try {
-    await setupDatabaseConstraints(ledgerSpaceSession, searchSpaceSession, requestId);
+    await setupDatabaseConstraints(
+      ledgerSpaceSession,
+      searchSpaceSession,
+      requestId
+    );
     const dayZero = establishDayZero(requestId);
     const dayZeroCXXrates = await fetchAndProcessRates(dayZero, requestId);
-    await createDayZeroDaynode(ledgerSpaceSession, dayZero, dayZeroCXXrates, requestId);
+    await createDayZeroDaynode(
+      ledgerSpaceSession,
+      dayZero,
+      dayZeroCXXrates,
+      requestId
+    );
     await createInitialAccounts(ledgerSpaceSession, requestId);
   } catch (error) {
-    logger.error("Error during DBinitialization", { error: error instanceof Error ? error.message : 'Unknown error', stack: error instanceof Error ? error.stack : undefined, requestId });
+    logger.error("Error during DBinitialization", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      requestId,
+    });
     throw error;
   } finally {
     await ledgerSpaceSession.close();
@@ -75,7 +88,9 @@ async function setupDatabaseConstraints(
     "CREATE CONSTRAINT credexID_unique IF NOT EXISTS FOR (credex:Credex) REQUIRE credex.credexID IS UNIQUE"
   );
 
-  logger.info("Database constraints and indexes created successfully", { requestId });
+  logger.info("Database constraints and indexes created successfully", {
+    requestId,
+  });
 }
 
 /**
@@ -105,7 +120,20 @@ async function fetchAndProcessRates(dayZero: string, requestId: string): Promise
   const {
     data: { rates: USDbaseRates },
   } = await axios.get(baseUrl);
-  USDbaseRates.ZIG = (await fetchZigRate())[1].avg;
+
+  try {
+    const zigRate = (await fetchZigRate())[1].avg;
+    USDbaseRates.ZIG = zigRate;
+    logger.info("ZIG rate fetched successfully", { rate: zigRate, requestId });
+  } catch (error) {
+    if (error instanceof ZigRateError) {
+      logger.warn("Failed to fetch ZIG rate, excluding ZIG from denominations", { requestId, error: error.message });
+      delete USDbaseRates.ZIG;
+    } else {
+      logger.error("Unexpected error while fetching ZIG rate", { requestId, error: error instanceof Error ? error.message : String(error) });
+      throw error;
+    }
+  }
 
   const OneCXXinCXXdenom = 1;
   const CXXdenom = "CAD";
@@ -151,8 +179,13 @@ async function createDayZeroDaynode(
 /**
  * Creates initial accounts and relationships for the DCO process.
  */
-async function createInitialAccounts(session: any, requestId: string): Promise<void> {
-  logger.info("Creating initialization accounts and relationships...", { requestId });
+async function createInitialAccounts(
+  session: any,
+  requestId: string
+): Promise<void> {
+  logger.info("Creating initialization accounts and relationships...", {
+    requestId,
+  });
 
   const rdubs = await createRdubsAccount(requestId);
   const credexFoundationID = await createCredexFoundation(
@@ -160,7 +193,10 @@ async function createInitialAccounts(session: any, requestId: string): Promise<v
     requestId
   );
   const greatSunID = await createGreatSun(rdubs.onboardedMemberID, requestId);
-  const vimbisoPayID = await createVimbisoPay(rdubs.onboardedMemberID, requestId);
+  const vimbisoPayID = await createVimbisoPay(
+    rdubs.onboardedMemberID,
+    requestId
+  );
 
   await createInitialRelationships(
     session,
@@ -176,7 +212,9 @@ async function createInitialAccounts(session: any, requestId: string): Promise<v
     requestId
   );
 
-  logger.info("Initial accounts and relationships created successfully", { requestId });
+  logger.info("Initial accounts and relationships created successfully", {
+    requestId,
+  });
 }
 
 async function createRdubsAccount(requestId: string): Promise<{
@@ -191,16 +229,29 @@ async function createRdubsAccount(requestId: string): Promise<{
   );
 
   if ("error" in result) {
-    logger.error("Failed to create rdubs account", { error: result.error, requestId });
+    logger.error("Failed to create rdubs account", {
+      error: result.error,
+      requestId,
+    });
     throw new Error(`Failed to create rdubs account: ${result.error}`);
   }
 
   const onboardedMemberID = result.memberDashboard.memberID;
 
-  const updateTierResult = await UpdateMemberTierController(onboardedMemberID, 5, requestId);
+  const updateTierResult = await UpdateMemberTierController(
+    onboardedMemberID,
+    5,
+    requestId
+  );
   if (!updateTierResult.success) {
-    logger.error("Failed to update member tier", { memberID: onboardedMemberID, error: updateTierResult.message, requestId });
-    throw new Error(`Failed to update member tier: ${updateTierResult.message}`);
+    logger.error("Failed to update member tier", {
+      memberID: onboardedMemberID,
+      error: updateTierResult.message,
+      requestId,
+    });
+    throw new Error(
+      `Failed to update member tier: ${updateTierResult.message}`
+    );
   }
 
   const rdubsPersonalAccount = await CreateAccountService(
@@ -213,7 +264,11 @@ async function createRdubsAccount(requestId: string): Promise<{
     "CAD"
   );
 
-  logger.info("Rdubs account created successfully", { memberID: onboardedMemberID, personalAccountID: rdubsPersonalAccount.accountID, requestId });
+  logger.info("Rdubs account created successfully", {
+    memberID: onboardedMemberID,
+    personalAccountID: rdubsPersonalAccount.accountID,
+    requestId,
+  });
 
   return {
     onboardedMemberID,
@@ -221,7 +276,10 @@ async function createRdubsAccount(requestId: string): Promise<{
   };
 }
 
-async function createCredexFoundation(memberID: string, requestId: string): Promise<string> {
+async function createCredexFoundation(
+  memberID: string,
+  requestId: string
+): Promise<string> {
   const credexFoundation = await CreateAccountService(
     memberID,
     "CREDEX_FOUNDATION",
@@ -234,15 +292,24 @@ async function createCredexFoundation(memberID: string, requestId: string): Prom
     typeof credexFoundation.account === "boolean" ||
     !credexFoundation.accountID
   ) {
-    logger.error("Failed to create Credex Foundation account", { memberID, requestId });
+    logger.error("Failed to create Credex Foundation account", {
+      memberID,
+      requestId,
+    });
     throw new Error("Failed to create Credex Foundation account");
   }
 
-  logger.info("Credex Foundation account created successfully", { accountID: credexFoundation.accountID, requestId });
+  logger.info("Credex Foundation account created successfully", {
+    accountID: credexFoundation.accountID,
+    requestId,
+  });
   return credexFoundation.accountID;
 }
 
-async function createGreatSun(memberID: string, requestId: string): Promise<string> {
+async function createGreatSun(
+  memberID: string,
+  requestId: string
+): Promise<string> {
   const greatSun = await CreateAccountService(
     memberID,
     "BUSINESS",
@@ -256,11 +323,17 @@ async function createGreatSun(memberID: string, requestId: string): Promise<stri
     throw new Error("Failed to create Great Sun account");
   }
 
-  logger.info("Great Sun account created successfully", { accountID: greatSun.accountID, requestId });
+  logger.info("Great Sun account created successfully", {
+    accountID: greatSun.accountID,
+    requestId,
+  });
   return greatSun.accountID;
 }
 
-async function createVimbisoPay(memberID: string, requestId: string): Promise<string> {
+async function createVimbisoPay(
+  memberID: string,
+  requestId: string
+): Promise<string> {
   const vimbisoPay = await CreateAccountService(
     memberID,
     "BUSINESS",
@@ -270,11 +343,17 @@ async function createVimbisoPay(memberID: string, requestId: string): Promise<st
   );
 
   if (!vimbisoPay || !vimbisoPay.accountID) {
-    logger.error("Failed to create VimbisoPay account", { memberID, requestId });
+    logger.error("Failed to create VimbisoPay account", {
+      memberID,
+      requestId,
+    });
     throw new Error("Failed to create VimbisoPay account");
   }
 
-  logger.info("VimbisoPay account created successfully", { accountID: vimbisoPay.accountID, requestId });
+  logger.info("VimbisoPay account created successfully", {
+    accountID: vimbisoPay.accountID,
+    requestId,
+  });
   return vimbisoPay.accountID;
 }
 
@@ -297,7 +376,12 @@ async function createInitialRelationships(
     { credexFoundationID, greatSunID, vimbisoPayID }
   );
 
-  logger.info("Initial relationships created successfully", { credexFoundationID, greatSunID, vimbisoPayID, requestId });
+  logger.info("Initial relationships created successfully", {
+    credexFoundationID,
+    greatSunID,
+    vimbisoPayID,
+    requestId,
+  });
 }
 
 async function createInitialCredex(
@@ -331,24 +415,24 @@ async function createInitialCredex(
     DCOinitializationOfferCredex.credex &&
     typeof DCOinitializationOfferCredex.credex.credexID === "string"
   ) {
-    logger.info("Initial Credex offered successfully", { 
-      requestId, 
-      credexID: DCOinitializationOfferCredex.credex.credexID 
+    logger.info("Initial Credex offered successfully", {
+      requestId,
+      credexID: DCOinitializationOfferCredex.credex.credexID,
     });
 
-    logger.debug("Accepting initial Credex", { 
-      requestId, 
+    logger.debug("Accepting initial Credex", {
+      requestId,
       credexID: DCOinitializationOfferCredex.credex.credexID,
-      memberID 
+      memberID,
     });
     await AcceptCredexService(
       DCOinitializationOfferCredex.credex.credexID,
       memberID,
       requestId
     );
-    logger.info("Initial Credex accepted successfully", { 
-      requestId, 
-      credexID: DCOinitializationOfferCredex.credex.credexID 
+    logger.info("Initial Credex accepted successfully", {
+      requestId,
+      credexID: DCOinitializationOfferCredex.credex.credexID,
     });
   } else {
     logger.error("Invalid credexID from OfferCredexService", { requestId });
