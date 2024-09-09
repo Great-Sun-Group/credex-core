@@ -1480,7 +1480,7 @@ async function resetDCORunningFlag(session: any): Promise<void> {
  */
 ```
 
-## src/core-cron/DCO/fetchZigRate.ts
+## src/core-cron/DCO/fetchZwgRate.ts
 ```
 const https = require("https");
 export interface ExchangeRate {
@@ -1488,8 +1488,8 @@ const RBZ_URL = "https://www.rbz.co.zw/index.php";
 const httpsAgent = new https.Agent({
 function isValidRate(rate: string): boolean {
 function validateRates(rates: ExchangeRate[]): void {
-export class ZigRateError extends Error {
-export async function fetchZigRate(): Promise<ExchangeRate[]> {
+export class ZwgRateError extends Error {
+export async function fetchZwgRate(): Promise<ExchangeRate[]> {
 ```
 
 ## src/core-cron/MTQ/LoopFinder.ts
@@ -3929,7 +3929,7 @@ const notFoundHandler = (req, res, next) => {
 //# sourceMappingURL=errorHandler.js.map
 ```
 
-## build/src/core-cron/DCO/fetchZigRate.js
+## build/src/core-cron/DCO/fetchZwgRate.js
 ```
 var __importDefault = (this && this.__importDefault) || function (mod) {
 const axios_1 = __importDefault(require("axios"));
@@ -3940,9 +3940,9 @@ const RBZ_URL = "https://www.rbz.co.zw/index.php";
 const httpsAgent = new https.Agent({
 function isValidRate(rate) {
 function validateRates(rates) {
-class ZigRateError extends Error {
-async function fetchZigRate() {
-//# sourceMappingURL=fetchZigRate.js.map
+class ZwgRateError extends Error {
+async function fetchZwgRate() {
+//# sourceMappingURL=fetchZwgRate.js.map
 ```
 
 ## build/src/core-cron/DCO/DBinitialization.js
@@ -3955,7 +3955,7 @@ const updateMemberTier_1 = require("../../api/Member/controllers/updateMemberTie
 const CreateAccount_1 = require("../../api/Account/services/CreateAccount");
 const OfferCredex_1 = require("../../api/Credex/services/OfferCredex");
 const AcceptCredex_1 = require("../../api/Credex/services/AcceptCredex");
-const fetchZigRate_1 = require("./fetchZigRate");
+const fetchZwgRate_1 = require("./fetchZwgRate");
 const axios_1 = __importDefault(require("axios"));
 const lodash_1 = __importDefault(require("lodash"));
 const moment_timezone_1 = __importDefault(require("moment-timezone"));
@@ -4021,7 +4021,7 @@ const denominations_1 = require("../../constants/denominations");
 const GetSecuredAuthorization_1 = require("../../api/Credex/services/GetSecuredAuthorization");
 const OfferCredex_1 = require("../../api/Credex/services/OfferCredex");
 const AcceptCredex_1 = require("../../api/Credex/services/AcceptCredex");
-const fetchZigRate_1 = require("./fetchZigRate");
+const fetchZwgRate_1 = require("./fetchZwgRate");
 const DBbackup_1 = require("./DBbackup");
 const logger_1 = require("../../utils/logger");
 const validators_1 = require("../../utils/validators");

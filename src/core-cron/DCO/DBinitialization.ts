@@ -5,7 +5,7 @@ import { UpdateMemberTierController } from "../../api/Member/controllers/updateM
 import { CreateAccountService } from "../../api/Account/services/CreateAccount";
 import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
-import { fetchZigRate, ZigRateError } from "./fetchZigRate";
+import { fetchZwgRate, ZwgRateError } from "./fetchZwgRate";
 import axios from "axios";
 import _ from "lodash";
 import moment from "moment-timezone";
@@ -122,15 +122,15 @@ async function fetchAndProcessRates(dayZero: string, requestId: string): Promise
   } = await axios.get(baseUrl);
 
   try {
-    const zigRate = (await fetchZigRate())[1].avg;
-    USDbaseRates.ZIG = zigRate;
-    logger.info("ZIG rate fetched successfully", { rate: zigRate, requestId });
+    const zigRate = (await fetchZwgRate())[1].avg;
+    USDbaseRates.ZWG = zigRate;
+    logger.info("ZWG rate fetched successfully", { rate: zigRate, requestId });
   } catch (error) {
-    if (error instanceof ZigRateError) {
-      logger.warn("Failed to fetch ZIG rate, excluding ZIG from denominations", { requestId, error: error.message });
-      delete USDbaseRates.ZIG;
+    if (error instanceof ZwgRateError) {
+      logger.warn("Failed to fetch ZWG rate, excluding ZWG from denominations", { requestId, error: error.message });
+      delete USDbaseRates.ZWG;
     } else {
-      logger.error("Unexpected error while fetching ZIG rate", { requestId, error: error instanceof Error ? error.message : String(error) });
+      logger.error("Unexpected error while fetching ZWG rate", { requestId, error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }

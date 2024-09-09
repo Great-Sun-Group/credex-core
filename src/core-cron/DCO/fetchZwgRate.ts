@@ -33,16 +33,16 @@ function validateRates(rates: ExchangeRate[]): void {
   }
 }
 
-export class ZigRateError extends Error {
+export class ZwgRateError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "ZigRateError";
+    this.name = "ZwgRateError";
   }
 }
 
-export async function fetchZigRate(): Promise<ExchangeRate[]> {
+export async function fetchZwgRate(): Promise<ExchangeRate[]> {
   try {
-    logger.info("Fetching ZIG rate from RBZ website");
+    logger.info("Fetching ZWG rate from RBZ website");
     const { data } = await axios.get(RBZ_URL, { 
       httpsAgent,
       timeout: 10000, // 10 seconds timeout
@@ -65,7 +65,7 @@ export async function fetchZigRate(): Promise<ExchangeRate[]> {
 
     validateRates(rates);
 
-    logger.info("ZIG rates fetched successfully", { ratesCount: rates.length });
+    logger.info("ZWG rates fetched successfully", { ratesCount: rates.length });
     return rates;
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -82,6 +82,6 @@ export async function fetchZigRate(): Promise<ExchangeRate[]> {
         error: error instanceof Error ? error.message : String(error) 
       });
     }
-    throw new ZigRateError("Failed to fetch valid ZIG rates from RBZ website");
+    throw new ZwgRateError("Failed to fetch valid ZWG rates from RBZ website");
   }
 }

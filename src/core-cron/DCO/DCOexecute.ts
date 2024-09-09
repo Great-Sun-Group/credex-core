@@ -5,7 +5,7 @@ import { getDenominations, Denomination } from "../../constants/denominations";
 import { GetSecuredAuthorizationService } from "../../api/Credex/services/GetSecuredAuthorization";
 import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
-import { fetchZigRate, ZigRateError } from "./fetchZigRate";
+import { fetchZwgRate, ZwgRateError } from "./fetchZwgRate";
 import { createNeo4jBackup } from "./DBbackup";
 import { logInfo, logError, logWarning, logDebug, logDCORates } from "../../utils/logger";
 import { validateAmount, validateDenomination } from "../../utils/validators";
@@ -181,14 +181,14 @@ async function fetchCurrencyRates(nextDate: string): Promise<Rates> {
   );
 
   try {
-    const ZIGrates = await fetchZigRate();
-    USDbaseRates.ZIG = ZIGrates.length > 0 ? parseFloat(ZIGrates[1].avg) : NaN;
+    const ZWGrates = await fetchZwgRate();
+    USDbaseRates.ZWG = ZWGrates.length > 0 ? parseFloat(ZWGrates[1].avg) : NaN;
   } catch (error) {
-    if (error instanceof ZigRateError) {
-      logWarning("Failed to fetch ZIG rate, excluding ZIG from denominations", error);
+    if (error instanceof ZwgRateError) {
+      logWarning("Failed to fetch ZWG rate, excluding ZWG from denominations", error);
       
     } else {
-      logError("Unexpected error while fetching ZIG rate", error instanceof Error ? error : new Error(String(error)));
+      logError("Unexpected error while fetching ZWG rate", error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
   }
