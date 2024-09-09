@@ -7,40 +7,40 @@ LOG_FILE="post-commit.log"
 
 echo "Running post-commit hook" >> "$LOG_FILE"
 
-# Check if this is an AI context update commit
-if [[ "$(git log -1 --pretty=%B)" == "Update AI context" ]]; then
-    echo "Skipping AI context update for AI context commit" >> "$LOG_FILE"
+# Check if this is a code summary update commit
+if [[ "$(git log -1 --pretty=%B)" == "Update code summary" ]]; then
+    echo "Skipping code summary update for code summary commit" >> "$LOG_FILE"
     exit 0
 fi
 
 # Run the update script and capture any errors
-if ! ./update_ai_context.sh >> "$LOG_FILE" 2>&1; then
-    echo "Error: Failed to update AI context" >> "$LOG_FILE"
+if ! ./src/utils/update_code_summary.sh >> "$LOG_FILE" 2>&1; then
+    echo "Error: Failed to update code summary" >> "$LOG_FILE"
     exit 1
 fi
 
-echo "AI context updated after commit" >> "$LOG_FILE"
+echo "Code summary updated after commit" >> "$LOG_FILE"
 
-# Check if there are changes to ai_context directory
-if git status --porcelain ai_context | grep -q '^??'; then
-    echo "New files detected in AI context" >> "$LOG_FILE"
-    git add ai_context
-elif git diff --quiet ai_context; then
-    echo "No changes to AI context" >> "$LOG_FILE"
+# Check if there are changes to docs/code_summary.md file
+if git status --porcelain docs/code_summary.md | grep -q '^??'; then
+    echo "New code summary file detected" >> "$LOG_FILE"
+    git add docs/code_summary.md
+elif git diff --quiet docs/code_summary.md; then
+    echo "No changes to code summary" >> "$LOG_FILE"
 else
-    echo "Changes detected in AI context" >> "$LOG_FILE"
-    git add ai_context
+    echo "Changes detected in code summary" >> "$LOG_FILE"
+    git add docs/code_summary.md
 fi
 
 if git diff --staged --quiet; then
-    echo "No staged changes for AI context" >> "$LOG_FILE"
+    echo "No staged changes for code summary" >> "$LOG_FILE"
 else
-    echo "Committing AI context changes" >> "$LOG_FILE"
-    if ! git commit -m "Update AI context" --no-verify >> "$LOG_FILE" 2>&1; then
-        echo "Failed to commit AI context changes" >> "$LOG_FILE"
+    echo "Committing code summary changes" >> "$LOG_FILE"
+    if ! git commit -m "Update code summary" --no-verify >> "$LOG_FILE" 2>&1; then
+        echo "Failed to commit code summary changes" >> "$LOG_FILE"
         exit 1
     fi
-    echo "AI context committed after main commit" >> "$LOG_FILE"
+    echo "Code summary committed after main commit" >> "$LOG_FILE"
 fi
 
 echo "Post-commit hook completed" >> "$LOG_FILE"
