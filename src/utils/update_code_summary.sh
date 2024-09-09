@@ -1,7 +1,9 @@
 #!/bin/bash
 
-# Define the output directory
-output_dir="ai_context"
+# Define the output directory as the docs directory
+output_dir="docs"
+
+# Ensure the docs directory exists
 mkdir -p "$output_dir"
 
 # Get the current branch name
@@ -37,26 +39,4 @@ find src middleware config build .devcontainer .githooks .github -type f \( -nam
     generate_summary "$file"
 done
 
-# Generate Git-based context
-git_context_file="$output_dir/git_context.md"
-echo "# Git Context" > "$git_context_file"
-echo "## Recent Commits" >> "$git_context_file"
-git log --oneline -n 5 >> "$git_context_file"
-echo "" >> "$git_context_file"
-echo "## Recent File Changes" >> "$git_context_file"
-git diff --name-status HEAD~5 HEAD >> "$git_context_file"
-
-# Include full content of up to 5 most recently changed files
-recent_changes_file="$output_dir/recent_changes.md"
-echo "# Recent Changes" > "$recent_changes_file"
-git diff --name-only HEAD~5 HEAD | head -n 5 | while read -r file; do
-    if [ -f "$file" ]; then
-        echo "## $file" >> "$recent_changes_file"
-        echo '```' >> "$recent_changes_file"
-        cat "$file" >> "$recent_changes_file"
-        echo '```' >> "$recent_changes_file"
-        echo "" >> "$recent_changes_file"
-    fi
-done
-
-echo "AI context updated in $output_dir"
+echo "Code summary updated in $summary_file"

@@ -5,7 +5,7 @@ import { getDenominations, Denomination } from "../../constants/denominations";
 import { GetSecuredAuthorizationService } from "../../api/Credex/services/GetSecuredAuthorization";
 import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
-import { fetchZigRate } from "./fetchZigRate";
+import { fetchZigRate, ZigRateError } from "./fetchZigRate";
 import { createNeo4jBackup } from "./DBbackup";
 import { logInfo, logError, logWarning, logDebug, logDCORates } from "../../utils/logger";
 import { validateAmount, validateDenomination } from "../../utils/validators";
@@ -180,8 +180,18 @@ async function fetchCurrencyRates(nextDate: string): Promise<Rates> {
     { params: { app_id: process.env.OPEN_EXCHANGE_RATES_API, symbols } }
   );
 
-  const ZIGrates = await fetchZigRate();
-  USDbaseRates.ZIG = ZIGrates.length > 0 ? parseFloat(ZIGrates[1].avg) : NaN;
+  try {
+    const ZIGrates = await fetchZigRate();
+    USDbaseRates.ZIG = ZIGrates.length > 0 ? parseFloat(ZIGrates[1].avg) : NaN;
+  } catch (error) {
+    if (error instanceof ZigRateError) {
+      logWarning("Failed to fetch ZIG rate, excluding ZIG from denominations", error);
+      
+    } else {
+      logError("Unexpected error while fetching ZIG rate", error instanceof Error ? error : new Error(String(error)));
+      throw error;
+    }
+  }
 
   validateRates(USDbaseRates);
   return USDbaseRates;

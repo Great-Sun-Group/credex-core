@@ -131,11 +131,13 @@ Note: The GitHub token needs to be updated for each new Codespace session. The b
 - [Logging Best Practices](docs/logging_best_practices.md)
 // to be added: auth, testing
 
-## Project Structure
+## Project structure and code summary
+For a detailed overview of the codebase, including function and class definitions, please refer to the [Code Summary](docs/code_summary.md). This summary is particularly useful for AI context and assists in understanding the overall structure and key components of the project.
 
 ```
 credex-core/
-├── ai_context/            # AI-related context files
+├── .githooks/             # Git hooks scripts
+├── .vscode/               # VS Code configuration files
 ├── build/                 # Compiled output
 ├── config/                # Configuration files
 ├── docs/                  # Documentation files
@@ -152,26 +154,8 @@ credex-core/
 │   │   └── MTQ/           # Minute Transaction Queue related code
 │   ├── middleware/        # Express middleware
 │   ├── tests/             # Test files
-│   │   ├── controllers/   # Test controllers
-│   │   ├── integration/   # Integration tests
-│   │   ├── services/      # Test services
-│   │   └── utils/         # Test utilities
 │   └── utils/             # Utility functions and helpers
 ```
-
-### Folder Descriptions
-
-- **ai_context**: Contains AI-related context files for improved development assistance.
-- **build**: Stores the compiled output of the TypeScript code.
-- **config**: Houses configuration files for various aspects of the application.
-- **docs**: Contains documentation files for different modules and processes.
-- **src**: The main source code directory.
-  - **api**: Contains all API-related code, organized by module (Account, AdminDashboard, Avatar, Credex, Member).
-  - **constants**: Stores constant values used throughout the application.
-  - **core-cron**: Contains the core cron jobs, including the Daily Credcoin Offering (DCO) and Minute Transaction Queue (MTQ).
-  - **middleware**: Houses Express middleware used in the application.
-  - **tests**: Contains various test files, including controllers, integration tests, services, and utilities.
-  - **utils**: Stores utility functions and helpers used across the application.
 
 ## Contributing
 
