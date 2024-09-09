@@ -8,6 +8,7 @@ dotenv.config();
 interface Config {
   port: number;
   nodeEnv: string;
+  deployment: string;
   logLevel: string;
   ledgerSpace: {
     uri: string;
@@ -25,7 +26,8 @@ interface Config {
     windowMs: number;
     max: number;
   };
-  // Add other configuration properties as needed
+  openExchangeRatesApi: string;
+  whatsappBotOrigin: string; // Add this line
 }
 
 class ConfigUtils {
@@ -37,6 +39,7 @@ class ConfigUtils {
     this.config = {
       port: parseInt(process.env.PORT || '3000', 10),
       nodeEnv: process.env.NODE_ENV || 'development',
+      deployment: process.env.DEPLOYMENT || 'dev',
       logLevel: process.env.LOG_LEVEL || 'info',
       ledgerSpace: {
         uri: process.env.NEO_4J_LEDGER_SPACE_BOLT_URL || '',
@@ -48,12 +51,14 @@ class ConfigUtils {
         user: process.env.NEO_4J_SEARCH_SPACE_USER || '',
         password: process.env.NEO_4J_SEARCH_SPACE_PASS || '',
       },
-      jwtSecret: process.env.JWT_SECRET || 'your-secret-key',
+      jwtSecret: process.env.JWT_SECRET || '',
       jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
       rateLimit: {
         windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
         max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
       },
+      openExchangeRatesApi: process.env.OPEN_EXCHANGE_RATES_API || '',
+      whatsappBotOrigin: process.env.WHATSAPP_BOT_ORIGIN || '', // Add this line
       // Initialize other configuration properties here
     };
     logger.info('ConfigUtils initialized', { nodeEnv: this.config.nodeEnv, logLevel: this.config.logLevel });
@@ -80,10 +85,19 @@ class ConfigUtils {
     this.config[key] = value;
   }
 
-  // Add basic validation for required fields
+  // Add validation for all required fields
   public validate(): void {
     logger.debug('Validating configuration');
-    const requiredFields: (keyof Config)[] = ['ledgerSpace', 'searchSpace', 'jwtSecret'];
+    const requiredFields: (keyof Config)[] = [
+      'port',
+      'nodeEnv',
+      'deployment',
+      'ledgerSpace',
+      'searchSpace',
+      'jwtSecret',
+      'openExchangeRatesApi',
+      'whatsappBotOrigin'
+    ];
     for (const field of requiredFields) {
       if (!this.config[field]) {
         logger.error(`Missing required configuration: ${field as string}`);

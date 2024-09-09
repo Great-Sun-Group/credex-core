@@ -84,50 +84,6 @@ Controllers for the endpoints are imported, and endpoints created for the variou
    npm run dev
    ```
 
-### Authentication
-
-The Credex API uses JWT (JSON Web Tokens) for authentication. Here's how it works:
-
-1. When a new member is onboarded or an existing member logs in, a JWT token is generated and returned.
-
-2. For subsequent requests to protected routes, the client should include the JWT token in the Authorization header of the request:
-
-   ```
-   Authorization: Bearer <token>
-   ```
-
-3. The server will validate the token for each request to a protected route. If the token is valid, the request will be processed. If not, a 401 Unauthorized response will be returned.
-
-4. The JWT token contains the member's ID, which is used to identify the member for each request.
-
-5. Tokens are set to expire after 15 minutes. After expiration, a new token will need to be obtained.
-
-6. For authenticated requests, use the JWT token received from the onboarding process in the Authorization header:
-
-   ```
-   Authorization: Bearer <your_jwt_token>
-   ```
-
-Note: Make sure to set the `JWT_SECRET` environment variable in your `.env` file. This secret is used to sign and verify the JWT tokens. You can create your own random string for this.
-
-### Using Postman for API Testing
-
-1. Navigate to the Postman extension in VS Code and sign in to your Postman account.
-
-2. Open the Credex Team Workspace in Postman.
-
-3. In the terminal, print the GitHub Token:
-
-   ```bash
-   echo $GITHUB_TOKEN
-   ```
-
-4. Copy the token and paste it into the "X-Github-Token" field in the credex-core variables in Postman.
-
-5. After starting the development server, copy the forwarded port address from the "Ports" tab and paste it into the "base_url" field in the credex-core variables in Postman.
-
-Note: The GitHub token needs to be updated for each new Codespace session. The base_url will remain constant for a specific Codespace, even across multiple sessions. If there are multiple team members using Postman at the same time, there may be conflicts in the tokens and base_urls.
-
 ## Available Scripts
 
 - `npm run dev`: Start the development server with nodemon
@@ -155,7 +111,7 @@ Note: The GitHub token needs to be updated for each new Codespace session. The b
 ## Developer Guides
 
 - [Logging Best Practices](docs/logging_best_practices.md)
-// to be added: auth, testing
+- [Authentication](docs/Authentication.md)
 
 ## Project structure and code summary
 For a detailed overview of the codebase, including function and class definitions, please refer to the [Code Summary](docs/code_summary.md). This summary is particularly useful for AI context and assists in understanding the overall structure and key components of the project.

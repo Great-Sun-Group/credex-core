@@ -14,14 +14,15 @@ if (!JWT_SECRET) {
   logger.warn("JWT_SECRET is not set. This is a security risk. Please set a strong, unique JWT_SECRET in your environment variables.");
 }
 
-// Set token expiration to 15 minutes
-const TOKEN_EXPIRATION = '15m';
+// Set token expiration to 5 minutes after the last activity
+const TOKEN_EXPIRATION = 5 * 60; // 5 minutes in seconds
 
 const generateToken = (memberId: string): string => {
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not set");
   }
-  return jwt.sign({ memberId }, JWT_SECRET, { expiresIn: TOKEN_EXPIRATION });
+  const now = Math.floor(Date.now() / 1000);
+  return jwt.sign({ memberId, iat: now, lastActivity: now }, JWT_SECRET);
 };
 
 const verifyToken = (token: string): any => {
@@ -33,6 +34,14 @@ const verifyToken = (token: string): any => {
   } catch (error) {
     return null;
   }
+};
+
+const refreshToken = (decoded: any): string => {
+  if (!JWT_SECRET) {
+    throw new Error("JWT_SECRET is not set");
+  }
+  const now = Math.floor(Date.now() / 1000);
+  return jwt.sign({ memberId: decoded.memberId, iat: decoded.iat, lastActivity: now }, JWT_SECRET);
 };
 
 const authenticate = async (req: UserRequest, res: Response, next: NextFunction) => {
@@ -50,6 +59,12 @@ const authenticate = async (req: UserRequest, res: Response, next: NextFunction)
     return res.status(401).json({ message: "Invalid token" });
   }
 
+  const now = Math.floor(Date.now() / 1000);
+  if (now - decoded.lastActivity > TOKEN_EXPIRATION) {
+    logger.warn("Token expired", { path: req.path, method: req.method, ip: req.ip });
+    return res.status(401).json({ message: "Token expired" });
+  }
+
   const session = searchSpaceDriver.session();
   try {
     const result = await session.run(
@@ -63,6 +78,11 @@ const authenticate = async (req: UserRequest, res: Response, next: NextFunction)
     }
 
     req.user = result.records[0].get('m').properties;
+
+    // Refresh the token
+    const newToken = refreshToken(decoded);
+    res.setHeader('Authorization', `Bearer ${newToken}`);
+
     next();
   } catch (error) {
     logger.error("Error verifying token", { error, path: req.path, method: req.method, ip: req.ip });

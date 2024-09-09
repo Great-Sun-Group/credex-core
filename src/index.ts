@@ -31,8 +31,17 @@ logger.info("Initializing application");
 
 // Apply security middleware
 app.use(helmet()); // Helps secure Express apps with various HTTP headers
-app.use(cors()); // Enable Cross-Origin Resource Sharing (CORS)
-logger.info("Applied security middleware: helmet and CORS");
+
+// Configure CORS
+const corsOptions = {
+  origin: configUtils.get('whatsappBotOrigin'), // The origin of your WhatsApp chatbot
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Adjust as needed
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  maxAge: 86400 // Cache preflight request results for 1 day (in seconds)
+};
+app.use(cors(corsOptions));
+logger.info("Applied security middleware: helmet and CORS", { corsOptions });
 
 // Apply custom logging middleware
 app.use(expressLogger);
