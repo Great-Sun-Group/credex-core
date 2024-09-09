@@ -166,4 +166,20 @@ credex-core/
 
 ## License
 
-[Add license information here]
+We've crafted a custom license for the Credex Ecosystem Core API that combines elements of the Creative Commons Attribution-NonCommercial 4.0 International License and the Commons Clause. Here's what you need to know:
+
+1. You're welcome to explore, experiment with, and build upon this work for non-commercial, testing, research, and development purposes. Please contribute!
+
+2. However, please note that this license explicitly prohibits the use of this software in any production environment with real members tracking real economic transactions, whether it's for-profit, not-for-profit or governmental context, without our explicit permission.
+
+3. If you create something new based on this project, you'll need to use the same license terms and give appropriate credit to the original work.
+
+4. The "Commons Clause" part of our license means you can't sell the software or any product or service that substantially relies on its functionality without our permission. This includes hosting or consulting services related to the software.
+
+This approach allows for community engagement and experimentation while ensuring the integrity and unity of the system as a single shared economic network that all can access.
+
+If you're interested in using this software in a way that goes beyond these terms, please reach out to us. We're open to discussing collaborations.
+
+For the full legal text of the Creative Commons Attribution-NonCommercial 4.0 International License, you can visit https://creativecommons.org/licenses/by-nc/4.0/legalcode.
+
+For more information about the Commons Clause, please visit https://commonsclause.com/.
