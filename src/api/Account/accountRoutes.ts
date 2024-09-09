@@ -9,6 +9,7 @@ import { UpdateSendOffersToController } from "./controllers/updateSendOffersTo";
 import { rateLimiter } from "../../middleware/rateLimiter";
 import { errorHandler } from "../../middleware/errorHandler";
 import { validateRequest } from "../../middleware/validateRequest";
+import { authMiddleware } from "../../middleware/authMiddleware";
 import {
   createAccountSchema,
   getAccountByHandleSchema,
@@ -31,6 +32,8 @@ export default function AccountRoutes(
    *   post:
    *     summary: Create a new account
    *     tags: [Accounts]
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -42,6 +45,10 @@ export default function AccountRoutes(
    *         description: Account created successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    *       429:
    *         description: Too many requests
    */
@@ -49,6 +56,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}createAccount`,
     rateLimiter,
     jsonParser,
+    authMiddleware(['member']),
     validateRequest(createAccountSchema),
     CreateAccountController,
     errorHandler
@@ -61,6 +69,8 @@ export default function AccountRoutes(
    *   get:
    *     summary: Get account by handle
    *     tags: [Accounts]
+   *     security:
+   *       - bearerAuth: []
    *     parameters:
    *       - in: query
    *         name: accountHandle
@@ -72,6 +82,10 @@ export default function AccountRoutes(
    *         description: Account retrieved successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    *       404:
    *         description: Account not found
    *       429:
@@ -80,6 +94,7 @@ export default function AccountRoutes(
   app.get(
     `${apiVersionOneRoute}getAccountByHandle`,
     rateLimiter,
+    authMiddleware(['member']),
     validateRequest(getAccountByHandleSchema, 'query'),
     GetAccountByHandleController,
     errorHandler
@@ -92,6 +107,8 @@ export default function AccountRoutes(
    *   patch:
    *     summary: Update account information
    *     tags: [Accounts]
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -103,6 +120,10 @@ export default function AccountRoutes(
    *         description: Account updated successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    *       404:
    *         description: Account not found
    *       429:
@@ -112,6 +133,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}updateAccount`,
     rateLimiter,
     jsonParser,
+    authMiddleware(['member']),
     validateRequest(updateAccountSchema),
     UpdateAccountController,
     errorHandler
@@ -124,6 +146,8 @@ export default function AccountRoutes(
    *   post:
    *     summary: Authorize a member for an account
    *     tags: [Accounts]
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -135,6 +159,10 @@ export default function AccountRoutes(
    *         description: Member authorized successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    *       429:
    *         description: Too many requests
    */
@@ -142,6 +170,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}authorizeForAccount`,
     rateLimiter,
     jsonParser,
+    authMiddleware(['member']),
     validateRequest(authorizeForAccountSchema),
     AuthorizeForAccountController,
     errorHandler
@@ -154,6 +183,8 @@ export default function AccountRoutes(
    *   post:
    *     summary: Unauthorize a member for an account
    *     tags: [Accounts]
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -165,6 +196,10 @@ export default function AccountRoutes(
    *         description: Member unauthorized successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    *       429:
    *         description: Too many requests
    */
@@ -172,6 +207,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}unauthorizeForAccount`,
     rateLimiter,
     jsonParser,
+    authMiddleware(['member']),
     validateRequest(unauthorizeForAccountSchema),
     UnauthorizeForAccountController,
     errorHandler
@@ -184,6 +220,8 @@ export default function AccountRoutes(
    *   post:
    *     summary: Update the member to receive offers for an account
    *     tags: [Accounts]
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -195,6 +233,10 @@ export default function AccountRoutes(
    *         description: Send offers recipient updated successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    *       429:
    *         description: Too many requests
    */
@@ -202,6 +244,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}updateSendOffersTo`,
     rateLimiter,
     jsonParser,
+    authMiddleware(['member']),
     validateRequest(updateSendOffersToSchema),
     UpdateSendOffersToController,
     errorHandler

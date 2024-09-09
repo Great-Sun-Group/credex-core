@@ -5,6 +5,7 @@ import { AcceptRecurringController } from "./controllers/acceptRecurring";
 import { DeclineRecurringController } from "./controllers/cancelRecurring";
 import { errorHandler } from "../../middleware/errorHandler";
 import { validateRequest } from "../../middleware/validateRequest";
+import { authMiddleware } from "../../middleware/authMiddleware";
 import {
   requestRecurringSchema,
   acceptRecurringSchema,
@@ -24,6 +25,8 @@ export default function RecurringRoutes(
    *   post:
    *     summary: Request a recurring payment
    *     tags: [Recurring]
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -35,10 +38,15 @@ export default function RecurringRoutes(
    *         description: Recurring payment requested successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    */
   app.post(
     `${apiVersionOneRoute}requestRecurring`,
     jsonParser,
+    authMiddleware(['member']),
     validateRequest(requestRecurringSchema),
     (req: express.Request, res: express.Response, next: express.NextFunction) => {
       logger.debug('POST /requestRecurring called', { requestId: req.id });
@@ -53,6 +61,8 @@ export default function RecurringRoutes(
    *   put:
    *     summary: Accept a recurring payment request
    *     tags: [Recurring]
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -64,10 +74,15 @@ export default function RecurringRoutes(
    *         description: Recurring payment accepted successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    */
   app.put(
     `${apiVersionOneRoute}acceptRecurring`,
     jsonParser,
+    authMiddleware(['member']),
     validateRequest(acceptRecurringSchema),
     (req: express.Request, res: express.Response, next: express.NextFunction) => {
       logger.debug('PUT /acceptRecurring called', { requestId: req.id });
@@ -82,6 +97,8 @@ export default function RecurringRoutes(
    *   delete:
    *     summary: Cancel a recurring payment
    *     tags: [Recurring]
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -93,10 +110,15 @@ export default function RecurringRoutes(
    *         description: Recurring payment cancelled successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    */
   app.delete(
     `${apiVersionOneRoute}cancelRecurring`,
     jsonParser,
+    authMiddleware(['member']),
     validateRequest(cancelRecurringSchema),
     (req: express.Request, res: express.Response, next: express.NextFunction) => {
       logger.debug('DELETE /cancelRecurring called', { requestId: req.id });

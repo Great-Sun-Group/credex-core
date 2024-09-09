@@ -8,6 +8,7 @@ import { CancelCredexController } from "./controllers/cancelCredex";
 import { GetCredexController } from "./controllers/getCredex";
 import { GetLedgerController } from "./controllers/getLedger";
 import { validateRequest } from "../../middleware/validateRequest";
+import { authMiddleware } from "../../middleware/authMiddleware";
 import {
   offerCredexSchema,
   acceptCredexSchema,
@@ -30,6 +31,8 @@ export default function CredexRoutes(
    *   post:
    *     summary: Offer a new Credex
    *     tags: [Credex]
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -65,10 +68,15 @@ export default function CredexRoutes(
    *         description: Credex offered successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    */
   app.post(
     `${apiVersionOneRoute}offerCredex`,
     jsonParser,
+    authMiddleware(['member']),
     validateRequest(offerCredexSchema),
     (req: express.Request, res: express.Response) => {
       logger.debug('POST /offerCredex called', { requestId: req.id });
@@ -83,6 +91,8 @@ export default function CredexRoutes(
    *   put:
    *     summary: Accept a Credex offer
    *     tags: [Credex]
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -102,10 +112,15 @@ export default function CredexRoutes(
    *         description: Credex accepted successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    */
   app.put(
     `${apiVersionOneRoute}acceptCredex`,
     jsonParser,
+    authMiddleware(['member']),
     validateRequest(acceptCredexSchema),
     (req: express.Request, res: express.Response) => {
       logger.debug('PUT /acceptCredex called', { requestId: req.id });
@@ -120,6 +135,8 @@ export default function CredexRoutes(
    *   put:
    *     summary: Accept multiple Credex offers in bulk
    *     tags: [Credex]
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -141,10 +158,15 @@ export default function CredexRoutes(
    *         description: Credexes accepted successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    */
   app.put(
     `${apiVersionOneRoute}acceptCredexBulk`,
     jsonParser,
+    authMiddleware(['member']),
     validateRequest({
       credexIDs: (value: any) => Array.isArray(value) && value.every((id: string) => acceptCredexSchema.credexID(id)),
       signerID: acceptCredexSchema.signerID,
@@ -162,6 +184,8 @@ export default function CredexRoutes(
    *   put:
    *     summary: Decline a Credex offer
    *     tags: [Credex]
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -178,10 +202,15 @@ export default function CredexRoutes(
    *         description: Credex declined successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    */
   app.put(
     `${apiVersionOneRoute}declineCredex`,
     jsonParser,
+    authMiddleware(['member']),
     validateRequest(declineCredexSchema),
     (req: express.Request, res: express.Response) => {
       logger.debug('PUT /declineCredex called', { requestId: req.id });
@@ -196,6 +225,8 @@ export default function CredexRoutes(
    *   put:
    *     summary: Cancel a Credex offer
    *     tags: [Credex]
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -212,10 +243,15 @@ export default function CredexRoutes(
    *         description: Credex cancelled successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    */
   app.put(
     `${apiVersionOneRoute}cancelCredex`,
     jsonParser,
+    authMiddleware(['member']),
     validateRequest(cancelCredexSchema),
     (req: express.Request, res: express.Response) => {
       logger.debug('PUT /cancelCredex called', { requestId: req.id });
@@ -230,6 +266,8 @@ export default function CredexRoutes(
    *   get:
    *     summary: Get Credex details
    *     tags: [Credex]
+   *     security:
+   *       - bearerAuth: []
    *     parameters:
    *       - in: query
    *         name: credexID
@@ -246,11 +284,16 @@ export default function CredexRoutes(
    *         description: Credex details retrieved successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    *       404:
    *         description: Credex not found
    */
   app.get(
     `${apiVersionOneRoute}getCredex`,
+    authMiddleware(['member']),
     validateRequest(getCredexSchema, 'query'),
     (req: express.Request, res: express.Response) => {
       logger.debug('GET /getCredex called', { requestId: req.id });
@@ -265,6 +308,8 @@ export default function CredexRoutes(
    *   get:
    *     summary: Get account ledger
    *     tags: [Credex]
+   *     security:
+   *       - bearerAuth: []
    *     parameters:
    *       - in: query
    *         name: accountID
@@ -284,9 +329,14 @@ export default function CredexRoutes(
    *         description: Ledger retrieved successfully
    *       400:
    *         description: Bad request
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
    */
   app.get(
     `${apiVersionOneRoute}getLedger`,
+    authMiddleware(['member']),
     validateRequest(getLedgerSchema, 'query'),
     (req: express.Request, res: express.Response) => {
       logger.debug('GET /getLedger called', { requestId: req.id });

@@ -12,6 +12,7 @@ import {
 } from "./controllers/AccountController";
 import { errorHandler } from "../../middleware/errorHandler";
 import { validateRequest } from "../../middleware/validateRequest";
+import { authMiddleware } from "../../middleware/authMiddleware";
 import {
   getCredexSchema,
   getMemberSchema,
@@ -29,6 +30,7 @@ export default function AdminDashboardRoutes(
   app.get(
     `${apiVersionOneRoute}getCredexDetails`,
     jsonParser,
+    authMiddleware(['admin']),
     validateRequest(getCredexSchema, 'query'),
     (req, res, next) => {
       logger.debug(`GET ${apiVersionOneRoute}getCredexDetails called`, { requestId: req.id });
@@ -39,6 +41,7 @@ export default function AdminDashboardRoutes(
   app.get(
     `${apiVersionOneRoute}getMemberDetails`,
     jsonParser,
+    authMiddleware(['admin']),
     validateRequest(getMemberSchema, 'query'),
     (req, res, next) => {
       logger.debug(`GET ${apiVersionOneRoute}getMemberDetails called`, { requestId: req.id });
@@ -49,6 +52,7 @@ export default function AdminDashboardRoutes(
   app.patch(
     `${apiVersionOneRoute}updateMemberTier`,
     jsonParser,
+    authMiddleware(['admin']),
     validateRequest(updateMemberTierSchema),
     (req, res, next) => {
       logger.debug(`PATCH ${apiVersionOneRoute}updateMemberTier called`, { requestId: req.id });
@@ -59,6 +63,7 @@ export default function AdminDashboardRoutes(
   app.get(
     `${apiVersionOneRoute}getAccountDetails`,
     jsonParser,
+    authMiddleware(['admin']),
     validateRequest(getAccountSchema, 'query'),
     (req, res, next) => {
       logger.debug(`GET ${apiVersionOneRoute}getAccountDetails called`, { requestId: req.id });
@@ -69,6 +74,7 @@ export default function AdminDashboardRoutes(
   app.get(
     `${apiVersionOneRoute}getReceivedCredexOffers`,
     jsonParser,
+    authMiddleware(['admin']),
     validateRequest(getAccountSchema, 'query'),
     (req, res, next) => {
       logger.debug(`GET ${apiVersionOneRoute}getReceivedCredexOffers called`, { requestId: req.id });
@@ -79,6 +85,7 @@ export default function AdminDashboardRoutes(
   app.get(
     `${apiVersionOneRoute}getSentCredexOffers`,
     jsonParser,
+    authMiddleware(['admin']),
     validateRequest(getAccountSchema, 'query'),
     (req, res, next) => {
       logger.debug(`GET ${apiVersionOneRoute}getSentCredexOffers called`, { requestId: req.id });

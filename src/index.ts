@@ -8,7 +8,6 @@ import RecurringRoutes from "./api/Avatar/recurringRoutes";
 import logger, { expressLogger } from "../config/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./core-cron/cronJobs";
-import { authenticate } from "../config/authenticate";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
@@ -50,10 +49,6 @@ logger.info("Applied custom logging middleware");
 // Serve Swagger UI for API documentation
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 logger.info("Swagger UI set up for API documentation");
-
-// Apply authentication middleware to all routes under the API version prefix
-app.use(apiVersionOneRoute, authenticate);
-logger.info("Applied authentication middleware to API routes");
 
 // Set up rate limiting to prevent abuse
 // NOTE: With all requests coming from a single WhatsApp chatbot, rate limiting might cause issues

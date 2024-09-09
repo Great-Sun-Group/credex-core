@@ -6,6 +6,7 @@ import { onboardMemberExpressHandler } from "./controllers/onboardMember";
 import { loginMemberExpressHandler } from "./controllers/loginMember";
 import { authForTierSpendLimitExpressHandler } from "./controllers/authForTierSpendLimit";
 import { validateRequest } from "../../middleware/validateRequest";
+import { authMiddleware } from "../../middleware/authMiddleware";
 import {
   getMemberByHandleSchema,
   getMemberDashboardByPhoneSchema,
@@ -15,7 +16,6 @@ import {
   loginMemberSchema,
 } from "./memberValidationSchemas";
 import logger from "../../../config/logger";
-import { authenticate } from "../../../config/authenticate";
 
 const router = express.Router();
 
@@ -79,10 +79,12 @@ logger.debug("Registered route: POST /member/login", { module: "memberRoutes", r
  *         description: Bad request
  *       401:
  *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  */
 router.post(
   "/getMemberByHandle",
-  authenticate,
+  authMiddleware(['member']),
   validateRequest(getMemberByHandleSchema),
   GetMemberByHandleController
 );
@@ -115,10 +117,12 @@ logger.debug("Registered route: POST /member/getMemberByHandle", { module: "memb
  *         description: Bad request
  *       401:
  *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  */
 router.post(
   "/getMemberDashboardByPhone",
-  authenticate,
+  authMiddleware(['member']),
   validateRequest(getMemberDashboardByPhoneSchema),
   GetMemberDashboardByPhoneController
 );
@@ -191,10 +195,12 @@ logger.debug("Registered route: POST /member/onboardMember", { module: "memberRo
  *         description: Bad request
  *       401:
  *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  */
 router.post(
   "/updateMemberTier",
-  authenticate,
+  authMiddleware(['admin']),
   validateRequest(updateMemberTierSchema),
   updateMemberTierExpressHandler
 );
@@ -236,10 +242,12 @@ logger.debug("Registered route: POST /member/updateMemberTier", { module: "membe
  *         description: Bad request
  *       401:
  *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  */
 router.post(
   "/authForTierSpendLimit",
-  authenticate,
+  authMiddleware(['member']),
   validateRequest(authForTierSpendLimitSchema),
   authForTierSpendLimitExpressHandler
 );
