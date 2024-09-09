@@ -84,6 +84,32 @@ Controllers for the endpoints are imported, and endpoints created for the variou
    npm run dev
    ```
 
+### Authentication
+
+The Credex API uses JWT (JSON Web Tokens) for authentication. Here's how it works:
+
+1. When a new member is onboarded or an existing member logs in, a JWT token is generated and returned.
+
+2. For subsequent requests to protected routes, the client should include the JWT token in the Authorization header of the request:
+
+   ```
+   Authorization: Bearer <token>
+   ```
+
+3. The server will validate the token for each request to a protected route. If the token is valid, the request will be processed. If not, a 401 Unauthorized response will be returned.
+
+4. The JWT token contains the member's ID, which is used to identify the member for each request.
+
+5. Tokens are set to expire after 15 minutes. After expiration, a new token will need to be obtained.
+
+6. For authenticated requests, use the JWT token received from the onboarding process in the Authorization header:
+
+   ```
+   Authorization: Bearer <your_jwt_token>
+   ```
+
+Note: Make sure to set the `JWT_SECRET` environment variable in your `.env` file. This secret is used to sign and verify the JWT tokens. You can create your own random string for this.
+
 ### Using Postman for API Testing
 
 1. Navigate to the Postman extension in VS Code and sign in to your Postman account.

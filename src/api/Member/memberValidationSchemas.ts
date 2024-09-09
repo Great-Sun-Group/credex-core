@@ -53,4 +53,9 @@ export const authForTierSpendLimitSchema = {
 };
 logger.debug('authForTierSpendLimitSchema initialized');
 
+export const loginMemberSchema = {
+  phone: v.validatePhone,
+};
+logger.debug('loginMemberSchema initialized');
+
 logger.debug('All member validation schemas initialized');

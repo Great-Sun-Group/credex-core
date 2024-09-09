@@ -8,7 +8,7 @@ import RecurringRoutes from "./api/Avatar/recurringRoutes";
 import logger, { expressLogger } from "../config/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./core-cron/cronJobs";
-import authenticate from "../config/authenticate";
+import { authenticate } from "../config/authenticate";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";

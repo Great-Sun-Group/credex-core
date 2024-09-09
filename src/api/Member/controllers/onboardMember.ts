@@ -3,13 +3,15 @@ import { OnboardMemberService } from "../services/OnboardMember";
 import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
 import logger from "../../../../config/logger";
 import { validateName, validatePhone } from "../../../utils/validators";
+import { generateToken } from "../../../../config/authenticate";
+import { searchSpaceDriver } from "../../../../config/neo4j";
 
 export async function OnboardMemberController(
   firstname: string,
   lastname: string,
   phone: string,
   requestId: string
-): Promise<{ memberDashboard: any } | { error: string }> {
+): Promise<{ memberDashboard: any, token: string } | { error: string }> {
   logger.debug("Entering OnboardMemberController", { firstname, lastname, phone, requestId });
 
   try {
@@ -29,6 +31,20 @@ export async function OnboardMemberController(
 
     logger.info("Member onboarded successfully", { memberID: onboardedMember.onboardedMemberID, requestId });
 
+    // Generate token
+    const token = generateToken(onboardedMember.onboardedMemberID);
+
+    // Save token to Neo4j
+    const session = searchSpaceDriver.session();
+    try {
+      await session.run(
+        'MATCH (m:Member {id: $memberId}) SET m.token = $token',
+        { memberId: onboardedMember.onboardedMemberID, token }
+      );
+    } finally {
+      await session.close();
+    }
+
     logger.debug("Retrieving member dashboard", { phone, requestId });
     const memberDashboard = await GetMemberDashboardByPhoneService(phone);
     if (!memberDashboard) {
@@ -39,7 +55,7 @@ export async function OnboardMemberController(
 
     logger.info("Member dashboard retrieved successfully", { memberID: onboardedMember.onboardedMemberID, requestId });
     logger.debug("Exiting OnboardMemberController successfully", { requestId });
-    return { memberDashboard };
+    return { memberDashboard, token };
   } catch (error) {
     logger.error("Error in OnboardMemberController", { 
       error: error instanceof Error ? error.message : 'Unknown error',
