@@ -3,17 +3,17 @@ import rateLimit from 'express-rate-limit';
 import { config } from '../../config/config';
 import logger from '../../config/logger';
 
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again after 15 minutes",
+const chatbotLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 1000, // limit to 1000 requests per minute
+  message: "Too many requests, please try again later",
   handler: (req: Request, res: Response) => {
     logger.warn('Rate limit exceeded', { 
       ip: req.ip, 
       path: req.path, 
       method: req.method 
     });
-    res.status(429).send("Too many requests from this IP, please try again after 15 minutes");
+    res.status(429).send("Too many requests, please try again later");
   },
 });
 
@@ -34,5 +34,5 @@ export const rateLimiter = (
     path: req.path, 
     method: req.method 
   });
-  apiLimiter(req, res, next);
+  chatbotLimiter(req, res, next);
 };
