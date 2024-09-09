@@ -8,14 +8,13 @@ import RecurringRoutes from "./api/Avatar/recurringRoutes";
 import logger, { expressLogger } from "../config/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./core-cron/cronJobs";
-import helmet from "helmet";
-import cors from "cors";
 import rateLimit from "express-rate-limit";
 import AdminDashboardRoutes from "./api/AdminDashboard/adminDashboardRoutes";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "../config/swagger";
 import configUtils from "./utils/configUtils";
+import { applySecurityMiddleware } from "./middleware/securityConfig";
 
 // Create an Express application
 export const app = express();
@@ -29,18 +28,8 @@ export const apiVersionOneRoute = "/api/v1/";
 logger.info("Initializing application");
 
 // Apply security middleware
-app.use(helmet()); // Helps secure Express apps with various HTTP headers
-
-// Configure CORS
-const corsOptions = {
-  origin: configUtils.get('whatsappBotOrigin'), // The origin of your WhatsApp chatbot
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Adjust as needed
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-  maxAge: 86400 // Cache preflight request results for 1 day (in seconds)
-};
-app.use(cors(corsOptions));
-logger.info("Applied security middleware: helmet and CORS", { corsOptions });
+applySecurityMiddleware(app);
+logger.info("Applied security middleware");
 
 // Apply custom logging middleware
 app.use(expressLogger);
