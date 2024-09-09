@@ -168,7 +168,10 @@ export default function CredexRoutes(
     jsonParser,
     authMiddleware(['member']),
     validateRequest({
-      credexIDs: (value: any) => Array.isArray(value) && value.every((id: string) => acceptCredexSchema.credexID(id)),
+      credexIDs: {
+        sanitizer: (value: any) => Array.isArray(value) ? value.map(acceptCredexSchema.credexID.sanitizer) : value,
+        validator: (value: any) => Array.isArray(value) && value.every(acceptCredexSchema.credexID.validator),
+      },
       signerID: acceptCredexSchema.signerID,
     }),
     (req: express.Request, res: express.Response) => {

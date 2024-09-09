@@ -1,43 +1,85 @@
-import { v } from '../../middleware/validateRequest';
+import { v, s } from '../../middleware/validateRequest';
 import logger from '../../../config/logger';
 
 logger.debug('Initializing credex validation schemas');
 
 export const offerCredexSchema = {
-  offerorAccountID: v.validateUUID,
-  receiverAccountID: v.validateUUID,
-  amount: v.validateAmount,
-  denomination: v.validateDenomination,
-  credexType: v.validateCredexType,
-  credspan: v.validatePositiveInteger,
+  offerorAccountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
+  receiverAccountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
+  amount: {
+    sanitizer: (value: any) => Number(value),
+    validator: v.validateAmount,
+  },
+  denomination: {
+    sanitizer: s.sanitizeDenomination,
+    validator: v.validateDenomination,
+  },
+  credexType: {
+    sanitizer: s.sanitizeString,
+    validator: v.validateCredexType,
+  },
+  credspan: {
+    sanitizer: (value: any) => Number(value),
+    validator: v.validatePositiveInteger,
+  },
 };
 logger.debug('offerCredexSchema initialized');
 
 export const acceptCredexSchema = {
-  credexID: v.validateUUID,
-  signerID: v.validateUUID,
+  credexID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
+  signerID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
 };
 logger.debug('acceptCredexSchema initialized');
 
 export const declineCredexSchema = {
-  credexID: v.validateUUID,
-  signerID: v.validateUUID,
+  credexID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
+  signerID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
 };
 logger.debug('declineCredexSchema initialized');
 
 export const cancelCredexSchema = {
-  credexID: v.validateUUID,
-  signerID: v.validateUUID,
+  credexID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
+  signerID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
 };
 logger.debug('cancelCredexSchema initialized');
 
 export const getCredexSchema = {
-  credexID: v.validateUUID,
+  credexID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
 };
 logger.debug('getCredexSchema initialized');
 
 export const getLedgerSchema = {
-  accountID: v.validateUUID,
+  accountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
 };
 logger.debug('getLedgerSchema initialized');
 

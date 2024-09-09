@@ -1,26 +1,41 @@
-import { v } from "../../middleware/validateRequest";
+import { v, s } from "../../middleware/validateRequest";
 import logger from "../../../config/logger";
 
 logger.debug("Initializing admin dashboard validation schemas");
 
 export const getCredexSchema = {
-  credexID: v.validateUUID,
+  credexID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
 };
 logger.debug("getCredexSchema initialized");
 
 export const getMemberSchema = {
-  memberID: v.validateUUID,
+  memberID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
 };
 logger.debug("getMemberSchema initialized");
 
 export const updateMemberTierSchema = {
-  memberID: v.validateUUID,
-  tier: v.validateTier,
+  memberID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
+  tier: {
+    sanitizer: (value: any) => Number(value),
+    validator: v.validateTier,
+  },
 };
 logger.debug("updateMemberTierSchema initialized");
 
 export const getAccountSchema = {
-  accountID: v.validateUUID,
+  accountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
 };
 logger.debug("getAccountSchema initialized");
 

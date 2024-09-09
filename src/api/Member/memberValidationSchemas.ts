@@ -17,44 +17,80 @@
  *    data validation rules, which in turn affects what gets logged as errors.
  */
 
-import { v } from "../../middleware/validateRequest";
+import { v, s } from "../../middleware/validateRequest";
 import logger from "../../../config/logger";
 
 logger.debug('Initializing member validation schemas');
 
 export const getMemberByHandleSchema = {
-  memberHandle: v.validateMemberHandle,
+  memberHandle: {
+    sanitizer: s.sanitizeString,
+    validator: v.validateMemberHandle,
+  },
 };
 logger.debug('getMemberByHandleSchema initialized');
 
 export const getMemberDashboardByPhoneSchema = {
-  phone: v.validatePhone,
+  phone: {
+    sanitizer: s.sanitizePhone,
+    validator: v.validatePhone,
+  },
 };
 logger.debug('getMemberDashboardByPhoneSchema initialized');
 
 export const onboardMemberSchema = {
-  firstname: v.validateName,
-  lastname: v.validateName,
-  phone: v.validatePhone,
+  firstname: {
+    sanitizer: s.sanitizeName,
+    validator: v.validateName,
+  },
+  lastname: {
+    sanitizer: s.sanitizeName,
+    validator: v.validateName,
+  },
+  phone: {
+    sanitizer: s.sanitizePhone,
+    validator: v.validatePhone,
+  },
 };
 logger.debug('onboardMemberSchema initialized');
 
 export const updateMemberTierSchema = {
-  memberID: v.validateUUID,
-  tier: v.validateTier,
+  memberID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
+  tier: {
+    sanitizer: (value: any) => Number(value),
+    validator: v.validateTier,
+  },
 };
 logger.debug('updateMemberTierSchema initialized');
 
 export const authForTierSpendLimitSchema = {
-  memberID: v.validateUUID,
-  tier: v.validateTier,
-  Amount: v.validateAmount,
-  Denomination: v.validateDenomination,
+  memberID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
+  tier: {
+    sanitizer: (value: any) => Number(value),
+    validator: v.validateTier,
+  },
+  Amount: {
+    sanitizer: (value: any) => Number(value),
+    validator: v.validateAmount,
+  },
+  Denomination: {
+    sanitizer: s.sanitizeDenomination,
+    validator: v.validateDenomination,
+  },
 };
 logger.debug('authForTierSpendLimitSchema initialized');
 
 export const loginMemberSchema = {
-  phone: v.validatePhone,
+  phone: {
+    sanitizer: s.sanitizePhone,
+    validator: v.validatePhone,
+  },
 };
 logger.debug('loginMemberSchema initialized');
 
