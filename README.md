@@ -1,6 +1,6 @@
 # Credex Ecosystem Core API
 
-The credex ecosystem is a shared ledger that enables the efficient circulation of value, accumulation of capital, investment of profits, and giving of gifts.
+The credex ecosystem is a shared ledger that enables the efficient circulation of value, accumulation of capital, investment of profits, and giving of gifts. It is a tool for financial inclusion, financial empowerment, and financial sovereignty.
 
 ## Credex Principle
 
@@ -9,12 +9,15 @@ The credex ecosystem is a shared ledger that enables the efficient circulation o
 **and they owe me,**\
 **we're square.**
 
+The credex ecosystem actualizes the Credex Principle in the Minute Transaction Queue (MTQ), which tracks payable and receivable invoices for members' accounts, finds loops of value creation, and cancels payable and receivable invoices against each other in "credloops" in which every debt is reduced by an equal value. This is a GAAP-compliant accounting process that any person or business can benefit from.
+
+In accounting terms, a credex is a contingent asset for one party and a contingent liability for the other. These asset/liability pairs are automatically strung together into credloops wherever possible across the credex ecosystem. When a credloop is created and cleared, every account in the loop will have an accounts payable invoice cancelled against an equivalent accounts receivable invoice.
+
+
 ## Credcoin Principle
 
 **Every human is entitled to one equal share of the value of the natural wealth entering the organic economy.**\
 **Every human is responsible to provide value equal to the amount of natural wealth that they consume.**
-
-The credex ecosystem actualizes the Credex Principle in the Minute Transaction Queue (MTQ), which tracks payable and receivable invoices for members' accounts, finds loops of value creation, and cancels payable and receivable invoices against each other in "credloops" in which every debt is reduced by an equal value. This is a GAAP-compliant accounting process that any person and any business can benefit from.
 
 The ecosystem actualizes the Credcoin Principle in the Daily Credcoin Offering (DCO), which updates exchange rates across the ecosystem daily. Every 24h, the DCO makes this equation true: one credcoin today equals the number of members participating in the DCO today divided by the value of natural wealth entering the organic economy through the DCO today.
 
@@ -24,7 +27,11 @@ The value of the natural wealth processed by the DCO is split into two portions:
 
 The credex ecosystem stores values in credcoin (CXX). In order to natively enable multi-denominational accounting, a CXXmultiplier value is stored alongside every CXX value. Both of these values are updated in every DCO so that the credex remains true to the face value in the denomination specified, and to other values stored in the ecosystem. A value expressed in CXX represents that value in relationship to every other value stored in the ecosystem. A value in CXX divided by its CXX multiplier expresses the value in the chosen denomination (face value).
 
-The system manages the balance between local truth (preserving the face value of contracts in their specified denomination) and global truth (adjusting all values relative to credcoin) through the daily rate and value adjustments in the DCO. This implementation creates a robust ecosystem that manages accounting processes across any denomination, clears debts automatically, and adjusts values dynamically.
+The system manages the balance between local truth (preserving the face value of contracts in their specified denomination) and global truth (adjusting all values relative to credcoin) through the daily rate and value adjustments in the DCO.
+
+## Neo4j databases
+
+Credex-core runs on two neo4j databases. LedgerSpace is the shared ledger containing the full state of the credex ecosystem. SearchSpace contains only unredeemed credexes, and is optimized to find credloops. On every credloop found and cleared, ledgerSpace is updated accordingly
 
 ## Express.js server
 
@@ -62,11 +69,7 @@ Controllers for the endpoints are imported, and endpoints created for the variou
 
 3. When prompted, click "Reopen in Container" to start the dev container. This will set up a consistent development environment with all necessary dependencies.
 
-4. Once the container is ready, copy the `.env.example` file to `.env` and fill in the necessary environment variables:
-
-   ```bash
-   cp .env.example .env
-   ```
+4. Once the container is ready, copy the `.env.example` file to `.env` and fill in the necessary environment variables.
 
 5. Start the development server:
    ```bash
@@ -77,12 +80,39 @@ Controllers for the endpoints are imported, and endpoints created for the variou
 
 1. Open the project in GitHub Codespaces.
 
-2. The devcontainer will automatically set up the development environment with all necessary dependencies and environment variables.
+2. The devcontainer will automatically set up the development environment with all necessary dependencies and environment variables. If your environment variables are not set in your codespaces, you can copy the `.env.example` file to `.env` and fill in the necessary environment variables there.
+
 
 3. Start the development server:
    ```bash
    npm run dev
    ```
+
+## Environment variables configuration
+
+To set up your development environment, you'll need to configure the following environment variables:
+
+1. PORT: Set this to 5000 for local development.
+2. NODE_ENV: Set this to 'development' for local development.
+3. DEPLOYMENT: Set this to 'dev' for development deployment.
+
+4. NEO4J_LEDGER_SPACE_BOLT_URL, NEO4J_LEDGER_SPACE_USER, NEO4J_LEDGER_SPACE_PASS:
+   - Sign up for a free Neo4j Aura account at https://neo4j.com/cloud/aura/
+   - Create a new database instance for ledgerSpace
+   - Use the provided connection details to fill in these variables
+
+5. NEO4J_SEARCH_SPACE_BOLT_URL, NEO4J_SEARCH_SPACE_USER, NEO4J_SEARCH_SPACE_PASS:
+   - Create a second Neo4j Aura account using a different email address and create a new database instance for searchSpace
+
+6. OPEN_EXCHANGE_RATES_API:
+   - Sign up for a free account at https://openexchangerates.org/
+   - Go to your account dashboard and create and copy your API key
+
+7. JWT_SECRET: Create a strong, unique string to use as your JWT secret
+
+8. WHATSAPP_BOT_ORIGIN: Set this to 'http://localhost:3000' for local development
+
+9. GIT_PERSONAL_ACCESS_TOKEN: Create a personal access token on GitHub with appropriate permissions
 
 ## Available Scripts
 
@@ -148,20 +178,10 @@ credex-core/
 
 ## License
 
-We've crafted a custom license for the Credex Ecosystem Core API that combines elements of the Creative Commons Attribution-NonCommercial 4.0 International License and the Commons Clause. Here's what you need to know:
+You are welcome to explore, experiment with, and build upon this work for research, development, modelling, testing, demonstrations, and other non-commercial purposes. Please contribute!
 
-1. You're welcome to explore, experiment with, and build upon this work for non-commercial, testing, research, and development purposes. Please contribute!
+The use of this software in any production environment is strictly prohibited. You do not have permission to use this software to track real debts. Real data of past transactions may be used, but only as data input. If you want to transact real value with credex, you are invited to become a member of the credex ecosystem.
 
-2. However, please note that this license explicitly prohibits the use of this software in any production environment with real members tracking real economic transactions, whether it's for-profit, not-for-profit or governmental context, without our explicit permission.
+If you create something new based on this project, you must use the same license terms and give appropriate credit to the original work. You may not sell the software or any product or service that substantially relies on its functionality.
 
-3. If you create something new based on this project, you'll need to use the same license terms and give appropriate credit to the original work.
-
-4. The "Commons Clause" part of our license means you can't sell the software or any product or service that substantially relies on its functionality without our permission. This includes hosting or consulting services related to the software.
-
-This approach allows for community engagement and experimentation while ensuring the integrity and unity of the system as a single shared economic network that all can access.
-
-If you're interested in using this software in a way that goes beyond these terms, please reach out to us. We're open to discussing collaborations.
-
-For the full legal text of the Creative Commons Attribution-NonCommercial 4.0 International License, you can visit https://creativecommons.org/licenses/by-nc/4.0/legalcode.
-
-For more information about the Commons Clause, please visit https://commonsclause.com/.
+This approach allows for community engagement and experimentation while ensuring the integrity and unity of the system as a single shared economic network that all can access and benefit from.
