@@ -3,8 +3,9 @@ import path from 'path';
 import logger from '../../config/logger';
 
 // Load environment variables from .env file
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
+// Rest of the file remains unchanged
 interface Config {
   port: number;
   nodeEnv: string;

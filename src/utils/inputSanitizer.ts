@@ -1,5 +1,5 @@
-import { customAlphabet } from 'nanoid';
 import xss from 'xss';
+import crypto from 'crypto';
 
 // Function to sanitize strings (remove HTML tags and trim)
 export const sanitizeString = (input: string): string => {
@@ -37,7 +37,9 @@ export const sanitizeName = (input: string): string => {
 };
 
 // Generate a safe, URL-friendly unique ID
-const generateSafeId = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz', 21);
+const generateSafeId = (): string => {
+  return crypto.randomBytes(16).toString('hex');
+};
 
 // Function to generate a safe ID if input is empty or invalid
 export const generateSafeIdIfInvalid = (input: string): string => {
