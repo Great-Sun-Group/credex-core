@@ -1,9 +1,9 @@
-import dotenv from 'dotenv';
-import path from 'path';
-import logger from '../../config/logger';
+import dotenv from "dotenv";
+import path from "path";
+import logger from "../utils/logger";
 
 // Load environment variables from .env file
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 // Rest of the file remains unchanged
 interface Config {
@@ -28,7 +28,7 @@ interface Config {
     max: number;
   };
   openExchangeRatesApi: string;
-  whatsappBotOrigin: string; // Add this line
+  whatsappBotOrigin: string;
 }
 
 class ConfigUtils {
@@ -36,33 +36,36 @@ class ConfigUtils {
   private config: Config;
 
   private constructor() {
-    logger.debug('Initializing ConfigUtils');
+    logger.debug("Initializing ConfigUtils");
     this.config = {
-      port: parseInt(process.env.PORT || '3000', 10),
-      nodeEnv: process.env.NODE_ENV || 'development',
-      deployment: process.env.DEPLOYMENT || 'dev',
-      logLevel: process.env.LOG_LEVEL || 'info',
+      port: parseInt(process.env.PORT || "3000", 10),
+      nodeEnv: process.env.NODE_ENV || "development",
+      deployment: process.env.DEPLOYMENT || "dev",
+      logLevel: process.env.LOG_LEVEL || "info",
       ledgerSpace: {
-        uri: process.env.NEO_4J_LEDGER_SPACE_BOLT_URL || '',
-        user: process.env.NEO_4J_LEDGER_SPACE_USER || '',
-        password: process.env.NEO_4J_LEDGER_SPACE_PASS || '',
+        uri: process.env.NEO_4J_LEDGER_SPACE_BOLT_URL || "",
+        user: process.env.NEO_4J_LEDGER_SPACE_USER || "",
+        password: process.env.NEO_4J_LEDGER_SPACE_PASS || "",
       },
       searchSpace: {
-        uri: process.env.NEO_4J_SEARCH_SPACE_BOLT_URL || '',
-        user: process.env.NEO_4J_SEARCH_SPACE_USER || '',
-        password: process.env.NEO_4J_SEARCH_SPACE_PASS || '',
+        uri: process.env.NEO_4J_SEARCH_SPACE_BOLT_URL || "",
+        user: process.env.NEO_4J_SEARCH_SPACE_USER || "",
+        password: process.env.NEO_4J_SEARCH_SPACE_PASS || "",
       },
-      jwtSecret: process.env.JWT_SECRET || '',
-      jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
+      jwtSecret: process.env.JWT_SECRET || "",
+      jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1h",
       rateLimit: {
-        windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
-        max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
+        windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000", 10), // 15 minutes
+        max: parseInt(process.env.RATE_LIMIT_MAX || "100", 10),
       },
-      openExchangeRatesApi: process.env.OPEN_EXCHANGE_RATES_API || '',
-      whatsappBotOrigin: process.env.WHATSAPP_BOT_ORIGIN || '', // Add this line
+      openExchangeRatesApi: process.env.OPEN_EXCHANGE_RATES_API || "",
+      whatsappBotOrigin: process.env.WHATSAPP_BOT_ORIGIN || "", // Add this line
       // Initialize other configuration properties here
     };
-    logger.info('ConfigUtils initialized', { nodeEnv: this.config.nodeEnv, logLevel: this.config.logLevel });
+    logger.info("ConfigUtils initialized", {
+      nodeEnv: this.config.nodeEnv,
+      logLevel: this.config.logLevel,
+    });
   }
 
   public static getInstance(): ConfigUtils {
@@ -88,16 +91,16 @@ class ConfigUtils {
 
   // Add validation for all required fields
   public validate(): void {
-    logger.debug('Validating configuration');
+    logger.debug("Validating configuration");
     const requiredFields: (keyof Config)[] = [
-      'port',
-      'nodeEnv',
-      'deployment',
-      'ledgerSpace',
-      'searchSpace',
-      'jwtSecret',
-      'openExchangeRatesApi',
-      'whatsappBotOrigin'
+      "port",
+      "nodeEnv",
+      "deployment",
+      "ledgerSpace",
+      "searchSpace",
+      "jwtSecret",
+      "openExchangeRatesApi",
+      "whatsappBotOrigin",
     ];
     for (const field of requiredFields) {
       if (!this.config[field]) {
@@ -109,16 +112,16 @@ class ConfigUtils {
     // Validate nested objects
     const validateNestedObject = (obj: any, prefix: string) => {
       for (const key in obj) {
-        if (obj[key] === '') {
+        if (obj[key] === "") {
           logger.error(`Missing required configuration: ${prefix}${key}`);
           throw new Error(`Missing required configuration: ${prefix}${key}`);
         }
       }
     };
 
-    validateNestedObject(this.config.ledgerSpace, 'ledgerSpace.');
-    validateNestedObject(this.config.searchSpace, 'searchSpace.');
-    logger.info('Configuration validation completed successfully');
+    validateNestedObject(this.config.ledgerSpace, "ledgerSpace.");
+    validateNestedObject(this.config.searchSpace, "searchSpace.");
+    logger.info("Configuration validation completed successfully");
   }
 }
 

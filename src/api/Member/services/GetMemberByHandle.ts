@@ -1,5 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 
 export async function GetMemberByHandleService(
   memberHandle: string
@@ -41,10 +41,10 @@ export async function GetMemberByHandleService(
       memberName: `${firstname} ${lastname}`,
     };
   } catch (error) {
-    logger.error("Error fetching member data from database", { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+    logger.error("Error fetching member data from database", {
+      error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      memberHandle 
+      memberHandle,
     });
     return false;
   } finally {

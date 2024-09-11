@@ -9,8 +9,8 @@ import { fetchZwgRate, ZwgRateError } from "./fetchZwgRate";
 import axios from "axios";
 import _ from "lodash";
 import moment from "moment-timezone";
-import logger from "../../../config/logger";
-import { v4 as uuidv4 } from 'uuid';
+import logger from "../../utils/logger";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Initializes the database for the Daily Credcoin Offering (DCO) process.
@@ -109,7 +109,10 @@ function establishDayZero(requestId: string): string {
 /**
  * Fetches and processes currency rates for day zero.
  */
-async function fetchAndProcessRates(dayZero: string, requestId: string): Promise<any> {
+async function fetchAndProcessRates(
+  dayZero: string,
+  requestId: string
+): Promise<any> {
   logger.info("Loading currencies and current rates...", { requestId });
   const symbols = getDenominations({
     sourceForRate: "OpenExchangeRates",
@@ -127,17 +130,26 @@ async function fetchAndProcessRates(dayZero: string, requestId: string): Promise
     logger.info("ZWG rate fetched successfully", { rate: zigRate, requestId });
   } catch (error) {
     if (error instanceof ZwgRateError) {
-      logger.warn("Failed to fetch ZWG rate, excluding ZWG from denominations", { requestId, error: error.message });
+      logger.warn(
+        "Failed to fetch ZWG rate, excluding ZWG from denominations",
+        { requestId, error: error.message }
+      );
       delete USDbaseRates.ZWG;
     } else {
-      logger.error("Unexpected error while fetching ZWG rate", { requestId, error: error instanceof Error ? error.message : String(error) });
+      logger.error("Unexpected error while fetching ZWG rate", {
+        requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
 
   const OneCXXinCXXdenom = 1;
   const CXXdenom = "CAD";
-  logger.info("CXX conversion rate", { rate: `${OneCXXinCXXdenom} CXX = 1 ${CXXdenom}`, requestId });
+  logger.info("CXX conversion rate", {
+    rate: `${OneCXXinCXXdenom} CXX = 1 ${CXXdenom}`,
+    requestId,
+  });
 
   const XAUbaseRates = _.mapValues(
     USDbaseRates,

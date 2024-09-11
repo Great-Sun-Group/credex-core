@@ -1,5 +1,5 @@
 import { v, s } from "../../middleware/validateRequest";
-import logger from "../../../config/logger";
+import logger from "../../utils/logger";
 
 logger.debug("Initializing avatar validation schemas");
 

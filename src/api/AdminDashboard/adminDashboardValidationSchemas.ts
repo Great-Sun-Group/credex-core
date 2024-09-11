@@ -1,5 +1,5 @@
 import { v, s } from "../../middleware/validateRequest";
-import logger from "../../../config/logger";
+import logger from "../../utils/logger";
 
 logger.debug("Initializing admin dashboard validation schemas");
 

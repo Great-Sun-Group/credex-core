@@ -1,6 +1,6 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { isNeo4jError } from "../../../utils/errorUtils";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 
 export async function CreateAccountService(
   ownerID: string,
@@ -11,7 +11,15 @@ export async function CreateAccountService(
   DCOgiveInCXX: number | null = null,
   DCOdenom: string | null = null
 ) {
-  logger.debug("CreateAccountService called", { ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX, DCOdenom });
+  logger.debug("CreateAccountService called", {
+    ownerID,
+    accountType,
+    accountName,
+    accountHandle,
+    defaultDenom,
+    DCOgiveInCXX,
+    DCOdenom,
+  });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -31,7 +39,11 @@ export async function CreateAccountService(
     const memberTier = getMemberTier.records[0].get("memberTier");
     const numAccounts = getMemberTier.records[0].get("numAccounts");
     if (memberTier <= 2 && numAccounts >= 1) {
-      logger.warn("Account creation not permitted on current membership tier", { ownerID, memberTier, numAccounts });
+      logger.warn("Account creation not permitted on current membership tier", {
+        ownerID,
+        memberTier,
+        numAccounts,
+      });
       return {
         account: false,
         message:
@@ -74,24 +86,33 @@ export async function CreateAccountService(
     );
 
     if (!result.records.length) {
-      logger.warn("Failed to create account", { ownerID, accountType, accountName, accountHandle });
+      logger.warn("Failed to create account", {
+        ownerID,
+        accountType,
+        accountName,
+        accountHandle,
+      });
       return { account: false, message: "could not create account" };
     }
 
     const createdAccountID = result.records[0].get("accountID");
-    logger.info("Account created successfully", { accountID: createdAccountID, accountType, ownerID });
+    logger.info("Account created successfully", {
+      accountID: createdAccountID,
+      accountType,
+      ownerID,
+    });
     return {
       accountID: createdAccountID,
       message: "account created",
     };
   } catch (error) {
-    logger.error("Error creating account", { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+    logger.error("Error creating account", {
+      error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      ownerID, 
-      accountType, 
-      accountName, 
-      accountHandle 
+      ownerID,
+      accountType,
+      accountName,
+      accountHandle,
     });
 
     if (

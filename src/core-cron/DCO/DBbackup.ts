@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import fs from "fs";
 import path from "path";
-import logger from "../../../config/logger";
+import logger from "../../utils/logger";
 
 const exportDatabase = async (
   driver: any,
@@ -29,7 +29,9 @@ const exportDatabase = async (
 
     logger.debug(`Writing backup data to file: ${filePath}`);
     fs.writeFileSync(filePath, jsonData);
-    logger.info(`Backup for ${databaseName} created successfully`, { filePath });
+    logger.info(`Backup for ${databaseName} created successfully`, {
+      filePath,
+    });
   } catch (error) {
     logger.error(`Error creating backup for ${databaseName}`, {
       error: error instanceof Error ? error.message : "Unknown error",
@@ -53,7 +55,12 @@ export const createNeo4jBackup = async (
 
   try {
     logger.debug("Backing up ledgerSpace_dev");
-    await exportDatabase(ledgerSpaceDriver, "ledgerSpace_dev", previousDate, append);
+    await exportDatabase(
+      ledgerSpaceDriver,
+      "ledgerSpace_dev",
+      previousDate,
+      append
+    );
 
     logger.debug("Backing up searchSpace_dev");
     await exportDatabase(
@@ -63,7 +70,10 @@ export const createNeo4jBackup = async (
       append
     );
 
-    logger.info("Both databases backed up successfully", { previousDate, append });
+    logger.info("Both databases backed up successfully", {
+      previousDate,
+      append,
+    });
   } catch (error) {
     logger.error("Error creating backups", {
       error: error instanceof Error ? error.message : "Unknown error",

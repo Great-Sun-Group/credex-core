@@ -1,6 +1,6 @@
 import express from "express";
 import { GetAccountByHandleService } from "../services/GetAccountByHandle";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 import { validateAccountHandle } from "../../../utils/validators";
 
 /**
@@ -27,20 +27,25 @@ export async function GetAccountByHandleController(
 
     logger.info("Retrieving account by handle", { accountHandle });
 
-    const accountData = await GetAccountByHandleService(accountHandle as string);
+    const accountData = await GetAccountByHandleService(
+      accountHandle as string
+    );
 
     if (accountData) {
-      logger.info("Account retrieved successfully", { accountHandle, accountID: accountData.accountID });
+      logger.info("Account retrieved successfully", {
+        accountHandle,
+        accountID: accountData.accountID,
+      });
       res.status(200).json({ accountData });
     } else {
       logger.info("Account not found", { accountHandle });
       res.status(404).json({ message: "Account not found" });
     }
   } catch (error) {
-    logger.error("Error in GetAccountByHandleController", { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+    logger.error("Error in GetAccountByHandleController", {
+      error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      accountHandle 
+      accountHandle,
     });
     next(error);
   }

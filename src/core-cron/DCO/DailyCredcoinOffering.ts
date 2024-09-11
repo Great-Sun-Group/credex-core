@@ -2,16 +2,19 @@ import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { DBinitialization } from "./DBinitialization";
 import { DCOexecute } from "./DCOexecute";
 import { DCOavatars } from "./DCOavatars";
-import logger from "../../../config/logger";
+import logger from "../../utils/logger";
 
 /**
  * Executes the Daily Credcoin Offering (DCO) process.
  * This function checks for an active daynode, initializes the database if necessary,
  * and runs the DCO execution and avatar update processes.
- * 
+ *
  * @returns {Promise<{ success: boolean, error?: string }>} Returns an object indicating success and any error message.
  */
-export async function DailyCredcoinOffering(): Promise<{ success: boolean, error?: string }> {
+export async function DailyCredcoinOffering(): Promise<{
+  success: boolean;
+  error?: string;
+}> {
   logger.info("Starting Daily Credcoin Offering process");
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
@@ -55,7 +58,7 @@ export async function DailyCredcoinOffering(): Promise<{ success: boolean, error
 
 /**
  * Checks if an active daynode exists in the database.
- * 
+ *
  * @param {Neo4jSession} session - The Neo4j session to use for the query.
  * @returns {Promise<boolean>} Returns true if an active daynode exists, false otherwise.
  */
@@ -72,7 +75,7 @@ async function checkActiveDaynode(session: any): Promise<boolean> {
 
 /**
  * Resets the DCOrunningNow flag on the active daynode.
- * 
+ *
  * @param {Neo4jSession} session - The Neo4j session to use for the query.
  */
 async function resetDCORunningFlag(session: any): Promise<void> {

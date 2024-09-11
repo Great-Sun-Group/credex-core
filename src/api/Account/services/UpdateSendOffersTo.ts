@@ -1,12 +1,16 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 
 export async function UpdateSendOffersToService(
   memberIDtoSendOffers: string,
   accountID: string,
   ownerID: string
 ) {
-  logger.debug("UpdateSendOffersToService called", { memberIDtoSendOffers, accountID, ownerID });
+  logger.debug("UpdateSendOffersToService called", {
+    memberIDtoSendOffers,
+    accountID,
+    ownerID,
+  });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -30,23 +34,35 @@ export async function UpdateSendOffersToService(
     );
 
     if (!result.records.length) {
-      logger.warn("Failed to update send offers recipient", { memberIDtoSendOffers, accountID, ownerID });
+      logger.warn("Failed to update send offers recipient", {
+        memberIDtoSendOffers,
+        accountID,
+        ownerID,
+      });
       return false;
     }
 
-    logger.info("Send offers recipient updated successfully", { memberIDtoSendOffers, accountID, ownerID });
+    logger.info("Send offers recipient updated successfully", {
+      memberIDtoSendOffers,
+      accountID,
+      ownerID,
+    });
     return true;
   } catch (error) {
-    logger.error("Error updating account to receive offer notifications", { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+    logger.error("Error updating account to receive offer notifications", {
+      error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      memberIDtoSendOffers, 
-      accountID, 
-      ownerID 
+      memberIDtoSendOffers,
+      accountID,
+      ownerID,
     });
     return false;
   } finally {
-    logger.debug("Closing database session", { memberIDtoSendOffers, accountID, ownerID });
+    logger.debug("Closing database session", {
+      memberIDtoSendOffers,
+      accountID,
+      ownerID,
+    });
     await ledgerSpaceSession.close();
   }
 }

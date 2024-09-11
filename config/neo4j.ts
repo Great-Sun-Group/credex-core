@@ -1,6 +1,6 @@
 import * as neo4j from "neo4j-driver";
 import configUtils from "../src/utils/configUtils";
-import logger from "./logger";
+import logger from '../src/utils/logger';
 
 const ledgerSpace = configUtils.get('ledgerSpace');
 const searchSpace = configUtils.get('searchSpace');

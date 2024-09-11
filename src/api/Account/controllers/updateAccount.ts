@@ -1,7 +1,12 @@
 import express from "express";
 import { UpdateAccountService } from "../services/UpdateAccount";
-import logger from "../../../../config/logger";
-import { validateUUID, validateAccountName, validateAccountHandle, validateDenomination } from "../../../utils/validators";
+import logger from "../../../utils/logger";
+import {
+  validateUUID,
+  validateAccountName,
+  validateAccountHandle,
+  validateDenomination,
+} from "../../../utils/validators";
 
 export async function UpdateAccountController(
   req: express.Request,
@@ -10,7 +15,8 @@ export async function UpdateAccountController(
 ) {
   logger.debug("UpdateAccountController called", { body: req.body });
 
-  const { ownerID, accountID, accountName, accountHandle, defaultDenom } = req.body;
+  const { ownerID, accountID, accountName, accountHandle, defaultDenom } =
+    req.body;
 
   try {
     // Validate input
@@ -35,7 +41,13 @@ export async function UpdateAccountController(
       return res.status(400).json({ message: "Invalid defaultDenom" });
     }
 
-    logger.info("Updating account", { ownerID, accountID, accountName, accountHandle, defaultDenom });
+    logger.info("Updating account", {
+      ownerID,
+      accountID,
+      accountName,
+      accountHandle,
+      defaultDenom,
+    });
 
     const updatedAccountID = await UpdateAccountService(
       ownerID,
@@ -46,18 +58,32 @@ export async function UpdateAccountController(
     );
 
     if (updatedAccountID) {
-      logger.info("Account updated successfully", { updatedAccountID, ownerID, accountID });
-      res.status(200).json({ message: `Account updated successfully`, accountID: updatedAccountID });
+      logger.info("Account updated successfully", {
+        updatedAccountID,
+        ownerID,
+        accountID,
+      });
+      res
+        .status(200)
+        .json({
+          message: `Account updated successfully`,
+          accountID: updatedAccountID,
+        });
     } else {
-      logger.warn("Account not found or no update performed", { ownerID, accountID });
-      res.status(404).json({ message: "Account not found or no update performed" });
+      logger.warn("Account not found or no update performed", {
+        ownerID,
+        accountID,
+      });
+      res
+        .status(404)
+        .json({ message: "Account not found or no update performed" });
     }
   } catch (error) {
-    logger.error("Error in UpdateAccountController", { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+    logger.error("Error in UpdateAccountController", {
+      error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      ownerID, 
-      accountID 
+      ownerID,
+      accountID,
     });
     next(error);
   }

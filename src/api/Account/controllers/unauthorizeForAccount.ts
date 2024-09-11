@@ -1,6 +1,6 @@
 import express from "express";
 import { UnauthorizeForCompanyService } from "../services/UnauthorizeForAccount";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 import { validateUUID } from "../../../utils/validators";
 
 /**
@@ -31,26 +31,40 @@ export async function UnauthorizeForAccountController(
 
     // Validate memberIDtoBeUnauthorized
     if (!validateUUID(memberIDtoBeUnauthorized)) {
-      logger.warn("Invalid memberIDtoBeUnauthorized provided", { memberIDtoBeUnauthorized });
-      res.status(400).json({ message: "Invalid memberIDtoBeUnauthorized. Must be a valid UUID." });
+      logger.warn("Invalid memberIDtoBeUnauthorized provided", {
+        memberIDtoBeUnauthorized,
+      });
+      res
+        .status(400)
+        .json({
+          message: "Invalid memberIDtoBeUnauthorized. Must be a valid UUID.",
+        });
       return;
     }
 
     // Validate accountID
     if (!validateUUID(accountID)) {
       logger.warn("Invalid accountID provided", { accountID });
-      res.status(400).json({ message: "Invalid accountID. Must be a valid UUID." });
+      res
+        .status(400)
+        .json({ message: "Invalid accountID. Must be a valid UUID." });
       return;
     }
 
     // Validate ownerID
     if (!validateUUID(ownerID)) {
       logger.warn("Invalid ownerID provided", { ownerID });
-      res.status(400).json({ message: "Invalid ownerID. Must be a valid UUID." });
+      res
+        .status(400)
+        .json({ message: "Invalid ownerID. Must be a valid UUID." });
       return;
     }
 
-    logger.info("Unauthorizing member for account", { memberIDtoBeUnauthorized, accountID, ownerID });
+    logger.info("Unauthorizing member for account", {
+      memberIDtoBeUnauthorized,
+      accountID,
+      ownerID,
+    });
 
     const responseData = await UnauthorizeForCompanyService(
       memberIDtoBeUnauthorized,
@@ -59,20 +73,30 @@ export async function UnauthorizeForAccountController(
     );
 
     if (!responseData) {
-      logger.warn("Failed to unauthorize member for account", { memberIDtoBeUnauthorized, accountID, ownerID });
-      res.status(400).json({ message: "Failed to unauthorize member for the account" });
+      logger.warn("Failed to unauthorize member for account", {
+        memberIDtoBeUnauthorized,
+        accountID,
+        ownerID,
+      });
+      res
+        .status(400)
+        .json({ message: "Failed to unauthorize member for the account" });
       return;
     }
 
-    logger.info("Member unauthorized for account successfully", { memberIDtoBeUnauthorized, accountID, ownerID });
+    logger.info("Member unauthorized for account successfully", {
+      memberIDtoBeUnauthorized,
+      accountID,
+      ownerID,
+    });
     res.status(200).json(responseData);
   } catch (error) {
-    logger.error("Error in UnauthorizeForAccountController", { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+    logger.error("Error in UnauthorizeForAccountController", {
+      error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      memberIDtoBeUnauthorized: req.body.memberIDtoBeUnauthorized, 
-      accountID: req.body.accountID, 
-      ownerID: req.body.ownerID 
+      memberIDtoBeUnauthorized: req.body.memberIDtoBeUnauthorized,
+      accountID: req.body.accountID,
+      ownerID: req.body.ownerID,
     });
     next(error);
   }

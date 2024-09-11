@@ -3,8 +3,8 @@ import { Session, Record } from "neo4j-driver";
 import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
 import moment from "moment-timezone";
-import logger from "../../../config/logger";
-import { v4 as uuidv4 } from 'uuid';
+import logger from "../../utils/logger";
+import { v4 as uuidv4 } from "uuid";
 
 interface Avatar {
   memberID: string;
@@ -46,7 +46,6 @@ export async function DCOavatars(): Promise<void> {
     for (const avatarData of activeAvatars) {
       await processAvatar(ledgerSpaceSession, avatarData);
     }
-
   } catch (error) {
     logger.error("Error in DCOavatars", {
       error: error instanceof Error ? error.message : "Unknown error",
@@ -59,7 +58,9 @@ export async function DCOavatars(): Promise<void> {
   }
 }
 
-async function getActiveRecurringAvatars(session: Session): Promise<AvatarData[]> {
+async function getActiveRecurringAvatars(
+  session: Session
+): Promise<AvatarData[]> {
   logger.debug("Querying for active recurring avatars");
   const result = await session.run(`
     MATCH (daynode:Daynode {Active: true})
@@ -119,27 +120,46 @@ async function getActiveRecurringAvatars(session: Session): Promise<AvatarData[]
     avatar: record.get("avatar") as Avatar,
     issuerAccountID: record.get("issuerAccountID") as string,
     acceptorAccountID: record.get("acceptorAccountID") as string,
-    date: record.get("Date") as string
+    date: record.get("Date") as string,
   }));
 }
 
-async function processAvatar(session: Session, avatarData: AvatarData): Promise<void> {
+async function processAvatar(
+  session: Session,
+  avatarData: AvatarData
+): Promise<void> {
   const { avatar, issuerAccountID, acceptorAccountID, date } = avatarData;
   const requestId = uuidv4();
-  logger.debug(`Processing avatar ${avatar.memberID}`, { requestId, avatarId: avatar.memberID });
+  logger.debug(`Processing avatar ${avatar.memberID}`, {
+    requestId,
+    avatarId: avatar.memberID,
+  });
 
   try {
-    const offerData = prepareOfferData(avatar, issuerAccountID, acceptorAccountID, date, requestId);
+    const offerData = prepareOfferData(
+      avatar,
+      issuerAccountID,
+      acceptorAccountID,
+      date,
+      requestId
+    );
     const offerResult = await createCredexOffer(offerData);
-    
+
     if (offerResult && offerResult.credex && offerResult.credex.credexID) {
-      await acceptCredexOffer(offerResult.credex.credexID, avatar.memberID, requestId);
-      logger.info(`Successfully created and accepted credex for recurring avatar`, { 
-        requestId,
-        avatarId: avatar.memberID,
-        remainingPays: avatar.remainingPays,
-        nextPayDate: avatar.nextPayDate
-      });
+      await acceptCredexOffer(
+        offerResult.credex.credexID,
+        avatar.memberID,
+        requestId
+      );
+      logger.info(
+        `Successfully created and accepted credex for recurring avatar`,
+        {
+          requestId,
+          avatarId: avatar.memberID,
+          remainingPays: avatar.remainingPays,
+          nextPayDate: avatar.nextPayDate,
+        }
+      );
     } else {
       throw new Error(`Failed to create offer for avatar: ${avatar.memberID}`);
     }
@@ -150,14 +170,23 @@ async function processAvatar(session: Session, avatarData: AvatarData): Promise<
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
       requestId,
-      avatarId: avatar.memberID
+      avatarId: avatar.memberID,
     });
     // TODO: Implement member notification about the failure
-    logger.warn(`Placeholder: Notify member about the failure in processing their recurring avatar`, { requestId, avatarId: avatar.memberID });
+    logger.warn(
+      `Placeholder: Notify member about the failure in processing their recurring avatar`,
+      { requestId, avatarId: avatar.memberID }
+    );
   }
 }
 
-function prepareOfferData(avatar: Avatar, issuerAccountID: string, acceptorAccountID: string, date: string, requestId: string): any {
+function prepareOfferData(
+  avatar: Avatar,
+  issuerAccountID: string,
+  acceptorAccountID: string,
+  date: string,
+  requestId: string
+): any {
   const offerData: any = {
     memberID: avatar.memberID,
     issuerAccountID: issuerAccountID,
@@ -178,15 +207,26 @@ function prepareOfferData(avatar: Avatar, issuerAccountID: string, acceptorAccou
       .format("YYYY-MM-DD");
   }
 
-  logger.debug("Prepared credex offer data", { requestId, avatarId: avatar.memberID, offerData });
+  logger.debug("Prepared credex offer data", {
+    requestId,
+    avatarId: avatar.memberID,
+    offerData,
+  });
   return offerData;
 }
 
 async function createCredexOffer(offerData: any): Promise<CredexOfferResult> {
-  logger.debug("Creating new credex offer", { requestId: offerData.requestId, avatarId: offerData.memberID });
+  logger.debug("Creating new credex offer", {
+    requestId: offerData.requestId,
+    avatarId: offerData.memberID,
+  });
   const offerResult = await OfferCredexService(offerData);
-  
-  if (offerResult && typeof offerResult.credex === "object" && offerResult.credex.credexID) {
+
+  if (
+    offerResult &&
+    typeof offerResult.credex === "object" &&
+    offerResult.credex.credexID
+  ) {
     logger.info("Credex offer created", {
       requestId: offerData.requestId,
       credexID: offerResult.credex.credexID,
@@ -195,14 +235,28 @@ async function createCredexOffer(offerData: any): Promise<CredexOfferResult> {
     });
     return offerResult;
   } else {
-    throw new Error(`Failed to create credex offer for avatar: ${offerData.memberID}`);
+    throw new Error(
+      `Failed to create credex offer for avatar: ${offerData.memberID}`
+    );
   }
 }
 
-async function acceptCredexOffer(credexID: string, avatarMemberID: string, requestId: string): Promise<void> {
-  logger.debug("Accepting credex offer", { requestId, credexID, avatarId: avatarMemberID });
-  const acceptResult = await AcceptCredexService(credexID, avatarMemberID, requestId);
-  
+async function acceptCredexOffer(
+  credexID: string,
+  avatarMemberID: string,
+  requestId: string
+): Promise<void> {
+  logger.debug("Accepting credex offer", {
+    requestId,
+    credexID,
+    avatarId: avatarMemberID,
+  });
+  const acceptResult = await AcceptCredexService(
+    credexID,
+    avatarMemberID,
+    requestId
+  );
+
   if (acceptResult) {
     logger.info("Credex accepted", {
       requestId,
@@ -215,15 +269,22 @@ async function acceptCredexOffer(credexID: string, avatarMemberID: string, reque
   }
 }
 
-async function deleteMarkedAuthorizations(session: Session, requestId: string, avatarId: string): Promise<void> {
-  logger.debug("Deleting marked avatar authorizations", { requestId, avatarId });
+async function deleteMarkedAuthorizations(
+  session: Session,
+  requestId: string,
+  avatarId: string
+): Promise<void> {
+  logger.debug("Deleting marked avatar authorizations", {
+    requestId,
+    avatarId,
+  });
   const deleteResult = await session.run(`
     MATCH ()-[rel:AUTHORIZED_FOR {markedToDelete: true}]->()
     DELETE rel
   `);
-  logger.debug("Deleted marked avatar authorizations", { 
-    requestId, 
-    avatarId, 
-    deletedCount: deleteResult.summary.counters.updates().relationshipsDeleted 
+  logger.debug("Deleted marked avatar authorizations", {
+    requestId,
+    avatarId,
+    deletedCount: deleteResult.summary.counters.updates().relationshipsDeleted,
   });
 }

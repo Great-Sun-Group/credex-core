@@ -1,6 +1,6 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { getDenominations } from "../../../constants/denominations";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 
 export async function UpdateAccountService(
   ownerID: string,
@@ -9,7 +9,13 @@ export async function UpdateAccountService(
   accountHandle: string,
   defaultDenom: string
 ) {
-  logger.debug("UpdateAccountService called", { ownerID, accountID, accountName, accountHandle, defaultDenom });
+  logger.debug("UpdateAccountService called", {
+    ownerID,
+    accountID,
+    accountName,
+    accountHandle,
+    defaultDenom,
+  });
 
   // Validation: Check defaultDenom in denominations
   if (!getDenominations({ code: defaultDenom }).length) {
@@ -27,7 +33,10 @@ export async function UpdateAccountService(
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    logger.debug("Executing database query to update account", { ownerID, accountID });
+    logger.debug("Executing database query to update account", {
+      ownerID,
+      accountID,
+    });
     const result = await ledgerSpaceSession.run(
       `
         MATCH
@@ -49,11 +58,11 @@ export async function UpdateAccountService(
     logger.info("Account updated successfully", { updatedAccountID, ownerID });
     return updatedAccountID;
   } catch (error) {
-    logger.error("Error updating account data", { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+    logger.error("Error updating account data", {
+      error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      ownerID, 
-      accountID 
+      ownerID,
+      accountID,
     });
     return null;
   } finally {

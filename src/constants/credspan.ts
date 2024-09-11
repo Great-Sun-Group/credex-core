@@ -1,6 +1,6 @@
 import { ledgerSpaceDriver } from "../../config/neo4j";
 import moment from "moment-timezone";
-import logger from "../../config/logger";
+import logger from "../utils/logger";
 
 export const credspan = 35;
 

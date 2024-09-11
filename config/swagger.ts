@@ -1,6 +1,6 @@
 import swaggerJsdoc from "swagger-jsdoc";
 import { config } from "./config";
-import logger from "./logger";
+import logger from '../src/utils/logger';
 
 const options: swaggerJsdoc.Options = {
   definition: {

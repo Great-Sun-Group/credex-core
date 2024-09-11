@@ -1,6 +1,6 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { digitallySign } from "../../../utils/digitalSignature";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 
 export async function CancelRecurringService(
   signerID: string,
@@ -8,11 +8,21 @@ export async function CancelRecurringService(
   avatarID: string,
   requestId: string
 ) {
-  logger.debug('CancelRecurringService entered', { signerID, cancelerAccountID, avatarID, requestId });
+  logger.debug("CancelRecurringService entered", {
+    signerID,
+    cancelerAccountID,
+    avatarID,
+    requestId,
+  });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    logger.info('Executing cancel recurring query', { signerID, cancelerAccountID, avatarID, requestId });
+    logger.info("Executing cancel recurring query", {
+      signerID,
+      cancelerAccountID,
+      avatarID,
+      requestId,
+    });
     const cancelRecurringQuery = await ledgerSpaceSession.run(
       `
       MATCH
@@ -38,7 +48,12 @@ export async function CancelRecurringService(
     );
 
     if (cancelRecurringQuery.records.length === 0) {
-      logger.warn('Recurring template not found or not authorized to cancel', { signerID, cancelerAccountID, avatarID, requestId });
+      logger.warn("Recurring template not found or not authorized to cancel", {
+        signerID,
+        cancelerAccountID,
+        avatarID,
+        requestId,
+      });
       return "Recurring template not found or not authorized to cancel";
     }
 
@@ -46,12 +61,17 @@ export async function CancelRecurringService(
       "deactivatedAvatarID"
     );
 
-    logger.debug('Creating digital signature', { signerID, cancelerAccountID, deactivatedAvatarID, requestId });
+    logger.debug("Creating digital signature", {
+      signerID,
+      cancelerAccountID,
+      deactivatedAvatarID,
+      requestId,
+    });
     const inputData = JSON.stringify({
       signerID,
       cancelerAccountID,
       avatarID: deactivatedAvatarID,
-      cancelledAt: new Date().toISOString()
+      cancelledAt: new Date().toISOString(),
     });
 
     await digitallySign(
@@ -64,29 +84,42 @@ export async function CancelRecurringService(
       requestId
     );
 
-    logger.info('Recurring avatar cancelled', { deactivatedAvatarID, requestId });
-    logger.debug('CancelRecurringService exiting successfully', { signerID, cancelerAccountID, avatarID, requestId });
+    logger.info("Recurring avatar cancelled", {
+      deactivatedAvatarID,
+      requestId,
+    });
+    logger.debug("CancelRecurringService exiting successfully", {
+      signerID,
+      cancelerAccountID,
+      avatarID,
+      requestId,
+    });
     return deactivatedAvatarID;
   } catch (error: unknown) {
     if (error instanceof Error) {
-      logger.error('Error cancelling recurring avatar', { 
-        signerID, 
-        cancelerAccountID, 
-        avatarID, 
-        requestId, 
-        error: error.message, 
-        stack: error.stack 
+      logger.error("Error cancelling recurring avatar", {
+        signerID,
+        cancelerAccountID,
+        avatarID,
+        requestId,
+        error: error.message,
+        stack: error.stack,
       });
     } else {
-      logger.error('Unknown error cancelling recurring avatar', { 
-        signerID, 
-        cancelerAccountID, 
-        avatarID, 
-        requestId, 
-        error: String(error)
+      logger.error("Unknown error cancelling recurring avatar", {
+        signerID,
+        cancelerAccountID,
+        avatarID,
+        requestId,
+        error: String(error),
       });
     }
-    logger.debug('CancelRecurringService exiting with error', { signerID, cancelerAccountID, avatarID, requestId });
+    logger.debug("CancelRecurringService exiting with error", {
+      signerID,
+      cancelerAccountID,
+      avatarID,
+      requestId,
+    });
     throw error;
   } finally {
     await ledgerSpaceSession.close();

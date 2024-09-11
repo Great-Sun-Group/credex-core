@@ -1,13 +1,17 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { denomFormatter } from "../../../utils/denomUtils";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 
 export async function AuthForTierSpendLimitService(
   issuerAccountID: string,
   amount: number,
   denom: string
 ) {
-  logger.debug("AuthForTierSpendLimitService called", { issuerAccountID, amount, denom });
+  logger.debug("AuthForTierSpendLimitService called", {
+    issuerAccountID,
+    amount,
+    denom,
+  });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -48,19 +52,32 @@ export async function AuthForTierSpendLimitService(
     );
 
     if (queryResult.records.length === 0) {
-      logger.warn("Query returned no results", { issuerAccountID, amount, denom });
+      logger.warn("Query returned no results", {
+        issuerAccountID,
+        amount,
+        denom,
+      });
       return "query error";
     }
     if (queryResult.records[0].get("result") == true) {
-      logger.info("Authorization granted for high tier member", { issuerAccountID, amount, denom });
+      logger.info("Authorization granted for high tier member", {
+        issuerAccountID,
+        amount,
+        denom,
+      });
       return true;
     }
 
     const memberTier = queryResult.records[0].get("result").memberTier;
     const dayTotalUSD = queryResult.records[0].get("result").dayTotalUSD;
-    const credexAmountUSD = queryResult.records[0].get("result").credexAmountUSD;
+    const credexAmountUSD =
+      queryResult.records[0].get("result").credexAmountUSD;
 
-    logger.debug("Authorization calculation", { memberTier, dayTotalUSD, credexAmountUSD });
+    logger.debug("Authorization calculation", {
+      memberTier,
+      dayTotalUSD,
+      credexAmountUSD,
+    });
 
     var amountAvailableUSD = 0;
     if (memberTier == 1) {
@@ -70,20 +87,31 @@ export async function AuthForTierSpendLimitService(
       amountAvailableUSD = 100 - dayTotalUSD;
     }
     if (amountAvailableUSD >= credexAmountUSD) {
-      logger.info("Authorization granted", { issuerAccountID, amount, denom, amountAvailableUSD });
+      logger.info("Authorization granted", {
+        issuerAccountID,
+        amount,
+        denom,
+        amountAvailableUSD,
+      });
       return true;
     } else {
       const message = `You are only able to issue ${denomFormatter(amountAvailableUSD, "USD")} USD until tomorrow. Limits renew at midnight UTC.`;
-      logger.warn("Authorization denied due to limit", { issuerAccountID, amount, denom, amountAvailableUSD, message });
+      logger.warn("Authorization denied due to limit", {
+        issuerAccountID,
+        amount,
+        denom,
+        amountAvailableUSD,
+        message,
+      });
       return message;
     }
   } catch (error) {
-    logger.error("Error in AuthForTierSpendLimitService", { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+    logger.error("Error in AuthForTierSpendLimitService", {
+      error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      issuerAccountID, 
-      amount, 
-      denom 
+      issuerAccountID,
+      amount,
+      denom,
     });
     throw error;
   } finally {

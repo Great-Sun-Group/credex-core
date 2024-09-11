@@ -15,7 +15,7 @@ import {
   authForTierSpendLimitSchema,
   loginMemberSchema,
 } from "./memberValidationSchemas";
-import logger from "../../../config/logger";
+import logger from "../../utils/logger";
 
 const router = express.Router();
 
@@ -50,7 +50,11 @@ router.post(
   validateRequest(loginMemberSchema),
   loginMemberExpressHandler
 );
-logger.debug("Registered route: POST /member/login", { module: "memberRoutes", route: "/login", method: "POST" });
+logger.debug("Registered route: POST /member/login", {
+  module: "memberRoutes",
+  route: "/login",
+  method: "POST",
+});
 
 /**
  * @openapi
@@ -84,11 +88,15 @@ logger.debug("Registered route: POST /member/login", { module: "memberRoutes", r
  */
 router.post(
   "/getMemberByHandle",
-  authMiddleware(['member']),
+  authMiddleware(["member"]),
   validateRequest(getMemberByHandleSchema),
   GetMemberByHandleController
 );
-logger.debug("Registered route: POST /member/getMemberByHandle", { module: "memberRoutes", route: "/getMemberByHandle", method: "POST" });
+logger.debug("Registered route: POST /member/getMemberByHandle", {
+  module: "memberRoutes",
+  route: "/getMemberByHandle",
+  method: "POST",
+});
 
 /**
  * @openapi
@@ -122,11 +130,15 @@ logger.debug("Registered route: POST /member/getMemberByHandle", { module: "memb
  */
 router.post(
   "/getMemberDashboardByPhone",
-  authMiddleware(['member']),
+  authMiddleware(["member"]),
   validateRequest(getMemberDashboardByPhoneSchema),
   GetMemberDashboardByPhoneController
 );
-logger.debug("Registered route: POST /member/getMemberDashboardByPhone", { module: "memberRoutes", route: "/getMemberDashboardByPhone", method: "POST" });
+logger.debug("Registered route: POST /member/getMemberDashboardByPhone", {
+  module: "memberRoutes",
+  route: "/getMemberDashboardByPhone",
+  method: "POST",
+});
 
 /**
  * @openapi
@@ -163,7 +175,11 @@ router.post(
   validateRequest(onboardMemberSchema),
   onboardMemberExpressHandler
 );
-logger.debug("Registered route: POST /member/onboardMember", { module: "memberRoutes", route: "/onboardMember", method: "POST" });
+logger.debug("Registered route: POST /member/onboardMember", {
+  module: "memberRoutes",
+  route: "/onboardMember",
+  method: "POST",
+});
 
 /**
  * @openapi
@@ -200,11 +216,15 @@ logger.debug("Registered route: POST /member/onboardMember", { module: "memberRo
  */
 router.post(
   "/updateMemberTier",
-  authMiddleware(['admin']),
+  authMiddleware(["admin"]),
   validateRequest(updateMemberTierSchema),
   updateMemberTierExpressHandler
 );
-logger.debug("Registered route: POST /member/updateMemberTier", { module: "memberRoutes", route: "/updateMemberTier", method: "POST" });
+logger.debug("Registered route: POST /member/updateMemberTier", {
+  module: "memberRoutes",
+  route: "/updateMemberTier",
+  method: "POST",
+});
 
 /**
  * @openapi
@@ -247,12 +267,19 @@ logger.debug("Registered route: POST /member/updateMemberTier", { module: "membe
  */
 router.post(
   "/authForTierSpendLimit",
-  authMiddleware(['member']),
+  authMiddleware(["member"]),
   validateRequest(authForTierSpendLimitSchema),
   authForTierSpendLimitExpressHandler
 );
-logger.debug("Registered route: POST /member/authForTierSpendLimit", { module: "memberRoutes", route: "/authForTierSpendLimit", method: "POST" });
+logger.debug("Registered route: POST /member/authForTierSpendLimit", {
+  module: "memberRoutes",
+  route: "/authForTierSpendLimit",
+  method: "POST",
+});
 
-logger.info("Member routes initialized successfully", { module: "memberRoutes", routesCount: 6 });
+logger.info("Member routes initialized successfully", {
+  module: "memberRoutes",
+  routesCount: 6,
+});
 
 export default router;

@@ -1,12 +1,16 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 
 export async function UnauthorizeForCompanyService(
   memberIDtoBeUnauthorized: string,
   accountID: string,
   ownerID: string
 ) {
-  logger.debug("UnauthorizeForCompanyService called", { memberIDtoBeUnauthorized, accountID, ownerID });
+  logger.debug("UnauthorizeForCompanyService called", {
+    memberIDtoBeUnauthorized,
+    accountID,
+    ownerID,
+  });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -30,27 +34,35 @@ export async function UnauthorizeForCompanyService(
     );
 
     if (!result.records.length) {
-      logger.warn("Could not unauthorize account", { memberIDtoBeUnauthorized, accountID, ownerID });
+      logger.warn("Could not unauthorize account", {
+        memberIDtoBeUnauthorized,
+        accountID,
+        ownerID,
+      });
       return false;
     }
     const record = result.records[0];
 
     logger.info("Account unauthorized successfully", {
       memberToUnauthorize: record.get("memberToUnauthorize"),
-      accountID: record.get("accountID")
+      accountID: record.get("accountID"),
     });
     return true;
   } catch (error) {
-    logger.error("Error unauthorizing account", { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+    logger.error("Error unauthorizing account", {
+      error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      memberIDtoBeUnauthorized, 
-      accountID, 
-      ownerID 
+      memberIDtoBeUnauthorized,
+      accountID,
+      ownerID,
     });
     return false;
   } finally {
-    logger.debug("Closing database session", { memberIDtoBeUnauthorized, accountID, ownerID });
+    logger.debug("Closing database session", {
+      memberIDtoBeUnauthorized,
+      accountID,
+      ownerID,
+    });
     await ledgerSpaceSession.close();
   }
 }

@@ -1,6 +1,6 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import * as neo4j from "neo4j-driver";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 
 export async function UpdateMemberTierService(
   memberIDtoUpdate: string,
@@ -39,18 +39,24 @@ export async function UpdateMemberTierService(
     const record = result.records[0];
 
     if (record.get("memberIDupdated")) {
-      logger.info("Member tier updated successfully", { memberIDtoUpdate, newTier });
+      logger.info("Member tier updated successfully", {
+        memberIDtoUpdate,
+        newTier,
+      });
       return true;
     } else {
-      logger.warn("Failed to update member tier", { memberIDtoUpdate, newTier });
+      logger.warn("Failed to update member tier", {
+        memberIDtoUpdate,
+        newTier,
+      });
       return false;
     }
   } catch (error) {
-    logger.error("Error updating member tier", { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+    logger.error("Error updating member tier", {
+      error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      memberIDtoUpdate, 
-      newTier 
+      memberIDtoUpdate,
+      newTier,
     });
     return false;
   } finally {

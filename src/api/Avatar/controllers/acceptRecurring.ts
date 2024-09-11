@@ -1,7 +1,7 @@
 import express from "express";
 import { AcceptRecurringService } from "../services/AcceptRecurring";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 import { validateUUID } from "../../../utils/validators";
 
 /**
@@ -19,12 +19,16 @@ export async function AcceptRecurringController(
   res: express.Response
 ) {
   const requestId = req.id;
-  logger.debug('AcceptRecurringController called', { requestId });
+  logger.debug("AcceptRecurringController called", { requestId });
 
   try {
     const { avatarID, signerID } = req.body;
 
-    logger.debug('Validating input parameters', { requestId, avatarID, signerID });
+    logger.debug("Validating input parameters", {
+      requestId,
+      avatarID,
+      signerID,
+    });
 
     if (!validateUUID(avatarID)) {
       logger.warn("Invalid avatarID", { requestId, avatarID });
@@ -36,7 +40,11 @@ export async function AcceptRecurringController(
       return res.status(400).json({ error: "Invalid signerID" });
     }
 
-    logger.info('Calling AcceptRecurringService', { requestId, avatarID, signerID });
+    logger.info("Calling AcceptRecurringService", {
+      requestId,
+      avatarID,
+      signerID,
+    });
     // Call AcceptRecurringService to process the acceptance
     const acceptRecurringData = await AcceptRecurringService({
       avatarID,
@@ -50,15 +58,15 @@ export async function AcceptRecurringController(
         error: acceptRecurringData.message,
         requestId,
         avatarID,
-        signerID
+        signerID,
       });
       return res.status(400).json({ error: acceptRecurringData.message });
     }
 
-    logger.info('Calling GetAccountDashboardService', { 
-      requestId, 
-      signerID, 
-      acceptorAccountID: acceptRecurringData.recurring.acceptorAccountID 
+    logger.info("Calling GetAccountDashboardService", {
+      requestId,
+      signerID,
+      acceptorAccountID: acceptRecurringData.recurring.acceptorAccountID,
     });
     // Fetch dashboard data
     const dashboardData = await GetAccountDashboardService(
@@ -71,7 +79,7 @@ export async function AcceptRecurringController(
         error: "GetAccountDashboardService returned null",
         requestId,
         signerID,
-        acceptorAccountID: acceptRecurringData.recurring.acceptorAccountID
+        acceptorAccountID: acceptRecurringData.recurring.acceptorAccountID,
       });
       return res.status(500).json({ error: "Failed to fetch dashboard data" });
     }
@@ -80,7 +88,7 @@ export async function AcceptRecurringController(
       avatarID,
       signerID,
       requestId,
-      acceptorAccountID: acceptRecurringData.recurring.acceptorAccountID
+      acceptorAccountID: acceptRecurringData.recurring.acceptorAccountID,
     });
     // Return the acceptance data and dashboard data
     return res.status(200).json({

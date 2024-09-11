@@ -1,6 +1,6 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { digitallySign } from "../../../utils/digitalSignature";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 
 interface AcceptRecurringParams {
   avatarID: string;
@@ -32,12 +32,20 @@ export async function AcceptRecurringService(
   params: AcceptRecurringParams
 ): Promise<AcceptRecurringResult> {
   const { avatarID, signerID, requestId } = params;
-  logger.debug('AcceptRecurringService entered', { avatarID, signerID, requestId });
+  logger.debug("AcceptRecurringService entered", {
+    avatarID,
+    signerID,
+    requestId,
+  });
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    logger.info('Executing accept recurring query', { avatarID, signerID, requestId });
+    logger.info("Executing accept recurring query", {
+      avatarID,
+      signerID,
+      requestId,
+    });
     const acceptRecurringQuery = await ledgerSpaceSession.run(
       `
       MATCH
@@ -57,7 +65,10 @@ export async function AcceptRecurringService(
     );
 
     if (acceptRecurringQuery.records.length === 0) {
-      logger.warn('No records found or recurring transaction no longer pending', { avatarID, requestId });
+      logger.warn(
+        "No records found or recurring transaction no longer pending",
+        { avatarID, requestId }
+      );
       return {
         recurring: false,
         message: `No records found or recurring transaction no longer pending for avatarID: ${avatarID}`,
@@ -69,11 +80,16 @@ export async function AcceptRecurringService(
     const acceptorAccountID = record.get("acceptorAccountID");
     const acceptorSignerID = record.get("signerID");
 
-    logger.debug('Creating digital signature', { acceptedRecurringID, acceptorAccountID, acceptorSignerID, requestId });
+    logger.debug("Creating digital signature", {
+      acceptedRecurringID,
+      acceptorAccountID,
+      acceptorSignerID,
+      requestId,
+    });
     const inputData = JSON.stringify({
       avatarID: acceptedRecurringID,
       acceptorAccountID,
-      acceptorSignerID
+      acceptorSignerID,
     });
     await digitallySign(
       ledgerSpaceSession,
@@ -87,8 +103,15 @@ export async function AcceptRecurringService(
 
     // TODO: Implement notification for recurring acceptance
 
-    logger.info('Recurring request accepted', { acceptedRecurringID, requestId });
-    logger.debug('AcceptRecurringService exiting successfully', { avatarID, signerID, requestId });
+    logger.info("Recurring request accepted", {
+      acceptedRecurringID,
+      requestId,
+    });
+    logger.debug("AcceptRecurringService exiting successfully", {
+      avatarID,
+      signerID,
+      requestId,
+    });
 
     return {
       recurring: {
@@ -100,22 +123,26 @@ export async function AcceptRecurringService(
     };
   } catch (error: unknown) {
     if (error instanceof Error) {
-      logger.error('Error accepting recurring template', { 
-        avatarID, 
-        signerID, 
-        requestId, 
-        error: error.message, 
-        stack: error.stack 
+      logger.error("Error accepting recurring template", {
+        avatarID,
+        signerID,
+        requestId,
+        error: error.message,
+        stack: error.stack,
       });
     } else {
-      logger.error('Unknown error accepting recurring template', { 
-        avatarID, 
-        signerID, 
-        requestId, 
-        error: String(error)
+      logger.error("Unknown error accepting recurring template", {
+        avatarID,
+        signerID,
+        requestId,
+        error: String(error),
       });
     }
-    logger.debug('AcceptRecurringService exiting with error', { avatarID, signerID, requestId });
+    logger.debug("AcceptRecurringService exiting with error", {
+      avatarID,
+      signerID,
+      requestId,
+    });
     return {
       recurring: false,
       message: `Error accepting recurring template: ${error instanceof Error ? error.message : String(error)}`,

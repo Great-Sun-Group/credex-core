@@ -1,14 +1,14 @@
 /**
  * Member Validation Schemas
- * 
+ *
  * This file contains validation schemas for various Member-related operations.
  * These schemas are used by the validateRequest middleware to ensure that
  * incoming requests have the correct structure and data types before they
  * reach the controllers.
- * 
+ *
  * While this file doesn't contain direct logging statements, it plays a crucial
  * role in the application's error handling and logging process:
- * 
+ *
  * 1. It helps prevent invalid data from reaching the controllers, reducing the
  *    need for error logging due to data validation issues.
  * 2. When used with the validateRequest middleware, it ensures that any validation
@@ -18,9 +18,9 @@
  */
 
 import { v, s } from "../../middleware/validateRequest";
-import logger from "../../../config/logger";
+import logger from "../../utils/logger";
 
-logger.debug('Initializing member validation schemas');
+logger.debug("Initializing member validation schemas");
 
 export const getMemberByHandleSchema = {
   memberHandle: {
@@ -28,7 +28,7 @@ export const getMemberByHandleSchema = {
     validator: v.validateMemberHandle,
   },
 };
-logger.debug('getMemberByHandleSchema initialized');
+logger.debug("getMemberByHandleSchema initialized");
 
 export const getMemberDashboardByPhoneSchema = {
   phone: {
@@ -36,7 +36,7 @@ export const getMemberDashboardByPhoneSchema = {
     validator: v.validatePhone,
   },
 };
-logger.debug('getMemberDashboardByPhoneSchema initialized');
+logger.debug("getMemberDashboardByPhoneSchema initialized");
 
 export const onboardMemberSchema = {
   firstname: {
@@ -52,7 +52,7 @@ export const onboardMemberSchema = {
     validator: v.validatePhone,
   },
 };
-logger.debug('onboardMemberSchema initialized');
+logger.debug("onboardMemberSchema initialized");
 
 export const updateMemberTierSchema = {
   memberID: {
@@ -64,7 +64,7 @@ export const updateMemberTierSchema = {
     validator: v.validateTier,
   },
 };
-logger.debug('updateMemberTierSchema initialized');
+logger.debug("updateMemberTierSchema initialized");
 
 export const authForTierSpendLimitSchema = {
   memberID: {
@@ -84,7 +84,7 @@ export const authForTierSpendLimitSchema = {
     validator: v.validateDenomination,
   },
 };
-logger.debug('authForTierSpendLimitSchema initialized');
+logger.debug("authForTierSpendLimitSchema initialized");
 
 export const loginMemberSchema = {
   phone: {
@@ -92,6 +92,6 @@ export const loginMemberSchema = {
     validator: v.validatePhone,
   },
 };
-logger.debug('loginMemberSchema initialized');
+logger.debug("loginMemberSchema initialized");
 
-logger.debug('All member validation schemas initialized');
+logger.debug("All member validation schemas initialized");

@@ -1,5 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 
 export async function GetAccountByHandleService(
   accountHandle: string
@@ -38,10 +38,10 @@ export async function GetAccountByHandleService(
       accountName: accountName,
     };
   } catch (error) {
-    logger.error("Error fetching account data", { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+    logger.error("Error fetching account data", {
+      error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      accountHandle 
+      accountHandle,
     });
     return false;
   } finally {

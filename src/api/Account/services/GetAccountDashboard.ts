@@ -2,14 +2,14 @@ import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { GetBalancesService } from "./GetBalances";
 import { GetPendingOffersInService } from "../../Credex/services/GetPendingOffersIn";
 import { GetPendingOffersOutService } from "../../Credex/services/GetPendingOffersOut";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 
 export async function GetAccountDashboardService(
   memberID: string,
   accountID: string
 ) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-  logger.debug('GetAccountDashboardService entered', { memberID, accountID });
+  logger.debug("GetAccountDashboardService entered", { memberID, accountID });
 
   try {
     interface AuthMember {
@@ -82,12 +82,18 @@ export async function GetAccountDashboardService(
       pendingOutData: [],
     };
 
-    logger.debug('Account data retrieved', { accountData });
+    logger.debug("Account data retrieved", { accountData });
 
     if (accountData.isOwnedAccount) {
-      accountData.sendOffersToFirstname = result.records[0].get("sendOffersToFirstname");
-      accountData.sendOffersToLastname = result.records[0].get("sendOffersToLastname");
-      accountData.sendOffersToMemberID = result.records[0].get("sendOffersToMemberID");
+      accountData.sendOffersToFirstname = result.records[0].get(
+        "sendOffersToFirstname"
+      );
+      accountData.sendOffersToLastname = result.records[0].get(
+        "sendOffersToLastname"
+      );
+      accountData.sendOffersToMemberID = result.records[0].get(
+        "sendOffersToMemberID"
+      );
       result.records.forEach((record) => {
         accountData.authFor.push({
           memberID: record.get("authMemberID"),
@@ -95,37 +101,49 @@ export async function GetAccountDashboardService(
           lastname: record.get("authMemberLastname"),
         });
       });
-      logger.debug('Authorized members retrieved', { authFor: accountData.authFor });
+      logger.debug("Authorized members retrieved", {
+        authFor: accountData.authFor,
+      });
     } else {
       accountData.authFor = [];
     }
 
-    logger.debug('Fetching balance data');
+    logger.debug("Fetching balance data");
     accountData.balanceData = await GetBalancesService(accountData.accountID);
-    logger.debug('Fetching pending offers in');
-    accountData.pendingInData = await GetPendingOffersInService(accountData.accountID);
-    logger.debug('Fetching pending offers out');
-    accountData.pendingOutData = await GetPendingOffersOutService(accountData.accountID);
+    logger.debug("Fetching pending offers in");
+    accountData.pendingInData = await GetPendingOffersInService(
+      accountData.accountID
+    );
+    logger.debug("Fetching pending offers out");
+    accountData.pendingOutData = await GetPendingOffersOutService(
+      accountData.accountID
+    );
 
-    logger.info('Account dashboard data retrieved successfully', { memberID, accountID });
-    logger.debug('GetAccountDashboardService exiting', { memberID, accountID });
+    logger.info("Account dashboard data retrieved successfully", {
+      memberID,
+      accountID,
+    });
+    logger.debug("GetAccountDashboardService exiting", { memberID, accountID });
     return accountData;
   } catch (error: unknown) {
     if (error instanceof Error) {
-      logger.error("Error fetching account data:", { 
-        memberID, 
-        accountID, 
-        error: error.message, 
-        stack: error.stack 
+      logger.error("Error fetching account data:", {
+        memberID,
+        accountID,
+        error: error.message,
+        stack: error.stack,
       });
     } else {
-      logger.error("Unknown error fetching account data:", { 
-        memberID, 
-        accountID, 
-        error: String(error)
+      logger.error("Unknown error fetching account data:", {
+        memberID,
+        accountID,
+        error: String(error),
       });
     }
-    logger.debug('GetAccountDashboardService exiting with error', { memberID, accountID });
+    logger.debug("GetAccountDashboardService exiting with error", {
+      memberID,
+      accountID,
+    });
     return null;
   } finally {
     await ledgerSpaceSession.close();

@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import baseLogger from './baseLogger';
 
 dotenv.config();
 
@@ -27,7 +26,8 @@ const validatedEnv = validateEnv(requiredEnvVars);
 
 export const config = {
   // Server configuration
-  port: process.env.PORT || 5000,
+  port: process.env.PORT ? parseInt(process.env.PORT, 10) : 5000,
+  fallbackPorts: [5001, 5002, 5003, 5004, 5005], // Add fallback ports
   nodeEnv: validatedEnv.NODE_ENV,
   deployment: validatedEnv.DEPLOYMENT,
 
@@ -61,15 +61,17 @@ export const config = {
   },
 };
 
-// Log configuration (excluding sensitive information)
-baseLogger.info('Application configuration loaded', {
-  port: config.port,
-  nodeEnv: config.nodeEnv,
-  deployment: config.deployment,
-  neo4jLedgerSpaceUrl: config.neo4j.ledgerSpace.url,
-  neo4jSearchSpaceUrl: config.neo4j.searchSpace.url,
-  rateLimitWindowMs: config.rateLimit.windowMs,
-  rateLimitMax: config.rateLimit.max,
-  cronDailyCredcoinOffering: config.cron.dailyCredcoinOffering,
-  cronMinuteTransactionQueue: config.cron.minuteTransactionQueue,
-});
+export function logConfig(logger: any) {
+  logger.info('Application configuration loaded', {
+    port: config.port,
+    fallbackPorts: config.fallbackPorts,
+    nodeEnv: config.nodeEnv,
+    deployment: config.deployment,
+    neo4jLedgerSpaceUrl: config.neo4j.ledgerSpace.url,
+    neo4jSearchSpaceUrl: config.neo4j.searchSpace.url,
+    rateLimitWindowMs: config.rateLimit.windowMs,
+    rateLimitMax: config.rateLimit.max,
+    cronDailyCredcoinOffering: config.cron.dailyCredcoinOffering,
+    cronMinuteTransactionQueue: config.cron.minuteTransactionQueue,
+  });
+}

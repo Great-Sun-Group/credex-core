@@ -16,9 +16,9 @@ import {
   updateAccountSchema,
   authorizeForAccountSchema,
   unauthorizeForAccountSchema,
-  updateSendOffersToSchema
+  updateSendOffersToSchema,
 } from "./accountValidationSchemas";
-import logger from "../../../config/logger";
+import logger from "../../utils/logger";
 
 export default function AccountRoutes(
   app: express.Application,
@@ -56,7 +56,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}createAccount`,
     rateLimiter,
     jsonParser,
-    authMiddleware(['member']),
+    authMiddleware(["member"]),
     validateRequest(createAccountSchema),
     CreateAccountController,
     errorHandler
@@ -94,8 +94,8 @@ export default function AccountRoutes(
   app.get(
     `${apiVersionOneRoute}getAccountByHandle`,
     rateLimiter,
-    authMiddleware(['member']),
-    validateRequest(getAccountByHandleSchema, 'query'),
+    authMiddleware(["member"]),
+    validateRequest(getAccountByHandleSchema, "query"),
     GetAccountByHandleController,
     errorHandler
   );
@@ -133,7 +133,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}updateAccount`,
     rateLimiter,
     jsonParser,
-    authMiddleware(['member']),
+    authMiddleware(["member"]),
     validateRequest(updateAccountSchema),
     UpdateAccountController,
     errorHandler
@@ -170,7 +170,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}authorizeForAccount`,
     rateLimiter,
     jsonParser,
-    authMiddleware(['member']),
+    authMiddleware(["member"]),
     validateRequest(authorizeForAccountSchema),
     AuthorizeForAccountController,
     errorHandler
@@ -207,7 +207,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}unauthorizeForAccount`,
     rateLimiter,
     jsonParser,
-    authMiddleware(['member']),
+    authMiddleware(["member"]),
     validateRequest(unauthorizeForAccountSchema),
     UnauthorizeForAccountController,
     errorHandler
@@ -244,7 +244,7 @@ export default function AccountRoutes(
     `${apiVersionOneRoute}updateSendOffersTo`,
     rateLimiter,
     jsonParser,
-    authMiddleware(['member']),
+    authMiddleware(["member"]),
     validateRequest(updateSendOffersToSchema),
     UpdateSendOffersToController,
     errorHandler

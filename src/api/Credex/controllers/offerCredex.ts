@@ -4,7 +4,7 @@ import { GetAccountDashboardService } from "../../Account/services/GetAccountDas
 import { checkDueDate, credspan } from "../../../constants/credspan";
 import { AuthForTierSpendLimitController } from "../../Member/controllers/authForTierSpendLimit";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 import {
   validateUUID,
   validateDenomination,
@@ -53,7 +53,7 @@ export async function OfferCredexController(
       OFFERSorREQUESTS,
       securedCredex,
       dueDate,
-      requestId
+      requestId,
     });
 
     // Validate input
@@ -62,11 +62,17 @@ export async function OfferCredexController(
       return res.status(400).json({ error: "Invalid memberID" });
     }
     if (!validateUUID(issuerAccountID)) {
-      logger.warn("Invalid issuerAccountID provided", { issuerAccountID, requestId });
+      logger.warn("Invalid issuerAccountID provided", {
+        issuerAccountID,
+        requestId,
+      });
       return res.status(400).json({ error: "Invalid issuerAccountID" });
     }
     if (!validateUUID(receiverAccountID)) {
-      logger.warn("Invalid receiverAccountID provided", { receiverAccountID, requestId });
+      logger.warn("Invalid receiverAccountID provided", {
+        receiverAccountID,
+        requestId,
+      });
       return res.status(400).json({ error: "Invalid receiverAccountID" });
     }
     if (!validateDenomination(Denomination)) {
@@ -74,7 +80,10 @@ export async function OfferCredexController(
       return res.status(400).json({ error: "Invalid Denomination" });
     }
     if (!validateAmount(InitialAmount)) {
-      logger.warn("Invalid InitialAmount provided", { InitialAmount, requestId });
+      logger.warn("Invalid InitialAmount provided", {
+        InitialAmount,
+        requestId,
+      });
       return res.status(400).json({ error: "Invalid InitialAmount" });
     }
     if (!validateCredexType(credexType)) {
@@ -82,21 +91,35 @@ export async function OfferCredexController(
       return res.status(400).json({ error: "Invalid credexType" });
     }
     if (OFFERSorREQUESTS !== "OFFERS" && OFFERSorREQUESTS !== "REQUESTS") {
-      logger.warn("Invalid OFFERSorREQUESTS value provided", { OFFERSorREQUESTS, requestId });
+      logger.warn("Invalid OFFERSorREQUESTS value provided", {
+        OFFERSorREQUESTS,
+        requestId,
+      });
       return res.status(400).json({ error: "Invalid OFFERSorREQUESTS value" });
     }
     if (typeof securedCredex !== "boolean") {
-      logger.warn("Invalid securedCredex value provided", { securedCredex, requestId });
+      logger.warn("Invalid securedCredex value provided", {
+        securedCredex,
+        requestId,
+      });
       return res.status(400).json({ error: "Invalid securedCredex value" });
     }
     if (!securedCredex && !dueDate) {
-      logger.warn("dueDate is required for unsecured credex", { securedCredex, dueDate, requestId });
+      logger.warn("dueDate is required for unsecured credex", {
+        securedCredex,
+        dueDate,
+        requestId,
+      });
       return res
         .status(400)
         .json({ error: "dueDate is required for unsecured credex" });
     }
     if (securedCredex && dueDate) {
-      logger.warn("dueDate is not allowed for secured credex", { securedCredex, dueDate, requestId });
+      logger.warn("dueDate is not allowed for secured credex", {
+        securedCredex,
+        dueDate,
+        requestId,
+      });
       return res
         .status(400)
         .json({ error: "dueDate is not allowed for secured credex" });
@@ -104,7 +127,11 @@ export async function OfferCredexController(
 
     // Check if issuerAccountID and receiverAccountID are the same
     if (issuerAccountID === receiverAccountID) {
-      logger.warn("Issuer and receiver are the same account", { issuerAccountID, receiverAccountID, requestId });
+      logger.warn("Issuer and receiver are the same account", {
+        issuerAccountID,
+        receiverAccountID,
+        requestId,
+      });
       return res
         .status(400)
         .json({ error: "Issuer and receiver cannot be the same account" });
@@ -112,7 +139,10 @@ export async function OfferCredexController(
 
     // Check due date for unsecured credex
     if (!securedCredex) {
-      logger.debug("Checking due date for unsecured credex", { dueDate, requestId });
+      logger.debug("Checking due date for unsecured credex", {
+        dueDate,
+        requestId,
+      });
       const dueDateOK = await checkDueDate(dueDate);
       if (!dueDateOK) {
         logger.warn("Invalid due date", { dueDate, requestId });
@@ -124,7 +154,10 @@ export async function OfferCredexController(
 
     // Check secured credex limits based on membership tier
     if (securedCredex) {
-      logger.debug("Checking secured credex limits", { issuerAccountID, requestId });
+      logger.debug("Checking secured credex limits", {
+        issuerAccountID,
+        requestId,
+      });
       const getMemberTier = await ledgerSpaceSession.run(
         `
           MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
@@ -139,7 +172,13 @@ export async function OfferCredexController(
         return res.status(404).json({ error: "Member tier not found" });
       }
 
-      logger.debug("Calling AuthForTierSpendLimitController", { issuerAccountID, memberTier, InitialAmount, Denomination, requestId });
+      logger.debug("Calling AuthForTierSpendLimitController", {
+        issuerAccountID,
+        memberTier,
+        InitialAmount,
+        Denomination,
+        requestId,
+      });
       const tierAuth = await AuthForTierSpendLimitController(
         issuerAccountID,
         memberTier,
@@ -148,14 +187,23 @@ export async function OfferCredexController(
         requestId
       );
       if (!tierAuth.isAuthorized) {
-        logger.warn("Unauthorized secured credex", { issuerAccountID, memberTier, InitialAmount, Denomination, requestId });
+        logger.warn("Unauthorized secured credex", {
+          issuerAccountID,
+          memberTier,
+          InitialAmount,
+          Denomination,
+          requestId,
+        });
         return res.status(400).json({ error: tierAuth.message });
       }
     }
 
     // Check if unsecured credex is permitted on membership tier
     if (!securedCredex) {
-      logger.debug("Checking unsecured credex permission", { issuerAccountID, requestId });
+      logger.debug("Checking unsecured credex permission", {
+        issuerAccountID,
+        requestId,
+      });
       const getMemberTier = await ledgerSpaceSession.run(
         `
           MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
@@ -171,12 +219,14 @@ export async function OfferCredexController(
       }
 
       if (memberTier == 1) {
-        logger.warn("Unauthorized unsecured credex for Open Tier", { issuerAccountID, memberTier, requestId });
-        return res
-          .status(400)
-          .json({
-            error: "Members on the Open Tier cannot issue unsecured credexes",
-          });
+        logger.warn("Unauthorized unsecured credex for Open Tier", {
+          issuerAccountID,
+          memberTier,
+          requestId,
+        });
+        return res.status(400).json({
+          error: "Members on the Open Tier cannot issue unsecured credexes",
+        });
       }
     }
 
@@ -185,23 +235,32 @@ export async function OfferCredexController(
     const offerCredexData = await OfferCredexService(req.body);
 
     if (!offerCredexData || typeof offerCredexData.credex === "boolean") {
-      logger.warn("Failed to create Credex offer", { offerCredexData, requestId });
-      return res
-        .status(400)
-        .json({
-          error: offerCredexData.message || "Failed to create Credex offer",
-        });
+      logger.warn("Failed to create Credex offer", {
+        offerCredexData,
+        requestId,
+      });
+      return res.status(400).json({
+        error: offerCredexData.message || "Failed to create Credex offer",
+      });
     }
 
     // Fetch updated dashboard data
-    logger.debug("Fetching updated dashboard data", { memberID, issuerAccountID, requestId });
+    logger.debug("Fetching updated dashboard data", {
+      memberID,
+      issuerAccountID,
+      requestId,
+    });
     const dashboardData = await GetAccountDashboardService(
       memberID,
       issuerAccountID
     );
 
     if (!dashboardData) {
-      logger.warn("Failed to fetch dashboard data", { memberID, issuerAccountID, requestId });
+      logger.warn("Failed to fetch dashboard data", {
+        memberID,
+        issuerAccountID,
+        requestId,
+      });
       return res.status(404).json({ error: "Failed to fetch dashboard data" });
     }
 
@@ -211,7 +270,7 @@ export async function OfferCredexController(
       memberID,
       issuerAccountID,
       receiverAccountID,
-      requestId
+      requestId,
     });
 
     // Return the offer data and updated dashboard data
@@ -220,10 +279,10 @@ export async function OfferCredexController(
       dashboardData: dashboardData,
     });
   } catch (err) {
-    logger.error("Unhandled error in OfferCredexController", { 
-      error: err instanceof Error ? err.message : 'Unknown error',
+    logger.error("Unhandled error in OfferCredexController", {
+      error: err instanceof Error ? err.message : "Unknown error",
       stack: err instanceof Error ? err.stack : undefined,
-      requestId
+      requestId,
     });
     return res.status(500).json({ error: "Internal server error" });
   } finally {

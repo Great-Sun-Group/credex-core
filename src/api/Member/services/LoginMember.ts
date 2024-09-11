@@ -1,14 +1,16 @@
 import { searchSpaceDriver } from "../../../../config/neo4j";
 import { generateToken } from "../../../../config/authenticate";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 
-export async function LoginMemberService(phone: string): Promise<{ token?: string; error?: string }> {
+export async function LoginMemberService(
+  phone: string
+): Promise<{ token?: string; error?: string }> {
   const session = searchSpaceDriver.session();
   logger.debug("Entering LoginMemberService", { phone });
 
   try {
     const result = await session.run(
-      'MATCH (m:Member {phone: $phone}) RETURN m',
+      "MATCH (m:Member {phone: $phone}) RETURN m",
       { phone }
     );
 
@@ -17,22 +19,25 @@ export async function LoginMemberService(phone: string): Promise<{ token?: strin
       return { error: "Member not found" };
     }
 
-    const member = result.records[0].get('m').properties;
+    const member = result.records[0].get("m").properties;
     const token = generateToken(member.id);
 
     // Update the token in the database
-    await session.run(
-      'MATCH (m:Member {id: $id}) SET m.token = $token',
-      { id: member.id, token }
-    );
+    await session.run("MATCH (m:Member {id: $id}) SET m.token = $token", {
+      id: member.id,
+      token,
+    });
 
-    logger.info("Member logged in successfully", { phone, memberId: member.id });
+    logger.info("Member logged in successfully", {
+      phone,
+      memberId: member.id,
+    });
     return { token };
   } catch (error) {
-    logger.error("Error in LoginMemberService", { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+    logger.error("Error in LoginMemberService", {
+      error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      phone
+      phone,
     });
     return { error: "Internal server error" };
   } finally {

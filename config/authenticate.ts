@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import logger from "./logger";
+import logger from '../src/utils/logger';
 import jwt from 'jsonwebtoken';
 import { searchSpaceDriver } from './neo4j';
 import crypto from 'crypto';

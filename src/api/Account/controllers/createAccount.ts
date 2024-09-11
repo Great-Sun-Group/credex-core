@@ -1,13 +1,13 @@
 import express from "express";
 import { CreateAccountService } from "../services/CreateAccount";
 import { checkPermittedAccountType } from "../../../constants/accountTypes";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 import {
   validateUUID,
   validateAccountName,
   validateAccountHandle,
   validateDenomination,
-  validateAmount
+  validateAmount,
 } from "../../../utils/validators";
 
 export async function CreateAccountController(
@@ -17,7 +17,15 @@ export async function CreateAccountController(
 ): Promise<void> {
   logger.debug("CreateAccountController called", { body: req.body });
 
-  const { ownerID, accountType, accountName, accountHandle, defaultDenom, DCOgiveInCXX, DCOdenom } = req.body;
+  const {
+    ownerID,
+    accountType,
+    accountName,
+    accountHandle,
+    defaultDenom,
+    DCOgiveInCXX,
+    DCOdenom,
+  } = req.body;
 
   try {
     // Validate input
@@ -77,16 +85,25 @@ export async function CreateAccountController(
     );
 
     if (newAccount.accountID) {
-      logger.info("Account created successfully", { accountID: newAccount.accountID });
-      res.status(201).json({ accountID: newAccount.accountID, message: "Account created successfully" });
+      logger.info("Account created successfully", {
+        accountID: newAccount.accountID,
+      });
+      res
+        .status(201)
+        .json({
+          accountID: newAccount.accountID,
+          message: "Account created successfully",
+        });
     } else {
       logger.warn("Failed to create account", { message: newAccount.message });
-      res.status(400).json({ message: newAccount.message || "Failed to create account" });
+      res
+        .status(400)
+        .json({ message: newAccount.message || "Failed to create account" });
     }
   } catch (error) {
-    logger.error("Error in CreateAccountController", { 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+    logger.error("Error in CreateAccountController", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
     });
     next(error);
   }

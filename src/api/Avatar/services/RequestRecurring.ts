@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import * as neo4j from "neo4j-driver";
 import { digitallySign } from "../../../utils/digitalSignature";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 
 interface RecurringParams {
   signerMemberID: string;
@@ -20,7 +20,7 @@ interface RecurringParams {
 export async function RequestRecurringService(
   params: RecurringParams
 ): Promise<string | null> {
-  logger.debug('RequestRecurringService entered', { ...params });
+  logger.debug("RequestRecurringService entered", { ...params });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -72,7 +72,9 @@ export async function RequestRecurringService(
         : undefined,
     };
 
-    logger.debug('Executing create recurring query', { requestId: params.requestId });
+    logger.debug("Executing create recurring query", {
+      requestId: params.requestId,
+    });
     const createRecurringQuery = await ledgerSpaceSession.run(
       cypher,
       neo4jParams
@@ -80,7 +82,10 @@ export async function RequestRecurringService(
     const avatarID = createRecurringQuery.records[0]?.get("avatarID");
 
     if (avatarID) {
-      logger.debug('Creating digital signature', { avatarID, requestId: params.requestId });
+      logger.debug("Creating digital signature", {
+        avatarID,
+        requestId: params.requestId,
+      });
       const inputData = JSON.stringify({
         requestorAccountID: params.requestorAccountID,
         counterpartyAccountID: params.counterpartyAccountID,
@@ -90,7 +95,7 @@ export async function RequestRecurringService(
         daysBetweenPays: params.daysBetweenPays,
         securedCredex: params.securedCredex,
         credspan: params.credspan,
-        remainingPays: params.remainingPays
+        remainingPays: params.remainingPays,
       });
 
       await digitallySign(
@@ -103,27 +108,37 @@ export async function RequestRecurringService(
         params.requestId
       );
 
-      logger.info("Recurring avatar created successfully", { avatarID, requestId: params.requestId });
+      logger.info("Recurring avatar created successfully", {
+        avatarID,
+        requestId: params.requestId,
+      });
     } else {
-      logger.warn("Failed to create recurring avatar", { requestId: params.requestId });
+      logger.warn("Failed to create recurring avatar", {
+        requestId: params.requestId,
+      });
     }
 
-    logger.debug('RequestRecurringService exiting', { avatarID, requestId: params.requestId });
+    logger.debug("RequestRecurringService exiting", {
+      avatarID,
+      requestId: params.requestId,
+    });
     return avatarID || null;
   } catch (error: unknown) {
     if (error instanceof Error) {
-      logger.error("Error creating recurring avatar", { 
-        requestId: params.requestId, 
-        error: error.message, 
-        stack: error.stack 
+      logger.error("Error creating recurring avatar", {
+        requestId: params.requestId,
+        error: error.message,
+        stack: error.stack,
       });
     } else {
-      logger.error("Unknown error creating recurring avatar", { 
-        requestId: params.requestId, 
-        error: String(error)
+      logger.error("Unknown error creating recurring avatar", {
+        requestId: params.requestId,
+        error: String(error),
       });
     }
-    logger.debug('RequestRecurringService exiting with error', { requestId: params.requestId });
+    logger.debug("RequestRecurringService exiting with error", {
+      requestId: params.requestId,
+    });
     return null;
   } finally {
     await ledgerSpaceSession.close();

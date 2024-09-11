@@ -17,7 +17,7 @@ import {
   getCredexSchema,
   getLedgerSchema,
 } from "./credexValidationSchemas";
-import logger from "../../../config/logger";
+import logger from "../../utils/logger";
 
 export default function CredexRoutes(
   app: express.Application,
@@ -76,10 +76,10 @@ export default function CredexRoutes(
   app.post(
     `${apiVersionOneRoute}offerCredex`,
     jsonParser,
-    authMiddleware(['member']),
+    authMiddleware(["member"]),
     validateRequest(offerCredexSchema),
     (req: express.Request, res: express.Response) => {
-      logger.debug('POST /offerCredex called', { requestId: req.id });
+      logger.debug("POST /offerCredex called", { requestId: req.id });
       OfferCredexController(req, res);
     }
   );
@@ -120,10 +120,10 @@ export default function CredexRoutes(
   app.put(
     `${apiVersionOneRoute}acceptCredex`,
     jsonParser,
-    authMiddleware(['member']),
+    authMiddleware(["member"]),
     validateRequest(acceptCredexSchema),
     (req: express.Request, res: express.Response) => {
-      logger.debug('PUT /acceptCredex called', { requestId: req.id });
+      logger.debug("PUT /acceptCredex called", { requestId: req.id });
       AcceptCredexController(req, res);
     }
   );
@@ -166,16 +166,21 @@ export default function CredexRoutes(
   app.put(
     `${apiVersionOneRoute}acceptCredexBulk`,
     jsonParser,
-    authMiddleware(['member']),
+    authMiddleware(["member"]),
     validateRequest({
       credexIDs: {
-        sanitizer: (value: any) => Array.isArray(value) ? value.map(acceptCredexSchema.credexID.sanitizer) : value,
-        validator: (value: any) => Array.isArray(value) && value.every(acceptCredexSchema.credexID.validator),
+        sanitizer: (value: any) =>
+          Array.isArray(value)
+            ? value.map(acceptCredexSchema.credexID.sanitizer)
+            : value,
+        validator: (value: any) =>
+          Array.isArray(value) &&
+          value.every(acceptCredexSchema.credexID.validator),
       },
       signerID: acceptCredexSchema.signerID,
     }),
     (req: express.Request, res: express.Response) => {
-      logger.debug('PUT /acceptCredexBulk called', { requestId: req.id });
+      logger.debug("PUT /acceptCredexBulk called", { requestId: req.id });
       AcceptCredexBulkController(req, res);
     }
   );
@@ -213,10 +218,10 @@ export default function CredexRoutes(
   app.put(
     `${apiVersionOneRoute}declineCredex`,
     jsonParser,
-    authMiddleware(['member']),
+    authMiddleware(["member"]),
     validateRequest(declineCredexSchema),
     (req: express.Request, res: express.Response) => {
-      logger.debug('PUT /declineCredex called', { requestId: req.id });
+      logger.debug("PUT /declineCredex called", { requestId: req.id });
       DeclineCredexController(req, res);
     }
   );
@@ -254,10 +259,10 @@ export default function CredexRoutes(
   app.put(
     `${apiVersionOneRoute}cancelCredex`,
     jsonParser,
-    authMiddleware(['member']),
+    authMiddleware(["member"]),
     validateRequest(cancelCredexSchema),
     (req: express.Request, res: express.Response) => {
-      logger.debug('PUT /cancelCredex called', { requestId: req.id });
+      logger.debug("PUT /cancelCredex called", { requestId: req.id });
       CancelCredexController(req, res);
     }
   );
@@ -296,10 +301,10 @@ export default function CredexRoutes(
    */
   app.get(
     `${apiVersionOneRoute}getCredex`,
-    authMiddleware(['member']),
-    validateRequest(getCredexSchema, 'query'),
+    authMiddleware(["member"]),
+    validateRequest(getCredexSchema, "query"),
     (req: express.Request, res: express.Response) => {
-      logger.debug('GET /getCredex called', { requestId: req.id });
+      logger.debug("GET /getCredex called", { requestId: req.id });
       GetCredexController(req, res);
     }
   );
@@ -339,10 +344,10 @@ export default function CredexRoutes(
    */
   app.get(
     `${apiVersionOneRoute}getLedger`,
-    authMiddleware(['member']),
-    validateRequest(getLedgerSchema, 'query'),
+    authMiddleware(["member"]),
+    validateRequest(getLedgerSchema, "query"),
     (req: express.Request, res: express.Response) => {
-      logger.debug('GET /getLedger called', { requestId: req.id });
+      logger.debug("GET /getLedger called", { requestId: req.id });
       GetLedgerController(req, res);
     }
   );

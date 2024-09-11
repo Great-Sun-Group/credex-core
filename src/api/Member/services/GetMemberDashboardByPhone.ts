@@ -1,6 +1,6 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { denomFormatter } from "../../../utils/denomUtils";
-import logger from "../../../../config/logger";
+import logger from "../../../utils/logger";
 
 export async function GetMemberDashboardByPhoneService(phone: string) {
   logger.debug("GetMemberDashboardByPhoneService called", { phone });
@@ -39,7 +39,7 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
     const memberTier = result.records[0].get("memberTier").low;
     const totalIssuedTodayUSD = result.records[0].get("totalIssuedTodayUSD");
     logger.debug("Total issued today in USD", { totalIssuedTodayUSD, phone });
-    
+
     let remainingAvailableUSD: number = Infinity;
     if (memberTier == 1) {
       remainingAvailableUSD = parseFloat(
@@ -63,19 +63,19 @@ export async function GetMemberDashboardByPhoneService(phone: string) {
       accountIDS: result.records[0].get("accountIDS"),
     };
 
-    logger.info("Member dashboard retrieved successfully", { 
-      memberID: memberDashboard.memberID, 
-      phone, 
-      memberTier, 
-      remainingAvailableUSD 
+    logger.info("Member dashboard retrieved successfully", {
+      memberID: memberDashboard.memberID,
+      phone,
+      memberTier,
+      remainingAvailableUSD,
     });
 
     return memberDashboard;
   } catch (error) {
-    logger.error("Error fetching member dashboard", { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+    logger.error("Error fetching member dashboard", {
+      error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      phone 
+      phone,
     });
     return false;
   } finally {

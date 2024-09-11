@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import { DailyCredcoinOffering } from "./DCO/DailyCredcoinOffering";
 import { MinuteTransactionQueue } from "./MTQ/MinuteTransactionQueue";
-import logger from "../../config/logger";
+import logger from "../utils/logger";
 
 export default function startCronJobs() {
   logger.info("Starting cron jobs");

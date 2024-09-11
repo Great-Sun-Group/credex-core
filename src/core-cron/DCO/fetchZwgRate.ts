@@ -1,6 +1,6 @@
 import axios from "axios";
 import cheerio from "cheerio";
-import logger from "../../../config/logger";
+import logger from "../../utils/logger";
 
 const https = require("https");
 
@@ -27,7 +27,12 @@ function validateRates(rates: ExchangeRate[]): void {
   }
 
   for (const rate of rates) {
-    if (!rate.currency || !isValidRate(rate.bid) || !isValidRate(rate.ask) || !isValidRate(rate.avg)) {
+    if (
+      !rate.currency ||
+      !isValidRate(rate.bid) ||
+      !isValidRate(rate.ask) ||
+      !isValidRate(rate.avg)
+    ) {
       throw new Error(`Invalid rate data: ${JSON.stringify(rate)}`);
     }
   }
@@ -43,17 +48,21 @@ export class ZwgRateError extends Error {
 export async function fetchZwgRate(): Promise<ExchangeRate[]> {
   try {
     logger.info("Fetching ZWG rate from RBZ website");
-    const { data } = await axios.get(RBZ_URL, { 
+    const { data } = await axios.get(RBZ_URL, {
       httpsAgent,
       timeout: 10000, // 10 seconds timeout
     });
-    
+
     const parsedHtml = cheerio.load(data);
 
     const rates: ExchangeRate[] = [];
 
     parsedHtml("#baTab1 table tbody tr").each((index: number, element: any) => {
-      const currency: string = parsedHtml(element).find("td").eq(0).text().trim();
+      const currency: string = parsedHtml(element)
+        .find("td")
+        .eq(0)
+        .text()
+        .trim();
       const bid: string = parsedHtml(element).find("td").eq(1).text().trim();
       const ask: string = parsedHtml(element).find("td").eq(2).text().trim();
       const avg: string = parsedHtml(element).find("td").eq(3).text().trim();
@@ -69,17 +78,20 @@ export async function fetchZwgRate(): Promise<ExchangeRate[]> {
     return rates;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      if (error.code === 'ECONNABORTED') {
+      if (error.code === "ECONNABORTED") {
         logger.error("Timeout while fetching exchange rates from RBZ website");
       } else {
-        logger.error("Network error while fetching exchange rates from RBZ website", { 
-          status: error.response?.status,
-          statusText: error.response?.statusText 
-        });
+        logger.error(
+          "Network error while fetching exchange rates from RBZ website",
+          {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+          }
+        );
       }
     } else {
-      logger.error("Error fetching or validating exchange rates", { 
-        error: error instanceof Error ? error.message : String(error) 
+      logger.error("Error fetching or validating exchange rates", {
+        error: error instanceof Error ? error.message : String(error),
       });
     }
     throw new ZwgRateError("Failed to fetch valid ZWG rates from RBZ website");

@@ -1,18 +1,19 @@
-import logger from '../../config/logger';
+import logger from "../utils/logger";
 
 // Type guard to check if an error is a Neo4j error
 export function isNeo4jError(
   error: unknown
 ): error is { code: string; message: string } {
-  const isNeo4jErr = typeof error === "object" &&
+  const isNeo4jErr =
+    typeof error === "object" &&
     error !== null &&
     "code" in error &&
     "message" in error;
-  
+
   if (isNeo4jErr) {
-    logger.debug('Neo4j error detected', { 
+    logger.debug("Neo4j error detected", {
       code: (error as { code: string }).code,
-      message: (error as { message: string }).message 
+      message: (error as { message: string }).message,
     });
   }
 
@@ -27,9 +28,9 @@ export class ApiError extends Error {
     if (details) {
       this.message = `${message}: ${details}`;
     }
-    logger.error('ApiError created', { 
-      message: this.message, 
-      statusCode: this.statusCode 
+    logger.error("ApiError created", {
+      message: this.message,
+      statusCode: this.statusCode,
     });
   }
 }

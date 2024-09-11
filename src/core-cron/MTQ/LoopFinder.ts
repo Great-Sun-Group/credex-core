@@ -1,6 +1,6 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import * as neo4j from "neo4j-driver";
-import logger from "../../../config/logger";
+import logger from "../../utils/logger";
 
 export async function LoopFinder(
   issuerAccountID: string,
@@ -12,13 +12,22 @@ export async function LoopFinder(
   credexDueDate: string,
   acceptorAccountID: string
 ): Promise<boolean> {
-  logger.info("LoopFinder started", { issuerAccountID, credexID, Denomination, credexSecuredDenom });
+  logger.info("LoopFinder started", {
+    issuerAccountID,
+    credexID,
+    Denomination,
+    credexSecuredDenom,
+  });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
   try {
     const searchOwesType = getSearchOwesType(credexSecuredDenom);
-    credexDueDate = await adjustCredexDueDate(ledgerSpaceSession, credexSecuredDenom, credexDueDate);
+    credexDueDate = await adjustCredexDueDate(
+      ledgerSpaceSession,
+      credexSecuredDenom,
+      credexDueDate
+    );
 
     await createOrUpdateSearchSpaceCredex(
       searchSpaceSession,
@@ -35,13 +44,22 @@ export async function LoopFinder(
     let searchForCredloops = true;
     while (searchForCredloops) {
       logger.debug("Searching for credloops...");
-      const { valueToClear, credexesInLoop, credexesRedeemed } = await findCredloop(searchSpaceSession, issuerAccountID, searchOwesType);
+      const { valueToClear, credexesInLoop, credexesRedeemed } =
+        await findCredloop(searchSpaceSession, issuerAccountID, searchOwesType);
 
       if (credexesInLoop.length > 0) {
-        await processCredloop(ledgerSpaceSession, searchSpaceSession, valueToClear, credexesInLoop, credexesRedeemed);
+        await processCredloop(
+          ledgerSpaceSession,
+          searchSpaceSession,
+          valueToClear,
+          credexesInLoop,
+          credexesRedeemed
+        );
       } else {
         await markCredexAsProcessed(ledgerSpaceSession, credexID);
-        logger.info("No credloops found. Credex marked as processed.", { credexID });
+        logger.info("No credloops found. Credex marked as processed.", {
+          credexID,
+        });
         searchForCredloops = false;
       }
     }
@@ -52,7 +70,7 @@ export async function LoopFinder(
     logger.error("Error in LoopFinder", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      credexID
+      credexID,
     });
     return false;
   } finally {
@@ -62,11 +80,20 @@ export async function LoopFinder(
 }
 
 function getSearchOwesType(credexSecuredDenom: string): string {
-  return credexSecuredDenom !== "floating" ? `${credexSecuredDenom}_SECURED` : "FLOATING";
+  return credexSecuredDenom !== "floating"
+    ? `${credexSecuredDenom}_SECURED`
+    : "FLOATING";
 }
 
-async function adjustCredexDueDate(session: neo4j.Session, credexSecuredDenom: string, credexDueDate: string): Promise<string> {
-  logger.debug("Adjusting credex due date", { credexSecuredDenom, credexDueDate });
+async function adjustCredexDueDate(
+  session: neo4j.Session,
+  credexSecuredDenom: string,
+  credexDueDate: string
+): Promise<string> {
+  logger.debug("Adjusting credex due date", {
+    credexSecuredDenom,
+    credexDueDate,
+  });
   if (credexSecuredDenom !== "floating") {
     const result = await session.run(`
       MATCH (daynode:Daynode {Active: true})
@@ -88,7 +115,11 @@ async function createOrUpdateSearchSpaceCredex(
   credexDueDate: string,
   searchOwesType: string
 ): Promise<void> {
-  logger.debug("Creating or updating SearchSpace credex", { credexID, Denomination, searchOwesType });
+  logger.debug("Creating or updating SearchSpace credex", {
+    credexID,
+    Denomination,
+    searchOwesType,
+  });
   const credexExists = await checkCredexExists(session, credexID);
 
   if (!credexExists) {
@@ -108,7 +139,10 @@ async function createOrUpdateSearchSpaceCredex(
   }
 }
 
-async function checkCredexExists(session: neo4j.Session, credexID: string): Promise<boolean> {
+async function checkCredexExists(
+  session: neo4j.Session,
+  credexID: string
+): Promise<boolean> {
   logger.debug("Checking if credex exists", { credexID });
   const result = await session.run(
     `
@@ -131,7 +165,11 @@ async function createSearchSpaceCredex(
   credexDueDate: string,
   searchOwesType: string
 ): Promise<void> {
-  logger.debug("Creating SearchSpace credex", { credexID, Denomination, searchOwesType });
+  logger.debug("Creating SearchSpace credex", {
+    credexID,
+    Denomination,
+    searchOwesType,
+  });
   try {
     const result = await session.run(
       `
@@ -177,18 +215,28 @@ async function createSearchSpaceCredex(
       throw new Error("Unable to create SearchSpace credex");
     }
 
-    logger.info("Credex created in SearchSpace", { credexID: result.records[0].get("credexID") });
+    logger.info("Credex created in SearchSpace", {
+      credexID: result.records[0].get("credexID"),
+    });
   } catch (error) {
     logger.error("Error creating SearchSpace credex", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      credexID
+      credexID,
     });
     throw error;
   }
 }
 
-async function findCredloop(session: neo4j.Session, issuerAccountID: string, searchOwesType: string): Promise<{ valueToClear: number; credexesInLoop: string[]; credexesRedeemed: string[] }> {
+async function findCredloop(
+  session: neo4j.Session,
+  issuerAccountID: string,
+  searchOwesType: string
+): Promise<{
+  valueToClear: number;
+  credexesInLoop: string[];
+  credexesRedeemed: string[];
+}> {
   logger.debug("Finding credloop", { issuerAccountID, searchOwesType });
   const result = await session.run(
     `
@@ -248,7 +296,11 @@ async function findCredloop(session: neo4j.Session, issuerAccountID: string, sea
     const valueToClear = result.records[0].get("lowestAmount").toNumber();
     const credexesInLoop = result.records[0].get("credexIDs");
     const credexesRedeemed = result.records[0].get("zeroCredexIDs");
-    logger.info("Credloop found", { valueToClear, credexesInLoopCount: credexesInLoop.length, credexesRedeemedCount: credexesRedeemed.length });
+    logger.info("Credloop found", {
+      valueToClear,
+      credexesInLoopCount: credexesInLoop.length,
+      credexesRedeemedCount: credexesRedeemed.length,
+    });
     return { valueToClear, credexesInLoop, credexesRedeemed };
   }
 
@@ -256,15 +308,35 @@ async function findCredloop(session: neo4j.Session, issuerAccountID: string, sea
   return { valueToClear: 0, credexesInLoop: [], credexesRedeemed: [] };
 }
 
-async function processCredloop(ledgerSpaceSession: neo4j.Session, searchSpaceSession: neo4j.Session, valueToClear: number, credexesInLoop: string[], credexesRedeemed: string[]): Promise<void> {
-  logger.info("Processing credloop", { valueToClear, credexesInLoopCount: credexesInLoop.length, credexesRedeemedCount: credexesRedeemed.length });
+async function processCredloop(
+  ledgerSpaceSession: neo4j.Session,
+  searchSpaceSession: neo4j.Session,
+  valueToClear: number,
+  credexesInLoop: string[],
+  credexesRedeemed: string[]
+): Promise<void> {
+  logger.info("Processing credloop", {
+    valueToClear,
+    credexesInLoopCount: credexesInLoop.length,
+    credexesRedeemedCount: credexesRedeemed.length,
+  });
 
   await cleanupSearchSpace(searchSpaceSession, credexesRedeemed);
-  await updateLedgerSpace(ledgerSpaceSession, valueToClear, credexesInLoop, credexesRedeemed);
+  await updateLedgerSpace(
+    ledgerSpaceSession,
+    valueToClear,
+    credexesInLoop,
+    credexesRedeemed
+  );
 }
 
-async function cleanupSearchSpace(session: neo4j.Session, credexesRedeemed: string[]): Promise<void> {
-  logger.debug("Cleaning up SearchSpace", { credexesRedeemedCount: credexesRedeemed.length });
+async function cleanupSearchSpace(
+  session: neo4j.Session,
+  credexesRedeemed: string[]
+): Promise<void> {
+  logger.debug("Cleaning up SearchSpace", {
+    credexesRedeemedCount: credexesRedeemed.length,
+  });
   await session.run(
     `
     // Step 10: Delete zeroCredexes
@@ -301,8 +373,17 @@ async function cleanupSearchSpace(session: neo4j.Session, credexesRedeemed: stri
   logger.debug("SearchSpace cleanup completed");
 }
 
-async function updateLedgerSpace(session: neo4j.Session, valueToClear: number, credexesInLoop: string[], credexesRedeemed: string[]): Promise<void> {
-  logger.info("Updating LedgerSpace", { valueToClear, credexesInLoopCount: credexesInLoop.length, credexesRedeemedCount: credexesRedeemed.length });
+async function updateLedgerSpace(
+  session: neo4j.Session,
+  valueToClear: number,
+  credexesInLoop: string[],
+  credexesRedeemed: string[]
+): Promise<void> {
+  logger.info("Updating LedgerSpace", {
+    valueToClear,
+    credexesInLoopCount: credexesInLoop.length,
+    credexesRedeemedCount: credexesRedeemed.length,
+  });
 
   const result = await session.run(
     `
@@ -361,10 +442,15 @@ async function updateLedgerSpace(session: neo4j.Session, valueToClear: number, c
     { valueToClear, credexesInLoop, credexesRedeemed }
   );
 
-  logger.info("LedgerSpace update completed", { loopID: result.records[0].get("loopID") });
+  logger.info("LedgerSpace update completed", {
+    loopID: result.records[0].get("loopID"),
+  });
 }
 
-async function markCredexAsProcessed(session: neo4j.Session, credexID: string): Promise<void> {
+async function markCredexAsProcessed(
+  session: neo4j.Session,
+  credexID: string
+): Promise<void> {
   logger.debug("Marking credex as processed", { credexID });
   await session.run(
     `

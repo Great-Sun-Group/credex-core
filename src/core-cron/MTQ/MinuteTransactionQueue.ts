@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { LoopFinder } from "./LoopFinder";
 import _ from "lodash";
-import logger from "../../../config/logger";
+import logger from "../../utils/logger";
 
 interface Account {
   accountID: string;
@@ -65,7 +65,7 @@ export async function MinuteTransactionQueue(): Promise<boolean> {
     } catch (error) {
       logger.error("Error in MinuteTransactionQueue processing", {
         error: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       });
       return false;
     } finally {
@@ -75,7 +75,7 @@ export async function MinuteTransactionQueue(): Promise<boolean> {
   } catch (error) {
     logger.error("Unhandled error in MinuteTransactionQueue", {
       error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined
+      stack: error instanceof Error ? error.stack : undefined,
     });
     await setMTQRunningFlag(ledgerSpaceSession, false);
     return false;
@@ -108,10 +108,7 @@ async function checkDCOAndMTQStatus(
   return { DCOflag, MTQflag };
 }
 
-async function setMTQRunningFlag(
-  session: any,
-  value: boolean
-): Promise<void> {
+async function setMTQRunningFlag(session: any, value: boolean): Promise<void> {
   logger.debug("Setting MTQ running flag", { value });
   const result = await session.run(
     `
@@ -141,13 +138,16 @@ async function processQueuedAccounts(
     try {
       await createAccountInSearchSpace(searchSpaceSession, account);
       await markAccountAsProcessed(ledgerSpaceSession, account.accountID);
-      logger.info("Account created in searchSpace", { accountName: account.accountName, accountID: account.accountID });
+      logger.info("Account created in searchSpace", {
+        accountName: account.accountName,
+        accountID: account.accountID,
+      });
     } catch (error) {
       logger.error("Error processing account", {
         accountName: account.accountName,
         accountID: account.accountID,
         error: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       });
     }
   }
@@ -174,7 +174,10 @@ async function createAccountInSearchSpace(
   session: any,
   account: Account
 ): Promise<void> {
-  logger.debug("Creating account in searchSpace", { accountName: account.accountName, accountID: account.accountID });
+  logger.debug("Creating account in searchSpace", {
+    accountName: account.accountName,
+    accountID: account.accountID,
+  });
   const result = await session.run(
     `
     CREATE (newAccount:Account)
@@ -185,16 +188,21 @@ async function createAccountInSearchSpace(
   );
 
   if (result.records.length === 0) {
-    const error = new Error(`Failed to create account in searchSpace: ${account.accountName}`);
+    const error = new Error(
+      `Failed to create account in searchSpace: ${account.accountName}`
+    );
     logger.error("Account creation failed", {
       accountName: account.accountName,
       accountID: account.accountID,
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
     throw error;
   }
-  logger.debug("Account created successfully in searchSpace", { accountName: account.accountName, accountID: account.accountID });
+  logger.debug("Account created successfully in searchSpace", {
+    accountName: account.accountName,
+    accountID: account.accountID,
+  });
 }
 
 async function markAccountAsProcessed(
@@ -234,12 +242,14 @@ async function processQueuedCredexes(
         credex.dueDate,
         credex.acceptorAccountID
       );
-      logger.debug("Credex processed successfully", { credexID: credex.credexID });
+      logger.debug("Credex processed successfully", {
+        credexID: credex.credexID,
+      });
     } catch (error) {
       logger.error("Error processing credex", {
         credexID: credex.credexID,
         error: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       });
     }
   }

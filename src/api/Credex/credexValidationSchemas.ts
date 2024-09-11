@@ -1,7 +1,7 @@
-import { v, s } from '../../middleware/validateRequest';
-import logger from '../../../config/logger';
+import { v, s } from "../../middleware/validateRequest";
+import logger from "../../utils/logger";
 
-logger.debug('Initializing credex validation schemas');
+logger.debug("Initializing credex validation schemas");
 
 export const offerCredexSchema = {
   offerorAccountID: {
@@ -29,7 +29,7 @@ export const offerCredexSchema = {
     validator: v.validatePositiveInteger,
   },
 };
-logger.debug('offerCredexSchema initialized');
+logger.debug("offerCredexSchema initialized");
 
 export const acceptCredexSchema = {
   credexID: {
@@ -41,7 +41,7 @@ export const acceptCredexSchema = {
     validator: v.validateUUID,
   },
 };
-logger.debug('acceptCredexSchema initialized');
+logger.debug("acceptCredexSchema initialized");
 
 export const declineCredexSchema = {
   credexID: {
@@ -53,7 +53,7 @@ export const declineCredexSchema = {
     validator: v.validateUUID,
   },
 };
-logger.debug('declineCredexSchema initialized');
+logger.debug("declineCredexSchema initialized");
 
 export const cancelCredexSchema = {
   credexID: {
@@ -65,7 +65,7 @@ export const cancelCredexSchema = {
     validator: v.validateUUID,
   },
 };
-logger.debug('cancelCredexSchema initialized');
+logger.debug("cancelCredexSchema initialized");
 
 export const getCredexSchema = {
   credexID: {
@@ -73,7 +73,7 @@ export const getCredexSchema = {
     validator: v.validateUUID,
   },
 };
-logger.debug('getCredexSchema initialized');
+logger.debug("getCredexSchema initialized");
 
 export const getLedgerSchema = {
   accountID: {
@@ -81,8 +81,8 @@ export const getLedgerSchema = {
     validator: v.validateUUID,
   },
 };
-logger.debug('getLedgerSchema initialized');
+logger.debug("getLedgerSchema initialized");
 
 // Add more schemas as needed for other Credex operations
 
-logger.debug('All credex validation schemas initialized');
+logger.debug("All credex validation schemas initialized");
