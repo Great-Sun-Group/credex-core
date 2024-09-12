@@ -31,7 +31,7 @@ The system manages the balance between local truth (preserving the face value of
 
 ## Neo4j databases
 
-Credex-core runs on two neo4j databases. LedgerSpace is the shared ledger containing the full state of the credex ecosystem. SearchSpace contains only unredeemed credexes, and is optimized to find credloops. On every credloop found and cleared, ledgerSpace is updated accordingly
+Credex-core runs on two neo4j databases. LedgerSpace is the shared ledger containing the full state of the credex ecosystem. SearchSpace contains only unredeemed credexes, and is optimized to find credloops. On every credloop found and cleared, ledgerSpace is updated accordingly.
 
 ## Express.js server
 
@@ -78,9 +78,11 @@ Controllers for the endpoints are imported, and endpoints created for the variou
 
 ### Codespaces Development
 
-1. Open the project in GitHub Codespaces.
+1. Add the secrets to your personal github Settings->Codespaces and assign them to the credex-core repo.
 
-2. The devcontainer will automatically set up the development environment with all necessary dependencies and environment variables. If your environment variables are not set in your codespaces, you can copy the `.env.example` file to `.env` and fill in the necessary environment variables there.
+2. Open the project in GitHub Codespaces.
+
+3. The devcontainer will automatically set up a consistent development environment with all necessary dependencies and environment variables.
 
 
 3. Start the development server:
@@ -92,10 +94,12 @@ Controllers for the endpoints are imported, and endpoints created for the variou
 
 To set up your development environment, you'll need to configure the following environment variables:
 
+### These have defaults and do not need to be configured in your environment
 1. PORT: Set this to 5000 for local development.
 2. NODE_ENV: Set this to 'development' for local development.
 3. DEPLOYMENT: Set this to 'dev' for development deployment.
 
+### These secrets must be added to your environment
 4. NEO4J_LEDGER_SPACE_BOLT_URL, NEO4J_LEDGER_SPACE_USER, NEO4J_LEDGER_SPACE_PASS:
    - Sign up for a free Neo4j Aura account at https://neo4j.com/cloud/aura/
    - Create a new database instance for ledgerSpace
@@ -109,8 +113,6 @@ To set up your development environment, you'll need to configure the following e
    - Go to your account dashboard and create and copy your API key
 
 7. JWT_SECRET: Create a strong, unique string to use as your JWT secret
-
-8. GIT_PERSONAL_ACCESS_TOKEN: Create a personal access token on GitHub with appropriate permissions
 
 ## Available Scripts
 
