@@ -110,9 +110,7 @@ To set up your development environment, you'll need to configure the following e
 
 7. JWT_SECRET: Create a strong, unique string to use as your JWT secret
 
-8. WHATSAPP_BOT_ORIGIN: Set this to 'http://localhost:3000' for local development
-
-9. GIT_PERSONAL_ACCESS_TOKEN: Create a personal access token on GitHub with appropriate permissions
+8. GIT_PERSONAL_ACCESS_TOKEN: Create a personal access token on GitHub with appropriate permissions
 
 ## Available Scripts
 

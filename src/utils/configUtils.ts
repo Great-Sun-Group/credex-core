@@ -28,7 +28,6 @@ interface Config {
     max: number;
   };
   openExchangeRatesApi: string;
-  whatsappBotOrigin: string;
 }
 
 class ConfigUtils {
@@ -59,7 +58,6 @@ class ConfigUtils {
         max: parseInt(process.env.RATE_LIMIT_MAX || "100", 10),
       },
       openExchangeRatesApi: process.env.OPEN_EXCHANGE_RATES_API || "",
-      whatsappBotOrigin: process.env.WHATSAPP_BOT_ORIGIN || "", // Add this line
       // Initialize other configuration properties here
     };
     logger.info("ConfigUtils initialized", {
@@ -100,7 +98,6 @@ class ConfigUtils {
       "searchSpace",
       "jwtSecret",
       "openExchangeRatesApi",
-      "whatsappBotOrigin",
     ];
     for (const field of requiredFields) {
       if (!this.config[field]) {
