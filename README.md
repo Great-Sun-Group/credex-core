@@ -13,7 +13,6 @@ The credex ecosystem actualizes the Credex Principle in the Minute Transaction Q
 
 In accounting terms, a credex is a contingent asset for one party and a contingent liability for the other. These asset/liability pairs are automatically strung together into credloops wherever possible across the credex ecosystem. When a credloop is created and cleared, every account in the loop will have an accounts payable invoice cancelled against an equivalent accounts receivable invoice.
 
-
 ## Credcoin Principle
 
 **Every human is entitled to one equal share of the value of the natural wealth entering the organic economy.**\
@@ -84,8 +83,7 @@ Controllers for the endpoints are imported, and endpoints created for the variou
 
 3. The devcontainer will automatically set up a consistent development environment with all necessary dependencies and environment variables.
 
-
-3. Start the development server:
+4. Start the development server:
    ```bash
    npm run dev
    ```
@@ -95,26 +93,31 @@ Controllers for the endpoints are imported, and endpoints created for the variou
 To set up your development environment, you'll need to configure the following environment variables:
 
 ### These have defaults and do not need to be configured in your environment
+
 1. PORT: Set this to 5000 for local development.
 2. NODE_ENV: Set this to 'development' for local development.
 3. DEPLOYMENT: Set this to 'dev' for development deployment.
 
 ### These secrets must be added to your environment
+
 4. NEO4J_LEDGER_SPACE_BOLT_URL, NEO4J_LEDGER_SPACE_USER, NEO4J_LEDGER_SPACE_PASS:
+
    - Sign up for a free Neo4j Aura account at https://neo4j.com/cloud/aura/
    - Create a new database instance for ledgerSpace
    - Use the provided connection details to fill in these variables
 
 5. NEO4J_SEARCH_SPACE_BOLT_URL, NEO4J_SEARCH_SPACE_USER, NEO4J_SEARCH_SPACE_PASS:
+
    - Create a second Neo4j Aura account using a different email address and create a new database instance for searchSpace
 
 6. OPEN_EXCHANGE_RATES_API:
+
    - Sign up for a free account at https://openexchangerates.org/
    - Go to your account dashboard and create and copy your API key
 
 7. JWT_SECRET: Create a strong, unique string to use as your secret
 
-8. WHATSAPP_BOT_ORIGIN: Create a strong, unique string to use as your secret
+8. WHATSAPP_BOT_API_KEY: Create a strong, unique string to use as your secret
 
 ## Available Scripts
 
@@ -148,6 +151,7 @@ To set up your development environment, you'll need to configure the following e
 - [Swagger API Documentation](docs/swagger.md)
 
 ## Project structure and code summary
+
 For a detailed overview of the codebase, including function and class definitions, please refer to the [Code Summary](docs/code_summary.md). This summary is particularly useful for AI context and assists in understanding the overall structure and key components of the project.
 
 ```
@@ -179,6 +183,15 @@ credex-core/
 2. Make your changes and commit them with clear, concise commit messages.
 3. Push your changes and create a pull request against the 'dev' branch.
 4. Follow the [Logging Best Practices](docs/logging_best_practices.md) when adding or modifying code.
+
+## Deployment
+
+1. Contributors branch from `dev` and complete work and testing on an issue, fix, or feature.
+2. Contributor requests review from reviewer on merge to `dev` .
+3. Reviewer tests and merges.
+4. Dev is regularly merged with all recent commits to `stage`, which is auto-deployed to demo deployment.
+5. Demo deployment is tested thoroughly in CI/CD pipeline.
+6. When tests are passed, stage is merged to `prod`, which is auto-deployed to our production branch.
 
 ## License
 

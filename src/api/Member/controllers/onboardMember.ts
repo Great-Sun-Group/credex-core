@@ -113,14 +113,17 @@ export async function onboardMemberExpressHandler(
   });
 
   try {
-    // Check for WHATSAPP_BOT_ORIGIN header
-    const clientOrigin = req.headers['whatsapp_bot_origin'];
-    const serverOrigin = process.env.WHATSAPP_BOT_ORIGIN;
+    // Check for WHATSAPP_BOT_API_KEY header
+    const clientOrigin = req.headers["WHATSAPP_BOT_API_KEY"];
+    const serverOrigin = process.env.WHATSAPP_BOT_API_KEY;
 
     if (!clientOrigin || clientOrigin !== serverOrigin) {
       logger.warn("Unauthorized access attempt", { clientOrigin, requestId });
       res.status(401).json({ message: "Unauthorized" });
-      logger.debug("Exiting onboardMemberExpressHandler with unauthorized error", { requestId });
+      logger.debug(
+        "Exiting onboardMemberExpressHandler with unauthorized error",
+        { requestId }
+      );
       return;
     }
 
@@ -128,11 +131,9 @@ export async function onboardMemberExpressHandler(
 
     if (!validateName(firstname)) {
       logger.warn("Invalid first name", { firstname, requestId });
-      res
-        .status(400)
-        .json({
-          message: "First name must be between 3 and 50 characters long",
-        });
+      res.status(400).json({
+        message: "First name must be between 3 and 50 characters long",
+      });
       logger.debug(
         "Exiting onboardMemberExpressHandler with invalid first name",
         { requestId }
@@ -142,11 +143,9 @@ export async function onboardMemberExpressHandler(
 
     if (!validateName(lastname)) {
       logger.warn("Invalid last name", { lastname, requestId });
-      res
-        .status(400)
-        .json({
-          message: "Last name must be between 3 and 50 characters long",
-        });
+      res.status(400).json({
+        message: "Last name must be between 3 and 50 characters long",
+      });
       logger.debug(
         "Exiting onboardMemberExpressHandler with invalid last name",
         { requestId }
@@ -156,12 +155,10 @@ export async function onboardMemberExpressHandler(
 
     if (!validatePhone(phone)) {
       logger.warn("Invalid phone number", { phone, requestId });
-      res
-        .status(400)
-        .json({
-          message:
-            "Invalid phone number. Please provide a valid international phone number.",
-        });
+      res.status(400).json({
+        message:
+          "Invalid phone number. Please provide a valid international phone number.",
+      });
       logger.debug(
         "Exiting onboardMemberExpressHandler with invalid phone number",
         { requestId }
