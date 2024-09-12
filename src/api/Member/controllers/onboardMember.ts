@@ -113,6 +113,17 @@ export async function onboardMemberExpressHandler(
   });
 
   try {
+    // Check for WHATSAPP_BOT_ORIGIN header
+    const clientOrigin = req.headers['whatsapp_bot_origin'];
+    const serverOrigin = process.env.WHATSAPP_BOT_ORIGIN;
+
+    if (!clientOrigin || clientOrigin !== serverOrigin) {
+      logger.warn("Unauthorized access attempt", { clientOrigin, requestId });
+      res.status(401).json({ message: "Unauthorized" });
+      logger.debug("Exiting onboardMemberExpressHandler with unauthorized error", { requestId });
+      return;
+    }
+
     const { firstname, lastname, phone } = req.body;
 
     if (!validateName(firstname)) {

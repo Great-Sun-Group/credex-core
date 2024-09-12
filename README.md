@@ -112,7 +112,9 @@ To set up your development environment, you'll need to configure the following e
    - Sign up for a free account at https://openexchangerates.org/
    - Go to your account dashboard and create and copy your API key
 
-7. JWT_SECRET: Create a strong, unique string to use as your JWT secret
+7. JWT_SECRET: Create a strong, unique string to use as your secret
+
+8. WHATSAPP_BOT_ORIGIN: Create a strong, unique string to use as your secret
 
 ## Available Scripts
 
