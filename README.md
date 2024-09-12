@@ -141,7 +141,8 @@ To set up your development environment, you'll need to configure the following e
 ## Developer Guides
 
 - [Logging Best Practices](docs/logging_best_practices.md)
-- [Authentication](docs/Authentication.md)
+- [Security and Authentication](docs/Security_and_Authentication.md)
+- [Security Overview](docs/security.md)
 
 ## Project structure and code summary
 For a detailed overview of the codebase, including function and class definitions, please refer to the [Code Summary](docs/code_summary.md). This summary is particularly useful for AI context and assists in understanding the overall structure and key components of the project.

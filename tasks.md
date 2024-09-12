@@ -1,10 +1,6 @@
 
 notis on offerCredex, requestRecurring, and loopFinder
 
-WhatsApp Chatbot Rate Limiting Implementation
-
-implement authorizations for specific functions available for signed in member
-
 Testing: Implement unit and integration tests that specifically check for SQL injection vulnerabilities.
 
 
