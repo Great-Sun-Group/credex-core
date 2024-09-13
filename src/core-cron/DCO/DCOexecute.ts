@@ -116,12 +116,22 @@ export async function DCOexecute(): Promise<boolean> {
 }
 
 async function calculateSystemChecksum(session: any): Promise<string> {
-  const result = await session.run(`
+  const nodesResult = await session.run(`
     MATCH (n)
-    WITH collect(n) AS nodes, [(n)-[r]-() | r] AS relationships
-    RETURN apoc.util.md5(apoc.convert.toJson(nodes + relationships)) AS checksum
+    WITH collect(properties(n)) AS nodes
+    RETURN apoc.util.md5(apoc.convert.toJson(nodes)) AS nodesChecksum
   `);
-  return result.records[0].get('checksum');
+  const nodesChecksum = nodesResult.records[0].get('nodesChecksum');
+
+  const relationshipsResult = await session.run(`
+    MATCH ()-[r]->()
+    WITH collect(properties(r)) AS relationships
+    RETURN apoc.util.md5(apoc.convert.toJson(relationships)) AS relationshipsChecksum
+  `);
+  const relationshipsChecksum = relationshipsResult.records[0].get('relationshipsChecksum');
+
+  const combinedChecksum = crypto.createHash('md5').update(nodesChecksum + relationshipsChecksum).digest('hex');
+  return combinedChecksum;
 }
 
 async function waitForMTQCompletion(session: any): Promise<void> {
