@@ -1,8 +1,11 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j"
-import { logError } from "../../../utils/logger";
+import logger from "../../../utils/logger";
 
 export default async function GetCredexService(credexID: string): Promise<any> {
+  logger.debug('GetCredexService called', { credexID });
+
   if(!credexID){
+    logger.warn('CredexID not provided');
     return {
       message: 'CredexID is required'
     }
@@ -11,6 +14,8 @@ export default async function GetCredexService(credexID: string): Promise<any> {
   const ledgerSpaceSession = ledgerSpaceDriver.session()
 
   try {
+    logger.info('Executing query to fetch credex details', { credexID });
+
     const credexResult = await ledgerSpaceSession.run(
       `MATCH (credex:Credex {credexID:$credexID})<-[:OFFERED]-(sendingAccount:Account)
         WITH credex, sendingAccount
@@ -65,11 +70,13 @@ export default async function GetCredexService(credexID: string): Promise<any> {
     }); 
 
     if(!credex.length) {
+      logger.warn('Credex not found', { credexID });
       return {
         message: 'Credex not found'
       }
     }
 
+    logger.info('Credex retrieved successfully', { credexID });
     return {
       message: 'Credex retrieved successfully',
       data: {
@@ -78,12 +85,17 @@ export default async function GetCredexService(credexID: string): Promise<any> {
     }
   }
   catch (error) {
-    logError('Error retrieving credex', error as Error);
+    logger.error('Error retrieving credex', { 
+      credexID, 
+      error: (error as Error).message,
+      stack: (error as Error).stack
+    });
     return {
       message: 'Error retrieving credex',
       error: error
     }
   } finally {
     await ledgerSpaceSession.close();
+    logger.debug('LedgerSpace session closed');
   }
 }

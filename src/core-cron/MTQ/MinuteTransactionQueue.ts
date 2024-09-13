@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { LoopFinder } from "./LoopFinder";
 import _ from "lodash";
-import { logInfo, logWarning, logError } from "../../utils/logger";
+import logger from "../../utils/logger";
 
 interface Account {
   accountID: string;
@@ -21,57 +21,75 @@ interface Credex {
 }
 
 export async function MinuteTransactionQueue(): Promise<boolean> {
+  logger.info("MinuteTransactionQueue started");
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
-  logInfo("MTQ start: checking if DCO or MTQ is in progress");
+  logger.debug("Checking if DCO or MTQ is in progress");
 
   try {
     const { DCOflag, MTQflag } = await checkDCOAndMTQStatus(ledgerSpaceSession);
 
     if (DCOflag === null || MTQflag === null) {
-      logWarning("No active daynode found. Skipping MTQ.");
+      logger.warn("No active daynode found. Skipping MTQ.");
       return false;
     }
 
     if (DCOflag || MTQflag) {
-      if (DCOflag) logInfo("DCO in progress, holding MTQ");
-      if (MTQflag) logInfo("MTQ already in progress, holding new MTQ");
+      if (DCOflag) logger.info("DCO in progress, holding MTQ");
+      if (MTQflag) logger.info("MTQ already in progress, holding new MTQ");
       return false;
     }
 
-    logInfo("Running MTQ");
+    logger.info("Running MTQ");
 
     await setMTQRunningFlag(ledgerSpaceSession, true);
 
     const BAIL_TIME = 14 * 60 * 1000; // 14 minutes
+    let bailTimerReached = false;
     const bailTimer = setTimeout(() => {
-      logWarning("Bail timer reached");
-      return true;
+      logger.warn("Bail timer reached");
+      bailTimerReached = true;
     }, BAIL_TIME);
 
     try {
       await processQueuedAccounts(ledgerSpaceSession, searchSpaceSession);
       await processQueuedCredexes(ledgerSpaceSession, searchSpaceSession);
+
+      if (bailTimerReached) {
+        logger.warn("MTQ processing completed after bail timer was reached");
+      } else {
+        logger.info("MTQ processing completed successfully");
+      }
+      return true;
+    } catch (error) {
+      logger.error("Error in MinuteTransactionQueue processing", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      return false;
     } finally {
       clearTimeout(bailTimer);
       await setMTQRunningFlag(ledgerSpaceSession, false);
     }
-
-    logInfo("MTQ processing completed");
-    return true;
   } catch (error) {
-    logError("Error in MinuteTransactionQueue", error as Error);
+    logger.error("Unhandled error in MinuteTransactionQueue", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    await setMTQRunningFlag(ledgerSpaceSession, false);
     return false;
   } finally {
     await ledgerSpaceSession.close();
     await searchSpaceSession.close();
+    logger.info("MinuteTransactionQueue finished");
   }
 }
 
 async function checkDCOAndMTQStatus(
   session: any
 ): Promise<{ DCOflag: boolean | null; MTQflag: boolean | null }> {
+  logger.debug("Checking DCO and MTQ status");
   const result = await session.run(`
     MATCH (daynode:Daynode {Active: true})
     RETURN
@@ -80,20 +98,18 @@ async function checkDCOAndMTQStatus(
   `);
 
   if (result.records.length === 0) {
-    logWarning("No active daynode found");
+    logger.warn("No active daynode found");
     return { DCOflag: null, MTQflag: null };
   }
 
-  return {
-    DCOflag: result.records[0].get("DCOflag"),
-    MTQflag: result.records[0].get("MTQflag"),
-  };
+  const DCOflag = result.records[0].get("DCOflag");
+  const MTQflag = result.records[0].get("MTQflag");
+  logger.debug("DCO and MTQ status checked", { DCOflag, MTQflag });
+  return { DCOflag, MTQflag };
 }
 
-async function setMTQRunningFlag(
-  session: any,
-  value: boolean
-): Promise<void> {
+async function setMTQRunningFlag(session: any, value: boolean): Promise<void> {
+  logger.debug("Setting MTQ running flag", { value });
   const result = await session.run(
     `
     MATCH (daynode:Daynode {Active: true})
@@ -104,7 +120,9 @@ async function setMTQRunningFlag(
   );
 
   if (result.records.length === 0) {
-    logWarning("No active daynode found when setting MTQ running flag");
+    logger.warn("No active daynode found when setting MTQ running flag");
+  } else {
+    logger.debug("MTQ running flag set successfully", { value });
   }
 }
 
@@ -112,36 +130,54 @@ async function processQueuedAccounts(
   ledgerSpaceSession: any,
   searchSpaceSession: any
 ): Promise<void> {
+  logger.info("Processing queued accounts");
   const queuedAccounts = await getQueuedAccounts(ledgerSpaceSession);
+  logger.debug(`Found ${queuedAccounts.length} queued accounts`);
 
   for (const account of queuedAccounts) {
     try {
       await createAccountInSearchSpace(searchSpaceSession, account);
       await markAccountAsProcessed(ledgerSpaceSession, account.accountID);
-      logInfo(`Account created in searchSpace: ${account.accountName}`);
+      logger.info("Account created in searchSpace", {
+        accountName: account.accountName,
+        accountID: account.accountID,
+      });
     } catch (error) {
-      logError(`Error processing account ${account.accountName}`, error as Error);
+      logger.error("Error processing account", {
+        accountName: account.accountName,
+        accountID: account.accountID,
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+      });
     }
   }
+  logger.info("Finished processing queued accounts");
 }
 
 async function getQueuedAccounts(session: any): Promise<Account[]> {
+  logger.debug("Getting queued accounts");
   const result = await session.run(`
     MATCH (newAccount:Account {queueStatus: "PENDING_ACCOUNT"})
     RETURN
       newAccount.accountID AS accountID,
       newAccount.accountName AS accountName
   `);
-  return result.records.map((record: any) => ({
+  const accounts = result.records.map((record: any) => ({
     accountID: record.get("accountID"),
     accountName: record.get("accountName"),
   }));
+  logger.debug(`Retrieved ${accounts.length} queued accounts`);
+  return accounts;
 }
 
 async function createAccountInSearchSpace(
   session: any,
   account: Account
 ): Promise<void> {
+  logger.debug("Creating account in searchSpace", {
+    accountName: account.accountName,
+    accountID: account.accountID,
+  });
   const result = await session.run(
     `
     CREATE (newAccount:Account)
@@ -152,16 +188,28 @@ async function createAccountInSearchSpace(
   );
 
   if (result.records.length === 0) {
-    throw new Error(
+    const error = new Error(
       `Failed to create account in searchSpace: ${account.accountName}`
     );
+    logger.error("Account creation failed", {
+      accountName: account.accountName,
+      accountID: account.accountID,
+      error: error.message,
+      stack: error.stack,
+    });
+    throw error;
   }
+  logger.debug("Account created successfully in searchSpace", {
+    accountName: account.accountName,
+    accountID: account.accountID,
+  });
 }
 
 async function markAccountAsProcessed(
   session: any,
   accountID: string
 ): Promise<void> {
+  logger.debug("Marking account as processed", { accountID });
   await session.run(
     `
     MATCH (processedAccount:Account {accountID: $accountID})
@@ -169,17 +217,21 @@ async function markAccountAsProcessed(
     `,
     { accountID }
   );
+  logger.debug("Account marked as processed", { accountID });
 }
 
 async function processQueuedCredexes(
   ledgerSpaceSession: any,
   searchSpaceSession: any
 ): Promise<void> {
+  logger.info("Processing queued credexes");
   const queuedCredexes = await getQueuedCredexes(ledgerSpaceSession);
   const sortedQueuedCredexes = _.sortBy(queuedCredexes, "acceptedAt");
+  logger.debug(`Found ${sortedQueuedCredexes.length} queued credexes`);
 
   for (const credex of sortedQueuedCredexes) {
     try {
+      logger.debug("Processing credex", { credexID: credex.credexID });
       await LoopFinder(
         credex.issuerAccountID,
         credex.credexID,
@@ -190,13 +242,22 @@ async function processQueuedCredexes(
         credex.dueDate,
         credex.acceptorAccountID
       );
+      logger.debug("Credex processed successfully", {
+        credexID: credex.credexID,
+      });
     } catch (error) {
-      logError(`Error processing credex ${credex.credexID}`, error as Error);
+      logger.error("Error processing credex", {
+        credexID: credex.credexID,
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+      });
     }
   }
+  logger.info("Finished processing queued credexes");
 }
 
 async function getQueuedCredexes(session: any): Promise<Credex[]> {
+  logger.debug("Getting queued credexes");
   const result = await session.run(`
     MATCH
       (issuerAccount:Account)
@@ -214,7 +275,7 @@ async function getQueuedCredexes(session: any): Promise<Credex[]> {
            queuedCredex.dueDate AS dueDate
   `);
 
-  return result.records.map((record: any) => ({
+  const credexes = result.records.map((record: any) => ({
     acceptedAt: record.get("acceptedAt"),
     issuerAccountID: record.get("issuerAccountID"),
     acceptorAccountID: record.get("acceptorAccountID"),
@@ -228,4 +289,6 @@ async function getQueuedCredexes(session: any): Promise<Credex[]> {
         : "floating",
     dueDate: record.get("dueDate"),
   }));
+  logger.debug(`Retrieved ${credexes.length} queued credexes`);
+  return credexes;
 }

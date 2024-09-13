@@ -5,19 +5,17 @@
     "vscode": {
       "extensions": [
         "esbenp.prettier-vscode",
-        "Postman.postman-for-vscode",
         "saoudrizwan.claude-dev",
-        "GitHub.copilot",
         "dbaeumer.vscode-eslint",
         "ms-azuretools.vscode-docker",
-        "eamodio.gitlens",
         "yzhang.markdown-all-in-one"
       ],
       "settings": {
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
-          "source.fixAll.eslint": true
-        }
+          "source.fixAll.eslint": "explicit"
+        },
+        "files.autoSave": "afterDelay"
       }
     }
   },

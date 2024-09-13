@@ -47,7 +47,7 @@ export async function CreateRandomFloatingCredexesService(
         const issuerAccountID = dateAndCounterparties.accountID_1;
         const receiverAccountID = dateAndCounterparties.accountID_2;
         const InitialAmount = random(1, 100);
-        const Denomination = InitialAmount < 80 ? "USD" : "ZIG";
+        const Denomination = InitialAmount < 80 ? "USD" : "ZWG";
 
         // floating credex due in 8-34 days
         const credspanDays = random(8, 34);

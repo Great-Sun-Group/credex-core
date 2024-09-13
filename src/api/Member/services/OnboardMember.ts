@@ -1,12 +1,14 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { getDenominations } from "../../../constants/denominations";
 import { isNeo4jError } from "../../../utils/errorUtils";
+import logger from "../../../utils/logger";
 
 export async function OnboardMemberService(
   firstname: string,
   lastname: string,
   phone: string
 ) {
+  logger.debug("OnboardMemberService called", { firstname, lastname, phone });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const defaultDenom = "USD";
 
@@ -14,10 +16,11 @@ export async function OnboardMemberService(
     // Validation: Check defaultDenom in denominations
     if (!getDenominations({ code: defaultDenom }).length) {
       const message = "defaultDenom not in denoms";
-      console.log(message);
+      logger.warn(message, { defaultDenom });
       return { onboardedMemberID: false, message: message };
     }
 
+    logger.debug("Executing database query to create new member");
     const result = await ledgerSpaceSession.run(
       `
         MATCH (daynode:Daynode { Active: true })
@@ -45,19 +48,30 @@ export async function OnboardMemberService(
 
     if (!result.records.length) {
       const message = "could not onboard member";
-      console.log(message);
+      logger.warn(message, { firstname, lastname, phone });
       return { onboardedMemberID: false, message: message };
     }
 
     const memberID = result.records[0].get("memberID");
 
-    console.log("member onboarded: " + memberID);
+    logger.info("Member onboarded successfully", {
+      memberID,
+      firstname,
+      lastname,
+      phone,
+    });
     return {
       onboardedMemberID: memberID,
       message: "member onboarded",
     };
   } catch (error) {
-    console.error("Error onboarding member:", error);
+    logger.error("Error onboarding member", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      firstname,
+      lastname,
+      phone,
+    });
 
     // Type guard to narrow the type of error
     if (
@@ -65,17 +79,20 @@ export async function OnboardMemberService(
       error.code === "Neo.ClientError.Schema.ConstraintValidationFailed"
     ) {
       if (error.message.includes("phone")) {
+        logger.warn("Phone number already in use", { phone });
         return {
           onboardedMemberID: false,
           message: "Phone number already in use",
         };
       }
       if (error.message.includes("memberHandle")) {
+        logger.warn("Member handle already in use", { phone });
         return {
           onboardedMemberID: false,
           message: "Member handle already in use",
         };
       }
+      logger.warn("Required unique field not unique", { error: error.message });
       return {
         onboardedMemberID: false,
         message: "Required unique field not unique",
@@ -88,6 +105,7 @@ export async function OnboardMemberService(
         "Error: " + (error instanceof Error ? error.message : "Unknown error"),
     };
   } finally {
+    logger.debug("Closing database session");
     await ledgerSpaceSession.close();
   }
 }

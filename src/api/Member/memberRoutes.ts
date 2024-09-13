@@ -3,42 +3,31 @@ import { GetMemberByHandleController } from "./controllers/getMemberByHandle";
 import { GetMemberDashboardByPhoneController } from "./controllers/getMemberDashboardByPhone";
 import { updateMemberTierExpressHandler } from "./controllers/updateMemberTier";
 import { onboardMemberExpressHandler } from "./controllers/onboardMember";
+import { loginMemberExpressHandler } from "./controllers/loginMember";
+import { authForTierSpendLimitExpressHandler } from "./controllers/authForTierSpendLimit";
+import { validateRequest } from "../../middleware/validateRequest";
+import { authMiddleware } from "../../middleware/authMiddleware";
+import {
+  getMemberByHandleSchema,
+  getMemberDashboardByPhoneSchema,
+  onboardMemberSchema,
+  updateMemberTierSchema,
+  authForTierSpendLimitSchema,
+  loginMemberSchema,
+} from "./memberValidationSchemas";
+import logger from "../../utils/logger";
 
 const router = express.Router();
 
-/**
- * @openapi
- * /member/getMemberByHandle:
- *   post:
- *     tags:
- *       - Member
- *     summary: Get member by handle
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - memberHandle
- *             properties:
- *               memberHandle:
- *                 type: string
- *     responses:
- *       200:
- *         description: Successful response
- *       400:
- *         description: Bad request
- */
-router.post("/getMemberByHandle", GetMemberByHandleController);
+logger.info("Initializing Member routes", { module: "memberRoutes" });
 
 /**
  * @openapi
- * /member/getMemberDashboardByPhone:
+ * /member/login:
  *   post:
  *     tags:
  *       - Member
- *     summary: Get member dashboard by phone
+ *     summary: Login a member
  *     requestBody:
  *       required: true
  *       content:
@@ -56,7 +45,100 @@ router.post("/getMemberByHandle", GetMemberByHandleController);
  *       400:
  *         description: Bad request
  */
-router.post("/getMemberDashboardByPhone", GetMemberDashboardByPhoneController);
+router.post(
+  "/login",
+  validateRequest(loginMemberSchema),
+  loginMemberExpressHandler
+);
+logger.debug("Registered route: POST /member/login", {
+  module: "memberRoutes",
+  route: "/login",
+  method: "POST",
+});
+
+/**
+ * @openapi
+ * /member/getMemberByHandle:
+ *   post:
+ *     tags:
+ *       - Member
+ *     summary: Get member by handle
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - memberHandle
+ *             properties:
+ *               memberHandle:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successful response
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.post(
+  "/getMemberByHandle",
+  authMiddleware(["member"]),
+  validateRequest(getMemberByHandleSchema),
+  GetMemberByHandleController
+);
+logger.debug("Registered route: POST /member/getMemberByHandle", {
+  module: "memberRoutes",
+  route: "/getMemberByHandle",
+  method: "POST",
+});
+
+/**
+ * @openapi
+ * /member/getMemberDashboardByPhone:
+ *   post:
+ *     tags:
+ *       - Member
+ *     summary: Get member dashboard by phone
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phone
+ *             properties:
+ *               phone:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successful response
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.post(
+  "/getMemberDashboardByPhone",
+  authMiddleware(["member"]),
+  validateRequest(getMemberDashboardByPhoneSchema),
+  GetMemberDashboardByPhoneController
+);
+logger.debug("Registered route: POST /member/getMemberDashboardByPhone", {
+  module: "memberRoutes",
+  route: "/getMemberDashboardByPhone",
+  method: "POST",
+});
 
 /**
  * @openapi
@@ -88,7 +170,16 @@ router.post("/getMemberDashboardByPhone", GetMemberDashboardByPhoneController);
  *       400:
  *         description: Bad request
  */
-router.post("/onboardMember", onboardMemberExpressHandler);
+router.post(
+  "/onboardMember",
+  validateRequest(onboardMemberSchema),
+  onboardMemberExpressHandler
+);
+logger.debug("Registered route: POST /member/onboardMember", {
+  module: "memberRoutes",
+  route: "/onboardMember",
+  method: "POST",
+});
 
 /**
  * @openapi
@@ -97,6 +188,8 @@ router.post("/onboardMember", onboardMemberExpressHandler);
  *     tags:
  *       - Member
  *     summary: Update member tier
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -116,7 +209,77 @@ router.post("/onboardMember", onboardMemberExpressHandler);
  *         description: Successful response
  *       400:
  *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  */
-router.post("/updateMemberTier", updateMemberTierExpressHandler);
+router.post(
+  "/updateMemberTier",
+  authMiddleware(["admin"]),
+  validateRequest(updateMemberTierSchema),
+  updateMemberTierExpressHandler
+);
+logger.debug("Registered route: POST /member/updateMemberTier", {
+  module: "memberRoutes",
+  route: "/updateMemberTier",
+  method: "POST",
+});
+
+/**
+ * @openapi
+ * /member/authForTierSpendLimit:
+ *   post:
+ *     tags:
+ *       - Member
+ *     summary: Authorize secured credex for member's tier
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - memberID
+ *               - tier
+ *               - Amount
+ *               - Denomination
+ *             properties:
+ *               memberID:
+ *                 type: string
+ *               tier:
+ *                 type: number
+ *               Amount:
+ *                 type: number
+ *               Denomination:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successful response
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.post(
+  "/authForTierSpendLimit",
+  authMiddleware(["member"]),
+  validateRequest(authForTierSpendLimitSchema),
+  authForTierSpendLimitExpressHandler
+);
+logger.debug("Registered route: POST /member/authForTierSpendLimit", {
+  module: "memberRoutes",
+  route: "/authForTierSpendLimit",
+  method: "POST",
+});
+
+logger.info("Member routes initialized successfully", {
+  module: "memberRoutes",
+  routesCount: 6,
+});
 
 export default router;

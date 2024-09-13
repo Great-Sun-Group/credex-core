@@ -1,48 +1,31 @@
 import express from "express";
 import { OnboardMemberService } from "../services/OnboardMember";
 import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
-import logger from "../../../../config/logger";
-import { validateAccountName, validatePhone } from "../../../utils/validators";
-
-function validateInput(
-  firstname: string,
-  lastname: string,
-  phone: string
-): string | null {
-  if (!firstname || !lastname || !phone) {
-    return "firstname, lastname, and phone are required";
-  }
-  if (
-    typeof firstname !== "string" ||
-    typeof lastname !== "string" ||
-    typeof phone !== "string"
-  ) {
-    return "firstname, lastname, and phone must be strings";
-  }
-  if (!validateAccountName(firstname) || !validateAccountName(lastname)) {
-    return "First name and last name must be between 3 and 50 characters";
-  }
-
-  if (!validatePhone(phone)) {
-    return "Invalid phone number format. It should be a valid international phone number.";
-  }
-
-  return null;
-}
+import logger from "../../../utils/logger";
+import { validateName, validatePhone } from "../../../utils/validators";
+import { generateToken } from "../../../../config/authenticate";
+import { searchSpaceDriver } from "../../../../config/neo4j";
 
 export async function OnboardMemberController(
   firstname: string,
   lastname: string,
-  phone: string
-): Promise<{ memberDashboard: any } | { error: string }> {
-  const validationError = validateInput(firstname, lastname, phone);
-  if (validationError) {
-    logger.warn("Invalid input for onboarding member", { firstname, lastname, phone, error: validationError });
-    return { error: validationError };
-  }
+  phone: string,
+  requestId: string
+): Promise<{ memberDashboard: any; token: string } | { error: string }> {
+  logger.debug("Entering OnboardMemberController", {
+    firstname,
+    lastname,
+    phone,
+    requestId,
+  });
 
   try {
-    logger.info("Onboarding new member", { firstname, lastname, phone });
+    logger.info("Onboarding new member", {
+      firstname,
+      lastname,
+      phone,
+      requestId,
+    });
 
     const onboardedMember = await OnboardMemberService(
       firstname,
@@ -51,22 +34,69 @@ export async function OnboardMemberController(
     );
 
     if (!onboardedMember.onboardedMemberID) {
-      logger.warn("Failed to onboard member", { firstname, lastname, phone, error: onboardedMember.message });
+      logger.warn("Failed to onboard member", {
+        firstname,
+        lastname,
+        phone,
+        error: onboardedMember.message,
+        requestId,
+      });
+      logger.debug("Exiting OnboardMemberController with onboarding failure", {
+        requestId,
+      });
       return { error: onboardedMember.message || "Failed to onboard member" };
     }
 
-    logger.info("Member onboarded successfully", { memberID: onboardedMember.onboardedMemberID });
+    logger.info("Member onboarded successfully", {
+      memberID: onboardedMember.onboardedMemberID,
+      requestId,
+    });
 
+    // Generate token
+    const token = generateToken(onboardedMember.onboardedMemberID);
+
+    // Save token to Neo4j
+    const session = searchSpaceDriver.session();
+    try {
+      await session.run(
+        "MATCH (m:Member {id: $memberId}) SET m.token = $token",
+        { memberId: onboardedMember.onboardedMemberID, token }
+      );
+    } finally {
+      await session.close();
+    }
+
+    logger.debug("Retrieving member dashboard", { phone, requestId });
     const memberDashboard = await GetMemberDashboardByPhoneService(phone);
     if (!memberDashboard) {
-      logger.warn("Could not retrieve member dashboard after onboarding", { phone });
+      logger.warn("Could not retrieve member dashboard after onboarding", {
+        phone,
+        memberID: onboardedMember.onboardedMemberID,
+        requestId,
+      });
+      logger.debug(
+        "Exiting OnboardMemberController with dashboard retrieval failure",
+        { requestId }
+      );
       return { error: "Could not retrieve member dashboard" };
     }
 
-    logger.info("Member dashboard retrieved successfully", { memberID: onboardedMember.onboardedMemberID });
-    return { memberDashboard };
+    logger.info("Member dashboard retrieved successfully", {
+      memberID: onboardedMember.onboardedMemberID,
+      requestId,
+    });
+    logger.debug("Exiting OnboardMemberController successfully", { requestId });
+    return { memberDashboard, token };
   } catch (error) {
-    logger.error("Error in OnboardMemberController", { error, firstname, lastname, phone });
+    logger.error("Error in OnboardMemberController", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      firstname,
+      lastname,
+      phone,
+      requestId,
+    });
+    logger.debug("Exiting OnboardMemberController with error", { requestId });
     return { error: "Internal Server Error" };
   }
 }
@@ -76,18 +106,104 @@ export async function onboardMemberExpressHandler(
   res: express.Response,
   next: express.NextFunction
 ): Promise<void> {
-  const { firstname, lastname, phone } = req.body;
+  const requestId = req.id;
+  logger.debug("Entering onboardMemberExpressHandler", {
+    body: req.body,
+    requestId,
+  });
 
   try {
-    const result = await OnboardMemberController(firstname, lastname, phone);
+    // Check for WHATSAPP_BOT_API_KEY header
+    const clientOrigin = req.headers["WHATSAPP_BOT_API_KEY"];
+    const serverOrigin = process.env.WHATSAPP_BOT_API_KEY;
+
+    if (!clientOrigin || clientOrigin !== serverOrigin) {
+      logger.warn("Unauthorized access attempt", { clientOrigin, requestId });
+      res.status(401).json({ message: "Unauthorized" });
+      logger.debug(
+        "Exiting onboardMemberExpressHandler with unauthorized error",
+        { requestId }
+      );
+      return;
+    }
+
+    const { firstname, lastname, phone } = req.body;
+
+    if (!validateName(firstname)) {
+      logger.warn("Invalid first name", { firstname, requestId });
+      res.status(400).json({
+        message: "First name must be between 3 and 50 characters long",
+      });
+      logger.debug(
+        "Exiting onboardMemberExpressHandler with invalid first name",
+        { requestId }
+      );
+      return;
+    }
+
+    if (!validateName(lastname)) {
+      logger.warn("Invalid last name", { lastname, requestId });
+      res.status(400).json({
+        message: "Last name must be between 3 and 50 characters long",
+      });
+      logger.debug(
+        "Exiting onboardMemberExpressHandler with invalid last name",
+        { requestId }
+      );
+      return;
+    }
+
+    if (!validatePhone(phone)) {
+      logger.warn("Invalid phone number", { phone, requestId });
+      res.status(400).json({
+        message:
+          "Invalid phone number. Please provide a valid international phone number.",
+      });
+      logger.debug(
+        "Exiting onboardMemberExpressHandler with invalid phone number",
+        { requestId }
+      );
+      return;
+    }
+
+    const result = await OnboardMemberController(
+      firstname,
+      lastname,
+      phone,
+      requestId
+    );
 
     if ("error" in result) {
+      logger.warn("Onboarding failed", {
+        error: result.error,
+        firstname,
+        lastname,
+        phone,
+        requestId,
+      });
       res.status(400).json({ message: result.error });
     } else {
+      logger.info("Onboarding successful", {
+        firstname,
+        lastname,
+        phone,
+        requestId,
+      });
       res.status(201).json(result);
     }
+    logger.debug("Exiting onboardMemberExpressHandler successfully", {
+      requestId,
+    });
   } catch (error) {
-    logger.error("Error in onboardMemberExpressHandler", { error, firstname, lastname, phone });
+    logger.error("Error in onboardMemberExpressHandler", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      body: req.body,
+      requestId,
+    });
+    logger.debug("Exiting onboardMemberExpressHandler with error", {
+      requestId,
+    });
     next(error);
   }
 }

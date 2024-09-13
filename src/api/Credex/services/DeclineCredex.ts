@@ -1,23 +1,14 @@
-/*
-marks a credex as declined by changing the relationships
-from OFFERS or REQUESTS to DECLINED
-
-required inputs:
-  credexID
-
-on success returns credexID
-
-will return false if:
-  credexID not found
-  credex does not have OFFERS or REQUESTS relationships (credex already accepted/declined/cancelled)
-    
-*/
-
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import { digitallySign } from "../../../utils/digitalSignature";
+import { logDebug, logInfo, logWarning, logError } from "../../../utils/logger";
 
-export async function DeclineCredexService(credexID: string) {
+export async function DeclineCredexService(credexID: string, signerID: string, requestId: string) {
+  logDebug(`Entering DeclineCredexService`, { credexID, signerID, requestId });
+
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
+
   try {
-    const ledgerSpaceSession = ledgerSpaceDriver.session();
+    logDebug(`Attempting to decline Credex in database`, { credexID, requestId });
     const result = await ledgerSpaceSession.run(
       `
         MATCH (issuer:Account)-[rel1:OFFERS|REQUESTS]->(credex:Credex{credexID:$credexID})-[rel2:OFFERS|REQUESTS]->(acceptor:Account)
@@ -25,26 +16,48 @@ export async function DeclineCredexService(credexID: string) {
         CREATE (issuer)-[:DECLINED]->(credex)-[:DECLINED]->(acceptor)
         WITH credex
         SET
-            credex.declinedAt = Datetime(),
+            credex.declinedAt = datetime(),
             credex.OutstandingAmount = 0,
             credex.queueStatus = "PROCESSED"
         RETURN credex.credexID AS credexID
-    `,
+      `,
       { credexID }
     );
-    await ledgerSpaceSession.close();
 
     if (result.records.length === 0) {
-      console.log(
-        `No records found or credex no longer pending for credexID: ${credexID}`
+      logWarning(
+        `No records found or credex no longer pending for credexID: ${credexID}`,
+        { credexID, signerID, requestId }
       );
       return false;
     }
 
     const declinedCredexID = result.records[0].get("credexID");
-    console.log(`Offer declined for credexID: ${declinedCredexID}`);
+
+    logDebug(`Preparing to create digital signature for declined Credex`, { declinedCredexID, signerID, requestId });
+    // Create digital signature
+    const inputData = JSON.stringify({
+      credexID: declinedCredexID,
+      declinedAt: new Date().toISOString()
+    });
+
+    await digitallySign(
+      ledgerSpaceSession,
+      signerID,
+      "Credex",
+      declinedCredexID,
+      "DECLINE_CREDEX",
+      inputData,
+      requestId
+    );
+
+    logInfo(`Offer declined for credexID: ${declinedCredexID}`, { declinedCredexID, signerID, requestId });
     return declinedCredexID;
   } catch (error) {
-    console.log(error);
+    logError(`Error declining credex for credexID ${credexID}`, error as Error, { credexID, signerID, requestId });
+    throw error;
+  } finally {
+    await ledgerSpaceSession.close();
+    logDebug(`Exiting DeclineCredexService`, { credexID, signerID, requestId });
   }
 }

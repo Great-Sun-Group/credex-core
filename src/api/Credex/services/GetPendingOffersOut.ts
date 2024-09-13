@@ -1,6 +1,7 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { denomFormatter } from "../../../utils/denomUtils";
 import moment from "moment-timezone";
+import { logDebug, logInfo, logWarning, logError } from "../../../utils/logger";
 
 interface OfferedCredex {
   credexID: string;
@@ -11,7 +12,10 @@ interface OfferedCredex {
 }
 
 export async function GetPendingOffersOutService(accountID: string) {
+  logDebug(`Entering GetPendingOffersOutService`, { accountID });
+
   try {
+    logDebug(`Attempting to fetch pending offers out from database`, { accountID });
     const ledgerSpaceSession = ledgerSpaceDriver.session();
     const result = await ledgerSpaceSession.run(
       `
@@ -32,6 +36,7 @@ export async function GetPendingOffersOutService(accountID: string) {
     await ledgerSpaceSession.close();
 
     if (!result.records[0].get("credexID")) {
+      logInfo(`No pending offers out found for account`, { accountID });
       return {};
     }
 
@@ -61,9 +66,11 @@ export async function GetPendingOffersOutService(accountID: string) {
       offeredCredexData.push(thisOfferedCredex);
     }
 
+    logInfo(`Successfully fetched pending offers out`, { accountID, offerCount: offeredCredexData.length });
+    logDebug(`Exiting GetPendingOffersOutService`, { accountID });
     return offeredCredexData;
   } catch (error) {
-    console.error("Error in GetPendingOffersOutService:", error);
+    logError(`Error in GetPendingOffersOutService:`, error as Error, { accountID });
     throw error;
   }
 }

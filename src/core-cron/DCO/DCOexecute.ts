@@ -5,10 +5,12 @@ import { getDenominations, Denomination } from "../../constants/denominations";
 import { GetSecuredAuthorizationService } from "../../api/Credex/services/GetSecuredAuthorization";
 import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
-import { fetchZigRate } from "./fetchZigRate";
+import { fetchZwgRate, ZwgRateError } from "./fetchZwgRate";
 import { createNeo4jBackup } from "./DBbackup";
 import { logInfo, logError, logWarning, logDebug, logDCORates } from "../../utils/logger";
 import { validateAmount, validateDenomination } from "../../utils/validators";
+import { v4 as uuidv4 } from "uuid";
+import crypto from 'crypto';
 
 interface Rates {
   [key: string]: number;
@@ -28,17 +30,23 @@ interface Participant {
  * including rate updates, participant validation, and transaction processing.
  */
 export async function DCOexecute(): Promise<boolean> {
-  logInfo("Starting DCOexecute");
+  const dcoProcessId = uuidv4();
+  const startTime = new Date();
+  logInfo(`Starting DCOexecute. Process ID: ${dcoProcessId}`, { dcoProcessId, startTime });
+  
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
   try {
     await waitForMTQCompletion(ledgerSpaceSession);
-    const { previousDate, nextDate } = await setDCORunningFlag(
-      ledgerSpaceSession
-    );
+    const { previousDate, nextDate } = await setDCORunningFlag(ledgerSpaceSession);
+
+    const initialChecksum = await calculateSystemChecksum(ledgerSpaceSession);
+    logInfo(`Initial system checksum: ${initialChecksum}`, { dcoProcessId, checksum: initialChecksum });
 
     await createNeo4jBackup(previousDate, "_end");
+    logInfo(`Created Neo4j backup for ${previousDate}_end`, { dcoProcessId });
+
     await handleDefaultingCredexes(ledgerSpaceSession);
     await expirePendingOffers(ledgerSpaceSession);
 
@@ -64,9 +72,7 @@ export async function DCOexecute(): Promise<boolean> {
       CXXprior_CXXcurrent
     );
 
-    const { foundationID, foundationXOid } = await getFoundationData(
-      ledgerSpaceSession
-    );
+    const { foundationID, foundationXOid } = await getFoundationData(ledgerSpaceSession);
     await processDCOTransactions(
       ledgerSpaceSession,
       foundationID,
@@ -76,16 +82,56 @@ export async function DCOexecute(): Promise<boolean> {
     );
 
     await createNeo4jBackup(nextDate, "_start");
-    logInfo(`DCOexecute completed for ${nextDate}`);
+    logInfo(`Created Neo4j backup for ${nextDate}_start`, { dcoProcessId });
+
+    const finalChecksum = await calculateSystemChecksum(ledgerSpaceSession);
+    logInfo(`Final system checksum: ${finalChecksum}`, { dcoProcessId, checksum: finalChecksum });
+
+    const endTime = new Date();
+    const duration = endTime.getTime() - startTime.getTime();
+    logInfo(`DCOexecute completed for ${nextDate}`, { 
+      dcoProcessId, 
+      startTime, 
+      endTime, 
+      duration,
+      numberConfirmedParticipants,
+      DCOinCXX,
+      DCOinXAU,
+      CXXprior_CXXcurrent
+    });
 
     return true;
   } catch (error) {
-    logError("Error during DCOexecute", error as Error);
+    logError("Error during DCOexecute", error as Error, { dcoProcessId });
     return false;
   } finally {
+    try {
+      await resetDCORunningFlag(ledgerSpaceSession);
+    } catch (resetError) {
+      logError("Error resetting DCO running flag", resetError as Error, { dcoProcessId });
+    }
     await ledgerSpaceSession.close();
     await searchSpaceSession.close();
   }
+}
+
+async function calculateSystemChecksum(session: any): Promise<string> {
+  const nodesResult = await session.run(`
+    MATCH (n)
+    WITH collect(properties(n)) AS nodes
+    RETURN apoc.util.md5(apoc.convert.toJson(nodes)) AS nodesChecksum
+  `);
+  const nodesChecksum = nodesResult.records[0].get('nodesChecksum');
+
+  const relationshipsResult = await session.run(`
+    MATCH ()-[r]->()
+    WITH collect(properties(r)) AS relationships
+    RETURN apoc.util.md5(apoc.convert.toJson(relationships)) AS relationshipsChecksum
+  `);
+  const relationshipsChecksum = relationshipsResult.records[0].get('relationshipsChecksum');
+
+  const combinedChecksum = crypto.createHash('md5').update(nodesChecksum + relationshipsChecksum).digest('hex');
+  return combinedChecksum;
 }
 
 async function waitForMTQCompletion(session: any): Promise<void> {
@@ -120,6 +166,14 @@ async function setDCORunningFlag(
   const nextDate = result.records[0].get("nextDate");
   logInfo(`Expiring day: ${previousDate}`);
   return { previousDate, nextDate };
+}
+
+async function resetDCORunningFlag(session: any): Promise<void> {
+  logInfo("Resetting DCOrunningNow flag");
+  await session.run(`
+    MATCH (daynode:Daynode {Active: TRUE})
+    SET daynode.DCOrunningNow = false
+  `);
 }
 
 async function handleDefaultingCredexes(session: any): Promise<void> {
@@ -166,8 +220,18 @@ async function fetchCurrencyRates(nextDate: string): Promise<Rates> {
     { params: { app_id: process.env.OPEN_EXCHANGE_RATES_API, symbols } }
   );
 
-  const ZIGrates = await fetchZigRate();
-  USDbaseRates.ZIG = ZIGrates.length > 0 ? parseFloat(ZIGrates[1].avg) : NaN;
+  try {
+    const ZWGrates = await fetchZwgRate();
+    USDbaseRates.ZWG = ZWGrates.length > 0 ? parseFloat(ZWGrates[1].avg) : NaN;
+  } catch (error) {
+    if (error instanceof ZwgRateError) {
+      logWarning("Failed to fetch ZWG rate, excluding ZWG from denominations", error);
+      
+    } else {
+      logError("Unexpected error while fetching ZWG rate", error instanceof Error ? error : new Error(String(error)));
+      throw error;
+    }
+  }
 
   validateRates(USDbaseRates);
   return USDbaseRates;
@@ -307,7 +371,7 @@ async function updateCredexBalances(
   newCXXrates: Rates,
   CXXprior_CXXcurrent: number
 ): Promise<void> {
-  logInfo("Updating credex and asset balances");
+  logInfo("Updating credex and asset balances", { CXXprior_CXXcurrent, newCXXrates });
 
   // Update ledger space
   await ledgerSession.run(`
@@ -436,6 +500,7 @@ async function processDCOTransactions(
         return;
       }
 
+      const requestId = uuidv4(); // Generate a unique requestId for this operation
       const dataForDCOgive = {
         memberID: participant.DCOmemberID,
         issuerAccountID: participant.accountID,
@@ -444,6 +509,7 @@ async function processDCOTransactions(
         InitialAmount: participant.DCOgiveInDenom,
         credexType: "DCO_GIVE",
         securedCredex: true,
+        requestId, // Add the requestId to the dataForDCOgive
       };
 
       const DCOgiveCredex = await OfferCredexService(dataForDCOgive);
@@ -455,7 +521,26 @@ async function processDCOTransactions(
           "Invalid response from OfferCredexService for DCO give"
         );
       }
-      await AcceptCredexService(DCOgiveCredex.credex.credexID, foundationXOid);
+      
+      // Log the offer creation
+      logInfo("DCO give credex offer created", {
+        requestId,
+        credexID: DCOgiveCredex.credex.credexID,
+        participantID: participant.DCOmemberID,
+        action: "OFFER_CREDEX",
+        data: JSON.stringify(dataForDCOgive)
+      });
+
+      await AcceptCredexService(DCOgiveCredex.credex.credexID, foundationXOid, requestId);
+      
+      // Log the credex acceptance
+      logInfo("DCO give credex accepted", {
+        requestId,
+        credexID: DCOgiveCredex.credex.credexID,
+        participantID: participant.DCOmemberID,
+        action: "ACCEPT_CREDEX",
+        data: JSON.stringify({ acceptedBy: foundationXOid })
+      });
     })
   );
 
@@ -468,6 +553,7 @@ async function processDCOTransactions(
         return;
       }
 
+      const requestId = uuidv4(); // Generate a unique requestId for this operation
       const dataForDCOreceive = {
         memberID: foundationXOid,
         issuerAccountID: foundationID,
@@ -476,6 +562,7 @@ async function processDCOTransactions(
         InitialAmount: receiveAmount,
         credexType: "DCO_RECEIVE",
         securedCredex: true,
+        requestId, // Add the requestId to the dataForDCOreceive
       };
 
       const DCOreceiveCredex = await OfferCredexService(dataForDCOreceive);
@@ -487,10 +574,30 @@ async function processDCOTransactions(
           "Invalid response from OfferCredexService for DCO receive"
         );
       }
+      
+      // Log the offer creation
+      logInfo("DCO receive credex offer created", {
+        requestId,
+        credexID: DCOreceiveCredex.credex.credexID,
+        participantID: participant.DCOmemberID,
+        action: "OFFER_CREDEX",
+        data: JSON.stringify(dataForDCOreceive)
+      });
+
       await AcceptCredexService(
         DCOreceiveCredex.credex.credexID,
-        foundationXOid
+        foundationXOid,
+        requestId
       );
+      
+      // Log the credex acceptance
+      logInfo("DCO receive credex accepted", {
+        requestId,
+        credexID: DCOreceiveCredex.credex.credexID,
+        participantID: participant.DCOmemberID,
+        action: "ACCEPT_CREDEX",
+        data: JSON.stringify({ acceptedBy: foundationXOid })
+      });
     })
   );
 }

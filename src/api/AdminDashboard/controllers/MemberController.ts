@@ -1,90 +1,125 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import GetMemberService from '../services/GetMemberService';
 import UpdateMemberTierService from '../services/UpdateMemberTierService';
-import { logError } from '../../../utils/logger';
+import logger from '../../../utils/logger';
+import { ApiError } from '../../../utils/errorUtils';
+import { validateMemberHandle, validateTier } from '../../../utils/validators';
 
-export async function getMemberDetails(req: Request, res: Response) {
-  const { memberHandle } = req.query;
+export async function getMemberDetails(req: Request, res: Response, next: NextFunction) {
+  const { memberHandle } = req.query as { memberHandle: string };
+  const requestId = req.id;
 
-  if (!memberHandle) {
-    return res.status(400).json({
-      message: 'The memberHandle is required'
-    });
+  logger.debug('getMemberDetails function called', { requestId, memberHandle });
+
+  if (!memberHandle || !validateMemberHandle(memberHandle)) {
+    logger.warn('Invalid memberHandle provided', { requestId, memberHandle });
+    return next(new ApiError('Invalid memberHandle', 400));
   }
 
   try {
-    const result = await GetMemberService(memberHandle as string);
-    return res.status(200).json(result);
+    const result = await GetMemberService(memberHandle);
+    logger.info('Successfully fetched member details', { requestId, memberHandle });
+    res.status(200).json(result);
   } catch (error) {
-    logError('Error in getMemberDetails controller', error as Error);
-    return res.status(500).json({
-      message: 'Error fetching member details',
-      error: (error as Error).message 
+    logger.error('Error fetching member details', { 
+      requestId, 
+      memberHandle, 
+      error: (error as Error).message,
+      stack: (error as Error).stack
     });
+    next(new ApiError('Error fetching member details', 500, (error as Error).message));
   }
 }
 
-export async function updateMemberTier(req: Request, res: Response) {
+export async function updateMemberTier(req: Request, res: Response, next: NextFunction) {
   const { memberHandle, newTier } = req.body;
+  const requestId = req.id;
 
-  if (!memberHandle || !newTier) {
-    return res.status(400).json({
-      message: 'The memberHandle and newTier are required'
-    });
+  logger.debug('updateMemberTier function called', { requestId, memberHandle, newTier });
+
+  if (!memberHandle || !validateMemberHandle(memberHandle)) {
+    logger.warn('Invalid memberHandle provided', { requestId, memberHandle });
+    return next(new ApiError('Invalid memberHandle', 400));
+  }
+
+  if (!newTier || !validateTier(Number(newTier))) {
+    logger.warn('Invalid newTier provided', { requestId, newTier });
+    return next(new ApiError('Invalid newTier', 400));
   }
 
   try {
     const result = await UpdateMemberTierService(memberHandle, newTier);
-    return res.status(200).json(result);
+    logger.info('Successfully updated member tier', { requestId, memberHandle, newTier });
+    res.status(200).json(result);
   } catch (error) {
-    logError('Error in updateMemberTier controller', error as Error);
-    return res.status(500).json({
-      message: 'Error updating member tier',
-      error: (error as Error).message 
+    logger.error('Error updating member tier', { 
+      requestId, 
+      memberHandle, 
+      newTier,
+      error: (error as Error).message,
+      stack: (error as Error).stack
     });
+    next(new ApiError('Error updating member tier', 500, (error as Error).message));
   }
 }
 
+// Keep the commented out functions for future reference
 /*
-export async function updateMemberStatus(req: Request, res: Response) {
+export async function updateMemberStatus(req: Request, res: Response, next: NextFunction) {
   const { memberHandle, newStatus } = req.body;
+  const requestId = req.id;
 
-  if (!memberHandle || !newStatus) {
-    return res.status(400).json({
-      message: 'The memberHandle and newStatus are required'
-    });
+  logger.debug('updateMemberStatus function called', { requestId, memberHandle, newStatus });
+
+  if (!memberHandle || !validateMemberHandle(memberHandle)) {
+    logger.warn('Invalid memberHandle provided', { requestId, memberHandle });
+    return next(new ApiError('Invalid memberHandle', 400));
   }
+
+  // Add validation for newStatus when implemented
 
   try {
     const result = await UpdateMemberStatusService(memberHandle, newStatus);
-    return res.status(200).json(result);
+    logger.info('Successfully updated member status', { requestId, memberHandle, newStatus });
+    res.status(200).json(result);
   } catch (error) {
-    logError('Error in updateMemberStatus controller', error as Error);
-    return res.status(500).json({
-      message: 'Error updating member status',
-      error: (error as Error).message 
+    logger.error('Error updating member status', { 
+      requestId, 
+      memberHandle, 
+      newStatus,
+      error: (error as Error).message,
+      stack: (error as Error).stack
     });
+    next(new ApiError('Error updating member status', 500, (error as Error).message));
   }
 }
 
-export async function logMemberInteraction(req: Request, res: Response) {
+export async function logMemberInteraction(req: Request, res: Response, next: NextFunction) {
   const { memberHandle, interactionType, interactionDetails } = req.body;
+  const requestId = req.id;
 
-  if (!memberHandle || !interactionType || !interactionDetails) {
-    return res.status(400).json({
-      message: 'The memberHandle, interactionType, and interactionDetails are required'
-    });
+  logger.debug('logMemberInteraction function called', { requestId, memberHandle, interactionType });
+
+  if (!memberHandle || !validateMemberHandle(memberHandle)) {
+    logger.warn('Invalid memberHandle provided', { requestId, memberHandle });
+    return next(new ApiError('Invalid memberHandle', 400));
   }
+
+  // Add validation for interactionType and interactionDetails when implemented
 
   try {
     const result = await LogMemberInteractionService(memberHandle, interactionType, interactionDetails);
-    return res.status(200).json(result);
+    logger.info('Successfully logged member interaction', { requestId, memberHandle, interactionType });
+    res.status(200).json(result);
   } catch (error) {
-    logError('Error in logMemberInteraction controller', error as Error);
-    return res.status(500).json({
-      message: 'Error logging member interaction',
-      error: (error as Error).message 
+    logger.error('Error logging member interaction', { 
+      requestId, 
+      memberHandle, 
+      interactionType,
+      error: (error as Error).message,
+      stack: (error as Error).stack
     });
+    next(new ApiError('Error logging member interaction', 500, (error as Error).message));
   }
 }
 */

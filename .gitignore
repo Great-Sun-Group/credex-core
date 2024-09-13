@@ -134,3 +134,6 @@ dist
 
 .sst
 *.pem
+
+# Build directory
+build/

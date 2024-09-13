@@ -1,4 +1,5 @@
-import { Denomination } from '../constants/denominations';
+import { Denomination } from "../constants/denominations";
+import logger from "../utils/logger";
 
 /**
  * Formats a numerical amount according to the specified denomination.
@@ -9,6 +10,7 @@ import { Denomination } from '../constants/denominations';
 export const denomFormatter = (amount: number, code: string): string => {
   // Ensure amount is a finite number
   if (!isFinite(amount)) {
+    logger.warn("Invalid amount provided to denomFormatter", { amount, code });
     amount = 0;
   }
 
@@ -33,7 +35,14 @@ export const denomFormatter = (amount: number, code: string): string => {
   const getDenominations = (options: { code: string }): Denomination[] => {
     // This function needs to be imported from denominations.ts
     // For now, we'll just return a mock implementation
-    return [{ code, regionalization: 'en-US', fulldescription: '', sourceForRate: '' }];
+    return [
+      {
+        code,
+        regionalization: "en-US",
+        fulldescription: "",
+        sourceForRate: "",
+      },
+    ];
   };
 
   const denomData = getDenominations({ code });
@@ -52,5 +61,11 @@ export const denomFormatter = (amount: number, code: string): string => {
       precision = 2;
   }
 
-  return formatCurrencyAmount(amount, precision, regionalization);
+  const formattedAmount = formatCurrencyAmount(
+    amount,
+    precision,
+    regionalization
+  );
+  logger.debug("Amount formatted", { amount, code, formattedAmount });
+  return formattedAmount;
 };

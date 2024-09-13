@@ -12,10 +12,10 @@ export async function GrowthTestController(
     "USD_SECURED_amountPerPurchaseLow",
     "USD_SECURED_amountPerPurchaseHigh",
     "USD_SECURED_fractionToSell",
-    "ZIG_SECURED_fractionToPurchase",
-    "ZIG_SECURED_amountPerPurchaseLow",
-    "ZIG_SECURED_amountPerPurchaseHigh",
-    "ZIG_SECURED_fractionToSell",
+    "ZWG_SECURED_fractionToPurchase",
+    "ZWG_SECURED_amountPerPurchaseLow",
+    "ZWG_SECURED_amountPerPurchaseHigh",
+    "ZWG_SECURED_fractionToSell",
     "dailyFloatingRandomTransactionsPerAccount",
   ];
   for (const field of fieldsRequired) {

@@ -1,9 +1,13 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { denomFormatter } from "../../../utils/denomUtils";
+import logger from "../../../utils/logger";
 
 export async function GetBalancesService(accountID: string) {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
+  logger.debug("GetBalancesService entered", { accountID });
+
   try {
+    logger.debug("Fetching secured balances");
     const getSecuredBalancesQuery = await ledgerSpaceSession.run(
       `
       MATCH (account:Account {accountID: $accountID})
@@ -36,6 +40,7 @@ export async function GetBalancesService(accountID: string) {
       { accountID }
     );
 
+    logger.debug("Processing secured balances");
     const securedNetBalancesByDenom: string[] = getSecuredBalancesQuery.records
       .filter((record) => {
         const amount = record.get("netSecured");
@@ -47,6 +52,7 @@ export async function GetBalancesService(accountID: string) {
         return `${denomFormatter(amount, denom)} ${denom}`;
       });
 
+    logger.debug("Fetching unsecured balances and total assets");
     const getUnsecuredBalancesAndTotalAssetsQuery =
       await ledgerSpaceSession.run(
         `
@@ -85,6 +91,7 @@ export async function GetBalancesService(accountID: string) {
         { accountID }
       );
 
+    logger.debug("Processing unsecured balances and total assets");
     const unsecuredBalancesAndTotalAssets =
       getUnsecuredBalancesAndTotalAssetsQuery.records[0];
     const defaultDenom = unsecuredBalancesAndTotalAssets.get("defaultDenom");
@@ -103,7 +110,7 @@ export async function GetBalancesService(accountID: string) {
       )} ${defaultDenom}`,
     };
 
-    return {
+    const result = {
       securedNetBalancesByDenom,
       unsecuredBalancesInDefaultDenom,
       netCredexAssetsInDefaultDenom: `${denomFormatter(
@@ -111,8 +118,24 @@ export async function GetBalancesService(accountID: string) {
         defaultDenom
       )} ${defaultDenom}`,
     };
-  } catch (error) {
-    console.error("Error fetching balances:", error);
+
+    logger.info("Balances fetched successfully", { accountID });
+    logger.debug("GetBalancesService exiting", { accountID });
+    return result;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      logger.error("Error fetching balances:", {
+        accountID,
+        error: error.message,
+        stack: error.stack,
+      });
+    } else {
+      logger.error("Unknown error fetching balances:", {
+        accountID,
+        error: String(error),
+      });
+    }
+    logger.debug("GetBalancesService exiting with error", { accountID });
     throw new Error("Failed to fetch balances. Please try again later.");
   } finally {
     await ledgerSpaceSession.close();

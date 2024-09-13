@@ -32,7 +32,7 @@ This module handles member-related operations in the Credex ecosystem. It expose
      - memberID: string
      - newTier: number
 
-5. **securedCredexAuthForTier** (POST)
+5. **authForTierSpendLimit** (POST)
    - Function: Authorizes secured credex for a member's tier.
    - Required variables:
      - issuerAccountID: string

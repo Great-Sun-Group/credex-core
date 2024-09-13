@@ -5,11 +5,12 @@ import { UpdateMemberTierController } from "../../api/Member/controllers/updateM
 import { CreateAccountService } from "../../api/Account/services/CreateAccount";
 import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
-import { fetchZigRate } from "./fetchZigRate";
+import { fetchZwgRate, ZwgRateError } from "./fetchZwgRate";
 import axios from "axios";
 import _ from "lodash";
 import moment from "moment-timezone";
-import logger from "../../../config/logger";
+import logger from "../../utils/logger";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Initializes the database for the Daily Credcoin Offering (DCO) process.
@@ -17,23 +18,38 @@ import logger from "../../../config/logger";
  * and establishes the starting state for the DCO.
  */
 export async function DBinitialization(): Promise<void> {
-  console.log("Starting DBinitialization");
+  const requestId = uuidv4();
+  logger.info("Starting DBinitialization", { requestId });
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
   try {
-    await setupDatabaseConstraints(ledgerSpaceSession, searchSpaceSession);
-    const dayZero = establishDayZero();
-    const dayZeroCXXrates = await fetchAndProcessRates(dayZero);
-    await createDayZeroDaynode(ledgerSpaceSession, dayZero, dayZeroCXXrates);
-    await createInitialAccounts(ledgerSpaceSession);
+    await setupDatabaseConstraints(
+      ledgerSpaceSession,
+      searchSpaceSession,
+      requestId
+    );
+    const dayZero = establishDayZero(requestId);
+    const dayZeroCXXrates = await fetchAndProcessRates(dayZero, requestId);
+    await createDayZeroDaynode(
+      ledgerSpaceSession,
+      dayZero,
+      dayZeroCXXrates,
+      requestId
+    );
+    await createInitialAccounts(ledgerSpaceSession, requestId);
   } catch (error) {
-    logger.error("Error during DBinitialization", error);
+    logger.error("Error during DBinitialization", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      requestId,
+    });
     throw error;
   } finally {
     await ledgerSpaceSession.close();
     await searchSpaceSession.close();
+    logger.info("DBinitialization completed", { requestId });
   }
 }
 
@@ -42,9 +58,10 @@ export async function DBinitialization(): Promise<void> {
  */
 async function setupDatabaseConstraints(
   ledgerSpaceSession: any,
-  searchSpaceSession: any
+  searchSpaceSession: any,
+  requestId: string
 ): Promise<void> {
-  console.log("Creating database constraints and indexes...");
+  logger.info("Creating database constraints and indexes...", { requestId });
 
   // Remove any current db constraints
   await ledgerSpaceSession.run("CALL apoc.schema.assert({}, {})");
@@ -70,26 +87,33 @@ async function setupDatabaseConstraints(
   await searchSpaceSession.run(
     "CREATE CONSTRAINT credexID_unique IF NOT EXISTS FOR (credex:Credex) REQUIRE credex.credexID IS UNIQUE"
   );
+
+  logger.info("Database constraints and indexes created successfully", {
+    requestId,
+  });
 }
 
 /**
  * Establishes the day zero date.
  */
-function establishDayZero(): string {
-  console.log("Establishing day zero");
+function establishDayZero(requestId: string): string {
+  logger.info("Establishing day zero", { requestId });
   const dayZero =
     process.env.DEPLOYMENT === "dev"
       ? "2021-01-01"
       : moment.utc().subtract(1, "days").format("YYYY-MM-DD");
-  console.log("Day zero:", dayZero);
+  logger.info("Day zero established", { dayZero, requestId });
   return dayZero;
 }
 
 /**
  * Fetches and processes currency rates for day zero.
  */
-async function fetchAndProcessRates(dayZero: string): Promise<any> {
-  console.log("Loading currencies and current rates...");
+async function fetchAndProcessRates(
+  dayZero: string,
+  requestId: string
+): Promise<any> {
+  logger.info("Loading currencies and current rates...", { requestId });
   const symbols = getDenominations({
     sourceForRate: "OpenExchangeRates",
     formatAsList: true,
@@ -99,11 +123,33 @@ async function fetchAndProcessRates(dayZero: string): Promise<any> {
   const {
     data: { rates: USDbaseRates },
   } = await axios.get(baseUrl);
-  USDbaseRates.ZIG = (await fetchZigRate())[1].avg;
+
+  try {
+    const zigRate = (await fetchZwgRate())[1].avg;
+    USDbaseRates.ZWG = zigRate;
+    logger.info("ZWG rate fetched successfully", { rate: zigRate, requestId });
+  } catch (error) {
+    if (error instanceof ZwgRateError) {
+      logger.warn(
+        "Failed to fetch ZWG rate, excluding ZWG from denominations",
+        { requestId, error: error.message }
+      );
+      delete USDbaseRates.ZWG;
+    } else {
+      logger.error("Unexpected error while fetching ZWG rate", {
+        requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
 
   const OneCXXinCXXdenom = 1;
   const CXXdenom = "CAD";
-  console.log(OneCXXinCXXdenom + " CXX = 1 " + CXXdenom);
+  logger.info("CXX conversion rate", {
+    rate: `${OneCXXinCXXdenom} CXX = 1 ${CXXdenom}`,
+    requestId,
+  });
 
   const XAUbaseRates = _.mapValues(
     USDbaseRates,
@@ -115,7 +161,7 @@ async function fetchAndProcessRates(dayZero: string): Promise<any> {
   );
   dayZeroCXXrates.CXX = 1;
 
-  console.log("Day zero CXX rates:", dayZeroCXXrates);
+  logger.info("Day zero CXX rates calculated", { dayZeroCXXrates, requestId });
   return dayZeroCXXrates;
 }
 
@@ -125,9 +171,10 @@ async function fetchAndProcessRates(dayZero: string): Promise<any> {
 async function createDayZeroDaynode(
   session: any,
   dayZero: string,
-  dayZeroCXXrates: any
+  dayZeroCXXrates: any,
+  requestId: string
 ): Promise<void> {
-  console.log("Creating day zero daynode...");
+  logger.info("Creating day zero daynode...", { requestId });
   await session.run(
     `
     CREATE (daynode:Daynode)
@@ -138,53 +185,85 @@ async function createDayZeroDaynode(
   `,
     { dayZeroCXXrates, dayZero }
   );
+  logger.info("Day zero daynode created successfully", { requestId });
 }
 
 /**
  * Creates initial accounts and relationships for the DCO process.
  */
-async function createInitialAccounts(session: any): Promise<void> {
-  console.log("Creating initialization accounts and relationships...");
+async function createInitialAccounts(
+  session: any,
+  requestId: string
+): Promise<void> {
+  logger.info("Creating initialization accounts and relationships...", {
+    requestId,
+  });
 
-  const rdubs = await createRdubsAccount();
+  const rdubs = await createRdubsAccount(requestId);
   const credexFoundationID = await createCredexFoundation(
-    rdubs.onboardedMemberID
+    rdubs.onboardedMemberID,
+    requestId
   );
-  const greatSunID = await createGreatSun(rdubs.onboardedMemberID);
-  const vimbisoPayID = await createVimbisoPay(rdubs.onboardedMemberID);
+  const greatSunID = await createGreatSun(rdubs.onboardedMemberID, requestId);
+  const vimbisoPayID = await createVimbisoPay(
+    rdubs.onboardedMemberID,
+    requestId
+  );
 
   await createInitialRelationships(
     session,
     credexFoundationID,
     greatSunID,
-    vimbisoPayID
+    vimbisoPayID,
+    requestId
   );
   await createInitialCredex(
     rdubs.onboardedMemberID,
     greatSunID,
-    rdubs.personalAccountID
+    rdubs.personalAccountID,
+    requestId
   );
+
+  logger.info("Initial accounts and relationships created successfully", {
+    requestId,
+  });
 }
 
-async function createRdubsAccount(): Promise<{
+async function createRdubsAccount(requestId: string): Promise<{
   onboardedMemberID: string;
   personalAccountID: string;
 }> {
   const result = await OnboardMemberController(
     "Ryan",
     "Watson",
-    "263778177125"
+    "263778177125",
+    requestId
   );
 
   if ("error" in result) {
+    logger.error("Failed to create rdubs account", {
+      error: result.error,
+      requestId,
+    });
     throw new Error(`Failed to create rdubs account: ${result.error}`);
   }
 
   const onboardedMemberID = result.memberDashboard.memberID;
 
-  const updateTierResult = await UpdateMemberTierController(onboardedMemberID, 5);
+  const updateTierResult = await UpdateMemberTierController(
+    onboardedMemberID,
+    5,
+    requestId
+  );
   if (!updateTierResult.success) {
-    throw new Error(`Failed to update member tier: ${updateTierResult.message}`);
+    logger.error("Failed to update member tier", {
+      memberID: onboardedMemberID,
+      error: updateTierResult.message,
+      requestId,
+    });
+    throw new Error(
+      `Failed to update member tier: ${updateTierResult.message}`
+    );
   }
 
   const rdubsPersonalAccount = await CreateAccountService(
@@ -197,13 +276,22 @@ async function createRdubsAccount(): Promise<{
     "CAD"
   );
 
+  logger.info("Rdubs account created successfully", {
+    memberID: onboardedMemberID,
+    personalAccountID: rdubsPersonalAccount.accountID,
+    requestId,
+  });
+
   return {
     onboardedMemberID,
     personalAccountID: rdubsPersonalAccount.accountID,
   };
 }
 
-async function createCredexFoundation(memberID: string): Promise<string> {
+async function createCredexFoundation(
+  memberID: string,
+  requestId: string
+): Promise<string> {
   const credexFoundation = await CreateAccountService(
     memberID,
     "CREDEX_FOUNDATION",
@@ -216,13 +304,24 @@ async function createCredexFoundation(memberID: string): Promise<string> {
     typeof credexFoundation.account === "boolean" ||
     !credexFoundation.accountID
   ) {
+    logger.error("Failed to create Credex Foundation account", {
+      memberID,
+      requestId,
+    });
     throw new Error("Failed to create Credex Foundation account");
   }
 
+  logger.info("Credex Foundation account created successfully", {
+    accountID: credexFoundation.accountID,
+    requestId,
+  });
   return credexFoundation.accountID;
 }
 
-async function createGreatSun(memberID: string): Promise<string> {
+async function createGreatSun(
+  memberID: string,
+  requestId: string
+): Promise<string> {
   const greatSun = await CreateAccountService(
     memberID,
     "BUSINESS",
@@ -232,13 +331,21 @@ async function createGreatSun(memberID: string): Promise<string> {
   );
 
   if (!greatSun || !greatSun.accountID) {
+    logger.error("Failed to create Great Sun account", { memberID, requestId });
     throw new Error("Failed to create Great Sun account");
   }
 
+  logger.info("Great Sun account created successfully", {
+    accountID: greatSun.accountID,
+    requestId,
+  });
   return greatSun.accountID;
 }
 
-async function createVimbisoPay(memberID: string): Promise<string> {
+async function createVimbisoPay(
+  memberID: string,
+  requestId: string
+): Promise<string> {
   const vimbisoPay = await CreateAccountService(
     memberID,
     "BUSINESS",
@@ -248,9 +355,17 @@ async function createVimbisoPay(memberID: string): Promise<string> {
   );
 
   if (!vimbisoPay || !vimbisoPay.accountID) {
+    logger.error("Failed to create VimbisoPay account", {
+      memberID,
+      requestId,
+    });
     throw new Error("Failed to create VimbisoPay account");
   }
 
+  logger.info("VimbisoPay account created successfully", {
+    accountID: vimbisoPay.accountID,
+    requestId,
+  });
   return vimbisoPay.accountID;
 }
 
@@ -258,7 +373,8 @@ async function createInitialRelationships(
   session: any,
   credexFoundationID: string,
   greatSunID: string,
-  vimbisoPayID: string
+  vimbisoPayID: string,
+  requestId: string
 ): Promise<void> {
   await session.run(
     `
@@ -271,13 +387,23 @@ async function createInitialRelationships(
   `,
     { credexFoundationID, greatSunID, vimbisoPayID }
   );
+
+  logger.info("Initial relationships created successfully", {
+    credexFoundationID,
+    greatSunID,
+    vimbisoPayID,
+    requestId,
+  });
 }
 
 async function createInitialCredex(
   memberID: string,
   issuerAccountID: string,
-  receiverAccountID: string
+  receiverAccountID: string,
+  requestId: string
 ): Promise<void> {
+  logger.info("Creating initial Credex for DBinitialization", { requestId });
+
   const credexData = {
     memberID,
     issuerAccountID,
@@ -286,21 +412,46 @@ async function createInitialCredex(
     InitialAmount: 365, // fund DCO for a year with no adjustments
     credexType: "PURCHASE",
     securedCredex: true,
+    requestId,
   };
 
+  logger.debug("Offering initial Credex", { requestId, credexData });
   const DCOinitializationOfferCredex = await OfferCredexService(credexData);
+
   if (typeof DCOinitializationOfferCredex.credex === "boolean") {
+    logger.error("Invalid response from OfferCredexService", { requestId });
     throw new Error("Invalid response from OfferCredexService");
   }
+
   if (
     DCOinitializationOfferCredex.credex &&
     typeof DCOinitializationOfferCredex.credex.credexID === "string"
   ) {
+    logger.info("Initial Credex offered successfully", {
+      requestId,
+      credexID: DCOinitializationOfferCredex.credex.credexID,
+    });
+
+    logger.debug("Accepting initial Credex", {
+      requestId,
+      credexID: DCOinitializationOfferCredex.credex.credexID,
+      memberID,
+    });
     await AcceptCredexService(
       DCOinitializationOfferCredex.credex.credexID,
-      memberID
+      memberID,
+      requestId
     );
+    logger.info("Initial Credex accepted successfully", {
+      requestId,
+      credexID: DCOinitializationOfferCredex.credex.credexID,
+    });
   } else {
+    logger.error("Invalid credexID from OfferCredexService", { requestId });
     throw new Error("Invalid credexID from OfferCredexService");
   }
+
+  logger.info("Initial Credex creation completed", { requestId });
 }
+
+// ... [rest of the code remains unchanged] ...

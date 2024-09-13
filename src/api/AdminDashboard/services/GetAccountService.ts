@@ -1,11 +1,14 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { logError } from "../../../utils/logger";
+import logger from "../../../utils/logger";
 
 export default async function GetAccount(
   accountHandle: string,
   accountID: string
 ): Promise<any> {
+  logger.debug('GetAccount service called', { accountHandle, accountID });
+
   if (!accountHandle && !accountID) {
+    logger.warn('No accountHandle or accountID provided');
     return {
       message: "The AccountID or accountHandle is required",
     };
@@ -19,6 +22,8 @@ export default async function GetAccount(
   const parameters = accountHandle ? { accountHandle } : { accountID };
 
   try {
+    logger.info('Executing query to fetch account details', { accountMatchCondition });
+
     const query = `MATCH (account:Account {${accountMatchCondition}})<-[:OWNS]-(member:Member)
     WITH account, member
     OPTIONAL MATCH (account)-[:OWES]->(owedCredex)-[:OWES]->(owedAccount)
@@ -58,22 +63,30 @@ export default async function GetAccount(
     });
 
     if (!account.length) {
+      logger.warn('Account not found', { accountHandle, accountID });
       return {
         message: "Account not found",
       };
     }
 
+    logger.info('Account fetched successfully', { accountID: account[0].accountID });
     return {
       message: "Account fetched successfully",
       data: account,
     };
   } catch (error) {
-    logError("Error fetching account", error as Error);
+    logger.error('Error fetching account', { 
+      accountHandle, 
+      accountID, 
+      error: (error as Error).message,
+      stack: (error as Error).stack
+    });
     return {
       message: "Error fetching account",
       error: error,
     };
   } finally {
     await ledgerSpaceSession.close();
+    logger.debug('LedgerSpace session closed');
   }
 }

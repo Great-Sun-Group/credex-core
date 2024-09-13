@@ -1,5 +1,7 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import * as neo4j from "neo4j-driver";
+import { digitallySign } from "../../../utils/digitalSignature";
+import logger from "../../../utils/logger";
 
 interface RecurringParams {
   signerMemberID: string;
@@ -12,9 +14,13 @@ interface RecurringParams {
   securedCredex?: boolean;
   credspan?: number;
   remainingPays?: number;
+  requestId: string;
 }
 
-export async function RequestRecurringService(params: RecurringParams): Promise<string | null> {
+export async function RequestRecurringService(
+  params: RecurringParams
+): Promise<string | null> {
+  logger.debug("RequestRecurringService entered", { ...params });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -52,7 +58,6 @@ export async function RequestRecurringService(params: RecurringParams): Promise<
       CREATE (requestor)<-[:REQUESTS]-(recurring)<-[:REQUESTS]-(counterparty)
       CREATE (requestor)<-[:REQUESTED]-(recurring)<-[:REQUESTED]-(counterparty)
       CREATE (requestor)<-[:AUTHORIZED_FOR]-(recurring)
-      CREATE (signer)-[:SIGNED]--(recurring)
       CREATE (recurring)-[:CREATED_ON]--(daynode)
       RETURN
         recurring.memberID AS avatarID
@@ -62,14 +67,78 @@ export async function RequestRecurringService(params: RecurringParams): Promise<
       ...params,
       daysBetweenPays: neo4j.int(params.daysBetweenPays),
       credspan: params.credspan ? neo4j.int(params.credspan) : undefined,
-      remainingPays: params.remainingPays ? neo4j.int(params.remainingPays) : undefined
+      remainingPays: params.remainingPays
+        ? neo4j.int(params.remainingPays)
+        : undefined,
     };
 
-    const createRecurringQuery = await ledgerSpaceSession.run(cypher, neo4jParams);
+    logger.debug("Executing create recurring query", {
+      requestId: params.requestId,
+    });
+    const createRecurringQuery = await ledgerSpaceSession.run(
+      cypher,
+      neo4jParams
+    );
+    const avatarID = createRecurringQuery.records[0]?.get("avatarID");
 
-    return createRecurringQuery.records[0]?.get("avatarID") || null;
-  } catch (error) {
-    console.error("Error creating recurring avatar:", error);
+    if (avatarID) {
+      logger.debug("Creating digital signature", {
+        avatarID,
+        requestId: params.requestId,
+      });
+      const inputData = JSON.stringify({
+        requestorAccountID: params.requestorAccountID,
+        counterpartyAccountID: params.counterpartyAccountID,
+        InitialAmount: params.InitialAmount,
+        Denomination: params.Denomination,
+        nextPayDate: params.nextPayDate,
+        daysBetweenPays: params.daysBetweenPays,
+        securedCredex: params.securedCredex,
+        credspan: params.credspan,
+        remainingPays: params.remainingPays,
+      });
+
+      await digitallySign(
+        ledgerSpaceSession,
+        params.signerMemberID,
+        "Avatar",
+        avatarID,
+        "CREATE_RECURRING_AVATAR",
+        inputData,
+        params.requestId
+      );
+
+      logger.info("Recurring avatar created successfully", {
+        avatarID,
+        requestId: params.requestId,
+      });
+    } else {
+      logger.warn("Failed to create recurring avatar", {
+        requestId: params.requestId,
+      });
+    }
+
+    logger.debug("RequestRecurringService exiting", {
+      avatarID,
+      requestId: params.requestId,
+    });
+    return avatarID || null;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      logger.error("Error creating recurring avatar", {
+        requestId: params.requestId,
+        error: error.message,
+        stack: error.stack,
+      });
+    } else {
+      logger.error("Unknown error creating recurring avatar", {
+        requestId: params.requestId,
+        error: String(error),
+      });
+    }
+    logger.debug("RequestRecurringService exiting with error", {
+      requestId: params.requestId,
+    });
     return null;
   } finally {
     await ledgerSpaceSession.close();

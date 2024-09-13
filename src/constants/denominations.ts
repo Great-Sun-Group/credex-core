@@ -48,8 +48,8 @@ const denominations: Denomination[] = [
     sourceForRate: "OpenExchangeRates",
   },
   {
-    code: "ZIG",
-    fulldescription: "ZIG (Zimbabwe Gold Official Rate)",
+    code: "ZWG",
+    fulldescription: "ZWG (Zimbabwe Gold Official Rate)",
     regionalization: "en-CA",
     sourceForRate: "RBZ",
   },

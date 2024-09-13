@@ -1,28 +1,6 @@
-/*
-updates data for a account
-
-requires object of account data to be updated
-field required: accountID
-
-fields that can be updated:
-    firstname
-    lastname
-    companyname
-    phone
-    accountHandle
-    DailyCredcoinOfferingGive
-    DailyCredcoinOfferingDenom
-
-if extraneous data or data not matching criteria is included it will be ignored, data
-that fits criteria (if any) will still be updated, and success message will be returned
-
-returns accountID of updated account
-
-returns null on error
-*/
-
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { getDenominations } from "../../../constants/denominations";
+import logger from "../../../utils/logger";
 
 export async function UpdateAccountService(
   ownerID: string,
@@ -31,10 +9,18 @@ export async function UpdateAccountService(
   accountHandle: string,
   defaultDenom: string
 ) {
+  logger.debug("UpdateAccountService called", {
+    ownerID,
+    accountID,
+    accountName,
+    accountHandle,
+    defaultDenom,
+  });
+
   // Validation: Check defaultDenom in denominations
   if (!getDenominations({ code: defaultDenom }).length) {
     const message = "defaultDenom not in denoms";
-    console.log(message);
+    logger.warn(message, { defaultDenom });
     return false;
   }
 
@@ -47,6 +33,10 @@ export async function UpdateAccountService(
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
+    logger.debug("Executing database query to update account", {
+      ownerID,
+      accountID,
+    });
     const result = await ledgerSpaceSession.run(
       `
         MATCH
@@ -60,14 +50,23 @@ export async function UpdateAccountService(
     );
 
     if (!result.records[0].get("accountID")) {
+      logger.warn("Account not found or update failed", { ownerID, accountID });
       return false;
     }
 
-    return result.records[0].get("accountID");
+    const updatedAccountID = result.records[0].get("accountID");
+    logger.info("Account updated successfully", { updatedAccountID, ownerID });
+    return updatedAccountID;
   } catch (error) {
-    console.error("Error updating account data:", error);
+    logger.error("Error updating account data", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      ownerID,
+      accountID,
+    });
     return null;
   } finally {
+    logger.debug("Closing database session", { ownerID, accountID });
     await ledgerSpaceSession.close();
   }
 }

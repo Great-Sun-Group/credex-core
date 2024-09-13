@@ -54,25 +54,25 @@ export async function GrowthTestService(variables: any) {
       );
       await SellSecuredCredexesService("USD", numberUSDsales);
 
-      const numberZIGpurchases = Math.round(
-        numberAccounts * variables.ZIG_SECURED_fractionToPurchase
+      const numberZWGpurchases = Math.round(
+        numberAccounts * variables.ZWG_SECURED_fractionToPurchase
       );
       await PurchaseSecuredCredexesService(
-        "ZIG",
-        numberZIGpurchases,
-        variables.ZIG_SECURED_amountPerPurchaseLow,
-        variables.ZIG_SECURED_amountPerPurchaseHigh
+        "ZWG",
+        numberZWGpurchases,
+        variables.ZWG_SECURED_amountPerPurchaseLow,
+        variables.ZWG_SECURED_amountPerPurchaseHigh
       );
 
-      const numberZIGsecuredCirculate = Math.round(
-        numberAccounts * variables.ZIG_SECURED_fractionToCirculate
+      const numberZWGsecuredCirculate = Math.round(
+        numberAccounts * variables.ZWG_SECURED_fractionToCirculate
       );
-      await InEcosystemSecuredCredexesService("ZIG", numberZIGsecuredCirculate);
+      await InEcosystemSecuredCredexesService("ZWG", numberZWGsecuredCirculate);
 
-      const numberZIGsales = Math.round(
-        numberAccounts * variables.ZIG_SECURED_fractionToSell
+      const numberZWGsales = Math.round(
+        numberAccounts * variables.ZWG_SECURED_fractionToSell
       );
-      await SellSecuredCredexesService("ZIG", numberZIGsales);
+      await SellSecuredCredexesService("ZWG", numberZWGsales);
 
       const numberRandomFloatingTransactions = Math.round(
         numberAccounts * variables.dailyFloatingRandomTransactionsPerAccount

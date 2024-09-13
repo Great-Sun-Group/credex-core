@@ -2,9 +2,10 @@ import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 import { config } from "../../config/config";
 import { v4 as uuidv4 } from "uuid";
+import { Request, Response, NextFunction } from 'express';
 
-// Configure the logger
-const logger = winston.createLogger({
+// Configure the base logger
+const baseLogger = winston.createLogger({
   level: config.nodeEnv === "production" ? "info" : "debug",
   format: winston.format.combine(
     winston.format.timestamp(),
@@ -14,6 +15,18 @@ const logger = winston.createLogger({
   ),
   defaultMeta: { service: "credex-core" },
   transports: [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      ),
+    }),
+  ],
+});
+
+// Add file transports for production environment
+if (config.nodeEnv === "production") {
+  baseLogger.add(
     new DailyRotateFile({
       filename: "logs/error-%DATE%.log",
       datePattern: "YYYY-MM-DD",
@@ -21,25 +34,15 @@ const logger = winston.createLogger({
       maxSize: "20m",
       maxFiles: "14d",
       level: "error",
-    }),
+    })
+  );
+  baseLogger.add(
     new DailyRotateFile({
       filename: "logs/combined-%DATE%.log",
       datePattern: "YYYY-MM-DD",
       zippedArchive: true,
       maxSize: "20m",
       maxFiles: "14d",
-    }),
-  ],
-});
-
-// Add console transport for non-production environments
-if (config.nodeEnv !== "production") {
-  logger.add(
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      ),
     })
   );
 }
@@ -66,11 +69,11 @@ function sanitizeData(data: any): any {
 
 // Standardized logging functions
 export const logInfo = (message: string, meta?: any) => {
-  logger.info(message, { ...meta, timestamp: new Date().toISOString() });
+  baseLogger.info(message, { ...meta, timestamp: new Date().toISOString() });
 };
 
 export const logError = (message: string, error: Error, meta?: any) => {
-  logger.error(message, {
+  baseLogger.error(message, {
     ...meta,
     error: {
       message: error.message,
@@ -81,22 +84,31 @@ export const logError = (message: string, error: Error, meta?: any) => {
 };
 
 export const logWarning = (message: string, meta?: any) => {
-  logger.warn(message, { ...meta, timestamp: new Date().toISOString() });
+  baseLogger.warn(message, { ...meta, timestamp: new Date().toISOString() });
 };
 
 export const logDebug = (message: string, meta?: any) => {
-  logger.debug(message, { ...meta, timestamp: new Date().toISOString() });
+  baseLogger.debug(message, { ...meta, timestamp: new Date().toISOString() });
 };
 
+// Extend the Express Request interface
+declare global {
+  namespace Express {
+    interface Request {
+      id: string;
+    }
+  }
+}
+
 // Request ID middleware
-export const addRequestId = (req: any, res: any, next: any) => {
+export const addRequestId = (req: Request, res: Response, next: NextFunction) => {
   req.id = uuidv4();
   res.setHeader("X-Request-ID", req.id);
   next();
 };
 
 // Express request logger middleware
-export const expressLogger = (req: any, res: any, next: any) => {
+export const expressLogger = (req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   res.on("finish", () => {
     const duration = Date.now() - start;
@@ -118,7 +130,7 @@ export const expressLogger = (req: any, res: any, next: any) => {
 };
 
 // Error logger middleware
-export const errorLogger = (err: Error, req: any, res: any, next: any) => {
+export const errorLogger = (err: Error, req: Request, res: Response, next: NextFunction) => {
   logError("Request Error", err, {
     requestId: req.id,
     method: req.method,
@@ -140,7 +152,7 @@ export const logDCORates = (
   logInfo("DCO Rates", { XAUrate, CXXrate, CXXmultiplier });
 };
 
-export default logger;
+export default baseLogger;
 
 // TODO: Implement log aggregation and centralized logging for production environments
 // TODO: Implement log retention policies based on compliance requirements

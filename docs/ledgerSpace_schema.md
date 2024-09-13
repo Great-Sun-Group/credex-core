@@ -123,7 +123,7 @@ graph TB
 - CXX: number
 - USD: number
 - CAD: number
-- ZiG: number
+- ZWG: number
 
 ## Relationship Properties
 
