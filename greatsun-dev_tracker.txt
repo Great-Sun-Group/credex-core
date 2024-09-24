@@ -1,5 +1,5 @@
 avatar-splendid-skua
 
-readme
+terminal test plan
 
-Commit-ID: ed8f5a4d-34bb-4d43-b469-6c9312ab0f65
+Commit-ID: f9216cff-f066-4e4c-9e7b-5874295aa304
