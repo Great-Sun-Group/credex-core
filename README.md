@@ -61,7 +61,7 @@ Controllers for the endpoints are imported, and endpoints created for the variou
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/Credex/credex-core.git
+   git clone https://github.com/Great-Sun-Group/credex-core.git
    ```
 
 2. Open the project in Visual Studio Code.
@@ -100,13 +100,17 @@ To set up your development environment, you'll need to configure the following e
 
 ### These secrets must be added to your environment
 
-4. NEO4J_LEDGER_SPACE_BOLT_URL, NEO4J_LEDGER_SPACE_USER, NEO4J_LEDGER_SPACE_PASS:
+4. NEO4J_LEDGER_SPACE_BOLT_URL,
+   NEO4J_LEDGER_SPACE_USER,
+   NEO4J_LEDGER_SPACE_PASS
 
    - Sign up for a free Neo4j Aura account at https://neo4j.com/cloud/aura/
    - Create a new database instance for ledgerSpace
    - Use the provided connection details to fill in these variables
 
-5. NEO4J_SEARCH_SPACE_BOLT_URL, NEO4J_SEARCH_SPACE_USER, NEO4J_SEARCH_SPACE_PASS:
+5. NEO4J_SEARCH_SPACE_BOLT_URL,
+   NEO4J_SEARCH_SPACE_USER,
+   NEO4J_SEARCH_SPACE_PASS
 
    - Create a second Neo4j Aura account using a different email address and create a new database instance for searchSpace
 
@@ -153,29 +157,6 @@ To set up your development environment, you'll need to configure the following e
 ## Project structure and code summary
 
 For a detailed overview of the codebase, including function and class definitions, please refer to the [Code Summary](docs/code_summary.md). This summary is particularly useful for AI context and assists in understanding the overall structure and key components of the project.
-
-```
-credex-core/
-├── .githooks/             # Git hooks scripts
-├── .vscode/               # VS Code configuration files
-├── build/                 # Compiled output
-├── config/                # Configuration files
-├── docs/                  # Documentation files
-├── src/                   # Source code
-│   ├── api/               # API-related code
-│   │   ├── Account/       # Account-related endpoints and services
-│   │   ├── AdminDashboard/# Admin dashboard endpoints and services
-│   │   ├── Avatar/        # Avatar-related endpoints and services
-│   │   ├── Credex/        # Credex-related endpoints and services
-│   │   └── Member/        # Member-related endpoints and services
-│   ├── constants/         # Constant values used across the application
-│   ├── core-cron/         # Core cron jobs (DCO and MTQ)
-│   │   ├── DCO/           # Daily Credcoin Offering related code
-│   │   └── MTQ/           # Minute Transaction Queue related code
-│   ├── middleware/        # Express middleware
-│   ├── tests/             # Test files
-│   └── utils/             # Utility functions and helpers
-```
 
 ## Contributing
 
