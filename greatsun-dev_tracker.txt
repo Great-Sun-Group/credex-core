@@ -1,5 +1,5 @@
 avatar-splendid-skua
 
-terminal test plan
+avatar restructure
 
-Commit-ID: f9216cff-f066-4e4c-9e7b-5874295aa304
+Commit-ID: 0ceb3571-0b72-4a64-aff3-0998d68b8b08
