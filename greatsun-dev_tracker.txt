@@ -1,5 +1,5 @@
-avatar-splendid-skua
+dev
 
-avatar restructure
+both servers running again
 
-Commit-ID: 0ceb3571-0b72-4a64-aff3-0998d68b8b08
+Commit-ID: 660728eb-bedd-4e84-95ce-f4fa07c33fa7
