@@ -4,6 +4,7 @@ import MemberRoutes from "./api/Member/memberRoutes";
 import AccountRoutes from "./api/Account/accountRoutes";
 import CredexRoutes from "./api/Credex/credexRoutes";
 import RecurringRoutes from "./api/Avatar/recurringRoutes";
+import DevRoutes from "./api/Dev/devRoutes";
 import logger, { expressLogger } from "./utils/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./core-cron/cronJobs";
@@ -62,12 +63,18 @@ AdminDashboardRoutes(app, jsonParser);
 RecurringRoutes(app, jsonParser);
 logger.info("Applied route handlers for all modules");
 
+// Apply route handlers for dev-only routes
+//if (process.env.DEPLOYMENT === "development") {
+  app.use(`${apiVersionOneRoute}dev`, jsonParser, DevRoutes);
+  logger.info("Applied route handlers for dev-only routes");
+//}
+
 // Apply error handling middleware
 app.use(notFoundHandler); // Handle 404 errors
 app.use(errorHandler); // Handle all other errors
 logger.info("Applied error handling middleware");
 
-// Start the server
+// Start the server if this file is run directly
 if (require.main === module) {
   const server = startServer(app);
   setupGracefulShutdown(server);
@@ -76,3 +83,6 @@ if (require.main === module) {
 }
 
 logger.info("Application initialization complete");
+
+// Export the app for testing or if this file is imported as a module
+export default app;
