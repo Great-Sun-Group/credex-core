@@ -49,88 +49,7 @@ Controllers for the endpoints are imported, and endpoints created for the variou
 
 ## Development Setup
 
-### Local Development with devcontainer
-
-#### Prerequisites
-
-- Docker and Docker Compose
-- Visual Studio Code with Remote - Containers extension
-
-#### Steps
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/Great-Sun-Group/credex-core.git
-   ```
-
-2. Open the project in Visual Studio Code.
-
-3. When prompted, click "Reopen in Container" to start the dev container. This will set up a consistent development environment with all necessary dependencies.
-
-4. Once the container is ready, copy the `.env.example` file to `.env` and fill in the necessary environment variables.
-
-5. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-### Codespaces Development
-
-1. Add the secrets to your personal github Settings->Codespaces and assign them to the credex-core repo.
-
-2. Open the project in GitHub Codespaces.
-
-3. The devcontainer will automatically set up a consistent development environment with all necessary dependencies and environment variables.
-
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-## Environment variables configuration
-
-To set up your development environment, you'll need to configure the following environment variables:
-
-### These have defaults and do not need to be configured in your environment
-
-1. PORT: Set this to 5000 for local development.
-2. NODE_ENV: Set this to 'development' for local development.
-3. DEPLOYMENT: Set this to 'dev' for development deployment.
-
-### These secrets must be added to your environment
-
-4. NEO4J_LEDGER_SPACE_BOLT_URL,
-   NEO4J_LEDGER_SPACE_USER,
-   NEO4J_LEDGER_SPACE_PASS
-
-   - Sign up for a free Neo4j Aura account at https://neo4j.com/cloud/aura/
-   - Create a new database instance for ledgerSpace
-   - Use the provided connection details to fill in these variables
-
-5. NEO4J_SEARCH_SPACE_BOLT_URL,
-   NEO4J_SEARCH_SPACE_USER,
-   NEO4J_SEARCH_SPACE_PASS
-
-   - Create a second Neo4j Aura account using a different email address and create a new database instance for searchSpace
-
-6. OPEN_EXCHANGE_RATES_API:
-
-   - Sign up for a free account at https://openexchangerates.org/
-   - Go to your account dashboard and create and copy your API key
-
-7. JWT_SECRET: Create a strong, unique string to use as your secret
-
-8. WHATSAPP_BOT_API_KEY: Create a strong, unique string to use as your secret
-
-## Available Scripts
-
-- `npm run dev`: Start the development server with nodemon
-- `npm run build`: Build the TypeScript project
-- `npm run start`: Start the production server
-- `npm run test`: Run the test suite
-- `npm run lint`: Run ESLint to check for code quality issues
-- `npm run format`: Run Prettier to format the code
+Development for the credex-core repository and API is intended to be carried out in the [greatsun-dev](https://github.com/Great-Sun-Group/greatsun-dev) environment.
 
 ## Module Documentation
 
@@ -154,32 +73,13 @@ To set up your development environment, you'll need to configure the following e
 - [Security Overview](docs/security.md)
 - [Swagger API Documentation](docs/swagger.md)
 
-## Project structure and code summary
-
-For a detailed overview of the codebase, including function and class definitions, please refer to the [Code Summary](docs/code_summary.md). This summary is particularly useful for AI context and assists in understanding the overall structure and key components of the project.
-
-## Contributing
-
-1. Create a branch from the 'dev' branch.
-2. Make your changes and commit them with clear, concise commit messages.
-3. Push your changes and create a pull request against the 'dev' branch.
-4. Follow the [Logging Best Practices](docs/logging_best_practices.md) when adding or modifying code.
-
-## Deployment
-
-1. Contributors branch from `dev` and complete work and testing on an issue, fix, or feature.
-2. Contributor requests review from reviewer on merge to `dev` .
-3. Reviewer tests and merges.
-4. Dev is regularly merged with all recent commits to `stage`, which is auto-deployed to demo deployment.
-5. Demo deployment is tested thoroughly in CI/CD pipeline.
-6. When tests are passed, stage is merged to `prod`, which is auto-deployed to our production branch.
 
 ## License
 
-You are welcome to explore, experiment with, and build upon this work for research, development, modelling, testing, demonstrations, and other non-commercial purposes. Please contribute!
+You are welcome to explore, experiment with, and build upon this work for research, development, modeling, testing, demonstrations, and other non-commercial purposes. Please contribute!
 
 The use of this software in any production environment is strictly prohibited. You do not have permission to use this software to track real debts. Real data of past transactions may be used, but only as data input. If you want to transact real value with credex, you are invited to become a member of the credex ecosystem.
 
-If you create something new based on this project, you must use the same license terms and give appropriate credit to the original work. You may not sell the software or any product or service that substantially relies on its functionality.
+If you create something new based on this project, you must use the same license terms and give appropriate credit to the original work. You may not sell the software or any product or service that substantially relies on its functionality, except functionality deployed in the live credex ecosystem that all members can access.
 
 This approach allows for community engagement and experimentation while ensuring the integrity and unity of the system as a single shared economic network that all can access and benefit from.
