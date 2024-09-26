@@ -54,18 +54,6 @@ export const onboardMemberSchema = {
 };
 logger.debug("onboardMemberSchema initialized");
 
-export const updateMemberTierSchema = {
-  memberID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-  },
-  tier: {
-    sanitizer: (value: any) => Number(value),
-    validator: v.validateTier,
-  },
-};
-logger.debug("updateMemberTierSchema initialized");
-
 export const authForTierSpendLimitSchema = {
   memberID: {
     sanitizer: s.sanitizeUUID,

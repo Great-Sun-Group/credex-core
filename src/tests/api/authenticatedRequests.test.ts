@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosInstance } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 

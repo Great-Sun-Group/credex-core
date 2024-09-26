@@ -1,5 +1,4 @@
 import express from "express";
-import { apiVersionOneRoute } from "../../index";
 import { OfferCredexController } from "./controllers/offerCredex";
 import { AcceptCredexController } from "./controllers/acceptCredex";
 import { AcceptCredexBulkController } from "./controllers/acceptCredexBulk";
@@ -19,10 +18,8 @@ import {
 } from "./credexValidationSchemas";
 import logger from "../../utils/logger";
 
-export default function CredexRoutes(
-  app: express.Application,
-  jsonParser: any
-) {
+export default function CredexRoutes(jsonParser: express.RequestHandler) {
+  const router = express.Router();
   logger.info("Initializing Credex routes");
 
   /**
@@ -73,8 +70,8 @@ export default function CredexRoutes(
    *       403:
    *         description: Forbidden
    */
-  app.post(
-    `${apiVersionOneRoute}offerCredex`,
+  router.post(
+    `/offerCredex`,
     jsonParser,
     authMiddleware(["member"]),
     validateRequest(offerCredexSchema),
@@ -117,8 +114,8 @@ export default function CredexRoutes(
    *       403:
    *         description: Forbidden
    */
-  app.put(
-    `${apiVersionOneRoute}acceptCredex`,
+  router.put(
+    `/acceptCredex`,
     jsonParser,
     authMiddleware(["member"]),
     validateRequest(acceptCredexSchema),
@@ -163,8 +160,8 @@ export default function CredexRoutes(
    *       403:
    *         description: Forbidden
    */
-  app.put(
-    `${apiVersionOneRoute}acceptCredexBulk`,
+  router.put(
+    `/acceptCredexBulk`,
     jsonParser,
     authMiddleware(["member"]),
     validateRequest({
@@ -215,8 +212,8 @@ export default function CredexRoutes(
    *       403:
    *         description: Forbidden
    */
-  app.put(
-    `${apiVersionOneRoute}declineCredex`,
+  router.put(
+    `/declineCredex`,
     jsonParser,
     authMiddleware(["member"]),
     validateRequest(declineCredexSchema),
@@ -256,8 +253,8 @@ export default function CredexRoutes(
    *       403:
    *         description: Forbidden
    */
-  app.put(
-    `${apiVersionOneRoute}cancelCredex`,
+  router.put(
+    `/cancelCredex`,
     jsonParser,
     authMiddleware(["member"]),
     validateRequest(cancelCredexSchema),
@@ -299,8 +296,8 @@ export default function CredexRoutes(
    *       404:
    *         description: Credex not found
    */
-  app.get(
-    `${apiVersionOneRoute}getCredex`,
+  router.get(
+    `/getCredex`,
     authMiddleware(["member"]),
     validateRequest(getCredexSchema, "query"),
     (req: express.Request, res: express.Response) => {
@@ -342,8 +339,8 @@ export default function CredexRoutes(
    *       403:
    *         description: Forbidden
    */
-  app.get(
-    `${apiVersionOneRoute}getLedger`,
+  router.get(
+    `/getLedger`,
     authMiddleware(["member"]),
     validateRequest(getLedgerSchema, "query"),
     (req: express.Request, res: express.Response) => {
@@ -354,4 +351,5 @@ export default function CredexRoutes(
   logger.debug("Registered route: GET /api/v1/getLedger");
 
   logger.info("Credex routes initialized successfully");
+  return router;
 }

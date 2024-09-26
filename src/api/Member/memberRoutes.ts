@@ -1,7 +1,6 @@
 import express from "express";
 import { GetMemberByHandleController } from "./controllers/getMemberByHandle";
 import { GetMemberDashboardByPhoneController } from "./controllers/getMemberDashboardByPhone";
-import { updateMemberTierExpressHandler } from "./controllers/updateMemberTier";
 import { onboardMemberExpressHandler } from "./controllers/onboardMember";
 import { loginMemberExpressHandler } from "./controllers/loginMember";
 import { authForTierSpendLimitExpressHandler } from "./controllers/authForTierSpendLimit";
@@ -11,7 +10,6 @@ import {
   getMemberByHandleSchema,
   getMemberDashboardByPhoneSchema,
   onboardMemberSchema,
-  updateMemberTierSchema,
   authForTierSpendLimitSchema,
   loginMemberSchema,
 } from "./memberValidationSchemas";
@@ -178,51 +176,6 @@ router.post(
 logger.debug("Registered route: POST /member/onboardMember", {
   module: "memberRoutes",
   route: "/onboardMember",
-  method: "POST",
-});
-
-/**
- * @openapi
- * /member/updateMemberTier:
- *   post:
- *     tags:
- *       - Member
- *     summary: Update member tier
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - memberID
- *               - tier
- *             properties:
- *               memberID:
- *                 type: string
- *               tier:
- *                 type: number
- *     responses:
- *       200:
- *         description: Successful response
- *       400:
- *         description: Bad request
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden
- */
-router.post(
-  "/updateMemberTier",
-  authMiddleware(["admin"]),
-  validateRequest(updateMemberTierSchema),
-  updateMemberTierExpressHandler
-);
-logger.debug("Registered route: POST /member/updateMemberTier", {
-  module: "memberRoutes",
-  route: "/updateMemberTier",
   method: "POST",
 });
 

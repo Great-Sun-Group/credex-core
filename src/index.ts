@@ -13,7 +13,10 @@ import AdminDashboardRoutes from "./api/AdminDashboard/adminDashboardRoutes";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import swaggerUi from "swagger-ui-express";
 import { swaggerSpec } from "../config/swagger";
-import { applySecurityMiddleware } from "./middleware/securityConfig";
+import {
+  applySecurityMiddleware,
+  applyDevSecurityMiddleware,
+} from "./middleware/securityConfig";
 import { startServer, setupGracefulShutdown, setupUncaughtExceptionHandler, setupUnhandledRejectionHandler } from "./utils/serverSetup";
 
 // Create an Express application
@@ -55,19 +58,22 @@ logger.info("Applied rate limiting middleware", {
 startCronJobs();
 logger.info("Started cron jobs for scheduled tasks");
 
-// Apply route handlers for different modules
+// Apply route handlers for hardened modules
 app.use(`${apiVersionOneRoute}member`, jsonParser, MemberRoutes);
-AccountRoutes(app, jsonParser);
-CredexRoutes(app, jsonParser);
-AdminDashboardRoutes(app, jsonParser);
-RecurringRoutes(app, jsonParser);
-logger.info("Applied route handlers for all modules");
+AccountRoutes(app);
+CredexRoutes(app);
+AdminDashboardRoutes(app);
+RecurringRoutes(app);
+logger.info("Applied route handlers for hardened modules");
 
 // Apply route handlers for dev-only routes
-//if (process.env.DEPLOYMENT === "development") {
+if (
+  process.env.DEPLOYMENT !== "production" &&
+  process.env.DEPLOYMENT !== "staging"
+) {
   app.use(`${apiVersionOneRoute}dev`, jsonParser, DevRoutes);
   logger.info("Applied route handlers for dev-only routes");
-//}
+}
 
 // Apply error handling middleware
 app.use(notFoundHandler); // Handle 404 errors
