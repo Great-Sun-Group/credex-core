@@ -1,5 +1,4 @@
 import express from "express";
-import { apiVersionOneRoute } from "../../index";
 import { RequestRecurringController } from "./controllers/requestRecurring";
 import { AcceptRecurringController } from "./controllers/acceptRecurring";
 import { DeclineRecurringController } from "./controllers/cancelRecurring";
@@ -13,10 +12,8 @@ import {
 } from "./avatarValidationSchemas";
 import logger from "../../utils/logger";
 
-export default function RecurringRoutes(
-  app: express.Application,
-  jsonParser: express.RequestHandler
-) {
+export default function RecurringRoutes(jsonParser: express.RequestHandler) {
+  const router = express.Router();
   logger.info('Initializing Recurring Routes');
 
   /**
@@ -43,8 +40,8 @@ export default function RecurringRoutes(
    *       403:
    *         description: Forbidden
    */
-  app.post(
-    `${apiVersionOneRoute}requestRecurring`,
+  router.post(
+    `/requestRecurring`,
     jsonParser,
     authMiddleware(['member']),
     validateRequest(requestRecurringSchema),
@@ -79,8 +76,8 @@ export default function RecurringRoutes(
    *       403:
    *         description: Forbidden
    */
-  app.put(
-    `${apiVersionOneRoute}acceptRecurring`,
+  router.put(
+    `/acceptRecurring`,
     jsonParser,
     authMiddleware(['member']),
     validateRequest(acceptRecurringSchema),
@@ -115,8 +112,8 @@ export default function RecurringRoutes(
    *       403:
    *         description: Forbidden
    */
-  app.delete(
-    `${apiVersionOneRoute}cancelRecurring`,
+  router.delete(
+    `/cancelRecurring`,
     jsonParser,
     authMiddleware(['member']),
     validateRequest(cancelRecurringSchema),
@@ -128,6 +125,7 @@ export default function RecurringRoutes(
   );
 
   logger.info('Recurring Routes initialized');
+  return router;
 }
 
 /**

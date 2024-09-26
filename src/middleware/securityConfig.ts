@@ -5,7 +5,7 @@ import { rateLimiter } from "./rateLimiter";
 import { authMiddleware } from "./authMiddleware";
 
 export const applySecurityMiddleware = (app: Application) => {
-  // Apply Helmet with stricter settings
+  // Apply Helmet with strict settings
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -30,7 +30,7 @@ export const applySecurityMiddleware = (app: Application) => {
     })
   );
 
-  // Configure CORS to be more permissive
+  // CORS highly permissive (UPDATE FOR PROD)
   const corsOptions = {
     origin: '*', // Allow all origins
     methods: ["GET", "POST", "PUT", "DELETE"],
@@ -40,7 +40,53 @@ export const applySecurityMiddleware = (app: Application) => {
   };
   app.use(cors(corsOptions));
 
-  // Apply authentication middleware
+  //apply middleware to all routes
+  app.use(authMiddleware);
+
+  // Apply rate limiting after authentication
+  app.use(rateLimiter);
+
+  return app;
+};
+
+
+export const applyDevSecurityMiddleware = (app: Application) => {
+  // Apply Helmet with strict settings
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:"],
+          fontSrc: ["'self'"],
+          frameAncestors: ["'self'"],
+          formAction: ["'self'"],
+        },
+      },
+      referrerPolicy: {
+        policy: "strict-origin-when-cross-origin",
+      },
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+    })
+  );
+
+  // CORS highly permissive
+  const corsOptions = {
+    origin: "*", // Allow all origins
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+    maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
+  };
+  app.use(cors(corsOptions));
+
+  //apply middleware to all routes
   app.use(authMiddleware);
 
   // Apply rate limiting after authentication

@@ -1,5 +1,4 @@
 import express from "express";
-import { apiVersionOneRoute } from "../../index";
 import { CreateAccountController } from "./controllers/createAccount";
 import { GetAccountByHandleController } from "./controllers/getAccountByHandle";
 import { UpdateAccountController } from "./controllers/updateAccount";
@@ -20,10 +19,8 @@ import {
 } from "./accountValidationSchemas";
 import logger from "../../utils/logger";
 
-export default function AccountRoutes(
-  app: express.Application,
-  jsonParser: express.RequestHandler
-) {
+export default function AccountRoutes(jsonParser: express.RequestHandler) {
+  const router = express.Router();
   logger.info("Initializing Account routes");
 
   /**
@@ -52,8 +49,8 @@ export default function AccountRoutes(
    *       429:
    *         description: Too many requests
    */
-  app.post(
-    `${apiVersionOneRoute}createAccount`,
+  router.post(
+    `/createAccount`,
     rateLimiter,
     jsonParser,
     authMiddleware(["member"]),
@@ -91,8 +88,8 @@ export default function AccountRoutes(
    *       429:
    *         description: Too many requests
    */
-  app.get(
-    `${apiVersionOneRoute}getAccountByHandle`,
+  router.get(
+    `/getAccountByHandle`,
     rateLimiter,
     authMiddleware(["member"]),
     validateRequest(getAccountByHandleSchema, "query"),
@@ -129,8 +126,8 @@ export default function AccountRoutes(
    *       429:
    *         description: Too many requests
    */
-  app.patch(
-    `${apiVersionOneRoute}updateAccount`,
+  router.patch(
+    `/updateAccount`,
     rateLimiter,
     jsonParser,
     authMiddleware(["member"]),
@@ -166,8 +163,8 @@ export default function AccountRoutes(
    *       429:
    *         description: Too many requests
    */
-  app.post(
-    `${apiVersionOneRoute}authorizeForAccount`,
+  router.post(
+    `/authorizeForAccount`,
     rateLimiter,
     jsonParser,
     authMiddleware(["member"]),
@@ -203,8 +200,8 @@ export default function AccountRoutes(
    *       429:
    *         description: Too many requests
    */
-  app.post(
-    `${apiVersionOneRoute}unauthorizeForAccount`,
+  router.post(
+    `/unauthorizeForAccount`,
     rateLimiter,
     jsonParser,
     authMiddleware(["member"]),
@@ -240,8 +237,8 @@ export default function AccountRoutes(
    *       429:
    *         description: Too many requests
    */
-  app.post(
-    `${apiVersionOneRoute}updateSendOffersTo`,
+  router.post(
+    `/updateSendOffersTo`,
     rateLimiter,
     jsonParser,
     authMiddleware(["member"]),
@@ -252,4 +249,5 @@ export default function AccountRoutes(
   logger.debug("Registered route: POST /api/v1/updateSendOffersTo");
 
   logger.info("Account routes initialized successfully");
+  return router;
 }
