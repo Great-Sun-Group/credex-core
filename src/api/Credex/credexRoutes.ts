@@ -73,7 +73,6 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
   router.post(
     `/offerCredex`,
     jsonParser,
-    authMiddleware(["member"]),
     validateRequest(offerCredexSchema),
     (req: express.Request, res: express.Response) => {
       logger.debug("POST /offerCredex called", { requestId: req.id });
@@ -117,7 +116,6 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
   router.put(
     `/acceptCredex`,
     jsonParser,
-    authMiddleware(["member"]),
     validateRequest(acceptCredexSchema),
     (req: express.Request, res: express.Response) => {
       logger.debug("PUT /acceptCredex called", { requestId: req.id });
@@ -163,7 +161,6 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
   router.put(
     `/acceptCredexBulk`,
     jsonParser,
-    authMiddleware(["member"]),
     validateRequest({
       credexIDs: {
         sanitizer: (value: any) =>
@@ -215,7 +212,6 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
   router.put(
     `/declineCredex`,
     jsonParser,
-    authMiddleware(["member"]),
     validateRequest(declineCredexSchema),
     (req: express.Request, res: express.Response) => {
       logger.debug("PUT /declineCredex called", { requestId: req.id });
@@ -256,7 +252,6 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
   router.put(
     `/cancelCredex`,
     jsonParser,
-    authMiddleware(["member"]),
     validateRequest(cancelCredexSchema),
     (req: express.Request, res: express.Response) => {
       logger.debug("PUT /cancelCredex called", { requestId: req.id });
@@ -298,7 +293,6 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
    */
   router.get(
     `/getCredex`,
-    authMiddleware(["member"]),
     validateRequest(getCredexSchema, "query"),
     (req: express.Request, res: express.Response) => {
       logger.debug("GET /getCredex called", { requestId: req.id });
@@ -341,7 +335,6 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
    */
   router.get(
     `/getLedger`,
-    authMiddleware(["member"]),
     validateRequest(getLedgerSchema, "query"),
     (req: express.Request, res: express.Response) => {
       logger.debug("GET /getLedger called", { requestId: req.id });

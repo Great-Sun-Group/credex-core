@@ -109,13 +109,20 @@ export async function onboardMemberExpressHandler(
   const requestId = req.id;
   logger.debug("Entering onboardMemberExpressHandler", {
     body: req.body,
+    headers: req.headers,
     requestId,
   });
 
   try {
     // Check for WHATSAPP_BOT_API_KEY header
-    const clientOrigin = req.headers["WHATSAPP_BOT_API_KEY"];
+    const clientOrigin = req.headers["whatsapp_bot_api_key"];
     const serverOrigin = process.env.WHATSAPP_BOT_API_KEY;
+
+    logger.debug("Checking WHATSAPP_BOT_API_KEY", {
+      clientOrigin,
+      serverOrigin,
+      requestId,
+    });
 
     if (!clientOrigin || clientOrigin !== serverOrigin) {
       logger.warn("Unauthorized access attempt", { clientOrigin, requestId });
@@ -128,6 +135,8 @@ export async function onboardMemberExpressHandler(
     }
 
     const { firstname, lastname, phone } = req.body;
+
+    logger.debug("Validating input", { firstname, lastname, phone, requestId });
 
     if (!validateName(firstname)) {
       logger.warn("Invalid first name", { firstname, requestId });
@@ -165,6 +174,13 @@ export async function onboardMemberExpressHandler(
       );
       return;
     }
+
+    logger.debug("Calling OnboardMemberController", {
+      firstname,
+      lastname,
+      phone,
+      requestId,
+    });
 
     const result = await OnboardMemberController(
       firstname,

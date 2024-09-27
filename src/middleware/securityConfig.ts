@@ -40,15 +40,20 @@ export const applySecurityMiddleware = (app: Application) => {
   };
   app.use(cors(corsOptions));
 
-  //apply middleware to all routes
-  app.use(authMiddleware);
-
-  // Apply rate limiting after authentication
+  // Apply rate limiting
   app.use(rateLimiter);
 
   return app;
 };
 
+export const applyAuthMiddleware = (app: Application) => {
+  app.use((req, res, next) => {
+    if (req.path === "/api/v1/login" || req.path === "/api/v1/onboardMember") {
+      return next();
+    }
+    authMiddleware()(req, res, next);
+  });
+};
 
 export const applyDevSecurityMiddleware = (app: Application) => {
   // Apply Helmet with strict settings
@@ -86,10 +91,7 @@ export const applyDevSecurityMiddleware = (app: Application) => {
   };
   app.use(cors(corsOptions));
 
-  //apply middleware to all routes
-  app.use(authMiddleware);
-
-  // Apply rate limiting after authentication
+  // Apply rate limiting
   app.use(rateLimiter);
 
   return app;

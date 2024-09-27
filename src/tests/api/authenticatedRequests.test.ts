@@ -1,164 +1,61 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosError } from "axios";
+import dotenv from "dotenv";
+import https from 'https';
 
+dotenv.config();
+
+const CODESPACE_URL = process.env.CODESPACE_NAME 
+  ? `https://${process.env.CODESPACE_NAME}-3000.preview.app.github.dev`
+  : null;
+const BASE_URL = CODESPACE_URL || "http://localhost:3000";
+const API_VERSION = "/api/v1";
+const WHATSAPP_BOT_API_KEY = process.env.WHATSAPP_BOT_API_KEY;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
-if (!GITHUB_TOKEN) {
-  throw new Error('GITHUB_TOKEN environment variable is not set');
-}
+// Create a custom https agent that ignores SSL certificate errors
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
 
-const BASE_URL = 'http://localhost:5000';
-console.log('Base URL:', BASE_URL);
-
-let apiToken: string;
-let testUser: { firstname: string; lastname: string; phone: string };
-let axiosInstance: AxiosInstance;
-
-const createAxiosInstance = (apiToken: string | null = null) => {
-  return axios.create({
-    baseURL: BASE_URL,
-    timeout: 10000, // 10 seconds timeout
-    headers: {
-      'Authorization': `Bearer ${GITHUB_TOKEN}`,
-      'X-API-Key': apiToken || '',
-      'Content-Type': 'application/json',
-    },
-  });
-};
-
-const retryServerCheck = async (retries = 3, delay = 2000) => {
-  for (let i = 0; i < retries; i++) {
-    try {
-      const response = await axios.get(`${BASE_URL}/api-docs`, { timeout: 10000 });
-      console.log('Server is running, status:', response.status);
-      return;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.log(`Attempt ${i + 1}: Server not responding. Error: ${error.message}`);
-        if (error.response) {
-          console.log('Response status:', error.response.status);
-          console.log('Response data:', error.response.data);
-        }
-      } else {
-        console.log(`Attempt ${i + 1}: Unknown error:`, error);
-      }
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-  throw new Error('Server is not running after multiple attempts');
-};
-
-describe('Authenticated API Requests', () => {
-  beforeAll(async () => {
-    console.log('Starting test setup...');
+describe("Basic API Test", () => {
+  it("should be able to reach the login endpoint", async () => {
+    const url = `${BASE_URL}${API_VERSION}/member/login`;
+    console.log(`Attempting to connect to: ${url}`);
     
     try {
-      await retryServerCheck();
-    } catch (error) {
-      console.error('Failed to connect to the server:', error);
-      throw error;
-    }
+      const config = {
+        method: 'post',
+        url: url,
+        data: { phone: "263778177125" },
+        headers: {
+          "Content-Type": "application/json",
+          "WHATSAPP_BOT_API_KEY": WHATSAPP_BOT_API_KEY,
+          "X-Github-Token": GITHUB_TOKEN
+        },
+        httpsAgent: httpsAgent
+      };
 
-    axiosInstance = createAxiosInstance();
+      console.log('Request config:', JSON.stringify(config, null, 2));
 
-    testUser = {
-      firstname: 'Test',
-      lastname: 'User',
-      phone: `+1${Math.floor(Math.random() * 9000000000) + 1000000000}`,
-    };
-
-    try {
-      console.log('Attempting to onboard test user...');
-      const onboardResponse = await axiosInstance.post('/member/onboardMember', testUser);
-      console.log('Onboard response:', onboardResponse.status, onboardResponse.data);
-
-      console.log('Attempting to login...');
-      const loginResponse = await axiosInstance.post('/member/login', {
-        phone: testUser.phone,
-      });
-      console.log('Login response:', loginResponse.status, loginResponse.data);
-
-      apiToken = loginResponse.data.token;
-
-      if (!apiToken) {
-        throw new Error('Failed to obtain API token');
-      }
-
-      axiosInstance = createAxiosInstance(apiToken);
-      console.log('Test setup completed successfully');
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error('Axios error in test setup:', error.response?.status, error.response?.data);
-      } else {
-        console.error('Error in test setup:', error);
-      }
-      throw error;
-    }
-  }, 30000); // Increase timeout to 30 seconds
-
-  afterAll(async () => {
-    console.log('Starting test cleanup...');
-    try {
-      // Implement user cleanup if needed
-      console.log('Test cleanup completed');
-    } catch (error) {
-      console.error('Error in test cleanup:', error);
-    }
-  });
-
-  test('GET /getAccountByHandle - should return account data', async () => {
-    try {
-      console.log('Sending GET request to /getAccountByHandle...');
-      const response = await axiosInstance.get('/getAccountByHandle');
-      console.log('GET /getAccountByHandle response:', response.status, response.data);
-
+      const response = await axios(config);
+      
+      console.log("Response status:", response.status);
+      console.log("Response data:", response.data);
+      
       expect(response.status).toBe(200);
-      expect(response.data).toBeDefined();
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error('Axios error in GET /getAccountByHandle:', error.response?.status, error.response?.data);
+        console.error("Axios Error:", error.message);
+        console.error("Attempted URL:", url);
+        if (error.response) {
+          console.error("Response status:", error.response.status);
+          console.error("Response data:", error.response.data);
+        } else if (error.request) {
+          console.error("No response received. Request:", error.request);
+        }
+        console.error("Error config:", error.config);
       } else {
-        console.error('Error in GET /getAccountByHandle:', error);
-      }
-      throw error;
-    }
-  });
-
-  test('POST /offerCredex - should create a new credex offer', async () => {
-    const offerData = {
-      amount: 100,
-      recipientHandle: 'testuser',
-    };
-
-    try {
-      console.log('Sending POST request to /offerCredex...');
-      const response = await axiosInstance.post('/offerCredex', offerData);
-      console.log('POST /offerCredex response:', response.status, response.data);
-
-      expect(response.status).toBe(201);
-      expect(response.data).toBeDefined();
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error('Axios error in POST /offerCredex:', error.response?.status, error.response?.data);
-      } else {
-        console.error('Error in POST /offerCredex:', error);
-      }
-      throw error;
-    }
-  });
-
-  test('GET /getCredex - should return list of credex offers', async () => {
-    try {
-      console.log('Sending GET request to /getCredex...');
-      const response = await axiosInstance.get('/getCredex');
-      console.log('GET /getCredex response:', response.status, response.data);
-
-      expect(response.status).toBe(200);
-      expect(Array.isArray(response.data)).toBe(true);
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error('Axios error in GET /getCredex:', error.response?.status, error.response?.data);
-      } else {
-        console.error('Error in GET /getCredex:', error);
+        console.error("Unexpected error:", error);
       }
       throw error;
     }

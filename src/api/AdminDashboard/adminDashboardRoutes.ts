@@ -11,7 +11,6 @@ import {
 } from "./controllers/AccountController";
 import { errorHandler } from "../../middleware/errorHandler";
 import { validateRequest } from "../../middleware/validateRequest";
-import { authMiddleware } from "../../middleware/authMiddleware";
 import {
   getCredexSchema,
   getMemberSchema,
@@ -20,15 +19,16 @@ import {
 } from "./adminDashboardValidationSchemas";
 import logger from "../../utils/logger";
 
-export default function AdminDashboardRoutes(jsonParser: express.RequestHandler) {
+export default function AdminDashboardRoutes(
+  jsonParser: express.RequestHandler
+) {
   const router = express.Router();
   logger.info("Initializing AdminDashboard routes");
 
   router.get(
     `/getCredexDetails`,
     jsonParser,
-    authMiddleware(['admin']),
-    validateRequest(getCredexSchema, 'query'),
+    validateRequest(getCredexSchema, "query"),
     (req, res, next) => {
       logger.debug(`GET /getCredexDetails called`, { requestId: req.id });
       getCredexDetails(req, res, next);
@@ -38,8 +38,7 @@ export default function AdminDashboardRoutes(jsonParser: express.RequestHandler)
   router.get(
     `/getMemberDetails`,
     jsonParser,
-    authMiddleware(['admin']),
-    validateRequest(getMemberSchema, 'query'),
+    validateRequest(getMemberSchema, "query"),
     (req, res, next) => {
       logger.debug(`GET /getMemberDetails called`, { requestId: req.id });
       getMemberDetails(req, res, next);
@@ -49,7 +48,6 @@ export default function AdminDashboardRoutes(jsonParser: express.RequestHandler)
   router.patch(
     `/updateMemberTier`,
     jsonParser,
-    authMiddleware(['admin']),
     validateRequest(updateMemberTierSchema),
     (req, res, next) => {
       logger.debug(`PATCH /updateMemberTier called`, { requestId: req.id });
@@ -60,8 +58,7 @@ export default function AdminDashboardRoutes(jsonParser: express.RequestHandler)
   router.get(
     `/getAccountDetails`,
     jsonParser,
-    authMiddleware(['admin']),
-    validateRequest(getAccountSchema, 'query'),
+    validateRequest(getAccountSchema, "query"),
     (req, res, next) => {
       logger.debug(`GET /getAccountDetails called`, { requestId: req.id });
       getAccountDetails(req, res, next);
@@ -71,10 +68,11 @@ export default function AdminDashboardRoutes(jsonParser: express.RequestHandler)
   router.get(
     `/getReceivedCredexOffers`,
     jsonParser,
-    authMiddleware(['admin']),
-    validateRequest(getAccountSchema, 'query'),
+    validateRequest(getAccountSchema, "query"),
     (req, res, next) => {
-      logger.debug(`GET /getReceivedCredexOffers called`, { requestId: req.id });
+      logger.debug(`GET /getReceivedCredexOffers called`, {
+        requestId: req.id,
+      });
       getReceivedCredexOffers(req, res, next);
     }
   );
@@ -82,8 +80,7 @@ export default function AdminDashboardRoutes(jsonParser: express.RequestHandler)
   router.get(
     `/getSentCredexOffers`,
     jsonParser,
-    authMiddleware(['admin']),
-    validateRequest(getAccountSchema, 'query'),
+    validateRequest(getAccountSchema, "query"),
     (req, res, next) => {
       logger.debug(`GET /getSentCredexOffers called`, { requestId: req.id });
       getSentCredexOffers(req, res, next);

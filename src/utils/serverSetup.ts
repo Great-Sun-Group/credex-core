@@ -1,60 +1,82 @@
-import http from 'http';
-import { Express } from 'express';
-import logger from './logger';
-import configUtils from './configUtils';
-import { config } from '../../config/config';
+import { Server } from "http";
+import { Application } from "express";
+import logger from "./logger";
 
-export function startServer(app: Express): http.Server {
-  const server = http.createServer(app);
-  const primaryPort = config.port;
-  const fallbackPorts = config.fallbackPorts;
+//will this work for prod? may need to update with an if()
+const DEFAULT_PORT = 3000;
+const MAX_PORT_ATTEMPTS = 10;
 
-  function attemptListen(port: number, remainingPorts: number[]): void {
-    server.listen(port, () => {
-      logger.info(`Server is running on http://localhost:${port}`);
-      logger.info(`API documentation available at http://localhost:${port}/api-docs`);
-      logger.info(`Server started at ${new Date().toISOString()}`);
-      logger.info(`Environment: ${config.nodeEnv}`);
-      logger.info(`Log level: ${configUtils.get('logLevel')}`);
-    }).on('error', (e: NodeJS.ErrnoException) => {
-      if (e.code === 'EADDRINUSE') {
-        logger.warn(`Port ${port} is already in use, trying next port...`);
-        if (remainingPorts.length > 0) {
-          const nextPort = remainingPorts.shift()!;
-          attemptListen(nextPort, remainingPorts);
+export function startServer(app: Application): Server {
+  let port = DEFAULT_PORT;
+  let server: Server | null = null;
+  const host = process.env.HOST || '0.0.0.0';
+
+  for (let attempt = 0; attempt < MAX_PORT_ATTEMPTS; attempt++) {
+    try {
+      server = app.listen(port, host, () => {
+        const localUrl = `http://${host}:${port}`;
+        const codespaceUrl = process.env.CODESPACE_NAME 
+          ? `https://${process.env.CODESPACE_NAME}-${port}.preview.app.github.dev` 
+          : null;
+
+        logger.info(`Server is running locally on ${localUrl}`);
+        if (codespaceUrl) {
+          logger.info(`Codespace URL: ${codespaceUrl}`);
+          console.log('\n==================================');
+          console.log(`CODESPACE URL: ${codespaceUrl}`);
+          console.log('==================================\n');
+        }
+        logger.info(
+          `API documentation available at ${localUrl}/api-docs`
+        );
+        logger.info(`Server started at ${new Date().toISOString()}`);
+        logger.info(`Deployment: ${process.env.DEPLOYMENT}`);
+        logger.debug(`Getting config value for key: logLevel`);
+        logger.info(`Log level: ${process.env.LOG_LEVEL || "info"}`);
+      });
+      break;
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        if ("code" in error && error.code === "EADDRINUSE") {
+          logger.warn(`Port ${port} is already in use, trying next port...`);
+          port++;
         } else {
-          logger.error('All ports are in use. Unable to start the server.');
+          logger.error(`Failed to start server: ${error.message}`);
           process.exit(1);
         }
       } else {
-        logger.error('Error starting server:', e);
+        logger.error(`Failed to start server: Unknown error`);
         process.exit(1);
       }
-    });
+    }
   }
 
-  attemptListen(primaryPort, [...fallbackPorts]);
+  if (!server) {
+    logger.error(
+      `Failed to find an available port after ${MAX_PORT_ATTEMPTS} attempts`
+    );
+    process.exit(1);
+  }
 
   return server;
 }
 
-export function setupGracefulShutdown(server: http.Server): void {
+export function setupGracefulShutdown(server: Server): void {
   process.on("SIGTERM", () => {
     logger.info("SIGTERM signal received: closing HTTP server");
     server.close(() => {
       logger.info("HTTP server closed");
-      // Perform any additional cleanup (e.g., close database connections)
       process.exit(0);
     });
   });
 }
 
-export function setupUncaughtExceptionHandler(server: http.Server): void {
-  process.on("uncaughtException", (error) => {
-    logger.error("Uncaught Exception:", { error: error.message, stack: error.stack });
-    // Perform any necessary cleanup
-    // TODO: Implement a more robust error reporting mechanism (e.g., send to a monitoring service)
-    // Gracefully shut down the server
+export function setupUncaughtExceptionHandler(server: Server): void {
+  process.on("uncaughtException", (error: Error) => {
+    logger.error("Uncaught Exception:", {
+      error: error.message,
+      stack: error.stack,
+    });
     server.close(() => {
       logger.info("Server closed due to uncaught exception");
       process.exit(1);
@@ -63,12 +85,7 @@ export function setupUncaughtExceptionHandler(server: http.Server): void {
 }
 
 export function setupUnhandledRejectionHandler(): void {
-  process.on("unhandledRejection", (reason, promise) => {
-    logger.error("Unhandled Rejection", { 
-      reason: reason instanceof Error ? reason.message : reason,
-      promise: promise.toString()
-    });
-    // Perform any necessary cleanup
-    // TODO: Implement a more robust error reporting mechanism (e.g., send to a monitoring service)
+  process.on("unhandledRejection", (reason: any, promise: Promise<any>) => {
+    logger.error("Unhandled Rejection at:", promise, "reason:", reason);
   });
 }

@@ -14,7 +14,7 @@ import logger from "../../utils/logger";
 
 export default function RecurringRoutes(jsonParser: express.RequestHandler) {
   const router = express.Router();
-  logger.info('Initializing Recurring Routes');
+  logger.info("Initializing Recurring Routes");
 
   /**
    * @swagger
@@ -43,10 +43,13 @@ export default function RecurringRoutes(jsonParser: express.RequestHandler) {
   router.post(
     `/requestRecurring`,
     jsonParser,
-    authMiddleware(['member']),
     validateRequest(requestRecurringSchema),
-    (req: express.Request, res: express.Response, next: express.NextFunction) => {
-      logger.debug('POST /requestRecurring called', { requestId: req.id });
+    (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => {
+      logger.debug("POST /requestRecurring called", { requestId: req.id });
       RequestRecurringController(req, res);
     },
     errorHandler
@@ -79,10 +82,13 @@ export default function RecurringRoutes(jsonParser: express.RequestHandler) {
   router.put(
     `/acceptRecurring`,
     jsonParser,
-    authMiddleware(['member']),
     validateRequest(acceptRecurringSchema),
-    (req: express.Request, res: express.Response, next: express.NextFunction) => {
-      logger.debug('PUT /acceptRecurring called', { requestId: req.id });
+    (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => {
+      logger.debug("PUT /acceptRecurring called", { requestId: req.id });
       AcceptRecurringController(req, res);
     },
     errorHandler
@@ -115,16 +121,19 @@ export default function RecurringRoutes(jsonParser: express.RequestHandler) {
   router.delete(
     `/cancelRecurring`,
     jsonParser,
-    authMiddleware(['member']),
     validateRequest(cancelRecurringSchema),
-    (req: express.Request, res: express.Response, next: express.NextFunction) => {
-      logger.debug('DELETE /cancelRecurring called', { requestId: req.id });
+    (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => {
+      logger.debug("DELETE /cancelRecurring called", { requestId: req.id });
       DeclineRecurringController(req, res);
     },
     errorHandler
   );
 
-  logger.info('Recurring Routes initialized');
+  logger.info("Recurring Routes initialized");
   return router;
 }
 

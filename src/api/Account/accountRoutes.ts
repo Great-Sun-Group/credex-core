@@ -8,7 +8,6 @@ import { UpdateSendOffersToController } from "./controllers/updateSendOffersTo";
 import { rateLimiter } from "../../middleware/rateLimiter";
 import { errorHandler } from "../../middleware/errorHandler";
 import { validateRequest } from "../../middleware/validateRequest";
-import { authMiddleware } from "../../middleware/authMiddleware";
 import {
   createAccountSchema,
   getAccountByHandleSchema,
@@ -53,7 +52,6 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
     `/createAccount`,
     rateLimiter,
     jsonParser,
-    authMiddleware(["member"]),
     validateRequest(createAccountSchema),
     CreateAccountController,
     errorHandler
@@ -91,7 +89,6 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
   router.get(
     `/getAccountByHandle`,
     rateLimiter,
-    authMiddleware(["member"]),
     validateRequest(getAccountByHandleSchema, "query"),
     GetAccountByHandleController,
     errorHandler
@@ -130,7 +127,6 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
     `/updateAccount`,
     rateLimiter,
     jsonParser,
-    authMiddleware(["member"]),
     validateRequest(updateAccountSchema),
     UpdateAccountController,
     errorHandler
@@ -167,7 +163,6 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
     `/authorizeForAccount`,
     rateLimiter,
     jsonParser,
-    authMiddleware(["member"]),
     validateRequest(authorizeForAccountSchema),
     AuthorizeForAccountController,
     errorHandler
@@ -204,7 +199,6 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
     `/unauthorizeForAccount`,
     rateLimiter,
     jsonParser,
-    authMiddleware(["member"]),
     validateRequest(unauthorizeForAccountSchema),
     UnauthorizeForAccountController,
     errorHandler
@@ -241,7 +235,6 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
     `/updateSendOffersTo`,
     rateLimiter,
     jsonParser,
-    authMiddleware(["member"]),
     validateRequest(updateSendOffersToSchema),
     UpdateSendOffersToController,
     errorHandler
