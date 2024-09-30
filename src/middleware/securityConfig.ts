@@ -33,15 +33,14 @@ export const applySecurityMiddleware = (app: Application) => {
   if (process.env.NODE_ENV !== "production") {
     // CORS highly permissive
     const corsOptions = {
-      origin: '*', // Allow all origins
+      origin: "*", // Allow all origins
       methods: ["GET", "POST", "PUT", "DELETE"],
       allowedHeaders: ["Content-Type", "Authorization"],
       credentials: true,
       maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
     };
     app.use(cors(corsOptions));
-  }
-  else {
+  } else {
     // Restrict origin to vimbiso-pay origin for now
     const corsOptions = {
       origin: "*", // Allow all origins  *****UPDATE THIS******
@@ -61,12 +60,8 @@ export const applySecurityMiddleware = (app: Application) => {
 
 export const applyAuthMiddleware = (app: Application) => {
   app.use((req, res, next) => {
-  console.log(req.path);
-    if (
-      req.path === "/api/v1/member/login" ||
-      req.path === "/api/v1/member/onboardMember"
-    ) {
-      console.log("Bypassing auth for path:", req.path); // Add this line
+    // Exclude /login and /onboardMember endpoints from authentication
+    if (req.path === "/api/v1/member/login" || req.path === "/api/v1/member/onboard") {
       return next();
     }
     authMiddleware()(req, res, next);

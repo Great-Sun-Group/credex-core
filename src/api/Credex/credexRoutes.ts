@@ -7,7 +7,6 @@ import { CancelCredexController } from "./controllers/cancelCredex";
 import { GetCredexController } from "./controllers/getCredex";
 import { GetLedgerController } from "./controllers/getLedger";
 import { validateRequest } from "../../middleware/validateRequest";
-import { authMiddleware } from "../../middleware/authMiddleware";
 import {
   offerCredexSchema,
   acceptCredexSchema,

@@ -5,7 +5,6 @@ import { onboardMemberExpressHandler } from "./controllers/onboardMember";
 import { loginMemberExpressHandler } from "./controllers/loginMember";
 import { authForTierSpendLimitExpressHandler } from "./controllers/authForTierSpendLimit";
 import { validateRequest } from "../../middleware/validateRequest";
-import { authMiddleware } from "../../middleware/authMiddleware";
 import {
   getMemberByHandleSchema,
   getMemberDashboardByPhoneSchema,
