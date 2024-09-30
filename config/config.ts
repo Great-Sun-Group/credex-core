@@ -12,7 +12,6 @@ function validateEnv(requiredVars: string[]): { [key: string]: string } {
 
 const requiredEnvVars = [
   'NODE_ENV',
-  'DEPLOYMENT',
   'NEO_4J_LEDGER_SPACE_BOLT_URL',
   'NEO_4J_LEDGER_SPACE_USER',
   'NEO_4J_LEDGER_SPACE_PASS',
@@ -29,7 +28,6 @@ export const config = {
   port: process.env.PORT ? parseInt(process.env.PORT, 10) : 5000,
   fallbackPorts: [5001, 5002, 5003, 5004, 5005], // Add fallback ports
   nodeEnv: validatedEnv.NODE_ENV,
-  deployment: validatedEnv.DEPLOYMENT,
 
   // Neo4j database configuration
   neo4j: {
@@ -66,7 +64,6 @@ export function logConfig(logger: any) {
     port: config.port,
     fallbackPorts: config.fallbackPorts,
     nodeEnv: config.nodeEnv,
-    deployment: config.deployment,
     neo4jLedgerSpaceUrl: config.neo4j.ledgerSpace.url,
     neo4jSearchSpaceUrl: config.neo4j.searchSpace.url,
     rateLimitWindowMs: config.rateLimit.windowMs,

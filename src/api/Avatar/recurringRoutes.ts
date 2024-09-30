@@ -1,11 +1,9 @@
 import express from "express";
-import { apiVersionOneRoute } from "../../index";
 import { RequestRecurringController } from "./controllers/requestRecurring";
 import { AcceptRecurringController } from "./controllers/acceptRecurring";
 import { DeclineRecurringController } from "./controllers/cancelRecurring";
 import { errorHandler } from "../../middleware/errorHandler";
 import { validateRequest } from "../../middleware/validateRequest";
-import { authMiddleware } from "../../middleware/authMiddleware";
 import {
   requestRecurringSchema,
   acceptRecurringSchema,
@@ -13,11 +11,9 @@ import {
 } from "./avatarValidationSchemas";
 import logger from "../../utils/logger";
 
-export default function RecurringRoutes(
-  app: express.Application,
-  jsonParser: express.RequestHandler
-) {
-  logger.info('Initializing Recurring Routes');
+export default function RecurringRoutes(jsonParser: express.RequestHandler) {
+  const router = express.Router();
+  logger.info("Initializing Recurring Routes");
 
   /**
    * @swagger
@@ -43,13 +39,16 @@ export default function RecurringRoutes(
    *       403:
    *         description: Forbidden
    */
-  app.post(
-    `${apiVersionOneRoute}requestRecurring`,
+  router.post(
+    `/requestRecurring`,
     jsonParser,
-    authMiddleware(['member']),
     validateRequest(requestRecurringSchema),
-    (req: express.Request, res: express.Response, next: express.NextFunction) => {
-      logger.debug('POST /requestRecurring called', { requestId: req.id });
+    (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => {
+      logger.debug("POST /requestRecurring called", { requestId: req.id });
       RequestRecurringController(req, res);
     },
     errorHandler
@@ -79,13 +78,16 @@ export default function RecurringRoutes(
    *       403:
    *         description: Forbidden
    */
-  app.put(
-    `${apiVersionOneRoute}acceptRecurring`,
+  router.put(
+    `/acceptRecurring`,
     jsonParser,
-    authMiddleware(['member']),
     validateRequest(acceptRecurringSchema),
-    (req: express.Request, res: express.Response, next: express.NextFunction) => {
-      logger.debug('PUT /acceptRecurring called', { requestId: req.id });
+    (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => {
+      logger.debug("PUT /acceptRecurring called", { requestId: req.id });
       AcceptRecurringController(req, res);
     },
     errorHandler
@@ -115,19 +117,23 @@ export default function RecurringRoutes(
    *       403:
    *         description: Forbidden
    */
-  app.delete(
-    `${apiVersionOneRoute}cancelRecurring`,
+  router.delete(
+    `/cancelRecurring`,
     jsonParser,
-    authMiddleware(['member']),
     validateRequest(cancelRecurringSchema),
-    (req: express.Request, res: express.Response, next: express.NextFunction) => {
-      logger.debug('DELETE /cancelRecurring called', { requestId: req.id });
+    (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => {
+      logger.debug("DELETE /cancelRecurring called", { requestId: req.id });
       DeclineRecurringController(req, res);
     },
     errorHandler
   );
 
-  logger.info('Recurring Routes initialized');
+  logger.info("Recurring Routes initialized");
+  return router;
 }
 
 /**

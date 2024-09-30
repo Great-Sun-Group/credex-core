@@ -5,7 +5,7 @@ import { rateLimiter } from "./rateLimiter";
 import { authMiddleware } from "./authMiddleware";
 
 export const applySecurityMiddleware = (app: Application) => {
-  // Apply Helmet with stricter settings
+  // Apply Helmet with strict settings
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -30,21 +30,39 @@ export const applySecurityMiddleware = (app: Application) => {
     })
   );
 
-  // Configure CORS to be more permissive
-  const corsOptions = {
-    origin: '*', // Allow all origins
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-    maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
-  };
-  app.use(cors(corsOptions));
+  if (process.env.NODE_ENV !== "production") {
+    // CORS highly permissive
+    const corsOptions = {
+      origin: "*", // Allow all origins
+      methods: ["GET", "POST", "PUT", "DELETE"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      credentials: true,
+      maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
+    };
+    app.use(cors(corsOptions));
+  } else {
+    // Restrict origin to vimbiso-pay origin for now
+    const corsOptions = {
+      origin: "*", // Allow all origins  *****UPDATE THIS******
+      methods: ["GET", "POST", "PUT", "DELETE"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      credentials: true,
+      maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
+    };
+    app.use(cors(corsOptions));
+  }
 
-  // Apply authentication middleware
-  app.use(authMiddleware);
-
-  // Apply rate limiting after authentication
+  // Apply rate limiting
   app.use(rateLimiter);
 
   return app;
+};
+
+export const applyAuthMiddleware = (app: Application) => {
+  app.use((req, res, next) => {
+    if (req.path === "/api/v1/member/login" || req.path === "/api/v1/member/onboardMember") {
+      return next();
+    }
+    authMiddleware()(req, res, next);
+  });
 };

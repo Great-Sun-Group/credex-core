@@ -1,5 +1,5 @@
-avatar-splendid-skua
+avatar-khaki-oriole
 
-avatar restructure
+settings.py combined in vimbiso-pay
 
-Commit-ID: 0ceb3571-0b72-4a64-aff3-0998d68b8b08
+Commit-ID: d2aa1b31-4641-47b0-adbb-61b884a3083d

@@ -1,38 +1,63 @@
-import { searchSpaceDriver } from "../../../../config/neo4j";
+import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { generateToken } from "../../../../config/authenticate";
 import logger from "../../../utils/logger";
 
 export async function LoginMemberService(
   phone: string
 ): Promise<{ token?: string; error?: string }> {
-  const session = searchSpaceDriver.session();
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
   logger.debug("Entering LoginMemberService", { phone });
 
   try {
-    const result = await session.run(
-      "MATCH (m:Member {phone: $phone}) RETURN m",
-      { phone }
-    );
+    const result = await ledgerSpaceSession.executeWrite(async (tx) => {
+      // First, find the member
+      const memberResult = await tx.run(
+        "MATCH (m:Member {phone: $phone}) RETURN m",
+        { phone }
+      );
 
-    if (result.records.length === 0) {
-      logger.warn("Member not found", { phone });
-      return { error: "Member not found" };
-    }
+      if (memberResult.records.length === 0) {
+        logger.warn("Member not found", { phone });
+        return { error: "Member not found" };
+      }
 
-    const member = result.records[0].get("m").properties;
-    const token = generateToken(member.id);
+      const member = memberResult.records[0].get("m").properties;
+      
+      // Ensure member.memberID exists
+      if (!member.memberID) {
+        logger.error("Member found but memberID is missing", { phone, member });
+        return { error: "Invalid member data" };
+      }
 
-    // Update the token in the database
-    await session.run("MATCH (m:Member {id: $id}) SET m.token = $token", {
-      id: member.id,
-      token,
+      const token = generateToken(member.memberID);
+
+      // Then, update the token
+      const updateResult = await tx.run(
+        "MATCH (m:Member {memberID: $memberID}) SET m.token = $token RETURN m",
+        { memberID: member.memberID, token }
+      );
+
+      // Verify the update was successful
+      if (updateResult.records.length === 0) {
+        logger.error("Failed to update member token", {
+          phone,
+          memberID: member.memberID,
+        });
+        return { error: "Failed to update member token" };
+      }
+
+      return { member, token };
     });
+
+    if ('error' in result) {
+      return result;
+    }
 
     logger.info("Member logged in successfully", {
       phone,
-      memberId: member.id,
+      memberId: result.member.memberID,
     });
-    return { token };
+    return { token: result.token };
   } catch (error) {
     logger.error("Error in LoginMemberService", {
       error: error instanceof Error ? error.message : "Unknown error",
@@ -41,6 +66,6 @@ export async function LoginMemberService(
     });
     return { error: "Internal server error" };
   } finally {
-    await session.close();
+    await ledgerSpaceSession.close();
   }
 }

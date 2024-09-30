@@ -1,5 +1,4 @@
 import express from "express";
-import { apiVersionOneRoute } from "../../index";
 import { getCredexDetails } from "./controllers/CredexController";
 import {
   getMemberDetails,
@@ -12,7 +11,6 @@ import {
 } from "./controllers/AccountController";
 import { errorHandler } from "../../middleware/errorHandler";
 import { validateRequest } from "../../middleware/validateRequest";
-import { authMiddleware } from "../../middleware/authMiddleware";
 import {
   getCredexSchema,
   getMemberSchema,
@@ -22,78 +20,75 @@ import {
 import logger from "../../utils/logger";
 
 export default function AdminDashboardRoutes(
-  app: express.Application,
   jsonParser: express.RequestHandler
 ) {
+  const router = express.Router();
   logger.info("Initializing AdminDashboard routes");
 
-  app.get(
-    `${apiVersionOneRoute}getCredexDetails`,
+  router.get(
+    `/getCredexDetails`,
     jsonParser,
-    authMiddleware(['admin']),
-    validateRequest(getCredexSchema, 'query'),
+    validateRequest(getCredexSchema, "query"),
     (req, res, next) => {
-      logger.debug(`GET ${apiVersionOneRoute}getCredexDetails called`, { requestId: req.id });
+      logger.debug(`GET /getCredexDetails called`, { requestId: req.id });
       getCredexDetails(req, res, next);
     }
   );
 
-  app.get(
-    `${apiVersionOneRoute}getMemberDetails`,
+  router.get(
+    `/getMemberDetails`,
     jsonParser,
-    authMiddleware(['admin']),
-    validateRequest(getMemberSchema, 'query'),
+    validateRequest(getMemberSchema, "query"),
     (req, res, next) => {
-      logger.debug(`GET ${apiVersionOneRoute}getMemberDetails called`, { requestId: req.id });
+      logger.debug(`GET /getMemberDetails called`, { requestId: req.id });
       getMemberDetails(req, res, next);
     }
   );
 
-  app.patch(
-    `${apiVersionOneRoute}updateMemberTier`,
+  router.patch(
+    `/updateMemberTier`,
     jsonParser,
-    authMiddleware(['admin']),
     validateRequest(updateMemberTierSchema),
     (req, res, next) => {
-      logger.debug(`PATCH ${apiVersionOneRoute}updateMemberTier called`, { requestId: req.id });
+      logger.debug(`PATCH /updateMemberTier called`, { requestId: req.id });
       updateMemberTier(req, res, next);
     }
   );
 
-  app.get(
-    `${apiVersionOneRoute}getAccountDetails`,
+  router.get(
+    `/getAccountDetails`,
     jsonParser,
-    authMiddleware(['admin']),
-    validateRequest(getAccountSchema, 'query'),
+    validateRequest(getAccountSchema, "query"),
     (req, res, next) => {
-      logger.debug(`GET ${apiVersionOneRoute}getAccountDetails called`, { requestId: req.id });
+      logger.debug(`GET /getAccountDetails called`, { requestId: req.id });
       getAccountDetails(req, res, next);
     }
   );
 
-  app.get(
-    `${apiVersionOneRoute}getReceivedCredexOffers`,
+  router.get(
+    `/getReceivedCredexOffers`,
     jsonParser,
-    authMiddleware(['admin']),
-    validateRequest(getAccountSchema, 'query'),
+    validateRequest(getAccountSchema, "query"),
     (req, res, next) => {
-      logger.debug(`GET ${apiVersionOneRoute}getReceivedCredexOffers called`, { requestId: req.id });
+      logger.debug(`GET /getReceivedCredexOffers called`, {
+        requestId: req.id,
+      });
       getReceivedCredexOffers(req, res, next);
     }
   );
 
-  app.get(
-    `${apiVersionOneRoute}getSentCredexOffers`,
+  router.get(
+    `/getSentCredexOffers`,
     jsonParser,
-    authMiddleware(['admin']),
-    validateRequest(getAccountSchema, 'query'),
+    validateRequest(getAccountSchema, "query"),
     (req, res, next) => {
-      logger.debug(`GET ${apiVersionOneRoute}getSentCredexOffers called`, { requestId: req.id });
+      logger.debug(`GET /getSentCredexOffers called`, { requestId: req.id });
       getSentCredexOffers(req, res, next);
     }
   );
 
-  app.use(errorHandler);
+  router.use(errorHandler);
 
   logger.info("AdminDashboard routes initialized");
+  return router;
 }
