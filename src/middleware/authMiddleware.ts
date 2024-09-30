@@ -8,7 +8,6 @@ interface UserRequest extends Request {
 
 export const authMiddleware = () => {
   return async (req: UserRequest, res: Response, next: NextFunction) => {
-
     try {
       await authenticate(req, res, async () => {
         // If all checks pass, proceed to the next middleware or controller
