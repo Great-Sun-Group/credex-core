@@ -9,7 +9,7 @@ interface UserRequest extends Request {
 export const authMiddleware = () => {
   return async (req: UserRequest, res: Response, next: NextFunction) => {
     // Exclude /login and /onboardMember endpoints from authentication
-    if (req.path === "/login" || req.path === "/onboardMember") {
+    if (req.path === "/login" || req.path === "/onboardMember" || req.path === "/forceDCO") {
       return next();
     }
 
