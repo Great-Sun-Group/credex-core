@@ -30,7 +30,6 @@ export function startServer(app: Application): Server {
           `API documentation available at ${localUrl}/api-docs`
         );
         logger.info(`Server started at ${new Date().toISOString()}`);
-        logger.info(`Deployment: ${process.env.DEPLOYMENT}`);
         logger.debug(`Getting config value for key: logLevel`);
         logger.info(`Log level: ${process.env.LOG_LEVEL || "info"}`);
       });
