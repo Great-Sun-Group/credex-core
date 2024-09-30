@@ -48,11 +48,6 @@ export default function MemberRoutes(app: express.Application) {
     validateRequest(loginMemberSchema),
     loginMemberExpressHandler
   );
-  logger.debug("Registered route: POST /member/login", {
-    module: "memberRoutes",
-    route: "/login",
-    method: "POST",
-  });
 
   /**
    * @openapi
@@ -89,11 +84,6 @@ export default function MemberRoutes(app: express.Application) {
     validateRequest(getMemberByHandleSchema),
     GetMemberByHandleController
   );
-  logger.debug("Registered route: POST /member/getMemberByHandle", {
-    module: "memberRoutes",
-    route: "/getMemberByHandle",
-    method: "POST",
-  });
 
   /**
    * @openapi
@@ -130,11 +120,6 @@ export default function MemberRoutes(app: express.Application) {
     validateRequest(getMemberDashboardByPhoneSchema),
     GetMemberDashboardByPhoneController
   );
-  logger.debug("Registered route: POST /member/getMemberDashboardByPhone", {
-    module: "memberRoutes",
-    route: "/getMemberDashboardByPhone",
-    method: "POST",
-  });
 
   /**
    * @openapi
@@ -171,11 +156,6 @@ export default function MemberRoutes(app: express.Application) {
     validateRequest(onboardMemberSchema),
     onboardMemberExpressHandler
   );
-  logger.debug("Registered route: POST /member/onboardMember", {
-    module: "memberRoutes",
-    route: "/onboardMember",
-    method: "POST",
-  });
 
   /**
    * @openapi
@@ -221,11 +201,6 @@ export default function MemberRoutes(app: express.Application) {
     validateRequest(authForTierSpendLimitSchema),
     authForTierSpendLimitExpressHandler
   );
-  logger.debug("Registered route: POST /member/authForTierSpendLimit", {
-    module: "memberRoutes",
-    route: "/authForTierSpendLimit",
-    method: "POST",
-  });
 
   logger.info("Member routes initialized successfully", {
     module: "memberRoutes",
