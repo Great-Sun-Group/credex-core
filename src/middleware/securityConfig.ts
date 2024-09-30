@@ -60,8 +60,7 @@ export const applySecurityMiddleware = (app: Application) => {
 
 export const applyAuthMiddleware = (app: Application) => {
   app.use((req, res, next) => {
-    // Exclude /login and /onboardMember endpoints from authentication
-    if (req.path === "/api/v1/member/login" || req.path === "/api/v1/member/onboard") {
+    if (req.path === "/api/v1/member/login" || req.path === "/api/v1/member/onboardMember") {
       return next();
     }
     authMiddleware()(req, res, next);
