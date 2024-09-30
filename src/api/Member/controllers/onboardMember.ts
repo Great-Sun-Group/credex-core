@@ -5,13 +5,15 @@ import logger from "../../../utils/logger";
 import { validateName, validatePhone } from "../../../utils/validators";
 import { generateToken } from "../../../../config/authenticate";
 import { searchSpaceDriver } from "../../../../config/neo4j";
+import { CreateAccountController } from "../../Account/controllers/createAccount";
+import { CreateAccountService } from "../../Account/services/CreateAccount";
 
 export async function OnboardMemberController(
   firstname: string,
   lastname: string,
   phone: string,
   requestId: string
-): Promise<{ memberDashboard: any; token: string } | { error: string }> {
+): Promise<{ memberDashboard: any; token: string; defaultAccountID: string } | { error: string }> {
   logger.debug("Entering OnboardMemberController", {
     firstname,
     lastname,
@@ -52,6 +54,36 @@ export async function OnboardMemberController(
       requestId,
     });
 
+    // Create default account for the new member
+    logger.debug("Creating default account for new member", {
+      memberID: onboardedMember.onboardedMemberID,
+      requestId,
+    });
+    const defaultAccount = await CreateAccountService(
+      onboardedMember.onboardedMemberID,
+      "PERSONAL_CONSUMPTION",
+      `${firstname} ${lastname} Personal`,
+      phone,
+      "USD",
+      null,
+      null
+    );
+
+    if (!defaultAccount.accountID) {
+      logger.warn("Failed to create default account for new member", {
+        memberID: onboardedMember.onboardedMemberID,
+        error: defaultAccount.message,
+        requestId,
+      });
+      return { error: "Failed to create default account for new member" };
+    }
+
+    logger.info("Default account created successfully", {
+      memberID: onboardedMember.onboardedMemberID,
+      accountID: defaultAccount.accountID,
+      requestId,
+    });
+
     // Generate token
     const token = generateToken(onboardedMember.onboardedMemberID);
 
@@ -86,7 +118,7 @@ export async function OnboardMemberController(
       requestId,
     });
     logger.debug("Exiting OnboardMemberController successfully", { requestId });
-    return { memberDashboard, token };
+    return { memberDashboard, token, defaultAccountID: defaultAccount.accountID };
   } catch (error) {
     logger.error("Error in OnboardMemberController", {
       error: error instanceof Error ? error.message : "Unknown error",
