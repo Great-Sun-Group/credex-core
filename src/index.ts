@@ -15,7 +15,6 @@ import { swaggerSpec } from "../config/swagger";
 import {
   applySecurityMiddleware,
   applyAuthMiddleware,
-  applyDevSecurityMiddleware,
 } from "./middleware/securityConfig";
 import { startServer, setupGracefulShutdown, setupUncaughtExceptionHandler, setupUnhandledRejectionHandler } from "./utils/serverSetup";
 
@@ -30,18 +29,6 @@ export const apiVersionOneRoute = "/api/v1";
 
 logger.info("Initializing application");
 console.log("Initializing application");
-
-// Add a middleware to log all incoming requests
-app.use((req, res, next) => {
-  logger.info(`Incoming request: ${req.method} ${req.url}`, {
-    headers: req.headers,
-    body: req.body,
-    query: req.query,
-    params: req.params,
-  });
-  console.log(`Incoming request: ${req.method} ${req.url}`);
-  next();
-});
 
 // Apply security middleware
 applySecurityMiddleware(app);
@@ -82,11 +69,8 @@ applyAuthMiddleware(app);
 logger.info("Applied authentication middleware");
 
 // Apply route handlers for dev-only routes
-if (
-  process.env.DEPLOYMENT !== "production" &&
-  process.env.DEPLOYMENT !== "staging"
-) {
-  // for dev endpoint
+if (process.env.NODE_ENV !== "production") {
+  // for dev endpoints
 }
 
 // Apply error handling middleware

@@ -99,7 +99,7 @@ async function setupDatabaseConstraints(
 function establishDayZero(requestId: string): string {
   logger.info("Establishing day zero", { requestId });
   const dayZero =
-    process.env.DEPLOYMENT === "dev"
+    process.env.NODE_ENV === "development"
       ? "2021-01-01"
       : moment.utc().subtract(1, "days").format("YYYY-MM-DD");
   logger.info("Day zero established", { dayZero, requestId });
