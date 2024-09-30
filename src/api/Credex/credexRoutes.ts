@@ -7,7 +7,6 @@ import { CancelCredexController } from "./controllers/cancelCredex";
 import { GetCredexController } from "./controllers/getCredex";
 import { GetLedgerController } from "./controllers/getLedger";
 import { validateRequest } from "../../middleware/validateRequest";
-import { authMiddleware } from "../../middleware/authMiddleware";
 import {
   offerCredexSchema,
   acceptCredexSchema,
@@ -79,7 +78,6 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
       OfferCredexController(req, res);
     }
   );
-  logger.debug("Registered route: POST /api/v1/offerCredex");
 
   /**
    * @swagger
@@ -122,7 +120,6 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
       AcceptCredexController(req, res);
     }
   );
-  logger.debug("Registered route: PUT /api/v1/acceptCredex");
 
   /**
    * @swagger
@@ -178,7 +175,6 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
       AcceptCredexBulkController(req, res);
     }
   );
-  logger.debug("Registered route: PUT /api/v1/acceptCredexBulk");
 
   /**
    * @swagger
@@ -218,7 +214,6 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
       DeclineCredexController(req, res);
     }
   );
-  logger.debug("Registered route: PUT /api/v1/declineCredex");
 
   /**
    * @swagger
@@ -258,7 +253,6 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
       CancelCredexController(req, res);
     }
   );
-  logger.debug("Registered route: PUT /api/v1/cancelCredex");
 
   /**
    * @swagger
@@ -299,7 +293,6 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
       GetCredexController(req, res);
     }
   );
-  logger.debug("Registered route: GET /api/v1/getCredex");
 
   /**
    * @swagger
@@ -341,7 +334,6 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
       GetLedgerController(req, res);
     }
   );
-  logger.debug("Registered route: GET /api/v1/getLedger");
 
   logger.info("Credex routes initialized successfully");
   return router;

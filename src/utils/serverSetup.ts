@@ -22,9 +22,6 @@ export function startServer(app: Application): Server {
         logger.info(`Server is running locally on ${localUrl}`);
         if (codespaceUrl) {
           logger.info(`Codespace URL: ${codespaceUrl}`);
-          console.log('\n==================================');
-          console.log(`CODESPACE URL: ${codespaceUrl}`);
-          console.log('==================================\n');
         }
         logger.info(
           `API documentation available at ${localUrl}/api-docs`
