@@ -55,9 +55,8 @@ class ConfigUtils {
         max: parseInt(process.env.RATE_LIMIT_MAX || "100", 10),
       },
       openExchangeRatesApi: process.env.OPEN_EXCHANGE_RATES_API || "",
-      // Initialize other configuration properties here
     };
-    logger.info("ConfigUtils initialized", {
+    logger.debug("ConfigUtils initialized", {
       nodeEnv: this.config.nodeEnv,
       logLevel: this.config.logLevel,
     });
