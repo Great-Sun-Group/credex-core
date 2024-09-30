@@ -48,7 +48,11 @@ export const applySecurityMiddleware = (app: Application) => {
 
 export const applyAuthMiddleware = (app: Application) => {
   app.use((req, res, next) => {
-    if (req.path === "/api/v1/login" || req.path === "/api/v1/member/onboardMember") {
+  console.log(req.path);
+    if (
+      req.path === "/api/v1/member/login" ||
+      req.path === "/api/v1/member/onboardMember"
+    ) {
       console.log("Bypassing auth for path:", req.path); // Add this line
       return next();
     }

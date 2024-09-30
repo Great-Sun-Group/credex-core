@@ -28,7 +28,6 @@ const jsonParser = bodyParser.json();
 export const apiVersionOneRoute = "/api/v1";
 
 logger.info("Initializing application");
-console.log("Initializing application");
 
 // Apply security middleware
 applySecurityMiddleware(app);
@@ -37,17 +36,14 @@ logger.info("Applied security middleware");
 // Apply custom logging middleware
 app.use(expressLogger);
 logger.info("Applied custom logging middleware");
-console.log("Applied custom logging middleware");
 
 // Serve Swagger UI for API documentation
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 logger.info("Swagger UI set up for API documentation");
-console.log("Swagger UI set up for API documentation");
 
 // Start cron jobs for scheduled tasks
 startCronJobs();
 logger.info("Started cron jobs for scheduled tasks");
-console.log("Started cron jobs for scheduled tasks");
 
 // Apply route handlers for hardened modules
 app.use(apiVersionOneRoute, jsonParser);
@@ -55,14 +51,12 @@ app.use(apiVersionOneRoute, jsonParser);
 // Apply MemberRoutes
 MemberRoutes(app);
 logger.info("Applied MemberRoutes");
-console.log("Applied MemberRoutes");
 
 AccountRoutes(app);
 CredexRoutes(app);
 AdminDashboardRoutes(app);
 RecurringRoutes(app);
 logger.info("Applied route handlers for hardened modules");
-console.log("Applied route handlers for hardened modules");
 
 // Apply authentication middleware after routes are set up
 applyAuthMiddleware(app);
@@ -77,10 +71,8 @@ if (process.env.NODE_ENV !== "production") {
 app.use(notFoundHandler); // Handle 404 errors
 app.use(errorHandler); // Handle all other errors
 logger.info("Applied error handling middleware");
-console.log("Applied error handling middleware");
 
 logger.info("Application initialization complete");
-console.log("Application initialization complete");
 
 // Start the server if this file is run directly
 if (require.main === module) {
