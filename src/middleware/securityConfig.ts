@@ -30,15 +30,28 @@ export const applySecurityMiddleware = (app: Application) => {
     })
   );
 
-  // CORS highly permissive (UPDATE FOR PROD)
-  const corsOptions = {
-    origin: '*', // Allow all origins
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-    maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
-  };
-  app.use(cors(corsOptions));
+  if (process.env.NODE_ENV !== "production") {
+    // CORS highly permissive
+    const corsOptions = {
+      origin: '*', // Allow all origins
+      methods: ["GET", "POST", "PUT", "DELETE"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      credentials: true,
+      maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
+    };
+    app.use(cors(corsOptions));
+  }
+  else {
+    // Restrict origin to vimbiso-pay origin for now
+    const corsOptions = {
+      origin: "*", // Allow all origins  *****UPDATE THIS******
+      methods: ["GET", "POST", "PUT", "DELETE"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      credentials: true,
+      maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
+    };
+    app.use(cors(corsOptions));
+  }
 
   // Apply rate limiting
   app.use(rateLimiter);
