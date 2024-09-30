@@ -4,7 +4,6 @@ import { AcceptRecurringController } from "./controllers/acceptRecurring";
 import { DeclineRecurringController } from "./controllers/cancelRecurring";
 import { errorHandler } from "../../middleware/errorHandler";
 import { validateRequest } from "../../middleware/validateRequest";
-import { authMiddleware } from "../../middleware/authMiddleware";
 import {
   requestRecurringSchema,
   acceptRecurringSchema,

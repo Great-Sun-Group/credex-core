@@ -5,11 +5,9 @@ import logger from "../utils/logger";
 // Load environment variables from .env file
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
-// Rest of the file remains unchanged
 interface Config {
   port: number;
   nodeEnv: string;
-  deployment: string;
   logLevel: string;
   ledgerSpace: {
     uri: string;
@@ -39,7 +37,6 @@ class ConfigUtils {
     this.config = {
       port: parseInt(process.env.PORT || "3000", 10),
       nodeEnv: process.env.NODE_ENV || "development",
-      deployment: process.env.DEPLOYMENT || "dev",
       logLevel: process.env.LOG_LEVEL || "info",
       ledgerSpace: {
         uri: process.env.NEO_4J_LEDGER_SPACE_BOLT_URL || "",
@@ -58,9 +55,8 @@ class ConfigUtils {
         max: parseInt(process.env.RATE_LIMIT_MAX || "100", 10),
       },
       openExchangeRatesApi: process.env.OPEN_EXCHANGE_RATES_API || "",
-      // Initialize other configuration properties here
     };
-    logger.info("ConfigUtils initialized", {
+    logger.debug("ConfigUtils initialized", {
       nodeEnv: this.config.nodeEnv,
       logLevel: this.config.logLevel,
     });
@@ -93,7 +89,6 @@ class ConfigUtils {
     const requiredFields: (keyof Config)[] = [
       "port",
       "nodeEnv",
-      "deployment",
       "ledgerSpace",
       "searchSpace",
       "jwtSecret",

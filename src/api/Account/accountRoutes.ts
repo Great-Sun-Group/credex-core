@@ -56,7 +56,6 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
     CreateAccountController,
     errorHandler
   );
-  logger.debug("Registered route: POST /api/v1/createAccount");
 
   /**
    * @swagger
@@ -93,7 +92,6 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
     GetAccountByHandleController,
     errorHandler
   );
-  logger.debug("Registered route: GET /api/v1/getAccountByHandle");
 
   /**
    * @swagger
@@ -131,7 +129,6 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
     UpdateAccountController,
     errorHandler
   );
-  logger.debug("Registered route: PATCH /api/v1/updateAccount");
 
   /**
    * @swagger
@@ -167,7 +164,6 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
     AuthorizeForAccountController,
     errorHandler
   );
-  logger.debug("Registered route: POST /api/v1/authorizeForAccount");
 
   /**
    * @swagger
@@ -203,7 +199,6 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
     UnauthorizeForAccountController,
     errorHandler
   );
-  logger.debug("Registered route: POST /api/v1/unauthorizeForAccount");
 
   /**
    * @swagger
@@ -239,7 +234,6 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
     UpdateSendOffersToController,
     errorHandler
   );
-  logger.debug("Registered route: POST /api/v1/updateSendOffersTo");
 
   logger.info("Account routes initialized successfully");
   return router;

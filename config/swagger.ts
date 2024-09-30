@@ -55,4 +55,4 @@ const options: swaggerJsdoc.Options = {
 
 export const swaggerSpec = swaggerJsdoc(options);
 
-logger.info("Swagger specification generated");
+logger.debug("Swagger specification generated");

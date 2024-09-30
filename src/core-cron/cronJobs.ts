@@ -4,7 +4,7 @@ import { MinuteTransactionQueue } from "./MTQ/MinuteTransactionQueue";
 import logger from "../utils/logger";
 
 export default function startCronJobs() {
-  logger.info("Starting cron jobs");
+  logger.debug("Starting cron jobs");
 
   // Running DailyCredcoinOffering every day at midnight UTC
   cron.schedule(
@@ -40,5 +40,5 @@ export default function startCronJobs() {
     }
   });
 
-  logger.info("Cron jobs started successfully");
+  logger.debug("Cron jobs started successfully");
 }

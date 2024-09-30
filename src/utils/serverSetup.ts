@@ -22,15 +22,11 @@ export function startServer(app: Application): Server {
         logger.info(`Server is running locally on ${localUrl}`);
         if (codespaceUrl) {
           logger.info(`Codespace URL: ${codespaceUrl}`);
-          console.log('\n==================================');
-          console.log(`CODESPACE URL: ${codespaceUrl}`);
-          console.log('==================================\n');
         }
         logger.info(
           `API documentation available at ${localUrl}/api-docs`
         );
         logger.info(`Server started at ${new Date().toISOString()}`);
-        logger.info(`Deployment: ${process.env.DEPLOYMENT}`);
         logger.debug(`Getting config value for key: logLevel`);
         logger.info(`Log level: ${process.env.LOG_LEVEL || "info"}`);
       });

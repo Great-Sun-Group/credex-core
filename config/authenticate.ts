@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import logger from '../src/utils/logger';
 import jwt from 'jsonwebtoken';
-import { searchSpaceDriver } from './neo4j';
+import { ledgerSpaceDriver } from './neo4j';
 import crypto from 'crypto';
 
 interface UserRequest extends Request {
@@ -17,12 +17,12 @@ if (!JWT_SECRET) {
 // Set token expiration to 5 minutes after the last activity
 const TOKEN_EXPIRATION = 5 * 60; // 5 minutes in seconds
 
-const generateToken = (memberId: string): string => {
+const generateToken = (memberID: string): string => {
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not set");
   }
   const now = Math.floor(Date.now() / 1000);
-  return jwt.sign({ memberId, iat: now, lastActivity: now }, JWT_SECRET);
+  return jwt.sign({ memberID, iat: now, lastActivity: now }, JWT_SECRET);
 };
 
 const verifyToken = (token: string): any => {
@@ -41,7 +41,7 @@ const refreshToken = (decoded: any): string => {
     throw new Error("JWT_SECRET is not set");
   }
   const now = Math.floor(Date.now() / 1000);
-  return jwt.sign({ memberId: decoded.memberId, iat: decoded.iat, lastActivity: now }, JWT_SECRET);
+  return jwt.sign({ memberID: decoded.memberID, iat: decoded.iat, lastActivity: now }, JWT_SECRET);
 };
 
 const authenticate = async (req: UserRequest, res: Response, next: NextFunction) => {
@@ -49,32 +49,32 @@ const authenticate = async (req: UserRequest, res: Response, next: NextFunction)
 
   if (!token) {
     logger.warn("No token provided", { path: req.path, method: req.method, ip: req.ip });
-    return res.status(401).json({ message: "Authentication required" });
+    return next(new Error("Authentication required"));
   }
 
   const decoded = verifyToken(token);
 
   if (!decoded) {
     logger.warn("Invalid token", { path: req.path, method: req.method, ip: req.ip });
-    return res.status(401).json({ message: "Invalid token" });
+    return next(new Error("Invalid token"));
   }
 
   const now = Math.floor(Date.now() / 1000);
   if (now - decoded.lastActivity > TOKEN_EXPIRATION) {
     logger.warn("Token expired", { path: req.path, method: req.method, ip: req.ip });
-    return res.status(401).json({ message: "Token expired" });
+    return next(new Error("Token expired"));
   }
 
-  const session = searchSpaceDriver.session();
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
   try {
-    const result = await session.run(
-      'MATCH (m:Member {id: $memberId}) RETURN m',
-      { memberId: decoded.memberId }
+    const result = await ledgerSpaceSession.run(
+      "MATCH (m:Member {memberID: $memberID}) RETURN m",
+      { memberID: decoded.memberID }
     );
 
     if (result.records.length === 0) {
-      logger.warn("Member not found", { memberId: decoded.memberId, path: req.path, method: req.method, ip: req.ip });
-      return res.status(401).json({ message: "Invalid token" });
+      logger.warn("Member not found", { memberID: decoded.memberID, path: req.path, method: req.method, ip: req.ip });
+      return next(new Error("Invalid token"));
     }
 
     req.user = result.records[0].get('m').properties;
@@ -86,9 +86,9 @@ const authenticate = async (req: UserRequest, res: Response, next: NextFunction)
     next();
   } catch (error) {
     logger.error("Error verifying token", { error, path: req.path, method: req.method, ip: req.ip });
-    res.status(500).json({ message: "Internal server error" });
+    next(new Error("Internal server error"));
   } finally {
-    await session.close();
+    await ledgerSpaceSession.close();
   }
 };
 
