@@ -18,41 +18,41 @@ const requiredEnvVars = [
   'NEO_4J_SEARCH_SPACE_BOLT_URL',
   'NEO_4J_SEARCH_SPACE_USER',
   'NEO_4J_SEARCH_SPACE_PASS',
-  'OPEN_EXCHANGE_RATES_API'
+  'OPEN_EXCHANGE_RATES_API',
+  'JWT_SECRET'
 ];
 
 const validatedEnv = validateEnv(requiredEnvVars);
 
-export const config = {
-  // Server configuration
-  port: process.env.PORT ? parseInt(process.env.PORT, 10) : 5000,
-  fallbackPorts: [5001, 5002, 5003, 5004, 5005], // Add fallback ports
-  nodeEnv: validatedEnv.NODE_ENV,
-
-  // Neo4j database configuration
-  neo4j: {
-    ledgerSpace: {
-      url: validatedEnv.NEO_4J_LEDGER_SPACE_BOLT_URL,
-      user: validatedEnv.NEO_4J_LEDGER_SPACE_USER,
-      password: validatedEnv.NEO_4J_LEDGER_SPACE_PASS,
+const config = {
+  environment: process.env.NODE_ENV || 'development',
+  port: parseInt(process.env.PORT || '5000', 10),
+  logLevel: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+  fallbackPorts: [5001, 5002, 5003, 5004, 5005],
+  database: {
+    neo4jLedgerSpace: {
+      boltUrl: process.env.NEO_4J_LEDGER_SPACE_BOLT_URL,
+      user: process.env.NEO_4J_LEDGER_SPACE_USER,
+      password: process.env.NEO_4J_LEDGER_SPACE_PASS
     },
-    searchSpace: {
-      url: validatedEnv.NEO_4J_SEARCH_SPACE_BOLT_URL,
-      user: validatedEnv.NEO_4J_SEARCH_SPACE_USER,
-      password: validatedEnv.NEO_4J_SEARCH_SPACE_PASS,
-    },
+    neo4jSearchSpace: {
+      boltUrl: process.env.NEO_4J_SEARCH_SPACE_BOLT_URL,
+      user: process.env.NEO_4J_SEARCH_SPACE_USER,
+      password: process.env.NEO_4J_SEARCH_SPACE_PASS
+    }
   },
-
-  // External API configuration
-  openExchangeRatesApiKey: validatedEnv.OPEN_EXCHANGE_RATES_API,
-
-  // Rate limiting configuration
+  api: {
+    openExchangeRates: {
+      apiKey: process.env.OPEN_EXCHANGE_RATES_API
+    }
+  },
+  security: {
+    jwtSecret: process.env.JWT_SECRET
+  },
   rateLimit: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // limit each IP to 100 requests per windowMs
   },
-
-  // Cron job schedules
   cron: {
     dailyCredcoinOffering: '0 0 * * *', // Every day at midnight UTC
     minuteTransactionQueue: '* * * * *', // Every minute
@@ -61,14 +61,17 @@ export const config = {
 
 export function logConfig(logger: any) {
   logger.info('Application configuration loaded', {
+    environment: config.environment,
     port: config.port,
+    logLevel: config.logLevel,
     fallbackPorts: config.fallbackPorts,
-    nodeEnv: config.nodeEnv,
-    neo4jLedgerSpaceUrl: config.neo4j.ledgerSpace.url,
-    neo4jSearchSpaceUrl: config.neo4j.searchSpace.url,
+    neo4jLedgerSpaceUrl: config.database.neo4jLedgerSpace.boltUrl,
+    neo4jSearchSpaceUrl: config.database.neo4jSearchSpace.boltUrl,
     rateLimitWindowMs: config.rateLimit.windowMs,
     rateLimitMax: config.rateLimit.max,
     cronDailyCredcoinOffering: config.cron.dailyCredcoinOffering,
     cronMinuteTransactionQueue: config.cron.minuteTransactionQueue,
   });
 }
+
+export default config;

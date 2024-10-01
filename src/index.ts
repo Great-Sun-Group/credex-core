@@ -61,7 +61,7 @@ logger.debug("Applied authentication middleware");
 // Apply route handlers for dev-only routes
 if (process.env.NODE_ENV !== "production") {
   // for dev endpoints
-logger.debug("Route handlers applied for dev-only routes");
+  logger.debug("Route handlers applied for dev-only routes");
 }
 
 // Apply error handling middleware
@@ -73,10 +73,17 @@ logger.info("Application initialization complete");
 
 // Start the server if this file is run directly
 if (require.main === module) {
-  const server = startServer(app);
-  setupGracefulShutdown(server);
-  setupUncaughtExceptionHandler(server);
-  setupUnhandledRejectionHandler();
+  (async () => {
+    try {
+      const server = await startServer(app);
+      setupGracefulShutdown(server);
+      setupUncaughtExceptionHandler(server);
+      setupUnhandledRejectionHandler();
+    } catch (error) {
+      logger.error("Failed to start server:", error);
+      process.exit(1);
+    }
+  })();
 }
 
 // Export the app for testing or if this file is imported as a module

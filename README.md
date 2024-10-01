@@ -72,6 +72,7 @@ Development for the credex-core repository and API is intended to be carried out
 - [Security and Authentication](docs/Security_and_Authentication.md)
 - [Security Overview](docs/security.md)
 - [Swagger API Documentation](docs/swagger.md)
+- [Deployments and Environments](docs/deployments.md)
 
 
 ## License

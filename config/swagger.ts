@@ -1,5 +1,5 @@
 import swaggerJsdoc from "swagger-jsdoc";
-import { config } from "./config";
+import config from "./config";
 import logger from '../src/utils/logger';
 
 const options: swaggerJsdoc.Options = {

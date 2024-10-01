@@ -1,12 +1,12 @@
 import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
-import { config } from "../../config/config";
 import { v4 as uuidv4 } from "uuid";
 import { Request, Response, NextFunction } from 'express';
+import config from "../../config/config";
 
 // Configure the base logger
 const baseLogger = winston.createLogger({
-  level: config.nodeEnv === "production" ? "info" : "debug",
+  level: config.logLevel,
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.errors({ stack: true }),
@@ -25,7 +25,7 @@ const baseLogger = winston.createLogger({
 });
 
 // Add file transports for production environment
-if (config.nodeEnv === "production") {
+if (config.environment === "production") {
   baseLogger.add(
     new DailyRotateFile({
       filename: "logs/error-%DATE%.log",

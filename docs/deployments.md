@@ -20,16 +20,13 @@ GitHub Codespaces provides a cloud-based development environment that's preconfi
 
 ### Codespaces-specific considerations:
 
-- Environment variables: Use Codespaces secrets to set up environment variables securely. These can be configured at the repository or organization level.
-- Ports: Codespaces will automatically forward the ports specified in the `devcontainer.json` file. Make sure the application's port (default 5000) is included.
+- Environment variables: Use Codespaces secrets to set up environment variables securely. Set .
+- Ports: Codespaces will automatically forward port 5000 as specified in the `devcontainer.json` file.
 - Persistence: Changes made in Codespaces persist between sessions, but it's good practice to commit and push changes regularly.
 
 ### Running the application in Codespaces:
 
-1. Open a terminal in Codespaces.
-2. Navigate to the project directory: `cd /workspaces/greatsun-dev/credex-ecosystem/credex-core`
-3. Install dependencies: `npm install`
-4. Start the application: `npm start`
+`npm run dev`
 
 The application should now be running and accessible via the Codespaces URL, which will be automatically generated and displayed in the terminal.
 
