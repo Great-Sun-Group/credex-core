@@ -22,7 +22,7 @@ const requiredEnvVars = [
   'JWT_SECRET'
 ];
 
-const validatedEnv = validateEnv(requiredEnvVars);
+validateEnv(requiredEnvVars);
 
 const config = {
   environment: process.env.NODE_ENV || 'development',

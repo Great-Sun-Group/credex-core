@@ -76,6 +76,158 @@ resource "aws_security_group" "ecs_tasks" {
   }
 }
 
+# Neo4j Production LedgerSpace Instance (Enterprise Edition)
+resource "aws_instance" "neo4j_prod_ledger" {
+  ami           = var.neo4j_enterprise_ami
+  instance_type = "m5.large"
+  key_name      = var.ec2_key_name
+
+  vpc_security_group_ids = [aws_security_group.neo4j_prod.id]
+  subnet_id              = var.subnet_ids[0]
+
+  tags = {
+    Name = "Neo4j-Production-LedgerSpace"
+  }
+
+  user_data = <<-EOF
+              #!/bin/bash
+              echo "Setting up Neo4j Enterprise Edition for LedgerSpace"
+              NEO4J_PASSWORD=${var.prod_neo4j_ledger_space_pass}
+              # Install and configure Neo4j Enterprise Edition
+              sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
+              neo4j-admin set-initial-password $NEO4J_PASSWORD
+              systemctl start neo4j
+              EOF
+}
+
+# Neo4j Production SearchSpace Instance (Enterprise Edition)
+resource "aws_instance" "neo4j_prod_search" {
+  ami           = var.neo4j_enterprise_ami
+  instance_type = "m5.large"
+  key_name      = var.ec2_key_name
+
+  vpc_security_group_ids = [aws_security_group.neo4j_prod.id]
+  subnet_id              = var.subnet_ids[0]
+
+  tags = {
+    Name = "Neo4j-Production-SearchSpace"
+  }
+
+  user_data = <<-EOF
+              #!/bin/bash
+              echo "Setting up Neo4j Enterprise Edition for SearchSpace"
+              NEO4J_PASSWORD=${var.prod_neo4j_search_space_pass}
+              # Install and configure Neo4j Enterprise Edition
+              sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
+              neo4j-admin set-initial-password $NEO4J_PASSWORD
+              systemctl start neo4j
+              EOF
+}
+
+# Neo4j Staging LedgerSpace Instance (Community Edition)
+resource "aws_instance" "neo4j_stage_ledger" {
+  ami           = var.neo4j_community_ami
+  instance_type = "t3.medium"
+  key_name      = var.ec2_key_name
+
+  vpc_security_group_ids = [aws_security_group.neo4j_stage.id]
+  subnet_id              = var.subnet_ids[0]
+
+  tags = {
+    Name = "Neo4j-Staging-LedgerSpace"
+  }
+
+  user_data = <<-EOF
+              #!/bin/bash
+              echo "Setting up Neo4j Community Edition for LedgerSpace"
+              NEO4J_PASSWORD=${var.staging_neo4j_ledger_space_pass}
+              # Install and configure Neo4j Community Edition
+              sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
+              neo4j-admin set-initial-password $NEO4J_PASSWORD
+              systemctl start neo4j
+              EOF
+}
+
+# Neo4j Staging SearchSpace Instance (Community Edition)
+resource "aws_instance" "neo4j_stage_search" {
+  ami           = var.neo4j_community_ami
+  instance_type = "t3.medium"
+  key_name      = var.ec2_key_name
+
+  vpc_security_group_ids = [aws_security_group.neo4j_stage.id]
+  subnet_id              = var.subnet_ids[0]
+
+  tags = {
+    Name = "Neo4j-Staging-SearchSpace"
+  }
+
+  user_data = <<-EOF
+              #!/bin/bash
+              echo "Setting up Neo4j Community Edition for SearchSpace"
+              NEO4J_PASSWORD=${var.staging_neo4j_search_space_pass}
+              # Install and configure Neo4j Community Edition
+              sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
+              neo4j-admin set-initial-password $NEO4J_PASSWORD
+              systemctl start neo4j
+              EOF
+}
+
+# Security Group for Neo4j Production
+resource "aws_security_group" "neo4j_prod" {
+  name        = "neo4j-prod-sg"
+  description = "Security group for Neo4j Production instances"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 7474
+    to_port     = 7474
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_cidr_block]
+  }
+
+  ingress {
+    from_port   = 7687
+    to_port     = 7687
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_cidr_block]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Security Group for Neo4j Staging
+resource "aws_security_group" "neo4j_stage" {
+  name        = "neo4j-stage-sg"
+  description = "Security group for Neo4j Staging instances"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 7474
+    to_port     = 7474
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_cidr_block]
+  }
+
+  ingress {
+    from_port   = 7687
+    to_port     = 7687
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_cidr_block]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 variable "aws_region" {
   description = "The AWS region to deploy to"
   default     = "us-east-1"
@@ -94,6 +246,46 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
+variable "neo4j_enterprise_ami" {
+  description = "AMI ID for Neo4j Enterprise Edition"
+  type        = string
+}
+
+variable "neo4j_community_ami" {
+  description = "AMI ID for Neo4j Community Edition"
+  type        = string
+}
+
+variable "ec2_key_name" {
+  description = "Name of the EC2 key pair to use for the instances"
+  type        = string
+}
+
+variable "allowed_cidr_block" {
+  description = "The CIDR block allowed to access Neo4j instances"
+  type        = string
+}
+
+variable "prod_neo4j_ledger_space_pass" {
+  description = "Password for Neo4j Production LedgerSpace instance"
+  type        = string
+}
+
+variable "prod_neo4j_search_space_pass" {
+  description = "Password for Neo4j Production SearchSpace instance"
+  type        = string
+}
+
+variable "staging_neo4j_ledger_space_pass" {
+  description = "Password for Neo4j Staging LedgerSpace instance"
+  type        = string
+}
+
+variable "staging_neo4j_search_space_pass" {
+  description = "Password for Neo4j Staging SearchSpace instance"
+  type        = string
+}
+
 output "ecr_repository_url" {
   value = aws_ecr_repository.credex_core.repository_url
 }
@@ -104,4 +296,20 @@ output "ecs_cluster_name" {
 
 output "ecs_service_name" {
   value = aws_ecs_service.credex_core_service.name
+}
+
+output "neo4j_prod_ledger_public_ip" {
+  value = aws_instance.neo4j_prod_ledger.public_ip
+}
+
+output "neo4j_prod_search_public_ip" {
+  value = aws_instance.neo4j_prod_search.public_ip
+}
+
+output "neo4j_stage_ledger_public_ip" {
+  value = aws_instance.neo4j_stage_ledger.public_ip
+}
+
+output "neo4j_stage_search_public_ip" {
+  value = aws_instance.neo4j_stage_search.public_ip
 }
