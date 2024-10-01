@@ -230,7 +230,7 @@ resource "aws_security_group" "neo4j_stage" {
 
 variable "aws_region" {
   description = "The AWS region to deploy to"
-  default     = "us-east-1"
+  default     = "af-south-1"
 }
 
 variable "environment" {

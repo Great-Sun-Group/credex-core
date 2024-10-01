@@ -36,7 +36,7 @@ The application uses environment variables for configuration. These are defined 
 
 ## AWS Deployment
 
-The application is deployed to AWS using ECS (Elastic Container Service) with Fargate. The deployment process is automated using GitHub Actions and Terraform.
+The application is deployed to AWS using ECS (Elastic Container Service) with Fargate. The deployment process is automated using GitHub Actions and Terraform. The default AWS region for deployment is set to af-south-1 (Cape Town).
 
 ### Prerequisites
 
@@ -77,17 +77,47 @@ The GitHub Actions workflows automatically update the ECS task definition during
 2. Using the AWS CLI to register the new task definition.
 3. Updating the ECS service to use the new task definition.
 
+### ECS Service Configuration
+
+The ECS service is configured using Terraform in the `main.tf` file. Key aspects of the configuration include:
+
+- Service name: "credex-core-service"
+- Cluster: Uses the "credex-cluster" ECS cluster
+- Launch type: FARGATE
+- Desired count: 1 (can be adjusted based on load requirements)
+- Network configuration: 
+  - Uses specified subnets
+  - Assigns a public IP
+  - Uses a dedicated security group for ECS tasks
+
+The security group for ECS tasks allows inbound traffic on port 5000 and all outbound traffic.
+
 ### Deployment Process
 
 1. Staging Deployment:
    - Push changes to the `stage` branch.
-   - GitHub Actions will automatically build, push to ECR, update the task definition, and deploy to the staging ECS cluster.
+   - The `deploy-staging.yml` GitHub Actions workflow will automatically:
+     - Build the Docker image
+     - Push the image to ECR
+     - Update the ECS task definition
+     - Deploy to the staging ECS cluster
 
 2. Production Deployment:
    - Push changes to the `prod` branch.
-   - GitHub Actions will automatically build, push to ECR, update the task definition, and deploy to the production ECS cluster.
+   - The `deploy-production.yml` GitHub Actions workflow will automatically:
+     - Build the Docker image
+     - Push the image to ECR
+     - Update the ECS task definition
+     - Deploy to the production ECS cluster
 
-3. Monitoring Deployments:
+3. Post-Deployment Verification:
+   - Currently, there is a placeholder for post-deployment verification in the GitHub Actions workflows.
+   - This step can be expanded to include more comprehensive checks, such as:
+     - Health check endpoints
+     - Integration tests
+     - Performance benchmarks
+
+4. Monitoring Deployments:
    - Check GitHub Actions logs for deployment status.
    - Use AWS Console or CLI to monitor ECS services and tasks.
 
@@ -150,6 +180,33 @@ This setup provides a scalable and manageable solution for running separate Ledg
 3. Run `terraform init` to initialize the Terraform working directory.
 4. Run `terraform apply` to create the necessary AWS resources.
 
+Note: The default AWS region is set to af-south-1 (Cape Town) in the Terraform configuration. If you need to deploy to a different region, you'll need to modify the `aws_region` variable in the `terraform/main.tf` file.
+
+## Monitoring and Logging
+
+The application uses AWS CloudWatch for monitoring and logging. This is configured in the ECS task definition within the Terraform configuration.
+
+### CloudWatch Logs
+
+- Log group: `/ecs/credex-core`
+- Log stream prefix: `ecs`
+- AWS region: af-south-1 (Cape Town)
+
+To access the logs:
+1. Go to the AWS CloudWatch console
+2. Navigate to Log groups
+3. Select the `/ecs/credex-core` log group
+4. Browse the log streams to find the logs for specific tasks
+
+### Monitoring
+
+Consider setting up CloudWatch Alarms for important metrics such as:
+- CPU and Memory utilization of ECS tasks
+- Number of running tasks
+- Application-specific metrics (if pushed to CloudWatch)
+
+You can also use CloudWatch Dashboards to create visual representations of your application's performance and health.
+
 ## Troubleshooting
 
 - If deployments fail, check the GitHub Actions logs for error messages.
@@ -158,6 +215,7 @@ This setup provides a scalable and manageable solution for running separate Ledg
 - For local development issues, check the Docker Compose logs and ensure all required environment variables are set in your local .env file.
 - For Codespaces issues, check the Codespaces logs and ensure all required environment variables are set in Codespaces secrets.
 - For Neo4j issues, check the EC2 instance logs and ensure the `user_data` script executed correctly for each instance.
+- For application issues, check the CloudWatch logs for the ECS tasks.
 
 ## Security Considerations
 
@@ -173,6 +231,7 @@ This setup provides a scalable and manageable solution for running separate Ledg
 ## Continuous Improvement
 
 The deployment process is designed to be flexible and scalable. As the project evolves, consider:
+- Implementing comprehensive post-deployment verification steps, including automated tests and health checks
 - Adding more comprehensive testing in the CI/CD pipeline
 - Implementing blue-green deployments for zero-downtime updates
 - Setting up automated rollback procedures in case of failed deployments
