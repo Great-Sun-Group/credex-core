@@ -108,10 +108,10 @@ resource "aws_secretsmanager_secret" "neo4j_prod_secrets" {
 resource "aws_secretsmanager_secret_version" "neo4j_prod_secrets" {
   secret_id = aws_secretsmanager_secret.neo4j_prod_secrets.id
   secret_string = jsonencode({
-    ledgerspacebolturl = "bolt://${aws_instance.neo4j_prod_ledger.public_ip}:7687"
+    ledgerspacebolturl = "bolt://${aws_instance.neo4j_prod_ledger.private_ip}:7687"
     ledgerspaceuser    = "neo4j"
     ledgerspacepass    = var.prod_neo4j_ledger_space_pass
-    searchspacebolturl = "bolt://${aws_instance.neo4j_prod_search.public_ip}:7687"
+    searchspacebolturl = "bolt://${aws_instance.neo4j_prod_search.private_ip}:7687"
     searchspaceuser    = "neo4j"
     searchspacepass    = var.prod_neo4j_search_space_pass
   })
@@ -125,10 +125,10 @@ resource "aws_secretsmanager_secret" "neo4j_stage_secrets" {
 resource "aws_secretsmanager_secret_version" "neo4j_stage_secrets" {
   secret_id = aws_secretsmanager_secret.neo4j_stage_secrets.id
   secret_string = jsonencode({
-    ledgerspacebolturl = "bolt://${aws_instance.neo4j_stage_ledger.public_ip}:7687"
+    ledgerspacebolturl = "bolt://${aws_instance.neo4j_stage_ledger.private_ip}:7687"
     ledgerspaceuser    = "neo4j"
     ledgerspacepass    = var.staging_neo4j_ledger_space_pass
-    searchspacebolturl = "bolt://${aws_instance.neo4j_stage_search.public_ip}:7687"
+    searchspacebolturl = "bolt://${aws_instance.neo4j_stage_search.private_ip}:7687"
     searchspaceuser    = "neo4j"
     searchspacepass    = var.staging_neo4j_search_space_pass
   })
@@ -156,6 +156,17 @@ resource "aws_instance" "neo4j_prod_ledger" {
               neo4j-admin set-initial-password $NEO4J_PASSWORD
               systemctl start neo4j
               EOF
+
+  root_block_device {
+    volume_type = "gp3"
+    volume_size = 100
+    encrypted   = true
+  }
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [ami, user_data]
+  }
 }
 
 # Neo4j Production SearchSpace Instance (Enterprise Edition)
@@ -180,6 +191,17 @@ resource "aws_instance" "neo4j_prod_search" {
               neo4j-admin set-initial-password $NEO4J_PASSWORD
               systemctl start neo4j
               EOF
+
+  root_block_device {
+    volume_type = "gp3"
+    volume_size = 100
+    encrypted   = true
+  }
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [ami, user_data]
+  }
 }
 
 # Neo4j Staging LedgerSpace Instance (Community Edition)
@@ -204,6 +226,17 @@ resource "aws_instance" "neo4j_stage_ledger" {
               neo4j-admin set-initial-password $NEO4J_PASSWORD
               systemctl start neo4j
               EOF
+
+  root_block_device {
+    volume_type = "gp3"
+    volume_size = 50
+    encrypted   = true
+  }
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [ami, user_data]
+  }
 }
 
 # Neo4j Staging SearchSpace Instance (Community Edition)
@@ -228,6 +261,17 @@ resource "aws_instance" "neo4j_stage_search" {
               neo4j-admin set-initial-password $NEO4J_PASSWORD
               systemctl start neo4j
               EOF
+
+  root_block_device {
+    volume_type = "gp3"
+    volume_size = 50
+    encrypted   = true
+  }
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [ami, user_data]
+  }
 }
 
 # Security Group for Neo4j Production
@@ -360,20 +404,20 @@ output "ecs_service_name" {
   value = aws_ecs_service.credex_core_service.name
 }
 
-output "neo4j_prod_ledger_public_ip" {
-  value = aws_instance.neo4j_prod_ledger.public_ip
+output "neo4j_prod_ledger_private_ip" {
+  value = aws_instance.neo4j_prod_ledger.private_ip
 }
 
-output "neo4j_prod_search_public_ip" {
-  value = aws_instance.neo4j_prod_search.public_ip
+output "neo4j_prod_search_private_ip" {
+  value = aws_instance.neo4j_prod_search.private_ip
 }
 
-output "neo4j_stage_ledger_public_ip" {
-  value = aws_instance.neo4j_stage_ledger.public_ip
+output "neo4j_stage_ledger_private_ip" {
+  value = aws_instance.neo4j_stage_ledger.private_ip
 }
 
-output "neo4j_stage_search_public_ip" {
-  value = aws_instance.neo4j_stage_search.public_ip
+output "neo4j_stage_search_private_ip" {
+  value = aws_instance.neo4j_stage_search.private_ip
 }
 
 output "neo4j_prod_secrets_arn" {
