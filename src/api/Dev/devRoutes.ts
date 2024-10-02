@@ -1,19 +1,41 @@
 import express from "express";
 import { GetMemberListController } from "./controllers/getMemberList";
+import { validateRequest } from "../../middleware/validateRequest";
 import logger from "../../utils/logger";
-import { updateMemberTierExpressHandler } from "./controllers/updateMemberTier";
+// Import validation schema if it exists
+// import { getMemberListSchema } from "./devValidationSchemas";
 
-const router = express.Router();
+export default function DevRoutes(jsonParser: express.RequestHandler) {
+  const router = express.Router();
+  logger.info("Initializing Dev routes");
 
-logger.info("Initializing Dev routes", { module: "devRoutes" });
+  /**
+   * @swagger
+   * /api/v1/dev/getMemberList:
+   *   post:
+   *     summary: Get member list (Dev only)
+   *     tags: [Dev]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Member list retrieved successfully
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden
+   */
+  router.post(
+    `/getMemberList`,
+    jsonParser,
+    // Add validation if schema exists
+    // validateRequest(getMemberListSchema),
+    (req: express.Request, res: express.Response) => {
+      logger.debug("POST /dev/getMemberList called", { requestId: req.id });
+      GetMemberListController(req, res);
+    }
+  );
 
-router.post("/getMemberList", GetMemberListController);
-
-router.post("/updateMemberTier", updateMemberTierExpressHandler);
-
-logger.info("Dev routes initialized successfully", {
-  module: "devRoutes",
-  routesCount: 1,
-});
-
-export default router;
+  logger.info("Dev routes initialized successfully");
+  return router;
+}

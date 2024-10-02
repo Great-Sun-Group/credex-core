@@ -11,35 +11,13 @@ resource "aws_ecs_cluster" "credex_cluster" {
 }
 
 resource "aws_ecs_task_definition" "credex_core_task" {
-  family                   = "credex-core-task"
+  family                   = "credex-core"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
   memory                   = "512"
 
-  container_definitions = jsonencode([
-    {
-      name  = "credex-core"
-      image = "${aws_ecr_repository.credex_core.repository_url}:latest"
-      portMappings = [
-        {
-          containerPort = 5000
-          hostPort      = 5000
-        }
-      ]
-      environment = [
-        { name = "NODE_ENV", value = var.environment }
-      ]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          awslogs-group         = "/ecs/credex-core"
-          awslogs-region        = var.aws_region
-          awslogs-stream-prefix = "ecs"
-        }
-      }
-    }
-  ])
+  container_definitions = file("${path.module}/task-definition.json")
 }
 
 resource "aws_ecs_service" "credex_core_service" {
@@ -76,6 +54,40 @@ resource "aws_security_group" "ecs_tasks" {
   }
 }
 
+# AWS Secrets Manager for Neo4j Production Secrets
+resource "aws_secretsmanager_secret" "neo4j_prod_secrets" {
+  name = "neo4j_prod_secrets"
+}
+
+resource "aws_secretsmanager_secret_version" "neo4j_prod_secrets" {
+  secret_id = aws_secretsmanager_secret.neo4j_prod_secrets.id
+  secret_string = jsonencode({
+    ledgerspacebolturl = "bolt://${aws_instance.neo4j_prod_ledger.public_ip}:7687"
+    ledgerspaceuser    = "neo4j"
+    ledgerspacepass    = var.prod_neo4j_ledger_space_pass
+    searchspacebolturl = "bolt://${aws_instance.neo4j_prod_search.public_ip}:7687"
+    searchspaceuser    = "neo4j"
+    searchspacepass    = var.prod_neo4j_search_space_pass
+  })
+}
+
+# AWS Secrets Manager for Neo4j Staging Secrets
+resource "aws_secretsmanager_secret" "neo4j_stage_secrets" {
+  name = "neo4j_stage_secrets"
+}
+
+resource "aws_secretsmanager_secret_version" "neo4j_stage_secrets" {
+  secret_id = aws_secretsmanager_secret.neo4j_stage_secrets.id
+  secret_string = jsonencode({
+    ledgerspacebolturl = "bolt://${aws_instance.neo4j_stage_ledger.public_ip}:7687"
+    ledgerspaceuser    = "neo4j"
+    ledgerspacepass    = var.staging_neo4j_ledger_space_pass
+    searchspacebolturl = "bolt://${aws_instance.neo4j_stage_search.public_ip}:7687"
+    searchspaceuser    = "neo4j"
+    searchspacepass    = var.staging_neo4j_search_space_pass
+  })
+}
+
 # Neo4j Production LedgerSpace Instance (Enterprise Edition)
 resource "aws_instance" "neo4j_prod_ledger" {
   ami           = var.neo4j_enterprise_ami
@@ -92,7 +104,7 @@ resource "aws_instance" "neo4j_prod_ledger" {
   user_data = <<-EOF
               #!/bin/bash
               echo "Setting up Neo4j Enterprise Edition for LedgerSpace"
-              NEO4J_PASSWORD=${var.prod_neo4j_ledger_space_pass}
+              NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_prod_secrets.id} --query SecretString --output text | jq -r .ledgerspacepass)
               # Install and configure Neo4j Enterprise Edition
               sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
               neo4j-admin set-initial-password $NEO4J_PASSWORD
@@ -116,7 +128,7 @@ resource "aws_instance" "neo4j_prod_search" {
   user_data = <<-EOF
               #!/bin/bash
               echo "Setting up Neo4j Enterprise Edition for SearchSpace"
-              NEO4J_PASSWORD=${var.prod_neo4j_search_space_pass}
+              NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_prod_secrets.id} --query SecretString --output text | jq -r .searchspacepass)
               # Install and configure Neo4j Enterprise Edition
               sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
               neo4j-admin set-initial-password $NEO4J_PASSWORD
@@ -140,7 +152,7 @@ resource "aws_instance" "neo4j_stage_ledger" {
   user_data = <<-EOF
               #!/bin/bash
               echo "Setting up Neo4j Community Edition for LedgerSpace"
-              NEO4J_PASSWORD=${var.staging_neo4j_ledger_space_pass}
+              NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_stage_secrets.id} --query SecretString --output text | jq -r .ledgerspacepass)
               # Install and configure Neo4j Community Edition
               sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
               neo4j-admin set-initial-password $NEO4J_PASSWORD
@@ -164,7 +176,7 @@ resource "aws_instance" "neo4j_stage_search" {
   user_data = <<-EOF
               #!/bin/bash
               echo "Setting up Neo4j Community Edition for SearchSpace"
-              NEO4J_PASSWORD=${var.staging_neo4j_search_space_pass}
+              NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_stage_secrets.id} --query SecretString --output text | jq -r .searchspacepass)
               # Install and configure Neo4j Community Edition
               sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
               neo4j-admin set-initial-password $NEO4J_PASSWORD
@@ -269,21 +281,25 @@ variable "allowed_cidr_block" {
 variable "prod_neo4j_ledger_space_pass" {
   description = "Password for Neo4j Production LedgerSpace instance"
   type        = string
+  sensitive   = true
 }
 
 variable "prod_neo4j_search_space_pass" {
   description = "Password for Neo4j Production SearchSpace instance"
   type        = string
+  sensitive   = true
 }
 
 variable "staging_neo4j_ledger_space_pass" {
   description = "Password for Neo4j Staging LedgerSpace instance"
   type        = string
+  sensitive   = true
 }
 
 variable "staging_neo4j_search_space_pass" {
   description = "Password for Neo4j Staging SearchSpace instance"
   type        = string
+  sensitive   = true
 }
 
 output "ecr_repository_url" {
@@ -312,4 +328,12 @@ output "neo4j_stage_ledger_public_ip" {
 
 output "neo4j_stage_search_public_ip" {
   value = aws_instance.neo4j_stage_search.public_ip
+}
+
+output "neo4j_prod_secrets_arn" {
+  value = aws_secretsmanager_secret.neo4j_prod_secrets.arn
+}
+
+output "neo4j_stage_secrets_arn" {
+  value = aws_secretsmanager_secret.neo4j_stage_secrets.arn
 }

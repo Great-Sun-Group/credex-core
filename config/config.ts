@@ -7,6 +7,11 @@ const isProduction = process.env.NODE_ENV === 'production';
 const isStaging = process.env.NODE_ENV === 'staging';
 const useAwsSecrets = isProduction || isStaging;
 
+/**
+ * Retrieves a secret from AWS Secrets Manager.
+ * @param secretName The name of the secret to retrieve.
+ * @returns The secret value as a parsed JSON object.
+ */
 async function getAwsSecret(secretName: string): Promise<any> {
   const client = new SecretsManager({ region: process.env.AWS_REGION });
   try {
@@ -21,6 +26,11 @@ async function getAwsSecret(secretName: string): Promise<any> {
   }
 }
 
+/**
+ * Validates environment variables and retrieves secrets from AWS Secrets Manager when necessary.
+ * @param requiredVars An array of required environment variable names.
+ * @returns An object containing the validated environment variables.
+ */
 async function validateEnv(requiredVars: string[]): Promise<{ [key: string]: string }> {
   const missingVars = [];
   const envVars: { [key: string]: string } = {};
@@ -38,7 +48,12 @@ async function validateEnv(requiredVars: string[]): Promise<{ [key: string]: str
         }
       } catch (error) {
         console.error(`Failed to retrieve ${varName} from AWS Secrets Manager:`, error);
-        missingVars.push(varName);
+        // Fallback to environment variables if AWS Secrets Manager fails
+        if (process.env[varName]) {
+          envVars[varName] = process.env[varName]!;
+        } else {
+          missingVars.push(varName);
+        }
       }
     } else if (!process.env[varName]) {
       missingVars.push(varName);
@@ -127,6 +142,7 @@ export async function logConfig(logger: any) {
     rateLimitMax: config.rateLimit.max,
     cronDailyCredcoinOffering: config.cron.dailyCredcoinOffering,
     cronMinuteTransactionQueue: config.cron.minuteTransactionQueue,
+    usingAwsSecrets: useAwsSecrets
   });
 }
 

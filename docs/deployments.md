@@ -2,31 +2,89 @@
 
 This document outlines the deployment process for the credex-core application, including local development, GitHub Codespaces, staging, and production environments.
 
+## Prerequisites
+
+### For all environments:
+- GitHub account with access to Great Sun Group repositories
+
+### Additional prerequisites for local development:
+- Git
+- Docker and Docker Compose
+- Visual Studio Code
+
+## Environment Variables and Secrets
+
+The following secrets are required for local development and Codespaces. These should be set in your personal Codespace secrets or in a `.env` file in the root directory when running locally.
+
+- DJANGO_SECRET
+  - Create your own unique random string
+
+- JWT_SECRET
+  - Create your own unique random string
+  
+- NEO_4J_LEDGER_SPACE_BOLT_URL
+- NEO_4J_LEDGER_SPACE_PASS
+- NEO_4J_LEDGER_SPACE_USER
+- NEO_4J_SEARCH_SPACE_BOLT_URL
+- NEO_4J_SEARCH_SPACE_PASS
+- NEO_4J_SEARCH_SPACE_USER
+  - To set up Neo4j Aura databases:
+    1. Go to https://neo4j.com/cloud/aura/ and sign up for two separate accounts using different email addresses.
+    2. For each account, create a new database instance. One should be named ledgerSpace and the other searchSpace.
+    3. Once the databases are created, you'll be provided with connection details.
+    4. Use the Bolt URL, username, and password for each database to fill in the corresponding environment variables.
+    5. The LEDGER_SPACE variables correspond to one database, and the SEARCH_SPACE variables to the other.
+
+- OPEN_EXCHANGE_RATES_API
+  - To get this secret from Open Exchange Rates:
+    1. Go to https://openexchangerates.org/ and sign up for an account.
+    2. Once logged in, navigate to your account dashboard.
+    3. Look for your App ID or API Key.
+    4. Copy this key and use it as the value for OPEN_EXCHANGE_RATES_API.
+
+- WHATSAPP_BOT_API_KEY
+  - Create your own unique random string
+
+Refer to the `.env.example` file in the root directory for a template of these environment variables. Remember to never commit your actual `.env` file with real values to version control.
+
 ## Local Development
 
-For local development and testing, use Docker Compose:
+For local development and testing:
 
-1. Ensure you have Docker and Docker Compose installed on your machine.
-2. Create a `.env` file in the project root with the necessary environment variables.
-3. Run `docker-compose up` to start the application and its dependencies.
+1. Clone the repository:
+   ```
+   git clone https://github.com/Great-Sun-Group/greatsun-dev.git
+   cd greatsun-dev
+   ```
+
+2. Create a `.env` file in the root of the project based on `.env.example` and fill in the required environment variables.
+
+3. Build and start the development container:
+   ```
+   docker-compose up -d --build
+   ```
+
+4. Attach VS Code to the running container or use `docker exec` to access the container's shell.
 
 ## GitHub Codespaces Development
 
 GitHub Codespaces provides a cloud-based development environment that's preconfigured for the project:
 
-1. Open the project in GitHub Codespaces.
-2. The necessary development environment will be automatically set up based on the `.devcontainer` configuration.
-3. Use the integrated terminal to run commands and start the application.
+1. Set up GitHub Secrets:
+   - Go to your personal GitHub Settings -> Codespaces and Add New Secret for each environment variable, giving it access to the greatsun-dev repository.
 
-### Codespaces-specific considerations:
+2. Create a new Codespace:
+   - Go to the main page of the greatsun-dev repository (dev branch), and create a new branch from dev.
+   - In the new branch, click on the "Code" button
+   - Select the "Codespaces" tab
+   - Click "Create codespace on new-branch-name"
 
-- Environment variables: Use Codespaces secrets to set up environment variables securely.
-- Ports: Codespaces will automatically forward port 5000 as specified in the `devcontainer.json` file.
-- Persistence: Changes made in Codespaces persist between sessions, but it's good practice to commit and push changes regularly.
+3. The Codespace will automatically set up the environment.
 
-### Running the application in Codespaces:
-
-`npm run dev`
+4. Use the integrated terminal to run commands and start the application:
+   ```
+   npm run dev
+   ```
 
 The application should now be running and accessible via the Codespaces URL, which will be automatically generated and displayed in the terminal.
 
@@ -43,23 +101,39 @@ The application is deployed to AWS using ECS (Elastic Container Service) with Fa
 1. AWS Account
 2. GitHub repository with the credex-core code
 
-### Setting up GitHub Secrets
+### Setting up GitHub Secrets for AWS Deployment
 
-To securely manage environment variables and secrets, add the following to your GitHub repository secrets:
+To securely manage environment variables and secrets for AWS deployment, add the following to your GitHub repository secrets:
 
 1. Go to your GitHub repository.
 2. Navigate to Settings > Secrets.
-3. Add the following secrets for both staging and production environments:
+3. Add the following secrets:
    - `AWS_ACCESS_KEY_ID`: Your AWS Access Key ID
    - `AWS_SECRET_ACCESS_KEY`: Your AWS Secret Access Key
-   - `STAGING_NEO4J_LEDGER_SPACE_BOLT_URL` / `PROD_NEO4J_LEDGER_SPACE_BOLT_URL`
-   - `STAGING_NEO4J_LEDGER_SPACE_USER` / `PROD_NEO4J_LEDGER_SPACE_USER`
-   - `STAGING_NEO4J_LEDGER_SPACE_PASS` / `PROD_NEO4J_LEDGER_SPACE_PASS`
-   - `STAGING_NEO4J_SEARCH_SPACE_BOLT_URL` / `PROD_NEO4J_SEARCH_SPACE_BOLT_URL`
-   - `STAGING_NEO4J_SEARCH_SPACE_USER` / `PROD_NEO4J_SEARCH_SPACE_USER`
-   - `STAGING_NEO4J_SEARCH_SPACE_PASS` / `PROD_NEO4J_SEARCH_SPACE_PASS`
-   - `STAGING_OPEN_EXCHANGE_RATES_API_KEY` / `PROD_OPEN_EXCHANGE_RATES_API_KEY`
-   - `STAGING_JWT_SECRET` / `PROD_JWT_SECRET`
+
+### AWS Secrets Manager
+
+For staging and production environments, we use AWS Secrets Manager to securely store and manage sensitive information. This includes database credentials and API keys.
+
+#### Setting up AWS Secrets Manager
+
+1. In the AWS Console, navigate to AWS Secrets Manager.
+2. Create two new secrets:
+   - `neo4j_prod_secrets` for production environment
+   - `neo4j_stage_secrets` for staging environment
+3. Each secret should contain the following key-value pairs:
+   - `ledgerspacebolturl`: Neo4j LedgerSpace Bolt URL
+   - `ledgerspaceuser`: Neo4j LedgerSpace username
+   - `ledgerspacepass`: Neo4j LedgerSpace password
+   - `searchspacebolturl`: Neo4j SearchSpace Bolt URL
+   - `searchspaceuser`: Neo4j SearchSpace username
+   - `searchspacepass`: Neo4j SearchSpace password
+
+#### Accessing Secrets in the Application
+
+The application is configured to retrieve these secrets at runtime in the staging and production environments. The `config/config.ts` file handles the logic for fetching secrets from AWS Secrets Manager when the environment is set to 'staging' or 'production'.
+
+For local development and Codespaces, the application will continue to use environment variables as described in the earlier sections.
 
 ### ECS Task Definition
 
@@ -69,11 +143,11 @@ To update the task definition:
 
 1. Modify the `task-definition.json` file in the project root.
 2. Ensure any new environment variables are added to the `environment` section with appropriate placeholders.
-3. Update the GitHub Actions workflows (`deploy-staging.yml` and `deploy-production.yml`) to replace new placeholders with the corresponding GitHub Secrets.
+3. Update the GitHub Actions workflows (`deploy-staging.yml` and `deploy-production.yml`) to replace new placeholders with the corresponding GitHub Secrets or AWS Secrets Manager references.
 
 The GitHub Actions workflows automatically update the ECS task definition during deployment by:
 
-1. Replacing placeholders in the `task-definition.json` with actual values from GitHub Secrets.
+1. Replacing placeholders in the `task-definition.json` with actual values from GitHub Secrets or references to AWS Secrets Manager.
 2. Using the AWS CLI to register the new task definition.
 3. Updating the ECS service to use the new task definition.
 
@@ -148,7 +222,7 @@ The project uses Neo4j for both staging and production environments. The deploym
    - Run `terraform plan` to review the changes
    - Run `terraform apply` to apply the changes
 3. After applying the Terraform changes, you'll receive the public IPs for all four Neo4j instances.
-4. Update your application's configuration to use these new Neo4j instances.
+4. Update the AWS Secrets Manager secrets (`neo4j_prod_secrets` and `neo4j_stage_secrets`) with the new Neo4j instance details.
 
 Remember to secure your Neo4j instances by updating the security group rules in the Terraform configuration to restrict access only to necessary IP ranges or security groups.
 
@@ -210,23 +284,27 @@ You can also use CloudWatch Dashboards to create visual representations of your 
 ## Troubleshooting
 
 - If deployments fail, check the GitHub Actions logs for error messages.
-- Ensure all required secrets are correctly set up in GitHub repository secrets.
+- Ensure all required secrets are correctly set up in GitHub repository secrets and AWS Secrets Manager.
 - Verify that the ECS task definition is correctly updated with the new image and environment variables.
 - For local development issues, check the Docker Compose logs and ensure all required environment variables are set in your local .env file.
 - For Codespaces issues, check the Codespaces logs and ensure all required environment variables are set in Codespaces secrets.
 - For Neo4j issues, check the EC2 instance logs and ensure the `user_data` script executed correctly for each instance.
 - For application issues, check the CloudWatch logs for the ECS tasks.
+- If there are issues with secrets retrieval, check the IAM roles and policies to ensure the ECS tasks have the necessary permissions to access AWS Secrets Manager.
 
 ## Security Considerations
 
 - Never commit sensitive information (passwords, API keys, etc.) to the repository.
-- Use GitHub Secrets to manage sensitive data for deployments.
+- Use GitHub Secrets to manage deployment-related sensitive data and Codespaces environment variables.
+- Use AWS Secrets Manager to store and manage application secrets for staging and production environments.
+- Use `.env` files for local development, but ensure they are listed in `.gitignore` to prevent accidental commits.
 - Regularly rotate passwords, API keys, and AWS access keys.
 - Ensure that production databases are not accessible from development or staging environments.
 - Implement proper access controls and network security in your AWS environment.
 - When using Codespaces, be cautious about which ports are publicly accessible.
 - Restrict access to Neo4j instances by updating the security group rules in Terraform.
 - Ensure that LedgerSpace and SearchSpace instances are properly isolated and secured.
+- Implement least privilege access for IAM roles used by ECS tasks to access AWS Secrets Manager.
 
 ## Continuous Improvement
 
@@ -240,3 +318,5 @@ The deployment process is designed to be flexible and scalable. As the project e
 - Implementing automated backups for all Neo4j instances (LedgerSpace and SearchSpace)
 - Setting up Neo4j clustering for high availability in the production environment for both LedgerSpace and SearchSpace
 - Implementing data synchronization or replication strategies between LedgerSpace and SearchSpace if required
+- Implementing a secrets rotation policy for AWS Secrets Manager to automatically update and distribute new credentials
+- Setting up monitoring and alerting for AWS Secrets Manager access and usage
