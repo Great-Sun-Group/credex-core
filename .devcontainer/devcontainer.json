@@ -7,7 +7,7 @@
         "esbenp.prettier-vscode",
         "saoudrizwan.claude-dev",
         "dbaeumer.vscode-eslint",
-        "ms-azuretools.vscode-docker",
+        //"ms-azuretools.vscode-docker", for some reason this breaks the devcontainer
         "yzhang.markdown-all-in-one",
         "github.vscode-github-actions"
       ],
