@@ -2,29 +2,30 @@
 
 ARG NODE_VERSION=18.17.1
 
-FROM node:${NODE_VERSION}-alpine AS build
-
+FROM node:${NODE_VERSION}-alpine AS base
 WORKDIR /app
-
 COPY package*.json ./
-RUN npm ci
 
+FROM base AS development
+RUN npm install
+COPY . .
+CMD ["npm", "run", "docker:dev"]
+
+FROM base AS production-build
+RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:${NODE_VERSION}-alpine
-
+FROM node:${NODE_VERSION}-alpine AS production
 WORKDIR /app
-
-COPY --from=build /app/build ./build
-COPY --from=build /app/package*.json ./
-COPY --from=build /app/config/config.js ./config/config.js
+COPY --from=production-build /app/build ./build
+COPY --from=production-build /app/package*.json ./
+COPY --from=production-build /app/config/config.js ./config/config.js
 RUN npm ci --only=production
-
-# Expose the port that the application listens on.
 EXPOSE 5000
-
-# The environment variables will be provided at runtime
-
-# Run the application.
 CMD ["node", "build/src/index.js"]
+
+FROM base AS test
+RUN npm ci
+COPY . .
+CMD ["npm", "test"]
