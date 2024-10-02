@@ -12,6 +12,63 @@ This document outlines the deployment process for the credex-core application, i
 - Docker and Docker Compose
 - Visual Studio Code
 
+## Initial Deployment
+
+### 1. Environment Variables and Secrets Setup
+
+1. Create a `.env` file in the root directory based on `.env.example` for local development.
+2. Set up GitHub Secrets for Codespaces:
+   - Go to your personal GitHub Settings -> Codespaces and Add New Secret for each environment variable, giving it access to the greatsun-dev repository.
+3. Set up GitHub Secrets for AWS deployment:
+   - Go to your GitHub repository.
+   - Navigate to Settings > Secrets.
+   - Add the following secrets:
+     - `AWS_ACCESS_KEY_ID`: Your AWS Access Key ID
+     - `AWS_SECRET_ACCESS_KEY`: Your AWS Secret Access Key
+     - `OPEN_EXCHANGE_RATES_API_STAGE`: Your Open Exchange Rates API key for staging
+     - `OPEN_EXCHANGE_RATES_API_PROD`: Your Open Exchange Rates API key for production
+     - `JWT_SECRET_STAGE`: Secret key for JWT token generation and verification in staging
+     - `JWT_SECRET_PROD`: Secret key for JWT token generation and verification in production
+     - `WHATSAPP_BOT_API_KEY_STAGE`: WhatsApp Bot API key for staging
+     - `WHATSAPP_BOT_API_KEY_PROD`: WhatsApp Bot API key for production
+
+### 2. AWS Setup
+
+1. Create an AWS account if you don't have one.
+2. Set up IAM users with appropriate permissions for deployment.
+3. Configure AWS CLI with the created IAM user credentials.
+
+### 3. Terraform Setup
+
+1. Install Terraform on your local machine.
+2. Navigate to the `terraform` directory.
+3. Run `terraform init` to initialize the Terraform working directory.
+4. Review and modify the `main.tf` file if necessary (e.g., AWS region, instance types).
+5. Run `terraform apply` to create the necessary AWS resources, including:
+   - ECS cluster
+   - ECR repository
+   - Neo4j instances (EC2)
+   - AWS Secrets Manager secrets
+   - Security groups
+   - IAM roles and policies
+
+### 4. Neo4j Deployment
+
+The Neo4j deployment is handled automatically by Terraform. Here's what happens:
+
+1. Terraform creates four Neo4j instances: two for production (LedgerSpace and SearchSpace) and two for staging (LedgerSpace and SearchSpace).
+2. The instance details (including connection URLs and credentials) are automatically stored in AWS Secrets Manager.
+3. Security groups are automatically created and configured for both production and staging Neo4j instances.
+
+No manual intervention is required for setting up the Neo4j instances or updating AWS Secrets Manager. The security groups are already configured in the Terraform file to restrict access to the necessary IP ranges.
+
+### 5. Initial Application Deployment
+
+1. Push your code to the `stage` branch to trigger the staging deployment.
+2. Once staging is verified, push to the `prod` branch to deploy to production.
+3. Monitor the GitHub Actions workflows for deployment status.
+4. Verify the deployments in the AWS Console (ECS services and tasks).
+
 ## Environment Variables and Secrets
 
 The following secrets are required for local development and Codespaces. These should be set in your personal Codespace secrets or in a `.env` file in the root directory when running locally.
@@ -167,26 +224,19 @@ The project uses Neo4j for both staging and production environments. The deploym
 
 ### Deployment Process
 
-1. The Neo4j instances are defined in the `terraform/main.tf` file.
-2. To deploy or update the Neo4j instances:
-   - Navigate to the `terraform` directory
-   - Run `terraform init` (if not done before)
-   - Run `terraform plan` to review the changes
-   - Run `terraform apply` to apply the changes
-3. After applying the Terraform changes, you'll receive the public IPs for all four Neo4j instances.
-4. Update the AWS Secrets Manager secrets (`neo4j_prod_secrets` and `neo4j_stage_secrets`) with the new Neo4j instance details.
+The Neo4j instances are defined and deployed automatically through the Terraform configuration in `terraform/main.tf`. The process includes:
 
-Remember to secure your Neo4j instances by updating the security group rules in the Terraform configuration to restrict access only to necessary IP ranges or security groups.
+1. Creation of EC2 instances for Neo4j
+2. Configuration of security groups
+3. Setting up of AWS Secrets Manager to store connection details
 
-This setup provides a scalable and manageable solution for running separate LedgerSpace and SearchSpace Neo4j instances in both staging (Community Edition) and production (Enterprise Edition) environments, fully integrated with our existing AWS infrastructure.
+No manual intervention is required for deploying or updating the Neo4j instances. The security groups are configured in the Terraform file to restrict access to the necessary IP ranges.
 
 ### Configuration
 
-- The Neo4j instances are configured using the `user_data` script in the EC2 instance definitions.
-- Ensure that the appropriate Neo4j version and configuration are set in the `user_data` scripts.
-- Update the security groups in `terraform/main.tf` to restrict access to the Neo4j instances as needed.
-
-For local development and Codespaces, the application will continue to use environment variables as described in the earlier sections.
+- The Neo4j instances are configured using the `user_data` script in the EC2 instance definitions within the Terraform configuration.
+- The appropriate Neo4j version and configuration are set in these `user_data` scripts.
+- Security groups in `terraform/main.tf` are pre-configured to restrict access to the Neo4j instances as needed.
 
 ### ECS Task Definition
 
@@ -257,11 +307,107 @@ The security group for ECS tasks allows inbound traffic on port 5000 and all out
 
 Note: The default AWS region is set to af-south-1 (Cape Town) in the Terraform configuration. If you need to deploy to a different region, you'll need to modify the `aws_region` variable in the `terraform/main.tf` file.
 
-### Maintenance
+## Resource Management: Initial Setup vs. Updates
 
-- Regularly update the Neo4j versions in the `user_data` scripts.
-- Monitor the EC2 instances for performance and adjust instance types if necessary.
-- Implement regular backups of the Neo4j data for both LedgerSpace and SearchSpace instances.
+Understanding how resources are managed during initial setup and subsequent updates is crucial for maintaining the infrastructure effectively.
+
+### Terraform State Management
+
+Terraform uses a state file to keep track of the resources it manages. This state file is crucial for determining what changes need to be made to the infrastructure.
+
+- Initial Setup: Terraform creates a new state file.
+- Updates: Terraform compares the current state with the desired state described in the configuration files and makes only the necessary changes.
+
+Ensure that the Terraform state file is securely stored and version-controlled, as it contains sensitive information about your infrastructure.
+
+### Resource-Specific Behavior
+
+#### Neo4j Instances (Databases)
+
+- Initial Setup: Four EC2 instances are created (two for production, two for staging) with specific AMIs, instance types, and user data scripts.
+- Updates: 
+  - Changes to instance type, AMI, or user data script will result in the instance being destroyed and recreated.
+  - This behavior means that database data is not automatically preserved during such updates.
+
+Consideration: Implement a data persistence strategy (e.g., using EBS volumes or backup/restore procedures) to preserve data during updates that require instance recreation.
+
+#### AWS Secrets Manager
+
+- Initial Setup: Secrets are created with initial values.
+- Updates: New versions of secrets are created when values change, preserving the secret's history.
+
+Consideration: Implement a secrets rotation strategy, especially for database passwords, to enhance security.
+
+#### ECS Resources
+
+- Initial Setup: ECS cluster, task definitions, and services are created as defined.
+- Updates: 
+  - Changes to task definitions create new revisions.
+  - ECS services are updated to use new task definition revisions without downtime.
+
+#### Security Groups
+
+- Initial Setup: Security groups are created with defined rules.
+- Updates: Rules can be added, modified, or removed without recreating the entire security group.
+
+#### IAM Roles and Policies
+
+- Initial Setup: Roles and policies are created as defined.
+- Updates: Changes to roles or policies are applied in-place without recreation.
+
+### Best Practices for Updates
+
+1. Database Updates:
+   - Before updating Neo4j instances, perform a backup of the database data.
+   - For major version upgrades or instance type changes, consider creating new instances and migrating data to minimize downtime.
+
+2. Zero-Downtime Updates:
+   - While ECS services support zero-downtime deployments, updates to Neo4j instances may cause downtime. 
+   - Consider implementing a high-availability setup for Neo4j in production to minimize downtime during updates.
+
+3. Testing Updates:
+   - Always test updates in the staging environment before applying them to production.
+   - Use Terraform's `plan` command to review changes before applying them.
+
+4. Monitoring During Updates:
+   - Closely monitor the application and database performance during and after updates.
+   - Have a rollback plan ready in case of unexpected issues.
+
+5. Regular Maintenance:
+   - Regularly update the AMIs used for Neo4j instances to ensure they have the latest security patches.
+   - Periodically review and update security group rules to maintain least-privilege access.
+
+By understanding these differences between initial setup and updates, you can better manage the infrastructure and minimize potential disruptions during maintenance and upgrades.
+
+## Ongoing Maintenance and Updates
+
+### Updating the Application
+
+1. Make changes from the `dev` branch to the codebase locally or in Codespaces.
+2. Test thoroughly in the local/Codespaces environment.
+3. Submit merge request back to `dev` when ready.
+4. `dev` will be merged to `stage` branch periodically to trigger staging deployment.
+5. Test the changes in the staging environment.
+7. If everything is working as expected, push to the `prod` branch to deploy to production.
+
+### Updating ECS Task Definition
+
+1. Modify the `task-definition.json` in the `terraform` directory if needed.
+2. Ensure any new environment variables are added to the `environment` section with appropriate placeholders.
+3. Update the GitHub Actions workflows (`deploy-staging.yml` and `deploy-production.yml`) to replace new placeholders with the corresponding GitHub Secrets or AWS Secrets Manager references.
+
+### Updating Neo4j Instances
+
+1. To update Neo4j versions or configurations:
+   - Modify the `user_data` scripts in the `terraform/main.tf` file.
+   - Run `terraform apply` to apply the changes.
+2. For major updates, consider creating new instances and migrating data to minimize downtime.
+
+### Secrets Management
+
+1. Regularly rotate passwords, API keys, and AWS access keys.
+2. Update the rotated secrets in GitHub Secrets and AWS Secrets Manager.
+3. For local development, update your `.env` file (ensure it remains in `.gitignore`).
 
 ## Monitoring and Logging
 
