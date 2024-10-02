@@ -6,7 +6,7 @@ on:
       - stage
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: af-south-1
   ECR_REPOSITORY: credex-core
   ECS_CLUSTER: credex-cluster
   ECS_SERVICE: credex-core-service
@@ -49,20 +49,12 @@ jobs:
         IMAGE_TAG: ${{ github.sha }}
       run: |
         sed -i.bak \
-          -e 's|{{CONTAINER_IMAGE}}|'${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}'|' \
-          -e 's|{{NODE_ENV}}|staging|' \
-          -e 's|{{PORT}}|5000|' \
-          -e 's|{{LOG_LEVEL}}|debug|' \
-          -e 's|{{NEO4J_LEDGER_SPACE_BOLT_URL}}|${{ secrets.STAGING_NEO4J_LEDGER_SPACE_BOLT_URL }}|' \
-          -e 's|{{NEO4J_LEDGER_SPACE_USER}}|${{ secrets.STAGING_NEO4J_LEDGER_SPACE_USER }}|' \
-          -e 's|{{NEO4J_LEDGER_SPACE_PASS}}|${{ secrets.STAGING_NEO4J_LEDGER_SPACE_PASS }}|' \
-          -e 's|{{NEO4J_SEARCH_SPACE_BOLT_URL}}|${{ secrets.STAGING_NEO4J_SEARCH_SPACE_BOLT_URL }}|' \
-          -e 's|{{NEO4J_SEARCH_SPACE_USER}}|${{ secrets.STAGING_NEO4J_SEARCH_SPACE_USER }}|' \
-          -e 's|{{NEO4J_SEARCH_SPACE_PASS}}|${{ secrets.STAGING_NEO4J_SEARCH_SPACE_PASS }}|' \
-          -e 's|{{OPEN_EXCHANGE_RATES_API_KEY}}|${{ secrets.STAGING_OPEN_EXCHANGE_RATES_API_KEY }}|' \
-          -e 's|{{JWT_SECRET}}|${{ secrets.STAGING_JWT_SECRET }}|' \
-          task-definition.json
-        echo "::set-output name=task-definition::task-definition.json"
+          -e 's|${CONTAINER_IMAGE}|'${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}'|' \
+          -e 's|${NODE_ENV}|staging|' \
+          -e 's|${LOG_LEVEL}|debug|' \
+          -e 's|${AWS_REGION}|${{ env.AWS_REGION }}|' \
+          terraform/task-definition.json
+        echo "::set-output name=task-definition::terraform/task-definition.json"
 
     - name: Deploy Amazon ECS task definition
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
@@ -71,6 +63,16 @@ jobs:
         service: ${{ env.ECS_SERVICE }}
         cluster: ${{ env.ECS_CLUSTER }}
         wait-for-service-stability: true
+      env:
+        JWT_SECRET: ${{ secrets.STAGE_JWT_SECRET }}
+        WHATSAPP_BOT_API_KEY: ${{ secrets.STAGE_WHATSAPP_BOT_API_KEY }}
+        OPEN_EXCHANGE_RATES_API_KEY: ${{ secrets.STAGE_OPEN_EXCHANGE_RATES_API_KEY }}
+        NEO4J_LEDGER_SPACE_BOLT_URL: ${{ secrets.STAGING_NEO4J_LEDGER_SPACE_BOLT_URL }}
+        NEO4J_LEDGER_SPACE_USER: ${{ secrets.STAGING_NEO4J_LEDGER_SPACE_USER }}
+        NEO4J_LEDGER_SPACE_PASS: ${{ secrets.STAGING_NEO4J_LEDGER_SPACE_PASS }}
+        NEO4J_SEARCH_SPACE_BOLT_URL: ${{ secrets.STAGING_NEO4J_SEARCH_SPACE_BOLT_URL }}
+        NEO4J_SEARCH_SPACE_USER: ${{ secrets.STAGING_NEO4J_SEARCH_SPACE_USER }}
+        NEO4J_SEARCH_SPACE_PASS: ${{ secrets.STAGING_NEO4J_SEARCH_SPACE_PASS }}
 
     - name: Verify deployment
       run: |
