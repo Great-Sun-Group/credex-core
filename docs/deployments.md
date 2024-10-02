@@ -14,6 +14,8 @@ The credex-core application is deployed using a combination of GitHub Actions, A
 - Docker and Docker Compose
 - Visual Studio Code
 - Terraform
+- AWS CLI
+- jq (command-line JSON processor)
 
 ## 3. Environment Setup
 
@@ -126,27 +128,51 @@ For development using GitHub Codespaces, follow the steps outlined in section 3.
    - Update the ECS task definition with production-specific environment variables
    - Deploy to the production ECS cluster
 
-### 5.5 Post-Deployment Verification
+### 5.5 Deployment and Verification Process
 
-- Check GitHub Actions logs for deployment status.
-- Use AWS Console or CLI to monitor ECS services and tasks.
-- Implement health check endpoints, integration tests, and performance benchmarks as needed.
+We have implemented an automated process that handles both the deployment and verification of the application. This process includes the following steps:
+
+1. Terraform deployment
+2. ECS service stability check
+3. ECS status check
+4. API health check
+5. Integration tests
+6. Performance benchmarks
+
+To run the complete deployment and verification process:
+
+1. Ensure you're in the project root directory.
+2. Run the following command:
+   ```
+   npm run deploy-and-verify
+   ```
+
+This command will execute the `deploy_and_verify.sh` script in the terraform directory, which handles the entire deployment and verification process, including:
+
+- Initializing and applying Terraform configurations
+- Waiting for the ECS service to be stable
+- Checking ECS service status
+- Performing API health checks
+- Running integration tests
+- Executing performance benchmarks
+
+The script will provide detailed output for each step and a final status report.
 
 ## 6. Infrastructure Management
 
-### 6.1 Terraform Setup and Usage
+### 6.1 Terraform Management
 
-1. Install Terraform on your local machine.
-2. Navigate to the `terraform` directory.
-3. Run `terraform init` to initialize the Terraform working directory.
-4. Review and modify the `main.tf` file if necessary (e.g., AWS region, instance types).
-5. Run `terraform apply` to create or update the necessary AWS resources, including:
-   - ECS cluster
-   - ECR repository
-   - Neo4j instances (EC2)
-   - AWS Secrets Manager secrets
-   - Security groups
-   - IAM roles and policies
+The Terraform configurations for this project are managed automatically through the `deploy_and_verify.sh` script. This script handles Terraform initialization and application, removing the need for manual Terraform commands in most cases.
+
+However, for development or troubleshooting purposes, you may still need to run Terraform commands manually. In such cases:
+
+1. Navigate to the `terraform` directory.
+2. Run `terraform init` to initialize the Terraform working directory.
+3. Review and modify the `main.tf` file if necessary (e.g., AWS region, instance types).
+4. Run `terraform plan` to see proposed changes.
+5. Run `terraform apply` to create or update the necessary AWS resources.
+
+Remember that running these commands manually may affect the state managed by the automated deployment process. Always coordinate with your team before making manual changes to the infrastructure.
 
 ### 6.2 AWS Resources
 
