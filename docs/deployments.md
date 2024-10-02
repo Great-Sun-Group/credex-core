@@ -2,106 +2,22 @@
 
 This document outlines the deployment process for the credex-core application, including local development, GitHub Codespaces, staging, and production environments.
 
-## Prerequisites
+## 1. Introduction
 
-### For all environments:
+The credex-core application is deployed using a combination of GitHub Actions, AWS services (including ECS, ECR, and Secrets Manager), and Terraform for infrastructure management. This document provides a comprehensive guide for setting up, deploying, and maintaining the application across various environments.
+
+## 2. Prerequisites
+
 - GitHub account with access to Great Sun Group repositories
-
-### Additional prerequisites for local development:
+- AWS account
 - Git
 - Docker and Docker Compose
 - Visual Studio Code
+- Terraform
 
-## Initial Deployment
+## 3. Environment Setup
 
-### 1. Environment Variables and Secrets Setup
-
-1. Create a `.env` file in the root directory based on `.env.example` for local development.
-2. Set up GitHub Secrets for Codespaces:
-   - Go to your personal GitHub Settings -> Codespaces and Add New Secret for each environment variable, giving it access to the greatsun-dev repository.
-3. Set up GitHub Secrets for AWS deployment:
-   - Go to your GitHub repository.
-   - Navigate to Settings > Secrets.
-   - Add the following secrets:
-     - `AWS_ACCESS_KEY_ID`: Your AWS Access Key ID
-     - `AWS_SECRET_ACCESS_KEY`: Your AWS Secret Access Key
-     - `OPEN_EXCHANGE_RATES_API_STAGE`: Your Open Exchange Rates API key for staging
-     - `OPEN_EXCHANGE_RATES_API_PROD`: Your Open Exchange Rates API key for production
-     - `JWT_SECRET_STAGE`: Secret key for JWT token generation and verification in staging
-     - `JWT_SECRET_PROD`: Secret key for JWT token generation and verification in production
-     - `WHATSAPP_BOT_API_KEY_STAGE`: WhatsApp Bot API key for staging
-     - `WHATSAPP_BOT_API_KEY_PROD`: WhatsApp Bot API key for production
-
-### 2. AWS Setup
-
-1. Create an AWS account if you don't have one.
-2. Set up IAM users with appropriate permissions for deployment.
-3. Configure AWS CLI with the created IAM user credentials.
-
-### 3. Terraform Setup
-
-1. Install Terraform on your local machine.
-2. Navigate to the `terraform` directory.
-3. Run `terraform init` to initialize the Terraform working directory.
-4. Review and modify the `main.tf` file if necessary (e.g., AWS region, instance types).
-5. Run `terraform apply` to create the necessary AWS resources, including:
-   - ECS cluster
-   - ECR repository
-   - Neo4j instances (EC2)
-   - AWS Secrets Manager secrets
-   - Security groups
-   - IAM roles and policies
-
-### 4. Neo4j Deployment
-
-The Neo4j deployment is handled automatically by Terraform. Here's what happens:
-
-1. Terraform creates four Neo4j instances: two for production (LedgerSpace and SearchSpace) and two for staging (LedgerSpace and SearchSpace).
-2. The instance details (including connection URLs and credentials) are automatically stored in AWS Secrets Manager.
-3. Security groups are automatically created and configured for both production and staging Neo4j instances.
-
-No manual intervention is required for setting up the Neo4j instances or updating AWS Secrets Manager. The security groups are already configured in the Terraform file to restrict access to the necessary IP ranges.
-
-### 5. Initial Application Deployment
-
-1. Push your code to the `stage` branch to trigger the staging deployment.
-2. Once staging is verified, push to the `prod` branch to deploy to production.
-3. Monitor the GitHub Actions workflows for deployment status.
-4. Verify the deployments in the AWS Console (ECS services and tasks).
-
-## Environment Variables and Secrets
-
-The following secrets are required for local development and Codespaces. These should be set in your personal Codespace secrets or in a `.env` file in the root directory when running locally.
-
-- NEO_4J_LEDGER_SPACE_BOLT_URL
-- NEO_4J_LEDGER_SPACE_PASS
-- NEO_4J_LEDGER_SPACE_USER
-- NEO_4J_SEARCH_SPACE_BOLT_URL
-- NEO_4J_SEARCH_SPACE_PASS
-- NEO_4J_SEARCH_SPACE_USER
-  - To set up Neo4j Aura databases:
-    1. Go to https://neo4j.com/cloud/aura/ and sign up for two separate accounts using different email addresses.
-    2. For each account, create a new database instance. One should be named ledgerSpace and the other searchSpace.
-    3. Once the databases are created, you'll be provided with connection details.
-    4. Use the Bolt URL, username, and password for each database to fill in the corresponding environment variables.
-    5. The LEDGER_SPACE variables correspond to one database, and the SEARCH_SPACE variables to the other.
-
-- OPEN_EXCHANGE_RATES_API
-  - To get this secret from Open Exchange Rates:
-    1. Go to https://openexchangerates.org/ and sign up for an account.
-    2. Once logged in, navigate to your account dashboard.
-    3. Look for your App ID or API Key.
-    4. Copy this key and use it as the value for OPEN_EXCHANGE_RATES_API.
-
-- WHATSAPP_BOT_API_KEY
-- JWT_SECRET
-  - Create your own unique random strings
-
-Refer to the `.env.example` file in the root directory for a template of these environment variables. Remember to never commit your actual `.env` file with real values to version control.
-
-## Local Development
-
-For local development and testing:
+### 3.1 Local Development
 
 1. Clone the repository:
    ```
@@ -118,44 +34,39 @@ For local development and testing:
 
 4. Attach VS Code to the running container or use `docker exec` to access the container's shell.
 
-## GitHub Codespaces Development
+### 3.2 GitHub Codespaces
 
-GitHub Codespaces provides a cloud-based development environment that's preconfigured for the project:
-
-1. Set up GitHub Secrets:
-   - Go to your personal GitHub Settings -> Codespaces and Add New Secret for each environment variable, giving it access to the greatsun-dev repository.
-
-2. Create a new Codespace:
-   - Go to the main page of the greatsun-dev repository (dev branch), and create a new branch from dev.
-   - In the new branch, click on the "Code" button
-   - Select the "Codespaces" tab
-   - Click "Create codespace on new-branch-name"
-
+1. Go to the main page of the greatsun-dev repository (dev branch), and create a new branch from dev.
+2. Click on the "Code" button, select the "Codespaces" tab, and click "Create codespace on new-branch-name".
 3. The Codespace will automatically set up the environment.
-
 4. Use the integrated terminal to run commands and start the application:
    ```
    npm run dev
    ```
 
-The application should now be running and accessible via the Codespaces URL, which will be automatically generated and displayed in the terminal.
+### 3.3 Staging and Production
 
-## Configuration
+Staging and production environments are managed through AWS ECS and deployed via GitHub Actions. The initial setup process is as follows:
 
-The application uses environment variables for configuration. These are defined in [config](config/config.ts).
+1. Set up GitHub Secrets for AWS deployment (detailed in section 4.2).
+2. Set up Terraform (detailed in section 6.1).
 
-## AWS Deployment
+## 4. Configuration
 
-The application is deployed to AWS using ECS (Elastic Container Service) with Fargate. The deployment process is automated using GitHub Actions and Terraform. The default AWS region for deployment is set to af-south-1 (Cape Town).
+### 4.1 Environment Variables
 
-### Prerequisites
+The application uses environment variables for configuration. These are defined in [config/config.ts](config/config.ts).
 
-1. AWS Account
-2. GitHub repository with the credex-core code
+The `NODE_ENV` variable is set during the deployment process:
+- For staging deployments, it's set to 'staging'
+- For production deployments, it's set to 'production'
+- For other (all dev and research) deployments, it defaults to 'development'
 
-### Setting up GitHub Secrets for AWS Deployment
+### 4.2 Secrets Management
 
-To securely manage environment variables and secrets for AWS deployment, add the following to your GitHub repository secrets:
+#### GitHub Secrets
+
+For secure management of deployment-related sensitive data, set up the following GitHub Secrets:
 
 1. Go to your GitHub repository.
 2. Navigate to Settings > Secrets.
@@ -169,23 +80,9 @@ To securely manage environment variables and secrets for AWS deployment, add the
    - `WHATSAPP_BOT_API_KEY_STAGE`: WhatsApp Bot API key for staging
    - `WHATSAPP_BOT_API_KEY_PROD`: WhatsApp Bot API key for production
 
-Note: The Neo4j connection details are managed through AWS Secrets Manager and do not need to be set in GitHub Actions.
+#### AWS Secrets Manager
 
-### Environment Variables
-
-The `NODE_ENV` variable is set during the deployment process:
-
-- For staging deployments, it's set to 'staging'
-- For production deployments, it's set to 'production'
-- For other (all dev and research) deployments, it defaults to 'development'
-
-### AWS Secrets Manager
-
-For staging and production environments, we use AWS Secrets Manager to securely store and manage Neo4j connection details.
-
-#### Setting up AWS Secrets Manager
-
-The setup process for AWS Secrets Manager is as follows:
+For staging and production environments, AWS Secrets Manager is used to securely store and manage Neo4j connection details.
 
 1. The Terraform configuration in `terraform/main.tf` defines the necessary AWS Secrets Manager resources.
 2. Two secrets are created:
@@ -199,222 +96,110 @@ The setup process for AWS Secrets Manager is as follows:
    - `searchspaceuser`: Neo4j SearchSpace username
    - `searchspacepass`: Neo4j SearchSpace password
 
-#### Accessing Secrets in the Application
+The application is configured to retrieve these secrets at runtime in the staging and production environments.
 
-The application is configured to retrieve the Neo4j secrets at runtime in the staging and production environments. The `config/config.ts` file handles the logic for fetching secrets from AWS Secrets Manager when the environment is set to 'staging' or 'production'.
-For local development and Codespaces, the application will continue to use environment variables as described in the earlier sections.
+## 5. Deployment Process
 
-## Neo4j Deployment
+### 5.1 Local Development
 
-The project uses Neo4j for both staging and production environments. The deployment and management of Neo4j instances are handled through Terraform.
+For local development and testing, follow the steps outlined in section 3.1.
 
-### Neo4j Instances
+### 5.2 GitHub Codespaces
 
-1. Production Environment:
-   - Uses Neo4j Enterprise Edition
-   - Two separate instances: LedgerSpace and SearchSpace
-   - Deployed on AWS EC2 instances (m5.large)
-   - Managed through Terraform
+For development using GitHub Codespaces, follow the steps outlined in section 3.2.
 
-2. Staging Environment:
-   - Uses Neo4j Community Edition
-   - Two separate instances: LedgerSpace and SearchSpace
-   - Deployed on AWS EC2 instances (t3.medium)
-   - Managed through Terraform
+### 5.3 Staging Deployment
 
-### Deployment Process
+1. Push changes to the `stage` branch.
+2. The `deploy-staging.yml` GitHub Actions workflow will automatically:
+   - Build the Docker image
+   - Push the image to ECR
+   - Update the ECS task definition with staging-specific environment variables
+   - Deploy to the staging ECS cluster
 
-The Neo4j instances are defined and deployed automatically through the Terraform configuration in `terraform/main.tf`. The process includes:
+### 5.4 Production Deployment
 
-1. Creation of EC2 instances for Neo4j
-2. Configuration of security groups
-3. Setting up of AWS Secrets Manager to store connection details
+1. Push changes to the `prod` branch.
+2. The `deploy-production.yml` GitHub Actions workflow will automatically:
+   - Build the Docker image
+   - Push the image to ECR
+   - Update the ECS task definition with production-specific environment variables
+   - Deploy to the production ECS cluster
 
-No manual intervention is required for deploying or updating the Neo4j instances. The security groups are configured in the Terraform file to restrict access to the necessary IP ranges.
+### 5.5 Post-Deployment Verification
 
-### Configuration
+- Check GitHub Actions logs for deployment status.
+- Use AWS Console or CLI to monitor ECS services and tasks.
+- Implement health check endpoints, integration tests, and performance benchmarks as needed.
 
-- The Neo4j instances are configured using the `user_data` script in the EC2 instance definitions within the Terraform configuration.
-- The appropriate Neo4j version and configuration are set in these `user_data` scripts.
-- Security groups in `terraform/main.tf` are pre-configured to restrict access to the Neo4j instances as needed.
+## 6. Infrastructure Management
 
-### ECS Task Definition
-
-The ECS task definition is managed using a template file [task-definition.json](terraform/task-definition.json). This template contains placeholders for environment-specific values, which are replaced during the deployment process.
-
-To update the task definition:
-
-1. Modify the `task-definition.json`.
-2. Ensure any new environment variables are added to the `environment` section with appropriate placeholders.
-3. Update the GitHub Actions workflows (`deploy-staging.yml` and `deploy-production.yml`) to replace new placeholders with the corresponding GitHub Secrets or AWS Secrets Manager references.
-
-The GitHub Actions workflows automatically update the ECS task definition during deployment by:
-
-1. Replacing placeholders in the `task-definition.json` with actual values from GitHub Secrets or references to AWS Secrets Manager.
-2. Using the AWS CLI to register the new task definition.
-3. Updating the ECS service to use the new task definition.
-
-### ECS Service Configuration
-
-The ECS service is configured using Terraform in the `main.tf` file. Key aspects of the configuration include:
-
-- Service name: "credex-core-service"
-- Cluster: Uses the "credex-cluster" ECS cluster
-- Launch type: FARGATE
-- Desired count: 1 (can be adjusted based on load requirements)
-- Network configuration: 
-  - Uses specified subnets
-  - Assigns a public IP
-  - Uses a dedicated security group for ECS tasks
-
-The security group for ECS tasks allows inbound traffic on port 5000 and all outbound traffic.
-
-### Deployment Process
-
-1. Staging Deployment:
-   - Push changes to the `stage` branch.
-   - The `deploy-staging.yml` GitHub Actions workflow will automatically:
-     - Build the Docker image
-     - Push the image to ECR
-     - Update the ECS task definition with staging-specific environment variables
-     - Deploy to the staging ECS cluster
-
-2. Production Deployment:
-   - Push changes to the `prod` branch.
-   - The `deploy-production.yml` GitHub Actions workflow will automatically:
-     - Build the Docker image
-     - Push the image to ECR
-     - Update the ECS task definition with production-specific environment variables
-     - Deploy to the production ECS cluster
-
-3. Post-Deployment Verification:
-   - Currently, there is a placeholder for post-deployment verification in the GitHub Actions workflows.
-   - This step can be expanded to include more comprehensive checks, such as:
-     - Health check endpoints
-     - Integration tests
-     - Performance benchmarks
-
-4. Monitoring Deployments:
-   - Check GitHub Actions logs for deployment status.
-   - Use AWS Console or CLI to monitor ECS services and tasks.
-
-## Terraform Setup
+### 6.1 Terraform Setup and Usage
 
 1. Install Terraform on your local machine.
 2. Navigate to the `terraform` directory.
 3. Run `terraform init` to initialize the Terraform working directory.
-4. Run `terraform apply` to create the necessary AWS resources.
+4. Review and modify the `main.tf` file if necessary (e.g., AWS region, instance types).
+5. Run `terraform apply` to create or update the necessary AWS resources, including:
+   - ECS cluster
+   - ECR repository
+   - Neo4j instances (EC2)
+   - AWS Secrets Manager secrets
+   - Security groups
+   - IAM roles and policies
 
-Note: The default AWS region is set to af-south-1 (Cape Town) in the Terraform configuration. If you need to deploy to a different region, you'll need to modify the `aws_region` variable in the `terraform/main.tf` file.
+### 6.2 AWS Resources
 
-## Resource Management: Initial Setup vs. Updates
+#### ECS Task Definition
 
-Understanding how resources are managed during initial setup and subsequent updates is crucial for maintaining the infrastructure effectively.
+The ECS task definition is managed using a template file [task-definition.json](terraform/task-definition.json). To update the task definition:
 
-### Terraform State Management
-
-Terraform uses a state file to keep track of the resources it manages. This state file is crucial for determining what changes need to be made to the infrastructure.
-
-- Initial Setup: Terraform creates a new state file.
-- Updates: Terraform compares the current state with the desired state described in the configuration files and makes only the necessary changes.
-
-Ensure that the Terraform state file is securely stored and version-controlled, as it contains sensitive information about your infrastructure.
-
-### Resource-Specific Behavior
-
-#### Neo4j Instances (Databases)
-
-- Initial Setup: Four EC2 instances are created (two for production, two for staging) with specific AMIs, instance types, and user data scripts.
-- Updates: 
-  - Changes to instance type, AMI, or user data script will result in the instance being destroyed and recreated.
-  - This behavior means that database data is not automatically preserved during such updates.
-
-Consideration: Implement a data persistence strategy (e.g., using EBS volumes or backup/restore procedures) to preserve data during updates that require instance recreation.
-
-#### AWS Secrets Manager
-
-- Initial Setup: Secrets are created with initial values.
-- Updates: New versions of secrets are created when values change, preserving the secret's history.
-
-Consideration: Implement a secrets rotation strategy, especially for database passwords, to enhance security.
-
-#### ECS Resources
-
-- Initial Setup: ECS cluster, task definitions, and services are created as defined.
-- Updates: 
-  - Changes to task definitions create new revisions.
-  - ECS services are updated to use new task definition revisions without downtime.
-
-#### Security Groups
-
-- Initial Setup: Security groups are created with defined rules.
-- Updates: Rules can be added, modified, or removed without recreating the entire security group.
-
-#### IAM Roles and Policies
-
-- Initial Setup: Roles and policies are created as defined.
-- Updates: Changes to roles or policies are applied in-place without recreation.
-
-### Best Practices for Updates
-
-1. Database Updates:
-   - Before updating Neo4j instances, perform a backup of the database data.
-   - For major version upgrades or instance type changes, consider creating new instances and migrating data to minimize downtime.
-
-2. Zero-Downtime Updates:
-   - While ECS services support zero-downtime deployments, updates to Neo4j instances may cause downtime. 
-   - Consider implementing a high-availability setup for Neo4j in production to minimize downtime during updates.
-
-3. Testing Updates:
-   - Always test updates in the staging environment before applying them to production.
-   - Use Terraform's `plan` command to review changes before applying them.
-
-4. Monitoring During Updates:
-   - Closely monitor the application and database performance during and after updates.
-   - Have a rollback plan ready in case of unexpected issues.
-
-5. Regular Maintenance:
-   - Regularly update the AMIs used for Neo4j instances to ensure they have the latest security patches.
-   - Periodically review and update security group rules to maintain least-privilege access.
-
-By understanding these differences between initial setup and updates, you can better manage the infrastructure and minimize potential disruptions during maintenance and upgrades.
-
-## Ongoing Maintenance and Updates
-
-### Updating the Application
-
-1. Make changes from the `dev` branch to the codebase locally or in Codespaces.
-2. Test thoroughly in the local/Codespaces environment.
-3. Submit merge request back to `dev` when ready.
-4. `dev` will be merged to `stage` branch periodically to trigger staging deployment.
-5. Test the changes in the staging environment.
-7. If everything is working as expected, push to the `prod` branch to deploy to production.
-
-### Updating ECS Task Definition
-
-1. Modify the `task-definition.json` in the `terraform` directory if needed.
+1. Modify the `task-definition.json`.
 2. Ensure any new environment variables are added to the `environment` section with appropriate placeholders.
-3. Update the GitHub Actions workflows (`deploy-staging.yml` and `deploy-production.yml`) to replace new placeholders with the corresponding GitHub Secrets or AWS Secrets Manager references.
+3. Update the GitHub Actions workflows to replace new placeholders with the corresponding GitHub Secrets or AWS Secrets Manager references.
 
-### Updating Neo4j Instances
+#### ECS Service Configuration
 
-1. To update Neo4j versions or configurations:
-   - Modify the `user_data` scripts in the `terraform/main.tf` file.
-   - Run `terraform apply` to apply the changes.
-2. For major updates, consider creating new instances and migrating data to minimize downtime.
+The ECS service is configured in the `main.tf` file, including:
+- Service name: "credex-core-service"
+- Cluster: "credex-cluster"
+- Launch type: FARGATE
+- Desired count: 1 (adjustable based on load requirements)
+- Network configuration and security group settings
 
-### Secrets Management
+### 6.3 Neo4j Deployment and Management
 
-1. Regularly rotate passwords, API keys, and AWS access keys.
-2. Update the rotated secrets in GitHub Secrets and AWS Secrets Manager.
-3. For local development, update your `.env` file (ensure it remains in `.gitignore`).
+The project uses Neo4j for both staging and production environments, managed through Terraform.
 
-## Monitoring and Logging
+#### Neo4j Instances
 
-The application uses AWS CloudWatch for monitoring and logging. This is configured in the ECS task definition within the Terraform configuration.
+1. Production Environment:
+   - Neo4j Enterprise Edition
+   - Two separate instances: LedgerSpace and SearchSpace
+   - Deployed on AWS EC2 instances (m5.large)
+
+2. Staging Environment:
+   - Neo4j Community Edition
+   - Two separate instances: LedgerSpace and SearchSpace
+   - Deployed on AWS EC2 instances (t3.medium)
+
+#### Deployment Process
+
+Neo4j instances are defined and deployed automatically through the Terraform configuration in `terraform/main.tf`, including:
+- Creation of EC2 instances
+- Configuration of security groups
+- Setting up AWS Secrets Manager to store connection details
+
+#### Configuration
+
+- Neo4j instances are configured using the `user_data` script in the EC2 instance definitions within the Terraform configuration.
+- Security groups in `terraform/main.tf` are pre-configured to restrict access to the Neo4j instances as needed.
+
+## 7. Monitoring and Logging
 
 ### CloudWatch Logs
 
+ECS task logs are sent to CloudWatch Logs:
 - Log group: `/ecs/credex-core`
 - Log stream prefix: `ecs`
 - AWS region: af-south-1 (Cape Town)
@@ -434,42 +219,68 @@ Consider setting up CloudWatch Alarms for important metrics such as:
 
 You can also use CloudWatch Dashboards to create visual representations of your application's performance and health.
 
-## Troubleshooting
+## 8. Troubleshooting
 
-- If deployments fail, check the GitHub Actions logs for error messages.
-- Ensure all required secrets are correctly set up in GitHub repository secrets and AWS Secrets Manager.
-- Verify that the ECS task definition is correctly updated with the new image and environment variables.
-- For local development issues, check the Docker Compose logs and ensure all required environment variables are set in your local .env file.
-- For Codespaces issues, check the Codespaces logs and ensure all required environment variables are set in Codespaces secrets.
-- For Neo4j issues, check the EC2 instance logs and ensure the `user_data` script executed correctly for each instance.
-- For application issues, check the CloudWatch logs for the ECS tasks.
-- If there are issues with secrets retrieval, check the IAM roles and policies to ensure the ECS tasks have the necessary permissions to access AWS Secrets Manager.
+- Check GitHub Actions logs for deployment failure error messages.
+- Verify all required secrets are correctly set up in GitHub repository secrets and AWS Secrets Manager.
+- Ensure the ECS task definition is correctly updated with the new image and environment variables.
+- For local development issues, check Docker Compose logs and environment variables in the local .env file.
+- For Codespaces issues, check Codespaces logs and environment variables in Codespaces secrets.
+- For Neo4j issues, check EC2 instance logs and ensure the `user_data` script executed correctly.
+- For application issues, check CloudWatch logs for the ECS tasks.
+- For secrets retrieval issues, check IAM roles and policies to ensure ECS tasks have necessary permissions to access AWS Secrets Manager.
 
-## Security Considerations
+## 9. Security Considerations
 
 - Never commit sensitive information (passwords, API keys, etc.) to the repository.
-- Use GitHub Secrets to manage deployment-related sensitive data and Codespaces environment variables.
-- Use AWS Secrets Manager to store and manage application secrets for staging and production environments.
-- Use `.env` files for local development, but ensure they are listed in `.gitignore` to prevent accidental commits.
+- Use GitHub Secrets for deployment-related sensitive data and Codespaces environment variables.
+- Use AWS Secrets Manager for application secrets in staging and production environments.
+- Use `.env` files for local development, ensuring they are listed in `.gitignore`.
 - Regularly rotate passwords, API keys, and AWS access keys.
-- Ensure that production databases are not accessible from development or staging environments.
+- Ensure production databases are not accessible from development or staging environments.
 - Implement proper access controls and network security in your AWS environment.
-- When using Codespaces, be cautious about which ports are publicly accessible.
-- Restrict access to Neo4j instances by updating the security group rules in Terraform.
-- Ensure that LedgerSpace and SearchSpace instances are properly isolated and secured.
+- Be cautious about which ports are publicly accessible in Codespaces.
+- Restrict access to Neo4j instances by updating security group rules in Terraform.
+- Ensure LedgerSpace and SearchSpace instances are properly isolated and secured.
 - Implement least privilege access for IAM roles used by ECS tasks to access AWS Secrets Manager.
 
-## Continuous Improvement
+## 10. Maintenance and Updates
 
-The deployment process is designed to be flexible and scalable. As the project evolves, consider:
-- Implementing comprehensive post-deployment verification steps, including automated tests and health checks
-- Adding more comprehensive testing in the CI/CD pipeline
-- Implementing blue-green deployments for zero-downtime updates
-- Setting up automated rollback procedures in case of failed deployments
-- Enhancing monitoring and alerting for the deployed application and Neo4j instances
-- Optimizing Codespaces configuration for faster startup and development experience
-- Implementing automated backups for all Neo4j instances (LedgerSpace and SearchSpace)
-- Setting up Neo4j clustering for high availability in the production environment for both LedgerSpace and SearchSpace
-- Implementing data synchronization or replication strategies between LedgerSpace and SearchSpace if required
-- Implementing a secrets rotation policy for AWS Secrets Manager to automatically update and distribute new credentials
-- Setting up monitoring and alerting for AWS Secrets Manager access and usage
+### Updating the Application
+
+1. Make changes from the `dev` branch locally or in Codespaces.
+2. Test thoroughly in the local/Codespaces environment.
+3. Submit merge request back to `dev` when ready.
+4. Merge `dev` to `stage` branch to trigger staging deployment.
+5. Test the changes in the staging environment.
+6. If everything works as expected, push to the `prod` branch to deploy to production.
+
+### Updating ECS Task Definition
+
+1. Modify the `task-definition.json` in the `terraform` directory if needed.
+2. Add any new environment variables to the `environment` section with appropriate placeholders.
+3. Update GitHub Actions workflows to replace new placeholders with corresponding GitHub Secrets or AWS Secrets Manager references.
+
+### Updating Neo4j Instances
+
+1. To update Neo4j versions or configurations:
+   - Modify the `user_data` scripts in the `terraform/main.tf` file.
+   - Run `terraform apply` to apply the changes.
+   - Changes that recreate the databases are currently disallowed, pending proper backup processes being verified.
+
+## 11. Continuous Improvement
+
+Consider the following improvements:
+- Implement comprehensive post-deployment verification steps, including automated tests and health checks
+- Add more comprehensive testing in the CI/CD pipeline
+- Implement blue-green deployments for zero-downtime updates
+- Set up automated rollback procedures for failed deployments
+- Enhance monitoring and alerting for the deployed application and Neo4j instances
+- Optimize Codespaces configuration for faster startup and development experience
+- Implement automated backups for all Neo4j instances
+- Set up Neo4j clustering for high availability in the production environment
+- Implement data synchronization or replication strategies between LedgerSpace and SearchSpace if required
+- Implement a secrets rotation policy for AWS Secrets Manager
+- Set up monitoring and alerting for AWS Secrets Manager access and usage
+
+By continuously improving the deployment process and infrastructure, you can ensure the reliability, security, and efficiency of the credex-core application across all environments.
