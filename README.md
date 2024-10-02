@@ -74,7 +74,6 @@ Development for the credex-core repository and API is intended to be carried out
 - [Swagger API Documentation](docs/swagger.md)
 - [Deployments and Environments](docs/deployments.md)
 
-
 ## License
 
 You are welcome to explore, experiment with, and build upon this work for research, development, modeling, testing, demonstrations, and other non-commercial purposes. Please contribute!
