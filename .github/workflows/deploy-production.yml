@@ -16,6 +16,7 @@ jobs:
   deploy:
     name: Deploy to AWS Production
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Checkout code
@@ -64,15 +65,15 @@ jobs:
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
         env:
-          JWT_SECRET: ${{ secrets.PROD_JWT_SECRET }}
-          WHATSAPP_BOT_API_KEY: ${{ secrets.PROD_WHATSAPP_BOT_API_KEY }}
-          OPEN_EXCHANGE_RATES_API: ${{ secrets.PROD_OPEN_EXCHANGE_RATES_API }}
-          NEO_4J_LEDGER_SPACE_BOLT_URL: ${{ secrets.PROD_NEO_4J_LEDGER_SPACE_BOLT_URL }}
-          NEO_4J_LEDGER_SPACE_USER: ${{ secrets.PROD_NEO_4J_LEDGER_SPACE_USER }}
-          NEO_4J_LEDGER_SPACE_PASS: ${{ secrets.PROD_NEO_4J_LEDGER_SPACE_PASS }}
-          NEO_4J_SEARCH_SPACE_BOLT_URL: ${{ secrets.PROD_NEO_4J_SEARCH_SPACE_BOLT_URL }}
-          NEO_4J_SEARCH_SPACE_USER: ${{ secrets.PROD_NEO_4J_SEARCH_SPACE_USER }}
-          NEO_4J_SEARCH_SPACE_PASS: ${{ secrets.PROD_NEO_4J_SEARCH_SPACE_PASS }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          WHATSAPP_BOT_API_KEY: ${{ secrets.WHATSAPP_BOT_API_KEY }}
+          OPEN_EXCHANGE_RATES_API: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
+          NEO_4J_LEDGER_SPACE_BOLT_URL: ${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}
+          NEO_4J_LEDGER_SPACE_USER: ${{ secrets.NEO_4J_LEDGER_SPACE_USER }}
+          NEO_4J_LEDGER_SPACE_PASS: ${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}
+          NEO_4J_SEARCH_SPACE_BOLT_URL: ${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}
+          NEO_4J_SEARCH_SPACE_USER: ${{ secrets.NEO_4J_SEARCH_SPACE_USER }}
+          NEO_4J_SEARCH_SPACE_PASS: ${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}
 
       - name: Verify deployment
         run: |
