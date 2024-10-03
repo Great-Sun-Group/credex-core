@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { app } from '../../index'; // Adjust this import based on your app structure
+import app from '../../index'; // Adjust this import based on your app structure
 import { ledgerSpaceDriver } from '../../../config/neo4j';
 
 describe('Account API Integration Tests', () => {

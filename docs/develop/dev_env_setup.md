@@ -11,6 +11,7 @@ This document outlines the deployment process for developers working on the cred
 - Git
 - Docker and Docker Compose
 - Visual Studio Code
+- Visual Studio Code Remote - Containers extension
 
 ## Environment Setup
 
@@ -25,6 +26,23 @@ This document outlines the deployment process for developers working on the cred
 
 2. Create a `.env` file in the root of the project based on `.env.example` and fill in the required environment variables (see below).
 3. `git checkout -b new-branch-name` to start local development
+
+### Using Devcontainers with VS Code
+
+Devcontainers provide a consistent, reproducible development environment across different machines. This project is set up to use devcontainers, which encapsulate the development environment in a Docker container.
+
+To use devcontainers:
+
+1. Ensure you have the "Remote - Containers" extension installed in VS Code.
+2. Open the project folder in VS Code.
+3. When prompted, click "Reopen in Container" or use the command palette (F1) and select "Remote-Containers: Reopen in Container".
+4. VS Code will build the devcontainer (this may take a few minutes the first time) and open the project inside the container.
+
+Benefits of using devcontainers:
+- Consistent development environment across team members
+- Easy onboarding for new developers
+- Isolation from the host system
+- Pre-configured development tools and extensions
 
 ### GitHub Codespaces
 
@@ -50,6 +68,8 @@ To run tests within a Docker container:
    ```
    npm run docker:test
    ```
+
+When using devcontainers or GitHub Codespaces, these commands can be run directly in the integrated terminal, as you're already working within the container environment.
 
 You can use VS Code's "Attach to Running Container" feature to work within the Docker container, or use `docker exec` to access the container's shell.
 
@@ -103,13 +123,14 @@ For development environments, the `NODE_ENV` variable defaults to 'development'.
   docker-compose logs
   ```
 - Ensure all required environment variables are set correctly in your `.env` file.
-- For Codespaces issues, check Codespaces logs and environment variables in Codespaces secrets.
+- For Codespaces or devcontainer issues, check the "Remote" output panel in VS Code for logs and error messages.
+- If you encounter issues with the devcontainer, try rebuilding it using the command palette (F1) and selecting "Remote-Containers: Rebuild Container".
 
 ## Security Considerations
 
 - Never commit sensitive information (passwords, API keys, etc.) to the repository.
 - Use `.env` files for local development, ensuring they are listed in `.gitignore`.
-- Be cautious about which ports are publicly accessible in Codespaces.
+- Be cautious about which ports are publicly accessible in Codespaces or devcontainers.
 
 ## Continuous Improvement
 
@@ -119,6 +140,6 @@ Consider the following improvements for the development process:
 - Implement more comprehensive testing procedures, including Docker-specific tests
 - Set up automated code quality checks and linting in the Docker environment
 - Explore ways to further align the Docker development environment with production settings
-- Optimize Codespaces configuration for faster startup and development experience
+- Optimize Codespaces and devcontainer configurations for faster startup and development experience
 
 By continuously improving the development process, you can enhance productivity and code quality in the credex-core application while ensuring consistency across different environments.
