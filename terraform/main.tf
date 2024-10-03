@@ -195,10 +195,10 @@ resource "aws_secretsmanager_secret_version" "neo4j_stage_secrets" {
   })
 }
 
-# Neo4j Production LedgerSpace Instance (Enterprise Edition)
+# Neo4j Production LedgerSpace Instance (Community Edition)
 resource "aws_instance" "neo4j_prod_ledger" {
-  ami           = var.neo4j_enterprise_ami
-  instance_type = "m5.large"
+  ami           = var.neo4j_community_ami
+  instance_type = "t3.medium"
   key_name      = var.ec2_key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j_prod.id]
@@ -210,9 +210,9 @@ resource "aws_instance" "neo4j_prod_ledger" {
 
   user_data = <<-EOF
               #!/bin/bash
-              echo "Setting up Neo4j Enterprise Edition for LedgerSpace"
+              echo "Setting up Neo4j Community Edition for LedgerSpace"
               NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_prod_secrets.id} --query SecretString --output text | jq -r .ledgerspacepass)
-              # Install and configure Neo4j Enterprise Edition
+              # Install and configure Neo4j Community Edition
               sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
               neo4j-admin set-initial-password $NEO4J_PASSWORD
               systemctl start neo4j
@@ -220,7 +220,7 @@ resource "aws_instance" "neo4j_prod_ledger" {
 
   root_block_device {
     volume_type = "gp3"
-    volume_size = 100
+    volume_size = 50
     encrypted   = true
   }
 
@@ -230,10 +230,10 @@ resource "aws_instance" "neo4j_prod_ledger" {
   }
 }
 
-# Neo4j Production SearchSpace Instance (Enterprise Edition)
+# Neo4j Production SearchSpace Instance (Community Edition)
 resource "aws_instance" "neo4j_prod_search" {
-  ami           = var.neo4j_enterprise_ami
-  instance_type = "m5.large"
+  ami           = var.neo4j_community_ami
+  instance_type = "t3.medium"
   key_name      = var.ec2_key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j_prod.id]
@@ -245,9 +245,9 @@ resource "aws_instance" "neo4j_prod_search" {
 
   user_data = <<-EOF
               #!/bin/bash
-              echo "Setting up Neo4j Enterprise Edition for SearchSpace"
+              echo "Setting up Neo4j Community Edition for SearchSpace"
               NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_prod_secrets.id} --query SecretString --output text | jq -r .searchspacepass)
-              # Install and configure Neo4j Enterprise Edition
+              # Install and configure Neo4j Community Edition
               sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
               neo4j-admin set-initial-password $NEO4J_PASSWORD
               systemctl start neo4j
@@ -255,7 +255,7 @@ resource "aws_instance" "neo4j_prod_search" {
 
   root_block_device {
     volume_type = "gp3"
-    volume_size = 100
+    volume_size = 50
     encrypted   = true
   }
 
@@ -407,11 +407,6 @@ variable "vpc_id" {
 variable "subnet_ids" {
   description = "The subnet IDs to deploy the ECS tasks in"
   type        = list(string)
-}
-
-variable "neo4j_enterprise_ami" {
-  description = "AMI ID for Neo4j Enterprise Edition"
-  type        = string
 }
 
 variable "neo4j_community_ami" {
