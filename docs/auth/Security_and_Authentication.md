@@ -158,7 +158,7 @@ This endpoint is used to onboard new members into the system. It creates a new m
 
 #### Successful Onboarding
 
-- **Status Code:** 200 OK
+- **Status Code:** 201 Created
 - **Body:**
   ```json
   {
