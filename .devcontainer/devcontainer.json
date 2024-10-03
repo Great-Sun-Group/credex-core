@@ -7,7 +7,7 @@
         "esbenp.prettier-vscode",
         "saoudrizwan.claude-dev",
         "dbaeumer.vscode-eslint",
-        //"ms-azuretools.vscode-docker", for some reason this breaks the devcontainer
+        "ms-azuretools.vscode-docker",
         "yzhang.markdown-all-in-one",
         "github.vscode-github-actions"
       ],
@@ -24,10 +24,11 @@
     "ghcr.io/devcontainers/features/node:1": {
       "version": "18"
     },
-    "ghcr.io/devcontainers/features/git:1": {}
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
   "forwardPorts": [5000],
-  "postCreateCommand": "npm install && npm install -g nodemon",
+  "postCreateCommand": "npm install && sudo apt-get update && sudo apt-get install -y docker-compose",
   "remoteEnv": {
     "NODE_ENV": "development"
   }
