@@ -9,7 +9,7 @@ COPY package*.json ./
 FROM base AS development
 RUN npm install
 COPY . .
-CMD ["npm", "run", "docker:dev"]
+CMD ["npm", "run", "start"]
 
 FROM base AS production-build
 RUN npm ci
