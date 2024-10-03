@@ -64,13 +64,12 @@ To protect the API from abuse and ensure fair usage, rate limiting has been impl
 - If the member ID is not available, it falls back to using the IP address or remote address
 - When the rate limit is exceeded, a 429 (Too Many Requests) status code is returned
 
-## Implementation Details In:
+## Implementation Locations:
 
 1. [config/authenticate.ts](config/authenticate.ts):
 2. [src/middleware/authMiddleware.ts](consrc/middleware/authMiddleware.ts):
 3. [src/middleware/rateLimiter.ts](src/middleware/rateLimiter.ts):
 4. [src/middleware/securityConfig.ts](src/middleware/securityConfig.ts):
-5. 
 
 These mechanisms work together to ensure that each request is properly authenticated, authorized for the specific member making the request, and within the allowed rate limits.
 
