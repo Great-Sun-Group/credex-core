@@ -78,6 +78,12 @@ resource "aws_ecs_service" "credex_core_service" {
     assign_public_ip = true
     security_groups  = [aws_security_group.ecs_tasks.id]
   }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.credex_tg.arn
+    container_name   = "credex-core"
+    container_port   = 5000
+  }
 }
 
 resource "aws_security_group" "ecs_tasks" {
@@ -90,6 +96,61 @@ resource "aws_security_group" "ecs_tasks" {
     from_port       = 5000
     to_port         = 5000
     cidr_blocks     = ["0.0.0.0/0"]
+  }
+
+  egress {
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_lb" "credex_alb" {
+  name               = "credex-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb.id]
+  subnets            = var.subnet_ids
+}
+
+resource "aws_lb_target_group" "credex_tg" {
+  name        = "credex-tg"
+  port        = 5000
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    path                = "/health"
+    healthy_threshold   = 2
+    unhealthy_threshold = 10
+    timeout             = 30
+    interval            = 60
+  }
+}
+
+resource "aws_lb_listener" "credex_listener" {
+  load_balancer_arn = aws_lb.credex_alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.credex_tg.arn
+  }
+}
+
+resource "aws_security_group" "alb" {
+  name        = "credex-alb-security-group"
+  description = "Controls access to the ALB"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    protocol    = "tcp"
+    from_port   = 80
+    to_port     = 80
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -392,16 +453,23 @@ variable "staging_neo4j_search_space_pass" {
   sensitive   = true
 }
 
-output "ecr_repository_url" {
-  value = aws_ecr_repository.credex_core.repository_url
+output "api_url" {
+  value       = "http://${aws_lb.credex_alb.dns_name}"
+  description = "The URL of the deployed API"
 }
 
 output "ecs_cluster_name" {
-  value = aws_ecs_cluster.credex_cluster.name
+  value       = aws_ecs_cluster.credex_cluster.name
+  description = "The name of the ECS cluster"
 }
 
 output "ecs_service_name" {
-  value = aws_ecs_service.credex_core_service.name
+  value       = aws_ecs_service.credex_core_service.name
+  description = "The name of the ECS service"
+}
+
+output "ecr_repository_url" {
+  value = aws_ecr_repository.credex_core.repository_url
 }
 
 output "neo4j_prod_ledger_private_ip" {

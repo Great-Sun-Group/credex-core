@@ -18,63 +18,63 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build, tag, and push image to Amazon ECR
-      id: build-image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        IMAGE_TAG: ${{ github.sha }}
-      run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-    - name: Update ECS task definition
-      id: task-def
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        IMAGE_TAG: ${{ github.sha }}
-      run: |
-        sed -i.bak \
-          -e 's|${CONTAINER_IMAGE}|'${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}'|' \
-          -e 's|${NODE_ENV}|staging|' \
-          -e 's|${LOG_LEVEL}|debug|' \
-          -e 's|${AWS_REGION}|${{ env.AWS_REGION }}|' \
-          terraform/task-definition.json
-        echo "::set-output name=task-definition::terraform/task-definition.json"
+      - name: Update ECS task definition
+        id: task-def
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          sed -i.bak \
+            -e 's|${CONTAINER_IMAGE}|'${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}'|' \
+            -e 's|${NODE_ENV}|staging|' \
+            -e 's|${LOG_LEVEL}|debug|' \
+            -e 's|${AWS_REGION}|${{ env.AWS_REGION }}|' \
+            terraform/task-definition.json
+          echo "::set-output name=task-definition::terraform/task-definition.json"
 
-    - name: Deploy Amazon ECS task definition
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: ${{ env.ECS_SERVICE }}
-        cluster: ${{ env.ECS_CLUSTER }}
-        wait-for-service-stability: true
-      env:
-        JWT_SECRET: ${{ secrets.STAGE_JWT_SECRET }}
-        WHATSAPP_BOT_API_KEY: ${{ secrets.STAGE_WHATSAPP_BOT_API_KEY }}
-        OPEN_EXCHANGE_RATES_API_KEY: ${{ secrets.STAGE_OPEN_EXCHANGE_RATES_API_KEY }}
-        NEO4J_LEDGER_SPACE_BOLT_URL: ${{ secrets.STAGING_NEO4J_LEDGER_SPACE_BOLT_URL }}
-        NEO4J_LEDGER_SPACE_USER: ${{ secrets.STAGING_NEO4J_LEDGER_SPACE_USER }}
-        NEO4J_LEDGER_SPACE_PASS: ${{ secrets.STAGING_NEO4J_LEDGER_SPACE_PASS }}
-        NEO4J_SEARCH_SPACE_BOLT_URL: ${{ secrets.STAGING_NEO4J_SEARCH_SPACE_BOLT_URL }}
-        NEO4J_SEARCH_SPACE_USER: ${{ secrets.STAGING_NEO4J_SEARCH_SPACE_USER }}
-        NEO4J_SEARCH_SPACE_PASS: ${{ secrets.STAGING_NEO4J_SEARCH_SPACE_PASS }}
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+        env:
+          JWT_SECRET: ${{ secrets.STAGE_JWT_SECRET }}
+          WHATSAPP_BOT_API_KEY: ${{ secrets.STAGE_WHATSAPP_BOT_API_KEY }}
+          OPEN_EXCHANGE_RATES_API: ${{ secrets.STAGE_OPEN_EXCHANGE_RATES_API }}
+          NEO_4J_LEDGER_SPACE_BOLT_URL: ${{ secrets.STAGING_NEO_4J_LEDGER_SPACE_BOLT_URL }}
+          NEO_4J_LEDGER_SPACE_USER: ${{ secrets.STAGING_NEO_4J_LEDGER_SPACE_USER }}
+          NEO_4J_LEDGER_SPACE_PASS: ${{ secrets.STAGING_NEO_4J_LEDGER_SPACE_PASS }}
+          NEO_4J_SEARCH_SPACE_BOLT_URL: ${{ secrets.STAGING_NEO_4J_SEARCH_SPACE_BOLT_URL }}
+          NEO_4J_SEARCH_SPACE_USER: ${{ secrets.STAGING_NEO_4J_SEARCH_SPACE_USER }}
+          NEO_4J_SEARCH_SPACE_PASS: ${{ secrets.STAGING_NEO_4J_SEARCH_SPACE_PASS }}
 
-    - name: Verify deployment
-      run: |
-        # Add any post-deployment verification steps here
-        # For example, you could run tests or check the health of your application
+      - name: Verify deployment
+        run: |
+          # Add any post-deployment verification steps here
+          # For example, you could run tests or check the health of your application

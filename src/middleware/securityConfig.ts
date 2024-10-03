@@ -60,7 +60,11 @@ export const applySecurityMiddleware = (app: Application) => {
 
 export const applyAuthMiddleware = (app: Application) => {
   app.use((req, res, next) => {
-    if (req.path === "/api/v1/member/login" || req.path === "/api/v1/member/onboardMember") {
+    if (
+      req.path === "/api/v1/member/login" ||
+      req.path === "/api/v1/member/onboardMember" ||
+      req.path === "/api/v1/member/getMemberDashboard"
+    ) {
       return next();
     }
     authMiddleware()(req, res, next);

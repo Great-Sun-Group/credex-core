@@ -21,13 +21,34 @@
         { "name": "LOG_LEVEL", "value": "${LOG_LEVEL}" },
         { "name": "JWT_SECRET", "value": "${JWT_SECRET}" },
         { "name": "WHATSAPP_BOT_API_KEY", "value": "${WHATSAPP_BOT_API_KEY}" },
-        { "name": "OPEN_EXCHANGE_RATES_API_KEY", "value": "${OPEN_EXCHANGE_RATES_API_KEY}" },
-        { "name": "NEO4J_LEDGER_SPACE_BOLT_URL", "value": "${NEO4J_LEDGER_SPACE_BOLT_URL}" },
-        { "name": "NEO4J_LEDGER_SPACE_USER", "value": "${NEO4J_LEDGER_SPACE_USER}" },
-        { "name": "NEO4J_LEDGER_SPACE_PASS", "value": "${NEO4J_LEDGER_SPACE_PASS}" },
-        { "name": "NEO4J_SEARCH_SPACE_BOLT_URL", "value": "${NEO4J_SEARCH_SPACE_BOLT_URL}" },
-        { "name": "NEO4J_SEARCH_SPACE_USER", "value": "${NEO4J_SEARCH_SPACE_USER}" },
-        { "name": "NEO4J_SEARCH_SPACE_PASS", "value": "${NEO4J_SEARCH_SPACE_PASS}" }
+        {
+          "name": "OPEN_EXCHANGE_RATES_API",
+          "value": "${OPEN_EXCHANGE_RATES_API}"
+        },
+        {
+          "name": "NEO_4J_LEDGER_SPACE_BOLT_URL",
+          "value": "${NEO_4J_LEDGER_SPACE_BOLT_URL}"
+        },
+        {
+          "name": "NEO_4J_LEDGER_SPACE_USER",
+          "value": "${NEO_4J_LEDGER_SPACE_USER}"
+        },
+        {
+          "name": "NEO_4J_LEDGER_SPACE_PASS",
+          "value": "${NEO_4J_LEDGER_SPACE_PASS}"
+        },
+        {
+          "name": "NEO_4J_SEARCH_SPACE_BOLT_URL",
+          "value": "${NEO_4J_SEARCH_SPACE_BOLT_URL}"
+        },
+        {
+          "name": "NEO_4J_SEARCH_SPACE_USER",
+          "value": "${NEO_4J_SEARCH_SPACE_USER}"
+        },
+        {
+          "name": "NEO_4J_SEARCH_SPACE_PASS",
+          "value": "${NEO_4J_SEARCH_SPACE_PASS}"
+        }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
