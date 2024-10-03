@@ -166,27 +166,7 @@ We have had to establish an IAM policy broader than desired because our attmpts 
 
 Remember, creating an effective IAM policy is an iterative process. Start broad to ensure functionality, then gradually tighten permissions as you gain more insights into your specific usage patterns.
 
-## 5. Deployment Process
-
-### 5.1 Staging Deployment
-
-1. Push changes to the `stage` branch.
-2. The `deploy-staging.yml` GitHub Actions workflow will automatically:
-   - Build the Docker image
-   - Push the image to ECR
-   - Update the ECS task definition with staging-specific environment variables
-   - Deploy to the staging ECS cluster
-
-### 5.2 Production Deployment
-
-1. Push changes to the `prod` branch.
-2. The `deploy-production.yml` GitHub Actions workflow will automatically:
-   - Build the Docker image
-   - Push the image to ECR
-   - Update the ECS task definition with production-specific environment variables
-   - Deploy to the production ECS cluster
-
-### 5.3 Deployment and Verification Process
+## 5. Infrastructure Management
 
 We have implemented an automated process that handles both the deployment and verification of the application. This process includes the following steps:
 
@@ -207,13 +187,8 @@ To run the complete deployment and verification process:
 
 This command will execute the `deploy_and_verify.sh` script in the terraform directory, which handles the entire deployment and verification process.
 
-## 6. Infrastructure Management
 
-### 6.1 Terraform Management
-
-The Terraform configurations for this project are managed automatically through the `deploy_and_verify.sh` script. This script handles Terraform initialization and application, removing the need for manual Terraform commands in most cases.
-
-For manual Terraform management:
+### 5.1 Manual Terraform management
 
 1. Navigate to the `terraform` directory.
 2. Run `terraform init` to initialize the Terraform working directory.
@@ -221,7 +196,7 @@ For manual Terraform management:
 4. Run `terraform plan` to see proposed changes.
 5. Run `terraform apply` to create or update the necessary AWS resources.
 
-### 6.2 AWS Resources
+### 5.2 AWS Resources
 
 #### ECS Task Definition
 
@@ -241,11 +216,9 @@ The ECS service is configured in the `main.tf` file, including:
 - Desired count: 1 (adjustable based on load requirements)
 - Network configuration and security group settings
 
-### 6.3 Neo4j Deployment and Management
+### Neo4j Deployment and Management
 
 The project uses Neo4j for both staging and production environments, managed through Terraform.
-
-#### Neo4j Instances
 
 1. Production Environment:
 
@@ -258,22 +231,37 @@ The project uses Neo4j for both staging and production environments, managed thr
    - Two separate instances: LedgerSpace and SearchSpace
    - Deployed on AWS EC2 instances (t3.medium)
 
-#### Deployment Process
-
 Neo4j instances are defined and deployed automatically through the Terraform configuration in `terraform/main.tf`, including:
 
 - Creation of EC2 instances
 - Configuration of security groups
 - Setting up AWS Secrets Manager to store connection details
 
-#### Configuration
+Neo4j instances are configured using the `user_data` script in the EC2 instance definitions within the Terraform configuration. Security groups in `terraform/main.tf` are pre-configured to restrict access to the Neo4j instances as needed.
 
-- Neo4j instances are configured using the `user_data` script in the EC2 instance definitions within the Terraform configuration.
-- Security groups in `terraform/main.tf` are pre-configured to restrict access to the Neo4j instances as needed.
+## 6. Deployment Process
+
+### 6.1 Staging Deployment
+
+1. Push changes to the `stage` branch.
+2. The `deploy-staging.yml` GitHub Actions workflow will automatically:
+   - Build the Docker image
+   - Push the image to ECR
+   - Update the ECS task definition with staging-specific environment variables
+   - Deploy to the staging ECS cluster
+
+### 6.2 Production Deployment
+
+1. Push changes to the `prod` branch.
+2. The `deploy-production.yml` GitHub Actions workflow will automatically:
+   - Build the Docker image
+   - Push the image to ECR
+   - Update the ECS task definition with production-specific environment variables
+   - Deploy to the production ECS cluster
 
 ## 7. Monitoring and Logging
 
-### CloudWatch Logs
+### 7.1 CloudWatch Logs
 
 ECS task logs are sent to CloudWatch Logs:
 
@@ -288,7 +276,7 @@ To access the logs:
 3. Select the `/ecs/credex-core` log group
 4. Browse the log streams to find the logs for specific tasks
 
-### Monitoring
+### 7.2 Monitoring
 
 Consider setting up CloudWatch Alarms for important metrics such as:
 
