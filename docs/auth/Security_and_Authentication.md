@@ -29,7 +29,7 @@ Our application uses JSON Web Tokens (JWT) for authentication. This setup provid
 4. **Role-based Access Control**
    - The authMiddleware supports role-based access control for fine-grained permissions.
 
-## Authentication Process
+### Authentication Process
 
 1. When a new member is onboarded or an existing member logs in, a JWT token is generated and returned.
 
@@ -42,6 +42,12 @@ Our application uses JSON Web Tokens (JWT) for authentication. This setup provid
 3. The server will validate the token for each request to a protected route. If the token is valid, the request will be processed. If not, a 401 Unauthorized response will be returned.
 
 4. After each request, check the Authorization header in the response for a new token. Always use the most recent token for subsequent requests.
+
+### Keyholes
+The /api/v1/member/login and /api/v1/member/onboardMember routes are keyholes in the JWT authorization layer so that members can onboard and login when they do not have valid JWT tokens.
+
+If any request in your client application returns a `400 Bad Request` or `401 Unauthorized` code, hit the login endpoint with the phone number. If the login endpoint returns `400 Bad Request` instead of `200 OK` and a valid token, request user name to onboard a new member with the onboardMember endpoint.
+
 
 ## CORS Configuration
 
@@ -66,10 +72,10 @@ To protect the API from abuse and ensure fair usage, rate limiting has been impl
 
 ## Implementation Locations:
 
-1. [config/authenticate.ts](config/authenticate.ts):
-2. [src/middleware/authMiddleware.ts](consrc/middleware/authMiddleware.ts):
-3. [src/middleware/rateLimiter.ts](src/middleware/rateLimiter.ts):
-4. [src/middleware/securityConfig.ts](src/middleware/securityConfig.ts):
+1. [config/authenticate.ts](config/authenticate.ts)
+2. [src/middleware/authMiddleware.ts](consrc/middleware/authMiddleware.ts)
+3. [src/middleware/rateLimiter.ts](src/middleware/rateLimiter.ts)
+4. [src/middleware/securityConfig.ts](src/middleware/securityConfig.ts)
 
 These mechanisms work together to ensure that each request is properly authenticated, authorized for the specific member making the request, and within the allowed rate limits.
 
