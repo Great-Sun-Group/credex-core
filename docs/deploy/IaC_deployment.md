@@ -29,28 +29,25 @@ Staging and production environments are managed through AWS ECS and deployed via
 The application uses environment variables for configuration. These are defined in [config/config.ts](config/config.ts).
 
 The `NODE_ENV` variable is set during the deployment process:
+
 - For staging deployments, it's set to 'staging'
 - For production deployments, it's set to 'production'
 
 ### 4.2 Secrets Management
 
-#### GitHub Secrets
+#### 4.2.1 GitHub Secrets
 
 For secure management of deployment-related sensitive data, set up the following GitHub Secrets:
 
-1. Go to your GitHub repository.
-2. Navigate to Settings > Secrets.
-3. Add the following secrets:
-   - `AWS_ACCESS_KEY_ID`: Your AWS Access Key ID
+1. Go to Settings->Environments in your GitHub repository and create Environments for `staging` and `production`. Implement protection so that only the `stage` and `prod` branches can deploy to their respective environments.
+2. Add the following secrets to each environment:
+   - `AWS_ACCESS_KEY_ID`: Your AWS Access Key ID (see 4.3 IAM Users, Groups, and Policies below)
    - `AWS_SECRET_ACCESS_KEY`: Your AWS Secret Access Key
-   - `OPEN_EXCHANGE_RATES_API_STAGE`: Your Open Exchange Rates API key for staging
-   - `OPEN_EXCHANGE_RATES_API_PROD`: Your Open Exchange Rates API key for production
-   - `JWT_SECRET_STAGE`: Secret key for JWT token generation and verification in staging
-   - `JWT_SECRET_PROD`: Secret key for JWT token generation and verification in production
-   - `WHATSAPP_BOT_API_KEY_STAGE`: WhatsApp Bot API key for staging
-   - `WHATSAPP_BOT_API_KEY_PROD`: WhatsApp Bot API key for production
+   - `OPEN_EXCHANGE_RATES_API`: Your Open Exchange Rates API key
+   - `JWT_SECRET`: Secret key for JWT token generation and verification
+   - `WHATSAPP_BOT_API_KEY`: WhatsApp Bot API key
 
-#### AWS Secrets Manager
+#### 4.2.2 AWS Secrets Manager
 
 For staging and production environments, AWS Secrets Manager is used to securely store and manage Neo4j connection details.
 
@@ -67,6 +64,107 @@ For staging and production environments, AWS Secrets Manager is used to securely
    - `searchspacepass`: Neo4j SearchSpace password
 
 The application is configured to retrieve these secrets at runtime in the staging and production environments.
+
+### 4.2.3 IAM Users, Groups, and Policies
+
+To manage access to AWS resources for deployment, we use the IAM setup below. This is to create and define the users that give us the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY above.
+
+1. IAM Users:
+
+   - `credex-core-staging-deployment`: User for staging deployments
+   - `credex-core-production-deployment`: User for production deployments
+
+2. IAM Group:
+
+   - `credex-core-deployment`: Group that includes both deployment users
+
+3. IAM Policy:
+   - `credex-core-permissions`: Policy that defines the permissions needed for deployment
+
+The `credex-core-permissions` policy is attached to the `credex-core-deployment` group, granting necessary permissions to both staging and production deployment users.
+
+#### Updating IAM Policy
+
+When Terraform scripts are modified, the IAM policy may need to be updated to reflect new resource requirements. Follow these steps to update the policy:
+
+1. Review the changes made to the Terraform scripts, particularly in `main.tf`.
+2. Identify any new AWS resources or actions that are being used.
+3. Update the `credex-core-permissions` policy in the AWS IAM console:
+   a. Go to the IAM console and find the `credex-core-permissions` policy.
+   b. Click "Edit policy" and switch to the JSON editor.
+   c. Add or modify the necessary permissions based on the Terraform changes.
+   d. Ensure you follow the principle of least privilege, granting only the permissions required for the deployment process.
+   e. You will need to include the Account ID used in the current policy in the AWS Console in the new politc generated.
+   e. Save the updated policy.
+4. After updating the policy, test the deployment process to ensure all necessary permissions are in place.
+
+Remember to document any significant changes to the IAM policy in your project's change log or documentation.
+
+#### Creating and Refining IAM Policy
+
+We have had to establish an IAM policy broader than desired because our attmpts to narrow it resulted in not all services being covered. This policy should be tightened in the future. When creating or updating the IAM policy, follow these guidelines:
+
+1. Start with a Broad Policy: Initially, you may need to use a broad policy that grants permissions to multiple AWS services. Here's an example of such a policy:
+
+   ```json
+   {
+       "Version": "2012-10-17",
+       "Statement": [
+           {
+               "Effect": "Allow",
+               "Action": [
+                   "ecs:*",
+                   "ecr:*",
+                   "logs:*",
+                   "secretsmanager:*",
+                   "ec2:*",
+                   "elasticloadbalancing:*",
+                   "iam:PassRole",
+                   "cloudwatch:*",
+                   "autoscaling:*",
+                   "application-autoscaling:*",
+                   "ssm:*",
+                   "sns:*",
+                   "kms:*",
+                   "route53:*",
+                   "elasticfilesystem:*",
+                   "servicediscovery:*",
+                   "acm:*",
+                   "cloudformation:*",
+                   "elasticache:*",
+                   "rds:*",
+                   "dynamodb:*",
+                   "sqs:*",
+                   "s3:*",
+                   "lambda:*",
+                   "apigateway:*",
+                   "events:*",
+                   "xray:*",
+                   "tag:*"
+               ],
+               "Resource": "*"
+           }
+       ]
+   }
+   ```
+
+   Note: This broad policy is not ideal from a security standpoint but ensures that the deployment process has all necessary permissions.
+
+2. Refine the Policy: Over time, refine this policy based on the actual needs of your deployment process. Use AWS CloudTrail logs to identify which actions and services are actually being used.
+
+3. Use Least Privilege Principle: As you refine the policy, aim to grant only the permissions that are absolutely necessary for the deployment process.
+
+4. Regular Review: Periodically review and update the policy, especially after making changes to the Terraform scripts or deployment process.
+
+5. Use AWS IAM Access Analyzer: This tool can help you identify resources in your organization and accounts that are shared with an external entity.
+
+6. Test Thoroughly: After any policy changes, thoroughly test the deployment process to ensure all necessary permissions are in place.
+
+7. Document Changes: Keep a record of any significant changes to the IAM policy in your project's change log or documentation.
+
+8. Consider Separate Policies: As your understanding of the required permissions grows, consider creating separate, more specific policies for different aspects of your deployment (e.g., one for ECS operations, another for ECR, etc.).
+
+Remember, creating an effective IAM policy is an iterative process. Start broad to ensure functionality, then gradually tighten permissions as you gain more insights into your specific usage patterns.
 
 ## 5. Deployment Process
 
@@ -136,6 +234,7 @@ The ECS task definition is managed using a template file [task-definition.json](
 #### ECS Service Configuration
 
 The ECS service is configured in the `main.tf` file, including:
+
 - Service name: "credex-core-service"
 - Cluster: "credex-cluster"
 - Launch type: FARGATE
@@ -149,6 +248,7 @@ The project uses Neo4j for both staging and production environments, managed thr
 #### Neo4j Instances
 
 1. Production Environment:
+
    - Neo4j Enterprise Edition
    - Two separate instances: LedgerSpace and SearchSpace
    - Deployed on AWS EC2 instances (m5.large)
@@ -161,6 +261,7 @@ The project uses Neo4j for both staging and production environments, managed thr
 #### Deployment Process
 
 Neo4j instances are defined and deployed automatically through the Terraform configuration in `terraform/main.tf`, including:
+
 - Creation of EC2 instances
 - Configuration of security groups
 - Setting up AWS Secrets Manager to store connection details
@@ -175,11 +276,13 @@ Neo4j instances are defined and deployed automatically through the Terraform con
 ### CloudWatch Logs
 
 ECS task logs are sent to CloudWatch Logs:
+
 - Log group: `/ecs/credex-core`
 - Log stream prefix: `ecs`
 - AWS region: af-south-1 (Cape Town)
 
 To access the logs:
+
 1. Go to the AWS CloudWatch console
 2. Navigate to Log groups
 3. Select the `/ecs/credex-core` log group
@@ -188,6 +291,7 @@ To access the logs:
 ### Monitoring
 
 Consider setting up CloudWatch Alarms for important metrics such as:
+
 - CPU and Memory utilization of ECS tasks
 - Number of running tasks
 - Application-specific metrics (if pushed to CloudWatch)
@@ -238,6 +342,7 @@ You can also use CloudWatch Dashboards to create visual representations of your 
 ## 11. Continuous Improvement
 
 Consider the following improvements:
+
 - Implement comprehensive post-deployment verification steps, including automated tests and health checks
 - Add more comprehensive testing in the CI/CD pipeline
 - Implement blue-green deployments for zero-downtime updates
