@@ -94,15 +94,19 @@ resource "null_resource" "neo4j_ami_management" {
 }
 
 resource "aws_ecr_repository" "credex_core" {
-  name = "credex-core"
+  name = "credex-core-${local.effective_environment}"
+
+  tags = local.common_tags
 }
 
 resource "aws_ecs_cluster" "credex_cluster" {
-  name = "credex-cluster"
+  name = "credex-cluster-${local.effective_environment}"
+
+  tags = local.common_tags
 }
 
 resource "aws_ecs_task_definition" "credex_core_task" {
-  family                   = "credex-core"
+  family                   = "credex-core-${local.effective_environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
@@ -116,10 +120,12 @@ resource "aws_ecs_task_definition" "credex_core_task" {
     LOG_LEVEL       = "info"
     AWS_REGION      = var.aws_region
   })
+
+  tags = local.common_tags
 }
 
 resource "aws_iam_role" "ecs_execution_role" {
-  name = "ecs_execution_role"
+  name = "ecs-execution-role-${local.effective_environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -133,6 +139,8 @@ resource "aws_iam_role" "ecs_execution_role" {
       }
     ]
   })
+
+  tags = local.common_tags
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
@@ -141,7 +149,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
 }
 
 resource "aws_iam_role" "ecs_task_role" {
-  name = "ecs_task_role"
+  name = "ecs-task-role-${local.effective_environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -155,17 +163,39 @@ resource "aws_iam_role" "ecs_task_role" {
       }
     ]
   })
+
+  tags = local.common_tags
+}
+
+# Data source to fetch subnet IDs
+data "aws_subnets" "available" {
+  filter {
+    name   = "vpc-id"
+    values = [var.vpc_id]
+  }
+}
+
+# Store subnet IDs in AWS Secrets Manager
+resource "aws_secretsmanager_secret" "subnet_ids" {
+  name = "subnet-ids-${local.effective_environment}"
+
+  tags = local.common_tags
+}
+
+resource "aws_secretsmanager_secret_version" "subnet_ids" {
+  secret_id     = aws_secretsmanager_secret.subnet_ids.id
+  secret_string = jsonencode(data.aws_subnets.available.ids)
 }
 
 resource "aws_ecs_service" "credex_core_service" {
-  name            = "credex-core-service"
+  name            = "credex-core-service-${local.effective_environment}"
   cluster         = aws_ecs_cluster.credex_cluster.id
   task_definition = aws_ecs_task_definition.credex_core_task.arn
   launch_type     = "FARGATE"
   desired_count   = 1
 
   network_configuration {
-    subnets          = var.subnet_ids
+    subnets          = data.aws_subnets.available.ids
     assign_public_ip = true
     security_groups  = [aws_security_group.ecs_tasks.id]
   }
@@ -175,10 +205,12 @@ resource "aws_ecs_service" "credex_core_service" {
     container_name   = "credex-core"
     container_port   = 5000
   }
+
+  tags = local.common_tags
 }
 
 resource "aws_security_group" "ecs_tasks" {
-  name        = "credex-core-ecs-tasks-security-group"
+  name        = "credex-core-ecs-tasks-sg-${local.effective_environment}"
   description = "Allow inbound access from the ALB only"
   vpc_id      = var.vpc_id
 
@@ -195,18 +227,22 @@ resource "aws_security_group" "ecs_tasks" {
     to_port     = 0
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = local.common_tags
 }
 
 resource "aws_lb" "credex_alb" {
-  name               = "credex-alb"
+  name               = "credex-alb-${local.effective_environment}"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = var.subnet_ids
+  subnets            = data.aws_subnets.available.ids
+
+  tags = local.common_tags
 }
 
 resource "aws_lb_target_group" "credex_tg" {
-  name        = "credex-tg"
+  name        = "credex-tg-${local.effective_environment}"
   port        = 5000
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -219,21 +255,45 @@ resource "aws_lb_target_group" "credex_tg" {
     timeout             = 30
     interval            = 60
   }
+
+  tags = local.common_tags
 }
 
 resource "aws_lb_listener" "credex_listener" {
   load_balancer_arn = aws_lb.credex_alb.arn
-  port              = "80"
-  protocol          = "HTTP"
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = var.acm_certificate_arn
 
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.credex_tg.arn
   }
+
+  tags = local.common_tags
+}
+
+resource "aws_lb_listener" "redirect_http_to_https" {
+  load_balancer_arn = aws_lb.credex_alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+
+  tags = local.common_tags
 }
 
 resource "aws_security_group" "alb" {
-  name        = "credex-alb-security-group"
+  name        = "credex-alb-sg-${local.effective_environment}"
   description = "Controls access to the ALB"
   vpc_id      = var.vpc_id
 
@@ -244,18 +304,29 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    protocol    = "tcp"
+    from_port   = 443
+    to_port     = 443
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     protocol    = "-1"
     from_port   = 0
     to_port     = 0
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = local.common_tags
 }
 
 # Generate EC2 Key Pair
 resource "aws_key_pair" "neo4j_key_pair" {
   key_name   = "neo4j-key-pair-${local.effective_environment}"
   public_key = tls_private_key.neo4j_private_key.public_key_openssh
+
+  tags = local.common_tags
 }
 
 # Generate private key
@@ -267,6 +338,8 @@ resource "tls_private_key" "neo4j_private_key" {
 # Store private key in AWS Secrets Manager
 resource "aws_secretsmanager_secret" "neo4j_private_key" {
   name = "neo4j-private-key-${local.effective_environment}"
+
+  tags = local.common_tags
 }
 
 resource "aws_secretsmanager_secret_version" "neo4j_private_key" {
@@ -295,11 +368,19 @@ resource "random_string" "neo4j_username_suffix" {
 locals {
   neo4j_username = "neo4j${random_string.neo4j_username_suffix.result}"
   effective_environment = coalesce(var.environment, terraform.workspace == "default" ? "production" : terraform.workspace)
+  domain = local.effective_environment == "production" ? "api.mycredex.app" : "apistaging.mycredex.app"
+  common_tags = {
+    Environment = local.effective_environment
+    Project     = "CredEx"
+    ManagedBy   = "Terraform"
+  }
 }
 
 # AWS Secrets Manager for Neo4j Secrets
 resource "aws_secretsmanager_secret" "neo4j_secrets" {
-  name = "neo4j_secrets_${local.effective_environment}"
+  name = "neo4j-secrets-${local.effective_environment}"
+
+  tags = local.common_tags
 }
 
 resource "aws_secretsmanager_secret_version" "neo4j_secrets" {
@@ -321,13 +402,12 @@ resource "aws_instance" "neo4j_ledger" {
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j.id]
-  subnet_id              = var.subnet_ids[0]
+  subnet_id              = data.aws_subnets.available.ids[0]
 
-  tags = {
-    Name        = "Neo4j-${local.effective_environment}-LedgerSpace"
-    Environment = local.effective_environment
-    Role        = "LedgerSpace"
-  }
+  tags = merge(local.common_tags, {
+    Name = "Neo4j-${local.effective_environment}-LedgerSpace"
+    Role = "LedgerSpace"
+  })
 
   user_data = <<-EOF
               #!/bin/bash
@@ -362,13 +442,12 @@ resource "aws_instance" "neo4j_search" {
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j.id]
-  subnet_id              = var.subnet_ids[0]
+  subnet_id              = data.aws_subnets.available.ids[0]
 
-  tags = {
-    Name        = "Neo4j-${local.effective_environment}-SearchSpace"
-    Environment = local.effective_environment
-    Role        = "SearchSpace"
-  }
+  tags = merge(local.common_tags, {
+    Name = "Neo4j-${local.effective_environment}-SearchSpace"
+    Role = "SearchSpace"
+  })
 
   user_data = <<-EOF
               #!/bin/bash
@@ -423,25 +502,22 @@ resource "aws_security_group" "neo4j" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name        = "Neo4j-${local.effective_environment}-SG"
-    Environment = local.effective_environment
-  }
+  tags = local.common_tags
 }
 
 # IAM policy for EC2 instances to access Secrets Manager
 resource "aws_iam_role_policy" "ec2_secrets_access" {
-  name = "ec2_secrets_access"
+  name = "ec2-secrets-access-${local.effective_environment}"
   role = aws_iam_role.ec2_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
+        Effect = "Allow"
         Action = [
           "secretsmanager:GetSecretValue",
         ]
-        Effect = "Allow"
         Resource = [
           aws_secretsmanager_secret.neo4j_secrets.arn,
           aws_secretsmanager_secret.neo4j_private_key.arn
@@ -453,7 +529,7 @@ resource "aws_iam_role_policy" "ec2_secrets_access" {
 
 # IAM role for EC2 instances
 resource "aws_iam_role" "ec2_role" {
-  name = "ec2_role"
+  name = "ec2-role-${local.effective_environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -467,12 +543,16 @@ resource "aws_iam_role" "ec2_role" {
       },
     ]
   })
+
+  tags = local.common_tags
 }
 
 # Attach the IAM role to an instance profile
 resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "ec2_profile"
+  name = "ec2-profile-${local.effective_environment}"
   role = aws_iam_role.ec2_role.name
+
+  tags = local.common_tags
 }
 
 variable "aws_region" {
@@ -490,24 +570,14 @@ variable "vpc_id" {
   description = "The ID of the VPC to deploy the ECS tasks in"
 }
 
-variable "subnet_ids" {
-  description = "The subnet IDs to deploy the ECS tasks in"
-  type        = list(string)
-}
-
 variable "neo4j_version" {
   description = "Version of Neo4j to install"
   type        = string
   default     = "4.4.0"  # Set your desired default version
 }
 
-variable "domain_name" {
-  description = "The domain name to use for the API"
-  type        = string
-}
-
-variable "subdomain" {
-  description = "The subdomain to use for the API"
+variable "acm_certificate_arn" {
+  description = "ARN of the ACM certificate for HTTPS"
   type        = string
 }
 
@@ -518,7 +588,7 @@ data "aws_route53_zone" "selected" {
 
 resource "aws_route53_record" "api" {
   zone_id = data.aws_route53_zone.selected.zone_id
-  name    = local.effective_environment == "production" ? "api.mycredex.app" : "apistage.mycredex.app"
+  name    = local.domain
   type    = "A"
 
   alias {
@@ -529,7 +599,7 @@ resource "aws_route53_record" "api" {
 }
 
 output "api_url" {
-  value       = "http://${aws_lb.credex_alb.dns_name}"
+  value       = "https://${aws_route53_record.api.name}"
   description = "The URL of the deployed API"
 }
 
@@ -572,4 +642,9 @@ output "neo4j_private_key_secret_arn" {
 output "neo4j_ami_id" {
   value       = data.aws_ami.neo4j.id
   description = "The ID of the Neo4j AMI used for EC2 instances"
+}
+
+output "subnet_ids_secret_arn" {
+  value       = aws_secretsmanager_secret.subnet_ids.arn
+  description = "ARN of the secret containing the subnet IDs"
 }
