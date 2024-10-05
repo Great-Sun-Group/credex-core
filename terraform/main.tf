@@ -130,10 +130,19 @@ resource "aws_ecs_task_definition" "credex_core_task" {
   task_role_arn            = aws_iam_role.ecs_task_role.arn
 
   container_definitions = templatefile("${path.module}/task-definition.json", {
-    CONTAINER_IMAGE = "${aws_ecr_repository.credex_core.repository_url}:latest"
-    NODE_ENV        = local.effective_environment
-    LOG_LEVEL       = "info"
-    AWS_REGION      = var.aws_region
+    CONTAINER_IMAGE                = "${aws_ecr_repository.credex_core.repository_url}:latest"
+    NODE_ENV                       = local.effective_environment
+    LOG_LEVEL                      = "info"
+    AWS_REGION                     = var.aws_region
+    JWT_SECRET                     = var.jwt_secret
+    WHATSAPP_BOT_API_KEY           = var.whatsapp_bot_api_key
+    OPEN_EXCHANGE_RATES_API        = var.open_exchange_rates_api
+    NEO_4J_LEDGER_SPACE_BOLT_URL   = "bolt://${aws_instance.neo4j_ledger.private_ip}:7687"
+    NEO_4J_LEDGER_SPACE_USER       = local.neo4j_username
+    NEO_4J_LEDGER_SPACE_PASS       = random_password.neo4j_ledger_password.result
+    NEO_4J_SEARCH_SPACE_BOLT_URL   = "bolt://${aws_instance.neo4j_search.private_ip}:7687"
+    NEO_4J_SEARCH_SPACE_USER       = local.neo4j_username
+    NEO_4J_SEARCH_SPACE_PASS       = random_password.neo4j_search_password.result
   })
 
   tags = local.common_tags
@@ -633,6 +642,21 @@ variable "neo4j_version" {
   description = "Version of Neo4j to install"
   type        = string
   default     = "4.4.0"  # Set your desired default version
+}
+
+variable "jwt_secret" {
+  description = "JWT secret for authentication"
+  type        = string
+}
+
+variable "whatsapp_bot_api_key" {
+  description = "API key for WhatsApp bot"
+  type        = string
+}
+
+variable "open_exchange_rates_api" {
+  description = "API key for Open Exchange Rates"
+  type        = string
 }
 
 data "aws_route53_zone" "selected" {

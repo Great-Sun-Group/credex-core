@@ -25,9 +25,24 @@ fi
 
 echo "Starting deployment and verification process for $ENVIRONMENT environment..."
 
+# Use the AWS credentials directly from the environment
+# These should be set as secrets in the development environment
+export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+export AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-"af-south-1"}
+
+# Debug: Print out if AWS credentials are set (without revealing the values)
+echo "AWS_ACCESS_KEY_ID is set: $(if [ -n "$AWS_ACCESS_KEY_ID" ]; then echo "Yes"; else echo "No"; fi)"
+echo "AWS_SECRET_ACCESS_KEY is set: $(if [ -n "$AWS_SECRET_ACCESS_KEY" ]; then echo "Yes"; else echo "No"; fi)"
+echo "AWS_DEFAULT_REGION is set to: $AWS_DEFAULT_REGION"
+
 # Run Terraform
 terraform init
-terraform apply -auto-approve -var="environment=$ENVIRONMENT"
+terraform apply -auto-approve -lock=false \
+    -var="environment=$ENVIRONMENT" \
+    -var="jwt_secret=$JWT_SECRET" \
+    -var="whatsapp_bot_api_key=$WHATSAPP_BOT_API_KEY" \
+    -var="open_exchange_rates_api=$OPEN_EXCHANGE_RATES_API"
 
 # Extract necessary information from Terraform output
 API_URL=$(terraform output -raw api_url)
@@ -62,3 +77,8 @@ echo "Running performance benchmark..."
 API_URL=$API_URL ENVIRONMENT=$ENVIRONMENT node benchmark.js
 
 echo "Deployment and verification process completed successfully for $ENVIRONMENT environment."
+
+# Re-enable state locking
+terraform force-unlock -force $(terraform show -json | jq -r '.values.root_module.resources[] | select(.type == "terraform_remote_state") | .values.lock_id')
+
+echo "State locking re-enabled."
