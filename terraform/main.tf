@@ -165,6 +165,28 @@ resource "aws_security_group" "alb" {
   }
 }
 
+# Generate EC2 Key Pair
+resource "aws_key_pair" "neo4j_key_pair" {
+  key_name   = "neo4j-key-pair-${var.environment}"
+  public_key = tls_private_key.neo4j_private_key.public_key_openssh
+}
+
+# Generate private key
+resource "tls_private_key" "neo4j_private_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+# Store private key in AWS Secrets Manager
+resource "aws_secretsmanager_secret" "neo4j_private_key" {
+  name = "neo4j-private-key-${var.environment}"
+}
+
+resource "aws_secretsmanager_secret_version" "neo4j_private_key" {
+  secret_id     = aws_secretsmanager_secret.neo4j_private_key.id
+  secret_string = tls_private_key.neo4j_private_key.private_key_pem
+}
+
 # AWS Secrets Manager for Neo4j Production Secrets
 resource "aws_secretsmanager_secret" "neo4j_prod_secrets" {
   name = "neo4j_prod_secrets"
@@ -203,7 +225,7 @@ resource "aws_secretsmanager_secret_version" "neo4j_stage_secrets" {
 resource "aws_instance" "neo4j_prod_ledger" {
   ami           = var.neo4j_community_ami
   instance_type = "t3.medium"
-  key_name      = var.ec2_key_name
+  key_name      = aws_key_pair.neo4j_key_pair.key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j_prod.id]
   subnet_id              = var.subnet_ids[0]
@@ -238,7 +260,7 @@ resource "aws_instance" "neo4j_prod_ledger" {
 resource "aws_instance" "neo4j_prod_search" {
   ami           = var.neo4j_community_ami
   instance_type = "t3.medium"
-  key_name      = var.ec2_key_name
+  key_name      = aws_key_pair.neo4j_key_pair.key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j_prod.id]
   subnet_id              = var.subnet_ids[0]
@@ -273,7 +295,7 @@ resource "aws_instance" "neo4j_prod_search" {
 resource "aws_instance" "neo4j_stage_ledger" {
   ami           = var.neo4j_community_ami
   instance_type = "t3.medium"
-  key_name      = var.ec2_key_name
+  key_name      = aws_key_pair.neo4j_key_pair.key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j_stage.id]
   subnet_id              = var.subnet_ids[0]
@@ -308,7 +330,7 @@ resource "aws_instance" "neo4j_stage_ledger" {
 resource "aws_instance" "neo4j_stage_search" {
   ami           = var.neo4j_community_ami
   instance_type = "t3.medium"
-  key_name      = var.ec2_key_name
+  key_name      = aws_key_pair.neo4j_key_pair.key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j_stage.id]
   subnet_id              = var.subnet_ids[0]
@@ -395,6 +417,53 @@ resource "aws_security_group" "neo4j_stage" {
   }
 }
 
+# IAM policy for EC2 instances to access Secrets Manager
+resource "aws_iam_role_policy" "ec2_secrets_access" {
+  name = "ec2_secrets_access"
+  role = aws_iam_role.ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "secretsmanager:GetSecretValue",
+        ]
+        Effect = "Allow"
+        Resource = [
+          aws_secretsmanager_secret.neo4j_prod_secrets.arn,
+          aws_secretsmanager_secret.neo4j_stage_secrets.arn,
+          aws_secretsmanager_secret.neo4j_private_key.arn
+        ]
+      },
+    ]
+  })
+}
+
+# IAM role for EC2 instances
+resource "aws_iam_role" "ec2_role" {
+  name = "ec2_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+# Attach the IAM role to an instance profile
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "ec2_profile"
+  role = aws_iam_role.ec2_role.name
+}
+
 variable "aws_region" {
   description = "The AWS region to deploy to"
   default     = "af-south-1"
@@ -415,11 +484,6 @@ variable "subnet_ids" {
 
 variable "neo4j_community_ami" {
   description = "AMI ID for Neo4j Community Edition"
-  type        = string
-}
-
-variable "ec2_key_name" {
-  description = "Name of the EC2 key pair to use for the instances"
   type        = string
 }
 
@@ -520,4 +584,9 @@ output "neo4j_prod_secrets_arn" {
 
 output "neo4j_stage_secrets_arn" {
   value = aws_secretsmanager_secret.neo4j_stage_secrets.arn
+}
+
+output "neo4j_private_key_secret_arn" {
+  value = aws_secretsmanager_secret.neo4j_private_key.arn
+  description = "ARN of the secret containing the Neo4j EC2 instance private key"
 }

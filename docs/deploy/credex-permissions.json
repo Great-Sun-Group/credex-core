@@ -1,0 +1,39 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecs:*",
+        "ecr:*",
+        "logs:*",
+        "secretsmanager:*",
+        "ec2:*",
+        "elasticloadbalancing:*",
+        "iam:PassRole",
+        "cloudwatch:*",
+        "autoscaling:*",
+        "application-autoscaling:*",
+        "ssm:*",
+        "sns:*",
+        "kms:*",
+        "route53:*",
+        "elasticfilesystem:*",
+        "servicediscovery:*",
+        "acm:*",
+        "cloudformation:*",
+        "elasticache:*",
+        "rds:*",
+        "dynamodb:*",
+        "sqs:*",
+        "s3:*",
+        "lambda:*",
+        "apigateway:*",
+        "events:*",
+        "xray:*",
+        "tag:*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

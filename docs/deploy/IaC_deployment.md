@@ -72,14 +72,14 @@ To manage access to AWS resources for deployment, we use the IAM setup below. Th
 1. IAM Users:
 
    - `credex-core-staging-deployment`: User for staging deployments
-   - `credex-core-production-deployment`: User for production deployments
+   - `credex-core-production-deployment`: User for production deployments.
 
 2. IAM Group:
 
-   - `credex-core-deployment`: Group that includes both deployment users
+   - `credex-core-deployment`: Group that includes both deployment users.
 
 3. IAM Policy:
-   - `credex-core-permissions`: Policy that defines the permissions needed for deployment
+   - `credex-core-permissions`: Policy that defines the permissions needed for deployment. This script is saved in the AWS IAM console, and executed there. A current copy is manually saved in our docs directory [here](docs/deploy/credex-permissions.json).
 
 The `credex-core-permissions` policy is attached to the `credex-core-deployment` group, granting necessary permissions to both staging and production deployment users.
 
@@ -89,14 +89,16 @@ When Terraform scripts are modified, the IAM policy may need to be updated to re
 
 1. Review the changes made to the Terraform scripts, particularly in `main.tf`.
 2. Identify any new AWS resources or actions that are being used.
+   - review against the copy of the [credex-core-permissions](docs/deploy/credex-permissions.json) file stored in the docs folder of this repo for reference.
+   - if changes made to Terraform scripts requires an update to permissions policies in AWS, move to step 3 below.
 3. Update the `credex-core-permissions` policy in the AWS IAM console:
-   a. Go to the IAM console and find the `credex-core-permissions` policy.
-   b. Click "Edit policy" and switch to the JSON editor.
-   c. Add or modify the necessary permissions based on the Terraform changes.
-   d. Ensure you follow the principle of least privilege, granting only the permissions required for the deployment process.
-   e. You will need to include the Account ID used in the current policy in the AWS Console in the new politc generated.
-   e. Save the updated policy.
-4. After updating the policy, test the deployment process to ensure all necessary permissions are in place.
+   - Go to the IAM console and find the `credex-core-permissions` policy.
+   - Click "Edit policy" and switch to the JSON editor.
+   - Add or modify the necessary permissions based on the Terraform changes.
+   - Ensure you follow the principle of least privilege, granting only the permissions required for the deployment process.
+   - Save the new policy in our local copy of [credex-core-permissions](docs/deploy/credex-permissions.json).
+   - Paste and save the updated policy in the AWS console.
+4. Test the deployment process to ensure all necessary permissions are in place.
 
 Remember to document any significant changes to the IAM policy in your project's change log or documentation.
 
@@ -106,47 +108,6 @@ We have had to establish an IAM policy broader than desired because our attmpts 
 
 1. Start with a Broad Policy: Initially, you may need to use a broad policy that grants permissions to multiple AWS services. Here's an example of such a policy:
 
-   ```json
-   {
-       "Version": "2012-10-17",
-       "Statement": [
-           {
-               "Effect": "Allow",
-               "Action": [
-                   "ecs:*",
-                   "ecr:*",
-                   "logs:*",
-                   "secretsmanager:*",
-                   "ec2:*",
-                   "elasticloadbalancing:*",
-                   "iam:PassRole",
-                   "cloudwatch:*",
-                   "autoscaling:*",
-                   "application-autoscaling:*",
-                   "ssm:*",
-                   "sns:*",
-                   "kms:*",
-                   "route53:*",
-                   "elasticfilesystem:*",
-                   "servicediscovery:*",
-                   "acm:*",
-                   "cloudformation:*",
-                   "elasticache:*",
-                   "rds:*",
-                   "dynamodb:*",
-                   "sqs:*",
-                   "s3:*",
-                   "lambda:*",
-                   "apigateway:*",
-                   "events:*",
-                   "xray:*",
-                   "tag:*"
-               ],
-               "Resource": "*"
-           }
-       ]
-   }
-   ```
 
    Note: This broad policy is not ideal from a security standpoint but ensures that the deployment process has all necessary permissions.
 
