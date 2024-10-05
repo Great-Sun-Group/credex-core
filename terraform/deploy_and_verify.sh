@@ -14,26 +14,41 @@ select_environment() {
 }
 
 # Determine the environment
-if [ "$NODE_ENV" = "development" ]; then
+if [ "$GITHUB_ACTIONS" = "true" ]; then
+    ENVIRONMENT=$GITHUB_ENVIRONMENT
+elif [ "$NODE_ENV" = "development" ]; then
     ENVIRONMENT=$(select_environment)
 elif [ "$NODE_ENV" = "production" ] || [ "$NODE_ENV" = "staging" ]; then
     ENVIRONMENT=$NODE_ENV
 else
-    echo "Error: NODE_ENV is not set to a valid value (development, production, or staging)"
+    echo "Error: Unable to determine the environment. Please set NODE_ENV to development, production, or staging."
     exit 1
 fi
 
 echo "Starting deployment and verification process for $ENVIRONMENT environment..."
 
-# Use the AWS credentials directly from the environment
-# These should be set as secrets in the development environment
-export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-export AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-"af-south-1"}
+# Ensure all required environment variables are set
+required_vars=(
+    "AWS_ACCESS_KEY_ID"
+    "AWS_SECRET_ACCESS_KEY"
+    "AWS_DEFAULT_REGION"
+    "JWT_SECRET"
+    "WHATSAPP_BOT_API_KEY"
+    "OPEN_EXCHANGE_RATES_API"
+)
+
+for var in "${required_vars[@]}"; do
+    if [ -z "${!var}" ]; then
+        echo "Error: $var is not set"
+        exit 1
+    fi
+done
+
+echo "All required environment variables are set."
 
 # Debug: Print out if AWS credentials are set (without revealing the values)
-echo "AWS_ACCESS_KEY_ID is set: $(if [ -n "$AWS_ACCESS_KEY_ID" ]; then echo "Yes"; else echo "No"; fi)"
-echo "AWS_SECRET_ACCESS_KEY is set: $(if [ -n "$AWS_SECRET_ACCESS_KEY" ]; then echo "Yes"; else echo "No"; fi)"
+echo "AWS_ACCESS_KEY_ID is set: Yes"
+echo "AWS_SECRET_ACCESS_KEY is set: Yes"
 echo "AWS_DEFAULT_REGION is set to: $AWS_DEFAULT_REGION"
 
 # Run Terraform
