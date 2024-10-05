@@ -2,6 +2,10 @@ provider "aws" {
   region = var.aws_region
 }
 
+data "aws_vpc" "selected" {
+  id = var.vpc_id
+}
+
 resource "aws_ecr_repository" "credex_core" {
   name = "credex-core"
 }
@@ -345,14 +349,14 @@ resource "aws_security_group" "neo4j_prod" {
     from_port   = 7474
     to_port     = 7474
     protocol    = "tcp"
-    cidr_blocks = [var.allowed_cidr_block]
+    cidr_blocks = [data.aws_vpc.selected.cidr_block]
   }
 
   ingress {
     from_port   = 7687
     to_port     = 7687
     protocol    = "tcp"
-    cidr_blocks = [var.allowed_cidr_block]
+    cidr_blocks = [data.aws_vpc.selected.cidr_block]
   }
 
   egress {
@@ -373,14 +377,14 @@ resource "aws_security_group" "neo4j_stage" {
     from_port   = 7474
     to_port     = 7474
     protocol    = "tcp"
-    cidr_blocks = [var.allowed_cidr_block]
+    cidr_blocks = [data.aws_vpc.selected.cidr_block]
   }
 
   ingress {
     from_port   = 7687
     to_port     = 7687
     protocol    = "tcp"
-    cidr_blocks = [var.allowed_cidr_block]
+    cidr_blocks = [data.aws_vpc.selected.cidr_block]
   }
 
   egress {
@@ -419,11 +423,6 @@ variable "ec2_key_name" {
   type        = string
 }
 
-variable "allowed_cidr_block" {
-  description = "The CIDR block allowed to access Neo4j instances"
-  type        = string
-}
-
 variable "prod_neo4j_ledger_space_pass" {
   description = "Password for Neo4j Production LedgerSpace instance"
   type        = string
@@ -448,9 +447,41 @@ variable "staging_neo4j_search_space_pass" {
   sensitive   = true
 }
 
+variable "domain_name" {
+  description = "The domain name to use for the API"
+  type        = string
+}
+
+variable "subdomain" {
+  description = "The subdomain to use for the API"
+  type        = string
+}
+
+data "aws_route53_zone" "selected" {
+  name = "mycredex.app."
+  private_zone = false
+}
+
+resource "aws_route53_record" "api" {
+  zone_id = data.aws_route53_zone.selected.zone_id
+  name    = var.environment == "production" ? "api.mycredex.app" : "apistage.mycredex.app"
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.credex_alb.dns_name
+    zone_id                = aws_lb.credex_alb.zone_id
+    evaluate_target_health = true
+  }
+}
+
 output "api_url" {
   value       = "http://${aws_lb.credex_alb.dns_name}"
   description = "The URL of the deployed API"
+}
+
+output "api_domain" {
+  value       = aws_route53_record.api.name
+  description = "The domain name of the API"
 }
 
 output "ecs_cluster_name" {
