@@ -9,9 +9,13 @@ The credex ecosystem is a shared ledger that enables the efficient circulation o
 **and they owe me,**\
 **we're square.**
 
-The credex ecosystem actualizes the Credex Principle in the Minute Transaction Queue (MTQ), which tracks payable and receivable invoices for members' accounts, finds loops of value creation, and cancels payable and receivable invoices against each other in "credloops" in which every debt is reduced by an equal value. This is a GAAP-compliant accounting process that any person or business can benefit from.
+The credex ecosystem actualizes the Credex Principle in the Minute Transaction Queue (MTQ), which tracks payable and receivable invoices for members' accounts, finds loops of value creation, and cancels payable and receivable invoices against each other in "credloops" in which every debt is reduced by an equal value. This is a GAAP-compliant accounting procedure that any person or business can benefit from.
 
-In accounting terms, a credex is a contingent asset for one party and a contingent liability for the other. These asset/liability pairs are automatically strung together into credloops wherever possible across the credex ecosystem. When a credloop is created and cleared, every account in the loop will have an accounts payable invoice cancelled against an equivalent accounts receivable invoice.
+In accounting terms, an outstanding credex is a contingent asset for one party and a contingent liability for the other. These asset/liability pairs are automatically strung together into credloops wherever possible across the credex ecosystem. When a credloop is found and cleared, every account in the loop will have an accounts payable invoice cancelled against an equivalent accounts receivable invoice.
+
+This behaviour enables members to replace the use of third party money or debt instruments issued by an outside sovereign with accounting entries backed purely by the sovereign value-producing capacities of the transacting members.
+
+The credex ecosystem provides the non-sovereign and non-monetary services of verifying the identify of the sovereign counterparties and their corporations, and managing the technical verification and standardization of the credex transaction contract between them.
 
 ## Credcoin Principle
 
@@ -46,8 +50,8 @@ The express.js server is initialized in `src/index.ts`, which provides the cronj
 
 The src/core-cron/ module hosts the cronjobs:
 
-- DailyCredcoinOffering() runs every day at midnight UTC, calculating the value of 1 CXX and updating all ecosystem values accordingly.
-- MinuteTransactionQueue() runs every minute, clearing credloops of value creation across the ecosystem.
+- DailyCredcoinOffering runs every day at midnight UTC, calculating the value of 1 CXX and updating all ecosystem values accordingly.
+- MinuteTransactionQueue runs every minute, clearing credloops of value creation across the ecosystem.
 
 ### Endpoints
 
