@@ -2,11 +2,32 @@
 
 set -e
 
-echo "Starting deployment and verification process..."
+# Function to prompt for environment selection
+select_environment() {
+    echo "Select the environment to deploy:"
+    select env in "production" "staging"; do
+        case $env in
+            production|staging ) echo $env; return;;
+            *) echo "Invalid selection. Please choose 1 for production or 2 for staging.";;
+        esac
+    done
+}
+
+# Determine the environment
+if [ "$NODE_ENV" = "development" ]; then
+    ENVIRONMENT=$(select_environment)
+elif [ "$NODE_ENV" = "production" ] || [ "$NODE_ENV" = "staging" ]; then
+    ENVIRONMENT=$NODE_ENV
+else
+    echo "Error: NODE_ENV is not set to a valid value (development, production, or staging)"
+    exit 1
+fi
+
+echo "Starting deployment and verification process for $ENVIRONMENT environment..."
 
 # Run Terraform
 terraform init
-terraform apply -auto-approve
+terraform apply -auto-approve -var="environment=$ENVIRONMENT"
 
 # Extract necessary information from Terraform output
 API_URL=$(terraform output -raw api_url)
@@ -34,10 +55,10 @@ fi
 
 # Run integration tests
 echo "Running integration tests..."
-API_URL=$API_URL node post_deployment_tests.js
+API_URL=$API_URL ENVIRONMENT=$ENVIRONMENT node post_deployment_tests.js
 
 # Run performance benchmark
 echo "Running performance benchmark..."
-API_URL=$API_URL node benchmark.js
+API_URL=$API_URL ENVIRONMENT=$ENVIRONMENT node benchmark.js
 
-echo "Deployment and verification process completed successfully."
+echo "Deployment and verification process completed successfully for $ENVIRONMENT environment."

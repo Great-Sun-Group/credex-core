@@ -112,7 +112,7 @@ resource "aws_ecs_task_definition" "credex_core_task" {
 
   container_definitions = templatefile("${path.module}/task-definition.json", {
     CONTAINER_IMAGE = "${aws_ecr_repository.credex_core.repository_url}:latest"
-    NODE_ENV        = var.environment
+    NODE_ENV        = local.effective_environment
     LOG_LEVEL       = "info"
     AWS_REGION      = var.aws_region
   })
@@ -254,7 +254,7 @@ resource "aws_security_group" "alb" {
 
 # Generate EC2 Key Pair
 resource "aws_key_pair" "neo4j_key_pair" {
-  key_name   = "neo4j-key-pair-${var.environment}"
+  key_name   = "neo4j-key-pair-${local.effective_environment}"
   public_key = tls_private_key.neo4j_private_key.public_key_openssh
 }
 
@@ -266,7 +266,7 @@ resource "tls_private_key" "neo4j_private_key" {
 
 # Store private key in AWS Secrets Manager
 resource "aws_secretsmanager_secret" "neo4j_private_key" {
-  name = "neo4j-private-key-${var.environment}"
+  name = "neo4j-private-key-${local.effective_environment}"
 }
 
 resource "aws_secretsmanager_secret_version" "neo4j_private_key" {
@@ -274,61 +274,70 @@ resource "aws_secretsmanager_secret_version" "neo4j_private_key" {
   secret_string = tls_private_key.neo4j_private_key.private_key_pem
 }
 
-# AWS Secrets Manager for Neo4j Production Secrets
-resource "aws_secretsmanager_secret" "neo4j_prod_secrets" {
-  name = "neo4j_prod_secrets"
+# Generate random passwords
+resource "random_password" "neo4j_ledger_password" {
+  length  = 16
+  special = true
 }
 
-resource "aws_secretsmanager_secret_version" "neo4j_prod_secrets" {
-  secret_id = aws_secretsmanager_secret.neo4j_prod_secrets.id
+resource "random_password" "neo4j_search_password" {
+  length  = 16
+  special = true
+}
+
+# Generate unique neo4j username
+resource "random_string" "neo4j_username_suffix" {
+  length  = 4
+  special = false
+  upper   = false
+}
+
+locals {
+  neo4j_username = "neo4j${random_string.neo4j_username_suffix.result}"
+  effective_environment = coalesce(var.environment, terraform.workspace == "default" ? "production" : terraform.workspace)
+}
+
+# AWS Secrets Manager for Neo4j Secrets
+resource "aws_secretsmanager_secret" "neo4j_secrets" {
+  name = "neo4j_secrets_${local.effective_environment}"
+}
+
+resource "aws_secretsmanager_secret_version" "neo4j_secrets" {
+  secret_id = aws_secretsmanager_secret.neo4j_secrets.id
   secret_string = jsonencode({
-    ledgerspacebolturl = "bolt://${aws_instance.neo4j_prod_ledger.private_ip}:7687"
-    ledgerspaceuser    = "neo4j"
-    ledgerspacepass    = var.prod_neo4j_ledger_space_pass
-    searchspacebolturl = "bolt://${aws_instance.neo4j_prod_search.private_ip}:7687"
-    searchspaceuser    = "neo4j"
-    searchspacepass    = var.prod_neo4j_search_space_pass
+    ledgerspacebolturl = "bolt://${aws_instance.neo4j_ledger.private_ip}:7687"
+    ledgerspaceuser    = local.neo4j_username
+    ledgerspacepass    = random_password.neo4j_ledger_password.result
+    searchspacebolturl = "bolt://${aws_instance.neo4j_search.private_ip}:7687"
+    searchspaceuser    = local.neo4j_username
+    searchspacepass    = random_password.neo4j_search_password.result
   })
 }
 
-# AWS Secrets Manager for Neo4j Staging Secrets
-resource "aws_secretsmanager_secret" "neo4j_stage_secrets" {
-  name = "neo4j_stage_secrets"
-}
-
-resource "aws_secretsmanager_secret_version" "neo4j_stage_secrets" {
-  secret_id = aws_secretsmanager_secret.neo4j_stage_secrets.id
-  secret_string = jsonencode({
-    ledgerspacebolturl = "bolt://${aws_instance.neo4j_stage_ledger.private_ip}:7687"
-    ledgerspaceuser    = "neo4j"
-    ledgerspacepass    = var.staging_neo4j_ledger_space_pass
-    searchspacebolturl = "bolt://${aws_instance.neo4j_stage_search.private_ip}:7687"
-    searchspaceuser    = "neo4j"
-    searchspacepass    = var.staging_neo4j_search_space_pass
-  })
-}
-
-# Neo4j Production LedgerSpace Instance
-resource "aws_instance" "neo4j_prod_ledger" {
+# Neo4j LedgerSpace Instance
+resource "aws_instance" "neo4j_ledger" {
   ami           = data.aws_ami.neo4j.id
   instance_type = "t3.medium"
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
-  vpc_security_group_ids = [aws_security_group.neo4j_prod.id]
+  vpc_security_group_ids = [aws_security_group.neo4j.id]
   subnet_id              = var.subnet_ids[0]
 
   tags = {
-    Name        = "Neo4j-Production-LedgerSpace"
-    Environment = "Production"
+    Name        = "Neo4j-${local.effective_environment}-LedgerSpace"
+    Environment = local.effective_environment
     Role        = "LedgerSpace"
   }
 
   user_data = <<-EOF
               #!/bin/bash
               echo "Configuring Neo4j Community Edition for LedgerSpace"
-              NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_prod_secrets.id} --query SecretString --output text | jq -r .ledgerspacepass)
+              NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_secrets.id} --query SecretString --output text | jq -r .ledgerspacepass)
+              NEO4J_USERNAME=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_secrets.id} --query SecretString --output text | jq -r .ledgerspaceuser)
               sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /opt/neo4j/conf/neo4j.conf
               /opt/neo4j/bin/neo4j-admin set-initial-password $NEO4J_PASSWORD
+              /opt/neo4j/bin/cypher-shell -u neo4j -p $NEO4J_PASSWORD "CREATE USER $NEO4J_USERNAME SET PASSWORD '$NEO4J_PASSWORD' CHANGE NOT REQUIRED"
+              /opt/neo4j/bin/cypher-shell -u neo4j -p $NEO4J_PASSWORD "GRANT ROLE admin TO $NEO4J_USERNAME"
               systemctl start neo4j
               EOF
 
@@ -346,27 +355,30 @@ resource "aws_instance" "neo4j_prod_ledger" {
   }
 }
 
-# Neo4j Production SearchSpace Instance
-resource "aws_instance" "neo4j_prod_search" {
+# Neo4j SearchSpace Instance
+resource "aws_instance" "neo4j_search" {
   ami           = data.aws_ami.neo4j.id
   instance_type = "t3.medium"
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
-  vpc_security_group_ids = [aws_security_group.neo4j_prod.id]
+  vpc_security_group_ids = [aws_security_group.neo4j.id]
   subnet_id              = var.subnet_ids[0]
 
   tags = {
-    Name        = "Neo4j-Production-SearchSpace"
-    Environment = "Production"
+    Name        = "Neo4j-${local.effective_environment}-SearchSpace"
+    Environment = local.effective_environment
     Role        = "SearchSpace"
   }
 
   user_data = <<-EOF
               #!/bin/bash
               echo "Configuring Neo4j Community Edition for SearchSpace"
-              NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_prod_secrets.id} --query SecretString --output text | jq -r .searchspacepass)
+              NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_secrets.id} --query SecretString --output text | jq -r .searchspacepass)
+              NEO4J_USERNAME=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_secrets.id} --query SecretString --output text | jq -r .searchspaceuser)
               sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /opt/neo4j/conf/neo4j.conf
               /opt/neo4j/bin/neo4j-admin set-initial-password $NEO4J_PASSWORD
+              /opt/neo4j/bin/cypher-shell -u neo4j -p $NEO4J_PASSWORD "CREATE USER $NEO4J_USERNAME SET PASSWORD '$NEO4J_PASSWORD' CHANGE NOT REQUIRED"
+              /opt/neo4j/bin/cypher-shell -u neo4j -p $NEO4J_PASSWORD "GRANT ROLE admin TO $NEO4J_USERNAME"
               systemctl start neo4j
               EOF
 
@@ -384,86 +396,10 @@ resource "aws_instance" "neo4j_prod_search" {
   }
 }
 
-# Neo4j Staging LedgerSpace Instance
-resource "aws_instance" "neo4j_stage_ledger" {
-  ami           = data.aws_ami.neo4j.id
-  instance_type = "t3.medium"
-  key_name      = aws_key_pair.neo4j_key_pair.key_name
-
-  vpc_security_group_ids = [aws_security_group.neo4j_stage.id]
-  subnet_id              = var.subnet_ids[0]
-
-  tags = {
-    Name        = "Neo4j-Staging-LedgerSpace"
-    Environment = "Staging"
-    Role        = "LedgerSpace"
-  }
-
-  user_data = <<-EOF
-              #!/bin/bash
-              echo "Configuring Neo4j Community Edition for LedgerSpace"
-              NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_stage_secrets.id} --query SecretString --output text | jq -r .ledgerspacepass)
-              sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /opt/neo4j/conf/neo4j.conf
-              /opt/neo4j/bin/neo4j-admin set-initial-password $NEO4J_PASSWORD
-              systemctl start neo4j
-              EOF
-
-  root_block_device {
-    volume_type = "gp3"
-    volume_size = 50
-    encrypted   = true
-  }
-
-  depends_on = [null_resource.neo4j_ami_management]
-
-  lifecycle {
-    prevent_destroy = true
-    ignore_changes  = [ami, user_data]
-  }
-}
-
-# Neo4j Staging SearchSpace Instance
-resource "aws_instance" "neo4j_stage_search" {
-  ami           = data.aws_ami.neo4j.id
-  instance_type = "t3.medium"
-  key_name      = aws_key_pair.neo4j_key_pair.key_name
-
-  vpc_security_group_ids = [aws_security_group.neo4j_stage.id]
-  subnet_id              = var.subnet_ids[0]
-
-  tags = {
-    Name        = "Neo4j-Staging-SearchSpace"
-    Environment = "Staging"
-    Role        = "SearchSpace"
-  }
-
-  user_data = <<-EOF
-              #!/bin/bash
-              echo "Configuring Neo4j Community Edition for SearchSpace"
-              NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_stage_secrets.id} --query SecretString --output text | jq -r .searchspacepass)
-              sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /opt/neo4j/conf/neo4j.conf
-              /opt/neo4j/bin/neo4j-admin set-initial-password $NEO4J_PASSWORD
-              systemctl start neo4j
-              EOF
-
-  root_block_device {
-    volume_type = "gp3"
-    volume_size = 50
-    encrypted   = true
-  }
-
-  depends_on = [null_resource.neo4j_ami_management]
-
-  lifecycle {
-    prevent_destroy = true
-    ignore_changes  = [ami, user_data]
-  }
-}
-
-# Security Group for Neo4j Production
-resource "aws_security_group" "neo4j_prod" {
-  name        = "neo4j-prod-sg"
-  description = "Security group for Neo4j Production instances"
+# Security Group for Neo4j
+resource "aws_security_group" "neo4j" {
+  name        = "neo4j-sg-${local.effective_environment}"
+  description = "Security group for Neo4j ${local.effective_environment} instances"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -488,41 +424,8 @@ resource "aws_security_group" "neo4j_prod" {
   }
 
   tags = {
-    Name        = "Neo4j-Production-SG"
-    Environment = "Production"
-  }
-}
-
-# Security Group for Neo4j Staging
-resource "aws_security_group" "neo4j_stage" {
-  name        = "neo4j-stage-sg"
-  description = "Security group for Neo4j Staging instances"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    from_port   = 7474
-    to_port     = 7474
-    protocol    = "tcp"
-    cidr_blocks = [data.aws_vpc.selected.cidr_block]
-  }
-
-  ingress {
-    from_port   = 7687
-    to_port     = 7687
-    protocol    = "tcp"
-    cidr_blocks = [data.aws_vpc.selected.cidr_block]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name        = "Neo4j-Staging-SG"
-    Environment = "Staging"
+    Name        = "Neo4j-${local.effective_environment}-SG"
+    Environment = local.effective_environment
   }
 }
 
@@ -540,8 +443,7 @@ resource "aws_iam_role_policy" "ec2_secrets_access" {
         ]
         Effect = "Allow"
         Resource = [
-          aws_secretsmanager_secret.neo4j_prod_secrets.arn,
-          aws_secretsmanager_secret.neo4j_stage_secrets.arn,
+          aws_secretsmanager_secret.neo4j_secrets.arn,
           aws_secretsmanager_secret.neo4j_private_key.arn
         ]
       },
@@ -579,7 +481,9 @@ variable "aws_region" {
 }
 
 variable "environment" {
-  description = "The deployment environment (e.g., production, staging)"
+  description = "The deployment environment (production or staging)"
+  type        = string
+  default     = null # This allows us to use NODE_ENV as a fallback
 }
 
 variable "vpc_id" {
@@ -595,30 +499,6 @@ variable "neo4j_version" {
   description = "Version of Neo4j to install"
   type        = string
   default     = "4.4.0"  # Set your desired default version
-}
-
-variable "prod_neo4j_ledger_space_pass" {
-  description = "Password for Neo4j Production LedgerSpace instance"
-  type        = string
-  sensitive   = true
-}
-
-variable "prod_neo4j_search_space_pass" {
-  description = "Password for Neo4j Production SearchSpace instance"
-  type        = string
-  sensitive   = true
-}
-
-variable "staging_neo4j_ledger_space_pass" {
-  description = "Password for Neo4j Staging LedgerSpace instance"
-  type        = string
-  sensitive   = true
-}
-
-variable "staging_neo4j_search_space_pass" {
-  description = "Password for Neo4j Staging SearchSpace instance"
-  type        = string
-  sensitive   = true
 }
 
 variable "domain_name" {
@@ -638,7 +518,7 @@ data "aws_route53_zone" "selected" {
 
 resource "aws_route53_record" "api" {
   zone_id = data.aws_route53_zone.selected.zone_id
-  name    = var.environment == "production" ? "api.mycredex.app" : "apistage.mycredex.app"
+  name    = local.effective_environment == "production" ? "api.mycredex.app" : "apistage.mycredex.app"
   type    = "A"
 
   alias {
@@ -672,28 +552,16 @@ output "ecr_repository_url" {
   value = aws_ecr_repository.credex_core.repository_url
 }
 
-output "neo4j_prod_ledger_private_ip" {
-  value = aws_instance.neo4j_prod_ledger.private_ip
+output "neo4j_ledger_private_ip" {
+  value = aws_instance.neo4j_ledger.private_ip
 }
 
-output "neo4j_prod_search_private_ip" {
-  value = aws_instance.neo4j_prod_search.private_ip
+output "neo4j_search_private_ip" {
+  value = aws_instance.neo4j_search.private_ip
 }
 
-output "neo4j_stage_ledger_private_ip" {
-  value = aws_instance.neo4j_stage_ledger.private_ip
-}
-
-output "neo4j_stage_search_private_ip" {
-  value = aws_instance.neo4j_stage_search.private_ip
-}
-
-output "neo4j_prod_secrets_arn" {
-  value = aws_secretsmanager_secret.neo4j_prod_secrets.arn
-}
-
-output "neo4j_stage_secrets_arn" {
-  value = aws_secretsmanager_secret.neo4j_stage_secrets.arn
+output "neo4j_secrets_arn" {
+  value = aws_secretsmanager_secret.neo4j_secrets.arn
 }
 
 output "neo4j_private_key_secret_arn" {
