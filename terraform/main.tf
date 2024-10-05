@@ -2,8 +2,23 @@ provider "aws" {
   region = var.aws_region
 }
 
-data "aws_vpc" "selected" {
-  id = var.vpc_id
+# Look for the default VPC
+data "aws_vpc" "default" {
+  default = true
+}
+
+# If default VPC doesn't exist, create a new one
+resource "aws_vpc" "main" {
+  count      = data.aws_vpc.default.id == "" ? 1 : 0
+  cidr_block = "10.0.0.0/16"
+
+  tags = merge(local.common_tags, {
+    Name = "credex-vpc-${local.effective_environment}"
+  })
+}
+
+locals {
+  vpc_id = data.aws_vpc.default.id != "" ? data.aws_vpc.default.id : aws_vpc.main[0].id
 }
 
 # Look for existing Neo4j AMI
@@ -171,7 +186,7 @@ resource "aws_iam_role" "ecs_task_role" {
 data "aws_subnets" "available" {
   filter {
     name   = "vpc-id"
-    values = [var.vpc_id]
+    values = [local.vpc_id]
   }
 }
 
@@ -212,7 +227,7 @@ resource "aws_ecs_service" "credex_core_service" {
 resource "aws_security_group" "ecs_tasks" {
   name        = "credex-core-ecs-tasks-sg-${local.effective_environment}"
   description = "Allow inbound access from the ALB only"
-  vpc_id      = var.vpc_id
+  vpc_id      = local.vpc_id
 
   ingress {
     protocol        = "tcp"
@@ -245,7 +260,7 @@ resource "aws_lb_target_group" "credex_tg" {
   name        = "credex-tg-${local.effective_environment}"
   port        = 5000
   protocol    = "HTTP"
-  vpc_id      = var.vpc_id
+  vpc_id      = local.vpc_id
   target_type = "ip"
 
   health_check {
@@ -259,12 +274,60 @@ resource "aws_lb_target_group" "credex_tg" {
   tags = local.common_tags
 }
 
+# Create ACM certificate
+resource "aws_acm_certificate" "credex_cert" {
+  domain_name       = local.domain
+  validation_method = "DNS"
+
+  tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Create Route53 record for ACM certificate validation
+resource "aws_route53_record" "cert_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.credex_cert.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = data.aws_route53_zone.selected.zone_id
+}
+
+# Validate the certificate
+resource "aws_acm_certificate_validation" "cert_validation" {
+  certificate_arn         = aws_acm_certificate.credex_cert.arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+}
+
+# Store certificate ARN in Secrets Manager
+resource "aws_secretsmanager_secret" "acm_cert_arn" {
+  name = "acm-cert-arn-${local.effective_environment}"
+
+  tags = local.common_tags
+}
+
+resource "aws_secretsmanager_secret_version" "acm_cert_arn" {
+  secret_id     = aws_secretsmanager_secret.acm_cert_arn.id
+  secret_string = aws_acm_certificate.credex_cert.arn
+}
+
 resource "aws_lb_listener" "credex_listener" {
   load_balancer_arn = aws_lb.credex_alb.arn
   port              = "443"
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-2016-08"
-  certificate_arn   = var.acm_certificate_arn
+  certificate_arn   = aws_acm_certificate.credex_cert.arn
 
   default_action {
     type             = "forward"
@@ -295,7 +358,7 @@ resource "aws_lb_listener" "redirect_http_to_https" {
 resource "aws_security_group" "alb" {
   name        = "credex-alb-sg-${local.effective_environment}"
   description = "Controls access to the ALB"
-  vpc_id      = var.vpc_id
+  vpc_id      = local.vpc_id
 
   ingress {
     protocol    = "tcp"
@@ -479,20 +542,20 @@ resource "aws_instance" "neo4j_search" {
 resource "aws_security_group" "neo4j" {
   name        = "neo4j-sg-${local.effective_environment}"
   description = "Security group for Neo4j ${local.effective_environment} instances"
-  vpc_id      = var.vpc_id
+  vpc_id      = local.vpc_id
 
   ingress {
     from_port   = 7474
     to_port     = 7474
     protocol    = "tcp"
-    cidr_blocks = [data.aws_vpc.selected.cidr_block]
+    cidr_blocks = [data.aws_vpc.default.cidr_block]
   }
 
   ingress {
     from_port   = 7687
     to_port     = 7687
     protocol    = "tcp"
-    cidr_blocks = [data.aws_vpc.selected.cidr_block]
+    cidr_blocks = [data.aws_vpc.default.cidr_block]
   }
 
   egress {
@@ -566,19 +629,10 @@ variable "environment" {
   default     = null # This allows us to use NODE_ENV as a fallback
 }
 
-variable "vpc_id" {
-  description = "The ID of the VPC to deploy the ECS tasks in"
-}
-
 variable "neo4j_version" {
   description = "Version of Neo4j to install"
   type        = string
   default     = "4.4.0"  # Set your desired default version
-}
-
-variable "acm_certificate_arn" {
-  description = "ARN of the ACM certificate for HTTPS"
-  type        = string
 }
 
 data "aws_route53_zone" "selected" {
@@ -647,4 +701,19 @@ output "neo4j_ami_id" {
 output "subnet_ids_secret_arn" {
   value       = aws_secretsmanager_secret.subnet_ids.arn
   description = "ARN of the secret containing the subnet IDs"
+}
+
+output "acm_certificate_arn" {
+  value       = aws_acm_certificate.credex_cert.arn
+  description = "ARN of the ACM certificate created for HTTPS"
+}
+
+output "acm_certificate_arn_secret" {
+  value       = aws_secretsmanager_secret.acm_cert_arn.arn
+  description = "ARN of the secret containing the ACM certificate ARN"
+}
+
+output "vpc_id" {
+  value       = local.vpc_id
+  description = "The ID of the VPC used for deployment"
 }
