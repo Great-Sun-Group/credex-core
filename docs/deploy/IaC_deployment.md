@@ -4,7 +4,7 @@ This document outlines the deployment process for the credex-core application in
 
 ## 1. Introduction
 
-The credex-core application is deployed using a combination of GitHub Actions, AWS services (including ECS, ECR, and Secrets Manager), and Terraform for infrastructure management. This guide provides comprehensive instructions for setting up, deploying, and maintaining the application in staging and production environments.
+The credex-core application is deployed using cronjobs, AWS services (including ECS, ECR, and Secrets Manager), and Terraform for infrastructure management. This guide provides comprehensive instructions for setting up, deploying, and maintaining the application in staging and production environments.
 
 ## 2. Prerequisites
 
@@ -65,7 +65,7 @@ For staging and production environments, AWS Secrets Manager is used to securely
 
 The application is configured to retrieve these secrets at runtime in the staging and production environments.
 
-### 4.2.3 IAM Users, Groups, and Policies
+#### 4.2.3 IAM Users, Groups, and Policies
 
 To manage access to AWS resources for deployment, we use the IAM setup below. This is to create and define the users that give us the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY above.
 
@@ -104,29 +104,173 @@ Remember to document any significant changes to the IAM policy in your project's
 
 #### Creating and Refining IAM Policy
 
-We have had to establish an IAM policy broader than desired because our attmpts to narrow it resulted in not all services being covered. This policy should be tightened in the future. When creating or updating the IAM policy, follow these guidelines:
+We have had to establish an IAM policy broader than desired because our attmpts to narrow it resulted in not all services being covered. This should be debugged and the policy should be tightened. 
 
-1. Start with a Broad Policy: Initially, you may need to use a broad policy that grants permissions to multiple AWS services. Here's an example of such a policy:
+1. Over time, refine this policy based on the actual needs of our deployment process. Use AWS CloudTrail logs to identify which actions and services are actually being used.
+2. Use Least Privilege Principle: As we refine the policy, aim to grant only the permissions that are absolutely necessary for the deployment process.
 
-   Note: This broad policy is not ideal from a security standpoint but ensures that the deployment process has all necessary permissions.
+3. Regular Review: Periodically review and update the policy, especially after making changes to the Terraform scripts or deployment process.
 
-2. Refine the Policy: Over time, refine this policy based on the actual needs of your deployment process. Use AWS CloudTrail logs to identify which actions and services are actually being used.
+4. Use AWS IAM Access Analyzer: This tool can help you identify resources in your organization and accounts that are shared with an external entity.
 
-3. Use Least Privilege Principle: As you refine the policy, aim to grant only the permissions that are absolutely necessary for the deployment process.
+5. Test Thoroughly: After any policy changes, thoroughly test the deployment process to ensure all necessary permissions are in place.
 
-4. Regular Review: Periodically review and update the policy, especially after making changes to the Terraform scripts or deployment process.
+6. Document Changes: Keep a record of any significant changes to the IAM policy in your project's change log or documentation.
 
-5. Use AWS IAM Access Analyzer: This tool can help you identify resources in your organization and accounts that are shared with an external entity.
+7. Consider Separate Policies: As your understanding of the required permissions grows, consider creating separate, more specific policies for different aspects of your deployment (e.g., one for ECS operations, another for ECR, etc.).
 
-6. Test Thoroughly: After any policy changes, thoroughly test the deployment process to ensure all necessary permissions are in place.
+Creating an effective IAM policy is an iterative process. Start broad to ensure functionality, then gradually tighten permissions as you gain more insights into your specific usage patterns.
 
-7. Document Changes: Keep a record of any significant changes to the IAM policy in your project's change log or documentation.
+## 5. Infrastructure Management
 
-8. Consider Separate Policies: As your understanding of the required permissions grows, consider creating separate, more specific policies for different aspects of your deployment (e.g., one for ECS operations, another for ECR, etc.).
+We have implemented an automated process that handles both the deployment and verification of the application. This process includes the following steps:
 
-Remember, creating an effective IAM policy is an iterative process. Start broad to ensure functionality, then gradually tighten permissions as you gain more insights into your specific usage patterns.
+1. Environment selection (if necessary)
+2. Terraform deployment
+3. ECS service stability check
+4. ECS status check
+5. API health check
+6. Integration tests
+7. Performance benchmarks
 
-j
+To run the complete deployment and verification process, ensure you're in the project root directory and run:
+```
+npm run deploy-and-verify
+```
+
+This command will execute the `deploy_and_verify.sh` script in the terraform directory, which handles the entire deployment and verification process.
+
+If you are in a development environment, you will be prompted to select either "production" or "staging" as the target environment. If `production` or `staging` NODE_ENV values are detected, the script will automatically deploy to the respective environment. AWS Secrets are required withnin the dev environment in order to deploy to stageng or production.
+
+### 5.1 Manual Terraform management
+
+1. Navigate to the `terraform` directory.
+2. Run `terraform init` to initialize the Terraform working directory.
+3. Review and modify the `main.tf` file if necessary (e.g., AWS region, instance types).
+4. Run `terraform plan` to see proposed changes.
+5. Run `terraform apply` to create or update the necessary AWS resources.
+
+### 5.2 AWS Resources
+
+#### ECS Task Definition
+
+The ECS task definition is managed using a template file [task-definition.json](terraform/task-definition.json). To update the task definition:
+
+1. Modify the `task-definition.json`.
+2. Ensure any new environment variables are added to the `environment` section with appropriate placeholders.
+3. Update the GitHub Actions workflows to replace new placeholders with the corresponding GitHub Secrets or AWS Secrets Manager references.
+
+#### ECS Service Configuration
+
+The ECS service is configured in the `main.tf` file, including:
+
+- Service name: "credex-core-service"
+- Cluster: "credex-cluster"
+- Launch type: FARGATE
+- Desired count: 1 (adjustable based on load requirements)
+- Network configuration and security group settings
+
+### 5.3 Neo4j Deployment and Management
+
+The project uses Neo4j for both staging and production environments, managed through Terraform.
+
+1. Production Environment:
+
+- Neo4j Enterprise Edition
+- Two separate instances: LedgerSpace and SearchSpace
+- Deployed on AWS EC2 instances (m5.large)
+
+2. Staging Environment:
+- Neo4j Community Edition
+- Two separate instances: LedgerSpace and SearchSpace
+- Deployed on AWS EC2 instances (t3.medium)
+
+Neo4j instances are defined and deployed automatically through the Terraform configuration in `terraform/main.tf`, including:
+
+- Creation of EC2 instances
+- Configuration of security groups
+- Setting up AWS Secrets Manager to store connection details
+
+Neo4j instances are configured using the `user_data` script in the EC2 instance definitions within the Terraform configuration. Security groups in `terraform/main.tf` are pre-configured to restrict access to the Neo4j instances as needed.
+
+### 5.4 Neo4j AMI Management
+
+We have implemented an automated process for managing Neo4j AMIs (Amazon Machine Images) using Terraform. This process ensures that Neo4j instances are always running the latest version and that updates are handled efficiently.
+
+#### AMI Creation and Update Process
+
+1. **Initial AMI Creation**:
+
+- When no Neo4j AMI exists, the Terraform script automatically creates a new AMI.
+- It launches a temporary EC2 instance, installs Neo4j, and creates an AMI from this instance.
+- The AMI is tagged with the Neo4j version for easy identification.
+
+2. **Update Checking**:
+
+- On subsequent Terraform runs, the script checks for the existence of a Neo4j AMI.
+- If an AMI exists, it compares the current version with the latest available Neo4j version.
+
+3. **Automatic Updates**:
+
+- If a newer Neo4j version is available, the script creates a new AMI with the updated version.
+- The new AMI is created using the same process as the initial creation.
+
+4. **Version Management**:
+
+- The Neo4j version is managed through a Terraform variable `neo4j_version`.
+- When a new AMI is created due to an update, the script updates the `terraform.tfvars` file with the new version.
+
+5. **Instance Configuration**:
+- All Neo4j instances (production and staging) use the latest AMI automatically.
+- The `depends_on` attribute ensures that the AMI management process completes before instance creation.
+
+#### Implementation Details
+
+The AMI management process is implemented in the `null_resource.neo4j_ami_management` resource in `terraform/main.tf`. Key components include:
+
+- A bash script that handles AMI creation, update checking, and version management.
+- Use of AWS CLI commands to interact with EC2 and create AMIs.
+- A function to fetch the latest Neo4j version from the official website.
+- Logic to compare versions and decide whether an update is necessary.
+
+#### Benefits
+
+- Ensures Neo4j instances are always running the latest version.
+- Automates the process of creating and updating AMIs.
+- Maintains version consistency across all Neo4j instances.
+- Allows for easy rollback by keeping previous AMIs (implementation of AMI retention policy is recommended).
+
+#### Considerations
+
+- Ensure proper IAM permissions are in place for AMI creation and management.
+- Monitor the AMI creation process, especially in production environments.
+- Implement a retention policy for old AMIs to manage storage costs.
+- Regularly review and update the AMI creation script to ensure it remains compatible with the latest Neo4j versions and AWS best practices.
+
+## 6. Deployment Process
+
+### 6.1 Manual Deployment
+
+1. Set the `NODE_ENV` environment variable to either `production`, `staging`, or `development`.
+2. Run `npm run deploy-and-verify` from the project root directory.
+3. If `NODE_ENV` is set to `development`, select the target environment when prompted.
+4. The script will handle the Terraform deployment, ECS service updates, and verification steps.
+
+### 6.2 Automated Deployment via GitHub Actions
+
+1. Push changes to the `stage` branch.
+2. The `deploy-staging.yml` GitHub Actions workflow will automatically:
+- Build the Docker image
+- Push the image to ECR
+- Update the ECS task definition with staging-specific environment variables
+- Deploy to the staging ECS cluster
+
+### 6.3 Environment-specific Behavior
+
+- **Production**: When `NODE_ENV=production`, the script will deploy to the production environment without prompting.
+- **Staging**: When `NODE_ENV=staging`, the script will deploy to the staging environment without prompting.
+- **Development**: When `NODE_ENV=development`, the script will prompt you to choose between deploying to production or staging.
+
 ## 7. Monitoring and Logging
 
 ### 7.1 CloudWatch Logs
@@ -166,8 +310,8 @@ You can also use CloudWatch Dashboards to create visual representations of your 
 
 ## 9. Security Considerations
 
-- Use GitHub Secrets for deployment-related sensitive data.
-- Use AWS Secrets Manager for application secrets in staging and production environments.
+- Use GitHub Secrets for deployment-related sensitive data that must be shared across apps, such as JWT_SECRET
+- Use AWS Secrets Manager for application secrets in staging and production environments that do not need regular access from outside credex-core, such as database credentials.
 - Regularly rotate passwords, API keys, and AWS access keys.
 - Ensure production databases are not accessible from development or staging environments.
 - Implement proper access controls and network security in your AWS environment.
@@ -178,7 +322,7 @@ You can also use CloudWatch Dashboards to create visual representations of your 
 
 ## 10. Maintenance and Updates
 
-### Updating the Application
+### Updating the Application within a Deployment
 
 1. Merge changes from `dev` to `stage` branch to trigger staging deployment.
 2. Test the changes in the staging environment.
