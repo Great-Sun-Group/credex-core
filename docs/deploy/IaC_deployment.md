@@ -177,7 +177,7 @@ The ECS service is configured in the `main.tf` file, including:
 - Desired count: 1 (adjustable based on load requirements)
 - Network configuration and security group settings
 
-### Neo4j Deployment and Management
+### 5.3 Neo4j Deployment and Management
 
 The project uses Neo4j for both staging and production environments, managed through Terraform.
 
@@ -199,6 +199,56 @@ Neo4j instances are defined and deployed automatically through the Terraform con
 - Setting up AWS Secrets Manager to store connection details
 
 Neo4j instances are configured using the `user_data` script in the EC2 instance definitions within the Terraform configuration. Security groups in `terraform/main.tf` are pre-configured to restrict access to the Neo4j instances as needed.
+
+### 5.4 Neo4j AMI Management
+
+We have implemented an automated process for managing Neo4j AMIs (Amazon Machine Images) using Terraform. This process ensures that Neo4j instances are always running the latest version and that updates are handled efficiently.
+
+#### AMI Creation and Update Process
+
+1. **Initial AMI Creation**:
+   - When no Neo4j AMI exists, the Terraform script automatically creates a new AMI.
+   - It launches a temporary EC2 instance, installs Neo4j, and creates an AMI from this instance.
+   - The AMI is tagged with the Neo4j version for easy identification.
+
+2. **Update Checking**:
+   - On subsequent Terraform runs, the script checks for the existence of a Neo4j AMI.
+   - If an AMI exists, it compares the current version with the latest available Neo4j version.
+
+3. **Automatic Updates**:
+   - If a newer Neo4j version is available, the script creates a new AMI with the updated version.
+   - The new AMI is created using the same process as the initial creation.
+
+4. **Version Management**:
+   - The Neo4j version is managed through a Terraform variable `neo4j_version`.
+   - When a new AMI is created due to an update, the script updates the `terraform.tfvars` file with the new version.
+
+5. **Instance Configuration**:
+   - All Neo4j instances (production and staging) use the latest AMI automatically.
+   - The `depends_on` attribute ensures that the AMI management process completes before instance creation.
+
+#### Implementation Details
+
+The AMI management process is implemented in the `null_resource.neo4j_ami_management` resource in `terraform/main.tf`. Key components include:
+
+- A bash script that handles AMI creation, update checking, and version management.
+- Use of AWS CLI commands to interact with EC2 and create AMIs.
+- A function to fetch the latest Neo4j version from the official website.
+- Logic to compare versions and decide whether an update is necessary.
+
+#### Benefits
+
+- Ensures Neo4j instances are always running the latest version.
+- Automates the process of creating and updating AMIs.
+- Maintains version consistency across all Neo4j instances.
+- Allows for easy rollback by keeping previous AMIs (implementation of AMI retention policy is recommended).
+
+#### Considerations
+
+- Ensure proper IAM permissions are in place for AMI creation and management.
+- Monitor the AMI creation process, especially in production environments.
+- Implement a retention policy for old AMIs to manage storage costs.
+- Regularly review and update the AMI creation script to ensure it remains compatible with the latest Neo4j versions and AWS best practices.
 
 ## 6. Deployment Process
 
@@ -255,6 +305,7 @@ You can also use CloudWatch Dashboards to create visual representations of your 
 - For application issues, check CloudWatch logs for the ECS tasks.
 - For secrets retrieval issues, check IAM roles and policies to ensure ECS tasks have necessary permissions to access AWS Secrets Manager.
 - For Neo4j issues, check EC2 instance logs and ensure the `user_data` script executed correctly.
+- For AMI creation issues, review the logs of the `null_resource.neo4j_ami_management` execution in Terraform output.
 
 ## 9. Security Considerations
 
@@ -266,6 +317,7 @@ You can also use CloudWatch Dashboards to create visual representations of your 
 - Restrict access to Neo4j instances by updating security group rules in Terraform.
 - Ensure LedgerSpace and SearchSpace instances are properly isolated and secured.
 - Implement least privilege access for IAM roles used by ECS tasks to access AWS resources.
+- Regularly review and update IAM policies, especially those related to AMI management.
 
 ## 10. Maintenance and Updates
 
@@ -283,10 +335,17 @@ You can also use CloudWatch Dashboards to create visual representations of your 
 
 ### Updating Neo4j Instances
 
-1. To update Neo4j versions or configurations:
+1. To update Neo4j versions:
+   - The AMI management process will automatically check for new versions and create new AMIs as needed.
+   - Run `terraform apply` to apply the changes and update the instances with the new AMI.
+2. To update Neo4j configurations:
    - Modify the `user_data` scripts in the `terraform/main.tf` file.
    - Run `terraform apply` to apply the changes.
-   - Changes that recreate the databases are currently disallowed, pending proper backup processes being verified.
+3. For major version upgrades or changes that require data migration:
+   - Plan the upgrade process carefully.
+   - Consider creating a backup of the existing data.
+   - Test the upgrade process in a staging environment first.
+   - Schedule downtime if necessary for the upgrade process.
 
 ## 11. Continuous Improvement
 
@@ -302,5 +361,7 @@ Consider the following improvements:
 - Implement data synchronization or replication strategies between LedgerSpace and SearchSpace if required
 - Implement a secrets rotation policy for AWS Secrets Manager
 - Set up monitoring and alerting for AWS Secrets Manager access and usage
+- Implement a retention policy for old Neo4j AMIs
+- Enhance the AMI management process to include automated testing of new AMIs before use
 
 By continuously improving the deployment process and infrastructure, you can ensure the reliability, security, and efficiency of the credex-core application across all environments.

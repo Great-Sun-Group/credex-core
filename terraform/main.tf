@@ -6,6 +6,93 @@ data "aws_vpc" "selected" {
   id = var.vpc_id
 }
 
+# Look for existing Neo4j AMI
+data "aws_ami" "neo4j" {
+  most_recent = true
+  owners      = ["self"]
+
+  filter {
+    name   = "name"
+    values = ["neo4j-*"]
+  }
+
+  filter {
+    name   = "tag:Version"
+    values = [var.neo4j_version]
+  }
+}
+
+# Create a null_resource to manage Neo4j AMI creation and updates
+resource "null_resource" "neo4j_ami_management" {
+  triggers = {
+    neo4j_version = var.neo4j_version
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      #!/bin/bash
+      set -e
+      
+      # Function to create a new Neo4j AMI
+      create_neo4j_ami() {
+        local NEO4J_VERSION=$1
+        echo "Creating new Neo4j AMI for version $NEO4J_VERSION..."
+        
+        # Launch EC2 instance
+        INSTANCE_ID=$(aws ec2 run-instances --image-id ami-xxxxxxxx --instance-type t3.micro --key-name MyKeyPair --security-group-ids sg-xxxxxxxx --subnet-id subnet-xxxxxxxx --query 'Instances[0].InstanceId' --output text)
+        
+        # Wait for instance to be running
+        aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+        
+        # Install and configure Neo4j
+        aws ec2 send-command --instance-ids $INSTANCE_ID --document-name "AWS-RunShellScript" --parameters commands=[
+          "wget https://neo4j.com/artifact.php?name=neo4j-community-$NEO4J_VERSION-unix.tar.gz",
+          "tar -xf neo4j-community-$NEO4J_VERSION-unix.tar.gz",
+          "sudo mv neo4j-community-$NEO4J_VERSION /opt/neo4j",
+          "sudo chown -R ec2-user:ec2-user /opt/neo4j"
+        ]
+        
+        # Create AMI
+        AMI_ID=$(aws ec2 create-image --instance-id $INSTANCE_ID --name "neo4j-$NEO4J_VERSION" --description "Neo4j $NEO4J_VERSION" --query 'ImageId' --output text)
+        
+        # Tag AMI
+        aws ec2 create-tags --resources $AMI_ID --tags Key=Version,Value=$NEO4J_VERSION
+        
+        # Terminate instance
+        aws ec2 terminate-instances --instance-ids $INSTANCE_ID
+        
+        echo $AMI_ID
+      }
+      
+      # Function to get the latest Neo4j version
+      get_latest_neo4j_version() {
+        curl -s https://neo4j.com/download-center/ | grep -oP 'Neo4j Community Edition \K[0-9.]+' | head -n 1
+      }
+      
+      # Check if AMI exists
+      if [[ "${data.aws_ami.neo4j.id}" == "" ]]; then
+        NEW_AMI_ID=$(create_neo4j_ami ${var.neo4j_version})
+        echo "Created new AMI: $NEW_AMI_ID"
+      else
+        echo "Neo4j AMI already exists. Checking for updates..."
+        CURRENT_VERSION=$(aws ec2 describe-images --image-ids ${data.aws_ami.neo4j.id} --query 'Images[0].Tags[?Key==`Version`].Value' --output text)
+        LATEST_VERSION=$(get_latest_neo4j_version)
+        
+        if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+          echo "Update available. Creating new AMI with Neo4j $LATEST_VERSION"
+          NEW_AMI_ID=$(create_neo4j_ami $LATEST_VERSION)
+          echo "Created new AMI: $NEW_AMI_ID"
+          
+          # Update Terraform state
+          echo "neo4j_version = \"$LATEST_VERSION\"" >> ${path.module}/terraform.tfvars
+        else
+          echo "Neo4j is up to date."
+        fi
+      fi
+    EOT
+  }
+}
+
 resource "aws_ecr_repository" "credex_core" {
   name = "credex-core"
 }
@@ -99,7 +186,7 @@ resource "aws_security_group" "ecs_tasks" {
     protocol        = "tcp"
     from_port       = 5000
     to_port         = 5000
-    cidr_blocks     = ["0.0.0.0/0"]
+    security_groups = [aws_security_group.alb.id]
   }
 
   egress {
@@ -221,9 +308,9 @@ resource "aws_secretsmanager_secret_version" "neo4j_stage_secrets" {
   })
 }
 
-# Neo4j Production LedgerSpace Instance (Community Edition)
+# Neo4j Production LedgerSpace Instance
 resource "aws_instance" "neo4j_prod_ledger" {
-  ami           = var.neo4j_community_ami
+  ami           = data.aws_ami.neo4j.id
   instance_type = "t3.medium"
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
@@ -231,16 +318,17 @@ resource "aws_instance" "neo4j_prod_ledger" {
   subnet_id              = var.subnet_ids[0]
 
   tags = {
-    Name = "Neo4j-Production-LedgerSpace"
+    Name        = "Neo4j-Production-LedgerSpace"
+    Environment = "Production"
+    Role        = "LedgerSpace"
   }
 
   user_data = <<-EOF
               #!/bin/bash
-              echo "Setting up Neo4j Community Edition for LedgerSpace"
+              echo "Configuring Neo4j Community Edition for LedgerSpace"
               NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_prod_secrets.id} --query SecretString --output text | jq -r .ledgerspacepass)
-              # Install and configure Neo4j Community Edition
-              sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
-              neo4j-admin set-initial-password $NEO4J_PASSWORD
+              sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /opt/neo4j/conf/neo4j.conf
+              /opt/neo4j/bin/neo4j-admin set-initial-password $NEO4J_PASSWORD
               systemctl start neo4j
               EOF
 
@@ -250,15 +338,17 @@ resource "aws_instance" "neo4j_prod_ledger" {
     encrypted   = true
   }
 
+  depends_on = [null_resource.neo4j_ami_management]
+
   lifecycle {
     prevent_destroy = true
     ignore_changes  = [ami, user_data]
   }
 }
 
-# Neo4j Production SearchSpace Instance (Community Edition)
+# Neo4j Production SearchSpace Instance
 resource "aws_instance" "neo4j_prod_search" {
-  ami           = var.neo4j_community_ami
+  ami           = data.aws_ami.neo4j.id
   instance_type = "t3.medium"
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
@@ -266,16 +356,17 @@ resource "aws_instance" "neo4j_prod_search" {
   subnet_id              = var.subnet_ids[0]
 
   tags = {
-    Name = "Neo4j-Production-SearchSpace"
+    Name        = "Neo4j-Production-SearchSpace"
+    Environment = "Production"
+    Role        = "SearchSpace"
   }
 
   user_data = <<-EOF
               #!/bin/bash
-              echo "Setting up Neo4j Community Edition for SearchSpace"
+              echo "Configuring Neo4j Community Edition for SearchSpace"
               NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_prod_secrets.id} --query SecretString --output text | jq -r .searchspacepass)
-              # Install and configure Neo4j Community Edition
-              sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
-              neo4j-admin set-initial-password $NEO4J_PASSWORD
+              sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /opt/neo4j/conf/neo4j.conf
+              /opt/neo4j/bin/neo4j-admin set-initial-password $NEO4J_PASSWORD
               systemctl start neo4j
               EOF
 
@@ -285,15 +376,17 @@ resource "aws_instance" "neo4j_prod_search" {
     encrypted   = true
   }
 
+  depends_on = [null_resource.neo4j_ami_management]
+
   lifecycle {
     prevent_destroy = true
     ignore_changes  = [ami, user_data]
   }
 }
 
-# Neo4j Staging LedgerSpace Instance (Community Edition)
+# Neo4j Staging LedgerSpace Instance
 resource "aws_instance" "neo4j_stage_ledger" {
-  ami           = var.neo4j_community_ami
+  ami           = data.aws_ami.neo4j.id
   instance_type = "t3.medium"
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
@@ -301,16 +394,17 @@ resource "aws_instance" "neo4j_stage_ledger" {
   subnet_id              = var.subnet_ids[0]
 
   tags = {
-    Name = "Neo4j-Staging-LedgerSpace"
+    Name        = "Neo4j-Staging-LedgerSpace"
+    Environment = "Staging"
+    Role        = "LedgerSpace"
   }
 
   user_data = <<-EOF
               #!/bin/bash
-              echo "Setting up Neo4j Community Edition for LedgerSpace"
+              echo "Configuring Neo4j Community Edition for LedgerSpace"
               NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_stage_secrets.id} --query SecretString --output text | jq -r .ledgerspacepass)
-              # Install and configure Neo4j Community Edition
-              sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
-              neo4j-admin set-initial-password $NEO4J_PASSWORD
+              sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /opt/neo4j/conf/neo4j.conf
+              /opt/neo4j/bin/neo4j-admin set-initial-password $NEO4J_PASSWORD
               systemctl start neo4j
               EOF
 
@@ -319,6 +413,8 @@ resource "aws_instance" "neo4j_stage_ledger" {
     volume_size = 50
     encrypted   = true
   }
+
+  depends_on = [null_resource.neo4j_ami_management]
 
   lifecycle {
     prevent_destroy = true
@@ -326,9 +422,9 @@ resource "aws_instance" "neo4j_stage_ledger" {
   }
 }
 
-# Neo4j Staging SearchSpace Instance (Community Edition)
+# Neo4j Staging SearchSpace Instance
 resource "aws_instance" "neo4j_stage_search" {
-  ami           = var.neo4j_community_ami
+  ami           = data.aws_ami.neo4j.id
   instance_type = "t3.medium"
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
@@ -336,16 +432,17 @@ resource "aws_instance" "neo4j_stage_search" {
   subnet_id              = var.subnet_ids[0]
 
   tags = {
-    Name = "Neo4j-Staging-SearchSpace"
+    Name        = "Neo4j-Staging-SearchSpace"
+    Environment = "Staging"
+    Role        = "SearchSpace"
   }
 
   user_data = <<-EOF
               #!/bin/bash
-              echo "Setting up Neo4j Community Edition for SearchSpace"
+              echo "Configuring Neo4j Community Edition for SearchSpace"
               NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_stage_secrets.id} --query SecretString --output text | jq -r .searchspacepass)
-              # Install and configure Neo4j Community Edition
-              sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
-              neo4j-admin set-initial-password $NEO4J_PASSWORD
+              sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /opt/neo4j/conf/neo4j.conf
+              /opt/neo4j/bin/neo4j-admin set-initial-password $NEO4J_PASSWORD
               systemctl start neo4j
               EOF
 
@@ -354,6 +451,8 @@ resource "aws_instance" "neo4j_stage_search" {
     volume_size = 50
     encrypted   = true
   }
+
+  depends_on = [null_resource.neo4j_ami_management]
 
   lifecycle {
     prevent_destroy = true
@@ -387,6 +486,11 @@ resource "aws_security_group" "neo4j_prod" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+    Name        = "Neo4j-Production-SG"
+    Environment = "Production"
+  }
 }
 
 # Security Group for Neo4j Staging
@@ -414,6 +518,11 @@ resource "aws_security_group" "neo4j_stage" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "Neo4j-Staging-SG"
+    Environment = "Staging"
   }
 }
 
@@ -482,9 +591,10 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
-variable "neo4j_community_ami" {
-  description = "AMI ID for Neo4j Community Edition"
+variable "neo4j_version" {
+  description = "Version of Neo4j to install"
   type        = string
+  default     = "4.4.0"  # Set your desired default version
 }
 
 variable "prod_neo4j_ledger_space_pass" {
@@ -522,7 +632,7 @@ variable "subdomain" {
 }
 
 data "aws_route53_zone" "selected" {
-  name = "mycredex.app."
+  name         = "mycredex.app."
   private_zone = false
 }
 
@@ -587,6 +697,11 @@ output "neo4j_stage_secrets_arn" {
 }
 
 output "neo4j_private_key_secret_arn" {
-  value = aws_secretsmanager_secret.neo4j_private_key.arn
+  value       = aws_secretsmanager_secret.neo4j_private_key.arn
   description = "ARN of the secret containing the Neo4j EC2 instance private key"
+}
+
+output "neo4j_ami_id" {
+  value       = data.aws_ami.neo4j.id
+  description = "The ID of the Neo4j AMI used for EC2 instances"
 }
