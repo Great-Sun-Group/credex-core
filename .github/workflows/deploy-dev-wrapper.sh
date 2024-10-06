@@ -46,20 +46,44 @@ fi
 
 echo "Workflow triggered successfully."
 
-# Fetch recent workflow runs
-echo "Fetching recent workflow runs..."
+# Function to fetch the most recent workflow run
+fetch_run() {
+    gh run list --workflow=deploy-development.yml --limit 1 --json databaseId,headBranch,status
+}
 
-RUNS=$(gh run list --workflow=deploy-development.yml --limit 1 --json databaseId,headBranch)
+# Wait for the workflow to start and fetch the run ID
+echo "Waiting for workflow to start..."
+MAX_ATTEMPTS=12
+ATTEMPT=1
+RUN_ID=""
 
-# Extract the run ID for the dev branch
-RUN_ID=$(echo $RUNS | jq -r '.[] | select(.headBranch == "dev") | .databaseId')
+while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+    echo "Attempt $ATTEMPT of $MAX_ATTEMPTS"
+    sleep 10
+    RUNS=$(fetch_run)
+    RUN_ID=$(echo $RUNS | jq -r '.[0].databaseId')
+    RUN_STATUS=$(echo $RUNS | jq -r '.[0].status')
+    
+    if [ -n "$RUN_ID" ] && [ "$RUN_STATUS" != "null" ]; then
+        echo "Found run ID: $RUN_ID with status: $RUN_STATUS"
+        break
+    fi
+    
+    ATTEMPT=$((ATTEMPT+1))
+done
 
 if [ -z "$RUN_ID" ]; then
-    echo "Error: Could not find a recent run for the 'dev' branch."
+    echo "Error: Could not find a recent run for the workflow after $MAX_ATTEMPTS attempts."
+    echo "To monitor the deployment progress manually:"
+    echo "1. Go to the GitHub repository: https://github.com/$REPO_OWNER/$REPO_NAME"
+    echo "2. Click on the 'Actions' tab"
+    echo "3. Look for the most recent 'Deploy to AWS Development' workflow run"
+    echo "4. Click on it to view details and logs"
+    echo ""
+    echo "Note: It may take a few moments for the workflow to appear in the Actions tab."
     exit 1
 fi
 
-echo "Found run ID: $RUN_ID"
 echo "Streaming logs for run ID: $RUN_ID"
 
 # Stream the workflow logs
@@ -68,5 +92,6 @@ gh run watch $RUN_ID
 if [ $? -eq 0 ]; then
     echo "Deployment completed successfully."
 else
-    echo "Deployment failed. Please check the logs above for more details."
+    echo "Deployment failed or was interrupted. Please check the logs above for more details."
+    echo "You can view full logs at: https://github.com/$REPO_OWNER/$REPO_NAME/actions/runs/$RUN_ID"
 fi
