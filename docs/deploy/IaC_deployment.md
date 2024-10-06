@@ -173,11 +173,33 @@ We have implemented an automated process for managing Neo4j AMIs using Terraform
 
 ### 6.1 Manual Deployment
 
+#### 6.1.1 Using deploy-and-verify script
+
 1. Ensure AWS credentials are properly set up in your local environment.
 2. Set the `NODE_ENV` environment variable to either `production`, `staging`, or `development`.
 3. Run `npm run deploy-and-verify` from the project root directory.
 4. If `NODE_ENV` is set to `development`, select the target environment when prompted.
 5. The script will verify AWS credentials, Neo4j credentials, handle the Terraform deployment, ECS service updates, and verification steps.
+
+#### 6.1.2 Using deploy-dev-wrapper script
+
+We have created a simplified deployment script `deploy-dev-wrapper.sh` located in the `.github/workflows` directory. This script streamlines the deployment process for development purposes. To use this script:
+
+1. Ensure your AWS credentials are set up in your environment variables:
+   ```bash
+   export AWS_ACCESS_KEY_ID=your_access_key_id
+   export AWS_SECRET_ACCESS_KEY=your_secret_access_key
+   ```
+2. Run the script from anywhere in the project:
+   ```bash
+   deploy-dev-wrapper.sh
+   ```
+
+The script will:
+- Determine the current git branch
+- Trigger the GitHub Actions workflow for deployment using the local version of the current branch
+
+Note: This script is primarily intended for use in the development container environment. The script is automatically made executable and added to the PATH when the development container is built or started. It's a full dry run privately before going to stage.
 
 ### 6.2 Automated Deployment via GitHub Actions
 
