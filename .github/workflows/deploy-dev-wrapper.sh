@@ -32,8 +32,8 @@ git push origin $CURRENT_BRANCH
 
 echo "Triggering deployment for branch: $CURRENT_BRANCH"
 
-# Trigger the workflow using the file name and current branch
-WORKFLOW_RUN=$(gh workflow run deploy-development.yml --ref $CURRENT_BRANCH -f branch=$CURRENT_BRANCH)
+# Trigger the workflow using the file name, current branch for the workflow file, and current branch to run on
+WORKFLOW_RUN=$(gh workflow run deploy-development.yml --ref $CURRENT_BRANCH -F branch=$CURRENT_BRANCH)
 
 if [ $? -ne 0 ]; then
     echo "Error: Failed to trigger the workflow."
