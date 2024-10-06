@@ -19,6 +19,77 @@ resource "aws_vpc" "main" {
 
 locals {
   vpc_id = data.aws_vpc.default.id != "" ? data.aws_vpc.default.id : aws_vpc.main[0].id
+  effective_environment = coalesce(var.environment, terraform.workspace == "default" ? "production" : terraform.workspace)
+  domain = local.effective_environment == "production" ? "api.mycredex.app" : local.effective_environment == "staging" ? "apistaging.mycredex.app" : "apidev.mycredex.app"
+  common_tags = {
+    Environment = local.effective_environment
+    Project     = "CredEx"
+    ManagedBy   = "Terraform"
+  }
+}
+
+# AWS Systems Manager Parameter Store resources
+resource "aws_ssm_parameter" "neo4j_ledger_space_bolt_url" {
+  name  = "/credex/${local.effective_environment}/neo4j_ledger_space_bolt_url"
+  type  = "String"
+  value = var.neo4j_ledger_space_bolt_url
+  tags  = local.common_tags
+}
+
+resource "aws_ssm_parameter" "neo4j_search_space_bolt_url" {
+  name  = "/credex/${local.effective_environment}/neo4j_search_space_bolt_url"
+  type  = "String"
+  value = var.neo4j_search_space_bolt_url
+  tags  = local.common_tags
+}
+
+resource "aws_ssm_parameter" "jwt_secret" {
+  name  = "/credex/${local.effective_environment}/jwt_secret"
+  type  = "SecureString"
+  value = var.jwt_secret
+  tags  = local.common_tags
+}
+
+resource "aws_ssm_parameter" "whatsapp_bot_api_key" {
+  name  = "/credex/${local.effective_environment}/whatsapp_bot_api_key"
+  type  = "SecureString"
+  value = var.whatsapp_bot_api_key
+  tags  = local.common_tags
+}
+
+resource "aws_ssm_parameter" "open_exchange_rates_api" {
+  name  = "/credex/${local.effective_environment}/open_exchange_rates_api"
+  type  = "SecureString"
+  value = var.open_exchange_rates_api
+  tags  = local.common_tags
+}
+
+resource "aws_ssm_parameter" "neo4j_ledger_space_user" {
+  name  = "/credex/${local.effective_environment}/neo4j_ledger_space_user"
+  type  = "String"
+  value = var.neo4j_ledger_space_user
+  tags  = local.common_tags
+}
+
+resource "aws_ssm_parameter" "neo4j_ledger_space_pass" {
+  name  = "/credex/${local.effective_environment}/neo4j_ledger_space_pass"
+  type  = "SecureString"
+  value = var.neo4j_ledger_space_pass
+  tags  = local.common_tags
+}
+
+resource "aws_ssm_parameter" "neo4j_search_space_user" {
+  name  = "/credex/${local.effective_environment}/neo4j_search_space_user"
+  type  = "String"
+  value = var.neo4j_search_space_user
+  tags  = local.common_tags
+}
+
+resource "aws_ssm_parameter" "neo4j_search_space_pass" {
+  name  = "/credex/${local.effective_environment}/neo4j_search_space_pass"
+  type  = "SecureString"
+  value = var.neo4j_search_space_pass
+  tags  = local.common_tags
 }
 
 # Look for existing Neo4j AMI
@@ -28,7 +99,7 @@ data "aws_ami" "neo4j" {
 
   filter {
     name   = "name"
-    values = ["neo4j-*"]
+    values = ["neo4j-${local.effective_environment}-*"]
   }
 
   filter {
@@ -41,6 +112,7 @@ data "aws_ami" "neo4j" {
 resource "null_resource" "neo4j_ami_management" {
   triggers = {
     neo4j_version = var.neo4j_version
+    environment   = local.effective_environment
   }
 
   provisioner "local-exec" {
@@ -51,7 +123,8 @@ resource "null_resource" "neo4j_ami_management" {
       # Function to create a new Neo4j AMI
       create_neo4j_ami() {
         local NEO4J_VERSION=$1
-        echo "Creating new Neo4j AMI for version $NEO4J_VERSION..."
+        local ENVIRONMENT=$2
+        echo "Creating new Neo4j AMI for version $NEO4J_VERSION in $ENVIRONMENT environment..."
         
         # Launch EC2 instance
         INSTANCE_ID=$(aws ec2 run-instances --image-id ami-xxxxxxxx --instance-type t3.micro --key-name MyKeyPair --security-group-ids sg-xxxxxxxx --subnet-id subnet-xxxxxxxx --query 'Instances[0].InstanceId' --output text)
@@ -68,10 +141,10 @@ resource "null_resource" "neo4j_ami_management" {
         ]
         
         # Create AMI
-        AMI_ID=$(aws ec2 create-image --instance-id $INSTANCE_ID --name "neo4j-$NEO4J_VERSION" --description "Neo4j $NEO4J_VERSION" --query 'ImageId' --output text)
+        AMI_ID=$(aws ec2 create-image --instance-id $INSTANCE_ID --name "neo4j-$ENVIRONMENT-$NEO4J_VERSION" --description "Neo4j $NEO4J_VERSION for $ENVIRONMENT" --query 'ImageId' --output text)
         
         # Tag AMI
-        aws ec2 create-tags --resources $AMI_ID --tags Key=Version,Value=$NEO4J_VERSION
+        aws ec2 create-tags --resources $AMI_ID --tags Key=Version,Value=$NEO4J_VERSION Key=Environment,Value=$ENVIRONMENT
         
         # Terminate instance
         aws ec2 terminate-instances --instance-ids $INSTANCE_ID
@@ -86,22 +159,22 @@ resource "null_resource" "neo4j_ami_management" {
       
       # Check if AMI exists
       if [[ "${data.aws_ami.neo4j.id}" == "" ]]; then
-        NEW_AMI_ID=$(create_neo4j_ami ${var.neo4j_version})
+        NEW_AMI_ID=$(create_neo4j_ami ${var.neo4j_version} ${local.effective_environment})
         echo "Created new AMI: $NEW_AMI_ID"
       else
-        echo "Neo4j AMI already exists. Checking for updates..."
+        echo "Neo4j AMI already exists for ${local.effective_environment}. Checking for updates..."
         CURRENT_VERSION=$(aws ec2 describe-images --image-ids ${data.aws_ami.neo4j.id} --query 'Images[0].Tags[?Key==`Version`].Value' --output text)
         LATEST_VERSION=$(get_latest_neo4j_version)
         
         if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
-          echo "Update available. Creating new AMI with Neo4j $LATEST_VERSION"
-          NEW_AMI_ID=$(create_neo4j_ami $LATEST_VERSION)
+          echo "Update available. Creating new AMI with Neo4j $LATEST_VERSION for ${local.effective_environment}"
+          NEW_AMI_ID=$(create_neo4j_ami $LATEST_VERSION ${local.effective_environment})
           echo "Created new AMI: $NEW_AMI_ID"
           
           # Update Terraform state
           echo "neo4j_version = \"$LATEST_VERSION\"" >> ${path.module}/terraform.tfvars
         else
-          echo "Neo4j is up to date."
+          echo "Neo4j is up to date for ${local.effective_environment}."
         fi
       fi
     EOT
@@ -132,17 +205,17 @@ resource "aws_ecs_task_definition" "credex_core_task" {
   container_definitions = templatefile("${path.module}/task-definition.json", {
     CONTAINER_IMAGE                = "${aws_ecr_repository.credex_core.repository_url}:latest"
     NODE_ENV                       = local.effective_environment
-    LOG_LEVEL                      = "info"
+    LOG_LEVEL                      = local.effective_environment == "production" ? "info" : "debug"
     AWS_REGION                     = var.aws_region
-    JWT_SECRET                     = var.jwt_secret
-    WHATSAPP_BOT_API_KEY           = var.whatsapp_bot_api_key
-    OPEN_EXCHANGE_RATES_API        = var.open_exchange_rates_api
-    NEO_4J_LEDGER_SPACE_BOLT_URL   = "bolt://${aws_instance.neo4j_ledger.private_ip}:7687"
-    NEO_4J_LEDGER_SPACE_USER       = local.neo4j_username
-    NEO_4J_LEDGER_SPACE_PASS       = random_password.neo4j_ledger_password.result
-    NEO_4J_SEARCH_SPACE_BOLT_URL   = "bolt://${aws_instance.neo4j_search.private_ip}:7687"
-    NEO_4J_SEARCH_SPACE_USER       = local.neo4j_username
-    NEO_4J_SEARCH_SPACE_PASS       = random_password.neo4j_search_password.result
+    JWT_SECRET                     = aws_ssm_parameter.jwt_secret.arn
+    WHATSAPP_BOT_API_KEY           = aws_ssm_parameter.whatsapp_bot_api_key.arn
+    OPEN_EXCHANGE_RATES_API        = aws_ssm_parameter.open_exchange_rates_api.arn
+    NEO_4J_LEDGER_SPACE_BOLT_URL   = aws_ssm_parameter.neo4j_ledger_space_bolt_url.arn
+    NEO_4J_LEDGER_SPACE_USER       = aws_ssm_parameter.neo4j_ledger_space_user.arn
+    NEO_4J_LEDGER_SPACE_PASS       = aws_ssm_parameter.neo4j_ledger_space_pass.arn
+    NEO_4J_SEARCH_SPACE_BOLT_URL   = aws_ssm_parameter.neo4j_search_space_bolt_url.arn
+    NEO_4J_SEARCH_SPACE_USER       = aws_ssm_parameter.neo4j_search_space_user.arn
+    NEO_4J_SEARCH_SPACE_PASS       = aws_ssm_parameter.neo4j_search_space_pass.arn
   })
 
   tags = local.common_tags
@@ -172,6 +245,35 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_iam_role_policy" "parameter_store_access" {
+  name = "parameter-store-access-policy"
+  role = aws_iam_role.ecs_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters"
+        ]
+        Resource = [
+          aws_ssm_parameter.jwt_secret.arn,
+          aws_ssm_parameter.whatsapp_bot_api_key.arn,
+          aws_ssm_parameter.open_exchange_rates_api.arn,
+          aws_ssm_parameter.neo4j_ledger_space_bolt_url.arn,
+          aws_ssm_parameter.neo4j_ledger_space_user.arn,
+          aws_ssm_parameter.neo4j_ledger_space_pass.arn,
+          aws_ssm_parameter.neo4j_search_space_bolt_url.arn,
+          aws_ssm_parameter.neo4j_search_space_user.arn,
+          aws_ssm_parameter.neo4j_search_space_pass.arn
+        ]
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role" "ecs_task_role" {
   name = "ecs-task-role-${local.effective_environment}"
 
@@ -191,24 +293,11 @@ resource "aws_iam_role" "ecs_task_role" {
   tags = local.common_tags
 }
 
-# Data source to fetch subnet IDs
 data "aws_subnets" "available" {
   filter {
     name   = "vpc-id"
     values = [local.vpc_id]
   }
-}
-
-# Store subnet IDs in AWS Secrets Manager
-resource "aws_secretsmanager_secret" "subnet_ids" {
-  name = "subnet-ids-${local.effective_environment}"
-
-  tags = local.common_tags
-}
-
-resource "aws_secretsmanager_secret_version" "subnet_ids" {
-  secret_id     = aws_secretsmanager_secret.subnet_ids.id
-  secret_string = jsonencode(data.aws_subnets.available.ids)
 }
 
 resource "aws_ecs_service" "credex_core_service" {
@@ -283,7 +372,6 @@ resource "aws_lb_target_group" "credex_tg" {
   tags = local.common_tags
 }
 
-# Create ACM certificate
 resource "aws_acm_certificate" "credex_cert" {
   domain_name       = local.domain
   validation_method = "DNS"
@@ -295,7 +383,6 @@ resource "aws_acm_certificate" "credex_cert" {
   }
 }
 
-# Create Route53 record for ACM certificate validation
 resource "aws_route53_record" "cert_validation" {
   for_each = {
     for dvo in aws_acm_certificate.credex_cert.domain_validation_options : dvo.domain_name => {
@@ -313,22 +400,9 @@ resource "aws_route53_record" "cert_validation" {
   zone_id         = data.aws_route53_zone.selected.zone_id
 }
 
-# Validate the certificate
 resource "aws_acm_certificate_validation" "cert_validation" {
   certificate_arn         = aws_acm_certificate.credex_cert.arn
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
-}
-
-# Store certificate ARN in Secrets Manager
-resource "aws_secretsmanager_secret" "acm_cert_arn" {
-  name = "acm-cert-arn-${local.effective_environment}"
-
-  tags = local.common_tags
-}
-
-resource "aws_secretsmanager_secret_version" "acm_cert_arn" {
-  secret_id     = aws_secretsmanager_secret.acm_cert_arn.id
-  secret_string = aws_acm_certificate.credex_cert.arn
 }
 
 resource "aws_lb_listener" "credex_listener" {
@@ -393,7 +467,6 @@ resource "aws_security_group" "alb" {
   tags = local.common_tags
 }
 
-# Generate EC2 Key Pair
 resource "aws_key_pair" "neo4j_key_pair" {
   key_name   = "neo4j-key-pair-${local.effective_environment}"
   public_key = tls_private_key.neo4j_private_key.public_key_openssh
@@ -401,76 +474,14 @@ resource "aws_key_pair" "neo4j_key_pair" {
   tags = local.common_tags
 }
 
-# Generate private key
 resource "tls_private_key" "neo4j_private_key" {
   algorithm = "RSA"
   rsa_bits  = 4096
 }
 
-# Store private key in AWS Secrets Manager
-resource "aws_secretsmanager_secret" "neo4j_private_key" {
-  name = "neo4j-private-key-${local.effective_environment}"
-
-  tags = local.common_tags
-}
-
-resource "aws_secretsmanager_secret_version" "neo4j_private_key" {
-  secret_id     = aws_secretsmanager_secret.neo4j_private_key.id
-  secret_string = tls_private_key.neo4j_private_key.private_key_pem
-}
-
-# Generate random passwords
-resource "random_password" "neo4j_ledger_password" {
-  length  = 16
-  special = true
-}
-
-resource "random_password" "neo4j_search_password" {
-  length  = 16
-  special = true
-}
-
-# Generate unique neo4j username
-resource "random_string" "neo4j_username_suffix" {
-  length  = 4
-  special = false
-  upper   = false
-}
-
-locals {
-  neo4j_username = "neo4j${random_string.neo4j_username_suffix.result}"
-  effective_environment = coalesce(var.environment, terraform.workspace == "default" ? "production" : terraform.workspace)
-  domain = local.effective_environment == "production" ? "api.mycredex.app" : "apistaging.mycredex.app"
-  common_tags = {
-    Environment = local.effective_environment
-    Project     = "CredEx"
-    ManagedBy   = "Terraform"
-  }
-}
-
-# AWS Secrets Manager for Neo4j Secrets
-resource "aws_secretsmanager_secret" "neo4j_secrets" {
-  name = "neo4j-secrets-${local.effective_environment}"
-
-  tags = local.common_tags
-}
-
-resource "aws_secretsmanager_secret_version" "neo4j_secrets" {
-  secret_id = aws_secretsmanager_secret.neo4j_secrets.id
-  secret_string = jsonencode({
-    ledgerspacebolturl = "bolt://${aws_instance.neo4j_ledger.private_ip}:7687"
-    ledgerspaceuser    = local.neo4j_username
-    ledgerspacepass    = random_password.neo4j_ledger_password.result
-    searchspacebolturl = "bolt://${aws_instance.neo4j_search.private_ip}:7687"
-    searchspaceuser    = local.neo4j_username
-    searchspacepass    = random_password.neo4j_search_password.result
-  })
-}
-
-# Neo4j LedgerSpace Instance
 resource "aws_instance" "neo4j_ledger" {
   ami           = data.aws_ami.neo4j.id
-  instance_type = "t3.medium"
+  instance_type = local.effective_environment == "production" ? "m5.large" : "t3.medium"
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j.id]
@@ -484,8 +495,8 @@ resource "aws_instance" "neo4j_ledger" {
   user_data = <<-EOF
               #!/bin/bash
               echo "Configuring Neo4j Community Edition for LedgerSpace"
-              NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_secrets.id} --query SecretString --output text | jq -r .ledgerspacepass)
-              NEO4J_USERNAME=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_secrets.id} --query SecretString --output text | jq -r .ledgerspaceuser)
+              NEO4J_PASSWORD=${var.neo4j_ledger_space_pass}
+              NEO4J_USERNAME=${var.neo4j_ledger_space_user}
               sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /opt/neo4j/conf/neo4j.conf
               /opt/neo4j/bin/neo4j-admin set-initial-password $NEO4J_PASSWORD
               /opt/neo4j/bin/cypher-shell -u neo4j -p $NEO4J_PASSWORD "CREATE USER $NEO4J_USERNAME SET PASSWORD '$NEO4J_PASSWORD' CHANGE NOT REQUIRED"
@@ -507,10 +518,9 @@ resource "aws_instance" "neo4j_ledger" {
   }
 }
 
-# Neo4j SearchSpace Instance
 resource "aws_instance" "neo4j_search" {
   ami           = data.aws_ami.neo4j.id
-  instance_type = "t3.medium"
+  instance_type = local.effective_environment == "production" ? "m5.large" : "t3.medium"
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j.id]
@@ -524,8 +534,8 @@ resource "aws_instance" "neo4j_search" {
   user_data = <<-EOF
               #!/bin/bash
               echo "Configuring Neo4j Community Edition for SearchSpace"
-              NEO4J_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_secrets.id} --query SecretString --output text | jq -r .searchspacepass)
-              NEO4J_USERNAME=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.neo4j_secrets.id} --query SecretString --output text | jq -r .searchspaceuser)
+              NEO4J_PASSWORD=${var.neo4j_search_space_pass}
+              NEO4J_USERNAME=${var.neo4j_search_space_user}
               sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /opt/neo4j/conf/neo4j.conf
               /opt/neo4j/bin/neo4j-admin set-initial-password $NEO4J_PASSWORD
               /opt/neo4j/bin/cypher-shell -u neo4j -p $NEO4J_PASSWORD "CREATE USER $NEO4J_USERNAME SET PASSWORD '$NEO4J_PASSWORD' CHANGE NOT REQUIRED"
@@ -547,7 +557,6 @@ resource "aws_instance" "neo4j_search" {
   }
 }
 
-# Security Group for Neo4j
 resource "aws_security_group" "neo4j" {
   name        = "neo4j-sg-${local.effective_environment}"
   description = "Security group for Neo4j ${local.effective_environment} instances"
@@ -577,29 +586,6 @@ resource "aws_security_group" "neo4j" {
   tags = local.common_tags
 }
 
-# IAM policy for EC2 instances to access Secrets Manager
-resource "aws_iam_role_policy" "ec2_secrets_access" {
-  name = "ec2-secrets-access-${local.effective_environment}"
-  role = aws_iam_role.ec2_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue",
-        ]
-        Resource = [
-          aws_secretsmanager_secret.neo4j_secrets.arn,
-          aws_secretsmanager_secret.neo4j_private_key.arn
-        ]
-      },
-    ]
-  })
-}
-
-# IAM role for EC2 instances
 resource "aws_iam_role" "ec2_role" {
   name = "ec2-role-${local.effective_environment}"
 
@@ -619,7 +605,6 @@ resource "aws_iam_role" "ec2_role" {
   tags = local.common_tags
 }
 
-# Attach the IAM role to an instance profile
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "ec2-profile-${local.effective_environment}"
   role = aws_iam_role.ec2_role.name
@@ -633,9 +618,9 @@ variable "aws_region" {
 }
 
 variable "environment" {
-  description = "The deployment environment (production or staging)"
+  description = "The deployment environment (production, staging, or development)"
   type        = string
-  default     = null # This allows us to use NODE_ENV as a fallback
+  default     = null # This allows us to use terraform.workspace as a fallback
 }
 
 variable "neo4j_version" {
@@ -656,6 +641,36 @@ variable "whatsapp_bot_api_key" {
 
 variable "open_exchange_rates_api" {
   description = "API key for Open Exchange Rates"
+  type        = string
+}
+
+variable "neo4j_ledger_space_bolt_url" {
+  description = "Neo4j LedgerSpace Bolt URL"
+  type        = string
+}
+
+variable "neo4j_ledger_space_user" {
+  description = "Neo4j LedgerSpace username"
+  type        = string
+}
+
+variable "neo4j_ledger_space_pass" {
+  description = "Neo4j LedgerSpace password"
+  type        = string
+}
+
+variable "neo4j_search_space_bolt_url" {
+  description = "Neo4j SearchSpace Bolt URL"
+  type        = string
+}
+
+variable "neo4j_search_space_user" {
+  description = "Neo4j SearchSpace username"
+  type        = string
+}
+
+variable "neo4j_search_space_pass" {
+  description = "Neo4j SearchSpace password"
   type        = string
 }
 
@@ -708,23 +723,9 @@ output "neo4j_search_private_ip" {
   value = aws_instance.neo4j_search.private_ip
 }
 
-output "neo4j_secrets_arn" {
-  value = aws_secretsmanager_secret.neo4j_secrets.arn
-}
-
-output "neo4j_private_key_secret_arn" {
-  value       = aws_secretsmanager_secret.neo4j_private_key.arn
-  description = "ARN of the secret containing the Neo4j EC2 instance private key"
-}
-
 output "neo4j_ami_id" {
   value       = data.aws_ami.neo4j.id
   description = "The ID of the Neo4j AMI used for EC2 instances"
-}
-
-output "subnet_ids_secret_arn" {
-  value       = aws_secretsmanager_secret.subnet_ids.arn
-  description = "ARN of the secret containing the subnet IDs"
 }
 
 output "acm_certificate_arn" {
@@ -732,12 +733,12 @@ output "acm_certificate_arn" {
   description = "ARN of the ACM certificate created for HTTPS"
 }
 
-output "acm_certificate_arn_secret" {
-  value       = aws_secretsmanager_secret.acm_cert_arn.arn
-  description = "ARN of the secret containing the ACM certificate ARN"
-}
-
 output "vpc_id" {
   value       = local.vpc_id
   description = "The ID of the VPC used for deployment"
+}
+
+output "environment" {
+  value       = local.effective_environment
+  description = "The current deployment environment"
 }

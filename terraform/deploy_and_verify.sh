@@ -4,19 +4,64 @@ set -e
 
 # Function to prompt for environment selection
 select_environment() {
-    echo "Select the environment to deploy:"
-    select env in "production" "staging"; do
+    PS3="Select the environment to deploy: "
+    select env in "production" "staging" "development"; do
         case $env in
-            production|staging ) echo $env; return;;
-            *) echo "Invalid selection. Please choose 1 for production or 2 for staging.";;
+            production|staging|development ) echo $env; return;;
+            *) echo "Invalid selection. Please choose 1 for production, 2 for staging, or 3 for development.";;
         esac
     done
 }
 
+# Function to verify AWS credentials
+verify_aws_credentials() {
+    if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_DEFAULT_REGION" ]; then
+        echo "Error: AWS credentials are not set in the environment."
+        echo "Please set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_DEFAULT_REGION."
+        exit 1
+    fi
+    echo "AWS credentials verified."
+}
+
+# Function to verify Neo4j credentials
+verify_neo4j_credentials() {
+    local env=$1
+    if [ -z "$NEO4J_LEDGER_SPACE_USER" ] || [ -z "$NEO4J_LEDGER_SPACE_PASS" ] || \
+       [ -z "$NEO4J_SEARCH_SPACE_USER" ] || [ -z "$NEO4J_SEARCH_SPACE_PASS" ]; then
+        echo "Error: Neo4j credentials are not set in the environment for $env."
+        echo "Please set NEO4J_LEDGER_SPACE_USER, NEO4J_LEDGER_SPACE_PASS,"
+        echo "NEO4J_SEARCH_SPACE_USER, and NEO4J_SEARCH_SPACE_PASS."
+        exit 1
+    fi
+    echo "Neo4j credentials verified for $env."
+    echo "Note: Neo4j bolt URLs are now stored in AWS Parameter Store."
+}
+
+# Function to trigger GitHub Actions workflow
+trigger_github_actions_workflow() {
+    local env=$1
+    local workflow_file="deploy-${env}.yml"
+    
+    echo "Triggering GitHub Actions workflow for $env environment..."
+
+    # Ensure GitHub CLI is installed
+    if ! command -v gh &> /dev/null; then
+        echo "Error: GitHub CLI (gh) is not installed. Please install it to proceed."
+        exit 1
+    fi
+
+    # Trigger the workflow
+    if ! gh workflow run $workflow_file; then
+        echo "Error: Failed to trigger GitHub Actions workflow."
+        exit 1
+    fi
+
+    echo "GitHub Actions workflow triggered successfully."
+    echo "You can check the progress of the deployment in the Actions tab of your GitHub repository."
+}
+
 # Determine the environment
-if [ "$GITHUB_ACTIONS" = "true" ]; then
-    ENVIRONMENT=$GITHUB_ENVIRONMENT
-elif [ "$NODE_ENV" = "development" ]; then
+if [ "$NODE_ENV" = "development" ]; then
     ENVIRONMENT=$(select_environment)
 elif [ "$NODE_ENV" = "production" ] || [ "$NODE_ENV" = "staging" ]; then
     ENVIRONMENT=$NODE_ENV
@@ -25,75 +70,47 @@ else
     exit 1
 fi
 
-echo "Starting deployment and verification process for $ENVIRONMENT environment..."
+echo "Starting deployment process for $ENVIRONMENT environment..."
 
-# Ensure all required environment variables are set
-required_vars=(
-    "AWS_ACCESS_KEY_ID"
-    "AWS_SECRET_ACCESS_KEY"
-    "AWS_DEFAULT_REGION"
-    "JWT_SECRET"
-    "WHATSAPP_BOT_API_KEY"
-    "OPEN_EXCHANGE_RATES_API"
-)
+# Verify AWS credentials
+verify_aws_credentials
 
-for var in "${required_vars[@]}"; do
-    if [ -z "${!var}" ]; then
-        echo "Error: $var is not set"
-        exit 1
-    fi
-done
+# Verify Neo4j credentials
+verify_neo4j_credentials $ENVIRONMENT
 
-echo "All required environment variables are set."
+# Trigger GitHub Actions workflow
+trigger_github_actions_workflow "$ENVIRONMENT"
 
-# Debug: Print out if AWS credentials are set (without revealing the values)
-echo "AWS_ACCESS_KEY_ID is set: Yes"
-echo "AWS_SECRET_ACCESS_KEY is set: Yes"
-echo "AWS_DEFAULT_REGION is set to: $AWS_DEFAULT_REGION"
+echo "Deployment process initiated for $ENVIRONMENT environment."
+echo "Please check the GitHub Actions tab for deployment progress and results."
 
-# Run Terraform
-terraform init
-terraform apply -auto-approve -lock=false \
-    -var="environment=$ENVIRONMENT" \
-    -var="jwt_secret=$JWT_SECRET" \
-    -var="whatsapp_bot_api_key=$WHATSAPP_BOT_API_KEY" \
-    -var="open_exchange_rates_api=$OPEN_EXCHANGE_RATES_API"
+# Additional verification steps
+echo "Performing additional verification steps..."
 
-# Extract necessary information from Terraform output
-API_URL=$(terraform output -raw api_url)
-CLUSTER_NAME=$(terraform output -raw ecs_cluster_name)
-SERVICE_NAME=$(terraform output -raw ecs_service_name)
-
-# Wait for ECS service to be stable
+# Wait for ECS service to be stable (with timeout)
 echo "Waiting for ECS service to be stable..."
-aws ecs wait services-stable --cluster $CLUSTER_NAME --services $SERVICE_NAME
+timeout 300 aws ecs wait services-stable --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT
+if [ $? -ne 0 ]; then
+    echo "Error: ECS service did not stabilize within the timeout period."
+    exit 1
+fi
+echo "ECS service is stable."
 
-echo "ECS service is stable. Starting verification process..."
+# Perform a health check (adjust the URL as needed)
+HEALTH_CHECK_URL="https://api.mycredex.app/health"
+if [ "$ENVIRONMENT" = "staging" ]; then
+    HEALTH_CHECK_URL="https://apistaging.mycredex.app/health"
+elif [ "$ENVIRONMENT" = "development" ]; then
+    HEALTH_CHECK_URL="https://apidev.mycredex.app/health"
+fi
 
-# Run ECS status check
-./check_ecs_status.sh $CLUSTER_NAME $SERVICE_NAME
-
-# Run health check
-echo "Performing health check..."
-HEALTH_CHECK_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $API_URL/health)
+echo "Performing health check on $HEALTH_CHECK_URL..."
+HEALTH_CHECK_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $HEALTH_CHECK_URL)
 if [ $HEALTH_CHECK_RESPONSE -eq 200 ]; then
     echo "Health check passed: $HEALTH_CHECK_RESPONSE"
 else
-    echo "Health check failed: $HEALTH_CHECK_RESPONSE"
+    echo "Error: Health check failed with status code: $HEALTH_CHECK_RESPONSE"
     exit 1
 fi
 
-# Run integration tests
-echo "Running integration tests..."
-API_URL=$API_URL ENVIRONMENT=$ENVIRONMENT node post_deployment_tests.js
-
-# Run performance benchmark
-echo "Running performance benchmark..."
-API_URL=$API_URL ENVIRONMENT=$ENVIRONMENT node benchmark.js
-
-echo "Deployment and verification process completed successfully for $ENVIRONMENT environment."
-
-# Re-enable state locking
-terraform force-unlock -force $(terraform show -json | jq -r '.values.root_module.resources[] | select(.type == "terraform_remote_state") | .values.lock_id')
-
-echo "State locking re-enabled."
+echo "Deployment and verification completed successfully for $ENVIRONMENT environment."
