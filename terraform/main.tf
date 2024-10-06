@@ -158,13 +158,18 @@ resource "null_resource" "neo4j_ami_management" {
       if [[ "$AMI_ID" == "None" || "$AMI_ID" == "" ]]; then
         NEW_AMI_ID=$(create_neo4j_ami ${var.neo4j_version} ${local.effective_environment})
         echo "Created new AMI: $NEW_AMI_ID"
-        echo "neo4j_ami_id = \"$NEW_AMI_ID\"" >> ${path.module}/terraform.tfvars
+        echo "$NEW_AMI_ID" > ${path.module}/neo4j_ami_id.txt
       else
         echo "Neo4j AMI already exists: $AMI_ID"
-        echo "neo4j_ami_id = \"$AMI_ID\"" >> ${path.module}/terraform.tfvars
+        echo "$AMI_ID" > ${path.module}/neo4j_ami_id.txt
       fi
     EOT
   }
+}
+
+data "local_file" "neo4j_ami_id" {
+  filename = "${path.module}/neo4j_ami_id.txt"
+  depends_on = [null_resource.neo4j_ami_management]
 }
 
 resource "aws_ecr_repository" "credex_core" {
@@ -466,7 +471,7 @@ resource "tls_private_key" "neo4j_private_key" {
 }
 
 resource "aws_instance" "neo4j_ledger" {
-  ami           = jsondecode(file("${path.module}/terraform.tfvars")).neo4j_ami_id
+  ami           = trimspace(data.local_file.neo4j_ami_id.content)
   instance_type = local.effective_environment == "production" ? "m5.large" : "t3.medium"
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
@@ -505,7 +510,7 @@ resource "aws_instance" "neo4j_ledger" {
 }
 
 resource "aws_instance" "neo4j_search" {
-  ami           = jsondecode(file("${path.module}/terraform.tfvars")).neo4j_ami_id
+  ami           = trimspace(data.local_file.neo4j_ami_id.content)
   instance_type = local.effective_environment == "production" ? "m5.large" : "t3.medium"
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
@@ -710,7 +715,7 @@ output "neo4j_search_private_ip" {
 }
 
 output "neo4j_ami_id" {
-  value       = jsondecode(file("${path.module}/terraform.tfvars")).neo4j_ami_id
+  value       = trimspace(data.local_file.neo4j_ami_id.content)
   description = "The ID of the Neo4j AMI used for EC2 instances"
 }
 
