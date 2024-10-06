@@ -69,6 +69,7 @@ module "neo4j" {
   neo4j_search_space_user     = var.neo4j_search_space_user
   neo4j_search_space_pass     = var.neo4j_search_space_pass
   neo4j_ledger_space_bolt_url = var.neo4j_ledger_space_bolt_url
+  neo4j_search_space_bolt_url = var.neo4j_search_space_bolt_url
 }
 
 module "security" {

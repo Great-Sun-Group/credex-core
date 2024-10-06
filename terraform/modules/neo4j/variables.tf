@@ -53,3 +53,9 @@ variable "neo4j_ledger_space_bolt_url" {
   type        = string
   default     = ""
 }
+
+variable "neo4j_search_space_bolt_url" {
+  description = "The Bolt URL for Neo4j SearchSpace, stored in AWS Parameter Store"
+  type        = string
+  default     = ""
+}
