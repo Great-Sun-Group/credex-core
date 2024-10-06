@@ -152,30 +152,16 @@ resource "null_resource" "neo4j_ami_management" {
         echo $AMI_ID
       }
       
-      # Function to get the latest Neo4j version
-      get_latest_neo4j_version() {
-        curl -s https://neo4j.com/download-center/ | grep -oP 'Neo4j Community Edition \K[0-9.]+' | head -n 1
-      }
-      
       # Check if AMI exists
-      if [[ "${data.aws_ami.neo4j.id}" == "" ]]; then
+      AMI_ID=$(aws ec2 describe-images --owners self --filters "Name=name,Values=neo4j-${local.effective_environment}-${var.neo4j_version}" --query 'Images[0].ImageId' --output text)
+      
+      if [[ "$AMI_ID" == "None" || "$AMI_ID" == "" ]]; then
         NEW_AMI_ID=$(create_neo4j_ami ${var.neo4j_version} ${local.effective_environment})
         echo "Created new AMI: $NEW_AMI_ID"
+        echo "neo4j_ami_id = \"$NEW_AMI_ID\"" >> ${path.module}/terraform.tfvars
       else
-        echo "Neo4j AMI already exists for ${local.effective_environment}. Checking for updates..."
-        CURRENT_VERSION=$(aws ec2 describe-images --image-ids ${data.aws_ami.neo4j.id} --query 'Images[0].Tags[?Key==`Version`].Value' --output text)
-        LATEST_VERSION=$(get_latest_neo4j_version)
-        
-        if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
-          echo "Update available. Creating new AMI with Neo4j $LATEST_VERSION for ${local.effective_environment}"
-          NEW_AMI_ID=$(create_neo4j_ami $LATEST_VERSION ${local.effective_environment})
-          echo "Created new AMI: $NEW_AMI_ID"
-          
-          # Update Terraform state
-          echo "neo4j_version = \"$LATEST_VERSION\"" >> ${path.module}/terraform.tfvars
-        else
-          echo "Neo4j is up to date for ${local.effective_environment}."
-        fi
+        echo "Neo4j AMI already exists: $AMI_ID"
+        echo "neo4j_ami_id = \"$AMI_ID\"" >> ${path.module}/terraform.tfvars
       fi
     EOT
   }
@@ -480,7 +466,7 @@ resource "tls_private_key" "neo4j_private_key" {
 }
 
 resource "aws_instance" "neo4j_ledger" {
-  ami           = data.aws_ami.neo4j.id
+  ami           = jsondecode(file("${path.module}/terraform.tfvars")).neo4j_ami_id
   instance_type = local.effective_environment == "production" ? "m5.large" : "t3.medium"
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
@@ -519,7 +505,7 @@ resource "aws_instance" "neo4j_ledger" {
 }
 
 resource "aws_instance" "neo4j_search" {
-  ami           = data.aws_ami.neo4j.id
+  ami           = jsondecode(file("${path.module}/terraform.tfvars")).neo4j_ami_id
   instance_type = local.effective_environment == "production" ? "m5.large" : "t3.medium"
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
@@ -724,7 +710,7 @@ output "neo4j_search_private_ip" {
 }
 
 output "neo4j_ami_id" {
-  value       = data.aws_ami.neo4j.id
+  value       = jsondecode(file("${path.module}/terraform.tfvars")).neo4j_ami_id
   description = "The ID of the Neo4j AMI used for EC2 instances"
 }
 

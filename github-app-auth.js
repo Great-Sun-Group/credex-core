@@ -63,7 +63,7 @@ async function triggerWorkflow() {
         inputs: {
           branch: "dev",
           aws_access_key_id: awsAccessKeyId,
-          aws_secret_access_key: awsSecretAccessKey
+          aws_secret_access_key: awsSecretAccessKey,
         },
       },
       {
