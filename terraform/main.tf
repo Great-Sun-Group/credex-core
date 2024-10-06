@@ -58,16 +58,17 @@ module "ecs" {
 module "neo4j" {
   source = "./modules/neo4j"
 
-  environment              = local.effective_environment
-  common_tags              = local.common_tags
-  neo4j_ami_id             = local.neo4j_ami_id
-  vpc_id                   = module.networking.vpc_id
-  vpc_cidr                 = var.vpc_cidr
-  subnet_id                = module.networking.subnet_ids[0]
-  neo4j_ledger_space_user  = var.neo4j_ledger_space_user
-  neo4j_ledger_space_pass  = var.neo4j_ledger_space_pass
-  neo4j_search_space_user  = var.neo4j_search_space_user
-  neo4j_search_space_pass  = var.neo4j_search_space_pass
+  environment                 = local.effective_environment
+  common_tags                 = local.common_tags
+  neo4j_ami_id                = local.neo4j_ami_id
+  vpc_id                      = module.networking.vpc_id
+  vpc_cidr                    = var.vpc_cidr
+  subnet_id                   = module.networking.subnet_ids[0]
+  neo4j_ledger_space_user     = var.neo4j_ledger_space_user
+  neo4j_ledger_space_pass     = var.neo4j_ledger_space_pass
+  neo4j_search_space_user     = var.neo4j_search_space_user
+  neo4j_search_space_pass     = var.neo4j_search_space_pass
+  neo4j_ledger_space_bolt_url = var.neo4j_ledger_space_bolt_url
 }
 
 module "security" {

@@ -47,3 +47,9 @@ variable "neo4j_search_space_pass" {
   description = "The password for Neo4j SearchSpace"
   type        = string
 }
+
+variable "neo4j_ledger_space_bolt_url" {
+  description = "The Bolt URL for Neo4j LedgerSpace, stored in AWS Parameter Store"
+  type        = string
+  default     = ""
+}

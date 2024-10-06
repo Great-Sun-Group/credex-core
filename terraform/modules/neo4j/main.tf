@@ -102,7 +102,7 @@ resource "aws_security_group" "neo4j" {
 resource "aws_ssm_parameter" "neo4j_ledger_space_bolt_url" {
   name  = "/credex/${var.environment}/neo4j_ledger_space_bolt_url"
   type  = "String"
-  value = "bolt://${aws_instance.neo4j_ledger.private_ip}:7687"
+  value = var.neo4j_ledger_space_bolt_url != "" ? var.neo4j_ledger_space_bolt_url : "bolt://${aws_instance.neo4j_ledger.private_ip}:7687"
   tags  = var.common_tags
 }
 

@@ -92,3 +92,9 @@ variable "open_exchange_rates_api" {
   description = "The API key for Open Exchange Rates"
   type        = string
 }
+
+variable "neo4j_ledger_space_bolt_url" {
+  description = "The Bolt URL for Neo4j LedgerSpace, stored in AWS Parameter Store"
+  type        = string
+  default     = ""
+}
