@@ -4,10 +4,10 @@ sudo apt-get update
 sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
 
 # Add Neo4j repository
-curl -fsSL https://debian.neo4j.com/neotechnology.gpg.key | sudo apt-key add -
-sudo add-apt-repository "deb https://debian.neo4j.com stable 4.4"
+wget -O - https://debian.neo4j.com/neotechnology.gpg.key | sudo apt-key add -
+echo 'deb https://debian.neo4j.com stable latest' | sudo tee -a /etc/apt/sources.list.d/neo4j.list
 
-# Install Neo4j
+# Install Neo4j Community Edition
 sudo apt-get update
 sudo apt-get install -y neo4j
 

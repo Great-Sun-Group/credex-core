@@ -2,13 +2,13 @@ provider "aws" {
   region = var.aws_region
 }
 
-data "aws_ami" "neo4j" {
+data "aws_ami" "ubuntu" {
   most_recent = true
-  owners      = ["aws-marketplace"]
+  owners      = ["099720109477"] # Canonical
 
   filter {
     name   = "name"
-    values = ["neo4j-enterprise-*"]
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
   }
 
   filter {
@@ -18,7 +18,7 @@ data "aws_ami" "neo4j" {
 }
 
 locals {
-  neo4j_ami_id = var.update_neo4j_ami ? data.aws_ami.neo4j.id : var.current_neo4j_ami_id
+  neo4j_ami_id = var.update_neo4j_ami ? data.aws_ami.ubuntu.id : var.current_neo4j_ami_id
 }
 
 module "networking" {
