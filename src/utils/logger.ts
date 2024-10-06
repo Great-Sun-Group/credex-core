@@ -1,12 +1,18 @@
 import winston from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
-import { config } from "../../config/config";
 import { v4 as uuidv4 } from "uuid";
 import { Request, Response, NextFunction } from 'express';
+import { getConfig } from "../../config/config";
 
-// Configure the base logger
+// Default configuration
+const defaultConfig = {
+  logLevel: 'info',
+  environment: 'development'
+};
+
+// Configure the base logger with default settings
 const baseLogger = winston.createLogger({
-  level: config.nodeEnv === "production" ? "info" : "debug",
+  level: defaultConfig.logLevel,
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.errors({ stack: true }),
@@ -24,27 +30,33 @@ const baseLogger = winston.createLogger({
   ],
 });
 
-// Add file transports for production environment
-if (config.nodeEnv === "production") {
-  baseLogger.add(
-    new DailyRotateFile({
-      filename: "logs/error-%DATE%.log",
-      datePattern: "YYYY-MM-DD",
-      zippedArchive: true,
-      maxSize: "20m",
-      maxFiles: "14d",
-      level: "error",
-    })
-  );
-  baseLogger.add(
-    new DailyRotateFile({
-      filename: "logs/combined-%DATE%.log",
-      datePattern: "YYYY-MM-DD",
-      zippedArchive: true,
-      maxSize: "20m",
-      maxFiles: "14d",
-    })
-  );
+// Function to update logger configuration
+export async function updateLoggerConfig() {
+  const config = await getConfig();
+  baseLogger.level = config.logLevel;
+
+  // Add file transports for production environment
+  if (config.environment === "production") {
+    baseLogger.add(
+      new DailyRotateFile({
+        filename: "logs/error-%DATE%.log",
+        datePattern: "YYYY-MM-DD",
+        zippedArchive: true,
+        maxSize: "20m",
+        maxFiles: "14d",
+        level: "error",
+      })
+    );
+    baseLogger.add(
+      new DailyRotateFile({
+        filename: "logs/combined-%DATE%.log",
+        datePattern: "YYYY-MM-DD",
+        zippedArchive: true,
+        maxSize: "20m",
+        maxFiles: "14d",
+      })
+    );
+  }
 }
 
 function sanitizeData(data: any): any {

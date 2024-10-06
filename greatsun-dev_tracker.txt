@@ -1,5 +1,5 @@
-avatar-khaki-oriole
+avatar-satisfied-ladybug
 
-settings.py combined in vimbiso-pay
+deployments
 
-Commit-ID: d2aa1b31-4641-47b0-adbb-61b884a3083d
+Commit-ID: ff770bd1-9d79-46e9-84b2-7640ef8407b5

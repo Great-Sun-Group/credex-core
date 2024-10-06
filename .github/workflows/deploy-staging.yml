@@ -1,0 +1,125 @@
+name: Deploy to AWS Staging
+
+on:
+  push:
+    branches:
+      - stage
+
+env:
+  AWS_REGION: af-south-1
+  ECR_REPOSITORY: credex-core-staging
+  ECS_CLUSTER: credex-cluster-staging
+  ECS_SERVICE: credex-core-service-staging
+  CONTAINER_NAME: credex-core
+
+jobs:
+  deploy:
+    name: Deploy to AWS Staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./terraform
+
+      - name: Terraform Plan
+        run: |
+          terraform plan \
+            -var="environment=staging" \
+            -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
+            -var="whatsapp_bot_api_key=${{ secrets.WHATSAPP_BOT_API_KEY }}" \
+            -var="open_exchange_rates_api=${{ secrets.OPEN_EXCHANGE_RATES_API }}" \
+            -var="neo4j_ledger_space_bolt_url=${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}" \
+            -var="neo4j_ledger_space_user=${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" \
+            -var="neo4j_ledger_space_pass=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" \
+            -var="neo4j_search_space_bolt_url=${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}" \
+            -var="neo4j_search_space_user=${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" \
+            -var="neo4j_search_space_pass=${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" \
+            -out=tfplan
+        working-directory: ./terraform
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+        working-directory: ./terraform
+
+      - name: Update ECS task definition
+        id: task-def
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          sed -i.bak \
+            -e 's|${CONTAINER_IMAGE}|'${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}'|' \
+            -e 's|${NODE_ENV}|staging|' \
+            -e 's|${LOG_LEVEL}|debug|' \
+            -e 's|${AWS_REGION}|${{ env.AWS_REGION }}|' \
+            terraform/task-definition.json
+          echo "task-definition=terraform/task-definition.json" >> $GITHUB_OUTPUT
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Verify Deployment
+        run: |
+          API_URL=$(terraform output -raw api_url)
+          CLUSTER_NAME=$(terraform output -raw ecs_cluster_name)
+          SERVICE_NAME=$(terraform output -raw ecs_service_name)
+          
+          echo "Waiting for ECS service to be stable..."
+          timeout 300 aws ecs wait services-stable --cluster $CLUSTER_NAME --services $SERVICE_NAME
+          if [ $? -ne 0 ]; then
+            echo "Error: ECS service did not stabilize within the timeout period."
+            exit 1
+          fi
+          
+          echo "Performing health check..."
+          HEALTH_CHECK_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $API_URL/health)
+          if [ $HEALTH_CHECK_RESPONSE -eq 200 ]; then
+            echo "Health check passed: $HEALTH_CHECK_RESPONSE"
+          else
+            echo "Error: Health check failed with status code: $HEALTH_CHECK_RESPONSE"
+            exit 1
+          fi
+        working-directory: ./terraform
+
+      - name: Log deployment
+        run: |
+          echo "Deployment to staging triggered by ${{ github.actor }} at $(date)" >> deployment_log.txt
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add deployment_log.txt
+          git commit -m "Log deployment to staging"
+          git push
+        working-directory: ./terraform

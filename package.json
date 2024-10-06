@@ -5,12 +5,17 @@
   "main": "build/src/index.js",
   "scripts": {
     "start": "node build/src/index.js",
-    "dev": "nodemon",
     "build": "tsc",
     "watch:build": "tsc --watch",
     "test": "jest",
+    "test:integration": "jest src/tests/integration",
+    "test:performance": "node src/tests/performance/benchmark.js",
+    "deploy-and-verify": "cd terraform && ./deploy_and_verify.sh",
     "lint": "eslint . --ext .ts",
-    "format": "prettier --write \"src/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\"",
+    "docker:dev": "docker-compose up --build",
+    "docker:dev:prod": "NODE_ENV=production docker-compose up --build",
+    "docker:test": "docker-compose run --rm server npm test"
   },
   "keywords": [
     "credex",
@@ -20,6 +25,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.658.1",
     "axios": "^1.6.8",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.2",
@@ -58,9 +64,9 @@
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^7.3.1",
     "@typescript-eslint/parser": "^7.3.1",
+    "autocannon": "^7.15.0",
     "eslint": "^8.57.0",
     "jest": "^29.7.0",
-    "nodemon": "^3.1.4",
     "prettier": "^3.2.5",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",

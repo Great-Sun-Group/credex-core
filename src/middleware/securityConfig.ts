@@ -31,20 +31,20 @@ export const applySecurityMiddleware = (app: Application) => {
   );
 
   if (process.env.NODE_ENV !== "production") {
-    // CORS highly permissive
+    // CORS highly permissive for non-prod deployments
     const corsOptions = {
       origin: "*", // Allow all origins
-      methods: ["GET", "POST", "PUT", "DELETE"],
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
       allowedHeaders: ["Content-Type", "Authorization"],
       credentials: true,
       maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
     };
     app.use(cors(corsOptions));
   } else {
-    // Restrict origin to vimbiso-pay origin for now
+    // to restrict origins in production deployment
     const corsOptions = {
-      origin: "*", // Allow all origins  *****UPDATE THIS******
-      methods: ["GET", "POST", "PUT", "DELETE"],
+      origin: "*", // change this to restrict  
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
       allowedHeaders: ["Content-Type", "Authorization"],
       credentials: true,
       maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
@@ -60,7 +60,11 @@ export const applySecurityMiddleware = (app: Application) => {
 
 export const applyAuthMiddleware = (app: Application) => {
   app.use((req, res, next) => {
-    if (req.path === "/api/v1/member/login" || req.path === "/api/v1/member/onboardMember") {
+    if (
+      req.path === "/api/v1/member/login" ||
+      req.path === "/api/v1/member/onboardMember" ||
+      req.path === "/api/v1/member/getMemberDashboard"
+    ) {
       return next();
     }
     authMiddleware()(req, res, next);

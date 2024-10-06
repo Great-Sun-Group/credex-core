@@ -9,9 +9,13 @@ The credex ecosystem is a shared ledger that enables the efficient circulation o
 **and they owe me,**\
 **we're square.**
 
-The credex ecosystem actualizes the Credex Principle in the Minute Transaction Queue (MTQ), which tracks payable and receivable invoices for members' accounts, finds loops of value creation, and cancels payable and receivable invoices against each other in "credloops" in which every debt is reduced by an equal value. This is a GAAP-compliant accounting process that any person or business can benefit from.
+The credex ecosystem actualizes the Credex Principle in the Minute Transaction Queue (MTQ), which tracks payable and receivable invoices for members' accounts, finds loops of value creation, and cancels payable and receivable invoices against each other in "credloops" in which every debt is reduced by an equal value. This is a GAAP-compliant accounting procedure that any person or business can benefit from.
 
-In accounting terms, a credex is a contingent asset for one party and a contingent liability for the other. These asset/liability pairs are automatically strung together into credloops wherever possible across the credex ecosystem. When a credloop is created and cleared, every account in the loop will have an accounts payable invoice cancelled against an equivalent accounts receivable invoice.
+In accounting terms, an outstanding credex is a contingent asset for one party and a contingent liability for the other. These asset/liability pairs are automatically strung together into credloops wherever possible across the credex ecosystem. When a credloop is found and cleared, every account in the loop will have an accounts payable invoice cancelled against an equivalent accounts receivable invoice.
+
+This behaviour enables members to replace the use of third party money or debt instruments issued by an outside sovereign with accounting entries backed purely by the sovereign value-producing capacities of the transacting members.
+
+The credex ecosystem provides the non-sovereign and non-monetary services of verifying the identify of the sovereign counterparties and their corporations, and managing the technical verification and standardization of the credex transaction contract between them.
 
 ## Credcoin Principle
 
@@ -22,64 +26,60 @@ The ecosystem actualizes the Credcoin Principle in the Daily Credcoin Offering (
 
 The organic economy is a subset of the credex ecosystem, which is a subset of the global economy, which is the human-enhanced subset of the world that is given to us by nature. The organic economy is an economy in which wealth circulates, profit accumulates, investment is made, and gifts are given in alignment and long-term harmony with the biological environment of our habitat and the physical laws that bind us.
 
-The value of the natural wealth processed by the DCO is split into two portions: gift portion and market portion. Currently, in the MVP version we've developed in this repository, only the gift portion of the DCO is implemented. The market portion will be added later.
-
 The credex ecosystem stores values in credcoin (CXX). In order to natively enable multi-denominational accounting, a CXXmultiplier value is stored alongside every CXX value. Both of these values are updated in every DCO so that the credex remains true to the face value in the denomination specified, and to other values stored in the ecosystem. A value expressed in CXX represents that value in relationship to every other value stored in the ecosystem. A value in CXX divided by its CXX multiplier expresses the value in the chosen denomination (face value).
 
 The system manages the balance between local truth (preserving the face value of contracts in their specified denomination) and global truth (adjusting all values relative to credcoin) through the daily rate and value adjustments in the DCO.
 
-## Neo4j databases
+## License
 
-Credex-core runs on two neo4j databases. LedgerSpace is the shared ledger containing the full state of the credex ecosystem. SearchSpace contains only unredeemed credexes, and is optimized to find credloops. On every credloop found and cleared, ledgerSpace is updated accordingly.
+You are welcome to explore, experiment with, and build upon this work for research, development, modeling, testing, demonstrations, and other non-commercial purposes. You are also invited to contribute. If you create something new based on this project, you must use the same license terms and give appropriate credit to the original work.
 
-## Express.js server
+You do not have permission to use this software to track real outstanding debts. You may not deploy this software to be used by real users transacting at arms length from each other. Data of real past transactions may be used, but only as modeling, testing, or research input. If you want to transact real value with credex, you are invited to use the live shared ledger of the credex ecosystem at [mycredex.app](https://mycredex.app), and to develop apps that connect your users to their credex accounts.
+
+This approach allows for community engagement and experimentation while ensuring the integrity and unity of the system as a single shared economic network that all can access and benefit from.
+
+## Neo4j Databases
+
+Credex-core runs on two neo4j databases. LedgerSpace is the shared ledger containing the full state of the credex ecosystem. SearchSpace contains only unredeemed credexes, and is optimized to find credloops. On every credloop found and cleared, LedgerSpace is updated accordingly.
+
+## Express.js Server
 
 The express.js server is initialized in `src/index.ts`, which provides the cronjobs and endpoints that power the ecosystem and enable members and client apps to interact with its ledger.
 
-## Cronjobs
+### Cronjobs
 
-The Core module hosts the cronjobs:
+The src/core-cron/ module hosts the cronjobs:
 
-- DailyCredcoinOffering() runs every day at midnight UTC.
-- MinuteTransactionQueue() runs every minute, clearing credloops of value creation across the ecosystem.
+- DailyCredcoinOffering runs every day at midnight UTC, calculating the value of 1 CXX and updating all ecosystem values accordingly.
+- MinuteTransactionQueue runs every minute, clearing credloops of value creation across the ecosystem.
 
-## Endpoints
+### Endpoints
 
-Controllers for the endpoints are imported, and endpoints created for the various modules: Member, Account, Avatar, Credex, and AdminDashboard.
+Endpoints and routes are deployed for the modules: Member, Account, Credex, Avatar, and AdminDashboard. Endpoints for the Dev module are included in development and staging deployments, but not in production.
 
-## Development Setup
-
-Development for the credex-core repository and API is intended to be carried out in the [greatsun-dev](https://github.com/Great-Sun-Group/greatsun-dev) environment.
+## Developer Guides
+- [Configure and Run Development Servers](/docs/develop/dev_env_setup.md)
+- [Security and Authentication](docs/auth/Security_and_Authentication.md)
+- [Logging Best Practices](docs/develop/logging_best_practices.md)
+- [Swagger API Documentation](docs/develop/swagger.md)
+- [Validation Specs](docs/auth/api_validation.md)
 
 ## Module Documentation
 
-- [Daily Credcoin Offering (DCO)](<docs/Daily_Credcoin_Offering_(DCO).md>)
-- [Minute Transaction Queue (MTQ)](<docs/MinuteTransactionQueue_(MTQ).md>)
-- [Member](docs/Member.md)
-- [Account](docs/Account.md)
-- [Credex](docs/Credex.md)
-- [Avatar](docs/Avatar.md)
-- [AdminDashboard](docs/AdminDashboard.md)
+- [Daily Credcoin Offering (DCO)](<docs/module/Daily_Credcoin_Offering_(DCO).md>)
+- [Minute Transaction Queue (MTQ)](<docs/module/MinuteTransactionQueue_(MTQ).md>)
+- [Member](docs/module/Member.md)
+- [Account](docs/module/Account.md)
+- [Credex](docs/module/Credex.md)
+- [Avatar](docs/module/Avatar.md)
+- [AdminDashboard](docs/module/AdminDashboard.md)
+- [Dev](docs/module/Dev.md) (doc doesn't yet exist)
 
 ## Schemas
 
-- [ledgerSpace Schema](docs/ledgerSpace_schema.md)
-- [searchSpace Schema](docs/searchSpace_schema.md)
+- [ledgerSpace Schema](docs/databases/ledgerSpace_schema.md)
+- [searchSpace Schema](docs/databases/searchSpace_schema.md)
 
-## Developer Guides
+## Deployment
 
-- [Logging Best Practices](docs/logging_best_practices.md)
-- [Security and Authentication](docs/Security_and_Authentication.md)
-- [Security Overview](docs/security.md)
-- [Swagger API Documentation](docs/swagger.md)
-
-
-## License
-
-You are welcome to explore, experiment with, and build upon this work for research, development, modeling, testing, demonstrations, and other non-commercial purposes. Please contribute!
-
-The use of this software in any production environment is strictly prohibited. You do not have permission to use this software to track real debts. Real data of past transactions may be used, but only as data input. If you want to transact real value with credex, you are invited to become a member of the credex ecosystem.
-
-If you create something new based on this project, you must use the same license terms and give appropriate credit to the original work. You may not sell the software or any product or service that substantially relies on its functionality, except functionality deployed in the live credex ecosystem that all members can access.
-
-This approach allows for community engagement and experimentation while ensuring the integrity and unity of the system as a single shared economic network that all can access and benefit from.
+- [ledgerSpace Schema](docs/deploy/IaC_deployment.md)
