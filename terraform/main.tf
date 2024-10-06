@@ -2,6 +2,25 @@ provider "aws" {
   region = var.aws_region
 }
 
+data "aws_ami" "neo4j" {
+  most_recent = true
+  owners      = ["aws-marketplace"]
+
+  filter {
+    name   = "name"
+    values = ["neo4j-enterprise-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+locals {
+  neo4j_ami_id = var.update_neo4j_ami ? data.aws_ami.neo4j.id : var.current_neo4j_ami_id
+}
+
 module "networking" {
   source = "./modules/networking"
 
@@ -41,7 +60,7 @@ module "neo4j" {
 
   environment              = local.effective_environment
   common_tags              = local.common_tags
-  neo4j_ami_id             = var.neo4j_ami_id
+  neo4j_ami_id             = local.neo4j_ami_id
   vpc_id                   = module.networking.vpc_id
   vpc_cidr                 = var.vpc_cidr
   subnet_id                = module.networking.subnet_ids[0]

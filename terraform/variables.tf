@@ -40,9 +40,16 @@ variable "service_desired_count" {
   default     = 1
 }
 
-variable "neo4j_ami_id" {
-  description = "The ID of the Neo4j AMI to use for EC2 instances"
+variable "update_neo4j_ami" {
+  description = "Whether to update the Neo4j AMI to the latest version"
+  type        = bool
+  default     = false
+}
+
+variable "current_neo4j_ami_id" {
+  description = "The current Neo4j AMI ID in use"
   type        = string
+  default     = ""
 }
 
 variable "neo4j_ledger_space_user" {

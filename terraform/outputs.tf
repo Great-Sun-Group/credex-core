@@ -34,7 +34,7 @@ output "neo4j_search_private_ip" {
 }
 
 output "neo4j_ami_id" {
-  value       = var.neo4j_ami_id
+  value       = local.neo4j_ami_id
   description = "The ID of the Neo4j AMI used for EC2 instances"
 }
 
