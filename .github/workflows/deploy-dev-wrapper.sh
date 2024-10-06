@@ -1,7 +1,11 @@
 #!/bin/bash
 
+set -e
+
 # Get the current branch name
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+echo "Current branch: $CURRENT_BRANCH"
 
 # Check if GitHub CLI is installed
 if ! command -v gh &> /dev/null; then
@@ -21,20 +25,34 @@ fi
 REPO_URL=$(git config --get remote.origin.url)
 REPO_NAME=$(basename -s .git $REPO_URL)
 
+echo "Repository: $REPO_NAME"
+
+echo "Pushing local changes to remote..."
+git push origin $CURRENT_BRANCH
+
 echo "Triggering deployment for branch: $CURRENT_BRANCH"
 
-# Trigger the workflow using the file name
-WORKFLOW_ID=$(gh workflow run deploy-development.yml --ref $CURRENT_BRANCH -f branch=$CURRENT_BRANCH)
+# Trigger the workflow using the file name and current branch
+WORKFLOW_RUN=$(gh workflow run deploy-development.yml --ref $CURRENT_BRANCH -f branch=$CURRENT_BRANCH)
 
 if [ $? -ne 0 ]; then
     echo "Error: Failed to trigger the workflow."
     exit 1
 fi
 
-echo "Workflow triggered successfully. Streaming logs..."
+echo "Workflow triggered successfully."
+echo "$WORKFLOW_RUN"
 
 # Extract run ID from the workflow run
-RUN_ID=$(echo $WORKFLOW_ID | grep -oP '(?<=ID )[0-9]+')
+RUN_ID=$(echo "$WORKFLOW_RUN" | grep -oP '(?<=ID )[0-9]+')
+
+if [ -z "$RUN_ID" ]; then
+    echo "Error: Could not extract run ID. Full output:"
+    echo "$WORKFLOW_RUN"
+    exit 1
+fi
+
+echo "Streaming logs for run ID: $RUN_ID"
 
 # Stream the workflow logs
 gh run watch $RUN_ID --exit-status
