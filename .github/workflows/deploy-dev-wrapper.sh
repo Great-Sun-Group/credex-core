@@ -46,9 +46,9 @@ fi
 
 echo "Workflow triggered successfully."
 
-# Function to fetch the most recent workflow run
-fetch_run() {
-    gh run list --workflow=deploy-development.yml --limit 1 --json databaseId,headBranch,status
+# Function to fetch the most recent workflow runs
+fetch_runs() {
+    gh run list --workflow=deploy-development.yml --limit 5 --json databaseId,headBranch,status,createdAt
 }
 
 # Wait for the workflow to start and fetch the run ID
@@ -59,8 +59,8 @@ RUN_ID=""
 
 while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
     echo "Attempt $ATTEMPT of $MAX_ATTEMPTS"
-    sleep 10
-    RUNS=$(fetch_run)
+    sleep 15
+    RUNS=$(fetch_runs)
     RUN_ID=$(echo $RUNS | jq -r '.[0].databaseId')
     RUN_STATUS=$(echo $RUNS | jq -r '.[0].status')
     
@@ -74,6 +74,9 @@ done
 
 if [ -z "$RUN_ID" ]; then
     echo "Error: Could not find a recent run for the workflow after $MAX_ATTEMPTS attempts."
+    echo "Recent workflow runs:"
+    echo "$RUNS" | jq -r '.[] | "ID: \(.databaseId), Status: \(.status), Created At: \(.createdAt)"'
+    echo ""
     echo "To monitor the deployment progress manually:"
     echo "1. Go to the GitHub repository: https://github.com/$REPO_OWNER/$REPO_NAME"
     echo "2. Click on the 'Actions' tab"
