@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to deploy'
+        description: "Branch to deploy"
         required: true
-        default: 'dev'
+        default: "dev"
 
 env:
   AWS_REGION: af-south-1
@@ -101,14 +101,14 @@ jobs:
           API_URL=$(terraform output -raw api_url)
           CLUSTER_NAME=$(terraform output -raw ecs_cluster_name)
           SERVICE_NAME=$(terraform output -raw ecs_service_name)
-          
+
           echo "Waiting for ECS service to be stable..."
           timeout 300 aws ecs wait services-stable --cluster $CLUSTER_NAME --services $SERVICE_NAME
           if [ $? -ne 0 ]; then
             echo "Error: ECS service did not stabilize within the timeout period."
             exit 1
           fi
-          
+
           echo "Performing health check..."
           HEALTH_CHECK_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $API_URL/health)
           if [ $HEALTH_CHECK_RESPONSE -eq 200 ]; then
