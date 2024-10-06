@@ -2,6 +2,10 @@
 
 This document provides a comprehensive overview of the security measures and authentication process implemented in our application, with a focus on JWT (JSON Web Token) authentication, CORS configuration, and rate limiting.
 
+## WHATSAPP_BOT_API_KEY
+
+The credex-core API is currently limited to clients who possess the correct WHATSAPP_BOT_API_KEY key, so that only the vimbiso-pay chatbot can hit the endpoints. This layer of security is now redundant and will be lifted soon. Currently while doing development, if deploying the server and the client, use the same random string for the secret required in each. If hitting the deployed staging server, you will need its current WHATSAPP_BOT_API_KEY.
+
 ## JWT Authentication
 
 Our application uses JSON Web Tokens (JWT) for authentication. This setup provides protection against unauthorized access and ensures that only the appropriate member is authorized on the endpoints.
@@ -25,7 +29,7 @@ Our application uses JSON Web Tokens (JWT) for authentication. This setup provid
 4. **Role-based Access Control**
    - The authMiddleware supports role-based access control for fine-grained permissions.
 
-## Authentication Process
+### Authentication Process
 
 1. When a new member is onboarded or an existing member logs in, a JWT token is generated and returned.
 
@@ -39,12 +43,18 @@ Our application uses JSON Web Tokens (JWT) for authentication. This setup provid
 
 4. After each request, check the Authorization header in the response for a new token. Always use the most recent token for subsequent requests.
 
+### Keyholes
+The /api/v1/member/login and /api/v1/member/onboardMember routes are keyholes in the JWT authorization layer so that members can onboard and login when they do not have valid JWT tokens.
+
+If any request in your client application returns a `400 Bad Request` or `401 Unauthorized` code, hit the login endpoint with the phone number. If the login endpoint returns `400 Bad Request` instead of `200 OK` and a valid token, request user name to onboard a new member with the onboardMember endpoint.
+
+
 ## CORS Configuration
 
-Cross-Origin Resource Sharing (CORS) is configured to be permissive, allowing requests from all origins. This setup facilitates integration with various front-end applications and third-party services.
+Cross-Origin Resource Sharing (CORS) is currently configured to be permissive, allowing requests from all origins. This setup facilitates integration with various front-end applications and third-party services.
 
 - All origins are allowed (`origin: '*'`)
-- Supported methods: GET, POST, PUT, DELETE
+- Supported methods: GET, POST, PUT, PATCH, DELETE
 - Allowed headers: Content-Type, Authorization
 - Credentials are allowed
 - Preflight requests are cached for 1 day (86400 seconds)
@@ -60,73 +70,126 @@ To protect the API from abuse and ensure fair usage, rate limiting has been impl
 - If the member ID is not available, it falls back to using the IP address or remote address
 - When the rate limit is exceeded, a 429 (Too Many Requests) status code is returned
 
-## Implementation Details
+## Implementation Locations:
 
-Key parts of the code that implement these protections:
-
-1. In `config/authenticate.ts`:
-   ```typescript
-   const authenticate = async (req: UserRequest, res: Response, next: NextFunction) => {
-     // ... (token verification)
-     const result = await session.run(
-       'MATCH (m:Member {id: $memberId}) RETURN m',
-       { memberId: decoded.memberId }
-     );
-     // ... (check if member exists and attach to request)
-   };
-   ```
-
-2. In `src/middleware/authMiddleware.ts`:
-   ```typescript
-   export const authMiddleware = (requiredRoles: string[] = []) => {
-     return async (req: UserRequest, res: Response, next: NextFunction) => {
-       // ... (authentication and role checking)
-     };
-   };
-   ```
-
-3. In `src/middleware/rateLimiter.ts`:
-   ```typescript
-   const memberLimiter = rateLimit({
-     windowMs: 60 * 1000, // 1 minute
-     max: 10, // limit to 10 requests per minute per member
-     keyGenerator: (req: Request): string => {
-       // Use the authenticated member's ID as the rate limit key, or fall back to IP address
-       return req.user?.id || req.ip || req.socket.remoteAddress || 'unknown';
-     },
-     // ... (handler configuration)
-   });
-   ```
-
-4. In `src/middleware/securityConfig.ts`:
-   ```typescript
-   export const applySecurityMiddleware = (app: Application) => {
-     // ... (Helmet configuration)
-     app.use(cors(corsOptions));
-     app.use(authMiddleware);
-     app.use(rateLimiter);
-     // ...
-   };
-   ```
+1. [config/authenticate.ts](config/authenticate.ts)
+2. [src/middleware/authMiddleware.ts](consrc/middleware/authMiddleware.ts)
+3. [src/middleware/rateLimiter.ts](src/middleware/rateLimiter.ts)
+4. [src/middleware/securityConfig.ts](src/middleware/securityConfig.ts)
 
 These mechanisms work together to ensure that each request is properly authenticated, authorized for the specific member making the request, and within the allowed rate limits.
-
-## Security Recommendations
-
-To further enhance security, consider implementing:
-
-1. HTTPS to encrypt all communications, preventing token interception.
-2. Token revocation or a blacklist for logged-out users.
-3. Refresh tokens for longer sessions.
-4. Fine-tuning CORS settings if a more restrictive policy is needed.
-5. Adjusting rate limits based on observed usage patterns and server capacity.
 
 ## Important Notes
 
 - It's crucial to ensure that the JWT_SECRET is kept secure and properly set in the environment variables.
-- Make sure to set the `JWT_SECRET` environment variable in your `.env` file. This secret is used to sign and verify the JWT tokens. You can create your own random string for this.
+- Make sure to set the `JWT_SECRET` environment variable in your `.env` file. This secret is used to sign and verify the JWT tokens. You can create your own random string for this in dev environments.
 - Regularly review logs for rate-limited requests to identify potential abuse or the need for limit adjustments.
 
-## Conclusion
+# Keyholes
+The /api/v1/member/login and /api/v1/member/onboardMember routes are keyholes in the JWT authorization layer so that members can onboard and login when they do not have valid JWT tokens.
 
-The current implementation provides robust protection against unauthorized access, member impersonation, and API abuse. The combination of JWT authentication, permissive CORS settings, and rate limiting offers a balance between accessibility and security. However, security is an ongoing process, and it's important to regularly review and update security measures as needed, especially in response to changing requirements or observed usage patterns.
+## Endpoint: `/api/v1/member/login`
+
+This endpoint is used for both new and existing members to log in or attempt to access the system.
+
+### Request
+
+- **Method:** POST
+- **Headers:** No special authentication headers required
+- **Body:**
+  ```json
+  {
+    "phone": "string"
+  }
+  ```
+  The `phone` should be a valid international phone number.
+
+### Responses
+
+#### Successful Login (Existing Member)
+
+- **Status Code:** 200 OK
+- **Body:**
+  ```json
+  {
+    "token": "string"
+  }
+  ```
+  The `token` is a JWT that can be used for subsequent authenticated requests.
+
+#### Failed Login (No Matching Member or Invalid Phone)
+
+- **Status Code:** 400 Bad Request
+- **Body:**
+  ```json
+  {
+    "message": "string"
+  }
+  ```
+  The `message` will provide details about the failure, such as "Failed to login member" or a more specific error message.
+
+### Notes
+
+- The same 400 status code is used for both invalid phone numbers and failed logins (including non-existent members).
+- To distinguish between these cases, check the specific error message in the response body.
+- For security reasons, the API does not explicitly state whether a member exists or not.
+
+## Endpoint: `/api/v1/member/onboardMember`
+
+This endpoint is used to onboard new members into the system. It creates a new member account and returns a JWT token for authentication.
+
+### Request
+
+- **Method:** POST
+- **Headers:** No special authentication headers required
+- **Body:**
+  ```json
+  {
+    "firstname": "string",
+    "lastname": "string",
+    "phone": "string"
+  }
+  ```
+  - `firstname`: The first name of the new member
+  - `lastname`: The last name of the new member
+  - `phone`: A valid international phone number
+
+### Responses
+
+#### Successful Onboarding
+
+- **Status Code:** 201 Created
+- **Body:**
+  ```json
+  {
+    "token": "string",
+    "member": {
+      "id": "string",
+      "firstname": "string",
+      "lastname": "string",
+      "phone": "string"
+    }
+  }
+  ```
+  - `token`: A JWT that can be used for subsequent authenticated requests
+  - `member`: An object containing the newly created member's details
+
+#### Failed Onboarding
+
+- **Status Code:** 400 Bad Request
+- **Body:**
+  ```json
+  {
+    "message": "string"
+  }
+  ```
+  The `message` will provide details about the failure, such as "Failed to onboard member" or a more specific error message.
+
+### Notes
+
+- This endpoint should only be used for new members. If an account with the provided phone number already exists, the onboarding will fail.
+- The system performs validation on the input data:
+  - The phone number must be in a valid international format
+  - The firstname and lastname must not be empty
+- After successful onboarding, the returned JWT token can be used immediately for authenticated requests.
+- For security and privacy reasons, detailed error messages about existing accounts are not provided to prevent enumeration attacks.
