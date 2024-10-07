@@ -139,7 +139,7 @@ jobs:
           API_URL: ${{ steps.apply.outputs.api_url }}
         run: |
           npm install axios jest
-          node terraform/post_deployment_tests.js
+          node .github/workflows/post_deployment_tests.js
 
       - name: Log deployment
         if: success()
