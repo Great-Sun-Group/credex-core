@@ -1,4 +1,3 @@
-const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 
@@ -40,7 +39,7 @@ async function getInstallationToken() {
   }
 }
 
-async function triggerDevelopmentWorkflow(awsAccessKeyId, awsSecretAccessKey) {
+async function triggerDevelopmentWorkflow() {
   const token = await getInstallationToken();
 
   try {
@@ -50,9 +49,7 @@ async function triggerDevelopmentWorkflow(awsAccessKeyId, awsSecretAccessKey) {
       {
         ref: 'dev',
         inputs: {
-          branch: 'dev',
-          aws_access_key_id: awsAccessKeyId,
-          aws_secret_access_key: awsSecretAccessKey,
+          environment: 'development'
         },
       },
       {
@@ -80,15 +77,7 @@ async function triggerDevelopmentWorkflow(awsAccessKeyId, awsSecretAccessKey) {
 
 async function main() {
   try {
-    // Read AWS credentials from environment variables
-    const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
-    const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-
-    if (!awsAccessKeyId || !awsSecretAccessKey) {
-      throw new Error('AWS credentials are not set in the environment');
-    }
-
-    await triggerDevelopmentWorkflow(awsAccessKeyId, awsSecretAccessKey);
+    await triggerDevelopmentWorkflow();
     console.log('Deployment workflow triggered. Check GitHub Actions for progress.');
   } catch (error) {
     console.error('Deployment failed:', error.message);
