@@ -2,6 +2,12 @@
 
 This document outlines the deployment process for the credex-core application in development, staging, and production environments.
 
+Application updates can be done by developers and tested locally without the AWS permissions or keys. These shanges can be merged to `dev` and pushed to stage for testing, then merged to prod.
+
+However, any work that changes files in /.github/workflows and /terraform impacts the application deployment process, and must first be tested on the `dev` branch by a developer with the AWS and Github App access keys.
+
+This document outlines the test deployment process from the `dev` branch, and outlines the deployments that will happen automatically once changes are pushed to `stage` and `prod` branches.
+
 ## 1. Introduction
 
 The credex-core application is deployed using AWS services (including ECS, ECR), Terraform for infrastructure management, and GitHub Actions for CI/CD. This guide provides comprehensive instructions for setting up, deploying, and maintaining the application across all environments.
@@ -13,6 +19,7 @@ The credex-core application is deployed using AWS services (including ECS, ECR),
 - AWS CLI
 - GitHub CLI (gh)
 - jq (command-line JSON processor)
+- Node.js and npm
 
 ## 3. Environment Setup
 
@@ -20,7 +27,7 @@ The credex-core application is deployed using AWS services (including ECS, ECR),
 
 All environments are managed through AWS ECS and deployed via GitHub Actions. The initial setup process is as follows:
 
-1. Set up GitHub Secrets for deployment (detailed in section 4.2).
+1. Set up GitHub Apps and Environments for deployment (detailed in section 4.2).
 2. Set up Terraform (detailed in section 6.1).
 3. Configure AWS credentials in your local environment (detailed in section 4.2.2).
 
@@ -28,7 +35,7 @@ All environments are managed through AWS ECS and deployed via GitHub Actions. Th
 
 ### 4.1 Environment Variables
 
-The application uses environment variables for configuration. These are defined in [config/config.ts](config/config.ts).
+The application uses environment variables for configuration. These are defined in [config/config.ts](../../config/config.ts).
 
 The `NODE_ENV` variable is set during the deployment process:
 
@@ -36,53 +43,64 @@ The `NODE_ENV` variable is set during the deployment process:
 - For staging deployments, it's set to 'staging'
 - For production deployments, it's set to 'production'
 
+The following environment variables are required for the application to function:
+
+- `NODE_ENV`
+- `NEO_4J_LEDGER_SPACE_USER`
+- `NEO_4J_LEDGER_SPACE_PASS`
+- `NEO_4J_SEARCH_SPACE_USER`
+- `NEO_4J_SEARCH_SPACE_PASS`
+- `OPEN_EXCHANGE_RATES_API`
+- `JWT_SECRET`
+- `WHATSAPP_BOT_API_KEY`
+
+The following environment variables are optional:
+
+- `NEO_4J_LEDGER_SPACE_BOLT_URL`
+- `NEO_4J_SEARCH_SPACE_BOLT_URL`
+
+These variables are set in GitHub Environments for staging and production deployments. For development deployments, they should be set in the local environment.
+
 ### 4.2 Secrets Management
 
-#### 4.2.1 GitHub Secrets
+#### 4.2.1 GitHub Apps and Environments
 
-For secure management of deployment-related sensitive data, set up the following GitHub Secrets:
+For secure management of deployment-related sensitive data, set up the following:
 
-1. Go to Settings->Environments in your GitHub repository and create Environments for `development`, `staging`, and `production`. Implement protection rules as needed.
-2. Add the following secrets to each environment:
+1. Create three GitHub Apps with the necessary permissions:
+   - One for development
+   - One for staging
+   - One for production
+   Each app should have:
+   - Read access to secrets
+   - Write access to workflows
+
+2. Install the GitHub Apps on your repository.
+
+3. Go to Settings -> Environments in your GitHub repository and create Environments for `development`, `staging`, and `production`. Implement protection rules as needed.
+
+4. Store the following secrets in each GitHub Environment:
+   - `AWS_ACCESS_KEY_ID`: AWS access key for the respective environment
+   - `AWS_SECRET_ACCESS_KEY`: AWS secret key for the respective environment
+   - `GH_APP_ID`: The ID of the GitHub App for the respective environment
+   - `GH_INSTALLATION_ID`: The installation ID of the GitHub App for the respective environment
+   - `GH_APP_PRIVATE_KEY`: The private key of the GitHub App for the respective environment
    - `JWT_SECRET`: Secret key for JWT token generation and verification
    - `WHATSAPP_BOT_API_KEY`: WhatsApp Bot API key
    - `OPEN_EXCHANGE_RATES_API`: Your Open Exchange Rates API key
-   - `NEO4J_LEDGER_SPACE_BOLT_URL`: Neo4j LedgerSpace Bolt URL
-   - `NEO4J_LEDGER_SPACE_USER`: Neo4j LedgerSpace username
-   - `NEO4J_LEDGER_SPACE_PASS`: Neo4j LedgerSpace password
-   - `NEO4J_SEARCH_SPACE_BOLT_URL`: Neo4j SearchSpace Bolt URL
-   - `NEO4J_SEARCH_SPACE_USER`: Neo4j SearchSpace username
-   - `NEO4J_SEARCH_SPACE_PASS`: Neo4j SearchSpace password
+   - `NEO_4J_LEDGER_SPACE_BOLT_URL`: Neo4j LedgerSpace Bolt URL
+   - `NEO_4J_LEDGER_SPACE_USER`: Neo4j LedgerSpace username
+   - `NEO_4J_LEDGER_SPACE_PASS`: Neo4j LedgerSpace password
+   - `NEO_4J_SEARCH_SPACE_BOLT_URL`: Neo4j SearchSpace Bolt URL
+   - `NEO_4J_SEARCH_SPACE_USER`: Neo4j SearchSpace username
+   - `NEO_4J_SEARCH_SPACE_PASS`: Neo4j SearchSpace password
 
-#### 4.2.2 AWS Credentials
-
-AWS credentials are managed locally in the development environment.
-
-To set up AWS credentials:
-
-1. Install the AWS CLI on your local machine if you haven't already.
-2. Configure your AWS credentials using one of the following methods:
-
-   a. Set environment variables:
-   ```bash
-   export AWS_ACCESS_KEY_ID=your_access_key_id
-   export AWS_SECRET_ACCESS_KEY=your_secret_access_key
-   export AWS_DEFAULT_REGION=your_preferred_region
-   ```
-
-   b. Use the AWS CLI to configure credentials:
-   ```bash
-   aws configure
-   ```
-
-3. Ensure these credentials have the necessary permissions for deployment (refer to section 4.2.3 for IAM policies).
-
-#### 4.2.3 IAM Users, Groups, and Policies
+#### 4.2.2 IAM Users, Groups, and Policies
 
 To manage access to AWS resources for deployment, we use the following IAM setup:
 
 1. IAM Users:
-   - `credex-core-development-deployment`: User for development deployments
+   - `ryanlukewatson`: User for development deployments (others can be created as needed)
    - `credex-core-staging-deployment`: User for staging deployments
    - `credex-core-production-deployment`: User for production deployments
 
@@ -92,9 +110,9 @@ To manage access to AWS resources for deployment, we use the following IAM setup
 3. IAM Policy:
    - `credex-core-permissions`: Policy that defines the permissions needed for deployment
 
-The `credex-core-permissions` policy is attached to the `credex-core-deployment` group, granting necessary permissions to all deployment users.
+The `credex-core-permissions` policy is attached to the `credex-core-deployment` group, granting necessary permissions to all deployment users. While stored and implemented in AWS, and updated through the console, we keep a local copy of this policy up to date at [credex-permissions.json](docs/deploy/credex-permissions.json).
 
-#### Updating IAM Policy
+#### 4.2.3 Updating IAM Policy
 
 When Terraform scripts are modified, the IAM policy may need to be updated. Follow these steps:
 
@@ -107,12 +125,11 @@ When Terraform scripts are modified, the IAM policy may need to be updated. Foll
 
 We have implemented an automated process that handles both the deployment and verification of the application. This process includes the following steps:
 
-1. Environment selection (if necessary)
-2. AWS credentials verification
-3. Neo4j credentials verification
-4. Terraform deployment
-5. ECS service stability check
-6. API health check
+1. AWS credentials verification
+2. Neo4j credentials verification
+3. Terraform deployment
+4. ECS service stability check
+5. API health check
 
 To run the complete deployment and verification process, ensure you're in the project root directory and run:
 ```
@@ -181,31 +198,37 @@ We have implemented an automated process for managing Neo4j AMIs using Terraform
 4. If `NODE_ENV` is set to `development`, select the target environment when prompted.
 5. The script will verify AWS credentials, Neo4j credentials, handle the Terraform deployment, ECS service updates, and verification steps.
 
-#### 6.1.2 Using deploy-dev-wrapper script
+#### 6.1.2 Using github-app-auth.js script
 
-We have created a simplified deployment script `deploy-dev-wrapper.sh` located in the `.github/workflows` directory. This script streamlines the deployment process for development purposes. To use this script:
+We have created a simplified deployment script `github-app-auth.js` located in the `.github/workflows` directory. This script streamlines the deployment process for development purposes. To use this script:
 
-1. Ensure your AWS credentials are set up in your environment variables:
-   ```bash
-   export AWS_ACCESS_KEY_ID=your_access_key_id
-   export AWS_SECRET_ACCESS_KEY=your_secret_access_key
+1. Install the necessary dependencies:
    ```
-2. Run the script from anywhere in the project:
-   ```bash
-   deploy-dev-wrapper.sh
+   npm install jsonwebtoken axios
+   ```
+
+2. Set up the following environment variables locally:
+   - `GH_APP_ID`: The ID of the development GitHub App
+   - `GH_INSTALLATION_ID`: The installation ID of the development GitHub App
+   - `GH_APP_PRIVATE_KEY`: The private key of the development GitHub App
+
+3. To deploy to development, run:
+   ```
+   NODE_ENV=development node .github/workflows/github-app-auth.js
    ```
 
 The script will:
-- Determine the current git branch
-- Trigger the GitHub Actions workflow for deployment using the local version of the current branch
+- Authenticate with the development GitHub App
+- Fetch development-specific secrets from the Development environment
+- Trigger the development deployment workflow
 
-Note: This script is primarily intended for use in the development container environment. The script is automatically made executable and added to the PATH when the development container is built or started. It's a full dry run privately before going to stage.
+Note: This script is primarily intended for use in the development environment. It's a full dry run privately before going to stage.
 
 ### 6.2 Automated Deployment via GitHub Actions
 
 1. For staging: Push changes to the `stage` branch.
 2. For production: Push changes to the `prod` branch.
-3. For development: Manually trigger the workflow from the GitHub Actions tab.
+3. For development: Manually trigger the workflow using the `github-app-auth.js` script.
 
 The respective GitHub Actions workflow will automatically:
 - Build the Docker image
@@ -215,9 +238,9 @@ The respective GitHub Actions workflow will automatically:
 
 ### 6.3 Environment-specific Behavior
 
-- **Production**: When `NODE_ENV=production`, the script will deploy to the production environment without prompting.
-- **Staging**: When `NODE_ENV=staging`, the script will deploy to the staging environment without prompting.
-- **Development**: When `NODE_ENV=development`, the script will prompt you to choose between deploying to production, staging, or development.
+- **Production**: Deployments are triggered by pushes to the `prod` branch.
+- **Staging**: Deployments are triggered by pushes to the `stage` branch.
+- **Development**: Deployments are triggered manually using the `github-app-auth.js` script.
 
 ## 7. Monitoring and Logging
 
@@ -257,6 +280,8 @@ Consider setting up CloudWatch Alarms for important metrics such as:
 - Implement least privilege access for IAM roles used by ECS tasks to access AWS resources.
 - Regularly review and update IAM policies, especially those related to AMI management.
 - Be aware of potential secret synchronization issues between infrastructure and application deployments. Infrastructure updates are triggered only when changes are detected, while application deployments always use the latest secrets from GitHub Actions. This could lead to mismatches, especially during secret rotation. A comprehensive secret management and rotation strategy should be implemented to address this issue in the future.
+- Regularly rotate the GitHub Apps' private keys and update them in the respective GitHub Environments.
+- Use environment protection rules for Staging and Production environments to require approvals before deployments.
 
 ## 10. Maintenance and Updates
 
@@ -299,5 +324,65 @@ Consider the following improvements:
 - Enhance the AMI management process to include automated testing of new AMIs before use
 - Set up a process for regularly auditing and updating IAM permissions based on the principle of least privilege
 - Develop a strategy for securely sharing and updating AWS credentials among team members
+- Implement a CLI wrapper around the `github-app-auth.js` script to provide a more user-friendly interface for developers.
+- Enhance the GitHub App authentication process to support multiple environments more seamlessly.
 
 By continuously improving the deployment process and infrastructure, you can ensure the reliability, security, and efficiency of the credex-core application across all environments.
+
+## 12. Deployment Scenarios
+
+### 12.1 Initial Deployment
+
+During the initial deployment, the Neo4j instances are created, but their Bolt URLs are not yet known. Here's how this scenario is handled:
+
+1. The Terraform script creates the Neo4j instances and outputs their private IP addresses.
+2. The application's `config/config.ts` file is set up to use default Bolt URLs (`bolt://localhost:7687`) if the environment variables are not provided.
+3. The initial deployment proceeds with these default URLs.
+4. After the deployment, retrieve the actual Bolt URLs from the Terraform outputs:
+   ```
+   terraform output neo4j_ledger_bolt_url
+   terraform output neo4j_search_bolt_url
+   ```
+5. Update the GitHub Environment secrets with these Bolt URLs for future deployments:
+   - `NEO_4J_LEDGER_SPACE_BOLT_URL`
+   - `NEO_4J_SEARCH_SPACE_BOLT_URL`
+
+### 12.2 Deployment with No Changes to Neo4j Instances
+
+For deployments where there are no changes to the Neo4j instances:
+
+1. The Terraform script will detect no changes to the Neo4j-related resources.
+2. The application will use the Bolt URLs stored in the GitHub Environment secrets.
+3. The deployment proceeds normally, updating only the application code and configuration.
+
+### 12.3 Deployments with Changes to Neo4j Instances
+
+When changes are made to the Neo4j instances (e.g., version updates, configuration changes):
+
+1. Modify the Neo4j-related resources in the `terraform/main.tf` file as needed.
+2. Run `terraform plan` to review the proposed changes.
+3. Apply the changes using `terraform apply`.
+4. After the changes are applied, check if the Bolt URLs have changed:
+   ```
+   terraform output neo4j_ledger_bolt_url
+   terraform output neo4j_search_bolt_url
+   ```
+5. If the Bolt URLs have changed, update the GitHub Environment secrets accordingly.
+6. Proceed with the application deployment, which will now use the updated Neo4j instances.
+
+### 12.4 Handling Bolt URL Updates
+
+To ensure smooth transitions when Bolt URLs change:
+
+1. The application's `config/config.ts` file is designed to prioritize environment variables for Bolt URLs.
+2. If a deployment occurs before the GitHub Environment secrets are updated with new Bolt URLs, the application will fall back to the default URLs (`bolt://localhost:7687`).
+3. Once the GitHub Environment secrets are updated, subsequent deployments will use the correct, updated Bolt URLs.
+
+### 12.5 Best Practices for Neo4j Instance Changes
+
+1. Always review the Terraform plan carefully before applying changes to Neo4j instances.
+2. Consider the impact on data persistence when making changes to Neo4j instances. Ensure proper backup and migration strategies are in place.
+3. After applying changes to Neo4j instances, always verify the Bolt URLs and update the GitHub Environment secrets if necessary.
+4. Consider implementing a post-deployment verification step that checks the application's connection to the Neo4j instances.
+
+By following these guidelines, you can ensure smooth deployments across various scenarios, including initial setup, routine updates, and infrastructure changes involving Neo4j instances.

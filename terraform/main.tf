@@ -32,7 +32,7 @@ locals {
 resource "aws_ssm_parameter" "neo4j_ledger_space_bolt_url" {
   name  = "/credex/${local.effective_environment}/neo4j_ledger_space_bolt_url"
   type  = "String"
-  value = var.neo4j_ledger_space_bolt_url
+  value = var.neo4j_ledger_space_bolt_url != "" ? var.neo4j_ledger_space_bolt_url : "bolt://${aws_instance.neo4j_ledger.private_ip}:7687"
   tags  = local.common_tags
 
   lifecycle {
@@ -43,7 +43,7 @@ resource "aws_ssm_parameter" "neo4j_ledger_space_bolt_url" {
 resource "aws_ssm_parameter" "neo4j_search_space_bolt_url" {
   name  = "/credex/${local.effective_environment}/neo4j_search_space_bolt_url"
   type  = "String"
-  value = var.neo4j_search_space_bolt_url
+  value = var.neo4j_search_space_bolt_url != "" ? var.neo4j_search_space_bolt_url : "bolt://${aws_instance.neo4j_search.private_ip}:7687"
   tags  = local.common_tags
 
   lifecycle {
@@ -822,4 +822,12 @@ output "vpc_id" {
 output "environment" {
   value       = local.effective_environment
   description = "The current deployment environment"
+}
+
+output "neo4j_ledger_bolt_url" {
+  value = "bolt://${aws_instance.neo4j_ledger.private_ip}:7687"
+}
+
+output "neo4j_search_bolt_url" {
+  value = "bolt://${aws_instance.neo4j_search.private_ip}:7687"
 }
