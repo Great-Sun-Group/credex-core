@@ -56,6 +56,7 @@ const optionalEnvVars = [
   "AWS_ACCESS_KEY_ID", // need to confirm if this is needed
   "AWS_SECRET_ACCESS_KEY", // need to confirm if this is needed
   "GH_APP_ID",
+  "GH_CLIENT_ID",
   "GH_INSTALLATION_ID",
   "GH_APP_PRIVATE_KEY",
 ];
@@ -100,6 +101,7 @@ async function initConfig() {
       },
       github: {
         appId: envVars.GH_APP_ID,
+        clientId: envVars.GH_CLIENT_ID,
         installationId: envVars.GH_INSTALLATION_ID,
         privateKey: envVars.GH_APP_PRIVATE_KEY
       }
