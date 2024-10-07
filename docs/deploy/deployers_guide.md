@@ -8,12 +8,13 @@ Application updates can be done by developers and tested locally without the AWS
 
 The development terminal (codespaces or local) can only trigger the workflows in the main branch of the remote repo  which in our case is the `dev` branch, so a deployer must do their work directly on that branch, push changes, then call the development deployment script with:
 ```
-node .github/workflows/github-app-auth.js
+node terraform/github-app-auth.ts
 ```
 This script will:
 - Authenticate with the development GitHub App
 - Fetch development-specific secrets from the Development environment
 - Trigger the development deployment workflow
+- Run follow up tests
 
 Note: This script is intended for use in the development environment. It's a full dry run privately before going to stage.
 
@@ -26,17 +27,15 @@ This document outlines the test deployment process that the above command trigge
 The credex-core application is deployed using AWS services (including ECS, ECR), Terraform for infrastructure management, and GitHub Actions for CI/CD. This guide provides comprehensive instructions for setting up, deploying, and maintaining the application across all environments.
 
 ## 2. Prerequisites
-In addition to the developer's prerequisites outlined in [Developer's Guide to Deployment Process](docs/develop/dev_env_setup.md), deployer's require to be set in their env:
+In addition to the developer's prerequisites outlined in [Developer's Guide to Deployment Process](docs/develop/dev_env_setup.md), deployer's also require these to be set in their env for the Development Deployment Github App:
 
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
 - `GH_APP_ID`
 - `GH_INSTALLATION_ID`
 - `GH_APP_PRIVATE_KEY`
 
 ## 3. Environment Setup
 
-### 3.1 Development, Staging, and Production
+### Development, Staging, and Production
 
 All environments are managed through AWS ECS and deployed via GitHub Actions. The initial setup process is as follows:
 
@@ -44,19 +43,18 @@ All environments are managed through AWS ECS and deployed via GitHub Actions. Th
 2. Set up Terraform (detailed in section 6.1).
 3. Configure AWS credentials in your local environment (detailed in section 4.2.2).
 
-## 4. Configuration
-
-### 4.1 Environment Variables
+### Environment Variables
 
 The `NODE_ENV` variable is set during the deployment process:
 
-- For development deployments, it's set to 'development'
+- For development deployments, it's set to 'development' by default
 - For staging deployments, it's set to 'staging'
 - For production deployments, it's set to 'production'
 
-The following environment variables are required for the application to function:
+The following environment variables must be set in Github Environment and imported by the Github App for the deployment to succeed:
 
-- `NODE_ENV`
+- `AWS_ACCESS_KEY`
+- `AWS_SECRET_ACCESS_KEY`
 - `NEO_4J_LEDGER_SPACE_USER`
 - `NEO_4J_LEDGER_SPACE_PASS`
 - `NEO_4J_SEARCH_SPACE_USER`
@@ -72,31 +70,7 @@ The following environment variables are optional, because on first deployment th
 
 These variables are set in GitHub Environments for staging and production deployments. For development deployments, they should be set in the local environment.
 
-### 4.2 Secrets Management
-
-#### 4.2.1 GitHub Apps and Environments
-
-For secure management of deployment-related sensitive data, we have set up GitHub Apps with the necessary permissions for development, staging, and production with read access to secrets and write access to workflows, and installed these apps in our repository.
-
-We have created Environments in the `credex-core` repository for `development`, `staging`, and `production` with protection rules.
-
-The following secrets are stored in each GitHub Environment:
-   - `AWS_ACCESS_KEY_ID`: AWS access key for the respective environment (is this real, and if so is it required? replaced by the below?)
-   - `AWS_SECRET_ACCESS_KEY`: AWS secret key for the respective environment (is this real, and if so is it required? replaced by the below?)
-   - `GH_APP_ID`: The ID of the GitHub App for the respective environment
-   - `GH_INSTALLATION_ID`: The installation ID of the GitHub App for the respective environment
-   - `GH_APP_PRIVATE_KEY`: The private key of the GitHub App for the respective environment
-   - `JWT_SECRET`: Secret key for JWT token generation and verification
-   - `WHATSAPP_BOT_API_KEY`: WhatsApp Bot API key to prove that vimbiso-pay is querying.
-   - `OPEN_EXCHANGE_RATES_API`: Open Exchange Rates API key
-   - `NEO_4J_LEDGER_SPACE_BOLT_URL`: Neo4j LedgerSpace Bolt URL
-   - `NEO_4J_LEDGER_SPACE_USER`: Neo4j LedgerSpace username
-   - `NEO_4J_LEDGER_SPACE_PASS`: Neo4j LedgerSpace password
-   - `NEO_4J_SEARCH_SPACE_BOLT_URL`: Neo4j SearchSpace Bolt URL
-   - `NEO_4J_SEARCH_SPACE_USER`: Neo4j SearchSpace username
-   - `NEO_4J_SEARCH_SPACE_PASS`: Neo4j SearchSpace password
-
-#### 4.2.2 IAM Users, Groups, and Policies
+### IAM Users, Groups, and Policies
 
 To manage access to AWS resources for deployment, we use the following IAM setup:
 
@@ -113,7 +87,7 @@ To manage access to AWS resources for deployment, we use the following IAM setup
 
 The `credex-core-permissions` policy is attached to the `credex-core-deployment` group, granting necessary permissions to all deployment users. While stored and implemented in AWS, and updated through the console, we keep a local copy of this policy up to date at [credex-permissions.json](docs/deploy/credex-permissions.json).
 
-#### 4.2.3 Updating IAM Policy
+### Updating IAM Policy
 
 When Terraform scripts are modified, the IAM policy may need to be updated. Follow these steps:
 
@@ -122,7 +96,7 @@ When Terraform scripts are modified, the IAM policy may need to be updated. Foll
 3. Update the `credex-core-permissions` policy in the AWS IAM console.
 4. Test the deployment process to ensure all necessary permissions are in place.
 
-## 5. Infrastructure Management
+## 4. Infrastructure Management
 
 We have implemented an automated process that handles both the deployment and verification of the application. This process includes the following steps:
 
@@ -136,10 +110,10 @@ To be added to the above:
 
 To run the automated deployment and verification process, ensure you're in the project root directory and run:
 ```
-node .github/workflows/github-app-auth.js
+node terraform/github-app-auth.ts
 ```
 
-### 5.1 Manual Terraform management
+### Manual Terraform management
 
 1. Navigate to the `terraform` directory.
 2. Run `terraform init` to initialize the Terraform working directory.
@@ -147,9 +121,7 @@ node .github/workflows/github-app-auth.js
 4. Run `terraform plan` to see proposed changes.
 5. Run `terraform apply` to create or update the necessary AWS resources.
 
-### 5.2 AWS Resources
-
-#### ECS Task Definition
+### ECS Task Definition
 
 The ECS task definition is managed using a template file [task-definition.json](terraform/task-definition.json). To update the task definition:
 
@@ -157,7 +129,7 @@ The ECS task definition is managed using a template file [task-definition.json](
 2. Ensure any new environment variables are added to the `environment` section.
 3. Update the GitHub Actions workflows to replace placeholders with the corresponding GitHub Secrets.
 
-#### ECS Service Configuration
+### ECS Service Configuration
 
 The ECS service is configured in the `main.tf` file, including:
 
@@ -189,13 +161,11 @@ We have implemented an automated process for managing Neo4j AMIs using Terraform
 
 ## 6. Deployment Process
 
-
-
-### 6.2 Automated Deployment via GitHub Actions
+### Automated Deployment via GitHub Actions
 
 1. For staging: Push changes to the `stage` branch.
 2. For production: Push changes to the `prod` branch.
-3. For development: Manually trigger the workflow using the `github-app-auth.js` script.
+3. For development: Manually trigger the workflow using the `github-app-auth.ts` script.
 
 The respective GitHub Actions workflow will automatically:
 - Build the Docker image
@@ -203,15 +173,15 @@ The respective GitHub Actions workflow will automatically:
 - Update the ECS task definition with environment-specific variables
 - Deploy to the appropriate ECS cluster
 
-### 6.3 Environment-specific Behavior
+### Environment-Specific Behavior
 
 - **Production**: Deployments are triggered by pushes to the `prod` branch.
 - **Staging**: Deployments are triggered by pushes to the `stage` branch.
-- **Development**: Deployments are triggered manually using the `github-app-auth.js` script.
+- **Development**: Deployments are triggered manually using the `github-app-auth.ts` script.
 
 ## 7. Monitoring and Logging
 
-### 7.1 CloudWatch Logs
+### CloudWatch Logs
 
 ECS task logs are sent to CloudWatch Logs:
 
@@ -219,7 +189,7 @@ ECS task logs are sent to CloudWatch Logs:
 - Log stream prefix: `ecs`
 - AWS region: af-south-1 (Cape Town)
 
-### 7.2 Monitoring
+### Monitoring
 
 Consider setting up CloudWatch Alarms for important metrics such as:
 
@@ -254,7 +224,7 @@ Consider setting up CloudWatch Alarms for important metrics such as:
 
 ### Updating the Application
 
-1. For development: Push changes to `dev` on remote and manually trigger the development workflow with the `github-app-auth.js` script.
+1. For development: Push changes to `dev` on remote and manually trigger the development workflow with the `github-app-auth.ts` script.
 2. For staging: Merge changes from `dev` to `stage` branch to trigger staging deployment, and run appropriate tests.
 3. For production: Merge changes from `stage` to `prod` branch to trigger production deployment.
 
@@ -291,7 +261,7 @@ Consider the following improvements:
 - Enhance the AMI management process to include automated testing of new AMIs before use
 - Set up a process for regularly auditing and updating IAM permissions based on the principle of least privilege
 - Develop a strategy for securely sharing and updating AWS credentials among team members
-- Implement a CLI wrapper around the `github-app-auth.js` script to provide a more user-friendly interface for developers.
+- Implement a CLI wrapper around the `github-app-auth.ts` script to provide a more user-friendly interface for developers.
 - Enhance the GitHub App authentication process to support multiple environments more seamlessly.
 
 By continuously improving the deployment process and infrastructure, you can ensure the reliability, security, and efficiency of the credex-core application across all environments.

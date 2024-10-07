@@ -1,6 +1,6 @@
-import jwt from "jsonwebtoken";
-import axios, { AxiosError } from "axios";
-import { getConfig } from "../../config/config";
+const jwt = require("jsonwebtoken");
+const axiosInstance = require("axios");
+const { getConfig } = require("../config/config");
 
 const REPO_OWNER = "Great-Sun-Group";
 const REPO_NAME = "credex-core";
@@ -15,11 +15,15 @@ async function generateJWT(appId: string, privateKey: string): Promise<string> {
   return jwt.sign(payload, privateKey, { algorithm: "RS256" });
 }
 
-async function getInstallationToken(appId: string, installationId: string, privateKey: string): Promise<string> {
+async function getInstallationToken(
+  appId: string,
+  installationId: string,
+  privateKey: string
+): Promise<string> {
   const jwtToken = await generateJWT(appId, privateKey);
 
   try {
-    const response = await axios.post(
+    const response = await axiosInstance.post(
       `https://api.github.com/app/installations/${installationId}/access_tokens`,
       {},
       {
@@ -31,10 +35,10 @@ async function getInstallationToken(appId: string, installationId: string, priva
     );
 
     return response.data.token;
-  } catch (error) {
+  } catch (error: any) {
     console.error(
       "Error getting installation token:",
-      (error as AxiosError).response?.data || (error as Error).message
+      error.response?.data || error.message
     );
     throw error;
   }
@@ -43,7 +47,7 @@ async function getInstallationToken(appId: string, installationId: string, priva
 async function triggerDevelopmentWorkflow(token: string): Promise<number> {
   try {
     console.log("Triggering development deployment workflow...");
-    const response = await axios.post(
+    const response = await axiosInstance.post(
       `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/deploy-development.yml/dispatches`,
       {
         ref: "dev",
@@ -62,13 +66,13 @@ async function triggerDevelopmentWorkflow(token: string): Promise<number> {
     console.log("Development deployment workflow triggered successfully");
     console.log("Response status:", response.status);
     return response.status;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error triggering development deployment workflow:");
-    if ((error as AxiosError).response) {
-      console.error("Status:", (error as AxiosError).response?.status);
-      console.error("Data:", (error as AxiosError).response?.data);
+    if (error.response) {
+      console.error("Status:", error.response.status);
+      console.error("Data:", error.response.data);
     } else {
-      console.error((error as Error).message);
+      console.error(error.message);
     }
     throw error;
   }
@@ -97,8 +101,8 @@ async function main(): Promise<void> {
     console.log(
       "Deployment workflow triggered. Check GitHub Actions for progress."
     );
-  } catch (error) {
-    console.error("Deployment failed:", (error as Error).message);
+  } catch (error: any) {
+    console.error("Deployment failed:", error.message);
     process.exit(1);
   }
 }
