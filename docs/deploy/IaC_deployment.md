@@ -36,14 +36,16 @@ The `NODE_ENV` variable is set during the deployment process:
 - For staging deployments, it's set to 'staging'
 - For production deployments, it's set to 'production'
 
+Secrets (AWS) required for deployment are stored in the developers environment for dev deployments and in Github Actions/Environments *(finalize and update this)* for staging and production. AWS Paramaeter manager stores the various neo4j parameters.
+
 ### 4.2 Secrets Management
 
-#### 4.2.1 GitHub Secrets
+#### GitHub Secrets
 
 For secure management of deployment-related sensitive data, set up the following GitHub Secrets:
 
-1. Go to Settings->Environments in your GitHub repository and create Environments for `development`, `staging`, and `production`. Implement protection rules as needed.
-2. Add the following secrets to each environment:
+1. Go to Settings->Environments in your GitHub repository and create Environments for `staging`, and `production`. Implement protection rules as needed.
+2. Add the following application secrets to each environment. These are required for app development:
    - `JWT_SECRET`: Secret key for JWT token generation and verification
    - `WHATSAPP_BOT_API_KEY`: WhatsApp Bot API key
    - `OPEN_EXCHANGE_RATES_API`: Your Open Exchange Rates API key
@@ -53,36 +55,17 @@ For secure management of deployment-related sensitive data, set up the following
    - `NEO4J_SEARCH_SPACE_BOLT_URL`: Neo4j SearchSpace Bolt URL
    - `NEO4J_SEARCH_SPACE_USER`: Neo4j SearchSpace username
    - `NEO4J_SEARCH_SPACE_PASS`: Neo4j SearchSpace password
+3. Add the following deployment secrets to each environment. These are additional requirements for developers working on the deployment process:
+   - `AWS_ACCESS_KEY_ID`: for the user deploying (different for each developer, as well as set for staging and production users).
+   - `AWS_SECRET_ACCESS_KEY`: for the user deploying (different for each developer, as well as set for staging and production users).
+   - `GH_APP_PRIVATE_KEY`: Key for Github App that authorizes deployments.
 
-#### 4.2.2 AWS Credentials
-
-AWS credentials are managed locally in the development environment.
-
-To set up AWS credentials:
-
-1. Install the AWS CLI on your local machine if you haven't already.
-2. Configure your AWS credentials using one of the following methods:
-
-   a. Set environment variables:
-   ```bash
-   export AWS_ACCESS_KEY_ID=your_access_key_id
-   export AWS_SECRET_ACCESS_KEY=your_secret_access_key
-   export AWS_DEFAULT_REGION=your_preferred_region
-   ```
-
-   b. Use the AWS CLI to configure credentials:
-   ```bash
-   aws configure
-   ```
-
-3. Ensure these credentials have the necessary permissions for deployment (refer to section 4.2.3 for IAM policies).
-
-#### 4.2.3 IAM Users, Groups, and Policies
+#### IAM Users, Groups, and Policies
 
 To manage access to AWS resources for deployment, we use the following IAM setup:
 
 1. IAM Users:
-   - `credex-core-development-deployment`: User for development deployments
+   - `ryanlukewatson`: User for development deployments (others can be created as needed)
    - `credex-core-staging-deployment`: User for staging deployments
    - `credex-core-production-deployment`: User for production deployments
 
@@ -92,7 +75,7 @@ To manage access to AWS resources for deployment, we use the following IAM setup
 3. IAM Policy:
    - `credex-core-permissions`: Policy that defines the permissions needed for deployment
 
-The `credex-core-permissions` policy is attached to the `credex-core-deployment` group, granting necessary permissions to all deployment users.
+The `credex-core-permissions` policy is attached to the `credex-core-deployment` group, granting necessary permissions to all deployment users. While stored and implemented in AWS, and updated through the console, aw keep a local copy of this policy up to date at [credex-permissions.json](docs/deploy/credex-permissions.json).
 
 #### Updating IAM Policy
 
@@ -100,14 +83,14 @@ When Terraform scripts are modified, the IAM policy may need to be updated. Foll
 
 1. Review changes made to the Terraform scripts, particularly in `main.tf`.
 2. Identify any new AWS resources or actions being used.
-3. Update the `credex-core-permissions` policy in the AWS IAM console.
+3. Update the `credex-core-permissions` policy in the AWS IAM console and save a copy [locally](docs/deploy/credex-permissions.json).
 4. Test the deployment process to ensure all necessary permissions are in place.
 
 ## 5. Infrastructure Management
 
 We have implemented an automated process that handles both the deployment and verification of the application. This process includes the following steps:
 
-1. Environment selection (if necessary)
+1. Environment selection
 2. AWS credentials verification
 3. Neo4j credentials verification
 4. Terraform deployment
@@ -117,6 +100,9 @@ We have implemented an automated process that handles both the deployment and ve
 To run the complete deployment and verification process, ensure you're in the project root directory and run:
 ```
 npm run deploy-and-verify
+```
+```
+node 
 ```
 
 This command will execute the `deploy_and_verify.sh` script in the terraform directory, which handles the entire deployment and verification process.
