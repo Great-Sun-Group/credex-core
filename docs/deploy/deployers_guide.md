@@ -8,7 +8,7 @@ Application updates can be done by developers and tested locally without the AWS
 
 The development terminal (codespaces or local) can only trigger the workflows in the main branch of the remote repo  which in our case is the `dev` branch, so a deployer must do their work directly on that branch, push changes, then call the development deployment script with:
 ```
-node terraform/github-app-auth.ts
+npx ts-node terraform/trigger-dev-deploy.ts
 ```
 This script will:
 - Authenticate with the development GitHub App
@@ -110,7 +110,7 @@ To be added to the above:
 
 To run the automated deployment and verification process, ensure you're in the project root directory and run:
 ```
-node terraform/github-app-auth.ts
+npx ts-node terraform/trigger-dev-deploy.ts
 ```
 
 ### Manual Terraform management
@@ -165,7 +165,7 @@ We have implemented an automated process for managing Neo4j AMIs using Terraform
 
 1. For staging: Push changes to the `stage` branch.
 2. For production: Push changes to the `prod` branch.
-3. For development: Manually trigger the workflow using the `github-app-auth.ts` script.
+3. For development: Manually trigger the workflow using the `trigger-dev-deploy.ts` script.
 
 The respective GitHub Actions workflow will automatically:
 - Build the Docker image
@@ -177,7 +177,7 @@ The respective GitHub Actions workflow will automatically:
 
 - **Production**: Deployments are triggered by pushes to the `prod` branch.
 - **Staging**: Deployments are triggered by pushes to the `stage` branch.
-- **Development**: Deployments are triggered manually using the `github-app-auth.ts` script.
+- **Development**: Deployments are triggered manually using the `trigger-dev-deploy.ts` script.
 
 ## 7. Monitoring and Logging
 
@@ -224,7 +224,7 @@ Consider setting up CloudWatch Alarms for important metrics such as:
 
 ### Updating the Application
 
-1. For development: Push changes to `dev` on remote and manually trigger the development workflow with the `github-app-auth.ts` script.
+1. For development: Push changes to `dev` on remote and manually trigger the development workflow with the `trigger-dev-deploy.ts` script.
 2. For staging: Merge changes from `dev` to `stage` branch to trigger staging deployment, and run appropriate tests.
 3. For production: Merge changes from `stage` to `prod` branch to trigger production deployment.
 
@@ -261,7 +261,7 @@ Consider the following improvements:
 - Enhance the AMI management process to include automated testing of new AMIs before use
 - Set up a process for regularly auditing and updating IAM permissions based on the principle of least privilege
 - Develop a strategy for securely sharing and updating AWS credentials among team members
-- Implement a CLI wrapper around the `github-app-auth.ts` script to provide a more user-friendly interface for developers.
+- Implement a CLI wrapper around the `trigger-dev-deploy.ts` script to provide a more user-friendly interface for developers.
 - Enhance the GitHub App authentication process to support multiple environments more seamlessly.
 
 By continuously improving the deployment process and infrastructure, you can ensure the reliability, security, and efficiency of the credex-core application across all environments.
