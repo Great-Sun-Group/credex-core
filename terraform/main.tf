@@ -34,6 +34,10 @@ resource "aws_ssm_parameter" "neo4j_ledger_space_bolt_url" {
   type  = "String"
   value = var.neo4j_ledger_space_bolt_url
   tags  = local.common_tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 resource "aws_ssm_parameter" "neo4j_search_space_bolt_url" {
@@ -41,6 +45,10 @@ resource "aws_ssm_parameter" "neo4j_search_space_bolt_url" {
   type  = "String"
   value = var.neo4j_search_space_bolt_url
   tags  = local.common_tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 resource "aws_ssm_parameter" "jwt_secret" {
@@ -48,6 +56,10 @@ resource "aws_ssm_parameter" "jwt_secret" {
   type  = "SecureString"
   value = var.jwt_secret
   tags  = local.common_tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 resource "aws_ssm_parameter" "whatsapp_bot_api_key" {
@@ -55,6 +67,10 @@ resource "aws_ssm_parameter" "whatsapp_bot_api_key" {
   type  = "SecureString"
   value = var.whatsapp_bot_api_key
   tags  = local.common_tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 resource "aws_ssm_parameter" "open_exchange_rates_api" {
@@ -62,6 +78,10 @@ resource "aws_ssm_parameter" "open_exchange_rates_api" {
   type  = "SecureString"
   value = var.open_exchange_rates_api
   tags  = local.common_tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 resource "aws_ssm_parameter" "neo4j_ledger_space_user" {
@@ -69,6 +89,10 @@ resource "aws_ssm_parameter" "neo4j_ledger_space_user" {
   type  = "String"
   value = var.neo4j_ledger_space_user
   tags  = local.common_tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 resource "aws_ssm_parameter" "neo4j_ledger_space_pass" {
@@ -76,6 +100,10 @@ resource "aws_ssm_parameter" "neo4j_ledger_space_pass" {
   type  = "SecureString"
   value = var.neo4j_ledger_space_pass
   tags  = local.common_tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 resource "aws_ssm_parameter" "neo4j_search_space_user" {
@@ -83,6 +111,10 @@ resource "aws_ssm_parameter" "neo4j_search_space_user" {
   type  = "String"
   value = var.neo4j_search_space_user
   tags  = local.common_tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 resource "aws_ssm_parameter" "neo4j_search_space_pass" {
@@ -90,6 +122,10 @@ resource "aws_ssm_parameter" "neo4j_search_space_pass" {
   type  = "SecureString"
   value = var.neo4j_search_space_pass
   tags  = local.common_tags
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 # Look for existing Neo4j AMI
@@ -157,6 +193,10 @@ resource "null_resource" "neo4j_ami_management" {
       
       if [[ "$AMI_ID" == "None" || "$AMI_ID" == "" ]]; then
         NEW_AMI_ID=$(create_neo4j_ami ${var.neo4j_version} ${local.effective_environment})
+        if [[ -z "$NEW_AMI_ID" ]]; then
+          echo "Error: Failed to create Neo4j AMI"
+          exit 1
+        fi
         echo "Created new AMI: $NEW_AMI_ID"
         echo "$NEW_AMI_ID" > ${path.module}/neo4j_ami_id.txt
       else
@@ -174,14 +214,20 @@ data "local_file" "neo4j_ami_id" {
 
 resource "aws_ecr_repository" "credex_core" {
   name = "credex-core-${local.effective_environment}"
-
   tags = local.common_tags
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_ecs_cluster" "credex_cluster" {
   name = "credex-cluster-${local.effective_environment}"
-
   tags = local.common_tags
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_ecs_task_definition" "credex_core_task" {
@@ -229,6 +275,10 @@ resource "aws_iam_role" "ecs_execution_role" {
   })
 
   tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
@@ -282,6 +332,10 @@ resource "aws_iam_role" "ecs_task_role" {
   })
 
   tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 data "aws_subnets" "available" {
@@ -311,6 +365,10 @@ resource "aws_ecs_service" "credex_core_service" {
   }
 
   tags = local.common_tags
+
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
 }
 
 resource "aws_security_group" "ecs_tasks" {
@@ -333,6 +391,10 @@ resource "aws_security_group" "ecs_tasks" {
   }
 
   tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_lb" "credex_alb" {
@@ -343,6 +405,10 @@ resource "aws_lb" "credex_alb" {
   subnets            = data.aws_subnets.available.ids
 
   tags = local.common_tags
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_lb_target_group" "credex_tg" {
@@ -361,6 +427,10 @@ resource "aws_lb_target_group" "credex_tg" {
   }
 
   tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_acm_certificate" "credex_cert" {
@@ -456,6 +526,10 @@ resource "aws_security_group" "alb" {
   }
 
   tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_key_pair" "neo4j_key_pair" {
@@ -463,6 +537,10 @@ resource "aws_key_pair" "neo4j_key_pair" {
   public_key = tls_private_key.neo4j_private_key.public_key_openssh
 
   tags = local.common_tags
+
+  lifecycle {
+    ignore_changes = [public_key]
+  }
 }
 
 resource "tls_private_key" "neo4j_private_key" {
@@ -575,6 +653,10 @@ resource "aws_security_group" "neo4j" {
   }
 
   tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_iam_role" "ec2_role" {
@@ -594,6 +676,10 @@ resource "aws_iam_role" "ec2_role" {
   })
 
   tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_iam_instance_profile" "ec2_profile" {
@@ -601,6 +687,10 @@ resource "aws_iam_instance_profile" "ec2_profile" {
   role = aws_iam_role.ec2_role.name
 
   tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 variable "aws_region" {

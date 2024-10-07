@@ -4,10 +4,7 @@ const axios = require("axios");
 
 const APP_ID = "1017516";
 const INSTALLATION_ID = "55663965";
-const PRIVATE_KEY = fs.readFileSync(
-  ".github/workflows/credex-core-deployment.2024-10-06.private-key.pem",
-  "utf8"
-);
+const PRIVATE_KEY = process.env.GH_APP_PRIVATE_KEY;
 
 function generateJWT() {
   const payload = {

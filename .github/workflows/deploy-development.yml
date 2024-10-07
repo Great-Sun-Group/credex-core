@@ -20,6 +20,7 @@ env:
   ECS_CLUSTER: credex-cluster-development
   ECS_SERVICE: credex-core-service-development
   CONTAINER_NAME: credex-core
+  TF_VAR_environment: development
 
 jobs:
   deploy:
@@ -64,7 +65,16 @@ jobs:
         run: terraform init
         working-directory: ./terraform
 
+      - name: Import existing resources
+        run: |
+          # Example import commands, adjust as needed
+          terraform import aws_ecr_repository.credex_core ${ECR_REPOSITORY} || true
+          terraform import aws_ecs_cluster.credex_cluster ${ECS_CLUSTER} || true
+          # Add more import commands for other existing resources
+        working-directory: ./terraform
+
       - name: Terraform Plan
+        id: plan
         run: |
           terraform plan \
             -var="environment=development" \
@@ -80,8 +90,20 @@ jobs:
             -out=tfplan
         working-directory: ./terraform
 
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
       - name: Terraform Apply
+        id: apply
         run: terraform apply -auto-approve tfplan
+        working-directory: ./terraform
+
+      - name: Rollback on Failure
+        if: failure() && steps.apply.outcome == 'failure'
+        run: |
+          echo "Deployment failed. Rolling back..."
+          terraform apply -auto-approve -refresh-only
         working-directory: ./terraform
 
       - name: Update ECS task definition
@@ -130,6 +152,7 @@ jobs:
         working-directory: ./terraform
 
       - name: Log deployment
+        if: success()
         run: |
           echo "Deployment to development triggered by ${{ github.actor }} at $(date)" >> deployment_log.txt
           git config user.name github-actions
@@ -138,3 +161,9 @@ jobs:
           git commit -m "Log deployment to development"
           git push
         working-directory: ./terraform
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "Deployment failed. Please check the logs for more information."
+          # Add notification mechanism here (e.g., send an email, Slack message, etc.)
