@@ -82,4 +82,4 @@ Endpoints and routes are deployed for the modules: Member, Account, Credex, Avat
 
 ## Deployment
 
-- [ledgerSpace Schema](docs/deploy/IaC_deployment.md)
+- [Deployer's Guide](docs/deploy/IaC_deployment.md)

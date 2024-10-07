@@ -1,4 +1,4 @@
-# Developer Deployment Guide
+# Developer's Guide to Deployment Process
 
 This document outlines the deployment process for developers working on the credex-core application in local and GitHub Codespaces environments using Docker.
 
