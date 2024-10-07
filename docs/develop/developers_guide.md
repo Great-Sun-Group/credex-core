@@ -12,6 +12,7 @@ This document outlines the deployment process for developers working on the cred
 - Docker and Docker Compose
 - Visual Studio Code
 - Visual Studio Code Remote - Containers extension
+- Node.js and npm (for running deployment scripts locally)
 
 ## Environment Setup
 
@@ -75,6 +76,8 @@ You can use VS Code's "Attach to Running Container" feature to work within the D
 
 ## Environment Variables
 
+The following environment variables are required:
+
 NEO_4J_LEDGER_SPACE_BOLT_URL
 NEO_4J_LEDGER_SPACE_PASS
 NEO_4J_LEDGER_SPACE_USER
@@ -100,6 +103,16 @@ JWT_SECRET
 - create your own unique random strings
 
 For development environments, the `NODE_ENV` variable defaults to 'development'.
+
+The following variables are optional and only required for deployment:
+
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+GH_APP_ID
+GH_INSTALLATION_ID
+GH_APP_PRIVATE_KEY
+
+These deployment-specific variables should only be set by authorized team members with the necessary AWS and GitHub permissions.
 
 ## Development Process
 
@@ -134,12 +147,14 @@ For development environments, the `NODE_ENV` variable defaults to 'development'.
 
 ## Continuous Improvement
 
-Consider the following improvements for the development process:
+Consider the following improvements for the development and deployment process:
 
 - Optimize Docker configurations for faster builds and more efficient resource usage
 - Implement more comprehensive testing procedures, including Docker-specific tests
 - Set up automated code quality checks and linting in the Docker environment
 - Explore ways to further align the Docker development environment with production settings
 - Optimize Codespaces and devcontainer configurations for faster startup and development experience
+- Enhance post-deployment verification steps
+- Implement automated rollback procedures for failed deployments
 
-By continuously improving the development process, you can enhance productivity and code quality in the credex-core application while ensuring consistency across different environments.
+By continuously improving the development and deployment processes, you can enhance productivity, code quality, and reliability in the credex-core application while ensuring consistency across different environments.

@@ -1,28 +1,26 @@
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
+const { getConfig } = require('../../config/config');
 
-const APP_ID = process.env.GH_APP_ID;
-const INSTALLATION_ID = process.env.GH_INSTALLATION_ID;
-const PRIVATE_KEY = process.env.GH_APP_PRIVATE_KEY;
 const REPO_OWNER = 'Great-Sun-Group';
 const REPO_NAME = 'credex-core';
 
-function generateJWT() {
+async function generateJWT(appId, privateKey) {
   const payload = {
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 10 * 60,
-    iss: APP_ID,
+    iss: appId,
   };
 
-  return jwt.sign(payload, PRIVATE_KEY, { algorithm: 'RS256' });
+  return jwt.sign(payload, privateKey, { algorithm: 'RS256' });
 }
 
-async function getInstallationToken() {
-  const jwtToken = generateJWT();
+async function getInstallationToken(appId, installationId, privateKey) {
+  const jwtToken = await generateJWT(appId, privateKey);
 
   try {
     const response = await axios.post(
-      `https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens`,
+      `https://api.github.com/app/installations/${installationId}/access_tokens`,
       {},
       {
         headers: {
@@ -39,9 +37,7 @@ async function getInstallationToken() {
   }
 }
 
-async function triggerDevelopmentWorkflow() {
-  const token = await getInstallationToken();
-
+async function triggerDevelopmentWorkflow(token) {
   try {
     console.log('Triggering development deployment workflow...');
     const response = await axios.post(
@@ -77,7 +73,20 @@ async function triggerDevelopmentWorkflow() {
 
 async function main() {
   try {
-    await triggerDevelopmentWorkflow();
+    const config = await getConfig();
+
+    if (!config.deployment || !config.deployment.github) {
+      throw new Error('Deployment configuration is missing. Make sure you have the necessary environment variables set.');
+    }
+
+    const { appId, installationId, privateKey } = config.deployment.github;
+
+    if (!appId || !installationId || !privateKey) {
+      throw new Error('GitHub App credentials are missing. Please check your environment variables.');
+    }
+
+    const token = await getInstallationToken(appId, installationId, privateKey);
+    await triggerDevelopmentWorkflow(token);
     console.log('Deployment workflow triggered. Check GitHub Actions for progress.');
   } catch (error) {
     console.error('Deployment failed:', error.message);

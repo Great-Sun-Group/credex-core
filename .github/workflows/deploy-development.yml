@@ -33,6 +33,31 @@ jobs:
         env:
           ENVIRONMENT: ${{ github.event.inputs.environment }}
 
+      - name: Validate environment variables
+        run: |
+          required_vars=(
+            "AWS_ACCESS_KEY_ID"
+            "AWS_SECRET_ACCESS_KEY"
+            "JWT_SECRET"
+            "WHATSAPP_BOT_API_KEY"
+            "OPEN_EXCHANGE_RATES_API"
+            "NEO_4J_LEDGER_SPACE_BOLT_URL"
+            "NEO_4J_LEDGER_SPACE_USER"
+            "NEO_4J_LEDGER_SPACE_PASS"
+            "NEO_4J_SEARCH_SPACE_BOLT_URL"
+            "NEO_4J_SEARCH_SPACE_USER"
+            "NEO_4J_SEARCH_SPACE_PASS"
+          )
+
+          for var in "${required_vars[@]}"; do
+            if [ -z "${!var}" ]; then
+              echo "Error: $var is not set"
+              exit 1
+            fi
+          done
+
+          echo "All required environment variables are set."
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -43,10 +68,6 @@ jobs:
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Create ECR repository if not exists
-        run: |
-          aws ecr describe-repositories --repository-names ${ECR_REPOSITORY} || aws ecr create-repository --repository-name ${ECR_REPOSITORY}
 
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
@@ -63,14 +84,6 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
-        working-directory: ./terraform
-
-      - name: Import existing resources
-        run: |
-          # Example import commands, adjust as needed
-          terraform import aws_ecr_repository.credex_core ${ECR_REPOSITORY} || true
-          terraform import aws_ecs_cluster.credex_cluster ${ECS_CLUSTER} || true
-          # Add more import commands for other existing resources
         working-directory: ./terraform
 
       - name: Terraform Plan
@@ -90,20 +103,9 @@ jobs:
             -out=tfplan
         working-directory: ./terraform
 
-      - name: Terraform Plan Status
-        if: steps.plan.outcome == 'failure'
-        run: exit 1
-
       - name: Terraform Apply
         id: apply
         run: terraform apply -auto-approve tfplan
-        working-directory: ./terraform
-
-      - name: Rollback on Failure
-        if: failure() && steps.apply.outcome == 'failure'
-        run: |
-          echo "Deployment failed. Rolling back..."
-          terraform apply -auto-approve -refresh-only
         working-directory: ./terraform
 
       - name: Update ECS task definition
@@ -128,28 +130,16 @@ jobs:
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
 
-      - name: Verify Deployment
+      - name: Check ECS Service Status
         run: |
-          API_URL=$(terraform output -raw api_url)
-          CLUSTER_NAME=$(terraform output -raw ecs_cluster_name)
-          SERVICE_NAME=$(terraform output -raw ecs_service_name)
+          ./terraform/check_ecs_status.sh ${{ env.ECS_CLUSTER }} ${{ env.ECS_SERVICE }}
 
-          echo "Waiting for ECS service to be stable..."
-          timeout 300 aws ecs wait services-stable --cluster $CLUSTER_NAME --services $SERVICE_NAME
-          if [ $? -ne 0 ]; then
-            echo "Error: ECS service did not stabilize within the timeout period."
-            exit 1
-          fi
-
-          echo "Performing health check..."
-          HEALTH_CHECK_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $API_URL/health)
-          if [ $HEALTH_CHECK_RESPONSE -eq 200 ]; then
-            echo "Health check passed: $HEALTH_CHECK_RESPONSE"
-          else
-            echo "Error: Health check failed with status code: $HEALTH_CHECK_RESPONSE"
-            exit 1
-          fi
-        working-directory: ./terraform
+      - name: Run Post-Deployment Tests
+        env:
+          API_URL: ${{ steps.apply.outputs.api_url }}
+        run: |
+          npm install axios jest
+          node terraform/post_deployment_tests.js
 
       - name: Log deployment
         if: success()

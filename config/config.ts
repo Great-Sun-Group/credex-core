@@ -47,8 +47,17 @@ const requiredEnvVars = [
 ];
 
 const optionalEnvVars = [
+  // For staging and production deployments these are to be obtained after initial deployment.
+  // They will be present from the first run for development environments, where db creation is not done with IaC.
   "NEO_4J_LEDGER_SPACE_BOLT_URL",
-  "NEO_4J_SEARCH_SPACE_BOLT_URL"
+  "NEO_4J_SEARCH_SPACE_BOLT_URL",
+
+  // For deployers who need to test in the development deployment in AWS
+  "AWS_ACCESS_KEY_ID", // need to confirm if this is needed
+  "AWS_SECRET_ACCESS_KEY", // need to confirm if this is needed
+  "GH_APP_ID",
+  "GH_INSTALLATION_ID",
+  "GH_APP_PRIVATE_KEY",
 ];
 
 let configPromise: Promise<any>;
@@ -76,10 +85,24 @@ async function initConfig() {
     api: {
       openExchangeRates: {
         apiKey: envVars.OPEN_EXCHANGE_RATES_API
+      },
+      whatsappBot: {
+        apiKey: envVars.WHATSAPP_BOT_API_KEY
       }
     },
     security: {
       jwtSecret: envVars.JWT_SECRET
+    },
+    deployment: {
+      aws: {
+        accessKeyId: envVars.AWS_ACCESS_KEY_ID,
+        secretAccessKey: envVars.AWS_SECRET_ACCESS_KEY
+      },
+      github: {
+        appId: envVars.GH_APP_ID,
+        installationId: envVars.GH_INSTALLATION_ID,
+        privateKey: envVars.GH_APP_PRIVATE_KEY
+      }
     },
     rateLimit: {
       windowMs: 15 * 60 * 1000, // 15 minutes

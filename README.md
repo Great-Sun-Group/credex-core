@@ -58,7 +58,7 @@ The src/core-cron/ module hosts the cronjobs:
 Endpoints and routes are deployed for the modules: Member, Account, Credex, Avatar, and AdminDashboard. Endpoints for the Dev module are included in development and staging deployments, but not in production.
 
 ## Developer Guides
-- [Configure and Run Development Servers](/docs/develop/dev_env_setup.md)
+- [Configure and Run Development Servers](/docs/develop/developers_guide.md)
 - [Security and Authentication](docs/auth/Security_and_Authentication.md)
 - [Logging Best Practices](docs/develop/logging_best_practices.md)
 - [Swagger API Documentation](docs/develop/swagger.md)
@@ -82,4 +82,4 @@ Endpoints and routes are deployed for the modules: Member, Account, Credex, Avat
 
 ## Deployment
 
-- [Deployer's Guide](docs/deploy/IaC_deployment.md)
+- [Deployer's Guide](docs/deploy/deployers_guide.md)
