@@ -60,52 +60,41 @@ async function getInstallationToken(installationId: string, privateKey: string):
     "User-Agent": "CredEx-App/1.0"
   };
 
-  try {
-    const response = await axios.post(url, {}, { headers });
-    return response.data.token;
-  } catch (error: any) {
-    console.error("Error getting installation token:", error.message);
-    throw error;
-  }
+  const response = await axios.post(url, {}, { headers });
+  return response.data.token;
 }
 
 async function triggerDevelopmentWorkflow(token: string): Promise<number> {
   console.log("Triggering development workflow...");
-  try {
-    await axios.post(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/deploy-development.yml/dispatches`,
-      {
-        ref: "dev",
-        inputs: {
-          environment: "development",
-        },
+  await axios.post(
+    `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/deploy-development.yml/dispatches`,
+    {
+      ref: "dev",
+      inputs: {
+        environment: "development",
       },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github.v3+json",
-          "User-Agent": "CredEx-App/1.0"
-        },
-      }
-    );
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "CredEx-App/1.0"
+      },
+    }
+  );
 
-    const runsResponse = await axios.get(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/runs?per_page=1`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github.v3+json",
-          "User-Agent": "CredEx-App/1.0"
-        },
-      }
-    );
+  const runsResponse = await axios.get(
+    `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/runs?per_page=1`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "CredEx-App/1.0"
+      },
+    }
+  );
 
-    const runId = runsResponse.data.workflow_runs[0].id;
-    return runId;
-  } catch (error: any) {
-    console.error("Error triggering development deployment workflow:", error.message);
-    throw error;
-  }
+  return runsResponse.data.workflow_runs[0].id;
 }
 
 async function getWorkflowRunLogs(token: string, runId: number): Promise<string> {
@@ -117,36 +106,27 @@ async function getWorkflowRunLogs(token: string, runId: number): Promise<string>
     "User-Agent": "CredEx-App/1.0"
   };
 
-  try {
-    const response = await axios.get(url, { headers, responseType: 'arraybuffer' });
-    
-    const contentType = response.headers['content-type'];
-    let decompressed: Buffer;
+  const response = await axios.get(url, { headers, responseType: 'arraybuffer' });
+  
+  const contentType = response.headers['content-type'];
+  let decompressed: Buffer;
 
-    if (contentType === 'application/zip') {
-      const zip = new AdmZip(response.data);
-      const zipEntries = zip.getEntries();
-      let allLogs = '';
-      for (const entry of zipEntries) {
-        allLogs += zip.readAsText(entry) + '\n\n';
-      }
-      decompressed = Buffer.from(allLogs);
-    } else if (contentType === 'application/gzip') {
-      decompressed = await gunzip(response.data);
-    } else {
-      decompressed = response.data;
+  if (contentType === 'application/zip') {
+    const zip = new AdmZip(response.data);
+    const zipEntries = zip.getEntries();
+    let allLogs = '';
+    for (const entry of zipEntries) {
+      allLogs += zip.readAsText(entry) + '\n\n';
     }
-    
-    console.log("Logs fetched and processed successfully.");
-    return decompressed.toString('utf-8');
-  } catch (error: any) {
-    console.error("Error fetching workflow run logs:", error.message);
-    if (error.response) {
-      console.error("Response status:", error.response.status);
-      console.error("Response headers:", JSON.stringify(error.response.headers, null, 2));
-    }
-    return "Failed to fetch logs";
+    decompressed = Buffer.from(allLogs);
+  } else if (contentType === 'application/gzip') {
+    decompressed = await gunzip(response.data);
+  } else {
+    decompressed = response.data;
   }
+  
+  console.log("Logs fetched successfully.");
+  return decompressed.toString('utf-8');
 }
 
 async function getWorkflowSteps(token: string, runId: number): Promise<any> {
@@ -158,13 +138,8 @@ async function getWorkflowSteps(token: string, runId: number): Promise<any> {
     "User-Agent": "CredEx-App/1.0"
   };
 
-  try {
-    const response = await axios.get(url, { headers });
-    return response.data.jobs;
-  } catch (error: any) {
-    console.error("Error fetching workflow steps:", error.message);
-    return [];
-  }
+  const response = await axios.get(url, { headers });
+  return response.data.jobs;
 }
 
 async function waitForWorkflowCompletion(token: string, runId: number): Promise<{ status: string, conclusion: string | null }> {
@@ -180,154 +155,84 @@ async function waitForWorkflowCompletion(token: string, runId: number): Promise<
   let lastStatus = '';
   let statusChangeCount = 0;
   while (true) {
-    try {
-      const response = await axios.get(url, { headers });
-      const status = response.data.status;
-      const conclusion = response.data.conclusion;
+    const response = await axios.get(url, { headers });
+    const status = response.data.status;
+    const conclusion = response.data.conclusion;
 
-      if (status !== lastStatus) {
-        console.log(`Workflow status: ${status}`);
-        lastStatus = status;
-        statusChangeCount++;
-      }
+    if (status !== lastStatus) {
+      console.log(`Workflow status: ${status}`);
+      lastStatus = status;
+      statusChangeCount++;
+    }
 
-      if (status === 'completed') {
-        console.log(`Workflow completed with conclusion: ${conclusion}`);
-        return { status, conclusion };
-      }
+    if (status === 'completed') {
+      console.log(`Workflow completed with conclusion: ${conclusion}`);
+      return { status, conclusion };
+    }
 
-      if (Date.now() - startTime > WORKFLOW_TIMEOUT) {
-        console.error("Workflow timed out");
-        return { status: 'timed_out', conclusion: null };
-      }
+    if (Date.now() - startTime > WORKFLOW_TIMEOUT) {
+      console.log("Workflow timed out");
+      return { status: 'timed_out', conclusion: null };
+    }
 
-      // Wait for 30 seconds before checking again
-      await new Promise(resolve => setTimeout(resolve, 30000));
+    // Wait for 30 seconds before checking again
+    await new Promise(resolve => setTimeout(resolve, 30000));
 
-      // Print a progress update every 5 status changes or every 5 minutes
-      if (statusChangeCount % 5 === 0 || (Date.now() - startTime) % (5 * 60 * 1000) < 30000) {
-        console.log(`Workflow still running. Current status: ${status}`);
-      }
-    } catch (error: any) {
-      console.error("Error checking workflow status:", error.message);
-      return { status: 'error', conclusion: null };
+    // Print a progress update every 5 status changes or every 5 minutes
+    if (statusChangeCount % 5 === 0 || (Date.now() - startTime) % (5 * 60 * 1000) < 30000) {
+      console.log(`Workflow still running. Current status: ${status}`);
     }
   }
 }
 
-function parseAndHighlightLogs(logs: string): string {
-  console.log("Parsing and highlighting logs...");
-  const lines = logs.split('\n');
-  const seenMessages = new Set<string>();
-  const filteredLines = lines.filter(line => {
-    const lowerLine = line.toLowerCase();
-    if (lowerLine.includes('counting objects:') ||
-        lowerLine.includes('compressing objects:') ||
-        lowerLine.includes('receiving objects:') ||
-        lowerLine.includes('resolving deltas:')) {
-      const key = lowerLine.split(':')[0];
-      if (seenMessages.has(key)) {
-        return false;
-      }
-      seenMessages.add(key);
-    }
-    return true;
+async function runDeployment(token: string): Promise<void> {
+  console.log("Starting deployment...");
+  const runId = await triggerDevelopmentWorkflow(token);
+  console.log(`Deployment workflow triggered. Run ID: ${runId}`);
+
+  const { status, conclusion } = await waitForWorkflowCompletion(token, runId);
+  
+  const logs = await getWorkflowRunLogs(token, runId);
+  const steps = await getWorkflowSteps(token, runId);
+
+  console.log("\nWorkflow Steps:");
+  steps.forEach((step: any) => {
+    console.log(`- ${step.name}: ${step.conclusion || step.status}`);
   });
 
-  const highlightedLines = filteredLines.map(line => {
-    if (line.toLowerCase().includes('error') || line.toLowerCase().includes('failure')) {
-      return `\x1b[31m${line}\x1b[0m`; // Red color for errors
-    }
-    if (line.toLowerCase().includes('warning')) {
-      return `\x1b[33m${line}\x1b[0m`; // Yellow color for warnings
-    }
-    return line;
-  });
-  return highlightedLines.join('\n');
-}
+  console.log("\nWorkflow Logs:");
+  console.log(logs);
 
-function extractErrorMessages(logs: string): string[] {
-  const errorLines = logs.split('\n').filter(line => 
-    line.toLowerCase().includes('error') || 
-    line.toLowerCase().includes('failure') ||
-    line.toLowerCase().includes('exception')
-  );
-  return errorLines.map(line => line.trim());
-}
-
-async function runDeployment(token: string, installationId: string, privateKey: string): Promise<void> {
-  try {
-    console.log("Starting deployment...");
-    const runId = await triggerDevelopmentWorkflow(token);
-    console.log(`Deployment workflow triggered. Run ID: ${runId}`);
-
-    const { status, conclusion } = await waitForWorkflowCompletion(token, runId);
-    
-    const logs = await getWorkflowRunLogs(token, runId);
-    const steps = await getWorkflowSteps(token, runId);
-
-    console.log("\nWorkflow Steps:");
-    steps.forEach((step: any) => {
-      console.log(`- ${step.name}: ${step.conclusion || step.status}`);
-    });
-
-    console.log("\nWorkflow Logs:");
-    console.log(parseAndHighlightLogs(logs));
-
-    console.log("\nDeployment Summary:");
-    console.log(`Status: ${status}`);
-    console.log(`Conclusion: ${conclusion || 'N/A'}`);
-
-    if (status === 'timed_out') {
-      console.error("Deployment timed out. Please check the GitHub Actions page for more information.");
-      process.exit(1);
-    }
-
-    if (conclusion !== 'success') {
-      console.error("Deployment failed. Extracted error messages:");
-      const errorMessages = extractErrorMessages(logs);
-      errorMessages.forEach(msg => console.error(`- ${msg}`));
-      process.exit(1);
-    }
-
-    console.log("Deployment completed successfully.");
-  } catch (error: any) {
-    console.error("Deployment failed:", error.message);
-    process.exit(1);
-  }
+  console.log(`\nDeployment ${conclusion === 'success' ? 'completed successfully' : 'failed'}.`);
+  console.log(`Final status: ${status}`);
+  console.log(`Conclusion: ${conclusion || 'N/A'}`);
 }
 
 async function main(): Promise<void> {
   const scriptStartTime = Date.now();
   
-  try {
-    console.log("Starting deployment process...");
-    checkRequiredEnvVariables();
-    
-    const config = await getConfig();
+  console.log("Starting deployment process...");
+  checkRequiredEnvVariables();
+  
+  const config = await getConfig();
 
-    if (!config.deployment || !config.deployment.github) {
-      throw new Error("Deployment configuration is missing. Check your environment variables.");
-    }
-
-    const { installationId } = config.deployment.github;
-    const privateKey = getPrivateKey();
-
-    if (!installationId || !privateKey) {
-      throw new Error("GitHub App credentials are missing. Check your environment variables.");
-    }
-
-    const token = await getInstallationToken(installationId, privateKey);
-    await runDeployment(token, installationId, privateKey);
-
-  } catch (error: any) {
-    console.error("Deployment failed:", error.message);
-    process.exit(1);
-  } finally {
-    const scriptEndTime = Date.now();
-    const scriptDuration = (scriptEndTime - scriptStartTime) / 1000;
-    console.log(`Total script execution time: ${scriptDuration.toFixed(2)} seconds`);
+  if (!config.deployment || !config.deployment.github) {
+    throw new Error("Deployment configuration is missing. Check your environment variables.");
   }
+
+  const { installationId } = config.deployment.github;
+  const privateKey = getPrivateKey();
+
+  if (!installationId || !privateKey) {
+    throw new Error("GitHub App credentials are missing. Check your environment variables.");
+  }
+
+  const token = await getInstallationToken(installationId, privateKey);
+  await runDeployment(token);
+
+  const scriptEndTime = Date.now();
+  const scriptDuration = (scriptEndTime - scriptStartTime) / 1000;
+  console.log(`Total script execution time: ${scriptDuration.toFixed(2)} seconds`);
 }
 
 // Wrap the main function with a timeout

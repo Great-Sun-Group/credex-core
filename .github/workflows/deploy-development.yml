@@ -31,76 +31,6 @@ jobs:
         run: |
           echo "Setting up environment: development"
 
-      - name: Debug - List all secrets and environment variables
-        env:
-          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          WHATSAPP_BOT_API_KEY: ${{ secrets.WHATSAPP_BOT_API_KEY }}
-          OPEN_EXCHANGE_RATES_API: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
-          NEO_4J_LEDGER_SPACE_BOLT_URL: ${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}
-          NEO_4J_LEDGER_SPACE_USER: ${{ secrets.NEO_4J_LEDGER_SPACE_USER }}
-          NEO_4J_LEDGER_SPACE_PASS: ${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}
-          NEO_4J_SEARCH_SPACE_BOLT_URL: ${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}
-          NEO_4J_SEARCH_SPACE_USER: ${{ secrets.NEO_4J_SEARCH_SPACE_USER }}
-          NEO_4J_SEARCH_SPACE_PASS: ${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}
-        run: |
-          echo "Available secrets:"
-          echo '${{ toJson(secrets) }}' | jq 'keys'
-          echo "Environment variables:"
-          env | grep -v -e '^GITHUB_' -e '^RUNNER_' -e '^ACTIONS_' | sort
-
-      - name: Validate environment variables
-        env:
-          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          WHATSAPP_BOT_API_KEY: ${{ secrets.WHATSAPP_BOT_API_KEY }}
-          OPEN_EXCHANGE_RATES_API: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
-          NEO_4J_LEDGER_SPACE_BOLT_URL: ${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}
-          NEO_4J_LEDGER_SPACE_USER: ${{ secrets.NEO_4J_LEDGER_SPACE_USER }}
-          NEO_4J_LEDGER_SPACE_PASS: ${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}
-          NEO_4J_SEARCH_SPACE_BOLT_URL: ${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}
-          NEO_4J_SEARCH_SPACE_USER: ${{ secrets.NEO_4J_SEARCH_SPACE_USER }}
-          NEO_4J_SEARCH_SPACE_PASS: ${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}
-        run: |
-          required_vars=(
-            "AWS_ACCESS_KEY"
-            "AWS_SECRET_ACCESS_KEY"
-            "JWT_SECRET"
-            "WHATSAPP_BOT_API_KEY"
-            "OPEN_EXCHANGE_RATES_API"
-            "NEO_4J_LEDGER_SPACE_USER"
-            "NEO_4J_LEDGER_SPACE_PASS"
-            "NEO_4J_SEARCH_SPACE_USER"
-            "NEO_4J_SEARCH_SPACE_PASS"
-          )
-
-          for var in "${required_vars[@]}"; do
-            if [ -z "${!var}" ]; then
-              echo "Error: $var is not set. Please ensure this secret is added to the 'development' environment in GitHub."
-              exit 1
-            else
-              echo "$var is set"
-            fi
-          done
-
-          # Check optional variables
-          optional_vars=(
-            "NEO_4J_LEDGER_SPACE_BOLT_URL"
-            "NEO_4J_SEARCH_SPACE_BOLT_URL"
-          )
-
-          for var in "${optional_vars[@]}"; do
-            if [ -z "${!var}" ]; then
-              echo "Warning: $var is not set. This is optional and will be set during the first deployment if not provided."
-            else
-              echo "$var is set"
-            fi
-          done
-
-          echo "All required environment variables are set."
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -143,6 +73,7 @@ jobs:
             -var="neo4j_search_space_bolt_url=${NEO_4J_SEARCH_SPACE_BOLT_URL:-}" \
             -var="neo4j_search_space_user=${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" \
             -var="neo4j_search_space_pass=${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" \
+            -var="neo4j_enterprise_license=${{ secrets.NEO4J_ENTERPRISE_LICENSE }}" \
             -out=tfplan
         working-directory: ./terraform
 
@@ -176,6 +107,15 @@ jobs:
       - name: Check ECS Service Status
         run: |
           ./terraform/check_ecs_status.sh ${{ env.ECS_CLUSTER }} ${{ env.ECS_SERVICE }}
+
+      - name: Run Neo4j Validation Tests
+        env:
+          NEO4J_HOST: ${{ steps.apply.outputs.neo4j_host }}
+          NEO4J_USER: ${{ secrets.NEO_4J_LEDGER_SPACE_USER }}
+          NEO4J_PASSWORD: ${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}
+        run: |
+          chmod +x ./tests/neo4j_validation.sh
+          ./tests/neo4j_validation.sh
 
       - name: Run Post-Deployment Tests
         env:

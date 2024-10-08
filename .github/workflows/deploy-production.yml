@@ -21,9 +21,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          ref: prod
 
       - name: Set up environment
-        run: echo "Setting up production environment"
+        run: |
+          echo "Setting up environment: production"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -61,29 +64,19 @@ jobs:
             -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
             -var="whatsapp_bot_api_key=${{ secrets.WHATSAPP_BOT_API_KEY }}" \
             -var="open_exchange_rates_api=${{ secrets.OPEN_EXCHANGE_RATES_API }}" \
-            -var="neo4j_ledger_space_bolt_url=${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}" \
+            -var="neo4j_ledger_space_bolt_url=${NEO_4J_LEDGER_SPACE_BOLT_URL:-}" \
             -var="neo4j_ledger_space_user=${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" \
             -var="neo4j_ledger_space_pass=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" \
-            -var="neo4j_search_space_bolt_url=${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}" \
+            -var="neo4j_search_space_bolt_url=${NEO_4J_SEARCH_SPACE_BOLT_URL:-}" \
             -var="neo4j_search_space_user=${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" \
             -var="neo4j_search_space_pass=${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" \
+            -var="neo4j_enterprise_license=${{ secrets.NEO4J_ENTERPRISE_LICENSE }}" \
             -out=tfplan
         working-directory: ./terraform
-
-      - name: Terraform Plan Status
-        if: steps.plan.outcome == 'failure'
-        run: exit 1
 
       - name: Terraform Apply
         id: apply
         run: terraform apply -auto-approve tfplan
-        working-directory: ./terraform
-
-      - name: Rollback on Failure
-        if: failure() && steps.apply.outcome == 'failure'
-        run: |
-          echo "Deployment failed. Rolling back..."
-          terraform apply -auto-approve -refresh-only
         working-directory: ./terraform
 
       - name: Update ECS task definition
@@ -108,28 +101,25 @@ jobs:
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
 
-      - name: Verify Deployment
+      - name: Check ECS Service Status
         run: |
-          API_URL=$(terraform output -raw api_url)
-          CLUSTER_NAME=$(terraform output -raw ecs_cluster_name)
-          SERVICE_NAME=$(terraform output -raw ecs_service_name)
-          
-          echo "Waiting for ECS service to be stable..."
-          timeout 300 aws ecs wait services-stable --cluster $CLUSTER_NAME --services $SERVICE_NAME
-          if [ $? -ne 0 ]; then
-            echo "Error: ECS service did not stabilize within the timeout period."
-            exit 1
-          fi
-          
-          echo "Performing health check..."
-          HEALTH_CHECK_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $API_URL/health)
-          if [ $HEALTH_CHECK_RESPONSE -eq 200 ]; then
-            echo "Health check passed: $HEALTH_CHECK_RESPONSE"
-          else
-            echo "Error: Health check failed with status code: $HEALTH_CHECK_RESPONSE"
-            exit 1
-          fi
-        working-directory: ./terraform
+          ./terraform/check_ecs_status.sh ${{ env.ECS_CLUSTER }} ${{ env.ECS_SERVICE }}
+
+      - name: Run Neo4j Validation Tests
+        env:
+          NEO4J_HOST: ${{ steps.apply.outputs.neo4j_host }}
+          NEO4J_USER: ${{ secrets.NEO_4J_LEDGER_SPACE_USER }}
+          NEO4J_PASSWORD: ${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}
+        run: |
+          chmod +x ./tests/neo4j_validation.sh
+          ./tests/neo4j_validation.sh
+
+      - name: Run Post-Deployment Tests
+        env:
+          API_URL: ${{ steps.apply.outputs.api_url }}
+        run: |
+          npm install axios jest
+          node .github/workflows/post_deployment_tests.js
 
       - name: Log deployment
         if: success()
