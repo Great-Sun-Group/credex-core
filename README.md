@@ -83,3 +83,11 @@ Endpoints and routes are deployed for the modules: Member, Account, Credex, Avat
 ## Deployment
 
 - [Deployer's Guide](docs/deploy/deployers_guide.md)
+- [Environment Setup](docs/deploy/environment_setup.md)
+- [Infrastructure Management](docs/deploy/infrastructure_management.md)
+- [Deployment Process](docs/deploy/deployment_process.md)
+- [Monitoring and Troubleshooting](docs/deploy/monitoring_and_troubleshooting.md)
+- [Security Considerations](docs/deploy/security_considerations.md)
+- [Maintenance and Updates](docs/deploy/maintenance_and_updates.md)
+- [Continuous Improvement](docs/deploy/continuous_improvement.md)
+- [Deployment Scenarios](docs/deploy/deployment_scenarios.md)
