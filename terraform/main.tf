@@ -147,8 +147,7 @@ data "aws_ami" "neo4j" {
 # Create a null_resource to manage Neo4j AMI creation and updates
 resource "null_resource" "neo4j_ami_management" {
   triggers = {
-    neo4j_version = var.neo4j_version
-    environment   = local.effective_environment
+    always_run = "${timestamp()}"
   }
 
   provisioner "local-exec" {
@@ -204,6 +203,11 @@ resource "null_resource" "neo4j_ami_management" {
         echo "$AMI_ID" > ${path.module}/neo4j_ami_id.txt
       fi
     EOT
+  }
+
+  # Add this provisioner to ensure the file exists
+  provisioner "local-exec" {
+    command = "touch ${path.module}/neo4j_ami_id.txt"
   }
 }
 
@@ -549,7 +553,7 @@ resource "tls_private_key" "neo4j_private_key" {
 }
 
 resource "aws_instance" "neo4j_ledger" {
-  ami           = trimspace(data.local_file.neo4j_ami_id.content)
+  ami           = coalesce(trimspace(data.local_file.neo4j_ami_id.content), data.aws_ami.neo4j.id)
   instance_type = local.effective_environment == "production" ? "m5.large" : "t3.medium"
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
@@ -588,7 +592,7 @@ resource "aws_instance" "neo4j_ledger" {
 }
 
 resource "aws_instance" "neo4j_search" {
-  ami           = trimspace(data.local_file.neo4j_ami_id.content)
+  ami           = coalesce(trimspace(data.local_file.neo4j_ami_id.content), data.aws_ami.neo4j.id)
   instance_type = local.effective_environment == "production" ? "m5.large" : "t3.medium"
   key_name      = aws_key_pair.neo4j_key_pair.key_name
 
