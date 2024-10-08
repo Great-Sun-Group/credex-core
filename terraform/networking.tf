@@ -37,9 +37,49 @@ resource "aws_security_group" "ecs_tasks" {
     from_port   = 0
     to_port     = 0
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
   }
 
   tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes        = [name, description]
+  }
+}
+
+resource "aws_security_group" "neo4j" {
+  name        = "credex-neo4j-sg-${local.effective_environment}"
+  description = "Security group for Neo4j instances"
+  vpc_id      = local.vpc_id
+
+  ingress {
+    protocol    = "tcp"
+    from_port   = 7474
+    to_port     = 7474
+    cidr_blocks = [local.effective_environment == "production" ? "10.0.0.0/16" : "10.0.0.0/8"]
+    description = "Allow Neo4j HTTP"
+  }
+
+  ingress {
+    protocol    = "tcp"
+    from_port   = 7687
+    to_port     = 7687
+    cidr_blocks = [local.effective_environment == "production" ? "10.0.0.0/16" : "10.0.0.0/8"]
+    description = "Allow Neo4j Bolt"
+  }
+
+  egress {
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "credex-neo4j-sg-${local.effective_environment}"
+  })
 
   lifecycle {
     create_before_destroy = true
@@ -161,6 +201,7 @@ resource "aws_security_group" "alb" {
     from_port   = 80
     to_port     = 80
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTP inbound traffic"
   }
 
   ingress {
@@ -168,6 +209,7 @@ resource "aws_security_group" "alb" {
     from_port   = 443
     to_port     = 443
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTPS inbound traffic"
   }
 
   egress {
@@ -175,6 +217,7 @@ resource "aws_security_group" "alb" {
     from_port   = 0
     to_port     = 0
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
   }
 
   tags = local.common_tags

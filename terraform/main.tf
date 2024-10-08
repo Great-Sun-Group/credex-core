@@ -24,10 +24,11 @@ locals {
 
 # AWS Systems Manager Parameter Store resources
 resource "aws_ssm_parameter" "neo4j_ledger_space_bolt_url" {
-  name  = "/credex/${local.effective_environment}/neo4j_ledger_space_bolt_url"
-  type  = "String"
-  value = var.neo4j_ledger_space_bolt_url != "" ? var.neo4j_ledger_space_bolt_url : "placeholder"
-  tags  = local.common_tags
+  name        = "/credex/${local.effective_environment}/neo4j_ledger_space_bolt_url"
+  type        = "String"
+  value       = var.neo4j_ledger_space_bolt_url != "" ? var.neo4j_ledger_space_bolt_url : "placeholder"
+  overwrite   = true
+  tags        = local.common_tags
 
   lifecycle {
     ignore_changes = [value]
@@ -35,10 +36,11 @@ resource "aws_ssm_parameter" "neo4j_ledger_space_bolt_url" {
 }
 
 resource "aws_ssm_parameter" "neo4j_search_space_bolt_url" {
-  name  = "/credex/${local.effective_environment}/neo4j_search_space_bolt_url"
-  type  = "String"
-  value = var.neo4j_search_space_bolt_url != "" ? var.neo4j_search_space_bolt_url : "placeholder"
-  tags  = local.common_tags
+  name        = "/credex/${local.effective_environment}/neo4j_search_space_bolt_url"
+  type        = "String"
+  value       = var.neo4j_search_space_bolt_url != "" ? var.neo4j_search_space_bolt_url : "placeholder"
+  overwrite   = true
+  tags        = local.common_tags
 
   lifecycle {
     ignore_changes = [value]
@@ -46,10 +48,11 @@ resource "aws_ssm_parameter" "neo4j_search_space_bolt_url" {
 }
 
 resource "aws_ssm_parameter" "jwt_secret" {
-  name  = "/credex/${local.effective_environment}/jwt_secret"
-  type  = "SecureString"
-  value = var.jwt_secret
-  tags  = local.common_tags
+  name        = "/credex/${local.effective_environment}/jwt_secret"
+  type        = "SecureString"
+  value       = var.jwt_secret
+  overwrite   = true
+  tags        = local.common_tags
 
   lifecycle {
     ignore_changes = [value]
@@ -57,10 +60,11 @@ resource "aws_ssm_parameter" "jwt_secret" {
 }
 
 resource "aws_ssm_parameter" "whatsapp_bot_api_key" {
-  name  = "/credex/${local.effective_environment}/whatsapp_bot_api_key"
-  type  = "SecureString"
-  value = var.whatsapp_bot_api_key
-  tags  = local.common_tags
+  name        = "/credex/${local.effective_environment}/whatsapp_bot_api_key"
+  type        = "SecureString"
+  value       = var.whatsapp_bot_api_key
+  overwrite   = true
+  tags        = local.common_tags
 
   lifecycle {
     ignore_changes = [value]
@@ -68,10 +72,11 @@ resource "aws_ssm_parameter" "whatsapp_bot_api_key" {
 }
 
 resource "aws_ssm_parameter" "open_exchange_rates_api" {
-  name  = "/credex/${local.effective_environment}/open_exchange_rates_api"
-  type  = "SecureString"
-  value = var.open_exchange_rates_api
-  tags  = local.common_tags
+  name        = "/credex/${local.effective_environment}/open_exchange_rates_api"
+  type        = "SecureString"
+  value       = var.open_exchange_rates_api
+  overwrite   = true
+  tags        = local.common_tags
 
   lifecycle {
     ignore_changes = [value]
@@ -79,10 +84,11 @@ resource "aws_ssm_parameter" "open_exchange_rates_api" {
 }
 
 resource "aws_ssm_parameter" "neo4j_ledger_space_user" {
-  name  = "/credex/${local.effective_environment}/neo4j_ledger_space_user"
-  type  = "String"
-  value = var.neo4j_ledger_space_user
-  tags  = local.common_tags
+  name        = "/credex/${local.effective_environment}/neo4j_ledger_space_user"
+  type        = "String"
+  value       = var.neo4j_ledger_space_user
+  overwrite   = true
+  tags        = local.common_tags
 
   lifecycle {
     ignore_changes = [value]
@@ -90,10 +96,11 @@ resource "aws_ssm_parameter" "neo4j_ledger_space_user" {
 }
 
 resource "aws_ssm_parameter" "neo4j_ledger_space_pass" {
-  name  = "/credex/${local.effective_environment}/neo4j_ledger_space_pass"
-  type  = "SecureString"
-  value = var.neo4j_ledger_space_pass
-  tags  = local.common_tags
+  name        = "/credex/${local.effective_environment}/neo4j_ledger_space_pass"
+  type        = "SecureString"
+  value       = var.neo4j_ledger_space_pass
+  overwrite   = true
+  tags        = local.common_tags
 
   lifecycle {
     ignore_changes = [value]
@@ -101,10 +108,11 @@ resource "aws_ssm_parameter" "neo4j_ledger_space_pass" {
 }
 
 resource "aws_ssm_parameter" "neo4j_search_space_user" {
-  name  = "/credex/${local.effective_environment}/neo4j_search_space_user"
-  type  = "String"
-  value = var.neo4j_search_space_user
-  tags  = local.common_tags
+  name        = "/credex/${local.effective_environment}/neo4j_search_space_user"
+  type        = "String"
+  value       = var.neo4j_search_space_user
+  overwrite   = true
+  tags        = local.common_tags
 
   lifecycle {
     ignore_changes = [value]
@@ -112,10 +120,11 @@ resource "aws_ssm_parameter" "neo4j_search_space_user" {
 }
 
 resource "aws_ssm_parameter" "neo4j_search_space_pass" {
-  name  = "/credex/${local.effective_environment}/neo4j_search_space_pass"
-  type  = "SecureString"
-  value = var.neo4j_search_space_pass
-  tags  = local.common_tags
+  name        = "/credex/${local.effective_environment}/neo4j_search_space_pass"
+  type        = "SecureString"
+  value       = var.neo4j_search_space_pass
+  overwrite   = true
+  tags        = local.common_tags
 
   lifecycle {
     ignore_changes = [value]
@@ -167,7 +176,7 @@ resource "aws_ecs_task_definition" "credex_core_task" {
   tags = local.common_tags
 }
 
-resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
+data "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   role       = data.aws_iam_role.ecs_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
@@ -231,11 +240,8 @@ data "aws_iam_role" "ec2_role" {
   name = "ec2-role-${local.effective_environment}"
 }
 
-resource "aws_iam_instance_profile" "ec2_profile" {
+data "aws_iam_instance_profile" "ec2_profile" {
   name = "ec2-profile-${local.effective_environment}"
-  role = data.aws_iam_role.ec2_role.name
-
-  tags = local.common_tags
 }
 
 # Outputs
