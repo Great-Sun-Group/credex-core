@@ -9,7 +9,6 @@ on:
         default: "development"
 
 env:
-  AWS_REGION: af-south-1
   ECR_REPOSITORY: credex-core-development
   ECS_CLUSTER: credex-cluster-development
   ECS_SERVICE: credex-core-service-development
@@ -41,6 +40,11 @@ jobs:
         env:
           ENVIRONMENT: ${{ github.event.inputs.environment }}
 
+      - name: Debug - List all secrets
+        run: |
+          echo "Available secrets:"
+          echo "${{ toJson(secrets) }}" | jq 'keys'
+
       - name: Validate environment variables
         run: |
           required_vars=(
@@ -61,6 +65,8 @@ jobs:
             if [ -z "${!var}" ]; then
               echo "Error: $var is not set. Please ensure this secret is added to the 'development' environment in GitHub."
               exit 1
+            else
+              echo "$var is set"
             fi
           done
 
@@ -69,9 +75,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: af-south-1
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -126,7 +132,7 @@ jobs:
             -e 's|${CONTAINER_IMAGE}|'${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}'|' \
             -e 's|${NODE_ENV}|development|' \
             -e 's|${LOG_LEVEL}|debug|' \
-            -e 's|${AWS_REGION}|${{ env.AWS_REGION }}|' \
+            -e 's|${AWS_REGION}|af-south-1|' \
             terraform/task-definition.json
           echo "task-definition=terraform/task-definition.json" >> $GITHUB_OUTPUT
 
