@@ -23,29 +23,17 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-resource "aws_key_pair" "neo4j_key_pair" {
-  key_name   = local.key_pair_name
-  public_key = tls_private_key.neo4j_private_key.public_key_openssh
-
-  tags = local.common_tags
-
-  lifecycle {
-    ignore_changes = [public_key, key_name]
-  }
-}
-
-resource "tls_private_key" "neo4j_private_key" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
+data "aws_key_pair" "neo4j_key_pair" {
+  key_name = local.key_pair_name
 }
 
 resource "aws_instance" "neo4j" {
   count         = local.neo4j_instance_count[local.effective_environment]
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = local.neo4j_instance_type[local.effective_environment]
-  key_name      = local.key_pair_name
+  key_name      = data.aws_key_pair.neo4j_key_pair.key_name
 
-  vpc_security_group_ids = [aws_security_group.neo4j[local.effective_environment].id]
+  vpc_security_group_ids = [data.aws_security_group.neo4j[local.effective_environment].id]
   subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]
 
   tags = merge(local.common_tags, {
@@ -117,20 +105,9 @@ resource "aws_instance" "neo4j" {
   }
 }
 
-resource "aws_security_group" "neo4j" {
-  for_each    = toset(["development", "staging", "production"])
-  name        = "neo4j-sg-${each.key}"
-  description = "Security group for Neo4j ${each.key} instances"
-  vpc_id      = local.vpc_id
-
-  tags = merge(local.common_tags, {
-    Environment = each.key
-  })
-
-  lifecycle {
-    create_before_destroy = true
-    ignore_changes        = [name, description]
-  }
+data "aws_security_group" "neo4j" {
+  for_each = toset(["development", "staging", "production"])
+  name     = "neo4j-sg-${each.key}"
 }
 
 resource "aws_security_group_rule" "neo4j_ingress" {
@@ -139,7 +116,7 @@ resource "aws_security_group_rule" "neo4j_ingress" {
   from_port         = each.value.port
   to_port           = each.value.port
   protocol          = "tcp"
-  security_group_id = aws_security_group.neo4j[each.value.env].id
+  security_group_id = data.aws_security_group.neo4j[each.value.env].id
 
   cidr_blocks = each.value.env == "production" ? [data.aws_vpc.default.cidr_block] : ["10.0.0.0/8"]
 }
@@ -150,6 +127,6 @@ resource "aws_security_group_rule" "neo4j_egress" {
   from_port         = 0
   to_port           = 0
   protocol          = "-1"
-  security_group_id = aws_security_group.neo4j[each.key].id
+  security_group_id = data.aws_security_group.neo4j[each.key].id
   cidr_blocks       = ["0.0.0.0/0"]
 }
