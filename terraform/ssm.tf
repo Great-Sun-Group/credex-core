@@ -19,11 +19,6 @@ resource "aws_iam_role_policy" "neo4j_ssm_access" {
   })
 }
 
-# Use data source for the existing EC2 instance profile
-data "aws_iam_instance_profile" "neo4j_profile" {
-  name = "neo4j-instance-profile-${local.effective_environment}"
-}
-
 # Data sources for current AWS region and account ID
 data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
