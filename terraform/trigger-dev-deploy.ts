@@ -1,9 +1,16 @@
-const jwt = require("jsonwebtoken");
+import * as fs from 'fs';
+import * as path from 'path';
+import * as jsonwebtoken from 'jsonwebtoken';
 const axiosInstance = require("axios");
 const { getConfig } = require("../config/config");
 
 const REPO_OWNER = "Great-Sun-Group";
 const REPO_NAME = "credex-core";
+
+function readPrivateKey(): string {
+  const keyPath = path.join(__dirname, '..', 'private-key.pem');
+  return fs.readFileSync(keyPath, 'utf8');
+}
 
 function logPrivateKeyInfo(privateKey: string): void {
   console.log(`Private key length: ${privateKey.length}`);
@@ -12,14 +19,18 @@ function logPrivateKeyInfo(privateKey: string): void {
   console.log(`Contains "BEGIN": ${privateKey.includes("BEGIN")}`);
   console.log(`Contains "END": ${privateKey.includes("END")}`);
   console.log(`Number of lines: ${privateKey.split('\n').length}`);
+  console.log("First 3 lines of private key:");
+  console.log(privateKey.split('\n').slice(0, 3).join('\n'));
+  console.log("Last 3 lines of private key:");
+  console.log(privateKey.split('\n').slice(-3).join('\n'));
 }
 
 function testPrivateKey(privateKey: string): void {
   try {
     const testPayload = { test: "payload" };
-    const token = jwt.sign(testPayload, privateKey, { algorithm: "RS256" });
+    const token = jsonwebtoken.sign(testPayload, privateKey, { algorithm: "RS256" });
     console.log("Test token generated successfully");
-    const decoded = jwt.verify(token, privateKey, { algorithms: ["RS256"] });
+    const decoded = jsonwebtoken.verify(token, privateKey, { algorithms: ["RS256"] });
     console.log("Test token verified successfully");
     console.log("Decoded test payload:", decoded);
   } catch (error) {
@@ -29,30 +40,69 @@ function testPrivateKey(privateKey: string): void {
 
 function decodeJWT(token: string): void {
   try {
-    const decoded = jwt.decode(token, { complete: true });
+    const decoded = jsonwebtoken.decode(token, { complete: true });
     console.log("Decoded JWT:");
-    console.log("Header:", JSON.stringify(decoded.header, null, 2));
-    console.log("Payload:", JSON.stringify(decoded.payload, null, 2));
+    console.log("Header:", JSON.stringify(decoded?.header, null, 2));
+    console.log("Payload:", JSON.stringify(decoded?.payload, null, 2));
   } catch (error) {
     console.error("Error decoding JWT:", error);
   }
 }
 
-async function generateJWT(clientId: string, appId: string, privateKey: string): Promise<string> {
-  console.log(`Generating JWT for Client ID: ${clientId}, App ID: ${appId}`);
+async function generateJWT(appId: string, privateKey: string): Promise<string> {
+  console.log(`Generating JWT for App ID: ${appId}`);
   logPrivateKeyInfo(privateKey);
   
+  if (!privateKey.trim()) {
+    throw new Error("Private key is empty or contains only whitespace");
+  }
+
+  if (!privateKey.includes("BEGIN") || !privateKey.includes("END")) {
+    throw new Error("Private key is missing BEGIN or END markers");
+  }
+
   const now = Math.floor(Date.now() / 1000);
+  console.log(`Current timestamp: ${now}`);
   const payload = {
     iat: now,
     exp: now + 10 * 60, // 10 minutes expiration
-    iss: appId,
+    iss: appId
   };
 
+  console.log("Full JWT payload:", JSON.stringify(payload, null, 2));
+
   try {
-    const token = jwt.sign(payload, privateKey, { algorithm: "RS256" });
+    const token = jsonwebtoken.sign(payload, privateKey, {
+      algorithm: "RS256",
+      header: {
+        alg: "RS256",
+        typ: "JWT"
+      }
+    });
     console.log("JWT generated successfully");
     decodeJWT(token);
+    console.log("Full JWT token for debugging:");
+    console.log(token);
+    console.log("Verify this token at: https://jwt.io/");
+
+    // Verify the token locally
+    try {
+      const verified = jsonwebtoken.verify(token, privateKey, { algorithms: ["RS256"] });
+      console.log("JWT verified locally:", verified);
+    } catch (verifyError) {
+      console.error("Error verifying JWT locally:", verifyError);
+      throw verifyError;
+    }
+
+    // Check if the current time is within the token's validity period
+    const currentTime = Math.floor(Date.now() / 1000);
+    console.log(`Current time: ${currentTime}, Token iat: ${payload.iat}, Token exp: ${payload.exp}`);
+    if (currentTime < payload.iat || currentTime > payload.exp) {
+      throw new Error("Current time is outside the token's validity period");
+    } else {
+      console.log("Current time is within the token's validity period");
+    }
+
     return token;
   } catch (error) {
     console.error("Error generating JWT:", error);
@@ -61,14 +111,13 @@ async function generateJWT(clientId: string, appId: string, privateKey: string):
 }
 
 async function getInstallationToken(
-  clientId: string,
   appId: string,
   installationId: string,
   privateKey: string
 ): Promise<string> {
-  console.log(`Getting installation token for Client ID: ${clientId}, App ID: ${appId}, Installation ID: ${installationId}`);
+  console.log(`Getting installation token for App ID: ${appId}, Installation ID: ${installationId}`);
   
-  const jwtToken = await generateJWT(clientId, appId, privateKey);
+  const jwtToken = await generateJWT(appId, privateKey);
   console.log(`JWT Token (first 20 chars): ${jwtToken.substring(0, 20)}...`);
 
   try {
@@ -86,14 +135,15 @@ async function getInstallationToken(
     console.log("Installation token retrieved successfully");
     return response.data.token;
   } catch (error: any) {
-    console.error(
-      "Error getting installation token:",
-      error.response?.data || error.message
-    );
+    console.error("Error getting installation token:");
     if (error.response) {
       console.error("Response status:", error.response.status);
-      console.error("Response headers:", error.response.headers);
+      console.error("Response headers:", JSON.stringify(error.response.headers, null, 2));
+      console.error("Response data:", JSON.stringify(error.response.data, null, 2));
+    } else {
+      console.error("Error message:", error.message);
     }
+    console.error("Full error object:", JSON.stringify(error, null, 2));
     throw error;
   }
 }
@@ -143,12 +193,12 @@ async function main(): Promise<void> {
       );
     }
 
-    const { clientId, appId, installationId, privateKey } = config.deployment.github;
+    const { appId, installationId } = config.deployment.github;
+    const privateKey = readPrivateKey();
 
     console.log("Required GitHub App credentials:");
-    console.log(`Client ID: ${clientId ? "Set" : "Missing"}`);
-    console.log(`App ID: ${appId ? "Set" : "Missing"}`);
-    console.log(`Installation ID: ${installationId ? "Set" : "Missing"}`);
+    console.log(`App ID: ${appId}`);
+    console.log(`Installation ID: ${installationId}`);
     console.log(`Private Key: ${privateKey ? "Set" : "Missing"}`);
 
     if (privateKey) {
@@ -156,16 +206,16 @@ async function main(): Promise<void> {
       logPrivateKeyInfo(privateKey);
     }
 
-    if (!clientId || !appId || !installationId || !privateKey) {
+    if (!appId || !installationId || !privateKey) {
       throw new Error(
-        "One or more GitHub App credentials are missing. Please check your environment variables."
+        "One or more GitHub App credentials are missing. Please check your environment variables and private key file."
       );
     }
 
     console.log("Testing private key...");
     testPrivateKey(privateKey);
 
-    const token = await getInstallationToken(clientId, appId, installationId, privateKey);
+    const token = await getInstallationToken(appId, installationId, privateKey);
     console.log(`Installation token retrieved (first 10 chars): ${token.substring(0, 10)}...`);
     
     await triggerDevelopmentWorkflow(token);
