@@ -82,6 +82,11 @@ jobs:
         run: terraform apply -auto-approve tfplan
         working-directory: ./terraform
 
+      - name: Run Post-Deployment Configuration
+        run: |
+          terraform apply -auto-approve -target=null_resource.post_deployment_config
+        working-directory: ./terraform
+
       - name: Update ECS task definition
         id: task-def
         env:

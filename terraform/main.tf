@@ -23,10 +23,11 @@ locals {
 }
 
 # AWS Systems Manager Parameter Store resources
+# These resources are created with placeholder values and updated post-deployment
 resource "aws_ssm_parameter" "neo4j_ledger_space_bolt_url" {
   name  = "/credex/${local.effective_environment}/neo4j_ledger_space_bolt_url"
   type  = "String"
-  value = var.neo4j_ledger_space_bolt_url != "" ? var.neo4j_ledger_space_bolt_url : "bolt://${aws_instance.neo4j_ledger.private_ip}:7687"
+  value = var.neo4j_ledger_space_bolt_url != "" ? var.neo4j_ledger_space_bolt_url : "placeholder"
   tags  = local.common_tags
 
   lifecycle {
@@ -37,7 +38,7 @@ resource "aws_ssm_parameter" "neo4j_ledger_space_bolt_url" {
 resource "aws_ssm_parameter" "neo4j_search_space_bolt_url" {
   name  = "/credex/${local.effective_environment}/neo4j_search_space_bolt_url"
   type  = "String"
-  value = var.neo4j_search_space_bolt_url != "" ? var.neo4j_search_space_bolt_url : "bolt://${aws_instance.neo4j_search.private_ip}:7687"
+  value = var.neo4j_search_space_bolt_url != "" ? var.neo4j_search_space_bolt_url : "placeholder"
   tags  = local.common_tags
 
   lifecycle {
@@ -308,7 +309,28 @@ resource "aws_iam_instance_profile" "ec2_profile" {
   }
 }
 
+# Add null_resource for post-deployment configuration
+# This resource updates the SSM parameters with the actual Neo4j instance details after they are created
+resource "null_resource" "post_deployment_config" {
+  count = local.neo4j_instance_count[local.effective_environment]
+
+  triggers = {
+    neo4j_instance_id = aws_instance.neo4j[count.index].id
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      aws ssm put-parameter \
+        --name "/credex/${local.effective_environment}/neo4j_${count.index == 0 ? "ledger" : "search"}_space_bolt_url" \
+        --value "bolt://${aws_instance.neo4j[count.index].private_ip}:7687" \
+        --type String \
+        --overwrite
+    EOT
+  }
+}
+
 # Outputs
+# These outputs use the 'try' function to handle cases where resources might not be available yet
 output "api_url" {
   value       = "https://${aws_route53_record.api.name}"
   description = "The URL of the deployed API"
@@ -334,15 +356,15 @@ output "ecr_repository_url" {
 }
 
 output "neo4j_ledger_private_ip" {
-  value = aws_instance.neo4j_ledger.private_ip
+  value = try(aws_instance.neo4j[0].private_ip, "Not available yet")
 }
 
 output "neo4j_search_private_ip" {
-  value = aws_instance.neo4j_search.private_ip
+  value = try(aws_instance.neo4j[1].private_ip, "Not available yet")
 }
 
 output "neo4j_ami_id" {
-  value       = trimspace(data.local_file.neo4j_ami_id.content)
+  value       = try(data.aws_ami.neo4j.id, "Not available yet")
   description = "The ID of the Neo4j AMI used for EC2 instances"
 }
 
@@ -362,9 +384,9 @@ output "environment" {
 }
 
 output "neo4j_ledger_bolt_url" {
-  value = "bolt://${aws_instance.neo4j_ledger.private_ip}:7687"
+  value = try(aws_ssm_parameter.neo4j_ledger_space_bolt_url.value, "Not available yet")
 }
 
 output "neo4j_search_bolt_url" {
-  value = "bolt://${aws_instance.neo4j_search.private_ip}:7687"
+  value = try(aws_ssm_parameter.neo4j_search_space_bolt_url.value, "Not available yet")
 }
