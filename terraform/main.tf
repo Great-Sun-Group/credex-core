@@ -231,8 +231,9 @@ data "aws_iam_role" "ec2_role" {
   name = "ec2-role-${local.effective_environment}"
 }
 
-data "aws_iam_instance_profile" "ec2_profile" {
+resource "aws_iam_instance_profile" "ec2_profile" {
   name = "ec2-profile-${local.effective_environment}"
+  role = data.aws_iam_role.ec2_role.name
 }
 
 # Outputs
