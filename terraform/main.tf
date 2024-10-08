@@ -39,7 +39,6 @@ data "aws_ssm_parameter" "params" {
   name = "/credex/${local.effective_environment}/${each.key}"
 }
 
-# Rest of the file remains unchanged
 data "aws_ecr_repository" "credex_core" {
   name = "credex-core-${local.effective_environment}"
 }
@@ -66,21 +65,25 @@ resource "aws_ecs_task_definition" "credex_core_task" {
   execution_role_arn       = data.aws_iam_role.ecs_execution_role.arn
   task_role_arn            = data.aws_iam_role.ecs_task_role.arn
 
-  container_definitions = templatefile("${path.module}/task-definition.json", {
-    CONTAINER_IMAGE                = "${data.aws_ecr_repository.credex_core.repository_url}:latest"
-    NODE_ENV                       = local.effective_environment
-    LOG_LEVEL                      = local.effective_environment == "production" ? "info" : "debug"
-    AWS_REGION                     = var.aws_region
-    JWT_SECRET                     = data.aws_ssm_parameter.params["jwt_secret"].arn
-    WHATSAPP_BOT_API_KEY           = data.aws_ssm_parameter.params["whatsapp_bot_api_key"].arn
-    OPEN_EXCHANGE_RATES_API        = data.aws_ssm_parameter.params["open_exchange_rates_api"].arn
-    NEO_4J_LEDGER_SPACE_BOLT_URL   = data.aws_ssm_parameter.params["neo4j_ledger_space_bolt_url"].arn
-    NEO_4J_LEDGER_SPACE_USER       = data.aws_ssm_parameter.params["neo4j_ledger_space_user"].arn
-    NEO_4J_LEDGER_SPACE_PASS       = data.aws_ssm_parameter.params["neo4j_ledger_space_pass"].arn
-    NEO_4J_SEARCH_SPACE_BOLT_URL   = data.aws_ssm_parameter.params["neo4j_search_space_bolt_url"].arn
-    NEO_4J_SEARCH_SPACE_USER       = data.aws_ssm_parameter.params["neo4j_search_space_user"].arn
-    NEO_4J_SEARCH_SPACE_PASS       = data.aws_ssm_parameter.params["neo4j_search_space_pass"].arn
-  })
+  container_definitions = jsonencode(
+    jsondecode(
+      templatefile("${path.module}/task-definition.json", {
+        CONTAINER_IMAGE                = "${data.aws_ecr_repository.credex_core.repository_url}:latest"
+        NODE_ENV                       = local.effective_environment
+        LOG_LEVEL                      = local.effective_environment == "production" ? "info" : "debug"
+        AWS_REGION                     = var.aws_region
+        JWT_SECRET                     = data.aws_ssm_parameter.params["jwt_secret"].arn
+        WHATSAPP_BOT_API_KEY           = data.aws_ssm_parameter.params["whatsapp_bot_api_key"].arn
+        OPEN_EXCHANGE_RATES_API        = data.aws_ssm_parameter.params["open_exchange_rates_api"].arn
+        NEO_4J_LEDGER_SPACE_BOLT_URL   = data.aws_ssm_parameter.params["neo4j_ledger_space_bolt_url"].arn
+        NEO_4J_LEDGER_SPACE_USER       = data.aws_ssm_parameter.params["neo4j_ledger_space_user"].arn
+        NEO_4J_LEDGER_SPACE_PASS       = data.aws_ssm_parameter.params["neo4j_ledger_space_pass"].arn
+        NEO_4J_SEARCH_SPACE_BOLT_URL   = data.aws_ssm_parameter.params["neo4j_search_space_bolt_url"].arn
+        NEO_4J_SEARCH_SPACE_USER       = data.aws_ssm_parameter.params["neo4j_search_space_user"].arn
+        NEO_4J_SEARCH_SPACE_PASS       = data.aws_ssm_parameter.params["neo4j_search_space_pass"].arn
+      })
+    )
+  )
 
   tags = local.common_tags
 }
