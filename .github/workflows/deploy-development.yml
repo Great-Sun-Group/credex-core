@@ -137,10 +137,10 @@ jobs:
             -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
             -var="whatsapp_bot_api_key=${{ secrets.WHATSAPP_BOT_API_KEY }}" \
             -var="open_exchange_rates_api=${{ secrets.OPEN_EXCHANGE_RATES_API }}" \
-            -var="neo4j_ledger_space_bolt_url=${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}" \
+            -var="neo4j_ledger_space_bolt_url=${NEO_4J_LEDGER_SPACE_BOLT_URL:-}" \
             -var="neo4j_ledger_space_user=${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" \
             -var="neo4j_ledger_space_pass=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" \
-            -var="neo4j_search_space_bolt_url=${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}" \
+            -var="neo4j_search_space_bolt_url=${NEO_4J_SEARCH_SPACE_BOLT_URL:-}" \
             -var="neo4j_search_space_user=${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" \
             -var="neo4j_search_space_pass=${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" \
             -out=tfplan
