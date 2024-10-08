@@ -20,12 +20,20 @@ jobs:
   deploy:
     name: Deploy to AWS Development
     runs-on: ubuntu-latest
+    environment: development
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
         with:
           ref: dev
+
+      - name: Check environment
+        run: |
+          if [ "${{ github.event.inputs.environment }}" != "development" ]; then
+            echo "Error: This workflow is intended for the development environment only."
+            exit 1
+          fi
 
       - name: Set up environment
         run: |
@@ -36,7 +44,7 @@ jobs:
       - name: Validate environment variables
         run: |
           required_vars=(
-            "AWS_ACCESS_KEY_ID"
+            "AWS_ACCESS_KEY"
             "AWS_SECRET_ACCESS_KEY"
             "JWT_SECRET"
             "WHATSAPP_BOT_API_KEY"
@@ -51,7 +59,7 @@ jobs:
 
           for var in "${required_vars[@]}"; do
             if [ -z "${!var}" ]; then
-              echo "Error: $var is not set"
+              echo "Error: $var is not set. Please ensure this secret is added to the 'development' environment in GitHub."
               exit 1
             fi
           done
