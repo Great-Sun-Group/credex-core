@@ -43,6 +43,7 @@ resource "aws_security_group" "ecs_tasks" {
 
   lifecycle {
     create_before_destroy = true
+    ignore_changes        = [name, description]
   }
 }
 
@@ -57,6 +58,7 @@ resource "aws_lb" "credex_alb" {
 
   lifecycle {
     prevent_destroy = true
+    ignore_changes  = [name]
   }
 }
 
@@ -179,6 +181,7 @@ resource "aws_security_group" "alb" {
 
   lifecycle {
     create_before_destroy = true
+    ignore_changes        = [name, description]
   }
 }
 
