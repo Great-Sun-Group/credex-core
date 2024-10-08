@@ -27,13 +27,6 @@ jobs:
         with:
           ref: dev
 
-      - name: Check environment
-        run: |
-          if [ "${{ github.event.inputs.environment }}" != "development" ]; then
-            echo "Error: This workflow is intended for the development environment only."
-            exit 1
-          fi
-
       - name: Set up environment
         run: |
           echo "Setting up environment: development"
@@ -41,7 +34,7 @@ jobs:
       - name: Debug - List all secrets and environment variables
         run: |
           echo "Available secrets:"
-          echo "${{ toJson(secrets) }}" | jq 'keys'
+          echo '${{ toJson(secrets) }}' | jq 'keys'
           echo "Environment variables:"
           env | sort
 
