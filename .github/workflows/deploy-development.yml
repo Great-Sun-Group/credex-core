@@ -41,7 +41,7 @@ jobs:
       - name: Debug - List all secrets and environment variables
         run: |
           echo "Available secrets:"
-          echo '${{ toJson(secrets) }}' | jq 'keys'
+          echo "${{ toJson(secrets) }}" | jq 'keys'
           echo "Environment variables:"
           env | sort
 
