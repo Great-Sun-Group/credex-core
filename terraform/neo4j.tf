@@ -134,9 +134,3 @@ resource "aws_security_group_rule" "neo4j_egress" {
   security_group_id = aws_security_group.neo4j[each.key].id
   cidr_blocks       = ["0.0.0.0/0"]
 }
-
-variable "neo4j_enterprise_license" {
-  description = "Neo4j Enterprise license content"
-  type        = string
-  sensitive   = true
-}

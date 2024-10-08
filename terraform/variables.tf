@@ -70,4 +70,5 @@ variable "neo4j_enterprise_license" {
   description = "Neo4j Enterprise License"
   type        = string
   default     = ""
+  sensitive   = true
 }
