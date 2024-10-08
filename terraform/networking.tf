@@ -100,10 +100,6 @@ resource "aws_lb" "credex_alb" {
   }
 }
 
-data "aws_lb_target_group" "credex_tg" {
-  name = "credex-tg-${local.effective_environment}"
-}
-
 resource "aws_acm_certificate" "credex_cert" {
   domain_name       = local.domain
   validation_method = "DNS"
