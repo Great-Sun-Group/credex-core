@@ -48,7 +48,7 @@ jobs:
           echo "Available secrets:"
           echo "${{ toJson(secrets) }}" | jq 'keys'
           echo "Environment variables:"
-          env | sort
+          env | grep -v -e '^GITHUB_' -e '^RUNNER_' -e '^ACTIONS_' | sort
 
       - name: Validate environment variables
         env:
