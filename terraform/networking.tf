@@ -79,6 +79,7 @@ resource "aws_lb_target_group" "credex_tg" {
 
   lifecycle {
     create_before_destroy = true
+    ignore_changes        = [name]
   }
 }
 

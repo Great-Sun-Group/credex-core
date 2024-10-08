@@ -129,6 +129,7 @@ resource "aws_ecr_repository" "credex_core" {
 
   lifecycle {
     prevent_destroy = true
+    ignore_changes  = [name]
   }
 }
 
@@ -198,7 +199,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
 }
 
 resource "aws_iam_role_policy" "parameter_store_access" {
-  name = "parameter-store-access-policy"
+  name = "parameter-store-access-policy-${local.effective_environment}"
   role = aws_iam_role.ecs_execution_role.id
 
   policy = jsonencode({

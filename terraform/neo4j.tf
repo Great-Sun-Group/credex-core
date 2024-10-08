@@ -10,6 +10,7 @@ locals {
     production  = "m5.large"
   }
   neo4j_ports = [7474, 7687]
+  key_pair_name = "neo4j-key-pair-${local.effective_environment}"
 }
 
 data "aws_ami" "amazon_linux_2" {
@@ -23,7 +24,7 @@ data "aws_ami" "amazon_linux_2" {
 }
 
 resource "aws_key_pair" "neo4j_key_pair" {
-  key_name   = "neo4j-key-pair-${local.effective_environment}"
+  key_name   = local.key_pair_name
   public_key = tls_private_key.neo4j_private_key.public_key_openssh
 
   tags = local.common_tags
