@@ -12,7 +12,7 @@ variable "environment" {
 variable "neo4j_version" {
   description = "Version of Neo4j to install"
   type        = string
-  default     = "4.4.0"  # Set your desired default version
+  default     = "5.15.0"  # Updated to the latest available version
 }
 
 variable "jwt_secret" {
