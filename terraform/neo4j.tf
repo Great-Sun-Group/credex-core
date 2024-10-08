@@ -33,7 +33,7 @@ resource "aws_instance" "neo4j" {
   instance_type = local.neo4j_instance_type[local.effective_environment]
   key_name      = data.aws_key_pair.neo4j_key_pair.key_name
 
-  vpc_security_group_ids = [data.aws_security_group.neo4j[local.effective_environment].id]
+  vpc_security_group_ids = [aws_security_group.neo4j.id]
   subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]
 
   tags = merge(local.common_tags, {
@@ -105,28 +105,15 @@ resource "aws_instance" "neo4j" {
   }
 }
 
-data "aws_security_group" "neo4j" {
-  for_each = toset(["development", "staging", "production"])
-  name     = "neo4j-sg-${each.key}"
-}
-
+# Use the existing Neo4j security group from networking.tf
 resource "aws_security_group_rule" "neo4j_ingress" {
-  for_each          = { for pair in setproduct(["development", "staging", "production"], local.neo4j_ports) : "${pair[0]}-${pair[1]}" => { env = pair[0], port = pair[1] } }
+  count             = length(local.neo4j_ports)
   type              = "ingress"
-  from_port         = each.value.port
-  to_port           = each.value.port
+  from_port         = local.neo4j_ports[count.index]
+  to_port           = local.neo4j_ports[count.index]
   protocol          = "tcp"
-  security_group_id = data.aws_security_group.neo4j[each.value.env].id
-
-  cidr_blocks = each.value.env == "production" ? [data.aws_vpc.default.cidr_block] : ["10.0.0.0/8"]
+  security_group_id = aws_security_group.neo4j.id
+  cidr_blocks       = [local.effective_environment == "production" ? data.aws_vpc.default.cidr_block : "10.0.0.0/8"]
 }
 
-resource "aws_security_group_rule" "neo4j_egress" {
-  for_each          = toset(["development", "staging", "production"])
-  type              = "egress"
-  from_port         = 0
-  to_port           = 0
-  protocol          = "-1"
-  security_group_id = data.aws_security_group.neo4j[each.key].id
-  cidr_blocks       = ["0.0.0.0/0"]
-}
+# The egress rule is already defined in the aws_security_group.neo4j resource in networking.tf

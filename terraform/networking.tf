@@ -21,7 +21,7 @@ data "aws_subnets" "available" {
 }
 
 resource "aws_security_group" "ecs_tasks" {
-  name        = "credex-core-ecs-tasks-sg-${local.effective_environment}"
+  name_prefix = "credex-core-ecs-tasks-sg-${local.effective_environment}"
   description = "Allow inbound access from the ALB only"
   vpc_id      = local.vpc_id
 
@@ -44,12 +44,11 @@ resource "aws_security_group" "ecs_tasks" {
 
   lifecycle {
     create_before_destroy = true
-    ignore_changes        = [name, description]
   }
 }
 
 resource "aws_security_group" "neo4j" {
-  name        = "credex-neo4j-sg-${local.effective_environment}"
+  name_prefix = "credex-neo4j-sg-${local.effective_environment}"
   description = "Security group for Neo4j instances"
   vpc_id      = local.vpc_id
 
@@ -83,7 +82,6 @@ resource "aws_security_group" "neo4j" {
 
   lifecycle {
     create_before_destroy = true
-    ignore_changes        = [name, description]
   }
 }
 
@@ -102,27 +100,8 @@ resource "aws_lb" "credex_alb" {
   }
 }
 
-resource "aws_lb_target_group" "credex_tg" {
-  name        = "credex-tg-${local.effective_environment}"
-  port        = 5000
-  protocol    = "HTTP"
-  vpc_id      = local.vpc_id
-  target_type = "ip"
-
-  health_check {
-    path                = "/health"
-    healthy_threshold   = 2
-    unhealthy_threshold = 10
-    timeout             = 30
-    interval            = 60
-  }
-
-  tags = local.common_tags
-
-  lifecycle {
-    create_before_destroy = true
-    ignore_changes        = [name]
-  }
+data "aws_lb_target_group" "credex_tg" {
+  name = "credex-tg-${local.effective_environment}"
 }
 
 resource "aws_acm_certificate" "credex_cert" {
@@ -167,7 +146,7 @@ resource "aws_lb_listener" "credex_listener" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.credex_tg.arn
+    target_group_arn = data.aws_lb_target_group.credex_tg.arn
   }
 
   tags = local.common_tags
@@ -192,7 +171,7 @@ resource "aws_lb_listener" "redirect_http_to_https" {
 }
 
 resource "aws_security_group" "alb" {
-  name        = "credex-alb-sg-${local.effective_environment}"
+  name_prefix = "credex-alb-sg-${local.effective_environment}"
   description = "Controls access to the ALB"
   vpc_id      = local.vpc_id
 
@@ -224,7 +203,6 @@ resource "aws_security_group" "alb" {
 
   lifecycle {
     create_before_destroy = true
-    ignore_changes        = [name, description]
   }
 }
 
