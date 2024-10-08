@@ -201,6 +201,10 @@ resource "aws_iam_role_policy" "parameter_store_access" {
   })
 }
 
+data "aws_lb_target_group" "credex_tg" {
+  name = "credex-tg-${local.effective_environment}"
+}
+
 resource "aws_ecs_service" "credex_core_service" {
   name            = "credex-core-service-${local.effective_environment}"
   cluster         = aws_ecs_cluster.credex_cluster.id

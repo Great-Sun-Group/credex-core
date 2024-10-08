@@ -3,7 +3,7 @@
 # Grant the EC2 instances permission to access SSM parameters
 resource "aws_iam_role_policy" "neo4j_ssm_access" {
   name = "neo4j-ssm-access-policy-${local.effective_environment}"
-  role = aws_iam_role.ec2_role.id
+  role = data.aws_iam_role.ec2_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -22,7 +22,7 @@ resource "aws_iam_role_policy" "neo4j_ssm_access" {
 # Update the existing EC2 role to allow SSM access
 resource "aws_iam_instance_profile" "neo4j_profile" {
   name = "neo4j-instance-profile-${local.effective_environment}"
-  role = aws_iam_role.ec2_role.name
+  role = data.aws_iam_role.ec2_role.name
 }
 
 # Data sources for current AWS region and account ID
