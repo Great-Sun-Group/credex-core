@@ -70,10 +70,8 @@ jobs:
             "JWT_SECRET"
             "WHATSAPP_BOT_API_KEY"
             "OPEN_EXCHANGE_RATES_API"
-            "NEO_4J_LEDGER_SPACE_BOLT_URL"
             "NEO_4J_LEDGER_SPACE_USER"
             "NEO_4J_LEDGER_SPACE_PASS"
-            "NEO_4J_SEARCH_SPACE_BOLT_URL"
             "NEO_4J_SEARCH_SPACE_USER"
             "NEO_4J_SEARCH_SPACE_PASS"
           )
@@ -82,6 +80,20 @@ jobs:
             if [ -z "${!var}" ]; then
               echo "Error: $var is not set. Please ensure this secret is added to the 'development' environment in GitHub."
               exit 1
+            else
+              echo "$var is set"
+            fi
+          done
+
+          # Check optional variables
+          optional_vars=(
+            "NEO_4J_LEDGER_SPACE_BOLT_URL"
+            "NEO_4J_SEARCH_SPACE_BOLT_URL"
+          )
+
+          for var in "${optional_vars[@]}"; do
+            if [ -z "${!var}" ]; then
+              echo "Warning: $var is not set. This is optional and will be set during the first deployment if not provided."
             else
               echo "$var is set"
             fi
