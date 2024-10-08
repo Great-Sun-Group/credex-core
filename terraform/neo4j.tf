@@ -1,6 +1,6 @@
 locals {
   neo4j_instance_count = {
-    development = 2
+    development = 1  # Changed from 2 to 1
     staging     = 1
     production  = 2
   }

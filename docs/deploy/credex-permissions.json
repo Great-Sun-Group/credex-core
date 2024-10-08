@@ -60,6 +60,16 @@
           "iam:AWSServiceName": "elasticloadbalancing.amazonaws.com"
         }
       }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+      "Condition": {
+        "StringLike": {
+          "iam:AWSServiceName": "ecs.amazonaws.com"
+        }
+      }
     }
   ]
 }
