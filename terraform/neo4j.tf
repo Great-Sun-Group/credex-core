@@ -5,9 +5,9 @@ locals {
     production  = 2
   }
   neo4j_instance_type = {
-    development = "t3.small"  # Changed from t3.medium
-    staging     = "t3.medium"  # Changed from t3.large
-    production  = "t3.medium"  # Changed from m5.large
+    development = "t3.small"
+    staging     = "t3.medium"
+    production  = "t3.medium"  # Note: Consider requesting a vCPU limit increase if deployment fails
   }
   neo4j_ports = [7474, 7687]
   key_pair_name = "neo4j-key-pair-${local.effective_environment}"

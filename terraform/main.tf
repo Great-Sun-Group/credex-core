@@ -11,6 +11,12 @@ provider "aws" {
   region = var.aws_region
 }
 
+# Note: If deployment fails due to vCPU limits, consider requesting a limit increase from AWS support
+
+resource "aws_iam_service_linked_role" "ecs" {
+  aws_service_name = "ecs.amazonaws.com"
+}
+
 locals {
   vpc_id = data.aws_vpc.default.id != "" ? data.aws_vpc.default.id : aws_vpc.main[0].id
   effective_environment = coalesce(var.environment, terraform.workspace == "default" ? "production" : terraform.workspace)
@@ -136,6 +142,8 @@ resource "aws_ecs_service" "credex_core_service" {
   }
 
   tags = local.common_tags
+
+  depends_on = [aws_iam_service_linked_role.ecs]
 }
 
 data "aws_iam_role" "ec2_role" {
