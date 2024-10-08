@@ -364,8 +364,8 @@ output "neo4j_search_private_ip" {
 }
 
 output "neo4j_ami_id" {
-  value       = try(data.aws_ami.neo4j.id, "Not available yet")
-  description = "The ID of the Neo4j AMI used for EC2 instances"
+  value       = try(data.aws_ami.amazon_linux_2.id, "Not available yet")
+  description = "The ID of the Amazon Linux 2 AMI used for Neo4j EC2 instances"
 }
 
 output "acm_certificate_arn" {
