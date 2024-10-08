@@ -87,10 +87,10 @@ resource "aws_ecs_task_definition" "credex_core_task" {
     JWT_SECRET                     = aws_ssm_parameter.params["jwt_secret"].arn
     WHATSAPP_BOT_API_KEY           = aws_ssm_parameter.params["whatsapp_bot_api_key"].arn
     OPEN_EXCHANGE_RATES_API        = aws_ssm_parameter.params["open_exchange_rates_api"].arn
-    NEO_4J_LEDGER_SPACE_BOLT_URL   = aws_ssm_parameter.params["neo4j_ledger_space_bolt_url"].arn
+    NEO_4J_LEDGER_SPACE_BOLT_URL   = try(aws_ssm_parameter.params["neo4j_ledger_space_bolt_url"].arn, "")
     NEO_4J_LEDGER_SPACE_USER       = aws_ssm_parameter.params["neo4j_ledger_space_user"].arn
     NEO_4J_LEDGER_SPACE_PASS       = aws_ssm_parameter.params["neo4j_ledger_space_pass"].arn
-    NEO_4J_SEARCH_SPACE_BOLT_URL   = aws_ssm_parameter.params["neo4j_search_space_bolt_url"].arn
+    NEO_4J_SEARCH_SPACE_BOLT_URL   = try(aws_ssm_parameter.params["neo4j_search_space_bolt_url"].arn, "")
     NEO_4J_SEARCH_SPACE_USER       = aws_ssm_parameter.params["neo4j_search_space_user"].arn
     NEO_4J_SEARCH_SPACE_PASS       = aws_ssm_parameter.params["neo4j_search_space_pass"].arn
   })
@@ -210,13 +210,13 @@ output "environment" {
 }
 
 output "neo4j_ledger_bolt_url" {
-  value       = aws_ssm_parameter.params["neo4j_ledger_space_bolt_url"].value
+  value       = try(aws_ssm_parameter.params["neo4j_ledger_space_bolt_url"].value, "Not available")
   sensitive   = true
   description = "The Neo4j Ledger Space Bolt URL"
 }
 
 output "neo4j_search_bolt_url" {
-  value       = aws_ssm_parameter.params["neo4j_search_space_bolt_url"].value
+  value       = try(aws_ssm_parameter.params["neo4j_search_space_bolt_url"].value, "Not available")
   sensitive   = true
   description = "The Neo4j Search Space Bolt URL"
 }
