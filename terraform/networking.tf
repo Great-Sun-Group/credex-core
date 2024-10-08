@@ -95,8 +95,8 @@ resource "aws_lb" "credex_alb" {
   tags = local.common_tags
 
   lifecycle {
-    create_before_destroy = true
-    ignore_changes        = [name]
+    prevent_destroy = true
+    ignore_changes  = [name, subnets, security_groups]
   }
 }
 
