@@ -53,7 +53,7 @@ const optionalEnvVars = [
   "NEO_4J_SEARCH_SPACE_BOLT_URL",
 
   // For deployers who need to test in the development deployment in AWS
-  "AWS_ACCESS_KEY_ID", // need to confirm if this is needed
+  "AWS_ACCESS_KEY", // need to confirm if this is needed
   "AWS_SECRET_ACCESS_KEY", // need to confirm if this is needed
   "GH_APP_ID",
   "GH_CLIENT_ID",
@@ -96,7 +96,7 @@ async function initConfig() {
     },
     deployment: {
       aws: {
-        accessKeyId: envVars.AWS_ACCESS_KEY_ID,
+        accessKeyId: envVars.AWS_ACCESS_KEY,
         secretAccessKey: envVars.AWS_SECRET_ACCESS_KEY
       },
       github: {

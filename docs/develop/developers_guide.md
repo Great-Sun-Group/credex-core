@@ -106,7 +106,7 @@ For development environments, the `NODE_ENV` variable defaults to 'development'.
 
 The following variables are optional and only required for deployment:
 
-AWS_ACCESS_KEY_ID
+AWS_ACCESS_KEY
 AWS_SECRET_ACCESS_KEY
 GH_APP_ID
 GH_INSTALLATION_ID
