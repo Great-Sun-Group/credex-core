@@ -82,7 +82,7 @@ resource "aws_ecs_task_definition" "credex_core_task" {
         NEO_4J_SEARCH_SPACE_USER       = data.aws_ssm_parameter.params["neo4j_search_space_user"].arn
         NEO_4J_SEARCH_SPACE_PASS       = data.aws_ssm_parameter.params["neo4j_search_space_pass"].arn
       })
-    )
+    ).containerDefinitions
   )
 
   tags = local.common_tags
