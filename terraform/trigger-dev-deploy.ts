@@ -1,15 +1,17 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as jsonwebtoken from 'jsonwebtoken';
-const axiosInstance = require("axios");
+import * as crypto from 'crypto';
+import axios from 'axios';
 const { getConfig } = require("../config/config");
 
 const REPO_OWNER = "Great-Sun-Group";
 const REPO_NAME = "credex-core";
+const APP_ID = "1018770"; // Hardcoding the App ID as it's a constant
 
-function readPrivateKey(): string {
-  const keyPath = path.join(__dirname, '..', 'private-key.pem');
-  return fs.readFileSync(keyPath, 'utf8');
+function getPrivateKey(): string {
+  const privateKey = process.env.GH_APP_PRIVATE_KEY;
+  if (!privateKey) {
+    throw new Error("GH_APP_PRIVATE_KEY environment variable is not set");
+  }
+  return privateKey.replace(/\\n/gm, '\n').trim();
 }
 
 function logPrivateKeyInfo(privateKey: string): void {
@@ -19,119 +21,89 @@ function logPrivateKeyInfo(privateKey: string): void {
   console.log(`Contains "BEGIN": ${privateKey.includes("BEGIN")}`);
   console.log(`Contains "END": ${privateKey.includes("END")}`);
   console.log(`Number of lines: ${privateKey.split('\n').length}`);
-  console.log("First 3 lines of private key:");
-  console.log(privateKey.split('\n').slice(0, 3).join('\n'));
-  console.log("Last 3 lines of private key:");
-  console.log(privateKey.split('\n').slice(-3).join('\n'));
 }
 
-function testPrivateKey(privateKey: string): void {
-  try {
-    const testPayload = { test: "payload" };
-    const token = jsonwebtoken.sign(testPayload, privateKey, { algorithm: "RS256" });
-    console.log("Test token generated successfully");
-    const decoded = jsonwebtoken.verify(token, privateKey, { algorithms: ["RS256"] });
-    console.log("Test token verified successfully");
-    console.log("Decoded test payload:", decoded);
-  } catch (error) {
-    console.error("Error testing private key:", error);
-  }
-}
-
-function decodeJWT(token: string): void {
-  try {
-    const decoded = jsonwebtoken.decode(token, { complete: true });
-    console.log("Decoded JWT:");
-    console.log("Header:", JSON.stringify(decoded?.header, null, 2));
-    console.log("Payload:", JSON.stringify(decoded?.payload, null, 2));
-  } catch (error) {
-    console.error("Error decoding JWT:", error);
-  }
-}
-
-async function generateJWT(appId: string, privateKey: string): Promise<string> {
-  console.log(`Generating JWT for App ID: ${appId}`);
+function generateJWT(privateKey: string): string {
+  console.log(`Generating JWT for App ID: ${APP_ID}`);
   logPrivateKeyInfo(privateKey);
   
-  if (!privateKey.trim()) {
-    throw new Error("Private key is empty or contains only whitespace");
-  }
-
-  if (!privateKey.includes("BEGIN") || !privateKey.includes("END")) {
-    throw new Error("Private key is missing BEGIN or END markers");
-  }
-
   const now = Math.floor(Date.now() / 1000);
-  console.log(`Current timestamp: ${now}`);
   const payload = {
     iat: now,
-    exp: now + 10 * 60, // 10 minutes expiration
-    iss: appId
+    exp: now + 600,
+    iss: APP_ID
   };
 
   console.log("Full JWT payload:", JSON.stringify(payload, null, 2));
 
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signatureInput = `${encodedHeader}.${encodedPayload}`;
+  
+  const signer = crypto.createSign('RSA-SHA256');
+  signer.update(signatureInput);
+  const signature = signer.sign(privateKey, 'base64url');
+
+  const jwt = `${signatureInput}.${signature}`;
+  console.log("JWT generated successfully");
+  console.log("Full JWT token for debugging:");
+  console.log(jwt);
+  console.log("Verify this token at: https://jwt.io/");
+
+  return jwt;
+}
+
+async function getAppInfo(jwtToken: string): Promise<void> {
   try {
-    const token = jsonwebtoken.sign(payload, privateKey, {
-      algorithm: "RS256",
-      header: {
-        alg: "RS256",
-        typ: "JWT"
+    const response = await axios.get(`https://api.github.com/app`, {
+      headers: {
+        Authorization: `Bearer ${jwtToken}`,
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "CredEx-App/1.0"
       }
     });
-    console.log("JWT generated successfully");
-    decodeJWT(token);
-    console.log("Full JWT token for debugging:");
-    console.log(token);
-    console.log("Verify this token at: https://jwt.io/");
-
-    // Verify the token locally
-    try {
-      const verified = jsonwebtoken.verify(token, privateKey, { algorithms: ["RS256"] });
-      console.log("JWT verified locally:", verified);
-    } catch (verifyError) {
-      console.error("Error verifying JWT locally:", verifyError);
-      throw verifyError;
-    }
-
-    // Check if the current time is within the token's validity period
-    const currentTime = Math.floor(Date.now() / 1000);
-    console.log(`Current time: ${currentTime}, Token iat: ${payload.iat}, Token exp: ${payload.exp}`);
-    if (currentTime < payload.iat || currentTime > payload.exp) {
-      throw new Error("Current time is outside the token's validity period");
+    console.log("GitHub App Information:");
+    console.log(`Name: ${response.data.name}`);
+    console.log(`ID: ${response.data.id}`);
+    console.log(`Description: ${response.data.description}`);
+    console.log("Permissions:");
+    console.log(JSON.stringify(response.data.permissions, null, 2));
+    console.log(`Events: ${response.data.events.join(', ')}`);
+    console.log(`Created at: ${response.data.created_at}`);
+    console.log(`Updated at: ${response.data.updated_at}`);
+  } catch (error: any) {
+    console.error("Error fetching GitHub App information:");
+    if (error.response) {
+      console.error("Response status:", error.response.status);
+      console.error("Response data:", JSON.stringify(error.response.data, null, 2));
     } else {
-      console.log("Current time is within the token's validity period");
+      console.error("Error message:", error.message);
     }
-
-    return token;
-  } catch (error) {
-    console.error("Error generating JWT:", error);
-    throw error;
   }
 }
 
-async function getInstallationToken(
-  appId: string,
-  installationId: string,
-  privateKey: string
-): Promise<string> {
-  console.log(`Getting installation token for App ID: ${appId}, Installation ID: ${installationId}`);
+async function getInstallationToken(installationId: string, privateKey: string): Promise<string> {
+  console.log(`Getting installation token for App ID: ${APP_ID}, Installation ID: ${installationId}`);
   
-  const jwtToken = await generateJWT(appId, privateKey);
+  const jwtToken = generateJWT(privateKey);
   console.log(`JWT Token (first 20 chars): ${jwtToken.substring(0, 20)}...`);
 
-  try {
-    const response = await axiosInstance.post(
-      `https://api.github.com/app/installations/${installationId}/access_tokens`,
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${jwtToken}`,
-          Accept: "application/vnd.github.v3+json",
-        },
-      }
-    );
+  // Fetch and log GitHub App information
+  await getAppInfo(jwtToken);
 
+  const url = `https://api.github.com/app/installations/${installationId}/access_tokens`;
+  console.log(`Request URL: ${url}`);
+
+  const headers = {
+    Authorization: `Bearer ${jwtToken}`,
+    Accept: "application/vnd.github.v3+json",
+    "User-Agent": "CredEx-App/1.0"
+  };
+  console.log("Request headers:", JSON.stringify(headers, null, 2));
+
+  try {
+    const response = await axios.post(url, {}, { headers });
     console.log("Installation token retrieved successfully");
     return response.data.token;
   } catch (error: any) {
@@ -143,7 +115,6 @@ async function getInstallationToken(
     } else {
       console.error("Error message:", error.message);
     }
-    console.error("Full error object:", JSON.stringify(error, null, 2));
     throw error;
   }
 }
@@ -151,7 +122,7 @@ async function getInstallationToken(
 async function triggerDevelopmentWorkflow(token: string): Promise<number> {
   try {
     console.log("Triggering development deployment workflow...");
-    const response = await axiosInstance.post(
+    const response = await axios.post(
       `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/deploy-development.yml/dispatches`,
       {
         ref: "dev",
@@ -163,6 +134,7 @@ async function triggerDevelopmentWorkflow(token: string): Promise<number> {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/vnd.github.v3+json",
+          "User-Agent": "CredEx-App/1.0"
         },
       }
     );
@@ -193,29 +165,21 @@ async function main(): Promise<void> {
       );
     }
 
-    const { appId, installationId } = config.deployment.github;
-    const privateKey = readPrivateKey();
+    const { installationId } = config.deployment.github;
+    const privateKey = getPrivateKey();
 
     console.log("Required GitHub App credentials:");
-    console.log(`App ID: ${appId}`);
+    console.log(`App ID: ${APP_ID}`);
     console.log(`Installation ID: ${installationId}`);
     console.log(`Private Key: ${privateKey ? "Set" : "Missing"}`);
 
-    if (privateKey) {
-      console.log("Private Key Information:");
-      logPrivateKeyInfo(privateKey);
-    }
-
-    if (!appId || !installationId || !privateKey) {
+    if (!installationId || !privateKey) {
       throw new Error(
-        "One or more GitHub App credentials are missing. Please check your environment variables and private key file."
+        "One or more GitHub App credentials are missing. Please check your environment variables."
       );
     }
 
-    console.log("Testing private key...");
-    testPrivateKey(privateKey);
-
-    const token = await getInstallationToken(appId, installationId, privateKey);
+    const token = await getInstallationToken(installationId, privateKey);
     console.log(`Installation token retrieved (first 10 chars): ${token.substring(0, 10)}...`);
     
     await triggerDevelopmentWorkflow(token);
