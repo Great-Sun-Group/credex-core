@@ -32,13 +32,37 @@ jobs:
           echo "Setting up environment: development"
 
       - name: Debug - List all secrets and environment variables
+        env:
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          WHATSAPP_BOT_API_KEY: ${{ secrets.WHATSAPP_BOT_API_KEY }}
+          OPEN_EXCHANGE_RATES_API: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
+          NEO_4J_LEDGER_SPACE_BOLT_URL: ${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}
+          NEO_4J_LEDGER_SPACE_USER: ${{ secrets.NEO_4J_LEDGER_SPACE_USER }}
+          NEO_4J_LEDGER_SPACE_PASS: ${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}
+          NEO_4J_SEARCH_SPACE_BOLT_URL: ${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}
+          NEO_4J_SEARCH_SPACE_USER: ${{ secrets.NEO_4J_SEARCH_SPACE_USER }}
+          NEO_4J_SEARCH_SPACE_PASS: ${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}
         run: |
           echo "Available secrets:"
-          echo '${{ toJson(secrets) }}' | jq 'keys'
+          echo "${{ toJson(secrets) }}" | jq 'keys'
           echo "Environment variables:"
           env | sort
 
       - name: Validate environment variables
+        env:
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          WHATSAPP_BOT_API_KEY: ${{ secrets.WHATSAPP_BOT_API_KEY }}
+          OPEN_EXCHANGE_RATES_API: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
+          NEO_4J_LEDGER_SPACE_BOLT_URL: ${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}
+          NEO_4J_LEDGER_SPACE_USER: ${{ secrets.NEO_4J_LEDGER_SPACE_USER }}
+          NEO_4J_LEDGER_SPACE_PASS: ${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}
+          NEO_4J_SEARCH_SPACE_BOLT_URL: ${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}
+          NEO_4J_SEARCH_SPACE_USER: ${{ secrets.NEO_4J_SEARCH_SPACE_USER }}
+          NEO_4J_SEARCH_SPACE_PASS: ${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}
         run: |
           required_vars=(
             "AWS_ACCESS_KEY"
