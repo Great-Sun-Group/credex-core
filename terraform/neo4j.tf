@@ -28,10 +28,11 @@ data "aws_key_pair" "neo4j_key_pair" {
 }
 
 resource "aws_instance" "neo4j" {
-  count         = local.neo4j_instance_count[local.effective_environment]
-  ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = local.neo4j_instance_type[local.effective_environment]
-  key_name      = data.aws_key_pair.neo4j_key_pair.key_name
+  count                = local.neo4j_instance_count[local.effective_environment]
+  ami                  = data.aws_ami.amazon_linux_2.id
+  instance_type        = local.neo4j_instance_type[local.effective_environment]
+  key_name             = data.aws_key_pair.neo4j_key_pair.key_name
+  iam_instance_profile = data.aws_iam_instance_profile.neo4j_profile.name
 
   vpc_security_group_ids = [aws_security_group.neo4j.id]
   subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]
@@ -105,15 +106,4 @@ resource "aws_instance" "neo4j" {
   }
 }
 
-# Use the existing Neo4j security group from networking.tf
-resource "aws_security_group_rule" "neo4j_ingress" {
-  count             = length(local.neo4j_ports)
-  type              = "ingress"
-  from_port         = local.neo4j_ports[count.index]
-  to_port           = local.neo4j_ports[count.index]
-  protocol          = "tcp"
-  security_group_id = aws_security_group.neo4j.id
-  cidr_blocks       = [local.effective_environment == "production" ? data.aws_vpc.default.cidr_block : "10.0.0.0/8"]
-}
-
-# The egress rule is already defined in the aws_security_group.neo4j resource in networking.tf
+# The security group for Neo4j is now defined in networking.tf

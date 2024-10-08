@@ -23,105 +23,36 @@ locals {
 }
 
 # AWS Systems Manager Parameter Store resources
-resource "aws_ssm_parameter" "neo4j_ledger_space_bolt_url" {
-  name        = "/credex/${local.effective_environment}/neo4j_ledger_space_bolt_url"
-  type        = "String"
-  value       = var.neo4j_ledger_space_bolt_url != "" ? var.neo4j_ledger_space_bolt_url : "placeholder"
-  tags        = local.common_tags
+
+# Helper function to create or update SSM parameters
+locals {
+  create_ssm_parameter = { for k, v in {
+    neo4j_ledger_space_bolt_url = var.neo4j_ledger_space_bolt_url
+    neo4j_search_space_bolt_url = var.neo4j_search_space_bolt_url
+    jwt_secret                  = var.jwt_secret
+    whatsapp_bot_api_key        = var.whatsapp_bot_api_key
+    open_exchange_rates_api     = var.open_exchange_rates_api
+    neo4j_ledger_space_user     = var.neo4j_ledger_space_user
+    neo4j_ledger_space_pass     = var.neo4j_ledger_space_pass
+    neo4j_search_space_user     = var.neo4j_search_space_user
+    neo4j_search_space_pass     = var.neo4j_search_space_pass
+  } : k => v if v != "" }
+}
+
+resource "aws_ssm_parameter" "params" {
+  for_each = local.create_ssm_parameter
+
+  name  = "/credex/${local.effective_environment}/${each.key}"
+  type  = contains(["jwt_secret", "whatsapp_bot_api_key", "open_exchange_rates_api", "neo4j_ledger_space_pass", "neo4j_search_space_pass"], each.key) ? "SecureString" : "String"
+  value = each.value
+  tags  = local.common_tags
 
   lifecycle {
     ignore_changes = [value]
   }
 }
 
-resource "aws_ssm_parameter" "neo4j_search_space_bolt_url" {
-  name        = "/credex/${local.effective_environment}/neo4j_search_space_bolt_url"
-  type        = "String"
-  value       = var.neo4j_search_space_bolt_url != "" ? var.neo4j_search_space_bolt_url : "placeholder"
-  tags        = local.common_tags
-
-  lifecycle {
-    ignore_changes = [value]
-  }
-}
-
-resource "aws_ssm_parameter" "jwt_secret" {
-  name        = "/credex/${local.effective_environment}/jwt_secret"
-  type        = "SecureString"
-  value       = var.jwt_secret
-  tags        = local.common_tags
-
-  lifecycle {
-    ignore_changes = [value]
-  }
-}
-
-resource "aws_ssm_parameter" "whatsapp_bot_api_key" {
-  name        = "/credex/${local.effective_environment}/whatsapp_bot_api_key"
-  type        = "SecureString"
-  value       = var.whatsapp_bot_api_key
-  tags        = local.common_tags
-
-  lifecycle {
-    ignore_changes = [value]
-  }
-}
-
-resource "aws_ssm_parameter" "open_exchange_rates_api" {
-  name        = "/credex/${local.effective_environment}/open_exchange_rates_api"
-  type        = "SecureString"
-  value       = var.open_exchange_rates_api
-  tags        = local.common_tags
-
-  lifecycle {
-    ignore_changes = [value]
-  }
-}
-
-resource "aws_ssm_parameter" "neo4j_ledger_space_user" {
-  name        = "/credex/${local.effective_environment}/neo4j_ledger_space_user"
-  type        = "String"
-  value       = var.neo4j_ledger_space_user
-  tags        = local.common_tags
-
-  lifecycle {
-    ignore_changes = [value]
-  }
-}
-
-resource "aws_ssm_parameter" "neo4j_ledger_space_pass" {
-  name        = "/credex/${local.effective_environment}/neo4j_ledger_space_pass"
-  type        = "SecureString"
-  value       = var.neo4j_ledger_space_pass
-  tags        = local.common_tags
-
-  lifecycle {
-    ignore_changes = [value]
-  }
-}
-
-resource "aws_ssm_parameter" "neo4j_search_space_user" {
-  name        = "/credex/${local.effective_environment}/neo4j_search_space_user"
-  type        = "String"
-  value       = var.neo4j_search_space_user
-  tags        = local.common_tags
-
-  lifecycle {
-    ignore_changes = [value]
-  }
-}
-
-resource "aws_ssm_parameter" "neo4j_search_space_pass" {
-  name        = "/credex/${local.effective_environment}/neo4j_search_space_pass"
-  type        = "SecureString"
-  value       = var.neo4j_search_space_pass
-  tags        = local.common_tags
-
-  lifecycle {
-    ignore_changes = [value]
-  }
-}
-
+# Rest of the file remains unchanged
 data "aws_ecr_repository" "credex_core" {
   name = "credex-core-${local.effective_environment}"
 }
@@ -153,15 +84,15 @@ resource "aws_ecs_task_definition" "credex_core_task" {
     NODE_ENV                       = local.effective_environment
     LOG_LEVEL                      = local.effective_environment == "production" ? "info" : "debug"
     AWS_REGION                     = var.aws_region
-    JWT_SECRET                     = aws_ssm_parameter.jwt_secret.arn
-    WHATSAPP_BOT_API_KEY           = aws_ssm_parameter.whatsapp_bot_api_key.arn
-    OPEN_EXCHANGE_RATES_API        = aws_ssm_parameter.open_exchange_rates_api.arn
-    NEO_4J_LEDGER_SPACE_BOLT_URL   = aws_ssm_parameter.neo4j_ledger_space_bolt_url.arn
-    NEO_4J_LEDGER_SPACE_USER       = aws_ssm_parameter.neo4j_ledger_space_user.arn
-    NEO_4J_LEDGER_SPACE_PASS       = aws_ssm_parameter.neo4j_ledger_space_pass.arn
-    NEO_4J_SEARCH_SPACE_BOLT_URL   = aws_ssm_parameter.neo4j_search_space_bolt_url.arn
-    NEO_4J_SEARCH_SPACE_USER       = aws_ssm_parameter.neo4j_search_space_user.arn
-    NEO_4J_SEARCH_SPACE_PASS       = aws_ssm_parameter.neo4j_search_space_pass.arn
+    JWT_SECRET                     = aws_ssm_parameter.params["jwt_secret"].arn
+    WHATSAPP_BOT_API_KEY           = aws_ssm_parameter.params["whatsapp_bot_api_key"].arn
+    OPEN_EXCHANGE_RATES_API        = aws_ssm_parameter.params["open_exchange_rates_api"].arn
+    NEO_4J_LEDGER_SPACE_BOLT_URL   = aws_ssm_parameter.params["neo4j_ledger_space_bolt_url"].arn
+    NEO_4J_LEDGER_SPACE_USER       = aws_ssm_parameter.params["neo4j_ledger_space_user"].arn
+    NEO_4J_LEDGER_SPACE_PASS       = aws_ssm_parameter.params["neo4j_ledger_space_pass"].arn
+    NEO_4J_SEARCH_SPACE_BOLT_URL   = aws_ssm_parameter.params["neo4j_search_space_bolt_url"].arn
+    NEO_4J_SEARCH_SPACE_USER       = aws_ssm_parameter.params["neo4j_search_space_user"].arn
+    NEO_4J_SEARCH_SPACE_PASS       = aws_ssm_parameter.params["neo4j_search_space_pass"].arn
   })
 
   tags = local.common_tags
@@ -185,17 +116,7 @@ resource "aws_iam_role_policy" "parameter_store_access" {
           "ssm:GetParameter",
           "ssm:GetParameters"
         ]
-        Resource = [
-          aws_ssm_parameter.jwt_secret.arn,
-          aws_ssm_parameter.whatsapp_bot_api_key.arn,
-          aws_ssm_parameter.open_exchange_rates_api.arn,
-          aws_ssm_parameter.neo4j_ledger_space_bolt_url.arn,
-          aws_ssm_parameter.neo4j_ledger_space_user.arn,
-          aws_ssm_parameter.neo4j_ledger_space_pass.arn,
-          aws_ssm_parameter.neo4j_search_space_bolt_url.arn,
-          aws_ssm_parameter.neo4j_search_space_user.arn,
-          aws_ssm_parameter.neo4j_search_space_pass.arn
-        ]
+        Resource = [for param in aws_ssm_parameter.params : param.arn]
       }
     ]
   })
@@ -231,9 +152,8 @@ data "aws_iam_role" "ec2_role" {
   name = "ec2-role-${local.effective_environment}"
 }
 
-resource "aws_iam_instance_profile" "ec2_profile" {
+data "aws_iam_instance_profile" "neo4j_profile" {
   name = "ec2-profile-${local.effective_environment}"
-  role = data.aws_iam_role.ec2_role.name
 }
 
 # Outputs
@@ -290,13 +210,13 @@ output "environment" {
 }
 
 output "neo4j_ledger_bolt_url" {
-  value       = aws_ssm_parameter.neo4j_ledger_space_bolt_url.value
+  value       = aws_ssm_parameter.params["neo4j_ledger_space_bolt_url"].value
   sensitive   = true
   description = "The Neo4j Ledger Space Bolt URL"
 }
 
 output "neo4j_search_bolt_url" {
-  value       = aws_ssm_parameter.neo4j_search_space_bolt_url.value
+  value       = aws_ssm_parameter.params["neo4j_search_space_bolt_url"].value
   sensitive   = true
   description = "The Neo4j Search Space Bolt URL"
 }
