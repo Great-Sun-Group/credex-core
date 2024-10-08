@@ -384,9 +384,13 @@ output "environment" {
 }
 
 output "neo4j_ledger_bolt_url" {
-  value = try(aws_ssm_parameter.neo4j_ledger_space_bolt_url.value, "Not available yet")
+  value       = try(aws_ssm_parameter.neo4j_ledger_space_bolt_url.value, "Not available yet")
+  sensitive   = true
+  description = "The Neo4j Ledger Space Bolt URL"
 }
 
 output "neo4j_search_bolt_url" {
-  value = try(aws_ssm_parameter.neo4j_search_space_bolt_url.value, "Not available yet")
+  value       = try(aws_ssm_parameter.neo4j_search_space_bolt_url.value, "Not available yet")
+  sensitive   = true
+  description = "The Neo4j Search Space Bolt URL"
 }
