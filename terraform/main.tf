@@ -37,16 +37,23 @@ data "aws_iam_role" "ecs_task_role" {
   name = "ecs-task-role-${local.environment}"
 }
 
-# Create or manage existing CloudWatch log group
+# Check if CloudWatch log group already exists
+data "aws_cloudwatch_log_group" "existing_ecs_logs" {
+  name = "/ecs/credex-core-${local.environment}"
+}
+
+# Create CloudWatch log group only if it doesn't exist
 resource "aws_cloudwatch_log_group" "ecs_logs" {
+  count             = data.aws_cloudwatch_log_group.existing_ecs_logs.arn == null ? 1 : 0
   name              = "/ecs/credex-core-${local.environment}"
   retention_in_days = 30
 
   tags = local.common_tags
 
   lifecycle {
-    prevent_destroy = true
-    ignore_changes  = [tags]
+    prevent_destroy     = true
+    create_before_destroy = true
+    ignore_changes      = [tags]
   }
 }
 
@@ -92,7 +99,7 @@ resource "aws_ecs_task_definition" "credex_core_task" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = aws_cloudwatch_log_group.ecs_logs.name
+          awslogs-group         = data.aws_cloudwatch_log_group.existing_ecs_logs.name
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "ecs"
         }
@@ -102,7 +109,7 @@ resource "aws_ecs_task_definition" "credex_core_task" {
 
   tags = local.common_tags
 
-  depends_on = [aws_cloudwatch_log_group.ecs_logs, aws_iam_role_policy_attachment.ecs_execution_role_policy]
+  depends_on = [aws_iam_role_policy_attachment.ecs_execution_role_policy]
 }
 
 data "aws_ecs_service" "credex_core_service" {
