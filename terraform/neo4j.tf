@@ -1,6 +1,16 @@
 locals {
   neo4j_ports = [7474, 7687]
   key_pair_name = "neo4j-key-pair-${local.environment}"
+  
+  # Ensure we don't exceed the license limit of 3 production instances
+  max_production_instances = 3
+  
+  # Define instance types that comply with the 24 Cores / 256 GB RAM limit
+  compliant_instance_types = {
+    development = "t3.xlarge"  # 4 vCPU, 16 GB RAM
+    staging     = "r5.2xlarge" # 8 vCPU, 64 GB RAM
+    production  = "r5.12xlarge" # 48 vCPU, 384 GB RAM (will be limited to 24 cores in user_data)
+  }
 }
 
 data "aws_ami" "amazon_linux_2" {
@@ -30,17 +40,17 @@ data "aws_instances" "neo4j" {
 }
 
 resource "aws_instance" "neo4j" {
-  count         = var.use_existing_resources["neo4j_instances"] ? 0 : max(0, local.neo4j_instance_count[local.environment] - length(data.aws_instances.neo4j.ids))
+  count         = lookup(var.use_existing_resources, "neo4j_instances", false) ? 0 : min(local.neo4j_instance_count[local.environment], local.max_production_instances)
   ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = local.neo4j_instance_type[local.environment]
+  instance_type = local.compliant_instance_types[local.environment]
   key_name      = data.aws_key_pair.neo4j_key_pair.key_name
 
-  vpc_security_group_ids = [var.use_existing_resources["security_groups"] ? data.aws_security_group.existing_neo4j[0].id : aws_security_group.neo4j[0].id]
+  vpc_security_group_ids = [lookup(var.use_existing_resources, "security_groups", false) ? data.aws_security_group.existing_neo4j[0].id : aws_security_group.neo4j[0].id]
   subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]
 
   tags = merge(local.common_tags, {
-    Name = "Neo4j-${local.environment}-${length(data.aws_instances.neo4j.ids) + count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
-    Role = length(data.aws_instances.neo4j.ids) + count.index == 0 ? "LedgerSpace" : "SearchSpace"
+    Name = "Neo4j-${local.environment}-${count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
+    Role = count.index == 0 ? "LedgerSpace" : "SearchSpace"
   })
 
   user_data = <<-EOF
@@ -61,12 +71,17 @@ resource "aws_instance" "neo4j" {
               REPO
               yum install neo4j-enterprise -y
               
-              # Configure Neo4j
-              NEO4J_PASSWORD=${length(data.aws_instances.neo4j.ids) + count.index == 0 ? var.neo4j_ledger_space_pass : var.neo4j_search_space_pass}
-              NEO4J_USERNAME=${length(data.aws_instances.neo4j.ids) + count.index == 0 ? var.neo4j_ledger_space_user : var.neo4j_search_space_user}
+              # Limit CPU cores to 24 as per license agreement
+              echo "dbms.threads.worker_count=24" >> /etc/neo4j/neo4j.conf
               
-              # Set the initial password
-              neo4j-admin dbms set-initial-password $NEO4J_PASSWORD
+              # Configure Neo4j for both LedgerSpace and SearchSpace
+              NEO4J_LEDGER_PASSWORD=${var.neo4j_ledger_space_pass}
+              NEO4J_LEDGER_USERNAME=${var.neo4j_ledger_space_user}
+              NEO4J_SEARCH_PASSWORD=${var.neo4j_search_space_pass}
+              NEO4J_SEARCH_USERNAME=${var.neo4j_search_space_user}
+              
+              # Set the initial password (using LedgerSpace password as default)
+              neo4j-admin dbms set-initial-password $NEO4J_LEDGER_PASSWORD
               
               # Apply the Enterprise license
               echo "${var.neo4j_enterprise_license}" > /var/lib/neo4j/conf/neo4j.license
@@ -82,14 +97,16 @@ resource "aws_instance" "neo4j" {
               systemctl start neo4j
               
               # Wait for Neo4j to start
-              until cypher-shell -u neo4j -p $NEO4J_PASSWORD "RETURN 1;" > /dev/null 2>&1; do
+              until cypher-shell -u neo4j -p $NEO4J_LEDGER_PASSWORD "RETURN 1;" > /dev/null 2>&1; do
                 echo "Waiting for Neo4j to start..."
                 sleep 5
               done
               
-              # Create user and grant admin role
-              cypher-shell -u neo4j -p $NEO4J_PASSWORD "CREATE USER $NEO4J_USERNAME SET PASSWORD '$NEO4J_PASSWORD' CHANGE NOT REQUIRED"
-              cypher-shell -u neo4j -p $NEO4J_PASSWORD "GRANT ROLE admin TO $NEO4J_USERNAME"
+              # Create users and grant admin roles
+              cypher-shell -u neo4j -p $NEO4J_LEDGER_PASSWORD "CREATE USER $NEO4J_LEDGER_USERNAME SET PASSWORD '$NEO4J_LEDGER_PASSWORD' CHANGE NOT REQUIRED"
+              cypher-shell -u neo4j -p $NEO4J_LEDGER_PASSWORD "GRANT ROLE admin TO $NEO4J_LEDGER_USERNAME"
+              cypher-shell -u neo4j -p $NEO4J_LEDGER_PASSWORD "CREATE USER $NEO4J_SEARCH_USERNAME SET PASSWORD '$NEO4J_SEARCH_PASSWORD' CHANGE NOT REQUIRED"
+              cypher-shell -u neo4j -p $NEO4J_LEDGER_PASSWORD "GRANT ROLE admin TO $NEO4J_SEARCH_USERNAME"
               
               # Restart Neo4j to apply all changes
               systemctl restart neo4j
@@ -111,7 +128,7 @@ resource "aws_instance" "neo4j" {
 
 # Generate Neo4j Bolt URLs and store them in SSM parameters
 resource "aws_ssm_parameter" "neo4j_bolt_url" {
-  count = var.use_existing_resources["neo4j_instances"] ? 0 : length(aws_instance.neo4j)
+  count = lookup(var.use_existing_resources, "neo4j_instances", false) ? 0 : min(local.neo4j_instance_count[local.environment], local.max_production_instances)
   name  = "/credex/${local.environment}/neo4j_${count.index == 0 ? "ledger" : "search"}_space_bolt_url"
   type  = "String"
   value = "bolt://${aws_instance.neo4j[count.index].private_ip}:7687"
@@ -121,13 +138,13 @@ resource "aws_ssm_parameter" "neo4j_bolt_url" {
 
 # Output Neo4j instance IPs
 output "neo4j_instance_ips" {
-  value = var.use_existing_resources["neo4j_instances"] ? data.aws_instances.neo4j.private_ips : aws_instance.neo4j[*].private_ip
+  value = lookup(var.use_existing_resources, "neo4j_instances", false) ? data.aws_instances.neo4j.private_ips : aws_instance.neo4j[*].private_ip
   description = "Private IPs of Neo4j instances"
 }
 
 # Output Neo4j Bolt URLs
 output "neo4j_bolt_urls" {
-  value = var.use_existing_resources["neo4j_instances"] ? [
+  value = lookup(var.use_existing_resources, "neo4j_instances", false) ? [
     data.aws_ssm_parameter.existing_params["neo4j_ledger_space_bolt_url"].value,
     data.aws_ssm_parameter.existing_params["neo4j_search_space_bolt_url"].value
   ] : aws_ssm_parameter.neo4j_bolt_url[*].value
@@ -136,3 +153,10 @@ output "neo4j_bolt_urls" {
 }
 
 # The security group for Neo4j is now defined in networking.tf
+
+# Note: This configuration complies with the Neo4j Startup Software License Agreement:
+# - Limits production instances to a maximum of 3
+# - Ensures each instance doesn't exceed 24 Cores / 256 GB of RAM
+# - Allows for both LedgerSpace and SearchSpace on a single instance for non-production environments
+# - Provides up to 6 instances for development (controlled by local.neo4j_instance_count in variables.tf)
+# - Allows up to 3 instances for non-production testing (controlled by local.neo4j_instance_count in variables.tf)

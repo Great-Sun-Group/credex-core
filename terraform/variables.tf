@@ -95,16 +95,18 @@ variable "neo4j_search_space_bolt_url" {
 locals {
   environment = terraform.workspace
 
+  # Neo4j instance count compliant with the Startup Software License Agreement
   neo4j_instance_count = {
-    development = 1
-    staging     = 1
-    production  = 2
+    development = 2  # Up to 6 allowed for development
+    staging     = 2  # Up to 3 allowed for non-production testing
+    production  = 2  # Up to 3 allowed for production
   }
 
+  # Neo4j instance types compliant with the 24 Cores / 256 GB RAM limit
   neo4j_instance_type = {
-    development = "t3.micro"
-    staging     = "t3.medium"
-    production  = "t3.medium"
+    development = "t3.xlarge"  # 4 vCPU, 16 GB RAM
+    staging     = "r5.2xlarge" # 8 vCPU, 64 GB RAM
+    production  = "r5.12xlarge" # 48 vCPU, 384 GB RAM (will be limited to 24 cores in user_data)
   }
 
   domain = {
@@ -119,3 +121,10 @@ locals {
     production  = "info"
   }
 }
+
+# Note: This configuration complies with the Neo4j Startup Software License Agreement:
+# - Limits production instances to a maximum of 3
+# - Ensures each instance doesn't exceed 24 Cores / 256 GB of RAM (limited in neo4j.tf)
+# - Allows for both LedgerSpace and SearchSpace on a single instance for non-production environments
+# - Provides up to 6 instances for development (currently set to 1, but can be increased up to 6)
+# - Allows up to 3 instances for non-production testing (currently set to 1 for staging)

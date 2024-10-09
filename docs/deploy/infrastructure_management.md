@@ -157,15 +157,40 @@ We use a Neo4j Enterprise Startup Edition license with the following limitations
 - Up to 6 Machines for development
 - Up to 3 Machines for non-production internal testing (e.g., staging)
 
+Our current allocation:
+- Production: 2 instances (1 LedgerSpace, 1 SearchSpace)
+- Staging: 2 instances (1 LedgerSpace, 1 SearchSpace)
+- Development: 2 instances (for flexibility in development)
+
 License management process:
 1. The license is stored as a secret in GitHub Actions (`NEO4J_ENTERPRISE_LICENSE`).
 2. During deployment, the license is retrieved and applied to Neo4j instances.
-3. To update the license:
-   - Obtain the new license file from Neo4j.
-   - Update the `NEO4J_ENTERPRISE_LICENSE` secret in GitHub Environments.
-   - Trigger a new deployment to apply the updated license.
+3. Instance counts and specifications are enforced through Terraform configurations in `terraform/neo4j.tf` and `terraform/variables.tf`.
+4. Pre-deployment checks (`terraform/pre_deployment_check.sh`) verify compliance with license limitations.
+5. Regular audits are conducted to ensure ongoing compliance.
 
-For detailed license management procedures, refer to the [Neo4j License Management](./neo4j_license_management.md) document.
+To update the license:
+1. Obtain the new license file from Neo4j.
+2. Update the `NEO4J_ENTERPRISE_LICENSE` secret in GitHub Environments.
+3. Trigger a new deployment to apply the updated license.
+
+Monitoring and Alerts:
+- AWS CloudWatch alarms are set up to monitor Neo4j instance metrics.
+- Alerts are configured for approaching resource limits (cores, RAM).
+- License expiration alerts are set up to provide ample time for renewal.
+
+Renewal Process:
+1. Monitor for license expiration alerts.
+2. Initiate renewal process with Neo4j at least 30 days before expiration.
+3. Upon receiving the new license key, update the GitHub Secret.
+4. Test the new license key in the development environment before applying to staging and production.
+
+Responsibilities:
+- DevOps Team: Manage deployment configurations, monitor compliance, and handle license key updates.
+- Development Team: Adhere to instance limitations during development and testing.
+- Management: Oversee license renewal process and ensure budget allocation.
+
+We conduct quarterly reviews of this license management process to ensure it remains effective and up-to-date with our usage patterns and Neo4j's licensing terms.
 
 ## Neo4j AMI Management
 

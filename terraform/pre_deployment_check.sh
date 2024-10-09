@@ -101,9 +101,22 @@ if resource_exists "aws_lb" "credex-alb-${TF_VAR_environment}"; then
     use_existing_resources["alb"]=true
 fi
 
-if resource_exists "aws_instance" "Neo4j-${TF_VAR_environment}-LedgerSpace"; then
-    echo "Neo4j instances exist"
+# Check for Neo4j instances
+neo4j_instance_count=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-${TF_VAR_environment}-*" "Name=instance-state-name,Values=running" --query 'length(Reservations[].Instances[])' --output text)
+
+if [ "$neo4j_instance_count" -gt 0 ]; then
+    echo "Neo4j instances exist: $neo4j_instance_count found"
     use_existing_resources["neo4j_instances"]=true
+
+    # Check if we're exceeding the maximum allowed instances
+    max_instances=3
+    if [ "$TF_VAR_environment" == "development" ]; then
+        max_instances=6
+    fi
+
+    if [ "$neo4j_instance_count" -gt "$max_instances" ]; then
+        echo "Warning: The number of existing Neo4j instances ($neo4j_instance_count) exceeds the maximum allowed ($max_instances) for the ${TF_VAR_environment} environment."
+    fi
 fi
 
 if resource_exists "aws_ssm_parameter" "/credex/${TF_VAR_environment}/jwt_secret"; then

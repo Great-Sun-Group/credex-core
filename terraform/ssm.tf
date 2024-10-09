@@ -1,6 +1,6 @@
 # Data source for existing SSM parameters
 data "aws_ssm_parameter" "existing_params" {
-  for_each = var.use_existing_resources["ssm_parameters"] ? {
+  for_each = lookup(var.use_existing_resources, "ssm_parameters", false) ? {
     jwt_secret                  = "/credex/${local.environment}/jwt_secret"
     whatsapp_bot_api_key        = "/credex/${local.environment}/whatsapp_bot_api_key"
     open_exchange_rates_api     = "/credex/${local.environment}/open_exchange_rates_api"
@@ -17,7 +17,7 @@ data "aws_ssm_parameter" "existing_params" {
 
 # Create SSM parameters
 resource "aws_ssm_parameter" "params" {
-  for_each = var.use_existing_resources["ssm_parameters"] ? {} : {
+  for_each = lookup(var.use_existing_resources, "ssm_parameters", false) ? {} : {
     jwt_secret                  = var.jwt_secret
     whatsapp_bot_api_key        = var.whatsapp_bot_api_key
     open_exchange_rates_api     = var.open_exchange_rates_api
@@ -38,7 +38,7 @@ resource "aws_ssm_parameter" "params" {
 
 # Null resource to update SSM parameters
 resource "null_resource" "update_ssm_params" {
-  count = var.use_existing_resources["ssm_parameters"] ? 0 : 1
+  count = lookup(var.use_existing_resources, "ssm_parameters", false) ? 0 : 1
 
   triggers = {
     jwt_secret              = var.jwt_secret
@@ -57,6 +57,6 @@ resource "null_resource" "update_ssm_params" {
 
 # Output SSM parameter ARNs
 output "ssm_parameter_arns" {
-  value = var.use_existing_resources["ssm_parameters"] ? values(data.aws_ssm_parameter.existing_params)[*].arn : values(aws_ssm_parameter.params)[*].arn
+  value = lookup(var.use_existing_resources, "ssm_parameters", false) ? values(data.aws_ssm_parameter.existing_params)[*].arn : values(aws_ssm_parameter.params)[*].arn
   description = "ARNs of the SSM parameters"
 }

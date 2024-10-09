@@ -16,14 +16,14 @@ data "aws_subnets" "available" {
 
 # Data source for existing ECS tasks security group
 data "aws_security_group" "existing_ecs_tasks" {
-  count = var.use_existing_resources["security_groups"] ? 1 : 0
+  count = lookup(var.use_existing_resources, "security_groups", false) ? 1 : 0
   name  = "credex-core-ecs-tasks-sg-${local.environment}"
   vpc_id = local.vpc_id
 }
 
 # ECS tasks security group
 resource "aws_security_group" "ecs_tasks" {
-  count       = var.use_existing_resources["security_groups"] ? 0 : 1
+  count       = lookup(var.use_existing_resources, "security_groups", false) ? 0 : 1
   name_prefix = "credex-core-ecs-tasks-sg-${local.environment}"
   description = "Allow inbound access from the ALB only"
   vpc_id      = local.vpc_id
@@ -32,7 +32,7 @@ resource "aws_security_group" "ecs_tasks" {
     protocol        = "tcp"
     from_port       = 5000
     to_port         = 5000
-    security_groups = [var.use_existing_resources["security_groups"] ? data.aws_security_group.existing_alb[0].id : aws_security_group.alb[0].id]
+    security_groups = [lookup(var.use_existing_resources, "security_groups", false) ? data.aws_security_group.existing_alb[0].id : aws_security_group.alb[0].id]
   }
 
   egress {
@@ -48,14 +48,14 @@ resource "aws_security_group" "ecs_tasks" {
 
 # Data source for existing Neo4j security group
 data "aws_security_group" "existing_neo4j" {
-  count = var.use_existing_resources["security_groups"] ? 1 : 0
+  count = lookup(var.use_existing_resources, "security_groups", false) ? 1 : 0
   name  = "credex-neo4j-sg-${local.environment}"
   vpc_id = local.vpc_id
 }
 
 # Neo4j security group
 resource "aws_security_group" "neo4j" {
-  count       = var.use_existing_resources["security_groups"] ? 0 : 1
+  count       = lookup(var.use_existing_resources, "security_groups", false) ? 0 : 1
   name_prefix = "credex-neo4j-sg-${local.environment}"
   description = "Security group for Neo4j instances"
   vpc_id      = local.vpc_id
@@ -89,17 +89,17 @@ resource "aws_security_group" "neo4j" {
 
 # Data source for existing ALB
 data "aws_lb" "existing_alb" {
-  count = var.use_existing_resources["alb"] ? 1 : 0
+  count = lookup(var.use_existing_resources, "alb", false) ? 1 : 0
   name  = "credex-alb-${local.environment}"
 }
 
 # ALB
 resource "aws_lb" "credex_alb" {
-  count              = var.use_existing_resources["alb"] ? 0 : 1
+  count              = lookup(var.use_existing_resources, "alb", false) ? 0 : 1
   name               = "credex-alb-${local.environment}"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [var.use_existing_resources["security_groups"] ? data.aws_security_group.existing_alb[0].id : aws_security_group.alb[0].id]
+  security_groups    = [lookup(var.use_existing_resources, "security_groups", false) ? data.aws_security_group.existing_alb[0].id : aws_security_group.alb[0].id]
   subnets            = data.aws_subnets.available.ids
 
   tags = local.common_tags
@@ -107,12 +107,12 @@ resource "aws_lb" "credex_alb" {
 
 # Data source for existing target group
 data "aws_lb_target_group" "existing_tg" {
-  count = var.use_existing_resources["alb"] ? 1 : 0
+  count = lookup(var.use_existing_resources, "alb", false) ? 1 : 0
   name  = "credex-tg-${local.environment}"
 }
 
 resource "aws_lb_target_group" "credex_core" {
-  count       = var.use_existing_resources["alb"] ? 0 : 1
+  count       = lookup(var.use_existing_resources, "alb", false) ? 0 : 1
   name        = "credex-tg-${local.environment}"
   port        = 5000
   protocol    = "HTTP"
@@ -134,14 +134,14 @@ resource "aws_lb_target_group" "credex_core" {
 
 # Data source for existing ACM certificate
 data "aws_acm_certificate" "existing_cert" {
-  count    = var.use_existing_resources["acm_certificate"] ? 1 : 0
+  count    = lookup(var.use_existing_resources, "acm_certificate", false) ? 1 : 0
   domain   = local.domain[local.environment]
   statuses = ["ISSUED"]
 }
 
 # ACM Certificate
 resource "aws_acm_certificate" "credex_cert" {
-  count             = var.use_existing_resources["acm_certificate"] ? 0 : 1
+  count             = lookup(var.use_existing_resources, "acm_certificate", false) ? 0 : 1
   domain_name       = local.domain[local.environment]
   validation_method = "DNS"
 
@@ -160,7 +160,7 @@ data "aws_route53_zone" "selected" {
 }
 
 resource "aws_route53_record" "cert_validation" {
-  for_each = var.use_existing_resources["acm_certificate"] ? {} : {
+  for_each = lookup(var.use_existing_resources, "acm_certificate", false) ? {} : {
     for dvo in aws_acm_certificate.credex_cert[0].domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
@@ -177,26 +177,26 @@ resource "aws_route53_record" "cert_validation" {
 }
 
 resource "aws_acm_certificate_validation" "cert_validation" {
-  count                   = var.use_existing_resources["acm_certificate"] ? 0 : 1
+  count                   = lookup(var.use_existing_resources, "acm_certificate", false) ? 0 : 1
   certificate_arn         = aws_acm_certificate.credex_cert[0].arn
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
 # Data source for existing HTTPS listener
 data "aws_lb_listener" "existing_https" {
-  count             = var.use_existing_resources["alb"] ? 1 : 0
-  load_balancer_arn = var.use_existing_resources["alb"] ? data.aws_lb.existing_alb[0].arn : aws_lb.credex_alb[0].arn
+  count             = lookup(var.use_existing_resources, "alb", false) ? 1 : 0
+  load_balancer_arn = lookup(var.use_existing_resources, "alb", false) ? data.aws_lb.existing_alb[0].arn : aws_lb.credex_alb[0].arn
   port              = 443
 }
 
 # ALB Listener
 resource "aws_lb_listener" "credex_listener" {
-  count             = var.use_existing_resources["alb"] ? 0 : 1
+  count             = lookup(var.use_existing_resources, "alb", false) ? 0 : 1
   load_balancer_arn = aws_lb.credex_alb[0].arn
   port              = "443"
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-2016-08"
-  certificate_arn   = var.use_existing_resources["acm_certificate"] ? data.aws_acm_certificate.existing_cert[0].arn : aws_acm_certificate.credex_cert[0].arn
+  certificate_arn   = lookup(var.use_existing_resources, "acm_certificate", false) ? data.aws_acm_certificate.existing_cert[0].arn : aws_acm_certificate.credex_cert[0].arn
 
   default_action {
     type             = "forward"
@@ -207,7 +207,7 @@ resource "aws_lb_listener" "credex_listener" {
 }
 
 resource "aws_lb_listener" "redirect_http_to_https" {
-  count             = var.use_existing_resources["alb"] ? 0 : 1
+  count             = lookup(var.use_existing_resources, "alb", false) ? 0 : 1
   load_balancer_arn = aws_lb.credex_alb[0].arn
   port              = "80"
   protocol          = "HTTP"
@@ -230,22 +230,22 @@ resource "aws_route53_record" "api" {
   allow_overwrite = true
 
   alias {
-    name                   = var.use_existing_resources["alb"] ? data.aws_lb.existing_alb[0].dns_name : aws_lb.credex_alb[0].dns_name
-    zone_id                = var.use_existing_resources["alb"] ? data.aws_lb.existing_alb[0].zone_id : aws_lb.credex_alb[0].zone_id
+    name                   = lookup(var.use_existing_resources, "alb", false) ? data.aws_lb.existing_alb[0].dns_name : aws_lb.credex_alb[0].dns_name
+    zone_id                = lookup(var.use_existing_resources, "alb", false) ? data.aws_lb.existing_alb[0].zone_id : aws_lb.credex_alb[0].zone_id
     evaluate_target_health = true
   }
 }
 
 # Data source for existing ALB security group
 data "aws_security_group" "existing_alb" {
-  count = var.use_existing_resources["security_groups"] ? 1 : 0
+  count = lookup(var.use_existing_resources, "security_groups", false) ? 1 : 0
   name  = "credex-alb-sg-${local.environment}"
   vpc_id = local.vpc_id
 }
 
 # ALB security group
 resource "aws_security_group" "alb" {
-  count       = var.use_existing_resources["security_groups"] ? 0 : 1
+  count       = lookup(var.use_existing_resources, "security_groups", false) ? 0 : 1
   name_prefix = "credex-alb-sg-${local.environment}"
   description = "Controls access to the ALB"
   vpc_id      = local.vpc_id
