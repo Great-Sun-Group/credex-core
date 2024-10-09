@@ -116,6 +116,15 @@ jobs:
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          echo "Current working directory:"
+          pwd
+          
+          echo "Contents of terraform directory:"
+          ls -la ./terraform
+          
+          echo "File permissions of task-definition.json:"
+          ls -l ./terraform/task-definition.json
+          
           echo "Raw Execution Role ARN output:"
           terraform output -raw ecs_execution_role_arn
           echo "Raw Task Role ARN output:"
@@ -139,12 +148,12 @@ jobs:
             -e 's|${AWS_REGION}|af-south-1|' \
             -e 's|${EXECUTION_ROLE_ARN}|'$EXECUTION_ROLE_ARN'|' \
             -e 's|${TASK_ROLE_ARN}|'$TASK_ROLE_ARN'|' \
-            terraform/task-definition.json
+            ./terraform/task-definition.json
           
           echo "Updated task definition:"
-          cat terraform/task-definition.json
+          cat ./terraform/task-definition.json
           
-          echo "task-definition=terraform/task-definition.json" >> $GITHUB_OUTPUT
+          echo "task-definition=./terraform/task-definition.json" >> $GITHUB_OUTPUT
         working-directory: ./terraform
 
       - name: Deploy Amazon ECS task definition
