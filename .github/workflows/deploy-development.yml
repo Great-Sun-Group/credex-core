@@ -150,12 +150,19 @@ jobs:
               '. + {executionRoleArn: $exec_role, taskRoleArn: $task_role}' task-definition.json > task-definition-updated.json
             mv task-definition-updated.json task-definition.json
 
+            # Add a unique identifier to force a new deployment
+            DEPLOY_ID=$(date +%s)
+            
             sed -i.bak \
               -e 's|${CONTAINER_IMAGE}|'${ECR_REPO_URL}:${IMAGE_TAG}'|' \
               -e 's|${NODE_ENV}|development|' \
               -e 's|${LOG_LEVEL}|debug|' \
               -e 's|${AWS_REGION}|af-south-1|' \
               task-definition.json
+            
+            # Add the DEPLOY_ID as an environment variable
+            jq --arg deploy_id "$DEPLOY_ID" '.containerDefinitions[0].environment += [{"name": "DEPLOY_ID", "value": $deploy_id}]' task-definition.json > task-definition-updated.json
+            mv task-definition-updated.json task-definition.json
             
             echo "Updated task definition:"
             cat task-definition.json

@@ -37,6 +37,14 @@ data "aws_iam_role" "ecs_task_role" {
   name = "ecs-task-role-${local.environment}"
 }
 
+# Create CloudWatch log group
+resource "aws_cloudwatch_log_group" "ecs_logs" {
+  name              = "/ecs/credex-core-${local.environment}"
+  retention_in_days = 30
+
+  tags = local.common_tags
+}
+
 resource "aws_ecs_task_definition" "credex_core_task" {
   family                   = "credex-core-${local.environment}"
   network_mode             = "awsvpc"
@@ -70,7 +78,7 @@ resource "aws_ecs_task_definition" "credex_core_task" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = data.aws_cloudwatch_log_group.ecs_logs.name
+          awslogs-group         = aws_cloudwatch_log_group.ecs_logs.name
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "ecs"
         }
@@ -79,10 +87,6 @@ resource "aws_ecs_task_definition" "credex_core_task" {
   ])
 
   tags = local.common_tags
-}
-
-data "aws_cloudwatch_log_group" "ecs_logs" {
-  name = "/ecs/credex-core-${local.environment}"
 }
 
 data "aws_ecs_service" "credex_core_service" {
