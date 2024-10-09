@@ -71,7 +71,13 @@ jobs:
 
       - name: Terraform Apply
         id: apply
-        run: terraform apply -auto-approve tfplan
+        run: |
+          echo "Applying Terraform changes..."
+          terraform apply -auto-approve tfplan
+          echo "Terraform apply completed."
+          
+          echo "Outputting updated SSM parameters..."
+          terraform output -json updated_ssm_parameters | jq -r '.[]'
         working-directory: ./terraform
 
       - name: Verify CloudWatch Log Group
@@ -136,6 +142,10 @@ jobs:
 
             DEPLOY_ID=$(date +%s)
             
+            # Use SSM parameter values instead of environment variables
+            NEO4J_LEDGER_SPACE_BOLT_URL=$(aws ssm get-parameter --name "/credex/${TF_VAR_environment}/neo4j_ledger_space_bolt_url" --with-decryption --query "Parameter.Value" --output text)
+            NEO4J_SEARCH_SPACE_BOLT_URL=$(aws ssm get-parameter --name "/credex/${TF_VAR_environment}/neo4j_search_space_bolt_url" --with-decryption --query "Parameter.Value" --output text)
+            
             sed -i.bak \
               -e 's|${CONTAINER_IMAGE}|'${ECR_REPO_URL}:${IMAGE_TAG}'|' \
               -e 's|${NODE_ENV}|development|' \
@@ -144,10 +154,10 @@ jobs:
               -e 's|${JWT_SECRET}|'${TF_VAR_jwt_secret}'|' \
               -e 's|${WHATSAPP_BOT_API_KEY}|'${TF_VAR_whatsapp_bot_api_key}'|' \
               -e 's|${OPEN_EXCHANGE_RATES_API}|'${TF_VAR_open_exchange_rates_api}'|' \
-              -e 's|${NEO_4J_LEDGER_SPACE_BOLT_URL}|'${TF_VAR_neo4j_ledger_space_bolt_url}'|' \
+              -e 's|${NEO_4J_LEDGER_SPACE_BOLT_URL}|'${NEO4J_LEDGER_SPACE_BOLT_URL}'|' \
               -e 's|${NEO_4J_LEDGER_SPACE_USER}|'${TF_VAR_neo4j_ledger_space_user}'|' \
               -e 's|${NEO_4J_LEDGER_SPACE_PASS}|'${TF_VAR_neo4j_ledger_space_pass}'|' \
-              -e 's|${NEO_4J_SEARCH_SPACE_BOLT_URL}|'${TF_VAR_neo4j_search_space_bolt_url}'|' \
+              -e 's|${NEO_4J_SEARCH_SPACE_BOLT_URL}|'${NEO4J_SEARCH_SPACE_BOLT_URL}'|' \
               -e 's|${NEO_4J_SEARCH_SPACE_USER}|'${TF_VAR_neo4j_search_space_user}'|' \
               -e 's|${NEO_4J_SEARCH_SPACE_PASS}|'${TF_VAR_neo4j_search_space_pass}'|' \
               task-definition.json

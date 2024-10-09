@@ -78,13 +78,16 @@ resource "aws_ecs_task_definition" "credex_core_task" {
       environment = [
         { name = "NODE_ENV", value = local.environment },
         { name = "LOG_LEVEL", value = local.environment == "production" ? "info" : "debug" },
-        { name = "AWS_REGION", value = var.aws_region }
+        { name = "AWS_REGION", value = var.aws_region },
+        { name = "NEO4J_LEDGER_SPACE_BOLT_URL", value = data.aws_ssm_parameter.existing_params["neo4j_ledger_space_bolt_url"].value },
+        { name = "NEO4J_SEARCH_SPACE_BOLT_URL", value = data.aws_ssm_parameter.existing_params["neo4j_search_space_bolt_url"].value }
       ]
       secrets = [
         for key, param in data.aws_ssm_parameter.existing_params : {
           name      = upper(replace(key, "/credex/${var.environment}/", ""))
           valueFrom = param.arn
         }
+        if !contains(["neo4j_ledger_space_bolt_url", "neo4j_search_space_bolt_url"], key)
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -154,7 +157,6 @@ output "neo4j_search_bolt_url" {
   description = "The Neo4j Search Space Bolt URL"
 }
 
-# New outputs for ECS execution and task role ARNs
 output "ecs_execution_role_arn" {
   value       = data.aws_iam_role.ecs_execution_role.arn
   description = "The ARN of the ECS execution role"
