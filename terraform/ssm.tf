@@ -19,7 +19,10 @@ data "aws_ssm_parameter" "existing_params" {
 }
 
 resource "null_resource" "update_ssm_params" {
-  for_each = local.ssm_parameters
+  for_each = {
+    for k, v in local.ssm_parameters : k => v
+    if v.value != ""
+  }
 
   triggers = {
     value = each.value.value
