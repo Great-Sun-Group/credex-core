@@ -97,6 +97,15 @@ The deployment process manages several key components for secure Neo4j access:
    - Usage in Terraform: 
      - Retrieved from SSM and used to create an EC2 Key Pair
      - Associated with Neo4j EC2 instances for SSH access
+   - Generation and Management:
+     - To generate a new SSH key pair, use the following command:
+       ```
+       ssh-keygen -t rsa -b 2048 -C "neo4j_access_key" -f ./neo4j_key
+       ```
+     - This will create two files: `neo4j_key` (private key) and `neo4j_key.pub` (public key)
+     - Store the content of `neo4j_key.pub` in the AWS Systems Manager Parameter Store
+     - Keep the `neo4j_key` file secure and use it for SSH access to the Neo4j instances
+     - Update the parameter in AWS SSM whenever you need to rotate the key
 
 2. Neo4j Username and Password:
    - Purpose: Used for authentication to the Neo4j database.

@@ -5,6 +5,7 @@ variable "aws_region" {
 }
 
 variable "environment" {
+  
   description = "The deployment environment (e.g., development, staging, production)"
   type        = string
 }
@@ -55,6 +56,6 @@ variable "neo4j_public_key" {
 
   validation {
     condition     = can(regex("^ssh-rsa AAAA[0-9A-Za-z+/]+[=]{0,3} .+$", var.neo4j_public_key))
-    error_message = "The neo4j_public_key must be a valid OpenSSH public key."
+    error_message = "The neo4j_public_key must be a valid OpenSSH public key. Please refer to the infrastructure management documentation for instructions on generating and managing SSH keys."
   }
 }
