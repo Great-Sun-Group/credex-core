@@ -17,6 +17,7 @@ npx ts-node terraform/trigger-dev-deploy.ts
 ```
 
 This script will:
+
 - Authenticate with the development GitHub App
 - Fetch development-specific secrets from the Development environment
 - Trigger the development deployment workflow
@@ -31,6 +32,7 @@ Please refer to the documents linked below for detailed information on each aspe
 ## Neo4j in credex-core
 
 Neo4j Enterprise Edition plays a crucial role in the credex-core application:
+
 - It serves as the primary database for storing and managing application data.
 - We maintain separate instances for LedgerSpace and SearchSpace in production.
 - The deployment and management of Neo4j instances are handled through Terraform.

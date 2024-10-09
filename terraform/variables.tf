@@ -58,3 +58,8 @@ variable "neo4j_enterprise_license" {
   description = "Neo4j Enterprise License"
   type        = string
 }
+
+variable "neo4j_public_key" {
+  description = "Public key for Neo4j EC2 instances"
+  type        = string
+}

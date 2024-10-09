@@ -87,6 +87,35 @@ Key aspects of Neo4j deployment:
 - Terraform provisions Neo4j instances and applies the license.
 - A post-deployment configuration step updates the AWS Systems Manager Parameter Store with the actual Neo4j instance details.
 
+### Neo4j Access Management
+
+The deployment process manages several key components for secure Neo4j access:
+
+1. Neo4j Public Key:
+   - Purpose: Used for SSH access to the EC2 instances running Neo4j.
+   - Storage: AWS Systems Manager Parameter Store
+   - Usage in Terraform: 
+     - Retrieved from SSM and used to create an EC2 Key Pair
+     - Associated with Neo4j EC2 instances for SSH access
+
+2. Neo4j Username and Password:
+   - Purpose: Used for authentication to the Neo4j database.
+   - Storage: Defined as separate variables for LedgerSpace and SearchSpace in AWS Systems Manager Parameter Store
+   - Usage in Terraform: 
+     - Retrieved from SSM and used in the EC2 user data script to set up and configure the Neo4j database
+     - Separate credentials for LedgerSpace and SearchSpace instances
+
+3. Neo4j Bolt URL:
+   - Purpose: Used for connecting to the Neo4j database.
+   - Generation: Created during the deployment process, not set in advance
+   - Storage: AWS Systems Manager Parameter Store
+   - Usage: 
+     - Not directly used in EC2 setup
+     - Retrieved from SSM for application configuration and database connections
+     - No need to store as environment secrets
+
+These components are managed securely through AWS Systems Manager Parameter Store, ensuring they are not exposed in the codebase while still allowing for automated deployment and secure access to Neo4j instances.
+
 ## Neo4j License Management
 
 We use a Neo4j Enterprise Startup Edition license with the following limitations:
@@ -121,7 +150,7 @@ Remember to always review the Terraform plan carefully before applying changes, 
 
 ## Post-Deployment Configuration
 
-A `null_resource` in `terraform/main.tf` is used to update the AWS Systems Manager parameters with the actual Neo4j instance details after they are created. This step ensures that the correct Neo4j connection information is available for the application to use, even when the initial deployment doesn't have this information.
+A `null_resource` in `terraform/main.tf` is used to update the AWS Systems Manager parameters with the actual Neo4j instance details after they are created. This step is crucial for managing the Bolt URLs and ensuring that the correct Neo4j connection information is available for the application to use.
 
 The post-deployment configuration process:
 1. Retrieves the actual Neo4j instance details (e.g., private IP addresses) from the newly created EC2 instances.
@@ -129,7 +158,20 @@ The post-deployment configuration process:
 3. Updates the AWS Systems Manager Parameter Store with the new Bolt URLs.
 4. Ensures that the application can access the correct Neo4j connection information for both LedgerSpace and SearchSpace.
 
-This step is crucial for maintaining the correct configuration across deployments and updates.
+This step is crucial for maintaining the correct configuration across deployments and updates, especially for dynamically generated values like Bolt URLs.
+
+## Accessing Neo4j Connection Details in the Application
+
+The application retrieves Neo4j connection details (including Bolt URLs) from AWS Systems Manager Parameter Store. This is configured in the ECS task definition, where the following environment variables are set:
+
+- `NEO_4J_LEDGER_SPACE_BOLT_URL`
+- `NEO_4J_LEDGER_SPACE_USER`
+- `NEO_4J_LEDGER_SPACE_PASS`
+- `NEO_4J_SEARCH_SPACE_BOLT_URL`
+- `NEO_4J_SEARCH_SPACE_USER`
+- `NEO_4J_SEARCH_SPACE_PASS`
+
+These variables are populated with values from the corresponding SSM parameters, allowing the application to securely access the Neo4j connection details without the need for environment secrets.
 
 ## Testing and Validation
 
@@ -147,4 +189,17 @@ Our deployment process includes several validation steps:
 
 For additional test cases to ensure license compliance and verify Neo4j Enterprise Edition functionality, refer to [Neo4j License Validation Test Cases](./testing/neo4j_license_validation.md).
 
-By following these infrastructure management practices, you can ensure that your credex-core application is running on up-to-date and properly configured infrastructure across all environments.
+By following these infrastructure management practices, you can ensure that your credex-core application is running on up-to-date and properly configured infrastructure across all environments, with secure and efficient Neo4j deployment and access management.
+
+## Handling of Bolt URLs in Different Environments
+
+- In staging and production environments, Bolt URLs are dynamically generated during the deployment process and stored in AWS Systems Manager Parameter Store.
+- In development environments, where database creation is not done with Infrastructure as Code (IaC), Bolt URLs are present from the first run.
+- The application configuration (`config/config.ts`) handles both scenarios, using the SSM-provided URLs when available and falling back to a default local URL if not provided.
+- Importantly, Bolt URLs are not passed as secrets or environment variables in the GitHub Actions workflow. Instead, they are generated and managed entirely within the AWS environment during deployment.
+
+## AWS Credentials and Permissions
+
+- AWS credentials (access key and secret access key) are not stored in the application configuration.
+- The necessary AWS permissions are managed through the ECS task role, adhering to the principle of least privilege and enhancing security.
+- In the GitHub Actions workflow, AWS credentials are used only for the deployment process and are stored as GitHub secrets.

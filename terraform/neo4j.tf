@@ -23,15 +23,21 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-data "aws_key_pair" "neo4j_key_pair" {
-  key_name = local.key_pair_name
+data "aws_ssm_parameter" "neo4j_public_key" {
+  name = "/credex/${local.environment}/neo4j_public_key"
+}
+
+# Create a new EC2 Key Pair
+resource "aws_key_pair" "neo4j_key_pair" {
+  key_name   = local.key_pair_name
+  public_key = data.aws_ssm_parameter.neo4j_public_key.value
 }
 
 resource "aws_instance" "neo4j" {
   count                = local.neo4j_instance_count[local.environment]
   ami                  = data.aws_ami.amazon_linux_2.id
   instance_type        = local.neo4j_instance_type[local.environment]
-  key_name             = data.aws_key_pair.neo4j_key_pair.key_name
+  key_name             = aws_key_pair.neo4j_key_pair.key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j.id]
   subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]

@@ -51,3 +51,9 @@ resource "aws_ssm_parameter" "neo4j_search_space_pass" {
   type  = "SecureString"
   value = var.neo4j_search_space_pass
 }
+
+resource "aws_ssm_parameter" "neo4j_public_key" {
+  name  = "/credex/${local.environment}/neo4j_public_key"
+  type  = "SecureString"
+  value = var.neo4j_public_key
+}
