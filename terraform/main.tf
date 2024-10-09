@@ -92,12 +92,12 @@ data "aws_ecs_service" "credex_core_service" {
 
 # Outputs
 output "api_url" {
-  value       = "https://${data.aws_route53_record.api.name}"
+  value       = "https://${aws_route53_record.api.name}"
   description = "The URL of the deployed API"
 }
 
 output "api_domain" {
-  value       = data.aws_route53_record.api.name
+  value       = aws_route53_record.api.name
   description = "The domain name of the API"
 }
 
