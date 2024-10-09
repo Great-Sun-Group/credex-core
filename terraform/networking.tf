@@ -127,7 +127,13 @@ resource "aws_acm_certificate_validation" "cert_validation" {
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
+data "aws_lb_listener" "https" {
+  load_balancer_arn = data.aws_lb.credex_alb.arn
+  port              = 443
+}
+
 resource "aws_lb_listener" "credex_listener" {
+  count             = data.aws_lb_listener.https.arn == null ? 1 : 0
   load_balancer_arn = data.aws_lb.credex_alb.arn
   port              = "443"
   protocol          = "HTTPS"

@@ -103,8 +103,9 @@ resource "aws_ecs_service" "credex_core_service" {
     container_port   = 5000
   }
 
-  # Remove the depends_on block since we're now using data sources
-  # depends_on = [aws_lb_listener.credex_listener]
+  lifecycle {
+    ignore_changes = [task_definition, desired_count]
+  }
 
   tags = local.common_tags
 }
