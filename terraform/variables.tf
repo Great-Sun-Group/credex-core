@@ -1,18 +1,12 @@
 variable "aws_region" {
   description = "The AWS region to deploy to"
+  type        = string
   default     = "af-south-1"
 }
 
 variable "environment" {
-  description = "The deployment environment (production, staging, or development)"
+  description = "The deployment environment (e.g., development, staging, production)"
   type        = string
-  default     = null # This allows us to use terraform.workspace as a fallback
-}
-
-variable "neo4j_version" {
-  description = "Version of Neo4j to install"
-  type        = string
-  default     = "5.15.0"  # Updated to the latest available version
 }
 
 variable "jwt_secret" {
@@ -33,42 +27,34 @@ variable "open_exchange_rates_api" {
 variable "neo4j_ledger_space_bolt_url" {
   description = "Neo4j LedgerSpace Bolt URL"
   type        = string
-  default     = ""
 }
 
 variable "neo4j_ledger_space_user" {
   description = "Neo4j LedgerSpace username"
   type        = string
-  default     = ""
 }
 
 variable "neo4j_ledger_space_pass" {
   description = "Neo4j LedgerSpace password"
   type        = string
-  default     = ""
 }
 
 variable "neo4j_search_space_bolt_url" {
   description = "Neo4j SearchSpace Bolt URL"
   type        = string
-  default     = ""
 }
 
 variable "neo4j_search_space_user" {
   description = "Neo4j SearchSpace username"
   type        = string
-  default     = ""
 }
 
 variable "neo4j_search_space_pass" {
   description = "Neo4j SearchSpace password"
   type        = string
-  default     = ""
 }
 
 variable "neo4j_enterprise_license" {
   description = "Neo4j Enterprise License"
   type        = string
-  default     = ""
-  sensitive   = true
 }
