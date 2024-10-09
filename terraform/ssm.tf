@@ -13,6 +13,11 @@ locals {
   }
 }
 
+data "aws_ssm_parameter" "existing_params" {
+  for_each = local.ssm_parameters
+  name     = "/credex/${var.environment}/${each.key}"
+}
+
 resource "aws_ssm_parameter" "params" {
   for_each = local.ssm_parameters
 
@@ -25,8 +30,7 @@ resource "aws_ssm_parameter" "params" {
   }
 }
 
-# This null_resource ensures that parameters are updated
-resource "null_resource" "update_params" {
+resource "null_resource" "update_ssm_params" {
   for_each = local.ssm_parameters
 
   triggers = {

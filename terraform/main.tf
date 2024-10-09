@@ -33,6 +33,7 @@ resource "aws_ecr_repository" "credex_core" {
 
   lifecycle {
     prevent_destroy = true
+    ignore_changes  = [image_tag_mutability, image_scanning_configuration]
   }
 }
 
