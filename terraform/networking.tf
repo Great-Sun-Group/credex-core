@@ -97,7 +97,7 @@ data "aws_lb_target_group" "credex_tg" {
 
 # Check for existing ACM certificate
 data "aws_acm_certificate" "existing_cert" {
-  domain   = local.domain
+  domain   = local.domain[local.environment]
   statuses = ["ISSUED"]
 
   count = var.use_existing_resources ? 1 : 0
@@ -105,7 +105,7 @@ data "aws_acm_certificate" "existing_cert" {
 
 resource "aws_acm_certificate" "credex_cert" {
   count             = var.use_existing_resources ? 0 : 1
-  domain_name       = local.domain
+  domain_name       = local.domain[local.environment]
   validation_method = "DNS"
 
   tags = merge(local.common_tags, {
@@ -179,7 +179,7 @@ resource "aws_lb_listener" "redirect_http_to_https" {
 
 resource "aws_route53_record" "api" {
   zone_id         = data.aws_route53_zone.selected.zone_id
-  name            = local.domain
+  name            = local.domain[local.environment]
   type            = "A"
   allow_overwrite = true
 

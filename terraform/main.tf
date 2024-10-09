@@ -12,7 +12,8 @@ provider "aws" {
 }
 
 locals {
-  domain      = local.domain[local.environment]
+  environment = terraform.workspace
+  api_domain  = local.domain[local.environment]
   common_tags = {
     Environment = local.environment
     Project     = "CredEx"

@@ -85,7 +85,7 @@ locals {
 
   domain = {
     development = "dev.api.mycredex.app"
-    staging     = "staging.api.mycredex.app"
+    staging     = "stage.api.mycredex.app"
     production  = "api.mycredex.app"
   }
 
@@ -94,9 +94,4 @@ locals {
     staging     = "info"
     production  = "info"
   }
-}
-
-output "environment" {
-  value       = local.environment
-  description = "The current deployment environment based on the Terraform workspace"
 }

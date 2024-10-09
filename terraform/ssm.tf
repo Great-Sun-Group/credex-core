@@ -12,11 +12,8 @@ locals {
 }
 
 data "aws_ssm_parameter" "existing_params" {
-  for_each = local.ssm_parameters
+  for_each = var.use_existing_resources ? local.ssm_parameters : {}
   name     = "/credex/${local.environment}/${each.key}"
-
-  # Only try to fetch existing parameters if use_existing_resources is true
-  count = var.use_existing_resources ? 1 : 0
 }
 
 resource "aws_ssm_parameter" "params" {
@@ -24,10 +21,7 @@ resource "aws_ssm_parameter" "params" {
 
   name  = "/credex/${local.environment}/${each.key}"
   type  = each.value.type
-  value = each.value.value
-
-  # Only create new parameters if use_existing_resources is false or if the parameter doesn't exist
-  count = var.use_existing_resources && contains(keys(data.aws_ssm_parameter.existing_params), each.key) ? 0 : 1
+  value = var.use_existing_resources && contains(keys(data.aws_ssm_parameter.existing_params), each.key) ? data.aws_ssm_parameter.existing_params[each.key].value : each.value.value
 
   lifecycle {
     ignore_changes = [value]
@@ -35,14 +29,11 @@ resource "aws_ssm_parameter" "params" {
 }
 
 resource "null_resource" "update_ssm_params" {
-  for_each = local.ssm_parameters
+  for_each = var.use_existing_resources ? local.ssm_parameters : {}
 
   triggers = {
     value = each.value.value
   }
-
-  # Only update parameters if use_existing_resources is true
-  count = var.use_existing_resources ? 1 : 0
 
   provisioner "local-exec" {
     command = <<EOT
@@ -61,18 +52,14 @@ resource "null_resource" "update_ssm_params" {
   }
 }
 
-# Output all SSM parameters
 output "ssm_parameters" {
-  value = var.use_existing_resources ? {
-    for k, v in data.aws_ssm_parameter.existing_params : k => v.value
-  } : {
+  value = {
     for k, v in aws_ssm_parameter.params : k => v.value
   }
   description = "All SSM parameters"
   sensitive   = true
 }
 
-# Output the names of all SSM parameters
 output "ssm_parameter_names" {
   value       = jsonencode([for k, v in local.ssm_parameters : "/credex/${local.environment}/${k}"])
   description = "List of all SSM parameter names"
