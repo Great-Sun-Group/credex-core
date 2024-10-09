@@ -12,7 +12,6 @@ provider "aws" {
 }
 
 locals {
-  vpc_id = data.aws_vpc.default.id != "" ? data.aws_vpc.default.id : aws_vpc.main[0].id
   effective_environment = coalesce(var.environment, terraform.workspace == "default" ? "production" : terraform.workspace)
   domain = local.effective_environment == "production" ? "api.mycredex.app" : local.effective_environment == "staging" ? "apistaging.mycredex.app" : "apidev.mycredex.app"
   common_tags = {
@@ -39,8 +38,9 @@ data "aws_ssm_parameter" "params" {
   name = "/credex/${local.effective_environment}/${each.key}"
 }
 
-data "aws_ecr_repository" "credex_core" {
+resource "aws_ecr_repository" "credex_core" {
   name = "credex-core-${local.effective_environment}"
+  tags = local.common_tags
 }
 
 resource "aws_ecs_cluster" "credex_cluster" {
@@ -48,12 +48,47 @@ resource "aws_ecs_cluster" "credex_cluster" {
   tags = local.common_tags
 }
 
-data "aws_iam_role" "ecs_execution_role" {
+resource "aws_iam_role" "ecs_execution_role" {
   name = "ecs-execution-role-${local.effective_environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = local.common_tags
 }
 
-data "aws_iam_role" "ecs_task_role" {
+resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
+  role       = aws_iam_role.ecs_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+resource "aws_iam_role" "ecs_task_role" {
   name = "ecs-task-role-${local.effective_environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = local.common_tags
 }
 
 resource "aws_ecs_task_definition" "credex_core_task" {
@@ -62,77 +97,87 @@ resource "aws_ecs_task_definition" "credex_core_task" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
   memory                   = "512"
-  execution_role_arn       = data.aws_iam_role.ecs_execution_role.arn
-  task_role_arn            = data.aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
 
-  container_definitions = jsonencode(
-    jsondecode(
-      templatefile("${path.module}/task-definition.json", {
-        CONTAINER_IMAGE                = "${data.aws_ecr_repository.credex_core.repository_url}:latest"
-        NODE_ENV                       = local.effective_environment
-        LOG_LEVEL                      = local.effective_environment == "production" ? "info" : "debug"
-        AWS_REGION                     = var.aws_region
-        JWT_SECRET                     = data.aws_ssm_parameter.params["jwt_secret"].arn
-        WHATSAPP_BOT_API_KEY           = data.aws_ssm_parameter.params["whatsapp_bot_api_key"].arn
-        OPEN_EXCHANGE_RATES_API        = data.aws_ssm_parameter.params["open_exchange_rates_api"].arn
-        NEO_4J_LEDGER_SPACE_BOLT_URL   = data.aws_ssm_parameter.params["neo4j_ledger_space_bolt_url"].arn
-        NEO_4J_LEDGER_SPACE_USER       = data.aws_ssm_parameter.params["neo4j_ledger_space_user"].arn
-        NEO_4J_LEDGER_SPACE_PASS       = data.aws_ssm_parameter.params["neo4j_ledger_space_pass"].arn
-        NEO_4J_SEARCH_SPACE_BOLT_URL   = data.aws_ssm_parameter.params["neo4j_search_space_bolt_url"].arn
-        NEO_4J_SEARCH_SPACE_USER       = data.aws_ssm_parameter.params["neo4j_search_space_user"].arn
-        NEO_4J_SEARCH_SPACE_PASS       = data.aws_ssm_parameter.params["neo4j_search_space_pass"].arn
-      })
-    ).containerDefinitions
-  )
+  container_definitions = jsonencode([
+    {
+      name  = "credex-core"
+      image = "${aws_ecr_repository.credex_core.repository_url}:latest"
+      portMappings = [
+        {
+          containerPort = 5000
+          hostPort      = 5000
+        }
+      ]
+      environment = [
+        { name = "NODE_ENV", value = local.effective_environment },
+        { name = "LOG_LEVEL", value = local.effective_environment == "production" ? "info" : "debug" },
+        { name = "AWS_REGION", value = var.aws_region }
+      ]
+      secrets = [
+        { name = "JWT_SECRET", valueFrom = data.aws_ssm_parameter.params["jwt_secret"].arn },
+        { name = "WHATSAPP_BOT_API_KEY", valueFrom = data.aws_ssm_parameter.params["whatsapp_bot_api_key"].arn },
+        { name = "OPEN_EXCHANGE_RATES_API", valueFrom = data.aws_ssm_parameter.params["open_exchange_rates_api"].arn },
+        { name = "NEO_4J_LEDGER_SPACE_BOLT_URL", valueFrom = data.aws_ssm_parameter.params["neo4j_ledger_space_bolt_url"].arn },
+        { name = "NEO_4J_LEDGER_SPACE_USER", valueFrom = data.aws_ssm_parameter.params["neo4j_ledger_space_user"].arn },
+        { name = "NEO_4J_LEDGER_SPACE_PASS", valueFrom = data.aws_ssm_parameter.params["neo4j_ledger_space_pass"].arn },
+        { name = "NEO_4J_SEARCH_SPACE_BOLT_URL", valueFrom = data.aws_ssm_parameter.params["neo4j_search_space_bolt_url"].arn },
+        { name = "NEO_4J_SEARCH_SPACE_USER", valueFrom = data.aws_ssm_parameter.params["neo4j_search_space_user"].arn },
+        { name = "NEO_4J_SEARCH_SPACE_PASS", valueFrom = data.aws_ssm_parameter.params["neo4j_search_space_pass"].arn }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/credex-core-${local.effective_environment}"
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
 
   tags = local.common_tags
 }
 
-resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
-  role       = data.aws_iam_role.ecs_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+resource "aws_cloudwatch_log_group" "ecs_logs" {
+  name              = "/ecs/credex-core-${local.effective_environment}"
+  retention_in_days = 30
+  tags              = local.common_tags
 }
 
-resource "aws_iam_role_policy" "parameter_store_access" {
-  name = "parameter-store-access-policy-${local.effective_environment}"
-  role = data.aws_iam_role.ecs_execution_role.id
+resource "aws_ecs_service" "credex_core_service" {
+  name            = "credex-core-service-${local.effective_environment}"
+  cluster         = aws_ecs_cluster.credex_cluster.id
+  task_definition = aws_ecs_task_definition.credex_core_task.arn
+  launch_type     = "FARGATE"
+  desired_count   = 1
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ssm:GetParameter",
-          "ssm:GetParameters"
-        ]
-        Resource = [for param in data.aws_ssm_parameter.params : param.arn]
-      }
-    ]
-  })
-}
+  network_configuration {
+    subnets          = data.aws_subnets.available.ids
+    assign_public_ip = true
+    security_groups  = [aws_security_group.ecs_tasks.id]
+  }
 
-data "aws_ecs_service" "credex_core_service" {
-  cluster_arn  = aws_ecs_cluster.credex_cluster.arn
-  service_name = "credex-core-service-${local.effective_environment}"
-}
+  load_balancer {
+    target_group_arn = aws_lb_target_group.credex_tg.arn
+    container_name   = "credex-core"
+    container_port   = 5000
+  }
 
-data "aws_iam_role" "ec2_role" {
-  name = "ec2-role-${local.effective_environment}"
-}
+  depends_on = [aws_lb_listener.credex_listener]
 
-data "aws_iam_instance_profile" "neo4j_profile" {
-  name = "ec2-profile-${local.effective_environment}"
+  tags = local.common_tags
 }
 
 # Outputs
 output "api_url" {
-  value       = "https://${local.domain}"
+  value       = "https://${aws_route53_record.api.name}"
   description = "The URL of the deployed API"
 }
 
 output "api_domain" {
-  value       = local.domain
+  value       = aws_route53_record.api.name
   description = "The domain name of the API"
 }
 
@@ -142,29 +187,16 @@ output "ecs_cluster_name" {
 }
 
 output "ecs_service_name" {
-  value       = data.aws_ecs_service.credex_core_service.service_name
+  value       = aws_ecs_service.credex_core_service.name
   description = "The name of the ECS service"
 }
 
 output "ecr_repository_url" {
-  value = data.aws_ecr_repository.credex_core.repository_url
-}
-
-output "neo4j_ledger_private_ip" {
-  value = try(aws_instance.neo4j[0].private_ip, "Not available yet")
-}
-
-output "neo4j_search_private_ip" {
-  value = try(aws_instance.neo4j[1].private_ip, "Not available yet")
-}
-
-output "neo4j_ami_id" {
-  value       = try(data.aws_ami.amazon_linux_2.id, "Not available yet")
-  description = "The ID of the Amazon Linux 2 AMI used for Neo4j EC2 instances"
+  value = aws_ecr_repository.credex_core.repository_url
 }
 
 output "vpc_id" {
-  value       = local.vpc_id
+  value       = data.aws_vpc.default.id
   description = "The ID of the VPC used for deployment"
 }
 
