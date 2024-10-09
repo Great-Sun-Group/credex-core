@@ -21,20 +21,8 @@ locals {
   }
 }
 
-resource "aws_ecr_repository" "credex_core" {
-  name                 = "credex-core-${local.environment}"
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  tags = local.common_tags
-
-  lifecycle {
-    prevent_destroy = true
-    ignore_changes  = [image_tag_mutability, image_scanning_configuration, name]
-  }
+data "aws_ecr_repository" "credex_core" {
+  name = "credex-core-${local.environment}"
 }
 
 resource "aws_ecs_cluster" "credex_cluster" {
@@ -42,57 +30,12 @@ resource "aws_ecs_cluster" "credex_cluster" {
   tags = local.common_tags
 }
 
-resource "aws_iam_role" "ecs_execution_role" {
+data "aws_iam_role" "ecs_execution_role" {
   name = "ecs-execution-role-${local.environment}"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = local.common_tags
-
-  lifecycle {
-    create_before_destroy = true
-    ignore_changes        = [name]
-  }
 }
 
-resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
-  role       = aws_iam_role.ecs_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-resource "aws_iam_role" "ecs_task_role" {
+data "aws_iam_role" "ecs_task_role" {
   name = "ecs-task-role-${local.environment}"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = local.common_tags
-
-  lifecycle {
-    create_before_destroy = true
-    ignore_changes        = [name]
-  }
 }
 
 resource "aws_ecs_task_definition" "credex_core_task" {
@@ -101,13 +44,13 @@ resource "aws_ecs_task_definition" "credex_core_task" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
   memory                   = "512"
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
-  task_role_arn            = aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = data.aws_iam_role.ecs_execution_role.arn
+  task_role_arn            = data.aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
       name  = "credex-core"
-      image = "${aws_ecr_repository.credex_core.repository_url}:latest"
+      image = "${data.aws_ecr_repository.credex_core.repository_url}:latest"
       portMappings = [
         {
           containerPort = 5000
@@ -126,7 +69,7 @@ resource "aws_ecs_task_definition" "credex_core_task" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = aws_cloudwatch_log_group.ecs_logs.name
+          awslogs-group         = data.aws_cloudwatch_log_group.ecs_logs.name
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "ecs"
         }
@@ -137,15 +80,8 @@ resource "aws_ecs_task_definition" "credex_core_task" {
   tags = local.common_tags
 }
 
-resource "aws_cloudwatch_log_group" "ecs_logs" {
-  name              = "/ecs/credex-core-${local.environment}"
-  retention_in_days = 30
-  tags              = local.common_tags
-
-  lifecycle {
-    prevent_destroy = true
-    ignore_changes  = [name]
-  }
+data "aws_cloudwatch_log_group" "ecs_logs" {
+  name = "/ecs/credex-core-${local.environment}"
 }
 
 resource "aws_ecs_service" "credex_core_service" {
@@ -162,12 +98,13 @@ resource "aws_ecs_service" "credex_core_service" {
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.credex_tg.arn
+    target_group_arn = data.aws_lb_target_group.credex_tg.arn
     container_name   = "credex-core"
     container_port   = 5000
   }
 
-  depends_on = [aws_lb_listener.credex_listener]
+  # Remove the depends_on block since we're now using data sources
+  # depends_on = [aws_lb_listener.credex_listener]
 
   tags = local.common_tags
 }
@@ -194,7 +131,7 @@ output "ecs_service_name" {
 }
 
 output "ecr_repository_url" {
-  value = aws_ecr_repository.credex_core.repository_url
+  value = data.aws_ecr_repository.credex_core.repository_url
 }
 
 output "vpc_id" {

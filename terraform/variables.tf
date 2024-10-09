@@ -52,4 +52,9 @@ variable "neo4j_enterprise_license" {
 variable "neo4j_public_key" {
   description = "Public key for Neo4j EC2 instances"
   type        = string
+
+  validation {
+    condition     = can(regex("^ssh-rsa AAAA[0-9A-Za-z+/]+[=]{0,3} .+$", var.neo4j_public_key))
+    error_message = "The neo4j_public_key must be a valid OpenSSH public key."
+  }
 }

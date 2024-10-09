@@ -29,6 +29,7 @@ resource "aws_key_pair" "neo4j_key_pair" {
 
   lifecycle {
     ignore_changes = [public_key]
+    create_before_destroy = true
   }
 }
 
