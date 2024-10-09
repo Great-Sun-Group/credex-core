@@ -136,3 +136,14 @@ output "neo4j_search_bolt_url" {
   sensitive   = true
   description = "The Neo4j Search Space Bolt URL"
 }
+
+# New outputs for ECS execution and task role ARNs
+output "ecs_execution_role_arn" {
+  value       = data.aws_iam_role.ecs_execution_role.arn
+  description = "The ARN of the ECS execution role"
+}
+
+output "ecs_task_role_arn" {
+  value       = data.aws_iam_role.ecs_task_role.arn
+  description = "The ARN of the ECS task role"
+}
