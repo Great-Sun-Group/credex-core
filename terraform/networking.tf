@@ -19,11 +19,6 @@ data "aws_security_group" "ecs_tasks" {
   vpc_id = local.vpc_id
 }
 
-data "aws_security_group" "neo4j" {
-  name = "credex-neo4j-sg-${local.environment}"
-  vpc_id = local.vpc_id
-}
-
 data "aws_lb" "credex_alb" {
   name = "credex-alb-${local.environment}"
 }
@@ -83,45 +78,6 @@ resource "aws_security_group" "ecs_tasks" {
   }
 
   tags = local.common_tags
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "aws_security_group" "neo4j" {
-  count       = data.aws_security_group.neo4j.id == null ? 1 : 0
-  name_prefix = "credex-neo4j-sg-${local.environment}"
-  description = "Security group for Neo4j instances"
-  vpc_id      = local.vpc_id
-
-  ingress {
-    protocol    = "tcp"
-    from_port   = 7474
-    to_port     = 7474
-    cidr_blocks = [local.environment == "production" ? "10.0.0.0/16" : "10.0.0.0/8"]
-    description = "Allow Neo4j HTTP"
-  }
-
-  ingress {
-    protocol    = "tcp"
-    from_port   = 7687
-    to_port     = 7687
-    cidr_blocks = [local.environment == "production" ? "10.0.0.0/16" : "10.0.0.0/8"]
-    description = "Allow Neo4j Bolt"
-  }
-
-  egress {
-    protocol    = "-1"
-    from_port   = 0
-    to_port     = 0
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow all outbound traffic"
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "credex-neo4j-sg-${local.environment}"
-  })
 
   lifecycle {
     create_before_destroy = true
