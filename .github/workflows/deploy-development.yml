@@ -50,26 +50,26 @@ jobs:
         run: terraform init
         working-directory: ./terraform
 
-      - name: Terraform Plan (Log Group)
-        id: plan-log-group
+      - name: Import existing CloudWatch Log Group
         run: |
-          terraform plan -target=aws_cloudwatch_log_group.ecs_logs -out=tfplan-log-group
+          LOG_GROUP_NAME="/ecs/credex-core-development"
+          if aws logs describe-log-groups --log-group-name-prefix $LOG_GROUP_NAME | grep -q $LOG_GROUP_NAME; then
+            echo "Importing existing CloudWatch Log Group"
+            terraform import aws_cloudwatch_log_group.ecs_logs $LOG_GROUP_NAME
+          else
+            echo "CloudWatch Log Group does not exist, it will be created by Terraform"
+          fi
         working-directory: ./terraform
 
-      - name: Terraform Apply (Log Group)
-        id: apply-log-group
-        run: terraform apply -auto-approve tfplan-log-group
-        working-directory: ./terraform
-
-      - name: Terraform Plan (Rest)
-        id: plan-rest
+      - name: Terraform Plan
+        id: plan
         run: |
-          terraform plan -out=tfplan-rest
+          terraform plan -out=tfplan
         working-directory: ./terraform
 
-      - name: Terraform Apply (Rest)
-        id: apply-rest
-        run: terraform apply -auto-approve tfplan-rest
+      - name: Terraform Apply
+        id: apply
+        run: terraform apply -auto-approve tfplan
         working-directory: ./terraform
 
       - name: Verify CloudWatch Log Group
@@ -168,7 +168,7 @@ jobs:
 
       - name: Run Neo4j Validation Tests
         env:
-          NEO4J_HOST: ${{ steps.apply-rest.outputs.neo4j_host }}
+          NEO4J_HOST: ${{ steps.apply.outputs.neo4j_host }}
           NEO4J_USER: ${{ secrets.NEO_4J_LEDGER_SPACE_USER }}
           NEO4J_PASSWORD: ${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}
         run: |
@@ -177,7 +177,7 @@ jobs:
 
       - name: Run Post-Deployment Tests
         env:
-          API_URL: ${{ steps.apply-rest.outputs.api_url }}
+          API_URL: ${{ steps.apply.outputs.api_url }}
         run: |
           npm install axios jest
           node .github/workflows/post_deployment_tests.js
