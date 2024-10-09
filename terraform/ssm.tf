@@ -20,14 +20,13 @@ resource "aws_ssm_parameter" "params" {
   type  = each.value.type
   value = each.value.value
 
-  # This will create the parameter if it doesn't exist, or update it if it does
   lifecycle {
     ignore_changes = [value]
   }
 }
 
-# Use null_resource to ensure the parameters are always up to date
-resource "null_resource" "update_ssm_params" {
+# This null_resource ensures that parameters are updated
+resource "null_resource" "update_params" {
   for_each = local.ssm_parameters
 
   triggers = {

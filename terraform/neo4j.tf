@@ -23,7 +23,6 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-# Create or update the EC2 Key Pair
 resource "aws_key_pair" "neo4j_key_pair" {
   key_name   = local.key_pair_name
   public_key = aws_ssm_parameter.params["neo4j_public_key"].value
