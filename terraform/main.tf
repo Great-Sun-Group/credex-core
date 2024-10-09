@@ -50,6 +50,12 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
   }
 }
 
+# Ensure ECS execution role has necessary permissions for CloudWatch Logs
+resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
+  role       = data.aws_iam_role.ecs_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
 resource "aws_ecs_task_definition" "credex_core_task" {
   family                   = "credex-core-${local.environment}"
   network_mode             = "awsvpc"
@@ -92,6 +98,8 @@ resource "aws_ecs_task_definition" "credex_core_task" {
   ])
 
   tags = local.common_tags
+
+  depends_on = [aws_cloudwatch_log_group.ecs_logs, aws_iam_role_policy_attachment.ecs_execution_role_policy]
 }
 
 data "aws_ecs_service" "credex_core_service" {
