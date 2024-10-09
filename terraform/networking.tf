@@ -85,25 +85,40 @@ resource "aws_security_group" "neo4j" {
   }
 }
 
-# Data source to fetch existing ALB
-data "aws_lb" "existing_alb" {
-  name = "credex-alb-${local.effective_environment}"
-}
-
-# Use the existing ALB data in the aws_lb resource
 resource "aws_lb" "credex_alb" {
-  name               = data.aws_lb.existing_alb.name
-  internal           = data.aws_lb.existing_alb.internal
-  load_balancer_type = data.aws_lb.existing_alb.load_balancer_type
-  security_groups    = data.aws_lb.existing_alb.security_groups
-  subnets            = data.aws_lb.existing_alb.subnets
+  name               = "credex-alb-${local.effective_environment}"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb.id]
+  subnets            = data.aws_subnets.available.ids
 
-  tags = merge(local.common_tags, data.aws_lb.existing_alb.tags)
+  tags = merge(local.common_tags, {
+    Name = "credex-alb-${local.effective_environment}"
+  })
 
   lifecycle {
-    prevent_destroy = true
-    ignore_changes  = [name, subnets, security_groups]
+    create_before_destroy = true
   }
+}
+
+resource "aws_lb_target_group" "credex_tg" {
+  name        = "credex-tg-${local.effective_environment}"
+  port        = 5000
+  protocol    = "HTTP"
+  vpc_id      = local.vpc_id
+  target_type = "ip"
+
+  health_check {
+    healthy_threshold   = "3"
+    interval            = "30"
+    protocol            = "HTTP"
+    matcher             = "200"
+    timeout             = "3"
+    path                = "/health"
+    unhealthy_threshold = "2"
+  }
+
+  tags = local.common_tags
 }
 
 resource "aws_acm_certificate" "credex_cert" {
@@ -148,7 +163,7 @@ resource "aws_lb_listener" "credex_listener" {
 
   default_action {
     type             = "forward"
-    target_group_arn = data.aws_lb_target_group.credex_tg.arn
+    target_group_arn = aws_lb_target_group.credex_tg.arn
   }
 
   tags = local.common_tags
