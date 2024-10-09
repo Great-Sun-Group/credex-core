@@ -1,16 +1,6 @@
 locals {
-  neo4j_instance_count = {
-    development = 1
-    staging     = 1
-    production  = 2
-  }
-  neo4j_instance_type = {
-    development = "t3.micro"
-    staging     = "t3.medium"
-    production  = "t3.medium"
-  }
   neo4j_ports = [7474, 7687]
-  key_pair_name = "neo4j-key-pair-${var.environment}"
+  key_pair_name = "neo4j-key-pair-${local.environment}"
 }
 
 data "aws_ami" "amazon_linux_2" {
@@ -30,26 +20,26 @@ data "aws_key_pair" "neo4j_key_pair" {
 data "aws_instances" "neo4j" {
   instance_tags = {
     Project     = "CredEx"
-    Environment = var.environment
+    Environment = local.environment
   }
 
   filter {
     name   = "tag:Name"
-    values = ["Neo4j-${var.environment}-*"]
+    values = ["Neo4j-${local.environment}-*"]
   }
 }
 
 resource "aws_instance" "neo4j" {
-  count         = max(0, local.neo4j_instance_count[var.environment] - length(data.aws_instances.neo4j.ids))
+  count         = var.use_existing_resources ? 0 : max(0, local.neo4j_instance_count[local.environment] - length(data.aws_instances.neo4j.ids))
   ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = local.neo4j_instance_type[var.environment]
+  instance_type = local.neo4j_instance_type[local.environment]
   key_name      = data.aws_key_pair.neo4j_key_pair.key_name
 
-  vpc_security_group_ids = [aws_security_group.neo4j.id]
+  vpc_security_group_ids = [var.use_existing_resources ? data.aws_security_group.existing_neo4j[0].id : aws_security_group.neo4j[0].id]
   subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]
 
   tags = merge(local.common_tags, {
-    Name = "Neo4j-${var.environment}-${length(data.aws_instances.neo4j.ids) + count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
+    Name = "Neo4j-${local.environment}-${length(data.aws_instances.neo4j.ids) + count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
     Role = length(data.aws_instances.neo4j.ids) + count.index == 0 ? "LedgerSpace" : "SearchSpace"
   })
 
@@ -117,6 +107,32 @@ resource "aws_instance" "neo4j" {
   }
 
   depends_on = [null_resource.update_ssm_params]
+}
+
+# Generate Neo4j Bolt URLs and store them in SSM parameters
+resource "aws_ssm_parameter" "neo4j_bolt_url" {
+  count = var.use_existing_resources ? 0 : length(aws_instance.neo4j)
+  name  = "/credex/${local.environment}/neo4j_${count.index == 0 ? "ledger" : "search"}_space_bolt_url"
+  type  = "String"
+  value = "bolt://${aws_instance.neo4j[count.index].private_ip}:7687"
+
+  overwrite = true
+}
+
+# Output Neo4j instance IPs
+output "neo4j_instance_ips" {
+  value = var.use_existing_resources ? data.aws_instances.neo4j.private_ips : aws_instance.neo4j[*].private_ip
+  description = "Private IPs of Neo4j instances"
+}
+
+# Output Neo4j Bolt URLs
+output "neo4j_bolt_urls" {
+  value = var.use_existing_resources ? [
+    data.aws_ssm_parameter.existing_params["neo4j_ledger_space_bolt_url"].value,
+    data.aws_ssm_parameter.existing_params["neo4j_search_space_bolt_url"].value
+  ] : aws_ssm_parameter.neo4j_bolt_url[*].value
+  description = "Neo4j Bolt URLs"
+  sensitive   = true
 }
 
 # The security group for Neo4j is now defined in networking.tf

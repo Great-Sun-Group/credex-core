@@ -12,8 +12,7 @@ provider "aws" {
 }
 
 locals {
-  environment = var.environment
-  domain      = local.environment == "production" ? "api.mycredex.app" : "${local.environment}.api.mycredex.app"
+  domain      = local.domain[local.environment]
   common_tags = {
     Environment = local.environment
     Project     = "CredEx"
@@ -42,9 +41,9 @@ data "aws_cloudwatch_log_group" "existing_ecs_logs" {
   name = "/ecs/credex-core-${local.environment}"
 }
 
-# Create CloudWatch log group only if it doesn't exist
+# Create CloudWatch log group only if it doesn't exist and use_existing_resources is false
 resource "aws_cloudwatch_log_group" "ecs_logs" {
-  count             = data.aws_cloudwatch_log_group.existing_ecs_logs.arn == null ? 1 : 0
+  count             = (!var.use_existing_resources && data.aws_cloudwatch_log_group.existing_ecs_logs.arn == null) ? 1 : 0
   name              = "/ecs/credex-core-${local.environment}"
   retention_in_days = 30
 
@@ -63,7 +62,13 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# Data source for existing ECS task definition
+data "aws_ecs_task_definition" "existing_task_definition" {
+  task_definition = "credex-core-${local.environment}"
+}
+
 resource "aws_ecs_task_definition" "credex_core_task" {
+  count                    = var.use_existing_resources ? 0 : 1
   family                   = "credex-core-${local.environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
@@ -84,14 +89,14 @@ resource "aws_ecs_task_definition" "credex_core_task" {
       ]
       environment = [
         { name = "NODE_ENV", value = local.environment },
-        { name = "LOG_LEVEL", value = local.environment == "production" ? "info" : "debug" },
+        { name = "LOG_LEVEL", value = local.log_level[local.environment] },
         { name = "AWS_REGION", value = var.aws_region },
         { name = "NEO4J_LEDGER_SPACE_BOLT_URL", value = data.aws_ssm_parameter.existing_params["neo4j_ledger_space_bolt_url"].value },
         { name = "NEO4J_SEARCH_SPACE_BOLT_URL", value = data.aws_ssm_parameter.existing_params["neo4j_search_space_bolt_url"].value }
       ]
       secrets = [
         for key, param in data.aws_ssm_parameter.existing_params : {
-          name      = upper(replace(key, "/credex/${var.environment}/", ""))
+          name      = upper(replace(key, "/credex/${local.environment}/", ""))
           valueFrom = param.arn
         }
         if !contains(["neo4j_ledger_space_bolt_url", "neo4j_search_space_bolt_url"], key)
@@ -112,9 +117,36 @@ resource "aws_ecs_task_definition" "credex_core_task" {
   depends_on = [aws_iam_role_policy_attachment.ecs_execution_role_policy]
 }
 
-data "aws_ecs_service" "credex_core_service" {
+# Data source for existing ECS service
+data "aws_ecs_service" "existing_service" {
   service_name = "credex-core-service-${local.environment}"
   cluster_arn  = data.aws_ecs_cluster.credex_cluster.arn
+}
+
+# Create or update ECS service based on use_existing_resources
+resource "aws_ecs_service" "credex_core_service" {
+  count           = var.use_existing_resources ? 0 : 1
+  name            = "credex-core-service-${local.environment}"
+  cluster         = data.aws_ecs_cluster.credex_cluster.id
+  task_definition = var.use_existing_resources ? data.aws_ecs_task_definition.existing_task_definition.arn : aws_ecs_task_definition.credex_core_task[0].arn
+  launch_type     = "FARGATE"
+  desired_count   = 1
+
+  network_configuration {
+    subnets          = data.aws_subnets.default.ids
+    security_groups  = [aws_security_group.ecs_tasks.id]
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.credex_core.arn
+    container_name   = "credex-core"
+    container_port   = 5000
+  }
+
+  depends_on = [aws_lb_listener.front_end, aws_iam_role_policy_attachment.ecs_execution_role_policy]
+
+  tags = local.common_tags
 }
 
 # Outputs
@@ -134,7 +166,7 @@ output "ecs_cluster_name" {
 }
 
 output "ecs_service_name" {
-  value       = data.aws_ecs_service.credex_core_service.service_name
+  value       = var.use_existing_resources ? data.aws_ecs_service.existing_service.service_name : aws_ecs_service.credex_core_service[0].name
   description = "The name of the ECS service"
 }
 

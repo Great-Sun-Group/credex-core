@@ -14,7 +14,16 @@ data "aws_subnets" "available" {
   }
 }
 
+# Check for existing ECS tasks security group
+data "aws_security_group" "existing_ecs_tasks" {
+  name   = "credex-core-ecs-tasks-sg-${local.environment}"
+  vpc_id = local.vpc_id
+
+  count = var.use_existing_resources ? 1 : 0
+}
+
 resource "aws_security_group" "ecs_tasks" {
+  count       = var.use_existing_resources ? 0 : 1
   name_prefix = "credex-core-ecs-tasks-sg-${local.environment}"
   description = "Allow inbound access from the ALB only"
   vpc_id      = local.vpc_id
@@ -23,7 +32,7 @@ resource "aws_security_group" "ecs_tasks" {
     protocol        = "tcp"
     from_port       = 5000
     to_port         = 5000
-    security_groups = [aws_security_group.alb.id]
+    security_groups = [var.use_existing_resources ? data.aws_security_group.existing_alb[0].id : aws_security_group.alb[0].id]
   }
 
   egress {
@@ -37,7 +46,16 @@ resource "aws_security_group" "ecs_tasks" {
   tags = local.common_tags
 }
 
+# Check for existing Neo4j security group
+data "aws_security_group" "existing_neo4j" {
+  name   = "credex-neo4j-sg-${local.environment}"
+  vpc_id = local.vpc_id
+
+  count = var.use_existing_resources ? 1 : 0
+}
+
 resource "aws_security_group" "neo4j" {
+  count       = var.use_existing_resources ? 0 : 1
   name_prefix = "credex-neo4j-sg-${local.environment}"
   description = "Security group for Neo4j instances"
   vpc_id      = local.vpc_id
@@ -77,7 +95,16 @@ data "aws_lb_target_group" "credex_tg" {
   name = "credex-tg-${local.environment}"
 }
 
+# Check for existing ACM certificate
+data "aws_acm_certificate" "existing_cert" {
+  domain   = local.domain
+  statuses = ["ISSUED"]
+
+  count = var.use_existing_resources ? 1 : 0
+}
+
 resource "aws_acm_certificate" "credex_cert" {
+  count             = var.use_existing_resources ? 0 : 1
   domain_name       = local.domain
   validation_method = "DNS"
 
@@ -96,18 +123,19 @@ data "aws_route53_zone" "selected" {
 }
 
 resource "aws_route53_record" "cert_validation" {
-  count   = 1
-  name    = tolist(aws_acm_certificate.credex_cert.domain_validation_options)[0].resource_record_name
-  type    = tolist(aws_acm_certificate.credex_cert.domain_validation_options)[0].resource_record_type
+  count   = var.use_existing_resources ? 0 : 1
+  name    = tolist(aws_acm_certificate.credex_cert[0].domain_validation_options)[0].resource_record_name
+  type    = tolist(aws_acm_certificate.credex_cert[0].domain_validation_options)[0].resource_record_type
   zone_id = data.aws_route53_zone.selected.zone_id
-  records = [tolist(aws_acm_certificate.credex_cert.domain_validation_options)[0].resource_record_value]
+  records = [tolist(aws_acm_certificate.credex_cert[0].domain_validation_options)[0].resource_record_value]
   ttl     = 60
 
   allow_overwrite = true
 }
 
 resource "aws_acm_certificate_validation" "cert_validation" {
-  certificate_arn         = aws_acm_certificate.credex_cert.arn
+  count                   = var.use_existing_resources ? 0 : 1
+  certificate_arn         = aws_acm_certificate.credex_cert[0].arn
   validation_record_fqdns = [aws_route53_record.cert_validation[0].fqdn]
 }
 
@@ -122,7 +150,7 @@ resource "aws_lb_listener" "credex_listener" {
   port              = "443"
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-2016-08"
-  certificate_arn   = aws_acm_certificate.credex_cert.arn
+  certificate_arn   = var.use_existing_resources ? data.aws_acm_certificate.existing_cert[0].arn : aws_acm_certificate.credex_cert[0].arn
 
   default_action {
     type             = "forward"
@@ -162,7 +190,16 @@ resource "aws_route53_record" "api" {
   }
 }
 
+# Check for existing ALB security group
+data "aws_security_group" "existing_alb" {
+  name   = "credex-alb-sg-${local.environment}"
+  vpc_id = local.vpc_id
+
+  count = var.use_existing_resources ? 1 : 0
+}
+
 resource "aws_security_group" "alb" {
+  count       = var.use_existing_resources ? 0 : 1
   name_prefix = "credex-alb-sg-${local.environment}"
   description = "Controls access to the ALB"
   vpc_id      = local.vpc_id

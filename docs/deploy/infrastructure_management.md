@@ -4,7 +4,7 @@ This document outlines the process of managing the infrastructure for the credex
 
 ## Automated Deployment and Verification Process
 
-We have implemented an automated process that handles both the deployment and verification of the application. This process includes the following steps:
+We have implemented an automated process that handles both the deployment and verification of the application across all environments (development, staging, and production). This process includes the following steps:
 
 1. AWS credentials verification
 2. Neo4j credentials verification
@@ -12,28 +12,50 @@ We have implemented an automated process that handles both the deployment and ve
 4. ECS service stability check
 5. API health check
 
-To run the automated deployment and verification process, ensure you're in the project root directory and run:
-
-```bash
-npx ts-node terraform/trigger-dev-deploy.ts
-```
+The deployment process is managed through a unified GitHub Actions workflow, which can be triggered automatically for staging and production environments, or manually for any environment.
 
 ## Key Files in the Deployment Process
 
-- GitHub Actions Workflows:
-  - `.github/workflows/deploy-development.yml`: Workflow for development environment
-  - `.github/workflows/deploy-staging.yml`: Workflow for staging environment
-  - `.github/workflows/deploy-production.yml`: Workflow for production environment
+- GitHub Actions Workflow:
+  - `.github/workflows/deploy.yml`: Unified workflow for all environments (development, staging, production)
 
 - Terraform Configuration:
   - `terraform/main.tf`: Main Terraform configuration including Neo4j-related resources
   - `terraform/neo4j.tf`: Specific Terraform configuration for Neo4j instances
   - `terraform/ssm.tf`: AWS Systems Manager configuration
+  - `terraform/networking.tf`: Network-related resources configuration
+  - `terraform/variables.tf`: Terraform variables definition
+
+- Deployment Scripts:
+  - `terraform/import_state.sh`: Script for importing existing resources into Terraform state
+  - `terraform/pre_deployment_check.sh`: Pre-deployment checks script
+  - `terraform/manage_workspaces.sh`: Terraform workspace management script
+  - `terraform/cleanup_orphaned_resources.sh`: Script for cleaning up orphaned resources
 
 - Other Important Files:
   - `terraform/task-definition.json`: ECS task definition template
   - `tests/neo4j_validation.sh`: Neo4j validation tests
   - `.github/workflows/post_deployment_tests.js`: Post-deployment API tests
+
+## Terraform Deployment Process
+
+Our Terraform deployment process has been improved to handle existing, orphaned, or partial resources more effectively. Key features of the updated process include:
+
+1. **Conditional Resource Creation**: The deployment process uses a `use_existing_resources` variable to determine whether to use existing resources or create new ones. This applies to security groups, ACM certificates, SSM parameters, and Neo4j instances.
+
+2. **Terraform State Import**: A script (`import_state.sh`) has been implemented to import existing resources into the Terraform state before applying changes.
+
+3. **Pre-deployment Checks**: A pre-deployment check script (`pre_deployment_check.sh`) runs automatically before each deployment to check for existing resources and run the import script if necessary.
+
+4. **Terraform Workspaces**: A management script (`manage_workspaces.sh`) has been implemented to create and select the appropriate workspace for each environment (development, staging, production).
+
+5. **Cleanup Process**: An optional cleanup step (`cleanup_orphaned_resources.sh`) can be run after successful deployment to identify and remove orphaned resources.
+
+To use these features:
+
+- For automatic deployments (pushes to `stage` or `prod` branches), the `use_existing_resources` flag is set to `true` by default.
+- For manual deployments, you can choose whether to use existing resources and whether to run the cleanup process when triggering the workflow through the GitHub Actions interface.
+- The pre-deployment checks, workspace management, and state import processes run automatically as part of every deployment.
 
 ## Manual Terraform Management
 
@@ -41,9 +63,12 @@ If you need to manage Terraform manually, follow these steps:
 
 1. Navigate to the `terraform` directory.
 2. Run `terraform init` to initialize the Terraform working directory.
-3. Review and modify the `main.tf` file if necessary.
-4. Run `terraform plan` to see proposed changes.
-5. Run `terraform apply` to create or update the necessary AWS resources.
+3. Use the `manage_workspaces.sh` script to select the appropriate workspace for your environment.
+4. Review and modify the `main.tf` file if necessary.
+5. Run `terraform plan` to see proposed changes.
+6. If needed, use the `import_state.sh` script to import existing resources.
+7. Run `terraform apply` to create or update the necessary AWS resources.
+8. Optionally, run the `cleanup_orphaned_resources.sh` script to clean up any orphaned resources.
 
 ## ECS Task Definition
 
@@ -51,7 +76,7 @@ The ECS task definition is managed using a template file [task-definition.json](
 
 1. Modify the `task-definition.json`.
 2. Ensure any new environment variables are added to the `environment` section.
-3. Update the GitHub Actions workflows to replace placeholders with the corresponding GitHub Secrets.
+3. Update the GitHub Actions workflow to replace placeholders with the corresponding GitHub Secrets.
 
 ## ECS Service Configuration
 

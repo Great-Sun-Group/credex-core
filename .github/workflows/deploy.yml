@@ -1,0 +1,149 @@
+name: Deploy to AWS
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      use_existing_resources:
+        description: "Use existing resources"
+        required: true
+        type: boolean
+        default: false
+      run_cleanup:
+        description: "Run cleanup of orphaned resources after deployment"
+        required: true
+        type: boolean
+        default: false
+  push:
+    branches:
+      - stage
+      - prod
+
+env:
+  TF_VAR_use_existing_resources: ${{ github.event.inputs.use_existing_resources || 'true' }}
+
+jobs:
+  deploy:
+    name: Deploy to AWS
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/stage' && 'staging') || (github.ref == 'refs/heads/prod' && 'production') }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set environment variable
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            if [ "${{ github.ref }}" = "refs/heads/stage" ]; then
+              echo "TF_VAR_environment=staging" >> $GITHUB_ENV
+            elif [ "${{ github.ref }}" = "refs/heads/prod" ]; then
+              echo "TF_VAR_environment=production" >> $GITHUB_ENV
+            fi
+          else
+            echo "TF_VAR_environment=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: af-south-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Terraform Init and Workspace Selection
+        run: |
+          cd terraform
+          ./manage_workspaces.sh
+
+      - name: Run Pre-deployment Check
+        run: |
+          cd terraform
+          ./pre_deployment_check.sh
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          cd terraform
+          terraform plan -detailed-exitcode -out=tfplan || exit_code=$?
+          if [ $exit_code -eq 1 ]; then
+            echo "Terraform plan failed"
+            exit 1
+          elif [ $exit_code -eq 2 ]; then
+            echo "Terraform plan has changes"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "Terraform plan has no changes"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+          terraform show -no-color tfplan > tfplan.txt
+
+      - name: Terraform Apply
+        if: steps.plan.outputs.has_changes == 'true'
+        run: |
+          cd terraform
+          terraform apply -auto-approve tfplan
+
+      - name: Get Terraform Outputs
+        id: tf-outputs
+        run: |
+          cd terraform
+          echo "Retrieving Terraform outputs..."
+          terraform output -json > tf_outputs.json
+          echo "tf_outputs=$(cat tf_outputs.json | jq -c .)" >> $GITHUB_OUTPUT
+
+      - name: Deploy Application
+        env:
+          TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
+        run: |
+          # Use TF_OUTPUTS to get necessary information for deployment
+          # For example:
+          # ECS_CLUSTER=$(echo $TF_OUTPUTS | jq -r '.ecs_cluster_name.value')
+          # ECS_SERVICE=$(echo $TF_OUTPUTS | jq -r '.ecs_service_name.value')
+          # Implement your deployment logic here
+          echo "Deploying application to ${{ env.TF_VAR_environment }}"
+          # Add your deployment commands here
+
+      - name: Run Post-Deployment Tests
+        env:
+          TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
+        run: |
+          # Use TF_OUTPUTS to get necessary information for tests
+          # For example:
+          # API_URL=$(echo $TF_OUTPUTS | jq -r '.api_url.value')
+          # Implement your post-deployment tests here
+          echo "Running post-deployment tests for ${{ env.TF_VAR_environment }}"
+          # Add your test commands here
+
+      - name: Cleanup Orphaned Resources
+        if: github.event.inputs.run_cleanup == 'true' || github.event_name == 'push'
+        run: |
+          cd terraform
+          chmod +x cleanup_orphaned_resources.sh
+          ./cleanup_orphaned_resources.sh
+
+      - name: Log Deployment
+        if: success()
+        run: |
+          echo "Deployment to ${{ env.TF_VAR_environment }} triggered by ${{ github.actor }} at $(date)" >> deployment_log.txt
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add deployment_log.txt
+          git commit -m "Log deployment to ${{ env.TF_VAR_environment }}"
+          git push
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "Deployment to ${{ env.TF_VAR_environment }} failed. Please check the logs for more information."
+          # Add notification mechanism here (e.g., send an email, Slack message, etc.)

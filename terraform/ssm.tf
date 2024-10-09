@@ -1,7 +1,5 @@
 locals {
   ssm_parameters = {
-    neo4j_ledger_space_bolt_url = { value = var.neo4j_ledger_space_bolt_url, type = "String" }
-    neo4j_search_space_bolt_url = { value = var.neo4j_search_space_bolt_url, type = "String" }
     jwt_secret                  = { value = var.jwt_secret, type = "SecureString" }
     whatsapp_bot_api_key        = { value = var.whatsapp_bot_api_key, type = "SecureString" }
     open_exchange_rates_api     = { value = var.open_exchange_rates_api, type = "SecureString" }
@@ -15,7 +13,25 @@ locals {
 
 data "aws_ssm_parameter" "existing_params" {
   for_each = local.ssm_parameters
-  name     = "/credex/${var.environment}/${each.key}"
+  name     = "/credex/${local.environment}/${each.key}"
+
+  # Only try to fetch existing parameters if use_existing_resources is true
+  count = var.use_existing_resources ? 1 : 0
+}
+
+resource "aws_ssm_parameter" "params" {
+  for_each = local.ssm_parameters
+
+  name  = "/credex/${local.environment}/${each.key}"
+  type  = each.value.type
+  value = each.value.value
+
+  # Only create new parameters if use_existing_resources is false or if the parameter doesn't exist
+  count = var.use_existing_resources && contains(keys(data.aws_ssm_parameter.existing_params), each.key) ? 0 : 1
+
+  lifecycle {
+    ignore_changes = [value]
+  }
 }
 
 resource "null_resource" "update_ssm_params" {
@@ -25,12 +41,15 @@ resource "null_resource" "update_ssm_params" {
     value = each.value.value
   }
 
+  # Only update parameters if use_existing_resources is true
+  count = var.use_existing_resources ? 1 : 0
+
   provisioner "local-exec" {
     command = <<EOT
-      EXISTING_VALUE=$(aws ssm get-parameter --name "/credex/${var.environment}/${each.key}" --with-decryption --query "Parameter.Value" --output text 2>/dev/null || echo "")
+      EXISTING_VALUE=$(aws ssm get-parameter --name "/credex/${local.environment}/${each.key}" --with-decryption --query "Parameter.Value" --output text 2>/dev/null || echo "")
       if [ "$EXISTING_VALUE" != "${each.value.value}" ]; then
         aws ssm put-parameter \
-          --name "/credex/${var.environment}/${each.key}" \
+          --name "/credex/${local.environment}/${each.key}" \
           --type "${each.value.type}" \
           --value "${each.value.value}" \
           --overwrite
@@ -44,13 +63,17 @@ resource "null_resource" "update_ssm_params" {
 
 # Output all SSM parameters
 output "ssm_parameters" {
-  value       = { for k, v in local.ssm_parameters : k => v.value }
+  value = var.use_existing_resources ? {
+    for k, v in data.aws_ssm_parameter.existing_params : k => v.value
+  } : {
+    for k, v in aws_ssm_parameter.params : k => v.value
+  }
   description = "All SSM parameters"
   sensitive   = true
 }
 
 # Output the names of all SSM parameters
 output "ssm_parameter_names" {
-  value       = jsonencode([for k, v in local.ssm_parameters : "/credex/${var.environment}/${k}"])
+  value       = jsonencode([for k, v in local.ssm_parameters : "/credex/${local.environment}/${k}"])
   description = "List of all SSM parameter names"
 }

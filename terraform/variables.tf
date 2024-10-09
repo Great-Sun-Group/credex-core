@@ -4,49 +4,52 @@ variable "aws_region" {
   default     = "af-south-1"
 }
 
-variable "environment" {
-  description = "The deployment environment (e.g., development, staging, production)"
-  type        = string
-}
-
 variable "jwt_secret" {
   description = "JWT secret for authentication"
   type        = string
+  sensitive   = true
 }
 
 variable "whatsapp_bot_api_key" {
   description = "API key for WhatsApp bot"
   type        = string
+  sensitive   = true
 }
 
 variable "open_exchange_rates_api" {
   description = "API key for Open Exchange Rates"
   type        = string
+  sensitive   = true
 }
 
 variable "neo4j_ledger_space_user" {
   description = "Neo4j LedgerSpace username"
   type        = string
+  sensitive   = true
 }
 
 variable "neo4j_ledger_space_pass" {
   description = "Neo4j LedgerSpace password"
   type        = string
+  sensitive   = true
 }
 
 variable "neo4j_search_space_user" {
   description = "Neo4j SearchSpace username"
   type        = string
+  sensitive   = true
 }
 
 variable "neo4j_search_space_pass" {
   description = "Neo4j SearchSpace password"
   type        = string
+  sensitive   = true
 }
 
 variable "neo4j_enterprise_license" {
   description = "Neo4j Enterprise License"
   type        = string
+  sensitive   = true
 }
 
 variable "neo4j_public_key" {
@@ -59,12 +62,41 @@ variable "neo4j_public_key" {
   }
 }
 
-variable "neo4j_ledger_space_bolt_url" {
-  description = "Neo4j LedgerSpace Bolt URL"
-  type        = string
+variable "use_existing_resources" {
+  description = "Whether to use existing resources or create new ones"
+  type        = bool
+  default     = false
 }
 
-variable "neo4j_search_space_bolt_url" {
-  description = "Neo4j SearchSpace Bolt URL"
-  type        = string
+locals {
+  environment = terraform.workspace
+
+  neo4j_instance_count = {
+    development = 1
+    staging     = 1
+    production  = 2
+  }
+
+  neo4j_instance_type = {
+    development = "t3.micro"
+    staging     = "t3.medium"
+    production  = "t3.medium"
+  }
+
+  domain = {
+    development = "dev.api.mycredex.app"
+    staging     = "staging.api.mycredex.app"
+    production  = "api.mycredex.app"
+  }
+
+  log_level = {
+    development = "debug"
+    staging     = "info"
+    production  = "info"
+  }
+}
+
+output "environment" {
+  value       = local.environment
+  description = "The current deployment environment based on the Terraform workspace"
 }

@@ -105,3 +105,14 @@ Develop and document rollback procedures for each type of update:
 1. Implement load testing as part of the deployment process to ensure the application can handle expected traffic
 2. Set up auto-scaling policies for ECS services to handle varying loads
 3. Regularly review and optimize Terraform configurations for better resource management and cost-efficiency
+
+
+
+
+
+
+1. **Rollback Scenario**
+   - Introduce a deliberate error in the Terraform configuration
+   - Attempt a deployment and verify that it fails safely
+   - Roll back to the previous version
+   - Verify that the rollback is successful and all services are running

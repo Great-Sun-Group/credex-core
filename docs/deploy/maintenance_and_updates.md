@@ -4,32 +4,70 @@ This document outlines the processes for maintaining the credex-core application
 
 ## Updating the Application
 
+We use a unified deployment process for all environments (development, staging, and production) managed through a single GitHub Actions workflow.
+
 ### Development Environment
 
 1. Push changes to the `dev` branch on the remote repository.
-2. Manually trigger the development workflow with the `trigger-dev-deploy.ts` script:
-   ```bash
-   npx ts-node terraform/trigger-dev-deploy.ts
-   ```
+2. Manually trigger the deployment workflow through the GitHub Actions interface:
+   - Select the "Deploy to AWS" workflow.
+   - Choose "development" as the deployment environment.
+   - Set other options as needed (e.g., use existing resources, run cleanup).
 3. Review the deployment logs and verify the changes in the development environment.
 
 ### Staging Environment
 
 1. After testing in the development environment, merge changes from `dev` to `stage` branch.
 2. This will automatically trigger the staging deployment.
-3. Run appropriate tests in the staging environment to ensure everything is working as expected.
+3. Monitor the deployment process in the GitHub Actions interface.
+4. Run appropriate tests in the staging environment to ensure everything is working as expected.
 
 ### Production Environment
 
 1. Once changes have been thoroughly tested in staging, merge from `stage` to `prod` branch.
-2. This will trigger the production deployment.
-3. Monitor the deployment closely and perform post-deployment checks.
+2. This will automatically trigger the production deployment.
+3. Monitor the deployment closely in the GitHub Actions interface.
+4. Perform post-deployment checks to ensure the application is functioning correctly in production.
+
+## Managing Terraform Workspaces
+
+1. The `manage_workspaces.sh` script is automatically run as part of the deployment process to select the appropriate Terraform workspace for each environment.
+
+2. If you need to manage workspaces manually (e.g., when working with Terraform locally), use the script as follows:
+   ```bash
+   ./terraform/manage_workspaces.sh <environment>
+   ```
+   Replace `<environment>` with `development`, `staging`, or `production`.
+
+3. Ensure you're in the correct workspace before running any Terraform commands manually.
+
+## Handling Existing Resources
+
+1. For automatic deployments (pushes to `stage` or `prod` branches), the `use_existing_resources` flag is set to `true` by default.
+
+2. For manual deployments, you can choose whether to use existing resources when triggering the workflow through the GitHub Actions interface.
+
+3. The `pre_deployment_check.sh` script will run automatically to identify existing resources.
+
+4. If existing resources are found, the `import_state.sh` script will import them into the Terraform state.
+
+5. After importing, you can manage these resources using Terraform as usual.
+
+## Cleanup Process for Orphaned Resources
+
+1. For automatic deployments, the cleanup process is not run by default to ensure safety.
+
+2. For manual deployments, you can choose to run the cleanup process when triggering the workflow through the GitHub Actions interface.
+
+3. If enabled, the cleanup process will run after a successful deployment to identify and remove orphaned resources.
+
+4. Use this feature cautiously, especially in production environments.
 
 ## Updating ECS Task Definition
 
 1. Modify the `task-definition.json` in the `terraform` directory if needed.
 2. Add any new environment variables to the `environment` section.
-3. Update GitHub Actions workflows to replace placeholders with corresponding GitHub Secrets.
+3. Update the GitHub Actions workflow to replace placeholders with corresponding GitHub Secrets.
 4. Commit these changes and follow the normal deployment process for the target environment.
 
 ## Updating Neo4j Instances
@@ -67,6 +105,11 @@ This document outlines the processes for maintaining the credex-core application
 
 3. Rotate IAM access keys regularly:
    - Update the rotated keys in GitHub Secrets and other relevant places.
+
+4. Regularly run the pre-deployment checks to ensure consistency:
+   ```bash
+   ./terraform/pre_deployment_check.sh
+   ```
 
 ## Database Maintenance
 
