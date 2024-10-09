@@ -21,7 +21,6 @@ locals {
   }
 }
 
-# Use data sources for existing SSM parameters
 data "aws_ssm_parameter" "params" {
   for_each = toset([
     "neo4j_ledger_space_bolt_url",
@@ -71,6 +70,10 @@ resource "aws_iam_role" "ecs_execution_role" {
   })
 
   tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
@@ -95,6 +98,10 @@ resource "aws_iam_role" "ecs_task_role" {
   })
 
   tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_ecs_task_definition" "credex_core_task" {
@@ -122,20 +129,13 @@ resource "aws_ecs_task_definition" "credex_core_task" {
         { name = "AWS_REGION", value = var.aws_region }
       ]
       secrets = [
-        { name = "JWT_SECRET", valueFrom = data.aws_ssm_parameter.params["jwt_secret"].arn },
-        { name = "WHATSAPP_BOT_API_KEY", valueFrom = data.aws_ssm_parameter.params["whatsapp_bot_api_key"].arn },
-        { name = "OPEN_EXCHANGE_RATES_API", valueFrom = data.aws_ssm_parameter.params["open_exchange_rates_api"].arn },
-        { name = "NEO_4J_LEDGER_SPACE_BOLT_URL", valueFrom = data.aws_ssm_parameter.params["neo4j_ledger_space_bolt_url"].arn },
-        { name = "NEO_4J_LEDGER_SPACE_USER", valueFrom = data.aws_ssm_parameter.params["neo4j_ledger_space_user"].arn },
-        { name = "NEO_4J_LEDGER_SPACE_PASS", valueFrom = data.aws_ssm_parameter.params["neo4j_ledger_space_pass"].arn },
-        { name = "NEO_4J_SEARCH_SPACE_BOLT_URL", valueFrom = data.aws_ssm_parameter.params["neo4j_search_space_bolt_url"].arn },
-        { name = "NEO_4J_SEARCH_SPACE_USER", valueFrom = data.aws_ssm_parameter.params["neo4j_search_space_user"].arn },
-        { name = "NEO_4J_SEARCH_SPACE_PASS", valueFrom = data.aws_ssm_parameter.params["neo4j_search_space_pass"].arn }
+        for key in keys(data.aws_ssm_parameter.params) :
+        { name = upper(replace(key, "_", "")), valueFrom = data.aws_ssm_parameter.params[key].arn }
       ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = "/ecs/credex-core-${local.environment}"
+          awslogs-group         = aws_cloudwatch_log_group.ecs_logs.name
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "ecs"
         }
@@ -150,6 +150,10 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
   name              = "/ecs/credex-core-${local.environment}"
   retention_in_days = 30
   tags              = local.common_tags
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "aws_ecs_service" "credex_core_service" {
@@ -178,6 +182,10 @@ resource "aws_ecs_service" "credex_core_service" {
 
 resource "null_resource" "update_bolt_urls" {
   depends_on = [aws_instance.neo4j]
+
+  triggers = {
+    always_run = "${timestamp()}"
+  }
 
   provisioner "local-exec" {
     command = <<-EOT

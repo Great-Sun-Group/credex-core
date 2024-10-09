@@ -10,7 +10,7 @@ locals {
     production  = "t3.medium"
   }
   neo4j_ports = [7474, 7687]
-  key_pair_name = "neo4j-key-pair-${local.environment}"
+  key_pair_name = "neo4j-key-pair-${var.environment}"
 }
 
 data "aws_ami" "amazon_linux_2" {
@@ -23,23 +23,27 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-# Create a new EC2 Key Pair
+# Create or update the EC2 Key Pair
 resource "aws_key_pair" "neo4j_key_pair" {
   key_name   = local.key_pair_name
-  public_key = aws_ssm_parameter.neo4j_public_key.value
+  public_key = aws_ssm_parameter.params["neo4j_public_key"].value
+
+  lifecycle {
+    ignore_changes = [public_key]
+  }
 }
 
 resource "aws_instance" "neo4j" {
-  count                = local.neo4j_instance_count[local.environment]
+  count                = local.neo4j_instance_count[var.environment]
   ami                  = data.aws_ami.amazon_linux_2.id
-  instance_type        = local.neo4j_instance_type[local.environment]
+  instance_type        = local.neo4j_instance_type[var.environment]
   key_name             = aws_key_pair.neo4j_key_pair.key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j.id]
   subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]
 
   tags = merge(local.common_tags, {
-    Name = "Neo4j-${local.environment}-${count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
+    Name = "Neo4j-${var.environment}-${count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
     Role = count.index == 0 ? "LedgerSpace" : "SearchSpace"
   })
 
@@ -106,7 +110,7 @@ resource "aws_instance" "neo4j" {
     ignore_changes  = [ami, user_data]
   }
 
-  depends_on = [aws_ssm_parameter.neo4j_public_key]
+  depends_on = [aws_ssm_parameter.params]
 }
 
 # The security group for Neo4j is now defined in networking.tf
