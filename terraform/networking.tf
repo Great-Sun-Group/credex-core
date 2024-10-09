@@ -156,9 +156,10 @@ resource "aws_lb_listener" "redirect_http_to_https" {
 }
 
 resource "aws_route53_record" "api" {
-  zone_id = data.aws_route53_zone.selected.zone_id
-  name    = local.domain
-  type    = "A"
+  zone_id         = data.aws_route53_zone.selected.zone_id
+  name            = local.domain
+  type            = "A"
+  allow_overwrite = true
 
   alias {
     name                   = data.aws_lb.credex_alb.dns_name
