@@ -8,6 +8,8 @@ locals {
     neo4j_search_space_user     = { value = var.neo4j_search_space_user, type = "SecureString" }
     neo4j_search_space_pass     = { value = var.neo4j_search_space_pass, type = "SecureString" }
     neo4j_public_key            = { value = var.neo4j_public_key, type = "SecureString" }
+    neo4j_ledger_space_bolt_url = { value = var.neo4j_ledger_space_bolt_url, type = "String" }
+    neo4j_search_space_bolt_url = { value = var.neo4j_search_space_bolt_url, type = "String" }
   }
 }
 

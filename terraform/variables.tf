@@ -68,6 +68,18 @@ variable "use_existing_resources" {
   default     = false
 }
 
+variable "neo4j_ledger_space_bolt_url" {
+  description = "Neo4j LedgerSpace Bolt URL"
+  type        = string
+  default     = ""
+}
+
+variable "neo4j_search_space_bolt_url" {
+  description = "Neo4j SearchSpace Bolt URL"
+  type        = string
+  default     = ""
+}
+
 locals {
   environment = terraform.workspace
 

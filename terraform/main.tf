@@ -90,16 +90,13 @@ resource "aws_ecs_task_definition" "credex_core_task" {
       environment = [
         { name = "NODE_ENV", value = local.environment },
         { name = "LOG_LEVEL", value = local.log_level[local.environment] },
-        { name = "AWS_REGION", value = var.aws_region },
-        { name = "NEO4J_LEDGER_SPACE_BOLT_URL", value = data.aws_ssm_parameter.existing_params["neo4j_ledger_space_bolt_url"].value },
-        { name = "NEO4J_SEARCH_SPACE_BOLT_URL", value = data.aws_ssm_parameter.existing_params["neo4j_search_space_bolt_url"].value }
+        { name = "AWS_REGION", value = var.aws_region }
       ]
       secrets = [
-        for key, param in data.aws_ssm_parameter.existing_params : {
+        for key, param in aws_ssm_parameter.params : {
           name      = upper(replace(key, "/credex/${local.environment}/", ""))
           valueFrom = param.arn
         }
-        if !contains(["neo4j_ledger_space_bolt_url", "neo4j_search_space_bolt_url"], key)
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -133,8 +130,8 @@ resource "aws_ecs_service" "credex_core_service" {
   desired_count   = 1
 
   network_configuration {
-    subnets          = data.aws_subnets.default.ids
-    security_groups  = [aws_security_group.ecs_tasks.id]
+    subnets          = data.aws_subnets.available.ids
+    security_groups  = [var.use_existing_resources ? data.aws_security_group.existing_ecs_tasks[0].id : aws_security_group.ecs_tasks[0].id]
     assign_public_ip = true
   }
 
@@ -144,7 +141,7 @@ resource "aws_ecs_service" "credex_core_service" {
     container_port   = 5000
   }
 
-  depends_on = [aws_lb_listener.front_end, aws_iam_role_policy_attachment.ecs_execution_role_policy]
+  depends_on = [aws_lb_listener.credex_listener, aws_iam_role_policy_attachment.ecs_execution_role_policy]
 
   tags = local.common_tags
 }
@@ -185,13 +182,13 @@ output "environment" {
 }
 
 output "neo4j_ledger_bolt_url" {
-  value       = data.aws_ssm_parameter.existing_params["neo4j_ledger_space_bolt_url"].value
+  value       = aws_ssm_parameter.params["neo4j_ledger_space_bolt_url"].value
   sensitive   = true
   description = "The Neo4j Ledger Space Bolt URL"
 }
 
 output "neo4j_search_bolt_url" {
-  value       = data.aws_ssm_parameter.existing_params["neo4j_search_space_bolt_url"].value
+  value       = aws_ssm_parameter.params["neo4j_search_space_bolt_url"].value
   sensitive   = true
   description = "The Neo4j Search Space Bolt URL"
 }
