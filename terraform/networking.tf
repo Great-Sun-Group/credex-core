@@ -43,12 +43,6 @@ data "aws_lb_listener" "https" {
   port              = 443
 }
 
-data "aws_route53_record" "api" {
-  zone_id = data.aws_route53_zone.selected.zone_id
-  name    = local.domain
-  type    = "A"
-}
-
 data "aws_security_group" "alb" {
   name = "credex-alb-sg-${local.environment}"
   vpc_id = local.vpc_id
@@ -155,7 +149,6 @@ resource "aws_lb_listener" "redirect_http_to_https" {
 }
 
 resource "aws_route53_record" "api" {
-  count   = data.aws_route53_record.api.name == null ? 1 : 0
   zone_id = data.aws_route53_zone.selected.zone_id
   name    = local.domain
   type    = "A"
