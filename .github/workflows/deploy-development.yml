@@ -89,18 +89,17 @@ jobs:
           
           # SSM Parameter Names
           echo "Retrieving SSM parameter names..."
-          SSM_NAMES=$(terraform output -json ssm_parameter_names 2>&1) || { echo "Error: $SSM_NAMES"; exit 1; }
-          echo "Raw SSM_NAMES output: $SSM_NAMES"
-          SSM_NAMES=$(echo "$SSM_NAMES" | jq -r 'join(",")' 2>&1) || { echo "Error processing SSM_NAMES with jq: $SSM_NAMES"; exit 1; }
-          if [ -z "$SSM_NAMES" ]; then
+          SSM_NAMES=$(terraform output -json ssm_parameter_names | jq -r 'join(",")')
+          if [ $? -ne 0 ] || [ -z "$SSM_NAMES" ]; then
             echo "Error: Failed to retrieve SSM parameter names"
+            terraform output
             exit 1
           fi
           echo "ssm_names=$SSM_NAMES" >> $GITHUB_OUTPUT
           
           # VPC ID
           echo "Retrieving VPC ID..."
-          VPC_ID=$(terraform output -raw vpc_id 2>&1) || { echo "Error: $VPC_ID"; exit 1; }
+          VPC_ID=$(terraform output -raw vpc_id)
           if [ -z "$VPC_ID" ]; then
             echo "Error: Failed to retrieve VPC ID"
             exit 1
