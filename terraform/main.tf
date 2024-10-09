@@ -12,10 +12,10 @@ provider "aws" {
 }
 
 locals {
-  effective_environment = coalesce(var.environment, terraform.workspace == "default" ? "production" : terraform.workspace)
-  domain = local.effective_environment == "production" ? "api.mycredex.app" : local.effective_environment == "staging" ? "apistaging.mycredex.app" : "apidev.mycredex.app"
+  environment = var.environment
+  domain      = local.environment == "production" ? "api.mycredex.app" : "${local.environment}.api.mycredex.app"
   common_tags = {
-    Environment = local.effective_environment
+    Environment = local.environment
     Project     = "CredEx"
     ManagedBy   = "Terraform"
   }
@@ -35,27 +35,20 @@ data "aws_ssm_parameter" "params" {
     "neo4j_search_space_pass"
   ])
 
-  name = "/credex/${local.effective_environment}/${each.key}"
+  name = "/credex/${local.environment}/${each.key}"
 }
 
-resource "aws_ecr_repository" "credex_core" {
-  name                 = "credex-core-${local.effective_environment}"
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  tags = local.common_tags
+data "aws_ecr_repository" "credex_core" {
+  name = "credex-core-${local.environment}"
 }
 
 resource "aws_ecs_cluster" "credex_cluster" {
-  name = "credex-cluster-${local.effective_environment}"
+  name = "credex-cluster-${local.environment}"
   tags = local.common_tags
 }
 
 resource "aws_iam_role" "ecs_execution_role" {
-  name = "ecs-execution-role-${local.effective_environment}"
+  name = "ecs-execution-role-${local.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -79,7 +72,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
 }
 
 resource "aws_iam_role" "ecs_task_role" {
-  name = "ecs-task-role-${local.effective_environment}"
+  name = "ecs-task-role-${local.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -98,7 +91,7 @@ resource "aws_iam_role" "ecs_task_role" {
 }
 
 resource "aws_ecs_task_definition" "credex_core_task" {
-  family                   = "credex-core-${local.effective_environment}"
+  family                   = "credex-core-${local.environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "256"
@@ -109,7 +102,7 @@ resource "aws_ecs_task_definition" "credex_core_task" {
   container_definitions = jsonencode([
     {
       name  = "credex-core"
-      image = "${aws_ecr_repository.credex_core.repository_url}:latest"
+      image = "${data.aws_ecr_repository.credex_core.repository_url}:latest"
       portMappings = [
         {
           containerPort = 5000
@@ -117,8 +110,8 @@ resource "aws_ecs_task_definition" "credex_core_task" {
         }
       ]
       environment = [
-        { name = "NODE_ENV", value = local.effective_environment },
-        { name = "LOG_LEVEL", value = local.effective_environment == "production" ? "info" : "debug" },
+        { name = "NODE_ENV", value = local.environment },
+        { name = "LOG_LEVEL", value = local.environment == "production" ? "info" : "debug" },
         { name = "AWS_REGION", value = var.aws_region }
       ]
       secrets = [
@@ -135,7 +128,7 @@ resource "aws_ecs_task_definition" "credex_core_task" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = "/ecs/credex-core-${local.effective_environment}"
+          awslogs-group         = "/ecs/credex-core-${local.environment}"
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "ecs"
         }
@@ -147,13 +140,13 @@ resource "aws_ecs_task_definition" "credex_core_task" {
 }
 
 resource "aws_cloudwatch_log_group" "ecs_logs" {
-  name              = "/ecs/credex-core-${local.effective_environment}"
+  name              = "/ecs/credex-core-${local.environment}"
   retention_in_days = 30
   tags              = local.common_tags
 }
 
 resource "aws_ecs_service" "credex_core_service" {
-  name            = "credex-core-service-${local.effective_environment}"
+  name            = "credex-core-service-${local.environment}"
   cluster         = aws_ecs_cluster.credex_cluster.id
   task_definition = aws_ecs_task_definition.credex_core_task.arn
   launch_type     = "FARGATE"
@@ -198,7 +191,7 @@ output "ecs_service_name" {
 }
 
 output "ecr_repository_url" {
-  value = aws_ecr_repository.credex_core.repository_url
+  value = data.aws_ecr_repository.credex_core.repository_url
 }
 
 output "vpc_id" {
@@ -207,7 +200,7 @@ output "vpc_id" {
 }
 
 output "environment" {
-  value       = local.effective_environment
+  value       = local.environment
   description = "The current deployment environment"
 }
 
@@ -221,4 +214,65 @@ output "neo4j_search_bolt_url" {
   value       = data.aws_ssm_parameter.params["neo4j_search_space_bolt_url"].value
   sensitive   = true
   description = "The Neo4j Search Space Bolt URL"
+}
+
+variable "environment" {
+  description = "The deployment environment (e.g., development, staging, production)"
+  type        = string
+}
+
+variable "aws_region" {
+  description = "The AWS region to deploy to"
+  type        = string
+  default     = "af-south-1"
+}
+
+variable "jwt_secret" {
+  description = "JWT secret for authentication"
+  type        = string
+}
+
+variable "whatsapp_bot_api_key" {
+  description = "API key for WhatsApp bot"
+  type        = string
+}
+
+variable "open_exchange_rates_api" {
+  description = "API key for Open Exchange Rates"
+  type        = string
+}
+
+variable "neo4j_ledger_space_bolt_url" {
+  description = "Neo4j LedgerSpace Bolt URL"
+  type        = string
+}
+
+variable "neo4j_ledger_space_user" {
+  description = "Neo4j LedgerSpace username"
+  type        = string
+}
+
+variable "neo4j_ledger_space_pass" {
+  description = "Neo4j LedgerSpace password"
+  type        = string
+}
+
+variable "neo4j_search_space_bolt_url" {
+  description = "Neo4j SearchSpace Bolt URL"
+  type        = string
+}
+
+variable "neo4j_search_space_user" {
+  description = "Neo4j SearchSpace username"
+  type        = string
+}
+
+variable "neo4j_search_space_pass" {
+  description = "Neo4j SearchSpace password"
+  type        = string
+}
+
+variable "neo4j_enterprise_license" {
+  description = "Neo4j Enterprise License"
+  type        = string
 }

@@ -5,12 +5,12 @@ locals {
     production  = 2
   }
   neo4j_instance_type = {
-    development = "t3.micro"  # Changed from t3.small to t3.micro
+    development = "t3.micro"
     staging     = "t3.medium"
     production  = "t3.medium"
   }
   neo4j_ports = [7474, 7687]
-  key_pair_name = "neo4j-key-pair-${local.effective_environment}"
+  key_pair_name = "neo4j-key-pair-${local.environment}"
 }
 
 data "aws_ami" "amazon_linux_2" {
@@ -28,9 +28,9 @@ data "aws_key_pair" "neo4j_key_pair" {
 }
 
 resource "aws_instance" "neo4j" {
-  count                = local.neo4j_instance_count[local.effective_environment]
+  count                = local.neo4j_instance_count[local.environment]
   ami                  = data.aws_ami.amazon_linux_2.id
-  instance_type        = local.neo4j_instance_type[local.effective_environment]
+  instance_type        = local.neo4j_instance_type[local.environment]
   key_name             = data.aws_key_pair.neo4j_key_pair.key_name
   iam_instance_profile = data.aws_iam_instance_profile.neo4j_profile.name
 
@@ -38,7 +38,7 @@ resource "aws_instance" "neo4j" {
   subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]
 
   tags = merge(local.common_tags, {
-    Name = "Neo4j-${local.effective_environment}-${count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
+    Name = "Neo4j-${local.environment}-${count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
     Role = count.index == 0 ? "LedgerSpace" : "SearchSpace"
   })
 

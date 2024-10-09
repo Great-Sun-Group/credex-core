@@ -1,26 +1,53 @@
-# AWS Systems Manager Parameter Store resources
-
-# Grant the EC2 instances permission to access SSM parameters
-resource "aws_iam_role_policy" "neo4j_ssm_access" {
-  name = "neo4j-ssm-access-policy-${local.effective_environment}"
-  role = data.aws_iam_role.ec2_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ssm:GetParameter"
-        ]
-        Resource = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/credex/${local.effective_environment}/*"
-      }
-    ]
-  })
+resource "aws_ssm_parameter" "neo4j_ledger_space_bolt_url" {
+  name  = "/credex/${local.environment}/neo4j_ledger_space_bolt_url"
+  type  = "SecureString"
+  value = var.neo4j_ledger_space_bolt_url
 }
 
-# Data sources for current AWS region and account ID
-data "aws_region" "current" {}
-data "aws_caller_identity" "current" {}
+resource "aws_ssm_parameter" "neo4j_search_space_bolt_url" {
+  name  = "/credex/${local.environment}/neo4j_search_space_bolt_url"
+  type  = "SecureString"
+  value = var.neo4j_search_space_bolt_url
+}
 
-# Note: The attachment of the instance profile to the Neo4j instances remains in the neo4j.tf file
+resource "aws_ssm_parameter" "jwt_secret" {
+  name  = "/credex/${local.environment}/jwt_secret"
+  type  = "SecureString"
+  value = var.jwt_secret
+}
+
+resource "aws_ssm_parameter" "whatsapp_bot_api_key" {
+  name  = "/credex/${local.environment}/whatsapp_bot_api_key"
+  type  = "SecureString"
+  value = var.whatsapp_bot_api_key
+}
+
+resource "aws_ssm_parameter" "open_exchange_rates_api" {
+  name  = "/credex/${local.environment}/open_exchange_rates_api"
+  type  = "SecureString"
+  value = var.open_exchange_rates_api
+}
+
+resource "aws_ssm_parameter" "neo4j_ledger_space_user" {
+  name  = "/credex/${local.environment}/neo4j_ledger_space_user"
+  type  = "SecureString"
+  value = var.neo4j_ledger_space_user
+}
+
+resource "aws_ssm_parameter" "neo4j_ledger_space_pass" {
+  name  = "/credex/${local.environment}/neo4j_ledger_space_pass"
+  type  = "SecureString"
+  value = var.neo4j_ledger_space_pass
+}
+
+resource "aws_ssm_parameter" "neo4j_search_space_user" {
+  name  = "/credex/${local.environment}/neo4j_search_space_user"
+  type  = "SecureString"
+  value = var.neo4j_search_space_user
+}
+
+resource "aws_ssm_parameter" "neo4j_search_space_pass" {
+  name  = "/credex/${local.environment}/neo4j_search_space_pass"
+  type  = "SecureString"
+  value = var.neo4j_search_space_pass
+}

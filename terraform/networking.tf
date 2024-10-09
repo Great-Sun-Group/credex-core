@@ -15,7 +15,7 @@ data "aws_subnets" "available" {
 }
 
 resource "aws_security_group" "ecs_tasks" {
-  name_prefix = "credex-core-ecs-tasks-sg-${local.effective_environment}"
+  name_prefix = "credex-core-ecs-tasks-sg-${local.environment}"
   description = "Allow inbound access from the ALB only"
   vpc_id      = local.vpc_id
 
@@ -42,7 +42,7 @@ resource "aws_security_group" "ecs_tasks" {
 }
 
 resource "aws_security_group" "neo4j" {
-  name_prefix = "credex-neo4j-sg-${local.effective_environment}"
+  name_prefix = "credex-neo4j-sg-${local.environment}"
   description = "Security group for Neo4j instances"
   vpc_id      = local.vpc_id
 
@@ -50,7 +50,7 @@ resource "aws_security_group" "neo4j" {
     protocol    = "tcp"
     from_port   = 7474
     to_port     = 7474
-    cidr_blocks = [local.effective_environment == "production" ? "10.0.0.0/16" : "10.0.0.0/8"]
+    cidr_blocks = [local.environment == "production" ? "10.0.0.0/16" : "10.0.0.0/8"]
     description = "Allow Neo4j HTTP"
   }
 
@@ -58,7 +58,7 @@ resource "aws_security_group" "neo4j" {
     protocol    = "tcp"
     from_port   = 7687
     to_port     = 7687
-    cidr_blocks = [local.effective_environment == "production" ? "10.0.0.0/16" : "10.0.0.0/8"]
+    cidr_blocks = [local.environment == "production" ? "10.0.0.0/16" : "10.0.0.0/8"]
     description = "Allow Neo4j Bolt"
   }
 
@@ -71,7 +71,7 @@ resource "aws_security_group" "neo4j" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "credex-neo4j-sg-${local.effective_environment}"
+    Name = "credex-neo4j-sg-${local.environment}"
   })
 
   lifecycle {
@@ -80,19 +80,19 @@ resource "aws_security_group" "neo4j" {
 }
 
 resource "aws_lb" "credex_alb" {
-  name               = "credex-alb-${local.effective_environment}"
+  name               = "credex-alb-${local.environment}"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
   subnets            = data.aws_subnets.available.ids
 
   tags = merge(local.common_tags, {
-    Name = "credex-alb-${local.effective_environment}"
+    Name = "credex-alb-${local.environment}"
   })
 }
 
 resource "aws_lb_target_group" "credex_tg" {
-  name        = "credex-tg-${local.effective_environment}"
+  name        = "credex-tg-${local.environment}"
   port        = 5000
   protocol    = "HTTP"
   vpc_id      = local.vpc_id
@@ -116,7 +116,7 @@ resource "aws_acm_certificate" "credex_cert" {
   validation_method = "DNS"
 
   tags = merge(local.common_tags, {
-    Name = "credex-cert-${local.effective_environment}"
+    Name = "credex-cert-${local.environment}"
   })
 
   lifecycle {
@@ -195,7 +195,7 @@ resource "aws_route53_record" "api" {
 }
 
 resource "aws_security_group" "alb" {
-  name_prefix = "credex-alb-sg-${local.effective_environment}"
+  name_prefix = "credex-alb-sg-${local.environment}"
   description = "Controls access to the ALB"
   vpc_id      = local.vpc_id
 
