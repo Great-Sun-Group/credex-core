@@ -37,18 +37,6 @@ data "aws_iam_role" "ecs_task_role" {
   name = "ecs-task-role-${local.environment}"
 }
 
-data "aws_ssm_parameter" "existing_params" {
-  for_each = toset([
-    "neo4j_ledger_space_bolt_url",
-    "neo4j_search_space_bolt_url",
-    "neo4j_ledger_space_user",
-    "neo4j_ledger_space_pass",
-    "neo4j_search_space_user",
-    "neo4j_search_space_pass"
-  ])
-  name = "/${local.environment}/${each.key}"
-}
-
 resource "aws_ecs_task_definition" "credex_core_task" {
   family                   = "credex-core-${local.environment}"
   network_mode             = "awsvpc"
