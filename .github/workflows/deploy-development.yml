@@ -80,14 +80,23 @@ jobs:
       - name: Get Terraform Outputs
         id: tf-outputs
         run: |
+          set -e
           echo "Retrieving Terraform outputs..."
           
           # SSM Parameter Names
-          SSM_NAMES=$(terraform output -json ssm_parameter_names | jq -r '.[]' | tr '\n' ',' | sed 's/,$//')
+          SSM_NAMES=$(terraform output ssm_parameter_names | tr -d '[],"' | tr '\n' ',' | sed 's/,$//')
+          if [ -z "$SSM_NAMES" ]; then
+            echo "Error: Failed to retrieve SSM parameter names"
+            exit 1
+          fi
           echo "ssm_names=$SSM_NAMES" >> $GITHUB_OUTPUT
           
           # VPC ID
           VPC_ID=$(terraform output -raw vpc_id)
+          if [ -z "$VPC_ID" ]; then
+            echo "Error: Failed to retrieve VPC ID"
+            exit 1
+          fi
           echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
           
           # Print outputs for debugging
@@ -96,7 +105,7 @@ jobs:
           
           # Print raw Terraform output for debugging
           echo "Raw Terraform output:"
-          terraform output
+          terraform output || echo "Warning: Failed to print raw Terraform output"
         working-directory: ./terraform
 
       - name: Verify CloudWatch Log Group
