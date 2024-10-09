@@ -120,8 +120,8 @@ resource "aws_ecs_task_definition" "credex_core_task" {
         { name = "AWS_REGION", value = var.aws_region }
       ]
       secrets = [
-        for key in keys(aws_ssm_parameter.params) :
-        { name = upper(replace(key, "_", "")), valueFrom = aws_ssm_parameter.params[key].arn }
+        for key in keys(data.aws_ssm_parameter.existing_params) :
+        { name = upper(replace(key, "_", "")), valueFrom = data.aws_ssm_parameter.existing_params[key].arn }
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -172,24 +172,6 @@ resource "aws_ecs_service" "credex_core_service" {
   tags = local.common_tags
 }
 
-resource "null_resource" "update_bolt_urls" {
-  triggers = {
-    always_run = timestamp()
-  }
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      LEDGER_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-${local.environment}-LedgerSpace" --query "Reservations[0].Instances[0].PrivateIpAddress" --output text)
-      SEARCH_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-${local.environment}-SearchSpace" --query "Reservations[0].Instances[0].PrivateIpAddress" --output text)
-      
-      aws ssm put-parameter --name "/credex/${local.environment}/neo4j_ledger_space_bolt_url" --value "bolt://$LEDGER_IP:7687" --type SecureString --overwrite
-      aws ssm put-parameter --name "/credex/${local.environment}/neo4j_search_space_bolt_url" --value "bolt://$SEARCH_IP:7687" --type SecureString --overwrite
-    EOT
-  }
-
-  depends_on = [aws_instance.neo4j]
-}
-
 # Outputs
 output "api_url" {
   value       = "https://${aws_route53_record.api.name}"
@@ -226,13 +208,13 @@ output "environment" {
 }
 
 output "neo4j_ledger_bolt_url" {
-  value       = aws_ssm_parameter.params["neo4j_ledger_space_bolt_url"].value
+  value       = data.aws_ssm_parameter.existing_params["neo4j_ledger_space_bolt_url"].value
   sensitive   = true
   description = "The Neo4j Ledger Space Bolt URL"
 }
 
 output "neo4j_search_bolt_url" {
-  value       = aws_ssm_parameter.params["neo4j_search_space_bolt_url"].value
+  value       = data.aws_ssm_parameter.existing_params["neo4j_search_space_bolt_url"].value
   sensitive   = true
   description = "The Neo4j Search Space Bolt URL"
 }
