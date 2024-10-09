@@ -25,7 +25,7 @@ data "aws_ami" "amazon_linux_2" {
 
 resource "aws_key_pair" "neo4j_key_pair" {
   key_name   = local.key_pair_name
-  public_key = aws_ssm_parameter.params["neo4j_public_key"].value
+  public_key = var.neo4j_public_key
 
   lifecycle {
     ignore_changes = [public_key]
@@ -109,7 +109,7 @@ resource "aws_instance" "neo4j" {
     ignore_changes  = [ami, user_data]
   }
 
-  depends_on = [aws_ssm_parameter.params]
+  depends_on = [null_resource.update_ssm_params]
 }
 
 # The security group for Neo4j is now defined in networking.tf

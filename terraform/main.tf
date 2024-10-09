@@ -33,7 +33,7 @@ resource "aws_ecr_repository" "credex_core" {
 
   lifecycle {
     prevent_destroy = true
-    ignore_changes  = [image_tag_mutability, image_scanning_configuration]
+    ignore_changes  = [image_tag_mutability, image_scanning_configuration, name]
   }
 }
 
@@ -62,6 +62,7 @@ resource "aws_iam_role" "ecs_execution_role" {
 
   lifecycle {
     create_before_destroy = true
+    ignore_changes        = [name]
   }
 }
 
@@ -90,6 +91,7 @@ resource "aws_iam_role" "ecs_task_role" {
 
   lifecycle {
     create_before_destroy = true
+    ignore_changes        = [name]
   }
 }
 
@@ -142,6 +144,7 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
 
   lifecycle {
     prevent_destroy = true
+    ignore_changes  = [name]
   }
 }
 

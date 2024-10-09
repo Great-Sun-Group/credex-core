@@ -89,6 +89,10 @@ resource "aws_lb" "credex_alb" {
   tags = merge(local.common_tags, {
     Name = "credex-alb-${local.environment}"
   })
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "aws_lb_target_group" "credex_tg" {
@@ -109,6 +113,10 @@ resource "aws_lb_target_group" "credex_tg" {
   }
 
   tags = local.common_tags
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "aws_acm_certificate" "credex_cert" {
