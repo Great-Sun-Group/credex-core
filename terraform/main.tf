@@ -62,8 +62,10 @@ resource "aws_ecs_task_definition" "credex_core_task" {
         { name = "AWS_REGION", value = var.aws_region }
       ]
       secrets = [
-        for key in keys(data.aws_ssm_parameter.existing_params) :
-        { name = upper(replace(key, "_", "")), valueFrom = data.aws_ssm_parameter.existing_params[key].arn }
+        for key, param in data.aws_ssm_parameter.existing_params : {
+          name      = upper(replace(key, "/credex/${var.environment}/", ""))
+          valueFrom = param.arn
+        }
       ]
       logConfiguration = {
         logDriver = "awslogs"
