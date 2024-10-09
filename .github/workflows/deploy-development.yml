@@ -84,7 +84,7 @@ jobs:
           
           # SSM Parameter Names
           echo "SSM_NAMES<<EOF" >> $GITHUB_OUTPUT
-          terraform output -json ssm_parameter_names | jq -r '.[]' >> $GITHUB_OUTPUT || echo "Error retrieving SSM parameter names"
+          terraform output ssm_parameter_names | sed 's/^[][]//g; s/[][]$//g; s/, /\n/g' >> $GITHUB_OUTPUT || echo "Error retrieving SSM parameter names"
           echo "EOF" >> $GITHUB_OUTPUT
           
           # VPC ID
@@ -95,6 +95,10 @@ jobs:
           echo "SSM Parameter Names:"
           cat $GITHUB_OUTPUT | sed -n '/SSM_NAMES<<EOF/,/EOF/p'
           echo "VPC ID: $VPC_ID"
+          
+          # Print raw Terraform output for debugging
+          echo "Raw Terraform output:"
+          terraform output
         working-directory: ./terraform
 
       - name: Verify CloudWatch Log Group
