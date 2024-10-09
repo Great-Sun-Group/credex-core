@@ -29,6 +29,8 @@ jobs:
       TF_VAR_neo4j_search_space_pass: ${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}
       TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
       TF_VAR_neo4j_public_key: ${{ secrets.NEO4J_PUBLIC_KEY }}
+      TF_VAR_neo4j_ledger_space_bolt_url: ${{ secrets.NEO4J_LEDGER_SPACE_BOLT_URL }}
+      TF_VAR_neo4j_search_space_bolt_url: ${{ secrets.NEO4J_SEARCH_SPACE_BOLT_URL }}
 
     steps:
       - name: Checkout code
@@ -139,6 +141,15 @@ jobs:
               -e 's|${NODE_ENV}|development|' \
               -e 's|${LOG_LEVEL}|debug|' \
               -e 's|${AWS_REGION}|af-south-1|' \
+              -e 's|${JWT_SECRET}|'${TF_VAR_jwt_secret}'|' \
+              -e 's|${WHATSAPP_BOT_API_KEY}|'${TF_VAR_whatsapp_bot_api_key}'|' \
+              -e 's|${OPEN_EXCHANGE_RATES_API}|'${TF_VAR_open_exchange_rates_api}'|' \
+              -e 's|${NEO_4J_LEDGER_SPACE_BOLT_URL}|'${TF_VAR_neo4j_ledger_space_bolt_url}'|' \
+              -e 's|${NEO_4J_LEDGER_SPACE_USER}|'${TF_VAR_neo4j_ledger_space_user}'|' \
+              -e 's|${NEO_4J_LEDGER_SPACE_PASS}|'${TF_VAR_neo4j_ledger_space_pass}'|' \
+              -e 's|${NEO_4J_SEARCH_SPACE_BOLT_URL}|'${TF_VAR_neo4j_search_space_bolt_url}'|' \
+              -e 's|${NEO_4J_SEARCH_SPACE_USER}|'${TF_VAR_neo4j_search_space_user}'|' \
+              -e 's|${NEO_4J_SEARCH_SPACE_PASS}|'${TF_VAR_neo4j_search_space_pass}'|' \
               task-definition.json
             
             jq --arg deploy_id "$DEPLOY_ID" '.containerDefinitions[0].environment += [{"name": "DEPLOY_ID", "value": $deploy_id}]' task-definition.json > task-definition-updated.json

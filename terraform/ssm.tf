@@ -1,7 +1,7 @@
 locals {
   ssm_parameters = {
-    neo4j_ledger_space_bolt_url = { value = "placeholder", type = "SecureString" }
-    neo4j_search_space_bolt_url = { value = "placeholder", type = "SecureString" }
+    neo4j_ledger_space_bolt_url = { value = var.neo4j_ledger_space_bolt_url, type = "SecureString" }
+    neo4j_search_space_bolt_url = { value = var.neo4j_search_space_bolt_url, type = "SecureString" }
     jwt_secret                  = { value = var.jwt_secret, type = "SecureString" }
     whatsapp_bot_api_key        = { value = var.whatsapp_bot_api_key, type = "SecureString" }
     open_exchange_rates_api     = { value = var.open_exchange_rates_api, type = "SecureString" }
