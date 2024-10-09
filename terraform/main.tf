@@ -12,7 +12,6 @@ provider "aws" {
 }
 
 locals {
-  environment = terraform.workspace
   api_domain  = local.domain[local.environment]
   common_tags = {
     Environment = local.environment
