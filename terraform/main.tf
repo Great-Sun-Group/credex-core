@@ -51,9 +51,9 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
   tags = local.common_tags
 
   lifecycle {
-    prevent_destroy     = true
+    prevent_destroy       = true
     create_before_destroy = true
-    ignore_changes      = [tags]
+    ignore_changes        = [tags]
   }
 }
 
@@ -99,7 +99,7 @@ resource "aws_ecs_task_definition" "credex_core_task" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = data.aws_cloudwatch_log_group.existing_ecs_logs.name
+          awslogs-group         = coalesce(try(aws_cloudwatch_log_group.ecs_logs[0].name, null), data.aws_cloudwatch_log_group.existing_ecs_logs.name)
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "ecs"
         }

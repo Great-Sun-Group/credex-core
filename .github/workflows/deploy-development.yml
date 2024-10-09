@@ -92,7 +92,7 @@ jobs:
         run: |
           set -e
           echo "Retrieving Terraform outputs..."
-          
+
           # SSM Parameter Names
           echo "Retrieving SSM parameter names..."
           SSM_NAMES=$(terraform output -json ssm_parameter_names | jq -r '.')
@@ -104,7 +104,7 @@ jobs:
           echo "SSM_NAMES<<EOF" >> $GITHUB_OUTPUT
           echo "$SSM_NAMES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          
+
           # VPC ID
           echo "Retrieving VPC ID..."
           VPC_ID=$(terraform output -raw vpc_id)
@@ -113,11 +113,11 @@ jobs:
             exit 1
           fi
           echo "VPC_ID=$VPC_ID" >> $GITHUB_OUTPUT
-          
+
           # Print outputs for debugging
           echo "SSM Parameter Names: $SSM_NAMES"
           echo "VPC ID: $VPC_ID"
-          
+
           # Print raw Terraform output for debugging
           echo "Raw Terraform output:"
           terraform output || echo "Warning: Failed to print raw Terraform output"
@@ -156,7 +156,7 @@ jobs:
         run: |
           echo "Raw Terraform output:"
           terraform output -raw ecr_repository_url
-          
+
           ECR_REPO_URL=$(terraform output -raw ecr_repository_url | grep -oP '[\w.-]+\.dkr\.ecr\.[\w-]+\.amazonaws\.com/[\w-]+' | head -n 1)
           if [ -z "$ECR_REPO_URL" ]; then
             echo "Failed to extract ECR Repository URL"
@@ -183,15 +183,15 @@ jobs:
         run: |
           EXECUTION_ROLE_ARN=$(terraform output -raw ecs_execution_role_arn)
           TASK_ROLE_ARN=$(terraform output -raw ecs_task_role_arn)
-          
+
           if [ -z "$EXECUTION_ROLE_ARN" ] || [ -z "$TASK_ROLE_ARN" ]; then
             echo "Failed to extract Role ARNs"
             exit 1
           fi
-          
+
           echo "Extracted Execution Role ARN: $EXECUTION_ROLE_ARN"
           echo "Extracted Task Role ARN: $TASK_ROLE_ARN"
-          
+
           if [ -f "task-definition.json" ]; then
             jq --arg exec_role "$EXECUTION_ROLE_ARN" --arg task_role "$TASK_ROLE_ARN" \
               '. + {executionRoleArn: $exec_role, taskRoleArn: $task_role}' task-definition.json > task-definition-updated.json
