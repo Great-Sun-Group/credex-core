@@ -83,17 +83,15 @@ jobs:
           echo "Retrieving Terraform outputs..."
           
           # SSM Parameter Names
-          echo "SSM_NAMES<<EOF" >> $GITHUB_OUTPUT
-          terraform output ssm_parameter_names | sed 's/^[][]//g; s/[][]$//g; s/, /\n/g' >> $GITHUB_OUTPUT || echo "Error retrieving SSM parameter names"
-          echo "EOF" >> $GITHUB_OUTPUT
+          SSM_NAMES=$(terraform output -json ssm_parameter_names | jq -r '.[]' | tr '\n' ',' | sed 's/,$//')
+          echo "ssm_names=$SSM_NAMES" >> $GITHUB_OUTPUT
           
           # VPC ID
-          VPC_ID=$(terraform output -raw vpc_id || echo "Error retrieving VPC ID")
-          echo "VPC_ID=$VPC_ID" >> $GITHUB_OUTPUT
+          VPC_ID=$(terraform output -raw vpc_id)
+          echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
           
           # Print outputs for debugging
-          echo "SSM Parameter Names:"
-          cat $GITHUB_OUTPUT | sed -n '/SSM_NAMES<<EOF/,/EOF/p'
+          echo "SSM Parameter Names: $SSM_NAMES"
           echo "VPC ID: $VPC_ID"
           
           # Print raw Terraform output for debugging
@@ -126,7 +124,7 @@ jobs:
             echo "Failed to extract ECR Repository URL"
             exit 1
           fi
-          echo "ECR_REPO_URL=$ECR_REPO_URL" >> $GITHUB_OUTPUT
+          echo "ecr_repo_url=$ECR_REPO_URL" >> $GITHUB_OUTPUT
           echo "Extracted ECR Repository URL: $ECR_REPO_URL"
         working-directory: ./terraform
 
@@ -135,10 +133,10 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          echo "Building and pushing to: $ECR_REPO_URL"
-          docker build -t $ECR_REPO_URL:$IMAGE_TAG .
-          docker push $ECR_REPO_URL:$IMAGE_TAG
-          echo "image=$ECR_REPO_URL:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "Building and pushing to: ${{ steps.get-ecr-url.outputs.ecr_repo_url }}"
+          docker build -t ${{ steps.get-ecr-url.outputs.ecr_repo_url }}:$IMAGE_TAG .
+          docker push ${{ steps.get-ecr-url.outputs.ecr_repo_url }}:$IMAGE_TAG
+          echo "image=${{ steps.get-ecr-url.outputs.ecr_repo_url }}:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Update ECS task definition
         id: task-def
@@ -168,7 +166,7 @@ jobs:
             NEO4J_SEARCH_SPACE_BOLT_URL=$(aws ssm get-parameter --name "/credex/${TF_VAR_environment}/neo4j_search_space_bolt_url" --with-decryption --query "Parameter.Value" --output text)
             
             sed -i.bak \
-              -e 's|${CONTAINER_IMAGE}|'${ECR_REPO_URL}:${IMAGE_TAG}'|' \
+              -e 's|${CONTAINER_IMAGE}|'${{ steps.get-ecr-url.outputs.ecr_repo_url }}:${IMAGE_TAG}'|' \
               -e 's|${NODE_ENV}|development|' \
               -e 's|${LOG_LEVEL}|debug|' \
               -e 's|${AWS_REGION}|af-south-1|' \
@@ -189,7 +187,7 @@ jobs:
             echo "Updated task definition:"
             cat task-definition.json
             
-            echo "task-definition=./terraform/task-definition.json" >> $GITHUB_OUTPUT
+            echo "task_definition=./terraform/task-definition.json" >> $GITHUB_OUTPUT
           else
             echo "task-definition.json not found"
             exit 1
@@ -199,7 +197,7 @@ jobs:
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          task-definition: ./terraform/task-definition.json
+          task-definition: ${{ steps.task-def.outputs.task_definition }}
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
