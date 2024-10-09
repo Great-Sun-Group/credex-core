@@ -145,13 +145,16 @@ jobs:
           echo "Extracted Task Role ARN: $TASK_ROLE_ARN"
           
           if [ -f "task-definition.json" ]; then
+            # Add executionRoleArn and taskRoleArn to the top level of the JSON
+            jq --arg exec_role "$EXECUTION_ROLE_ARN" --arg task_role "$TASK_ROLE_ARN" \
+              '. + {executionRoleArn: $exec_role, taskRoleArn: $task_role}' task-definition.json > task-definition-updated.json
+            mv task-definition-updated.json task-definition.json
+
             sed -i.bak \
               -e 's|${CONTAINER_IMAGE}|'${ECR_REPO_URL}:${IMAGE_TAG}'|' \
               -e 's|${NODE_ENV}|development|' \
               -e 's|${LOG_LEVEL}|debug|' \
               -e 's|${AWS_REGION}|af-south-1|' \
-              -e 's|${EXECUTION_ROLE_ARN}|'$EXECUTION_ROLE_ARN'|' \
-              -e 's|${TASK_ROLE_ARN}|'$TASK_ROLE_ARN'|' \
               task-definition.json
             
             echo "Updated task definition:"
