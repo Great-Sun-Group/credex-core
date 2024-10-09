@@ -143,7 +143,7 @@ resource "aws_ecs_service" "credex_core_service" {
     container_port   = 5000
   }
 
-  depends_on = [var.use_existing_resources["alb"] ? data.aws_lb_listener.existing_https[0] : aws_lb_listener.credex_listener[0], aws_iam_role_policy_attachment.ecs_execution_role_policy]
+  depends_on = [aws_iam_role_policy_attachment.ecs_execution_role_policy]
 
   tags = local.common_tags
 }
