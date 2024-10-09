@@ -39,7 +39,13 @@ data "aws_ssm_parameter" "params" {
 }
 
 resource "aws_ecr_repository" "credex_core" {
-  name = "credex-core-${local.effective_environment}"
+  name                 = "credex-core-${local.effective_environment}"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
   tags = local.common_tags
 }
 
