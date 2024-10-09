@@ -78,13 +78,15 @@ jobs:
           
           # SSM Parameter Names
           echo "Retrieving SSM parameter names..."
-          SSM_NAMES=$(terraform output -json ssm_parameter_names | jq -r 'join(",")')
+          SSM_NAMES=$(terraform output -json ssm_parameter_names | jq -r '.')
           if [ $? -ne 0 ] || [ -z "$SSM_NAMES" ]; then
             echo "Error: Failed to retrieve SSM parameter names"
             terraform output
             exit 1
           fi
-          echo "SSM_NAMES=$SSM_NAMES" >> $GITHUB_OUTPUT
+          echo "SSM_NAMES<<EOF" >> $GITHUB_OUTPUT
+          echo "$SSM_NAMES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
           
           # VPC ID
           echo "Retrieving VPC ID..."
@@ -106,8 +108,10 @@ jobs:
 
       - name: Debug SSM Parameters
         run: |
-          echo "SSM Parameter Names: ${{ steps.tf-outputs.outputs.SSM_NAMES }}"
-          for param in $(echo ${{ steps.tf-outputs.outputs.SSM_NAMES }} | tr ',' '\n'); do
+          echo "SSM Parameter Names:"
+          echo "${{ steps.tf-outputs.outputs.SSM_NAMES }}"
+          echo "Retrieving SSM parameter values:"
+          echo "${{ steps.tf-outputs.outputs.SSM_NAMES }}" | jq -r '.[]' | while read param; do
             echo "Parameter: $param"
             aws ssm get-parameter --name "$param" --with-decryption --query "Parameter.Value" --output text || echo "Failed to retrieve parameter"
           done
