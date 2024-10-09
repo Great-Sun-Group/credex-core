@@ -116,6 +116,12 @@ data "aws_lb_target_group" "credex_tg" {
   name = "credex-tg-${local.effective_environment}"
 }
 
+# Use a data source to check if the ECS service already exists
+data "aws_ecs_service" "existing_service" {
+  cluster_arn = aws_ecs_cluster.credex_cluster.arn
+  service_name = "credex-core-service-${local.effective_environment}"
+}
+
 resource "aws_ecs_service" "credex_core_service" {
   name            = "credex-core-service-${local.effective_environment}"
   cluster         = aws_ecs_cluster.credex_cluster.id
@@ -139,7 +145,11 @@ resource "aws_ecs_service" "credex_core_service" {
 
   lifecycle {
     ignore_changes = [task_definition, desired_count]
+    create_before_destroy = true
   }
+
+  # Only create the service if it doesn't already exist
+  count = data.aws_ecs_service.existing_service.id == "" ? 1 : 0
 }
 
 data "aws_iam_role" "ec2_role" {
@@ -167,7 +177,7 @@ output "ecs_cluster_name" {
 }
 
 output "ecs_service_name" {
-  value       = aws_ecs_service.credex_core_service.name
+  value       = try(aws_ecs_service.credex_core_service[0].name, data.aws_ecs_service.existing_service.service_name)
   description = "The name of the ECS service"
 }
 

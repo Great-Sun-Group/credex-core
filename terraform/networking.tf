@@ -90,6 +90,7 @@ data "aws_lb" "existing_alb" {
   name = "credex-alb-${local.effective_environment}"
 }
 
+# Use the existing ALB data in the aws_lb resource
 resource "aws_lb" "credex_alb" {
   name               = data.aws_lb.existing_alb.name
   internal           = data.aws_lb.existing_alb.internal
