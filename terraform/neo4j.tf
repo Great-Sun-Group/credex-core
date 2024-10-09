@@ -23,14 +23,10 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-data "aws_ssm_parameter" "neo4j_public_key" {
-  name = "/credex/${local.environment}/neo4j_public_key"
-}
-
 # Create a new EC2 Key Pair
 resource "aws_key_pair" "neo4j_key_pair" {
   key_name   = local.key_pair_name
-  public_key = data.aws_ssm_parameter.neo4j_public_key.value
+  public_key = aws_ssm_parameter.neo4j_public_key.value
 }
 
 resource "aws_instance" "neo4j" {
@@ -109,6 +105,8 @@ resource "aws_instance" "neo4j" {
     prevent_destroy = true
     ignore_changes  = [ami, user_data]
   }
+
+  depends_on = [aws_ssm_parameter.neo4j_public_key]
 }
 
 # The security group for Neo4j is now defined in networking.tf
