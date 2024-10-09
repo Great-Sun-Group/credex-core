@@ -25,9 +25,8 @@ data "aws_ecr_repository" "credex_core" {
   name = "credex-core-${local.environment}"
 }
 
-resource "aws_ecs_cluster" "credex_cluster" {
-  name = "credex-cluster-${local.environment}"
-  tags = local.common_tags
+data "aws_ecs_cluster" "credex_cluster" {
+  cluster_name = "credex-cluster-${local.environment}"
 }
 
 data "aws_iam_role" "ecs_execution_role" {
@@ -84,50 +83,29 @@ data "aws_cloudwatch_log_group" "ecs_logs" {
   name = "/ecs/credex-core-${local.environment}"
 }
 
-resource "aws_ecs_service" "credex_core_service" {
-  name            = "credex-core-service-${local.environment}"
-  cluster         = aws_ecs_cluster.credex_cluster.id
-  task_definition = aws_ecs_task_definition.credex_core_task.arn
-  launch_type     = "FARGATE"
-  desired_count   = 1
-
-  network_configuration {
-    subnets          = data.aws_subnets.available.ids
-    assign_public_ip = true
-    security_groups  = [aws_security_group.ecs_tasks.id]
-  }
-
-  load_balancer {
-    target_group_arn = data.aws_lb_target_group.credex_tg.arn
-    container_name   = "credex-core"
-    container_port   = 5000
-  }
-
-  lifecycle {
-    ignore_changes = [task_definition, desired_count]
-  }
-
-  tags = local.common_tags
+data "aws_ecs_service" "credex_core_service" {
+  service_name = "credex-core-service-${local.environment}"
+  cluster_arn  = data.aws_ecs_cluster.credex_cluster.arn
 }
 
 # Outputs
 output "api_url" {
-  value       = "https://${aws_route53_record.api.name}"
+  value       = "https://${data.aws_route53_record.api.name}"
   description = "The URL of the deployed API"
 }
 
 output "api_domain" {
-  value       = aws_route53_record.api.name
+  value       = data.aws_route53_record.api.name
   description = "The domain name of the API"
 }
 
 output "ecs_cluster_name" {
-  value       = aws_ecs_cluster.credex_cluster.name
+  value       = data.aws_ecs_cluster.credex_cluster.cluster_name
   description = "The name of the ECS cluster"
 }
 
 output "ecs_service_name" {
-  value       = aws_ecs_service.credex_core_service.name
+  value       = data.aws_ecs_service.credex_core_service.service_name
   description = "The name of the ECS service"
 }
 

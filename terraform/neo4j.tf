@@ -23,27 +23,38 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-resource "aws_key_pair" "neo4j_key_pair" {
-  key_name   = local.key_pair_name
-  public_key = var.neo4j_public_key
+data "aws_key_pair" "neo4j_key_pair" {
+  key_name = local.key_pair_name
+}
 
-  lifecycle {
-    ignore_changes = [public_key]
+data "aws_instances" "neo4j" {
+  instance_tags = {
+    Project     = "CredEx"
+    Environment = var.environment
+  }
+
+  filter {
+    name   = "tag:Name"
+    values = ["Neo4j-${var.environment}-*"]
   }
 }
 
-resource "aws_instance" "neo4j" {
-  count                = local.neo4j_instance_count[var.environment]
-  ami                  = data.aws_ami.amazon_linux_2.id
-  instance_type        = local.neo4j_instance_type[var.environment]
-  key_name             = try(aws_key_pair.neo4j_key_pair.key_name, local.key_pair_name)
+data "aws_security_group" "neo4j" {
+  name = "credex-neo4j-sg-${var.environment}"
+}
 
-  vpc_security_group_ids = [aws_security_group.neo4j.id]
+resource "aws_instance" "neo4j" {
+  count         = max(0, local.neo4j_instance_count[var.environment] - length(data.aws_instances.neo4j.ids))
+  ami           = data.aws_ami.amazon_linux_2.id
+  instance_type = local.neo4j_instance_type[var.environment]
+  key_name      = data.aws_key_pair.neo4j_key_pair.key_name
+
+  vpc_security_group_ids = [data.aws_security_group.neo4j.id]
   subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]
 
   tags = merge(local.common_tags, {
-    Name = "Neo4j-${var.environment}-${count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
-    Role = count.index == 0 ? "LedgerSpace" : "SearchSpace"
+    Name = "Neo4j-${var.environment}-${length(data.aws_instances.neo4j.ids) + count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
+    Role = length(data.aws_instances.neo4j.ids) + count.index == 0 ? "LedgerSpace" : "SearchSpace"
   })
 
   user_data = <<-EOF
@@ -65,8 +76,8 @@ resource "aws_instance" "neo4j" {
               yum install neo4j-enterprise -y
               
               # Configure Neo4j
-              NEO4J_PASSWORD=${count.index == 0 ? var.neo4j_ledger_space_pass : var.neo4j_search_space_pass}
-              NEO4J_USERNAME=${count.index == 0 ? var.neo4j_ledger_space_user : var.neo4j_search_space_user}
+              NEO4J_PASSWORD=${length(data.aws_instances.neo4j.ids) + count.index == 0 ? var.neo4j_ledger_space_pass : var.neo4j_search_space_pass}
+              NEO4J_USERNAME=${length(data.aws_instances.neo4j.ids) + count.index == 0 ? var.neo4j_ledger_space_user : var.neo4j_search_space_user}
               
               # Set the initial password
               neo4j-admin dbms set-initial-password $NEO4J_PASSWORD
