@@ -38,8 +38,15 @@ data "aws_ssm_parameter" "params" {
   name = "/credex/${local.environment}/${each.key}"
 }
 
-data "aws_ecr_repository" "credex_core" {
-  name = "credex-core-${local.environment}"
+resource "aws_ecr_repository" "credex_core" {
+  name                 = "credex-core-${local.environment}"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  tags = local.common_tags
 }
 
 resource "aws_ecs_cluster" "credex_cluster" {
@@ -102,7 +109,7 @@ resource "aws_ecs_task_definition" "credex_core_task" {
   container_definitions = jsonencode([
     {
       name  = "credex-core"
-      image = "${data.aws_ecr_repository.credex_core.repository_url}:latest"
+      image = "${aws_ecr_repository.credex_core.repository_url}:latest"
       portMappings = [
         {
           containerPort = 5000
@@ -191,7 +198,7 @@ output "ecs_service_name" {
 }
 
 output "ecr_repository_url" {
-  value = data.aws_ecr_repository.credex_core.repository_url
+  value = aws_ecr_repository.credex_core.repository_url
 }
 
 output "vpc_id" {

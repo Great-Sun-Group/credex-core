@@ -9,7 +9,6 @@ on:
         default: "development"
 
 env:
-  ECR_REPOSITORY: credex-core-development
   ECS_CLUSTER: credex-cluster-development
   ECS_SERVICE: credex-core-service-development
   CONTAINER_NAME: credex-core
@@ -42,16 +41,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build, tag, and push image to Amazon ECR
-        id: build-image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
 
@@ -82,6 +71,24 @@ jobs:
         run: terraform apply -auto-approve tfplan
         working-directory: ./terraform
 
+      - name: Get ECR Repository URL
+        id: get-ecr-url
+        run: |
+          ECR_REPO_URL=$(terraform output -raw ecr_repository_url)
+          echo "ECR_REPO_URL=${ECR_REPO_URL}" >> $GITHUB_OUTPUT
+        working-directory: ./terraform
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ steps.get-ecr-url.outputs.ECR_REPO_URL }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
       - name: Run Post-Deployment Configuration
         run: |
           terraform apply -auto-approve -target=null_resource.post_deployment_config
@@ -90,11 +97,11 @@ jobs:
       - name: Update ECS task definition
         id: task-def
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ steps.get-ecr-url.outputs.ECR_REPO_URL }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           sed -i.bak \
-            -e 's|${CONTAINER_IMAGE}|'${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}'|' \
+            -e 's|${CONTAINER_IMAGE}|'${ECR_REPOSITORY}:${IMAGE_TAG}'|' \
             -e 's|${NODE_ENV}|development|' \
             -e 's|${LOG_LEVEL}|debug|' \
             -e 's|${AWS_REGION}|af-south-1|' \
