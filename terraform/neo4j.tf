@@ -32,7 +32,6 @@ resource "aws_instance" "neo4j" {
   ami                  = data.aws_ami.amazon_linux_2.id
   instance_type        = local.neo4j_instance_type[local.environment]
   key_name             = data.aws_key_pair.neo4j_key_pair.key_name
-  iam_instance_profile = data.aws_iam_instance_profile.neo4j_profile.name
 
   vpc_security_group_ids = [aws_security_group.neo4j.id]
   subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]
