@@ -112,31 +112,9 @@ resource "aws_iam_role_policy" "parameter_store_access" {
   })
 }
 
-resource "aws_ecs_service" "credex_core_service" {
-  name            = "credex-core-service-${local.effective_environment}"
-  cluster         = aws_ecs_cluster.credex_cluster.id
-  task_definition = aws_ecs_task_definition.credex_core_task.arn
-  launch_type     = "FARGATE"
-  desired_count   = 1
-
-  network_configuration {
-    subnets          = data.aws_subnets.available.ids
-    assign_public_ip = true
-    security_groups  = [aws_security_group.ecs_tasks.id]
-  }
-
-  load_balancer {
-    target_group_arn = data.aws_lb_target_group.credex_tg.arn
-    container_name   = "credex-core"
-    container_port   = 5000
-  }
-
-  tags = local.common_tags
-
-  lifecycle {
-    create_before_destroy = true
-    ignore_changes        = [task_definition, desired_count, load_balancer]
-  }
+data "aws_ecs_service" "credex_core_service" {
+  cluster_arn  = aws_ecs_cluster.credex_cluster.arn
+  service_name = "credex-core-service-${local.effective_environment}"
 }
 
 data "aws_iam_role" "ec2_role" {
@@ -149,12 +127,12 @@ data "aws_iam_instance_profile" "neo4j_profile" {
 
 # Outputs
 output "api_url" {
-  value       = "https://${aws_route53_record.api.name}"
+  value       = "https://${local.domain}"
   description = "The URL of the deployed API"
 }
 
 output "api_domain" {
-  value       = aws_route53_record.api.name
+  value       = local.domain
   description = "The domain name of the API"
 }
 
@@ -164,7 +142,7 @@ output "ecs_cluster_name" {
 }
 
 output "ecs_service_name" {
-  value       = aws_ecs_service.credex_core_service.name
+  value       = data.aws_ecs_service.credex_core_service.service_name
   description = "The name of the ECS service"
 }
 
@@ -183,11 +161,6 @@ output "neo4j_search_private_ip" {
 output "neo4j_ami_id" {
   value       = try(data.aws_ami.amazon_linux_2.id, "Not available yet")
   description = "The ID of the Amazon Linux 2 AMI used for Neo4j EC2 instances"
-}
-
-output "acm_certificate_arn" {
-  value       = aws_acm_certificate.credex_cert.arn
-  description = "ARN of the ACM certificate created for HTTPS"
 }
 
 output "vpc_id" {

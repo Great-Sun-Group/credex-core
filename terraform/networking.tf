@@ -94,70 +94,25 @@ data "aws_lb_target_group" "credex_tg" {
   name = "credex-tg-${local.effective_environment}"
 }
 
-resource "aws_acm_certificate" "credex_cert" {
-  domain_name       = local.domain
-  validation_method = "DNS"
-
-  tags = local.common_tags
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "aws_route53_record" "cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.credex_cert.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-
-  allow_overwrite = true
-  name            = each.value.name
-  records         = [each.value.record]
-  ttl             = 60
-  type            = each.value.type
-  zone_id         = data.aws_route53_zone.selected.zone_id
-}
-
-resource "aws_acm_certificate_validation" "cert_validation" {
-  certificate_arn         = aws_acm_certificate.credex_cert.arn
-  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
-}
-
-resource "aws_lb_listener" "credex_listener" {
+data "aws_lb_listener" "credex_listener" {
   load_balancer_arn = data.aws_lb.credex_alb.arn
-  port              = "443"
-  protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-2016-08"
-  certificate_arn   = aws_acm_certificate.credex_cert.arn
-
-  default_action {
-    type             = "forward"
-    target_group_arn = data.aws_lb_target_group.credex_tg.arn
-  }
-
-  tags = local.common_tags
+  port              = 443
 }
 
-resource "aws_lb_listener" "redirect_http_to_https" {
-  load_balancer_arn = data.aws_lb.credex_alb.arn
-  port              = "80"
-  protocol          = "HTTP"
+data "aws_acm_certificate" "credex_cert" {
+  domain   = local.domain
+  statuses = ["ISSUED"]
+}
 
-  default_action {
-    type = "redirect"
+data "aws_route53_zone" "selected" {
+  name         = "mycredex.app."
+  private_zone = false
+}
 
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-    }
-  }
-
-  tags = local.common_tags
+data "aws_route53_record" "api" {
+  zone_id = data.aws_route53_zone.selected.zone_id
+  name    = local.domain
+  type    = "A"
 }
 
 resource "aws_security_group" "alb" {
@@ -193,22 +148,5 @@ resource "aws_security_group" "alb" {
 
   lifecycle {
     create_before_destroy = true
-  }
-}
-
-data "aws_route53_zone" "selected" {
-  name         = "mycredex.app."
-  private_zone = false
-}
-
-resource "aws_route53_record" "api" {
-  zone_id = data.aws_route53_zone.selected.zone_id
-  name    = local.domain
-  type    = "A"
-
-  alias {
-    name                   = data.aws_lb.credex_alb.dns_name
-    zone_id                = data.aws_lb.credex_alb.zone_id
-    evaluate_target_health = true
   }
 }
