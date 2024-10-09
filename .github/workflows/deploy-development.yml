@@ -60,6 +60,11 @@ jobs:
         id: plan
         run: |
           terraform plan -out=tfplan
+          terraform show -no-color tfplan > tfplan.txt
+        working-directory: ./terraform
+
+      - name: Output Terraform Plan
+        run: cat tfplan.txt
         working-directory: ./terraform
 
       - name: Terraform Apply
@@ -121,8 +126,11 @@ jobs:
       - name: Verify CloudWatch Log Group
         run: |
           LOG_GROUP_NAME="/ecs/credex-core-development"
-          if aws logs describe-log-groups --log-group-name-prefix $LOG_GROUP_NAME | grep -q $LOG_GROUP_NAME; then
+          LOG_GROUP_INFO=$(aws logs describe-log-groups --log-group-name-prefix $LOG_GROUP_NAME --query 'logGroups[0]')
+          if [ -n "$LOG_GROUP_INFO" ]; then
             echo "CloudWatch Log Group $LOG_GROUP_NAME exists."
+            echo "Log Group Details:"
+            echo "$LOG_GROUP_INFO" | jq '.'
           else
             echo "Error: CloudWatch Log Group $LOG_GROUP_NAME does not exist."
             exit 1

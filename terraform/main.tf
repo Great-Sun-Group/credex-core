@@ -45,8 +45,8 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
   tags = local.common_tags
 
   lifecycle {
-    create_before_destroy = true
-    ignore_changes        = [tags]
+    prevent_destroy = true
+    ignore_changes  = [tags]
   }
 }
 
