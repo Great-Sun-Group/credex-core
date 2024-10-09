@@ -65,10 +65,9 @@ jobs:
             -out=tfplan
         working-directory: ./terraform
 
-      - name: Terraform Apply CloudWatch Log Group
-        id: apply-cloudwatch
-        run: |
-          terraform apply -auto-approve -target=aws_cloudwatch_log_group.ecs_logs tfplan
+      - name: Terraform Apply
+        id: apply
+        run: terraform apply -auto-approve tfplan
         working-directory: ./terraform
 
       - name: Verify CloudWatch Log Group
@@ -80,11 +79,6 @@ jobs:
             echo "Error: CloudWatch Log Group $LOG_GROUP_NAME does not exist."
             exit 1
           fi
-
-      - name: Terraform Apply Remaining Resources
-        id: apply-remaining
-        run: terraform apply -auto-approve tfplan
-        working-directory: ./terraform
 
       - name: Get ECR Repository URL
         id: get-ecr-url
@@ -204,7 +198,7 @@ jobs:
 
       - name: Run Neo4j Validation Tests
         env:
-          NEO4J_HOST: ${{ steps.apply-remaining.outputs.neo4j_host }}
+          NEO4J_HOST: ${{ steps.apply.outputs.neo4j_host }}
           NEO4J_USER: ${{ secrets.NEO_4J_LEDGER_SPACE_USER }}
           NEO4J_PASSWORD: ${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}
         run: |
@@ -213,7 +207,7 @@ jobs:
 
       - name: Run Post-Deployment Tests
         env:
-          API_URL: ${{ steps.apply-remaining.outputs.api_url }}
+          API_URL: ${{ steps.apply.outputs.api_url }}
         run: |
           npm install axios jest
           node .github/workflows/post_deployment_tests.js

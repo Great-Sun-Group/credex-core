@@ -37,12 +37,17 @@ data "aws_iam_role" "ecs_task_role" {
   name = "ecs-task-role-${local.environment}"
 }
 
-# Create CloudWatch log group
+# Create or manage existing CloudWatch log group
 resource "aws_cloudwatch_log_group" "ecs_logs" {
   name              = "/ecs/credex-core-${local.environment}"
   retention_in_days = 30
 
   tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes        = [tags]
+  }
 }
 
 resource "aws_ecs_task_definition" "credex_core_task" {
