@@ -75,16 +75,26 @@ jobs:
           echo "Applying Terraform changes..."
           terraform apply -auto-approve tfplan
           echo "Terraform apply completed."
+        working-directory: ./terraform
+
+      - name: Get Terraform Outputs
+        id: tf-outputs
+        run: |
+          echo "Retrieving Terraform outputs..."
           
-          echo "Outputting SSM parameter names..."
-          SSM_NAMES=$(terraform output -json ssm_parameter_names | jq -r '.[]')
+          # SSM Parameter Names
           echo "SSM_NAMES<<EOF" >> $GITHUB_OUTPUT
-          echo "$SSM_NAMES" >> $GITHUB_OUTPUT
+          terraform output -json ssm_parameter_names | jq -r '.[]' >> $GITHUB_OUTPUT || echo "Error retrieving SSM parameter names"
           echo "EOF" >> $GITHUB_OUTPUT
           
-          echo "Outputting VPC ID..."
-          VPC_ID=$(terraform output -raw vpc_id)
+          # VPC ID
+          VPC_ID=$(terraform output -raw vpc_id || echo "Error retrieving VPC ID")
           echo "VPC_ID=$VPC_ID" >> $GITHUB_OUTPUT
+          
+          # Print outputs for debugging
+          echo "SSM Parameter Names:"
+          cat $GITHUB_OUTPUT | sed -n '/SSM_NAMES<<EOF/,/EOF/p'
+          echo "VPC ID: $VPC_ID"
         working-directory: ./terraform
 
       - name: Verify CloudWatch Log Group
