@@ -126,7 +126,7 @@ resource "aws_ecs_service" "credex_core_service" {
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.credex_tg.arn
+    target_group_arn = data.aws_lb_target_group.credex_tg.arn
     container_name   = "credex-core"
     container_port   = 5000
   }
