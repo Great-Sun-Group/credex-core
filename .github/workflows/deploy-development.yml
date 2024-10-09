@@ -69,6 +69,14 @@ jobs:
           terraform plan -out=tfplan
         working-directory: ./terraform
 
+      - name: Debug Terraform State
+        run: |
+          echo "Terraform State:"
+          terraform show
+          echo "Terraform Output:"
+          terraform output
+        working-directory: ./terraform
+
       - name: Terraform Apply
         id: apply
         run: |
@@ -84,7 +92,7 @@ jobs:
           echo "Retrieving Terraform outputs..."
           
           # SSM Parameter Names
-          SSM_NAMES=$(terraform output ssm_parameter_names | tr -d '[],"' | tr '\n' ',' | sed 's/,$//')
+          SSM_NAMES=$(terraform output -json ssm_parameter_names | jq -r 'join(",")')
           if [ -z "$SSM_NAMES" ]; then
             echo "Error: Failed to retrieve SSM parameter names"
             exit 1
@@ -105,7 +113,7 @@ jobs:
           
           # Print raw Terraform output for debugging
           echo "Raw Terraform output:"
-          terraform output || echo "Warning: Failed to print raw Terraform output"
+          terraform output
         working-directory: ./terraform
 
       - name: Verify CloudWatch Log Group
