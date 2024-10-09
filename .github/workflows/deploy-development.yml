@@ -48,6 +48,17 @@ jobs:
         run: terraform init
         working-directory: ./terraform
 
+      - name: Import existing CloudWatch Log Group
+        run: |
+          LOG_GROUP_NAME="/ecs/credex-core-development"
+          if aws logs describe-log-groups --log-group-name-prefix $LOG_GROUP_NAME | grep -q $LOG_GROUP_NAME; then
+            echo "Importing existing CloudWatch Log Group"
+            terraform import aws_cloudwatch_log_group.ecs_logs $LOG_GROUP_NAME
+          else
+            echo "CloudWatch Log Group does not exist, skipping import"
+          fi
+        working-directory: ./terraform
+
       - name: Terraform Plan
         id: plan
         run: |
