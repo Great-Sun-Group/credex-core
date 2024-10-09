@@ -109,10 +109,16 @@ data "aws_route53_zone" "selected" {
   private_zone = false
 }
 
-data "aws_route53_record" "api" {
+resource "aws_route53_record" "api" {
   zone_id = data.aws_route53_zone.selected.zone_id
   name    = local.domain
   type    = "A"
+
+  alias {
+    name                   = data.aws_lb.credex_alb.dns_name
+    zone_id                = data.aws_lb.credex_alb.zone_id
+    evaluate_target_health = true
+  }
 }
 
 resource "aws_security_group" "alb" {
