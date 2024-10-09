@@ -69,12 +69,8 @@ jobs:
           terraform plan -out=tfplan
         working-directory: ./terraform
 
-      - name: Debug Terraform State
-        run: |
-          echo "Terraform State:"
-          terraform show
-          echo "Terraform Output:"
-          terraform output
+      - name: Terraform Validate
+        run: terraform validate
         working-directory: ./terraform
 
       - name: Terraform Apply
@@ -92,7 +88,10 @@ jobs:
           echo "Retrieving Terraform outputs..."
           
           # SSM Parameter Names
-          SSM_NAMES=$(terraform output -json ssm_parameter_names | jq -r 'join(",")')
+          echo "Retrieving SSM parameter names..."
+          SSM_NAMES=$(terraform output -json ssm_parameter_names 2>&1) || { echo "Error: $SSM_NAMES"; exit 1; }
+          echo "Raw SSM_NAMES output: $SSM_NAMES"
+          SSM_NAMES=$(echo "$SSM_NAMES" | jq -r 'join(",")' 2>&1) || { echo "Error processing SSM_NAMES with jq: $SSM_NAMES"; exit 1; }
           if [ -z "$SSM_NAMES" ]; then
             echo "Error: Failed to retrieve SSM parameter names"
             exit 1
@@ -100,7 +99,8 @@ jobs:
           echo "ssm_names=$SSM_NAMES" >> $GITHUB_OUTPUT
           
           # VPC ID
-          VPC_ID=$(terraform output -raw vpc_id)
+          echo "Retrieving VPC ID..."
+          VPC_ID=$(terraform output -raw vpc_id 2>&1) || { echo "Error: $VPC_ID"; exit 1; }
           if [ -z "$VPC_ID" ]; then
             echo "Error: Failed to retrieve VPC ID"
             exit 1
@@ -113,8 +113,17 @@ jobs:
           
           # Print raw Terraform output for debugging
           echo "Raw Terraform output:"
-          terraform output
+          terraform output || echo "Warning: Failed to print raw Terraform output"
         working-directory: ./terraform
+
+      - name: Debug SSM Parameters
+        run: |
+          for param in $(echo ${{ steps.tf-outputs.outputs.ssm_names }} | tr ',' '\n'); do
+            echo "Parameter: $param"
+            aws ssm get-parameter --name "$param" --with-decryption --query "Parameter.Value" --output text || echo "Failed to retrieve parameter"
+          done
+        env:
+          AWS_DEFAULT_REGION: af-south-1
 
       - name: Verify CloudWatch Log Group
         run: |
@@ -248,6 +257,13 @@ jobs:
           git add deployment_log.txt
           git commit -m "Log deployment to development"
           git push
+        working-directory: ./terraform
+
+      - name: Debug Terraform State
+        if: failure()
+        run: |
+          echo "Terraform State:"
+          terraform show
         working-directory: ./terraform
 
       - name: Notify on Failure
