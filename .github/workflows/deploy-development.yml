@@ -75,20 +75,18 @@ jobs:
         run: |
           ECR_REPO_URL=$(terraform output -raw ecr_repository_url)
           ECR_REPO_URL=$(echo $ECR_REPO_URL | tr -d '\n' | sed 's/::debug::.*$//')
-          echo "ECR_REPO_URL=${ECR_REPO_URL}" >> $GITHUB_OUTPUT
+          echo "ECR_REPO_URL=$ECR_REPO_URL" >> $GITHUB_ENV
         working-directory: ./terraform
 
       - name: Build, tag, and push image to Amazon ECR
-        id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ steps.get-ecr-url.outputs.ECR_REPO_URL }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          echo "Building and pushing to: $ECR_REPOSITORY"
-          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "Building and pushing to: $ECR_REPO_URL"
+          docker build -t $ECR_REPO_URL:$IMAGE_TAG .
+          docker push $ECR_REPO_URL:$IMAGE_TAG
+          echo "image=$ECR_REPO_URL:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Run Post-Deployment Configuration
         run: |
@@ -98,11 +96,10 @@ jobs:
       - name: Update ECS task definition
         id: task-def
         env:
-          ECR_REPOSITORY: ${{ steps.get-ecr-url.outputs.ECR_REPO_URL }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           sed -i.bak \
-            -e 's|${CONTAINER_IMAGE}|'${ECR_REPOSITORY}:${IMAGE_TAG}'|' \
+            -e 's|${CONTAINER_IMAGE}|'${ECR_REPO_URL}:${IMAGE_TAG}'|' \
             -e 's|${NODE_ENV}|development|' \
             -e 's|${LOG_LEVEL}|debug|' \
             -e 's|${AWS_REGION}|af-south-1|' \
