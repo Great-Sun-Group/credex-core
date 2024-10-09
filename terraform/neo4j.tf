@@ -39,17 +39,13 @@ data "aws_instances" "neo4j" {
   }
 }
 
-data "aws_security_group" "neo4j" {
-  name = "credex-neo4j-sg-${var.environment}"
-}
-
 resource "aws_instance" "neo4j" {
   count         = max(0, local.neo4j_instance_count[var.environment] - length(data.aws_instances.neo4j.ids))
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = local.neo4j_instance_type[var.environment]
   key_name      = data.aws_key_pair.neo4j_key_pair.key_name
 
-  vpc_security_group_ids = [data.aws_security_group.neo4j.id]
+  vpc_security_group_ids = [aws_security_group.neo4j.id]
   subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]
 
   tags = merge(local.common_tags, {
