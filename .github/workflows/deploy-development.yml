@@ -52,25 +52,14 @@ jobs:
         run: terraform init
         working-directory: ./terraform
 
-      - name: Import existing CloudWatch Log Group
-        run: |
-          LOG_GROUP_NAME="/ecs/credex-core-development"
-          if aws logs describe-log-groups --log-group-name-prefix $LOG_GROUP_NAME | grep -q $LOG_GROUP_NAME; then
-            echo "Importing existing CloudWatch Log Group"
-            terraform import aws_cloudwatch_log_group.ecs_logs $LOG_GROUP_NAME
-          else
-            echo "CloudWatch Log Group does not exist, it will be created by Terraform"
-          fi
+      - name: Terraform Validate
+        run: terraform validate
         working-directory: ./terraform
 
       - name: Terraform Plan
         id: plan
         run: |
           terraform plan -out=tfplan
-        working-directory: ./terraform
-
-      - name: Terraform Validate
-        run: terraform validate
         working-directory: ./terraform
 
       - name: Terraform Apply
@@ -95,7 +84,7 @@ jobs:
             terraform output
             exit 1
           fi
-          echo "ssm_names=$SSM_NAMES" >> $GITHUB_OUTPUT
+          echo "SSM_NAMES=$SSM_NAMES" >> $GITHUB_OUTPUT
           
           # VPC ID
           echo "Retrieving VPC ID..."
@@ -104,7 +93,7 @@ jobs:
             echo "Error: Failed to retrieve VPC ID"
             exit 1
           fi
-          echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
+          echo "VPC_ID=$VPC_ID" >> $GITHUB_OUTPUT
           
           # Print outputs for debugging
           echo "SSM Parameter Names: $SSM_NAMES"
@@ -117,7 +106,8 @@ jobs:
 
       - name: Debug SSM Parameters
         run: |
-          for param in $(echo ${{ steps.tf-outputs.outputs.ssm_names }} | tr ',' '\n'); do
+          echo "SSM Parameter Names: ${{ steps.tf-outputs.outputs.SSM_NAMES }}"
+          for param in $(echo ${{ steps.tf-outputs.outputs.SSM_NAMES }} | tr ',' '\n'); do
             echo "Parameter: $param"
             aws ssm get-parameter --name "$param" --with-decryption --query "Parameter.Value" --output text || echo "Failed to retrieve parameter"
           done

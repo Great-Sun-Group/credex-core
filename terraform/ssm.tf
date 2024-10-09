@@ -44,13 +44,13 @@ resource "null_resource" "update_ssm_params" {
 
 # Output all SSM parameters
 output "ssm_parameters" {
-  value = { for k, v in local.ssm_parameters : k => v.value }
+  value       = { for k, v in local.ssm_parameters : k => v.value }
   description = "All SSM parameters"
-  sensitive = true
+  sensitive   = true
 }
 
 # Output the names of all SSM parameters
 output "ssm_parameter_names" {
-  value = [for k, v in local.ssm_parameters : "/credex/${var.environment}/${k}"]
+  value       = jsonencode([for k, v in local.ssm_parameters : "/credex/${var.environment}/${k}"])
   description = "List of all SSM parameter names"
 }
