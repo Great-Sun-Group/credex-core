@@ -1,13 +1,13 @@
 resource "aws_ssm_parameter" "neo4j_ledger_space_bolt_url" {
   name  = "/credex/${local.environment}/neo4j_ledger_space_bolt_url"
   type  = "SecureString"
-  value = var.neo4j_ledger_space_bolt_url
+  value = "placeholder"  # This will be updated post-deployment
 }
 
 resource "aws_ssm_parameter" "neo4j_search_space_bolt_url" {
   name  = "/credex/${local.environment}/neo4j_search_space_bolt_url"
   type  = "SecureString"
-  value = var.neo4j_search_space_bolt_url
+  value = "placeholder"  # This will be updated post-deployment
 }
 
 resource "aws_ssm_parameter" "jwt_secret" {

@@ -24,11 +24,6 @@ variable "open_exchange_rates_api" {
   type        = string
 }
 
-variable "neo4j_ledger_space_bolt_url" {
-  description = "Neo4j LedgerSpace Bolt URL"
-  type        = string
-}
-
 variable "neo4j_ledger_space_user" {
   description = "Neo4j LedgerSpace username"
   type        = string
@@ -36,11 +31,6 @@ variable "neo4j_ledger_space_user" {
 
 variable "neo4j_ledger_space_pass" {
   description = "Neo4j LedgerSpace password"
-  type        = string
-}
-
-variable "neo4j_search_space_bolt_url" {
-  description = "Neo4j SearchSpace Bolt URL"
   type        = string
 }
 

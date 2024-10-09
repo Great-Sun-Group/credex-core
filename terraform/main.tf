@@ -176,6 +176,20 @@ resource "aws_ecs_service" "credex_core_service" {
   tags = local.common_tags
 }
 
+resource "null_resource" "update_bolt_urls" {
+  depends_on = [aws_instance.neo4j]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      LEDGER_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-${local.environment}-LedgerSpace" --query "Reservations[0].Instances[0].PrivateIpAddress" --output text)
+      SEARCH_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-${local.environment}-SearchSpace" --query "Reservations[0].Instances[0].PrivateIpAddress" --output text)
+      
+      aws ssm put-parameter --name "/credex/${local.environment}/neo4j_ledger_space_bolt_url" --value "bolt://$LEDGER_IP:7687" --type SecureString --overwrite
+      aws ssm put-parameter --name "/credex/${local.environment}/neo4j_search_space_bolt_url" --value "bolt://$SEARCH_IP:7687" --type SecureString --overwrite
+    EOT
+  }
+}
+
 # Outputs
 output "api_url" {
   value       = "https://${aws_route53_record.api.name}"
