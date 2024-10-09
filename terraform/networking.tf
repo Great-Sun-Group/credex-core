@@ -218,3 +218,24 @@ resource "aws_route53_record" "api" {
     evaluate_target_health = true
   }
 }
+
+# Data source to fetch existing ALB
+data "aws_lb" "existing_alb" {
+  name = "credex-alb-${local.effective_environment}"
+}
+
+# Use the existing ALB data in the aws_lb resource
+resource "aws_lb" "credex_alb" {
+  name               = data.aws_lb.existing_alb.name
+  internal           = data.aws_lb.existing_alb.internal
+  load_balancer_type = data.aws_lb.existing_alb.load_balancer_type
+  security_groups    = data.aws_lb.existing_alb.security_groups
+  subnets            = data.aws_lb.existing_alb.subnets
+
+  tags = merge(local.common_tags, data.aws_lb.existing_alb.tags)
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes  = [name, subnets, security_groups]
+  }
+}

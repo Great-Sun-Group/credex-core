@@ -11,9 +11,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Note: If deployment fails due to vCPU limits, request a limit increase from AWS support
-# The ECS service-linked role is assumed to exist. If it doesn't, create it manually or grant the necessary permissions.
-
 locals {
   vpc_id = data.aws_vpc.default.id != "" ? data.aws_vpc.default.id : aws_vpc.main[0].id
   effective_environment = coalesce(var.environment, terraform.workspace == "default" ? "production" : terraform.workspace)
@@ -139,6 +136,10 @@ resource "aws_ecs_service" "credex_core_service" {
   }
 
   tags = local.common_tags
+
+  lifecycle {
+    ignore_changes = [task_definition, desired_count]
+  }
 }
 
 data "aws_iam_role" "ec2_role" {
