@@ -30,12 +30,12 @@ data "aws_instances" "neo4j" {
 }
 
 resource "aws_instance" "neo4j" {
-  count         = var.use_existing_resources ? 0 : max(0, local.neo4j_instance_count[local.environment] - length(data.aws_instances.neo4j.ids))
+  count         = var.use_existing_resources["neo4j_instances"] ? 0 : max(0, local.neo4j_instance_count[local.environment] - length(data.aws_instances.neo4j.ids))
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = local.neo4j_instance_type[local.environment]
   key_name      = data.aws_key_pair.neo4j_key_pair.key_name
 
-  vpc_security_group_ids = [var.use_existing_resources ? data.aws_security_group.existing_neo4j[0].id : aws_security_group.neo4j[0].id]
+  vpc_security_group_ids = [var.use_existing_resources["security_groups"] ? data.aws_security_group.existing_neo4j[0].id : aws_security_group.neo4j[0].id]
   subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]
 
   tags = merge(local.common_tags, {
@@ -111,7 +111,7 @@ resource "aws_instance" "neo4j" {
 
 # Generate Neo4j Bolt URLs and store them in SSM parameters
 resource "aws_ssm_parameter" "neo4j_bolt_url" {
-  count = var.use_existing_resources ? 0 : length(aws_instance.neo4j)
+  count = var.use_existing_resources["neo4j_instances"] ? 0 : length(aws_instance.neo4j)
   name  = "/credex/${local.environment}/neo4j_${count.index == 0 ? "ledger" : "search"}_space_bolt_url"
   type  = "String"
   value = "bolt://${aws_instance.neo4j[count.index].private_ip}:7687"
@@ -121,13 +121,13 @@ resource "aws_ssm_parameter" "neo4j_bolt_url" {
 
 # Output Neo4j instance IPs
 output "neo4j_instance_ips" {
-  value = var.use_existing_resources ? data.aws_instances.neo4j.private_ips : aws_instance.neo4j[*].private_ip
+  value = var.use_existing_resources["neo4j_instances"] ? data.aws_instances.neo4j.private_ips : aws_instance.neo4j[*].private_ip
   description = "Private IPs of Neo4j instances"
 }
 
 # Output Neo4j Bolt URLs
 output "neo4j_bolt_urls" {
-  value = var.use_existing_resources ? [
+  value = var.use_existing_resources["neo4j_instances"] ? [
     data.aws_ssm_parameter.existing_params["neo4j_ledger_space_bolt_url"].value,
     data.aws_ssm_parameter.existing_params["neo4j_search_space_bolt_url"].value
   ] : aws_ssm_parameter.neo4j_bolt_url[*].value

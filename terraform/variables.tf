@@ -63,9 +63,21 @@ variable "neo4j_public_key" {
 }
 
 variable "use_existing_resources" {
-  description = "Whether to use existing resources or create new ones"
-  type        = bool
-  default     = false
+  description = "Map of resource types to boolean indicating whether to use existing resources"
+  type = map(bool)
+  default = {
+    vpc                 = false
+    subnets             = false
+    security_groups     = false
+    ecs_cluster         = false
+    ecs_service         = false
+    ecs_task_definition = false
+    alb                 = false
+    acm_certificate     = false
+    route53_record      = false
+    neo4j_instances     = false
+    ssm_parameters      = false
+  }
 }
 
 variable "neo4j_ledger_space_bolt_url" {

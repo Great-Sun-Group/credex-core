@@ -43,7 +43,7 @@ data "aws_cloudwatch_log_group" "existing_ecs_logs" {
 
 # Create CloudWatch log group only if it doesn't exist and use_existing_resources is false
 resource "aws_cloudwatch_log_group" "ecs_logs" {
-  count             = (!var.use_existing_resources && data.aws_cloudwatch_log_group.existing_ecs_logs.arn == null) ? 1 : 0
+  count             = (!var.use_existing_resources["ecs_cluster"] && data.aws_cloudwatch_log_group.existing_ecs_logs.arn == null) ? 1 : 0
   name              = "/ecs/credex-core-${local.environment}"
   retention_in_days = 30
 
@@ -64,11 +64,12 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
 
 # Data source for existing ECS task definition
 data "aws_ecs_task_definition" "existing_task_definition" {
+  count          = var.use_existing_resources["ecs_task_definition"] ? 1 : 0
   task_definition = "credex-core-${local.environment}"
 }
 
 resource "aws_ecs_task_definition" "credex_core_task" {
-  count                    = var.use_existing_resources ? 0 : 1
+  count                    = var.use_existing_resources["ecs_task_definition"] ? 0 : 1
   family                   = "credex-core-${local.environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
@@ -116,32 +117,33 @@ resource "aws_ecs_task_definition" "credex_core_task" {
 
 # Data source for existing ECS service
 data "aws_ecs_service" "existing_service" {
-  service_name = "credex-core-service-${local.environment}"
-  cluster_arn  = data.aws_ecs_cluster.credex_cluster.arn
+  count         = var.use_existing_resources["ecs_service"] ? 1 : 0
+  service_name  = "credex-core-service-${local.environment}"
+  cluster_arn   = data.aws_ecs_cluster.credex_cluster.arn
 }
 
 # Create or update ECS service based on use_existing_resources
 resource "aws_ecs_service" "credex_core_service" {
-  count           = var.use_existing_resources ? 0 : 1
+  count           = var.use_existing_resources["ecs_service"] ? 0 : 1
   name            = "credex-core-service-${local.environment}"
   cluster         = data.aws_ecs_cluster.credex_cluster.id
-  task_definition = var.use_existing_resources ? data.aws_ecs_task_definition.existing_task_definition.arn : aws_ecs_task_definition.credex_core_task[0].arn
+  task_definition = var.use_existing_resources["ecs_task_definition"] ? data.aws_ecs_task_definition.existing_task_definition[0].arn : aws_ecs_task_definition.credex_core_task[0].arn
   launch_type     = "FARGATE"
   desired_count   = 1
 
   network_configuration {
     subnets          = data.aws_subnets.available.ids
-    security_groups  = [var.use_existing_resources ? data.aws_security_group.existing_ecs_tasks[0].id : aws_security_group.ecs_tasks[0].id]
+    security_groups  = [var.use_existing_resources["security_groups"] ? data.aws_security_group.existing_ecs_tasks[0].id : aws_security_group.ecs_tasks[0].id]
     assign_public_ip = true
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.credex_core.arn
+    target_group_arn = var.use_existing_resources["alb"] ? data.aws_lb_target_group.existing_tg[0].arn : aws_lb_target_group.credex_core[0].arn
     container_name   = "credex-core"
     container_port   = 5000
   }
 
-  depends_on = [aws_lb_listener.credex_listener, aws_iam_role_policy_attachment.ecs_execution_role_policy]
+  depends_on = [var.use_existing_resources["alb"] ? data.aws_lb_listener.existing_https[0] : aws_lb_listener.credex_listener[0], aws_iam_role_policy_attachment.ecs_execution_role_policy]
 
   tags = local.common_tags
 }
@@ -163,7 +165,7 @@ output "ecs_cluster_name" {
 }
 
 output "ecs_service_name" {
-  value       = var.use_existing_resources ? data.aws_ecs_service.existing_service.service_name : aws_ecs_service.credex_core_service[0].name
+  value       = var.use_existing_resources["ecs_service"] ? data.aws_ecs_service.existing_service[0].service_name : aws_ecs_service.credex_core_service[0].name
   description = "The name of the ECS service"
 }
 

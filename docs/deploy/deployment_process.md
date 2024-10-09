@@ -58,35 +58,37 @@ The unified `deploy.yml` workflow performs the following steps for all environme
 
 2. **Pre-deployment Checks**: 
    - Runs the `pre_deployment_check.sh` script to check for existing resources and prepare for deployment.
+   - Sets the `use_existing_resources` map based on the presence of existing resources.
 
 3. **Terraform Workspace Management**:
    - Uses the `manage_workspaces.sh` script to create and select the appropriate Terraform workspace for the target environment.
 
-4. **Terraform Plan and Apply**:
+4. **Import Existing Resources**:
+   - If existing resources are detected, runs the `import_existing_resources.sh` script to import them into the Terraform state.
+
+5. **Terraform Plan and Apply**:
    - Runs `terraform plan` to preview changes.
    - If changes are detected, runs `terraform apply` to apply the changes.
 
-5. **Application Deployment**:
+6. **Application Deployment**:
    - Deploys the application using the information from Terraform outputs.
 
-6. **Post-Deployment Tests**:
+7. **Post-Deployment Tests**:
    - Runs post-deployment tests to verify the application's functionality.
 
-7. **Cleanup Process** (Optional):
+8. **Cleanup Process** (Optional):
    - If enabled, runs the `cleanup_orphaned_resources.sh` script to identify and remove orphaned resources.
 
-8. **Deployment Logging**:
+9. **Deployment Logging**:
    - Logs the deployment details for future reference.
 
 ## Handling Existing Resources
 
-When deploying to an environment with existing resources:
+The deployment process now uses a map structure for `use_existing_resources`, allowing granular control over which resources to create or use existing ones:
 
-1. For automatic deployments (pushes to `stage` or `prod`), the `use_existing_resources` flag is set to `true` by default.
-2. For manual deployments, you can choose whether to use existing resources when triggering the workflow.
-3. The pre-deployment checks will identify existing resources.
-4. The state import script will import these resources into the Terraform state if necessary.
-5. Terraform will then manage these existing resources, making only necessary changes.
+- The `pre_deployment_check.sh` script detects existing resources and sets the `use_existing_resources` map accordingly.
+- Each resource in the Terraform configuration checks its corresponding key in the `use_existing_resources` map to determine whether to create a new resource or use an existing one.
+- This approach provides flexibility in managing infrastructure across different environments and deployment scenarios.
 
 ## Post-Deployment Verification
 
@@ -107,5 +109,14 @@ In case of issues after deployment:
 3. Push the revert commit to automatically trigger a new deployment with the previous working version.
 4. Monitor the rollback deployment and verify that the issue is resolved.
 5. If necessary, use the Terraform workspace management and state import scripts to ensure the infrastructure aligns with the rolled-back version.
+
+## Best Practices
+
+1. Always review Terraform plans before applying changes, especially in production.
+2. Use meaningful commit messages and tags to easily identify deployment versions.
+3. Regularly update and test the post-deployment verification process.
+4. Keep the `cleanup_orphaned_resources.sh` script updated as new resource types are added to the infrastructure.
+5. Periodically review and update the Terraform configurations to leverage new features and best practices.
+6. Maintain a comprehensive test suite for the application and infrastructure to catch issues early.
 
 By following this unified deployment process, you can ensure consistent and reliable deployments across all environments for the credex-core application, with improved handling of existing resources and better management of the infrastructure state.

@@ -11,23 +11,11 @@ on:
           - development
           - staging
           - production
-      use_existing_resources:
-        description: "Use existing resources"
-        required: true
-        type: boolean
-        default: false
       run_cleanup:
         description: "Run cleanup of orphaned resources after deployment"
         required: true
         type: boolean
         default: false
-  push:
-    branches:
-      - stage
-      - prod
-
-env:
-  TF_VAR_use_existing_resources: ${{ github.event.inputs.use_existing_resources || 'true' }}
 
 jobs:
   deploy:
@@ -80,6 +68,11 @@ jobs:
         run: |
           cd terraform
           ./pre_deployment_check.sh
+
+      - name: Import Existing Resources
+        run: |
+          cd terraform
+          ./import_existing_resources.sh
 
       - name: Terraform Plan
         id: plan
@@ -136,10 +129,9 @@ jobs:
           # Add your test commands here
 
       - name: Cleanup Orphaned Resources
-        if: github.event.inputs.run_cleanup == 'true' || github.event_name == 'push'
+        if: github.event.inputs.run_cleanup == 'true'
         run: |
           cd terraform
-          chmod +x cleanup_orphaned_resources.sh
           ./cleanup_orphaned_resources.sh
 
       - name: Log Deployment
