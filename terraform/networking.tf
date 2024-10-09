@@ -168,6 +168,10 @@ resource "aws_route53_record" "api" {
     zone_id                = data.aws_lb.credex_alb.zone_id
     evaluate_target_health = true
   }
+
+  lifecycle {
+    ignore_changes = [alias]
+  }
 }
 
 resource "aws_security_group" "alb" {
