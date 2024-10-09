@@ -116,10 +116,21 @@ jobs:
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          EXECUTION_ROLE_ARN=$(terraform output -raw ecs_execution_role_arn)
-          TASK_ROLE_ARN=$(terraform output -raw ecs_task_role_arn)
-          echo "Execution Role ARN: $EXECUTION_ROLE_ARN"
-          echo "Task Role ARN: $TASK_ROLE_ARN"
+          echo "Raw Execution Role ARN output:"
+          terraform output -raw ecs_execution_role_arn
+          echo "Raw Task Role ARN output:"
+          terraform output -raw ecs_task_role_arn
+
+          EXECUTION_ROLE_ARN=$(terraform output -raw ecs_execution_role_arn | grep -oP 'arn:aws:iam::[0-9]+:role/[a-zA-Z0-9_-]+' | head -n 1)
+          TASK_ROLE_ARN=$(terraform output -raw ecs_task_role_arn | grep -oP 'arn:aws:iam::[0-9]+:role/[a-zA-Z0-9_-]+' | head -n 1)
+          
+          if [ -z "$EXECUTION_ROLE_ARN" ] || [ -z "$TASK_ROLE_ARN" ]; then
+            echo "Failed to extract Role ARNs"
+            exit 1
+          fi
+          
+          echo "Extracted Execution Role ARN: $EXECUTION_ROLE_ARN"
+          echo "Extracted Task Role ARN: $TASK_ROLE_ARN"
           
           sed -i.bak \
             -e 's|${CONTAINER_IMAGE}|'${ECR_REPO_URL}:${IMAGE_TAG}'|' \
