@@ -41,7 +41,7 @@ export default function DevRoutes(app: express.Application) {
    *       403:
    *         description: Forbidden
    */
-  app.post(`${apiVersionOneRoute}/dev/clearDevDBs`, ClearDevDBsController);
+  app.delete(`${apiVersionOneRoute}/dev/clearDevDBs`, ClearDevDBsController);
 
   /**
    * @swagger
