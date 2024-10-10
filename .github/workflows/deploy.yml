@@ -37,6 +37,13 @@ jobs:
       TF_VAR_neo4j_search_space_bolt_url: ${{ secrets.NEO4J_SEARCH_SPACE_BOLT_URL }}
 
     steps:
+      - name: Check environment
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" != "development" && "${{ github.event.inputs.environment }}" != "staging" && "${{ github.event.inputs.environment }}" != "production" ]]; then
+            echo "Invalid environment specified. Must be one of: development, staging, production"
+            exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -71,6 +78,7 @@ jobs:
         run: |
           cd terraform
           terraform workspace select ${{ github.event.inputs.environment }} || terraform workspace new ${{ github.event.inputs.environment }}
+          echo "TF_VAR_environment=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
 
       - name: Run Pre-deployment Check
         run: |

@@ -4,6 +4,16 @@ variable "aws_region" {
   default     = "af-south-1"
 }
 
+variable "environment" {
+  description = "The deployment environment (development, staging, or production)"
+  type        = string
+
+  validation {
+    condition     = contains(["development", "staging", "production"], var.environment)
+    error_message = "The environment must be one of: development, staging, production."
+  }
+}
+
 variable "jwt_secret" {
   description = "JWT secret for authentication"
   type        = string
@@ -93,7 +103,7 @@ variable "neo4j_search_space_bolt_url" {
 }
 
 locals {
-  environment = terraform.workspace
+  environment = var.environment
 
   # Neo4j instance count compliant with the Startup Software License Agreement
   neo4j_instance_count = {
