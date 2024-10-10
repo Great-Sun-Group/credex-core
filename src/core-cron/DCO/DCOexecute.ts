@@ -5,12 +5,18 @@ import { getDenominations, Denomination } from "../../constants/denominations";
 import { GetSecuredAuthorizationService } from "../../api/Credex/services/GetSecuredAuthorization";
 import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
-import { fetchZwgRate, ZwgRateError } from "./fetchZwgRate";
+import { fetchZwgRate, ZwgRateError, ExchangeRate } from "./fetchZwgRate";
 import { createNeo4jBackup } from "./DBbackup";
-import { logInfo, logError, logWarning, logDebug, logDCORates } from "../../utils/logger";
+import {
+  logInfo,
+  logError,
+  logWarning,
+  logDebug,
+  logDCORates,
+} from "../../utils/logger";
 import { validateAmount, validateDenomination } from "../../utils/validators";
 import { v4 as uuidv4 } from "uuid";
-import crypto from 'crypto';
+import crypto from "crypto";
 
 interface Rates {
   [key: string]: number;
@@ -32,17 +38,24 @@ interface Participant {
 export async function DCOexecute(): Promise<boolean> {
   const dcoProcessId = uuidv4();
   const startTime = new Date();
-  logInfo(`Starting DCOexecute. Process ID: ${dcoProcessId}`, { dcoProcessId, startTime });
-  
+  logInfo(`Starting DCOexecute. Process ID: ${dcoProcessId}`, {
+    dcoProcessId,
+    startTime,
+  });
+
   const ledgerSpaceSession = ledgerSpaceDriver.session();
   const searchSpaceSession = searchSpaceDriver.session();
 
   try {
     await waitForMTQCompletion(ledgerSpaceSession);
-    const { previousDate, nextDate } = await setDCORunningFlag(ledgerSpaceSession);
+    const { previousDate, nextDate } =
+      await setDCORunningFlag(ledgerSpaceSession);
 
     const initialChecksum = await calculateSystemChecksum(ledgerSpaceSession);
-    logInfo(`Initial system checksum: ${initialChecksum}`, { dcoProcessId, checksum: initialChecksum });
+    logInfo(`Initial system checksum: ${initialChecksum}`, {
+      dcoProcessId,
+      checksum: initialChecksum,
+    });
 
     await createNeo4jBackup(previousDate, "_end");
     logInfo(`Created Neo4j backup for ${previousDate}_end`, { dcoProcessId });
@@ -72,7 +85,8 @@ export async function DCOexecute(): Promise<boolean> {
       CXXprior_CXXcurrent
     );
 
-    const { foundationID, foundationXOid } = await getFoundationData(ledgerSpaceSession);
+    const { foundationID, foundationXOid } =
+      await getFoundationData(ledgerSpaceSession);
     await processDCOTransactions(
       ledgerSpaceSession,
       foundationID,
@@ -85,19 +99,22 @@ export async function DCOexecute(): Promise<boolean> {
     logInfo(`Created Neo4j backup for ${nextDate}_start`, { dcoProcessId });
 
     const finalChecksum = await calculateSystemChecksum(ledgerSpaceSession);
-    logInfo(`Final system checksum: ${finalChecksum}`, { dcoProcessId, checksum: finalChecksum });
+    logInfo(`Final system checksum: ${finalChecksum}`, {
+      dcoProcessId,
+      checksum: finalChecksum,
+    });
 
     const endTime = new Date();
     const duration = endTime.getTime() - startTime.getTime();
-    logInfo(`DCOexecute completed for ${nextDate}`, { 
-      dcoProcessId, 
-      startTime, 
-      endTime, 
+    logInfo(`DCOexecute completed for ${nextDate}`, {
+      dcoProcessId,
+      startTime,
+      endTime,
       duration,
       numberConfirmedParticipants,
       DCOinCXX,
       DCOinXAU,
-      CXXprior_CXXcurrent
+      CXXprior_CXXcurrent,
     });
 
     return true;
@@ -108,7 +125,9 @@ export async function DCOexecute(): Promise<boolean> {
     try {
       await resetDCORunningFlag(ledgerSpaceSession);
     } catch (resetError) {
-      logError("Error resetting DCO running flag", resetError as Error, { dcoProcessId });
+      logError("Error resetting DCO running flag", resetError as Error, {
+        dcoProcessId,
+      });
     }
     await ledgerSpaceSession.close();
     await searchSpaceSession.close();
@@ -118,19 +137,26 @@ export async function DCOexecute(): Promise<boolean> {
 async function calculateSystemChecksum(session: any): Promise<string> {
   const nodesResult = await session.run(`
     MATCH (n)
-    WITH collect(properties(n)) AS nodes
-    RETURN apoc.util.md5(apoc.convert.toJson(nodes)) AS nodesChecksum
+    WITH collect(properties(n)) AS allNodes
+    WITH apoc.convert.toJson(allNodes) AS nodesJson
+    RETURN apoc.util.md5([nodesJson]) AS nodesChecksum
   `);
-  const nodesChecksum = nodesResult.records[0].get('nodesChecksum');
+  const nodesChecksum = nodesResult.records[0].get("nodesChecksum");
 
   const relationshipsResult = await session.run(`
     MATCH ()-[r]->()
-    WITH collect(properties(r)) AS relationships
-    RETURN apoc.util.md5(apoc.convert.toJson(relationships)) AS relationshipsChecksum
+    WITH collect(properties(r)) AS allRelationships
+    WITH apoc.convert.toJson(allRelationships) AS relationshipsJson
+    RETURN apoc.util.md5([relationshipsJson]) AS relationshipsChecksum
   `);
-  const relationshipsChecksum = relationshipsResult.records[0].get('relationshipsChecksum');
+  const relationshipsChecksum = relationshipsResult.records[0].get(
+    "relationshipsChecksum"
+  );
 
-  const combinedChecksum = crypto.createHash('md5').update(nodesChecksum + relationshipsChecksum).digest('hex');
+  const combinedChecksum = crypto
+    .createHash("md5")
+    .update(nodesChecksum + relationshipsChecksum)
+    .digest("hex");
   return combinedChecksum;
 }
 
@@ -221,14 +247,29 @@ async function fetchCurrencyRates(nextDate: string): Promise<Rates> {
   );
 
   try {
-    const ZWGrates = await fetchZwgRate();
-    USDbaseRates.ZWG = ZWGrates.length > 0 ? parseFloat(ZWGrates[1].avg) : NaN;
+    const ZWGrates: ExchangeRate[] = await fetchZwgRate();
+    if (ZWGrates.length > 0) {
+      const usdZwgRate = ZWGrates.find((rate) => rate.currency === "USD/ZWG");
+      if (usdZwgRate) {
+        USDbaseRates.ZWG = parseFloat(usdZwgRate.avg);
+        logInfo(`ZWG rate fetched successfully: ${USDbaseRates.ZWG}`);
+      } else {
+        logWarning("USD/ZWG rate not found in fetched ZWG rates");
+      }
+    } else {
+      logWarning("No ZWG rates fetched");
+    }
   } catch (error) {
     if (error instanceof ZwgRateError) {
-      logWarning("Failed to fetch ZWG rate, excluding ZWG from denominations", error);
-      
+      logWarning(
+        "Failed to fetch ZWG rate, excluding ZWG from denominations",
+        error
+      );
     } else {
-      logError("Unexpected error while fetching ZWG rate", error instanceof Error ? error : new Error(String(error)));
+      logError(
+        "Unexpected error while fetching ZWG rate",
+        error instanceof Error ? error : new Error(String(error))
+      );
       throw error;
     }
   }
@@ -287,9 +328,19 @@ async function processDCOParticipants(
   for (const participant of declaredParticipants) {
     const { accountID, DCOmemberID, DCOdenom, DCOgiveInCXX, DCOgiveInDenom } =
       participant.toObject();
-    
-    if (!validateDenomination(DCOdenom) || !validateAmount(DCOgiveInCXX) || !validateAmount(DCOgiveInDenom)) {
-      logWarning("Invalid participant data", { accountID, DCOmemberID, DCOdenom, DCOgiveInCXX, DCOgiveInDenom });
+
+    if (
+      !validateDenomination(DCOdenom) ||
+      !validateAmount(DCOgiveInCXX) ||
+      !validateAmount(DCOgiveInDenom)
+    ) {
+      logWarning("Invalid participant data", {
+        accountID,
+        DCOmemberID,
+        DCOdenom,
+        DCOgiveInCXX,
+        DCOgiveInDenom,
+      });
       continue;
     }
 
@@ -326,11 +377,7 @@ async function processDCOParticipants(
   );
   newCXXrates.CXX = 1;
 
-  logDCORates(
-    denomsInXAU.XAU,
-    newCXXrates.CXX,
-    CXXprior_CXXcurrent
-  );
+  logDCORates(denomsInXAU.XAU, newCXXrates.CXX, CXXprior_CXXcurrent);
 
   return {
     newCXXrates,
@@ -371,7 +418,10 @@ async function updateCredexBalances(
   newCXXrates: Rates,
   CXXprior_CXXcurrent: number
 ): Promise<void> {
-  logInfo("Updating credex and asset balances", { CXXprior_CXXcurrent, newCXXrates });
+  logInfo("Updating credex and asset balances", {
+    CXXprior_CXXcurrent,
+    newCXXrates,
+  });
 
   // Update ledger space
   await ledgerSession.run(`
@@ -386,6 +436,7 @@ async function updateCredexBalances(
       credcoinCredex.RedeemedAmount = credcoinCredex.RedeemedAmount / newDaynode.CXXprior_CXXcurrent,
       credcoinCredex.DefaultedAmount = credcoinCredex.DefaultedAmount / newDaynode.CXXprior_CXXcurrent,
       credcoinCredex.WrittenOffAmount = credcoinCredex.WrittenOffAmount / newDaynode.CXXprior_CXXcurrent
+    WITH newDaynode
 
     // Update currency credexes
     MATCH (currencyCredex:Credex)
@@ -397,6 +448,7 @@ async function updateCredexBalances(
       currencyCredex.DefaultedAmount = (currencyCredex.DefaultedAmount / currencyCredex.CXXmultiplier) * newDaynode[currencyCredex.Denomination],
       currencyCredex.WrittenOffAmount = (currencyCredex.WrittenOffAmount / currencyCredex.CXXmultiplier) * newDaynode[currencyCredex.Denomination],
       currencyCredex.CXXmultiplier = newDaynode[currencyCredex.Denomination]
+    WITH newDaynode
 
     // Update CXX :REDEEMED relationships
     MATCH ()-[CXXredeemed:REDEEMED]-()
@@ -404,6 +456,7 @@ async function updateCredexBalances(
     SET
       CXXredeemed.AmountRedeemed = CXXredeemed.AmountRedeemed / newDaynode.CXXprior_CXXcurrent,
       CXXredeemed.AmountOutstandingNow = CXXredeemed.AmountOutstandingNow / newDaynode.CXXprior_CXXcurrent
+    WITH newDaynode
 
     // Update currency :REDEEMED relationships
     MATCH ()-[currencyRedeemed:REDEEMED]-()
@@ -412,6 +465,7 @@ async function updateCredexBalances(
       currencyRedeemed.AmountOutstandingNow = (currencyRedeemed.AmountOutstandingNow / currencyRedeemed.CXXmultiplier) * newDaynode[currencyRedeemed.Denomination],
       currencyRedeemed.AmountRedeemed = (currencyRedeemed.AmountRedeemed / currencyRedeemed.CXXmultiplier) * newDaynode[currencyRedeemed.Denomination],
       currencyRedeemed.CXXmultiplier = newDaynode[currencyRedeemed.Denomination]
+    WITH newDaynode
 
     // Update CXX :CREDLOOP relationships
     MATCH ()-[CXXcredloop:CREDLOOP]-()
@@ -419,6 +473,7 @@ async function updateCredexBalances(
     SET
       CXXcredloop.AmountRedeemed = CXXcredloop.AmountRedeemed / newDaynode.CXXprior_CXXcurrent,
       CXXcredloop.AmountOutstandingNow = CXXcredloop.AmountOutstandingNow / newDaynode.CXXprior_CXXcurrent
+    WITH newDaynode
 
     // Update currency :CREDLOOP relationships
     MATCH ()-[currencyCredloop:CREDLOOP]-()
@@ -427,6 +482,7 @@ async function updateCredexBalances(
       currencyCredloop.AmountOutstandingNow = (currencyCredloop.AmountOutstandingNow / currencyCredloop.CXXmultiplier) * newDaynode[currencyCredloop.Denomination],
       currencyCredloop.AmountRedeemed = (currencyCredloop.AmountRedeemed / currencyCredloop.CXXmultiplier) * newDaynode[currencyCredloop.Denomination],
       currencyCredloop.CXXmultiplier = newDaynode[currencyCredloop.Denomination]
+    WITH newDaynode
 
     // Update loop anchors (always CXX)
     MATCH (loopAnchors:LoopAnchor)
@@ -495,7 +551,10 @@ async function processDCOTransactions(
   // Process DCO give transactions
   await Promise.all(
     confirmedParticipants.map(async (participant: Participant) => {
-      if (!validateDenomination(participant.DCOdenom) || !validateAmount(participant.DCOgiveInDenom)) {
+      if (
+        !validateDenomination(participant.DCOdenom) ||
+        !validateAmount(participant.DCOgiveInDenom)
+      ) {
         logWarning("Invalid participant data for DCO give", participant);
         return;
       }
@@ -521,25 +580,29 @@ async function processDCOTransactions(
           "Invalid response from OfferCredexService for DCO give"
         );
       }
-      
+
       // Log the offer creation
       logInfo("DCO give credex offer created", {
         requestId,
         credexID: DCOgiveCredex.credex.credexID,
         participantID: participant.DCOmemberID,
         action: "OFFER_CREDEX",
-        data: JSON.stringify(dataForDCOgive)
+        data: JSON.stringify(dataForDCOgive),
       });
 
-      await AcceptCredexService(DCOgiveCredex.credex.credexID, foundationXOid, requestId);
-      
+      await AcceptCredexService(
+        DCOgiveCredex.credex.credexID,
+        foundationXOid,
+        requestId
+      );
+
       // Log the credex acceptance
       logInfo("DCO give credex accepted", {
         requestId,
         credexID: DCOgiveCredex.credex.credexID,
         participantID: participant.DCOmemberID,
         action: "ACCEPT_CREDEX",
-        data: JSON.stringify({ acceptedBy: foundationXOid })
+        data: JSON.stringify({ acceptedBy: foundationXOid }),
       });
     })
   );
@@ -549,7 +612,10 @@ async function processDCOTransactions(
     confirmedParticipants.map(async (participant: Participant) => {
       const receiveAmount = DCOinCXX / numberConfirmedParticipants;
       if (!validateAmount(receiveAmount)) {
-        logWarning("Invalid receive amount for DCO receive", { receiveAmount, participant });
+        logWarning("Invalid receive amount for DCO receive", {
+          receiveAmount,
+          participant,
+        });
         return;
       }
 
@@ -574,14 +640,14 @@ async function processDCOTransactions(
           "Invalid response from OfferCredexService for DCO receive"
         );
       }
-      
+
       // Log the offer creation
       logInfo("DCO receive credex offer created", {
         requestId,
         credexID: DCOreceiveCredex.credex.credexID,
         participantID: participant.DCOmemberID,
         action: "OFFER_CREDEX",
-        data: JSON.stringify(dataForDCOreceive)
+        data: JSON.stringify(dataForDCOreceive),
       });
 
       await AcceptCredexService(
@@ -589,14 +655,14 @@ async function processDCOTransactions(
         foundationXOid,
         requestId
       );
-      
+
       // Log the credex acceptance
       logInfo("DCO receive credex accepted", {
         requestId,
         credexID: DCOreceiveCredex.credex.credexID,
         participantID: participant.DCOmemberID,
         action: "ACCEPT_CREDEX",
-        data: JSON.stringify({ acceptedBy: foundationXOid })
+        data: JSON.stringify({ acceptedBy: foundationXOid }),
       });
     })
   );
