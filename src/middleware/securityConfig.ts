@@ -61,9 +61,10 @@ export const applySecurityMiddleware = (app: Application) => {
 export const applyAuthMiddleware = (app: Application) => {
   app.use((req, res, next) => {
     if (
+      // Keyholes in the auth layer where we don't apply the middleware
       req.path === "/api/v1/member/login" ||
       req.path === "/api/v1/member/onboardMember" ||
-      req.path === "/api/v1/member/getMemberDashboard"
+      req.path.includes("/api/v1/dev/") // routes are not published in prod
     ) {
       return next();
     }

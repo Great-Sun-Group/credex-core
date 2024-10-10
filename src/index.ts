@@ -32,7 +32,7 @@ async function initializeApp() {
   try {
     // Update logger configuration
     await updateLoggerConfig();
-    
+
     const config = await getConfig();
     logger.info("Initializing application");
 
@@ -65,15 +65,16 @@ async function initializeApp() {
     RecurringRoutes(app);
     logger.info("Route handlers applied for hardened modules");
 
+    // Apply route handlers for dev-only routes
+    if (config.environment !== "production") {
+      app.use(apiVersionOneRoute, jsonParser);
+      DevRoutes(app);
+      logger.debug("Route handlers applied for dev-only routes");
+    }
+
     // Apply authentication middleware after routes are set up
     applyAuthMiddleware(app);
     logger.debug("Applied authentication middleware");
-
-    // Apply route handlers for dev-only routes
-    if (config.environment !== "production") {
-      app.use(`${apiVersionOneRoute}/dev`, DevRoutes(jsonParser));
-      logger.debug("Route handlers applied for dev-only routes");
-    }
 
     // Apply error handling middleware
     app.use(notFoundHandler); // Handle 404 errors

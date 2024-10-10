@@ -106,13 +106,35 @@ For development environments, the `NODE_ENV` variable defaults to 'development'.
 
 The following variables are optional and only required for deployment:
 
-AWS_ACCESS_KEY
-AWS_SECRET_ACCESS_KEY
+AWS_ACCESS_KEY(? not sure if still required)
+AWS_SECRET_ACCESS_KEY(? not sure if still required)
 GH_APP_ID
 GH_INSTALLATION_ID
 GH_APP_PRIVATE_KEY
 
 These deployment-specific variables should only be set by authorized team members with the necessary AWS and GitHub permissions.
+
+## Initializing, Resetting, and Progressing the Databases
+
+To clear your dev databases, hit the `api/v1/dev/clearDevDBs` endpoint.with your dev server running. Use API software, or in local dev, use this command in a new terminal from where the server is running:
+```
+curl -X DELETE "http://localhost:5000/api/v1/dev/clearDevDBs" -H "Content-Type: application/json" -v
+```
+In codespaces, use this:
+```
+curl -X DELETE "https://${CODESPACE_NAME}-5000.app.github.dev/api/v1/dev/clearDevDBs" -H "X-Github-Token: $GITHUB_TOKEN" -H "Content-Type: application/json" -v
+```
+
+To run the DCO and advance the day state, including new exchange rates, hit the `api/v1/dev/forceDCO` endpoint. If the database has been wiped or is new, this will first create initialization nodes and relationship then run the first DCO, bringing the credex ecosystem online.
+
+This can be done from API software, or in local dev with:
+```
+curl -X POST "http://localhost:5000/api/v1/dev/forceDCO" -H "Content-Type: application/json" -v
+```
+and in Codespaces:
+```
+curl -X POST "https://${CODESPACE_NAME}-5000.app.github.dev/api/v1/dev/forceDCO" -H "X-Github-Token: $GITHUB_TOKEN" -H "Content-Type: application/json" -v
+```
 
 ## Development Process
 

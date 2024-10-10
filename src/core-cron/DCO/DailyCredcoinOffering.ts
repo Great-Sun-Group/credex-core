@@ -68,9 +68,15 @@ async function checkActiveDaynode(session: any): Promise<boolean> {
     MATCH (daynode:Daynode {Active: true})
     RETURN daynode IS NOT NULL AS activeDaynodeExists
   `);
+  
+  if (!result.records || result.records.length === 0) {
+    logger.debug("No records found, assuming no active daynode exists");
+    return false;
+  }
+  
   const activeDaynodeExists = result.records[0].get("activeDaynodeExists");
   logger.debug(`Active daynode exists: ${activeDaynodeExists}`);
-  return activeDaynodeExists;
+  return activeDaynodeExists === true;
 }
 
 /**
