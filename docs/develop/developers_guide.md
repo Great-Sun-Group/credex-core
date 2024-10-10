@@ -116,7 +116,7 @@ These deployment-specific variables should only be set by authorized team member
 
 ## Initializing, Resetting, and Progressing the Databases
 
-To clear your dev databases, hit the `api/v1/dev/clearDevDBs` endpoint.with your dev server running. Use API software, or in local dev, use this command in a new terminal from where the server is running:
+To clear your dev databases, hit the `api/v1/dev/clearDevDBs` endpoint with your dev server running. Use API software, or in local dev use this command in a different terminal from where the server is running:
 ```
 curl -X DELETE "http://localhost:5000/api/v1/dev/clearDevDBs" -H "Content-Type: application/json" -v
 ```
@@ -131,7 +131,7 @@ This can be done from API software, or in local dev with:
 ```
 curl -X POST "http://localhost:5000/api/v1/dev/forceDCO" -H "Content-Type: application/json" -v
 ```
-and in Codespaces:
+In codespaces:
 ```
 curl -X POST "https://${CODESPACE_NAME}-5000.app.github.dev/api/v1/dev/forceDCO" -H "X-Github-Token: $GITHUB_TOKEN" -H "Content-Type: application/json" -v
 ```
