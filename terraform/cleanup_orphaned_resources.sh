@@ -14,7 +14,7 @@ terraform init
 terraform workspace select ${TF_VAR_environment}
 
 # Parse the TF_VAR_use_existing_resources JSON string
-eval "$(echo "$TF_VAR_use_existing_resources" | jq -r 'to_entries | .[] | "USE_EXISTING_\(.key|ascii_upcase)=\(.value)"')"
+eval "$(echo "$TF_VAR_use_existing_resources" | jq -r 'to_entries | .[] | "USE_EXISTING_\(.key|ascii_upcase|gsub("-";"_"))=\(.value)"')"
 
 # Function to get resources managed by Terraform
 get_terraform_resources() {
@@ -52,6 +52,7 @@ remove_resource() {
 cleanup() {
     local resource_type=$1
     local use_existing_var="USE_EXISTING_${resource_type^^}"
+    use_existing_var=${use_existing_var//-/_}
     
     if [ "${!use_existing_var}" != "true" ]; then
         echo "Identifying orphaned $resource_type resources..."
@@ -79,12 +80,12 @@ cleanup() {
 }
 
 # Run cleanup for different resource types
-[ "$USE_EXISTING_NEO4J_INSTANCES" != "true" ] && cleanup "instance"
-[ "$USE_EXISTING_SECURITY_GROUPS" != "true" ] && cleanup "security-group"
-[ "$USE_EXISTING_VPC" != "true" ] && cleanup "vpc"
-[ "$USE_EXISTING_SUBNETS" != "true" ] && cleanup "subnet"
-[ "$USE_EXISTING_ALB" != "true" ] && cleanup "load-balancer"
-[ "$USE_EXISTING_ECS_CLUSTER" != "true" ] && cleanup "ecs-cluster"
-[ "$USE_EXISTING_ECS_SERVICE" != "true" ] && cleanup "ecs-service"
+cleanup "instance"
+cleanup "security-group"
+cleanup "vpc"
+cleanup "subnet"
+cleanup "load-balancer"
+cleanup "ecs-cluster"
+cleanup "ecs-service"
 
 echo "Cleanup process completed."
