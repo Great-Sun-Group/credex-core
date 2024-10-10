@@ -145,12 +145,7 @@ jobs:
       - name: Log Deployment
         if: success()
         run: |
-          echo "Deployment to ${{ github.event.inputs.environment }} triggered by ${{ github.actor }} at $(date)" >> deployment_log.txt
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git add deployment_log.txt
-          git commit -m "Log deployment to ${{ github.event.inputs.environment }}"
-          git push
+          echo "Deployment to ${{ github.event.inputs.environment }} completed successfully at $(date)"
 
       - name: Notify on Failure
         if: failure()
