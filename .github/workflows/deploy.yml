@@ -56,6 +56,11 @@ jobs:
           env | grep TF_VAR_ | sed 's/=.*/=***/'
           echo "AWS_REGION: $AWS_REGION"
 
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
       - name: Terraform Version and Validation
         run: |
           cd terraform
@@ -65,7 +70,6 @@ jobs:
       - name: Terraform Init and Workspace Selection
         run: |
           cd terraform
-          terraform init
           terraform workspace select ${{ github.event.inputs.environment }} || terraform workspace new ${{ github.event.inputs.environment }}
 
       - name: Run Pre-deployment Check
