@@ -266,25 +266,15 @@ async function createRdubsAccount(requestId: string): Promise<{
     );
   }
 
-  const rdubsPersonalAccount = await CreateAccountService(
-    onboardedMemberID,
-    "PERSONAL_CONSUMPTION",
-    "Ryan Watson Personal",
-    "263778177125",
-    "USD",
-    1,
-    "CAD"
-  );
-
   logger.info("Rdubs account created successfully", {
     memberID: onboardedMemberID,
-    personalAccountID: rdubsPersonalAccount.accountID,
+    personalAccountID: onboardedMemberID,
     requestId,
   });
 
   return {
     onboardedMemberID,
-    personalAccountID: rdubsPersonalAccount.accountID,
+    personalAccountID: onboardedMemberID,
   };
 }
 
@@ -453,5 +443,3 @@ async function createInitialCredex(
 
   logger.info("Initial Credex creation completed", { requestId });
 }
-
-// ... [rest of the code remains unchanged] ...
