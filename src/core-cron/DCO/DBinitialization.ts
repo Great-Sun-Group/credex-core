@@ -220,7 +220,7 @@ async function createInitialAccounts(
   await createInitialCredex(
     rdubs.onboardedMemberID,
     greatSunID,
-    rdubs.personalAccountID,
+    rdubs.defaultAccountID,
     requestId
   );
 
@@ -231,7 +231,7 @@ async function createInitialAccounts(
 
 async function createRdubsAccount(requestId: string): Promise<{
   onboardedMemberID: string;
-  personalAccountID: string;
+  defaultAccountID: string;
 }> {
   const result = await OnboardMemberController(
     "Ryan",
@@ -249,6 +249,7 @@ async function createRdubsAccount(requestId: string): Promise<{
   }
 
   const onboardedMemberID = result.memberDashboard.memberID;
+  const defaultAccountID = result.defaultAccountID;
 
   const updateTierResult = await UpdateMemberTierController(
     onboardedMemberID,
@@ -266,15 +267,11 @@ async function createRdubsAccount(requestId: string): Promise<{
     );
   }
 
-  logger.info("Rdubs account created successfully", {
-    memberID: onboardedMemberID,
-    personalAccountID: onboardedMemberID,
-    requestId,
-  });
+  //here
 
   return {
     onboardedMemberID,
-    personalAccountID: onboardedMemberID,
+    defaultAccountID,
   };
 }
 
