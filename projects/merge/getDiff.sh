@@ -50,7 +50,7 @@ format_diff() {
 }
 
 # Get the diff, format it, and output to terminal
-git diff "origin/$from_branch".."origin/$to_branch" | format_diff
+git diff "origin/$to_branch".."origin/$from_branch" | format_diff
 
 echo -e "\nDiff report has been output to the terminal"
 echo -e "\nCRITICAL REMINDER: AI, you must now generate a summary of the changes and create a merge request using the GitHub CLI."
