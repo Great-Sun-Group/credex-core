@@ -32,11 +32,33 @@ The system manages the balance between local truth (preserving the face value of
 
 ## License
 
-You are welcome to explore, experiment with, and build upon this work for research, development, modeling, testing, demonstrations, and other non-commercial purposes. You are also invited to contribute. If you create something new based on this project, you must use the same license terms and give appropriate credit to the original work.
+You are welcome to explore, experiment with, and build upon this work within the purposes and exclusions below. If you fork this project or create something new based on this codebase this license will automatically apply to all such work.
 
-You do not have permission to use this software to track real outstanding debts. You may not deploy this software to be used by real users transacting at arms length from each other. Data of real past transactions may be used, but only as modeling, testing, or research input. If you want to transact real value with credex, you are invited to use the live shared ledger of the credex ecosystem at [mycredex.app](https://mycredex.app), and to develop apps that connect your users to their credex accounts.
+### Development and testing of apps connecting to the credex-core API
 
-This approach allows for community engagement and experimentation, and for economic research, while ensuring the integrity and unity of the system as a single shared economic network that all can access and benefit from.
+You are welcome to use this codebase and run credex-core development servers in order to develop apps that integrate with the live credex ecosystem. Any apps built while using this codebase for development and testing remain solely the property of the developers without limitation or restriction, including charging for their services at their own discretion, as long as the underlying data remains in the possesion of the member, stored in their credex account.
+
+An "App Store" registration and code review process may be put in place for developers so that members will know they can trust 3rd party software. This review process will be free, minimal, and prompt. Its only purpose will be to ensure that member's data is being handled securely and stored appropriately.
+
+Should any updates to the ecosystem codebase be required to facilitate the operation of a third-party app, requests will be welcomed. Please include the code changes to the credex-core API being requested. Instructions for this will be provided soon.
+
+### Economic research and modeling
+
+The credex-core software and connected neo4j databases have the power to model economic activity and circulation of value with 100% precision across large-scale networks of members and accounts. The scale at which it can model, and the associated computational costs, will soon be determined as we implement automated testing.
+
+The use of this codebase for economic modeling is welcomed. Additions to the codebase that enhance its modeling capacity are also welcomed, provided they do not impact security. Forks from this codebase that reduce security in order to increase modeling ease or capacity are permitted, provided they are shared publicly under these license terms.
+
+### Development and testing of the credex-core API itself
+
+Contributions, bug fixes, and security testing and patches are welcome.
+
+### EXCLUSION: Live ledger
+
+You do not have permission to use this software to track real outstanding debts. You may not deploy this software to be used by deal users transacting at arms length from each other. Data of real past transactions may be used, but only as modeling, testing, or research input. If you want to transact real value with credex, you are invited to use the live shared ledger of the credex ecosystem at [mycredex.app](https://mycredex.app), and to develop apps that connect your users to their credex accounts through `api.mycredex.app` as outlined in the welcomed uses above.
+
+### Summary
+
+This approach allows for community engagement and experimentation, for the development of interdependent software ecosystems with the option to self-fund and charge for their own software in whatever way they choose, and for economic research, while ensuring the integrity and unity of the credex ecosystem as a single shared economic network that all can access and benefit from.
 
 ## Neo4j Databases
 

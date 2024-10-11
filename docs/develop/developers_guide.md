@@ -139,6 +139,9 @@ curl -X POST "https://${CODESPACE_NAME}-5000.app.github.dev/api/v1/dev/forceDCO"
 ## Development Process
 
 1. Make changes in your local environment or GitHub Codespaces.
+   ```
+   npm run dev: We need to set up this command again with nodemon for stripped-down dev
+   ```
 2. Test your changes thoroughly in the development environment:
    ```
    npm run docker:dev
@@ -146,10 +149,15 @@ curl -X POST "https://${CODESPACE_NAME}-5000.app.github.dev/api/v1/dev/forceDCO"
 3. Do checks in production mode then run tests in the Docker environment:
    ```
    npm run docker:dev:prod
-   npm run docker:test
+   npm run docker:test (not really developed yet)
    ```
 4. Commit your changes and push to your branch.
-5. Create a pull request to merge your changes into a project branch or the `dev` branch itself.
+6. Create a pull request to merge your changes into a project branch or the `dev` branch itself. Enter this in the Cline plugin:
+   ```
+   read projects/merge/getDiff.sh and execute from <your-branch-name> to <branch-to-merge-to>
+   ```
+7. Cline should step you through the process to create and submit a thorough merge summary from the code pushed to the Github repo.
+8. Once created, visit the pull request online, make any necessary edits, then request review.
 
 ## Troubleshooting
 
