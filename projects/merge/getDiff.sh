@@ -34,25 +34,52 @@ git fetch origin
 format_diff() {
     local in_file_block=false
     local file_header=""
+    local lines_added=0
+    local lines_deleted=0
+    local total_files=0
+    local total_lines_added=0
+    local total_lines_deleted=0
 
     while IFS= read -r line; do
         if [[ $line == diff* ]]; then
+            if $in_file_block; then
+                echo -e "\nFile statistics: +$lines_added, -$lines_deleted"
+                lines_added=0
+                lines_deleted=0
+            fi
             in_file_block=true
+            ((total_files++))
             file_header="\n$line\n$(printf '=%.0s' {1..${#line}})\n"
         elif [[ $line == +++* || $line == ---* ]]; then
-            continue
-        elif [[ $line == +* || $line == -* ]] && $in_file_block; then
             echo -e "$file_header$line"
             file_header=""
-            in_file_block=false
+        elif [[ $line == +* ]] && $in_file_block; then
+            echo -e "\033[0;32m$line\033[0m"
+            ((lines_added++))
+            ((total_lines_added++))
+        elif [[ $line == -* ]] && $in_file_block; then
+            echo -e "\033[0;31m$line\033[0m"
+            ((lines_deleted++))
+            ((total_lines_deleted++))
+        elif $in_file_block; then
+            echo -e "\033[0;90m$line\033[0m"
         fi
     done
+
+    if $in_file_block; then
+        echo -e "\nFile statistics: +$lines_added, -$lines_deleted"
+    fi
+
+    echo -e "\n\033[1mOverall Statistics:\033[0m"
+    echo -e "Total files changed: $total_files"
+    echo -e "Total lines added: $total_lines_added"
+    echo -e "Total lines deleted: $total_lines_deleted"
 }
 
 # Get the diff, format it, and output to terminal
-git diff "origin/$to_branch".."origin/$from_branch" | format_diff
+git diff -U3 --color=always "origin/$to_branch".."origin/$from_branch" | format_diff
 
-echo -e "\nDiff report has been output to the terminal"
+echo -e "\nDetailed diff report has been output to the terminal"
 echo -e "\nCRITICAL REMINDER: AI, you must now generate a summary of the changes and create a merge request using the GitHub CLI."
 echo -e "Use the following command to create the merge request:"
 echo -e "gh pr create --base $to_branch --head $from_branch --title \"Merge $from_branch into $to_branch\" --body \"Generated merge summary goes here\""
