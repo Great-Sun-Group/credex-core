@@ -15,7 +15,10 @@
 #    c. Add any necessary labels or assignees based on the nature of the changes
 #    d. If applicable, mention related issues or pull requests
 #    e. Provide any additional instructions for reviewers, such as specific areas to focus on
-# 5. DO NOT JUST DESCRIBE THE MERGE REQUEST - YOU MUST ACTUALLY CREATE AND SUBMIT IT
+# 5. CRITICAL: YOU MUST ACTUALLY CREATE AND SUBMIT THE MERGE REQUEST
+#    Failure to do so will result in an incomplete task. This is not optional.
+# 6. After creating and submitting the merge request, provide confirmation that you have done so,
+#    including the merge request number or URL if available.
 
 # Check if two arguments are provided
 if [ $# -ne 2 ]; then
@@ -53,4 +56,7 @@ format_diff() {
 git diff "origin/$from_branch".."origin/$to_branch" | format_diff
 
 echo -e "\nDiff report has been output to the terminal"
-echo -e "\nREMINDER: AI, you must now create and submit an actual merge request based on this diff."
+echo -e "\nCRITICAL REMINDER: AI, you must now create and submit an actual merge request based on this diff."
+echo -e "This is not optional. Failure to do so will result in an incomplete task."
+echo -e "After creating and submitting the merge request, provide confirmation that you have done so,"
+echo -e "including the merge request number or URL if available."
