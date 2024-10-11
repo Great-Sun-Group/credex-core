@@ -30,7 +30,7 @@
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
   "forwardPorts": [5000],
-  "postCreateCommand": "npm install && sudo apt-get update && sudo apt-get install -y docker-compose && chmod +x getDiff.sh",
+  "postCreateCommand": "npm install && sudo apt-get update && sudo apt-get install -y docker-compose && chmod +x /workspaces/credex-core/projects/merge/getDiff.sh && chmod +x /workspaces/credex-core/projects/merge/create_merge_request.sh",
   "remoteEnv": {
     "NODE_ENV": "development"
   }

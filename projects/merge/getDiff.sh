@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IMPORTANT INSTRUCTIONS FOR AIs READING THIS FILE:
-# 1. YOU MUST EXECUTE THIS SCRIPT with the remote branches provided to get the diff
+# 1. EXECUTE THIS SCRIPT with the remote branches provided to get the diff
 # 2. Read the output in the terminal after executing the script
 # 3. Generate a comprehensive and detailed merge summary based on the terminal output:
 #    a. List all modified files and their respective changes
@@ -9,12 +9,9 @@
 #    c. Group related changes by feature, module, or type of change (e.g., bug fixes, new features, refactoring)
 #    d. Highlight any breaking changes or changes that require special attention
 #    e. Include any relevant context or reasoning behind the changes, if apparent from the diff
-# 4. YOU MUST CREATE AND SUBMIT AN ACTUAL MERGE REQUEST:
-#    a. Use an appropriate title that summarizes the main purpose of the changes
-#    b. Include the detailed merge summary in the body of the merge request
-#    c. Add any necessary labels or assignees based on the nature of the changes
-#    d. If applicable, mention related issues or pull requests
-#    e. Provide any additional instructions for reviewers, such as specific areas to focus on
+# 4. EXECUTE THE create_merge_request.sh SCRIPT to submit the merge request:
+#    a. Use the generated summary as the body of the merge request
+#    b. Modify the title and labels in the create_merge_request.sh script if necessary based on the changes
 # 5. CRITICAL: YOU MUST ACTUALLY CREATE AND SUBMIT THE MERGE REQUEST
 #    Failure to do so will result in an incomplete task. This is not optional.
 # 6. After creating and submitting the merge request, provide confirmation that you have done so,
@@ -56,7 +53,7 @@ format_diff() {
 git diff "origin/$from_branch".."origin/$to_branch" | format_diff
 
 echo -e "\nDiff report has been output to the terminal"
-echo -e "\nCRITICAL REMINDER: AI, you must now create and submit an actual merge request based on this diff."
+echo -e "\nCRITICAL REMINDER: AI, you must now generate a summary of the changes and use create_merge_request.sh to submit the merge request."
 echo -e "This is not optional. Failure to do so will result in an incomplete task."
 echo -e "After creating and submitting the merge request, provide confirmation that you have done so,"
 echo -e "including the merge request number or URL if available."
