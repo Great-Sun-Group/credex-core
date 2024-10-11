@@ -9,9 +9,9 @@
 #    c. Group related changes by feature, module, or type of change (e.g., bug fixes, new features, refactoring)
 #    d. Highlight any breaking changes or changes that require special attention
 #    e. Include any relevant context or reasoning behind the changes, if apparent from the diff
-# 4. EXECUTE THE create_merge_request.sh SCRIPT to submit the merge request:
-#    a. Use the generated summary as the body of the merge request
-#    b. Modify the title and labels in the create_merge_request.sh script if necessary based on the changes
+# 4. CREATE AND SUBMIT THE MERGE REQUEST using the GitHub CLI:
+#    Execute the following command, replacing <from_branch> and <to_branch> with the appropriate branch names:
+#    gh pr create --base <to_branch> --head <from_branch> --title "Merge <from_branch> into <to_branch>" --body "Generated merge summary goes here"
 # 5. CRITICAL: YOU MUST ACTUALLY CREATE AND SUBMIT THE MERGE REQUEST
 #    Failure to do so will result in an incomplete task. This is not optional.
 # 6. After creating and submitting the merge request, provide confirmation that you have done so,
@@ -53,7 +53,9 @@ format_diff() {
 git diff "origin/$from_branch".."origin/$to_branch" | format_diff
 
 echo -e "\nDiff report has been output to the terminal"
-echo -e "\nCRITICAL REMINDER: AI, you must now generate a summary of the changes and use create_merge_request.sh to submit the merge request."
-echo -e "This is not optional. Failure to do so will result in an incomplete task."
+echo -e "\nCRITICAL REMINDER: AI, you must now generate a summary of the changes and create a merge request using the GitHub CLI."
+echo -e "Use the following command to create the merge request:"
+echo -e "gh pr create --base $to_branch --head $from_branch --title \"Merge $from_branch into $to_branch\" --body \"Generated merge summary goes here\""
+echo -e "\nThis is not optional. Failure to do so will result in an incomplete task."
 echo -e "After creating and submitting the merge request, provide confirmation that you have done so,"
 echo -e "including the merge request number or URL if available."
