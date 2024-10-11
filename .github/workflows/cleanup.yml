@@ -2,19 +2,10 @@ name: Cleanup AWS Resources
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Environment to clean up'
-        required: true
-        type: choice
-        options:
-          - development
-          - staging
-          - production
 
 jobs:
   cleanup:
-    name: 3 Wipe AWS Resources
+    name: Wipe AWS Resources
     runs-on: ubuntu-latest
     env:
       TF_VAR_aws_region: af-south-1
@@ -25,7 +16,13 @@ jobs:
 
       - name: Set environment
         run: |
-          echo "ENVIRONMENT=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=development" >> $GITHUB_ENV
+          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
