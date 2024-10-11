@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Environment to clean up"
+        description: 'Environment to clean up'
         required: true
         type: choice
         options:
@@ -14,15 +14,18 @@ on:
 
 jobs:
   cleanup:
-    name: Cleanup AWS Resources
+    name: 3. Wipe AWS Resources
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
     env:
       TF_VAR_aws_region: af-south-1
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Set environment
+        run: |
+          echo "ENVIRONMENT=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -38,7 +41,7 @@ jobs:
         run: |
           cd terraform
           terraform init
-          terraform workspace select ${{ github.event.inputs.environment }} || terraform workspace new ${{ github.event.inputs.environment }}
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
 
       - name: Terraform Destroy
         run: |
@@ -103,10 +106,10 @@ jobs:
       - name: Log Cleanup
         if: success()
         run: |
-          echo "Cleanup of ${{ github.event.inputs.environment }} environment completed successfully at $(date)"
+          echo "Cleanup of ${{ env.ENVIRONMENT }} environment completed successfully at $(date)"
 
       - name: Notify on Failure
         if: failure()
         run: |
-          echo "Cleanup of ${{ github.event.inputs.environment }} environment failed. Please check the logs for more information."
+          echo "Cleanup of ${{ env.ENVIRONMENT }} environment failed. Please check the logs for more information."
           # Add notification mechanism here (e.g., send an email, Slack message, etc.)
