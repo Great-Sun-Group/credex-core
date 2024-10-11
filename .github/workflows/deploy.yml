@@ -93,7 +93,7 @@ jobs:
       - name: Terraform Init and Workspace Selection
         run: |
           cd terraform
-          terraform workspace select ${{ github.event.inputs.environment }} || terraform workspace new ${{ github.event.inputs.environment }}
+          terraform workspace select-or-create ${{ github.event.inputs.environment }} || terraform workspace new ${{ github.event.inputs.environment }}
           echo "TF_VAR_environment=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
 
       - name: Run Pre-deployment Check
