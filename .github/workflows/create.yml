@@ -3,15 +3,17 @@ name: Initial Deployment to AWS
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: "Select branch to deploy from"
+      environment:
+        description: 'Deployment Environment'
         required: true
+        default: 'development'
         type: choice
         options:
-          - main
-          - prod
-          - stage
-          - dev
+          - development
+  push:
+    branches:
+      - stage
+      - prod
 
 jobs:
   deploy:
@@ -32,14 +34,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.inputs.branch }}
 
       - name: Set environment
         run: |
-          if [[ "${{ github.event.inputs.branch }}" == "prod" ]]; then
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "ENVIRONMENT=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
             echo "ENVIRONMENT=production" >> $GITHUB_ENV
-          elif [[ "${{ github.event.inputs.branch }}" == "stage" ]]; then
+          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
             echo "ENVIRONMENT=staging" >> $GITHUB_ENV
           else
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
@@ -216,7 +218,7 @@ jobs:
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
-          echo "Deploying application to ${{ env.ENVIRONMENT }} from branch ${{ github.event.inputs.branch }}"
+          echo "Deploying application to ${{ env.ENVIRONMENT }} from branch ${{ github.ref_name }}"
           # Add your deployment commands here
 
       - name: Run Post-Deployment Tests
@@ -229,10 +231,10 @@ jobs:
       - name: Log Deployment
         if: success()
         run: |
-          echo "Initial deployment to ${{ env.ENVIRONMENT }} from branch ${{ github.event.inputs.branch }} completed successfully at $(date)"
+          echo "Initial deployment to ${{ env.ENVIRONMENT }} from branch ${{ github.ref_name }} completed successfully at $(date)"
 
       - name: Notify on Failure
         if: failure()
         run: |
-          echo "Initial deployment to ${{ env.ENVIRONMENT }} from branch ${{ github.event.inputs.branch }} failed. Please check the logs for more information."
+          echo "Initial deployment to ${{ env.ENVIRONMENT }} from branch ${{ github.ref_name }} failed. Please check the logs for more information."
           # Add notification mechanism here (e.g., send an email, Slack message, etc.)
