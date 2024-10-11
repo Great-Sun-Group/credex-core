@@ -6,11 +6,11 @@ import logger from "../../../utils/logger";
 export async function OnboardMemberService(
   firstname: string,
   lastname: string,
-  phone: string
+  phone: string,
+  defaultDenom: string
 ) {
-  logger.debug("OnboardMemberService called", { firstname, lastname, phone });
+  logger.debug("OnboardMemberService called", { firstname, lastname, phone, defaultDenom });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-  const defaultDenom = "USD";
 
   try {
     // Validation: Check defaultDenom in denominations
@@ -48,7 +48,7 @@ export async function OnboardMemberService(
 
     if (!result.records.length) {
       const message = "could not onboard member";
-      logger.warn(message, { firstname, lastname, phone });
+      logger.warn(message, { firstname, lastname, phone, defaultDenom });
       return { onboardedMemberID: false, message: message };
     }
 
@@ -59,6 +59,7 @@ export async function OnboardMemberService(
       firstname,
       lastname,
       phone,
+      defaultDenom,
     });
     return {
       onboardedMemberID: memberID,
@@ -71,6 +72,7 @@ export async function OnboardMemberService(
       firstname,
       lastname,
       phone,
+      defaultDenom,
     });
 
     // Type guard to narrow the type of error

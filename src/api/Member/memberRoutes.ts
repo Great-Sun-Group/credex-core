@@ -14,189 +14,99 @@ import {
 } from "./memberValidationSchemas";
 import logger from "../../utils/logger";
 
-export default function MemberRoutes(app: express.Application) {
-  const apiVersionOneRoute = "/api/v1";
+export default function MemberRoutes(jsonParser: express.RequestHandler, apiVersionOneRoute: string) {
+  const router = express.Router();
   logger.info("Initializing Member routes");
 
-  /**
-   * @openapi
-   * /member/login:
-   *   post:
-   *     tags:
-   *       - Member
-   *     summary: Login a member
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - phone
-   *             properties:
-   *               phone:
-   *                 type: string
-   *     responses:
-   *       200:
-   *         description: Successful response
-   *       400:
-   *         description: Bad request
-   */
-  app.post(
-    `${apiVersionOneRoute}/member/login`,
+  // Middleware to log raw request body
+  const logRawBody = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    logger.debug('logRawBody middleware called', { path: req.path });
+    let data = '';
+    req.setEncoding('utf8');
+    req.on('data', (chunk) => {
+      data += chunk;
+    });
+    req.on('end', () => {
+      logger.debug('Raw request body:', { body: data || 'No data received', path: req.path });
+      next();
+    });
+    // Add a timeout to ensure the middleware completes even if no 'end' event is fired
+    setTimeout(() => {
+      if (!res.headersSent) {
+        logger.debug('logRawBody middleware timed out', { path: req.path });
+        next();
+      }
+    }, 1000);
+  };
+
+  // Log all incoming requests to this router
+  router.use((req, res, next) => {
+    logger.debug('Request received in MemberRoutes', { method: req.method, path: req.path });
+    next();
+  });
+
+  router.post(
+    `/member/login`,
+    jsonParser,
     validateRequest(loginMemberSchema),
     loginMemberExpressHandler
   );
 
-  /**
-   * @openapi
-   * /member/getMemberByHandle:
-   *   post:
-   *     tags:
-   *       - Member
-   *     summary: Get member by handle
-   *     security:
-   *       - BearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - memberHandle
-   *             properties:
-   *               memberHandle:
-   *                 type: string
-   *     responses:
-   *       200:
-   *         description: Successful response
-   *       400:
-   *         description: Bad request
-   *       401:
-   *         description: Unauthorized
-   *       403:
-   *         description: Forbidden
-   */
-  app.post(
-    `${apiVersionOneRoute}/member/getMemberByHandle`,
+  router.post(
+    `/member/getMemberByHandle`,
+    jsonParser,
     validateRequest(getMemberByHandleSchema),
     GetMemberByHandleController
   );
 
-  /**
-   * @openapi
-   * /member/getMemberDashboardByPhone:
-   *   post:
-   *     tags:
-   *       - Member
-   *     summary: Get member dashboard by phone
-   *     security:
-   *       - BearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - phone
-   *             properties:
-   *               phone:
-   *                 type: string
-   *     responses:
-   *       200:
-   *         description: Successful response
-   *       400:
-   *         description: Bad request
-   *       401:
-   *         description: Unauthorized
-   *       403:
-   *         description: Forbidden
-   */
-  app.post(
-    `${apiVersionOneRoute}/member/getMemberDashboardByPhone`,
+  router.post(
+    `/member/getMemberDashboardByPhone`,
+    jsonParser,
     validateRequest(getMemberDashboardByPhoneSchema),
     GetMemberDashboardByPhoneController
   );
 
-  /**
-   * @openapi
-   * /member/onboardMember:
-   *   post:
-   *     tags:
-   *       - Member
-   *     summary: Onboard a new member
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - firstname
-   *               - lastname
-   *               - phone
-   *             properties:
-   *               firstname:
-   *                 type: string
-   *               lastname:
-   *                 type: string
-   *               phone:
-   *                 type: string
-   *     responses:
-   *       200:
-   *         description: Successful response
-   *       400:
-   *         description: Bad request
-   */
-  app.post(
-    `${apiVersionOneRoute}/member/onboardMember`,
-    validateRequest(onboardMemberSchema),
-    onboardMemberExpressHandler
+  router.post(
+    `/member/onboardMember`,
+    logRawBody,
+    (req, res, next) => {
+      logger.debug('Before jsonParser', { path: req.path });
+      jsonParser(req, res, (err) => {
+        if (err) {
+          logger.error('jsonParser error', { error: err.message, path: req.path });
+          return res.status(400).json({ message: 'Invalid JSON' });
+        }
+        logger.debug('After jsonParser', { path: req.path });
+        next();
+      });
+    },
+    (req, res, next) => {
+      logger.debug('Before validateRequest', { path: req.path });
+      validateRequest(onboardMemberSchema)(req, res, (err) => {
+        if (err) {
+          logger.error('validateRequest error', { error: err.message, path: req.path });
+          return res.status(400).json({ message: 'Validation failed' });
+        }
+        logger.debug('After validateRequest', { path: req.path });
+        next();
+      });
+    },
+    (req, res, next) => {
+      logger.debug('Before onboardMemberExpressHandler', { path: req.path });
+      onboardMemberExpressHandler(req, res, (err) => {
+        if (err) {
+          logger.error('onboardMemberExpressHandler error', { error: err.message, path: req.path });
+          return next(err);
+        }
+        logger.debug('After onboardMemberExpressHandler', { path: req.path });
+        next();
+      });
+    }
   );
 
-  /**
-   * @openapi
-   * /member/authForTierSpendLimit:
-   *   post:
-   *     tags:
-   *       - Member
-   *     summary: Authorize secured credex for member's tier
-   *     security:
-   *       - BearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - memberID
-   *               - tier
-   *               - Amount
-   *               - Denomination
-   *             properties:
-   *               memberID:
-   *                 type: string
-   *               tier:
-   *                 type: number
-   *               Amount:
-   *                 type: number
-   *               Denomination:
-   *                 type: string
-   *     responses:
-   *       200:
-   *         description: Successful response
-   *       400:
-   *         description: Bad request
-   *       401:
-   *         description: Unauthorized
-   *       403:
-   *         description: Forbidden
-   */
-  app.post(
-    `${apiVersionOneRoute}/member/authForTierSpendLimit`,
+  router.post(
+    `/member/authForTierSpendLimit`,
+    jsonParser,
     validateRequest(authForTierSpendLimitSchema),
     authForTierSpendLimitExpressHandler
   );
@@ -205,4 +115,6 @@ export default function MemberRoutes(app: express.Application) {
     module: "memberRoutes",
     routesCount: 5,
   });
+
+  return router;
 }

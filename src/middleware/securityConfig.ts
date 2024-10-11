@@ -1,10 +1,13 @@
-import { Application } from "express";
+import { Application, Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import cors from "cors";
 import { rateLimiter } from "./rateLimiter";
 import { authMiddleware } from "./authMiddleware";
+import logger from "../utils/logger";
 
 export const applySecurityMiddleware = (app: Application) => {
+  logger.debug("Applying security middleware");
+
   // Apply Helmet with strict settings
   app.use(
     helmet({
@@ -29,6 +32,7 @@ export const applySecurityMiddleware = (app: Application) => {
       },
     })
   );
+  logger.debug("Helmet middleware applied");
 
   if (process.env.NODE_ENV !== "production") {
     // CORS highly permissive for non-prod deployments
@@ -40,6 +44,7 @@ export const applySecurityMiddleware = (app: Application) => {
       maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
     };
     app.use(cors(corsOptions));
+    logger.debug("CORS middleware applied (non-production)");
   } else {
     // to restrict origins in production deployment
     const corsOptions = {
@@ -50,10 +55,22 @@ export const applySecurityMiddleware = (app: Application) => {
       maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
     };
     app.use(cors(corsOptions));
+    logger.debug("CORS middleware applied (production)");
   }
 
   // Apply rate limiting
   app.use(rateLimiter);
+  logger.debug("Rate limiter middleware applied");
+
+  // Add a logging middleware to track requests after security middleware
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    logger.debug("Request passed through all security middleware", {
+      method: req.method,
+      path: req.path,
+      ip: req.ip,
+    });
+    next();
+  });
 
   return app;
 };
@@ -66,8 +83,10 @@ export const applyAuthMiddleware = (app: Application) => {
       req.path === "/api/v1/member/onboardMember" ||
       req.path.includes("/api/v1/dev/") // routes are not published in prod
     ) {
+      logger.debug("Skipping auth middleware for path", { path: req.path });
       return next();
     }
+    logger.debug("Applying auth middleware for path", { path: req.path });
     authMiddleware()(req, res, next);
   });
 };

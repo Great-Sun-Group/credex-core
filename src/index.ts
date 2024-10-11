@@ -58,7 +58,19 @@ async function initializeApp() {
 
     // Apply route handlers for hardened modules
     app.use(apiVersionOneRoute, jsonParser);
-    MemberRoutes(app);
+
+    // Log before applying MemberRoutes
+    app.use((req, res, next) => {
+      logger.debug("Request reached before MemberRoutes", {
+        method: req.method,
+        path: req.path,
+        ip: req.ip,
+      });
+      next();
+    });
+
+    // Apply Hardened Routes
+    app.use(apiVersionOneRoute, MemberRoutes(jsonParser, "")); // this is the syntax we want
     AccountRoutes(app);
     CredexRoutes(app);
     AdminDashboardRoutes(app);
@@ -67,7 +79,6 @@ async function initializeApp() {
 
     // Apply route handlers for dev-only routes
     if (config.environment !== "production") {
-      app.use(apiVersionOneRoute, jsonParser);
       DevRoutes(app);
       logger.debug("Route handlers applied for dev-only routes");
     }
@@ -75,6 +86,16 @@ async function initializeApp() {
     // Apply authentication middleware after routes are set up
     applyAuthMiddleware(app);
     logger.debug("Applied authentication middleware");
+
+    // Add a catch-all route to log unhandled requests
+    app.use((req, res, next) => {
+      logger.debug("Unhandled request", {
+        method: req.method,
+        path: req.path,
+        ip: req.ip,
+      });
+      next();
+    });
 
     // Apply error handling middleware
     app.use(notFoundHandler); // Handle 404 errors

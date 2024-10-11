@@ -36,7 +36,7 @@ You are welcome to explore, experiment with, and build upon this work for resear
 
 You do not have permission to use this software to track real outstanding debts. You may not deploy this software to be used by real users transacting at arms length from each other. Data of real past transactions may be used, but only as modeling, testing, or research input. If you want to transact real value with credex, you are invited to use the live shared ledger of the credex ecosystem at [mycredex.app](https://mycredex.app), and to develop apps that connect your users to their credex accounts.
 
-This approach allows for community engagement and experimentation while ensuring the integrity and unity of the system as a single shared economic network that all can access and benefit from.
+This approach allows for community engagement and experimentation, and for economic research, while ensuring the integrity and unity of the system as a single shared economic network that all can access and benefit from.
 
 ## Neo4j Databases
 

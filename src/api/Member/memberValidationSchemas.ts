@@ -25,7 +25,10 @@ logger.debug("Initializing member validation schemas");
 export const getMemberByHandleSchema = {
   memberHandle: {
     sanitizer: s.sanitizeString,
-    validator: v.validateMemberHandle,
+    validator: (value: string) => {
+      const result = v.validateMemberHandle(value);
+      return result.isValid;
+    },
   },
 };
 logger.debug("getMemberByHandleSchema initialized");
@@ -33,7 +36,10 @@ logger.debug("getMemberByHandleSchema initialized");
 export const getMemberDashboardByPhoneSchema = {
   phone: {
     sanitizer: s.sanitizePhone,
-    validator: v.validatePhone,
+    validator: (value: string) => {
+      const result = v.validatePhone(value);
+      return result.isValid;
+    },
   },
 };
 logger.debug("getMemberDashboardByPhoneSchema initialized");
@@ -41,15 +47,31 @@ logger.debug("getMemberDashboardByPhoneSchema initialized");
 export const onboardMemberSchema = {
   firstname: {
     sanitizer: s.sanitizeName,
-    validator: v.validateName,
+    validator: (value: string) => {
+      const result = v.validateName(value);
+      return result.isValid;
+    },
   },
   lastname: {
     sanitizer: s.sanitizeName,
-    validator: v.validateName,
+    validator: (value: string) => {
+      const result = v.validateName(value);
+      return result.isValid;
+    },
   },
   phone: {
     sanitizer: s.sanitizePhone,
-    validator: v.validatePhone,
+    validator: (value: string) => {
+      const result = v.validatePhone(value);
+      return result.isValid;
+    },
+  },
+  defaultDenom: {
+    sanitizer: s.sanitizeDenomination,
+    validator: (value: string) => {
+      const result = v.validateDenomination(value);
+      return result.isValid;
+    },
   },
 };
 logger.debug("onboardMemberSchema initialized");
@@ -57,19 +79,31 @@ logger.debug("onboardMemberSchema initialized");
 export const authForTierSpendLimitSchema = {
   memberID: {
     sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
+    validator: (value: string) => {
+      const result = v.validateUUID(value);
+      return result.isValid;
+    },
   },
   tier: {
     sanitizer: (value: any) => Number(value),
-    validator: v.validateTier,
+    validator: (value: number) => {
+      const result = v.validateTier(value);
+      return result.isValid;
+    },
   },
   Amount: {
     sanitizer: (value: any) => Number(value),
-    validator: v.validateAmount,
+    validator: (value: number) => {
+      const result = v.validateAmount(value);
+      return result.isValid;
+    },
   },
   Denomination: {
     sanitizer: s.sanitizeDenomination,
-    validator: v.validateDenomination,
+    validator: (value: string) => {
+      const result = v.validateDenomination(value);
+      return result.isValid;
+    },
   },
 };
 logger.debug("authForTierSpendLimitSchema initialized");
@@ -77,7 +111,10 @@ logger.debug("authForTierSpendLimitSchema initialized");
 export const loginMemberSchema = {
   phone: {
     sanitizer: s.sanitizePhone,
-    validator: v.validatePhone,
+    validator: (value: string) => {
+      const result = v.validatePhone(value);
+      return result.isValid;
+    },
   },
 };
 logger.debug("loginMemberSchema initialized");

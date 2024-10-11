@@ -1,0 +1,232 @@
+name: Initial Deployment to AWS
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      branch:
+        description: "Branch to deploy"
+        required: true
+        default: 'dev'
+
+jobs:
+  deploy:
+    name: Initial Deployment to AWS
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    env:
+      TF_VAR_aws_region: af-south-1
+      TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+      TF_VAR_whatsapp_bot_api_key: ${{ secrets.WHATSAPP_BOT_API_KEY }}
+      TF_VAR_open_exchange_rates_api: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
+      TF_VAR_neo4j_ledger_space_user: ${{ secrets.NEO4J_LEDGER_SPACE_USER }}
+      TF_VAR_neo4j_ledger_space_pass: ${{ secrets.NEO4J_LEDGER_SPACE_PASS }}
+      TF_VAR_neo4j_search_space_user: ${{ secrets.NEO4J_SEARCH_SPACE_USER }}
+      TF_VAR_neo4j_search_space_pass: ${{ secrets.NEO4J_SEARCH_SPACE_PASS }}
+      TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
+      TF_VAR_neo4j_public_key: ${{ secrets.NEO4J_PUBLIC_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.TF_VAR_aws_region }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Pre-deployment Checks
+        id: pre_deployment_checks
+        run: |
+          cd terraform
+          
+          # Function to check if a resource exists in AWS
+          resource_exists() {
+            local resource_type=$1
+            local resource_name=$2
+            
+            case $resource_type in
+              "aws_acm_certificate")
+                aws acm list-certificates --query 'CertificateSummaryList[?DomainName==`'"$resource_name"'`].CertificateArn' --output text | grep -q .
+                ;;
+              "aws_security_group")
+                aws ec2 describe-security-groups --filters "Name=group-name,Values=$resource_name" --query 'SecurityGroups[0].GroupId' --output text | grep -q .
+                ;;
+              "aws_ssm_parameter")
+                aws ssm get-parameter --name "$resource_name" --query 'Parameter.Name' --output text 2>/dev/null | grep -q .
+                ;;
+              "aws_instance")
+                aws ec2 describe-instances --filters "Name=tag:Name,Values=$resource_name" "Name=instance-state-name,Values=running" --query 'Reservations[*].Instances[*].[InstanceId]' --output text | grep -q .
+                ;;
+              "aws_ecs_cluster")
+                aws ecs list-clusters --query "clusterArns[?contains(@, '$resource_name')]" --output text | grep -q .
+                ;;
+              "aws_ecs_service")
+                aws ecs list-services --cluster "credex-cluster-${{ github.event.inputs.environment }}" --query "serviceArns[?contains(@, '$resource_name')]" --output text | grep -q .
+                ;;
+              "aws_lb")
+                aws elbv2 describe-load-balancers --query "LoadBalancers[?LoadBalancerName=='$resource_name'].LoadBalancerArn" --output text | grep -q .
+                ;;
+              *)
+                echo "Unknown resource type: $resource_type"
+                return 1
+                ;;
+            esac
+          }
+          
+          # Initialize use_existing_resources map
+          declare -A use_existing_resources=(
+            ["vpc"]=false
+            ["subnets"]=false
+            ["security_groups"]=false
+            ["ecs_cluster"]=false
+            ["ecs_service"]=false
+            ["ecs_task_definition"]=false
+            ["alb"]=false
+            ["acm_certificate"]=false
+            ["route53_record"]=false
+            ["neo4j_instances"]=false
+            ["ssm_parameters"]=false
+          )
+          
+          # Check for existing resources
+          echo "Checking for existing resources..."
+          
+          if resource_exists "aws_acm_certificate" "${TF_VAR_domain}"; then
+            echo "ACM Certificate exists"
+            use_existing_resources["acm_certificate"]=true
+          fi
+          
+          if resource_exists "aws_security_group" "credex-alb-sg-${{ github.event.inputs.environment }}"; then
+            echo "ALB Security Group exists"
+            use_existing_resources["security_groups"]=true
+          fi
+          
+          if resource_exists "aws_security_group" "credex-core-ecs-tasks-sg-${{ github.event.inputs.environment }}"; then
+            echo "ECS Tasks Security Group exists"
+            use_existing_resources["security_groups"]=true
+          fi
+          
+          if resource_exists "aws_security_group" "credex-neo4j-sg-${{ github.event.inputs.environment }}"; then
+            echo "Neo4j Security Group exists"
+            use_existing_resources["security_groups"]=true
+          fi
+          
+          if resource_exists "aws_ecs_cluster" "credex-cluster-${{ github.event.inputs.environment }}"; then
+            echo "ECS Cluster exists"
+            use_existing_resources["ecs_cluster"]=true
+          fi
+          
+          if resource_exists "aws_ecs_service" "credex-core-service-${{ github.event.inputs.environment }}"; then
+            echo "ECS Service exists"
+            use_existing_resources["ecs_service"]=true
+            use_existing_resources["ecs_task_definition"]=true
+          fi
+          
+          if resource_exists "aws_lb" "credex-alb-${{ github.event.inputs.environment }}"; then
+            echo "ALB exists"
+            use_existing_resources["alb"]=true
+          fi
+          
+          # Check for Neo4j instances
+          neo4j_instance_count=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-${{ github.event.inputs.environment }}-*" "Name=instance-state-name,Values=running" --query 'length(Reservations[].Instances[])' --output text)
+          
+          if [ "$neo4j_instance_count" -gt 0 ]; then
+            echo "Neo4j instances exist: $neo4j_instance_count found"
+            use_existing_resources["neo4j_instances"]=true
+          
+            # Check if we're exceeding the maximum allowed instances
+            max_instances=3
+            if [ "${{ github.event.inputs.environment }}" == "development" ]; then
+              max_instances=6
+            fi
+          
+            if [ "$neo4j_instance_count" -gt "$max_instances" ]; then
+              echo "Warning: The number of existing Neo4j instances ($neo4j_instance_count) exceeds the maximum allowed ($max_instances) for the ${{ github.event.inputs.environment }} environment."
+            fi
+          fi
+          
+          if resource_exists "aws_ssm_parameter" "/credex/${{ github.event.inputs.environment }}/jwt_secret"; then
+            echo "SSM parameters exist"
+            use_existing_resources["ssm_parameters"]=true
+          fi
+          
+          # Convert the bash associative array to a JSON string
+          use_existing_resources_json=$(declare -p use_existing_resources | sed -e "s/declare -A use_existing_resources=//" -e "s/([^)]*)//" | jq -R 'split(" ")| map(split("="))|from_entries')
+          
+          echo "TF_VAR_use_existing_resources=$use_existing_resources_json" >> $GITHUB_ENV
+          echo "use_existing_resources=$use_existing_resources_json" >> $GITHUB_OUTPUT
+
+      - name: Terraform Init and Workspace Selection
+        run: |
+          cd terraform
+          terraform init
+          terraform workspace select ${{ github.event.inputs.environment }} || terraform workspace new ${{ github.event.inputs.environment }}
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          cd terraform
+          terraform plan -out=tfplan -var="create_resources=true"
+
+      - name: Terraform Apply
+        run: |
+          cd terraform
+          terraform apply -auto-approve tfplan
+
+      - name: Get Terraform Outputs
+        id: tf-outputs
+        run: |
+          cd terraform
+          echo "Retrieving Terraform outputs..."
+          terraform output -json > tf_outputs.json
+          echo "tf_outputs=$(cat tf_outputs.json | jq -c .)" >> $GITHUB_OUTPUT
+
+      - name: Save Neo4j URLs to AWS Parameter Store
+        env:
+          TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
+        run: |
+          LEDGER_BOLT_URL=$(echo $TF_OUTPUTS | jq -r '.neo4j_ledger_space_bolt_url.value')
+          SEARCH_BOLT_URL=$(echo $TF_OUTPUTS | jq -r '.neo4j_search_space_bolt_url.value')
+          
+          aws ssm put-parameter --name "/${{ github.event.inputs.environment }}/neo4j_ledger_space_bolt_url" --value "$LEDGER_BOLT_URL" --type "SecureString" --overwrite
+          aws ssm put-parameter --name "/${{ github.event.inputs.environment }}/neo4j_search_space_bolt_url" --value "$SEARCH_BOLT_URL" --type "SecureString" --overwrite
+
+      - name: Deploy Application
+        env:
+          TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
+        run: |
+          echo "Deploying application to ${{ github.event.inputs.environment }} from branch ${{ github.event.inputs.branch }}"
+          # Add your deployment commands here
+
+      - name: Run Post-Deployment Tests
+        env:
+          TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
+        run: |
+          echo "Running post-deployment tests for ${{ github.event.inputs.environment }}"
+          # Add your test commands here
+
+      - name: Log Deployment
+        if: success()
+        run: |
+          echo "Initial deployment to ${{ github.event.inputs.environment }} from branch ${{ github.event.inputs.branch }} completed successfully at $(date)"
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "Initial deployment to ${{ github.event.inputs.environment }} from branch ${{ github.event.inputs.branch }} failed. Please check the logs for more information."
+          # Add notification mechanism here (e.g., send an email, Slack message, etc.)
