@@ -14,7 +14,7 @@ on:
 
 jobs:
   cleanup:
-    name: 3. Wipe AWS Resources
+    name: 3 Wipe AWS Resources
     runs-on: ubuntu-latest
     env:
       TF_VAR_aws_region: af-south-1

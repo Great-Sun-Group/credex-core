@@ -17,7 +17,7 @@ on:
 
 jobs:
   redeploy:
-    name: 1. Regular AWS Redeploy
+    name: 1 Regular AWS Redeploy
     runs-on: ubuntu-latest
     env:
       TF_VAR_aws_region: af-south-1
