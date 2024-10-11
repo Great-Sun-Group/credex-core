@@ -30,26 +30,9 @@ log "Fetch completed."
 log "Listing remote branches:"
 git --no-pager branch -r
 
-# Get list of changed files
-log "Getting list of changed files..."
-changed_files=$(git --no-pager diff --name-only "origin/$to_branch".."origin/$from_branch")
-log "Changed files:"
-echo "$changed_files"
-
-# Function to get diff for a single file
-get_file_diff() {
-    local file=$1
-    log "Getting diff for file: $file"
-    git --no-pager diff -U3 --no-color --ignore-all-space --ignore-blank-lines "origin/$to_branch".."origin/$from_branch" -- "$file" | cat
-}
-
-# Process each changed file
-for file in $changed_files; do
-    log "Processing file: $file"
-    log "Diff for $file:"
-    get_file_diff "$file"
-    echo "----------------------------------------"
-done
+# Get and display the diff for the specified files
+log "Getting diff for .github/workflows/create.yml and .github/workflows/redeploy.yml..."
+git --no-pager diff --no-color --ignore-all-space --ignore-blank-lines "origin/$to_branch".."origin/$from_branch" -- .github/workflows/create.yml .github/workflows/redeploy.yml
 
 log "Diff process completed."
 log "CRITICAL REMINDER: AI, you must now generate a summary of the changes and create a merge request using the GitHub CLI."
