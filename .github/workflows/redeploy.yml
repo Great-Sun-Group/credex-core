@@ -3,24 +3,21 @@ name: Redeploy to AWS
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: "Deployment environment"
+      branch:
+        description: "Use workflow and deploy from"
         required: true
         type: choice
         options:
-          - development
-          - staging
-          - production
-      branch:
-        description: "Branch to deploy"
-        required: true
-        default: 'dev'
+          - main
+          - prod
+          - stage
+          - dev
+          - feature/*
 
 jobs:
   redeploy:
     name: Redeploy to AWS
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
     env:
       TF_VAR_aws_region: af-south-1
       TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
@@ -38,6 +35,16 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.inputs.branch }}
+
+      - name: Set environment
+        run: |
+          if [[ "${{ github.event.inputs.branch }}" == "prod" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          elif [[ "${{ github.event.inputs.branch }}" == "stage" ]]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=development" >> $GITHUB_ENV
+          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -76,7 +83,7 @@ jobs:
                 aws ecs list-clusters --query "clusterArns[?contains(@, '$resource_name')]" --output text | grep -q .
                 ;;
               "aws_ecs_service")
-                aws ecs list-services --cluster "credex-cluster-${{ github.event.inputs.environment }}" --query "serviceArns[?contains(@, '$resource_name')]" --output text | grep -q .
+                aws ecs list-services --cluster "credex-cluster-${{ env.ENVIRONMENT }}" --query "serviceArns[?contains(@, '$resource_name')]" --output text | grep -q .
                 ;;
               "aws_lb")
                 aws elbv2 describe-load-balancers --query "LoadBalancers[?LoadBalancerName=='$resource_name'].LoadBalancerArn" --output text | grep -q .
@@ -111,39 +118,39 @@ jobs:
             use_existing_resources["acm_certificate"]=true
           fi
           
-          if resource_exists "aws_security_group" "credex-alb-sg-${{ github.event.inputs.environment }}"; then
+          if resource_exists "aws_security_group" "credex-alb-sg-${{ env.ENVIRONMENT }}"; then
             echo "ALB Security Group exists"
             use_existing_resources["security_groups"]=true
           fi
           
-          if resource_exists "aws_security_group" "credex-core-ecs-tasks-sg-${{ github.event.inputs.environment }}"; then
+          if resource_exists "aws_security_group" "credex-core-ecs-tasks-sg-${{ env.ENVIRONMENT }}"; then
             echo "ECS Tasks Security Group exists"
             use_existing_resources["security_groups"]=true
           fi
           
-          if resource_exists "aws_security_group" "credex-neo4j-sg-${{ github.event.inputs.environment }}"; then
+          if resource_exists "aws_security_group" "credex-neo4j-sg-${{ env.ENVIRONMENT }}"; then
             echo "Neo4j Security Group exists"
             use_existing_resources["security_groups"]=true
           fi
           
-          if resource_exists "aws_ecs_cluster" "credex-cluster-${{ github.event.inputs.environment }}"; then
+          if resource_exists "aws_ecs_cluster" "credex-cluster-${{ env.ENVIRONMENT }}"; then
             echo "ECS Cluster exists"
             use_existing_resources["ecs_cluster"]=true
           fi
           
-          if resource_exists "aws_ecs_service" "credex-core-service-${{ github.event.inputs.environment }}"; then
+          if resource_exists "aws_ecs_service" "credex-core-service-${{ env.ENVIRONMENT }}"; then
             echo "ECS Service exists"
             use_existing_resources["ecs_service"]=true
             use_existing_resources["ecs_task_definition"]=true
           fi
           
-          if resource_exists "aws_lb" "credex-alb-${{ github.event.inputs.environment }}"; then
+          if resource_exists "aws_lb" "credex-alb-${{ env.ENVIRONMENT }}"; then
             echo "ALB exists"
             use_existing_resources["alb"]=true
           fi
           
           # Check for Neo4j instances
-          neo4j_instance_count=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-${{ github.event.inputs.environment }}-*" "Name=instance-state-name,Values=running" --query 'length(Reservations[].Instances[])' --output text)
+          neo4j_instance_count=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-${{ env.ENVIRONMENT }}-*" "Name=instance-state-name,Values=running" --query 'length(Reservations[].Instances[])' --output text)
           
           if [ "$neo4j_instance_count" -gt 0 ]; then
             echo "Neo4j instances exist: $neo4j_instance_count found"
@@ -151,16 +158,16 @@ jobs:
           
             # Check if we're exceeding the maximum allowed instances
             max_instances=3
-            if [ "${{ github.event.inputs.environment }}" == "development" ]; then
+            if [ "${{ env.ENVIRONMENT }}" == "development" ]; then
               max_instances=6
             fi
           
             if [ "$neo4j_instance_count" -gt "$max_instances" ]; then
-              echo "Warning: The number of existing Neo4j instances ($neo4j_instance_count) exceeds the maximum allowed ($max_instances) for the ${{ github.event.inputs.environment }} environment."
+              echo "Warning: The number of existing Neo4j instances ($neo4j_instance_count) exceeds the maximum allowed ($max_instances) for the ${{ env.ENVIRONMENT }} environment."
             fi
           fi
           
-          if resource_exists "aws_ssm_parameter" "/credex/${{ github.event.inputs.environment }}/jwt_secret"; then
+          if resource_exists "aws_ssm_parameter" "/credex/${{ env.ENVIRONMENT }}/jwt_secret"; then
             echo "SSM parameters exist"
             use_existing_resources["ssm_parameters"]=true
           fi
@@ -175,7 +182,7 @@ jobs:
         run: |
           cd terraform
           terraform init
-          terraform workspace select ${{ github.event.inputs.environment }} || terraform workspace new ${{ github.event.inputs.environment }}
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
 
       - name: Import Existing Resources
         if: fromJSON(steps.pre_deployment_checks.outputs.use_existing_resources).security_groups == true || fromJSON(steps.pre_deployment_checks.outputs.use_existing_resources).ecs_cluster == true || fromJSON(steps.pre_deployment_checks.outputs.use_existing_resources).alb == true || fromJSON(steps.pre_deployment_checks.outputs.use_existing_resources).neo4j_instances == true || fromJSON(steps.pre_deployment_checks.outputs.use_existing_resources).ssm_parameters == true
@@ -207,23 +214,23 @@ jobs:
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
-          echo "Updating application in ${{ github.event.inputs.environment }} from branch ${{ github.event.inputs.branch }}"
+          echo "Updating application in ${{ env.ENVIRONMENT }} from branch ${{ github.event.inputs.branch }}"
           # Add your update commands here
 
       - name: Run Post-Update Tests
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
-          echo "Running post-update tests for ${{ github.event.inputs.environment }}"
+          echo "Running post-update tests for ${{ env.ENVIRONMENT }}"
           # Add your test commands here
 
       - name: Log Redeployment
         if: success()
         run: |
-          echo "Redeployment to ${{ github.event.inputs.environment }} from branch ${{ github.event.inputs.branch }} completed successfully at $(date)"
+          echo "Redeployment to ${{ env.ENVIRONMENT }} from branch ${{ github.event.inputs.branch }} completed successfully at $(date)"
 
       - name: Notify on Failure
         if: failure()
         run: |
-          echo "Redeployment to ${{ github.event.inputs.environment }} from branch ${{ github.event.inputs.branch }} failed. Please check the logs for more information."
+          echo "Redeployment to ${{ env.ENVIRONMENT }} from branch ${{ github.event.inputs.branch }} failed. Please check the logs for more information."
           # Add notification mechanism here (e.g., send an email, Slack message, etc.)
