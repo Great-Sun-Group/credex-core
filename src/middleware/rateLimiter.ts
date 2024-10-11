@@ -51,5 +51,37 @@ export const rateLimiter = (
     path: req.path,
     method: req.method,
   });
-  memberLimiter(req, res, next);
+
+  try {
+    memberLimiter(req, res, (err) => {
+      if (err) {
+        logger.error("Error in rate limiter", {
+          error: err.message,
+          stack: err.stack,
+          memberId: req.user?.id,
+          ip: req.ip,
+          path: req.path,
+          method: req.method,
+        });
+        return next(err);
+      }
+      logger.debug("Rate limiter passed, calling next middleware", {
+        memberId: req.user?.id,
+        ip: req.ip,
+        path: req.path,
+        method: req.method,
+      });
+      next();
+    });
+  } catch (error) {
+    logger.error("Unexpected error in rate limiter", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      memberId: req.user?.id,
+      ip: req.ip,
+      path: req.path,
+      method: req.method,
+    });
+    next(error);
+  }
 };

@@ -2,7 +2,7 @@ import express from "express";
 import { OnboardMemberService } from "../services/OnboardMember";
 import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
 import logger from "../../../utils/logger";
-import { validateName, validatePhone } from "../../../utils/validators";
+import { validateName, validatePhone, validateDenomination } from "../../../utils/validators";
 import { generateToken } from "../../../../config/authenticate";
 import { searchSpaceDriver } from "../../../../config/neo4j";
 import { CreateAccountController } from "../../Account/controllers/createAccount";
@@ -12,12 +12,14 @@ export async function OnboardMemberController(
   firstname: string,
   lastname: string,
   phone: string,
+  defaultDenom: string,
   requestId: string
 ): Promise<{ memberDashboard: any; token: string; defaultAccountID: string } | { error: string }> {
   logger.debug("Entering OnboardMemberController", {
     firstname,
     lastname,
     phone,
+    defaultDenom,
     requestId,
   });
 
@@ -26,13 +28,15 @@ export async function OnboardMemberController(
       firstname,
       lastname,
       phone,
+      defaultDenom,
       requestId,
     });
 
     const onboardedMember = await OnboardMemberService(
       firstname,
       lastname,
-      phone
+      phone,
+      defaultDenom
     );
 
     if (!onboardedMember.onboardedMemberID) {
@@ -40,6 +44,7 @@ export async function OnboardMemberController(
         firstname,
         lastname,
         phone,
+        defaultDenom,
         error: onboardedMember.message,
         requestId,
       });
@@ -51,12 +56,14 @@ export async function OnboardMemberController(
 
     logger.info("Member onboarded successfully", {
       memberID: onboardedMember.onboardedMemberID,
+      defaultDenom,
       requestId,
     });
 
     // Create default account for the new member
     logger.debug("Creating default account for new member", {
       memberID: onboardedMember.onboardedMemberID,
+      defaultDenom,
       requestId,
     });
     const defaultAccount = await CreateAccountService(
@@ -64,7 +71,7 @@ export async function OnboardMemberController(
       "PERSONAL_CONSUMPTION",
       `${firstname} ${lastname} Personal`,
       phone,
-      "USD",
+      defaultDenom,
       null,
       null
     );
@@ -72,6 +79,7 @@ export async function OnboardMemberController(
     if (!defaultAccount.accountID) {
       logger.warn("Failed to create default account for new member", {
         memberID: onboardedMember.onboardedMemberID,
+        defaultDenom,
         error: defaultAccount.message,
         requestId,
       });
@@ -81,6 +89,7 @@ export async function OnboardMemberController(
     logger.info("Default account created successfully", {
       memberID: onboardedMember.onboardedMemberID,
       accountID: defaultAccount.accountID,
+      defaultDenom,
       requestId,
     });
 
@@ -98,11 +107,12 @@ export async function OnboardMemberController(
       await session.close();
     }
 
-    logger.debug("Retrieving member dashboard", { phone, requestId });
+    logger.debug("Retrieving member dashboard", { phone, defaultDenom, requestId });
     const memberDashboard = await GetMemberDashboardByPhoneService(phone);
     if (!memberDashboard) {
       logger.warn("Could not retrieve member dashboard after onboarding", {
         phone,
+        defaultDenom,
         memberID: onboardedMember.onboardedMemberID,
         requestId,
       });
@@ -115,6 +125,7 @@ export async function OnboardMemberController(
 
     logger.info("Member dashboard retrieved successfully", {
       memberID: onboardedMember.onboardedMemberID,
+      defaultDenom,
       requestId,
     });
     logger.debug("Exiting OnboardMemberController successfully", { requestId });
@@ -126,6 +137,7 @@ export async function OnboardMemberController(
       firstname,
       lastname,
       phone,
+      defaultDenom,
       requestId,
     });
     logger.debug("Exiting OnboardMemberController with error", { requestId });
@@ -146,71 +158,45 @@ export async function onboardMemberExpressHandler(
   });
 
   try {
-    // Check for WHATSAPP_BOT_API_KEY header
-    const clientOrigin = req.headers["whatsapp_bot_api_key"];
-    const serverOrigin = process.env.WHATSAPP_BOT_API_KEY;
+    const { firstname, lastname, phone, defaultDenom } = req.body;
 
-    logger.debug("Checking WHATSAPP_BOT_API_KEY", {
-      clientOrigin,
-      serverOrigin,
-      requestId,
-    });
+    logger.debug("Validating input", { firstname, lastname, phone, defaultDenom, requestId });
 
-    if (!clientOrigin || clientOrigin !== serverOrigin) {
-      logger.warn("Unauthorized access attempt", { clientOrigin, requestId });
-      res.status(401).json({ message: "Unauthorized" });
-      logger.debug(
-        "Exiting onboardMemberExpressHandler with unauthorized error",
-        { requestId }
-      );
+    const firstnameValidation = validateName(firstname);
+    if (!firstnameValidation.isValid) {
+      logger.warn("Invalid first name", { firstname, message: firstnameValidation.message, requestId });
+      res.status(400).json({ message: firstnameValidation.message });
       return;
     }
 
-    const { firstname, lastname, phone } = req.body;
-
-    logger.debug("Validating input", { firstname, lastname, phone, requestId });
-
-    if (!validateName(firstname)) {
-      logger.warn("Invalid first name", { firstname, requestId });
-      res.status(400).json({
-        message: "First name must be between 3 and 50 characters long",
-      });
-      logger.debug(
-        "Exiting onboardMemberExpressHandler with invalid first name",
-        { requestId }
-      );
+    const lastnameValidation = validateName(lastname);
+    if (!lastnameValidation.isValid) {
+      logger.warn("Invalid last name", { lastname, message: lastnameValidation.message, requestId });
+      res.status(400).json({ message: lastnameValidation.message });
       return;
     }
 
-    if (!validateName(lastname)) {
-      logger.warn("Invalid last name", { lastname, requestId });
-      res.status(400).json({
-        message: "Last name must be between 3 and 50 characters long",
-      });
-      logger.debug(
-        "Exiting onboardMemberExpressHandler with invalid last name",
-        { requestId }
-      );
+    const phoneValidation = validatePhone(phone);
+    if (!phoneValidation.isValid) {
+      logger.warn("Invalid phone number", { phone, message: phoneValidation.message, requestId });
+      res.status(400).json({ message: phoneValidation.message });
       return;
     }
 
-    if (!validatePhone(phone)) {
-      logger.warn("Invalid phone number", { phone, requestId });
-      res.status(400).json({
-        message:
-          "Invalid phone number. Please provide a valid international phone number.",
-      });
-      logger.debug(
-        "Exiting onboardMemberExpressHandler with invalid phone number",
-        { requestId }
-      );
+    const denomValidation = validateDenomination(defaultDenom);
+    if (!denomValidation.isValid) {
+      logger.warn("Invalid default denomination", { defaultDenom, message: denomValidation.message, requestId });
+      res.status(400).json({ message: denomValidation.message });
       return;
     }
+
+    logger.debug("All validations passed", { requestId });
 
     logger.debug("Calling OnboardMemberController", {
       firstname,
       lastname,
       phone,
+      defaultDenom,
       requestId,
     });
 
@@ -218,6 +204,7 @@ export async function onboardMemberExpressHandler(
       firstname,
       lastname,
       phone,
+      defaultDenom,
       requestId
     );
 
@@ -227,6 +214,7 @@ export async function onboardMemberExpressHandler(
         firstname,
         lastname,
         phone,
+        defaultDenom,
         requestId,
       });
       res.status(400).json({ message: result.error });
@@ -235,6 +223,7 @@ export async function onboardMemberExpressHandler(
         firstname,
         lastname,
         phone,
+        defaultDenom,
         requestId,
       });
       res.status(201).json(result);
