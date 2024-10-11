@@ -40,14 +40,14 @@ echo "$changed_files"
 get_file_diff() {
     local file=$1
     log "Getting diff for file: $file"
-    git --no-pager diff -U3 --color=always --ignore-all-space --ignore-blank-lines "origin/$to_branch".."origin/$from_branch" -- "$file"
+    git --no-pager diff -U3 --no-color --ignore-all-space --ignore-blank-lines "origin/$to_branch".."origin/$from_branch" -- "$file" | cat
 }
 
 # Process each changed file
 for file in $changed_files; do
     log "Processing file: $file"
-    diff_output=$(get_file_diff "$file")
-    echo "$diff_output"
+    log "Diff for $file:"
+    get_file_diff "$file"
     echo "----------------------------------------"
 done
 
