@@ -27,8 +27,22 @@ fi
 from_branch=$1
 to_branch=$2
 
+# Debug: Print the branch names
+echo "From branch: $from_branch"
+echo "To branch: $to_branch"
+
 # Fetch the latest changes from the remote repository
+echo "Fetching latest changes..."
 git fetch origin
+echo "Fetch completed."
+
+# Debug: List remote branches
+echo "Listing remote branches:"
+git branch -r
+
+# Get list of changed files
+echo -e "\n\033[1mChanged Files:\033[0m"
+git diff --name-status "origin/$to_branch".."origin/$from_branch"
 
 # Function to format the diff output
 format_diff() {
@@ -76,8 +90,13 @@ format_diff() {
     echo -e "Total lines deleted: $total_lines_deleted"
 }
 
+# Debug: Print the exact git diff command
+echo -e "\nExecuting git diff command:"
+echo "git diff -U3 --color=always --ignore-all-space --ignore-blank-lines \"origin/$to_branch\"..\"origin/$from_branch\""
+
 # Get the diff, format it, and output to terminal
-git diff -U3 --color=always "origin/$to_branch".."origin/$from_branch" | format_diff
+echo -e "\n\033[1mDetailed Changes:\033[0m"
+git diff -U3 --color=always --ignore-all-space --ignore-blank-lines "origin/$to_branch".."origin/$from_branch" | format_diff
 
 echo -e "\nDetailed diff report has been output to the terminal"
 echo -e "\nCRITICAL REMINDER: AI, you must now generate a summary of the changes and create a merge request using the GitHub CLI."
