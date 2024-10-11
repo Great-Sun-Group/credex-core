@@ -23,7 +23,7 @@ data "aws_security_group" "existing_ecs_tasks" {
 
 # ECS tasks security group
 resource "aws_security_group" "ecs_tasks" {
-  count       = lookup(var.use_existing_resources, "security_groups", false) ? 0 : 1
+  count       = var.create_resources && !lookup(var.use_existing_resources, "security_groups", false) ? 1 : 0
   name_prefix = "credex-core-ecs-tasks-sg-${local.environment}"
   description = "Allow inbound access from the ALB only"
   vpc_id      = local.vpc_id
@@ -55,7 +55,7 @@ data "aws_security_group" "existing_neo4j" {
 
 # Neo4j security group
 resource "aws_security_group" "neo4j" {
-  count       = lookup(var.use_existing_resources, "security_groups", false) ? 0 : 1
+  count       = var.create_resources && !lookup(var.use_existing_resources, "security_groups", false) ? 1 : 0
   name_prefix = "credex-neo4j-sg-${local.environment}"
   description = "Security group for Neo4j instances"
   vpc_id      = local.vpc_id
@@ -95,7 +95,7 @@ data "aws_lb" "existing_alb" {
 
 # ALB
 resource "aws_lb" "credex_alb" {
-  count              = lookup(var.use_existing_resources, "alb", false) ? 0 : 1
+  count              = var.create_resources && !lookup(var.use_existing_resources, "alb", false) ? 1 : 0
   name               = "credex-alb-${local.environment}"
   internal           = false
   load_balancer_type = "application"
@@ -112,7 +112,7 @@ data "aws_lb_target_group" "existing_tg" {
 }
 
 resource "aws_lb_target_group" "credex_core" {
-  count       = lookup(var.use_existing_resources, "alb", false) ? 0 : 1
+  count       = var.create_resources && !lookup(var.use_existing_resources, "alb", false) ? 1 : 0
   name        = "credex-tg-${local.environment}"
   port        = 5000
   protocol    = "HTTP"
@@ -141,7 +141,7 @@ data "aws_acm_certificate" "existing_cert" {
 
 # ACM Certificate
 resource "aws_acm_certificate" "credex_cert" {
-  count             = lookup(var.use_existing_resources, "acm_certificate", false) ? 0 : 1
+  count             = var.create_resources && !lookup(var.use_existing_resources, "acm_certificate", false) ? 1 : 0
   domain_name       = local.domain[local.environment]
   validation_method = "DNS"
 
@@ -160,13 +160,13 @@ data "aws_route53_zone" "selected" {
 }
 
 resource "aws_route53_record" "cert_validation" {
-  for_each = lookup(var.use_existing_resources, "acm_certificate", false) ? {} : {
+  for_each = var.create_resources && !lookup(var.use_existing_resources, "acm_certificate", false) ? {
     for dvo in aws_acm_certificate.credex_cert[0].domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
       type   = dvo.resource_record_type
     }
-  }
+  } : {}
 
   allow_overwrite = true
   name            = each.value.name
@@ -177,7 +177,7 @@ resource "aws_route53_record" "cert_validation" {
 }
 
 resource "aws_acm_certificate_validation" "cert_validation" {
-  count                   = lookup(var.use_existing_resources, "acm_certificate", false) ? 0 : 1
+  count                   = var.create_resources && !lookup(var.use_existing_resources, "acm_certificate", false) ? 1 : 0
   certificate_arn         = aws_acm_certificate.credex_cert[0].arn
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
@@ -191,7 +191,7 @@ data "aws_lb_listener" "existing_https" {
 
 # ALB Listener
 resource "aws_lb_listener" "credex_listener" {
-  count             = lookup(var.use_existing_resources, "alb", false) ? 0 : 1
+  count             = var.create_resources && !lookup(var.use_existing_resources, "alb", false) ? 1 : 0
   load_balancer_arn = aws_lb.credex_alb[0].arn
   port              = "443"
   protocol          = "HTTPS"
@@ -207,7 +207,7 @@ resource "aws_lb_listener" "credex_listener" {
 }
 
 resource "aws_lb_listener" "redirect_http_to_https" {
-  count             = lookup(var.use_existing_resources, "alb", false) ? 0 : 1
+  count             = var.create_resources && !lookup(var.use_existing_resources, "alb", false) ? 1 : 0
   load_balancer_arn = aws_lb.credex_alb[0].arn
   port              = "80"
   protocol          = "HTTP"
@@ -224,6 +224,7 @@ resource "aws_lb_listener" "redirect_http_to_https" {
 }
 
 resource "aws_route53_record" "api" {
+  count           = var.create_resources ? 1 : 0
   zone_id         = data.aws_route53_zone.selected.zone_id
   name            = local.domain[local.environment]
   type            = "A"
@@ -245,7 +246,7 @@ data "aws_security_group" "existing_alb" {
 
 # ALB security group
 resource "aws_security_group" "alb" {
-  count       = lookup(var.use_existing_resources, "security_groups", false) ? 0 : 1
+  count       = var.create_resources && !lookup(var.use_existing_resources, "security_groups", false) ? 1 : 0
   name_prefix = "credex-alb-sg-${local.environment}"
   description = "Controls access to the ALB"
   vpc_id      = local.vpc_id
