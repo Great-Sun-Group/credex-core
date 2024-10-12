@@ -156,6 +156,8 @@ jobs:
       - name: Wipe Terraform State
         run: |
           cd terraform
+          # Initialize Terraform to ensure plugins are installed
+          terraform init -input=false
           # Remove local state files and directories
           rm -rf terraform.tfstate*
           rm -rf .terraform
@@ -169,6 +171,7 @@ jobs:
       - name: Verify Wipe
         run: |
           cd terraform
+          terraform init -input=false
           if terraform show; then
             echo "Error: Resources still exist after wipe"
             exit 1
