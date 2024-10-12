@@ -48,6 +48,18 @@ jobs:
             echo "Wiped SSM parameter: $param"
           done
 
+      - name: Unset Secret TF_VAR Environment Variables
+        run: |
+          unset TF_VAR_jwt_secret
+          unset TF_VAR_whatsapp_bot_api_key
+          unset TF_VAR_open_exchange_rates_api
+          unset TF_VAR_neo4j_ledger_space_user
+          unset TF_VAR_neo4j_ledger_space_pass
+          unset TF_VAR_neo4j_search_space_user
+          unset TF_VAR_neo4j_search_space_pass
+          unset TF_VAR_neo4j_enterprise_license
+          unset TF_VAR_neo4j_public_key
+
       - name: Terraform Destroy
         run: |
           cd terraform
