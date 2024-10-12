@@ -41,12 +41,13 @@ jobs:
           terraform init
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
 
-      - name: Wipe SSM Parameters
+      - name: Remove GitHub Secrets for Neo4j Bolt URLs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          aws ssm get-parameters-by-path --path "/credex/${{ env.ENVIRONMENT }}/" --recursive --query "Parameters[].Name" --output text | tr '\t' '\n' | while read param; do
-            aws ssm delete-parameter --name "$param" || true
-            echo "Wiped SSM parameter: $param"
-          done
+          gh secret remove NEO4J_LEDGER_SPACE_BOLT_URL || true
+          gh secret remove NEO4J_SEARCH_SPACE_BOLT_URL || true
+          echo "Removed Neo4j Bolt URL secrets from GitHub"
 
       - name: Terraform Destroy
         env:

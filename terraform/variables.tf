@@ -1,7 +1,32 @@
+# Hardcoded variables
 variable "aws_region" {
   description = "The AWS region to deploy to"
   type        = string
   default     = "af-south-1"
+}
+
+variable "domain_base" {
+  description = "The base domain for all environments"
+  type        = string
+  default     = "mycredex.app"
+}
+
+variable "subdomain_development" {
+  description = "The subdomain for the development environment"
+  type        = string
+  default     = "dev.api"
+}
+
+variable "subdomain_staging" {
+  description = "The subdomain for the staging environment"
+  type        = string
+  default     = "stage.api"
+}
+
+variable "subdomain_production" {
+  description = "The subdomain for the production environment"
+  type        = string
+  default     = "api"
 }
 
 variable "environment" {
@@ -93,17 +118,23 @@ variable "use_existing_resources" {
 variable "neo4j_ledger_space_bolt_url" {
   description = "Neo4j LedgerSpace Bolt URL"
   type        = string
-  default     = ""
+  sensitive   = true
 }
 
 variable "neo4j_search_space_bolt_url" {
   description = "Neo4j SearchSpace Bolt URL"
   type        = string
-  default     = ""
+  sensitive   = true
 }
 
 locals {
   environment = var.environment
+
+  domain = {
+    development = "${var.subdomain_development}.${var.domain_base}"
+    staging     = "${var.subdomain_staging}.${var.domain_base}"
+    production  = "${var.subdomain_production}.${var.domain_base}"
+  }
 
   # Neo4j instance count compliant with the Startup Software License Agreement
   neo4j_instance_count = {
@@ -117,12 +148,6 @@ locals {
     development = "t3.xlarge"  # 4 vCPU, 16 GB RAM
     staging     = "r5.2xlarge" # 8 vCPU, 64 GB RAM
     production  = "r5.12xlarge" # 48 vCPU, 384 GB RAM (will be limited to 24 cores in user_data)
-  }
-
-  domain = {
-    development = "dev.api.mycredex.app"
-    staging     = "stage.api.mycredex.app"
-    production  = "api.mycredex.app"
   }
 
   log_level = {

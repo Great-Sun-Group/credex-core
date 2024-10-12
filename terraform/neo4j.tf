@@ -37,13 +37,26 @@ data "aws_instances" "neo4j" {
   }
 }
 
+resource "random_string" "neo4j_password" {
+  count   = var.create_resources ? min(local.neo4j_instance_count[local.environment], local.max_production_instances) : 0
+  length  = 16
+  special = true
+}
+
+resource "random_string" "neo4j_username_suffix" {
+  count   = var.create_resources ? min(local.neo4j_instance_count[local.environment], local.max_production_instances) : 0
+  length  = 6
+  special = false
+  upper   = false
+}
+
 resource "aws_instance" "neo4j" {
-  count         = var.create_resources && !lookup(var.use_existing_resources, "neo4j_instances", false) ? min(local.neo4j_instance_count[local.environment], local.max_production_instances) : 0
+  count         = var.create_resources ? min(local.neo4j_instance_count[local.environment], local.max_production_instances) : 0
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = local.compliant_instance_types[local.environment]
   key_name      = data.aws_key_pair.neo4j_key_pair.key_name
 
-  vpc_security_group_ids = [lookup(var.use_existing_resources, "security_groups", false) ? data.aws_security_group.existing_neo4j[0].id : aws_security_group.neo4j[0].id]
+  vpc_security_group_ids = [aws_security_group.neo4j[0].id]
   subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]
 
   tags = merge(local.common_tags, {
@@ -53,7 +66,25 @@ resource "aws_instance" "neo4j" {
 
   user_data = <<-EOF
               #!/bin/bash
-              # ... (keep the existing user_data script)
+              # Install Neo4j
+              wget -O - https://debian.neo4j.com/neotechnology.gpg.key | sudo apt-key add -
+              echo 'deb https://debian.neo4j.com stable latest' | sudo tee -a /etc/apt/sources.list.d/neo4j.list
+              sudo apt-get update
+              sudo apt-get install -y neo4j-enterprise
+
+              # Configure Neo4j
+              sudo sed -i 's/#dbms.default_listen_address=0.0.0.0/dbms.default_listen_address=0.0.0.0/' /etc/neo4j/neo4j.conf
+              sudo sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
+              
+              # Set Neo4j password
+              sudo neo4j-admin set-initial-password "${random_string.neo4j_password[count.index].result}"
+
+              # Set Neo4j Enterprise License
+              echo "${var.neo4j_enterprise_license}" | sudo tee /etc/neo4j/neo4j.license
+
+              # Start Neo4j
+              sudo systemctl enable neo4j
+              sudo systemctl start neo4j
               EOF
 
   root_block_device {
@@ -66,34 +97,43 @@ resource "aws_instance" "neo4j" {
     prevent_destroy = false
     ignore_changes  = [ami, user_data]
   }
-
-  depends_on = [null_resource.update_ssm_params]
 }
 
-resource "aws_ssm_parameter" "neo4j_bolt_url" {
-  count = var.create_resources && !lookup(var.use_existing_resources, "neo4j_instances", false) ? min(local.neo4j_instance_count[local.environment], local.max_production_instances) : 0
-  name  = "/credex/${local.environment}/neo4j_${count.index == 0 ? "ledger" : "search"}_space_bolt_url"
-  type  = "String"
-  value = "bolt://${aws_instance.neo4j[count.index].private_ip}:7687"
+resource "aws_secretsmanager_secret" "neo4j_credentials" {
+  count = var.create_resources ? min(local.neo4j_instance_count[local.environment], local.max_production_instances) : 0
+  name  = "neo4j-credentials-${local.environment}-${count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
+}
 
-  overwrite = true
+resource "aws_secretsmanager_secret_version" "neo4j_credentials" {
+  count         = var.create_resources ? min(local.neo4j_instance_count[local.environment], local.max_production_instances) : 0
+  secret_id     = aws_secretsmanager_secret.neo4j_credentials[count.index].id
+  secret_string = jsonencode({
+    username = "neo4j${random_string.neo4j_username_suffix[count.index].result}"
+    password = random_string.neo4j_password[count.index].result
+    bolt_url = "bolt://${aws_instance.neo4j[count.index].private_ip}:7687"
+  })
 }
 
 output "neo4j_instance_ips" {
-  value = var.create_resources ? (
-    lookup(var.use_existing_resources, "neo4j_instances", false) ? data.aws_instances.neo4j.private_ips : aws_instance.neo4j[*].private_ip
-  ) : []
+  value       = aws_instance.neo4j[*].private_ip
   description = "Private IPs of Neo4j instances"
 }
 
 output "neo4j_bolt_urls" {
-  value = var.create_resources ? (
-    lookup(var.use_existing_resources, "neo4j_instances", false) ? [
-      data.aws_ssm_parameter.existing_params["neo4j_ledger_space_bolt_url"].value,
-      data.aws_ssm_parameter.existing_params["neo4j_search_space_bolt_url"].value
-    ] : aws_ssm_parameter.neo4j_bolt_url[*].value
-  ) : []
+  value = [for instance in aws_instance.neo4j : "bolt://${instance.private_ip}:7687"]
   description = "Neo4j Bolt URLs"
+  sensitive   = true
+}
+
+output "neo4j_ledger_space_bolt_url" {
+  value       = length(aws_instance.neo4j) > 0 ? "bolt://${aws_instance.neo4j[0].private_ip}:7687" : ""
+  description = "Neo4j Ledger Space Bolt URL"
+  sensitive   = true
+}
+
+output "neo4j_search_space_bolt_url" {
+  value       = length(aws_instance.neo4j) > 1 ? "bolt://${aws_instance.neo4j[1].private_ip}:7687" : ""
+  description = "Neo4j Search Space Bolt URL"
   sensitive   = true
 }
 

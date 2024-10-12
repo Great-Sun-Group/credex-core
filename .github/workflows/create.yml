@@ -8,16 +8,9 @@ jobs:
     name: Initial AWS Deployment
     runs-on: ubuntu-latest
     env:
-      TF_VAR_aws_region: af-south-1
-      TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
-      TF_VAR_whatsapp_bot_api_key: ${{ secrets.WHATSAPP_BOT_API_KEY }}
-      TF_VAR_open_exchange_rates_api: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
-      TF_VAR_neo4j_ledger_space_user: ${{ secrets.NEO4J_LEDGER_SPACE_USER }}
-      TF_VAR_neo4j_ledger_space_pass: ${{ secrets.NEO4J_LEDGER_SPACE_PASS }}
-      TF_VAR_neo4j_search_space_user: ${{ secrets.NEO4J_SEARCH_SPACE_USER }}
-      TF_VAR_neo4j_search_space_pass: ${{ secrets.NEO4J_SEARCH_SPACE_PASS }}
+      TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
       TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
-      TF_VAR_neo4j_public_key: ${{ secrets.NEO4J_PUBLIC_KEY }}
+      TF_VAR_open_exchange_rates_api: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
 
     steps:
       - name: Checkout code
@@ -32,6 +25,11 @@ jobs:
           else
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
+
+      - name: Generate Secrets
+        run: |
+          chmod +x .github/workflows/generate_secrets.sh
+          ./.github/workflows/generate_secrets.sh ${{ env.ENVIRONMENT }}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -60,9 +58,6 @@ jobs:
               "aws_security_group")
                 aws ec2 describe-security-groups --filters "Name=group-name,Values=$resource_name" --query 'SecurityGroups[0].GroupId' --output text | grep -q .
                 ;;
-              "aws_ssm_parameter")
-                aws ssm get-parameter --name "$resource_name" --query 'Parameter.Name' --output text 2>/dev/null | grep -q .
-                ;;
               "aws_instance")
                 aws ec2 describe-instances --filters "Name=tag:Name,Values=$resource_name" "Name=instance-state-name,Values=running" --query 'Reservations[*].Instances[*].[InstanceId]' --output text | grep -q .
                 ;;
@@ -82,88 +77,27 @@ jobs:
             esac
           }
           
-          # Initialize use_existing_resources map
-          declare -A use_existing_resources=(
-            ["vpc"]=false
-            ["subnets"]=false
-            ["security_groups"]=false
-            ["ecs_cluster"]=false
-            ["ecs_service"]=false
-            ["ecs_task_definition"]=false
-            ["alb"]=false
-            ["acm_certificate"]=false
-            ["route53_record"]=false
-            ["neo4j_instances"]=false
-            ["ssm_parameters"]=false
-          )
-          
           # Check for existing resources
           echo "Checking for existing resources..."
           
-          if resource_exists "aws_acm_certificate" "${TF_VAR_domain}"; then
-            echo "ACM Certificate exists"
-            use_existing_resources["acm_certificate"]=true
-          fi
-          
-          if resource_exists "aws_security_group" "credex-alb-sg-${{ env.ENVIRONMENT }}"; then
-            echo "ALB Security Group exists"
-            use_existing_resources["security_groups"]=true
-          fi
-          
-          if resource_exists "aws_security_group" "credex-core-ecs-tasks-sg-${{ env.ENVIRONMENT }}"; then
-            echo "ECS Tasks Security Group exists"
-            use_existing_resources["security_groups"]=true
-          fi
-          
-          if resource_exists "aws_security_group" "credex-neo4j-sg-${{ env.ENVIRONMENT }}"; then
-            echo "Neo4j Security Group exists"
-            use_existing_resources["security_groups"]=true
-          fi
-          
-          if resource_exists "aws_ecs_cluster" "credex-cluster-${{ env.ENVIRONMENT }}"; then
-            echo "ECS Cluster exists"
-            use_existing_resources["ecs_cluster"]=true
-          fi
-          
-          if resource_exists "aws_ecs_service" "credex-core-service-${{ env.ENVIRONMENT }}"; then
-            echo "ECS Service exists"
-            use_existing_resources["ecs_service"]=true
-            use_existing_resources["ecs_task_definition"]=true
-          fi
-          
-          if resource_exists "aws_lb" "credex-alb-${{ env.ENVIRONMENT }}"; then
-            echo "ALB exists"
-            use_existing_resources["alb"]=true
+          if resource_exists "aws_acm_certificate" "${TF_VAR_domain}" || \
+             resource_exists "aws_security_group" "credex-alb-sg-${{ env.ENVIRONMENT }}" || \
+             resource_exists "aws_security_group" "credex-core-ecs-tasks-sg-${{ env.ENVIRONMENT }}" || \
+             resource_exists "aws_security_group" "credex-neo4j-sg-${{ env.ENVIRONMENT }}" || \
+             resource_exists "aws_ecs_cluster" "credex-cluster-${{ env.ENVIRONMENT }}" || \
+             resource_exists "aws_ecs_service" "credex-core-service-${{ env.ENVIRONMENT }}" || \
+             resource_exists "aws_lb" "credex-alb-${{ env.ENVIRONMENT }}"; then
+            echo "Error: Some resources already exist. This script is intended for initial deployment only."
+            exit 1
           fi
           
           # Check for Neo4j instances
           neo4j_instance_count=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-${{ env.ENVIRONMENT }}-*" "Name=instance-state-name,Values=running" --query 'length(Reservations[].Instances[])' --output text)
           
           if [ "$neo4j_instance_count" -gt 0 ]; then
-            echo "Neo4j instances exist: $neo4j_instance_count found"
-            use_existing_resources["neo4j_instances"]=true
-          
-            # Check if we're exceeding the maximum allowed instances
-            max_instances=3
-            if [ "${{ env.ENVIRONMENT }}" == "development" ]; then
-              max_instances=6
-            fi
-          
-            if [ "$neo4j_instance_count" -gt "$max_instances" ]; then
-              echo "Warning: The number of existing Neo4j instances ($neo4j_instance_count) exceeds the maximum allowed ($max_instances) for the ${{ env.ENVIRONMENT }} environment."
-            fi
+            echo "Error: Neo4j instances already exist. This script is intended for initial deployment only."
+            exit 1
           fi
-          
-          if resource_exists "aws_ssm_parameter" "/credex/${{ env.ENVIRONMENT }}/jwt_secret"; then
-            echo "SSM parameters exist"
-            use_existing_resources["ssm_parameters"]=true
-          fi
-          
-          # Convert the bash associative array to a JSON string
-          use_existing_resources_json=$(declare -p use_existing_resources | sed -e "s/declare -A use_existing_resources=//" -e "s/([^)]*)//" | jq -R 'split(" ")| map(split("="))|from_entries')
-          
-          echo "TF_VAR_use_existing_resources=$use_existing_resources_json" >> $GITHUB_ENV
-          echo "use_existing_resources=$use_existing_resources_json" >> $GITHUB_OUTPUT
 
       - name: Terraform Init and Workspace Selection
         run: |
@@ -175,7 +109,7 @@ jobs:
         id: plan
         run: |
           cd terraform
-          terraform plan -out=tfplan -var="create_resources=true"
+          terraform plan -out=tfplan
 
       - name: Terraform Apply
         run: |
@@ -190,22 +124,31 @@ jobs:
           terraform output -json > tf_outputs.json
           echo "tf_outputs=$(cat tf_outputs.json | jq -c .)" >> $GITHUB_OUTPUT
 
-      - name: Save Neo4j URLs to AWS Parameter Store
+      - name: Update ECS Task Definition
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
-          LEDGER_BOLT_URL=$(echo $TF_OUTPUTS | jq -r '.neo4j_ledger_space_bolt_url.value')
-          SEARCH_BOLT_URL=$(echo $TF_OUTPUTS | jq -r '.neo4j_search_space_bolt_url.value')
-          
-          aws ssm put-parameter --name "/${{ env.ENVIRONMENT }}/neo4j_ledger_space_bolt_url" --value "$LEDGER_BOLT_URL" --type "SecureString" --overwrite
-          aws ssm put-parameter --name "/${{ env.ENVIRONMENT }}/neo4j_search_space_bolt_url" --value "$SEARCH_BOLT_URL" --type "SecureString" --overwrite
+          # Update ECS task definition
+          TASK_DEF=$(aws ecs describe-task-definition --task-definition credex-core-${{ env.ENVIRONMENT }} --query taskDefinition)
+          NEW_TASK_DEF=$(echo $TASK_DEF | jq '.containerDefinitions[0].environment += [
+            {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}"},
+            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_USER }}"},
+            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_USER }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}"},
+            {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"}
+          ]')
+          echo $NEW_TASK_DEF > new-task-def.json
+          aws ecs register-task-definition --cli-input-json file://new-task-def.json
 
       - name: Deploy Application
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
           echo "Deploying application to ${{ env.ENVIRONMENT }} from branch ${{ github.ref_name }}"
-          # Add your deployment commands here
+          # Update ECS service to use the new task definition
+          aws ecs update-service --cluster credex-cluster-${{ env.ENVIRONMENT }} --service credex-core-service-${{ env.ENVIRONMENT }} --task-definition credex-core-${{ env.ENVIRONMENT }}
 
       - name: Run Post-Deployment Tests
         env:

@@ -22,15 +22,8 @@ The deployment process is managed through a unified GitHub Actions workflow, whi
 - Terraform Configuration:
   - `terraform/main.tf`: Main Terraform configuration including Neo4j-related resources
   - `terraform/neo4j.tf`: Specific Terraform configuration for Neo4j instances
-  - `terraform/ssm.tf`: AWS Systems Manager configuration
   - `terraform/networking.tf`: Network-related resources configuration
   - `terraform/variables.tf`: Terraform variables definition
-
-- Deployment Scripts:
-  - `terraform/import_state.sh`: Script for importing existing resources into Terraform state
-  - `terraform/pre_deployment_check.sh`: Pre-deployment checks script
-  - `terraform/manage_workspaces.sh`: Terraform workspace management script
-  - `terraform/cleanup_orphaned_resources.sh`: Script for cleaning up orphaned resources
 
 - Other Important Files:
   - `terraform/task-definition.json`: ECS task definition template
@@ -39,23 +32,17 @@ The deployment process is managed through a unified GitHub Actions workflow, whi
 
 ## Terraform Deployment Process
 
-Our Terraform deployment process has been improved to handle existing, orphaned, or partial resources more effectively. Key features of the updated process include:
+The Terraform deployment process is designed to create and manage the necessary AWS resources for the credex-core application. Key aspects of this process include:
 
-1. **Conditional Resource Creation**: The deployment process uses a `use_existing_resources` variable to determine whether to use existing resources or create new ones. This applies to security groups, ACM certificates, SSM parameters, and Neo4j instances.
+1. **Environment-specific Configurations**: Separate Terraform workspaces are used for development, staging, and production environments.
 
-2. **Terraform State Import**: A script (`import_state.sh`) has been implemented to import existing resources into the Terraform state before applying changes.
+2. **Resource Creation**: The process creates various AWS resources including ECS clusters, EC2 instances for Neo4j, security groups, and networking components.
 
-3. **Pre-deployment Checks**: A pre-deployment check script (`pre_deployment_check.sh`) runs automatically before each deployment to check for existing resources and run the import script if necessary.
+3. **Neo4j Instance Management**: Terraform manages the creation and configuration of Neo4j instances, including the application of the Enterprise license.
 
-4. **Terraform Workspaces**: A management script (`manage_workspaces.sh`) has been implemented to create and select the appropriate workspace for each environment (development, staging, production).
+4. **Secrets Management**: Sensitive information such as database credentials and API keys are managed through GitHub Secrets and injected into the ECS task definition.
 
-5. **Cleanup Process**: An optional cleanup step (`cleanup_orphaned_resources.sh`) can be run after successful deployment to identify and remove orphaned resources.
-
-To use these features:
-
-- For automatic deployments (pushes to `stage` or `prod` branches), the `use_existing_resources` flag is set to `true` by default.
-- For manual deployments, you can choose whether to use existing resources and whether to run the cleanup process when triggering the workflow through the GitHub Actions interface.
-- The pre-deployment checks, workspace management, and state import processes run automatically as part of every deployment.
+5. **Output Management**: After resource creation, important information like Neo4j Bolt URLs are output and stored as GitHub Secrets for use in the application.
 
 ## Manual Terraform Management
 
@@ -63,12 +50,10 @@ If you need to manage Terraform manually, follow these steps:
 
 1. Navigate to the `terraform` directory.
 2. Run `terraform init` to initialize the Terraform working directory.
-3. Use the `manage_workspaces.sh` script to select the appropriate workspace for your environment.
+3. Select the appropriate workspace for your environment (e.g., `terraform workspace select production`).
 4. Review and modify the `main.tf` file if necessary.
 5. Run `terraform plan` to see proposed changes.
-6. If needed, use the `import_state.sh` script to import existing resources.
-7. Run `terraform apply` to create or update the necessary AWS resources.
-8. Optionally, run the `cleanup_orphaned_resources.sh` script to clean up any orphaned resources.
+6. Run `terraform apply` to create or update the necessary AWS resources.
 
 ## ECS Task Definition
 
@@ -94,61 +79,75 @@ The project uses Neo4j Enterprise Edition for all environments, managed through 
 
 1. Production Environment:
    - Two separate instances: LedgerSpace and SearchSpace
-   - Deployed on AWS EC2 instances (m5.medium)
+   - Deployed on AWS EC2 instances (r5.12xlarge)
 
 2. Staging Environment:
-   - One instance (combined LedgerSpace and SearchSpace)
-   - Deployed on AWS EC2 instance (t3.medium)
+   - Two instances: LedgerSpace and SearchSpace
+   - Deployed on AWS EC2 instances (r5.2xlarge)
 
 3. Development Environment:
-   - Up to six instances as needed
-   - Deployed on AWS EC2 instances (t3.medium)
+   - Two instances: LedgerSpace and SearchSpace
+   - Deployed on AWS EC2 instances (t3.xlarge)
 
 Neo4j instances are defined and deployed automatically through the Terraform configuration in `terraform/main.tf` and `terraform/neo4j.tf`.
 
 Key aspects of Neo4j deployment:
-- The Neo4j Enterprise license is stored as a GitHub secret (`NEO4J_ENTERPRISE_LICENSE`).
+- The Neo4j Enterprise license is stored as a GitHub secret (`NEO4J_ENTERPRISE_LICENSE`) and must be inputted manually.
 - Deployment workflows retrieve the license and pass it to Terraform.
 - Terraform provisions Neo4j instances and applies the license.
-- A post-deployment configuration step updates the AWS Systems Manager Parameter Store with the actual Neo4j instance details.
+- Neo4j bolt URLs are generated during deployment and stored as GitHub secrets.
 
 ### Neo4j Access Management
 
 The deployment process manages several key components for secure Neo4j access:
 
-1. Neo4j Public Key:
-   - Purpose: Used for SSH access to the EC2 instances running Neo4j.
-   - Storage: AWS Systems Manager Parameter Store
-   - Usage in Terraform: 
-     - Retrieved from SSM and used to create an EC2 Key Pair
-     - Associated with Neo4j EC2 instances for SSH access
-   - Generation and Management:
-     - To generate a new SSH key pair, use the following command:
-       ```
-       ssh-keygen -t rsa -b 2048 -C "neo4j_access_key" -f ./neo4j_key
-       ```
-     - This will create two files: `neo4j_key` (private key) and `neo4j_key.pub` (public key)
-     - Store the content of `neo4j_key.pub` in the AWS Systems Manager Parameter Store
-     - Keep the `neo4j_key` file secure and use it for SSH access to the Neo4j instances
-     - Update the parameter in AWS SSM whenever you need to rotate the key
-
-2. Neo4j Username and Password:
+1. Neo4j Usernames:
    - Purpose: Used for authentication to the Neo4j database.
-   - Storage: Defined as separate variables for LedgerSpace and SearchSpace in AWS Systems Manager Parameter Store
-   - Usage in Terraform: 
-     - Retrieved from SSM and used in the EC2 user data script to set up and configure the Neo4j database
-     - Separate credentials for LedgerSpace and SearchSpace instances
+   - Generation: Created during the deployment process as "neo4j" followed by 6 random digits.
+   - Storage: Generated and stored as GitHub Secrets for each environment.
+
+2. Neo4j Passwords:
+   - Purpose: Used for authentication to the Neo4j database.
+   - Generation: Secure, random passwords created during the deployment process.
+   - Storage: Generated and stored as GitHub Secrets for each environment.
 
 3. Neo4j Bolt URL:
    - Purpose: Used for connecting to the Neo4j database.
-   - Generation: Created during the deployment process, not set in advance
-   - Storage: AWS Systems Manager Parameter Store
-   - Usage: 
-     - Not directly used in EC2 setup
-     - Retrieved from SSM for application configuration and database connections
-     - No need to store as environment secrets
+   - Generation: Created during the deployment process based on the EC2 instance's private IP.
+   - Storage: Generated and stored as GitHub Secrets for each environment.
 
-These components are managed securely through AWS Systems Manager Parameter Store, ensuring they are not exposed in the codebase while still allowing for automated deployment and secure access to Neo4j instances.
+4. SSH Key Pair:
+   - Purpose: Used for secure SSH access to the EC2 instances running Neo4j.
+   - Generation: Created during the initial deployment process.
+   - Storage: 
+     - Public key: Stored in AWS EC2 Key Pairs.
+     - Private key: Stored as a GitHub Secret for secure access.
+
+These components are generated during the initial deployment process for both LedgerSpace and SearchSpace databases. The deployment process will output these secrets once for secure manual storage, ensuring they are not lost. For subsequent deployments, these secrets are retrieved from the appropriate GitHub environment.
+
+### Additional Managed Variables
+
+The following variables are also managed through the deployment process:
+
+1. Neo4j Enterprise License:
+   - Purpose: Enables Enterprise features of Neo4j.
+   - Storage: Stored as a GitHub Secret, manually inputted.
+
+2. AWS Region:
+   - Purpose: Regional AWS cluster to deploy to.
+   - Value: Stored as a GitHub Secret, manually inputted.
+
+3. Domain Name:
+   - Purpose: Used for configuring DNS and SSL certificates.
+   - Value: Hardcoded based on the deployment environment.
+
+4. External Service Credentials:
+   - Purpose: Authentication for any external services integrated with the application.
+   - Storage: Stored as GitHub Secrets.
+
+Usage in Terraform and Deployment:
+- All these secrets and variables are retrieved from GitHub Secrets and used in the Terraform scripts and EC2 user data to set up and configure the Neo4j databases and associated infrastructure.
+- Separate credentials and configurations are maintained for LedgerSpace and SearchSpace instances, as well as for different environments (development, staging, production).
 
 ## Neo4j License Management
 
@@ -160,13 +159,13 @@ We use a Neo4j Enterprise Startup Edition license with the following limitations
 Our current allocation:
 - Production: 2 instances (1 LedgerSpace, 1 SearchSpace)
 - Staging: 2 instances (1 LedgerSpace, 1 SearchSpace)
-- Development: 2 instances (for flexibility in development)
+- Development: 2 instances (1 LedgerSpace, 1 SearchSpace)
 
 License management process:
 1. The license is stored as a secret in GitHub Actions (`NEO4J_ENTERPRISE_LICENSE`).
 2. During deployment, the license is retrieved and applied to Neo4j instances.
 3. Instance counts and specifications are enforced through Terraform configurations in `terraform/neo4j.tf` and `terraform/variables.tf`.
-4. Pre-deployment checks (`terraform/pre_deployment_check.sh`) verify compliance with license limitations.
+4. Pre-deployment checks verify compliance with license limitations.
 5. Regular audits are conducted to ensure ongoing compliance.
 
 To update the license:
@@ -209,19 +208,19 @@ Remember to always review the Terraform plan carefully before applying changes, 
 
 ## Post-Deployment Configuration
 
-A `null_resource` in `terraform/main.tf` is used to update the AWS Systems Manager parameters with the actual Neo4j instance details after they are created. This step is crucial for managing the Bolt URLs and ensuring that the correct Neo4j connection information is available for the application to use.
+A `null_resource` in `terraform/main.tf` is used to update the GitHub Secrets with the actual Neo4j instance details after they are created. This step is crucial for managing the Bolt URLs and ensuring that the correct Neo4j connection information is available for the application to use.
 
 The post-deployment configuration process:
 1. Retrieves the actual Neo4j instance details (e.g., private IP addresses) from the newly created EC2 instances.
 2. Constructs the Neo4j Bolt URLs using these IP addresses.
-3. Updates the AWS Systems Manager Parameter Store with the new Bolt URLs.
+3. Updates the GitHub Secrets with the new Bolt URLs.
 4. Ensures that the application can access the correct Neo4j connection information for both LedgerSpace and SearchSpace.
 
 This step is crucial for maintaining the correct configuration across deployments and updates, especially for dynamically generated values like Bolt URLs.
 
 ## Accessing Neo4j Connection Details in the Application
 
-The application retrieves Neo4j connection details (including Bolt URLs) from AWS Systems Manager Parameter Store. This is configured in the ECS task definition, where the following environment variables are set:
+The application retrieves Neo4j connection details (including Bolt URLs) from environment variables set in the ECS task definition. These environment variables are populated with values from GitHub Secrets:
 
 - `NEO_4J_LEDGER_SPACE_BOLT_URL`
 - `NEO_4J_LEDGER_SPACE_USER`
@@ -230,7 +229,7 @@ The application retrieves Neo4j connection details (including Bolt URLs) from AW
 - `NEO_4J_SEARCH_SPACE_USER`
 - `NEO_4J_SEARCH_SPACE_PASS`
 
-These variables are populated with values from the corresponding SSM parameters, allowing the application to securely access the Neo4j connection details without the need for environment secrets.
+These variables allow the application to securely access the Neo4j connection details without the need for hardcoded values.
 
 ## Testing and Validation
 
@@ -252,10 +251,9 @@ By following these infrastructure management practices, you can ensure that your
 
 ## Handling of Bolt URLs in Different Environments
 
-- In staging and production environments, Bolt URLs are dynamically generated during the deployment process and stored in AWS Systems Manager Parameter Store.
-- In development environments, where database creation is not done with Infrastructure as Code (IaC), Bolt URLs are present from the first run.
-- The application configuration (`config/config.ts`) handles both scenarios, using the SSM-provided URLs when available and falling back to a default local URL if not provided.
-- Importantly, Bolt URLs are not passed as secrets or environment variables in the GitHub Actions workflow. Instead, they are generated and managed entirely within the AWS environment during deployment.
+- In all environments, Bolt URLs are dynamically generated during the deployment process and stored as GitHub Secrets.
+- The application configuration (`config/config.ts`) retrieves these URLs from environment variables set in the ECS task definition.
+- For local development, developers can set these environment variables manually or use a local `.env` file.
 
 ## AWS Credentials and Permissions
 
