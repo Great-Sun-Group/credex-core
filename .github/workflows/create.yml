@@ -40,46 +40,39 @@ jobs:
           echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
           echo "Setting environment to: ${{ env.ENVIRONMENT }}"
 
-      - name: Set Environment Variables
-        env:
-          GITHUB_ENV: ${{ env.ENVIRONMENT }}
-        run: |
-          echo "AWS_REGION=${{ secrets[format('{0}_AWS_REGION', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
-          echo "TF_VAR_open_exchange_rates_api=${{ secrets[format('{0}_OPEN_EXCHANGE_RATES_API', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_enterprise_license=${{ secrets[format('{0}_NEO4J_ENTERPRISE_LICENSE', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
-          echo "TF_VAR_jwt_secret=${{ secrets[format('{0}_JWT_SECRET', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_ledger_space_user=${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_USER', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_ledger_space_pass=${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_PASS', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_search_space_user=${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_USER', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_search_space_pass=${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_PASS', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_public_key=${{ secrets[format('{0}_NEO4J_PUBLIC_KEY', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Debug - Print Environment Variables
         run: |
           echo "NODE_ENV: ${{ env.NODE_ENV }}"
           echo "TF_VAR_environment: ${{ env.TF_VAR_environment }}"
-          echo "GitHub Environment: ${{ env.GITHUB_ENV }}"
-          echo "AWS_REGION: ${{ env.AWS_REGION }}"
-          echo "OPEN_EXCHANGE_RATES_API is set: ${{ env.TF_VAR_open_exchange_rates_api != '' }}"
-          echo "NEO4J_ENTERPRISE_LICENSE is set: ${{ env.TF_VAR_neo4j_enterprise_license != '' }}"
+          echo "GitHub Environment: ${{ env.ENVIRONMENT }}"
+          echo "AWS_REGION: ${{ secrets.AWS_REGION }}"
+          echo "OPEN_EXCHANGE_RATES_API is set: ${{ secrets.OPEN_EXCHANGE_RATES_API != '' }}"
+          echo "NEO4J_ENTERPRISE_LICENSE is set: ${{ secrets.NEO4J_ENTERPRISE_LICENSE != '' }}"
 
       - name: Check Required Secrets
         run: |
           missing_secrets=()
           
-          if [ -z "${{ secrets[format('{0}_AWS_ACCESS_KEY_ID', env.ENVIRONMENT)] }}" ]; then
-            missing_secrets+=("AWS_ACCESS_KEY_ID")
+          if [ -z "${{ secrets.AWS_ACCESS_KEY }}" ]; then
+            missing_secrets+=("AWS_ACCESS_KEY")
           fi
-          if [ -z "${{ secrets[format('{0}_AWS_SECRET_ACCESS_KEY', env.ENVIRONMENT)] }}" ]; then
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
             missing_secrets+=("AWS_SECRET_ACCESS_KEY")
           fi
-          if [ -z "${{ secrets[format('{0}_AWS_REGION', env.ENVIRONMENT)] }}" ]; then
+          if [ -z "${{ secrets.AWS_REGION }}" ]; then
             missing_secrets+=("AWS_REGION")
           fi
-          if [ -z "${{ secrets[format('{0}_OPEN_EXCHANGE_RATES_API', env.ENVIRONMENT)] }}" ]; then
+          if [ -z "${{ secrets.OPEN_EXCHANGE_RATES_API }}" ]; then
             missing_secrets+=("OPEN_EXCHANGE_RATES_API")
           fi
-          if [ -z "${{ secrets[format('{0}_NEO4J_ENTERPRISE_LICENSE', env.ENVIRONMENT)] }}" ]; then
+          if [ -z "${{ secrets.NEO4J_ENTERPRISE_LICENSE }}" ]; then
             missing_secrets+=("NEO4J_ENTERPRISE_LICENSE")
           fi
           
@@ -89,13 +82,6 @@ jobs:
             exit 1
           fi
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets[format('{0}_AWS_ACCESS_KEY_ID', env.ENVIRONMENT)] }}
-          aws-secret-access-key: ${{ secrets[format('{0}_AWS_SECRET_ACCESS_KEY', env.ENVIRONMENT)] }}
-          aws-region: ${{ env.AWS_REGION }}
-
       - name: Debug - Check AWS Configuration
         run: |
           echo "Checking AWS credentials..."
@@ -104,9 +90,9 @@ jobs:
             aws sts get-caller-identity
           else
             echo "Error: AWS credentials are invalid or not set correctly"
-            echo "AWS_ACCESS_KEY_ID is set: ${{ secrets[format('{0}_AWS_ACCESS_KEY_ID', env.ENVIRONMENT)] != '' }}"
-            echo "AWS_SECRET_ACCESS_KEY is set: ${{ secrets[format('{0}_AWS_SECRET_ACCESS_KEY', env.ENVIRONMENT)] != '' }}"
-            echo "AWS_REGION is set: ${{ env.AWS_REGION != '' }}"
+            echo "AWS_ACCESS_KEY is set: ${{ secrets.AWS_ACCESS_KEY != '' }}"
+            echo "AWS_SECRET_ACCESS_KEY is set: ${{ secrets.AWS_SECRET_ACCESS_KEY != '' }}"
+            echo "AWS_REGION is set: ${{ secrets.AWS_REGION != '' }}"
             exit 1
           fi
           aws configure list
@@ -120,14 +106,14 @@ jobs:
         run: |
           cat << EOF > terraform/terraform.tfvars
           environment = "${{ env.ENVIRONMENT }}"
-          jwt_secret = "${{ secrets[format('{0}_JWT_SECRET', env.ENVIRONMENT)] }}"
-          open_exchange_rates_api = "${{ secrets[format('{0}_OPEN_EXCHANGE_RATES_API', env.ENVIRONMENT)] }}"
-          neo4j_enterprise_license = "${{ secrets[format('{0}_NEO4J_ENTERPRISE_LICENSE', env.ENVIRONMENT)] }}"
-          neo4j_ledger_space_user = "${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_USER', env.ENVIRONMENT)] }}"
-          neo4j_ledger_space_pass = "${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_PASS', env.ENVIRONMENT)] }}"
-          neo4j_search_space_user = "${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_USER', env.ENVIRONMENT)] }}"
-          neo4j_search_space_pass = "${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_PASS', env.ENVIRONMENT)] }}"
-          neo4j_public_key = "${{ secrets[format('{0}_NEO4J_PUBLIC_KEY', env.ENVIRONMENT)] }}"
+          jwt_secret = "${{ secrets.JWT_SECRET }}"
+          open_exchange_rates_api = "${{ secrets.OPEN_EXCHANGE_RATES_API }}"
+          neo4j_enterprise_license = "${{ secrets.NEO4J_ENTERPRISE_LICENSE }}"
+          neo4j_ledger_space_user = "${{ secrets.NEO4J_LEDGER_SPACE_USER }}"
+          neo4j_ledger_space_pass = "${{ secrets.NEO4J_LEDGER_SPACE_PASS }}"
+          neo4j_search_space_user = "${{ secrets.NEO4J_SEARCH_SPACE_USER }}"
+          neo4j_search_space_pass = "${{ secrets.NEO4J_SEARCH_SPACE_PASS }}"
+          neo4j_public_key = "${{ secrets.NEO4J_PUBLIC_KEY }}"
           EOF
 
       - name: Setup Terraform
@@ -244,12 +230,12 @@ jobs:
           NEW_TASK_DEF=$(echo $TASK_DEF | jq '.containerDefinitions[0].environment += [
             {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_ledger_space_bolt_url }}"},
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_search_space_bolt_url }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_USER', env.ENVIRONMENT)] }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_PASS', env.ENVIRONMENT)] }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_USER', env.ENVIRONMENT)] }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_PASS', env.ENVIRONMENT)] }}"},
-            {"name": "JWT_SECRET", "value": "${{ secrets[format('{0}_JWT_SECRET', env.ENVIRONMENT)] }}"},
-            {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ env.TF_VAR_open_exchange_rates_api }}"}
+            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO4J_LEDGER_SPACE_USER }}"},
+            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO4J_LEDGER_SPACE_PASS }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ secrets.NEO4J_SEARCH_SPACE_USER }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ secrets.NEO4J_SEARCH_SPACE_PASS }}"},
+            {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
+            {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"}
           ]')
           echo $NEW_TASK_DEF > new-task-def.json
           aws ecs register-task-definition --cli-input-json file://new-task-def.json
