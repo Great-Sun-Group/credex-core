@@ -68,14 +68,23 @@ jobs:
 
       - name: Check Required Secrets
         run: |
-          required_secrets=("AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "AWS_REGION" "OPEN_EXCHANGE_RATES_API" "NEO4J_ENTERPRISE_LICENSE")
           missing_secrets=()
           
-          for secret in "${required_secrets[@]}"; do
-            if [ -z "${{ secrets[secret] }}" ]; then
-              missing_secrets+=("$secret")
-            fi
-          done
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            missing_secrets+=("AWS_ACCESS_KEY_ID")
+          fi
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            missing_secrets+=("AWS_SECRET_ACCESS_KEY")
+          fi
+          if [ -z "${{ secrets.AWS_REGION }}" ]; then
+            missing_secrets+=("AWS_REGION")
+          fi
+          if [ -z "${{ secrets.OPEN_EXCHANGE_RATES_API }}" ]; then
+            missing_secrets+=("OPEN_EXCHANGE_RATES_API")
+          fi
+          if [ -z "${{ secrets.NEO4J_ENTERPRISE_LICENSE }}" ]; then
+            missing_secrets+=("NEO4J_ENTERPRISE_LICENSE")
+          fi
           
           if [ ${#missing_secrets[@]} -ne 0 ]; then
             echo "Error: The following required secrets are missing: ${missing_secrets[*]}"
