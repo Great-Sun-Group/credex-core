@@ -41,114 +41,80 @@ jobs:
           terraform init
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
 
-      - name: Prepare Wipe Script
+      - name: Delete SSM Parameters
         run: |
-          cat << EOF > wipe_resources.sh
-          #!/bin/bash
+          aws ssm get-parameters-by-path --path "/credex/${{ env.ENVIRONMENT }}/" --recursive --query "Parameters[].Name" --output text | tr '\t' '\n' | while read param; do
+            aws ssm delete-parameter --name "$param" || true
+            echo "Deleted SSM parameter: $param"
+          done
 
-          set -e
+      - name: Terraform Destroy
+        run: |
+          cd terraform
+          terraform destroy -auto-approve -var="create_resources=false"
 
-          ENVIRONMENT="${{ env.ENVIRONMENT }}"
-
-          echo "Starting wipe process for $ENVIRONMENT environment"
-
-          # Function to delete SSM parameters
-          delete_ssm_parameters() {
-            echo "Deleting SSM parameters..."
-            aws ssm get-parameters-by-path --path "/credex/$ENVIRONMENT/" --recursive --query "Parameters[].Name" --output text | tr '\t' '\n' | while read param; do
-              aws ssm delete-parameter --name "$param" || true
-              echo "Deleted SSM parameter: $param"
-            done
+      - name: Cleanup Orphaned Resources
+        run: |
+          # Function to get all AWS resources in the environment
+          get_aws_resources() {
+            local resource_type=$1
+            aws $resource_type describe-${resource_type}s --query "${resource_type}s[*].${resource_type}Id" --output text
           }
 
-          # Function to delete ECS resources
-          delete_ecs_resources() {
-            echo "Deleting ECS resources..."
-            cluster_arns=$(aws ecs list-clusters --query "clusterArns[?contains(@, '$ENVIRONMENT')]" --output text)
-            for cluster_arn in $cluster_arns; do
-              services=$(aws ecs list-services --cluster $cluster_arn --query "serviceArns[]" --output text)
-              for service in $services; do
-                aws ecs update-service --cluster $cluster_arn --service $service --desired-count 0
-                aws ecs delete-service --cluster $cluster_arn --service $service
-                echo "Deleted ECS service: $service"
+          # Function to remove a resource
+          remove_resource() {
+            local resource_type=$1
+            local resource_id=$2
+            aws $resource_type delete-${resource_type} --${resource_type}-id $resource_id
+            echo "Removed $resource_type: $resource_id"
+          }
+
+          # Cleanup process for each resource type
+          cleanup() {
+            local resource_type=$1
+            echo "Cleaning up $resource_type resources..."
+            resources=$(get_aws_resources $resource_type)
+            
+            if [ -z "$resources" ]; then
+              echo "No $resource_type resources found."
+            else
+              echo "The following $resource_type resources were found:"
+              echo "$resources"
+              
+              for resource in $resources; do
+                remove_resource $resource_type $resource
               done
-              aws ecs delete-cluster --cluster $cluster_arn
-              echo "Deleted ECS cluster: $cluster_arn"
-            done
-          }
-
-          # Function to delete EC2 instances
-          delete_ec2_instances() {
-            echo "Deleting EC2 instances..."
-            instance_ids=$(aws ec2 describe-instances --filters "Name=tag:Environment,Values=$ENVIRONMENT" --query "Reservations[].Instances[].InstanceId" --output text)
-            if [ ! -z "$instance_ids" ]; then
-              aws ec2 terminate-instances --instance-ids $instance_ids
-              echo "Terminated EC2 instances: $instance_ids"
             fi
           }
 
-          # Function to delete load balancers
-          delete_load_balancers() {
-            echo "Deleting load balancers..."
-            lb_arns=$(aws elbv2 describe-load-balancers --query "LoadBalancers[?contains(LoadBalancerName, '$ENVIRONMENT')].LoadBalancerArn" --output text)
-            for lb_arn in $lb_arns; do
-              aws elbv2 delete-load-balancer --load-balancer-arn $lb_arn
-              echo "Deleted load balancer: $lb_arn"
-            done
-          }
+          # Run cleanup for different resource types
+          cleanup "instance"
+          cleanup "security-group"
+          cleanup "vpc"
+          cleanup "subnet"
+          cleanup "load-balancer"
+          cleanup "ecs-cluster"
+          cleanup "ecs-service"
 
-          # Function to delete VPCs and associated resources
-          delete_vpcs() {
-            echo "Deleting VPCs and associated resources..."
-            vpc_ids=$(aws ec2 describe-vpcs --filters "Name=tag:Environment,Values=$ENVIRONMENT" --query "Vpcs[].VpcId" --output text)
-            for vpc_id in $vpc_ids; do
-              # Delete subnets
-              subnet_ids=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$vpc_id" --query "Subnets[].SubnetId" --output text)
-              for subnet_id in $subnet_ids; do
-                aws ec2 delete-subnet --subnet-id $subnet_id
-                echo "Deleted subnet: $subnet_id"
-              done
-
-              # Delete internet gateways
-              igw_ids=$(aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=$vpc_id" --query "InternetGateways[].InternetGatewayId" --output text)
-              for igw_id in $igw_ids; do
-                aws ec2 detach-internet-gateway --internet-gateway-id $igw_id --vpc-id $vpc_id
-                aws ec2 delete-internet-gateway --internet-gateway-id $igw_id
-                echo "Deleted internet gateway: $igw_id"
-              done
-
-              # Delete security groups (except default)
-              sg_ids=$(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$vpc_id" --query "SecurityGroups[?GroupName!='default'].GroupId" --output text)
-              for sg_id in $sg_ids; do
-                aws ec2 delete-security-group --group-id $sg_id
-                echo "Deleted security group: $sg_id"
-              done
-
-              # Delete the VPC
-              aws ec2 delete-vpc --vpc-id $vpc_id
-              echo "Deleted VPC: $vpc_id"
-            done
-          }
-
-          # Main execution
-          delete_ssm_parameters
-          delete_ecs_resources
-          delete_ec2_instances
-          delete_load_balancers
-          delete_vpcs
-
-          # Run Terraform destroy as a final step
-          echo "Running Terraform destroy..."
+      - name: Wipe Terraform State
+        run: |
           cd terraform
-          terraform destroy -auto-approve -var="create_resources=false" || true
+          # Remove local state
+          rm -f terraform.tfstate*
+          # Remove remote state if using backend (adjust as needed)
+          terraform state list | xargs -I {} terraform state rm {}
+          # If using S3 backend, you might want to delete the state file from S3
+          # aws s3 rm s3://your-bucket-name/path/to/terraform.tfstate
 
-          echo "Wipe process completed for $ENVIRONMENT environment"
-          EOF
-
-          chmod +x wipe_resources.sh
-
-      - name: Execute Wipe
-        run: ./wipe_resources.sh
+      - name: Verify Wipe
+        run: |
+          cd terraform
+          if terraform show; then
+            echo "Error: Resources still exist after wipe"
+            exit 1
+          else
+            echo "All resources have been successfully removed"
+          fi
 
       - name: Log Wipe
         if: success()

@@ -64,23 +64,3 @@ output "ssm_parameter_arns" {
   ) : []
   description = "ARNs of the SSM parameters"
 }
-
-# Add a null resource for cleaning up SSM parameters
-resource "null_resource" "cleanup_ssm_params" {
-  count = var.create_resources ? 0 : 1
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<EOT
-      aws ssm delete-parameter --name "/credex/${local.environment}/jwt_secret" || true
-      aws ssm delete-parameter --name "/credex/${local.environment}/whatsapp_bot_api_key" || true
-      aws ssm delete-parameter --name "/credex/${local.environment}/open_exchange_rates_api" || true
-      aws ssm delete-parameter --name "/credex/${local.environment}/neo4j_ledger_space_user" || true
-      aws ssm delete-parameter --name "/credex/${local.environment}/neo4j_ledger_space_pass" || true
-      aws ssm delete-parameter --name "/credex/${local.environment}/neo4j_search_space_user" || true
-      aws ssm delete-parameter --name "/credex/${local.environment}/neo4j_search_space_pass" || true
-      aws ssm delete-parameter --name "/credex/${local.environment}/neo4j_ledger_space_bolt_url" || true
-      aws ssm delete-parameter --name "/credex/${local.environment}/neo4j_search_space_bolt_url" || true
-    EOT
-  }
-}
