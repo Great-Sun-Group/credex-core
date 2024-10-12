@@ -7,7 +7,7 @@ jobs:
   wipe:
     name: Wipe AWS Resources
     runs-on: ubuntu-latest
-    environment: development
+    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
     env:
       TF_VAR_aws_region: af-south-1
 
