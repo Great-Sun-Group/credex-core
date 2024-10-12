@@ -41,11 +41,11 @@ jobs:
           terraform init
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
 
-      - name: Delete SSM Parameters
+      - name: Wipe SSM Parameters
         run: |
           aws ssm get-parameters-by-path --path "/credex/${{ env.ENVIRONMENT }}/" --recursive --query "Parameters[].Name" --output text | tr '\t' '\n' | while read param; do
             aws ssm delete-parameter --name "$param" || true
-            echo "Deleted SSM parameter: $param"
+            echo "Wiped SSM parameter: $param"
           done
 
       - name: Terraform Destroy
@@ -53,7 +53,7 @@ jobs:
           cd terraform
           terraform destroy -auto-approve -var="create_resources=false" -var="environment=${{ env.ENVIRONMENT }}"
 
-      - name: Cleanup Orphaned Resources
+      - name: Wipe Orphaned Resources
         run: |
           # Function to get all AWS resources in the environment
           get_aws_resources() {
@@ -61,18 +61,18 @@ jobs:
             aws $resource_type describe-${resource_type}s --query "${resource_type}s[*].${resource_type}Id" --output text
           }
 
-          # Function to remove a resource
-          remove_resource() {
+          # Function to wipe a resource
+          wipe_resource() {
             local resource_type=$1
             local resource_id=$2
             aws $resource_type delete-${resource_type} --${resource_type}-id $resource_id
-            echo "Removed $resource_type: $resource_id"
+            echo "Wiped $resource_type: $resource_id"
           }
 
-          # Cleanup process for each resource type
-          cleanup() {
+          # Wipe process for each resource type
+          wipe_resources() {
             local resource_type=$1
-            echo "Cleaning up $resource_type resources..."
+            echo "Wiping $resource_type resources..."
             resources=$(get_aws_resources $resource_type)
             
             if [ -z "$resources" ]; then
@@ -82,19 +82,19 @@ jobs:
               echo "$resources"
               
               for resource in $resources; do
-                remove_resource $resource_type $resource
+                wipe_resource $resource_type $resource
               done
             fi
           }
 
-          # Run cleanup for different resource types
-          cleanup "instance"
-          cleanup "security-group"
-          cleanup "vpc"
-          cleanup "subnet"
-          cleanup "load-balancer"
-          cleanup "ecs-cluster"
-          cleanup "ecs-service"
+          # Run wipe for different resource types
+          wipe_resources "instance"
+          wipe_resources "security-group"
+          wipe_resources "vpc"
+          wipe_resources "subnet"
+          wipe_resources "load-balancer"
+          wipe_resources "ecs-cluster"
+          wipe_resources "ecs-service"
 
       - name: Wipe Terraform State
         run: |
@@ -103,7 +103,7 @@ jobs:
           rm -f terraform.tfstate*
           # Remove remote state if using backend (adjust as needed)
           terraform state list | xargs -I {} terraform state rm {}
-          # If using S3 backend, you might want to delete the state file from S3
+          # If using S3 backend, uncomment and adjust the following line
           # aws s3 rm s3://your-bucket-name/path/to/terraform.tfstate
 
       - name: Verify Wipe
@@ -113,7 +113,7 @@ jobs:
             echo "Error: Resources still exist after wipe"
             exit 1
           else
-            echo "All resources have been successfully removed"
+            echo "All resources have been successfully wiped"
           fi
 
       - name: Log Wipe
