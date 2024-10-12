@@ -2,17 +2,29 @@ name: Initial Deployment to AWS
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment (development, staging, production)'
-        required: true
-        default: 'development'
 
 jobs:
   deploy:
     name: Initial AWS Deployment
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set Environment
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=development" >> $GITHUB_ENV
+          fi
+
+      - name: Set GitHub Environment
+        run: echo "GITHUB_ENV=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+
+    environment: ${{ env.GITHUB_ENV }}
     env:
       # Domain config, used to assemble subdomains like
       # dev.api.mycredex.app
@@ -46,13 +58,10 @@ jobs:
       TF_VAR_log_level_production: info
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
       - name: Set Environment Variables
         run: |
-          echo "NODE_ENV=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
-          echo "TF_VAR_environment=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+          echo "NODE_ENV=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+          echo "TF_VAR_environment=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
           echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
           echo "TF_VAR_open_exchange_rates_api=${{ secrets.OPEN_EXCHANGE_RATES_API }}" >> $GITHUB_ENV
           echo "TF_VAR_neo4j_enterprise_license=${{ secrets.NEO4J_ENTERPRISE_LICENSE }}" >> $GITHUB_ENV
@@ -61,7 +70,7 @@ jobs:
         run: |
           echo "NODE_ENV: ${{ env.NODE_ENV }}"
           echo "TF_VAR_environment: ${{ env.TF_VAR_environment }}"
-          echo "GitHub Environment: ${{ github.event.inputs.environment }}"
+          echo "GitHub Environment: ${{ env.GITHUB_ENV }}"
           echo "AWS_REGION: ${{ env.AWS_REGION }}"
           echo "OPEN_EXCHANGE_RATES_API is set: ${{ env.TF_VAR_open_exchange_rates_api != '' }}"
           echo "NEO4J_ENTERPRISE_LICENSE is set: ${{ env.TF_VAR_neo4j_enterprise_license != '' }}"
