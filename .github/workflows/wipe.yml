@@ -143,6 +143,36 @@ jobs:
               done
             done
           }
+
+          # Function to wipe EC2 key pairs
+          wipe_ec2_key_pairs() {
+            echo "Wiping EC2 key pairs..."
+            key_pairs=$(aws ec2 describe-key-pairs --query "KeyPairs[*].KeyName" --output text)
+            for key_pair in $key_pairs; do
+              aws ec2 delete-key-pair --key-name $key_pair || echo "Failed to delete EC2 key pair: $key_pair"
+              echo "Deleted EC2 key pair: $key_pair"
+            done
+          }
+
+          # Function to wipe ACM certificates
+          wipe_acm_certificates() {
+            echo "Wiping ACM certificates..."
+            certificates=$(aws acm list-certificates --query "CertificateSummaryList[*].CertificateArn" --output text)
+            for cert in $certificates; do
+              aws acm delete-certificate --certificate-arn $cert || echo "Failed to delete ACM certificate: $cert"
+              echo "Deleted ACM certificate: $cert"
+            done
+          }
+
+          # Function to wipe ECR repositories
+          wipe_ecr_repositories() {
+            echo "Wiping ECR repositories..."
+            repos=$(aws ecr describe-repositories --query "repositories[*].repositoryName" --output text)
+            for repo in $repos; do
+              aws ecr delete-repository --repository-name $repo --force || echo "Failed to delete ECR repository: $repo"
+              echo "Deleted ECR repository: $repo"
+            done
+          }
           
           # Run wipe for different resource types
           wipe_ecs_services
@@ -152,6 +182,9 @@ jobs:
           wipe_security_groups
           wipe_subnets
           wipe_vpcs
+          wipe_ec2_key_pairs
+          wipe_acm_certificates
+          wipe_ecr_repositories
 
       - name: Wipe Terraform State
         run: |
