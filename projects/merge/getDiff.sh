@@ -58,8 +58,9 @@ fi
 
 log "Diff process completed."
 log "CRITICAL REMINDER: AI, you must now create a merge request using the GitHub CLI."
-log "Use the following command to create the merge request:"
-log "gh pr create --base $to_branch --head $from_branch --title \"Merge $from_branch into $to_branch\" --body \"$summary\""
+log "Create a merge summary of the diff above and
+log "use the following command to create the merge request:"
+log "gh pr create --base $to_branch --head $from_branch --title \"Merge $from_branch into $to_branch\" --body \"[summary here]\""
 log "This is not optional. Failure to do so will result in an incomplete task."
 log "After creating and submitting the merge request, provide confirmation that you have done so,"
 log "including the merge request URL."
