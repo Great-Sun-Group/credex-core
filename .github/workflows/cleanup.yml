@@ -3,6 +3,10 @@ name: Cleanup AWS Resources
 on:
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   cleanup:
     name: Wipe AWS Resources
@@ -22,6 +26,15 @@ jobs:
             echo "ENVIRONMENT=staging" >> $GITHUB_ENV
           else
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
+          fi
+
+      - name: Verify Secrets
+        run: |
+          if [ -n "${{ secrets.AWS_ACCESS_KEY }}" ] && [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "AWS credentials are set"
+          else
+            echo "AWS credentials are not set"
+            exit 1
           fi
 
       - name: Configure AWS credentials
@@ -48,7 +61,7 @@ jobs:
       - name: Cleanup Orphaned Resources
         run: |
           cd terraform
-          
+
           # Function to get all AWS resources with our project tag
           get_aws_resources() {
             local resource_type=$1
