@@ -22,6 +22,7 @@ jobs:
       TF_VAR_log_level_development: debug
       TF_VAR_log_level_staging: info
       TF_VAR_log_level_production: info
+      TF_VAR_operation_type: create
 
     steps:
       - name: Checkout code
@@ -59,7 +60,7 @@ jobs:
       - name: Check Required Secrets
         run: |
           missing_secrets=()
-          
+
           if [ -z "${{ secrets.AWS_ACCESS_KEY }}" ]; then
             missing_secrets+=("AWS_ACCESS_KEY")
           fi
@@ -75,7 +76,7 @@ jobs:
           if [ -z "${{ secrets.NEO4J_ENTERPRISE_LICENSE }}" ]; then
             missing_secrets+=("NEO4J_ENTERPRISE_LICENSE")
           fi
-          
+
           if [ ${#missing_secrets[@]} -ne 0 ]; then
             echo "Error: The following required secrets are missing: ${missing_secrets[*]}"
             echo "Please set these secrets in your GitHub repository settings."
@@ -97,15 +98,11 @@ jobs:
           fi
           aws configure list
 
-      - name: Generate Secrets
-        run: |
-          chmod +x .github/workflows/generate_secrets.sh
-          ./.github/workflows/generate_secrets.sh $ENVIRONMENT
-
       - name: Create Terraform Variables File
         run: |
           cat << EOF > terraform/terraform.tfvars
           environment = "$ENVIRONMENT"
+          operation_type = "create"
           jwt_secret = "${{ secrets.JWT_SECRET }}"
           open_exchange_rates_api = "${{ secrets.OPEN_EXCHANGE_RATES_API }}"
           neo4j_enterprise_license = "${{ secrets.NEO4J_ENTERPRISE_LICENSE }}"
@@ -183,16 +180,16 @@ jobs:
           terraform init
           terraform workspace select $TF_VAR_environment || terraform workspace new $TF_VAR_environment
 
-      - name: Terraform Plan (Infrastructure)
-        id: plan_infra
+      - name: Terraform Plan
+        id: plan
         run: |
           cd terraform
-          terraform plan -out=tfplan_infra -target=module.neo4j -target=module.networking -var-file=terraform.tfvars
+          terraform plan -out=tfplan -var-file=terraform.tfvars
 
-      - name: Terraform Apply (Infrastructure)
+      - name: Terraform Apply
         run: |
           cd terraform
-          terraform apply -auto-approve tfplan_infra
+          terraform apply -auto-approve tfplan
 
       - name: Get Terraform Outputs
         id: tf-outputs
@@ -206,21 +203,8 @@ jobs:
         run: |
           NEO4J_LEDGER_IP=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_ledger_space_bolt_url.value' | sed 's|bolt://||' | sed 's|:7687||')
           NEO4J_SEARCH_IP=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_search_space_bolt_url.value' | sed 's|bolt://||' | sed 's|:7687||')
-          gh secret set NEO_4J_LEDGER_SPACE_BOLT_URL -b"bolt://${NEO4J_LEDGER_IP}:7687" --env $TF_VAR_environment
-          gh secret set NEO_4J_SEARCH_SPACE_BOLT_URL -b"bolt://${NEO4J_SEARCH_IP}:7687" --env $TF_VAR_environment
           echo "TF_VAR_neo4j_ledger_space_bolt_url=bolt://${NEO4J_LEDGER_IP}:7687" >> $GITHUB_ENV
           echo "TF_VAR_neo4j_search_space_bolt_url=bolt://${NEO4J_SEARCH_IP}:7687" >> $GITHUB_ENV
-
-      - name: Terraform Plan (ECS)
-        id: plan_ecs
-        run: |
-          cd terraform
-          terraform plan -out=tfplan_ecs -target=module.ecs -var-file=terraform.tfvars
-
-      - name: Terraform Apply (ECS)
-        run: |
-          cd terraform
-          terraform apply -auto-approve tfplan_ecs
 
       - name: Update ECS Task Definition
         env:
@@ -230,12 +214,12 @@ jobs:
           NEW_TASK_DEF=$(echo $TASK_DEF | jq '.containerDefinitions[0].environment += [
             {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_ledger_space_bolt_url }}"},
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_search_space_bolt_url }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO4J_LEDGER_SPACE_USER }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO4J_LEDGER_SPACE_PASS }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ secrets.NEO4J_SEARCH_SPACE_USER }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ secrets.NEO4J_SEARCH_SPACE_PASS }}"},
-            {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
-            {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"}
+            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ vars.NEO4J_LEDGER_SPACE_USER }}"},
+            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ vars.NEO4J_LEDGER_SPACE_PASS }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ vars.NEO4J_SEARCH_SPACE_USER }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ vars.NEO4J_SEARCH_SPACE_PASS }}"},
+            {"name": "JWT_SECRET", "value": "${{ vars.JWT_SECRET }}"},
+            {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ vars.OPEN_EXCHANGE_RATES_API }}"}
           ]')
           echo $NEW_TASK_DEF > new-task-def.json
           aws ecs register-task-definition --cli-input-json file://new-task-def.json
@@ -246,20 +230,20 @@ jobs:
         run: |
           echo "Deploying application to $TF_VAR_environment from branch ${{ github.ref_name }}"
           aws ecs update-service --cluster credex-cluster-$TF_VAR_environment --service credex-core-service-$TF_VAR_environment --task-definition credex-core-$TF_VAR_environment
-          
+
           # Wait for the service to stabilize
           aws ecs wait services-stable --cluster credex-cluster-$TF_VAR_environment --services credex-core-service-$TF_VAR_environment
-          
+
           # Get the latest task ARN
           TASK_ARN=$(aws ecs list-tasks --cluster credex-cluster-$TF_VAR_environment --service-name credex-core-service-$TF_VAR_environment --query 'taskArns[0]' --output text)
-          
+
           # Get the task details
           TASK_DETAILS=$(aws ecs describe-tasks --cluster credex-cluster-$TF_VAR_environment --tasks $TASK_ARN)
-          
+
           # Print task details for debugging
           echo "Task Details:"
           echo "$TASK_DETAILS" | jq .
-          
+
           # Get the latest events from the ECS service
           echo "ECS Service Events:"
           aws ecs describe-services --cluster credex-cluster-$TF_VAR_environment --services credex-core-service-$TF_VAR_environment --query 'services[0].events[0:5]' | jq .

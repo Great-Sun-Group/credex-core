@@ -1,6 +1,6 @@
 locals {
   neo4j_ports = [7474, 7687]
-  key_pair_name = "neo4j-key-pair-${local.environment}"
+  key_pair_name = "neo4j-key-pair-${var.environment}"
   
   max_production_instances = 3
   
@@ -28,39 +28,39 @@ data "aws_key_pair" "neo4j_key_pair" {
 data "aws_instances" "neo4j" {
   instance_tags = {
     Project     = "CredEx"
-    Environment = local.environment
+    Environment = var.environment
   }
 
   filter {
     name   = "tag:Name"
-    values = ["Neo4j-${local.environment}-*"]
+    values = ["Neo4j-${var.environment}-*"]
   }
 }
 
 resource "random_string" "neo4j_password" {
-  count   = var.create_resources ? min(local.neo4j_instance_count[local.environment], local.max_production_instances) : 0
+  count   = var.operation_type != "delete" ? min(local.neo4j_instance_count[var.environment], local.max_production_instances) : 0
   length  = 16
   special = true
 }
 
 resource "random_string" "neo4j_username_suffix" {
-  count   = var.create_resources ? min(local.neo4j_instance_count[local.environment], local.max_production_instances) : 0
+  count   = var.operation_type != "delete" ? min(local.neo4j_instance_count[var.environment], local.max_production_instances) : 0
   length  = 6
   special = false
   upper   = false
 }
 
 resource "aws_instance" "neo4j" {
-  count         = var.create_resources ? min(local.neo4j_instance_count[local.environment], local.max_production_instances) : 0
+  count         = var.operation_type != "delete" ? min(local.neo4j_instance_count[var.environment], local.max_production_instances) : 0
   ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = local.compliant_instance_types[local.environment]
+  instance_type = local.compliant_instance_types[var.environment]
   key_name      = data.aws_key_pair.neo4j_key_pair.key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j[0].id]
   subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]
 
   tags = merge(local.common_tags, {
-    Name = "Neo4j-${local.environment}-${count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
+    Name = "Neo4j-${var.environment}-${count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
     Role = count.index == 0 ? "LedgerSpace" : "SearchSpace"
   })
 
@@ -99,40 +99,25 @@ resource "aws_instance" "neo4j" {
   }
 }
 
-resource "aws_secretsmanager_secret" "neo4j_credentials" {
-  count = var.create_resources ? min(local.neo4j_instance_count[local.environment], local.max_production_instances) : 0
-  name  = "neo4j-credentials-${local.environment}-${count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
-}
-
-resource "aws_secretsmanager_secret_version" "neo4j_credentials" {
-  count         = var.create_resources ? min(local.neo4j_instance_count[local.environment], local.max_production_instances) : 0
-  secret_id     = aws_secretsmanager_secret.neo4j_credentials[count.index].id
-  secret_string = jsonencode({
-    username = "neo4j${random_string.neo4j_username_suffix[count.index].result}"
-    password = random_string.neo4j_password[count.index].result
-    bolt_url = "bolt://${aws_instance.neo4j[count.index].private_ip}:7687"
-  })
-}
-
 output "neo4j_instance_ips" {
-  value       = aws_instance.neo4j[*].private_ip
+  value       = var.operation_type != "delete" ? aws_instance.neo4j[*].private_ip : []
   description = "Private IPs of Neo4j instances"
 }
 
 output "neo4j_bolt_urls" {
-  value = [for instance in aws_instance.neo4j : "bolt://${instance.private_ip}:7687"]
+  value = var.operation_type != "delete" ? [for instance in aws_instance.neo4j : "bolt://${instance.private_ip}:7687"] : []
   description = "Neo4j Bolt URLs"
   sensitive   = true
 }
 
 output "neo4j_ledger_space_bolt_url" {
-  value       = length(aws_instance.neo4j) > 0 ? "bolt://${aws_instance.neo4j[0].private_ip}:7687" : ""
+  value       = var.operation_type != "delete" && length(aws_instance.neo4j) > 0 ? "bolt://${aws_instance.neo4j[0].private_ip}:7687" : ""
   description = "Neo4j Ledger Space Bolt URL"
   sensitive   = true
 }
 
 output "neo4j_search_space_bolt_url" {
-  value       = length(aws_instance.neo4j) > 1 ? "bolt://${aws_instance.neo4j[1].private_ip}:7687" : ""
+  value       = var.operation_type != "delete" && length(aws_instance.neo4j) > 1 ? "bolt://${aws_instance.neo4j[1].private_ip}:7687" : ""
   description = "Neo4j Search Space Bolt URL"
   sensitive   = true
 }

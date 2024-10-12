@@ -9,7 +9,20 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
     env:
-      TF_VAR_aws_region: af-south-1
+      TF_VAR_domain_base: mycredex.app
+      TF_VAR_subdomain_development: dev.api
+      TF_VAR_subdomain_staging: stage.api
+      TF_VAR_subdomain_production: api
+      TF_VAR_neo4j_instance_count_development: 2
+      TF_VAR_neo4j_instance_count_staging: 2
+      TF_VAR_neo4j_instance_count_production: 2
+      TF_VAR_neo4j_instance_type_development: t3.xlarge
+      TF_VAR_neo4j_instance_type_staging: r5.2xlarge
+      TF_VAR_neo4j_instance_type_production: r5.12xlarge
+      TF_VAR_log_level_development: debug
+      TF_VAR_log_level_staging: info
+      TF_VAR_log_level_production: info
+      TF_VAR_operation_type: delete
 
     steps:
       - name: Checkout code
@@ -24,44 +37,53 @@ jobs:
           else
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
+          echo "NODE_ENV=$ENVIRONMENT" >> $GITHUB_ENV
+          echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
+          echo "Setting environment to: $ENVIRONMENT"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.TF_VAR_aws_region }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
+
+      - name: Create Terraform Variables File
+        run: |
+          cat << EOF > terraform/terraform.tfvars
+          environment = "$ENVIRONMENT"
+          operation_type = "delete"
+          jwt_secret = "${{ secrets.JWT_SECRET }}"
+          open_exchange_rates_api = "${{ secrets.OPEN_EXCHANGE_RATES_API }}"
+          neo4j_enterprise_license = "${{ secrets.NEO4J_ENTERPRISE_LICENSE }}"
+          neo4j_ledger_space_user = "${{ secrets.NEO4J_LEDGER_SPACE_USER }}"
+          neo4j_ledger_space_pass = "${{ secrets.NEO4J_LEDGER_SPACE_PASS }}"
+          neo4j_search_space_user = "${{ secrets.NEO4J_SEARCH_SPACE_USER }}"
+          neo4j_search_space_pass = "${{ secrets.NEO4J_SEARCH_SPACE_PASS }}"
+          neo4j_public_key = "${{ secrets.NEO4J_PUBLIC_KEY }}"
+          EOF
 
       - name: Terraform Init and Workspace Selection
         run: |
           cd terraform
           terraform init
-          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+          terraform workspace select $ENVIRONMENT || terraform workspace new $ENVIRONMENT
 
       - name: Remove GitHub Secrets for Neo4j Bolt URLs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh secret remove NEO4J_LEDGER_SPACE_BOLT_URL || true
-          gh secret remove NEO4J_SEARCH_SPACE_BOLT_URL || true
+          gh secret remove NEO4J_LEDGER_SPACE_BOLT_URL --env $ENVIRONMENT || true
+          gh secret remove NEO4J_SEARCH_SPACE_BOLT_URL --env $ENVIRONMENT || true
           echo "Removed Neo4j Bolt URL secrets from GitHub"
 
       - name: Terraform Destroy
-        env:
-          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
-          TF_VAR_open_exchange_rates_api: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
-          TF_VAR_neo4j_ledger_space_user: ${{ secrets.NEO4J_LEDGER_SPACE_USER }}
-          TF_VAR_neo4j_ledger_space_pass: ${{ secrets.NEO4J_LEDGER_SPACE_PASS }}
-          TF_VAR_neo4j_search_space_user: ${{ secrets.NEO4J_SEARCH_SPACE_USER }}
-          TF_VAR_neo4j_search_space_pass: ${{ secrets.NEO4J_SEARCH_SPACE_PASS }}
-          TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
-          TF_VAR_neo4j_public_key: ${{ secrets.NEO4J_PUBLIC_KEY }}
         run: |
           cd terraform
-          terraform destroy -auto-approve -var="create_resources=false" -var="environment=${{ env.ENVIRONMENT }}" || echo "Terraform destroy failed, continuing with manual resource deletion"
+          terraform destroy -auto-approve -var-file=terraform.tfvars || echo "Terraform destroy failed, continuing with manual resource deletion"
 
       - name: Wipe Orphaned Resources
         run: |
@@ -196,8 +218,6 @@ jobs:
           rm -rf .terraform
           # Remove workspace state
           rm -rf terraform.tfstate.d
-          # If using S3 backend, uncomment and adjust the following line
-          # aws s3 rm s3://your-bucket-name/path/to/terraform.tfstate || true
           echo "Terraform state files removed"
 
       - name: Verify Wipe
@@ -216,9 +236,9 @@ jobs:
       - name: Log Wipe
         if: success()
         run: |
-          echo "Wipe of ${{ env.ENVIRONMENT }} environment completed successfully at $(date)"
+          echo "Wipe of $ENVIRONMENT environment completed successfully at $(date)"
 
       - name: Notify on Failure
         if: failure()
         run: |
-          echo "Wipe of ${{ env.ENVIRONMENT }} environment failed. Please check the logs for more information."
+          echo "Wipe of $ENVIRONMENT environment failed. Please check the logs for more information."

@@ -39,6 +39,38 @@ variable "environment" {
   }
 }
 
+variable "domain" {
+  description = "Map of environment to domain names"
+  type        = map(string)
+  default = {
+    development = "dev.api.mycredex.app"
+    staging     = "stage.api.mycredex.app"
+    production  = "api.mycredex.app"
+  }
+}
+
+variable "log_level" {
+  description = "Map of environment to log levels"
+  type        = map(string)
+  default = {
+    development = "debug"
+    staging     = "info"
+    production  = "info"
+  }
+}
+
+variable "operation_type" {
+  description = "The type of operation to perform (create, delete, redeploy)"
+  type        = string
+  default     = "create"
+
+  validation {
+    condition     = contains(["create", "delete", "redeploy"], var.operation_type)
+    error_message = "The operation_type must be one of: create, delete, redeploy."
+  }
+}
+
+# Variables for secrets (passed from GitHub Actions)
 variable "jwt_secret" {
   description = "JWT secret for authentication"
   type        = string
@@ -81,34 +113,6 @@ variable "neo4j_enterprise_license" {
   sensitive   = true
 }
 
-variable "neo4j_public_key" {
-  description = "Public key for Neo4j EC2 instances"
-  type        = string
-
-  validation {
-    condition     = can(regex("^ssh-rsa AAAA[0-9A-Za-z+/]+[=]{0,3} .+$", var.neo4j_public_key))
-    error_message = "The neo4j_public_key must be a valid OpenSSH public key. Please refer to the infrastructure management documentation for instructions on generating and managing SSH keys."
-  }
-}
-
-variable "use_existing_resources" {
-  description = "Map of resource types to boolean indicating whether to use existing resources"
-  type = map(bool)
-  default = {
-    vpc                 = false
-    subnets             = false
-    security_groups     = false
-    ecs_cluster         = false
-    ecs_service         = false
-    ecs_task_definition = false
-    alb                 = false
-    acm_certificate     = false
-    route53_record      = false
-    neo4j_instances     = false
-    ssm_parameters      = false
-  }
-}
-
 variable "neo4j_ledger_space_bolt_url" {
   description = "Neo4j LedgerSpace Bolt URL"
   type        = string
@@ -122,14 +126,6 @@ variable "neo4j_search_space_bolt_url" {
 }
 
 locals {
-  environment = var.environment
-
-  domain = {
-    development = "${var.subdomain_development}.${var.domain_base}"
-    staging     = "${var.subdomain_staging}.${var.domain_base}"
-    production  = "${var.subdomain_production}.${var.domain_base}"
-  }
-
   # Neo4j instance count compliant with the Startup Software License Agreement
   neo4j_instance_count = {
     development = 2  # Up to 6 allowed for development
@@ -143,17 +139,11 @@ locals {
     staging     = "r5.2xlarge" # 8 vCPU, 64 GB RAM
     production  = "r5.12xlarge" # 48 vCPU, 384 GB RAM (will be limited to 24 cores in user_data)
   }
-
-  log_level = {
-    development = "debug"
-    staging     = "info"
-    production  = "info"
-  }
 }
 
 # Note: This configuration complies with the Neo4j Startup Software License Agreement:
 # - Limits production instances to a maximum of 3
 # - Ensures each instance doesn't exceed 24 Cores / 256 GB of RAM (limited in neo4j.tf)
 # - Allows for both LedgerSpace and SearchSpace on a single instance for non-production environments
-# - Provides up to 6 instances for development (currently set to 1, but can be increased up to 6)
-# - Allows up to 3 instances for non-production testing (currently set to 1 for staging)
+# - Provides up to 6 instances for development (currently set to 2, but can be increased up to 6)
+# - Allows up to 3 instances for non-production testing (currently set to 2 for staging)

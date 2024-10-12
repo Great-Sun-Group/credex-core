@@ -12,7 +12,7 @@ provider "aws" {
 }
 
 locals {
-  environment = terraform.workspace
+  environment = var.environment
   api_domain  = var.domain[local.environment]
   log_level   = var.log_level[local.environment]
   common_tags = {
@@ -20,12 +20,6 @@ locals {
     Project     = "CredEx"
     ManagedBy   = "Terraform"
   }
-}
-
-variable "create_resources" {
-  description = "Whether to create (true) or destroy (false) resources"
-  type        = bool
-  default     = true
 }
 
 data "aws_ecr_repository" "credex_core" {
@@ -49,7 +43,7 @@ data "aws_cloudwatch_log_group" "existing_ecs_logs" {
 }
 
 resource "aws_cloudwatch_log_group" "ecs_logs" {
-  count             = var.create_resources && data.aws_cloudwatch_log_group.existing_ecs_logs.arn == null ? 1 : 0
+  count             = var.operation_type != "delete" ? 1 : 0
   name              = "/ecs/credex-core-${local.environment}"
   retention_in_days = 30
 
@@ -63,18 +57,13 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
-  count      = var.create_resources ? 1 : 0
+  count      = var.operation_type != "delete" ? 1 : 0
   role       = data.aws_iam_role.ecs_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-data "aws_ecs_task_definition" "existing_task_definition" {
-  count           = var.create_resources ? 0 : 1
-  task_definition = "credex-core-${local.environment}"
-}
-
 resource "aws_ecs_task_definition" "credex_core_task" {
-  count                    = var.create_resources ? 1 : 0
+  count                    = var.operation_type != "delete" ? 1 : 0
   family                   = "credex-core-${local.environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
@@ -97,23 +86,21 @@ resource "aws_ecs_task_definition" "credex_core_task" {
         { name = "NODE_ENV", value = local.environment },
         { name = "LOG_LEVEL", value = local.log_level },
         { name = "AWS_REGION", value = var.aws_region },
-        { name = "DOMAIN_NAME", value = local.api_domain }
-      ]
-      secrets = [
-        { name = "JWT_SECRET", valueFrom = var.jwt_secret_arn },
-        { name = "OPEN_EXCHANGE_RATES_API", valueFrom = var.open_exchange_rates_api_arn },
-        { name = "NEO4J_LEDGER_SPACE_USER", valueFrom = var.neo4j_ledger_space_user_arn },
-        { name = "NEO4J_LEDGER_SPACE_PASS", valueFrom = var.neo4j_ledger_space_pass_arn },
-        { name = "NEO4J_SEARCH_SPACE_USER", valueFrom = var.neo4j_search_space_user_arn },
-        { name = "NEO4J_SEARCH_SPACE_PASS", valueFrom = var.neo4j_search_space_pass_arn },
-        { name = "NEO4J_LEDGER_SPACE_BOLT_URL", valueFrom = var.neo4j_ledger_space_bolt_url_arn },
-        { name = "NEO4J_SEARCH_SPACE_BOLT_URL", valueFrom = var.neo4j_search_space_bolt_url_arn },
-        { name = "NEO4J_ENTERPRISE_LICENSE", valueFrom = var.neo4j_enterprise_license_arn }
+        { name = "DOMAIN_NAME", value = local.api_domain },
+        { name = "JWT_SECRET", value = var.jwt_secret },
+        { name = "OPEN_EXCHANGE_RATES_API", value = var.open_exchange_rates_api },
+        { name = "NEO4J_LEDGER_SPACE_USER", value = var.neo4j_ledger_space_user },
+        { name = "NEO4J_LEDGER_SPACE_PASS", value = var.neo4j_ledger_space_pass },
+        { name = "NEO4J_SEARCH_SPACE_USER", value = var.neo4j_search_space_user },
+        { name = "NEO4J_SEARCH_SPACE_PASS", value = var.neo4j_search_space_pass },
+        { name = "NEO4J_LEDGER_SPACE_BOLT_URL", value = var.neo4j_ledger_space_bolt_url },
+        { name = "NEO4J_SEARCH_SPACE_BOLT_URL", value = var.neo4j_search_space_bolt_url },
+        { name = "NEO4J_ENTERPRISE_LICENSE", value = var.neo4j_enterprise_license }
       ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = var.create_resources ? aws_cloudwatch_log_group.ecs_logs[0].name : data.aws_cloudwatch_log_group.existing_ecs_logs.name
+          awslogs-group         = aws_cloudwatch_log_group.ecs_logs[0].name
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "ecs"
         }
@@ -126,14 +113,8 @@ resource "aws_ecs_task_definition" "credex_core_task" {
   depends_on = [aws_iam_role_policy_attachment.ecs_execution_role_policy]
 }
 
-data "aws_ecs_service" "existing_service" {
-  count        = var.create_resources ? 0 : 1
-  service_name = "credex-core-service-${local.environment}"
-  cluster_arn  = data.aws_ecs_cluster.credex_cluster.arn
-}
-
 resource "aws_ecs_service" "credex_core_service" {
-  count           = var.create_resources ? 1 : 0
+  count           = var.operation_type != "delete" ? 1 : 0
   name            = "credex-core-service-${local.environment}"
   cluster         = data.aws_ecs_cluster.credex_cluster.id
   task_definition = aws_ecs_task_definition.credex_core_task[0].arn
@@ -159,71 +140,10 @@ resource "aws_ecs_service" "credex_core_service" {
 
 # Output the task definition ARN
 output "task_definition_arn" {
-  value = var.create_resources ? aws_ecs_task_definition.credex_core_task[0].arn : data.aws_ecs_task_definition.existing_task_definition[0].arn
+  value = var.operation_type != "delete" ? aws_ecs_task_definition.credex_core_task[0].arn : null
 }
 
 # Output the ECS service name
 output "ecs_service_name" {
-  value = var.create_resources ? aws_ecs_service.credex_core_service[0].name : data.aws_ecs_service.existing_service[0].service_name
-}
-
-# Variables for secret ARNs
-variable "jwt_secret_arn" {
-  description = "ARN of the JWT secret in Secrets Manager"
-  type        = string
-}
-
-variable "open_exchange_rates_api_arn" {
-  description = "ARN of the Open Exchange Rates API key in Secrets Manager"
-  type        = string
-}
-
-variable "neo4j_ledger_space_user_arn" {
-  description = "ARN of the Neo4j Ledger Space user in Secrets Manager"
-  type        = string
-}
-
-variable "neo4j_ledger_space_pass_arn" {
-  description = "ARN of the Neo4j Ledger Space password in Secrets Manager"
-  type        = string
-}
-
-variable "neo4j_search_space_user_arn" {
-  description = "ARN of the Neo4j Search Space user in Secrets Manager"
-  type        = string
-}
-
-variable "neo4j_search_space_pass_arn" {
-  description = "ARN of the Neo4j Search Space password in Secrets Manager"
-  type        = string
-}
-
-variable "neo4j_ledger_space_bolt_url_arn" {
-  description = "ARN of the Neo4j Ledger Space Bolt URL in Secrets Manager"
-  type        = string
-}
-
-variable "neo4j_search_space_bolt_url_arn" {
-  description = "ARN of the Neo4j Search Space Bolt URL in Secrets Manager"
-  type        = string
-}
-
-variable "neo4j_enterprise_license_arn" {
-  description = "ARN of the Neo4j Enterprise License in Secrets Manager"
-  type        = string
-}
-
-variable "aws_region" {
-  description = "The AWS region to deploy to"
-  type        = string
-}
-
-variable "domain" {
-  description = "Map of environment to domain names"
-  type        = map(string)
-}
-
-variable "log_level" {
-  description = "Map of environment to log levels"
-  type        = map(string)
+  value = var.operation_type != "delete" ? aws_ecs_service.credex_core_service[0].name : null
 }
