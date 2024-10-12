@@ -2,26 +2,24 @@ name: Initial Deployment to AWS
 
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment (development, staging, production)'
+        required: true
+        default: 'development'
 
 jobs:
   deploy:
     name: Initial AWS Deployment
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
     env:
-      # Secrets from Github Environment
-      TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
-      TF_VAR_open_exchange_rates_api: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
-
-      # Where to deploy
-      AWS_REGION: af-south-1
-
       # Domain config, used to assemble subdomains like
       # dev.api.mycredex.app
       TF_VAR_domain_base: mycredex.app
       TF_VAR_subdomain_development: dev.api
       TF_VAR_subdomain_staging: stage.api
       TF_VAR_subdomain_production: api
-
       # Neo4j instance count: Defines the number of Neo4j instances to be deployed for each environment.
       # This is compliant with the Neo4j Startup Software License Agreement, which allows:
       # - Up to 6 instances for development
@@ -39,7 +37,7 @@ jobs:
       TF_VAR_neo4j_instance_type_development: t3.xlarge
       TF_VAR_neo4j_instance_type_staging: r5.2xlarge
       TF_VAR_neo4j_instance_type_production: r5.12xlarge
-      
+
       # Log levels for different environments:
       # - debug for development to provide detailed information for troubleshooting
       # - info for staging and production to provide general operational information
@@ -51,22 +49,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set environment
+      - name: Set Environment Variables
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-          else
-            echo "ENVIRONMENT=development" >> $GITHUB_ENV
-          fi
-          echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
+          echo "NODE_ENV=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+          echo "TF_VAR_environment=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
+          echo "TF_VAR_open_exchange_rates_api=${{ secrets.OPEN_EXCHANGE_RATES_API }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_enterprise_license=${{ secrets.NEO4J_ENTERPRISE_LICENSE }}" >> $GITHUB_ENV
 
       - name: Debug - Print Environment Variables
         run: |
-          echo "ENVIRONMENT: ${{ env.ENVIRONMENT }}"
+          echo "NODE_ENV: ${{ env.NODE_ENV }}"
           echo "TF_VAR_environment: ${{ env.TF_VAR_environment }}"
+          echo "GitHub Environment: ${{ github.event.inputs.environment }}"
           echo "AWS_REGION: ${{ env.AWS_REGION }}"
+          echo "OPEN_EXCHANGE_RATES_API is set: ${{ env.TF_VAR_open_exchange_rates_api != '' }}"
+          echo "NEO4J_ENTERPRISE_LICENSE is set: ${{ env.TF_VAR_neo4j_enterprise_license != '' }}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -77,13 +75,22 @@ jobs:
 
       - name: Debug - Check AWS Configuration
         run: |
-          aws sts get-caller-identity
+          echo "Checking AWS credentials..."
+          if aws sts get-caller-identity &> /dev/null; then
+            echo "AWS credentials are valid"
+            aws sts get-caller-identity
+          else
+            echo "Error: AWS credentials are invalid or not set correctly"
+            echo "AWS_ACCESS_KEY_ID is set: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}"
+            echo "AWS_SECRET_ACCESS_KEY is set: ${{ secrets.AWS_SECRET_ACCESS_KEY != '' }}"
+            exit 1
+          fi
           aws configure list
 
       - name: Generate Secrets
         run: |
           chmod +x .github/workflows/generate_secrets.sh
-          ./.github/workflows/generate_secrets.sh ${{ env.ENVIRONMENT }}
+          ./.github/workflows/generate_secrets.sh ${{ env.NODE_ENV }}
 
       - name: Set Terraform variables
         run: |
@@ -121,7 +128,7 @@ jobs:
                 aws ecs list-clusters --query "clusterArns[?contains(@, '$resource_name')]" --output text | grep -q .
                 ;;
               "aws_ecs_service")
-                aws ecs list-services --cluster "credex-cluster-${{ env.ENVIRONMENT }}" --query "serviceArns[?contains(@, '$resource_name')]" --output text | grep -q .
+                aws ecs list-services --cluster "credex-cluster-${{ env.TF_VAR_environment }}" --query "serviceArns[?contains(@, '$resource_name')]" --output text | grep -q .
                 ;;
               "aws_lb")
                 aws elbv2 describe-load-balancers --query "LoadBalancers[?LoadBalancerName=='$resource_name'].LoadBalancerArn" --output text | grep -q .
@@ -137,18 +144,18 @@ jobs:
           echo "Checking for existing resources..."
           
           if resource_exists "aws_acm_certificate" "${TF_VAR_domain_base}" || \
-             resource_exists "aws_security_group" "credex-alb-sg-${{ env.ENVIRONMENT }}" || \
-             resource_exists "aws_security_group" "credex-core-ecs-tasks-sg-${{ env.ENVIRONMENT }}" || \
-             resource_exists "aws_security_group" "credex-neo4j-sg-${{ env.ENVIRONMENT }}" || \
-             resource_exists "aws_ecs_cluster" "credex-cluster-${{ env.ENVIRONMENT }}" || \
-             resource_exists "aws_ecs_service" "credex-core-service-${{ env.ENVIRONMENT }}" || \
-             resource_exists "aws_lb" "credex-alb-${{ env.ENVIRONMENT }}"; then
+             resource_exists "aws_security_group" "credex-alb-sg-${{ env.TF_VAR_environment }}" || \
+             resource_exists "aws_security_group" "credex-core-ecs-tasks-sg-${{ env.TF_VAR_environment }}" || \
+             resource_exists "aws_security_group" "credex-neo4j-sg-${{ env.TF_VAR_environment }}" || \
+             resource_exists "aws_ecs_cluster" "credex-cluster-${{ env.TF_VAR_environment }}" || \
+             resource_exists "aws_ecs_service" "credex-core-service-${{ env.TF_VAR_environment }}" || \
+             resource_exists "aws_lb" "credex-alb-${{ env.TF_VAR_environment }}"; then
             echo "Error: Some resources already exist. This script is intended for initial deployment only."
             exit 1
           fi
           
           # Check for Neo4j instances
-          neo4j_instance_count=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-${{ env.ENVIRONMENT }}-*" "Name=instance-state-name,Values=running" --query 'length(Reservations[].Instances[])' --output text)
+          neo4j_instance_count=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-${{ env.TF_VAR_environment }}-*" "Name=instance-state-name,Values=running" --query 'length(Reservations[].Instances[])' --output text)
           
           if [ "$neo4j_instance_count" -gt 0 ]; then
             echo "Error: Neo4j instances already exist. This script is intended for initial deployment only."
@@ -159,7 +166,7 @@ jobs:
         run: |
           cd terraform
           terraform init
-          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+          terraform workspace select ${{ env.TF_VAR_environment }} || terraform workspace new ${{ env.TF_VAR_environment }}
 
       - name: Terraform Plan (Infrastructure)
         id: plan_infra
@@ -184,8 +191,8 @@ jobs:
         run: |
           NEO4J_LEDGER_IP=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_ledger_space_bolt_url.value' | sed 's|bolt://||' | sed 's|:7687||')
           NEO4J_SEARCH_IP=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_search_space_bolt_url.value' | sed 's|bolt://||' | sed 's|:7687||')
-          gh secret set NEO_4J_LEDGER_SPACE_BOLT_URL -b"bolt://${NEO4J_LEDGER_IP}:7687" --env ${{ env.ENVIRONMENT }}
-          gh secret set NEO_4J_SEARCH_SPACE_BOLT_URL -b"bolt://${NEO4J_SEARCH_IP}:7687" --env ${{ env.ENVIRONMENT }}
+          gh secret set NEO_4J_LEDGER_SPACE_BOLT_URL -b"bolt://${NEO4J_LEDGER_IP}:7687" --env ${{ env.TF_VAR_environment }}
+          gh secret set NEO_4J_SEARCH_SPACE_BOLT_URL -b"bolt://${NEO4J_SEARCH_IP}:7687" --env ${{ env.TF_VAR_environment }}
           echo "TF_VAR_neo4j_ledger_space_bolt_url=bolt://${NEO4J_LEDGER_IP}:7687" >> $GITHUB_ENV
           echo "TF_VAR_neo4j_search_space_bolt_url=bolt://${NEO4J_SEARCH_IP}:7687" >> $GITHUB_ENV
 
@@ -204,7 +211,7 @@ jobs:
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
-          TASK_DEF=$(aws ecs describe-task-definition --task-definition credex-core-${{ env.ENVIRONMENT }} --query taskDefinition)
+          TASK_DEF=$(aws ecs describe-task-definition --task-definition credex-core-${{ env.TF_VAR_environment }} --query taskDefinition)
           NEW_TASK_DEF=$(echo $TASK_DEF | jq '.containerDefinitions[0].environment += [
             {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_ledger_space_bolt_url }}"},
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_search_space_bolt_url }}"},
@@ -222,23 +229,23 @@ jobs:
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
-          echo "Deploying application to ${{ env.ENVIRONMENT }} from branch ${{ github.ref_name }}"
-          aws ecs update-service --cluster credex-cluster-${{ env.ENVIRONMENT }} --service credex-core-service-${{ env.ENVIRONMENT }} --task-definition credex-core-${{ env.ENVIRONMENT }}
+          echo "Deploying application to ${{ env.TF_VAR_environment }} from branch ${{ github.ref_name }}"
+          aws ecs update-service --cluster credex-cluster-${{ env.TF_VAR_environment }} --service credex-core-service-${{ env.TF_VAR_environment }} --task-definition credex-core-${{ env.TF_VAR_environment }}
 
       - name: Run Post-Deployment Tests
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
-          echo "Running post-deployment tests for ${{ env.ENVIRONMENT }}"
+          echo "Running post-deployment tests for ${{ env.TF_VAR_environment }}"
           # Add your test commands here
 
       - name: Log Deployment
         if: success()
         run: |
-          echo "Initial deployment to ${{ env.ENVIRONMENT }} from branch ${{ github.ref_name }} completed successfully at $(date)"
+          echo "Initial deployment to ${{ env.TF_VAR_environment }} from branch ${{ github.ref_name }} completed successfully at $(date)"
 
       - name: Notify on Failure
         if: failure()
         run: |
-          echo "Initial deployment to ${{ env.ENVIRONMENT }} from branch ${{ github.ref_name }} failed. Please check the logs for more information."
+          echo "Initial deployment to ${{ env.TF_VAR_environment }} from branch ${{ github.ref_name }} failed. Please check the logs for more information."
           # Add notification mechanism here (e.g., send an email, Slack message, etc.)
