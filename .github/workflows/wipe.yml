@@ -56,10 +56,10 @@ jobs:
           cd terraform
           terraform destroy -auto-approve -var="create_resources=false"
 
-      - name: Cleanup Orphaned Resources
+      - name: Wipe Orphaned Resources
         run: |
           cd terraform
-          
+
           # Function to get all AWS resources with our project tag
           get_aws_resources() {
             local resource_type=$1
@@ -74,8 +74,8 @@ jobs:
             echo "Removed $resource_type: $resource_id"
           }
 
-          # Cleanup process for each resource type
-          cleanup() {
+          # Wipe process for each resource type
+          wipe() {
             local resource_type=$1
             echo "Identifying orphaned $resource_type resources..."
             orphaned_resources=$(get_aws_resources $resource_type)
@@ -92,31 +92,31 @@ jobs:
             fi
           }
 
-          # Run cleanup for different resource types
-          cleanup "instance"
-          cleanup "security-group"
-          cleanup "vpc"
-          cleanup "subnet"
-          cleanup "load-balancer"
-          cleanup "ecs-cluster"
-          cleanup "ecs-service"
+          # Run wipe for different resource types
+          wipe "instance"
+          wipe "security-group"
+          wipe "vpc"
+          wipe "subnet"
+          wipe "load-balancer"
+          wipe "ecs-cluster"
+          wipe "ecs-service"
 
-      - name: Verify Cleanup
+      - name: Verify Wipe
         run: |
           cd terraform
           if terraform show; then
-            echo "Error: Resources still exist after cleanup"
+            echo "Error: Resources still exist after wipe"
             exit 1
           else
             echo "All resources have been successfully removed"
           fi
 
-      - name: Log Cleanup
+      - name: Log Wipe
         if: success()
         run: |
-          echo "Cleanup of ${{ env.ENVIRONMENT }} environment completed successfully at $(date)"
+          echo "Wipe of ${{ env.ENVIRONMENT }} environment completed successfully at $(date)"
 
       - name: Notify on Failure
         if: failure()
         run: |
-          echo "Cleanup of ${{ env.ENVIRONMENT }} environment failed. Please check the logs for more information."
+          echo "Wipe of ${{ env.ENVIRONMENT }} environment failed. Please check the logs for more information."
