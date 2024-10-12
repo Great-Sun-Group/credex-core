@@ -2,7 +2,7 @@
 
 ## Current Situation
 - AWS credentials are currently stored as GitHub secrets (AWS_ACCESS_KEY and AWS_SECRET_ACCESS_KEY).
-- The cleanup.yml workflow is experiencing authentication errors, possibly due to secret unavailability.
+- The wipe.yml workflow is experiencing authentication errors, possibly due to secret unavailability.
 
 ## Goal
 Implement OpenID Connect (OIDC) authentication for AWS in our GitHub Actions workflows to enhance security and simplify credential management.
@@ -10,7 +10,7 @@ Implement OpenID Connect (OIDC) authentication for AWS in our GitHub Actions wor
 ## Steps
 
 1. Investigate Current Secret Availability
-   - Review the cleanup.yml workflow and verify secret usage.
+   - Review the wipe.yml workflow and verify secret usage.
    - Check GitHub repository settings to ensure secrets are properly set.
    - Temporarily add a step in the workflow to echo a masked version of the secrets to verify their presence.
 
@@ -27,10 +27,10 @@ Implement OpenID Connect (OIDC) authentication for AWS in our GitHub Actions wor
    - Choose the GitHub OIDC provider created in step 2.
    - Add a condition to limit access to our specific GitHub repository:
      token.actions.githubusercontent.com:sub: repo:Great-Sun-Group/credex-core:*
-   - Attach necessary policies (e.g., permissions required for the cleanup workflow).
+   - Attach necessary policies (e.g., permissions required for the wipe workflow).
 
 4. Update GitHub Actions Workflow
-   - Modify .github/workflows/cleanup.yml to use OIDC authentication.
+   - Modify .github/workflows/wipe.yml to use OIDC authentication.
    - Replace the AWS credentials step with the following:
      ```yaml
      - name: Configure AWS Credentials
@@ -43,7 +43,7 @@ Implement OpenID Connect (OIDC) authentication for AWS in our GitHub Actions wor
 
 5. Test and Verify
    - Push changes to a test branch.
-   - Run the updated cleanup workflow manually using workflow_dispatch.
+   - Run the updated wipe workflow manually using workflow_dispatch.
    - Monitor the workflow execution and AWS CloudTrail logs to verify successful authentication.
 
 6. Documentation and Team Communication
@@ -67,5 +67,5 @@ Total Estimated Time: 6 working days
 
 ## Notes
 - Ensure all team members with AWS access are involved in the OIDC setup process.
-- Consider implementing OIDC authentication gradually, starting with non-critical workflows before updating the cleanup workflow.
+- Consider implementing OIDC authentication gradually, starting with non-critical workflows before updating the wipe workflow.
 - Regularly review AWS permissions to ensure they adhere to the principle of least privilege.
