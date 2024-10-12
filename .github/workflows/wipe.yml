@@ -156,12 +156,15 @@ jobs:
       - name: Wipe Terraform State
         run: |
           cd terraform
-          # Remove local state
-          rm -f terraform.tfstate*
+          # Remove local state files and directories
+          rm -rf terraform.tfstate*
+          rm -rf .terraform
+          # Remove workspace state
+          rm -rf terraform.tfstate.d
           # Remove remote state if using backend (adjust as needed)
-          terraform state list | xargs -I {} terraform state rm {}
+          terraform state list 2>/dev/null | xargs -I {} terraform state rm {} || true
           # If using S3 backend, uncomment and adjust the following line
-          # aws s3 rm s3://your-bucket-name/path/to/terraform.tfstate
+          # aws s3 rm s3://your-bucket-name/path/to/terraform.tfstate || true
 
       - name: Verify Wipe
         run: |
