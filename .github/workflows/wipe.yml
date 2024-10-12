@@ -172,11 +172,13 @@ jobs:
         run: |
           cd terraform
           terraform init -input=false
-          if terraform show; then
-            echo "Error: Resources still exist after wipe"
-            exit 1
-          else
+          # Check if there are any resources in the state
+          if [ -z "$(terraform show -json | jq '.values.root_module.resources')" ]; then
             echo "All resources have been successfully wiped"
+          else
+            echo "Error: Resources still exist after wipe"
+            terraform show
+            exit 1
           fi
 
       - name: Log Wipe
