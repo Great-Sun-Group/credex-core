@@ -26,12 +26,23 @@ jobs:
           fi
           echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
 
+      - name: Debug - Print Environment Variables
+        run: |
+          echo "ENVIRONMENT: ${{ env.ENVIRONMENT }}"
+          echo "TF_VAR_environment: ${{ env.TF_VAR_environment }}"
+          echo "AWS_REGION is set: ${{ secrets.AWS_REGION != '' }}"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Debug - Check AWS Configuration
+        run: |
+          aws sts get-caller-identity
+          aws configure list
 
       - name: Generate Secrets
         run: |
@@ -46,6 +57,15 @@ jobs:
           echo "TF_VAR_neo4j_search_space_user=${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" >> $GITHUB_ENV
           echo "TF_VAR_neo4j_search_space_pass=${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" >> $GITHUB_ENV
           echo "TF_VAR_neo4j_public_key=${{ secrets.NEO4J_PUBLIC_KEY }}" >> $GITHUB_ENV
+
+      - name: Debug - Print Terraform Variables
+        run: |
+          echo "TF_VAR_jwt_secret is set: ${{ env.TF_VAR_jwt_secret != '' }}"
+          echo "TF_VAR_neo4j_ledger_space_user is set: ${{ env.TF_VAR_neo4j_ledger_space_user != '' }}"
+          echo "TF_VAR_neo4j_ledger_space_pass is set: ${{ env.TF_VAR_neo4j_ledger_space_pass != '' }}"
+          echo "TF_VAR_neo4j_search_space_user is set: ${{ env.TF_VAR_neo4j_search_space_user != '' }}"
+          echo "TF_VAR_neo4j_search_space_pass is set: ${{ env.TF_VAR_neo4j_search_space_pass != '' }}"
+          echo "TF_VAR_neo4j_public_key is set: ${{ env.TF_VAR_neo4j_public_key != '' }}"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -141,6 +161,11 @@ jobs:
           gh secret set NEO_4J_SEARCH_SPACE_BOLT_URL -b"bolt://${NEO4J_SEARCH_IP}:7687" --env ${{ env.ENVIRONMENT }}
           echo "TF_VAR_neo4j_ledger_space_bolt_url=bolt://${NEO4J_LEDGER_IP}:7687" >> $GITHUB_ENV
           echo "TF_VAR_neo4j_search_space_bolt_url=bolt://${NEO4J_SEARCH_IP}:7687" >> $GITHUB_ENV
+
+      - name: Debug - Print Neo4j Bolt URLs
+        run: |
+          echo "TF_VAR_neo4j_ledger_space_bolt_url: ${{ env.TF_VAR_neo4j_ledger_space_bolt_url }}"
+          echo "TF_VAR_neo4j_search_space_bolt_url: ${{ env.TF_VAR_neo4j_search_space_bolt_url }}"
 
       - name: Terraform Plan (ECS)
         id: plan_ecs
