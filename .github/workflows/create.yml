@@ -38,7 +38,7 @@ jobs:
           fi
           echo "NODE_ENV=$ENVIRONMENT" >> $GITHUB_ENV
           echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
-          echo "Setting environment to: ${{ env.ENVIRONMENT }}"
+          echo "Setting environment to: $ENVIRONMENT"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -49,9 +49,9 @@ jobs:
 
       - name: Debug - Print Environment Variables
         run: |
-          echo "NODE_ENV: ${{ env.NODE_ENV }}"
-          echo "TF_VAR_environment: ${{ env.TF_VAR_environment }}"
-          echo "GitHub Environment: ${{ env.ENVIRONMENT }}"
+          echo "NODE_ENV: $NODE_ENV"
+          echo "TF_VAR_environment: $TF_VAR_environment"
+          echo "GitHub Environment: $ENVIRONMENT"
           echo "AWS_REGION: ${{ secrets.AWS_REGION }}"
           echo "OPEN_EXCHANGE_RATES_API is set: ${{ secrets.OPEN_EXCHANGE_RATES_API != '' }}"
           echo "NEO4J_ENTERPRISE_LICENSE is set: ${{ secrets.NEO4J_ENTERPRISE_LICENSE != '' }}"
@@ -100,12 +100,12 @@ jobs:
       - name: Generate Secrets
         run: |
           chmod +x .github/workflows/generate_secrets.sh
-          ./.github/workflows/generate_secrets.sh ${{ env.NODE_ENV }}
+          ./.github/workflows/generate_secrets.sh $ENVIRONMENT
 
       - name: Create Terraform Variables File
         run: |
           cat << EOF > terraform/terraform.tfvars
-          environment = "${{ env.ENVIRONMENT }}"
+          environment = "$ENVIRONMENT"
           jwt_secret = "${{ secrets.JWT_SECRET }}"
           open_exchange_rates_api = "${{ secrets.OPEN_EXCHANGE_RATES_API }}"
           neo4j_enterprise_license = "${{ secrets.NEO4J_ENTERPRISE_LICENSE }}"
@@ -143,7 +143,7 @@ jobs:
                 aws ecs list-clusters --query "clusterArns[?contains(@, '$resource_name')]" --output text | grep -q .
                 ;;
               "aws_ecs_service")
-                aws ecs list-services --cluster "credex-cluster-${{ env.TF_VAR_environment }}" --query "serviceArns[?contains(@, '$resource_name')]" --output text | grep -q .
+                aws ecs list-services --cluster "credex-cluster-$TF_VAR_environment" --query "serviceArns[?contains(@, '$resource_name')]" --output text | grep -q .
                 ;;
               "aws_lb")
                 aws elbv2 describe-load-balancers --query "LoadBalancers[?LoadBalancerName=='$resource_name'].LoadBalancerArn" --output text | grep -q .
@@ -159,18 +159,18 @@ jobs:
           echo "Checking for existing resources..."
 
           if resource_exists "aws_acm_certificate" "${TF_VAR_domain_base}" || \
-             resource_exists "aws_security_group" "credex-alb-sg-${{ env.TF_VAR_environment }}" || \
-             resource_exists "aws_security_group" "credex-core-ecs-tasks-sg-${{ env.TF_VAR_environment }}" || \
-             resource_exists "aws_security_group" "credex-neo4j-sg-${{ env.TF_VAR_environment }}" || \
-             resource_exists "aws_ecs_cluster" "credex-cluster-${{ env.TF_VAR_environment }}" || \
-             resource_exists "aws_ecs_service" "credex-core-service-${{ env.TF_VAR_environment }}" || \
-             resource_exists "aws_lb" "credex-alb-${{ env.TF_VAR_environment }}"; then
+             resource_exists "aws_security_group" "credex-alb-sg-$TF_VAR_environment" || \
+             resource_exists "aws_security_group" "credex-core-ecs-tasks-sg-$TF_VAR_environment" || \
+             resource_exists "aws_security_group" "credex-neo4j-sg-$TF_VAR_environment" || \
+             resource_exists "aws_ecs_cluster" "credex-cluster-$TF_VAR_environment" || \
+             resource_exists "aws_ecs_service" "credex-core-service-$TF_VAR_environment" || \
+             resource_exists "aws_lb" "credex-alb-$TF_VAR_environment"; then
             echo "Error: Some resources already exist. This script is intended for initial deployment only."
             exit 1
           fi
 
           # Check for Neo4j instances
-          neo4j_instance_count=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-${{ env.TF_VAR_environment }}-*" "Name=instance-state-name,Values=running" --query 'length(Reservations[].Instances[])' --output text)
+          neo4j_instance_count=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-$TF_VAR_environment-*" "Name=instance-state-name,Values=running" --query 'length(Reservations[].Instances[])' --output text)
 
           if [ "$neo4j_instance_count" -gt 0 ]; then
             echo "Error: Neo4j instances already exist. This script is intended for initial deployment only."
@@ -181,7 +181,7 @@ jobs:
         run: |
           cd terraform
           terraform init
-          terraform workspace select ${{ env.TF_VAR_environment }} || terraform workspace new ${{ env.TF_VAR_environment }}
+          terraform workspace select $TF_VAR_environment || terraform workspace new $TF_VAR_environment
 
       - name: Terraform Plan (Infrastructure)
         id: plan_infra
@@ -206,8 +206,8 @@ jobs:
         run: |
           NEO4J_LEDGER_IP=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_ledger_space_bolt_url.value' | sed 's|bolt://||' | sed 's|:7687||')
           NEO4J_SEARCH_IP=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_search_space_bolt_url.value' | sed 's|bolt://||' | sed 's|:7687||')
-          gh secret set NEO_4J_LEDGER_SPACE_BOLT_URL -b"bolt://${NEO4J_LEDGER_IP}:7687" --env ${{ env.TF_VAR_environment }}
-          gh secret set NEO_4J_SEARCH_SPACE_BOLT_URL -b"bolt://${NEO4J_SEARCH_IP}:7687" --env ${{ env.TF_VAR_environment }}
+          gh secret set NEO_4J_LEDGER_SPACE_BOLT_URL -b"bolt://${NEO4J_LEDGER_IP}:7687" --env $TF_VAR_environment
+          gh secret set NEO_4J_SEARCH_SPACE_BOLT_URL -b"bolt://${NEO4J_SEARCH_IP}:7687" --env $TF_VAR_environment
           echo "TF_VAR_neo4j_ledger_space_bolt_url=bolt://${NEO4J_LEDGER_IP}:7687" >> $GITHUB_ENV
           echo "TF_VAR_neo4j_search_space_bolt_url=bolt://${NEO4J_SEARCH_IP}:7687" >> $GITHUB_ENV
 
@@ -226,7 +226,7 @@ jobs:
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
-          TASK_DEF=$(aws ecs describe-task-definition --task-definition credex-core-${{ env.TF_VAR_environment }} --query taskDefinition)
+          TASK_DEF=$(aws ecs describe-task-definition --task-definition credex-core-$TF_VAR_environment --query taskDefinition)
           NEW_TASK_DEF=$(echo $TASK_DEF | jq '.containerDefinitions[0].environment += [
             {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_ledger_space_bolt_url }}"},
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_search_space_bolt_url }}"},
@@ -244,17 +244,17 @@ jobs:
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
-          echo "Deploying application to ${{ env.TF_VAR_environment }} from branch ${{ github.ref_name }}"
-          aws ecs update-service --cluster credex-cluster-${{ env.TF_VAR_environment }} --service credex-core-service-${{ env.TF_VAR_environment }} --task-definition credex-core-${{ env.TF_VAR_environment }}
+          echo "Deploying application to $TF_VAR_environment from branch ${{ github.ref_name }}"
+          aws ecs update-service --cluster credex-cluster-$TF_VAR_environment --service credex-core-service-$TF_VAR_environment --task-definition credex-core-$TF_VAR_environment
           
           # Wait for the service to stabilize
-          aws ecs wait services-stable --cluster credex-cluster-${{ env.TF_VAR_environment }} --services credex-core-service-${{ env.TF_VAR_environment }}
+          aws ecs wait services-stable --cluster credex-cluster-$TF_VAR_environment --services credex-core-service-$TF_VAR_environment
           
           # Get the latest task ARN
-          TASK_ARN=$(aws ecs list-tasks --cluster credex-cluster-${{ env.TF_VAR_environment }} --service-name credex-core-service-${{ env.TF_VAR_environment }} --query 'taskArns[0]' --output text)
+          TASK_ARN=$(aws ecs list-tasks --cluster credex-cluster-$TF_VAR_environment --service-name credex-core-service-$TF_VAR_environment --query 'taskArns[0]' --output text)
           
           # Get the task details
-          TASK_DETAILS=$(aws ecs describe-tasks --cluster credex-cluster-${{ env.TF_VAR_environment }} --tasks $TASK_ARN)
+          TASK_DETAILS=$(aws ecs describe-tasks --cluster credex-cluster-$TF_VAR_environment --tasks $TASK_ARN)
           
           # Print task details for debugging
           echo "Task Details:"
@@ -262,7 +262,7 @@ jobs:
           
           # Get the latest events from the ECS service
           echo "ECS Service Events:"
-          aws ecs describe-services --cluster credex-cluster-${{ env.TF_VAR_environment }} --services credex-core-service-${{ env.TF_VAR_environment }} --query 'services[0].events[0:5]' | jq .
+          aws ecs describe-services --cluster credex-cluster-$TF_VAR_environment --services credex-core-service-$TF_VAR_environment --query 'services[0].events[0:5]' | jq .
 
       - name: Debug - Print Final Environment Variables
         run: |
