@@ -1,9 +1,5 @@
 name: Wipe AWS Resources
 
-permissions:
-  contents: write
-  id-token: write
-
 on:
   workflow_dispatch:
 
@@ -28,15 +24,23 @@ jobs:
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
 
-      - name: Debug - Check Secret Availability
+      - name: Debug - Environment Variables
+        run: |
+          echo "GitHub Ref: ${{ github.ref }}"
+          echo "Environment: ${{ env.ENVIRONMENT }}"
+          echo "AWS Region: ${{ env.TF_VAR_aws_region }}"
+
+      - name: Debug - Secret Availability
         run: |
           if [ -n "${{ secrets.AWS_ACCESS_KEY }}" ]; then
             echo "AWS_ACCESS_KEY is set"
+            echo "First 4 characters: ${{{ secrets.AWS_ACCESS_KEY }:0:4}}"
           else
             echo "AWS_ACCESS_KEY is not set"
           fi
           if [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
             echo "AWS_SECRET_ACCESS_KEY is set"
+            echo "Length: ${#{{ secrets.AWS_SECRET_ACCESS_KEY }}}"
           else
             echo "AWS_SECRET_ACCESS_KEY is not set"
           fi
@@ -51,6 +55,7 @@ jobs:
       - name: Verify AWS CLI Configuration
         run: |
           aws sts get-caller-identity
+          aws configure list
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
