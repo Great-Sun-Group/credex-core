@@ -7,6 +7,7 @@ jobs:
   wipe:
     name: Wipe AWS Resources
     runs-on: ubuntu-latest
+    environment: development
     env:
       TF_VAR_aws_region: af-south-1
 
