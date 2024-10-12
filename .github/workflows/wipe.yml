@@ -56,6 +56,51 @@ jobs:
           cd terraform
           terraform destroy -auto-approve -var="create_resources=false"
 
+      - name: Cleanup Orphaned Resources
+        run: |
+          cd terraform
+          
+          # Function to get all AWS resources with our project tag
+          get_aws_resources() {
+            local resource_type=$1
+            aws $resource_type describe-${resource_type}s --query "${resource_type}s[?Tags[?Key=='Project' && Value=='CredEx']].${resource_type}Id" --output text
+          }
+
+          # Function to remove a resource
+          remove_resource() {
+            local resource_type=$1
+            local resource_id=$2
+            aws $resource_type delete-${resource_type} --${resource_type}-id $resource_id
+            echo "Removed $resource_type: $resource_id"
+          }
+
+          # Cleanup process for each resource type
+          cleanup() {
+            local resource_type=$1
+            echo "Identifying orphaned $resource_type resources..."
+            orphaned_resources=$(get_aws_resources $resource_type)
+            
+            if [ -z "$orphaned_resources" ]; then
+              echo "No orphaned $resource_type resources found."
+            else
+              echo "The following orphaned $resource_type resources were found:"
+              echo "$orphaned_resources"
+              
+              for resource in $orphaned_resources; do
+                remove_resource $resource_type $resource
+              done
+            fi
+          }
+
+          # Run cleanup for different resource types
+          cleanup "instance"
+          cleanup "security-group"
+          cleanup "vpc"
+          cleanup "subnet"
+          cleanup "load-balancer"
+          cleanup "ecs-cluster"
+          cleanup "ecs-service"
+
       - name: Verify Cleanup
         run: |
           cd terraform
