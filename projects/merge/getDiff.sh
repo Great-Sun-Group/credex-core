@@ -68,7 +68,3 @@ log "including the merge request URL."
 echo "--- BEGIN SUMMARY ---"
 echo "$summary"
 echo "--- END SUMMARY ---"
-
-# Comment explaining how to use the script output
-log "To use this script's output, copy everything between '--- BEGIN SUMMARY ---' and '--- END SUMMARY ---'"
-log "and use it as the body of your pull request when creating it with the GitHub CLI."
