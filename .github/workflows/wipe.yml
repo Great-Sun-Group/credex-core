@@ -48,19 +48,17 @@ jobs:
             echo "Wiped SSM parameter: $param"
           done
 
-      - name: Unset Secret TF_VAR Environment Variables
-        run: |
-          unset TF_VAR_jwt_secret
-          unset TF_VAR_whatsapp_bot_api_key
-          unset TF_VAR_open_exchange_rates_api
-          unset TF_VAR_neo4j_ledger_space_user
-          unset TF_VAR_neo4j_ledger_space_pass
-          unset TF_VAR_neo4j_search_space_user
-          unset TF_VAR_neo4j_search_space_pass
-          unset TF_VAR_neo4j_enterprise_license
-          unset TF_VAR_neo4j_public_key
-
       - name: Terraform Destroy
+        env:
+          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+          TF_VAR_whatsapp_bot_api_key: ${{ secrets.WHATSAPP_BOT_API_KEY }}
+          TF_VAR_open_exchange_rates_api: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
+          TF_VAR_neo4j_ledger_space_user: ${{ secrets.NEO4J_LEDGER_SPACE_USER }}
+          TF_VAR_neo4j_ledger_space_pass: ${{ secrets.NEO4J_LEDGER_SPACE_PASS }}
+          TF_VAR_neo4j_search_space_user: ${{ secrets.NEO4J_SEARCH_SPACE_USER }}
+          TF_VAR_neo4j_search_space_pass: ${{ secrets.NEO4J_SEARCH_SPACE_PASS }}
+          TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
+          TF_VAR_neo4j_public_key: ${{ secrets.NEO4J_PUBLIC_KEY }}
         run: |
           cd terraform
           terraform destroy -auto-approve -var="create_resources=false" -var="environment=${{ env.ENVIRONMENT }}"
