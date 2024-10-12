@@ -99,7 +99,6 @@ resource "aws_ecs_task_definition" "credex_core_task" {
       ]
       secrets = [
         { name = "JWT_SECRET", valueFrom = var.jwt_secret_arn },
-        { name = "WHATSAPP_BOT_API_KEY", valueFrom = var.whatsapp_bot_api_key_arn },
         { name = "OPEN_EXCHANGE_RATES_API", valueFrom = var.open_exchange_rates_api_arn },
         { name = "NEO4J_LEDGER_SPACE_USER", valueFrom = var.neo4j_ledger_space_user_arn },
         { name = "NEO4J_LEDGER_SPACE_PASS", valueFrom = var.neo4j_ledger_space_pass_arn },
@@ -164,11 +163,6 @@ output "task_definition_arn" {
 # Variables for secret ARNs
 variable "jwt_secret_arn" {
   description = "ARN of the JWT secret in Secrets Manager"
-  type        = string
-}
-
-variable "whatsapp_bot_api_key_arn" {
-  description = "ARN of the WhatsApp Bot API key in Secrets Manager"
   type        = string
 }
 

@@ -43,7 +43,6 @@ const requiredEnvVars = [
   "NEO_4J_SEARCH_SPACE_PASS",
   "OPEN_EXCHANGE_RATES_API",
   "JWT_SECRET",
-  "WHATSAPP_BOT_API_KEY"
 ];
 
 const optionalEnvVars = [
@@ -85,9 +84,6 @@ async function initConfig() {
     api: {
       openExchangeRates: {
         apiKey: envVars.OPEN_EXCHANGE_RATES_API
-      },
-      whatsappBot: {
-        apiKey: envVars.WHATSAPP_BOT_API_KEY
       }
     },
     security: {

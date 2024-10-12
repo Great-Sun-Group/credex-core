@@ -2,10 +2,6 @@
 
 This document provides a comprehensive overview of the security measures and authentication process implemented in our application, with a focus on JWT (JSON Web Token) authentication, CORS configuration, and rate limiting.
 
-## WHATSAPP_BOT_API_KEY
-
-The credex-core API is currently limited to clients who possess the correct WHATSAPP_BOT_API_KEY key, so that only the vimbiso-pay chatbot can hit the endpoints. This layer of security is now redundant and will be lifted soon. Currently while doing development, if deploying the server and the client, use the same random string for the secret required in each. If hitting the deployed staging server, you will need its current WHATSAPP_BOT_API_KEY.
-
 ## JWT Authentication
 
 Our application uses JSON Web Tokens (JWT) for authentication. This setup provides protection against unauthorized access and ensures that only the appropriate member is authorized on the endpoints.

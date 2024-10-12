@@ -45,12 +45,6 @@ variable "jwt_secret" {
   sensitive   = true
 }
 
-variable "whatsapp_bot_api_key" {
-  description = "API key for WhatsApp bot"
-  type        = string
-  sensitive   = true
-}
-
 variable "open_exchange_rates_api" {
   description = "API key for Open Exchange Rates"
   type        = string

@@ -20,7 +20,6 @@
         { "name": "PORT", "value": "5000" },
         { "name": "LOG_LEVEL", "value": "${LOG_LEVEL}" },
         { "name": "JWT_SECRET", "value": "${JWT_SECRET}" },
-        { "name": "WHATSAPP_BOT_API_KEY", "value": "${WHATSAPP_BOT_API_KEY}" },
         {
           "name": "OPEN_EXCHANGE_RATES_API",
           "value": "${OPEN_EXCHANGE_RATES_API}"

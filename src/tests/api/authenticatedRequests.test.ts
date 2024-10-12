@@ -9,7 +9,6 @@ const CODESPACE_URL = process.env.CODESPACE_NAME
   : null;
 const BASE_URL = CODESPACE_URL || "http://localhost:3000";
 const API_VERSION = "/api/v1";
-const WHATSAPP_BOT_API_KEY = process.env.WHATSAPP_BOT_API_KEY;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 // Create a custom https agent that ignores SSL certificate errors
@@ -29,7 +28,6 @@ describe("Basic API Test", () => {
         data: { phone: "263778177125" },
         headers: {
           "Content-Type": "application/json",
-          "WHATSAPP_BOT_API_KEY": WHATSAPP_BOT_API_KEY,
           "X-Github-Token": GITHUB_TOKEN
         },
         httpsAgent: httpsAgent

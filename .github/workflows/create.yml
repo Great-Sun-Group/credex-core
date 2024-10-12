@@ -8,7 +8,6 @@ jobs:
     name: Initial AWS Deployment
     runs-on: ubuntu-latest
     env:
-      TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
       TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
       TF_VAR_open_exchange_rates_api: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
 
@@ -25,18 +24,28 @@ jobs:
           else
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
+          echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Generate Secrets
         run: |
           chmod +x .github/workflows/generate_secrets.sh
           ./.github/workflows/generate_secrets.sh ${{ env.ENVIRONMENT }}
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.TF_VAR_aws_region }}
+      - name: Set Terraform variables
+        run: |
+          echo "TF_VAR_jwt_secret=${{ secrets.JWT_SECRET }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_ledger_space_user=${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_ledger_space_pass=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_search_space_user=${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_search_space_pass=${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_public_key=${{ secrets.NEO4J_PUBLIC_KEY }}" >> $GITHUB_ENV
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -80,7 +89,7 @@ jobs:
           # Check for existing resources
           echo "Checking for existing resources..."
           
-          if resource_exists "aws_acm_certificate" "${TF_VAR_domain}" || \
+          if resource_exists "aws_acm_certificate" "${TF_VAR_domain_base}" || \
              resource_exists "aws_security_group" "credex-alb-sg-${{ env.ENVIRONMENT }}" || \
              resource_exists "aws_security_group" "credex-core-ecs-tasks-sg-${{ env.ENVIRONMENT }}" || \
              resource_exists "aws_security_group" "credex-neo4j-sg-${{ env.ENVIRONMENT }}" || \
@@ -105,16 +114,16 @@ jobs:
           terraform init
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
 
-      - name: Terraform Plan
-        id: plan
+      - name: Terraform Plan (Infrastructure)
+        id: plan_infra
         run: |
           cd terraform
-          terraform plan -out=tfplan
+          terraform plan -out=tfplan_infra -target=module.neo4j -target=module.networking
 
-      - name: Terraform Apply
+      - name: Terraform Apply (Infrastructure)
         run: |
           cd terraform
-          terraform apply -auto-approve tfplan
+          terraform apply -auto-approve tfplan_infra
 
       - name: Get Terraform Outputs
         id: tf-outputs
@@ -124,20 +133,40 @@ jobs:
           terraform output -json > tf_outputs.json
           echo "tf_outputs=$(cat tf_outputs.json | jq -c .)" >> $GITHUB_OUTPUT
 
+      - name: Set Neo4j Bolt URLs
+        run: |
+          NEO4J_LEDGER_IP=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_ledger_space_bolt_url.value' | sed 's|bolt://||' | sed 's|:7687||')
+          NEO4J_SEARCH_IP=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_search_space_bolt_url.value' | sed 's|bolt://||' | sed 's|:7687||')
+          gh secret set NEO_4J_LEDGER_SPACE_BOLT_URL -b"bolt://${NEO4J_LEDGER_IP}:7687" --env ${{ env.ENVIRONMENT }}
+          gh secret set NEO_4J_SEARCH_SPACE_BOLT_URL -b"bolt://${NEO4J_SEARCH_IP}:7687" --env ${{ env.ENVIRONMENT }}
+          echo "TF_VAR_neo4j_ledger_space_bolt_url=bolt://${NEO4J_LEDGER_IP}:7687" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_search_space_bolt_url=bolt://${NEO4J_SEARCH_IP}:7687" >> $GITHUB_ENV
+
+      - name: Terraform Plan (ECS)
+        id: plan_ecs
+        run: |
+          cd terraform
+          terraform plan -out=tfplan_ecs -target=module.ecs
+
+      - name: Terraform Apply (ECS)
+        run: |
+          cd terraform
+          terraform apply -auto-approve tfplan_ecs
+
       - name: Update ECS Task Definition
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
-          # Update ECS task definition
           TASK_DEF=$(aws ecs describe-task-definition --task-definition credex-core-${{ env.ENVIRONMENT }} --query taskDefinition)
           NEW_TASK_DEF=$(echo $TASK_DEF | jq '.containerDefinitions[0].environment += [
-            {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_USER }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_USER }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}"},
-            {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"}
+            {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_ledger_space_bolt_url }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_search_space_bolt_url }}"},
+            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ env.TF_VAR_neo4j_ledger_space_user }}"},
+            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ env.TF_VAR_neo4j_ledger_space_pass }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ env.TF_VAR_neo4j_search_space_user }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ env.TF_VAR_neo4j_search_space_pass }}"},
+            {"name": "JWT_SECRET", "value": "${{ env.TF_VAR_jwt_secret }}"},
+            {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ env.TF_VAR_open_exchange_rates_api }}"}
           ]')
           echo $NEW_TASK_DEF > new-task-def.json
           aws ecs register-task-definition --cli-input-json file://new-task-def.json
@@ -147,7 +176,6 @@ jobs:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
           echo "Deploying application to ${{ env.ENVIRONMENT }} from branch ${{ github.ref_name }}"
-          # Update ECS service to use the new task definition
           aws ecs update-service --cluster credex-cluster-${{ env.ENVIRONMENT }} --service credex-core-service-${{ env.ENVIRONMENT }} --task-definition credex-core-${{ env.ENVIRONMENT }}
 
       - name: Run Post-Deployment Tests

@@ -36,7 +36,6 @@ The following environment variables must be set in Github Environment and import
 - `NEO_4J_SEARCH_SPACE_PASS`
 - `OPEN_EXCHANGE_RATES_API`
 - `JWT_SECRET`
-- `WHATSAPP_BOT_API_KEY`
 
 The following environment variables are optional, because on first deployment they do not exist. First deployment provides the values, which then must be set in their respective environment. Subsequent deployments that redeploy neo4j (exercise caution with this! docs to be created) will provide new Bolt URLs, which must be updated in the respective environment.
 

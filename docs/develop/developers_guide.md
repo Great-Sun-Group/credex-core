@@ -98,21 +98,10 @@ OPEN_EXCHANGE_RATES_API
    3. Look for your App ID or API Key.
    4. Copy this key and use it as the value for OPEN_EXCHANGE_RATES_API.
 
-WHATSAPP_BOT_API_KEY
 JWT_SECRET
-- create your own unique random strings
+- create your own unique random string
 
 For development environments, the `NODE_ENV` variable defaults to 'development'.
-
-The following variables are optional and only required for deployment:
-
-AWS_ACCESS_KEY(? not sure if still required)
-AWS_SECRET_ACCESS_KEY(? not sure if still required)
-GH_APP_ID
-GH_INSTALLATION_ID
-GH_APP_PRIVATE_KEY
-
-These deployment-specific variables should only be set by authorized team members with the necessary AWS and GitHub permissions.
 
 ## Initializing, Resetting, and Progressing the Databases
 
