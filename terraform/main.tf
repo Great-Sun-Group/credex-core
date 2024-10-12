@@ -12,7 +12,9 @@ provider "aws" {
 }
 
 locals {
-  api_domain  = local.domain[local.environment]
+  environment = terraform.workspace
+  api_domain  = var.domain[local.environment]
+  log_level   = var.log_level[local.environment]
   common_tags = {
     Environment = local.environment
     Project     = "CredEx"
@@ -93,7 +95,7 @@ resource "aws_ecs_task_definition" "credex_core_task" {
       ]
       environment = [
         { name = "NODE_ENV", value = local.environment },
-        { name = "LOG_LEVEL", value = local.log_level[local.environment] },
+        { name = "LOG_LEVEL", value = local.log_level },
         { name = "AWS_REGION", value = var.aws_region },
         { name = "DOMAIN_NAME", value = local.api_domain }
       ]
@@ -160,6 +162,11 @@ output "task_definition_arn" {
   value = var.create_resources ? aws_ecs_task_definition.credex_core_task[0].arn : data.aws_ecs_task_definition.existing_task_definition[0].arn
 }
 
+# Output the ECS service name
+output "ecs_service_name" {
+  value = var.create_resources ? aws_ecs_service.credex_core_service[0].name : data.aws_ecs_service.existing_service[0].service_name
+}
+
 # Variables for secret ARNs
 variable "jwt_secret_arn" {
   description = "ARN of the JWT secret in Secrets Manager"
@@ -204,4 +211,19 @@ variable "neo4j_search_space_bolt_url_arn" {
 variable "neo4j_enterprise_license_arn" {
   description = "ARN of the Neo4j Enterprise License in Secrets Manager"
   type        = string
+}
+
+variable "aws_region" {
+  description = "The AWS region to deploy to"
+  type        = string
+}
+
+variable "domain" {
+  description = "Map of environment to domain names"
+  type        = map(string)
+}
+
+variable "log_level" {
+  description = "Map of environment to log levels"
+  type        = map(string)
 }

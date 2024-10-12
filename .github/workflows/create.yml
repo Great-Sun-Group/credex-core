@@ -7,6 +7,7 @@ jobs:
   deploy:
     name: Initial AWS Deployment
     runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
     env:
       TF_VAR_domain_base: mycredex.app
       TF_VAR_subdomain_development: dev.api
@@ -54,19 +55,9 @@ jobs:
         run: |
           echo "NODE_ENV=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
           echo "TF_VAR_environment=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-          if [ "${{ env.ENVIRONMENT }}" == "development" ]; then
-            echo "AWS_REGION=${{ secrets.DEVELOPMENT_AWS_REGION }}" >> $GITHUB_ENV
-            echo "TF_VAR_open_exchange_rates_api=${{ secrets.DEVELOPMENT_OPEN_EXCHANGE_RATES_API }}" >> $GITHUB_ENV
-            echo "TF_VAR_neo4j_enterprise_license=${{ secrets.DEVELOPMENT_NEO4J_ENTERPRISE_LICENSE }}" >> $GITHUB_ENV
-          elif [ "${{ env.ENVIRONMENT }}" == "staging" ]; then
-            echo "AWS_REGION=${{ secrets.STAGING_AWS_REGION }}" >> $GITHUB_ENV
-            echo "TF_VAR_open_exchange_rates_api=${{ secrets.STAGING_OPEN_EXCHANGE_RATES_API }}" >> $GITHUB_ENV
-            echo "TF_VAR_neo4j_enterprise_license=${{ secrets.STAGING_NEO4J_ENTERPRISE_LICENSE }}" >> $GITHUB_ENV
-          else
-            echo "AWS_REGION=${{ secrets.PRODUCTION_AWS_REGION }}" >> $GITHUB_ENV
-            echo "TF_VAR_open_exchange_rates_api=${{ secrets.PRODUCTION_OPEN_EXCHANGE_RATES_API }}" >> $GITHUB_ENV
-            echo "TF_VAR_neo4j_enterprise_license=${{ secrets.PRODUCTION_NEO4J_ENTERPRISE_LICENSE }}" >> $GITHUB_ENV
-          fi
+          echo "AWS_REGION=${{ secrets[format('{0}_AWS_REGION', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+          echo "TF_VAR_open_exchange_rates_api=${{ secrets[format('{0}_OPEN_EXCHANGE_RATES_API', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_enterprise_license=${{ secrets[format('{0}_NEO4J_ENTERPRISE_LICENSE', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
 
       - name: Debug - Print Environment Variables
         run: |
@@ -81,19 +72,19 @@ jobs:
         run: |
           missing_secrets=()
           
-          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+          if [ -z "${{ secrets[format('{0}_AWS_ACCESS_KEY_ID', env.ENVIRONMENT)] }}" ]; then
             missing_secrets+=("AWS_ACCESS_KEY_ID")
           fi
-          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+          if [ -z "${{ secrets[format('{0}_AWS_SECRET_ACCESS_KEY', env.ENVIRONMENT)] }}" ]; then
             missing_secrets+=("AWS_SECRET_ACCESS_KEY")
           fi
-          if [ -z "${{ secrets.AWS_REGION }}" ]; then
+          if [ -z "${{ secrets[format('{0}_AWS_REGION', env.ENVIRONMENT)] }}" ]; then
             missing_secrets+=("AWS_REGION")
           fi
-          if [ -z "${{ secrets.OPEN_EXCHANGE_RATES_API }}" ]; then
+          if [ -z "${{ secrets[format('{0}_OPEN_EXCHANGE_RATES_API', env.ENVIRONMENT)] }}" ]; then
             missing_secrets+=("OPEN_EXCHANGE_RATES_API")
           fi
-          if [ -z "${{ secrets.NEO4J_ENTERPRISE_LICENSE }}" ]; then
+          if [ -z "${{ secrets[format('{0}_NEO4J_ENTERPRISE_LICENSE', env.ENVIRONMENT)] }}" ]; then
             missing_secrets+=("NEO4J_ENTERPRISE_LICENSE")
           fi
           
@@ -106,8 +97,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets[format('{0}_AWS_ACCESS_KEY_ID', env.ENVIRONMENT)] }}
+          aws-secret-access-key: ${{ secrets[format('{0}_AWS_SECRET_ACCESS_KEY', env.ENVIRONMENT)] }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Debug - Check AWS Configuration
@@ -118,8 +109,8 @@ jobs:
             aws sts get-caller-identity
           else
             echo "Error: AWS credentials are invalid or not set correctly"
-            echo "AWS_ACCESS_KEY_ID is set: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}"
-            echo "AWS_SECRET_ACCESS_KEY is set: ${{ secrets.AWS_SECRET_ACCESS_KEY != '' }}"
+            echo "AWS_ACCESS_KEY_ID is set: ${{ secrets[format('{0}_AWS_ACCESS_KEY_ID', env.ENVIRONMENT)] != '' }}"
+            echo "AWS_SECRET_ACCESS_KEY is set: ${{ secrets[format('{0}_AWS_SECRET_ACCESS_KEY', env.ENVIRONMENT)] != '' }}"
             echo "AWS_REGION is set: ${{ env.AWS_REGION != '' }}"
             exit 1
           fi
@@ -132,12 +123,12 @@ jobs:
 
       - name: Set Terraform variables
         run: |
-          echo "TF_VAR_jwt_secret=${{ secrets.JWT_SECRET }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_ledger_space_user=${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_ledger_space_pass=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_search_space_user=${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_search_space_pass=${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_public_key=${{ secrets.NEO4J_PUBLIC_KEY }}" >> $GITHUB_ENV
+          echo "TF_VAR_jwt_secret=${{ secrets[format('{0}_JWT_SECRET', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_ledger_space_user=${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_USER', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_ledger_space_pass=${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_PASS', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_search_space_user=${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_USER', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_search_space_pass=${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_PASS', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_public_key=${{ secrets[format('{0}_NEO4J_PUBLIC_KEY', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -253,11 +244,11 @@ jobs:
           NEW_TASK_DEF=$(echo $TASK_DEF | jq '.containerDefinitions[0].environment += [
             {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_ledger_space_bolt_url }}"},
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_search_space_bolt_url }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ env.TF_VAR_neo4j_ledger_space_user }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ env.TF_VAR_neo4j_ledger_space_pass }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ env.TF_VAR_neo4j_search_space_user }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ env.TF_VAR_neo4j_search_space_pass }}"},
-            {"name": "JWT_SECRET", "value": "${{ env.TF_VAR_jwt_secret }}"},
+            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_USER', env.ENVIRONMENT)] }}"},
+            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_PASS', env.ENVIRONMENT)] }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_USER', env.ENVIRONMENT)] }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_PASS', env.ENVIRONMENT)] }}"},
+            {"name": "JWT_SECRET", "value": "${{ secrets[format('{0}_JWT_SECRET', env.ENVIRONMENT)] }}"},
             {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ env.TF_VAR_open_exchange_rates_api }}"}
           ]')
           echo $NEW_TASK_DEF > new-task-def.json
@@ -286,3 +277,8 @@ jobs:
           # Get the latest events from the ECS service
           echo "ECS Service Events:"
           aws ecs describe-services --cluster credex-cluster-${{ env.TF_VAR_environment }} --services credex-core-service-${{ env.TF_VAR_environment }} --query 'services[0].events[0:5]' | jq .
+
+      - name: Debug - Print Final Environment Variables
+        run: |
+          echo "Final Environment Variables:"
+          env | grep -E "TF_VAR_|AWS_|NODE_ENV|GITHUB_ENV"
