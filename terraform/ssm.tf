@@ -1,6 +1,6 @@
 # Data source for existing SSM parameters
 data "aws_ssm_parameter" "existing_params" {
-  for_each = lookup(var.use_existing_resources, "ssm_parameters", false) ? {
+  for_each = var.create_resources && lookup(var.use_existing_resources, "ssm_parameters", false) ? {
     jwt_secret                  = "/credex/${local.environment}/jwt_secret"
     whatsapp_bot_api_key        = "/credex/${local.environment}/whatsapp_bot_api_key"
     open_exchange_rates_api     = "/credex/${local.environment}/open_exchange_rates_api"
@@ -41,9 +41,7 @@ resource "null_resource" "update_ssm_params" {
   count = var.create_resources && !lookup(var.use_existing_resources, "ssm_parameters", false) ? 1 : 0
 
   triggers = {
-    jwt_secret              = var.jwt_secret
-    whatsapp_bot_api_key    = var.whatsapp_bot_api_key
-    open_exchange_rates_api = var.open_exchange_rates_api
+    always_run = timestamp()
   }
 
   provisioner "local-exec" {
