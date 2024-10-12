@@ -51,7 +51,7 @@ jobs:
       - name: Terraform Destroy
         run: |
           cd terraform
-          terraform destroy -auto-approve -var="create_resources=false"
+          terraform destroy -auto-approve -var="create_resources=false" -var="environment=${{ env.ENVIRONMENT }}"
 
       - name: Cleanup Orphaned Resources
         run: |
