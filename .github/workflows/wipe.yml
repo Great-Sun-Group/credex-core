@@ -50,3 +50,28 @@ jobs:
           cd terraform
           terraform init
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+
+      - name: Terraform Destroy
+        run: |
+          cd terraform
+          terraform destroy -auto-approve -var="create_resources=false"
+
+      - name: Verify Cleanup
+        run: |
+          cd terraform
+          if terraform show; then
+            echo "Error: Resources still exist after cleanup"
+            exit 1
+          else
+            echo "All resources have been successfully removed"
+          fi
+
+      - name: Log Cleanup
+        if: success()
+        run: |
+          echo "Cleanup of ${{ env.ENVIRONMENT }} environment completed successfully at $(date)"
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "Cleanup of ${{ env.ENVIRONMENT }} environment failed. Please check the logs for more information."
