@@ -66,6 +66,23 @@ jobs:
           echo "OPEN_EXCHANGE_RATES_API is set: ${{ env.TF_VAR_open_exchange_rates_api != '' }}"
           echo "NEO4J_ENTERPRISE_LICENSE is set: ${{ env.TF_VAR_neo4j_enterprise_license != '' }}"
 
+      - name: Check Required Secrets
+        run: |
+          required_secrets=("AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "AWS_REGION" "OPEN_EXCHANGE_RATES_API" "NEO4J_ENTERPRISE_LICENSE")
+          missing_secrets=()
+          
+          for secret in "${required_secrets[@]}"; do
+            if [ -z "${{ secrets[secret] }}" ]; then
+              missing_secrets+=("$secret")
+            fi
+          done
+          
+          if [ ${#missing_secrets[@]} -ne 0 ]; then
+            echo "Error: The following required secrets are missing: ${missing_secrets[*]}"
+            echo "Please set these secrets in your GitHub repository settings."
+            exit 1
+          fi
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -83,6 +100,7 @@ jobs:
             echo "Error: AWS credentials are invalid or not set correctly"
             echo "AWS_ACCESS_KEY_ID is set: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}"
             echo "AWS_SECRET_ACCESS_KEY is set: ${{ secrets.AWS_SECRET_ACCESS_KEY != '' }}"
+            echo "AWS_REGION is set: ${{ env.AWS_REGION != '' }}"
             exit 1
           fi
           aws configure list
@@ -108,7 +126,7 @@ jobs:
         id: pre_deployment_checks
         run: |
           cd terraform
-          
+
           # Function to check if a resource exists in AWS
           resource_exists() {
             local resource_type=$1
@@ -139,10 +157,10 @@ jobs:
                 ;;
             esac
           }
-          
+
           # Check for existing resources
           echo "Checking for existing resources..."
-          
+
           if resource_exists "aws_acm_certificate" "${TF_VAR_domain_base}" || \
              resource_exists "aws_security_group" "credex-alb-sg-${{ env.TF_VAR_environment }}" || \
              resource_exists "aws_security_group" "credex-core-ecs-tasks-sg-${{ env.TF_VAR_environment }}" || \
@@ -153,10 +171,10 @@ jobs:
             echo "Error: Some resources already exist. This script is intended for initial deployment only."
             exit 1
           fi
-          
+
           # Check for Neo4j instances
           neo4j_instance_count=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-${{ env.TF_VAR_environment }}-*" "Name=instance-state-name,Values=running" --query 'length(Reservations[].Instances[])' --output text)
-          
+
           if [ "$neo4j_instance_count" -gt 0 ]; then
             echo "Error: Neo4j instances already exist. This script is intended for initial deployment only."
             exit 1
