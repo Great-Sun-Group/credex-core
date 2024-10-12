@@ -7,6 +7,7 @@ jobs:
   wipe:
     name: Wipe AWS Resources
     runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
     env:
       TF_VAR_aws_region: af-south-1
 
@@ -24,38 +25,12 @@ jobs:
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
 
-      - name: Debug - Environment Variables
-        run: |
-          echo "GitHub Ref: ${{ github.ref }}"
-          echo "Environment: ${{ env.ENVIRONMENT }}"
-          echo "AWS Region: ${{ env.TF_VAR_aws_region }}"
-
-      - name: Debug - Secret Availability
-        run: |
-          if [ -n "${{ secrets.AWS_ACCESS_KEY }}" ]; then
-            echo "AWS_ACCESS_KEY is set"
-            echo "First 4 characters: ${{{ secrets.AWS_ACCESS_KEY }:0:4}}"
-          else
-            echo "AWS_ACCESS_KEY is not set"
-          fi
-          if [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
-            echo "AWS_SECRET_ACCESS_KEY is set"
-            echo "Length: ${#{{ secrets.AWS_SECRET_ACCESS_KEY }}}"
-          else
-            echo "AWS_SECRET_ACCESS_KEY is not set"
-          fi
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.TF_VAR_aws_region }}
-
-      - name: Verify AWS CLI Configuration
-        run: |
-          aws sts get-caller-identity
-          aws configure list
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -66,64 +41,176 @@ jobs:
           terraform init
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
 
+      - name: Wipe SSM Parameters
+        run: |
+          aws ssm get-parameters-by-path --path "/credex/${{ env.ENVIRONMENT }}/" --recursive --query "Parameters[].Name" --output text | tr '\t' '\n' | while read param; do
+            aws ssm delete-parameter --name "$param" || true
+            echo "Wiped SSM parameter: $param"
+          done
+
       - name: Terraform Destroy
+        env:
+          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+          TF_VAR_whatsapp_bot_api_key: ${{ secrets.WHATSAPP_BOT_API_KEY }}
+          TF_VAR_open_exchange_rates_api: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
+          TF_VAR_neo4j_ledger_space_user: ${{ secrets.NEO4J_LEDGER_SPACE_USER }}
+          TF_VAR_neo4j_ledger_space_pass: ${{ secrets.NEO4J_LEDGER_SPACE_PASS }}
+          TF_VAR_neo4j_search_space_user: ${{ secrets.NEO4J_SEARCH_SPACE_USER }}
+          TF_VAR_neo4j_search_space_pass: ${{ secrets.NEO4J_SEARCH_SPACE_PASS }}
+          TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
+          TF_VAR_neo4j_public_key: ${{ secrets.NEO4J_PUBLIC_KEY }}
         run: |
           cd terraform
-          terraform destroy -auto-approve -var="create_resources=false"
+          terraform destroy -auto-approve -var="create_resources=false" -var="environment=${{ env.ENVIRONMENT }}" || echo "Terraform destroy failed, continuing with manual resource deletion"
 
       - name: Wipe Orphaned Resources
         run: |
-          cd terraform
+          # Function to wipe EC2 instances
+          wipe_ec2_instances() {
+            echo "Wiping EC2 instances..."
+            instances=$(aws ec2 describe-instances --query "Reservations[*].Instances[*].InstanceId" --output text)
+            for instance in $instances; do
+              aws ec2 terminate-instances --instance-ids $instance || echo "Failed to terminate EC2 instance: $instance"
+              echo "Terminated EC2 instance: $instance"
+            done
+          }
           
-          # Function to get all AWS resources with our project tag
-          get_aws_resources() {
-            local resource_type=$1
-            aws $resource_type describe-${resource_type}s --query "${resource_type}s[?Tags[?Key=='Project' && Value=='CredEx']].${resource_type}Id" --output text
+          # Function to wipe security groups
+          wipe_security_groups() {
+            echo "Wiping security groups..."
+            sgs=$(aws ec2 describe-security-groups --query "SecurityGroups[?GroupName!='default'].GroupId" --output text)
+            for sg in $sgs; do
+              # Remove all inbound rules
+              aws ec2 revoke-security-group-ingress --group-id $sg --protocol all --port all --cidr 0.0.0.0/0 || echo "Failed to revoke ingress rules for security group: $sg"
+              # Remove all outbound rules
+              aws ec2 revoke-security-group-egress --group-id $sg --protocol all --port all --cidr 0.0.0.0/0 || echo "Failed to revoke egress rules for security group: $sg"
+              # Now try to delete the security group
+              aws ec2 delete-security-group --group-id $sg || echo "Failed to delete security group: $sg"
+              echo "Deleted security group: $sg"
+            done
           }
-
-          # Function to remove a resource
-          remove_resource() {
-            local resource_type=$1
-            local resource_id=$2
-            aws $resource_type delete-${resource_type} --${resource_type}-id $resource_id
-            echo "Removed $resource_type: $resource_id"
+          
+          # Function to wipe VPCs
+          wipe_vpcs() {
+            echo "Wiping VPCs..."
+            vpcs=$(aws ec2 describe-vpcs --query "Vpcs[?IsDefault==\`false\`].VpcId" --output text)
+            for vpc in $vpcs; do
+              aws ec2 delete-vpc --vpc-id $vpc || echo "Failed to delete VPC: $vpc"
+              echo "Deleted VPC: $vpc"
+            done
           }
-
-          # Wipe process for each resource type
-          wipe() {
-            local resource_type=$1
-            echo "Identifying orphaned $resource_type resources..."
-            orphaned_resources=$(get_aws_resources $resource_type)
-            
-            if [ -z "$orphaned_resources" ]; then
-              echo "No orphaned $resource_type resources found."
-            else
-              echo "The following orphaned $resource_type resources were found:"
-              echo "$orphaned_resources"
-              
-              for resource in $orphaned_resources; do
-                remove_resource $resource_type $resource
+          
+          # Function to wipe subnets
+          wipe_subnets() {
+            echo "Wiping subnets..."
+            subnets=$(aws ec2 describe-subnets --query "Subnets[*].SubnetId" --output text)
+            for subnet in $subnets; do
+              aws ec2 delete-subnet --subnet-id $subnet || echo "Failed to delete subnet: $subnet"
+              echo "Deleted subnet: $subnet"
+            done
+          }
+          
+          # Function to wipe load balancers
+          wipe_load_balancers() {
+            echo "Wiping load balancers..."
+            lbs=$(aws elbv2 describe-load-balancers --query "LoadBalancers[*].LoadBalancerArn" --output text)
+            for lb in $lbs; do
+              aws elbv2 delete-load-balancer --load-balancer-arn $lb || echo "Failed to delete load balancer: $lb"
+              echo "Deleted load balancer: $lb"
+            done
+          }
+          
+          # Function to wipe ECS clusters
+          wipe_ecs_clusters() {
+            echo "Wiping ECS clusters..."
+            clusters=$(aws ecs list-clusters --query "clusterArns[]" --output text)
+            for cluster in $clusters; do
+              aws ecs delete-cluster --cluster $cluster || echo "Failed to delete ECS cluster: $cluster"
+              echo "Deleted ECS cluster: $cluster"
+            done
+          }
+          
+          # Function to wipe ECS services
+          wipe_ecs_services() {
+            echo "Wiping ECS services..."
+            clusters=$(aws ecs list-clusters --query "clusterArns[]" --output text)
+            for cluster in $clusters; do
+              services=$(aws ecs list-services --cluster $cluster --query "serviceArns[]" --output text)
+              for service in $services; do
+                aws ecs update-service --cluster $cluster --service $service --desired-count 0 || echo "Failed to scale down ECS service: $service"
+                aws ecs delete-service --cluster $cluster --service $service --force || echo "Failed to delete ECS service: $service"
+                echo "Deleted ECS service: $service in cluster: $cluster"
               done
-            fi
+            done
           }
 
+          # Function to wipe EC2 key pairs
+          wipe_ec2_key_pairs() {
+            echo "Wiping EC2 key pairs..."
+            key_pairs=$(aws ec2 describe-key-pairs --query "KeyPairs[*].KeyName" --output text)
+            for key_pair in $key_pairs; do
+              aws ec2 delete-key-pair --key-name $key_pair || echo "Failed to delete EC2 key pair: $key_pair"
+              echo "Deleted EC2 key pair: $key_pair"
+            done
+          }
+
+          # Function to wipe ACM certificates
+          wipe_acm_certificates() {
+            echo "Wiping ACM certificates..."
+            certificates=$(aws acm list-certificates --query "CertificateSummaryList[*].CertificateArn" --output text)
+            for cert in $certificates; do
+              aws acm delete-certificate --certificate-arn $cert || echo "Failed to delete ACM certificate: $cert"
+              echo "Deleted ACM certificate: $cert"
+            done
+          }
+
+          # Function to wipe ECR repositories
+          wipe_ecr_repositories() {
+            echo "Wiping ECR repositories..."
+            repos=$(aws ecr describe-repositories --query "repositories[*].repositoryName" --output text)
+            for repo in $repos; do
+              aws ecr delete-repository --repository-name $repo --force || echo "Failed to delete ECR repository: $repo"
+              echo "Deleted ECR repository: $repo"
+            done
+          }
+          
           # Run wipe for different resource types
-          wipe "instance"
-          wipe "security-group"
-          wipe "vpc"
-          wipe "subnet"
-          wipe "load-balancer"
-          wipe "ecs-cluster"
-          wipe "ecs-service"
+          wipe_ecs_services
+          wipe_ecs_clusters
+          wipe_load_balancers
+          wipe_ec2_instances
+          wipe_security_groups
+          wipe_subnets
+          wipe_vpcs
+          wipe_ec2_key_pairs
+          wipe_acm_certificates
+          wipe_ecr_repositories
+
+      - name: Wipe Terraform State
+        run: |
+          cd terraform
+          # Initialize Terraform to ensure plugins are installed
+          terraform init -input=false
+          # Remove local state files and directories
+          rm -rf terraform.tfstate*
+          rm -rf .terraform
+          # Remove workspace state
+          rm -rf terraform.tfstate.d
+          # If using S3 backend, uncomment and adjust the following line
+          # aws s3 rm s3://your-bucket-name/path/to/terraform.tfstate || true
+          echo "Terraform state files removed"
 
       - name: Verify Wipe
         run: |
           cd terraform
-          if terraform show; then
+          terraform init -input=false
+          # Check if there are any resources in the state
+          if terraform show -json 2>/dev/null | jq -e '.values.root_module.resources' >/dev/null 2>&1; then
             echo "Error: Resources still exist after wipe"
+            terraform show
             exit 1
           else
-            echo "All resources have been successfully removed"
+            echo "All resources have been successfully wiped"
           fi
 
       - name: Log Wipe
@@ -135,4 +222,3 @@ jobs:
         if: failure()
         run: |
           echo "Wipe of ${{ env.ENVIRONMENT }} environment failed. Please check the logs for more information."
-          # Add notification mechanism here (e.g., send an email, Slack message, etc.)

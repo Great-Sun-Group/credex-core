@@ -101,12 +101,12 @@ resource "aws_ecs_task_definition" "credex_core_task" {
         { name = "LOG_LEVEL", value = local.log_level[local.environment] },
         { name = "AWS_REGION", value = var.aws_region }
       ]
-      secrets = [
+      secrets = var.create_resources ? [
         for key, param in aws_ssm_parameter.params : {
           name      = upper(replace(key, "/credex/${local.environment}/", ""))
           valueFrom = param.arn
         }
-      ]
+      ] : []
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -155,6 +155,3 @@ resource "aws_ecs_service" "credex_core_service" {
 
   tags = local.common_tags
 }
-
-# Outputs remain the same
-# ... (keep all the output blocks as they were)
