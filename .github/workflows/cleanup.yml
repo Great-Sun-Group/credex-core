@@ -3,10 +3,6 @@ name: Cleanup AWS Resources
 on:
   workflow_dispatch:
 
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
   cleanup:
     name: Wipe AWS Resources
@@ -28,13 +24,17 @@ jobs:
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
 
-      - name: Verify Secrets
+      - name: Debug - Check Secret Availability
         run: |
-          if [ -n "${{ secrets.AWS_ACCESS_KEY }}" ] && [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
-            echo "AWS credentials are set"
+          if [ -n "${{ secrets.AWS_ACCESS_KEY }}" ]; then
+            echo "AWS_ACCESS_KEY is set"
           else
-            echo "AWS credentials are not set"
-            exit 1
+            echo "AWS_ACCESS_KEY is not set"
+          fi
+          if [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "AWS_SECRET_ACCESS_KEY is set"
+          else
+            echo "AWS_SECRET_ACCESS_KEY is not set"
           fi
 
       - name: Configure AWS credentials
@@ -43,6 +43,10 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.TF_VAR_aws_region }}
+
+      - name: Verify AWS CLI Configuration
+        run: |
+          aws sts get-caller-identity
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -61,7 +65,7 @@ jobs:
       - name: Cleanup Orphaned Resources
         run: |
           cd terraform
-
+          
           # Function to get all AWS resources with our project tag
           get_aws_resources() {
             local resource_type=$1
