@@ -35,6 +35,7 @@ jobs:
           else
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
+          echo "Setting environment to: ${{ env.ENVIRONMENT }}"
 
       - name: Set GitHub Environment
         run: |
@@ -53,9 +54,19 @@ jobs:
         run: |
           echo "NODE_ENV=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
           echo "TF_VAR_environment=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
-          echo "TF_VAR_open_exchange_rates_api=${{ secrets.OPEN_EXCHANGE_RATES_API }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_enterprise_license=${{ secrets.NEO4J_ENTERPRISE_LICENSE }}" >> $GITHUB_ENV
+          if [ "${{ env.ENVIRONMENT }}" == "development" ]; then
+            echo "AWS_REGION=${{ secrets.DEVELOPMENT_AWS_REGION }}" >> $GITHUB_ENV
+            echo "TF_VAR_open_exchange_rates_api=${{ secrets.DEVELOPMENT_OPEN_EXCHANGE_RATES_API }}" >> $GITHUB_ENV
+            echo "TF_VAR_neo4j_enterprise_license=${{ secrets.DEVELOPMENT_NEO4J_ENTERPRISE_LICENSE }}" >> $GITHUB_ENV
+          elif [ "${{ env.ENVIRONMENT }}" == "staging" ]; then
+            echo "AWS_REGION=${{ secrets.STAGING_AWS_REGION }}" >> $GITHUB_ENV
+            echo "TF_VAR_open_exchange_rates_api=${{ secrets.STAGING_OPEN_EXCHANGE_RATES_API }}" >> $GITHUB_ENV
+            echo "TF_VAR_neo4j_enterprise_license=${{ secrets.STAGING_NEO4J_ENTERPRISE_LICENSE }}" >> $GITHUB_ENV
+          else
+            echo "AWS_REGION=${{ secrets.PRODUCTION_AWS_REGION }}" >> $GITHUB_ENV
+            echo "TF_VAR_open_exchange_rates_api=${{ secrets.PRODUCTION_OPEN_EXCHANGE_RATES_API }}" >> $GITHUB_ENV
+            echo "TF_VAR_neo4j_enterprise_license=${{ secrets.PRODUCTION_NEO4J_ENTERPRISE_LICENSE }}" >> $GITHUB_ENV
+          fi
 
       - name: Debug - Print Environment Variables
         run: |
