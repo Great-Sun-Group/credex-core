@@ -258,21 +258,20 @@ jobs:
         run: |
           echo "Deploying application to ${{ env.TF_VAR_environment }} from branch ${{ github.ref_name }}"
           aws ecs update-service --cluster credex-cluster-${{ env.TF_VAR_environment }} --service credex-core-service-${{ env.TF_VAR_environment }} --task-definition credex-core-${{ env.TF_VAR_environment }}
-
-      - name: Run Post-Deployment Tests
-        env:
-          TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
-        run: |
-          echo "Running post-deployment tests for ${{ env.TF_VAR_environment }}"
-          # Add your test commands here
-
-      - name: Log Deployment
-        if: success()
-        run: |
-          echo "Initial deployment to ${{ env.TF_VAR_environment }} from branch ${{ github.ref_name }} completed successfully at $(date)"
-
-      - name: Notify on Failure
-        if: failure()
-        run: |
-          echo "Initial deployment to ${{ env.TF_VAR_environment }} from branch ${{ github.ref_name }} failed. Please check the logs for more information."
-          # Add notification mechanism here (e.g., send an email, Slack message, etc.)
+          
+          # Wait for the service to stabilize
+          aws ecs wait services-stable --cluster credex-cluster-${{ env.TF_VAR_environment }} --services credex-core-service-${{ env.TF_VAR_environment }}
+          
+          # Get the latest task ARN
+          TASK_ARN=$(aws ecs list-tasks --cluster credex-cluster-${{ env.TF_VAR_environment }} --service-name credex-core-service-${{ env.TF_VAR_environment }} --query 'taskArns[0]' --output text)
+          
+          # Get the task details
+          TASK_DETAILS=$(aws ecs describe-tasks --cluster credex-cluster-${{ env.TF_VAR_environment }} --tasks $TASK_ARN)
+          
+          # Print task details for debugging
+          echo "Task Details:"
+          echo "$TASK_DETAILS" | jq .
+          
+          # Get the latest events from the ECS service
+          echo "ECS Service Events:"
+          aws ecs describe-services --cluster credex-cluster-${{ env.TF_VAR_environment }} --services credex-core-service-${{ env.TF_VAR_environment }} --query 'services[0].events[0:5]' | jq .
