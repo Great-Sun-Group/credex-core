@@ -36,28 +36,23 @@ jobs:
           else
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
+          echo "NODE_ENV=$ENVIRONMENT" >> $GITHUB_ENV
+          echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
           echo "Setting environment to: ${{ env.ENVIRONMENT }}"
-
-      - name: Set GitHub Environment
-        run: |
-          echo "GITHUB_ENV=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-          echo "Setting GitHub Environment to: ${{ env.ENVIRONMENT }}"
-
-      - name: Use GitHub Environment
-        uses: actions/github-script@v6
-        with:
-          script: |
-            core.exportVariable('GITHUB_JOB_ENV', '${{ env.ENVIRONMENT }}')
 
       - name: Set Environment Variables
         env:
-          GITHUB_ENV: ${{ env.GITHUB_JOB_ENV }}
+          GITHUB_ENV: ${{ env.ENVIRONMENT }}
         run: |
-          echo "NODE_ENV=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-          echo "TF_VAR_environment=${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
           echo "AWS_REGION=${{ secrets[format('{0}_AWS_REGION', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
           echo "TF_VAR_open_exchange_rates_api=${{ secrets[format('{0}_OPEN_EXCHANGE_RATES_API', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
           echo "TF_VAR_neo4j_enterprise_license=${{ secrets[format('{0}_NEO4J_ENTERPRISE_LICENSE', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+          echo "TF_VAR_jwt_secret=${{ secrets[format('{0}_JWT_SECRET', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_ledger_space_user=${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_USER', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_ledger_space_pass=${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_PASS', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_search_space_user=${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_USER', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_search_space_pass=${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_PASS', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_public_key=${{ secrets[format('{0}_NEO4J_PUBLIC_KEY', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
 
       - name: Debug - Print Environment Variables
         run: |
@@ -121,14 +116,19 @@ jobs:
           chmod +x .github/workflows/generate_secrets.sh
           ./.github/workflows/generate_secrets.sh ${{ env.NODE_ENV }}
 
-      - name: Set Terraform variables
+      - name: Create Terraform Variables File
         run: |
-          echo "TF_VAR_jwt_secret=${{ secrets[format('{0}_JWT_SECRET', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_ledger_space_user=${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_USER', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_ledger_space_pass=${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_PASS', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_search_space_user=${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_USER', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_search_space_pass=${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_PASS', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_public_key=${{ secrets[format('{0}_NEO4J_PUBLIC_KEY', env.ENVIRONMENT)] }}" >> $GITHUB_ENV
+          cat << EOF > terraform/terraform.tfvars
+          environment = "${{ env.ENVIRONMENT }}"
+          jwt_secret = "${{ secrets[format('{0}_JWT_SECRET', env.ENVIRONMENT)] }}"
+          open_exchange_rates_api = "${{ secrets[format('{0}_OPEN_EXCHANGE_RATES_API', env.ENVIRONMENT)] }}"
+          neo4j_enterprise_license = "${{ secrets[format('{0}_NEO4J_ENTERPRISE_LICENSE', env.ENVIRONMENT)] }}"
+          neo4j_ledger_space_user = "${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_USER', env.ENVIRONMENT)] }}"
+          neo4j_ledger_space_pass = "${{ secrets[format('{0}_NEO_4J_LEDGER_SPACE_PASS', env.ENVIRONMENT)] }}"
+          neo4j_search_space_user = "${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_USER', env.ENVIRONMENT)] }}"
+          neo4j_search_space_pass = "${{ secrets[format('{0}_NEO_4J_SEARCH_SPACE_PASS', env.ENVIRONMENT)] }}"
+          neo4j_public_key = "${{ secrets[format('{0}_NEO4J_PUBLIC_KEY', env.ENVIRONMENT)] }}"
+          EOF
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -201,7 +201,7 @@ jobs:
         id: plan_infra
         run: |
           cd terraform
-          terraform plan -out=tfplan_infra -target=module.neo4j -target=module.networking
+          terraform plan -out=tfplan_infra -target=module.neo4j -target=module.networking -var-file=terraform.tfvars
 
       - name: Terraform Apply (Infrastructure)
         run: |
@@ -229,7 +229,7 @@ jobs:
         id: plan_ecs
         run: |
           cd terraform
-          terraform plan -out=tfplan_ecs -target=module.ecs
+          terraform plan -out=tfplan_ecs -target=module.ecs -var-file=terraform.tfvars
 
       - name: Terraform Apply (ECS)
         run: |
