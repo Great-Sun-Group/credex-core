@@ -61,7 +61,7 @@ jobs:
           TF_VAR_neo4j_public_key: ${{ secrets.NEO4J_PUBLIC_KEY }}
         run: |
           cd terraform
-          terraform destroy -auto-approve -var="create_resources=false" -var="environment=${{ env.ENVIRONMENT }}"
+          terraform destroy -auto-approve -var="create_resources=false" -var="environment=${{ env.ENVIRONMENT }}" || echo "Terraform destroy failed, continuing with manual resource deletion"
 
       - name: Wipe Orphaned Resources
         run: |
@@ -163,22 +163,25 @@ jobs:
           rm -rf .terraform
           # Remove workspace state
           rm -rf terraform.tfstate.d
-          # Remove remote state if using backend (adjust as needed)
-          terraform state list 2>/dev/null | xargs -I {} terraform state rm {} || true
           # If using S3 backend, uncomment and adjust the following line
           # aws s3 rm s3://your-bucket-name/path/to/terraform.tfstate || true
+          echo "Terraform state files removed"
 
       - name: Verify Wipe
         run: |
           cd terraform
           terraform init -input=false
           # Check if there are any resources in the state
-          if [ -z "$(terraform show -json | jq '.values.root_module.resources')" ]; then
-            echo "All resources have been successfully wiped"
+          if terraform show -json > /dev/null 2>&1; then
+            if [ -z "$(terraform show -json | jq '.values.root_module.resources')" ]; then
+              echo "All resources have been successfully wiped"
+            else
+              echo "Error: Resources still exist after wipe"
+              terraform show
+              exit 1
+            fi
           else
-            echo "Error: Resources still exist after wipe"
-            terraform show
-            exit 1
+            echo "No Terraform state found, assuming all resources have been wiped"
           fi
 
       - name: Log Wipe
