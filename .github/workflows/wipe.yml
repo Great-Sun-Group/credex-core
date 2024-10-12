@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  wipe:
-    name: Wipe AWS Resources
+  debug:
+    name: Debug Workflow
     runs-on: ubuntu-latest
     env:
       TF_VAR_aws_region: af-south-1
@@ -13,6 +13,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Print GitHub context
+        run: echo '${{ toJson(github) }}'
 
       - name: Set environment
         run: |
@@ -24,26 +27,16 @@ jobs:
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
 
-      - name: Debug - Environment Variables
+      - name: Print environment variables
         run: |
           echo "GitHub Ref: ${{ github.ref }}"
           echo "Environment: ${{ env.ENVIRONMENT }}"
           echo "AWS Region: ${{ env.TF_VAR_aws_region }}"
 
-      - name: Debug - Secret Availability
+      - name: Check secret availability
         run: |
-          if [ -n "${{ secrets.AWS_ACCESS_KEY }}" ]; then
-            echo "AWS_ACCESS_KEY is set"
-            echo "First 4 characters: ${{{ secrets.AWS_ACCESS_KEY }:0:4}}"
-          else
-            echo "AWS_ACCESS_KEY is not set"
-          fi
-          if [ -n "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
-            echo "AWS_SECRET_ACCESS_KEY is set"
-            echo "Length: ${#{{ secrets.AWS_SECRET_ACCESS_KEY }}}"
-          else
-            echo "AWS_SECRET_ACCESS_KEY is not set"
-          fi
+          echo "AWS_ACCESS_KEY availability: ${{ secrets.AWS_ACCESS_KEY != '' }}"
+          echo "AWS_SECRET_ACCESS_KEY availability: ${{ secrets.AWS_SECRET_ACCESS_KEY != '' }}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -56,83 +49,3 @@ jobs:
         run: |
           aws sts get-caller-identity
           aws configure list
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-
-      - name: Terraform Init and Workspace Selection
-        run: |
-          cd terraform
-          terraform init
-          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
-
-      - name: Terraform Destroy
-        run: |
-          cd terraform
-          terraform destroy -auto-approve -var="create_resources=false"
-
-      - name: Wipe Orphaned Resources
-        run: |
-          cd terraform
-          
-          # Function to get all AWS resources with our project tag
-          get_aws_resources() {
-            local resource_type=$1
-            aws $resource_type describe-${resource_type}s --query "${resource_type}s[?Tags[?Key=='Project' && Value=='CredEx']].${resource_type}Id" --output text
-          }
-
-          # Function to remove a resource
-          remove_resource() {
-            local resource_type=$1
-            local resource_id=$2
-            aws $resource_type delete-${resource_type} --${resource_type}-id $resource_id
-            echo "Removed $resource_type: $resource_id"
-          }
-
-          # Wipe process for each resource type
-          wipe() {
-            local resource_type=$1
-            echo "Identifying orphaned $resource_type resources..."
-            orphaned_resources=$(get_aws_resources $resource_type)
-            
-            if [ -z "$orphaned_resources" ]; then
-              echo "No orphaned $resource_type resources found."
-            else
-              echo "The following orphaned $resource_type resources were found:"
-              echo "$orphaned_resources"
-              
-              for resource in $orphaned_resources; do
-                remove_resource $resource_type $resource
-              done
-            fi
-          }
-
-          # Run wipe for different resource types
-          wipe "instance"
-          wipe "security-group"
-          wipe "vpc"
-          wipe "subnet"
-          wipe "load-balancer"
-          wipe "ecs-cluster"
-          wipe "ecs-service"
-
-      - name: Verify Wipe
-        run: |
-          cd terraform
-          if terraform show; then
-            echo "Error: Resources still exist after wipe"
-            exit 1
-          else
-            echo "All resources have been successfully removed"
-          fi
-
-      - name: Log Wipe
-        if: success()
-        run: |
-          echo "Wipe of ${{ env.ENVIRONMENT }} environment completed successfully at $(date)"
-
-      - name: Notify on Failure
-        if: failure()
-        run: |
-          echo "Wipe of ${{ env.ENVIRONMENT }} environment failed. Please check the logs for more information."
-          # Add notification mechanism here (e.g., send an email, Slack message, etc.)
