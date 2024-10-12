@@ -8,22 +8,12 @@ The credex-core application is deployed using AWS services (including ECS, ECR),
 
 ## Deployment Overview
 
-**Any work that changes files in /.github/workflows or /terraform impacts the application deployment process**, and must first be tested on the `dev` branch by a developer with the AWS and Github App access keys. For the purpose of these docs, a developer with the AWS access codes is a "deployer".
+**Any work that changes files in /.github/workflows or /terraform impacts the application deployment process**, and must first be tested by a developer with the appropriate AWS keys. For the purpose of these docs, a developer with the AWS access codes is a "deployer".
 
-Our permissions are currently set (should be updated, key validation is enough, branch protection unneeded) so that the AWS `development` environment can only be deployed from the `dev` branch, so a deployer must do their work directly on that branch, push changes, then call the development deployment script with:
-
-```bash
-npx ts-node terraform/trigger-dev-deploy.ts
-```
-
-This script will:
-
-- Authenticate with the development GitHub App
-- Fetch development-specific secrets from the Development environment
-- Trigger the development deployment workflow
-- Run follow-up tests
-
-Note: This `trigger-dev-deploy.ts` script is intended for use in the development environment on the `dev` branch. It's a full dry run privately that logs to your terminal, before going to stage.
+Deployments are managed from the Github console under Actions: `Initial Deployment to AWS`, `Redeploy to AWS`, and `Wipe AWS Resources`. These three scripts can be run on any branch.
+ - `prod` branch will automatically be deployed to `production` environment using production secrets.
+ - `stage` branch will automatically be deployed to `staging` environment using staging secrets. 
+ - any other branch will automatically be deployed to `deployment` environment using deployment secrets
 
 Note to code reviewers: Developers are technically able to make changes to deployment code (workflows or terraform). But such changes should not be made by anyone who can't test them, and should not be deployed to `stage` untested.
 

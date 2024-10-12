@@ -54,7 +54,7 @@ Contributions, bug fixes, and security testing and patches are welcome.
 
 ### EXCLUSION: Live ledger
 
-You do not have permission to use this software to track real outstanding debts. You may not deploy this software to be used by deal users transacting at arms length from each other. Data of real past transactions may be used, but only as modeling, testing, or research input. If you want to transact real value with credex, you are invited to use the live shared ledger of the credex ecosystem at [mycredex.app](https://mycredex.app), and to develop apps that connect your users to their credex accounts through `api.mycredex.app` as outlined in the welcomed uses above.
+You do not have permission to use this software to track real outstanding debts. You may not deploy this software to be used by real users transacting at arms length from each other. Data of real past transactions may be used, but only as modeling, testing, or research input. If you want to transact real value with credex, you are invited to use the live shared ledger of the credex ecosystem at [mycredex.app](https://mycredex.app), and to develop apps that connect your users to their credex accounts through `api.mycredex.app` as outlined in the welcomed uses above.
 
 ### Summary
 
