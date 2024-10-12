@@ -8,8 +8,44 @@ jobs:
     name: Initial AWS Deployment
     runs-on: ubuntu-latest
     env:
+      # Secrets from Github Environment
       TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
       TF_VAR_open_exchange_rates_api: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
+
+      # Where to deploy
+      AWS_REGION: af-south-1
+
+      # Domain config, used to assemble subdomains like
+      # dev.api.mycredex.app
+      TF_VAR_domain_base: mycredex.app
+      TF_VAR_subdomain_development: dev.api
+      TF_VAR_subdomain_staging: stage.api
+      TF_VAR_subdomain_production: api
+
+      # Neo4j instance count: Defines the number of Neo4j instances to be deployed for each environment.
+      # This is compliant with the Neo4j Startup Software License Agreement, which allows:
+      # - Up to 6 instances for development
+      # - Up to 3 instances for non-production testing (staging)
+      # - Up to 3 instances for production
+      TF_VAR_neo4j_instance_count_development: 2
+      TF_VAR_neo4j_instance_count_staging: 2
+      TF_VAR_neo4j_instance_count_production: 2
+
+      # Neo4j instance types: Specifies the AWS EC2 instance types for Neo4j in each environment.
+      # These are chosen to comply with the 24 Cores / 256 GB RAM limit of the Neo4j license:
+      # - t3.xlarge for development (4 vCPU, 16 GB RAM)
+      # - r5.2xlarge for staging (8 vCPU, 64 GB RAM)
+      # - r5.12xlarge for production (48 vCPU, 384 GB RAM, but will be limited to 24 cores in user_data)
+      TF_VAR_neo4j_instance_type_development: t3.xlarge
+      TF_VAR_neo4j_instance_type_staging: r5.2xlarge
+      TF_VAR_neo4j_instance_type_production: r5.12xlarge
+      
+      # Log levels for different environments:
+      # - debug for development to provide detailed information for troubleshooting
+      # - info for staging and production to provide general operational information
+      TF_VAR_log_level_development: debug
+      TF_VAR_log_level_staging: info
+      TF_VAR_log_level_production: info
 
     steps:
       - name: Checkout code
@@ -30,14 +66,14 @@ jobs:
         run: |
           echo "ENVIRONMENT: ${{ env.ENVIRONMENT }}"
           echo "TF_VAR_environment: ${{ env.TF_VAR_environment }}"
-          echo "AWS_REGION is set: ${{ secrets.AWS_REGION != '' }}"
+          echo "AWS_REGION: ${{ env.AWS_REGION }}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Debug - Check AWS Configuration
         run: |
@@ -57,15 +93,6 @@ jobs:
           echo "TF_VAR_neo4j_search_space_user=${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" >> $GITHUB_ENV
           echo "TF_VAR_neo4j_search_space_pass=${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" >> $GITHUB_ENV
           echo "TF_VAR_neo4j_public_key=${{ secrets.NEO4J_PUBLIC_KEY }}" >> $GITHUB_ENV
-
-      - name: Debug - Print Terraform Variables
-        run: |
-          echo "TF_VAR_jwt_secret is set: ${{ env.TF_VAR_jwt_secret != '' }}"
-          echo "TF_VAR_neo4j_ledger_space_user is set: ${{ env.TF_VAR_neo4j_ledger_space_user != '' }}"
-          echo "TF_VAR_neo4j_ledger_space_pass is set: ${{ env.TF_VAR_neo4j_ledger_space_pass != '' }}"
-          echo "TF_VAR_neo4j_search_space_user is set: ${{ env.TF_VAR_neo4j_search_space_user != '' }}"
-          echo "TF_VAR_neo4j_search_space_pass is set: ${{ env.TF_VAR_neo4j_search_space_pass != '' }}"
-          echo "TF_VAR_neo4j_public_key is set: ${{ env.TF_VAR_neo4j_public_key != '' }}"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -161,11 +188,6 @@ jobs:
           gh secret set NEO_4J_SEARCH_SPACE_BOLT_URL -b"bolt://${NEO4J_SEARCH_IP}:7687" --env ${{ env.ENVIRONMENT }}
           echo "TF_VAR_neo4j_ledger_space_bolt_url=bolt://${NEO4J_LEDGER_IP}:7687" >> $GITHUB_ENV
           echo "TF_VAR_neo4j_search_space_bolt_url=bolt://${NEO4J_SEARCH_IP}:7687" >> $GITHUB_ENV
-
-      - name: Debug - Print Neo4j Bolt URLs
-        run: |
-          echo "TF_VAR_neo4j_ledger_space_bolt_url: ${{ env.TF_VAR_neo4j_ledger_space_bolt_url }}"
-          echo "TF_VAR_neo4j_search_space_bolt_url: ${{ env.TF_VAR_neo4j_search_space_bolt_url }}"
 
       - name: Terraform Plan (ECS)
         id: plan_ecs
