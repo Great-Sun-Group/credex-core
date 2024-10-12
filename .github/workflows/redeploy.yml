@@ -2,14 +2,6 @@ name: Redeploy to AWS
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment Environment'
-        required: true
-        default: 'development'
-        type: choice
-        options:
-          - development
   push:
     branches:
       - stage
@@ -17,7 +9,7 @@ on:
 
 jobs:
   redeploy:
-    name: 1 Regular AWS Redeploy
+    name: Regular AWS Redeploy
     runs-on: ubuntu-latest
     env:
       TF_VAR_aws_region: af-south-1
@@ -37,9 +29,7 @@ jobs:
 
       - name: Set environment
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "ENVIRONMENT=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
+          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
             echo "ENVIRONMENT=production" >> $GITHUB_ENV
           elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
             echo "ENVIRONMENT=staging" >> $GITHUB_ENV
