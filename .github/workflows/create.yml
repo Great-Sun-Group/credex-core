@@ -137,40 +137,27 @@ jobs:
           echo "Retrieving Terraform outputs..."
           terraform output -json > tf_outputs.json
           
-          echo "Raw Terraform output:"
-          cat tf_outputs.json
+          echo "First 20 characters of tf_outputs.json:"
+          head -c 20 tf_outputs.json | od -c
           
-          echo "Attempting to parse with jq..."
-          if jq empty tf_outputs.json 2>/dev/null; then
-            echo "Valid JSON output"
-            jq '.' tf_outputs.json
+          echo "Attempting to clean and parse JSON..."
+          tr -cd '\11\12\15\40-\176' < tf_outputs.json > cleaned_tf_outputs.json
+          
+          echo "First 20 characters of cleaned_tf_outputs.json:"
+          head -c 20 cleaned_tf_outputs.json | od -c
+          
+          if jq empty cleaned_tf_outputs.json 2>/dev/null; then
+            echo "Cleaned JSON is valid"
+            jq '.' cleaned_tf_outputs.json
+            mv cleaned_tf_outputs.json tf_outputs.json
           else
-            echo "Invalid JSON output. Error from jq:"
-            jq empty tf_outputs.json 2>&1
-            echo "Raw content of tf_outputs.json:"
-            cat tf_outputs.json
-            echo "Attempting to clean and parse JSON..."
-            # Remove any non-printable characters and try parsing again
-            tr -cd '\11\12\15\40-\176' < tf_outputs.json > cleaned_tf_outputs.json
-            if jq empty cleaned_tf_outputs.json 2>/dev/null; then
-              echo "Cleaned JSON is valid"
-              jq '.' cleaned_tf_outputs.json
-              mv cleaned_tf_outputs.json tf_outputs.json
-            else
-              echo "Failed to clean and parse JSON"
-              exit 1
-            fi
-          fi
-
-      - name: Parse Terraform Outputs
-        id: parse-outputs
-        run: |
-          cd terraform
-          if [ ! -f tf_outputs.json ]; then
-            echo "tf_outputs.json file not found"
+            echo "Failed to clean and parse JSON. Error from jq:"
+            jq empty cleaned_tf_outputs.json 2>&1
+            echo "Raw content of cleaned_tf_outputs.json:"
+            cat cleaned_tf_outputs.json
             exit 1
           fi
-          
+
           echo "Parsing Terraform outputs..."
           ECR_REPO_URL=$(jq -r '.ecr_repository_url.value // empty' tf_outputs.json)
           ECS_CLUSTER_ARN=$(jq -r '.ecs_cluster_arn.value // empty' tf_outputs.json)
