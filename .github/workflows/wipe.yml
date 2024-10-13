@@ -117,8 +117,22 @@ jobs:
             echo "Wiping load balancers..."
             lbs=$(aws elbv2 describe-load-balancers --query "LoadBalancers[*].LoadBalancerArn" --output text)
             for lb in $lbs; do
+              # Delete listeners associated with the load balancer
+              listeners=$(aws elbv2 describe-listeners --load-balancer-arn $lb --query "Listeners[*].ListenerArn" --output text)
+              for listener in $listeners; do
+                retry_command aws elbv2 delete-listener --listener-arn $listener
+                echo "Deleted listener: $listener"
+              done
+              
               retry_command aws elbv2 delete-load-balancer --load-balancer-arn $lb
               echo "Deleted load balancer: $lb"
+            done
+
+            # Delete target groups
+            target_groups=$(aws elbv2 describe-target-groups --query "TargetGroups[*].TargetGroupArn" --output text)
+            for tg in $target_groups; do
+              retry_command aws elbv2 delete-target-group --target-group-arn $tg
+              echo "Deleted target group: $tg"
             done
           }
 
@@ -217,6 +231,18 @@ jobs:
             fi
           }
 
+          # Function to wipe ECR repositories
+          wipe_ecr_repositories() {
+            echo "Wiping ECR repositories..."
+            repo_name="credex-core-$ENVIRONMENT"
+            if aws ecr describe-repositories --repository-names $repo_name &>/dev/null; then
+              retry_command aws ecr delete-repository --repository-name $repo_name --force
+              echo "Deleted ECR repository: $repo_name"
+            else
+              echo "ECR repository $repo_name not found, skipping deletion"
+            fi
+          }
+
           # Run wipe functions in order
           wipe_ecs_resources
           wipe_ec2_instances
@@ -227,6 +253,7 @@ jobs:
           wipe_iam_roles
           wipe_cloudwatch_log_groups
           wipe_ec2_key_pairs
+          wipe_ecr_repositories
 
           echo "Manual resource deletion completed"
 

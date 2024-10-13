@@ -22,7 +22,7 @@ data "aws_ami" "amazon_linux_2" {
 }
 
 resource "aws_key_pair" "neo4j_key_pair" {
-  count      = var.operation_type == "create" ? 1 : 0
+  count      = var.operation_type == "create" && var.neo4j_public_key != "" ? 1 : 0
   key_name   = local.key_pair_name
   public_key = var.neo4j_public_key
   tags       = local.common_tags
@@ -50,7 +50,7 @@ resource "aws_instance" "neo4j" {
   count         = var.operation_type != "delete" && length(data.aws_subnets.available.ids) > 0 ? min(local.neo4j_instance_count[var.environment], local.max_production_instances) : 0
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = local.compliant_instance_types[var.environment]
-  key_name      = var.operation_type == "create" ? aws_key_pair.neo4j_key_pair[0].key_name : data.aws_key_pair.existing_neo4j_key_pair[0].key_name
+  key_name      = var.operation_type == "create" && var.neo4j_public_key != "" ? aws_key_pair.neo4j_key_pair[0].key_name : (var.operation_type != "create" ? data.aws_key_pair.existing_neo4j_key_pair[0].key_name : null)
 
   vpc_security_group_ids = [aws_security_group.neo4j[0].id]
   subnet_id              = length(data.aws_subnets.available.ids) > 0 ? data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)] : null
