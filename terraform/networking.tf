@@ -18,15 +18,23 @@ data "aws_subnets" "available" {
     name   = "vpc-id"
     values = [local.vpc_id]
   }
-  filter {
-    name   = "availability-zone"
-    values = slice(data.aws_availability_zones.available.names, 0, 2)
-  }
 }
 
-# Ensure we have at least two subnets
+# Ensure we have at least two subnets in different AZs
 locals {
-  subnet_ids = slice(data.aws_subnets.available.ids, 0, min(length(data.aws_subnets.available.ids), 2))
+  subnet_ids = distinct(slice([for s in data.aws_subnets.available.ids : s], 0, min(length(data.aws_subnets.available.ids), 2)))
+}
+
+# Validate that we have at least two subnets
+resource "null_resource" "validate_subnets" {
+  count = var.operation_type != "delete" ? 1 : 0
+
+  lifecycle {
+    precondition {
+      condition     = length(local.subnet_ids) >= 2
+      error_message = "At least two subnets in different Availability Zones are required for the ALB."
+    }
+  }
 }
 
 # ECS tasks security group
@@ -98,6 +106,8 @@ resource "aws_lb" "credex_alb" {
   subnets            = local.subnet_ids
 
   tags = local.common_tags
+
+  depends_on = [null_resource.validate_subnets]
 }
 
 resource "aws_lb_target_group" "credex_core" {
