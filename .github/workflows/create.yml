@@ -214,13 +214,13 @@ jobs:
               # Get detailed task information for all tasks
               TASK_DETAILS=$(aws ecs describe-tasks --cluster credex-cluster-$ENVIRONMENT --tasks $TASK_ARNS)
               
-              echo "$TASK_DETAILS" | jq -r '.tasks[] | "Task ARN: \(.taskArn)\nLast Status: \(.lastStatus)\nDesired Status: \(.desiredStatus)\nHealth Status: \(.healthStatus)\n"'
+              echo "$TASK_DETAILS" | jq -r '.tasks[] | "Task ARN: \(.taskArn)\nLast Status: \(.lastStatus)\nDesired Status: \(.desiredStatus)\nHealth Status: \(.healthStatus)\nTask Definition: \(.taskDefinitionArn)\nLaunch Type: \(.launchType)\nContainer Instance: \(.containerInstanceArn)\n"'
               
               # Check for stopped tasks and their reasons
               STOPPED_TASKS=$(echo "$TASK_DETAILS" | jq -r '.tasks[] | select(.lastStatus == "STOPPED")')
               if [ -n "$STOPPED_TASKS" ]; then
                 echo "Stopped tasks found:"
-                echo "$STOPPED_TASKS" | jq -r '. | "Task ARN: \(.taskArn)\nStopped Reason: \(.stoppedReason)\nContainer Exit Codes: \(.containers[].exitCode)\n"'
+                echo "$STOPPED_TASKS" | jq -r '. | "Task ARN: \(.taskArn)\nStopped Reason: \(.stoppedReason)\nContainer Exit Codes: \(.containers[].exitCode)\nContainer Reason: \(.containers[].reason)\n"'
               fi
               
               # Get container logs for all tasks
@@ -237,10 +237,32 @@ jobs:
               echo "No tasks found for the service"
             fi
             
+            # Check ECS service events
+            echo "ECS Service Events:"
+            aws ecs describe-services --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT --query 'services[0].events[0:10]' | jq -r '.[] | "\(.createdAt): \(.message)"'
+            
+            # Check CloudWatch Logs for ECS Service
+            echo "CloudWatch Logs for ECS Service:"
+            aws logs get-log-events --log-group-name /ecs/credex-core-$ENVIRONMENT --log-stream-name ecs/credex-core-service-$ENVIRONMENT --limit 20 | jq -r '.events[].message'
+            
             sleep 60
           done
 
           echo "Service did not stabilize within the expected time. Deployment failed."
+          
+          # Fetch and display the latest task definition
+          echo "Latest Task Definition:"
+          aws ecs describe-task-definition --task-definition $NEW_TASK_DEF_ARN | jq .
+          
+          # Display VPC and Subnet information
+          echo "VPC and Subnet Information:"
+          aws ec2 describe-vpcs --filters "Name=tag:Name,Values=credex-vpc-$ENVIRONMENT" | jq .
+          aws ec2 describe-subnets --filters "Name=vpc-id,Values=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=credex-vpc-$ENVIRONMENT" --query 'Vpcs[0].VpcId' --output text)" | jq .
+          
+          # Display Security Group information
+          echo "Security Group Information:"
+          aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=credex-vpc-$ENVIRONMENT" --query 'Vpcs[0].VpcId' --output text)" | jq .
+          
           exit 1
 
       - name: Debug - Print Final Environment Variables
