@@ -134,6 +134,12 @@ variable "neo4j_search_space_bolt_url" {
   default     = "placeholder"
 }
 
+variable "neo4j_public_key" {
+  description = "Public key for Neo4j instances"
+  type        = string
+  default     = "placeholder"
+}
+
 locals {
   # Neo4j instance count compliant with the Startup Software License Agreement
   neo4j_instance_count = {

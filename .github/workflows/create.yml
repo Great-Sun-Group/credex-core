@@ -162,6 +162,12 @@ jobs:
           cd terraform
           terraform plan -out=tfplan -var-file=terraform.tfvars
 
+      - name: Output Terraform Plan
+        if: always()
+        run: |
+          cd terraform
+          terraform show -no-color tfplan || true
+
       - name: Terraform Apply
         run: |
           cd terraform
@@ -175,6 +181,12 @@ jobs:
           terraform output -json > tf_outputs.json
           echo "tf_outputs=$(cat tf_outputs.json | jq -c .)" >> $GITHUB_OUTPUT
 
+      - name: Debug - Print Terraform Outputs
+        run: |
+          echo "ECR Repository URL: $(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.ecr_repository_url.value')"
+          echo "ECS Cluster ARN: $(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.ecs_cluster_arn.value')"
+          echo "ECS Task Definition ARN: $(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.ecs_task_definition_arn.value')"
+
       - name: Set Neo4j Bolt URLs
         run: |
           NEO4J_LEDGER_IP=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_ledger_space_bolt_url.value' | sed 's|bolt://||' | sed 's|:7687||')
@@ -186,8 +198,9 @@ jobs:
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
+          ECR_REPO_URL=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.ecr_repository_url.value')
           TASK_DEF=$(aws ecs describe-task-definition --task-definition credex-core-$TF_VAR_environment --query taskDefinition)
-          NEW_TASK_DEF=$(echo $TASK_DEF | jq '.containerDefinitions[0].environment += [
+          NEW_TASK_DEF=$(echo $TASK_DEF | jq --arg ECR_REPO_URL "$ECR_REPO_URL" '.containerDefinitions[0].image = $ECR_REPO_URL + ":latest" | .containerDefinitions[0].environment += [
             {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_ledger_space_bolt_url }}"},
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_search_space_bolt_url }}"},
             {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ vars.NEO4J_LEDGER_SPACE_USER }}"},
