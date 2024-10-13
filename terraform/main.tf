@@ -84,7 +84,7 @@ resource "aws_ecs_service" "credex_core" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = data.aws_subnets.available.ids
+    subnets          = aws_subnet.credex_subnets[*].id
     security_groups  = [aws_security_group.ecs_tasks[0].id]
     assign_public_ip = true
   }
