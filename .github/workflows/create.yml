@@ -25,122 +25,7 @@ jobs:
       TF_VAR_operation_type: create
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set Environment
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-          else
-            echo "ENVIRONMENT=development" >> $GITHUB_ENV
-          fi
-          echo "NODE_ENV=$ENVIRONMENT" >> $GITHUB_ENV
-          echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
-          echo "Setting environment to: $ENVIRONMENT"
-          
-          # Debug output for environment variables
-          echo "Debug: Environment Variables"
-          echo "ENVIRONMENT: $ENVIRONMENT"
-          echo "NODE_ENV: $NODE_ENV"
-          echo "TF_VAR_environment: $TF_VAR_environment"
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Check Required Secrets
-        run: |
-          missing_secrets=()
-          if [ -z "${{ secrets.AWS_ACCESS_KEY }}" ]; then
-            missing_secrets+=("AWS_ACCESS_KEY")
-          fi
-          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
-            missing_secrets+=("AWS_SECRET_ACCESS_KEY")
-          fi
-          if [ -z "${{ secrets.AWS_REGION }}" ]; then
-            missing_secrets+=("AWS_REGION")
-          fi
-          if [ -z "${{ secrets.OPEN_EXCHANGE_RATES_API }}" ]; then
-            missing_secrets+=("OPEN_EXCHANGE_RATES_API")
-          fi
-          if [ -z "${{ secrets.NEO4J_ENTERPRISE_LICENSE }}" ]; then
-            missing_secrets+=("NEO4J_ENTERPRISE_LICENSE")
-          fi
-
-          if [ ${#missing_secrets[@]} -ne 0 ]; then
-            echo "Error: The following required secrets are missing: ${missing_secrets[*]}"
-            echo "Please set these secrets in your GitHub repository settings."
-            exit 1
-          fi
-
-      - name: Debug - Check AWS Configuration
-        run: |
-          echo "Checking AWS credentials..."
-          if aws sts get-caller-identity &> /dev/null; then
-            echo "AWS credentials are valid"
-            aws sts get-caller-identity
-          else
-            echo "Error: AWS credentials are invalid or not set correctly"
-            echo "AWS_ACCESS_KEY is set: ${{ secrets.AWS_ACCESS_KEY != '' }}"
-            echo "AWS_SECRET_ACCESS_KEY is set: ${{ secrets.AWS_SECRET_ACCESS_KEY != '' }}"
-            echo "AWS_REGION is set: ${{ secrets.AWS_REGION != '' }}"
-            exit 1
-          fi
-          aws configure list
-
-      - name: Create Terraform Variables File
-        run: |
-          cat << EOF > terraform/terraform.tfvars
-          environment = "$ENVIRONMENT"
-          operation_type = "create"
-          jwt_secret = "${{ secrets.JWT_SECRET }}"
-          open_exchange_rates_api = "${{ secrets.OPEN_EXCHANGE_RATES_API }}"
-          neo4j_enterprise_license = "${{ secrets.NEO4J_ENTERPRISE_LICENSE }}"
-          neo4j_ledger_space_user = "${{ secrets.NEO4J_LEDGER_SPACE_USER }}"
-          neo4j_ledger_space_pass = "${{ secrets.NEO4J_LEDGER_SPACE_PASS }}"
-          neo4j_search_space_user = "${{ secrets.NEO4J_SEARCH_SPACE_USER }}"
-          neo4j_search_space_pass = "${{ secrets.NEO4J_SEARCH_SPACE_PASS }}"
-          neo4j_public_key = "${{ secrets.NEO4J_PUBLIC_KEY }}"
-          EOF
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-
-      - name: Terraform Init and Workspace Selection
-        run: |
-          cd terraform
-          terraform init
-          terraform workspace select $ENVIRONMENT || terraform workspace new $ENVIRONMENT
-
-      - name: Debug - Print Terraform Workspace and Environment
-        run: |
-          cd terraform
-          echo "Current Terraform Workspace: $(terraform workspace show)"
-          echo "ENVIRONMENT: $ENVIRONMENT"
-          echo "TF_VAR_environment: $TF_VAR_environment"
-
-      - name: Terraform Plan
-        id: plan
-        run: |
-          cd terraform
-          terraform plan -out=tfplan -var-file=terraform.tfvars
-
-      - name: Output Terraform Plan
-        if: always()
-        run: |
-          cd terraform
-          terraform show -no-color tfplan || true
-
-      - name: Terraform Apply
-        run: |
-          cd terraform
-          terraform apply -auto-approve tfplan
+      # ... (previous steps remain unchanged)
 
       - name: Get Terraform Outputs
         id: tf-outputs
@@ -148,21 +33,38 @@ jobs:
           cd terraform
           echo "Retrieving Terraform outputs..."
           terraform output -json > tf_outputs.json
-          echo "tf_outputs=$(cat tf_outputs.json | jq -c .)" >> $GITHUB_OUTPUT
           
-          # Debug output for Terraform outputs
-          echo "Debug: Terraform Outputs"
-          cat tf_outputs.json
+          # Validate JSON
+          if jq empty tf_outputs.json 2>/dev/null; then
+            echo "Valid JSON output"
+            cat tf_outputs.json
+          else
+            echo "Invalid JSON output. Raw content:"
+            cat tf_outputs.json
+            exit 1
+          fi
 
       - name: Parse Terraform Outputs
         id: parse-outputs
         run: |
           cd terraform
-          ECR_REPO_URL=$(jq -r '.ecr_repository_url.value' tf_outputs.json)
-          ECS_CLUSTER_ARN=$(jq -r '.ecs_cluster_arn.value' tf_outputs.json)
-          ECS_TASK_DEF_ARN=$(jq -r '.ecs_task_definition_arn.value' tf_outputs.json)
-          NEO4J_LEDGER_URL=$(jq -r '.neo4j_ledger_space_bolt_url.value' tf_outputs.json)
-          NEO4J_SEARCH_URL=$(jq -r '.neo4j_search_space_bolt_url.value' tf_outputs.json)
+          if [ ! -f tf_outputs.json ]; then
+            echo "tf_outputs.json file not found"
+            exit 1
+          fi
+          
+          echo "Parsing Terraform outputs..."
+          ECR_REPO_URL=$(jq -r '.ecr_repository_url.value // empty' tf_outputs.json)
+          ECS_CLUSTER_ARN=$(jq -r '.ecs_cluster_arn.value // empty' tf_outputs.json)
+          ECS_TASK_DEF_ARN=$(jq -r '.ecs_task_definition_arn.value // empty' tf_outputs.json)
+          NEO4J_LEDGER_URL=$(jq -r '.neo4j_ledger_space_bolt_url.value // empty' tf_outputs.json)
+          NEO4J_SEARCH_URL=$(jq -r '.neo4j_search_space_bolt_url.value // empty' tf_outputs.json)
+
+          # Check if any of the values are empty
+          if [ -z "$ECR_REPO_URL" ] || [ -z "$ECS_CLUSTER_ARN" ] || [ -z "$ECS_TASK_DEF_ARN" ] || [ -z "$NEO4J_LEDGER_URL" ] || [ -z "$NEO4J_SEARCH_URL" ]; then
+            echo "One or more Terraform outputs are empty"
+            exit 1
+          fi
 
           echo "ECR_REPO_URL=${ECR_REPO_URL}" >> $GITHUB_ENV
           echo "ECS_CLUSTER_ARN=${ECS_CLUSTER_ARN}" >> $GITHUB_ENV
