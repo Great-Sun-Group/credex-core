@@ -40,12 +40,6 @@ jobs:
           echo "NODE_ENV=$ENVIRONMENT" >> $GITHUB_ENV
           echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
           echo "Setting environment to: $ENVIRONMENT"
-          
-          # Ensure these variables are available to subsequent steps
-          echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
-          echo "NODE_ENV=$ENVIRONMENT" >> $GITHUB_OUTPUT
-          echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
-        id: set_env
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -97,7 +91,7 @@ jobs:
       - name: Create Terraform Variables File
         run: |
           cat << EOF > terraform/terraform.tfvars
-          environment = "${{ steps.set_env.outputs.ENVIRONMENT }}"
+          environment = "$ENVIRONMENT"
           operation_type = "create"
           jwt_secret = "${{ secrets.JWT_SECRET }}"
           open_exchange_rates_api = "${{ secrets.OPEN_EXCHANGE_RATES_API }}"
@@ -116,14 +110,14 @@ jobs:
         run: |
           cd terraform
           terraform init
-          terraform workspace select ${{ steps.set_env.outputs.ENVIRONMENT }} || terraform workspace new ${{ steps.set_env.outputs.ENVIRONMENT }}
+          terraform workspace select $ENVIRONMENT || terraform workspace new $ENVIRONMENT
 
       - name: Debug - Print Terraform Workspace and Environment
         run: |
           cd terraform
           echo "Current Terraform Workspace: $(terraform workspace show)"
-          echo "ENVIRONMENT: ${{ steps.set_env.outputs.ENVIRONMENT }}"
-          echo "TF_VAR_environment: ${{ steps.set_env.outputs.TF_VAR_environment }}"
+          echo "ENVIRONMENT: $ENVIRONMENT"
+          echo "TF_VAR_environment: $TF_VAR_environment"
 
       - name: Terraform Plan
         id: plan
@@ -171,14 +165,14 @@ jobs:
           echo "Starting Update ECS Task Definition step"
           
           echo "Environment variables:"
-          env | grep -E "TF_VAR_|AWS_|NODE_ENV|GITHUB_ENV|ENVIRONMENT"
+          env | grep -E "TF_VAR_|AWS_|NODE_ENV|GITHUB_ENV"
           
           echo "Retrieving ECR Repository URL"
           ECR_REPO_URL=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.ecr_repository_url.value')
           echo "ECR Repository URL: $ECR_REPO_URL"
           
           echo "Describing ECS task definition"
-          TASK_DEF_NAME="credex-core-${{ steps.set_env.outputs.ENVIRONMENT }}"
+          TASK_DEF_NAME="credex-core-$TF_VAR_environment"
           echo "Task Definition Name: $TASK_DEF_NAME"
           
           TASK_DEF=$(aws ecs describe-task-definition --task-definition $TASK_DEF_NAME --query taskDefinition)
@@ -218,17 +212,17 @@ jobs:
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
-          echo "Deploying application to ${{ steps.set_env.outputs.ENVIRONMENT }} from branch ${{ github.ref_name }}"
-          aws ecs update-service --cluster credex-cluster-${{ steps.set_env.outputs.ENVIRONMENT }} --service credex-core-service-${{ steps.set_env.outputs.ENVIRONMENT }} --task-definition credex-core-${{ steps.set_env.outputs.ENVIRONMENT }}
+          echo "Deploying application to $TF_VAR_environment from branch ${{ github.ref_name }}"
+          aws ecs update-service --cluster credex-cluster-$TF_VAR_environment --service credex-core-service-$TF_VAR_environment --task-definition credex-core-$TF_VAR_environment
 
           # Wait for the service to stabilize
-          aws ecs wait services-stable --cluster credex-cluster-${{ steps.set_env.outputs.ENVIRONMENT }} --services credex-core-service-${{ steps.set_env.outputs.ENVIRONMENT }}
+          aws ecs wait services-stable --cluster credex-cluster-$TF_VAR_environment --services credex-core-service-$TF_VAR_environment
 
           # Get the latest task ARN
-          TASK_ARN=$(aws ecs list-tasks --cluster credex-cluster-${{ steps.set_env.outputs.ENVIRONMENT }} --service-name credex-core-service-${{ steps.set_env.outputs.ENVIRONMENT }} --query 'taskArns[0]' --output text)
+          TASK_ARN=$(aws ecs list-tasks --cluster credex-cluster-$TF_VAR_environment --service-name credex-core-service-$TF_VAR_environment --query 'taskArns[0]' --output text)
 
           # Get the task details
-          TASK_DETAILS=$(aws ecs describe-tasks --cluster credex-cluster-${{ steps.set_env.outputs.ENVIRONMENT }} --tasks $TASK_ARN)
+          TASK_DETAILS=$(aws ecs describe-tasks --cluster credex-cluster-$TF_VAR_environment --tasks $TASK_ARN)
 
           # Print task details for debugging
           echo "Task Details:"
@@ -236,9 +230,9 @@ jobs:
 
           # Get the latest events from the ECS service
           echo "ECS Service Events:"
-          aws ecs describe-services --cluster credex-cluster-${{ steps.set_env.outputs.ENVIRONMENT }} --services credex-core-service-${{ steps.set_env.outputs.ENVIRONMENT }} --query 'services[0].events[0:5]' | jq .
+          aws ecs describe-services --cluster credex-cluster-$TF_VAR_environment --services credex-core-service-$TF_VAR_environment --query 'services[0].events[0:5]' | jq .
 
       - name: Debug - Print Final Environment Variables
         run: |
           echo "Final Environment Variables:"
-          env | grep -E "TF_VAR_|AWS_|NODE_ENV|GITHUB_ENV|ENVIRONMENT"
+          env | grep -E "TF_VAR_|AWS_|NODE_ENV|GITHUB_ENV"
