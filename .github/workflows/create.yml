@@ -89,6 +89,16 @@ jobs:
           cd terraform
           terraform apply -auto-approve tfplan
 
+      - name: Check CloudWatch Log Group
+        run: |
+          LOG_GROUP_NAME="/ecs/credex-core-$ENVIRONMENT"
+          if aws logs describe-log-groups --log-group-name-prefix $LOG_GROUP_NAME | grep -q $LOG_GROUP_NAME; then
+            echo "CloudWatch Log Group $LOG_GROUP_NAME exists"
+          else
+            echo "Error: CloudWatch Log Group $LOG_GROUP_NAME does not exist"
+            exit 1
+          fi
+
       - name: Get Terraform Outputs
         id: tf-outputs
         run: |
@@ -188,6 +198,21 @@ jobs:
           NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://new-task-def.json --query 'taskDefinition.taskDefinitionArn' --output text)
           echo "New task definition ARN: $NEW_TASK_DEF_ARN"
           echo "NEW_TASK_DEF_ARN=$NEW_TASK_DEF_ARN" >> $GITHUB_ENV
+
+      - name: Verify ECS Task Definition
+        run: |
+          TASK_DEF=$(aws ecs describe-task-definition --task-definition $NEW_TASK_DEF_ARN --query taskDefinition)
+          echo "Task Definition:"
+          echo $TASK_DEF | jq .
+          
+          LOG_CONFIG=$(echo $TASK_DEF | jq -r '.containerDefinitions[0].logConfiguration')
+          echo "Log Configuration:"
+          echo $LOG_CONFIG | jq .
+          
+          if [ -z "$LOG_CONFIG" ] || [ "$LOG_CONFIG" == "null" ]; then
+            echo "Error: Log configuration is missing in the task definition"
+            exit 1
+          fi
 
       - name: Deploy Application
         env:
