@@ -145,6 +145,51 @@ jobs:
             done
           }
 
+          # Function to wipe IAM roles
+          wipe_iam_roles() {
+            echo "Wiping IAM roles..."
+            roles=("ecs-execution-role-$ENVIRONMENT" "ecs-task-role-$ENVIRONMENT")
+            for role in "${roles[@]}"; do
+              if aws iam get-role --role-name $role &>/dev/null; then
+                # Detach all policies from the role
+                attached_policies=$(aws iam list-attached-role-policies --role-name $role --query 'AttachedPolicies[*].PolicyArn' --output text)
+                for policy in $attached_policies; do
+                  retry_command aws iam detach-role-policy --role-name $role --policy-arn $policy
+                  echo "Detached policy $policy from role $role"
+                done
+                # Delete the role
+                retry_command aws iam delete-role --role-name $role
+                echo "Deleted IAM role: $role"
+              else
+                echo "IAM role $role not found, skipping deletion"
+              fi
+            done
+          }
+
+          # Function to wipe CloudWatch log groups
+          wipe_cloudwatch_log_groups() {
+            echo "Wiping CloudWatch log groups..."
+            log_group="/ecs/credex-core-$ENVIRONMENT"
+            if aws logs describe-log-groups --log-group-name-prefix $log_group | grep -q $log_group; then
+              retry_command aws logs delete-log-group --log-group-name $log_group
+              echo "Deleted CloudWatch log group: $log_group"
+            else
+              echo "CloudWatch log group $log_group not found, skipping deletion"
+            fi
+          }
+
+          # Function to wipe EC2 key pairs
+          wipe_ec2_key_pairs() {
+            echo "Wiping EC2 key pairs..."
+            key_pair="neo4j-key-pair-$ENVIRONMENT"
+            if aws ec2 describe-key-pairs --key-names $key_pair &>/dev/null; then
+              retry_command aws ec2 delete-key-pair --key-name $key_pair
+              echo "Deleted EC2 key pair: $key_pair"
+            else
+              echo "EC2 key pair $key_pair not found, skipping deletion"
+            fi
+          }
+
           # Run wipe functions in order
           wipe_ecs_resources
           wipe_ec2_instances
@@ -152,6 +197,9 @@ jobs:
           wipe_security_groups
           wipe_acm_certificates
           wipe_vpcs
+          wipe_iam_roles
+          wipe_cloudwatch_log_groups
+          wipe_ec2_key_pairs
 
           echo "Manual resource deletion completed"
 

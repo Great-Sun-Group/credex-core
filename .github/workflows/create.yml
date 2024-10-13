@@ -48,23 +48,23 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Debug - Print Environment Variables
+      - name: Check and Remove Existing Resources
         run: |
-          echo "NODE_ENV: $NODE_ENV"
-          echo "TF_VAR_environment: $TF_VAR_environment"
-          echo "GitHub Environment: $ENVIRONMENT"
-          echo "AWS_REGION: ${{ secrets.AWS_REGION }}"
-          echo "OPEN_EXCHANGE_RATES_API is set: ${{ secrets.OPEN_EXCHANGE_RATES_API != '' }}"
-          echo "NEO4J_ENTERPRISE_LICENSE is set: ${{ secrets.NEO4J_ENTERPRISE_LICENSE != '' }}"
+          # Check and remove IAM roles
+          for role in ecs-execution-role-$ENVIRONMENT ecs-task-role-$ENVIRONMENT; do
+            if aws iam get-role --role-name $role &>/dev/null; then
+              echo "Removing existing IAM role: $role"
+              aws iam delete-role --role-name $role
+            fi
+          done
 
-      - name: Check Required Secrets
-        run: |
-          missing_secrets=()
-
-          if [ -z "${{ secrets.AWS_ACCESS_KEY }}" ]; then
-            missing_secrets+=("AWS_ACCESS_KEY")
+          # Check and remove CloudWatch log group
+          log_group="/ecs/credex-core-$ENVIRONMENT"
+          if aws logs describe-log-groups --log-group-name-prefix $log_group | grep -q $log_group; then
+            echo "Removing existing CloudWatch log group: $log_group"
+            aws logs delete-log-group --log-group-name $log_group
           fi
-          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+
             missing_secrets+=("AWS_SECRET_ACCESS_KEY")
           fi
           if [ -z "${{ secrets.AWS_REGION }}" ]; then

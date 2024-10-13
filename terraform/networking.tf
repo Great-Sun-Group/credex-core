@@ -7,11 +7,26 @@ locals {
   vpc_id = data.aws_vpc.default.id
 }
 
+# Get available AZs in the region
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+# Get subnets in at least two AZs
 data "aws_subnets" "available" {
   filter {
     name   = "vpc-id"
     values = [local.vpc_id]
   }
+  filter {
+    name   = "availability-zone"
+    values = slice(data.aws_availability_zones.available.names, 0, 2)
+  }
+}
+
+# Ensure we have at least two subnets
+locals {
+  subnet_ids = slice(data.aws_subnets.available.ids, 0, min(length(data.aws_subnets.available.ids), 2))
 }
 
 # ECS tasks security group
@@ -80,7 +95,7 @@ resource "aws_lb" "credex_alb" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb[0].id]
-  subnets            = data.aws_subnets.available.ids
+  subnets            = local.subnet_ids
 
   tags = local.common_tags
 }
