@@ -94,17 +94,23 @@ jobs:
         run: |
           cd terraform
           echo "Retrieving Terraform outputs..."
-          TF_OUTPUT=$(terraform output -json | sed '1d' | tr -d '\n' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+          TF_OUTPUT=$(terraform output -json | sed '1d' | tr -d '\n' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | sed 's/::debug::.*$//')
+          echo "Raw Terraform output:"
+          echo "$TF_OUTPUT"
           
+          echo "Attempting to parse JSON..."
           if echo "$TF_OUTPUT" | jq empty 2>/dev/null; then
             echo "Valid JSON output"
             echo "$TF_OUTPUT" | jq '.'
           else
             echo "Invalid JSON output. Error from jq:"
             echo "$TF_OUTPUT" | jq empty 2>&1
+            echo "Raw content of Terraform output:"
+            echo "$TF_OUTPUT"
             exit 1
           fi
 
+          echo "Parsing Terraform outputs..."
           ECR_REPO_URL=$(echo "$TF_OUTPUT" | jq -r '.ecr_repository_url.value // empty')
           ECS_CLUSTER_ARN=$(echo "$TF_OUTPUT" | jq -r '.ecs_cluster_arn.value // empty')
           ECS_TASK_DEF_ARN=$(echo "$TF_OUTPUT" | jq -r '.ecs_task_definition_arn.value // empty')
