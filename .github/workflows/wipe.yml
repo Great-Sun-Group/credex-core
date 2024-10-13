@@ -118,8 +118,18 @@ jobs:
             echo "Wiping security groups..."
             sgs=$(aws ec2 describe-security-groups --query "SecurityGroups[?GroupName!='default'].GroupId" --output text)
             for sg in $sgs; do
+              # Detach the security group from any network interfaces
+              nis=$(aws ec2 describe-network-interfaces --filters Name=group-id,Values=$sg --query 'NetworkInterfaces[*].NetworkInterfaceId' --output text)
+              for ni in $nis; do
+                retry_command aws ec2 modify-network-interface-attribute --network-interface-id $ni --groups $(aws ec2 describe-security-groups --filters Name=group-name,Values=default --query 'SecurityGroups[0].GroupId' --output text)
+                echo "Detached security group $sg from network interface $ni"
+              done
+              
+              # Remove all ingress and egress rules
               retry_command aws ec2 revoke-security-group-ingress --group-id $sg --protocol all --port all --cidr 0.0.0.0/0
               retry_command aws ec2 revoke-security-group-egress --group-id $sg --protocol all --port all --cidr 0.0.0.0/0
+              
+              # Now attempt to delete the security group
               retry_command aws ec2 delete-security-group --group-id $sg
               echo "Deleted security group: $sg"
             done
