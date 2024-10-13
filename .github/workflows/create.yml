@@ -154,27 +154,28 @@ jobs:
           echo "Debug: Terraform Outputs"
           cat tf_outputs.json
 
-      - name: Debug - Print Terraform Outputs
+      - name: Parse Terraform Outputs
+        id: parse-outputs
         run: |
-          echo "Terraform Outputs:"
-          echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq .
-          echo "ECR Repository URL: $(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.ecr_repository_url.value')"
-          echo "ECS Cluster ARN: $(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.ecs_cluster_arn.value')"
-          echo "ECS Task Definition ARN: $(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.ecs_task_definition_arn.value')"
+          cd terraform
+          ECR_REPO_URL=$(jq -r '.ecr_repository_url.value' tf_outputs.json)
+          ECS_CLUSTER_ARN=$(jq -r '.ecs_cluster_arn.value' tf_outputs.json)
+          ECS_TASK_DEF_ARN=$(jq -r '.ecs_task_definition_arn.value' tf_outputs.json)
+          NEO4J_LEDGER_URL=$(jq -r '.neo4j_ledger_space_bolt_url.value' tf_outputs.json)
+          NEO4J_SEARCH_URL=$(jq -r '.neo4j_search_space_bolt_url.value' tf_outputs.json)
 
-      - name: Set Neo4j Bolt URLs
-        run: |
-          NEO4J_LEDGER_IP=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_ledger_space_bolt_url.value' | sed 's|bolt://||' | sed 's|:7687||')
-          NEO4J_SEARCH_IP=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_search_space_bolt_url.value' | sed 's|bolt://||' | sed 's|:7687||')
-          echo "TF_VAR_neo4j_ledger_space_bolt_url=bolt://${NEO4J_LEDGER_IP}:7687" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_search_space_bolt_url=bolt://${NEO4J_SEARCH_IP}:7687" >> $GITHUB_ENV
-          echo "Neo4j Ledger Space Bolt URL: bolt://${NEO4J_LEDGER_IP}:7687"
-          echo "Neo4j Search Space Bolt URL: bolt://${NEO4J_SEARCH_IP}:7687"
-          
-          # Debug output for Neo4j Bolt URLs
-          echo "Debug: Neo4j Bolt URLs"
-          echo "TF_VAR_neo4j_ledger_space_bolt_url: $TF_VAR_neo4j_ledger_space_bolt_url"
-          echo "TF_VAR_neo4j_search_space_bolt_url: $TF_VAR_neo4j_search_space_bolt_url"
+          echo "ECR_REPO_URL=${ECR_REPO_URL}" >> $GITHUB_ENV
+          echo "ECS_CLUSTER_ARN=${ECS_CLUSTER_ARN}" >> $GITHUB_ENV
+          echo "ECS_TASK_DEF_ARN=${ECS_TASK_DEF_ARN}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_ledger_space_bolt_url=${NEO4J_LEDGER_URL}" >> $GITHUB_ENV
+          echo "TF_VAR_neo4j_search_space_bolt_url=${NEO4J_SEARCH_URL}" >> $GITHUB_ENV
+
+          echo "Parsed Terraform Outputs:"
+          echo "ECR_REPO_URL: ${ECR_REPO_URL}"
+          echo "ECS_CLUSTER_ARN: ${ECS_CLUSTER_ARN}"
+          echo "ECS_TASK_DEF_ARN: ${ECS_TASK_DEF_ARN}"
+          echo "NEO4J_LEDGER_URL: ${NEO4J_LEDGER_URL}"
+          echo "NEO4J_SEARCH_URL: ${NEO4J_SEARCH_URL}"
 
       - name: Update ECS Task Definition
         env:
@@ -184,17 +185,10 @@ jobs:
           echo "Starting Update ECS Task Definition step"
           
           echo "Environment variables:"
-          env | grep -E "TF_VAR_|AWS_|NODE_ENV|GITHUB_ENV"
-          
-          echo "Terraform Outputs:"
-          echo "$TF_OUTPUTS" | jq .
-          
-          echo "Retrieving ECR Repository URL"
-          ECR_REPO_URL=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.ecr_repository_url.value')
-          echo "ECR Repository URL: $ECR_REPO_URL"
+          env | grep -E "TF_VAR_|AWS_|NODE_ENV|GITHUB_ENV|ECR_REPO_URL|ECS_"
           
           echo "Describing ECS task definition"
-          TASK_DEF_NAME="credex-core-$TF_VAR_environment"
+          TASK_DEF_NAME="credex-core-${ENVIRONMENT}"
           echo "Task Definition Name: $TASK_DEF_NAME"
           
           echo "AWS Configuration:"
