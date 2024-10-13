@@ -181,6 +181,8 @@ jobs:
             echo "Wiping VPCs..."
             vpcs=$(aws ec2 describe-vpcs --query "Vpcs[?IsDefault==\`false\`].VpcId" --output text)
             for vpc in $vpcs; do
+              echo "Processing VPC: $vpc"
+              
               # Delete all subnets in the VPC
               subnets=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$vpc" --query "Subnets[*].SubnetId" --output text)
               for subnet in $subnets; do
@@ -188,22 +190,22 @@ jobs:
                 echo "Deleted subnet: $subnet in VPC: $vpc"
               done
 
-              # Delete all route tables
+              # Delete all route tables except the main one
               route_tables=$(aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$vpc" --query "RouteTables[?Associations[0].Main != \`true\`].RouteTableId" --output text)
               for rt in $route_tables; do
                 retry_command aws ec2 delete-route-table --route-table-id $rt
                 echo "Deleted route table: $rt in VPC: $vpc"
               done
 
-              # Delete internet gateway
-              igw=$(aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=$vpc" --query "InternetGateways[*].InternetGatewayId" --output text)
-              if [ -n "$igw" ]; then
+              # Detach and delete internet gateway
+              igws=$(aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=$vpc" --query "InternetGateways[*].InternetGatewayId" --output text)
+              for igw in $igws; do
                 retry_command aws ec2 detach-internet-gateway --internet-gateway-id $igw --vpc-id $vpc
                 retry_command aws ec2 delete-internet-gateway --internet-gateway-id $igw
                 echo "Deleted internet gateway: $igw for VPC: $vpc"
-              fi
+              done
 
-              # Now attempt to delete the VPC
+              # Delete the VPC
               retry_command aws ec2 delete-vpc --vpc-id $vpc
               echo "Deleted VPC: $vpc"
             done
@@ -280,7 +282,7 @@ jobs:
           wipe_load_balancers
           wipe_security_groups
           wipe_acm_certificates
-          wipe_vpcs
+          wipe_vpcs_and_igws
           wipe_iam_roles
           wipe_cloudwatch_log_groups
           wipe_ec2_key_pairs
@@ -295,7 +297,7 @@ jobs:
           rm -rf terraform.tfstate*
           rm -rf .terraform
           rm -rf terraform.tfstate.d
-          
+
           # If using S3 backend, remove state from S3
           if grep -q "backend \"s3\"" *.tf; then
             BUCKET_NAME=$(grep -A 3 "backend \"s3\"" *.tf | grep "bucket" | cut -d '"' -f 2)
@@ -303,7 +305,7 @@ jobs:
             aws s3 rm s3://$BUCKET_NAME/$KEY_NAME
             echo "Removed Terraform state from S3 bucket: $BUCKET_NAME, key: $KEY_NAME"
           fi
-          
+
           echo "Terraform state cleared"
 
       - name: Verify Wipe

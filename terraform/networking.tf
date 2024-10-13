@@ -12,20 +12,24 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
-# Create subnets if they don't exist
-resource "aws_subnet" "credex_subnets" {
-  count             = var.operation_type != "delete" ? 2 : 0
-  vpc_id            = local.vpc_id
-  cidr_block        = "172.31.${count.index + 1}.0/24"
-  availability_zone = data.aws_availability_zones.available.names[count.index]
+# Get the default VPC's Internet Gateway
+data "aws_internet_gateway" "default" {
+  filter {
+    name   = "attachment.vpc-id"
+    values = [local.vpc_id]
+  }
+}
 
-  tags = merge(local.common_tags, {
-    Name = "credex-subnet-${var.environment}-${count.index + 1}"
-  })
+# Get existing subnets in the default VPC
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [local.vpc_id]
+  }
 }
 
 locals {
-  subnet_ids = var.operation_type != "delete" ? aws_subnet.credex_subnets[*].id : []
+  subnet_ids = var.operation_type != "delete" ? slice(data.aws_subnets.default.ids, 0, 2) : []
 }
 
 # Validate that we have at least two subnets
@@ -257,36 +261,4 @@ resource "aws_security_group" "alb" {
   }
 
   tags = local.common_tags
-}
-
-# Create an Internet Gateway for the VPC
-resource "aws_internet_gateway" "credex_igw" {
-  count  = var.operation_type != "delete" ? 1 : 0
-  vpc_id = local.vpc_id
-
-  tags = merge(local.common_tags, {
-    Name = "credex-igw-${var.environment}"
-  })
-}
-
-# Create a route table for the VPC
-resource "aws_route_table" "credex_route_table" {
-  count  = var.operation_type != "delete" ? 1 : 0
-  vpc_id = local.vpc_id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.credex_igw[0].id
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "credex-route-table-${var.environment}"
-  })
-}
-
-# Associate the route table with the subnets
-resource "aws_route_table_association" "credex_route_table_assoc" {
-  count          = var.operation_type != "delete" ? 2 : 0
-  subnet_id      = aws_subnet.credex_subnets[count.index].id
-  route_table_id = aws_route_table.credex_route_table[0].id
 }
