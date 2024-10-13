@@ -40,6 +40,17 @@ jobs:
           echo "NODE_ENV=$ENVIRONMENT" >> $GITHUB_ENV
           echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
 
+      - name: Generate Neo4j Credentials
+        run: |
+          NEO4J_LEDGER_USER="neo4j$(openssl rand -base64 8 | tr -dc '0-9' | fold -w 6 | head -n 1)"
+          NEO4J_SEARCH_USER="neo4j$(openssl rand -base64 8 | tr -dc '0-9' | fold -w 6 | head -n 1)"
+          NEO4J_LEDGER_PASS=$(openssl rand -base64 32)
+          NEO4J_SEARCH_PASS=$(openssl rand -base64 32)
+          echo "NEO4J_LEDGER_USER=$NEO4J_LEDGER_USER" >> $GITHUB_ENV
+          echo "NEO4J_SEARCH_USER=$NEO4J_SEARCH_USER" >> $GITHUB_ENV
+          echo "NEO4J_LEDGER_PASS=$NEO4J_LEDGER_PASS" >> $GITHUB_ENV
+          echo "NEO4J_SEARCH_PASS=$NEO4J_SEARCH_PASS" >> $GITHUB_ENV
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -62,10 +73,10 @@ jobs:
           jwt_secret = "${{ secrets.JWT_SECRET }}"
           open_exchange_rates_api = "${{ secrets.OPEN_EXCHANGE_RATES_API }}"
           neo4j_enterprise_license = "${{ secrets.NEO4J_ENTERPRISE_LICENSE }}"
-          neo4j_ledger_space_user = "${{ secrets.NEO4J_LEDGER_SPACE_USER }}"
-          neo4j_ledger_space_pass = "${{ secrets.NEO4J_LEDGER_SPACE_PASS }}"
-          neo4j_search_space_user = "${{ secrets.NEO4J_SEARCH_SPACE_USER }}"
-          neo4j_search_space_pass = "${{ secrets.NEO4J_SEARCH_SPACE_PASS }}"
+          neo4j_ledger_space_user = "$NEO4J_LEDGER_USER"
+          neo4j_ledger_space_pass = "$NEO4J_LEDGER_PASS"
+          neo4j_search_space_user = "$NEO4J_SEARCH_USER"
+          neo4j_search_space_pass = "$NEO4J_SEARCH_PASS"
           neo4j_public_key = "${{ secrets.NEO4J_PUBLIC_KEY }}"
           EOF
 
@@ -124,12 +135,8 @@ jobs:
           ECS_TASK_DEF_ARN=$(echo "$TF_OUTPUT" | jq -r '.ecs_task_definition_arn.value // empty')
           NEO4J_LEDGER_URL=$(echo "$TF_OUTPUT" | jq -r '.neo4j_ledger_space_bolt_url.value // empty')
           NEO4J_SEARCH_URL=$(echo "$TF_OUTPUT" | jq -r '.neo4j_search_space_bolt_url.value // empty')
-          NEO4J_LEDGER_USER=$(echo "$TF_OUTPUT" | jq -r '.neo4j_ledger_space_user.value // empty')
-          NEO4J_LEDGER_PASS=$(echo "$TF_OUTPUT" | jq -r '.neo4j_ledger_space_pass.value // empty')
-          NEO4J_SEARCH_USER=$(echo "$TF_OUTPUT" | jq -r '.neo4j_search_space_user.value // empty')
-          NEO4J_SEARCH_PASS=$(echo "$TF_OUTPUT" | jq -r '.neo4j_search_space_pass.value // empty')
 
-          if [ -z "$ECR_REPO_URL" ] || [ -z "$ECS_CLUSTER_ARN" ] || [ -z "$ECS_TASK_DEF_ARN" ] || [ -z "$NEO4J_LEDGER_URL" ] || [ -z "$NEO4J_SEARCH_URL" ] || [ -z "$NEO4J_LEDGER_USER" ] || [ -z "$NEO4J_LEDGER_PASS" ] || [ -z "$NEO4J_SEARCH_USER" ] || [ -z "$NEO4J_SEARCH_PASS" ]; then
+          if [ -z "$ECR_REPO_URL" ] || [ -z "$ECS_CLUSTER_ARN" ] || [ -z "$ECS_TASK_DEF_ARN" ] || [ -z "$NEO4J_LEDGER_URL" ] || [ -z "$NEO4J_SEARCH_URL" ]; then
             echo "One or more Terraform outputs are empty"
             exit 1
           fi
@@ -140,10 +147,6 @@ jobs:
             echo "ECS_TASK_DEF_ARN=${ECS_TASK_DEF_ARN}"
             echo "NEO4J_LEDGER_URL=${NEO4J_LEDGER_URL}"
             echo "NEO4J_SEARCH_URL=${NEO4J_SEARCH_URL}"
-            echo "NEO4J_LEDGER_USER=${NEO4J_LEDGER_USER}"
-            echo "NEO4J_LEDGER_PASS=${NEO4J_LEDGER_PASS}"
-            echo "NEO4J_SEARCH_USER=${NEO4J_SEARCH_USER}"
-            echo "NEO4J_SEARCH_PASS=${NEO4J_SEARCH_PASS}"
           } >> $GITHUB_ENV
 
           echo "Parsed Terraform Outputs:"
@@ -152,8 +155,6 @@ jobs:
           echo "ECS_TASK_DEF_ARN: ${ECS_TASK_DEF_ARN}"
           echo "NEO4J_LEDGER_URL: ${NEO4J_LEDGER_URL}"
           echo "NEO4J_SEARCH_URL: ${NEO4J_SEARCH_URL}"
-          echo "NEO4J_LEDGER_USER: ${NEO4J_LEDGER_USER}"
-          echo "NEO4J_SEARCH_USER: ${NEO4J_SEARCH_USER}"
 
       - name: Update ECS Task Definition
         env:
@@ -316,23 +317,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Extract Neo4j information from Terraform outputs
-          NEO4J_LEDGER_BOLT_URL=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_ledger_space_bolt_url.value')
-          NEO4J_SEARCH_BOLT_URL=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_search_space_bolt_url.value')
-          NEO4J_LEDGER_USER=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_ledger_space_user.value')
-          NEO4J_LEDGER_PASS=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_ledger_space_pass.value')
-          NEO4J_SEARCH_USER=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_search_space_user.value')
-          NEO4J_SEARCH_PASS=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_search_space_pass.value')
-          NEO4J_SSH_KEY=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_ssh_key.value')
-
           # Save secrets using GitHub CLI
-          gh secret set NEO4J_LEDGER_BOLT_URL --body "$NEO4J_LEDGER_BOLT_URL" --env $ENVIRONMENT
-          gh secret set NEO4J_SEARCH_BOLT_URL --body "$NEO4J_SEARCH_BOLT_URL" --env $ENVIRONMENT
+          gh secret set NEO4J_LEDGER_BOLT_URL --body "$NEO4J_LEDGER_URL" --env $ENVIRONMENT
+          gh secret set NEO4J_SEARCH_BOLT_URL --body "$NEO4J_SEARCH_URL" --env $ENVIRONMENT
           gh secret set NEO4J_LEDGER_USER --body "$NEO4J_LEDGER_USER" --env $ENVIRONMENT
           gh secret set NEO4J_LEDGER_PASS --body "$NEO4J_LEDGER_PASS" --env $ENVIRONMENT
           gh secret set NEO4J_SEARCH_USER --body "$NEO4J_SEARCH_USER" --env $ENVIRONMENT
           gh secret set NEO4J_SEARCH_PASS --body "$NEO4J_SEARCH_PASS" --env $ENVIRONMENT
-          gh secret set NEO4J_SSH_KEY --body "$NEO4J_SSH_KEY" --env $ENVIRONMENT
 
           echo "Neo4j information saved as GitHub secrets for the $ENVIRONMENT environment"
           # Verify specific environment variables
@@ -345,5 +336,3 @@ jobs:
           done
 
           echo "All required environment variables are present in the task definition"
-
-      # ... (remaining steps unchanged)
