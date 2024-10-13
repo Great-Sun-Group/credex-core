@@ -173,17 +173,17 @@ jobs:
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
-          echo "Deploying application to $TF_VAR_environment from branch ${{ github.ref_name }}"
-          aws ecs update-service --cluster credex-cluster-$TF_VAR_environment --service credex-core-service-$TF_VAR_environment --task-definition $NEW_TASK_DEF_ARN
+          echo "Deploying application to $ENVIRONMENT from branch ${{ github.ref_name }}"
+          aws ecs update-service --cluster credex-cluster-$ENVIRONMENT --service credex-core-service-$ENVIRONMENT --task-definition $NEW_TASK_DEF_ARN
 
           # Wait for the service to stabilize
-          aws ecs wait services-stable --cluster credex-cluster-$TF_VAR_environment --services credex-core-service-$TF_VAR_environment
+          aws ecs wait services-stable --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT
 
           # Get the latest task ARN
-          TASK_ARN=$(aws ecs list-tasks --cluster credex-cluster-$TF_VAR_environment --service-name credex-core-service-$TF_VAR_environment --query 'taskArns[0]' --output text)
+          TASK_ARN=$(aws ecs list-tasks --cluster credex-cluster-$ENVIRONMENT --service-name credex-core-service-$ENVIRONMENT --query 'taskArns[0]' --output text)
 
           # Get the task details
-          TASK_DETAILS=$(aws ecs describe-tasks --cluster credex-cluster-$TF_VAR_environment --tasks $TASK_ARN)
+          TASK_DETAILS=$(aws ecs describe-tasks --cluster credex-cluster-$ENVIRONMENT --tasks $TASK_ARN)
 
           # Print task details for debugging
           echo "Task Details:"
@@ -191,7 +191,7 @@ jobs:
 
           # Get the latest events from the ECS service
           echo "ECS Service Events:"
-          aws ecs describe-services --cluster credex-cluster-$TF_VAR_environment --services credex-core-service-$TF_VAR_environment --query 'services[0].events[0:5]' | jq .
+          aws ecs describe-services --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT --query 'services[0].events[0:5]' | jq .
 
       - name: Debug - Print Final Environment Variables
         run: |
