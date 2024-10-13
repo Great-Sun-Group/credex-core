@@ -135,35 +135,28 @@ jobs:
         run: |
           cd terraform
           echo "Retrieving Terraform outputs..."
-          terraform output -json > tf_outputs.json
+          TF_OUTPUT=$(terraform output -json)
+          echo "Raw Terraform output:"
+          echo "$TF_OUTPUT"
           
-          echo "First 20 characters of tf_outputs.json:"
-          head -c 20 tf_outputs.json | od -c
-          
-          echo "Attempting to clean and parse JSON..."
-          tr -cd '\11\12\15\40-\176' < tf_outputs.json > cleaned_tf_outputs.json
-          
-          echo "First 20 characters of cleaned_tf_outputs.json:"
-          head -c 20 cleaned_tf_outputs.json | od -c
-          
-          if jq empty cleaned_tf_outputs.json 2>/dev/null; then
-            echo "Cleaned JSON is valid"
-            jq '.' cleaned_tf_outputs.json
-            mv cleaned_tf_outputs.json tf_outputs.json
+          echo "Attempting to parse JSON..."
+          if echo "$TF_OUTPUT" | jq empty 2>/dev/null; then
+            echo "Valid JSON output"
+            echo "$TF_OUTPUT" | jq '.'
           else
-            echo "Failed to clean and parse JSON. Error from jq:"
-            jq empty cleaned_tf_outputs.json 2>&1
-            echo "Raw content of cleaned_tf_outputs.json:"
-            cat cleaned_tf_outputs.json
+            echo "Invalid JSON output. Error from jq:"
+            echo "$TF_OUTPUT" | jq empty 2>&1
+            echo "Raw content of Terraform output:"
+            echo "$TF_OUTPUT"
             exit 1
           fi
 
           echo "Parsing Terraform outputs..."
-          ECR_REPO_URL=$(jq -r '.ecr_repository_url.value // empty' tf_outputs.json)
-          ECS_CLUSTER_ARN=$(jq -r '.ecs_cluster_arn.value // empty' tf_outputs.json)
-          ECS_TASK_DEF_ARN=$(jq -r '.ecs_task_definition_arn.value // empty' tf_outputs.json)
-          NEO4J_LEDGER_URL=$(jq -r '.neo4j_ledger_space_bolt_url.value // empty' tf_outputs.json)
-          NEO4J_SEARCH_URL=$(jq -r '.neo4j_search_space_bolt_url.value // empty' tf_outputs.json)
+          ECR_REPO_URL=$(echo "$TF_OUTPUT" | jq -r '.ecr_repository_url.value // empty')
+          ECS_CLUSTER_ARN=$(echo "$TF_OUTPUT" | jq -r '.ecs_cluster_arn.value // empty')
+          ECS_TASK_DEF_ARN=$(echo "$TF_OUTPUT" | jq -r '.ecs_task_definition_arn.value // empty')
+          NEO4J_LEDGER_URL=$(echo "$TF_OUTPUT" | jq -r '.neo4j_ledger_space_bolt_url.value // empty')
+          NEO4J_SEARCH_URL=$(echo "$TF_OUTPUT" | jq -r '.neo4j_search_space_bolt_url.value // empty')
 
           # Check if any of the values are empty
           if [ -z "$ECR_REPO_URL" ] || [ -z "$ECS_CLUSTER_ARN" ] || [ -z "$ECS_TASK_DEF_ARN" ] || [ -z "$NEO4J_LEDGER_URL" ] || [ -z "$NEO4J_SEARCH_URL" ]; then
