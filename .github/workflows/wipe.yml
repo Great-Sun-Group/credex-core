@@ -161,12 +161,20 @@ jobs:
             roles=("ecs-execution-role-$ENVIRONMENT" "ecs-task-role-$ENVIRONMENT")
             for role in "${roles[@]}"; do
               if aws iam get-role --role-name $role &>/dev/null; then
-                # Detach all policies from the role
+                # Detach all managed policies from the role
                 attached_policies=$(aws iam list-attached-role-policies --role-name $role --query 'AttachedPolicies[*].PolicyArn' --output text)
                 for policy in $attached_policies; do
                   retry_command aws iam detach-role-policy --role-name $role --policy-arn $policy
-                  echo "Detached policy $policy from role $role"
+                  echo "Detached managed policy $policy from role $role"
                 done
+
+                # Delete all inline policies
+                inline_policies=$(aws iam list-role-policies --role-name $role --query 'PolicyNames' --output text)
+                for policy in $inline_policies; do
+                  retry_command aws iam delete-role-policy --role-name $role --policy-name $policy
+                  echo "Deleted inline policy $policy from role $role"
+                done
+
                 # Delete the role
                 retry_command aws iam delete-role --role-name $role
                 echo "Deleted IAM role: $role"
