@@ -28,6 +28,8 @@
         "iam:GetInstanceProfile",
         "iam:GetRolePolicy",
         "iam:ListRolePolicies",
+        "iam:GetUser",
+        "iam:SimulatePrincipalPolicy",
         "cloudwatch:*",
         "autoscaling:*",
         "application-autoscaling:*",
