@@ -120,7 +120,14 @@ jobs:
         run: |
           cd terraform
           terraform init
-          terraform workspace select $TF_VAR_environment || terraform workspace new $TF_VAR_environment
+          terraform workspace select $ENVIRONMENT || terraform workspace new $ENVIRONMENT
+
+      - name: Debug - Print Terraform Workspace and Environment
+        run: |
+          cd terraform
+          echo "Current Terraform Workspace: $(terraform workspace show)"
+          echo "ENVIRONMENT: $ENVIRONMENT"
+          echo "TF_VAR_environment: $TF_VAR_environment"
 
       - name: Import Existing Resources
         run: |
