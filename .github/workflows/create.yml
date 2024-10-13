@@ -146,6 +146,8 @@ jobs:
 
       - name: Debug - Print Terraform Outputs
         run: |
+          echo "Terraform Outputs:"
+          echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq .
           echo "ECR Repository URL: $(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.ecr_repository_url.value')"
           echo "ECS Cluster ARN: $(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.ecs_cluster_arn.value')"
           echo "ECS Task Definition ARN: $(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.ecs_task_definition_arn.value')"
@@ -156,6 +158,8 @@ jobs:
           NEO4J_SEARCH_IP=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_search_space_bolt_url.value' | sed 's|bolt://||' | sed 's|:7687||')
           echo "TF_VAR_neo4j_ledger_space_bolt_url=bolt://${NEO4J_LEDGER_IP}:7687" >> $GITHUB_ENV
           echo "TF_VAR_neo4j_search_space_bolt_url=bolt://${NEO4J_SEARCH_IP}:7687" >> $GITHUB_ENV
+          echo "Neo4j Ledger Space Bolt URL: bolt://${NEO4J_LEDGER_IP}:7687"
+          echo "Neo4j Search Space Bolt URL: bolt://${NEO4J_SEARCH_IP}:7687"
 
       - name: Update ECS Task Definition
         env:
@@ -194,14 +198,14 @@ jobs:
           
           echo "Updating task definition"
           NEW_TASK_DEF=$(echo $TASK_DEF | jq --arg ECR_REPO_URL "$ECR_REPO_URL" '.containerDefinitions[0].image = $ECR_REPO_URL + ":latest" | .containerDefinitions[0].environment += [
-            {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_ledger_space_bolt_url }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_search_space_bolt_url }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO4J_LEDGER_SPACE_USER }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO4J_LEDGER_SPACE_PASS }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ secrets.NEO4J_SEARCH_SPACE_USER }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ secrets.NEO4J_SEARCH_SPACE_PASS }}"},
-            {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
-            {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"}
+            {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "'"$TF_VAR_neo4j_ledger_space_bolt_url"'"},
+            {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "'"$TF_VAR_neo4j_search_space_bolt_url"'"},
+            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "'"${{ secrets.NEO4J_LEDGER_SPACE_USER }}"'"},
+            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "'"${{ secrets.NEO4J_LEDGER_SPACE_PASS }}"'"},
+            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "'"${{ secrets.NEO4J_SEARCH_SPACE_USER }}"'"},
+            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "'"${{ secrets.NEO4J_SEARCH_SPACE_PASS }}"'"},
+            {"name": "JWT_SECRET", "value": "'"${{ secrets.JWT_SECRET }}"'"},
+            {"name": "OPEN_EXCHANGE_RATES_API", "value": "'"${{ secrets.OPEN_EXCHANGE_RATES_API }}"'"}
           ]')
           echo "Task definition updated"
           
