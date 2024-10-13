@@ -48,23 +48,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Check and Remove Existing Resources
+      - name: Check Required Secrets
         run: |
-          # Check and remove IAM roles
-          for role in ecs-execution-role-$ENVIRONMENT ecs-task-role-$ENVIRONMENT; do
-            if aws iam get-role --role-name $role &>/dev/null; then
-              echo "Removing existing IAM role: $role"
-              aws iam delete-role --role-name $role
-            fi
-          done
-
-          # Check and remove CloudWatch log group
-          log_group="/ecs/credex-core-$ENVIRONMENT"
-          if aws logs describe-log-groups --log-group-name-prefix $log_group | grep -q $log_group; then
-            echo "Removing existing CloudWatch log group: $log_group"
-            aws logs delete-log-group --log-group-name $log_group
+          missing_secrets=()
+          if [ -z "${{ secrets.AWS_ACCESS_KEY }}" ]; then
+            missing_secrets+=("AWS_ACCESS_KEY")
           fi
-
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
             missing_secrets+=("AWS_SECRET_ACCESS_KEY")
           fi
           if [ -z "${{ secrets.AWS_REGION }}" ]; then
@@ -128,33 +118,6 @@ jobs:
           echo "Current Terraform Workspace: $(terraform workspace show)"
           echo "ENVIRONMENT: $ENVIRONMENT"
           echo "TF_VAR_environment: $TF_VAR_environment"
-
-      - name: Import Existing Resources
-        run: |
-          cd terraform
-          
-          # Function to import a resource if it exists
-          import_if_exists() {
-            local resource_type=$1
-            local resource_name=$2
-            local tf_resource=$3
-            
-            if aws $resource_type describe-$resource_name --name $resource_name 2>/dev/null; then
-              terraform import $tf_resource $resource_name
-              echo "Imported existing $resource_type: $resource_name"
-            else
-              echo "No existing $resource_type found: $resource_name"
-            fi
-          }
-          
-          # Import existing resources
-          import_if_exists acm get-certificate "mycredex.app" "aws_acm_certificate.credex_cert"
-          import_if_exists ec2 security-groups "credex-alb-sg-$TF_VAR_environment" "aws_security_group.alb_sg"
-          import_if_exists ec2 security-groups "credex-core-ecs-tasks-sg-$TF_VAR_environment" "aws_security_group.ecs_tasks_sg"
-          import_if_exists ec2 security-groups "credex-neo4j-sg-$TF_VAR_environment" "aws_security_group.neo4j_sg"
-          import_if_exists ecs clusters "credex-cluster-$TF_VAR_environment" "aws_ecs_cluster.credex_cluster"
-          import_if_exists ecs services "credex-core-service-$TF_VAR_environment" "aws_ecs_service.credex_core_service"
-          import_if_exists elbv2 load-balancers "credex-alb-$TF_VAR_environment" "aws_lb.credex_alb"
 
       - name: Terraform Plan
         id: plan
