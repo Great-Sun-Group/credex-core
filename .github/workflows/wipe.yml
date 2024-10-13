@@ -90,7 +90,7 @@ jobs:
           wipe_vpcs() {
             echo "Wiping VPCs..."
             vpcs=$(aws ec2 describe-vpcs --query "Vpcs[?IsDefault==\`false\`].VpcId" --output text)
-            for vpc in $vpcs; do
+            for vpc in $vpc; do
               aws ec2 delete-vpc --vpc-id $vpc || echo "Failed to delete VPC: $vpc"
               echo "Deleted VPC: $vpc"
             done
@@ -121,22 +121,16 @@ jobs:
             echo "Wiping ECS clusters..."
             clusters=$(aws ecs list-clusters --query "clusterArns[]" --output text)
             for cluster in $clusters; do
-              aws ecs delete-cluster --cluster $cluster || echo "Failed to delete ECS cluster: $cluster"
-              echo "Deleted ECS cluster: $cluster"
-            done
-          }
-
-          # Function to wipe ECS services
-          wipe_ecs_services() {
-            echo "Wiping ECS services..."
-            clusters=$(aws ecs list-clusters --query "clusterArns[]" --output text)
-            for cluster in $clusters; do
+              # First, delete all services in the cluster
               services=$(aws ecs list-services --cluster $cluster --query "serviceArns[]" --output text)
               for service in $services; do
-                aws ecs update-service --cluster $cluster --service $service --desired-count 0 || echo "Failed to scale down ECS service: $service"
-                aws ecs delete-service --cluster $cluster --service $service --force || echo "Failed to delete ECS service: $service"
+                aws ecs update-service --cluster $cluster --service $service --desired-count 0
+                aws ecs delete-service --cluster $cluster --service $service --force
                 echo "Deleted ECS service: $service in cluster: $cluster"
               done
+              # Then delete the cluster
+              aws ecs delete-cluster --cluster $cluster || echo "Failed to delete ECS cluster: $cluster"
+              echo "Deleted ECS cluster: $cluster"
             done
           }
 
@@ -171,7 +165,6 @@ jobs:
           }
 
           # Run wipe for different resource types
-          wipe_ecs_services
           wipe_ecs_clusters
           wipe_load_balancers
           wipe_ec2_instances
