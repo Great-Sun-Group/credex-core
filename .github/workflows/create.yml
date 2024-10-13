@@ -214,13 +214,13 @@ jobs:
               # Get detailed task information for all tasks
               TASK_DETAILS=$(aws ecs describe-tasks --cluster credex-cluster-$ENVIRONMENT --tasks $TASK_ARNS)
               
-              echo "$TASK_DETAILS" | jq -r '.tasks[] | "Task ARN: \(.taskArn)\nLast Status: \(.lastStatus)\nDesired Status: \(.desiredStatus)\nHealth Status: \(.healthStatus)\nTask Definition: \(.taskDefinitionArn)\nLaunch Type: \(.launchType)\nContainer Instance: \(.containerInstanceArn)\n"'
+              echo "$TASK_DETAILS" | jq -r '.tasks[] | "Task ARN: \(.taskArn)\nLast Status: \(.lastStatus)\nDesired Status: \(.desiredStatus)\nHealth Status: \(.healthStatus)\nTask Definition: \(.taskDefinitionArn)\nLaunch Type: \(.launchType)\nContainer Instance: \(.containerInstanceArn)\nStopped Reason: \(.stoppedReason)\nStopped At: \(.stoppedAt)\nStarted At: \(.startedAt)\n"'
               
               # Check for stopped tasks and their reasons
               STOPPED_TASKS=$(echo "$TASK_DETAILS" | jq -r '.tasks[] | select(.lastStatus == "STOPPED")')
               if [ -n "$STOPPED_TASKS" ]; then
                 echo "Stopped tasks found:"
-                echo "$STOPPED_TASKS" | jq -r '. | "Task ARN: \(.taskArn)\nStopped Reason: \(.stoppedReason)\nContainer Exit Codes: \(.containers[].exitCode)\nContainer Reason: \(.containers[].reason)\n"'
+                echo "$STOPPED_TASKS" | jq -r '. | "Task ARN: \(.taskArn)\nStopped Reason: \(.stoppedReason)\nContainer Exit Codes: \(.containers[].exitCode)\nContainer Reason: \(.containers[].reason)\nStopped At: \(.stoppedAt)\n"'
               fi
               
               # Get container logs for all tasks
@@ -262,6 +262,10 @@ jobs:
           # Display Security Group information
           echo "Security Group Information:"
           aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=credex-vpc-$ENVIRONMENT" --query 'Vpcs[0].VpcId' --output text)" | jq .
+          
+          # Display IAM Role information
+          echo "IAM Role Information:"
+          aws iam get-role --role-name ecsTaskExecutionRole | jq .
           
           exit 1
 
