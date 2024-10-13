@@ -40,7 +40,7 @@ jobs:
           echo "NODE_ENV=$ENVIRONMENT" >> $GITHUB_ENV
           echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
           echo "Setting environment to: $ENVIRONMENT"
-          
+
           # Ensure these variables are available to subsequent steps
           echo "ENVIRONMENT=$ENVIRONMENT" >> $GITHUB_OUTPUT
           echo "NODE_ENV=$ENVIRONMENT" >> $GITHUB_OUTPUT
@@ -169,18 +169,18 @@ jobs:
         run: |
           set -e
           echo "Starting Update ECS Task Definition step"
-          
+
           echo "Environment variables:"
           env | grep -E "TF_VAR_|AWS_|NODE_ENV|GITHUB_ENV|ENVIRONMENT"
-          
+
           echo "Retrieving ECR Repository URL"
           ECR_REPO_URL=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.ecr_repository_url.value')
           echo "ECR Repository URL: $ECR_REPO_URL"
-          
+
           echo "Describing ECS task definition"
           TASK_DEF_NAME="credex-core-${{ steps.set_env.outputs.ENVIRONMENT }}"
           echo "Task Definition Name: $TASK_DEF_NAME"
-          
+
           TASK_DEF=$(aws ecs describe-task-definition --task-definition $TASK_DEF_NAME --query taskDefinition)
           if [ $? -ne 0 ]; then
             echo "Error describing task definition. AWS CLI output:"
@@ -188,7 +188,7 @@ jobs:
             exit 1
           fi
           echo "Task Definition retrieved successfully"
-          
+
           echo "Updating task definition"
           NEW_TASK_DEF=$(echo $TASK_DEF | jq --arg ECR_REPO_URL "$ECR_REPO_URL" '.containerDefinitions[0].image = $ECR_REPO_URL + ":latest" | .containerDefinitions[0].environment += [
             {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_ledger_space_bolt_url }}"},
@@ -201,10 +201,10 @@ jobs:
             {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ vars.OPEN_EXCHANGE_RATES_API }}"}
           ]')
           echo "Task definition updated"
-          
+
           echo "Writing new task definition to file"
           echo $NEW_TASK_DEF > new-task-def.json
-          
+
           echo "Registering new task definition"
           aws ecs register-task-definition --cli-input-json file://new-task-def.json
           if [ $? -ne 0 ]; then
