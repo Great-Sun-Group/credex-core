@@ -124,17 +124,27 @@ jobs:
           ECS_TASK_DEF_ARN=$(echo "$TF_OUTPUT" | jq -r '.ecs_task_definition_arn.value // empty')
           NEO4J_LEDGER_URL=$(echo "$TF_OUTPUT" | jq -r '.neo4j_ledger_space_bolt_url.value // empty')
           NEO4J_SEARCH_URL=$(echo "$TF_OUTPUT" | jq -r '.neo4j_search_space_bolt_url.value // empty')
+          NEO4J_LEDGER_USER=$(echo "$TF_OUTPUT" | jq -r '.neo4j_ledger_space_user.value // empty')
+          NEO4J_LEDGER_PASS=$(echo "$TF_OUTPUT" | jq -r '.neo4j_ledger_space_pass.value // empty')
+          NEO4J_SEARCH_USER=$(echo "$TF_OUTPUT" | jq -r '.neo4j_search_space_user.value // empty')
+          NEO4J_SEARCH_PASS=$(echo "$TF_OUTPUT" | jq -r '.neo4j_search_space_pass.value // empty')
 
-          if [ -z "$ECR_REPO_URL" ] || [ -z "$ECS_CLUSTER_ARN" ] || [ -z "$ECS_TASK_DEF_ARN" ] || [ -z "$NEO4J_LEDGER_URL" ] || [ -z "$NEO4J_SEARCH_URL" ]; then
+          if [ -z "$ECR_REPO_URL" ] || [ -z "$ECS_CLUSTER_ARN" ] || [ -z "$ECS_TASK_DEF_ARN" ] || [ -z "$NEO4J_LEDGER_URL" ] || [ -z "$NEO4J_SEARCH_URL" ] || [ -z "$NEO4J_LEDGER_USER" ] || [ -z "$NEO4J_LEDGER_PASS" ] || [ -z "$NEO4J_SEARCH_USER" ] || [ -z "$NEO4J_SEARCH_PASS" ]; then
             echo "One or more Terraform outputs are empty"
             exit 1
           fi
 
-          echo "ECR_REPO_URL=${ECR_REPO_URL}" >> $GITHUB_ENV
-          echo "ECS_CLUSTER_ARN=${ECS_CLUSTER_ARN}" >> $GITHUB_ENV
-          echo "ECS_TASK_DEF_ARN=${ECS_TASK_DEF_ARN}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_ledger_space_bolt_url=${NEO4J_LEDGER_URL}" >> $GITHUB_ENV
-          echo "TF_VAR_neo4j_search_space_bolt_url=${NEO4J_SEARCH_URL}" >> $GITHUB_ENV
+          {
+            echo "ECR_REPO_URL=${ECR_REPO_URL}"
+            echo "ECS_CLUSTER_ARN=${ECS_CLUSTER_ARN}"
+            echo "ECS_TASK_DEF_ARN=${ECS_TASK_DEF_ARN}"
+            echo "NEO4J_LEDGER_URL=${NEO4J_LEDGER_URL}"
+            echo "NEO4J_SEARCH_URL=${NEO4J_SEARCH_URL}"
+            echo "NEO4J_LEDGER_USER=${NEO4J_LEDGER_USER}"
+            echo "NEO4J_LEDGER_PASS=${NEO4J_LEDGER_PASS}"
+            echo "NEO4J_SEARCH_USER=${NEO4J_SEARCH_USER}"
+            echo "NEO4J_SEARCH_PASS=${NEO4J_SEARCH_PASS}"
+          } >> $GITHUB_ENV
 
           echo "Parsed Terraform Outputs:"
           echo "ECR_REPO_URL: ${ECR_REPO_URL}"
@@ -142,26 +152,8 @@ jobs:
           echo "ECS_TASK_DEF_ARN: ${ECS_TASK_DEF_ARN}"
           echo "NEO4J_LEDGER_URL: ${NEO4J_LEDGER_URL}"
           echo "NEO4J_SEARCH_URL: ${NEO4J_SEARCH_URL}"
-
-      - name: Build and push Docker image to ECR
-        env:
-          ECR_REGISTRY: ${{ env.ECR_REPO_URL }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          # Build the Docker image
-          docker build -t $ECR_REGISTRY:$IMAGE_TAG .
-
-          # Log in to Amazon ECR
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY
-
-          # Push the image to ECR
-          docker push $ECR_REGISTRY:$IMAGE_TAG
-
-          # Tag the image as latest
-          docker tag $ECR_REGISTRY:$IMAGE_TAG $ECR_REGISTRY:latest
-          docker push $ECR_REGISTRY:latest
-
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "NEO4J_LEDGER_USER: ${NEO4J_LEDGER_USER}"
+          echo "NEO4J_SEARCH_USER: ${NEO4J_SEARCH_USER}"
 
       - name: Update ECS Task Definition
         env:
@@ -181,14 +173,15 @@ jobs:
           NEW_TASK_DEF=$(echo $TASK_DEF | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | 
             .containerDefinitions[0].image = "'$ECR_REPO_URL':'$IMAGE_TAG'" | 
             .containerDefinitions[0].environment += [
-              {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "'$TF_VAR_neo4j_ledger_space_bolt_url'"},
-              {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "'$TF_VAR_neo4j_search_space_bolt_url'"},
-              {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "'${{ secrets.NEO4J_LEDGER_SPACE_USER }}'"},
-              {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "'${{ secrets.NEO4J_LEDGER_SPACE_PASS }}'"},
-              {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "'${{ secrets.NEO4J_SEARCH_SPACE_USER }}'"},
-              {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "'${{ secrets.NEO4J_SEARCH_SPACE_PASS }}'"},
+              {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "'$NEO4J_LEDGER_URL'"},
+              {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "'$NEO4J_SEARCH_URL'"},
+              {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "'$NEO4J_LEDGER_USER'"},
+              {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "'$NEO4J_LEDGER_PASS'"},
+              {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "'$NEO4J_SEARCH_USER'"},
+              {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "'$NEO4J_SEARCH_PASS'"},
               {"name": "JWT_SECRET", "value": "'${{ secrets.JWT_SECRET }}'"},
-              {"name": "OPEN_EXCHANGE_RATES_API", "value": "'${{ secrets.OPEN_EXCHANGE_RATES_API }}'"}
+              {"name": "OPEN_EXCHANGE_RATES_API", "value": "'${{ secrets.OPEN_EXCHANGE_RATES_API }}'"},
+              {"name": "NODE_ENV", "value": "'$ENVIRONMENT'"}
             ]')
 
           echo "Writing new task definition to file"
@@ -205,12 +198,12 @@ jobs:
           echo "Task Definition:"
           echo $TASK_DEF | jq .
           
-          LOG_CONFIG=$(echo $TASK_DEF | jq -r '.containerDefinitions[0].logConfiguration')
-          echo "Log Configuration:"
-          echo $LOG_CONFIG | jq .
+          ENV_VARS=$(echo $TASK_DEF | jq -r '.containerDefinitions[0].environment')
+          echo "Environment Variables:"
+          echo $ENV_VARS | jq .
           
-          if [ -z "$LOG_CONFIG" ] || [ "$LOG_CONFIG" == "null" ]; then
-            echo "Error: Log configuration is missing in the task definition"
+          if [ -z "$ENV_VARS" ] || [ "$ENV_VARS" == "null" ]; then
+            echo "Error: Environment variables are missing in the task definition"
             exit 1
           fi
 
@@ -342,3 +335,15 @@ jobs:
           gh secret set NEO4J_SSH_KEY --body "$NEO4J_SSH_KEY" --env $ENVIRONMENT
 
           echo "Neo4j information saved as GitHub secrets for the $ENVIRONMENT environment"
+          # Verify specific environment variables
+          required_vars=("NEO_4J_LEDGER_SPACE_USER" "NEO_4J_LEDGER_SPACE_PASS" "NEO_4J_SEARCH_SPACE_USER" "NEO_4J_SEARCH_SPACE_PASS" "JWT_SECRET" "NEO_4J_LEDGER_SPACE_BOLT_URL" "NEO_4J_SEARCH_SPACE_BOLT_URL")
+          for var in "${required_vars[@]}"; do
+            if ! echo $ENV_VARS | jq -e ".[] | select(.name == \"$var\")" > /dev/null; then
+              echo "Error: Required environment variable $var is missing"
+              exit 1
+            fi
+          done
+
+          echo "All required environment variables are present in the task definition"
+
+      # ... (remaining steps unchanged)
