@@ -61,48 +61,45 @@ jobs:
 
       - name: Wipe Orphaned Resources
         run: |
+          # Function to retry AWS CLI commands
+          retry_command() {
+            local max_attempts=3
+            local attempt=1
+            until "$@"; do
+              if (( attempt == max_attempts )); then
+                echo "Command failed after $max_attempts attempts: $*" >&2
+                return 1
+              fi
+              echo "Command failed, retrying in 5 seconds..." >&2
+              sleep 5
+              ((attempt++))
+            done
+            return 0
+          }
+
+          # Function to wipe ECS services and clusters
+          wipe_ecs_resources() {
+            echo "Wiping ECS resources..."
+            clusters=$(aws ecs list-clusters --query "clusterArns[]" --output text)
+            for cluster in $clusters; do
+              services=$(aws ecs list-services --cluster $cluster --query "serviceArns[]" --output text)
+              for service in $services; do
+                retry_command aws ecs update-service --cluster $cluster --service $service --desired-count 0
+                retry_command aws ecs delete-service --cluster $cluster --service $service --force
+                echo "Deleted ECS service: $service in cluster: $cluster"
+              done
+              retry_command aws ecs delete-cluster --cluster $cluster
+              echo "Deleted ECS cluster: $cluster"
+            done
+          }
+
           # Function to wipe EC2 instances
           wipe_ec2_instances() {
             echo "Wiping EC2 instances..."
             instances=$(aws ec2 describe-instances --query "Reservations[*].Instances[*].InstanceId" --output text)
             for instance in $instances; do
-              aws ec2 terminate-instances --instance-ids $instance || echo "Failed to terminate EC2 instance: $instance"
+              retry_command aws ec2 terminate-instances --instance-ids $instance
               echo "Terminated EC2 instance: $instance"
-            done
-          }
-
-          # Function to wipe security groups
-          wipe_security_groups() {
-            echo "Wiping security groups..."
-            sgs=$(aws ec2 describe-security-groups --query "SecurityGroups[?GroupName!='default'].GroupId" --output text)
-            for sg in $sgs; do
-              # Remove all inbound rules
-              aws ec2 revoke-security-group-ingress --group-id $sg --protocol all --port all --cidr 0.0.0.0/0 || echo "Failed to revoke ingress rules for security group: $sg"
-              # Remove all outbound rules
-              aws ec2 revoke-security-group-egress --group-id $sg --protocol all --port all --cidr 0.0.0.0/0 || echo "Failed to revoke egress rules for security group: $sg"
-              # Now try to delete the security group
-              aws ec2 delete-security-group --group-id $sg || echo "Failed to delete security group: $sg"
-              echo "Deleted security group: $sg"
-            done
-          }
-
-          # Function to wipe VPCs
-          wipe_vpcs() {
-            echo "Wiping VPCs..."
-            vpcs=$(aws ec2 describe-vpcs --query "Vpcs[?IsDefault==\`false\`].VpcId" --output text)
-            for vpc in $vpc; do
-              aws ec2 delete-vpc --vpc-id $vpc || echo "Failed to delete VPC: $vpc"
-              echo "Deleted VPC: $vpc"
-            done
-          }
-
-          # Function to wipe subnets
-          wipe_subnets() {
-            echo "Wiping subnets..."
-            subnets=$(aws ec2 describe-subnets --query "Subnets[*].SubnetId" --output text)
-            for subnet in $subnets; do
-              aws ec2 delete-subnet --subnet-id $subnet || echo "Failed to delete subnet: $subnet"
-              echo "Deleted subnet: $subnet"
             done
           }
 
@@ -111,36 +108,20 @@ jobs:
             echo "Wiping load balancers..."
             lbs=$(aws elbv2 describe-load-balancers --query "LoadBalancers[*].LoadBalancerArn" --output text)
             for lb in $lbs; do
-              aws elbv2 delete-load-balancer --load-balancer-arn $lb || echo "Failed to delete load balancer: $lb"
+              retry_command aws elbv2 delete-load-balancer --load-balancer-arn $lb
               echo "Deleted load balancer: $lb"
             done
           }
 
-          # Function to wipe ECS clusters
-          wipe_ecs_clusters() {
-            echo "Wiping ECS clusters..."
-            clusters=$(aws ecs list-clusters --query "clusterArns[]" --output text)
-            for cluster in $clusters; do
-              # First, delete all services in the cluster
-              services=$(aws ecs list-services --cluster $cluster --query "serviceArns[]" --output text)
-              for service in $services; do
-                aws ecs update-service --cluster $cluster --service $service --desired-count 0
-                aws ecs delete-service --cluster $cluster --service $service --force
-                echo "Deleted ECS service: $service in cluster: $cluster"
-              done
-              # Then delete the cluster
-              aws ecs delete-cluster --cluster $cluster || echo "Failed to delete ECS cluster: $cluster"
-              echo "Deleted ECS cluster: $cluster"
-            done
-          }
-
-          # Function to wipe EC2 key pairs
-          wipe_ec2_key_pairs() {
-            echo "Wiping EC2 key pairs..."
-            key_pairs=$(aws ec2 describe-key-pairs --query "KeyPairs[*].KeyName" --output text)
-            for key_pair in $key_pairs; do
-              aws ec2 delete-key-pair --key-name $key_pair || echo "Failed to delete EC2 key pair: $key_pair"
-              echo "Deleted EC2 key pair: $key_pair"
+          # Function to wipe security groups
+          wipe_security_groups() {
+            echo "Wiping security groups..."
+            sgs=$(aws ec2 describe-security-groups --query "SecurityGroups[?GroupName!='default'].GroupId" --output text)
+            for sg in $sgs; do
+              retry_command aws ec2 revoke-security-group-ingress --group-id $sg --protocol all --port all --cidr 0.0.0.0/0
+              retry_command aws ec2 revoke-security-group-egress --group-id $sg --protocol all --port all --cidr 0.0.0.0/0
+              retry_command aws ec2 delete-security-group --group-id $sg
+              echo "Deleted security group: $sg"
             done
           }
 
@@ -149,41 +130,37 @@ jobs:
             echo "Wiping ACM certificates..."
             certificates=$(aws acm list-certificates --query "CertificateSummaryList[*].CertificateArn" --output text)
             for cert in $certificates; do
-              aws acm delete-certificate --certificate-arn $cert || echo "Failed to delete ACM certificate: $cert"
+              retry_command aws acm delete-certificate --certificate-arn $cert
               echo "Deleted ACM certificate: $cert"
             done
           }
 
-          # Function to wipe ECR repositories
-          wipe_ecr_repositories() {
-            echo "Wiping ECR repositories..."
-            repos=$(aws ecr describe-repositories --query "repositories[*].repositoryName" --output text)
-            for repo in $repos; do
-              aws ecr delete-repository --repository-name $repo --force || echo "Failed to delete ECR repository: $repo"
-              echo "Deleted ECR repository: $repo"
+          # Function to wipe VPCs
+          wipe_vpcs() {
+            echo "Wiping VPCs..."
+            vpcs=$(aws ec2 describe-vpcs --query "Vpcs[?IsDefault==\`false\`].VpcId" --output text)
+            for vpc in $vpcs; do
+              retry_command aws ec2 delete-vpc --vpc-id $vpc
+              echo "Deleted VPC: $vpc"
             done
           }
 
-          # Run wipe for different resource types
-          wipe_ecs_clusters
-          wipe_load_balancers
+          # Run wipe functions in order
+          wipe_ecs_resources
           wipe_ec2_instances
+          wipe_load_balancers
           wipe_security_groups
-          wipe_subnets
-          wipe_vpcs
-          wipe_ec2_key_pairs
           wipe_acm_certificates
-          wipe_ecr_repositories
+          wipe_vpcs
+
+          echo "Manual resource deletion completed"
 
       - name: Wipe Terraform State
         run: |
           cd terraform
-          # Initialize Terraform to ensure plugins are installed
           terraform init -input=false
-          # Remove local state files and directories
           rm -rf terraform.tfstate*
           rm -rf .terraform
-          # Remove workspace state
           rm -rf terraform.tfstate.d
           echo "Terraform state files removed"
 
@@ -191,7 +168,6 @@ jobs:
         run: |
           cd terraform
           terraform init -input=false
-          # Check if there are any resources in the state
           if terraform show -json 2>/dev/null | jq -e '.values.root_module.resources' >/dev/null 2>&1; then
             echo "Error: Resources still exist after wipe"
             terraform show
