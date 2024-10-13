@@ -12,17 +12,20 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
-# Get subnets in at least two AZs
-data "aws_subnets" "available" {
-  filter {
-    name   = "vpc-id"
-    values = [local.vpc_id]
-  }
+# Create subnets if they don't exist
+resource "aws_subnet" "credex_subnets" {
+  count             = var.operation_type != "delete" ? 2 : 0
+  vpc_id            = local.vpc_id
+  cidr_block        = "172.31.${count.index + 1}.0/24"
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+
+  tags = merge(local.common_tags, {
+    Name = "credex-subnet-${var.environment}-${count.index + 1}"
+  })
 }
 
-# Ensure we have at least two subnets in different AZs
 locals {
-  subnet_ids = distinct(slice([for s in data.aws_subnets.available.ids : s], 0, min(length(data.aws_subnets.available.ids), 2)))
+  subnet_ids = var.operation_type != "delete" ? aws_subnet.credex_subnets[*].id : []
 }
 
 # Validate that we have at least two subnets
@@ -254,4 +257,36 @@ resource "aws_security_group" "alb" {
   }
 
   tags = local.common_tags
+}
+
+# Create an Internet Gateway for the VPC
+resource "aws_internet_gateway" "credex_igw" {
+  count  = var.operation_type != "delete" ? 1 : 0
+  vpc_id = local.vpc_id
+
+  tags = merge(local.common_tags, {
+    Name = "credex-igw-${var.environment}"
+  })
+}
+
+# Create a route table for the VPC
+resource "aws_route_table" "credex_route_table" {
+  count  = var.operation_type != "delete" ? 1 : 0
+  vpc_id = local.vpc_id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.credex_igw[0].id
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "credex-route-table-${var.environment}"
+  })
+}
+
+# Associate the route table with the subnets
+resource "aws_route_table_association" "credex_route_table_assoc" {
+  count          = var.operation_type != "delete" ? 2 : 0
+  subnet_id      = aws_subnet.credex_subnets[count.index].id
+  route_table_id = aws_route_table.credex_route_table[0].id
 }
