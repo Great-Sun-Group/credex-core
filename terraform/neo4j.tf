@@ -53,7 +53,7 @@ resource "aws_instance" "neo4j" {
   key_name      = var.operation_type == "create" && var.neo4j_public_key != "" ? aws_key_pair.neo4j_key_pair[0].key_name : (var.operation_type != "create" ? data.aws_key_pair.existing_neo4j_key_pair[0].key_name : null)
 
   vpc_security_group_ids = [aws_security_group.neo4j[0].id]
-  subnet_id              = aws_subnet.credex_subnets[count.index % length(aws_subnet.credex_subnets)].id
+  subnet_id              = data.aws_subnets.default.ids[count.index % length(data.aws_subnets.default.ids)]
 
   tags = merge(local.common_tags, {
     Name = "Neo4j-${var.environment}-${count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
