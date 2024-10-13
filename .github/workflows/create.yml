@@ -167,6 +167,9 @@ jobs:
           echo "Environment variables:"
           env | grep -E "TF_VAR_|AWS_|NODE_ENV|GITHUB_ENV"
           
+          echo "Terraform Outputs:"
+          echo "$TF_OUTPUTS" | jq .
+          
           echo "Retrieving ECR Repository URL"
           ECR_REPO_URL=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.ecr_repository_url.value')
           echo "ECR Repository URL: $ECR_REPO_URL"
@@ -175,10 +178,16 @@ jobs:
           TASK_DEF_NAME="credex-core-$TF_VAR_environment"
           echo "Task Definition Name: $TASK_DEF_NAME"
           
+          echo "AWS Configuration:"
+          aws configure list
+          
+          echo "Attempting to describe task definition"
           TASK_DEF=$(aws ecs describe-task-definition --task-definition $TASK_DEF_NAME --query taskDefinition)
           if [ $? -ne 0 ]; then
             echo "Error describing task definition. AWS CLI output:"
             aws ecs describe-task-definition --task-definition $TASK_DEF_NAME
+            echo "Listing available task definitions:"
+            aws ecs list-task-definitions
             exit 1
           fi
           echo "Task Definition retrieved successfully"
@@ -187,12 +196,12 @@ jobs:
           NEW_TASK_DEF=$(echo $TASK_DEF | jq --arg ECR_REPO_URL "$ECR_REPO_URL" '.containerDefinitions[0].image = $ECR_REPO_URL + ":latest" | .containerDefinitions[0].environment += [
             {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_ledger_space_bolt_url }}"},
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ env.TF_VAR_neo4j_search_space_bolt_url }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ vars.NEO4J_LEDGER_SPACE_USER }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ vars.NEO4J_LEDGER_SPACE_PASS }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ vars.NEO4J_SEARCH_SPACE_USER }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ vars.NEO4J_SEARCH_SPACE_PASS }}"},
-            {"name": "JWT_SECRET", "value": "${{ vars.JWT_SECRET }}"},
-            {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ vars.OPEN_EXCHANGE_RATES_API }}"}
+            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO4J_LEDGER_SPACE_USER }}"},
+            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO4J_LEDGER_SPACE_PASS }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ secrets.NEO4J_SEARCH_SPACE_USER }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ secrets.NEO4J_SEARCH_SPACE_PASS }}"},
+            {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
+            {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"}
           ]')
           echo "Task definition updated"
           
