@@ -177,46 +177,67 @@ jobs:
           aws ecs update-service --cluster credex-cluster-$ENVIRONMENT --service credex-core-service-$ENVIRONMENT --task-definition $NEW_TASK_DEF_ARN
 
           echo "Waiting for service to stabilize (this may take up to 30 minutes)..."
-          if ! aws ecs wait services-stable --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT --max-attempts 180; then
-            echo "Service did not stabilize within the expected time. Checking for issues..."
+          
+          start_time=$(date +%s)
+          timeout=1800  # 30 minutes in seconds
+          
+          while true; do
+            current_time=$(date +%s)
+            elapsed_time=$((current_time - start_time))
             
-            # Get the latest task ARN
-            TASK_ARN=$(aws ecs list-tasks --cluster credex-cluster-$ENVIRONMENT --service-name credex-core-service-$ENVIRONMENT --query 'taskArns[0]' --output text)
-            
-            if [ -n "$TASK_ARN" ]; then
-              echo "Latest task ARN: $TASK_ARN"
-              
-              # Get detailed task information
-              TASK_DETAILS=$(aws ecs describe-tasks --cluster credex-cluster-$ENVIRONMENT --tasks $TASK_ARN)
-              
-              echo "Task Details:"
-              echo "$TASK_DETAILS" | jq .
-              
-              # Check if the task is in STOPPED state and get the reason
-              STOPPED_REASON=$(echo "$TASK_DETAILS" | jq -r '.tasks[0].stoppedReason')
-              if [ -n "$STOPPED_REASON" ] && [ "$STOPPED_REASON" != "null" ]; then
-                echo "Task stopped. Reason: $STOPPED_REASON"
-              fi
-              
-              # Get container exit codes
-              CONTAINER_EXIT_CODES=$(echo "$TASK_DETAILS" | jq -r '.tasks[0].containers[].exitCode')
-              if [ -n "$CONTAINER_EXIT_CODES" ]; then
-                echo "Container exit codes: $CONTAINER_EXIT_CODES"
-              fi
-            else
-              echo "No tasks found for the service"
+            if [ $elapsed_time -ge $timeout ]; then
+              echo "Timeout reached. Service did not stabilize within 30 minutes."
+              break
             fi
             
-            # Get service events
-            SERVICE_EVENTS=$(aws ecs describe-services --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT --query 'services[0].events[0:5]')
+            service_status=$(aws ecs describe-services --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT --query 'services[0].{status: status, runningCount: runningCount, desiredCount: desiredCount, events: events[0:5]}')
             
-            echo "Recent service events:"
-            echo "$SERVICE_EVENTS" | jq .
+            status=$(echo $service_status | jq -r '.status')
+            running_count=$(echo $service_status | jq -r '.runningCount')
+            desired_count=$(echo $service_status | jq -r '.desiredCount')
             
-            exit 1
+            echo "Service status: $status, Running tasks: $running_count/$desired_count"
+            echo "Recent events:"
+            echo $service_status | jq -r '.events[] | "  \(.createdAt): \(.message)"'
+            
+            if [ "$status" == "ACTIVE" ] && [ "$running_count" -eq "$desired_count" ]; then
+              echo "Service has stabilized successfully"
+              exit 0
+            fi
+            
+            sleep 30
+          done
+          
+          echo "Service did not stabilize within the expected time. Checking for issues..."
+          
+          # Get the latest task ARN
+          TASK_ARN=$(aws ecs list-tasks --cluster credex-cluster-$ENVIRONMENT --service-name credex-core-service-$ENVIRONMENT --query 'taskArns[0]' --output text)
+          
+          if [ -n "$TASK_ARN" ]; then
+            echo "Latest task ARN: $TASK_ARN"
+            
+            # Get detailed task information
+            TASK_DETAILS=$(aws ecs describe-tasks --cluster credex-cluster-$ENVIRONMENT --tasks $TASK_ARN)
+            
+            echo "Task Details:"
+            echo "$TASK_DETAILS" | jq .
+            
+            # Check if the task is in STOPPED state and get the reason
+            STOPPED_REASON=$(echo "$TASK_DETAILS" | jq -r '.tasks[0].stoppedReason')
+            if [ -n "$STOPPED_REASON" ] && [ "$STOPPED_REASON" != "null" ]; then
+              echo "Task stopped. Reason: $STOPPED_REASON"
+            fi
+            
+            # Get container exit codes
+            CONTAINER_EXIT_CODES=$(echo "$TASK_DETAILS" | jq -r '.tasks[0].containers[].exitCode')
+            if [ -n "$CONTAINER_EXIT_CODES" ]; then
+              echo "Container exit codes: $CONTAINER_EXIT_CODES"
+            fi
+          else
+            echo "No tasks found for the service"
           fi
-
-          echo "Service has stabilized successfully"
+          
+          exit 1
 
       - name: Debug - Print Final Environment Variables
         run: |
