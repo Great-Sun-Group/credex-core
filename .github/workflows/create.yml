@@ -133,6 +133,26 @@ jobs:
           echo "NEO4J_LEDGER_URL: ${NEO4J_LEDGER_URL}"
           echo "NEO4J_SEARCH_URL: ${NEO4J_SEARCH_URL}"
 
+      - name: Build and push Docker image to ECR
+        env:
+          ECR_REGISTRY: ${{ env.ECR_REPO_URL }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Build the Docker image
+          docker build -t $ECR_REGISTRY:$IMAGE_TAG .
+
+          # Log in to Amazon ECR
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+          # Push the image to ECR
+          docker push $ECR_REGISTRY:$IMAGE_TAG
+
+          # Tag the image as latest
+          docker tag $ECR_REGISTRY:$IMAGE_TAG $ECR_REGISTRY:latest
+          docker push $ECR_REGISTRY:latest
+
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
       - name: Update ECS Task Definition
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
@@ -149,7 +169,7 @@ jobs:
           fi
 
           NEW_TASK_DEF=$(echo $TASK_DEF | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | 
-            .containerDefinitions[0].image = "'$ECR_REPO_URL':latest" | 
+            .containerDefinitions[0].image = "'$ECR_REPO_URL':'$IMAGE_TAG'" | 
             .containerDefinitions[0].environment += [
               {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "'$TF_VAR_neo4j_ledger_space_bolt_url'"},
               {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "'$TF_VAR_neo4j_search_space_bolt_url'"},
@@ -249,24 +269,24 @@ jobs:
           done
 
           echo "Service did not stabilize within the expected time. Deployment failed."
-          
+
           # Fetch and display the latest task definition
           echo "Latest Task Definition:"
           aws ecs describe-task-definition --task-definition $NEW_TASK_DEF_ARN | jq .
-          
+
           # Display VPC and Subnet information
           echo "VPC and Subnet Information:"
           aws ec2 describe-vpcs --filters "Name=tag:Name,Values=credex-vpc-$ENVIRONMENT" | jq .
           aws ec2 describe-subnets --filters "Name=vpc-id,Values=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=credex-vpc-$ENVIRONMENT" --query 'Vpcs[0].VpcId' --output text)" | jq .
-          
+
           # Display Security Group information
           echo "Security Group Information:"
           aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=credex-vpc-$ENVIRONMENT" --query 'Vpcs[0].VpcId' --output text)" | jq .
-          
+
           # Display IAM Role information
           echo "IAM Role Information:"
           aws iam get-role --role-name ecsTaskExecutionRole | jq .
-          
+
           exit 1
 
       - name: Debug - Print Final Environment Variables

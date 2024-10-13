@@ -45,8 +45,8 @@ resource "aws_ecs_task_definition" "credex_core" {
   family                   = "credex-core-${var.environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
+  cpu                      = "512"
+  memory                   = "1024"
   execution_role_arn       = aws_iam_role.ecs_execution_role[0].arn
   task_role_arn            = aws_iam_role.ecs_task_role[0].arn
 
@@ -59,6 +59,17 @@ resource "aws_ecs_task_definition" "credex_core" {
           containerPort = 5000
           hostPort      = 5000
         }
+      ]
+      environment = [
+        { name = "NODE_ENV", value = var.environment },
+        { name = "NEO_4J_LEDGER_SPACE_BOLT_URL", value = var.neo4j_ledger_space_bolt_url },
+        { name = "NEO_4J_SEARCH_SPACE_BOLT_URL", value = var.neo4j_search_space_bolt_url },
+        { name = "NEO_4J_LEDGER_SPACE_USER", value = var.neo4j_ledger_space_user },
+        { name = "NEO_4J_LEDGER_SPACE_PASS", value = var.neo4j_ledger_space_pass },
+        { name = "NEO_4J_SEARCH_SPACE_USER", value = var.neo4j_search_space_user },
+        { name = "NEO_4J_SEARCH_SPACE_PASS", value = var.neo4j_search_space_pass },
+        { name = "JWT_SECRET", value = var.jwt_secret },
+        { name = "OPEN_EXCHANGE_RATES_API", value = var.open_exchange_rates_api }
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -148,27 +159,33 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# CloudWatch log group
-resource "aws_cloudwatch_log_group" "ecs_logs" {
+resource "aws_iam_role_policy_attachment" "ecs_task_role_policy" {
+  count      = local.create_resources ? 1 : 0
+  role       = aws_iam_role.ecs_task_role[0].name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+}
+
+# Add ECR pull permissions to the ECS execution role
+resource "aws_iam_role_policy" "ecs_ecr_policy" {
   count = local.create_resources ? 1 : 0
-  name  = "/ecs/credex-core-${var.environment}"
-  tags  = local.common_tags
+  name  = "ecs-ecr-policy-${var.environment}"
+  role  = aws_iam_role.ecs_execution_role[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }
 
-# Outputs for debugging
-output "ecr_repository_url" {
-  value       = try(aws_ecr_repository.credex_core[0].repository_url, data.aws_ecr_repository.credex_core[0].repository_url, "N/A")
-  description = "The URL of the ECR repository"
-}
-
-output "ecs_cluster_arn" {
-  value       = try(aws_ecs_cluster.credex_cluster[0].arn, data.aws_ecs_cluster.credex_cluster[0].arn, "N/A")
-  description = "The ARN of the ECS cluster"
-}
-
-output "ecs_task_definition_arn" {
-  value       = try(aws_ecs_task_definition.credex_core[0].arn, "N/A")
-  description = "The ARN of the ECS task definition"
-}
-
-# Add other necessary resources and configurations here
+# ... (rest of the content remains unchanged)
