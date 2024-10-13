@@ -40,6 +40,12 @@ jobs:
           echo "NODE_ENV=$ENVIRONMENT" >> $GITHUB_ENV
           echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
           echo "Setting environment to: $ENVIRONMENT"
+          
+          # Debug output for environment variables
+          echo "Debug: Environment Variables"
+          echo "ENVIRONMENT: $ENVIRONMENT"
+          echo "NODE_ENV: $NODE_ENV"
+          echo "TF_VAR_environment: $TF_VAR_environment"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -143,6 +149,10 @@ jobs:
           echo "Retrieving Terraform outputs..."
           terraform output -json > tf_outputs.json
           echo "tf_outputs=$(cat tf_outputs.json | jq -c .)" >> $GITHUB_OUTPUT
+          
+          # Debug output for Terraform outputs
+          echo "Debug: Terraform Outputs"
+          cat tf_outputs.json
 
       - name: Debug - Print Terraform Outputs
         run: |
@@ -160,6 +170,11 @@ jobs:
           echo "TF_VAR_neo4j_search_space_bolt_url=bolt://${NEO4J_SEARCH_IP}:7687" >> $GITHUB_ENV
           echo "Neo4j Ledger Space Bolt URL: bolt://${NEO4J_LEDGER_IP}:7687"
           echo "Neo4j Search Space Bolt URL: bolt://${NEO4J_SEARCH_IP}:7687"
+          
+          # Debug output for Neo4j Bolt URLs
+          echo "Debug: Neo4j Bolt URLs"
+          echo "TF_VAR_neo4j_ledger_space_bolt_url: $TF_VAR_neo4j_ledger_space_bolt_url"
+          echo "TF_VAR_neo4j_search_space_bolt_url: $TF_VAR_neo4j_search_space_bolt_url"
 
       - name: Update ECS Task Definition
         env:
@@ -249,3 +264,27 @@ jobs:
         run: |
           echo "Final Environment Variables:"
           env | grep -E "TF_VAR_|AWS_|NODE_ENV|GITHUB_ENV"
+
+      - name: Save Neo4j Information as GitHub Secrets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Extract Neo4j information from Terraform outputs
+          NEO4J_LEDGER_BOLT_URL=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_ledger_space_bolt_url.value')
+          NEO4J_SEARCH_BOLT_URL=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_search_space_bolt_url.value')
+          NEO4J_LEDGER_USER=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_ledger_space_user.value')
+          NEO4J_LEDGER_PASS=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_ledger_space_pass.value')
+          NEO4J_SEARCH_USER=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_search_space_user.value')
+          NEO4J_SEARCH_PASS=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_search_space_pass.value')
+          NEO4J_SSH_KEY=$(echo '${{ steps.tf-outputs.outputs.tf_outputs }}' | jq -r '.neo4j_ssh_key.value')
+
+          # Save secrets using GitHub CLI
+          gh secret set NEO4J_LEDGER_BOLT_URL --body "$NEO4J_LEDGER_BOLT_URL" --env $ENVIRONMENT
+          gh secret set NEO4J_SEARCH_BOLT_URL --body "$NEO4J_SEARCH_BOLT_URL" --env $ENVIRONMENT
+          gh secret set NEO4J_LEDGER_USER --body "$NEO4J_LEDGER_USER" --env $ENVIRONMENT
+          gh secret set NEO4J_LEDGER_PASS --body "$NEO4J_LEDGER_PASS" --env $ENVIRONMENT
+          gh secret set NEO4J_SEARCH_USER --body "$NEO4J_SEARCH_USER" --env $ENVIRONMENT
+          gh secret set NEO4J_SEARCH_PASS --body "$NEO4J_SEARCH_PASS" --env $ENVIRONMENT
+          gh secret set NEO4J_SSH_KEY --body "$NEO4J_SSH_KEY" --env $ENVIRONMENT
+
+          echo "Neo4j information saved as GitHub secrets for the $ENVIRONMENT environment"
