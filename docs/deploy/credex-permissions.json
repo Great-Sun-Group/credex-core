@@ -27,6 +27,7 @@
         "iam:TagInstanceProfile",
         "iam:GetInstanceProfile",
         "iam:GetRolePolicy",
+        "iam:ListRolePolicies",
         "cloudwatch:*",
         "autoscaling:*",
         "application-autoscaling:*",

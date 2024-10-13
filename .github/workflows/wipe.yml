@@ -38,6 +38,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Check IAM Permissions
+        run: |
+          echo "Checking IAM permissions..."
+          aws iam get-user
+          aws iam simulate-principal-policy --policy-source-arn $(aws iam get-user --query 'User.Arn' --output text) --action-names iam:ListRolePolicies
+          echo "IAM permissions check completed."
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
