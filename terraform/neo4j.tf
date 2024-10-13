@@ -33,15 +33,14 @@ data "aws_key_pair" "existing_neo4j_key_pair" {
   key_name = local.key_pair_name
 }
 
-data "aws_instances" "neo4j" {
-  instance_tags = {
-    Project     = "CredEx"
-    Environment = var.environment
-  }
+data "aws_vpc" "default" {
+  default = true
+}
 
+data "aws_subnets" "available" {
   filter {
-    name   = "tag:Name"
-    values = ["Neo4j-${var.environment}-*"]
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
   }
 }
 
@@ -59,13 +58,13 @@ resource "random_string" "neo4j_username_suffix" {
 }
 
 resource "aws_instance" "neo4j" {
-  count         = var.operation_type != "delete" ? min(local.neo4j_instance_count[var.environment], local.max_production_instances) : 0
+  count         = var.operation_type != "delete" && length(data.aws_subnets.available.ids) > 0 ? min(local.neo4j_instance_count[var.environment], local.max_production_instances) : 0
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = local.compliant_instance_types[var.environment]
   key_name      = var.operation_type == "create" ? aws_key_pair.neo4j_key_pair[0].key_name : data.aws_key_pair.existing_neo4j_key_pair[0].key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j[0].id]
-  subnet_id              = data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)]
+  subnet_id              = length(data.aws_subnets.available.ids) > 0 ? data.aws_subnets.available.ids[count.index % length(data.aws_subnets.available.ids)] : null
 
   tags = merge(local.common_tags, {
     Name = "Neo4j-${var.environment}-${count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
