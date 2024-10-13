@@ -33,17 +33,6 @@ data "aws_key_pair" "existing_neo4j_key_pair" {
   key_name = local.key_pair_name
 }
 
-data "aws_vpc" "default" {
-  default = true
-}
-
-data "aws_subnets" "available" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
-  }
-}
-
 resource "random_string" "neo4j_password" {
   count   = var.operation_type != "delete" ? min(local.neo4j_instance_count[var.environment], local.max_production_instances) : 0
   length  = 16
