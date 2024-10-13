@@ -95,8 +95,6 @@ jobs:
           cd terraform
           echo "Retrieving Terraform outputs..."
           TF_OUTPUT=$(terraform output -json | sed '1d' | tr -d '\n' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | sed 's/::debug::.*$//')
-          echo "Raw Terraform output:"
-          echo "$TF_OUTPUT"
           
           echo "Attempting to parse JSON..."
           if echo "$TF_OUTPUT" | jq empty 2>/dev/null; then
@@ -142,61 +140,41 @@ jobs:
           set -e
           echo "Starting Update ECS Task Definition step"
           
-          echo "Environment variables:"
-          env | grep -E "TF_VAR_|AWS_|NODE_ENV|GITHUB_ENV|ECR_REPO_URL|ECS_"
-          
-          echo "Describing ECS task definition"
           TASK_DEF_NAME="credex-core-${ENVIRONMENT}"
           echo "Task Definition Name: $TASK_DEF_NAME"
           
-          echo "AWS Configuration:"
-          aws configure list
-          
-          echo "Listing available task definitions:"
-          aws ecs list-task-definitions
-          
-          echo "Attempting to describe task definition"
           if ! TASK_DEF=$(aws ecs describe-task-definition --task-definition $TASK_DEF_NAME --query taskDefinition); then
-            echo "Error describing task definition. AWS CLI output:"
-            aws ecs describe-task-definition --task-definition $TASK_DEF_NAME
-            echo "Available task definitions:"
-            aws ecs list-task-definitions
+            echo "Error describing task definition"
             exit 1
           fi
-          echo "Task Definition retrieved successfully"
-          echo "Task Definition contents:"
-          echo "$TASK_DEF" | jq .
           
-          echo "Updating task definition"
-          NEW_TASK_DEF=$(echo $TASK_DEF | jq --arg ECR_REPO_URL "$ECR_REPO_URL" '.containerDefinitions[0].image = $ECR_REPO_URL + ":latest" | .containerDefinitions[0].environment += [
-            {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "'"$TF_VAR_neo4j_ledger_space_bolt_url"'"},
-            {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "'"$TF_VAR_neo4j_search_space_bolt_url"'"},
-            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "'"${{ secrets.NEO4J_LEDGER_SPACE_USER }}"'"},
-            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "'"${{ secrets.NEO4J_LEDGER_SPACE_PASS }}"'"},
-            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "'"${{ secrets.NEO4J_SEARCH_SPACE_USER }}"'"},
-            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "'"${{ secrets.NEO4J_SEARCH_SPACE_PASS }}"'"},
-            {"name": "JWT_SECRET", "value": "'"${{ secrets.JWT_SECRET }}"'"},
-            {"name": "OPEN_EXCHANGE_RATES_API", "value": "'"${{ secrets.OPEN_EXCHANGE_RATES_API }}"'"}
-          ]')
-          echo "Task definition updated"
+          NEW_TASK_DEF=$(echo $TASK_DEF | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | 
+            .containerDefinitions[0].image = "'$ECR_REPO_URL':latest" | 
+            .containerDefinitions[0].environment += [
+              {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "'$TF_VAR_neo4j_ledger_space_bolt_url'"},
+              {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "'$TF_VAR_neo4j_search_space_bolt_url'"},
+              {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "'${{ secrets.NEO4J_LEDGER_SPACE_USER }}'"},
+              {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "'${{ secrets.NEO4J_LEDGER_SPACE_PASS }}'"},
+              {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "'${{ secrets.NEO4J_SEARCH_SPACE_USER }}'"},
+              {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "'${{ secrets.NEO4J_SEARCH_SPACE_PASS }}'"},
+              {"name": "JWT_SECRET", "value": "'${{ secrets.JWT_SECRET }}'"},
+              {"name": "OPEN_EXCHANGE_RATES_API", "value": "'${{ secrets.OPEN_EXCHANGE_RATES_API }}'"}
+            ]')
           
           echo "Writing new task definition to file"
           echo $NEW_TASK_DEF > new-task-def.json
           
           echo "Registering new task definition"
-          if ! aws ecs register-task-definition --cli-input-json file://new-task-def.json; then
-            echo "Error registering new task definition. Contents of new-task-def.json:"
-            cat new-task-def.json
-            exit 1
-          fi
-          echo "New task definition registered successfully"
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://new-task-def.json --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "New task definition ARN: $NEW_TASK_DEF_ARN"
+          echo "NEW_TASK_DEF_ARN=$NEW_TASK_DEF_ARN" >> $GITHUB_ENV
 
       - name: Deploy Application
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
           echo "Deploying application to $TF_VAR_environment from branch ${{ github.ref_name }}"
-          aws ecs update-service --cluster credex-cluster-$TF_VAR_environment --service credex-core-service-$TF_VAR_environment --task-definition credex-core-$TF_VAR_environment
+          aws ecs update-service --cluster credex-cluster-$TF_VAR_environment --service credex-core-service-$TF_VAR_environment --task-definition $NEW_TASK_DEF_ARN
 
           # Wait for the service to stabilize
           aws ecs wait services-stable --cluster credex-cluster-$TF_VAR_environment --services credex-core-service-$TF_VAR_environment
