@@ -39,6 +39,13 @@ resource "aws_ecs_cluster" "credex_cluster" {
   tags  = local.common_tags
 }
 
+# CloudWatch log group
+resource "aws_cloudwatch_log_group" "ecs_logs" {
+  count = local.create_resources ? 1 : 0
+  name  = "/ecs/credex-core-${var.environment}"
+  tags  = local.common_tags
+}
+
 # ECS task definition
 resource "aws_ecs_task_definition" "credex_core" {
   count                    = local.create_resources ? 1 : 0
@@ -188,4 +195,20 @@ resource "aws_iam_role_policy" "ecs_ecr_policy" {
   })
 }
 
-# ... (rest of the content remains unchanged)
+# Outputs for debugging
+output "ecr_repository_url" {
+  value       = try(aws_ecr_repository.credex_core[0].repository_url, data.aws_ecr_repository.credex_core[0].repository_url, "N/A")
+  description = "The URL of the ECR repository"
+}
+
+output "ecs_cluster_arn" {
+  value       = try(aws_ecs_cluster.credex_cluster[0].arn, data.aws_ecs_cluster.credex_cluster[0].arn, "N/A")
+  description = "The ARN of the ECS cluster"
+}
+
+output "ecs_task_definition_arn" {
+  value       = try(aws_ecs_task_definition.credex_core[0].arn, "N/A")
+  description = "The ARN of the ECS task definition"
+}
+
+# Add other necessary resources and configurations here
