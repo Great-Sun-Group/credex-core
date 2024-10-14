@@ -1,95 +1,66 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
-
+# Provider configuration
 provider "aws" {
   region = var.aws_region
 }
 
+# Local variables
 locals {
-  api_domain  = local.domain[local.environment]
   common_tags = {
-    Environment = local.environment
+    Environment = var.environment
     Project     = "CredEx"
     ManagedBy   = "Terraform"
   }
+  create_resources = var.operation_type == "create" || var.operation_type == "redeploy"
 }
 
-# New variable to control resource creation/deletion
-variable "create_resources" {
-  description = "Whether to create (true) or destroy (false) resources"
-  type        = bool
-  default     = true
-}
-
+# Data source for existing ECR repository (used in wipe and redeploy)
 data "aws_ecr_repository" "credex_core" {
-  name = "credex-core-${local.environment}"
+  count = var.operation_type != "create" ? 1 : 0
+  name  = "credex-core-${var.environment}"
 }
 
+# Create ECR repository if it doesn't exist (used in create and redeploy)
+resource "aws_ecr_repository" "credex_core" {
+  count = local.create_resources ? 1 : 0
+  name  = "credex-core-${var.environment}"
+  tags  = local.common_tags
+}
+
+# Data source for existing ECS cluster (used in wipe and redeploy)
 data "aws_ecs_cluster" "credex_cluster" {
-  cluster_name = "credex-cluster-${local.environment}"
+  count        = var.operation_type != "create" ? 1 : 0
+  cluster_name = "credex-cluster-${var.environment}"
 }
 
-data "aws_iam_role" "ecs_execution_role" {
-  name = "ecs-execution-role-${local.environment}"
+# Create ECS cluster if it doesn't exist (used in create and redeploy)
+resource "aws_ecs_cluster" "credex_cluster" {
+  count = local.create_resources ? 1 : 0
+  name  = "credex-cluster-${var.environment}"
+  tags  = local.common_tags
 }
 
-data "aws_iam_role" "ecs_task_role" {
-  name = "ecs-task-role-${local.environment}"
-}
-
-# Check if CloudWatch log group already exists
-data "aws_cloudwatch_log_group" "existing_ecs_logs" {
-  name = "/ecs/credex-core-${local.environment}"
-}
-
-# Create CloudWatch log group only if it doesn't exist, use_existing_resources is false, and create_resources is true
+# CloudWatch log group
 resource "aws_cloudwatch_log_group" "ecs_logs" {
-  count             = (var.create_resources && !lookup(var.use_existing_resources, "ecs_cluster", false) && data.aws_cloudwatch_log_group.existing_ecs_logs.arn == null) ? 1 : 0
-  name              = "/ecs/credex-core-${local.environment}"
-  retention_in_days = 30
-
-  tags = local.common_tags
-
-  lifecycle {
-    prevent_destroy       = false
-    create_before_destroy = true
-    ignore_changes        = [tags]
-  }
+  count = local.create_resources ? 1 : 0
+  name  = "/ecs/credex-core-${var.environment}"
+  tags  = local.common_tags
 }
 
-# Ensure ECS execution role has necessary permissions for CloudWatch Logs
-resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
-  count      = var.create_resources ? 1 : 0
-  role       = data.aws_iam_role.ecs_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-# Data source for existing ECS task definition
-data "aws_ecs_task_definition" "existing_task_definition" {
-  count           = lookup(var.use_existing_resources, "ecs_task_definition", false) ? 1 : 0
-  task_definition = "credex-core-${local.environment}"
-}
-
-resource "aws_ecs_task_definition" "credex_core_task" {
-  count                    = var.create_resources && !lookup(var.use_existing_resources, "ecs_task_definition", false) ? 1 : 0
-  family                   = "credex-core-${local.environment}"
+# ECS task definition
+resource "aws_ecs_task_definition" "credex_core" {
+  count                    = local.create_resources ? 1 : 0
+  family                   = "credex-core-${var.environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
-  execution_role_arn       = data.aws_iam_role.ecs_execution_role.arn
-  task_role_arn            = data.aws_iam_role.ecs_task_role.arn
+  cpu                      = "512"
+  memory                   = "1024"
+  execution_role_arn       = aws_iam_role.ecs_execution_role[0].arn
+  task_role_arn            = aws_iam_role.ecs_task_role[0].arn
 
   container_definitions = jsonencode([
     {
       name  = "credex-core"
-      image = "${data.aws_ecr_repository.credex_core.repository_url}:latest"
+      image = "${try(aws_ecr_repository.credex_core[0].repository_url, data.aws_ecr_repository.credex_core[0].repository_url)}:latest"
       portMappings = [
         {
           containerPort = 5000
@@ -97,20 +68,20 @@ resource "aws_ecs_task_definition" "credex_core_task" {
         }
       ]
       environment = [
-        { name = "NODE_ENV", value = local.environment },
-        { name = "LOG_LEVEL", value = local.log_level[local.environment] },
-        { name = "AWS_REGION", value = var.aws_region }
+        { name = "NODE_ENV", value = var.environment },
+        { name = "NEO_4J_LEDGER_SPACE_BOLT_URL", value = var.neo4j_ledger_space_bolt_url },
+        { name = "NEO_4J_SEARCH_SPACE_BOLT_URL", value = var.neo4j_search_space_bolt_url },
+        { name = "NEO_4J_LEDGER_SPACE_USER", value = var.neo4j_ledger_space_user },
+        { name = "NEO_4J_LEDGER_SPACE_PASS", value = var.neo4j_ledger_space_pass },
+        { name = "NEO_4J_SEARCH_SPACE_USER", value = var.neo4j_search_space_user },
+        { name = "NEO_4J_SEARCH_SPACE_PASS", value = var.neo4j_search_space_pass },
+        { name = "JWT_SECRET", value = var.jwt_secret },
+        { name = "OPEN_EXCHANGE_RATES_API", value = var.open_exchange_rates_api }
       ]
-      secrets = var.create_resources ? [
-        for key, param in aws_ssm_parameter.params : {
-          name      = upper(replace(key, "/credex/${local.environment}/", ""))
-          valueFrom = param.arn
-        }
-      ] : []
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = coalesce(try(aws_cloudwatch_log_group.ecs_logs[0].name, null), data.aws_cloudwatch_log_group.existing_ecs_logs.name)
+          awslogs-group         = aws_cloudwatch_log_group.ecs_logs[0].name
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "ecs"
         }
@@ -119,39 +90,145 @@ resource "aws_ecs_task_definition" "credex_core_task" {
   ])
 
   tags = local.common_tags
-
-  depends_on = [aws_iam_role_policy_attachment.ecs_execution_role_policy]
 }
 
-# Data source for existing ECS service
-data "aws_ecs_service" "existing_service" {
-  count        = lookup(var.use_existing_resources, "ecs_service", false) ? 1 : 0
-  service_name = "credex-core-service-${local.environment}"
-  cluster_arn  = data.aws_ecs_cluster.credex_cluster.arn
-}
-
-# Create or update ECS service based on use_existing_resources and create_resources
-resource "aws_ecs_service" "credex_core_service" {
-  count           = var.create_resources && !lookup(var.use_existing_resources, "ecs_service", false) ? 1 : 0
-  name            = "credex-core-service-${local.environment}"
-  cluster         = data.aws_ecs_cluster.credex_cluster.id
-  task_definition = lookup(var.use_existing_resources, "ecs_task_definition", false) ? data.aws_ecs_task_definition.existing_task_definition[0].arn : aws_ecs_task_definition.credex_core_task[0].arn
-  launch_type     = "FARGATE"
+# ECS service
+resource "aws_ecs_service" "credex_core" {
+  count           = local.create_resources ? 1 : 0
+  name            = "credex-core-service-${var.environment}"
+  cluster         = try(aws_ecs_cluster.credex_cluster[0].id, data.aws_ecs_cluster.credex_cluster[0].arn)
+  task_definition = aws_ecs_task_definition.credex_core[0].arn
   desired_count   = 1
+  launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = data.aws_subnets.available.ids
-    security_groups  = [lookup(var.use_existing_resources, "security_groups", false) ? data.aws_security_group.existing_ecs_tasks[0].id : aws_security_group.ecs_tasks[0].id]
+    subnets          = data.aws_subnets.default.ids
+    security_groups  = [aws_security_group.ecs_tasks[0].id]
     assign_public_ip = true
   }
 
   load_balancer {
-    target_group_arn = lookup(var.use_existing_resources, "alb", false) ? data.aws_lb_target_group.existing_tg[0].arn : aws_lb_target_group.credex_core[0].arn
+    target_group_arn = aws_lb_target_group.credex_core[0].arn
     container_name   = "credex-core"
     container_port   = 5000
   }
 
-  depends_on = [aws_iam_role_policy_attachment.ecs_execution_role_policy]
+  depends_on = [aws_lb_listener.credex_listener]
 
   tags = local.common_tags
 }
+
+# IAM roles
+resource "aws_iam_role" "ecs_execution_role" {
+  count = local.create_resources ? 1 : 0
+  name  = "ecs-execution-role-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role" "ecs_task_role" {
+  count = local.create_resources ? 1 : 0
+  name  = "ecs-task-role-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+# Attach necessary policies to the roles
+resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
+  count      = local.create_resources ? 1 : 0
+  role       = aws_iam_role.ecs_execution_role[0].name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_role_policy" {
+  count      = local.create_resources ? 1 : 0
+  role       = aws_iam_role.ecs_task_role[0].name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+}
+
+# Add ECR pull permissions to the ECS execution role
+resource "aws_iam_role_policy" "ecs_ecr_policy" {
+  count = local.create_resources ? 1 : 0
+  name  = "ecs-ecr-policy-${var.environment}"
+  role  = aws_iam_role.ecs_execution_role[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Add explicit CloudWatch Logs permissions to the ECS execution role
+resource "aws_iam_role_policy" "ecs_cloudwatch_logs_policy" {
+  count = local.create_resources ? 1 : 0
+  name  = "ecs-cloudwatch-logs-policy-${var.environment}"
+  role  = aws_iam_role.ecs_execution_role[0].id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "${aws_cloudwatch_log_group.ecs_logs[0].arn}:*"
+      }
+    ]
+  })
+}
+
+# Outputs for debugging
+output "ecr_repository_url" {
+  value       = try(aws_ecr_repository.credex_core[0].repository_url, data.aws_ecr_repository.credex_core[0].repository_url, "N/A")
+  description = "The URL of the ECR repository"
+}
+
+output "ecs_cluster_arn" {
+  value       = try(aws_ecs_cluster.credex_cluster[0].arn, data.aws_ecs_cluster.credex_cluster[0].arn, "N/A")
+  description = "The ARN of the ECS cluster"
+}
+
+output "ecs_task_definition_arn" {
+  value       = try(aws_ecs_task_definition.credex_core[0].arn, "N/A")
+  description = "The ARN of the ECS task definition"
+}
+
+# Add other necessary resources and configurations here

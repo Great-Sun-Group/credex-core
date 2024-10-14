@@ -10,7 +10,6 @@
     "test": "jest",
     "test:integration": "jest src/tests/integration",
     "test:performance": "node src/tests/performance/benchmark.js",
-    "deploy-and-verify": "cd terraform && ./deploy_and_verify.sh",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "docker:dev": "docker-compose up --build",

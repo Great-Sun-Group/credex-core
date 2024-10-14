@@ -3,27 +3,37 @@ name: Initial Deployment to AWS
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+  actions: write
+
 jobs:
   deploy:
     name: Initial AWS Deployment
     runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
     env:
-      TF_VAR_aws_region: af-south-1
-      TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
-      TF_VAR_whatsapp_bot_api_key: ${{ secrets.WHATSAPP_BOT_API_KEY }}
-      TF_VAR_open_exchange_rates_api: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
-      TF_VAR_neo4j_ledger_space_user: ${{ secrets.NEO4J_LEDGER_SPACE_USER }}
-      TF_VAR_neo4j_ledger_space_pass: ${{ secrets.NEO4J_LEDGER_SPACE_PASS }}
-      TF_VAR_neo4j_search_space_user: ${{ secrets.NEO4J_SEARCH_SPACE_USER }}
-      TF_VAR_neo4j_search_space_pass: ${{ secrets.NEO4J_SEARCH_SPACE_PASS }}
-      TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
-      TF_VAR_neo4j_public_key: ${{ secrets.NEO4J_PUBLIC_KEY }}
+      TF_VAR_domain_base: mycredex.app
+      TF_VAR_subdomain_development: dev.api
+      TF_VAR_subdomain_staging: stage.api
+      TF_VAR_subdomain_production: api
+      TF_VAR_neo4j_instance_count_development: 2
+      TF_VAR_neo4j_instance_count_staging: 2
+      TF_VAR_neo4j_instance_count_production: 2
+      TF_VAR_neo4j_instance_type_development: t3.xlarge
+      TF_VAR_neo4j_instance_type_staging: r5.2xlarge
+      TF_VAR_neo4j_instance_type_production: r5.12xlarge
+      TF_VAR_log_level_development: debug
+      TF_VAR_log_level_staging: info
+      TF_VAR_log_level_production: info
+      TF_VAR_operation_type: create
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set environment
+      - name: Set Environment
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
             echo "ENVIRONMENT=production" >> $GITHUB_ENV
@@ -32,195 +42,390 @@ jobs:
           else
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
+          echo "NODE_ENV=$ENVIRONMENT" >> $GITHUB_ENV
+          echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
+
+      - name: Generate Neo4j Credentials and JWT Secret
+        run: |
+          NEO4J_LEDGER_USER="neo4j$(openssl rand -base64 8 | tr -dc '0-9' | fold -w 6 | head -n 1)"
+          NEO4J_SEARCH_USER="neo4j$(openssl rand -base64 8 | tr -dc '0-9' | fold -w 6 | head -n 1)"
+          NEO4J_LEDGER_PASS=$(openssl rand -base64 32)
+          NEO4J_SEARCH_PASS=$(openssl rand -base64 32)
+          JWT_SECRET=$(openssl rand -base64 32)
+          echo "NEO4J_LEDGER_USER=$NEO4J_LEDGER_USER" >> $GITHUB_ENV
+          echo "NEO4J_SEARCH_USER=$NEO4J_SEARCH_USER" >> $GITHUB_ENV
+          echo "NEO4J_LEDGER_PASS=$NEO4J_LEDGER_PASS" >> $GITHUB_ENV
+          echo "NEO4J_SEARCH_PASS=$NEO4J_SEARCH_PASS" >> $GITHUB_ENV
+          echo "JWT_SECRET=$JWT_SECRET" >> $GITHUB_ENV
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.TF_VAR_aws_region }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Check Critical Secrets
+        run: |
+          if [ -z "${{ secrets.AWS_ACCESS_KEY }}" ] || [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] || [ -z "${{ secrets.AWS_REGION }}" ] || [ -z "${{ secrets.NEO4J_ENTERPRISE_LICENSE }}" ]; then
+            echo "Error: One or more critical secrets are missing. Please check your GitHub repository settings."
+            exit 1
+          fi
+
+      - name: Create Terraform Variables File
+        run: |
+          cat << EOF > terraform/terraform.tfvars
+          environment = "$ENVIRONMENT"
+          operation_type = "create"
+          jwt_secret = "$JWT_SECRET"
+          open_exchange_rates_api = "${{ secrets.OPEN_EXCHANGE_RATES_API }}"
+          neo4j_enterprise_license = "${{ secrets.NEO4J_ENTERPRISE_LICENSE }}"
+          neo4j_ledger_space_user = "$NEO4J_LEDGER_USER"
+          neo4j_ledger_space_pass = "$NEO4J_LEDGER_PASS"
+          neo4j_search_space_user = "$NEO4J_SEARCH_USER"
+          neo4j_search_space_pass = "$NEO4J_SEARCH_PASS"
+          neo4j_public_key = "${{ secrets.NEO4J_PUBLIC_KEY }}"
+          EOF
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
-
-      - name: Pre-deployment Checks
-        id: pre_deployment_checks
-        run: |
-          cd terraform
-          
-          # Function to check if a resource exists in AWS
-          resource_exists() {
-            local resource_type=$1
-            local resource_name=$2
-            
-            case $resource_type in
-              "aws_acm_certificate")
-                aws acm list-certificates --query 'CertificateSummaryList[?DomainName==`'"$resource_name"'`].CertificateArn' --output text | grep -q .
-                ;;
-              "aws_security_group")
-                aws ec2 describe-security-groups --filters "Name=group-name,Values=$resource_name" --query 'SecurityGroups[0].GroupId' --output text | grep -q .
-                ;;
-              "aws_ssm_parameter")
-                aws ssm get-parameter --name "$resource_name" --query 'Parameter.Name' --output text 2>/dev/null | grep -q .
-                ;;
-              "aws_instance")
-                aws ec2 describe-instances --filters "Name=tag:Name,Values=$resource_name" "Name=instance-state-name,Values=running" --query 'Reservations[*].Instances[*].[InstanceId]' --output text | grep -q .
-                ;;
-              "aws_ecs_cluster")
-                aws ecs list-clusters --query "clusterArns[?contains(@, '$resource_name')]" --output text | grep -q .
-                ;;
-              "aws_ecs_service")
-                aws ecs list-services --cluster "credex-cluster-${{ env.ENVIRONMENT }}" --query "serviceArns[?contains(@, '$resource_name')]" --output text | grep -q .
-                ;;
-              "aws_lb")
-                aws elbv2 describe-load-balancers --query "LoadBalancers[?LoadBalancerName=='$resource_name'].LoadBalancerArn" --output text | grep -q .
-                ;;
-              *)
-                echo "Unknown resource type: $resource_type"
-                return 1
-                ;;
-            esac
-          }
-          
-          # Initialize use_existing_resources map
-          declare -A use_existing_resources=(
-            ["vpc"]=false
-            ["subnets"]=false
-            ["security_groups"]=false
-            ["ecs_cluster"]=false
-            ["ecs_service"]=false
-            ["ecs_task_definition"]=false
-            ["alb"]=false
-            ["acm_certificate"]=false
-            ["route53_record"]=false
-            ["neo4j_instances"]=false
-            ["ssm_parameters"]=false
-          )
-          
-          # Check for existing resources
-          echo "Checking for existing resources..."
-          
-          if resource_exists "aws_acm_certificate" "${TF_VAR_domain}"; then
-            echo "ACM Certificate exists"
-            use_existing_resources["acm_certificate"]=true
-          fi
-          
-          if resource_exists "aws_security_group" "credex-alb-sg-${{ env.ENVIRONMENT }}"; then
-            echo "ALB Security Group exists"
-            use_existing_resources["security_groups"]=true
-          fi
-          
-          if resource_exists "aws_security_group" "credex-core-ecs-tasks-sg-${{ env.ENVIRONMENT }}"; then
-            echo "ECS Tasks Security Group exists"
-            use_existing_resources["security_groups"]=true
-          fi
-          
-          if resource_exists "aws_security_group" "credex-neo4j-sg-${{ env.ENVIRONMENT }}"; then
-            echo "Neo4j Security Group exists"
-            use_existing_resources["security_groups"]=true
-          fi
-          
-          if resource_exists "aws_ecs_cluster" "credex-cluster-${{ env.ENVIRONMENT }}"; then
-            echo "ECS Cluster exists"
-            use_existing_resources["ecs_cluster"]=true
-          fi
-          
-          if resource_exists "aws_ecs_service" "credex-core-service-${{ env.ENVIRONMENT }}"; then
-            echo "ECS Service exists"
-            use_existing_resources["ecs_service"]=true
-            use_existing_resources["ecs_task_definition"]=true
-          fi
-          
-          if resource_exists "aws_lb" "credex-alb-${{ env.ENVIRONMENT }}"; then
-            echo "ALB exists"
-            use_existing_resources["alb"]=true
-          fi
-          
-          # Check for Neo4j instances
-          neo4j_instance_count=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=Neo4j-${{ env.ENVIRONMENT }}-*" "Name=instance-state-name,Values=running" --query 'length(Reservations[].Instances[])' --output text)
-          
-          if [ "$neo4j_instance_count" -gt 0 ]; then
-            echo "Neo4j instances exist: $neo4j_instance_count found"
-            use_existing_resources["neo4j_instances"]=true
-          
-            # Check if we're exceeding the maximum allowed instances
-            max_instances=3
-            if [ "${{ env.ENVIRONMENT }}" == "development" ]; then
-              max_instances=6
-            fi
-          
-            if [ "$neo4j_instance_count" -gt "$max_instances" ]; then
-              echo "Warning: The number of existing Neo4j instances ($neo4j_instance_count) exceeds the maximum allowed ($max_instances) for the ${{ env.ENVIRONMENT }} environment."
-            fi
-          fi
-          
-          if resource_exists "aws_ssm_parameter" "/credex/${{ env.ENVIRONMENT }}/jwt_secret"; then
-            echo "SSM parameters exist"
-            use_existing_resources["ssm_parameters"]=true
-          fi
-          
-          # Convert the bash associative array to a JSON string
-          use_existing_resources_json=$(declare -p use_existing_resources | sed -e "s/declare -A use_existing_resources=//" -e "s/([^)]*)//" | jq -R 'split(" ")| map(split("="))|from_entries')
-          
-          echo "TF_VAR_use_existing_resources=$use_existing_resources_json" >> $GITHUB_ENV
-          echo "use_existing_resources=$use_existing_resources_json" >> $GITHUB_OUTPUT
 
       - name: Terraform Init and Workspace Selection
         run: |
           cd terraform
           terraform init
-          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+          terraform workspace select $ENVIRONMENT || terraform workspace new $ENVIRONMENT
 
       - name: Terraform Plan
         id: plan
         run: |
           cd terraform
-          terraform plan -out=tfplan -var="create_resources=true"
+          terraform plan -out=tfplan -var-file=terraform.tfvars
 
       - name: Terraform Apply
         run: |
           cd terraform
           terraform apply -auto-approve tfplan
 
+      - name: Check CloudWatch Log Group
+        run: |
+          LOG_GROUP_NAME="/ecs/credex-core-$ENVIRONMENT"
+          if aws logs describe-log-groups --log-group-name-prefix $LOG_GROUP_NAME | grep -q $LOG_GROUP_NAME; then
+            echo "CloudWatch Log Group $LOG_GROUP_NAME exists"
+          else
+            echo "Error: CloudWatch Log Group $LOG_GROUP_NAME does not exist"
+            exit 1
+          fi
+
       - name: Get Terraform Outputs
         id: tf-outputs
         run: |
           cd terraform
           echo "Retrieving Terraform outputs..."
-          terraform output -json > tf_outputs.json
-          echo "tf_outputs=$(cat tf_outputs.json | jq -c .)" >> $GITHUB_OUTPUT
+          TF_OUTPUT=$(terraform output -json | sed '1d' | tr -d '\n' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | sed 's/::debug::.*$//')
 
-      - name: Save Neo4j URLs to AWS Parameter Store
+          echo "Attempting to parse JSON..."
+          if echo "$TF_OUTPUT" | jq empty 2>/dev/null; then
+            echo "Valid JSON output"
+            echo "$TF_OUTPUT" | jq '.'
+          else
+            echo "Invalid JSON output. Error from jq:"
+            echo "$TF_OUTPUT" | jq empty 2>&1
+            echo "Raw content of Terraform output:"
+            echo "$TF_OUTPUT"
+            exit 1
+          fi
+
+          echo "Parsing Terraform outputs..."
+          ECR_REPO_URL=$(echo "$TF_OUTPUT" | jq -r '.ecr_repository_url.value // empty')
+          ECS_CLUSTER_ARN=$(echo "$TF_OUTPUT" | jq -r '.ecs_cluster_arn.value // empty')
+          ECS_TASK_DEF_ARN=$(echo "$TF_OUTPUT" | jq -r '.ecs_task_definition_arn.value // empty')
+          NEO4J_LEDGER_URL=$(echo "$TF_OUTPUT" | jq -r '.neo4j_ledger_space_bolt_url.value // empty')
+          NEO4J_SEARCH_URL=$(echo "$TF_OUTPUT" | jq -r '.neo4j_search_space_bolt_url.value // empty')
+
+          if [ -z "$ECR_REPO_URL" ] || [ -z "$ECS_CLUSTER_ARN" ] || [ -z "$ECS_TASK_DEF_ARN" ] || [ -z "$NEO4J_LEDGER_URL" ] || [ -z "$NEO4J_SEARCH_URL" ]; then
+            echo "One or more Terraform outputs are empty"
+            exit 1
+          fi
+
+          {
+            echo "ECR_REPO_URL=${ECR_REPO_URL}"
+            echo "ECS_CLUSTER_ARN=${ECS_CLUSTER_ARN}"
+            echo "ECS_TASK_DEF_ARN=${ECS_TASK_DEF_ARN}"
+            echo "NEO4J_LEDGER_URL=${NEO4J_LEDGER_URL}"
+            echo "NEO4J_SEARCH_URL=${NEO4J_SEARCH_URL}"
+          } >> $GITHUB_ENV
+
+          echo "Parsed Terraform Outputs:"
+          echo "ECR_REPO_URL: ${ECR_REPO_URL}"
+          echo "ECS_CLUSTER_ARN: ${ECS_CLUSTER_ARN}"
+          echo "ECS_TASK_DEF_ARN: ${ECS_TASK_DEF_ARN}"
+          echo "NEO4J_LEDGER_URL: ${NEO4J_LEDGER_URL}"
+          echo "NEO4J_SEARCH_URL: ${NEO4J_SEARCH_URL}"
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: credex-core-${{ env.ENVIRONMENT }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Ensure ECR repository exists
+          aws ecr describe-repositories --repository-names ${ECR_REPOSITORY} || aws ecr create-repository --repository-name ${ECR_REPOSITORY}
+
+          # Build Docker image using the appropriate stage
+          if [ "$ENVIRONMENT" == "production" ] || [ "$ENVIRONMENT" == "staging" ]; then
+            docker build --target production -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          else
+            docker build --target development -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          fi
+
+          # Push image to ECR
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+          echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Update ECS Task Definition
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
-          LEDGER_BOLT_URL=$(echo $TF_OUTPUTS | jq -r '.neo4j_ledger_space_bolt_url.value')
-          SEARCH_BOLT_URL=$(echo $TF_OUTPUTS | jq -r '.neo4j_search_space_bolt_url.value')
-          
-          aws ssm put-parameter --name "/${{ env.ENVIRONMENT }}/neo4j_ledger_space_bolt_url" --value "$LEDGER_BOLT_URL" --type "SecureString" --overwrite
-          aws ssm put-parameter --name "/${{ env.ENVIRONMENT }}/neo4j_search_space_bolt_url" --value "$SEARCH_BOLT_URL" --type "SecureString" --overwrite
+          set -e
+          echo "Starting Update ECS Task Definition step"
+
+          TASK_DEF_NAME="credex-core-${ENVIRONMENT}"
+          echo "Task Definition Name: $TASK_DEF_NAME"
+
+          if ! TASK_DEF=$(aws ecs describe-task-definition --task-definition $TASK_DEF_NAME --query taskDefinition); then
+            echo "Error describing task definition"
+            exit 1
+          fi
+
+          NEW_TASK_DEF=$(echo $TASK_DEF | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | 
+            .containerDefinitions[0].image = "'$IMAGE'" | 
+            .containerDefinitions[0].environment += [
+              {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "'$NEO4J_LEDGER_URL'"},
+              {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "'$NEO4J_SEARCH_URL'"},
+              {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "'$NEO4J_LEDGER_USER'"},
+              {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "'$NEO4J_LEDGER_PASS'"},
+              {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "'$NEO4J_SEARCH_USER'"},
+              {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "'$NEO4J_SEARCH_PASS'"},
+              {"name": "JWT_SECRET", "value": "'$JWT_SECRET'"},
+              {"name": "OPEN_EXCHANGE_RATES_API", "value": "'${{ secrets.OPEN_EXCHANGE_RATES_API }}'"},
+              {"name": "NODE_ENV", "value": "'$ENVIRONMENT'"}
+            ] |
+            .containerDefinitions[0].logConfiguration.options."awslogs-group" = "/ecs/credex-core-'$ENVIRONMENT'" |
+            .containerDefinitions[0].logConfiguration.options."awslogs-region" = "'${{ secrets.AWS_REGION }}'" |
+            .containerDefinitions[0].logConfiguration.options."awslogs-stream-prefix" = "ecs" |
+            .containerDefinitions[0].healthCheck = {
+              "command": ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"],
+              "interval": 30,
+              "timeout": 5,
+              "retries": 3,
+              "startPeriod": 60
+            } |
+            .cpu = "512" |
+            .memory = "1024"')
+
+          echo "Writing new task definition to file"
+          echo $NEW_TASK_DEF > new-task-def.json
+
+          echo "Registering new task definition"
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://new-task-def.json --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "New task definition ARN: $NEW_TASK_DEF_ARN"
+          echo "NEW_TASK_DEF_ARN=$NEW_TASK_DEF_ARN" >> $GITHUB_ENV
+
+      - name: Check Environment Variables
+        run: |
+          echo "Checking Environment Variables for ECS Task Definition"
+          TASK_DEF=$(aws ecs describe-task-definition --task-definition $NEW_TASK_DEF_ARN --query taskDefinition)
+          echo "Environment Variables:"
+          echo $TASK_DEF | jq -r '.containerDefinitions[0].environment[] | "\(.name): \(.value)"'
+
+          echo "Log Configuration:"
+          echo $TASK_DEF | jq -r '.containerDefinitions[0].logConfiguration'
+
+          echo "Task Role ARN:"
+          echo $TASK_DEF | jq -r '.taskRoleArn'
+
+          echo "Execution Role ARN:"
+          echo $TASK_DEF | jq -r '.executionRoleArn'
+
+          echo "Network Mode:"
+          echo $TASK_DEF | jq -r '.networkMode'
+
+          echo "CPU:"
+          echo $TASK_DEF | jq -r '.cpu'
+
+          echo "Memory:"
+          echo $TASK_DEF | jq -r '.memory'
+
+      - name: Verify ECS Task Execution Role Permissions
+        run: |
+          EXECUTION_ROLE_ARN=$(aws ecs describe-task-definition --task-definition $NEW_TASK_DEF_ARN --query 'taskDefinition.executionRoleArn' --output text)
+          ROLE_NAME=$(echo $EXECUTION_ROLE_ARN | awk -F'/' '{print $NF}')
+          echo "ECS Task Execution Role: $ROLE_NAME"
+
+          echo "Attached Policies:"
+          ATTACHED_POLICIES=$(aws iam list-attached-role-policies --role-name $ROLE_NAME --query 'AttachedPolicies[].PolicyName' --output json)
+          echo $ATTACHED_POLICIES | jq .
+
+          echo "Inline Policies:"
+          INLINE_POLICIES=$(aws iam list-role-policies --role-name $ROLE_NAME --query 'PolicyNames' --output json)
+          echo $INLINE_POLICIES | jq .
+
+          # Check for AmazonECSTaskExecutionRolePolicy
+          if echo $ATTACHED_POLICIES | jq -e 'contains(["AmazonECSTaskExecutionRolePolicy"])' > /dev/null; then
+            echo "AmazonECSTaskExecutionRolePolicy is attached to the role"
+          else
+            echo "Error: AmazonECSTaskExecutionRolePolicy is not attached to the role"
+            exit 1
+          fi
+
+          # Check for ecs-cloudwatch-logs-policy
+          if echo $INLINE_POLICIES | jq -e 'contains(["ecs-cloudwatch-logs-policy-'$ENVIRONMENT'"])' > /dev/null; then
+            echo "ecs-cloudwatch-logs-policy is attached to the role"
+          else
+            echo "Error: ecs-cloudwatch-logs-policy is not attached to the role"
+            exit 1
+          fi
+
+          echo "ECS Task Execution Role has necessary policies attached"
 
       - name: Deploy Application
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
-          echo "Deploying application to ${{ env.ENVIRONMENT }} from branch ${{ github.ref_name }}"
-          # Add your deployment commands here
+          echo "Deploying application to $ENVIRONMENT from branch ${{ github.ref_name }}"
+          aws ecs update-service --cluster credex-cluster-$ENVIRONMENT --service credex-core-service-$ENVIRONMENT --task-definition $NEW_TASK_DEF_ARN
 
-      - name: Run Post-Deployment Tests
-        env:
-          TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
-        run: |
-          echo "Running post-deployment tests for ${{ env.ENVIRONMENT }}"
-          # Add your test commands here
+          echo "Waiting for service to stabilize (this may take up to 30 minutes)..."
 
-      - name: Log Deployment
-        if: success()
-        run: |
-          echo "Initial deployment to ${{ env.ENVIRONMENT }} from branch ${{ github.ref_name }} completed successfully at $(date)"
+          start_time=$(date +%s)
+          timeout=1800  # 30 minutes in seconds
 
-      - name: Notify on Failure
-        if: failure()
+          while true; do
+            current_time=$(date +%s)
+            elapsed_time=$((current_time - start_time))
+            
+            if [ $elapsed_time -ge $timeout ]; then
+              echo "Timeout reached. Service did not stabilize within 30 minutes."
+              break
+            fi
+            
+            service_status=$(aws ecs describe-services --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT --query 'services[0].{status: status, runningCount: runningCount, desiredCount: desiredCount, events: events[0:10]}')
+            
+            status=$(echo $service_status | jq -r '.status')
+            running_count=$(echo $service_status | jq -r '.runningCount')
+            desired_count=$(echo $service_status | jq -r '.desiredCount')
+            
+            echo "Service status: $status, Running tasks: $running_count/$desired_count"
+            echo "Recent service events:"
+            echo $service_status | jq -r '.events[] | "  \(.createdAt): \(.message)"'
+            
+            if [ "$status" == "ACTIVE" ] && [ "$running_count" -eq "$desired_count" ]; then
+              echo "Service has stabilized successfully"
+              exit 0
+            fi
+            
+            # Get all task ARNs for the service
+            TASK_ARNS=$(aws ecs list-tasks --cluster credex-cluster-$ENVIRONMENT --service-name credex-core-service-$ENVIRONMENT --query 'taskArns[]' --output text)
+            
+            if [ -n "$TASK_ARNS" ]; then
+              echo "Tasks found for the service:"
+              
+              # Get detailed task information for all tasks
+              TASK_DETAILS=$(aws ecs describe-tasks --cluster credex-cluster-$ENVIRONMENT --tasks $TASK_ARNS)
+              
+              echo "$TASK_DETAILS" | jq -r '.tasks[] | "Task ARN: \(.taskArn)\nLast Status: \(.lastStatus)\nDesired Status: \(.desiredStatus)\nHealth Status: \(.healthStatus)\nTask Definition: \(.taskDefinitionArn)\nLaunch Type: \(.launchType)\nContainer Instance: \(.containerInstanceArn)\nStopped Reason: \(.stoppedReason)\nStopped At: \(.stoppedAt)\nStarted At: \(.startedAt)\n"'
+              
+              # Check for stopped tasks and their reasons
+              STOPPED_TASKS=$(echo "$TASK_DETAILS" | jq -r '.tasks[] | select(.lastStatus == "STOPPED")')
+              if [ -n "$STOPPED_TASKS" ]; then
+                echo "Stopped tasks found:"
+                echo "$STOPPED_TASKS" | jq -r '. | "Task ARN: \(.taskArn)\nStopped Reason: \(.stoppedReason)\nContainer Exit Codes: \(.containers[].exitCode)\nContainer Reason: \(.containers[].reason)\nStopped At: \(.stoppedAt)\n"'
+                
+                # Get container logs for stopped tasks
+                echo "$STOPPED_TASKS" | jq -r '.containers[] | select(.runtimeId != null) | "Container ID: \(.runtimeId)\nContainer Name: \(.name)\nLogs:"' | while read -r line; do
+                  if [[ $line == Container* ]]; then
+                    echo "$line"
+                  elif [[ $line == Logs:* ]]; then
+                    CONTAINER_ID=$(echo "$line" | awk '{print $3}')
+                    aws logs get-log-events --log-group-name /ecs/credex-core-$ENVIRONMENT --log-stream-name ecs/credex-core/$CONTAINER_ID --limit 100 | jq -r '.events[].message'
+                    echo ""
+                  fi
+                done
+              fi
+              
+              # Get container logs for running tasks
+              echo "$TASK_DETAILS" | jq -r '.tasks[] | select(.lastStatus == "RUNNING") | .containers[] | select(.runtimeId != null) | "Container ID: \(.runtimeId)\nContainer Name: \(.name)\nLogs:"' | while read -r line; do
+                if [[ $line == Container* ]]; then
+                  echo "$line"
+                elif [[ $line == Logs:* ]]; then
+                  CONTAINER_ID=$(echo "$line" | awk '{print $3}')
+                  aws logs get-log-events --log-group-name /ecs/credex-core-$ENVIRONMENT --log-stream-name ecs/credex-core/$CONTAINER_ID --limit 100 | jq -r '.events[].message'
+                  echo ""
+                fi
+              done
+            else
+              echo "No tasks found for the service"
+            fi
+            
+            # Check ECS service events
+            echo "ECS Service Events:"
+            aws ecs describe-services --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT --query 'services[0].events[0:10]' | jq -r '.[] | "\(.createdAt): \(.message)"'
+            
+            # Check ECS Cluster Capacity Providers
+            echo "ECS Cluster Capacity Providers:"
+            aws ecs describe-clusters --clusters credex-cluster-$ENVIRONMENT --include ATTACHMENTS --query 'clusters[0].attachments' | jq .
+            
+            # Check ECS Cluster Settings
+            echo "ECS Cluster Settings:"
+            aws ecs describe-clusters --clusters credex-cluster-$ENVIRONMENT --include SETTINGS --query 'clusters[0].settings' | jq .
+            
+            sleep 30
+          done
+
+          echo "Service did not stabilize within the expected time. Deployment failed."
+
+          # Fetch and display the latest task definition
+          echo "Latest Task Definition:"
+          aws ecs describe-task-definition --task-definition $NEW_TASK_DEF_ARN | jq .
+
+          # Display VPC and Subnet information
+          echo "VPC and Subnet Information:"
+          aws ec2 describe-vpcs --filters "Name=tag:Name,Values=credex-vpc-$ENVIRONMENT" | jq .
+          aws ec2 describe-subnets --filters "Name=vpc-id,Values=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=credex-vpc-$ENVIRONMENT" --query 'Vpcs[0].VpcId' --output text)" | jq .
+
+          # Display Security Group information
+          echo "Security Group Information:"
+          aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=credex-vpc-$ENVIRONMENT" --query 'Vpcs[0].VpcId' --output text)" | jq .
+
+          # Display IAM Role information
+          echo "IAM Role Information:"
+          aws iam get-role --role-name ecsTaskExecutionRole | jq .
+
+          # Check ECS Task Execution Role permissions
+          echo "ECS Task Execution Role Permissions:"
+          aws iam list-role-policies --role-name ecsTaskExecutionRole
+          aws iam list-attached-role-policies --role-name ecsTaskExecutionRole
+
+          exit 1
+
+      - name: Debug - Print Final Environment Variables
         run: |
-          echo "Initial deployment to ${{ env.ENVIRONMENT }} from branch ${{ github.ref_name }} failed. Please check the logs for more information."
-          # Add notification mechanism here (e.g., send an email, Slack message, etc.)
+          echo "Final Environment Variables:"
+          env | grep -E "TF_VAR_|AWS_|NODE_ENV|GITHUB_ENV"
+
+      - name: Print Neo4j Information and JWT Secret
+        run: |
+          echo "Please manually add the following secrets to your GitHub repository for the $ENVIRONMENT environment:"
+          echo "NEO4J_LEDGER_BOLT_URL: $NEO4J_LEDGER_URL"
+          echo "NEO4J_SEARCH_BOLT_URL: $NEO4J_SEARCH_URL"
+          echo "NEO4J_LEDGER_USER: $NEO4J_LEDGER_USER"
+          echo "NEO4J_LEDGER_PASS: $NEO4J_LEDGER_PASS"
+          echo "NEO4J_SEARCH_USER: $NEO4J_SEARCH_USER"
+          echo "NEO4J_SEARCH_PASS: $NEO4J_SEARCH_PASS"
+          echo "JWT_SECRET: $JWT_SECRET"

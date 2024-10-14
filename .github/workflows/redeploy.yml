@@ -12,16 +12,9 @@ jobs:
     name: Regular AWS Redeploy
     runs-on: ubuntu-latest
     env:
-      TF_VAR_aws_region: af-south-1
-      TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
-      TF_VAR_whatsapp_bot_api_key: ${{ secrets.WHATSAPP_BOT_API_KEY }}
-      TF_VAR_open_exchange_rates_api: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
-      TF_VAR_neo4j_ledger_space_user: ${{ secrets.NEO4J_LEDGER_SPACE_USER }}
-      TF_VAR_neo4j_ledger_space_pass: ${{ secrets.NEO4J_LEDGER_SPACE_PASS }}
-      TF_VAR_neo4j_search_space_user: ${{ secrets.NEO4J_SEARCH_SPACE_USER }}
-      TF_VAR_neo4j_search_space_pass: ${{ secrets.NEO4J_SEARCH_SPACE_PASS }}
+      TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
       TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
-      TF_VAR_neo4j_public_key: ${{ secrets.NEO4J_PUBLIC_KEY }}
+      TF_VAR_open_exchange_rates_api: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
 
     steps:
       - name: Checkout code
@@ -64,9 +57,6 @@ jobs:
               "aws_security_group")
                 aws ec2 describe-security-groups --filters "Name=group-name,Values=$resource_name" --query 'SecurityGroups[0].GroupId' --output text | grep -q .
                 ;;
-              "aws_ssm_parameter")
-                aws ssm get-parameter --name "$resource_name" --query 'Parameter.Name' --output text 2>/dev/null | grep -q .
-                ;;
               "aws_instance")
                 aws ec2 describe-instances --filters "Name=tag:Name,Values=$resource_name" "Name=instance-state-name,Values=running" --query 'Reservations[*].Instances[*].[InstanceId]' --output text | grep -q .
                 ;;
@@ -98,7 +88,6 @@ jobs:
             ["acm_certificate"]=false
             ["route53_record"]=false
             ["neo4j_instances"]=false
-            ["ssm_parameters"]=false
           )
           
           # Check for existing resources
@@ -158,11 +147,6 @@ jobs:
             fi
           fi
           
-          if resource_exists "aws_ssm_parameter" "/credex/${{ env.ENVIRONMENT }}/jwt_secret"; then
-            echo "SSM parameters exist"
-            use_existing_resources["ssm_parameters"]=true
-          fi
-          
           # Convert the bash associative array to a JSON string
           use_existing_resources_json=$(declare -p use_existing_resources | sed -e "s/declare -A use_existing_resources=//" -e "s/([^)]*)//" | jq -R 'split(" ")| map(split("="))|from_entries')
           
@@ -176,7 +160,7 @@ jobs:
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
 
       - name: Import Existing Resources
-        if: fromJSON(steps.pre_deployment_checks.outputs.use_existing_resources).security_groups == true || fromJSON(steps.pre_deployment_checks.outputs.use_existing_resources).ecs_cluster == true || fromJSON(steps.pre_deployment_checks.outputs.use_existing_resources).alb == true || fromJSON(steps.pre_deployment_checks.outputs.use_existing_resources).neo4j_instances == true || fromJSON(steps.pre_deployment_checks.outputs.use_existing_resources).ssm_parameters == true
+        if: fromJSON(steps.pre_deployment_checks.outputs.use_existing_resources).security_groups == true || fromJSON(steps.pre_deployment_checks.outputs.use_existing_resources).ecs_cluster == true || fromJSON(steps.pre_deployment_checks.outputs.use_existing_resources).alb == true || fromJSON(steps.pre_deployment_checks.outputs.use_existing_resources).neo4j_instances == true
         run: |
           cd terraform
           chmod +x import_existing_resources.sh
@@ -201,12 +185,30 @@ jobs:
           terraform output -json > tf_outputs.json
           echo "tf_outputs=$(cat tf_outputs.json | jq -c .)" >> $GITHUB_OUTPUT
 
+      - name: Update ECS Task Definition
+        env:
+          TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
+        run: |
+          TASK_DEF=$(aws ecs describe-task-definition --task-definition credex-core-${{ env.ENVIRONMENT }} --query taskDefinition)
+          NEW_TASK_DEF=$(echo $TASK_DEF | jq '.containerDefinitions[0].environment += [
+            {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}"},
+            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_USER }}"},
+            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_USER }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}"},
+            {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"}
+          ]')
+          echo $NEW_TASK_DEF > new-task-def.json
+          aws ecs register-task-definition --cli-input-json file://new-task-def.json
+
       - name: Update Application
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
         run: |
           echo "Updating application in ${{ env.ENVIRONMENT }} from branch ${{ github.ref_name }}"
-          # Add your update commands here
+          # Update ECS service to use the new task definition
+          aws ecs update-service --cluster credex-cluster-${{ env.ENVIRONMENT }} --service credex-core-service-${{ env.ENVIRONMENT }} --task-definition credex-core-${{ env.ENVIRONMENT }}
 
       - name: Run Post-Update Tests
         env:

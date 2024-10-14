@@ -52,6 +52,12 @@ async function initializeApp() {
     app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
     logger.debug("Swagger UI set up for API documentation");
 
+    // Add health check endpoint
+    app.get('/health', (req, res) => {
+      res.status(200).json({ status: 'healthy' });
+    });
+    logger.debug("Health check endpoint added");
+
     // Start cron jobs for scheduled tasks
     startCronJobs();
     logger.info("Cronjobs engaged for DCO and MTQ");

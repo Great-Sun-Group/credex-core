@@ -9,7 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
     env:
-      TF_VAR_aws_region: af-south-1
+      TF_VAR_domain_base: mycredex.app
+      TF_VAR_subdomain_development: dev.api
+      TF_VAR_subdomain_staging: stage.api
+      TF_VAR_subdomain_production: api
+      TF_VAR_operation_type: delete
 
     steps:
       - name: Checkout code
@@ -24,133 +28,148 @@ jobs:
           else
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
+          echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
+          echo "Setting environment to: $ENVIRONMENT"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.TF_VAR_aws_region }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Check IAM Permissions
+        run: |
+          echo "Checking IAM permissions..."
+          if aws iam list-roles --max-items 1 &> /dev/null; then
+            echo "IAM permissions check passed. Basic role listing is allowed."
+          else
+            echo "Warning: Unable to list IAM roles. Some operations may fail."
+          fi
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
+
+      - name: Create Terraform Variables File
+        run: |
+          cat << EOF > terraform/terraform.tfvars
+          environment = "$ENVIRONMENT"
+          operation_type = "delete"
+          EOF
 
       - name: Terraform Init and Workspace Selection
         run: |
           cd terraform
           terraform init
-          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
-
-      - name: Wipe SSM Parameters
-        run: |
-          aws ssm get-parameters-by-path --path "/credex/${{ env.ENVIRONMENT }}/" --recursive --query "Parameters[].Name" --output text | tr '\t' '\n' | while read param; do
-            aws ssm delete-parameter --name "$param" || true
-            echo "Wiped SSM parameter: $param"
-          done
+          terraform workspace select $ENVIRONMENT || terraform workspace new $ENVIRONMENT
 
       - name: Terraform Destroy
-        env:
-          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
-          TF_VAR_whatsapp_bot_api_key: ${{ secrets.WHATSAPP_BOT_API_KEY }}
-          TF_VAR_open_exchange_rates_api: ${{ secrets.OPEN_EXCHANGE_RATES_API }}
-          TF_VAR_neo4j_ledger_space_user: ${{ secrets.NEO4J_LEDGER_SPACE_USER }}
-          TF_VAR_neo4j_ledger_space_pass: ${{ secrets.NEO4J_LEDGER_SPACE_PASS }}
-          TF_VAR_neo4j_search_space_user: ${{ secrets.NEO4J_SEARCH_SPACE_USER }}
-          TF_VAR_neo4j_search_space_pass: ${{ secrets.NEO4J_SEARCH_SPACE_PASS }}
-          TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
-          TF_VAR_neo4j_public_key: ${{ secrets.NEO4J_PUBLIC_KEY }}
         run: |
           cd terraform
-          terraform destroy -auto-approve -var="create_resources=false" -var="environment=${{ env.ENVIRONMENT }}" || echo "Terraform destroy failed, continuing with manual resource deletion"
+          terraform destroy -auto-approve -var-file=terraform.tfvars || echo "Terraform destroy failed, continuing with manual resource deletion"
 
       - name: Wipe Orphaned Resources
         run: |
+          # Function to retry AWS CLI commands
+          retry_command() {
+            local max_attempts=3
+            local attempt=1
+            until "$@"; do
+              if (( attempt == max_attempts )); then
+                echo "Command failed after $max_attempts attempts: $*" >&2
+                return 1
+              fi
+              echo "Command failed, retrying in 5 seconds..." >&2
+              sleep 5
+              ((attempt++))
+            done
+            return 0
+          }
+
+          # Function to wipe ECS resources
+          wipe_ecs_resources() {
+            echo "Wiping ECS resources..."
+            clusters=$(aws ecs list-clusters --query "clusterArns[]" --output text)
+            for cluster in $clusters; do
+              services=$(aws ecs list-services --cluster $cluster --query "serviceArns[]" --output text)
+              for service in $services; do
+                retry_command aws ecs update-service --cluster $cluster --service $service --desired-count 0
+                retry_command aws ecs delete-service --cluster $cluster --service $service --force
+                echo "Deleted ECS service: $service in cluster: $cluster"
+              done
+              retry_command aws ecs delete-cluster --cluster $cluster
+              echo "Deleted ECS cluster: $cluster"
+            done
+          }
+
           # Function to wipe EC2 instances
           wipe_ec2_instances() {
             echo "Wiping EC2 instances..."
-            instances=$(aws ec2 describe-instances --query "Reservations[*].Instances[*].InstanceId" --output text)
-            for instance in $instances; do
-              aws ec2 terminate-instances --instance-ids $instance || echo "Failed to terminate EC2 instance: $instance"
-              echo "Terminated EC2 instance: $instance"
-            done
+            instances=$(aws ec2 describe-instances --filters "Name=instance-state-name,Values=running,stopped" --query "Reservations[*].Instances[*].InstanceId" --output text)
+            if [ -n "$instances" ]; then
+              retry_command aws ec2 terminate-instances --instance-ids $instances
+              echo "Terminated EC2 instances: $instances"
+              echo "Waiting for instances to terminate..."
+              aws ec2 wait instance-terminated --instance-ids $instances
+            else
+              echo "No EC2 instances found to terminate."
+            fi
           }
-          
-          # Function to wipe security groups
-          wipe_security_groups() {
-            echo "Wiping security groups..."
-            sgs=$(aws ec2 describe-security-groups --query "SecurityGroups[?GroupName!='default'].GroupId" --output text)
-            for sg in $sgs; do
-              # Remove all inbound rules
-              aws ec2 revoke-security-group-ingress --group-id $sg --protocol all --port all --cidr 0.0.0.0/0 || echo "Failed to revoke ingress rules for security group: $sg"
-              # Remove all outbound rules
-              aws ec2 revoke-security-group-egress --group-id $sg --protocol all --port all --cidr 0.0.0.0/0 || echo "Failed to revoke egress rules for security group: $sg"
-              # Now try to delete the security group
-              aws ec2 delete-security-group --group-id $sg || echo "Failed to delete security group: $sg"
-              echo "Deleted security group: $sg"
-            done
-          }
-          
-          # Function to wipe VPCs
-          wipe_vpcs() {
-            echo "Wiping VPCs..."
-            vpcs=$(aws ec2 describe-vpcs --query "Vpcs[?IsDefault==\`false\`].VpcId" --output text)
-            for vpc in $vpcs; do
-              aws ec2 delete-vpc --vpc-id $vpc || echo "Failed to delete VPC: $vpc"
-              echo "Deleted VPC: $vpc"
-            done
-          }
-          
-          # Function to wipe subnets
-          wipe_subnets() {
-            echo "Wiping subnets..."
-            subnets=$(aws ec2 describe-subnets --query "Subnets[*].SubnetId" --output text)
-            for subnet in $subnets; do
-              aws ec2 delete-subnet --subnet-id $subnet || echo "Failed to delete subnet: $subnet"
-              echo "Deleted subnet: $subnet"
-            done
-          }
-          
+
           # Function to wipe load balancers
           wipe_load_balancers() {
             echo "Wiping load balancers..."
             lbs=$(aws elbv2 describe-load-balancers --query "LoadBalancers[*].LoadBalancerArn" --output text)
             for lb in $lbs; do
-              aws elbv2 delete-load-balancer --load-balancer-arn $lb || echo "Failed to delete load balancer: $lb"
+              # Delete listeners associated with the load balancer
+              listeners=$(aws elbv2 describe-listeners --load-balancer-arn $lb --query "Listeners[*].ListenerArn" --output text)
+              for listener in $listeners; do
+                retry_command aws elbv2 delete-listener --listener-arn $listener
+                echo "Deleted listener: $listener"
+              done
+              
+              retry_command aws elbv2 delete-load-balancer --load-balancer-arn $lb
               echo "Deleted load balancer: $lb"
             done
-          }
-          
-          # Function to wipe ECS clusters
-          wipe_ecs_clusters() {
-            echo "Wiping ECS clusters..."
-            clusters=$(aws ecs list-clusters --query "clusterArns[]" --output text)
-            for cluster in $clusters; do
-              aws ecs delete-cluster --cluster $cluster || echo "Failed to delete ECS cluster: $cluster"
-              echo "Deleted ECS cluster: $cluster"
-            done
-          }
-          
-          # Function to wipe ECS services
-          wipe_ecs_services() {
-            echo "Wiping ECS services..."
-            clusters=$(aws ecs list-clusters --query "clusterArns[]" --output text)
-            for cluster in $clusters; do
-              services=$(aws ecs list-services --cluster $cluster --query "serviceArns[]" --output text)
-              for service in $services; do
-                aws ecs update-service --cluster $cluster --service $service --desired-count 0 || echo "Failed to scale down ECS service: $service"
-                aws ecs delete-service --cluster $cluster --service $service --force || echo "Failed to delete ECS service: $service"
-                echo "Deleted ECS service: $service in cluster: $cluster"
-              done
+
+            # Delete target groups
+            target_groups=$(aws elbv2 describe-target-groups --query "TargetGroups[*].TargetGroupArn" --output text)
+            for tg in $target_groups; do
+              retry_command aws elbv2 delete-target-group --target-group-arn $tg
+              echo "Deleted target group: $tg"
             done
           }
 
-          # Function to wipe EC2 key pairs
-          wipe_ec2_key_pairs() {
-            echo "Wiping EC2 key pairs..."
-            key_pairs=$(aws ec2 describe-key-pairs --query "KeyPairs[*].KeyName" --output text)
-            for key_pair in $key_pairs; do
-              aws ec2 delete-key-pair --key-name $key_pair || echo "Failed to delete EC2 key pair: $key_pair"
-              echo "Deleted EC2 key pair: $key_pair"
+          # Function to wipe security groups
+          wipe_security_groups() {
+            echo "Wiping security groups..."
+            sgs=$(aws ec2 describe-security-groups --query "SecurityGroups[?GroupName!='default'].GroupId" --output text)
+            for sg in $sgs; do
+              echo "Processing security group: $sg"
+              
+              # Detach the security group from any network interfaces
+              nis=$(aws ec2 describe-network-interfaces --filters Name=group-id,Values=$sg --query 'NetworkInterfaces[*].NetworkInterfaceId' --output text)
+              for ni in $nis; do
+                echo "Attempting to detach security group $sg from network interface $ni"
+                default_sg=$(aws ec2 describe-security-groups --filters Name=group-name,Values=default --query 'SecurityGroups[0].GroupId' --output text)
+                if aws ec2 modify-network-interface-attribute --network-interface-id $ni --groups $default_sg 2>/dev/null; then
+                  echo "Detached security group $sg from network interface $ni"
+                else
+                  echo "Failed to detach security group $sg from network interface $ni. It may no longer exist."
+                fi
+              done
+              
+              # Remove all ingress and egress rules
+              aws ec2 revoke-security-group-ingress --group-id $sg --protocol all --port all --cidr 0.0.0.0/0 2>/dev/null
+              aws ec2 revoke-security-group-egress --group-id $sg --protocol all --port all --cidr 0.0.0.0/0 2>/dev/null
+              
+              # Now attempt to delete the security group
+              echo "Attempting to delete security group: $sg"
+              if aws ec2 delete-security-group --group-id $sg 2>/dev/null; then
+                echo "Deleted security group: $sg"
+              else
+                echo "Failed to delete security group: $sg. It may still have dependencies or no longer exist."
+              fi
             done
           }
 
@@ -159,52 +178,147 @@ jobs:
             echo "Wiping ACM certificates..."
             certificates=$(aws acm list-certificates --query "CertificateSummaryList[*].CertificateArn" --output text)
             for cert in $certificates; do
-              aws acm delete-certificate --certificate-arn $cert || echo "Failed to delete ACM certificate: $cert"
+              retry_command aws acm delete-certificate --certificate-arn $cert
               echo "Deleted ACM certificate: $cert"
             done
+          }
+
+          # Function to wipe VPCs
+          wipe_vpcs() {
+            echo "Wiping VPCs..."
+            vpcs=$(aws ec2 describe-vpcs --query "Vpcs[?IsDefault==\`false\`].VpcId" --output text)
+            for vpc in $vpcs; do
+              echo "Processing VPC: $vpc"
+              
+              # Delete all subnets in the VPC
+              subnets=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$vpc" --query "Subnets[*].SubnetId" --output text)
+              for subnet in $subnets; do
+                retry_command aws ec2 delete-subnet --subnet-id $subnet
+                echo "Deleted subnet: $subnet in VPC: $vpc"
+              done
+
+              # Delete all route tables except the main one
+              route_tables=$(aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$vpc" --query "RouteTables[?Associations[0].Main != \`true\`].RouteTableId" --output text)
+              for rt in $route_tables; do
+                retry_command aws ec2 delete-route-table --route-table-id $rt
+                echo "Deleted route table: $rt in VPC: $vpc"
+              done
+
+              # Detach and delete internet gateway
+              igws=$(aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=$vpc" --query "InternetGateways[*].InternetGatewayId" --output text)
+              for igw in $igws; do
+                retry_command aws ec2 detach-internet-gateway --internet-gateway-id $igw --vpc-id $vpc
+                retry_command aws ec2 delete-internet-gateway --internet-gateway-id $igw
+                echo "Deleted internet gateway: $igw for VPC: $vpc"
+              done
+
+              # Delete the VPC
+              retry_command aws ec2 delete-vpc --vpc-id $vpc
+              echo "Deleted VPC: $vpc"
+            done
+          }
+
+          # Function to wipe IAM roles
+          wipe_iam_roles() {
+            echo "Wiping IAM roles..."
+            roles=("ecs-execution-role-$ENVIRONMENT" "ecs-task-role-$ENVIRONMENT")
+            for role in "${roles[@]}"; do
+              if aws iam get-role --role-name $role &>/dev/null; then
+                # Detach all managed policies from the role
+                attached_policies=$(aws iam list-attached-role-policies --role-name $role --query 'AttachedPolicies[*].PolicyArn' --output text)
+                for policy in $attached_policies; do
+                  retry_command aws iam detach-role-policy --role-name $role --policy-arn $policy
+                  echo "Detached managed policy $policy from role $role"
+                done
+
+                # Delete all inline policies
+                inline_policies=$(aws iam list-role-policies --role-name $role --query 'PolicyNames' --output text)
+                for policy in $inline_policies; do
+                  retry_command aws iam delete-role-policy --role-name $role --policy-name $policy
+                  echo "Deleted inline policy $policy from role $role"
+                done
+
+                # Delete the role
+                retry_command aws iam delete-role --role-name $role
+                echo "Deleted IAM role: $role"
+              else
+                echo "IAM role $role not found, skipping deletion"
+              fi
+            done
+          }
+
+          # Function to wipe CloudWatch log groups
+          wipe_cloudwatch_log_groups() {
+            echo "Wiping CloudWatch log groups..."
+            log_group="/ecs/credex-core-$ENVIRONMENT"
+            if aws logs describe-log-groups --log-group-name-prefix $log_group | grep -q $log_group; then
+              retry_command aws logs delete-log-group --log-group-name $log_group
+              echo "Deleted CloudWatch log group: $log_group"
+            else
+              echo "CloudWatch log group $log_group not found, skipping deletion"
+            fi
+          }
+
+          # Function to wipe EC2 key pairs
+          wipe_ec2_key_pairs() {
+            echo "Wiping EC2 key pairs..."
+            key_pair="neo4j-key-pair-$ENVIRONMENT"
+            if aws ec2 describe-key-pairs --key-names $key_pair &>/dev/null; then
+              retry_command aws ec2 delete-key-pair --key-name $key_pair
+              echo "Deleted EC2 key pair: $key_pair"
+            else
+              echo "EC2 key pair $key_pair not found, skipping deletion"
+            fi
           }
 
           # Function to wipe ECR repositories
           wipe_ecr_repositories() {
             echo "Wiping ECR repositories..."
-            repos=$(aws ecr describe-repositories --query "repositories[*].repositoryName" --output text)
-            for repo in $repos; do
-              aws ecr delete-repository --repository-name $repo --force || echo "Failed to delete ECR repository: $repo"
-              echo "Deleted ECR repository: $repo"
-            done
+            repo_name="credex-core-$ENVIRONMENT"
+            if aws ecr describe-repositories --repository-names $repo_name &>/dev/null; then
+              retry_command aws ecr delete-repository --repository-name $repo_name --force
+              echo "Deleted ECR repository: $repo_name"
+            else
+              echo "ECR repository $repo_name not found, skipping deletion"
+            fi
           }
-          
-          # Run wipe for different resource types
-          wipe_ecs_services
-          wipe_ecs_clusters
-          wipe_load_balancers
+
+          # Run wipe functions in order
+          wipe_ecs_resources
           wipe_ec2_instances
+          wipe_load_balancers
           wipe_security_groups
-          wipe_subnets
-          wipe_vpcs
-          wipe_ec2_key_pairs
           wipe_acm_certificates
+          wipe_vpcs
+          wipe_iam_roles
+          wipe_cloudwatch_log_groups
+          wipe_ec2_key_pairs
           wipe_ecr_repositories
 
-      - name: Wipe Terraform State
+          echo "Manual resource deletion completed"
+
+      - name: Clear Terraform State
         run: |
           cd terraform
-          # Initialize Terraform to ensure plugins are installed
-          terraform init -input=false
-          # Remove local state files and directories
+          # Remove local state
           rm -rf terraform.tfstate*
           rm -rf .terraform
-          # Remove workspace state
           rm -rf terraform.tfstate.d
-          # If using S3 backend, uncomment and adjust the following line
-          # aws s3 rm s3://your-bucket-name/path/to/terraform.tfstate || true
-          echo "Terraform state files removed"
+
+          # If using S3 backend, remove state from S3
+          if grep -q "backend \"s3\"" *.tf; then
+            BUCKET_NAME=$(grep -A 3 "backend \"s3\"" *.tf | grep "bucket" | cut -d '"' -f 2)
+            KEY_NAME=$(grep -A 3 "backend \"s3\"" *.tf | grep "key" | cut -d '"' -f 2)
+            aws s3 rm s3://$BUCKET_NAME/$KEY_NAME
+            echo "Removed Terraform state from S3 bucket: $BUCKET_NAME, key: $KEY_NAME"
+          fi
+
+          echo "Terraform state cleared"
 
       - name: Verify Wipe
         run: |
           cd terraform
           terraform init -input=false
-          # Check if there are any resources in the state
           if terraform show -json 2>/dev/null | jq -e '.values.root_module.resources' >/dev/null 2>&1; then
             echo "Error: Resources still exist after wipe"
             terraform show
@@ -216,9 +330,9 @@ jobs:
       - name: Log Wipe
         if: success()
         run: |
-          echo "Wipe of ${{ env.ENVIRONMENT }} environment completed successfully at $(date)"
+          echo "Wipe of $ENVIRONMENT environment completed successfully at $(date)"
 
       - name: Notify on Failure
         if: failure()
         run: |
-          echo "Wipe of ${{ env.ENVIRONMENT }} environment failed. Please check the logs for more information."
+          echo "Wipe of $ENVIRONMENT environment failed. Please check the logs for more information."

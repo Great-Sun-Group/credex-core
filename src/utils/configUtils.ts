@@ -35,7 +35,7 @@ class ConfigUtils {
   private constructor() {
     logger.debug("Initializing ConfigUtils");
     this.config = {
-      port: parseInt(process.env.PORT || "3000", 10),
+      port: parseInt(process.env.PORT || "5000", 10),
       nodeEnv: process.env.NODE_ENV || "development",
       logLevel: process.env.LOG_LEVEL || "info",
       ledgerSpace: {
