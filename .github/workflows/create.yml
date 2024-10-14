@@ -51,6 +51,7 @@ jobs:
           echo "NEO4J_SEARCH_USER=$NEO4J_SEARCH_USER" >> $GITHUB_ENV
           echo "NEO4J_LEDGER_PASS=$NEO4J_LEDGER_PASS" >> $GITHUB_ENV
           echo "NEO4J_SEARCH_PASS=$NEO4J_SEARCH_PASS" >> $GITHUB_ENV
+          echo "JWT_SECRET=$JWT_SECRET" >> $GITHUB_ENV
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -65,7 +66,6 @@ jobs:
             echo "Error: One or more critical secrets are missing. Please check your GitHub repository settings."
             exit 1
           fi
-          echo "JWT_SECRET=$JWT_SECRET" >> $GITHUB_ENV
 
       - name: Create Terraform Variables File
         run: |
@@ -158,6 +158,27 @@ jobs:
           echo "NEO4J_LEDGER_URL: ${NEO4J_LEDGER_URL}"
           echo "NEO4J_SEARCH_URL: ${NEO4J_SEARCH_URL}"
 
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: credex-core-${{ env.ENVIRONMENT }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Ensure ECR repository exists
+          aws ecr describe-repositories --repository-names ${ECR_REPOSITORY} || aws ecr create-repository --repository-name ${ECR_REPOSITORY}
+
+          # Build Docker image
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+
+          # Push image to ECR
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+          echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
+
       - name: Update ECS Task Definition
         env:
           TF_OUTPUTS: ${{ steps.tf-outputs.outputs.tf_outputs }}
@@ -173,38 +194,8 @@ jobs:
             exit 1
           fi
 
-          # Generate a timestamp for the image tag
-          TIMESTAMP=$(date +%Y%m%d%H%M%S)
-          IMAGE_TAG="deploy-${TIMESTAMP}"
-
-          # Check if the ECR repository exists
-          if ! aws ecr describe-repositories --repository-names credex-core-${ENVIRONMENT} &> /dev/null; then
-            echo "Creating ECR repository credex-core-${ENVIRONMENT}"
-            aws ecr create-repository --repository-name credex-core-${ENVIRONMENT}
-          fi
-
-          # Check if any image exists in the repository
-          if ! aws ecr list-images --repository-name credex-core-${ENVIRONMENT} --query 'imageIds[0]' &> /dev/null; then
-            echo "No images found in the repository. Creating an initial image."
-            # Create a dummy Dockerfile
-            echo "FROM alpine:latest" > Dockerfile
-            echo "CMD ['echo', 'This is a placeholder image']" >> Dockerfile
-            
-            # Build and push the initial image
-            docker build -t ${ECR_REPO_URL}:latest .
-            docker push ${ECR_REPO_URL}:latest
-          fi
-
-          # Ensure we can pull the latest image
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REPO_URL
-          docker pull ${ECR_REPO_URL}:latest
-
-          # Tag and push the new image
-          docker tag ${ECR_REPO_URL}:latest ${ECR_REPO_URL}:${IMAGE_TAG}
-          docker push ${ECR_REPO_URL}:${IMAGE_TAG}
-
           NEW_TASK_DEF=$(echo $TASK_DEF | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | 
-            .containerDefinitions[0].image = "'$ECR_REPO_URL':'$IMAGE_TAG'" | 
+            .containerDefinitions[0].image = "'$IMAGE'" | 
             .containerDefinitions[0].environment += [
               {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "'$NEO4J_LEDGER_URL'"},
               {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "'$NEO4J_SEARCH_URL'"},
@@ -218,7 +209,16 @@ jobs:
             ] |
             .containerDefinitions[0].logConfiguration.options."awslogs-group" = "/ecs/credex-core-'$ENVIRONMENT'" |
             .containerDefinitions[0].logConfiguration.options."awslogs-region" = "'${{ secrets.AWS_REGION }}'" |
-            .containerDefinitions[0].logConfiguration.options."awslogs-stream-prefix" = "ecs"')
+            .containerDefinitions[0].logConfiguration.options."awslogs-stream-prefix" = "ecs" |
+            .containerDefinitions[0].healthCheck = {
+              "command": ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"],
+              "interval": 30,
+              "timeout": 5,
+              "retries": 3,
+              "startPeriod": 60
+            } |
+            .cpu = "512" |
+            .memory = "1024"')
 
           echo "Writing new task definition to file"
           echo $NEW_TASK_DEF > new-task-def.json
