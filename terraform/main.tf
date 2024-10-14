@@ -195,6 +195,26 @@ resource "aws_iam_role_policy" "ecs_ecr_policy" {
   })
 }
 
+# Add explicit CloudWatch Logs permissions to the ECS execution role
+resource "aws_iam_role_policy" "ecs_cloudwatch_logs_policy" {
+  count = local.create_resources ? 1 : 0
+  name  = "ecs-cloudwatch-logs-policy-${var.environment}"
+  role  = aws_iam_role.ecs_execution_role[0].id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "${aws_cloudwatch_log_group.ecs_logs[0].arn}:*"
+      }
+    ]
+  })
+}
+
 # Outputs for debugging
 output "ecr_repository_url" {
   value       = try(aws_ecr_repository.credex_core[0].repository_url, data.aws_ecr_repository.credex_core[0].repository_url, "N/A")
