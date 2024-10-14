@@ -411,6 +411,9 @@ jobs:
           exit 1
 
       - name: Debug - Print Final Environment Variables
+        run: |
+          echo "Final Environment Variables:"
+          env | grep -E "TF_VAR_|AWS_|NODE_ENV|GITHUB_ENV"
 
       - name: Print Neo4j Information and JWT Secret
         run: |
