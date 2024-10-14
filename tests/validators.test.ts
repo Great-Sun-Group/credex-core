@@ -1,4 +1,4 @@
-import { validateUUID, validateMemberHandle, validateAccountName, validateAccountHandle } from '../../utils/validators';
+import { validateUUID, validateMemberHandle, validateAccountName, validateAccountHandle } from '../src/utils/validators';
 
 describe('Validators', () => {
   describe('validateUUID', () => {
