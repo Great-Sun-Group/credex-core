@@ -3,6 +3,11 @@ name: Initial Deployment to AWS
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+  actions: write
+
 jobs:
   deploy:
     name: Initial AWS Deployment
@@ -411,20 +416,33 @@ jobs:
           env | grep -E "TF_VAR_|AWS_|NODE_ENV|GITHUB_ENV"
 
       - name: Save Neo4j Information as GitHub Secrets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Save secrets using GitHub CLI
-          gh secret set NEO4J_LEDGER_BOLT_URL --body "$NEO4J_LEDGER_URL" --env $ENVIRONMENT
-          gh secret set NEO4J_SEARCH_BOLT_URL --body "$NEO4J_SEARCH_URL" --env $ENVIRONMENT
-          gh secret set NEO4J_LEDGER_USER --body "$NEO4J_LEDGER_USER" --env $ENVIRONMENT
-          gh secret set NEO4J_LEDGER_PASS --body "$NEO4J_LEDGER_PASS" --env $ENVIRONMENT
-          gh secret set NEO4J_SEARCH_USER --body "$NEO4J_SEARCH_USER" --env $ENVIRONMENT
-          gh secret set NEO4J_SEARCH_PASS --body "$NEO4J_SEARCH_PASS" --env $ENVIRONMENT
-          gh secret set JWT_SECRET --body "$JWT_SECRET" --env $ENVIRONMENT
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const secrets = [
+              { name: 'NEO4J_LEDGER_BOLT_URL', value: process.env.NEO4J_LEDGER_URL },
+              { name: 'NEO4J_SEARCH_BOLT_URL', value: process.env.NEO4J_SEARCH_URL },
+              { name: 'NEO4J_LEDGER_USER', value: process.env.NEO4J_LEDGER_USER },
+              { name: 'NEO4J_LEDGER_PASS', value: process.env.NEO4J_LEDGER_PASS },
+              { name: 'NEO4J_SEARCH_USER', value: process.env.NEO4J_SEARCH_USER },
+              { name: 'NEO4J_SEARCH_PASS', value: process.env.NEO4J_SEARCH_PASS },
+              { name: 'JWT_SECRET', value: process.env.JWT_SECRET }
+            ];
 
-          echo "Neo4j information and JWT Secret saved as GitHub secrets for the $ENVIRONMENT environment"
-          # Verify specific environment variables
+            for (const secret of secrets) {
+              await github.rest.actions.createOrUpdateEnvironmentSecret({
+                environment_name: process.env.ENVIRONMENT,
+                repository_id: context.repo.id,
+                secret_name: secret.name,
+                encrypted_value: Buffer.from(secret.value).toString('base64')
+              });
+            }
+
+            console.log('Neo4j information and JWT Secret saved as GitHub secrets for the ' + process.env.ENVIRONMENT + ' environment');
+
+      - name: Verify Environment Variables
+        run: |
           required_vars=("NEO_4J_LEDGER_SPACE_USER" "NEO_4J_LEDGER_SPACE_PASS" "NEO_4J_SEARCH_SPACE_USER" "NEO_4J_SEARCH_SPACE_PASS" "JWT_SECRET" "NEO_4J_LEDGER_SPACE_BOLT_URL" "NEO_4J_SEARCH_SPACE_BOLT_URL")
           for var in "${required_vars[@]}"; do
             if ! echo $ENV_VARS | jq -e ".[] | select(.name == \"$var\")" > /dev/null; then
