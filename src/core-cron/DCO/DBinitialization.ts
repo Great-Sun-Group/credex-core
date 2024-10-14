@@ -5,6 +5,7 @@ import { UpdateMemberTierController } from "../../api/Dev/controllers/updateMemb
 import { CreateAccountService } from "../../api/Account/services/CreateAccount";
 import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
+import { setDCOparticipantRateExpressHandler } from "../../api/Member/controllers/setDCOparticipantRate";
 import { fetchZwgRate, ZwgRateError } from "./fetchZwgRate";
 import axios from "axios";
 import _ from "lodash";
@@ -237,6 +238,7 @@ async function createRdubsAccount(requestId: string): Promise<{
     "Ryan",
     "Watson",
     "263778177125",
+    "CAD",
     requestId
   );
 
@@ -267,7 +269,36 @@ async function createRdubsAccount(requestId: string): Promise<{
     );
   }
 
-  //here
+  // Call setDCOparticipantRateExpressHandler
+  try {
+    const req = {
+      body: {
+        memberID: onboardedMemberID,
+        personalAccountID: defaultAccountID,
+        DCOgiveInCXX: 1,
+        DCOdenom: "CAD"
+      }
+    } as any;
+    const res = {
+      status: (code: number) => ({
+        json: (data: any) => {
+          if (code !== 200) {
+            throw new Error(`Failed to set DCO participant rate: ${JSON.stringify(data)}`);
+          }
+        }
+      })
+    } as any;
+
+    await setDCOparticipantRateExpressHandler(req, res);
+    logger.info("DCO participant rate set successfully", { memberID: onboardedMemberID, requestId });
+  } catch (error) {
+    logger.error("Failed to set DCO participant rate", {
+      memberID: onboardedMemberID,
+      error: error instanceof Error ? error.message : String(error),
+      requestId,
+    });
+    throw error;
+  }
 
   return {
     onboardedMemberID,
