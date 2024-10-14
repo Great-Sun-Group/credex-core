@@ -173,6 +173,22 @@ jobs:
             exit 1
           fi
 
+          # Generate a timestamp for the image tag
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          IMAGE_TAG="deploy-${TIMESTAMP}"
+
+          # Ensure the image exists in ECR
+          if ! aws ecr describe-images --repository-name credex-core-${ENVIRONMENT} --image-ids imageTag=latest &> /dev/null; then
+            echo "Error: No 'latest' image found in the ECR repository"
+            exit 1
+          fi
+
+          # Tag and push the new image
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REPO_URL
+          docker pull ${ECR_REPO_URL}:latest
+          docker tag ${ECR_REPO_URL}:latest ${ECR_REPO_URL}:${IMAGE_TAG}
+          docker push ${ECR_REPO_URL}:${IMAGE_TAG}
+
           NEW_TASK_DEF=$(echo $TASK_DEF | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | 
             .containerDefinitions[0].image = "'$ECR_REPO_URL':'$IMAGE_TAG'" | 
             .containerDefinitions[0].environment += [
