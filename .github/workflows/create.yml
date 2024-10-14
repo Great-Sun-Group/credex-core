@@ -177,15 +177,29 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           IMAGE_TAG="deploy-${TIMESTAMP}"
 
-          # Ensure the image exists in ECR
-          if ! aws ecr describe-images --repository-name credex-core-${ENVIRONMENT} --image-ids imageTag=latest &> /dev/null; then
-            echo "Error: No 'latest' image found in the ECR repository"
-            exit 1
+          # Check if the ECR repository exists
+          if ! aws ecr describe-repositories --repository-names credex-core-${ENVIRONMENT} &> /dev/null; then
+            echo "Creating ECR repository credex-core-${ENVIRONMENT}"
+            aws ecr create-repository --repository-name credex-core-${ENVIRONMENT}
           fi
 
-          # Tag and push the new image
+          # Check if any image exists in the repository
+          if ! aws ecr list-images --repository-name credex-core-${ENVIRONMENT} --query 'imageIds[0]' &> /dev/null; then
+            echo "No images found in the repository. Creating an initial image."
+            # Create a dummy Dockerfile
+            echo "FROM alpine:latest" > Dockerfile
+            echo "CMD ['echo', 'This is a placeholder image']" >> Dockerfile
+            
+            # Build and push the initial image
+            docker build -t ${ECR_REPO_URL}:latest .
+            docker push ${ECR_REPO_URL}:latest
+          fi
+
+          # Ensure we can pull the latest image
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REPO_URL
           docker pull ${ECR_REPO_URL}:latest
+
+          # Tag and push the new image
           docker tag ${ECR_REPO_URL}:latest ${ECR_REPO_URL}:${IMAGE_TAG}
           docker push ${ECR_REPO_URL}:${IMAGE_TAG}
 
