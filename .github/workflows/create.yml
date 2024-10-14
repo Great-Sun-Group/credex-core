@@ -40,12 +40,13 @@ jobs:
           echo "NODE_ENV=$ENVIRONMENT" >> $GITHUB_ENV
           echo "TF_VAR_environment=$ENVIRONMENT" >> $GITHUB_ENV
 
-      - name: Generate Neo4j Credentials
+      - name: Generate Neo4j Credentials and JWT Secret
         run: |
           NEO4J_LEDGER_USER="neo4j$(openssl rand -base64 8 | tr -dc '0-9' | fold -w 6 | head -n 1)"
           NEO4J_SEARCH_USER="neo4j$(openssl rand -base64 8 | tr -dc '0-9' | fold -w 6 | head -n 1)"
           NEO4J_LEDGER_PASS=$(openssl rand -base64 32)
           NEO4J_SEARCH_PASS=$(openssl rand -base64 32)
+          JWT_SECRET=$(openssl rand -base64 32)
           echo "NEO4J_LEDGER_USER=$NEO4J_LEDGER_USER" >> $GITHUB_ENV
           echo "NEO4J_SEARCH_USER=$NEO4J_SEARCH_USER" >> $GITHUB_ENV
           echo "NEO4J_LEDGER_PASS=$NEO4J_LEDGER_PASS" >> $GITHUB_ENV
@@ -64,13 +65,14 @@ jobs:
             echo "Error: One or more critical secrets are missing. Please check your GitHub repository settings."
             exit 1
           fi
+          echo "JWT_SECRET=$JWT_SECRET" >> $GITHUB_ENV
 
       - name: Create Terraform Variables File
         run: |
           cat << EOF > terraform/terraform.tfvars
           environment = "$ENVIRONMENT"
           operation_type = "create"
-          jwt_secret = "${{ secrets.JWT_SECRET }}"
+          jwt_secret = "$JWT_SECRET"
           open_exchange_rates_api = "${{ secrets.OPEN_EXCHANGE_RATES_API }}"
           neo4j_enterprise_license = "${{ secrets.NEO4J_ENTERPRISE_LICENSE }}"
           neo4j_ledger_space_user = "$NEO4J_LEDGER_USER"
@@ -180,10 +182,13 @@ jobs:
               {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "'$NEO4J_LEDGER_PASS'"},
               {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "'$NEO4J_SEARCH_USER'"},
               {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "'$NEO4J_SEARCH_PASS'"},
-              {"name": "JWT_SECRET", "value": "'${{ secrets.JWT_SECRET }}'"},
+              {"name": "JWT_SECRET", "value": "'$JWT_SECRET'"},
               {"name": "OPEN_EXCHANGE_RATES_API", "value": "'${{ secrets.OPEN_EXCHANGE_RATES_API }}'"},
               {"name": "NODE_ENV", "value": "'$ENVIRONMENT'"}
-            ]')
+            ] |
+            .containerDefinitions[0].logConfiguration.options."awslogs-group" = "/ecs/credex-core-'$ENVIRONMENT'" |
+            .containerDefinitions[0].logConfiguration.options."awslogs-region" = "'${{ secrets.AWS_REGION }}'" |
+            .containerDefinitions[0].logConfiguration.options."awslogs-stream-prefix" = "ecs"')
 
           echo "Writing new task definition to file"
           echo $NEW_TASK_DEF > new-task-def.json
@@ -193,18 +198,48 @@ jobs:
           echo "New task definition ARN: $NEW_TASK_DEF_ARN"
           echo "NEW_TASK_DEF_ARN=$NEW_TASK_DEF_ARN" >> $GITHUB_ENV
 
-      - name: Verify ECS Task Definition
+      - name: Check Environment Variables
         run: |
+          echo "Checking Environment Variables for ECS Task Definition"
           TASK_DEF=$(aws ecs describe-task-definition --task-definition $NEW_TASK_DEF_ARN --query taskDefinition)
-          echo "Task Definition:"
-          echo $TASK_DEF | jq .
-          
-          ENV_VARS=$(echo $TASK_DEF | jq -r '.containerDefinitions[0].environment')
           echo "Environment Variables:"
-          echo $ENV_VARS | jq .
+          echo $TASK_DEF | jq -r '.containerDefinitions[0].environment[] | "\(.name): \(.value)"'
           
-          if [ -z "$ENV_VARS" ] || [ "$ENV_VARS" == "null" ]; then
-            echo "Error: Environment variables are missing in the task definition"
+          echo "Log Configuration:"
+          echo $TASK_DEF | jq -r '.containerDefinitions[0].logConfiguration'
+          
+          echo "Task Role ARN:"
+          echo $TASK_DEF | jq -r '.taskRoleArn'
+          
+          echo "Execution Role ARN:"
+          echo $TASK_DEF | jq -r '.executionRoleArn'
+          
+          echo "Network Mode:"
+          echo $TASK_DEF | jq -r '.networkMode'
+          
+          echo "CPU:"
+          echo $TASK_DEF | jq -r '.cpu'
+          
+          echo "Memory:"
+          echo $TASK_DEF | jq -r '.memory'
+
+      - name: Verify ECS Task Execution Role Permissions
+        run: |
+          EXECUTION_ROLE_ARN=$(aws ecs describe-task-definition --task-definition $NEW_TASK_DEF_ARN --query 'taskDefinition.executionRoleArn' --output text)
+          ROLE_NAME=$(echo $EXECUTION_ROLE_ARN | awk -F'/' '{print $NF}')
+          echo "ECS Task Execution Role: $ROLE_NAME"
+
+          echo "Attached Policies:"
+          aws iam list-attached-role-policies --role-name $ROLE_NAME | jq '.AttachedPolicies[].PolicyName'
+
+          echo "Inline Policies:"
+          aws iam list-role-policies --role-name $ROLE_NAME | jq '.PolicyNames[]'
+
+          # Check for CloudWatch Logs permissions
+          if aws iam simulate-principal-policy --policy-source-arn $EXECUTION_ROLE_ARN --action-names "logs:CreateLogStream" "logs:PutLogEvents" | grep -q "allowed"; then
+            echo "ECS Task Execution Role has necessary CloudWatch Logs permissions"
+          else
+            echo "Error: ECS Task Execution Role is missing necessary CloudWatch Logs permissions"
             exit 1
           fi
 
@@ -260,10 +295,21 @@ jobs:
               if [ -n "$STOPPED_TASKS" ]; then
                 echo "Stopped tasks found:"
                 echo "$STOPPED_TASKS" | jq -r '. | "Task ARN: \(.taskArn)\nStopped Reason: \(.stoppedReason)\nContainer Exit Codes: \(.containers[].exitCode)\nContainer Reason: \(.containers[].reason)\nStopped At: \(.stoppedAt)\n"'
+                
+                # Get container logs for stopped tasks
+                echo "$STOPPED_TASKS" | jq -r '.containers[] | select(.runtimeId != null) | "Container ID: \(.runtimeId)\nContainer Name: \(.name)\nLogs:"' | while read -r line; do
+                  if [[ $line == Container* ]]; then
+                    echo "$line"
+                  elif [[ $line == Logs:* ]]; then
+                    CONTAINER_ID=$(echo "$line" | awk '{print $3}')
+                    aws logs get-log-events --log-group-name /ecs/credex-core-$ENVIRONMENT --log-stream-name ecs/credex-core/$CONTAINER_ID --limit 100 | jq -r '.events[].message'
+                    echo ""
+                  fi
+                done
               fi
               
-              # Get container logs for all tasks
-              echo "$TASK_DETAILS" | jq -r '.tasks[].containers[] | select(.runtimeId != null) | "Container ID: \(.runtimeId)\nContainer Name: \(.name)\nLogs:"' | while read -r line; do
+              # Get container logs for running tasks
+              echo "$TASK_DETAILS" | jq -r '.tasks[] | select(.lastStatus == "RUNNING") | .containers[] | select(.runtimeId != null) | "Container ID: \(.runtimeId)\nContainer Name: \(.name)\nLogs:"' | while read -r line; do
                 if [[ $line == Container* ]]; then
                   echo "$line"
                 elif [[ $line == Logs:* ]]; then
@@ -280,11 +326,15 @@ jobs:
             echo "ECS Service Events:"
             aws ecs describe-services --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT --query 'services[0].events[0:10]' | jq -r '.[] | "\(.createdAt): \(.message)"'
             
-            # Check CloudWatch Logs for ECS Service
-            echo "CloudWatch Logs for ECS Service:"
-            aws logs get-log-events --log-group-name /ecs/credex-core-$ENVIRONMENT --log-stream-name ecs/credex-core-service-$ENVIRONMENT --limit 20 | jq -r '.events[].message'
+            # Check ECS Cluster Capacity Providers
+            echo "ECS Cluster Capacity Providers:"
+            aws ecs describe-clusters --clusters credex-cluster-$ENVIRONMENT --include ATTACHMENTS --query 'clusters[0].attachments' | jq .
             
-            sleep 60
+            # Check ECS Cluster Settings
+            echo "ECS Cluster Settings:"
+            aws ecs describe-clusters --clusters credex-cluster-$ENVIRONMENT --include SETTINGS --query 'clusters[0].settings' | jq .
+            
+            sleep 30
           done
 
           echo "Service did not stabilize within the expected time. Deployment failed."
@@ -306,6 +356,11 @@ jobs:
           echo "IAM Role Information:"
           aws iam get-role --role-name ecsTaskExecutionRole | jq .
 
+          # Check ECS Task Execution Role permissions
+          echo "ECS Task Execution Role Permissions:"
+          aws iam list-role-policies --role-name ecsTaskExecutionRole
+          aws iam list-attached-role-policies --role-name ecsTaskExecutionRole
+
           exit 1
 
       - name: Debug - Print Final Environment Variables
@@ -324,8 +379,9 @@ jobs:
           gh secret set NEO4J_LEDGER_PASS --body "$NEO4J_LEDGER_PASS" --env $ENVIRONMENT
           gh secret set NEO4J_SEARCH_USER --body "$NEO4J_SEARCH_USER" --env $ENVIRONMENT
           gh secret set NEO4J_SEARCH_PASS --body "$NEO4J_SEARCH_PASS" --env $ENVIRONMENT
+          gh secret set JWT_SECRET --body "$JWT_SECRET" --env $ENVIRONMENT
 
-          echo "Neo4j information saved as GitHub secrets for the $ENVIRONMENT environment"
+          echo "Neo4j information and JWT Secret saved as GitHub secrets for the $ENVIRONMENT environment"
           # Verify specific environment variables
           required_vars=("NEO_4J_LEDGER_SPACE_USER" "NEO_4J_LEDGER_SPACE_PASS" "NEO_4J_SEARCH_SPACE_USER" "NEO_4J_SEARCH_SPACE_PASS" "JWT_SECRET" "NEO_4J_LEDGER_SPACE_BOLT_URL" "NEO_4J_SEARCH_SPACE_BOLT_URL")
           for var in "${required_vars[@]}"; do
