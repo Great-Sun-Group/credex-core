@@ -4,6 +4,7 @@ import { GetMemberDashboardByPhoneController } from "./controllers/getMemberDash
 import { onboardMemberExpressHandler } from "./controllers/onboardMember";
 import { loginMemberExpressHandler } from "./controllers/loginMember";
 import { authForTierSpendLimitExpressHandler } from "./controllers/authForTierSpendLimit";
+import { setDCOparticipantRateExpressHandler } from "./controllers/setDCOparticipantRate";
 import { validateRequest } from "../../middleware/validateRequest";
 import {
   getMemberByHandleSchema,
@@ -11,6 +12,7 @@ import {
   onboardMemberSchema,
   authForTierSpendLimitSchema,
   loginMemberSchema,
+  setDCOparticipantRateSchema,
 } from "./memberValidationSchemas";
 import logger from "../../utils/logger";
 
@@ -111,9 +113,16 @@ export default function MemberRoutes(jsonParser: express.RequestHandler, apiVers
     authForTierSpendLimitExpressHandler
   );
 
+  router.post(
+    `/member/setDCOparticipantRate`,
+    jsonParser,
+    validateRequest(setDCOparticipantRateSchema),
+    setDCOparticipantRateExpressHandler
+  );
+
   logger.info("Member routes initialized successfully", {
     module: "memberRoutes",
-    routesCount: 5,
+    routesCount: 6,
   });
 
   return router;

@@ -119,4 +119,36 @@ export const loginMemberSchema = {
 };
 logger.debug("loginMemberSchema initialized");
 
+export const setDCOparticipantRateSchema = {
+  memberID: {
+    sanitizer: s.sanitizeUUID,
+    validator: (value: string) => {
+      const result = v.validateUUID(value);
+      return result.isValid;
+    },
+  },
+  personalAccountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: (value: string) => {
+      const result = v.validateUUID(value);
+      return result.isValid;
+    },
+  },
+  DCOgiveInCXX: {
+    sanitizer: (value: any) => Number(value),
+    validator: (value: number) => {
+      const result = v.validateAmount(value);
+      return result.isValid;
+    },
+  },
+  DCOdenom: {
+    sanitizer: s.sanitizeDenomination,
+    validator: (value: string) => {
+      const result = v.validateDenomination(value);
+      return result.isValid;
+    },
+  },
+};
+logger.debug("setDCOparticipantRateSchema initialized");
+
 logger.debug("All member validation schemas initialized");

@@ -308,14 +308,14 @@ async function processDCOParticipants(
 
   const result = await session.run(`
     MATCH (daynode:Daynode{Active:true})
-    MATCH (DCOparticpantsDeclared:Account)<-[:OWNS]-(DCOmember:Member)
-    WHERE DCOparticpantsDeclared.DCOgiveInCXX > 0
+    MATCH (DCOparticipantsDeclared:Account)<-[:OWNS]-(DCOmember:Member)
+    WHERE DCOparticipantsDeclared.DCOgiveInCXX > 0
     RETURN
-      DCOparticpantsDeclared.accountID AS accountID,
+      DCOparticipantsDeclared.accountID AS accountID,
       DCOmember.memberID AS DCOmemberID,
-      DCOparticpantsDeclared.DCOgiveInCXX AS DCOgiveInCXX,
-      DCOparticpantsDeclared.DCOgiveInCXX / daynode[DCOparticpantsDeclared.DCOdenom] AS DCOgiveInDenom,
-      DCOparticpantsDeclared.DCOdenom AS DCOdenom
+      DCOparticipantsDeclared.DCOgiveInCXX AS DCOgiveInCXX,
+      DCOparticipantsDeclared.DCOgiveInCXX / daynode[DCOparticipantsDeclared.DCOdenom] AS DCOgiveInDenom,
+      DCOparticipantsDeclared.DCOdenom AS DCOdenom
   `);
 
   const declaredParticipants = result.records;
@@ -537,14 +537,14 @@ async function processDCOTransactions(
   const confirmedParticipants: Participant[] = (
     await session.run(`
     MATCH (daynode:Daynode{Active:true})
-    MATCH (DCOparticpantsDeclared:Account)<-[:OWNS]-(DCOmember:Member)
-    WHERE DCOparticpantsDeclared.DCOgiveInCXX > 0
+    MATCH (DCOparticipantsDeclared:Account)<-[:OWNS]-(DCOmember:Member)
+    WHERE DCOparticipantsDeclared.DCOgiveInCXX > 0
     RETURN
-      DCOparticpantsDeclared.accountID AS accountID,
+      DCOparticipantsDeclared.accountID AS accountID,
       DCOmember.memberID AS DCOmemberID,
-      DCOparticpantsDeclared.DCOgiveInCXX AS DCOgiveInCXX,
-      DCOparticpantsDeclared.DCOgiveInCXX / daynode[DCOparticpantsDeclared.DCOdenom] AS DCOgiveInDenom,
-      DCOparticpantsDeclared.DCOdenom AS DCOdenom
+      DCOparticipantsDeclared.DCOgiveInCXX AS DCOgiveInCXX,
+      DCOparticipantsDeclared.DCOgiveInCXX / daynode[DCOparticipantsDeclared.DCOdenom] AS DCOgiveInDenom,
+      DCOparticipantsDeclared.DCOdenom AS DCOdenom
   `)
   ).records.map((record: any) => record.toObject() as Participant);
 
