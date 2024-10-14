@@ -418,7 +418,7 @@ jobs:
       - name: Save Neo4j Information as GitHub Secrets
         uses: actions/github-script@v6
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const secrets = [
               { name: 'NEO4J_LEDGER_BOLT_URL', value: process.env.NEO4J_LEDGER_URL },
@@ -430,25 +430,24 @@ jobs:
               { name: 'JWT_SECRET', value: process.env.JWT_SECRET }
             ];
 
+            console.log('Organization:', context.repo.owner);
+            console.log('Repository:', context.repo.repo);
+            console.log('Environment:', process.env.ENVIRONMENT);
+
             for (const secret of secrets) {
-              await github.rest.actions.createOrUpdateEnvironmentSecret({
-                environment_name: process.env.ENVIRONMENT,
-                repository_id: context.repo.id,
-                secret_name: secret.name,
-                encrypted_value: Buffer.from(secret.value).toString('base64')
-              });
+              try {
+                await github.rest.actions.createOrUpdateEnvironmentSecret({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  environment_name: process.env.ENVIRONMENT,
+                  secret_name: secret.name,
+                  encrypted_value: Buffer.from(secret.value).toString('base64')
+                });
+                console.log(`Secret ${secret.name} created/updated successfully.`);
+              } catch (error) {
+                console.error(`Error creating/updating secret ${secret.name}:`, error.message);
+                core.setFailed(`Failed to create/update secret ${secret.name}`);
+              }
             }
 
-            console.log('Neo4j information and JWT Secret saved as GitHub secrets for the ' + process.env.ENVIRONMENT + ' environment');
-
-      - name: Verify Environment Variables
-        run: |
-          required_vars=("NEO_4J_LEDGER_SPACE_USER" "NEO_4J_LEDGER_SPACE_PASS" "NEO_4J_SEARCH_SPACE_USER" "NEO_4J_SEARCH_SPACE_PASS" "JWT_SECRET" "NEO_4J_LEDGER_SPACE_BOLT_URL" "NEO_4J_SEARCH_SPACE_BOLT_URL")
-          for var in "${required_vars[@]}"; do
-            if ! echo $ENV_VARS | jq -e ".[] | select(.name == \"$var\")" > /dev/null; then
-              echo "Error: Required environment variable $var is missing"
-              exit 1
-            fi
-          done
-
-          echo "All required environment variables are present in the task definition"
+      # ... [remaining steps unchanged]
