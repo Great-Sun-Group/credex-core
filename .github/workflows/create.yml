@@ -204,22 +204,22 @@ jobs:
           TASK_DEF=$(aws ecs describe-task-definition --task-definition $NEW_TASK_DEF_ARN --query taskDefinition)
           echo "Environment Variables:"
           echo $TASK_DEF | jq -r '.containerDefinitions[0].environment[] | "\(.name): \(.value)"'
-          
+
           echo "Log Configuration:"
           echo $TASK_DEF | jq -r '.containerDefinitions[0].logConfiguration'
-          
+
           echo "Task Role ARN:"
           echo $TASK_DEF | jq -r '.taskRoleArn'
-          
+
           echo "Execution Role ARN:"
           echo $TASK_DEF | jq -r '.executionRoleArn'
-          
+
           echo "Network Mode:"
           echo $TASK_DEF | jq -r '.networkMode'
-          
+
           echo "CPU:"
           echo $TASK_DEF | jq -r '.cpu'
-          
+
           echo "Memory:"
           echo $TASK_DEF | jq -r '.memory'
 
@@ -230,18 +230,30 @@ jobs:
           echo "ECS Task Execution Role: $ROLE_NAME"
 
           echo "Attached Policies:"
-          aws iam list-attached-role-policies --role-name $ROLE_NAME | jq '.AttachedPolicies[].PolicyName'
+          ATTACHED_POLICIES=$(aws iam list-attached-role-policies --role-name $ROLE_NAME --query 'AttachedPolicies[].PolicyName' --output json)
+          echo $ATTACHED_POLICIES | jq .
 
           echo "Inline Policies:"
-          aws iam list-role-policies --role-name $ROLE_NAME | jq '.PolicyNames[]'
+          INLINE_POLICIES=$(aws iam list-role-policies --role-name $ROLE_NAME --query 'PolicyNames' --output json)
+          echo $INLINE_POLICIES | jq .
 
-          # Check for CloudWatch Logs permissions
-          if aws iam simulate-principal-policy --policy-source-arn $EXECUTION_ROLE_ARN --action-names "logs:CreateLogStream" "logs:PutLogEvents" | grep -q "allowed"; then
-            echo "ECS Task Execution Role has necessary CloudWatch Logs permissions"
+          # Check for AmazonECSTaskExecutionRolePolicy
+          if echo $ATTACHED_POLICIES | jq -e 'contains(["AmazonECSTaskExecutionRolePolicy"])' > /dev/null; then
+            echo "AmazonECSTaskExecutionRolePolicy is attached to the role"
           else
-            echo "Error: ECS Task Execution Role is missing necessary CloudWatch Logs permissions"
+            echo "Error: AmazonECSTaskExecutionRolePolicy is not attached to the role"
             exit 1
           fi
+
+          # Check for ecs-cloudwatch-logs-policy
+          if echo $INLINE_POLICIES | jq -e 'contains(["ecs-cloudwatch-logs-policy-'$ENVIRONMENT'"])' > /dev/null; then
+            echo "ecs-cloudwatch-logs-policy is attached to the role"
+          else
+            echo "Error: ecs-cloudwatch-logs-policy is not attached to the role"
+            exit 1
+          fi
+
+          echo "ECS Task Execution Role has necessary policies attached"
 
       - name: Deploy Application
         env:
