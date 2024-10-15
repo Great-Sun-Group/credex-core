@@ -1,0 +1,54 @@
+name: Deploy Application Infrastructure
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy_infrastructure:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set Environment
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=development" >> $GITHUB_ENV
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init and Apply for Application Infrastructure
+        run: |
+          cd terraform
+          terraform init
+          terraform workspace select $ENVIRONMENT || terraform workspace new $ENVIRONMENT
+          terraform apply -auto-approve -target=module.ecs -target=module.vpc -target=module.security_groups
+
+      - name: Get Infrastructure Outputs
+        run: |
+          cd terraform
+          echo "ECR_REPO_URL=$(terraform output -raw ecr_repository_url)" >> $GITHUB_ENV
+          echo "ECS_CLUSTER_ARN=$(terraform output -raw ecs_cluster_arn)" >> $GITHUB_ENV
+          echo "ECS_TASK_DEF_ARN=$(terraform output -raw ecs_task_definition_arn)" >> $GITHUB_ENV
+
+      - name: Print Infrastructure Information
+        run: |
+          echo "Please manually add the following secrets to your GitHub repository for the $ENVIRONMENT environment:"
+          echo "ECR_REPO_URL: $ECR_REPO_URL"
+          echo "ECS_CLUSTER_ARN: $ECS_CLUSTER_ARN"
+          echo "ECS_TASK_DEF_ARN: $ECS_TASK_DEF_ARN"
