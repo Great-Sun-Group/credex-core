@@ -10,14 +10,46 @@ The credex-core application is deployed using AWS services (including ECS, ECR),
 
 **Any work that changes files in /.github/workflows or /terraform impacts the application deployment process**, and must first be tested by a developer with the appropriate AWS keys. For the purpose of these docs, a developer with the AWS access codes is a "deployer".
 
-Deployments are managed from the Github console under Actions: `Initial Deployment to AWS`, `Redeploy to AWS`, and `Wipe AWS Resources`. These three scripts can be run on any branch.
+Our deployment process runs in three separate workflows:
+
+1. **deploy_neo4j.yml**: Handles the deployment of Neo4j instances.
+2. **deploy_application_infrastructure.yml**: Sets up the application infrastructure.
+3. **deploy_application.yml**: Deploys the application itself.
+
+This separation allows for granular control over each part of the deployment process and makes it easier to manage and troubleshoot specific aspects of the deployment.
+
+### deploy_neo4j.yml
+This workflow is responsible for:
+- Setting up and configuring Neo4j instances
+- Generating Neo4j credentials
+- Applying Terraform configurations for Neo4j resources
+- Outputting Neo4j connection information
+
+### deploy_application_infrastructure.yml
+This workflow handles:
+- Setting up the core AWS infrastructure (VPC, ECS cluster, security groups, etc.)
+- Applying Terraform configurations for application infrastructure
+- Outputting important infrastructure information (ECR repo URL, ECS cluster ARN, etc.)
+
+### deploy_application.yml
+This workflow manages:
+- Building and pushing the Docker image to ECR
+- Updating the ECS task definition
+- Deploying the application to ECS
+- Generating and managing application secrets (e.g., JWT token)
+
+Each of these workflows can be triggered independently, allowing for more flexible and targeted deployments. For example, you can update the application without changing the infrastructure, or modify the Neo4j setup without redeploying the entire application.
+
+Deployments are managed from the Github console under Actions. These workflows can be run on any branch:
  - `prod` branch will automatically be deployed to `production` environment using production secrets.
  - `stage` branch will automatically be deployed to `staging` environment using staging secrets. 
- - any other branch will automatically be deployed to `deployment` environment using deployment secrets
+ - any other branch will automatically be deployed to `development` environment using development secrets
 
 Note to code reviewers: Developers are technically able to make changes to deployment code (workflows or terraform). But such changes should not be made by anyone who can't test them, and should not be deployed to `stage` untested.
 
-Please refer to the documents linked below for detailed information on each aspect of the deployment process, including specific considerations for Neo4j management and monitoring.
+## Terraform Workspaces
+
+We use Terraform workspaces consistently across all workflows to manage different environments (development, staging, production). This approach allows for management of environment-specific resources and configurations. Each workflow selects or creates a new Terraform workspace based on the current environment, ensuring that each environment has its own isolated set of resources managed by Terraform.
 
 ## Neo4j in credex-core
 
