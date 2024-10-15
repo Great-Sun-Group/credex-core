@@ -141,7 +141,7 @@ resource "aws_lb_target_group" "credex_core" {
 # ACM Certificate
 resource "aws_acm_certificate" "credex_cert" {
   count             = var.operation_type != "delete" ? 1 : 0
-  domain_name       = var.domain[var.environment]
+  domain_name       = local.full_domain
   validation_method = "DNS"
 
   tags = merge(local.common_tags, {
@@ -218,7 +218,7 @@ resource "aws_lb_listener" "redirect_http_to_https" {
 resource "aws_route53_record" "api" {
   count           = var.operation_type != "delete" ? 1 : 0
   zone_id         = data.aws_route53_zone.selected.zone_id
-  name            = var.domain[var.environment]
+  name            = local.full_domain
   type            = "A"
   allow_overwrite = true
 

@@ -14,16 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
     env:
-      TF_VAR_domain_base: mycredex.app
-      TF_VAR_subdomain_development: dev.api
-      TF_VAR_subdomain_staging: stage.api
-      TF_VAR_subdomain_production: api
-      TF_VAR_neo4j_instance_count_development: 2
-      TF_VAR_neo4j_instance_count_staging: 2
-      TF_VAR_neo4j_instance_count_production: 2
-      TF_VAR_neo4j_instance_type_development: t3.xlarge
-      TF_VAR_neo4j_instance_type_staging: r5.2xlarge
-      TF_VAR_neo4j_instance_type_production: r5.12xlarge
       TF_VAR_log_level_development: debug
       TF_VAR_log_level_staging: info
       TF_VAR_log_level_production: info

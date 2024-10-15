@@ -3,12 +3,6 @@ locals {
   key_pair_name = "neo4j-key-pair-${var.environment}"
   
   max_production_instances = 3
-  
-  compliant_instance_types = {
-    development = "t3.xlarge"
-    staging     = "r5.2xlarge"
-    production  = "r5.12xlarge"
-  }
 }
 
 data "aws_ami" "amazon_linux_2" {
@@ -34,22 +28,15 @@ data "aws_key_pair" "existing_neo4j_key_pair" {
 }
 
 resource "random_string" "neo4j_password" {
-  count   = var.operation_type != "delete" ? min(local.neo4j_instance_count[var.environment], local.max_production_instances) : 0
+  count   = var.operation_type != "delete" ? 2 : 0
   length  = 16
   special = true
 }
 
-resource "random_string" "neo4j_username_suffix" {
-  count   = var.operation_type != "delete" ? min(local.neo4j_instance_count[var.environment], local.max_production_instances) : 0
-  length  = 6
-  special = false
-  upper   = false
-}
-
 resource "aws_instance" "neo4j" {
-  count         = var.operation_type != "delete" ? min(local.neo4j_instance_count[var.environment], local.max_production_instances) : 0
+  count         = var.operation_type != "delete" ? 2 : 0
   ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = local.compliant_instance_types[var.environment]
+  instance_type = local.neo4j_instance_type[var.environment]
   key_name      = var.operation_type == "create" && var.neo4j_public_key != "" ? aws_key_pair.neo4j_key_pair[0].key_name : (var.operation_type != "create" ? data.aws_key_pair.existing_neo4j_key_pair[0].key_name : null)
 
   vpc_security_group_ids = [aws_security_group.neo4j[0].id]

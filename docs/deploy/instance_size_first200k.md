@@ -59,51 +59,6 @@ Note: The staging environment is identical to production but runs for approximat
 ### SearchSpace
 - **Instance Type**: r5.12xlarge (48 vCPU, 384 GB RAM, limited to 24 cores)
 - **Justification**: 
-  - Dedicated to running the loopfinder algorithm
-  - CPU-intensive for executing complex graph traversals and calculations
-  - High memory requirements for handling large-scale graph operations efficiently
-## 3. Staging/Production Environment
-
-For staging and production environments, we recommend the following setup to handle the expected load of 200,000 members:
-
-- **Members**: 200,000
-- **Accounts**: 300,000 (1.5 accounts per member)
-- **Daily Transactions**: 6,000,000 (20 credex transactions per account per day)
-- **Database Calls**: ~30,000,000 per day (assuming 5 DB calls per transaction)
-
-Note: The staging environment is identical to production but runs for approximately 15 hours per week for testing, research, and projections.
-
-### Neo4j Instances
-- **LedgerSpace**: 1 x r5.12xlarge (48 vCPU, 384 GB RAM, limited to 24 cores as per license)
-- **SearchSpace**: 1 x r5.12xlarge (48 vCPU, 384 GB RAM, limited to 24 cores as per license)
-- **Storage**: 500 GB gp3 SSD per instance (consider increasing based on data growth)
-- **Network**: Private subnets with VPC peering or AWS PrivateLink for secure access
-
-### API and Application Servers
-- **ECS Fargate**: Multiple tasks running on Fargate for scalability
-- **Initial Setup**: 10 x 2 vCPU, 4 GB RAM tasks
-- **Auto Scaling**: Set up auto-scaling based on CPU and memory utilization
-
-### Load Balancer
-- **ALB**: Application Load Balancer for distributing traffic to ECS tasks
-
-### Additional Resources
-- **ElastiCache**: For caching frequently accessed data
-- **CloudWatch**: For monitoring and logging
-- **S3**: For storing backups and other static assets
-
-## 4. Neo4j Instance Sizing
-
-### LedgerSpace
-- **Instance Type**: r5.12xlarge (48 vCPU, 384 GB RAM, limited to 24 cores)
-- **Justification**: 
-  - Handles all historical data and DCO calculations
-  - Needs high memory for caching and complex query processing
-  - CPU-intensive for DCO calculations and transaction processing
-
-### SearchSpace
-- **Instance Type**: r5.12xlarge (48 vCPU, 384 GB RAM, limited to 24 cores)
-- **Justification**: 
   - CPU-intensive for real-time query processing and loopfinder operations
 - **Loopfinder Considerations**:
   - The loopfinder algorithm is the primary function of the SearchSpace, requiring significant computational resources
@@ -211,12 +166,12 @@ Note: Staging costs are based on 15 hours of weekly usage (approximately 65 hour
 
 ### DCO on Separate Instance Analysis
 
-Running the DCO on a separate instance every 24 hours could potentially allow for reducing the size of the LedgerSpace instance. Here's an analysis of this approach:
+Running the DCO on a separate instance could potentially allow for reducing the size of the LedgerSpace instance. Here's an analysis of this approach:
 
 1. **Separate DCO Instance**:
    - Instance Type: r5.4xlarge (16 vCPU, 128 GB RAM)
-   - Usage: 4 hours per day
-   - Monthly Cost: $360
+   - Usage: Approximately 10 minutes per day
+   - Monthly Cost: $15 (based on on-demand pricing for 5 hours of usage per month)
 
 2. **Reduced LedgerSpace Instance**:
    - Current: r5.12xlarge ($4,200/month)
@@ -224,17 +179,21 @@ Running the DCO on a separate instance every 24 hours could potentially allow fo
    - Monthly Savings: $1,400
 
 3. **Net Impact**:
-   - Additional Cost (DCO Instance): $360
+   - Additional Cost (DCO Instance): $15
    - Potential Savings (LedgerSpace Reduction): $1,400
-   - Net Monthly Savings: $1,040
+   - Net Monthly Savings: $1,385
 
 **Considerations**:
-- The separate DCO instance would need to handle the intensive calculations without impacting regular operations.
-- Data synchronization between the main LedgerSpace and the DCO instance would be required, which could add complexity and potential data transfer costs.
+- The separate DCO instance would need to be initialized and ready for operation at midnight UTC each day.
+- The instance can be turned off after the DCO process completes to save costs.
 - The reduced LedgerSpace instance should still be capable of handling regular transaction loads and queries efficiently.
 
 **Recommendation**:
-Based on this analysis, moving the DCO to a separate instance could potentially reduce overall costs while improving system performance. However, it's crucial to thoroughly test this setup to ensure it meets performance requirements and doesn't introduce unacceptable complexity or data consistency issues.
+Based on this analysis, moving the DCO to a separate instance that is turned on only when needed could significantly reduce overall costs while improving system performance. This approach allows for efficient use of resources by only running the DCO instance for the short time it's needed each day. However, it's crucial to:
+1. Implement robust automation for starting and stopping the DCO instance.
+2. Ensure data synchronization processes are efficient and reliable.
+3. Thoroughly test this setup to ensure it meets performance requirements and doesn't introduce unacceptable complexity or data consistency issues.
+4. Monitor the actual runtime of the DCO process and adjust the instance type if necessary to ensure it completes within the allocated time.
 
 ## 11. Scaling from 10,000 to 200,000 Members
 
