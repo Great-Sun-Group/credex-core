@@ -11,24 +11,6 @@ variable "domain_base" {
   default     = "mycredex.app"
 }
 
-variable "subdomain_development" {
-  description = "The subdomain for the development environment"
-  type        = string
-  default     = "dev.api"
-}
-
-variable "subdomain_staging" {
-  description = "The subdomain for the staging environment"
-  type        = string
-  default     = "stage.api"
-}
-
-variable "subdomain_production" {
-  description = "The subdomain for the production environment"
-  type        = string
-  default     = "api"
-}
-
 variable "environment" {
   description = "The deployment environment (development, staging, or production)"
   type        = string
@@ -39,13 +21,13 @@ variable "environment" {
   }
 }
 
-variable "domain" {
-  description = "Map of environment to domain names"
+variable "subdomain_prefix" {
+  description = "Map of environment to subdomain prefixes"
   type        = map(string)
   default = {
-    development = "dev.api.mycredex.app"
-    staging     = "stage.api.mycredex.app"
-    production  = "api.mycredex.app"
+    development = "dev.api"
+    staging     = "stage.api"
+    production  = "api"
   }
 }
 
@@ -142,11 +124,7 @@ variable "neo4j_public_key" {
 
 locals {
   # Neo4j instance count compliant with the Startup Software License Agreement
-  neo4j_instance_count = {
-    development = 2  # Up to 6 allowed for development
-    staging     = 2  # Up to 3 allowed for non-production testing
-    production  = 2  # Up to 3 allowed for production
-  }
+  neo4j_instance_count = 2
 
   # Neo4j instance types compliant with the 24 Cores / 256 GB RAM limit
   neo4j_instance_type = {
@@ -154,11 +132,13 @@ locals {
     staging     = "r5.2xlarge" # 8 vCPU, 64 GB RAM
     production  = "r5.12xlarge" # 48 vCPU, 384 GB RAM (will be limited to 24 cores in user_data)
   }
+
+  # Full domain construction
+  full_domain = "${var.subdomain_prefix[var.environment]}.${var.domain_base}"
 }
 
 # Note: This configuration complies with the Neo4j Startup Software License Agreement:
 # - Limits production instances to a maximum of 3
 # - Ensures each instance doesn't exceed 24 Cores / 256 GB of RAM (limited in neo4j.tf)
-# - Allows for both LedgerSpace and SearchSpace on a single instance for non-production environments
-# - Provides up to 6 instances for development (currently set to 2, but can be increased up to 6)
+# - Provides separate instances for LedgerSpace and SearchSpace in all environments
 # - Allows up to 3 instances for non-production testing (currently set to 2 for staging)
