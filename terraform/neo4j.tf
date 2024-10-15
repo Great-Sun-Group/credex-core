@@ -33,6 +33,14 @@ resource "random_string" "neo4j_password" {
   special = true
 }
 
+resource "random_string" "neo4j_username_suffix" {
+  count   = var.operation_type != "delete" ? 2 : 0
+  length  = 6
+  special = false
+  upper   = false
+  numeric = true
+}
+
 resource "aws_instance" "neo4j" {
   count         = var.operation_type != "delete" ? 2 : 0
   ami           = data.aws_ami.amazon_linux_2.id
@@ -59,8 +67,10 @@ resource "aws_instance" "neo4j" {
               sudo sed -i 's/#dbms.default_listen_address=0.0.0.0/dbms.default_listen_address=0.0.0.0/' /etc/neo4j/neo4j.conf
               sudo sed -i 's/#dbms.security.auth_enabled=false/dbms.security.auth_enabled=true/' /etc/neo4j/neo4j.conf
               
-              # Set Neo4j password
+              # Set Neo4j password and create user with random suffix
+              NEO4J_USERNAME="neo4j${random_string.neo4j_username_suffix[count.index].result}"
               sudo neo4j-admin set-initial-password "${random_string.neo4j_password[count.index].result}"
+              sudo neo4j-admin set-user-password $NEO4J_USERNAME "${random_string.neo4j_password[count.index].result}"
 
               # Set Neo4j Enterprise License
               echo "${var.neo4j_enterprise_license}" | sudo tee /etc/neo4j/neo4j.license
