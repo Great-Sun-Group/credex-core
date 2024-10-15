@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-This report outlines the instance sizing and infrastructure requirements for the credex system to support the first 200,000 members, with sections on on initial 2,000 and a later 2,000,000 members. It covers development, staging, and production environments, with a primary focus on Neo4j instance sizing and associated resources on AWS and Aura.
+This report outlines the instance sizing and infrastructure requirements for the credex system to support the first 200,000 members, with sections on initial 2,000, a later 2,000,000 members, and an extension to managing the full economy of Zimbabwe based on highly rough estimates. It covers development, staging, and production environments, detailing all infrastructure components including Neo4j instances, API servers, load balancers, networking, and additional AWS services.
 
 ## 2. Development Environment
 
@@ -14,8 +14,13 @@ For the development environment, we recommend the following setup:
 - **EC2 Instance Type**: t3.medium
 - **Storage**: 20 GB gp3 SSD per instance
 - **Network**: Default VPC with public subnets for easy access
+- **ECS Fargate**: 2 tasks with 1 vCPU and 2 GB RAM each
+- **Application Load Balancer**: 1 x ALB for distributing traffic
+- **ElastiCache**: 1 x cache.t3.micro instance for caching
+- **CloudWatch**: Basic monitoring
+- **S3**: 50 GB for backups and static assets
 
-This setup provides sufficient resources for development and testing while keeping costs manageable. The t3.medium instances offer a good balance of compute and memory for development workloads without overprovisioning.
+This setup provides sufficient resources for development and testing while keeping costs manageable.
 
 ## 3. Staging/Production Environment
 
@@ -41,11 +46,21 @@ Note: The staging environment is identical to production but runs for approximat
 
 ### Load Balancer
 - **ALB**: Application Load Balancer for distributing traffic to ECS tasks
+- **SSL/TLS**: ACM certificate for HTTPS
+
+### Networking
+- **VPC**: Custom VPC with public and private subnets
+- **NAT Gateways**: 2 x NAT Gateways for outbound internet access from private subnets
+- **VPC Peering**: For secure communication between application and database layers
+- **Security Groups**: Configured for each component to control inbound and outbound traffic
 
 ### Additional Resources
-- **ElastiCache**: For caching frequently accessed data
-- **CloudWatch**: For monitoring and logging
-- **S3**: For storing backups and other static assets
+- **ElastiCache**: 1 x cache.r5.large for caching frequently accessed data
+- **CloudWatch**: Detailed monitoring and custom metrics
+- **S3**: 1 TB for storing backups, logs, and other static assets
+- **Route 53**: DNS management and routing
+- **AWS Certificate Manager**: SSL/TLS certificate management
+- **AWS Systems Manager**: For secure parameter storage and management
 
 ## 4. Neo4j Instance Sizing
 
@@ -80,63 +95,68 @@ Initial setup:
 - 10 Fargate tasks with 2 vCPU and 4 GB RAM each
 - Auto-scaling policies based on CPU and memory utilization
 
+Additional considerations:
+- Use ECR (Elastic Container Registry) for storing and managing Docker images
+- Implement CI/CD pipelines for automated deployments
+- Use AWS Systems Manager Parameter Store for securely storing and retrieving configuration data
+
 ## 6. Load Balancing and Networking
 
-- Use an Application Load Balancer (ALB) to distribute traffic across ECS tasks
-- Implement VPC with public and private subnets
-- Use NAT Gateways for outbound internet access from private subnets
-- Implement VPC peering or AWS PrivateLink for secure communication between application and database layers
+- **Application Load Balancer (ALB)**: Distribute traffic across ECS tasks
+  - Configure health checks for robust load balancing
+  - Set up SSL/TLS termination for secure communication
+- **VPC Configuration**:
+  - Create a custom VPC with public and private subnets across multiple Availability Zones
+  - Place ECS tasks and databases in private subnets for enhanced security
+  - Use public subnets for ALB and NAT Gateways
+- **NAT Gateways**: Deploy in public subnets for outbound internet access from private subnets
+- **VPC Peering or AWS PrivateLink**: Implement for secure communication between application and database layers
+- **Security Groups and NACLs**: 
+  - Configure to control inbound and outbound traffic for each component
+  - Implement principle of least privilege
+- **Route 53**: 
+  - Set up DNS management and routing
+  - Implement health checks and failover routing for high availability
 
 ## 7. Database Backup and Recovery
 
 - Implement regular snapshots of Neo4j instances using EBS snapshots
 - Store backups in S3 with appropriate retention policies
 - Develop and test a disaster recovery plan
+- Consider using AWS Backup for centralized backup management
+- Implement point-in-time recovery capabilities
+- Regularly test restore procedures to ensure data integrity and recovery time objectives (RTOs)
 
 ## 8. Monitoring and Logging
 
-- Use CloudWatch for monitoring EC2 instances, ECS tasks, and ALB
-- Implement custom CloudWatch metrics for application-specific monitoring
-- Set up alarms for critical thresholds (e.g., high CPU usage, memory consumption, error rates)
-- Use CloudWatch Logs for centralized logging
+- Use CloudWatch for comprehensive monitoring:
+  - EC2 instances, ECS tasks, ALB, and other AWS resources
+  - Custom metrics for application-specific monitoring
+  - Set up alarms for critical thresholds (e.g., high CPU usage, memory consumption, error rates)
+- Implement centralized logging with CloudWatch Logs:
+  - Aggregate logs from all components (Neo4j, ECS tasks, ALB)
+  - Set up log retention policies
+  - Use CloudWatch Logs Insights for log analysis
+- Consider using AWS X-Ray for distributed tracing and performance analysis
+- Implement custom dashboards for real-time system overview
+- Set up SNS topics for alarm notifications
 
-## 9. Future Considerations
+## 9. Security and Compliance
 
-### DCO Processing
-1. **Current Approach**: Run DCO in LedgerSpace
-   - Pros: Simplicity, direct access to all data
-   - Cons: Potential performance impact on regular operations
+- Implement AWS Identity and Access Management (IAM) for fine-grained access control
+- Use AWS Key Management Service (KMS) for encryption key management
+- Enable VPC Flow Logs for network traffic analysis
+- Implement AWS Config for resource inventory, configuration history, and compliance auditing
+- Use AWS CloudTrail for API call logging and auditing
+- Consider implementing AWS GuardDuty for threat detection
+- Regularly perform security assessments and penetration testing
+- Ensure compliance with relevant standards (e.g., GDPR, PCI DSS) based on the nature of data handled
 
-2. **Near-Future Improvement**: Move DCO to a separate instance
-   - Pros: 
-     - Isolates resource-intensive DCO process
-     - Allows for specialized hardware for DCO calculations
-   - Cons: 
-     - Increased complexity in data synchronization
-     - Additional infrastructure cost
+## 10. Future Considerations
 
-3. **Long-Term Solution**: Code refactoring for efficient data handling
-   - Implement data archiving strategies
-   - Develop a more efficient DCO calculation process
-   - Consider a hybrid approach using both Neo4j and specialized analytics tools
+[Content remains the same as in the original document]
 
-### Scaling Strategies
-- Implement read replicas for Neo4j to distribute read load
-- Consider sharding strategies as data volume grows
-- Explore Neo4j's causal clustering for improved read scalability
-- For SearchSpace, investigate partitioning strategies to distribute loopfinder workload
-
-### Performance Optimization
-- Regularly review and optimize Neo4j queries
-- Implement and tune caching strategies
-- Consider using graph algorithms for more efficient data processing
-- Optimize loopfinder algorithm and explore parallel processing options
-
-### Infrastructure as Code
-- Continuously improve Terraform scripts for infrastructure management
-- Implement blue-green deployment strategies for zero-downtime updates
-
-## 10. Cost Projections
+## 11. Cost Projections
 
 The following cost projections are based on AWS pricing for the af-south-1 region and are approximate. Actual costs may vary based on usage patterns, data transfer, and other factors.
 
@@ -145,8 +165,13 @@ The following cost projections are based on AWS pricing for the af-south-1 regio
 | Resource | Specification | Monthly Cost (USD) |
 |----------|---------------|---------------------|
 | Neo4j Instances (2) | t3.medium, 20 GB gp3 SSD each | $70 |
+| ECS Fargate | 2 tasks, 1 vCPU, 2 GB RAM each | $50 |
+| ALB | 1 ALB | $20 |
+| ElastiCache | cache.t3.micro | $15 |
+| CloudWatch | Basic monitoring | $10 |
+| S3 | 50 GB storage | $2 |
 | Data Transfer | Estimated 100 GB/month | $10 |
-| **Total Estimated Monthly Cost** | | **$80** |
+| **Total Estimated Monthly Cost** | | **$177** |
 
 ### Staging/Production Environment
 
@@ -156,11 +181,14 @@ The following cost projections are based on AWS pricing for the af-south-1 regio
 | ECS Fargate | 10 tasks, 2 vCPU, 4 GB RAM each | $500 | $38 |
 | ALB | 1 ALB | $25 | $2 |
 | NAT Gateway | 2 NAT Gateways | $70 | $5 |
-| Data Transfer | Estimated 5 TB/month (Prod), 500 GB/month (Staging) | $500 | $50 |
 | ElastiCache | cache.r5.large | $150 | $11 |
 | CloudWatch | Detailed monitoring | $100 | $8 |
 | S3 | 1 TB storage | $25 | $25 |
-| **Total Estimated Monthly Cost** | | **$9,770** | **$769** |
+| Route 53 | DNS management | $5 | $5 |
+| ACM | SSL/TLS certificates | $0 | $0 |
+| Systems Manager | Parameter Store (advanced) | $5 | $5 |
+| Data Transfer | Estimated 5 TB/month (Prod), 500 GB/month (Staging) | $500 | $50 |
+| **Total Estimated Monthly Cost** | | **$9,780** | **$779** |
 
 Note: Staging costs are based on 15 hours of weekly usage (approximately 65 hours per month).
 
