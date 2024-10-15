@@ -1,6 +1,51 @@
 # Credex Instance Sizing Report for First 200,000 Members
 
-[... Previous content remains unchanged ...]
+## 1. Introduction
+
+This report outlines the instance sizing and infrastructure requirements for the credex system to support the first 200,000 members, with sections on on initial 2,000 and a later 2,000,000 members. It covers development, staging, and production environments, with a primary focus on Neo4j instance sizing and associated resources on AWS and Aura.
+
+## 2. Development Environment
+
+For the development environment, we recommend the following setup:
+
+- **Neo4j Instances**: 2 x t3.medium (2 vCPU, 4 GB RAM)
+  - One for LedgerSpace
+  - One for SearchSpace
+- **EC2 Instance Type**: t3.medium
+- **Storage**: 20 GB gp3 SSD per instance
+- **Network**: Default VPC with public subnets for easy access
+
+This setup provides sufficient resources for development and testing while keeping costs manageable. The t3.medium instances offer a good balance of compute and memory for development workloads without overprovisioning.
+
+## 3. Staging/Production Environment
+
+For staging and production environments, we recommend the following setup to handle the expected load of 200,000 members:
+
+- **Members**: 200,000
+- **Accounts**: 300,000 (1.5 accounts per member)
+- **Daily Transactions**: 6,000,000 (20 credex transactions per account per day)
+- **Database Calls**: ~30,000,000 per day (assuming 5 DB calls per transaction)
+
+Note: The staging environment is identical to production but runs for approximately 15 hours per week for testing, research, and projections.
+
+### Neo4j Instances
+- **LedgerSpace**: 1 x r5.12xlarge (48 vCPU, 384 GB RAM, limited to 24 cores as per license)
+- **SearchSpace**: 1 x r5.12xlarge (48 vCPU, 384 GB RAM, limited to 24 cores as per license)
+- **Storage**: 500 GB gp3 SSD per instance (consider increasing based on data growth)
+- **Network**: Private subnets with VPC peering or AWS PrivateLink for secure access
+
+### API and Application Servers
+- **ECS Fargate**: Multiple tasks running on Fargate for scalability
+- **Initial Setup**: 10 x 2 vCPU, 4 GB RAM tasks
+- **Auto Scaling**: Set up auto-scaling based on CPU and memory utilization
+
+### Load Balancer
+- **ALB**: Application Load Balancer for distributing traffic to ECS tasks
+
+### Additional Resources
+- **ElastiCache**: For caching frequently accessed data
+- **CloudWatch**: For monitoring and logging
+- **S3**: For storing backups and other static assets
 
 ## 4. Neo4j Instance Sizing
 
