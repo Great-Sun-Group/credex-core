@@ -37,7 +37,7 @@ jobs:
           cd terraform
           terraform init
           terraform workspace select $ENVIRONMENT || terraform workspace new $ENVIRONMENT
-          terraform apply -auto-approve -target=module.ecs -target=module.vpc -target=module.security_groups
+          terraform apply -auto-approve -target=module.ecs -target=module.vpc -target=module.security_groups -var="environment=$ENVIRONMENT"
 
       - name: Get Infrastructure Outputs
         run: |
