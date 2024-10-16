@@ -1,4 +1,4 @@
-name: Deploy Neo4j
+name: Deploy/Update Neo4j Databases
 
 on:
   workflow_dispatch:

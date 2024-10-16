@@ -1,4 +1,4 @@
-name: Deploy Application Infrastructure
+name: Deploy/Update App Infrastructure
 
 on:
   workflow_dispatch:
