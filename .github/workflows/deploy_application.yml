@@ -25,13 +25,28 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify AWS credentials
+        run: |
+          if ! aws sts get-caller-identity; then
+            echo "Failed to get caller identity. Check AWS credentials and permissions."
+            exit 1
+          fi
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
+        continue-on-error: true
+
+      - name: Check ECR login status
+        if: steps.login-ecr.outcome == 'failure'
+        run: |
+          echo "Failed to log in to ECR. This could be due to insufficient permissions."
+          echo "Error: ${{ steps.login-ecr.outputs.error }}"
+          exit 1
 
       - name: Build, tag, and push image to Amazon ECR
         env:
@@ -39,6 +54,7 @@ jobs:
           ECR_REPOSITORY: credex-core-${{ env.ENVIRONMENT }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          set -e
           docker build --target ${{ env.ENVIRONMENT }} \
             --build-arg NEO_4J_LEDGER_SPACE_USER=${{ secrets.NEO_4J_LEDGER_SPACE_USER }} \
             --build-arg NEO_4J_LEDGER_SPACE_PASS=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }} \
@@ -49,7 +65,7 @@ jobs:
             --build-arg OPEN_EXCHANGE_RATES_API=${{ secrets.OPEN_EXCHANGE_RATES_API }} \
             --build-arg JWT_SECRET=${{ secrets.JWT_SECRET }} \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG || { echo "Failed to push image to ECR. Check ECR permissions."; exit 1; }
           echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Setup Terraform
@@ -60,8 +76,9 @@ jobs:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_create_resource: "true"
         run: |
+          set -e
           cd terraform
-          terraform init
+          terraform init || { echo "Terraform init failed. Check AWS permissions for S3 and DynamoDB (if using remote state)."; exit 1; }
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
           terraform apply -auto-approve -target=aws_ecs_task_definition.credex_core \
             -var="neo4j_ledger_space_user=${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" \
@@ -71,14 +88,15 @@ jobs:
             -var="neo4j_search_space_pass=${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" \
             -var="neo4j_search_space_bolt_url=${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}" \
             -var="open_exchange_rates_api=${{ secrets.OPEN_EXCHANGE_RATES_API }}" \
-            -var="jwt_secret=${{ secrets.JWT_SECRET }}"
+            -var="jwt_secret=${{ secrets.JWT_SECRET }}" || { echo "Terraform apply failed. Check AWS permissions for resources being created/modified."; exit 1; }
 
       - name: Update ECS Service
         run: |
+          set -e
           TASK_DEF_ARN=$(terraform output -raw ecs_task_definition_arn)
-          aws ecs update-service --cluster credex-cluster-${{ env.ENVIRONMENT }} --service credex-core-service-${{ env.ENVIRONMENT }} --task-definition $TASK_DEF_ARN
+          aws ecs update-service --cluster credex-cluster-${{ env.ENVIRONMENT }} --service credex-core-service-${{ env.ENVIRONMENT }} --task-definition $TASK_DEF_ARN || { echo "Failed to update ECS service. Check ECS permissions."; exit 1; }
           echo "Waiting for service to stabilize..."
-          aws ecs wait services-stable --cluster credex-cluster-${{ env.ENVIRONMENT }} --services credex-core-service-${{ env.ENVIRONMENT }}
+          aws ecs wait services-stable --cluster credex-cluster-${{ env.ENVIRONMENT }} --services credex-core-service-${{ env.ENVIRONMENT }} || { echo "ECS service failed to stabilize. Check ECS logs for more information."; exit 1; }
 
       - name: Print Deployment Information
         run: |
