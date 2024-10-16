@@ -15,7 +15,7 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
             echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
+          elif [[ "${{ github.ref }}" == "refs/heads/stage" || "${{ github.ref }}" == "refs/heads/deploy8" ]]; then
             echo "ENVIRONMENT=staging" >> $GITHUB_OUTPUT
           else
             echo "ENVIRONMENT=development" >> $GITHUB_OUTPUT
@@ -25,19 +25,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Debug AWS Credentials
+      - name: Debug Environment
         run: |
           echo "Environment: ${{ steps.determine_env.outputs.ENVIRONMENT }}"
-          echo "AWS Region Secret Name: ${{ format('{0}_AWS_REGION', steps.determine_env.outputs.ENVIRONMENT) }}"
-          echo "AWS Access Key ID Secret Name: ${{ format('{0}_AWS_ACCESS_KEY_ID', steps.determine_env.outputs.ENVIRONMENT) }}"
-          echo "AWS Secret Access Key Secret Name: ${{ format('{0}_AWS_SECRET_ACCESS_KEY', steps.determine_env.outputs.ENVIRONMENT) }}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets[format('{0}_AWS_ACCESS_KEY_ID', steps.determine_env.outputs.ENVIRONMENT)] }}
-          aws-secret-access-key: ${{ secrets[format('{0}_AWS_SECRET_ACCESS_KEY', steps.determine_env.outputs.ENVIRONMENT)] }}
-          aws-region: ${{ secrets[format('{0}_AWS_REGION', steps.determine_env.outputs.ENVIRONMENT)] }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+        env:
+          GITHUB_ENV: ${{ steps.determine_env.outputs.ENVIRONMENT }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -93,3 +92,5 @@ jobs:
       - name: Print Deployment Information
         run: |
           echo "Deployment completed successfully. New task definition ARN: $TASK_DEF_ARN"
+
+    environment: ${{ steps.determine_env.outputs.ENVIRONMENT }}
