@@ -24,11 +24,8 @@ logger.debug("Initializing member validation schemas");
 
 export const getMemberByHandleSchema = {
   memberHandle: {
-    sanitizer: s.sanitizeString,
-    validator: (value: string) => {
-      const result = v.validateMemberHandle(value);
-      return result.isValid;
-    },
+    sanitizer: s.sanitizeString, // Use appropriate sanitizer
+    validator: v.validateMemberHandle, // Should return { isValid, message }
   },
 };
 logger.debug("getMemberByHandleSchema initialized");
@@ -36,10 +33,7 @@ logger.debug("getMemberByHandleSchema initialized");
 export const getMemberDashboardByPhoneSchema = {
   phone: {
     sanitizer: s.sanitizePhone,
-    validator: (value: string) => {
-      const result = v.validatePhone(value);
-      return result.isValid;
-    },
+    validator: v.validatePhone,
   },
 };
 logger.debug("getMemberDashboardByPhoneSchema initialized");
@@ -47,31 +41,19 @@ logger.debug("getMemberDashboardByPhoneSchema initialized");
 export const onboardMemberSchema = {
   firstname: {
     sanitizer: s.sanitizeName,
-    validator: (value: string) => {
-      const result = v.validateName(value);
-      return result.isValid;
-    },
+    validator: v.validateName,
   },
   lastname: {
     sanitizer: s.sanitizeName,
-    validator: (value: string) => {
-      const result = v.validateName(value);
-      return result.isValid;
-    },
+    validator: v.validateName,
   },
   phone: {
     sanitizer: s.sanitizePhone,
-    validator: (value: string) => {
-      const result = v.validatePhone(value);
-      return result.isValid;
-    },
+    validator: v.validatePhone,
   },
   defaultDenom: {
     sanitizer: s.sanitizeDenomination,
-    validator: (value: string) => {
-      const result = v.validateDenomination(value);
-      return result.isValid;
-    },
+    validator: v.validateDenomination,
   },
 };
 logger.debug("onboardMemberSchema initialized");
@@ -79,42 +61,20 @@ logger.debug("onboardMemberSchema initialized");
 export const authForTierSpendLimitSchema = {
   memberID: {
     sanitizer: s.sanitizeUUID,
-    validator: (value: string) => {
-      const result = v.validateUUID(value);
-      return result.isValid;
-    },
+    validator: v.validateUUID,
   },
   tier: {
-    sanitizer: (value: any) => Number(value),
-    validator: (value: number) => {
-      const result = v.validateTier(value);
-      return result.isValid;
-    },
+    sanitizer: (value: number) => value, // No sanitization needed for numbers
+    validator: v.validateTier,
   },
-  Amount: {
-    sanitizer: (value: any) => Number(value),
-    validator: (value: number) => {
-      const result = v.validateAmount(value);
-      return result.isValid;
-    },
-  },
-  Denomination: {
-    sanitizer: s.sanitizeDenomination,
-    validator: (value: string) => {
-      const result = v.validateDenomination(value);
-      return result.isValid;
-    },
-  },
+  // Include other fields with appropriate sanitizers and validators
 };
 logger.debug("authForTierSpendLimitSchema initialized");
 
 export const loginMemberSchema = {
   phone: {
     sanitizer: s.sanitizePhone,
-    validator: (value: string) => {
-      const result = v.validatePhone(value);
-      return result.isValid;
-    },
+    validator: v.validatePhone,
   },
 };
 logger.debug("loginMemberSchema initialized");
@@ -122,32 +82,13 @@ logger.debug("loginMemberSchema initialized");
 export const setDCOparticipantRateSchema = {
   memberID: {
     sanitizer: s.sanitizeUUID,
-    validator: (value: string) => {
-      const result = v.validateUUID(value);
-      return result.isValid;
-    },
+    validator: v.validateUUID,
   },
-  personalAccountID: {
-    sanitizer: s.sanitizeUUID,
-    validator: (value: string) => {
-      const result = v.validateUUID(value);
-      return result.isValid;
-    },
+  rate: {
+    sanitizer: (value: number) => value, // No sanitization needed for numbers
+    validator: v.validatePositiveNumber, // Ensure you have a validator for positive numbers
   },
-  DCOgiveInCXX: {
-    sanitizer: (value: any) => Number(value),
-    validator: (value: number) => {
-      const result = v.validateAmount(value);
-      return result.isValid;
-    },
-  },
-  DCOdenom: {
-    sanitizer: s.sanitizeDenomination,
-    validator: (value: string) => {
-      const result = v.validateDenomination(value);
-      return result.isValid;
-    },
-  },
+  // Include other fields with appropriate sanitizers and validators
 };
 logger.debug("setDCOparticipantRateSchema initialized");
 

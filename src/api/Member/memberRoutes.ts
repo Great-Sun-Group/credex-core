@@ -71,39 +71,9 @@ export default function MemberRoutes(jsonParser: express.RequestHandler, apiVers
   router.post(
     `/member/onboardMember`,
     logRawBody,
-    (req, res, next) => {
-      logger.debug('Before jsonParser', { path: req.path });
-      jsonParser(req, res, (err) => {
-        if (err) {
-          logger.error('jsonParser error', { error: err.message, path: req.path });
-          return res.status(400).json({ message: 'Invalid JSON' });
-        }
-        logger.debug('After jsonParser', { path: req.path });
-        next();
-      });
-    },
-    (req, res, next) => {
-      logger.debug('Before validateRequest', { path: req.path });
-      validateRequest(onboardMemberSchema)(req, res, (err) => {
-        if (err) {
-          logger.error('validateRequest error', { error: err.message, path: req.path });
-          return res.status(400).json({ message: 'Validation failed' });
-        }
-        logger.debug('After validateRequest', { path: req.path });
-        next();
-      });
-    },
-    (req, res, next) => {
-      logger.debug('Before onboardMemberExpressHandler', { path: req.path });
-      onboardMemberExpressHandler(req, res, (err) => {
-        if (err) {
-          logger.error('onboardMemberExpressHandler error', { error: err.message, path: req.path });
-          return next(err);
-        }
-        logger.debug('After onboardMemberExpressHandler', { path: req.path });
-        next();
-      });
-    }
+    jsonParser,
+    validateRequest(onboardMemberSchema),
+    onboardMemberExpressHandler
   );
 
   router.post(

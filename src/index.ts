@@ -20,7 +20,7 @@ import { startServer, setupGracefulShutdown, setupUncaughtExceptionHandler, setu
 import { getConfig } from "../config/config";
 
 // Create an Express application
-const app = express();
+export const app = express();
 
 // Create a JSON parser middleware
 const jsonParser = bodyParser.json();
@@ -121,8 +121,8 @@ async function initializeApp() {
 if (require.main === module) {
   (async () => {
     try {
-      const initializedApp = await initializeApp();
-      const server = await startServer(initializedApp);
+      await initializeApp();
+      const server = await startServer(app);
       setupGracefulShutdown(server);
       setupUncaughtExceptionHandler(server);
       setupUnhandledRejectionHandler();

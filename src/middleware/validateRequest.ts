@@ -3,7 +3,7 @@ import * as validators from "../utils/validators";
 import * as sanitizers from "../utils/inputSanitizer";
 import logger from "../utils/logger";
 
-type ValidatorFunction = (value: any) => boolean;
+type ValidatorFunction = (value: any) => { isValid: boolean; message?: string | undefined };
 type SanitizerFunction = (value: any) => any;
 
 type SchemaItem = {
@@ -29,11 +29,13 @@ function sanitizeAndValidateObject(
       const { sanitizer, validator } = schemaItem as SchemaItem;
       const sanitizedValue = sanitizer(obj[key]);
       sanitizedObj[key] = sanitizedValue;
-      if (!validator(sanitizedValue)) {
+
+      const validationResult = validator(sanitizedValue);
+      if (!validationResult.isValid) {
         logger.debug(`Validation failed for key: ${key}`, {
           value: sanitizedValue,
         });
-        return { sanitizedObj, error: `Invalid ${key}` };
+        return { sanitizedObj, error: validationResult.message || `Invalid ${key}` };
       }
     } else if (typeof schemaItem === "object") {
       if (typeof obj[key] !== "object") {
@@ -67,10 +69,7 @@ export function validateRequest(
       source,
     });
 
-    const { sanitizedObj, error } = sanitizeAndValidateObject(
-      req[source],
-      schema
-    );
+    const { sanitizedObj, error } = sanitizeAndValidateObject(req[source], schema);
     if (error) {
       logger.warn("Request validation failed", {
         path: req.path,
