@@ -59,6 +59,27 @@ jobs:
           echo "Waiting for service to stabilize..."
           aws ecs wait services-stable --cluster credex-cluster-${{ env.ENVIRONMENT }} --services credex-core-service-${{ env.ENVIRONMENT }}
 
+      - name: Debug ECS Service
+        if: failure()
+        run: |
+          echo "Debugging ECS Service..."
+          aws ecs describe-services --cluster credex-cluster-${{ env.ENVIRONMENT }} --services credex-core-service-${{ env.ENVIRONMENT }}
+          
+          echo "Listing recent task failures..."
+          TASK_ARNS=$(aws ecs list-tasks --cluster credex-cluster-${{ env.ENVIRONMENT }} --service-name credex-core-service-${{ env.ENVIRONMENT }} --desired-status STOPPED --query 'taskArns' --output text)
+          for TASK_ARN in $TASK_ARNS; do
+            echo "Task $TASK_ARN details:"
+            aws ecs describe-tasks --cluster credex-cluster-${{ env.ENVIRONMENT }} --tasks $TASK_ARN
+          done
+          
+          echo "Checking CloudWatch Logs..."
+          LOG_GROUP="/ecs/credex-core-${{ env.ENVIRONMENT }}"
+          LOG_STREAMS=$(aws logs describe-log-streams --log-group-name $LOG_GROUP --order-by LastEventTime --descending --max-items 5 --query 'logStreams[*].logStreamName' --output text)
+          for STREAM in $LOG_STREAMS; do
+            echo "Log stream $STREAM:"
+            aws logs get-log-events --log-group-name $LOG_GROUP --log-stream-name $STREAM --limit 100 --query 'events[*].message' --output text
+          done
+
       - name: Print Deployment Information
         run: |
           echo "Deployment completed successfully. Updated ECS service with latest image."
