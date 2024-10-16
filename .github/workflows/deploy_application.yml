@@ -2,32 +2,25 @@ name: Deploy Application
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 0 * * *" # Daily at midnight
 
 jobs:
   deploy_application:
     runs-on: ubuntu-latest
-
+    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+    
     steps:
-      - name: Determine environment
-        id: determine_env
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/stage" || "${{ github.ref }}" == "refs/heads/deploy8" ]]; then
-            echo "ENVIRONMENT=staging" >> $GITHUB_OUTPUT
-          else
-            echo "ENVIRONMENT=development" >> $GITHUB_OUTPUT
-          fi
-          echo "Determined environment: ${{ steps.determine_env.outputs.ENVIRONMENT }}"
-
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Debug Environment
+      - name: Set Environment
         run: |
-          echo "Environment: ${{ steps.determine_env.outputs.ENVIRONMENT }}"
+          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=development" >> $GITHUB_ENV
+          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -35,8 +28,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-        env:
-          GITHUB_ENV: ${{ steps.determine_env.outputs.ENVIRONMENT }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -45,10 +36,10 @@ jobs:
       - name: Build, tag, and push image to Amazon ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: credex-core-${{ steps.determine_env.outputs.ENVIRONMENT }}
+          ECR_REPOSITORY: credex-core-${{ env.ENVIRONMENT }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build --target ${{ steps.determine_env.outputs.ENVIRONMENT }} \
+          docker build --target ${{ env.ENVIRONMENT }} \
             --build-arg NEO_4J_LEDGER_SPACE_USER=${{ secrets.NEO_4J_LEDGER_SPACE_USER }} \
             --build-arg NEO_4J_LEDGER_SPACE_PASS=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }} \
             --build-arg NEO_4J_LEDGER_SPACE_BOLT_URL=${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }} \
@@ -66,12 +57,12 @@ jobs:
 
       - name: Terraform Init and Apply for Application
         env:
-          TF_VAR_environment: ${{ steps.determine_env.outputs.ENVIRONMENT }}
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_create_resource: "true"
         run: |
           cd terraform
           terraform init
-          terraform workspace select ${{ steps.determine_env.outputs.ENVIRONMENT }} || terraform workspace new ${{ steps.determine_env.outputs.ENVIRONMENT }}
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
           terraform apply -auto-approve -target=aws_ecs_task_definition.credex_core \
             -var="neo4j_ledger_space_user=${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" \
             -var="neo4j_ledger_space_pass=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" \
@@ -85,12 +76,10 @@ jobs:
       - name: Update ECS Service
         run: |
           TASK_DEF_ARN=$(terraform output -raw ecs_task_definition_arn)
-          aws ecs update-service --cluster credex-cluster-${{ steps.determine_env.outputs.ENVIRONMENT }} --service credex-core-service-${{ steps.determine_env.outputs.ENVIRONMENT }} --task-definition $TASK_DEF_ARN
+          aws ecs update-service --cluster credex-cluster-${{ env.ENVIRONMENT }} --service credex-core-service-${{ env.ENVIRONMENT }} --task-definition $TASK_DEF_ARN
           echo "Waiting for service to stabilize..."
-          aws ecs wait services-stable --cluster credex-cluster-${{ steps.determine_env.outputs.ENVIRONMENT }} --services credex-core-service-${{ steps.determine_env.outputs.ENVIRONMENT }}
+          aws ecs wait services-stable --cluster credex-cluster-${{ env.ENVIRONMENT }} --services credex-core-service-${{ env.ENVIRONMENT }}
 
       - name: Print Deployment Information
         run: |
           echo "Deployment completed successfully. New task definition ARN: $TASK_DEF_ARN"
-
-    environment: ${{ steps.determine_env.outputs.ENVIRONMENT }}
