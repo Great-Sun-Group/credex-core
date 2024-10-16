@@ -5,15 +5,22 @@ on:
   schedule:
     - cron: "0 0 * * *" # Daily at midnight
 
-env:
-  ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
-
 jobs:
   deploy_application:
     runs-on: ubuntu-latest
-    environment: ${{ env.ENVIRONMENT }}
 
     steps:
+      - name: Determine environment
+        id: determine_env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_OUTPUT
+          else
+            echo "ENVIRONMENT=development" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -31,10 +38,10 @@ jobs:
       - name: Build, tag, and push image to Amazon ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: credex-core-${{ env.ENVIRONMENT }}
+          ECR_REPOSITORY: credex-core-${{ steps.determine_env.outputs.ENVIRONMENT }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build --target ${{ env.ENVIRONMENT }} \
+          docker build --target ${{ steps.determine_env.outputs.ENVIRONMENT }} \
             --build-arg NEO_4J_LEDGER_SPACE_USER=${{ secrets.NEO_4J_LEDGER_SPACE_USER }} \
             --build-arg NEO_4J_LEDGER_SPACE_PASS=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }} \
             --build-arg NEO_4J_LEDGER_SPACE_BOLT_URL=${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }} \
@@ -52,12 +59,12 @@ jobs:
 
       - name: Terraform Init and Apply for Application
         env:
-          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_environment: ${{ steps.determine_env.outputs.ENVIRONMENT }}
           TF_VAR_create_resource: "true"
         run: |
           cd terraform
           terraform init
-          terraform workspace select $ENVIRONMENT || terraform workspace new $ENVIRONMENT
+          terraform workspace select ${{ steps.determine_env.outputs.ENVIRONMENT }} || terraform workspace new ${{ steps.determine_env.outputs.ENVIRONMENT }}
           terraform apply -auto-approve -target=aws_ecs_task_definition.credex_core \
             -var="neo4j_ledger_space_user=${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" \
             -var="neo4j_ledger_space_pass=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" \
@@ -71,9 +78,9 @@ jobs:
       - name: Update ECS Service
         run: |
           TASK_DEF_ARN=$(terraform output -raw ecs_task_definition_arn)
-          aws ecs update-service --cluster credex-cluster-$ENVIRONMENT --service credex-core-service-$ENVIRONMENT --task-definition $TASK_DEF_ARN
+          aws ecs update-service --cluster credex-cluster-${{ steps.determine_env.outputs.ENVIRONMENT }} --service credex-core-service-${{ steps.determine_env.outputs.ENVIRONMENT }} --task-definition $TASK_DEF_ARN
           echo "Waiting for service to stabilize..."
-          aws ecs wait services-stable --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT
+          aws ecs wait services-stable --cluster credex-cluster-${{ steps.determine_env.outputs.ENVIRONMENT }} --services credex-core-service-${{ steps.determine_env.outputs.ENVIRONMENT }}
 
       - name: Print Deployment Information
         run: |
