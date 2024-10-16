@@ -47,6 +47,25 @@ variable "create_resource" {
   default     = true
 }
 
+# Variables passed from Github Action script checks on whether these resources exist
+variable "create_ecr" {
+  description = "Whether to create the ECR repository"
+  type        = bool
+  default     = true
+}
+
+variable "create_ecs_cluster" {
+  description = "Whether to create the ECS cluster"
+  type        = bool
+  default     = true
+}
+
+variable "create_log_group" {
+  description = "Whether to create the CloudWatch log group"
+  type        = bool
+  default     = true
+}
+
 # Variables for secrets (passed from GitHub Actions)
 variable "jwt_secret" {
   description = "JWT secret for authentication"

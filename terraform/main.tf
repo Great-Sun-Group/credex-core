@@ -10,57 +10,59 @@ locals {
     Project     = "CredEx"
     ManagedBy   = "Terraform"
   }
-  create_resource = var.create_resource
 }
 
-# Data source for existing ECR repository (used when not creating resources)
-data "aws_ecr_repository" "credex_core" {
-  count = local.create_resource ? 0 : 1
-  name  = "credex-core-${var.environment}"
-}
-
-# Create ECR repository if it doesn't exist (used when creating resources)
+# ECR repository
 resource "aws_ecr_repository" "credex_core" {
-  count = local.create_resource ? 1 : 0
+  count                = var.create_ecr ? 1 : 0
+  name                 = "credex-core-${var.environment}"
+  image_tag_mutability = "MUTABLE"
+  tags                 = local.common_tags
+}
+
+data "aws_ecr_repository" "credex_core" {
+  count = var.create_ecr ? 0 : 1
   name  = "credex-core-${var.environment}"
-  tags  = local.common_tags
 }
 
-# Data source for existing ECS cluster (used when not creating resources)
-data "aws_ecs_cluster" "credex_cluster" {
-  count        = local.create_resource ? 0 : 1
-  cluster_name = "credex-cluster-${var.environment}"
-}
-
-# Create ECS cluster if it doesn't exist (used when creating resources)
+# ECS cluster
 resource "aws_ecs_cluster" "credex_cluster" {
-  count = local.create_resource ? 1 : 0
+  count = var.create_ecs_cluster ? 1 : 0
   name  = "credex-cluster-${var.environment}"
   tags  = local.common_tags
 }
 
+data "aws_ecs_cluster" "credex_cluster" {
+  count        = var.create_ecs_cluster ? 0 : 1
+  cluster_name = "credex-cluster-${var.environment}"
+}
+
 # CloudWatch log group
 resource "aws_cloudwatch_log_group" "ecs_logs" {
-  count = local.create_resource ? 1 : 0
+  count = var.create_log_group ? 1 : 0
   name  = "/ecs/credex-core-${var.environment}"
   tags  = local.common_tags
 }
 
+data "aws_cloudwatch_log_group" "ecs_logs" {
+  count = var.create_log_group ? 0 : 1
+  name  = "/ecs/credex-core-${var.environment}"
+}
+
 # ECS task definition
 resource "aws_ecs_task_definition" "credex_core" {
-  count                    = local.create_resource ? 1 : 0
   family                   = "credex-core-${var.environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "512"
   memory                   = "1024"
-  execution_role_arn       = aws_iam_role.ecs_execution_role[0].arn
-  task_role_arn            = aws_iam_role.ecs_task_role[0].arn
+  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
       name  = "credex-core"
-      image = "${try(aws_ecr_repository.credex_core[0].repository_url, data.aws_ecr_repository.credex_core[0].repository_url)}:latest"
+      image = "${var.create_ecr ? aws_ecr_repository.credex_core[0].repository_url : data.aws_ecr_repository.credex_core[0].repository_url}:latest"
       portMappings = [
         {
           containerPort = 5000
@@ -81,7 +83,7 @@ resource "aws_ecs_task_definition" "credex_core" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = aws_cloudwatch_log_group.ecs_logs[0].name
+          awslogs-group         = var.create_log_group ? aws_cloudwatch_log_group.ecs_logs[0].name : data.aws_cloudwatch_log_group.ecs_logs[0].name
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "ecs"
         }
@@ -94,21 +96,20 @@ resource "aws_ecs_task_definition" "credex_core" {
 
 # ECS service
 resource "aws_ecs_service" "credex_core" {
-  count           = local.create_resource ? 1 : 0
   name            = "credex-core-service-${var.environment}"
-  cluster         = try(aws_ecs_cluster.credex_cluster[0].id, data.aws_ecs_cluster.credex_cluster[0].arn)
-  task_definition = aws_ecs_task_definition.credex_core[0].arn
+  cluster         = var.create_ecs_cluster ? aws_ecs_cluster.credex_cluster[0].id : data.aws_ecs_cluster.credex_cluster[0].arn
+  task_definition = aws_ecs_task_definition.credex_core.arn
   desired_count   = 1
   launch_type     = "FARGATE"
 
   network_configuration {
     subnets          = data.aws_subnets.default.ids
-    security_groups  = [aws_security_group.ecs_tasks[0].id]
+    security_groups  = [aws_security_group.ecs_tasks.id]
     assign_public_ip = true
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.credex_core[0].arn
+    target_group_arn = aws_lb_target_group.credex_core.arn
     container_name   = "credex-core"
     container_port   = 5000
   }
@@ -120,8 +121,7 @@ resource "aws_ecs_service" "credex_core" {
 
 # IAM roles
 resource "aws_iam_role" "ecs_execution_role" {
-  count = local.create_resource ? 1 : 0
-  name  = "ecs-execution-role-${var.environment}"
+  name = "ecs-execution-role-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -140,8 +140,7 @@ resource "aws_iam_role" "ecs_execution_role" {
 }
 
 resource "aws_iam_role" "ecs_task_role" {
-  count = local.create_resource ? 1 : 0
-  name  = "ecs-task-role-${var.environment}"
+  name = "ecs-task-role-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -161,22 +160,20 @@ resource "aws_iam_role" "ecs_task_role" {
 
 # Attach necessary policies to the roles
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
-  count      = local.create_resource ? 1 : 0
-  role       = aws_iam_role.ecs_execution_role[0].name
+  role       = aws_iam_role.ecs_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_role_policy" {
-  count      = local.create_resource ? 1 : 0
-  role       = aws_iam_role.ecs_task_role[0].name
+  role       = aws_iam_role.ecs_task_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
 # Add ECR pull permissions to the ECS execution role
 resource "aws_iam_role_policy" "ecs_ecr_policy" {
-  count = local.create_resource ? 1 : 0
+  count = var.create_resource ? 1 : 0
   name  = "ecs-ecr-policy-${var.environment}"
-  role  = aws_iam_role.ecs_execution_role[0].id
+  role  = aws_iam_role.ecs_execution_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -197,9 +194,9 @@ resource "aws_iam_role_policy" "ecs_ecr_policy" {
 
 # Add explicit CloudWatch Logs permissions to the ECS execution role
 resource "aws_iam_role_policy" "ecs_cloudwatch_logs_policy" {
-  count = local.create_resource ? 1 : 0
+  count = var.create_resource ? 1 : 0
   name  = "ecs-cloudwatch-logs-policy-${var.environment}"
-  role  = aws_iam_role.ecs_execution_role[0].id
+  role  = aws_iam_role.ecs_execution_role.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -209,7 +206,7 @@ resource "aws_iam_role_policy" "ecs_cloudwatch_logs_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "${aws_cloudwatch_log_group.ecs_logs[0].arn}:*"
+        Resource = "${var.create_log_group ? aws_cloudwatch_log_group.ecs_logs[0].arn : data.aws_cloudwatch_log_group.ecs_logs[0].arn}:*"
       }
     ]
   })
@@ -217,18 +214,16 @@ resource "aws_iam_role_policy" "ecs_cloudwatch_logs_policy" {
 
 # Outputs for debugging
 output "ecr_repository_url" {
-  value       = try(aws_ecr_repository.credex_core[0].repository_url, data.aws_ecr_repository.credex_core[0].repository_url, "N/A")
+  value       = var.create_ecr ? aws_ecr_repository.credex_core[0].repository_url : data.aws_ecr_repository.credex_core[0].repository_url
   description = "The URL of the ECR repository"
 }
 
 output "ecs_cluster_arn" {
-  value       = try(aws_ecs_cluster.credex_cluster[0].arn, data.aws_ecs_cluster.credex_cluster[0].arn, "N/A")
+  value       = var.create_ecs_cluster ? aws_ecs_cluster.credex_cluster[0].arn : data.aws_ecs_cluster.credex_cluster[0].arn
   description = "The ARN of the ECS cluster"
 }
 
 output "ecs_task_definition_arn" {
-  value       = try(aws_ecs_task_definition.credex_core[0].arn, "N/A")
+  value       = aws_ecs_task_definition.credex_core.arn
   description = "The ARN of the ECS task definition"
 }
-
-# Add other necessary resources and configurations here

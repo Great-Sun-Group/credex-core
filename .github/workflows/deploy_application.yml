@@ -7,7 +7,7 @@ jobs:
   deploy_application:
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -52,34 +52,13 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-
-      - name: Terraform Init and Apply for Application
-        env:
-          TF_VAR_environment: ${{ env.ENVIRONMENT }}
-          TF_VAR_create_resource: "true"
-        run: |
-          cd terraform
-          terraform init
-          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
-          terraform apply -auto-approve -target=aws_ecs_task_definition.credex_core \
-            -var="neo4j_ledger_space_user=${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" \
-            -var="neo4j_ledger_space_pass=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" \
-            -var="neo4j_ledger_space_bolt_url=${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}" \
-            -var="neo4j_search_space_user=${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" \
-            -var="neo4j_search_space_pass=${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" \
-            -var="neo4j_search_space_bolt_url=${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}" \
-            -var="open_exchange_rates_api=${{ secrets.OPEN_EXCHANGE_RATES_API }}" \
-            -var="jwt_secret=${{ secrets.JWT_SECRET }}"
-
       - name: Update ECS Service
         run: |
-          TASK_DEF_ARN=$(terraform output -raw ecs_task_definition_arn)
-          aws ecs update-service --cluster credex-cluster-${{ env.ENVIRONMENT }} --service credex-core-service-${{ env.ENVIRONMENT }} --task-definition $TASK_DEF_ARN
+          TASK_DEF_ARN=$(aws ecs describe-task-definition --task-definition credex-core-${{ env.ENVIRONMENT }} --query 'taskDefinition.taskDefinitionArn' --output text)
+          aws ecs update-service --cluster credex-cluster-${{ env.ENVIRONMENT }} --service credex-core-service-${{ env.ENVIRONMENT }} --task-definition $TASK_DEF_ARN --force-new-deployment
           echo "Waiting for service to stabilize..."
           aws ecs wait services-stable --cluster credex-cluster-${{ env.ENVIRONMENT }} --services credex-core-service-${{ env.ENVIRONMENT }}
 
       - name: Print Deployment Information
         run: |
-          echo "Deployment completed successfully. New task definition ARN: $TASK_DEF_ARN"
+          echo "Deployment completed successfully. Updated ECS service with latest image."
