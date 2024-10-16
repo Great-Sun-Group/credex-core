@@ -53,7 +53,7 @@ jobs:
           cd terraform
           terraform init
           terraform workspace select $ENVIRONMENT || terraform workspace new $ENVIRONMENT
-          terraform apply -auto-approve -target=aws_ecs_task_definition.credex_core -var="environment=$ENVIRONMENT"
+          terraform apply -auto-approve -target=aws_ecs_task_definition.credex_core -var="environment=$ENVIRONMENT" -var="create_resource=true"
 
       - name: Update ECS Service
         run: |

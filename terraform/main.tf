@@ -10,45 +10,45 @@ locals {
     Project     = "CredEx"
     ManagedBy   = "Terraform"
   }
-  create_resources = var.operation_type == "create" || var.operation_type == "redeploy"
+  create_resource = var.create_resource
 }
 
-# Data source for existing ECR repository (used in wipe and redeploy)
+# Data source for existing ECR repository (used when not creating resources)
 data "aws_ecr_repository" "credex_core" {
-  count = var.operation_type != "create" ? 1 : 0
+  count = local.create_resource ? 0 : 1
   name  = "credex-core-${var.environment}"
 }
 
-# Create ECR repository if it doesn't exist (used in create and redeploy)
+# Create ECR repository if it doesn't exist (used when creating resources)
 resource "aws_ecr_repository" "credex_core" {
-  count = local.create_resources ? 1 : 0
+  count = local.create_resource ? 1 : 0
   name  = "credex-core-${var.environment}"
   tags  = local.common_tags
 }
 
-# Data source for existing ECS cluster (used in wipe and redeploy)
+# Data source for existing ECS cluster (used when not creating resources)
 data "aws_ecs_cluster" "credex_cluster" {
-  count        = var.operation_type != "create" ? 1 : 0
+  count        = local.create_resource ? 0 : 1
   cluster_name = "credex-cluster-${var.environment}"
 }
 
-# Create ECS cluster if it doesn't exist (used in create and redeploy)
+# Create ECS cluster if it doesn't exist (used when creating resources)
 resource "aws_ecs_cluster" "credex_cluster" {
-  count = local.create_resources ? 1 : 0
+  count = local.create_resource ? 1 : 0
   name  = "credex-cluster-${var.environment}"
   tags  = local.common_tags
 }
 
 # CloudWatch log group
 resource "aws_cloudwatch_log_group" "ecs_logs" {
-  count = local.create_resources ? 1 : 0
+  count = local.create_resource ? 1 : 0
   name  = "/ecs/credex-core-${var.environment}"
   tags  = local.common_tags
 }
 
 # ECS task definition
 resource "aws_ecs_task_definition" "credex_core" {
-  count                    = local.create_resources ? 1 : 0
+  count                    = local.create_resource ? 1 : 0
   family                   = "credex-core-${var.environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
@@ -94,7 +94,7 @@ resource "aws_ecs_task_definition" "credex_core" {
 
 # ECS service
 resource "aws_ecs_service" "credex_core" {
-  count           = local.create_resources ? 1 : 0
+  count           = local.create_resource ? 1 : 0
   name            = "credex-core-service-${var.environment}"
   cluster         = try(aws_ecs_cluster.credex_cluster[0].id, data.aws_ecs_cluster.credex_cluster[0].arn)
   task_definition = aws_ecs_task_definition.credex_core[0].arn
@@ -120,7 +120,7 @@ resource "aws_ecs_service" "credex_core" {
 
 # IAM roles
 resource "aws_iam_role" "ecs_execution_role" {
-  count = local.create_resources ? 1 : 0
+  count = local.create_resource ? 1 : 0
   name  = "ecs-execution-role-${var.environment}"
 
   assume_role_policy = jsonencode({
@@ -140,7 +140,7 @@ resource "aws_iam_role" "ecs_execution_role" {
 }
 
 resource "aws_iam_role" "ecs_task_role" {
-  count = local.create_resources ? 1 : 0
+  count = local.create_resource ? 1 : 0
   name  = "ecs-task-role-${var.environment}"
 
   assume_role_policy = jsonencode({
@@ -161,20 +161,20 @@ resource "aws_iam_role" "ecs_task_role" {
 
 # Attach necessary policies to the roles
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
-  count      = local.create_resources ? 1 : 0
+  count      = local.create_resource ? 1 : 0
   role       = aws_iam_role.ecs_execution_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_role_policy" {
-  count      = local.create_resources ? 1 : 0
+  count      = local.create_resource ? 1 : 0
   role       = aws_iam_role.ecs_task_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
 # Add ECR pull permissions to the ECS execution role
 resource "aws_iam_role_policy" "ecs_ecr_policy" {
-  count = local.create_resources ? 1 : 0
+  count = local.create_resource ? 1 : 0
   name  = "ecs-ecr-policy-${var.environment}"
   role  = aws_iam_role.ecs_execution_role[0].id
 
@@ -197,7 +197,7 @@ resource "aws_iam_role_policy" "ecs_ecr_policy" {
 
 # Add explicit CloudWatch Logs permissions to the ECS execution role
 resource "aws_iam_role_policy" "ecs_cloudwatch_logs_policy" {
-  count = local.create_resources ? 1 : 0
+  count = local.create_resource ? 1 : 0
   name  = "ecs-cloudwatch-logs-policy-${var.environment}"
   role  = aws_iam_role.ecs_execution_role[0].id
   policy = jsonencode({

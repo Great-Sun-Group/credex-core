@@ -41,15 +41,10 @@ variable "log_level" {
   }
 }
 
-variable "operation_type" {
-  description = "The type of operation to perform (create, delete, redeploy)"
-  type        = string
-  default     = "create"
-
-  validation {
-    condition     = contains(["create", "delete", "redeploy"], var.operation_type)
-    error_message = "The operation_type must be one of: create, delete, redeploy."
-  }
+variable "create_resource" {
+  description = "Boolean flag to indicate whether to create/update (true) or delete (false) resources"
+  type        = bool
+  default     = true
 }
 
 # Variables for secrets (passed from GitHub Actions)
