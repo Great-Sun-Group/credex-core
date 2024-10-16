@@ -3,26 +3,19 @@ name: Deploy Application
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'  # Daily at midnight
+    - cron: "0 0 * * *" # Daily at midnight
+
+env:
+  ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
 
 jobs:
   deploy_application:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
-    
+    environment: ${{ env.ENVIRONMENT }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Set Environment
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-          else
-            echo "ENVIRONMENT=development" >> $GITHUB_ENV
-          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -41,7 +34,16 @@ jobs:
           ECR_REPOSITORY: credex-core-${{ env.ENVIRONMENT }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build --target $ENVIRONMENT -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker build --target $ENVIRONMENT \
+            --build-arg NEO_4J_LEDGER_SPACE_USER=${{ secrets.NEO_4J_LEDGER_SPACE_USER }} \
+            --build-arg NEO_4J_LEDGER_SPACE_PASS=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }} \
+            --build-arg NEO_4J_LEDGER_SPACE_BOLT_URL=${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }} \
+            --build-arg NEO_4J_SEARCH_SPACE_USER=${{ secrets.NEO_4J_SEARCH_SPACE_USER }} \
+            --build-arg NEO_4J_SEARCH_SPACE_PASS=${{ secrets.NEO_4J_SEARCH_SPACE_PASS }} \
+            --build-arg NEO_4J_SEARCH_SPACE_BOLT_URL=${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }} \
+            --build-arg OPEN_EXCHANGE_RATES_API=${{ secrets.OPEN_EXCHANGE_RATES_API }} \
+            --build-arg JWT_SECRET=${{ secrets.JWT_SECRET }} \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
@@ -49,11 +51,22 @@ jobs:
         uses: hashicorp/setup-terraform@v2
 
       - name: Terraform Init and Apply for Application
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_create_resource: "true"
         run: |
           cd terraform
           terraform init
           terraform workspace select $ENVIRONMENT || terraform workspace new $ENVIRONMENT
-          terraform apply -auto-approve -target=aws_ecs_task_definition.credex_core -var="environment=$ENVIRONMENT" -var="create_resource=true"
+          terraform apply -auto-approve -target=aws_ecs_task_definition.credex_core \
+            -var="neo4j_ledger_space_user=${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" \
+            -var="neo4j_ledger_space_pass=${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" \
+            -var="neo4j_ledger_space_bolt_url=${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}" \
+            -var="neo4j_search_space_user=${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" \
+            -var="neo4j_search_space_pass=${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" \
+            -var="neo4j_search_space_bolt_url=${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}" \
+            -var="open_exchange_rates_api=${{ secrets.OPEN_EXCHANGE_RATES_API }}" \
+            -var="jwt_secret=${{ secrets.JWT_SECRET }}"
 
       - name: Update ECS Service
         run: |
@@ -62,13 +75,6 @@ jobs:
           echo "Waiting for service to stabilize..."
           aws ecs wait services-stable --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT
 
-      - name: Generate JWT Token
-        run: |
-          JWT_SECRET=$(openssl rand -base64 32)
-          echo "JWT_SECRET=$JWT_SECRET" >> $GITHUB_ENV
-
       - name: Print Deployment Information
         run: |
-          echo "Please manually add the following secret to your GitHub repository for the $ENVIRONMENT environment:"
-          echo "JWT_SECRET: $JWT_SECRET"
           echo "Deployment completed successfully. New task definition ARN: $TASK_DEF_ARN"

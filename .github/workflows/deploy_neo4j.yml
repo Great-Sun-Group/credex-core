@@ -3,24 +3,17 @@ name: Deploy Neo4j
 on:
   workflow_dispatch:
 
+env:
+  ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+
 jobs:
   deploy_neo4j:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+    environment: ${{ env.ENVIRONMENT }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Set Environment
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-          else
-            echo "ENVIRONMENT=development" >> $GITHUB_ENV
-          fi
 
       - name: Generate Neo4j Credentials
         run: |
@@ -43,15 +36,12 @@ jobs:
           terraform workspace select $ENVIRONMENT || terraform workspace new $ENVIRONMENT
           terraform apply -auto-approve -target=module.neo4j -var="environment=$ENVIRONMENT" -var="create_resource=true"
 
-      - name: Get Neo4j Outputs
-        run: |
-          cd terraform
-          echo "NEO4J_LEDGER_URL=$(terraform output -raw neo4j_ledger_space_bolt_url)" >> $GITHUB_ENV
-          echo "NEO4J_SEARCH_URL=$(terraform output -raw neo4j_search_space_bolt_url)" >> $GITHUB_ENV
-
       - name: Print Neo4j Information
         run: |
+          cd terraform
           echo "Please manually add the following secrets to your GitHub repository for the $ENVIRONMENT environment:"
+          echo "NEO4J_LEDGER_URL=$(terraform output -raw neo4j_ledger_space_bolt_url)" >> $GITHUB_ENV
+          echo "NEO4J_SEARCH_URL=$(terraform output -raw neo4j_search_space_bolt_url)" >> $GITHUB_ENV
           echo "NEO4J_LEDGER_BOLT_URL: $NEO4J_LEDGER_URL"
           echo "NEO4J_SEARCH_BOLT_URL: $NEO4J_SEARCH_URL"
           echo "NEO4J_LEDGER_USER: $NEO4J_LEDGER_USER"

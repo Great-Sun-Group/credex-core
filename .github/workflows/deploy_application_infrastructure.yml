@@ -3,24 +3,17 @@ name: Deploy Application Infrastructure
 on:
   workflow_dispatch:
 
+env:
+  ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+
 jobs:
   deploy_infrastructure:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+    environment: ${{ env.ENVIRONMENT }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Set Environment
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-          else
-            echo "ENVIRONMENT=development" >> $GITHUB_ENV
-          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
