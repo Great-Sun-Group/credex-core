@@ -1,19 +1,28 @@
 import axios, { AxiosError } from "axios";
 import https from "https";
 
-// Use the CODESPACE_NAME environment variable to construct the BASE_URL
-const CODESPACE_NAME = process.env.CODESPACE_NAME || 'localhost';
-const BASE_URL = `https://${CODESPACE_NAME}-5000.preview.app.github.dev/api/v1`;
+// Use an environment variable to determine which environment we're testing
+const ENV = process.env.TEST_ENV || "local";
+
+let BASE_URL: string;
+if (ENV === "local") {
+  const CODESPACE_NAME = process.env.CODESPACE_NAME || "localhost";
+  BASE_URL = `https://${CODESPACE_NAME}-5000.preview.app.github.dev/api/v1`;
+} else {
+  BASE_URL = "https://dev.api.mycredex.app/api/v1";
+}
 
 console.log(`Using BASE_URL: ${BASE_URL}`);
 
 const axiosInstance = axios.create({
-  httpsAgent: new https.Agent({
-    rejectUnauthorized: false,
+  ...(ENV === "local" && {
+    httpsAgent: new https.Agent({
+      rejectUnauthorized: false,
+    }),
   }),
   headers: {
     "Content-Type": "application/json",
-    "X-Github-Token": process.env.GITHUB_TOKEN,
+    ...(ENV === "local" && { "X-Github-Token": process.env.GITHUB_TOKEN }),
   },
 });
 
@@ -49,7 +58,10 @@ describe("Basic API Test", () => {
         console.log(`Member ${i + 1} created successfully`);
       } catch (error) {
         if (axios.isAxiosError(error)) {
-          console.error(`Error creating member ${i + 1}:`, error.response?.data || error.message);
+          console.error(
+            `Error creating member ${i + 1}:`,
+            error.response?.data || error.message
+          );
         } else {
           console.error(`Error creating member ${i + 1}:`, error);
         }
@@ -73,7 +85,10 @@ describe("Basic API Test", () => {
       console.log("rdubs logged in successfully");
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error("Error logging in rdubs:", error.response?.data || error.message);
+        console.error(
+          "Error logging in rdubs:",
+          error.response?.data || error.message
+        );
       } else {
         console.error("Error logging in rdubs:", error);
       }
@@ -92,7 +107,10 @@ describe("Basic API Test", () => {
       vimbisopayAccountId = accountResponse.data.accountId;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error("Error getting vimbisopay.audited account:", error.response?.data || error.message);
+        console.error(
+          "Error getting vimbisopay.audited account:",
+          error.response?.data || error.message
+        );
       } else {
         console.error("Error getting vimbisopay.audited account:", error);
       }
@@ -121,7 +139,10 @@ describe("Basic API Test", () => {
       console.log("Credex offered successfully");
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error("Error offering credex:", error.response?.data || error.message);
+        console.error(
+          "Error offering credex:",
+          error.response?.data || error.message
+        );
       } else {
         console.error("Error offering credex:", error);
       }
@@ -161,7 +182,10 @@ describe("Basic API Test", () => {
       console.log("Second credex offered successfully");
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error("Error in step 3:", error.response?.data || error.message);
+        console.error(
+          "Error in step 3:",
+          error.response?.data || error.message
+        );
       } else {
         console.error("Error in step 3:", error);
       }
@@ -199,7 +223,10 @@ describe("Basic API Test", () => {
       console.log("Third credex offered successfully");
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error("Error in step 4:", error.response?.data || error.message);
+        console.error(
+          "Error in step 4:",
+          error.response?.data || error.message
+        );
       } else {
         console.error("Error in step 4:", error);
       }
@@ -221,7 +248,10 @@ describe("Basic API Test", () => {
       console.log("Final credex accepted successfully");
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error("Error in step 5:", error.response?.data || error.message);
+        console.error(
+          "Error in step 5:",
+          error.response?.data || error.message
+        );
       } else {
         console.error("Error in step 5:", error);
       }
