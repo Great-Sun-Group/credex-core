@@ -3,48 +3,65 @@ name: Deploy Neo4j
 on:
   workflow_dispatch:
 
-env:
-  ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
-
 jobs:
   deploy_neo4j:
     runs-on: ubuntu-latest
-    environment: ${{ env.ENVIRONMENT }}
-    
+
     steps:
+      - name: Determine environment
+        id: determine_env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_OUTPUT
+          else
+            echo "ENVIRONMENT=development" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets[format('{0}_AWS_ACCESS_KEY_ID', steps.determine_env.outputs.ENVIRONMENT)] }}
+          aws-secret-access-key: ${{ secrets[format('{0}_AWS_SECRET_ACCESS_KEY', steps.determine_env.outputs.ENVIRONMENT)] }}
+          aws-region: ${{ secrets[format('{0}_AWS_REGION', steps.determine_env.outputs.ENVIRONMENT)] }}
+
       - name: Generate Neo4j Credentials
         run: |
-          NEO4J_LEDGER_USER="neo4j$(openssl rand -base64 8 | tr -dc '0-9' | fold -w 6 | head -n 1)"
-          NEO4J_SEARCH_USER="neo4j$(openssl rand -base64 8 | tr -dc '0-9' | fold -w 6 | head -n 1)"
-          NEO4J_LEDGER_PASS=$(openssl rand -base64 32)
-          NEO4J_SEARCH_PASS=$(openssl rand -base64 32)
-          echo "NEO4J_LEDGER_USER=$NEO4J_LEDGER_USER" >> $GITHUB_ENV
-          echo "NEO4J_SEARCH_USER=$NEO4J_SEARCH_USER" >> $GITHUB_ENV
-          echo "NEO4J_LEDGER_PASS=$NEO4J_LEDGER_PASS" >> $GITHUB_ENV
-          echo "NEO4J_SEARCH_PASS=$NEO4J_SEARCH_PASS" >> $GITHUB_ENV
+          NEO_4J_LEDGER_SPACE_USER="neo4j$(openssl rand -base64 8 | tr -dc '0-9' | fold -w 6 | head -n 1)"
+          NEO_4J_SEARCH_SPACE_USER="neo4j$(openssl rand -base64 8 | tr -dc '0-9' | fold -w 6 | head -n 1)"
+          NEO_4J_LEDGER_SPACE_PASS=$(openssl rand -base64 32)
+          NEO_4J_SEARCH_SPACE_PASS=$(openssl rand -base64 32)
+          echo "NEO_4J_LEDGER_SPACE_USER=$NEO_4J_LEDGER_SPACE_USER" >> $GITHUB_ENV
+          echo "NEO_4J_SEARCH_SPACE_USER=$NEO_4J_SEARCH_SPACE_USER" >> $GITHUB_ENV
+          echo "NEO_4J_LEDGER_SPACE_PASS=$NEO_4J_LEDGER_SPACE_PASS" >> $GITHUB_ENV
+          echo "NEO_4J_SEARCH_SPACE_PASS=$NEO_4J_SEARCH_SPACE_PASS" >> $GITHUB_ENV
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
       - name: Terraform Init and Apply for Neo4j
+        env:
+          TF_VAR_environment: ${{ steps.determine_env.outputs.ENVIRONMENT }}
+          TF_VAR_create_resource: "true"
         run: |
           cd terraform
           terraform init
-          terraform workspace select $ENVIRONMENT || terraform workspace new $ENVIRONMENT
-          terraform apply -auto-approve -target=module.neo4j -var="environment=$ENVIRONMENT" -var="create_resource=true"
+          terraform workspace select ${{ steps.determine_env.outputs.ENVIRONMENT }} || terraform workspace new ${{ steps.determine_env.outputs.ENVIRONMENT }}
+          terraform apply -auto-approve -target=module.neo4j -var="environment=${{ steps.determine_env.outputs.ENVIRONMENT }}" -var="create_resource=true"
 
       - name: Print Neo4j Information
         run: |
           cd terraform
-          echo "Please manually add the following secrets to your GitHub repository for the $ENVIRONMENT environment:"
-          echo "NEO4J_LEDGER_URL=$(terraform output -raw neo4j_ledger_space_bolt_url)" >> $GITHUB_ENV
-          echo "NEO4J_SEARCH_URL=$(terraform output -raw neo4j_search_space_bolt_url)" >> $GITHUB_ENV
-          echo "NEO4J_LEDGER_BOLT_URL: $NEO4J_LEDGER_URL"
-          echo "NEO4J_SEARCH_BOLT_URL: $NEO4J_SEARCH_URL"
-          echo "NEO4J_LEDGER_USER: $NEO4J_LEDGER_USER"
-          echo "NEO4J_LEDGER_PASS: $NEO4J_LEDGER_PASS"
-          echo "NEO4J_SEARCH_USER: $NEO4J_SEARCH_USER"
-          echo "NEO4J_SEARCH_PASS: $NEO4J_SEARCH_PASS"
+          echo "Please manually add the following secrets to your GitHub repository for the ${{ steps.determine_env.outputs.ENVIRONMENT }} environment:"
+          echo "NEO4J_LNEO_4J_LEDGER_SPACE_BOLT_URLDGER_URL=$(terraform output -raw neo4j_ledger_space_bolt_url)" >> $GITHUB_ENV
+          echo "NEO_4J_SEARCH_SPACE_BOLT_URL=$(terraform output -raw neo4j_search_space_bolt_url)" >> $GITHUB_ENV
+          echo "NEO_4J_LEDGER_SPACE_BOLT_URL: $NEO_4J_LEDGER_SPACE_BOLT_URL"
+          echo "NEO_4J_SEARCH_SPACE_BOLT_URL: $NEO_4J_SEARCH_SPACE_BOLT_URL"
+          echo "NEO_4J_LEDGER_SPACE_USER: $NEO_4J_LEDGER_SPACE_USER"
+          echo "NEO_4J_LEDGER_SPACE_PASS: $NEO_4J_LEDGER_SPACE_PASS"
+          echo "NEO_4J_SEARCH_SPACE_USER: $NEO_4J_SEARCH_SPACE_USER"
+          echo "NEO_4J_SEARCH_SPACE_PASS: $NEO_4J_SEARCH_SPACE_PASS"
