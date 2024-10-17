@@ -16,7 +16,10 @@ import {
 } from "./memberValidationSchemas";
 import logger from "../../utils/logger";
 
-export default function MemberRoutes(jsonParser: express.RequestHandler, apiVersionOneRoute: string) {
+export default function MemberRoutes(
+  jsonParser: express.RequestHandler,
+  apiVersionOneRoute: string
+) {
   const router = express.Router();
   logger.info("Initializing Member routes");
 
@@ -92,34 +95,43 @@ export default function MemberRoutes(jsonParser: express.RequestHandler, apiVers
 
   router.post(
     `/member/authForTierSpendLimit`,
+    logRawBody,
     (req, res, next) => {
-      logger.debug('Before jsonParser for authForTierSpendLimit', {
-        contentType: req.headers['content-type'],
+      logger.debug("Before jsonParser for authForTierSpendLimit", {
+        contentType: req.headers["content-type"],
         bodyType: typeof req.body,
         bodyKeys: req.body ? Object.keys(req.body) : [],
-        path: req.path
+        rawBody: req.body,
+        path: req.path,
       });
       next();
     },
     jsonParser,
     (req, res, next) => {
       try {
-        logger.debug('After jsonParser for authForTierSpendLimit', {
+        logger.debug("After jsonParser for authForTierSpendLimit", {
           bodyType: typeof req.body,
           bodyKeys: req.body ? Object.keys(req.body) : [],
+          parsedBody: JSON.stringify(req.body),
           issuerAccountID: req.body?.issuerAccountID,
           issuerAccountIDType: typeof req.body?.issuerAccountID,
-          path: req.path
+          path: req.path,
         });
         next();
       } catch (error) {
-        logger.error('Error in custom middleware for authForTierSpendLimit', {
-          error: error instanceof Error ? error.message : 'Unknown error',
+        logger.error("Error in custom middleware for authForTierSpendLimit", {
+          error: error instanceof Error ? error.message : "Unknown error",
           stack: error instanceof Error ? error.stack : undefined,
-          path: req.path
+          path: req.path,
         });
         next(error);
       }
+    },
+    (req, res, next) => {
+      logger.debug("authForTierSpendLimitSchema", {
+        schema: JSON.stringify(authForTierSpendLimitSchema),
+      });
+      next();
     },
     validateRequest(authForTierSpendLimitSchema),
     authForTierSpendLimitExpressHandler
