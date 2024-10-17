@@ -9,6 +9,7 @@ type SanitizerFunction = (value: any) => any;
 type SchemaItem = {
   sanitizer: SanitizerFunction;
   validator: ValidatorFunction;
+  required?: boolean;
 };
 
 type ValidationSchema = {
@@ -27,7 +28,18 @@ function sanitizeAndValidateObject(
       "sanitizer" in schemaItem &&
       "validator" in schemaItem
     ) {
-      const { sanitizer, validator } = schemaItem as SchemaItem;
+      const { sanitizer, validator, required } = schemaItem as SchemaItem;
+      
+      if (obj[key] === undefined) {
+        if (required) {
+          logger.error(`Required field missing: ${key}`);
+          return { sanitizedObj, error: `Required field missing: ${key}` };
+        } else {
+          logger.debug(`Optional field missing: ${key}`);
+          continue;
+        }
+      }
+
       logger.debug(`Sanitizing value for key: ${key}`, { value: obj[key], sanitizer: sanitizer.name });
       let sanitizedValue;
       try {
