@@ -137,6 +137,22 @@ export async function OfferCredexController(
         .json({ error: "Issuer and receiver cannot be the same account" });
     }
 
+    // Get member tier
+    logger.debug("Fetching member tier", { issuerAccountID, requestId });
+    const getMemberTier = await ledgerSpaceSession.run(
+      `
+        MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
+        RETURN member.memberTier as memberTier
+      `,
+      { issuerAccountID }
+    );
+
+    const memberTier = getMemberTier.records[0]?.get("memberTier");
+    if (!memberTier) {
+      logger.warn("Member tier not found", { issuerAccountID, requestId });
+      return res.status(404).json({ error: "Member tier not found" });
+    }
+
     // Check due date for unsecured credex
     if (!securedCredex) {
       logger.debug("Checking due date for unsecured credex", {
@@ -150,6 +166,18 @@ export async function OfferCredexController(
           error: `Due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan / 7} weeks from today.`,
         });
       }
+
+      // Check if unsecured credex is permitted on membership tier
+      if (memberTier == 1) {
+        logger.warn("Unauthorized unsecured credex for Open Tier", {
+          issuerAccountID,
+          memberTier,
+          requestId,
+        });
+        return res.status(400).json({
+          error: "Members on the Open Tier cannot issue unsecured credexes",
+        });
+      }
     }
 
     // Check secured credex limits based on membership tier
@@ -158,20 +186,6 @@ export async function OfferCredexController(
         issuerAccountID,
         requestId,
       });
-      const getMemberTier = await ledgerSpaceSession.run(
-        `
-          MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
-          RETURN member.memberTier as memberTier
-        `,
-        { issuerAccountID }
-      );
-
-      const memberTier = getMemberTier.records[0]?.get("memberTier");
-      if (!memberTier) {
-        logger.warn("Member tier not found", { issuerAccountID, requestId });
-        return res.status(404).json({ error: "Member tier not found" });
-      }
-
       logger.debug("Calling AuthForTierSpendLimitController", {
         issuerAccountID,
         InitialAmount,
@@ -187,44 +201,11 @@ export async function OfferCredexController(
       if (!tierAuth.isAuthorized) {
         logger.warn("Unauthorized secured credex", {
           issuerAccountID,
-          memberTier,
           InitialAmount,
           Denomination,
           requestId,
         });
         return res.status(400).json({ error: tierAuth.message });
-      }
-    }
-
-    // Check if unsecured credex is permitted on membership tier
-    if (!securedCredex) {
-      logger.debug("Checking unsecured credex permission", {
-        issuerAccountID,
-        requestId,
-      });
-      const getMemberTier = await ledgerSpaceSession.run(
-        `
-          MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
-          RETURN member.memberTier as memberTier
-        `,
-        { issuerAccountID }
-      );
-
-      const memberTier = getMemberTier.records[0]?.get("memberTier");
-      if (!memberTier) {
-        logger.warn("Member tier not found", { issuerAccountID, requestId });
-        return res.status(404).json({ error: "Member tier not found" });
-      }
-
-      if (memberTier == 1) {
-        logger.warn("Unauthorized unsecured credex for Open Tier", {
-          issuerAccountID,
-          memberTier,
-          requestId,
-        });
-        return res.status(400).json({
-          error: "Members on the Open Tier cannot issue unsecured credexes",
-        });
       }
     }
 
