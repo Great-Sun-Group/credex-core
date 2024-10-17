@@ -26,14 +26,12 @@ function sanitizeAndValidateObject(
 ): { sanitizedObj: any; error: string | null } {
   const sanitizedObj: any = {};
   for (const [key, schemaItem] of Object.entries(schema)) {
-    if (key === "issuerAccountID") {
-      logger.debug(`Processing issuerAccountID`, {
-        value: obj[key],
-        valueType: typeof obj[key],
-        objectKeys: Object.keys(obj),
-        path,
-      });
-    }
+    logger.debug(`Processing key: ${key}`, {
+      value: obj[key],
+      valueType: typeof obj[key],
+      objectKeys: Object.keys(obj),
+      path,
+    });
 
     if (
       typeof schemaItem === "object" &&
@@ -52,24 +50,20 @@ function sanitizeAndValidateObject(
         }
       }
 
-      if (key === "issuerAccountID") {
-        logger.debug(`Before sanitizing issuerAccountID`, {
-          value: obj[key],
-          sanitizer: sanitizer.name,
-          path,
-        });
-      }
+      logger.debug(`Before sanitizing ${key}`, {
+        value: obj[key],
+        sanitizer: sanitizer.name,
+        path,
+      });
 
       let sanitizedValue;
       try {
         sanitizedValue = sanitizer(obj[key]);
-        if (key === "issuerAccountID") {
-          logger.debug(`After sanitizing issuerAccountID`, {
-            originalValue: obj[key],
-            sanitizedValue,
-            path,
-          });
-        }
+        logger.debug(`After sanitizing ${key}`, {
+          originalValue: obj[key],
+          sanitizedValue,
+          path,
+        });
       } catch (error) {
         logger.error(`Error during sanitization for key: ${key}`, {
           error,
@@ -140,8 +134,8 @@ export function validateRequest(
 
     // Log the entire request body for debugging
     logger.debug("Full request body", {
-      body: JSON.stringify(req.body),
-      bodyKeys: Object.keys(req.body),
+      body: JSON.stringify(req[source]),
+      bodyKeys: Object.keys(req[source]),
       path: req.path,
     });
 
