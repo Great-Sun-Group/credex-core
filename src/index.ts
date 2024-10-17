@@ -25,7 +25,7 @@ export const app = express();
 // Create a JSON parser middleware with custom configuration
 const jsonParser = bodyParser.json({
   limit: '1mb', // Increase the size limit if necessary
-  strict: true,
+  strict: false, // Changed from true to false
   verify: (req: Request, res: Response, buf: Buffer, encoding: string) => {
     try {
       JSON.parse(buf.toString());
@@ -35,22 +35,16 @@ const jsonParser = bodyParser.json({
       } else {
         logger.error('Invalid JSON', { error: 'Unknown error', body: buf.toString() });
       }
-      throw new Error('Invalid JSON');
+      // Changed from throwing an error to just logging it
+      logger.error('Invalid JSON in request body');
     }
   }
 });
 
-// Middleware to log raw request body
-const logRawBody = (req: Request, res: Response, next: NextFunction) => {
-  let data = '';
-  req.setEncoding('utf8');
-  req.on('data', (chunk: string) => {
-    data += chunk;
-  });
-  req.on('end', () => {
-    logger.debug('Raw request body:', { body: data, path: req.path });
-    next();
-  });
+// Middleware to log request body (modified to use req.body instead of raw data)
+const logRequestBody = (req: Request, res: Response, next: NextFunction) => {
+  logger.debug('Request body:', { body: req.body, path: req.path });
+  next();
 };
 
 // Define the API version route prefix
@@ -72,10 +66,11 @@ async function initializeApp() {
     app.use(expressLogger);
     logger.debug("Applied logging middleware");
 
-    // Apply logRawBody and jsonParser globally
-    app.use(logRawBody);
+    // Apply jsonParser globally
     app.use(jsonParser);
-    logger.debug("Applied logRawBody and jsonParser middleware globally");
+    // Apply logRequestBody after jsonParser
+    app.use(logRequestBody);
+    logger.debug("Applied jsonParser and logRequestBody middleware globally");
 
     // Generate Swagger specification
     const swaggerSpec = await generateSwaggerSpec();
