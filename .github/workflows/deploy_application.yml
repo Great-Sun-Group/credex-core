@@ -55,28 +55,28 @@ jobs:
       - name: Deploy Application
         run: |
           echo "Deploying application to $ENVIRONMENT from branch ${{ github.ref_name }}"
-          TASK_DEF_ARN=$(aws ecs describe-task-definition --task-definition credex-core-${{ env.ENVIRONMENT }} --query 'taskDefinition.taskDefinitionArn' --output text)
-          aws ecs update-service --cluster credex-cluster-${{ env.ENVIRONMENT }} --service credex-core-service-${{ env.ENVIRONMENT }} --task-definition $TASK_DEF_ARN --force-new-deployment
+          TASK_DEF_ARN=$(aws ecs describe-task-definition --task-definition credex-core-$ENVIRONMENT --query 'taskDefinition.taskDefinitionArn' --output text)
+          aws ecs update-service --cluster credex-cluster-$ENVIRONMENT --service credex-core-service-$ENVIRONMENT --task-definition $TASK_DEF_ARN --force-new-deployment
 
           echo "Waiting for service to stabilize..."
-          timeout 900s bash -c '
+          timeout 900s bash -c "
           while true; do
-            STATUS=$(aws ecs describe-services --cluster credex-cluster-${{ env.ENVIRONMENT }} --services credex-core-service-${{ env.ENVIRONMENT }} --query "services[0].status" --output text)
-            if [ "$STATUS" = "ACTIVE" ]; then
-              echo "Service is stable"
+            STATUS=\$(aws ecs describe-services --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT --query \"services[0].status\" --output text)
+            if [ \"\$STATUS\" = \"ACTIVE\" ]; then
+              echo \"Service is stable\"
               exit 0
             fi
-            echo "Service status: $STATUS. Waiting..."
+            echo \"Service status: \$STATUS. Waiting...\"
             sleep 30
           done
-          '
+          "
           if [ $? -eq 124 ]; then
             echo "Timeout reached. Service did not stabilize within 15 minutes."
             exit 1
           fi
 
           echo "Deployment completed. Checking service status..."
-          aws ecs describe-services --cluster credex-cluster-${{ env.ENVIRONMENT }} --services credex-core-service-${{ env.ENVIRONMENT }} \
+          aws ecs describe-services --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT \
             --query 'services[0].{status: status, runningCount: runningCount, desiredCount: desiredCount, events: events[0].message}'
 
       - name: Print Deployment Information
