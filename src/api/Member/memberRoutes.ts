@@ -83,6 +83,14 @@ export default function MemberRoutes(jsonParser: express.RequestHandler, apiVers
   router.post(
     `/member/authForTierSpendLimit`,
     jsonParser,
+    (req, res, next) => {
+      logger.debug('Request body after jsonParser for authForTierSpendLimit', {
+        body: req.body,
+        issuerAccountID: req.body.issuerAccountID,
+        path: req.path
+      });
+      next();
+    },
     validateRequest(authForTierSpendLimitSchema),
     authForTierSpendLimitExpressHandler
   );
