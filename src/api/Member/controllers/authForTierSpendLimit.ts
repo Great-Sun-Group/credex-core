@@ -103,7 +103,10 @@ export async function authForTierSpendLimitExpressHandler(
     const { issuerAccountID, Amount, Denomination } = req.body;
 
     if (!validateUUID(issuerAccountID)) {
-      logger.warn("Invalid issuerAccountID provided", { issuerAccountID, requestId });
+      logger.warn("Invalid issuerAccountID provided", {
+        issuerAccountID,
+        requestId,
+      });
       res.status(400).json({ message: "Invalid issuerAccountID" });
       logger.debug(
         "Exiting authForTierSpendLimitExpressHandler with invalid issuerAccountID",
