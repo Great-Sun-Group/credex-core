@@ -138,6 +138,13 @@ export function validateRequest(
       requestData: req[source],
     });
 
+    // Log the entire request body for debugging
+    logger.debug("Full request body", {
+      body: JSON.stringify(req.body),
+      bodyKeys: Object.keys(req.body),
+      path: req.path,
+    });
+
     if (req.path.includes("authForTierSpendLimit")) {
       logger.debug("authForTierSpendLimit request data", {
         body: req[source],
