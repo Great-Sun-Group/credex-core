@@ -24,8 +24,8 @@ logger.debug("Initializing member validation schemas");
 
 export const getMemberByHandleSchema = {
   memberHandle: {
-    sanitizer: s.sanitizeString, // Use appropriate sanitizer
-    validator: v.validateMemberHandle, // Should return { isValid, message }
+    sanitizer: s.sanitizeString,
+    validator: v.validateMemberHandle,
   },
 };
 logger.debug("getMemberByHandleSchema initialized");
@@ -64,10 +64,17 @@ export const authForTierSpendLimitSchema = {
     validator: v.validateUUID,
   },
   tier: {
-    sanitizer: (value: number) => value, // No sanitization needed for numbers
+    sanitizer: (value: number) => value,
     validator: v.validateTier,
   },
-  // Include other fields with appropriate sanitizers and validators
+  Amount: {
+    sanitizer: (value: number) => value,
+    validator: v.validatePositiveNumber,
+  },
+  Denomination: {
+    sanitizer: s.sanitizeDenomination,
+    validator: v.validateDenomination,
+  },
 };
 logger.debug("authForTierSpendLimitSchema initialized");
 
@@ -84,11 +91,18 @@ export const setDCOparticipantRateSchema = {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
   },
-  rate: {
-    sanitizer: (value: number) => value, // No sanitization needed for numbers
-    validator: v.validatePositiveNumber, // Ensure you have a validator for positive numbers
+  personalAccountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
   },
-  // Include other fields with appropriate sanitizers and validators
+  DCOgiveInCXX: {
+    sanitizer: (value: number) => value,
+    validator: v.validatePositiveNumber,
+  },
+  DCOdenom: {
+    sanitizer: s.sanitizeDenomination,
+    validator: v.validateDenomination,
+  },
 };
 logger.debug("setDCOparticipantRateSchema initialized");
 

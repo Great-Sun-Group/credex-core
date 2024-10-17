@@ -3,9 +3,10 @@ import axios from "axios";
 // Use an environment variable to determine which environment we're testing
 const ENV = process.env.TEST_ENV || "local";
 
-const BASE_URL = ENV === "local" 
-  ? "http://localhost:5000/api/v1" 
-  : "https://dev.api.mycredex.app/api/v1";
+const BASE_URL =
+  ENV === "local"
+    ? "http://localhost:5000/api/v1"
+    : "https://dev.api.mycredex.app/api/v1";
 
 console.log(`Using BASE_URL: ${BASE_URL}`);
 
@@ -17,13 +18,16 @@ const axiosInstance = axios.create({
 
 describe("Member API Tests", () => {
   let testMemberJWT: string;
-  let testMemberHandle: string;
+  let testMemberID: string;
   let testMemberPhone: string;
+  let testPersonalAccountID: string;
 
   beforeAll(async () => {
     // Create a test member to use for all tests
     const url = `${BASE_URL}/member/onboardMember`;
-    const phoneNumber = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+    const phoneNumber = Math.floor(
+      100000000000 + Math.random() * 900000000000
+    ).toString();
     const memberData = {
       firstname: "TestMember",
       lastname: "ForAPITests",
@@ -35,10 +39,20 @@ describe("Member API Tests", () => {
       const response = await axiosInstance.post(url, memberData);
       testMemberJWT = response.data.token;
       testMemberPhone = phoneNumber;
-      testMemberHandle = response.data.memberHandle;
+      testMemberID = response.data.memberDashboard.memberID;
+      testPersonalAccountID = response.data.defaultAccountID;
+      console.log("Test member created with ID:", testMemberID);
+      console.log("Test member created with phone (handle):", testMemberPhone);
+      console.log("Test member personal account ID:", testPersonalAccountID);
+      console.log("Full response data:", JSON.stringify(response.data, null, 2));
     } catch (error) {
-      console.error("Error creating test member:", error);
-      throw error;
+      const errorMessage = `Error in beforeAll (creating test member): ${error}`;
+      console.error(errorMessage);
+      if (axios.isAxiosError(error) && error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", JSON.stringify(error.response.data, null, 2));
+      }
+      throw new Error(errorMessage);
     }
   });
 
@@ -51,27 +65,42 @@ describe("Member API Tests", () => {
       expect(response.status).toBe(200);
       expect(response.data).toHaveProperty("token");
     } catch (error) {
-      console.error("Error logging in member:", error);
-      throw error;
+      const errorMessage = `Error in 'should login a member' test: ${error}`;
+      console.error(errorMessage);
+      if (axios.isAxiosError(error) && error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", JSON.stringify(error.response.data, null, 2));
+      }
+      throw new Error(errorMessage);
     }
   });
 
   it("should get member by handle", async () => {
     const url = `${BASE_URL}/member/getMemberByHandle`;
-    const data = { memberHandle: testMemberHandle };
+    const data = { memberHandle: testMemberPhone };
+    console.log("Sending request with memberHandle:", testMemberPhone);
+    console.log("Request data:", JSON.stringify(data, null, 2));
 
     try {
-      const response = await axiosInstance.post(url, data, {
-        headers: { Authorization: `Bearer ${testMemberJWT}` }
-      });
-      expect(response.status).toBe(200);
-      expect(response.data).toHaveProperty("memberID");
-    } catch (error) {
-      console.error("Error getting member by handle:", error);
-      if (axios.isAxiosError(error) && error.response) {
-        console.error("Response data:", error.response.data);
+      if (!testMemberPhone) {
+        throw new Error("testMemberPhone is undefined or empty");
       }
-      throw error;
+
+      const response = await axiosInstance.post(url, data, {
+        headers: { Authorization: `Bearer ${testMemberJWT}` },
+      });
+      console.log("Response status:", response.status);
+      console.log("Response data:", JSON.stringify(response.data, null, 2));
+      expect(response.status).toBe(200);
+      expect(response.data.memberData).toHaveProperty("memberID");
+    } catch (error) {
+      const errorMessage = `Error in 'should get member by handle' test: ${error}`;
+      console.error(errorMessage);
+      if (axios.isAxiosError(error) && error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", JSON.stringify(error.response.data, null, 2));
+      }
+      throw new Error(errorMessage);
     }
   });
 
@@ -81,52 +110,77 @@ describe("Member API Tests", () => {
 
     try {
       const response = await axiosInstance.post(url, data, {
-        headers: { Authorization: `Bearer ${testMemberJWT}` }
+        headers: { Authorization: `Bearer ${testMemberJWT}` },
       });
       expect(response.status).toBe(200);
       expect(response.data.memberDashboard).toHaveProperty("memberID");
     } catch (error) {
-      console.error("Error getting member dashboard by phone:", error);
+      const errorMessage = `Error in 'should get member dashboard by phone' test: ${error}`;
+      console.error(errorMessage);
       if (axios.isAxiosError(error) && error.response) {
-        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", JSON.stringify(error.response.data, null, 2));
       }
-      throw error;
+      throw new Error(errorMessage);
     }
   });
 
   it("should authenticate for tier spend limit", async () => {
     const url = `${BASE_URL}/member/authForTierSpendLimit`;
-    const data = { memberID: testMemberHandle, tier: 1 }; // Assuming tier 1 is valid
+    const data = { 
+      memberID: testMemberID,
+      tier: 1,
+      Amount: 100,
+      Denomination: "USD"
+    };
+    console.log("Sending request for tier spend limit:", JSON.stringify(data, null, 2));
+    console.log("Headers:", { Authorization: `Bearer ${testMemberJWT}` });
 
     try {
       const response = await axiosInstance.post(url, data, {
-        headers: { Authorization: `Bearer ${testMemberJWT}` }
+        headers: { Authorization: `Bearer ${testMemberJWT}` },
       });
+      console.log("Response status:", response.status);
+      console.log("Response data:", JSON.stringify(response.data, null, 2));
       expect(response.status).toBe(200);
+      expect(response.data).toHaveProperty("isAuthorized");
     } catch (error) {
-      console.error("Error authenticating for tier spend limit:", error);
+      const errorMessage = `Error in 'should authenticate for tier spend limit' test: ${error}`;
+      console.error(errorMessage);
       if (axios.isAxiosError(error) && error.response) {
-        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", JSON.stringify(error.response.data, null, 2));
       }
-      throw error;
+      throw new Error(errorMessage);
     }
   });
 
   it("should set DCO participant rate", async () => {
     const url = `${BASE_URL}/member/setDCOparticipantRate`;
-    const data = { memberID: testMemberHandle, rate: 0.5 }; // Assuming 0.5 is a valid rate
+    const data = {
+      memberID: testMemberID,
+      personalAccountID: testPersonalAccountID,
+      DCOgiveInCXX: 0.5,
+      DCOdenom: "USD"
+    };
+    console.log("Sending request to set DCO participant rate:", JSON.stringify(data, null, 2));
 
     try {
       const response = await axiosInstance.post(url, data, {
-        headers: { Authorization: `Bearer ${testMemberJWT}` }
+        headers: { Authorization: `Bearer ${testMemberJWT}` },
       });
+      console.log("Response status:", response.status);
+      console.log("Response data:", JSON.stringify(response.data, null, 2));
       expect(response.status).toBe(200);
+      expect(response.data).toHaveProperty("message");
     } catch (error) {
-      console.error("Error setting DCO participant rate:", error);
+      const errorMessage = `Error in 'should set DCO participant rate' test: ${error}`;
+      console.error(errorMessage);
       if (axios.isAxiosError(error) && error.response) {
-        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", JSON.stringify(error.response.data, null, 2));
       }
-      throw error;
+      throw new Error(errorMessage);
     }
   });
 });

@@ -21,6 +21,7 @@ function sanitizeAndValidateObject(
 ): { sanitizedObj: any; error: string | null } {
   const sanitizedObj: any = {};
   for (const [key, schemaItem] of Object.entries(schema)) {
+    logger.debug(`Validating and sanitizing key: ${key}`, { value: obj[key] });
     if (
       typeof schemaItem === "object" &&
       "sanitizer" in schemaItem &&
@@ -30,10 +31,13 @@ function sanitizeAndValidateObject(
       const sanitizedValue = sanitizer(obj[key]);
       sanitizedObj[key] = sanitizedValue;
 
+      logger.debug(`Sanitized value for key: ${key}`, { sanitizedValue });
+
       const validationResult = validator(sanitizedValue);
       if (!validationResult.isValid) {
         logger.debug(`Validation failed for key: ${key}`, {
           value: sanitizedValue,
+          error: validationResult.message,
         });
         return { sanitizedObj, error: validationResult.message || `Invalid ${key}` };
       }
@@ -67,6 +71,7 @@ export function validateRequest(
       path: req.path,
       method: req.method,
       source,
+      requestData: req[source],
     });
 
     const { sanitizedObj, error } = sanitizeAndValidateObject(req[source], schema);
@@ -87,6 +92,7 @@ export function validateRequest(
       path: req.path,
       method: req.method,
       source,
+      sanitizedData: sanitizedObj,
     });
     next();
   };
