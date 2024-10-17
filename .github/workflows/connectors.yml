@@ -1,4 +1,4 @@
-name: Deploy/Update App Infrastructure
+name: Deploy Connectors
 
 on:
   workflow_dispatch:
