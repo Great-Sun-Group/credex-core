@@ -28,7 +28,7 @@ The organic economy is a subset of the credex ecosystem, which is a subset of th
 
 The credex ecosystem stores values in credcoin (CXX). In order to natively enable multi-denominational accounting, a CXXmultiplier value is stored alongside every CXX value. Both of these values are updated in every DCO so that the credex remains true to the face value in the denomination specified, and to other values stored in the ecosystem. A value expressed in CXX represents that value in relationship to every other value stored in the ecosystem, expressed in today's value of credcoin. A value in CXX divided by its CXX multiplier expresses the value in the chosen denomination (face value).
 
-The system manages the balance between local truth (preserving the face value of contracts in their specified denomination) and global truth (adjusting all values relative to credcoin) through the daily rate and value adjustments in the DCO.
+This mechanism manages the balance between local truth (preserving the face value of contracts in their specified denomination) and global truth (adjusting all values relative to credcoin) through the daily rate and value adjustments in the DCO.
 
 ## License
 
@@ -38,7 +38,7 @@ You are welcome to explore, experiment with, and build upon this work within the
 
 You are welcome to use this codebase and run credex-core development servers in order to develop apps that integrate with the live credex ecosystem. Any apps built while using this codebase for development and testing remain solely the property of the developers without limitation or restriction, including charging for their services at their own discretion, as long as the underlying data remains in the possesion of the member, stored in their credex account.
 
-An "App Store" registration and code review process may be put in place for developers so that members will know they can trust 3rd party software. This review process will be free, minimal, and prompt. Its only purpose will be to ensure that member's data is being handled securely and stored appropriately.
+An "App Store" type registration and code review process may be put in place for developers so that members will know they can trust 3rd party software. This review process will be free, minimal, and prompt. Its only purpose will be to ensure that member's data is being handled securely and stored appropriately.
 
 Should any updates to the ecosystem codebase be required to facilitate the operation of a third-party app, requests will be welcomed. Please include the code changes to the credex-core API being requested. Instructions for this will be provided soon.
 
@@ -58,7 +58,7 @@ You do not have permission to use this software to track real outstanding debts.
 
 ### Summary
 
-This approach allows for community engagement and experimentation, for the development of interdependent software ecosystems with the option to self-fund and charge for their own software in whatever way they choose, and for economic research, while ensuring the integrity and unity of the credex ecosystem as a single shared economic network that all can access and benefit from.
+This approach allows for community engagement and experimentation, for the development of interdependent software ecosystems that retain the option to self-fund and charge for their own software in whatever way they choose, and for economic research, while ensuring the integrity and unity of the credex ecosystem as a single shared economic network that all can access and benefit from.
 
 ## Neo4j Databases
 
