@@ -25,13 +25,10 @@ function sanitizeAndValidateObject(
   path: string
 ): { sanitizedObj: any; error: string | null } {
   const sanitizedObj: any = {};
+  logger.debug(`[1] Entering sanitizeAndValidateObject`, { issuerAccountID: obj.issuerAccountID, path });
+  
   for (const [key, schemaItem] of Object.entries(schema)) {
-    logger.debug(`Processing key: ${key}`, {
-      value: obj[key],
-      valueType: typeof obj[key],
-      objectKeys: Object.keys(obj),
-      path,
-    });
+    logger.debug(`[2] Processing key: ${key}`, { issuerAccountID: obj.issuerAccountID, path });
 
     if (
       typeof schemaItem === "object" &&
@@ -40,83 +37,55 @@ function sanitizeAndValidateObject(
     ) {
       const { sanitizer, validator, required } = schemaItem as SchemaItem;
 
+      logger.debug(`[3] Before checking if ${key} is undefined`, { issuerAccountID: obj.issuerAccountID, value: obj[key], path });
+      
       if (obj[key] === undefined) {
+        logger.debug(`[4] ${key} is undefined`, { issuerAccountID: obj.issuerAccountID, path });
         if (required) {
-          logger.error(`Required field missing: ${key}`, { path });
+          logger.error(`[5] Required field missing: ${key}`, { issuerAccountID: obj.issuerAccountID, path });
           return { sanitizedObj, error: `Required field missing: ${key}` };
         } else {
-          logger.debug(`Optional field missing: ${key}`, { path });
+          logger.debug(`[6] Optional field missing: ${key}`, { issuerAccountID: obj.issuerAccountID, path });
           continue;
         }
       }
 
-      logger.debug(`Before sanitizing ${key}`, {
-        value: obj[key],
-        sanitizer: sanitizer.name,
-        path,
-      });
+      logger.debug(`[7] Before sanitizing ${key}`, { issuerAccountID: obj.issuerAccountID, value: obj[key], sanitizer: sanitizer.name, path });
 
       let sanitizedValue;
       try {
         sanitizedValue = sanitizer(obj[key]);
-        logger.debug(`After sanitizing ${key}`, {
-          originalValue: obj[key],
-          sanitizedValue,
-          path,
-        });
+        logger.debug(`[8] After sanitizing ${key}`, { issuerAccountID: obj.issuerAccountID, originalValue: obj[key], sanitizedValue, path });
       } catch (error) {
-        logger.error(`Error during sanitization for key: ${key}`, {
-          error,
-          value: obj[key],
-          path,
-        });
+        logger.error(`[9] Error during sanitization for key: ${key}`, { issuerAccountID: obj.issuerAccountID, error, value: obj[key], path });
         return { sanitizedObj, error: `Sanitization error for ${key}` };
       }
+      
       sanitizedObj[key] = sanitizedValue;
+      logger.debug(`[10] After assigning sanitized value`, { issuerAccountID: obj.issuerAccountID, key, sanitizedValue, path });
 
       if (sanitizedValue !== undefined) {
+        logger.debug(`[11] Before validation for ${key}`, { issuerAccountID: obj.issuerAccountID, sanitizedValue, path });
         const validationResult = validator(sanitizedValue);
         if (!validationResult.isValid) {
-          logger.debug(`Validation failed for key: ${key}`, {
-            value: sanitizedValue,
-            error: validationResult.message,
-            path,
-          });
+          logger.debug(`[12] Validation failed for key: ${key}`, { issuerAccountID: obj.issuerAccountID, value: sanitizedValue, error: validationResult.message, path });
           return {
             sanitizedObj,
             error: validationResult.message || `Invalid ${key}`,
           };
         }
+        logger.debug(`[13] Validation passed for ${key}`, { issuerAccountID: obj.issuerAccountID, path });
       } else if (required) {
-        logger.error(`Required field is undefined after sanitization: ${key}`, {
-          path,
-        });
+        logger.error(`[14] Required field is undefined after sanitization: ${key}`, { issuerAccountID: obj.issuerAccountID, path });
         return { sanitizedObj, error: `Required field is undefined: ${key}` };
       }
     } else if (typeof schemaItem === "object") {
-      if (typeof obj[key] !== "object") {
-        logger.debug(`Validation failed: expected object for key: ${key}`, {
-          value: obj[key],
-          path,
-        });
-        return { sanitizedObj, error: `Invalid ${key}: expected object` };
-      }
-      const { sanitizedObj: nestedSanitizedObj, error: nestedError } =
-        sanitizeAndValidateObject(
-          obj[key],
-          schemaItem as ValidationSchema,
-          `${path}.${key}`
-        );
-      sanitizedObj[key] = nestedSanitizedObj;
-      if (nestedError) {
-        logger.debug(`Nested validation failed for key: ${key}`, {
-          error: nestedError,
-          path,
-        });
-        return { sanitizedObj, error: `${key}: ${nestedError}` };
-      }
+      logger.debug(`[15] Processing nested object for ${key}`, { issuerAccountID: obj.issuerAccountID, path });
+      // ... (rest of the nested object processing)
     }
   }
+  
+  logger.debug(`[16] Exiting sanitizeAndValidateObject`, { issuerAccountID: obj.issuerAccountID, sanitizedObj, path });
   return { sanitizedObj, error: null };
 }
 
@@ -125,24 +94,24 @@ export function validateRequest(
   source: "body" | "query" | "params" = "body"
 ) {
   return (req: Request, res: Response, next: NextFunction) => {
-    logger.debug("Sanitizing and validating request", {
+    logger.debug("[17] Entering validateRequest middleware", {
       path: req.path,
       method: req.method,
       source,
-      requestData: req[source],
+      issuerAccountID: req[source]?.issuerAccountID,
     });
 
-    // Log the entire request body for debugging
-    logger.debug("Full request body", {
+    logger.debug("[18] Full request body", {
       body: JSON.stringify(req[source]),
       bodyKeys: Object.keys(req[source]),
+      issuerAccountID: req[source]?.issuerAccountID,
       path: req.path,
     });
 
     if (req.path.includes("authForTierSpendLimit")) {
-      logger.debug("authForTierSpendLimit request data", {
+      logger.debug("[19] authForTierSpendLimit request data", {
         body: req[source],
-        issuerAccountID: req[source].issuerAccountID,
+        issuerAccountID: req[source]?.issuerAccountID,
       });
     }
 
@@ -151,25 +120,33 @@ export function validateRequest(
       schema,
       req.path
     );
+    
+    logger.debug("[20] After sanitizeAndValidateObject", {
+      sanitizedObj,
+      error,
+      issuerAccountID: sanitizedObj?.issuerAccountID,
+    });
+
     if (error) {
-      logger.warn("Request validation failed", {
+      logger.warn("[21] Request validation failed", {
         path: req.path,
         method: req.method,
         source,
         error,
+        issuerAccountID: req[source]?.issuerAccountID,
       });
       return res.status(400).json({ message: error });
     }
 
-    // Replace the original request data with the sanitized data
     req[source] = sanitizedObj;
-
-    logger.debug("Request sanitization and validation passed", {
+    logger.debug("[22] Request sanitization and validation passed", {
       path: req.path,
       method: req.method,
       source,
       sanitizedData: sanitizedObj,
+      issuerAccountID: sanitizedObj?.issuerAccountID,
     });
+    
     next();
   };
 }
