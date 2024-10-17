@@ -16,10 +16,7 @@ import {
 } from "./memberValidationSchemas";
 import logger from "../../utils/logger";
 
-export default function MemberRoutes(
-  jsonParser: express.RequestHandler,
-  apiVersionOneRoute: string
-) {
+export default function MemberRoutes(jsonParser: express.RequestHandler, apiVersionOneRoute: string) {
   const router = express.Router();
   logger.info("Initializing Member routes");
 
@@ -95,17 +92,13 @@ export default function MemberRoutes(
 
   router.post(
     `/member/authForTierSpendLimit`,
-    logRawBody,
     jsonParser,
     (req, res, next) => {
-      logger.debug(
-        "Request body immediately before validateRequest for authForTierSpendLimit",
-        {
-          body: req.body,
-          issuerAccountID: req.body?.issuerAccountID,
-          path: req.path,
-        }
-      );
+      logger.debug('Request body after jsonParser for authForTierSpendLimit', {
+        body: req.body,
+        issuerAccountID: req.body?.issuerAccountID,
+        path: req.path
+      });
       next();
     },
     validateRequest(authForTierSpendLimitSchema),

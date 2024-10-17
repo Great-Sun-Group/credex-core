@@ -164,7 +164,7 @@ export function validateRequest(
       headers: req.headers,
     });
 
-    logger.debug("Sanitizing and validating request", {
+    logger.debug("[VR3] Request data before sanitization", {
       path: req.path,
       method: req.method,
       source,
@@ -172,7 +172,7 @@ export function validateRequest(
     });
 
     if (req.path.includes("authForTierSpendLimit")) {
-      logger.debug("authForTierSpendLimit request data", {
+      logger.debug("[VR4] authForTierSpendLimit request data before sanitization", {
         body: req[source],
         issuerAccountID: req[source]?.issuerAccountID,
         issuerAccountIDType: typeof req[source]?.issuerAccountID,
