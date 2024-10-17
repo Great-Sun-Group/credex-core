@@ -1,5 +1,6 @@
 import xss from 'xss';
 import crypto from 'crypto';
+import logger from './logger';
 
 // Function to sanitize strings (remove HTML tags and trim)
 export const sanitizeString = (input: string | undefined | null): string => {
@@ -10,8 +11,24 @@ export const sanitizeString = (input: string | undefined | null): string => {
 };
 
 // Function to sanitize UUIDs (ensure it only contains valid UUID characters)
-export const sanitizeUUID = (input: string): string => {
-  return input.replace(/[^a-fA-F0-9-]/g, '');
+export const sanitizeUUID = (input: string | undefined | null): string => {
+  logger.debug('sanitizeUUID input:', { input, type: typeof input });
+  if (input === undefined || input === null) {
+    logger.warn('sanitizeUUID received undefined or null input');
+    return '';
+  }
+  if (typeof input !== 'string') {
+    logger.warn('sanitizeUUID received non-string input', { type: typeof input });
+    return '';
+  }
+  try {
+    const sanitized = input.replace(/[^a-fA-F0-9-]/g, '');
+    logger.debug('sanitizeUUID output:', { sanitized });
+    return sanitized;
+  } catch (error) {
+    logger.error('Error in sanitizeUUID', { error, input });
+    return '';
+  }
 };
 
 // Function to sanitize account names (allow only alphanumeric characters, spaces, and hyphens)
