@@ -174,14 +174,12 @@ export async function OfferCredexController(
 
       logger.debug("Calling AuthForTierSpendLimitController", {
         issuerAccountID,
-        memberTier,
         InitialAmount,
         Denomination,
         requestId,
       });
       const tierAuth = await AuthForTierSpendLimitController(
         issuerAccountID,
-        memberTier,
         InitialAmount,
         Denomination,
         requestId
