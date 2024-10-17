@@ -23,6 +23,15 @@ function sanitizeAndValidateObject(
 ): { sanitizedObj: any; error: string | null } {
   const sanitizedObj: any = {};
   for (const [key, schemaItem] of Object.entries(schema)) {
+    if (key === 'issuerAccountID') {
+      logger.debug(`Processing issuerAccountID`, { 
+        value: obj[key], 
+        valueType: typeof obj[key],
+        objectKeys: Object.keys(obj),
+        path
+      });
+    }
+    
     if (
       typeof schemaItem === "object" &&
       "sanitizer" in schemaItem &&
@@ -30,16 +39,6 @@ function sanitizeAndValidateObject(
     ) {
       const { sanitizer, validator, required } = schemaItem as SchemaItem;
       
-      // Add a check specifically for issuerAccountID
-      if (key === 'issuerAccountID') {
-        logger.debug(`issuerAccountID check`, { 
-          exists: key in obj,
-          value: obj[key],
-          type: typeof obj[key],
-          path
-        });
-      }
-
       if (obj[key] === undefined) {
         if (required) {
           logger.error(`Required field missing: ${key}`, { path });
@@ -50,9 +49,24 @@ function sanitizeAndValidateObject(
         }
       }
 
+      if (key === 'issuerAccountID') {
+        logger.debug(`Before sanitizing issuerAccountID`, { 
+          value: obj[key], 
+          sanitizer: sanitizer.name,
+          path
+        });
+      }
+
       let sanitizedValue;
       try {
         sanitizedValue = sanitizer(obj[key]);
+        if (key === 'issuerAccountID') {
+          logger.debug(`After sanitizing issuerAccountID`, { 
+            originalValue: obj[key],
+            sanitizedValue,
+            path
+          });
+        }
       } catch (error) {
         logger.error(`Error during sanitization for key: ${key}`, { error, value: obj[key], path });
         return { sanitizedObj, error: `Sanitization error for ${key}` };
@@ -107,6 +121,13 @@ export function validateRequest(
       source,
       requestData: req[source],
     });
+
+    if (req.path.includes('authForTierSpendLimit')) {
+      logger.debug("authForTierSpendLimit request data", {
+        body: req[source],
+        issuerAccountID: req[source].issuerAccountID,
+      });
+    }
 
     const { sanitizedObj, error } = sanitizeAndValidateObject(req[source], schema, req.path);
     if (error) {
