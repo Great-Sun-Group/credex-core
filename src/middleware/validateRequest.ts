@@ -23,11 +23,12 @@ function sanitizeAndValidateObject(
 ): { sanitizedObj: any; error: string | null } {
   const sanitizedObj: any = {};
   for (const [key, schemaItem] of Object.entries(schema)) {
-    if (path.includes('authForTierSpendLimit') && key === 'issuerAccountID') {
-      logger.debug(`Processing issuerAccountID for authForTierSpendLimit`, { 
+    if (key === 'issuerAccountID') {
+      logger.debug(`Processing issuerAccountID`, { 
         value: obj[key], 
         valueType: typeof obj[key],
-        objectKeys: Object.keys(obj)
+        objectKeys: Object.keys(obj),
+        path
       });
     }
     
@@ -48,34 +49,43 @@ function sanitizeAndValidateObject(
         }
       }
 
-      if (path.includes('authForTierSpendLimit') && key === 'issuerAccountID') {
-        logger.debug(`Sanitizing issuerAccountID for authForTierSpendLimit`, { 
+      if (key === 'issuerAccountID') {
+        logger.debug(`Before sanitizing issuerAccountID`, { 
           value: obj[key], 
-          sanitizer: sanitizer.name 
+          sanitizer: sanitizer.name,
+          path
         });
       }
 
       let sanitizedValue;
       try {
         sanitizedValue = sanitizer(obj[key]);
+        if (key === 'issuerAccountID') {
+          logger.debug(`After sanitizing issuerAccountID`, { 
+            originalValue: obj[key],
+            sanitizedValue,
+            path
+          });
+        }
       } catch (error) {
         logger.error(`Error during sanitization for key: ${key}`, { error, value: obj[key], path });
         return { sanitizedObj, error: `Sanitization error for ${key}` };
       }
       sanitizedObj[key] = sanitizedValue;
 
-      if (path.includes('authForTierSpendLimit') && key === 'issuerAccountID') {
-        logger.debug(`Sanitized issuerAccountID for authForTierSpendLimit`, { sanitizedValue });
-      }
-
-      const validationResult = validator(sanitizedValue);
-      if (!validationResult.isValid) {
-        logger.debug(`Validation failed for key: ${key}`, {
-          value: sanitizedValue,
-          error: validationResult.message,
-          path
-        });
-        return { sanitizedObj, error: validationResult.message || `Invalid ${key}` };
+      if (sanitizedValue !== undefined) {
+        const validationResult = validator(sanitizedValue);
+        if (!validationResult.isValid) {
+          logger.debug(`Validation failed for key: ${key}`, {
+            value: sanitizedValue,
+            error: validationResult.message,
+            path
+          });
+          return { sanitizedObj, error: validationResult.message || `Invalid ${key}` };
+        }
+      } else if (required) {
+        logger.error(`Required field is undefined after sanitization: ${key}`, { path });
+        return { sanitizedObj, error: `Required field is undefined: ${key}` };
       }
     } else if (typeof schemaItem === "object") {
       if (typeof obj[key] !== "object") {
