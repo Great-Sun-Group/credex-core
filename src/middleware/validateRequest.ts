@@ -3,7 +3,10 @@ import * as validators from "../utils/validators";
 import * as sanitizers from "../utils/inputSanitizer";
 import logger from "../utils/logger";
 
-type ValidatorFunction = (value: any) => { isValid: boolean; message?: string | undefined };
+type ValidatorFunction = (value: any) => {
+  isValid: boolean;
+  message?: string | undefined;
+};
 type SanitizerFunction = (value: any) => any;
 
 type SchemaItem = {
@@ -23,22 +26,22 @@ function sanitizeAndValidateObject(
 ): { sanitizedObj: any; error: string | null } {
   const sanitizedObj: any = {};
   for (const [key, schemaItem] of Object.entries(schema)) {
-    if (key === 'issuerAccountID') {
-      logger.debug(`Processing issuerAccountID`, { 
-        value: obj[key], 
+    if (key === "issuerAccountID") {
+      logger.debug(`Processing issuerAccountID`, {
+        value: obj[key],
         valueType: typeof obj[key],
         objectKeys: Object.keys(obj),
-        path
+        path,
       });
     }
-    
+
     if (
       typeof schemaItem === "object" &&
       "sanitizer" in schemaItem &&
       "validator" in schemaItem
     ) {
       const { sanitizer, validator, required } = schemaItem as SchemaItem;
-      
+
       if (obj[key] === undefined) {
         if (required) {
           logger.error(`Required field missing: ${key}`, { path });
@@ -49,26 +52,30 @@ function sanitizeAndValidateObject(
         }
       }
 
-      if (key === 'issuerAccountID') {
-        logger.debug(`Before sanitizing issuerAccountID`, { 
-          value: obj[key], 
+      if (key === "issuerAccountID") {
+        logger.debug(`Before sanitizing issuerAccountID`, {
+          value: obj[key],
           sanitizer: sanitizer.name,
-          path
+          path,
         });
       }
 
       let sanitizedValue;
       try {
         sanitizedValue = sanitizer(obj[key]);
-        if (key === 'issuerAccountID') {
-          logger.debug(`After sanitizing issuerAccountID`, { 
+        if (key === "issuerAccountID") {
+          logger.debug(`After sanitizing issuerAccountID`, {
             originalValue: obj[key],
             sanitizedValue,
-            path
+            path,
           });
         }
       } catch (error) {
-        logger.error(`Error during sanitization for key: ${key}`, { error, value: obj[key], path });
+        logger.error(`Error during sanitization for key: ${key}`, {
+          error,
+          value: obj[key],
+          path,
+        });
         return { sanitizedObj, error: `Sanitization error for ${key}` };
       }
       sanitizedObj[key] = sanitizedValue;
@@ -79,29 +86,38 @@ function sanitizeAndValidateObject(
           logger.debug(`Validation failed for key: ${key}`, {
             value: sanitizedValue,
             error: validationResult.message,
-            path
+            path,
           });
-          return { sanitizedObj, error: validationResult.message || `Invalid ${key}` };
+          return {
+            sanitizedObj,
+            error: validationResult.message || `Invalid ${key}`,
+          };
         }
       } else if (required) {
-        logger.error(`Required field is undefined after sanitization: ${key}`, { path });
+        logger.error(`Required field is undefined after sanitization: ${key}`, {
+          path,
+        });
         return { sanitizedObj, error: `Required field is undefined: ${key}` };
       }
     } else if (typeof schemaItem === "object") {
       if (typeof obj[key] !== "object") {
         logger.debug(`Validation failed: expected object for key: ${key}`, {
           value: obj[key],
-          path
+          path,
         });
         return { sanitizedObj, error: `Invalid ${key}: expected object` };
       }
       const { sanitizedObj: nestedSanitizedObj, error: nestedError } =
-        sanitizeAndValidateObject(obj[key], schemaItem as ValidationSchema, `${path}.${key}`);
+        sanitizeAndValidateObject(
+          obj[key],
+          schemaItem as ValidationSchema,
+          `${path}.${key}`
+        );
       sanitizedObj[key] = nestedSanitizedObj;
       if (nestedError) {
         logger.debug(`Nested validation failed for key: ${key}`, {
           error: nestedError,
-          path
+          path,
         });
         return { sanitizedObj, error: `${key}: ${nestedError}` };
       }
@@ -122,14 +138,18 @@ export function validateRequest(
       requestData: req[source],
     });
 
-    if (req.path.includes('authForTierSpendLimit')) {
+    if (req.path.includes("authForTierSpendLimit")) {
       logger.debug("authForTierSpendLimit request data", {
         body: req[source],
         issuerAccountID: req[source].issuerAccountID,
       });
     }
 
-    const { sanitizedObj, error } = sanitizeAndValidateObject(req[source], schema, req.path);
+    const { sanitizedObj, error } = sanitizeAndValidateObject(
+      req[source],
+      schema,
+      req.path
+    );
     if (error) {
       logger.warn("Request validation failed", {
         path: req.path,
