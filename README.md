@@ -13,7 +13,7 @@ The credex ecosystem actualizes the Credex Principle in the Minute Transaction Q
 
 In accounting terms, an outstanding credex is a contingent asset for one party and a contingent liability for the other. These asset/liability pairs are automatically strung together into credloops wherever possible across the credex ecosystem. When a credloop is found and cleared, every account in the loop will have an accounts payable invoice cancelled against an equivalent accounts receivable invoice.
 
-This behaviour enables members to replace the use of third party money or debt instruments issued by an outside sovereign with accounting entries backed purely by the sovereign value-producing capacities of the transacting members.
+This behaviour enables members to replace the use of third party money or other debt instruments issued by an outside sovereign with accounting entries on a shared ledger backed by the value-producing capacity of the transacting members and their assets.
 
 The credex ecosystem provides the non-sovereign and non-monetary services of verifying the identify of the sovereign counterparties and their corporations, and managing the technical verification and standardization of the credex transaction contract between them.
 

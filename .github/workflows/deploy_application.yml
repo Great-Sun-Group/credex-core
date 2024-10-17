@@ -39,7 +39,8 @@ jobs:
           ECR_REPOSITORY: credex-core-${{ env.ENVIRONMENT }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build --target ${{ env.ENVIRONMENT }} \
+          docker build --target deploy \
+            --build-arg NODE_ENV=${{ env.ENVIRONMENT }} \
             --build-arg NEO_4J_LEDGER_SPACE_USER="${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" \
             --build-arg NEO_4J_LEDGER_SPACE_PASS="${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" \
             --build-arg NEO_4J_LEDGER_SPACE_BOLT_URL="${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}" \
@@ -82,3 +83,5 @@ jobs:
       - name: Print Deployment Information
         run: |
           echo "Deployment completed successfully. Updated ECS service with latest image."
+          echo "Environment: $ENVIRONMENT"
+          echo "Image: $IMAGE"

@@ -75,12 +75,14 @@ async function initConfig() {
       neo4jLedgerSpace: {
         boltUrl: envVars.NEO_4J_LEDGER_SPACE_BOLT_URL,
         user: envVars.NEO_4J_LEDGER_SPACE_USER,
-        password: envVars.NEO_4J_LEDGER_SPACE_PASS
+        password: envVars.NEO_4J_LEDGER_SPACE_PASS,
+        connectionTimeout: 60000, // Increase timeout to 60 seconds
       },
       neo4jSearchSpace: {
         boltUrl: envVars.NEO_4J_SEARCH_SPACE_BOLT_URL,
         user: envVars.NEO_4J_SEARCH_SPACE_USER,
-        password: envVars.NEO_4J_SEARCH_SPACE_PASS
+        password: envVars.NEO_4J_SEARCH_SPACE_PASS,
+        connectionTimeout: 60000, // Increase timeout to 60 seconds
       }
     },
     api: {
@@ -106,7 +108,8 @@ async function initConfig() {
     port: config.port,
     logLevel: config.logLevel,
     neo4jLedgerSpaceBoltUrl: config.database.neo4jLedgerSpace.boltUrl,
-    neo4jSearchSpaceBoltUrl: config.database.neo4jSearchSpace.boltUrl
+    neo4jSearchSpaceBoltUrl: config.database.neo4jSearchSpace.boltUrl,
+    connectionTimeout: config.database.neo4jLedgerSpace.connectionTimeout
   });
 
   return config;
@@ -128,6 +131,7 @@ export async function logConfig(logger: any) {
     fallbackPorts: config.fallbackPorts,
     neo4jLedgerSpaceUrl: config.database.neo4jLedgerSpace.boltUrl,
     neo4jSearchSpaceUrl: config.database.neo4jSearchSpace.boltUrl,
+    connectionTimeout: config.database.neo4jLedgerSpace.connectionTimeout,
     rateLimitWindowMs: config.rateLimit.windowMs,
     rateLimitMax: config.rateLimit.max,
     cronDailyCredcoinOffering: config.cron.dailyCredcoinOffering,
