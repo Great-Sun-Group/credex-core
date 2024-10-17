@@ -31,7 +31,7 @@ function updateImport(filePath: string, baseDir: string, dryRun: boolean): void 
     } else {
       console.log(`No changes needed in ${filePath}`);
     }
-  } catch (error: unknown) {
+  } catch (error) {
     if (error instanceof Error) {
       console.error(`Error processing file ${filePath}: ${error.message}`);
     } else {
@@ -58,7 +58,7 @@ function updateImportsInDirectory(dir: string, baseDir: string, dryRun: boolean)
         ) {
           updateImport(filePath, baseDir, dryRun);
         }
-      } catch (error: unknown) {
+      } catch (error) {
         if (error instanceof Error) {
           console.error(`Error processing ${filePath}: ${error.message}`);
         } else {
@@ -66,7 +66,7 @@ function updateImportsInDirectory(dir: string, baseDir: string, dryRun: boolean)
         }
       }
     }
-  } catch (error: unknown) {
+  } catch (error) {
     if (error instanceof Error) {
       console.error(`Error reading directory ${dir}: ${error.message}`);
     } else {
@@ -83,7 +83,7 @@ try {
   console.log(`Dry run: ${dryRun ? 'Yes' : 'No'}`);
   updateImportsInDirectory(baseDir, baseDir, dryRun);
   console.log("Import update process completed.");
-} catch (error: unknown) {
+} catch (error) {
   if (error instanceof Error) {
     console.error(`Error in import update process: ${error.message}`);
   } else {
