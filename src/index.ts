@@ -72,6 +72,11 @@ async function initializeApp() {
     app.use(expressLogger);
     logger.debug("Applied logging middleware");
 
+    // Apply logRawBody and jsonParser globally
+    app.use(logRawBody);
+    app.use(jsonParser);
+    logger.debug("Applied logRawBody and jsonParser middleware globally");
+
     // Generate Swagger specification
     const swaggerSpec = await generateSwaggerSpec();
     logger.debug("Swagger specification generated");
@@ -90,9 +95,6 @@ async function initializeApp() {
     startCronJobs();
     logger.info("Cronjobs engaged for DCO and MTQ");
 
-    // Apply route handlers for hardened modules
-    app.use(apiVersionOneRoute, logRawBody, jsonParser);
-
     // Log before applying MemberRoutes
     app.use((req: Request, res: Response, next: NextFunction) => {
       logger.debug("Request reached before MemberRoutes", {
@@ -104,7 +106,7 @@ async function initializeApp() {
     });
 
     // Apply Hardened Routes
-    app.use(apiVersionOneRoute, MemberRoutes(jsonParser, "")); // this is the syntax we want
+    app.use(apiVersionOneRoute, MemberRoutes(jsonParser, apiVersionOneRoute));
     AccountRoutes(app);
     CredexRoutes(app);
     AdminDashboardRoutes(app);
