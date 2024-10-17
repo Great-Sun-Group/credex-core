@@ -26,13 +26,15 @@ function sanitizeAndValidateObject(
 ): { sanitizedObj: any; error: string | null } {
   const sanitizedObj: any = {};
   logger.debug(`[1] Entering sanitizeAndValidateObject`, {
-    issuerAccountID: obj.issuerAccountID,
+    obj,
+    schema,
     path,
   });
 
   for (const [key, schemaItem] of Object.entries(schema)) {
     logger.debug(`[2] Processing key: ${key}`, {
-      issuerAccountID: obj.issuerAccountID,
+      value: obj[key],
+      schemaItem,
       path,
     });
 
@@ -44,25 +46,23 @@ function sanitizeAndValidateObject(
       const { sanitizer, validator, required } = schemaItem as SchemaItem;
 
       logger.debug(`[3] Before checking if ${key} is undefined`, {
-        issuerAccountID: obj.issuerAccountID,
         value: obj[key],
+        required,
         path,
       });
 
       if (obj[key] === undefined) {
         logger.debug(`[4] ${key} is undefined`, {
-          issuerAccountID: obj.issuerAccountID,
+          required,
           path,
         });
         if (required) {
           logger.error(`[5] Required field missing: ${key}`, {
-            issuerAccountID: obj.issuerAccountID,
             path,
           });
           return { sanitizedObj, error: `Required field missing: ${key}` };
         } else {
           logger.debug(`[6] Optional field missing: ${key}`, {
-            issuerAccountID: obj.issuerAccountID,
             path,
           });
           continue;
@@ -70,7 +70,6 @@ function sanitizeAndValidateObject(
       }
 
       logger.debug(`[7] Before sanitizing ${key}`, {
-        issuerAccountID: obj.issuerAccountID,
         value: obj[key],
         sanitizer: sanitizer.name,
         path,
@@ -80,14 +79,12 @@ function sanitizeAndValidateObject(
       try {
         sanitizedValue = sanitizer(obj[key]);
         logger.debug(`[8] After sanitizing ${key}`, {
-          issuerAccountID: obj.issuerAccountID,
           originalValue: obj[key],
           sanitizedValue,
           path,
         });
       } catch (error) {
         logger.error(`[9] Error during sanitization for key: ${key}`, {
-          issuerAccountID: obj.issuerAccountID,
           error,
           value: obj[key],
           path,
@@ -97,7 +94,6 @@ function sanitizeAndValidateObject(
 
       sanitizedObj[key] = sanitizedValue;
       logger.debug(`[10] After assigning sanitized value`, {
-        issuerAccountID: obj.issuerAccountID,
         key,
         sanitizedValue,
         path,
@@ -105,14 +101,12 @@ function sanitizeAndValidateObject(
 
       if (sanitizedValue !== undefined) {
         logger.debug(`[11] Before validation for ${key}`, {
-          issuerAccountID: obj.issuerAccountID,
           sanitizedValue,
           path,
         });
         const validationResult = validator(sanitizedValue);
         if (!validationResult.isValid) {
           logger.debug(`[12] Validation failed for key: ${key}`, {
-            issuerAccountID: obj.issuerAccountID,
             value: sanitizedValue,
             error: validationResult.message,
             path,
@@ -123,27 +117,29 @@ function sanitizeAndValidateObject(
           };
         }
         logger.debug(`[13] Validation passed for ${key}`, {
-          issuerAccountID: obj.issuerAccountID,
           path,
         });
       } else if (required) {
         logger.error(
           `[14] Required field is undefined after sanitization: ${key}`,
-          { issuerAccountID: obj.issuerAccountID, path }
+          { path }
         );
         return { sanitizedObj, error: `Required field is undefined: ${key}` };
       }
     } else if (typeof schemaItem === "object") {
       logger.debug(`[15] Processing nested object for ${key}`, {
-        issuerAccountID: obj.issuerAccountID,
         path,
       });
-      // ... (rest of the nested object processing)
+      const { sanitizedObj: nestedSanitizedObj, error: nestedError } =
+        sanitizeAndValidateObject(obj[key] || {}, schemaItem as ValidationSchema, `${path}.${key}`);
+      if (nestedError) {
+        return { sanitizedObj, error: nestedError };
+      }
+      sanitizedObj[key] = nestedSanitizedObj;
     }
   }
 
   logger.debug(`[16] Exiting sanitizeAndValidateObject`, {
-    issuerAccountID: obj.issuerAccountID,
     sanitizedObj,
     path,
   });
@@ -155,7 +151,6 @@ export function validateRequest(
   source: "body" | "query" | "params" = "body"
 ) {
   return (req: Request, res: Response, next: NextFunction) => {
-    // Add these new log statements at the very beginning of the function
     logger.debug("[VR1] Entering validateRequest middleware", {
       path: req.path,
       method: req.method,
@@ -169,7 +164,6 @@ export function validateRequest(
       headers: req.headers,
     });
 
-    // Continue with the existing logic
     logger.debug("Sanitizing and validating request", {
       path: req.path,
       method: req.method,
@@ -177,7 +171,6 @@ export function validateRequest(
       requestData: req[source],
     });
 
-    // Log the entire request body for debugging
     logger.debug("Full request body", {
       body: JSON.stringify(req[source]),
       bodyKeys: Object.keys(req[source]),
