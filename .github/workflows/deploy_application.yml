@@ -59,7 +59,7 @@ jobs:
           aws ecs update-service --cluster credex-cluster-${{ env.ENVIRONMENT }} --service credex-core-service-${{ env.ENVIRONMENT }} --task-definition $TASK_DEF_ARN --force-new-deployment
 
           echo "Waiting for service to stabilize..."
-          aws ecs wait services-stable --cluster credex-cluster-${{ env.ENVIRONMENT }} --services credex-core-service-${{ env.ENVIRONMENT }}
+          aws ecs wait services-stable --cluster credex-cluster-${{ env.ENVIRONMENT }} --services credex-core-service-${{ env.ENVIRONMENT }} --max-wait-time 900
 
           echo "Deployment completed. Checking service status..."
           aws ecs describe-services --cluster credex-cluster-${{ env.ENVIRONMENT }} --services credex-core-service-${{ env.ENVIRONMENT }} \
