@@ -135,6 +135,12 @@ curl -X POST "https://${CODESPACE_NAME}-5000.app.github.dev/api/v1/dev/forceDCO"
    ```
    npm run docker:dev
    ```
+   Then in another terminal window run the command below to test basic functions of user onboarding and login, and the creation of three secured credex making a credloop.
+   
+   To be added to the tests are confirmations that the information is in the DB as expected, a test that the loopfinder processes it as expected, and a test run of the DCO and check for expected changes in the database.
+   ```
+   npx jest tests/basic_functions.test.ts
+   ```
 3. Do checks in production mode then run tests in the Docker environment:
    ```
    npm run docker:dev:prod

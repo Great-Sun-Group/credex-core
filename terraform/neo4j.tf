@@ -16,25 +16,25 @@ data "aws_ami" "amazon_linux_2" {
 }
 
 resource "aws_key_pair" "neo4j_key_pair" {
-  count      = var.operation_type == "create" && var.neo4j_public_key != "" ? 1 : 0
+  count      = var.create_resource && var.neo4j_public_key != "" ? 1 : 0
   key_name   = local.key_pair_name
   public_key = var.neo4j_public_key
   tags       = local.common_tags
 }
 
 data "aws_key_pair" "existing_neo4j_key_pair" {
-  count    = var.operation_type != "create" ? 1 : 0
+  count    = var.create_resource ? 0 : 1
   key_name = local.key_pair_name
 }
 
 resource "random_string" "neo4j_password" {
-  count   = var.operation_type != "delete" ? 2 : 0
+  count   = var.create_resource ? 2 : 0
   length  = 16
   special = true
 }
 
 resource "random_string" "neo4j_username_suffix" {
-  count   = var.operation_type != "delete" ? 2 : 0
+  count   = var.create_resource ? 2 : 0
   length  = 6
   special = false
   upper   = false
@@ -42,10 +42,10 @@ resource "random_string" "neo4j_username_suffix" {
 }
 
 resource "aws_instance" "neo4j" {
-  count         = var.operation_type != "delete" ? 2 : 0
+  count         = var.create_resource ? 2 : 0
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = local.neo4j_instance_type[var.environment]
-  key_name      = var.operation_type == "create" && var.neo4j_public_key != "" ? aws_key_pair.neo4j_key_pair[0].key_name : (var.operation_type != "create" ? data.aws_key_pair.existing_neo4j_key_pair[0].key_name : null)
+  key_name      = var.create_resource && var.neo4j_public_key != "" ? aws_key_pair.neo4j_key_pair[0].key_name : (var.create_resource ? null : data.aws_key_pair.existing_neo4j_key_pair[0].key_name)
 
   vpc_security_group_ids = [aws_security_group.neo4j[0].id]
   subnet_id              = data.aws_subnets.default.ids[count.index % length(data.aws_subnets.default.ids)]
@@ -93,24 +93,24 @@ resource "aws_instance" "neo4j" {
 }
 
 output "neo4j_instance_ips" {
-  value       = var.operation_type != "delete" ? aws_instance.neo4j[*].private_ip : []
+  value       = var.create_resource ? aws_instance.neo4j[*].private_ip : []
   description = "Private IPs of Neo4j instances"
 }
 
 output "neo4j_bolt_urls" {
-  value = var.operation_type != "delete" ? [for instance in aws_instance.neo4j : "bolt://${instance.private_ip}:7687"] : []
+  value = var.create_resource ? [for instance in aws_instance.neo4j : "bolt://${instance.private_ip}:7687"] : []
   description = "Neo4j Bolt URLs"
   sensitive   = true
 }
 
 output "neo4j_ledger_space_bolt_url" {
-  value       = var.operation_type != "delete" && length(aws_instance.neo4j) > 0 ? "bolt://${aws_instance.neo4j[0].private_ip}:7687" : ""
+  value       = var.create_resource && length(aws_instance.neo4j) > 0 ? "bolt://${aws_instance.neo4j[0].private_ip}:7687" : ""
   description = "Neo4j Ledger Space Bolt URL"
   sensitive   = true
 }
 
 output "neo4j_search_space_bolt_url" {
-  value       = var.operation_type != "delete" && length(aws_instance.neo4j) > 1 ? "bolt://${aws_instance.neo4j[1].private_ip}:7687" : ""
+  value       = var.create_resource && length(aws_instance.neo4j) > 1 ? "bolt://${aws_instance.neo4j[1].private_ip}:7687" : ""
   description = "Neo4j Search Space Bolt URL"
   sensitive   = true
 }

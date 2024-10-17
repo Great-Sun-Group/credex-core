@@ -21,7 +21,7 @@ The unified deployment process consists of two main workflows: `create.yml` for 
 
 5. **Neo4j Secret Generation and Management**:
    - For initial deployments (`create.yml`):
-     - Generates secure, random passwords and usernames for Neo4j databases using the `generate_secrets.sh` script.
+     - Generates secure, random passwords and usernames for Neo4j databases.
      - Creates Bolt URLs based on the newly created EC2 instances.
      - Stores these secrets (usernames, passwords, Bolt URLs, and JWT secret) as GitHub Secrets for the specific environment.
      - Outputs these secrets once for secure manual storage to prevent loss.

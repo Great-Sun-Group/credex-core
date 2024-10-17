@@ -41,15 +41,29 @@ variable "log_level" {
   }
 }
 
-variable "operation_type" {
-  description = "The type of operation to perform (create, delete, redeploy)"
-  type        = string
-  default     = "create"
+variable "create_resource" {
+  description = "Boolean flag to indicate whether to create/update (true) or delete (false) resources"
+  type        = bool
+  default     = true
+}
 
-  validation {
-    condition     = contains(["create", "delete", "redeploy"], var.operation_type)
-    error_message = "The operation_type must be one of: create, delete, redeploy."
-  }
+# Variables passed from Github Action script checks on whether these resources exist
+variable "create_ecr" {
+  description = "Whether to create the ECR repository"
+  type        = bool
+  default     = true
+}
+
+variable "create_ecs_cluster" {
+  description = "Whether to create the ECS cluster"
+  type        = bool
+  default     = true
+}
+
+variable "create_log_group" {
+  description = "Whether to create the CloudWatch log group"
+  type        = bool
+  default     = true
 }
 
 # Variables for secrets (passed from GitHub Actions)

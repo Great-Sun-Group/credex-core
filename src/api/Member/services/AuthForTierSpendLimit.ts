@@ -57,7 +57,7 @@ export async function AuthForTierSpendLimitService(
         amount,
         denom,
       });
-      return "query error";
+      return { isAuthorized: false, message: "No results found for the given account" };
     }
     if (queryResult.records[0].get("result") == true) {
       logger.info("Authorization granted for high tier member", {
@@ -65,7 +65,7 @@ export async function AuthForTierSpendLimitService(
         amount,
         denom,
       });
-      return true;
+      return { isAuthorized: true, message: "Authorization granted for high tier member" };
     }
 
     const memberTier = queryResult.records[0].get("result").memberTier;
@@ -93,7 +93,7 @@ export async function AuthForTierSpendLimitService(
         denom,
         amountAvailableUSD,
       });
-      return true;
+      return { isAuthorized: true, message: "Authorization granted" };
     } else {
       const message = `You are only able to issue ${denomFormatter(amountAvailableUSD, "USD")} USD until tomorrow. Limits renew at midnight UTC.`;
       logger.warn("Authorization denied due to limit", {
@@ -103,7 +103,7 @@ export async function AuthForTierSpendLimitService(
         amountAvailableUSD,
         message,
       });
-      return message;
+      return { isAuthorized: false, message };
     }
   } catch (error) {
     logger.error("Error in AuthForTierSpendLimitService", {
@@ -113,7 +113,7 @@ export async function AuthForTierSpendLimitService(
       amount,
       denom,
     });
-    throw error;
+    return { isAuthorized: false, message: "An error occurred during authorization" };
   } finally {
     logger.debug("Closing database session", { issuerAccountID });
     await ledgerSpaceSession.close();

@@ -1,0 +1,57 @@
+name: Deploy/Update App Infrastructure
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy_infrastructure:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Determine environment
+        id: determine_env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_OUTPUT
+          else
+            echo "ENVIRONMENT=development" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets[format('{0}_AWS_ACCESS_KEY_ID', steps.determine_env.outputs.ENVIRONMENT)] }}
+          aws-secret-access-key: ${{ secrets[format('{0}_AWS_SECRET_ACCESS_KEY', steps.determine_env.outputs.ENVIRONMENT)] }}
+          aws-region: ${{ secrets[format('{0}_AWS_REGION', steps.determine_env.outputs.ENVIRONMENT)] }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init and Apply for Application Infrastructure
+        env:
+          TF_VAR_environment: ${{ steps.determine_env.outputs.ENVIRONMENT }}
+          TF_VAR_create_resource: "true"
+        run: |
+          cd terraform
+          terraform init
+          terraform workspace select ${{ steps.determine_env.outputs.ENVIRONMENT }} || terraform workspace new ${{ steps.determine_env.outputs.ENVIRONMENT }}
+          terraform apply -auto-approve -target=module.ecs -target=module.vpc -target=module.security_groups -var="environment=${{ steps.determine_env.outputs.ENVIRONMENT }}" -var="create_resource=true"
+
+      - name: Get Infrastructure Outputs
+        run: |
+          cd terraform
+          echo "ECR_REPO_URL=$(terraform output -raw ecr_repository_url)" >> $GITHUB_ENV
+          echo "ECS_CLUSTER_ARN=$(terraform output -raw ecs_cluster_arn)" >> $GITHUB_ENV
+          echo "ECS_TASK_DEF_ARN=$(terraform output -raw ecs_task_definition_arn)" >> $GITHUB_ENV
+
+      - name: Print Infrastructure Information
+        run: |
+          echo "Please manually add the following secrets to your GitHub repository for the ${{ steps.determine_env.outputs.ENVIRONMENT }} environment:"
+          echo "ECR_REPO_URL: $ECR_REPO_URL"
+          echo "ECS_CLUSTER_ARN: $ECS_CLUSTER_ARN"
+          echo "ECS_TASK_DEF_ARN: $ECS_TASK_DEF_ARN"

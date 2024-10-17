@@ -2,7 +2,10 @@ import xss from 'xss';
 import crypto from 'crypto';
 
 // Function to sanitize strings (remove HTML tags and trim)
-export const sanitizeString = (input: string): string => {
+export const sanitizeString = (input: string | undefined | null): string => {
+  if (input === undefined || input === null) {
+    return '';
+  }
   return xss(input.trim());
 };
 
@@ -28,7 +31,7 @@ export const sanitizeDenomination = (input: string): string => {
 
 // Function to sanitize phone numbers (remove non-digit characters)
 export const sanitizePhone = (input: string): string => {
-  return input.replace(/\D/g, '');
+  return sanitizeString(input).replace(/\D/g, '');
 };
 
 // Function to sanitize names (allow only letters, spaces, and hyphens)
@@ -43,5 +46,5 @@ const generateSafeId = (): string => {
 
 // Function to generate a safe ID if input is empty or invalid
 export const generateSafeIdIfInvalid = (input: string): string => {
-  return input.trim() === '' ? generateSafeId() : input;
+  return sanitizeString(input) === '' ? generateSafeId() : input;
 };

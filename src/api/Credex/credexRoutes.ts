@@ -164,9 +164,18 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
           Array.isArray(value)
             ? value.map(acceptCredexSchema.credexID.sanitizer)
             : value,
-        validator: (value: any) =>
-          Array.isArray(value) &&
-          value.every(acceptCredexSchema.credexID.validator),
+        validator: (value: any) => {
+          if (!Array.isArray(value)) {
+            return { isValid: false, message: "credexIDs must be an array" };
+          }
+          for (const credexID of value) {
+            const result = acceptCredexSchema.credexID.validator(credexID);
+            if (!result.isValid) {
+              return { isValid: false, message: `Invalid credexID: ${result.message}` };
+            }
+          }
+          return { isValid: true };
+        },
       },
       signerID: acceptCredexSchema.signerID,
     }),

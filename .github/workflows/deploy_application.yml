@@ -2,14 +2,12 @@ name: Deploy Application
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * *'  # Daily at midnight
 
 jobs:
   deploy_application:
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -41,32 +39,46 @@ jobs:
           ECR_REPOSITORY: credex-core-${{ env.ENVIRONMENT }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build --target $ENVIRONMENT -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker build --target ${{ env.ENVIRONMENT }} \
+            --build-arg NEO_4J_LEDGER_SPACE_USER="${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" \
+            --build-arg NEO_4J_LEDGER_SPACE_PASS="${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" \
+            --build-arg NEO_4J_LEDGER_SPACE_BOLT_URL="${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}" \
+            --build-arg NEO_4J_SEARCH_SPACE_USER="${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" \
+            --build-arg NEO_4J_SEARCH_SPACE_PASS="${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" \
+            --build-arg NEO_4J_SEARCH_SPACE_BOLT_URL="${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}" \
+            --build-arg OPEN_EXCHANGE_RATES_API="${{ secrets.OPEN_EXCHANGE_RATES_API }}" \
+            --build-arg JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
-      - name: Update ECS Task Definition
+      - name: Deploy Application
         run: |
-          TASK_DEF_NAME="credex-core-${ENVIRONMENT}"
-          TASK_DEF=$(aws ecs describe-task-definition --task-definition $TASK_DEF_NAME --query taskDefinition)
-          NEW_TASK_DEF=$(echo $TASK_DEF | jq '.containerDefinitions[0].image = env.IMAGE')
-          echo $NEW_TASK_DEF > new-task-def.json
-          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://new-task-def.json --query 'taskDefinition.taskDefinitionArn' --output text)
-          echo "NEW_TASK_DEF_ARN=$NEW_TASK_DEF_ARN" >> $GITHUB_ENV
+          echo "Deploying application to $ENVIRONMENT from branch ${{ github.ref_name }}"
+          TASK_DEF_ARN=$(aws ecs describe-task-definition --task-definition credex-core-${{ env.ENVIRONMENT }} --query 'taskDefinition.taskDefinitionArn' --output text)
+          aws ecs update-service --cluster credex-cluster-${{ env.ENVIRONMENT }} --service credex-core-service-${{ env.ENVIRONMENT }} --task-definition $TASK_DEF_ARN --force-new-deployment
 
-      - name: Deploy to ECS
-        run: |
-          aws ecs update-service --cluster credex-cluster-$ENVIRONMENT --service credex-core-service-$ENVIRONMENT --task-definition $NEW_TASK_DEF_ARN
           echo "Waiting for service to stabilize..."
-          aws ecs wait services-stable --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT
+          timeout 900s bash -c '
+          while true; do
+            STATUS=$(aws ecs describe-services --cluster credex-cluster-${{ env.ENVIRONMENT }} --services credex-core-service-${{ env.ENVIRONMENT }} --query "services[0].status" --output text)
+            if [ "$STATUS" = "ACTIVE" ]; then
+              echo "Service is stable"
+              exit 0
+            fi
+            echo "Service status: $STATUS. Waiting..."
+            sleep 30
+          done
+          '
+          if [ $? -eq 124 ]; then
+            echo "Timeout reached. Service did not stabilize within 15 minutes."
+            exit 1
+          fi
 
-      - name: Generate JWT Token
-        run: |
-          JWT_SECRET=$(openssl rand -base64 32)
-          echo "JWT_SECRET=$JWT_SECRET" >> $GITHUB_ENV
+          echo "Deployment completed. Checking service status..."
+          aws ecs describe-services --cluster credex-cluster-${{ env.ENVIRONMENT }} --services credex-core-service-${{ env.ENVIRONMENT }} \
+            --query 'services[0].{status: status, runningCount: runningCount, desiredCount: desiredCount, events: events[0].message}'
 
       - name: Print Deployment Information
         run: |
-          echo "Please manually add the following secret to your GitHub repository for the $ENVIRONMENT environment:"
-          echo "JWT_SECRET: $JWT_SECRET"
-          echo "Deployment completed successfully. New task definition ARN: $NEW_TASK_DEF_ARN"
+          echo "Deployment completed successfully. Updated ECS service with latest image."

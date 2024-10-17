@@ -113,3 +113,4 @@ Endpoints and routes are deployed for the modules: Member, Account, Credex, Avat
 - [Maintenance and Updates](docs/deploy/maintenance_and_updates.md)
 - [Continuous Improvement](docs/deploy/continuous_improvement.md)
 - [Deployment Scenarios](docs/deploy/deployment_scenarios.md)
+- [Debugging Deployment](docs/deploy/debugging_deployment.md)
