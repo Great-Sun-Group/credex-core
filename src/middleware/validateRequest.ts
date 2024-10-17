@@ -3,12 +3,16 @@ import * as validators from "../utils/validators";
 import * as sanitizers from "../utils/inputSanitizer";
 import logger from "../utils/logger";
 
-type ValidatorFunction = (value: any) => { isValid: boolean; message?: string | undefined };
+type ValidatorFunction = (value: any) => {
+  isValid: boolean;
+  message?: string | undefined;
+};
 type SanitizerFunction = (value: any) => any;
 
 type SchemaItem = {
   sanitizer: SanitizerFunction;
   validator: ValidatorFunction;
+  required?: boolean;
 };
 
 type ValidationSchema = {
@@ -17,48 +21,132 @@ type ValidationSchema = {
 
 function sanitizeAndValidateObject(
   obj: any,
-  schema: ValidationSchema
+  schema: ValidationSchema,
+  path: string
 ): { sanitizedObj: any; error: string | null } {
   const sanitizedObj: any = {};
+  logger.debug(`[1] Entering sanitizeAndValidateObject`, {
+    obj,
+    schema,
+    path,
+  });
+
   for (const [key, schemaItem] of Object.entries(schema)) {
-    logger.debug(`Validating and sanitizing key: ${key}`, { value: obj[key] });
+    logger.debug(`[2] Processing key: ${key}`, {
+      value: obj[key],
+      schemaItem,
+      path,
+    });
+
     if (
       typeof schemaItem === "object" &&
       "sanitizer" in schemaItem &&
       "validator" in schemaItem
     ) {
-      const { sanitizer, validator } = schemaItem as SchemaItem;
-      const sanitizedValue = sanitizer(obj[key]);
-      sanitizedObj[key] = sanitizedValue;
+      const { sanitizer, validator, required } = schemaItem as SchemaItem;
 
-      logger.debug(`Sanitized value for key: ${key}`, { sanitizedValue });
+      logger.debug(`[3] Before checking if ${key} is undefined`, {
+        value: obj[key],
+        required,
+        path,
+      });
 
-      const validationResult = validator(sanitizedValue);
-      if (!validationResult.isValid) {
-        logger.debug(`Validation failed for key: ${key}`, {
-          value: sanitizedValue,
-          error: validationResult.message,
+      if (obj[key] === undefined) {
+        logger.debug(`[4] ${key} is undefined`, {
+          required,
+          path,
         });
-        return { sanitizedObj, error: validationResult.message || `Invalid ${key}` };
+        if (required) {
+          logger.error(`[5] Required field missing: ${key}`, {
+            path,
+          });
+          return { sanitizedObj, error: `Required field missing: ${key}` };
+        } else {
+          logger.debug(`[6] Optional field missing: ${key}`, {
+            path,
+          });
+          continue;
+        }
+      }
+
+      logger.debug(`[7] Before sanitizing ${key}`, {
+        value: obj[key],
+        sanitizer: sanitizer.name,
+        path,
+      });
+
+      let sanitizedValue;
+      try {
+        sanitizedValue = sanitizer(obj[key]);
+        logger.debug(`[8] After sanitizing ${key}`, {
+          originalValue: obj[key],
+          sanitizedValue,
+          path,
+        });
+      } catch (error) {
+        logger.error(`[9] Error during sanitization for key: ${key}`, {
+          error,
+          value: obj[key],
+          path,
+        });
+        return { sanitizedObj, error: `Sanitization error for ${key}` };
+      }
+
+      sanitizedObj[key] = sanitizedValue;
+      logger.debug(`[10] After assigning sanitized value`, {
+        key,
+        sanitizedValue,
+        path,
+      });
+
+      if (sanitizedValue !== undefined) {
+        logger.debug(`[11] Before validation for ${key}`, {
+          sanitizedValue,
+          path,
+        });
+        const validationResult = validator(sanitizedValue);
+        if (!validationResult.isValid) {
+          logger.debug(`[12] Validation failed for key: ${key}`, {
+            value: sanitizedValue,
+            error: validationResult.message,
+            path,
+          });
+          return {
+            sanitizedObj,
+            error: validationResult.message || `Invalid ${key}`,
+          };
+        }
+        logger.debug(`[13] Validation passed for ${key}`, {
+          path,
+        });
+      } else if (required) {
+        logger.error(
+          `[14] Required field is undefined after sanitization: ${key}`,
+          { path }
+        );
+        return { sanitizedObj, error: `Required field is undefined: ${key}` };
       }
     } else if (typeof schemaItem === "object") {
-      if (typeof obj[key] !== "object") {
-        logger.debug(`Validation failed: expected object for key: ${key}`, {
-          value: obj[key],
-        });
-        return { sanitizedObj, error: `Invalid ${key}: expected object` };
-      }
+      logger.debug(`[15] Processing nested object for ${key}`, {
+        path,
+      });
       const { sanitizedObj: nestedSanitizedObj, error: nestedError } =
-        sanitizeAndValidateObject(obj[key], schemaItem as ValidationSchema);
-      sanitizedObj[key] = nestedSanitizedObj;
+        sanitizeAndValidateObject(
+          obj[key] || {},
+          schemaItem as ValidationSchema,
+          `${path}.${key}`
+        );
       if (nestedError) {
-        logger.debug(`Nested validation failed for key: ${key}`, {
-          error: nestedError,
-        });
-        return { sanitizedObj, error: `${key}: ${nestedError}` };
+        return { sanitizedObj, error: nestedError };
       }
+      sanitizedObj[key] = nestedSanitizedObj;
     }
   }
+
+  logger.debug(`[16] Exiting sanitizeAndValidateObject`, {
+    sanitizedObj,
+    path,
+  });
   return { sanitizedObj, error: null };
 }
 
@@ -67,34 +155,83 @@ export function validateRequest(
   source: "body" | "query" | "params" = "body"
 ) {
   return (req: Request, res: Response, next: NextFunction) => {
-    logger.debug("Sanitizing and validating request", {
+    logger.debug("[VR1] Entering validateRequest middleware", {
+      path: req.path,
+      method: req.method,
+      source,
+    });
+
+    logger.debug("[VR2] Request details", {
+      body: req.body,
+      query: req.query,
+      params: req.params,
+      headers: req.headers,
+    });
+
+    logger.debug("[VR3] Request data before sanitization", {
       path: req.path,
       method: req.method,
       source,
       requestData: req[source],
     });
 
-    const { sanitizedObj, error } = sanitizeAndValidateObject(req[source], schema);
-    if (error) {
-      logger.warn("Request validation failed", {
+    if (req.path.includes("authForTierSpendLimit")) {
+      logger.debug(
+        "[VR4] authForTierSpendLimit request data before sanitization",
+        {
+          body: req[source],
+          issuerAccountID: req[source]?.issuerAccountID,
+          issuerAccountIDType: typeof req[source]?.issuerAccountID,
+        }
+      );
+    }
+
+    try {
+      const { sanitizedObj, error } = sanitizeAndValidateObject(
+        req[source],
+        schema,
+        req.path
+      );
+
+      if (error) {
+        logger.warn("[VR5] Request validation failed", {
+          path: req.path,
+          method: req.method,
+          source,
+          error,
+        });
+        return res.status(400).json({ message: error });
+      }
+
+      // Replace the original request data with the sanitized data
+      req[source] = sanitizedObj;
+
+      logger.debug("[VR6] Request sanitization and validation passed", {
         path: req.path,
         method: req.method,
         source,
-        error,
+        sanitizedData: sanitizedObj,
       });
-      return res.status(400).json({ message: error });
+
+      if (req.path.includes("authForTierSpendLimit")) {
+        logger.debug("[VR7] authForTierSpendLimit sanitized data", {
+          sanitizedBody: req[source],
+          sanitizedIssuerAccountID: req[source]?.issuerAccountID,
+          sanitizedIssuerAccountIDType: typeof req[source]?.issuerAccountID,
+        });
+      }
+
+      next();
+    } catch (error) {
+      logger.error("[VR8] Error in sanitizeAndValidateObject", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+        requestBody: req[source],
+      });
+      return res
+        .status(500)
+        .json({ message: "Internal server error during request validation" });
     }
-
-    // Replace the original request data with the sanitized data
-    req[source] = sanitizedObj;
-
-    logger.debug("Request sanitization and validation passed", {
-      path: req.path,
-      method: req.method,
-      source,
-      sanitizedData: sanitizedObj,
-    });
-    next();
   };
 }
 

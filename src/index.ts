@@ -1,5 +1,5 @@
 // Import required modules and dependencies
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import MemberRoutes from "./api/Member/memberRoutes";
 import AccountRoutes from "./api/Account/accountRoutes";
 import CredexRoutes from "./api/Credex/credexRoutes";
@@ -22,8 +22,36 @@ import { getConfig } from "../config/config";
 // Create an Express application
 export const app = express();
 
-// Create a JSON parser middleware
-const jsonParser = bodyParser.json();
+// Create a JSON parser middleware with custom configuration
+const jsonParser = bodyParser.json({
+  limit: '1mb', // Increase the size limit if necessary
+  strict: true,
+  verify: (req: Request, res: Response, buf: Buffer, encoding: string) => {
+    try {
+      JSON.parse(buf.toString());
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        logger.error('Invalid JSON', { error: e.message, body: buf.toString() });
+      } else {
+        logger.error('Invalid JSON', { error: 'Unknown error', body: buf.toString() });
+      }
+      throw new Error('Invalid JSON');
+    }
+  }
+});
+
+// Middleware to log raw request body
+const logRawBody = (req: Request, res: Response, next: NextFunction) => {
+  let data = '';
+  req.setEncoding('utf8');
+  req.on('data', (chunk: string) => {
+    data += chunk;
+  });
+  req.on('end', () => {
+    logger.debug('Raw request body:', { body: data, path: req.path });
+    next();
+  });
+};
 
 // Define the API version route prefix
 export const apiVersionOneRoute = "/api/v1";
@@ -44,6 +72,11 @@ async function initializeApp() {
     app.use(expressLogger);
     logger.debug("Applied logging middleware");
 
+    // Apply logRawBody and jsonParser globally
+    app.use(logRawBody);
+    app.use(jsonParser);
+    logger.debug("Applied logRawBody and jsonParser middleware globally");
+
     // Generate Swagger specification
     const swaggerSpec = await generateSwaggerSpec();
     logger.debug("Swagger specification generated");
@@ -53,7 +86,7 @@ async function initializeApp() {
     logger.debug("Swagger UI set up for API documentation");
 
     // Add health check endpoint
-    app.get('/health', (req, res) => {
+    app.get('/health', (req: Request, res: Response) => {
       res.status(200).json({ status: 'healthy' });
     });
     logger.debug("Health check endpoint added");
@@ -62,11 +95,8 @@ async function initializeApp() {
     startCronJobs();
     logger.info("Cronjobs engaged for DCO and MTQ");
 
-    // Apply route handlers for hardened modules
-    app.use(apiVersionOneRoute, jsonParser);
-
     // Log before applying MemberRoutes
-    app.use((req, res, next) => {
+    app.use((req: Request, res: Response, next: NextFunction) => {
       logger.debug("Request reached before MemberRoutes", {
         method: req.method,
         path: req.path,
@@ -76,7 +106,7 @@ async function initializeApp() {
     });
 
     // Apply Hardened Routes
-    app.use(apiVersionOneRoute, MemberRoutes(jsonParser, "")); // this is the syntax we want
+    app.use(apiVersionOneRoute, MemberRoutes(jsonParser, apiVersionOneRoute));
     AccountRoutes(app);
     CredexRoutes(app);
     AdminDashboardRoutes(app);
@@ -94,7 +124,7 @@ async function initializeApp() {
     logger.debug("Applied authentication middleware");
 
     // Add a catch-all route to log unhandled requests
-    app.use((req, res, next) => {
+    app.use((req: Request, res: Response, next: NextFunction) => {
       logger.debug("Unhandled request", {
         method: req.method,
         path: req.path,

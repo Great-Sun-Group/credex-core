@@ -96,14 +96,42 @@ export async function authForTierSpendLimitExpressHandler(
   const requestId = req.id;
   logger.debug("Entering authForTierSpendLimitExpressHandler", {
     body: req.body,
+    headers: req.headers,
     requestId,
   });
 
   try {
+    logger.debug("Extracting request body", {
+      body: req.body,
+      requestId,
+    });
+
     const { issuerAccountID, Amount, Denomination } = req.body;
 
+    logger.debug("Extracted values from request body", {
+      issuerAccountID,
+      Amount,
+      Denomination,
+      bodyKeys: Object.keys(req.body),
+      requestId,
+    });
+
+    if (issuerAccountID === undefined) {
+      logger.warn("issuerAccountID is undefined", { requestId });
+      res.status(400).json({ message: "issuerAccountID is required" });
+      return;
+    }
+
+    logger.debug("Validating issuerAccountID", {
+      issuerAccountID,
+      requestId,
+    });
+
     if (!validateUUID(issuerAccountID)) {
-      logger.warn("Invalid issuerAccountID provided", { issuerAccountID, requestId });
+      logger.warn("Invalid issuerAccountID provided", {
+        issuerAccountID,
+        requestId,
+      });
       res.status(400).json({ message: "Invalid issuerAccountID" });
       logger.debug(
         "Exiting authForTierSpendLimitExpressHandler with invalid issuerAccountID",
@@ -111,6 +139,11 @@ export async function authForTierSpendLimitExpressHandler(
       );
       return;
     }
+
+    logger.debug("Validating Amount", {
+      Amount,
+      requestId,
+    });
 
     if (!validateAmount(Amount)) {
       logger.warn("Invalid Amount provided", { Amount, requestId });
@@ -122,6 +155,11 @@ export async function authForTierSpendLimitExpressHandler(
       return;
     }
 
+    logger.debug("Validating Denomination", {
+      Denomination,
+      requestId,
+    });
+
     if (!validateDenomination(Denomination)) {
       logger.warn("Invalid Denomination provided", { Denomination, requestId });
       res.status(400).json({ message: "Invalid Denomination" });
@@ -131,6 +169,13 @@ export async function authForTierSpendLimitExpressHandler(
       );
       return;
     }
+
+    logger.debug("Calling AuthForTierSpendLimitController", {
+      issuerAccountID,
+      Amount,
+      Denomination,
+      requestId,
+    });
 
     const result = await AuthForTierSpendLimitController(
       issuerAccountID,
