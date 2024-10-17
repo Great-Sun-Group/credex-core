@@ -169,9 +169,8 @@ describe("API Tests", () => {
     it("should authenticate for tier spend limit", async () => {
       const url = `${BASE_URL}/api/v1/member/authForTierSpendLimit`;
       const data = {
-        memberID: testMemberID,
-        tier: 1,
-        Amount: 100,
+        issuerAccountID: testPersonalAccountID,
+        Amount: 5,
         Denomination: "USD",
       };
       console.log(

@@ -59,13 +59,9 @@ export const onboardMemberSchema = {
 logger.debug("onboardMemberSchema initialized");
 
 export const authForTierSpendLimitSchema = {
-  memberID: {
+  issuerAccountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
-  },
-  tier: {
-    sanitizer: (value: number) => value,
-    validator: v.validateTier,
   },
   Amount: {
     sanitizer: (value: number) => value,

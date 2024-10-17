@@ -53,6 +53,7 @@ export default function MemberRoutes(jsonParser: express.RequestHandler, apiVers
     validateRequest(loginMemberSchema),
     loginMemberExpressHandler
   );
+  logger.info("Route registered: POST /member/login");
 
   router.post(
     `/member/getMemberByHandle`,
@@ -60,6 +61,7 @@ export default function MemberRoutes(jsonParser: express.RequestHandler, apiVers
     validateRequest(getMemberByHandleSchema),
     GetMemberByHandleController
   );
+  logger.info("Route registered: POST /member/getMemberByHandle");
 
   router.post(
     `/member/getMemberDashboardByPhone`,
@@ -67,6 +69,7 @@ export default function MemberRoutes(jsonParser: express.RequestHandler, apiVers
     validateRequest(getMemberDashboardByPhoneSchema),
     GetMemberDashboardByPhoneController
   );
+  logger.info("Route registered: POST /member/getMemberDashboardByPhone");
 
   router.post(
     `/member/onboardMember`,
@@ -75,6 +78,7 @@ export default function MemberRoutes(jsonParser: express.RequestHandler, apiVers
     validateRequest(onboardMemberSchema),
     onboardMemberExpressHandler
   );
+  logger.info("Route registered: POST /member/onboardMember");
 
   router.post(
     `/member/authForTierSpendLimit`,
@@ -82,6 +86,7 @@ export default function MemberRoutes(jsonParser: express.RequestHandler, apiVers
     validateRequest(authForTierSpendLimitSchema),
     authForTierSpendLimitExpressHandler
   );
+  logger.info("Route registered: POST /member/authForTierSpendLimit");
 
   router.post(
     `/member/setDCOparticipantRate`,
@@ -89,6 +94,7 @@ export default function MemberRoutes(jsonParser: express.RequestHandler, apiVers
     validateRequest(setDCOparticipantRateSchema),
     setDCOparticipantRateExpressHandler
   );
+  logger.info("Route registered: POST /member/setDCOparticipantRate");
 
   logger.info("Member routes initialized successfully", {
     module: "memberRoutes",

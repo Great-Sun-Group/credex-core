@@ -57,7 +57,10 @@ export async function AuthForTierSpendLimitService(
         amount,
         denom,
       });
-      return { isAuthorized: false, message: "No results found for the given account" };
+      return {
+        isAuthorized: false,
+        message: "No results found for the given account",
+      };
     }
     if (queryResult.records[0].get("result") == true) {
       logger.info("Authorization granted for high tier member", {
@@ -65,7 +68,10 @@ export async function AuthForTierSpendLimitService(
         amount,
         denom,
       });
-      return { isAuthorized: true, message: "Authorization granted for high tier member" };
+      return {
+        isAuthorized: true,
+        message: "Authorization granted for high tier member",
+      };
     }
 
     const memberTier = queryResult.records[0].get("result").memberTier;
@@ -113,7 +119,10 @@ export async function AuthForTierSpendLimitService(
       amount,
       denom,
     });
-    return { isAuthorized: false, message: "An error occurred during authorization" };
+    return {
+      isAuthorized: false,
+      message: `Query error: ${error instanceof Error ? error.message : "Unknown error"}`,
+    };
   } finally {
     logger.debug("Closing database session", { issuerAccountID });
     await ledgerSpaceSession.close();
