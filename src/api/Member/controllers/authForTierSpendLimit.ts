@@ -96,6 +96,7 @@ export async function authForTierSpendLimitExpressHandler(
   const requestId = req.id;
   logger.debug("Entering authForTierSpendLimitExpressHandler", {
     body: req.body,
+    headers: req.headers,
     requestId,
   });
 
@@ -111,8 +112,15 @@ export async function authForTierSpendLimitExpressHandler(
       issuerAccountID,
       Amount,
       Denomination,
+      bodyKeys: Object.keys(req.body),
       requestId,
     });
+
+    if (issuerAccountID === undefined) {
+      logger.warn("issuerAccountID is undefined", { requestId });
+      res.status(400).json({ message: "issuerAccountID is required" });
+      return;
+    }
 
     logger.debug("Validating issuerAccountID", {
       issuerAccountID,
