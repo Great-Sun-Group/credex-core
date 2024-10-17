@@ -87,7 +87,7 @@ export default function MemberRoutes(jsonParser: express.RequestHandler, apiVers
     (req, res, next) => {
       logger.debug('Request body immediately before validateRequest for authForTierSpendLimit', {
         body: req.body,
-        issuerAccountID: req.body.issuerAccountID,
+        issuerAccountID: req.body?.issuerAccountID,
         path: req.path
       });
       next();
