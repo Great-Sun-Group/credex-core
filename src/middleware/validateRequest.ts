@@ -226,6 +226,7 @@ export function validateRequest(
       logger.error("[VR8] Error in sanitizeAndValidateObject", {
         error: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
+        requestBody: req[source],
       });
       return res
         .status(500)

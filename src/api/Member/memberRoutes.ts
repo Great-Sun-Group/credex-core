@@ -92,14 +92,34 @@ export default function MemberRoutes(jsonParser: express.RequestHandler, apiVers
 
   router.post(
     `/member/authForTierSpendLimit`,
-    jsonParser,
     (req, res, next) => {
-      logger.debug('Request body after jsonParser for authForTierSpendLimit', {
-        body: req.body,
-        issuerAccountID: req.body?.issuerAccountID,
+      logger.debug('Before jsonParser for authForTierSpendLimit', {
+        contentType: req.headers['content-type'],
+        bodyType: typeof req.body,
+        bodyKeys: req.body ? Object.keys(req.body) : [],
         path: req.path
       });
       next();
+    },
+    jsonParser,
+    (req, res, next) => {
+      try {
+        logger.debug('After jsonParser for authForTierSpendLimit', {
+          bodyType: typeof req.body,
+          bodyKeys: req.body ? Object.keys(req.body) : [],
+          issuerAccountID: req.body?.issuerAccountID,
+          issuerAccountIDType: typeof req.body?.issuerAccountID,
+          path: req.path
+        });
+        next();
+      } catch (error) {
+        logger.error('Error in custom middleware for authForTierSpendLimit', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          path: req.path
+        });
+        next(error);
+      }
     },
     validateRequest(authForTierSpendLimitSchema),
     authForTierSpendLimitExpressHandler
