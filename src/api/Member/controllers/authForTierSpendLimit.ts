@@ -100,7 +100,24 @@ export async function authForTierSpendLimitExpressHandler(
   });
 
   try {
+    logger.debug("Extracting request body", {
+      body: req.body,
+      requestId,
+    });
+
     const { issuerAccountID, Amount, Denomination } = req.body;
+
+    logger.debug("Extracted values from request body", {
+      issuerAccountID,
+      Amount,
+      Denomination,
+      requestId,
+    });
+
+    logger.debug("Validating issuerAccountID", {
+      issuerAccountID,
+      requestId,
+    });
 
     if (!validateUUID(issuerAccountID)) {
       logger.warn("Invalid issuerAccountID provided", {
@@ -115,6 +132,11 @@ export async function authForTierSpendLimitExpressHandler(
       return;
     }
 
+    logger.debug("Validating Amount", {
+      Amount,
+      requestId,
+    });
+
     if (!validateAmount(Amount)) {
       logger.warn("Invalid Amount provided", { Amount, requestId });
       res.status(400).json({ message: "Invalid Amount" });
@@ -125,6 +147,11 @@ export async function authForTierSpendLimitExpressHandler(
       return;
     }
 
+    logger.debug("Validating Denomination", {
+      Denomination,
+      requestId,
+    });
+
     if (!validateDenomination(Denomination)) {
       logger.warn("Invalid Denomination provided", { Denomination, requestId });
       res.status(400).json({ message: "Invalid Denomination" });
@@ -134,6 +161,13 @@ export async function authForTierSpendLimitExpressHandler(
       );
       return;
     }
+
+    logger.debug("Calling AuthForTierSpendLimitController", {
+      issuerAccountID,
+      Amount,
+      Denomination,
+      requestId,
+    });
 
     const result = await AuthForTierSpendLimitController(
       issuerAccountID,
