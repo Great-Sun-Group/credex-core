@@ -1,12 +1,11 @@
 import axios from "axios";
 
-// Use an environment variable to determine which environment we're testing
-const ENV = process.env.TEST_ENV || "local";
+// Check for command-line argument
+const isDeployed = process.argv.includes("dev");
 
-const BASE_URL =
-  ENV === "local"
-    ? "http://localhost:5000/api/v1"
-    : "https://dev.api.mycredex.app/api/v1";
+const BASE_URL = isDeployed
+  ? "https://dev.api.mycredex.app/api/v1"
+  : "http://localhost:5000/api/v1";
 
 console.log(`Using BASE_URL: ${BASE_URL}`);
 
@@ -44,13 +43,19 @@ describe("Member API Tests", () => {
       console.log("Test member created with ID:", testMemberID);
       console.log("Test member created with phone (handle):", testMemberPhone);
       console.log("Test member personal account ID:", testPersonalAccountID);
-      console.log("Full response data:", JSON.stringify(response.data, null, 2));
+      console.log(
+        "Full response data:",
+        JSON.stringify(response.data, null, 2)
+      );
     } catch (error) {
       const errorMessage = `Error in beforeAll (creating test member): ${error}`;
       console.error(errorMessage);
       if (axios.isAxiosError(error) && error.response) {
         console.error("Response status:", error.response.status);
-        console.error("Response data:", JSON.stringify(error.response.data, null, 2));
+        console.error(
+          "Response data:",
+          JSON.stringify(error.response.data, null, 2)
+        );
       }
       throw new Error(errorMessage);
     }
@@ -69,7 +74,10 @@ describe("Member API Tests", () => {
       console.error(errorMessage);
       if (axios.isAxiosError(error) && error.response) {
         console.error("Response status:", error.response.status);
-        console.error("Response data:", JSON.stringify(error.response.data, null, 2));
+        console.error(
+          "Response data:",
+          JSON.stringify(error.response.data, null, 2)
+        );
       }
       throw new Error(errorMessage);
     }
@@ -98,7 +106,10 @@ describe("Member API Tests", () => {
       console.error(errorMessage);
       if (axios.isAxiosError(error) && error.response) {
         console.error("Response status:", error.response.status);
-        console.error("Response data:", JSON.stringify(error.response.data, null, 2));
+        console.error(
+          "Response data:",
+          JSON.stringify(error.response.data, null, 2)
+        );
       }
       throw new Error(errorMessage);
     }
@@ -119,7 +130,10 @@ describe("Member API Tests", () => {
       console.error(errorMessage);
       if (axios.isAxiosError(error) && error.response) {
         console.error("Response status:", error.response.status);
-        console.error("Response data:", JSON.stringify(error.response.data, null, 2));
+        console.error(
+          "Response data:",
+          JSON.stringify(error.response.data, null, 2)
+        );
       }
       throw new Error(errorMessage);
     }
@@ -127,13 +141,16 @@ describe("Member API Tests", () => {
 
   it("should authenticate for tier spend limit", async () => {
     const url = `${BASE_URL}/member/authForTierSpendLimit`;
-    const data = { 
+    const data = {
       memberID: testMemberID,
       tier: 1,
       Amount: 100,
-      Denomination: "USD"
+      Denomination: "USD",
     };
-    console.log("Sending request for tier spend limit:", JSON.stringify(data, null, 2));
+    console.log(
+      "Sending request for tier spend limit:",
+      JSON.stringify(data, null, 2)
+    );
     console.log("Headers:", { Authorization: `Bearer ${testMemberJWT}` });
 
     try {
@@ -149,7 +166,10 @@ describe("Member API Tests", () => {
       console.error(errorMessage);
       if (axios.isAxiosError(error) && error.response) {
         console.error("Response status:", error.response.status);
-        console.error("Response data:", JSON.stringify(error.response.data, null, 2));
+        console.error(
+          "Response data:",
+          JSON.stringify(error.response.data, null, 2)
+        );
       }
       throw new Error(errorMessage);
     }
@@ -161,9 +181,12 @@ describe("Member API Tests", () => {
       memberID: testMemberID,
       personalAccountID: testPersonalAccountID,
       DCOgiveInCXX: 0.5,
-      DCOdenom: "USD"
+      DCOdenom: "USD",
     };
-    console.log("Sending request to set DCO participant rate:", JSON.stringify(data, null, 2));
+    console.log(
+      "Sending request to set DCO participant rate:",
+      JSON.stringify(data, null, 2)
+    );
 
     try {
       const response = await axiosInstance.post(url, data, {
@@ -178,7 +201,10 @@ describe("Member API Tests", () => {
       console.error(errorMessage);
       if (axios.isAxiosError(error) && error.response) {
         console.error("Response status:", error.response.status);
-        console.error("Response data:", JSON.stringify(error.response.data, null, 2));
+        console.error(
+          "Response data:",
+          JSON.stringify(error.response.data, null, 2)
+        );
       }
       throw new Error(errorMessage);
     }
