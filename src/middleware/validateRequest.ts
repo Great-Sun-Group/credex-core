@@ -131,7 +131,11 @@ function sanitizeAndValidateObject(
         path,
       });
       const { sanitizedObj: nestedSanitizedObj, error: nestedError } =
-        sanitizeAndValidateObject(obj[key] || {}, schemaItem as ValidationSchema, `${path}.${key}`);
+        sanitizeAndValidateObject(
+          obj[key] || {},
+          schemaItem as ValidationSchema,
+          `${path}.${key}`
+        );
       if (nestedError) {
         return { sanitizedObj, error: nestedError };
       }
@@ -172,48 +176,61 @@ export function validateRequest(
     });
 
     if (req.path.includes("authForTierSpendLimit")) {
-      logger.debug("[VR4] authForTierSpendLimit request data before sanitization", {
-        body: req[source],
-        issuerAccountID: req[source]?.issuerAccountID,
-        issuerAccountIDType: typeof req[source]?.issuerAccountID,
-      });
+      logger.debug(
+        "[VR4] authForTierSpendLimit request data before sanitization",
+        {
+          body: req[source],
+          issuerAccountID: req[source]?.issuerAccountID,
+          issuerAccountIDType: typeof req[source]?.issuerAccountID,
+        }
+      );
     }
 
-    const { sanitizedObj, error } = sanitizeAndValidateObject(
-      req[source],
-      schema,
-      req.path
-    );
-    
-    if (error) {
-      logger.warn("Request validation failed", {
+    try {
+      const { sanitizedObj, error } = sanitizeAndValidateObject(
+        req[source],
+        schema,
+        req.path
+      );
+
+      if (error) {
+        logger.warn("[VR5] Request validation failed", {
+          path: req.path,
+          method: req.method,
+          source,
+          error,
+        });
+        return res.status(400).json({ message: error });
+      }
+
+      // Replace the original request data with the sanitized data
+      req[source] = sanitizedObj;
+
+      logger.debug("[VR6] Request sanitization and validation passed", {
         path: req.path,
         method: req.method,
         source,
-        error,
+        sanitizedData: sanitizedObj,
       });
-      return res.status(400).json({ message: error });
-    }
 
-    // Replace the original request data with the sanitized data
-    req[source] = sanitizedObj;
+      if (req.path.includes("authForTierSpendLimit")) {
+        logger.debug("[VR7] authForTierSpendLimit sanitized data", {
+          sanitizedBody: req[source],
+          sanitizedIssuerAccountID: req[source]?.issuerAccountID,
+          sanitizedIssuerAccountIDType: typeof req[source]?.issuerAccountID,
+        });
+      }
 
-    logger.debug("Request sanitization and validation passed", {
-      path: req.path,
-      method: req.method,
-      source,
-      sanitizedData: sanitizedObj,
-    });
-
-    if (req.path.includes("authForTierSpendLimit")) {
-      logger.debug("authForTierSpendLimit sanitized data", {
-        sanitizedBody: req[source],
-        sanitizedIssuerAccountID: req[source]?.issuerAccountID,
-        sanitizedIssuerAccountIDType: typeof req[source]?.issuerAccountID,
+      next();
+    } catch (error) {
+      logger.error("[VR8] Error in sanitizeAndValidateObject", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
       });
+      return res
+        .status(500)
+        .json({ message: "Internal server error during request validation" });
     }
-
-    next();
   };
 }
 
