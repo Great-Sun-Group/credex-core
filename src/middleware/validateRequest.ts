@@ -21,18 +21,26 @@ function sanitizeAndValidateObject(
 ): { sanitizedObj: any; error: string | null } {
   const sanitizedObj: any = {};
   for (const [key, schemaItem] of Object.entries(schema)) {
-    logger.debug(`Validating and sanitizing key: ${key}`, { value: obj[key] });
+    logger.debug(`Processing key: ${key}`, { value: obj[key], valueType: typeof obj[key] });
     if (
       typeof schemaItem === "object" &&
       "sanitizer" in schemaItem &&
       "validator" in schemaItem
     ) {
       const { sanitizer, validator } = schemaItem as SchemaItem;
-      const sanitizedValue = sanitizer(obj[key]);
+      logger.debug(`Sanitizing value for key: ${key}`, { value: obj[key], sanitizer: sanitizer.name });
+      let sanitizedValue;
+      try {
+        sanitizedValue = sanitizer(obj[key]);
+      } catch (error) {
+        logger.error(`Error during sanitization for key: ${key}`, { error, value: obj[key] });
+        return { sanitizedObj, error: `Sanitization error for ${key}` };
+      }
       sanitizedObj[key] = sanitizedValue;
 
       logger.debug(`Sanitized value for key: ${key}`, { sanitizedValue });
 
+      logger.debug(`Validating value for key: ${key}`, { sanitizedValue, validator: validator.name });
       const validationResult = validator(sanitizedValue);
       if (!validationResult.isValid) {
         logger.debug(`Validation failed for key: ${key}`, {
