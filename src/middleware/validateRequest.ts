@@ -171,16 +171,11 @@ export function validateRequest(
       requestData: req[source],
     });
 
-    logger.debug("Full request body", {
-      body: JSON.stringify(req[source]),
-      bodyKeys: Object.keys(req[source]),
-      path: req.path,
-    });
-
     if (req.path.includes("authForTierSpendLimit")) {
       logger.debug("authForTierSpendLimit request data", {
         body: req[source],
         issuerAccountID: req[source]?.issuerAccountID,
+        issuerAccountIDType: typeof req[source]?.issuerAccountID,
       });
     }
 
@@ -209,6 +204,15 @@ export function validateRequest(
       source,
       sanitizedData: sanitizedObj,
     });
+
+    if (req.path.includes("authForTierSpendLimit")) {
+      logger.debug("authForTierSpendLimit sanitized data", {
+        sanitizedBody: req[source],
+        sanitizedIssuerAccountID: req[source]?.issuerAccountID,
+        sanitizedIssuerAccountIDType: typeof req[source]?.issuerAccountID,
+      });
+    }
+
     next();
   };
 }
