@@ -1,7 +1,6 @@
 locals {
   neo4j_ports = [7474, 7687]
   key_pair_name = "neo4j-key-pair-${var.environment}"
-  
   max_production_instances = 3
 }
 
@@ -41,7 +40,7 @@ resource "random_string" "neo4j_username_suffix" {
 }
 
 resource "aws_instance" "neo4j" {
-  count         = var.create_resource ? 2 : 0
+  count         = 2
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = local.neo4j_instance_type[var.environment]
   key_name      = aws_key_pair.neo4j_key_pair.key_name
@@ -84,11 +83,6 @@ resource "aws_instance" "neo4j" {
     volume_size = local.neo4j_instance_size[var.environment]
     encrypted   = true
   }
-
-  lifecycle {
-    prevent_destroy = false
-    ignore_changes  = [ami, user_data]
-  }
 }
 
 output "neo4j_instance_ips" {
@@ -103,13 +97,13 @@ output "neo4j_bolt_urls" {
 }
 
 output "neo4j_ledger_space_bolt_url" {
-  value       = length(aws_instance.neo4j) > 0 ? "bolt://${aws_instance.neo4j[0].private_ip}:7687" : ""
+  value       = "bolt://${aws_instance.neo4j[0].private_ip}:7687"
   description = "Neo4j Ledger Space Bolt URL"
   sensitive   = true
 }
 
 output "neo4j_search_space_bolt_url" {
-  value       = length(aws_instance.neo4j) > 1 ? "bolt://${aws_instance.neo4j[1].private_ip}:7687" : ""
+  value       = "bolt://${aws_instance.neo4j[1].private_ip}:7687"
   description = "Neo4j Search Space Bolt URL"
   sensitive   = true
 }
