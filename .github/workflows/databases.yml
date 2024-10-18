@@ -45,6 +45,9 @@ jobs:
       - name: Terraform Apply
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_create_ecr: false
+          TF_VAR_create_ecs_cluster: false
+          TF_VAR_create_log_group: false
         run: |
           cd terraform
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
@@ -55,7 +58,7 @@ jobs:
           cd terraform
           echo "Terraform outputs:"
           terraform output || echo "No outputs found"
-          
+
           NEO_4J_LEDGER_SPACE_BOLT_URL=$(terraform output -raw neo4j_ledger_space_bolt_url)
           NEO_4J_SEARCH_SPACE_BOLT_URL=$(terraform output -raw neo4j_search_space_bolt_url)
           NEO_4J_PRIVATE_KEY=$(terraform output -raw neo4j_private_key)
@@ -63,7 +66,7 @@ jobs:
           NEO_4J_SEARCH_SPACE_USERNAME=$(terraform output -raw neo4j_search_space_username)
           NEO_4J_LEDGER_SPACE_PASSWORD=$(terraform output -raw neo4j_ledger_space_password)
           NEO_4J_SEARCH_SPACE_PASSWORD=$(terraform output -raw neo4j_search_space_password)
-          
+
           echo "NEO_4J_LEDGER_SPACE_BOLT_URL=$NEO_4J_LEDGER_SPACE_BOLT_URL" >> $GITHUB_ENV
           echo "NEO_4J_SEARCH_SPACE_BOLT_URL=$NEO_4J_SEARCH_SPACE_BOLT_URL" >> $GITHUB_ENV
           echo "NEO_4J_PRIVATE_KEY=$NEO_4J_PRIVATE_KEY" >> $GITHUB_ENV
@@ -71,17 +74,6 @@ jobs:
           echo "NEO_4J_SEARCH_SPACE_USERNAME=$NEO_4J_SEARCH_SPACE_USERNAME" >> $GITHUB_ENV
           echo "NEO_4J_LEDGER_SPACE_PASSWORD=$NEO_4J_LEDGER_SPACE_PASSWORD" >> $GITHUB_ENV
           echo "NEO_4J_SEARCH_SPACE_PASSWORD=$NEO_4J_SEARCH_SPACE_PASSWORD" >> $GITHUB_ENV
-
-      - name: Print Neo4j Information
-        run: |
-          echo "Neo4j information for the ${{ env.ENVIRONMENT }} environment:"
-          echo "NEO_4J_LEDGER_SPACE_BOLT_URL: $NEO_4J_LEDGER_SPACE_BOLT_URL"
-          echo "NEO_4J_SEARCH_SPACE_BOLT_URL: $NEO_4J_SEARCH_SPACE_BOLT_URL"
-          echo "NEO_4J_LEDGER_SPACE_USERNAME: $NEO_4J_LEDGER_SPACE_USERNAME"
-          echo "NEO_4J_SEARCH_SPACE_USERNAME: $NEO_4J_SEARCH_SPACE_USERNAME"
-          echo "NEO_4J_LEDGER_SPACE_PASSWORD: $NEO_4J_LEDGER_SPACE_PASSWORD"
-          echo "NEO_4J_SEARCH_SPACE_PASSWORD: $NEO_4J_SEARCH_SPACE_PASSWORD"
-          echo "NEO_4J_PRIVATE_KEY has been generated and saved to the environment variables."
 
       - name: Save Neo4j Information to GitHub Secrets
         env:
