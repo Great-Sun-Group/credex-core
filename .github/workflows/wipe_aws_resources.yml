@@ -11,16 +11,26 @@ jobs:
   wipe-aws-resources:
     runs-on: ubuntu-latest
     if: github.event.inputs.confirm_wipe == 'YES'
-    environment: development
+    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
+
+    - name: Set Environment
+      run: |
+        if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
+          echo "ENVIRONMENT=production" >> $GITHUB_ENV
+        elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
+          echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+        else
+          echo "ENVIRONMENT=development" >> $GITHUB_ENV
+        fi
 
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v2
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ secrets.AWS_REGION }}
 
