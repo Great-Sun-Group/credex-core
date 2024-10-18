@@ -84,6 +84,13 @@ function sanitizeAndValidateObject(
 
       let sanitizedValue;
       try {
+        if (key === 'issuerAccountID') {
+          logger.debug(`[VR7.1] Sanitizing issuerAccountID`, {
+            value: obj[key],
+            type: typeof obj[key],
+            sanitizer: sanitizer.name,
+          });
+        }
         sanitizedValue = sanitizer(obj[key]);
         logger.debug(`[VR8] After sanitizing ${key}`, {
           originalValue: obj[key],
