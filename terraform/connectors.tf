@@ -4,7 +4,7 @@
 locals {
   common_tags = {
     Environment = var.environment
-    Project     = "CredEx"
+    Project     = "Credex"
     ManagedBy   = "Terraform"
   }
 }

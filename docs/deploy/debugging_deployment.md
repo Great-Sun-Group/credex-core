@@ -1,6 +1,6 @@
 # Debugging ECS Deployment Issues
 
-This document provides guidance on debugging ECS deployment issues for the CredEx application. If you encounter problems with the deployment process, you can add these debugging steps to the `deploy_application.yml` workflow.
+This document provides guidance on debugging ECS deployment issues for the Credex application. If you encounter problems with the deployment process, you can add these debugging steps to the `deploy_application.yml` workflow.
 
 ## Enhanced Deployment Step
 
