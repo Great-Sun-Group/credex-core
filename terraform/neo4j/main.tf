@@ -17,10 +17,6 @@ data "aws_security_group" "neo4j" {
   name = "credex-neo4j-sg-${var.environment}"
 }
 
-data "aws_key_pair" "existing_key_pair" {
-  key_name = var.key_name
-}
-
 resource "random_string" "neo4j_password" {
   count   = 2
   length  = 16
@@ -39,7 +35,7 @@ resource "aws_instance" "neo4j" {
   count         = 2
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = var.neo4j_instance_type[var.environment]
-  key_name      = data.aws_key_pair.existing_key_pair.key_name
+  key_name      = var.key_name
 
   vpc_security_group_ids = [data.aws_security_group.neo4j.id]
   subnet_id              = var.subnet_ids[count.index % length(var.subnet_ids)]
