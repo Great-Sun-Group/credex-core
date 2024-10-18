@@ -23,15 +23,6 @@ export default function MemberRoutes(
   const router = express.Router();
   logger.info("Initializing Member routes");
 
-  // Log all incoming requests to this router
-  router.use((req, res, next) => {
-    logger.debug("Request received in MemberRoutes", {
-      method: req.method,
-      path: req.path,
-    });
-    next();
-  });
-
   router.post(
     `/member/login`,
     jsonParser,
