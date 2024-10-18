@@ -49,7 +49,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Terraform Init and Apply for Neo4j
+      - name: Terraform Init and Plan
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_create_resource: "true"
@@ -64,12 +64,18 @@ jobs:
           cd terraform
           terraform init
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
-          terraform apply -auto-approve -target=module.neo4j \
+          terraform plan -out=tfplan -target=module.neo4j \
             -var="environment=${{ env.ENVIRONMENT }}" \
             -var="create_resource=true" \
             -var="create_ecr=false" \
             -var="create_ecs_cluster=false" \
             -var="create_log_group=false"
+
+      - name: Terraform Apply
+        if: success()
+        run: |
+          cd terraform
+          terraform apply -auto-approve tfplan
 
       - name: Get Neo4j Information
         run: |
