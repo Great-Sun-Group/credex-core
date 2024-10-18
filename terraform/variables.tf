@@ -111,65 +111,11 @@ variable "open_exchange_rates_api" {
   default     = "placeholder"
 }
 
-variable "neo4j_ledger_space_user" {
-  description = "Neo4j LedgerSpace username"
-  type        = string
-  sensitive   = true
-  default     = "placeholder"
-}
-
-variable "neo4j_ledger_space_pass" {
-  description = "Neo4j LedgerSpace password"
-  type        = string
-  sensitive   = true
-  default     = "placeholder"
-}
-
-variable "neo4j_search_space_user" {
-  description = "Neo4j SearchSpace username"
-  type        = string
-  sensitive   = true
-  default     = "placeholder"
-}
-
-variable "neo4j_search_space_pass" {
-  description = "Neo4j SearchSpace password"
-  type        = string
-  sensitive   = true
-  default     = "placeholder"
-}
-
 variable "neo4j_enterprise_license" {
   description = "Neo4j Enterprise License"
   type        = string
   sensitive   = true
   default     = "placeholder"
-}
-
-variable "neo4j_ledger_space_bolt_url" {
-  description = "Neo4j LedgerSpace Bolt URL"
-  type        = string
-  sensitive   = true
-  default     = "placeholder"
-}
-
-variable "neo4j_search_space_bolt_url" {
-  description = "Neo4j SearchSpace Bolt URL"
-  type        = string
-  sensitive   = true
-  default     = "placeholder"
-}
-
-variable "neo4j_public_key" {
-  description = "Public key for Neo4j instances"
-  type        = string
-  default     = ""
-}
-
-variable "ssh_key_name" {
-  description = "The name of the SSH key pair to use for EC2 instances"
-  type        = string
-  default     = ""
 }
 
 locals {

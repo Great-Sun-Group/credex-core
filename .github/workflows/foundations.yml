@@ -32,58 +32,29 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Terraform Init and Apply for Shared Infrastructure
+      - name: Terraform Init and Apply
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_create_ecr: "true"
+          TF_VAR_create_ecs_cluster: "true"
+          TF_VAR_create_log_group: "true"
+          TF_VAR_create_key_pair: "true"
         run: |
           cd terraform
           terraform init
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
-          terraform apply -auto-approve \
-            -target=aws_security_group.neo4j \
-            -target=aws_security_group.alb \
-            -target=aws_security_group.ecs_tasks \
-            -var="environment=${{ env.ENVIRONMENT }}"
-
-      - name: Terraform Apply for ALB and Application Infrastructure
-        env:
-          TF_VAR_environment: ${{ env.ENVIRONMENT }}
-          TF_VAR_create_resource: "true"
-          TF_VAR_create_ecr: "true"
-          TF_VAR_create_ecs_cluster: "true"
-          TF_VAR_create_log_group: "true"
-          TF_VAR_create_load_balancer: "true"
-          TF_VAR_create_target_group: "true"
-        run: |
-          cd terraform
-          terraform apply -auto-approve \
-            -target=module.ecs \
-            -target=aws_lb.credex_alb \
-            -target=aws_lb_target_group.credex_core \
-            -target=aws_acm_certificate.credex_cert \
-            -target=aws_route53_record.cert_validation \
-            -target=aws_acm_certificate_validation.cert_validation \
-            -target=aws_lb_listener.credex_listener \
-            -target=aws_lb_listener.redirect_http_to_https \
-            -target=aws_route53_record.api \
-            -var="environment=${{ env.ENVIRONMENT }}" \
-            -var="create_resource=true" \
-            -var="create_ecr=true" \
-            -var="create_ecs_cluster=true" \
-            -var="create_log_group=true" \
-            -var="create_load_balancer=true" \
-            -var="create_target_group=true"
+          terraform apply -auto-approve -target=module.shared_resources
 
       - name: Get Infrastructure Outputs
         run: |
           cd terraform
           echo "ECR_REPO_URL=$(terraform output -raw ecr_repository_url)" >> $GITHUB_ENV
           echo "ECS_CLUSTER_ARN=$(terraform output -raw ecs_cluster_arn)" >> $GITHUB_ENV
-          echo "ECS_TASK_DEF_ARN=$(terraform output -raw ecs_task_definition_arn)" >> $GITHUB_ENV
+          echo "ALB_DNS_NAME=$(terraform output -raw alb_dns_name)" >> $GITHUB_ENV
 
       - name: Print Infrastructure Information
         run: |
           echo "Please manually add the following secrets to your GitHub repository for the ${{ env.ENVIRONMENT }} environment:"
           echo "ECR_REPO_URL: $ECR_REPO_URL"
           echo "ECS_CLUSTER_ARN: $ECS_CLUSTER_ARN"
-          echo "ECS_TASK_DEF_ARN: $ECS_TASK_DEF_ARN"
+          echo "ALB_DNS_NAME: $ALB_DNS_NAME"

@@ -24,7 +24,7 @@ resource "aws_key_pair" "neo4j_key_pair" {
   count      = var.create_key_pair ? 1 : 0
   key_name   = local.key_pair_name
   public_key = tls_private_key.neo4j_key[0].public_key_openssh
-  tags       = local.common_tags
+  tags       = var.common_tags
 }
 
 data "aws_key_pair" "existing_key_pair" {
@@ -46,20 +46,16 @@ resource "random_string" "neo4j_username_suffix" {
   numeric = true
 }
 
-data "aws_security_group" "neo4j" {
-  name = "credex-neo4j-sg-${var.environment}"
-}
-
 resource "aws_instance" "neo4j" {
   count         = 2
   ami           = data.aws_ami.amazon_linux_2.id
-  instance_type = local.neo4j_instance_type[var.environment]
+  instance_type = var.neo4j_instance_type[var.environment]
   key_name      = var.create_key_pair ? aws_key_pair.neo4j_key_pair[0].key_name : data.aws_key_pair.existing_key_pair[0].key_name
 
-  vpc_security_group_ids = [data.aws_security_group.neo4j.id]
-  subnet_id              = data.aws_subnets.default.ids[count.index % length(data.aws_subnets.default.ids)]
+  vpc_security_group_ids = [var.neo4j_security_group_id]
+  subnet_id              = var.subnet_ids[count.index % length(var.subnet_ids)]
 
-  tags = merge(local.common_tags, {
+  tags = merge(var.common_tags, {
     Name = "Neo4j-${var.environment}-${count.index == 0 ? "LedgerSpace" : "SearchSpace"}"
     Role = count.index == 0 ? "LedgerSpace" : "SearchSpace"
   })
@@ -91,60 +87,7 @@ resource "aws_instance" "neo4j" {
 
   root_block_device {
     volume_type = "gp3"
-    volume_size = local.neo4j_instance_size[var.environment]
+    volume_size = var.neo4j_instance_size[var.environment]
     encrypted   = true
   }
-}
-
-output "neo4j_instance_ips" {
-  value       = aws_instance.neo4j[*].private_ip
-  description = "Private IPs of Neo4j instances"
-}
-
-output "neo4j_bolt_urls" {
-  value = [for instance in aws_instance.neo4j : "bolt://${instance.private_ip}:7687"]
-  description = "Neo4j Bolt URLs"
-  sensitive   = true
-}
-
-output "neo4j_ledger_space_bolt_url" {
-  value       = "bolt://${aws_instance.neo4j[0].private_ip}:7687"
-  description = "Neo4j Ledger Space Bolt URL"
-  sensitive   = true
-}
-
-output "neo4j_search_space_bolt_url" {
-  value       = "bolt://${aws_instance.neo4j[1].private_ip}:7687"
-  description = "Neo4j Search Space Bolt URL"
-  sensitive   = true
-}
-
-output "neo4j_private_key" {
-  value       = var.create_key_pair ? tls_private_key.neo4j_key[0].private_key_pem : "Key pair not created in this run"
-  description = "Private key for Neo4j instances"
-  sensitive   = true
-}
-
-output "neo4j_ledger_space_username" {
-  value       = "neo4j${random_string.neo4j_username_suffix[0].result}"
-  description = "Neo4j Ledger Space username"
-  sensitive   = true
-}
-
-output "neo4j_search_space_username" {
-  value       = "neo4j${random_string.neo4j_username_suffix[1].result}"
-  description = "Neo4j Search Space username"
-  sensitive   = true
-}
-
-output "neo4j_ledger_space_password" {
-  value       = random_string.neo4j_password[0].result
-  description = "Neo4j Ledger Space password"
-  sensitive   = true
-}
-
-output "neo4j_search_space_password" {
-  value       = random_string.neo4j_password[1].result
-  description = "Neo4j Search Space password"
-  sensitive   = true
 }

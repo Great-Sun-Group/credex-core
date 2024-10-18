@@ -10,6 +10,28 @@ locals {
     Project     = "CredEx"
     ManagedBy   = "Terraform"
   }
+  full_domain = "${var.subdomain_prefix[var.environment]}.${var.domain_base}"
+}
+
+# Shared Resources Module
+module "shared_resources" {
+  source      = "./shared_resources"
+  environment = var.environment
+  common_tags = local.common_tags
+  domain      = local.full_domain
+}
+
+# Neo4j Module
+module "neo4j" {
+  source                   = "./neo4j"
+  environment              = var.environment
+  common_tags              = local.common_tags
+  create_key_pair          = var.create_key_pair
+  neo4j_security_group_id  = module.shared_resources.neo4j_security_group_id
+  subnet_ids               = module.shared_resources.subnet_ids
+  neo4j_enterprise_license = var.neo4j_enterprise_license
+  neo4j_instance_type      = local.neo4j_instance_type
+  neo4j_instance_size      = local.neo4j_instance_size
 }
 
 # ECR repository
@@ -72,12 +94,12 @@ resource "aws_ecs_task_definition" "credex_core" {
       ]
       environment = [
         { name = "NODE_ENV", value = var.environment },
-        { name = "NEO_4J_LEDGER_SPACE_BOLT_URL", value = var.neo4j_ledger_space_bolt_url },
-        { name = "NEO_4J_SEARCH_SPACE_BOLT_URL", value = var.neo4j_search_space_bolt_url },
-        { name = "NEO_4J_LEDGER_SPACE_USER", value = var.neo4j_ledger_space_user },
-        { name = "NEO_4J_LEDGER_SPACE_PASS", value = var.neo4j_ledger_space_pass },
-        { name = "NEO_4J_SEARCH_SPACE_USER", value = var.neo4j_search_space_user },
-        { name = "NEO_4J_SEARCH_SPACE_PASS", value = var.neo4j_search_space_pass },
+        { name = "NEO_4J_LEDGER_SPACE_BOLT_URL", value = module.neo4j.neo4j_ledger_space_bolt_url },
+        { name = "NEO_4J_SEARCH_SPACE_BOLT_URL", value = module.neo4j.neo4j_search_space_bolt_url },
+        { name = "NEO_4J_LEDGER_SPACE_USER", value = module.neo4j.neo4j_ledger_space_username },
+        { name = "NEO_4J_LEDGER_SPACE_PASS", value = module.neo4j.neo4j_ledger_space_password },
+        { name = "NEO_4J_SEARCH_SPACE_USER", value = module.neo4j.neo4j_search_space_username },
+        { name = "NEO_4J_SEARCH_SPACE_PASS", value = module.neo4j.neo4j_search_space_password },
         { name = "JWT_SECRET", value = var.jwt_secret },
         { name = "OPEN_EXCHANGE_RATES_API", value = var.open_exchange_rates_api }
       ]
@@ -105,18 +127,18 @@ resource "aws_ecs_service" "credex_core" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = data.aws_subnets.default.ids
-    security_groups  = [var.create_security_groups ? aws_security_group.ecs_tasks[0].id : data.aws_security_group.ecs_tasks[0].id]
+    subnets          = module.shared_resources.subnet_ids
+    security_groups  = [module.shared_resources.ecs_tasks_security_group_id]
     assign_public_ip = true
   }
 
   load_balancer {
-    target_group_arn = var.create_target_group ? aws_lb_target_group.credex_core[0].arn : data.aws_lb_target_group.credex_core[0].arn
+    target_group_arn = module.shared_resources.target_group_arn
     container_name   = "credex-core"
     container_port   = 5000
   }
 
-  depends_on = [aws_lb_listener.credex_listener]
+  depends_on = [module.shared_resources.alb_listener]
 
   tags = local.common_tags
 }
@@ -228,7 +250,7 @@ resource "aws_iam_role_policy" "ecs_cloudwatch_logs_policy" {
   })
 }
 
-# Outputs for debugging
+# Outputs
 output "ecr_repository_url" {
   value       = var.create_ecr ? aws_ecr_repository.credex_core[0].repository_url : data.aws_ecr_repository.credex_core[0].repository_url
   description = "The URL of the ECR repository"
@@ -242,4 +264,20 @@ output "ecs_cluster_arn" {
 output "ecs_task_definition_arn" {
   value       = var.create_ecs_cluster ? aws_ecs_task_definition.credex_core[0].arn : null
   description = "The ARN of the ECS task definition"
+}
+
+output "neo4j_instance_ips" {
+  value       = module.neo4j.neo4j_instance_ips
+  description = "Private IPs of Neo4j instances"
+}
+
+output "neo4j_bolt_urls" {
+  value       = module.neo4j.neo4j_bolt_urls
+  description = "Neo4j Bolt URLs"
+  sensitive   = true
+}
+
+output "alb_dns_name" {
+  value       = module.shared_resources.alb_dns_name
+  description = "The DNS name of the Application Load Balancer"
 }
