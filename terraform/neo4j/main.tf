@@ -1,6 +1,5 @@
 locals {
   neo4j_ports = [7474, 7687]
-  key_pair_name = "neo4j-key-pair-${var.environment}"
   max_production_instances = 3
 }
 
@@ -12,24 +11,6 @@ data "aws_ami" "amazon_linux_2" {
     name   = "name"
     values = ["amzn2-ami-hvm-*-x86_64-gp2"]
   }
-}
-
-resource "tls_private_key" "neo4j_key" {
-  count     = var.create_key_pair ? 1 : 0
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-resource "aws_key_pair" "neo4j_key_pair" {
-  count      = var.create_key_pair ? 1 : 0
-  key_name   = local.key_pair_name
-  public_key = tls_private_key.neo4j_key[0].public_key_openssh
-  tags       = var.common_tags
-}
-
-data "aws_key_pair" "existing_key_pair" {
-  count    = var.create_key_pair ? 0 : 1
-  key_name = local.key_pair_name
 }
 
 resource "random_string" "neo4j_password" {
@@ -50,7 +31,7 @@ resource "aws_instance" "neo4j" {
   count         = 2
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = var.neo4j_instance_type[var.environment]
-  key_name      = var.create_key_pair ? aws_key_pair.neo4j_key_pair[0].key_name : data.aws_key_pair.existing_key_pair[0].key_name
+  key_name      = var.key_name
 
   vpc_security_group_ids = [var.neo4j_security_group_id]
   subnet_id              = var.subnet_ids[count.index % length(var.subnet_ids)]

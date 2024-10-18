@@ -26,6 +26,16 @@ locals {
   subnet_ids = slice(data.aws_subnets.default.ids, 0, 2)
 }
 
+# Key Pair
+resource "aws_key_pair" "credex_key_pair" {
+  key_name   = "credex-key-pair-${var.environment}"
+  public_key = var.public_key
+
+  tags = merge(var.common_tags, {
+    Name = "credex-key-pair-${var.environment}"
+  })
+}
+
 # ALB security group
 resource "aws_security_group" "alb" {
   name        = "credex-alb-sg-${var.environment}"

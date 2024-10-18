@@ -8,33 +8,48 @@ variable "common_tags" {
   type        = map(string)
 }
 
-variable "create_key_pair" {
-  description = "Whether to create a new key pair"
-  type        = bool
-}
-
 variable "neo4j_security_group_id" {
-  description = "ID of the Neo4j security group"
+  description = "The ID of the Neo4j security group"
   type        = string
 }
 
 variable "subnet_ids" {
-  description = "List of subnet IDs for Neo4j instances"
+  description = "The IDs of the subnets where Neo4j instances will be launched"
   type        = list(string)
 }
 
 variable "neo4j_enterprise_license" {
-  description = "Neo4j Enterprise License"
+  description = "The Neo4j Enterprise license key"
   type        = string
-  sensitive   = true
 }
 
 variable "neo4j_instance_type" {
-  description = "Map of environment to Neo4j instance types"
+  description = "The instance type for Neo4j instances"
   type        = map(string)
+  default = {
+    development = "t3.medium"
+    staging     = "t3.large"
+    production  = "m5.xlarge"
+  }
 }
 
 variable "neo4j_instance_size" {
-  description = "Map of environment to Neo4j instance sizes"
+  description = "The instance size (in GB) for Neo4j instances"
   type        = map(number)
+  default = {
+    development = 50
+    staging     = 100
+    production  = 200
+  }
+}
+
+variable "key_name" {
+  description = "The name of the key pair to use for Neo4j instances"
+  type        = string
+}
+
+variable "create_key_pair" {
+  description = "Whether to create a new key pair or use an existing one"
+  type        = bool
+  default     = false
 }

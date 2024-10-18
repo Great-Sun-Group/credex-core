@@ -12,3 +12,8 @@ variable "domain" {
   description = "The domain name for the ALB certificate"
   type        = string
 }
+
+variable "public_key" {
+  description = "The public key for the EC2 key pair"
+  type        = string
+}
