@@ -7,7 +7,7 @@ export async function AuthForTierSpendLimitService(
   amount: number,
   denom: string
 ) {
-  logger.debug("AuthForTierSpendLimitService called", {
+  logger.debug("Entering AuthForTierSpendLimitService", {
     issuerAccountID,
     amount,
     denom,
@@ -15,7 +15,11 @@ export async function AuthForTierSpendLimitService(
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    logger.debug("Executing database query for tier spend limit authorization");
+    logger.debug("Preparing database query for tier spend limit authorization", {
+      issuerAccountID,
+      amount,
+      denom,
+    });
     const queryResult = await ledgerSpaceSession.run(
       `
         MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
@@ -51,29 +55,52 @@ export async function AuthForTierSpendLimitService(
       { issuerAccountID, amount, denom }
     );
 
+    logger.debug("Database query executed", {
+      issuerAccountID,
+      recordCount: queryResult.records.length,
+    });
+
     if (queryResult.records.length === 0) {
       logger.warn("Query returned no results", {
         issuerAccountID,
         amount,
         denom,
       });
-      return { isAuthorized: false, message: "No results found for the given account" };
+      return {
+        isAuthorized: false,
+        message: "No results found for the given account",
+      };
     }
-    if (queryResult.records[0].get("result") == true) {
+
+    logger.debug("Processing query results", {
+      issuerAccountID,
+      firstResultType: typeof queryResult.records[0].get("result"),
+    });
+
+    if (queryResult.records[0].get("result") === true) {
       logger.info("Authorization granted for high tier member", {
         issuerAccountID,
         amount,
         denom,
       });
-      return { isAuthorized: true, message: "Authorization granted for high tier member" };
+      return {
+        isAuthorized: true,
+        message: "Authorization granted for high tier member",
+      };
     }
 
-    const memberTier = queryResult.records[0].get("result").memberTier;
-    const dayTotalUSD = queryResult.records[0].get("result").dayTotalUSD;
-    const credexAmountUSD =
-      queryResult.records[0].get("result").credexAmountUSD;
+    const result = queryResult.records[0].get("result");
+    logger.debug("Query result details", {
+      issuerAccountID,
+      result,
+    });
+
+    const memberTier = result.memberTier;
+    const dayTotalUSD = result.dayTotalUSD;
+    const credexAmountUSD = result.credexAmountUSD;
 
     logger.debug("Authorization calculation", {
+      issuerAccountID,
       memberTier,
       dayTotalUSD,
       credexAmountUSD,
@@ -86,6 +113,13 @@ export async function AuthForTierSpendLimitService(
     if (memberTier == 2) {
       amountAvailableUSD = 100 - dayTotalUSD;
     }
+
+    logger.debug("Amount available calculated", {
+      issuerAccountID,
+      amountAvailableUSD,
+      memberTier,
+    });
+
     if (amountAvailableUSD >= credexAmountUSD) {
       logger.info("Authorization granted", {
         issuerAccountID,
@@ -113,9 +147,13 @@ export async function AuthForTierSpendLimitService(
       amount,
       denom,
     });
-    return { isAuthorized: false, message: "An error occurred during authorization" };
+    return {
+      isAuthorized: false,
+      message: `Query error: ${error instanceof Error ? error.message : "Unknown error"}`,
+    };
   } finally {
     logger.debug("Closing database session", { issuerAccountID });
     await ledgerSpaceSession.close();
+    logger.debug("Exiting AuthForTierSpendLimitService", { issuerAccountID });
   }
 }

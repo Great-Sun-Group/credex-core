@@ -1,5 +1,5 @@
 // Import required modules and dependencies
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import MemberRoutes from "./api/Member/memberRoutes";
 import AccountRoutes from "./api/Account/accountRoutes";
 import CredexRoutes from "./api/Credex/credexRoutes";
@@ -38,45 +38,30 @@ async function initializeApp() {
 
     // Apply security middleware
     applySecurityMiddleware(app);
-    logger.debug("Applied security middleware");
 
     // Apply custom logging middleware
     app.use(expressLogger);
-    logger.debug("Applied logging middleware");
+
+    // Apply jsonParser globally
+    app.use(jsonParser);
 
     // Generate Swagger specification
     const swaggerSpec = await generateSwaggerSpec();
-    logger.debug("Swagger specification generated");
 
     // Serve Swagger UI for API documentation
     app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-    logger.debug("Swagger UI set up for API documentation");
 
     // Add health check endpoint
-    app.get('/health', (req, res) => {
+    app.get('/health', (req: Request, res: Response) => {
       res.status(200).json({ status: 'healthy' });
     });
-    logger.debug("Health check endpoint added");
 
     // Start cron jobs for scheduled tasks
     startCronJobs();
     logger.info("Cronjobs engaged for DCO and MTQ");
 
-    // Apply route handlers for hardened modules
-    app.use(apiVersionOneRoute, jsonParser);
-
-    // Log before applying MemberRoutes
-    app.use((req, res, next) => {
-      logger.debug("Request reached before MemberRoutes", {
-        method: req.method,
-        path: req.path,
-        ip: req.ip,
-      });
-      next();
-    });
-
     // Apply Hardened Routes
-    app.use(apiVersionOneRoute, MemberRoutes(jsonParser, "")); // this is the syntax we want
+    app.use(apiVersionOneRoute, MemberRoutes(jsonParser, apiVersionOneRoute));
     AccountRoutes(app);
     CredexRoutes(app);
     AdminDashboardRoutes(app);
@@ -86,27 +71,14 @@ async function initializeApp() {
     // Apply route handlers for dev-only routes
     if (config.environment !== "production") {
       DevRoutes(app);
-      logger.debug("Route handlers applied for dev-only routes");
     }
 
     // Apply authentication middleware after routes are set up
     applyAuthMiddleware(app);
-    logger.debug("Applied authentication middleware");
-
-    // Add a catch-all route to log unhandled requests
-    app.use((req, res, next) => {
-      logger.debug("Unhandled request", {
-        method: req.method,
-        path: req.path,
-        ip: req.ip,
-      });
-      next();
-    });
 
     // Apply error handling middleware
     app.use(notFoundHandler); // Handle 404 errors
     app.use(errorHandler); // Handle all other errors
-    logger.debug("Applied error handling middleware");
 
     logger.info("Application initialization complete");
 

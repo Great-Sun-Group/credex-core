@@ -48,7 +48,7 @@ export const applySecurityMiddleware = (app: Application) => {
   } else {
     // to restrict origins in production deployment
     const corsOptions = {
-      origin: "*", // change this to restrict  
+      origin: "*", // change this to restrict
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
       allowedHeaders: ["Content-Type", "Authorization"],
       credentials: true,
@@ -64,11 +64,35 @@ export const applySecurityMiddleware = (app: Application) => {
 
   // Add a logging middleware to track requests after security middleware
   app.use((req: Request, res: Response, next: NextFunction) => {
-    logger.debug("Request passed through all security middleware", {
+    const logData: any = {
       method: req.method,
       path: req.path,
       ip: req.ip,
-    });
+      query: req.query,
+    };
+
+    if (req.body) {
+      logData.request_body = req.body;
+    }
+
+    if (req.query.issuerAccountID) {
+      logData.issuerAccountID = req.query.issuerAccountID;
+    }
+
+    if (req.body && req.body.issuerAccountID) {
+      logData.bodyIssuerAccountID = req.body.issuerAccountID;
+    }
+
+    logger.debug("[SC1] Request passed through all security middleware", logData);
+
+    if (req.path.includes("authForTierSpendLimit")) {
+      logger.debug("[SC2] authForTierSpendLimit request details", {
+        issuerAccountIDInQuery: req.query.issuerAccountID,
+        issuerAccountIDInBody: req.body ? req.body.issuerAccountID : undefined,
+        issuerAccountIDInBodyType: req.body ? typeof req.body.issuerAccountID : undefined,
+      });
+    }
+
     next();
   });
 
@@ -83,10 +107,19 @@ export const applyAuthMiddleware = (app: Application) => {
       req.path === "/api/v1/member/onboardMember" ||
       req.path.includes("/api/v1/dev/") // routes are not published in prod
     ) {
-      logger.debug("Skipping auth middleware for path", { path: req.path });
+      logger.debug("[SC3] Skipping auth middleware for path", { 
+        path: req.path,
+        issuerAccountIDInQuery: req.query.issuerAccountID,
+        issuerAccountIDInBody: req.body ? req.body.issuerAccountID : undefined,
+      });
       return next();
     }
-    logger.debug("Applying auth middleware for path", { path: req.path });
+    logger.debug("[SC4] Applying auth middleware for path", { 
+      path: req.path,
+      query: req.query,
+      issuerAccountIDInQuery: req.query.issuerAccountID,
+      issuerAccountIDInBody: req.body ? req.body.issuerAccountID : undefined,
+    });
     authMiddleware()(req, res, next);
   });
 };

@@ -26,6 +26,7 @@ export const getMemberByHandleSchema = {
   memberHandle: {
     sanitizer: s.sanitizeString,
     validator: v.validateMemberHandle,
+    required: true,
   },
 };
 logger.debug("getMemberByHandleSchema initialized");
@@ -34,6 +35,7 @@ export const getMemberDashboardByPhoneSchema = {
   phone: {
     sanitizer: s.sanitizePhone,
     validator: v.validatePhone,
+    required: true,
   },
 };
 logger.debug("getMemberDashboardByPhoneSchema initialized");
@@ -42,46 +44,50 @@ export const onboardMemberSchema = {
   firstname: {
     sanitizer: s.sanitizeName,
     validator: v.validateName,
+    required: true,
   },
   lastname: {
     sanitizer: s.sanitizeName,
     validator: v.validateName,
+    required: true,
   },
   phone: {
     sanitizer: s.sanitizePhone,
     validator: v.validatePhone,
+    required: true,
   },
   defaultDenom: {
     sanitizer: s.sanitizeDenomination,
     validator: v.validateDenomination,
+    required: true,
   },
 };
 logger.debug("onboardMemberSchema initialized");
 
 export const authForTierSpendLimitSchema = {
-  memberID: {
+  issuerAccountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
-  },
-  tier: {
-    sanitizer: (value: number) => value,
-    validator: v.validateTier,
+    required: true,
   },
   Amount: {
     sanitizer: (value: number) => value,
     validator: v.validatePositiveNumber,
+    required: true,
   },
   Denomination: {
     sanitizer: s.sanitizeDenomination,
     validator: v.validateDenomination,
+    required: true,
   },
 };
-logger.debug("authForTierSpendLimitSchema initialized");
+logger.debug("authForTierSpendLimitSchema initialized", { schema: authForTierSpendLimitSchema });
 
 export const loginMemberSchema = {
   phone: {
     sanitizer: s.sanitizePhone,
     validator: v.validatePhone,
+    required: true,
   },
 };
 logger.debug("loginMemberSchema initialized");
@@ -90,18 +96,22 @@ export const setDCOparticipantRateSchema = {
   memberID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
   },
   personalAccountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
   },
   DCOgiveInCXX: {
     sanitizer: (value: number) => value,
     validator: v.validatePositiveNumber,
+    required: true,
   },
   DCOdenom: {
     sanitizer: s.sanitizeDenomination,
     validator: v.validateDenomination,
+    required: true,
   },
 };
 logger.debug("setDCOparticipantRateSchema initialized");

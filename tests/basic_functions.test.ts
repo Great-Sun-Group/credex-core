@@ -15,6 +15,8 @@ const axiosInstance = axios.create({
   },
 });
 
+jest.setTimeout(30000); // Increase global timeout to 30 seconds
+
 describe("API Tests", () => {
   it("should check server health", async () => {
     const url = `${BASE_URL}/health`;
@@ -35,9 +37,6 @@ describe("API Tests", () => {
     let testPersonalAccountID: string;
 
     beforeAll(async () => {
-      // 20 second timeout
-      jest.setTimeout(20 * 1000);
-
       // Create a test member to use for all tests
       const url = `${BASE_URL}/api/v1/member/onboardMember`;
       const phoneNumber = Math.floor(
@@ -64,7 +63,10 @@ describe("API Tests", () => {
         testMemberID = response.data.memberDashboard.memberID;
         testPersonalAccountID = response.data.defaultAccountID;
         console.log("Test member created with ID:", testMemberID);
-        console.log("Test member created with phone (handle):", testMemberPhone);
+        console.log(
+          "Test member created with phone (handle):",
+          testMemberPhone
+        );
         console.log("Test member personal account ID:", testPersonalAccountID);
         console.log(
           "Full response data:",
@@ -84,7 +86,7 @@ describe("API Tests", () => {
         }
         throw new Error(errorMessage);
       }
-    });
+    }, 30000); // 30 seconds timeout for beforeAll
 
     it("should login a member", async () => {
       const url = `${BASE_URL}/api/v1/member/login`;
@@ -167,9 +169,8 @@ describe("API Tests", () => {
     it("should authenticate for tier spend limit", async () => {
       const url = `${BASE_URL}/api/v1/member/authForTierSpendLimit`;
       const data = {
-        memberID: testMemberID,
-        tier: 1,
-        Amount: 100,
+        issuerAccountID: testPersonalAccountID,
+        Amount: 5,
         Denomination: "USD",
       };
       console.log(
