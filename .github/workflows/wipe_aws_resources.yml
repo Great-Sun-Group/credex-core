@@ -86,20 +86,48 @@ jobs:
 
     - name: Wipe ECS Clusters
       run: |
-        echo "Deleting ECS clusters and services..."
+        echo "Deleting ECS clusters, services, and tasks..."
         clusters=$(aws ecs list-clusters --query 'clusterArns[]' --output text)
         for cluster in $clusters; do
-          # List all services in the cluster
-          services=$(aws ecs list-services --cluster $cluster --query 'serviceArns[]' --output text)
+          echo "Processing cluster: $cluster"
           
-          # Update each service to have 0 desired tasks and delete it
-          for service in $services; do
-            aws ecs update-service --cluster $cluster --service $service --desired-count 0
-            aws ecs delete-service --cluster $cluster --service $service --force
-          done
+          # List and stop all tasks
+          tasks=$(aws ecs list-tasks --cluster $cluster --query 'taskArns[]' --output text)
+          if [ -n "$tasks" ]; then
+            echo "Stopping tasks in cluster $cluster"
+            for task in $tasks; do
+              if ! aws ecs stop-task --cluster $cluster --task $task > /dev/null 2>&1; then
+                echo "Failed to stop task $task in cluster $cluster"
+              fi
+            done
+            
+            echo "Waiting for tasks to stop..."
+            aws ecs wait tasks-stopped --cluster $cluster --tasks $tasks
+          else
+            echo "No tasks found in cluster $cluster"
+          fi
+          
+          # List and delete all services
+          services=$(aws ecs list-services --cluster $cluster --query 'serviceArns[]' --output text)
+          if [ -n "$services" ]; then
+            echo "Deleting services in cluster $cluster"
+            for service in $services; do
+              if ! aws ecs update-service --cluster $cluster --service $service --desired-count 0 > /dev/null 2>&1; then
+                echo "Failed to update service $service in cluster $cluster"
+              fi
+              if ! aws ecs delete-service --cluster $cluster --service $service --force > /dev/null 2>&1; then
+                echo "Failed to delete service $service in cluster $cluster"
+              fi
+            done
+          else
+            echo "No services found in cluster $cluster"
+          fi
           
           # Delete the cluster
-          aws ecs delete-cluster --cluster $cluster
+          echo "Deleting cluster $cluster"
+          if ! aws ecs delete-cluster --cluster $cluster > /dev/null 2>&1; then
+            echo "Failed to delete cluster $cluster"
+          fi
         done
 
     - name: Wipe ECR Repositories
