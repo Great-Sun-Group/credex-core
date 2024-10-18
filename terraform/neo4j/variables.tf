@@ -8,11 +8,6 @@ variable "common_tags" {
   type        = map(string)
 }
 
-variable "neo4j_security_group_id" {
-  description = "The ID of the Neo4j security group"
-  type        = string
-}
-
 variable "subnet_ids" {
   description = "The IDs of the subnets where Neo4j instances will be launched"
   type        = list(string)
@@ -46,10 +41,4 @@ variable "neo4j_instance_size" {
 variable "key_name" {
   description = "The name of the key pair to use for Neo4j instances"
   type        = string
-}
-
-variable "create_key_pair" {
-  description = "Whether to create a new key pair or use an existing one"
-  type        = bool
-  default     = false
 }

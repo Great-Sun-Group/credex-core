@@ -13,6 +13,10 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
+data "aws_security_group" "neo4j" {
+  name = "credex-neo4j-sg-${var.environment}"
+}
+
 resource "random_string" "neo4j_password" {
   count   = 2
   length  = 16
@@ -33,7 +37,7 @@ resource "aws_instance" "neo4j" {
   instance_type = var.neo4j_instance_type[var.environment]
   key_name      = var.key_name
 
-  vpc_security_group_ids = [var.neo4j_security_group_id]
+  vpc_security_group_ids = [data.aws_security_group.neo4j.id]
   subnet_id              = var.subnet_ids[count.index % length(var.subnet_ids)]
 
   tags = merge(var.common_tags, {
