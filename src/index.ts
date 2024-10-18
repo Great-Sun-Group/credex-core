@@ -22,23 +22,8 @@ import { getConfig } from "../config/config";
 // Create an Express application
 export const app = express();
 
-// Create a JSON parser middleware with custom configuration
-const jsonParser = bodyParser.json({
-  limit: '1mb',
-  strict: true,
-  verify: (req: Request, res: Response, buf: Buffer, encoding: string) => {
-    try {
-      JSON.parse(buf.toString());
-    } catch (e: unknown) {
-      if (e instanceof Error) {
-        logger.error('Invalid JSON', { error: e.message });
-      } else {
-        logger.error('Invalid JSON', { error: 'Unknown error' });
-      }
-      throw new Error('Invalid JSON in request body');
-    }
-  }
-});
+// Create a JSON parser middleware
+const jsonParser = bodyParser.json();
 
 // Define the API version route prefix
 export const apiVersionOneRoute = "/api/v1";
