@@ -46,9 +46,13 @@ resource "random_string" "neo4j_username_suffix" {
   numeric = true
 }
 
-data "aws_security_group" "existing_neo4j" {
+data "aws_security_group" "neo4j" {
   count = var.create_security_groups ? 0 : 1
-  name  = "credex-neo4j-sg-${var.environment}"
+  
+  filter {
+    name   = "tag:Name"
+    values = ["credex-neo4j-sg-${var.environment}"]
+  }
 }
 
 resource "aws_instance" "neo4j" {
@@ -57,7 +61,7 @@ resource "aws_instance" "neo4j" {
   instance_type = local.neo4j_instance_type[var.environment]
   key_name      = var.create_key_pair ? aws_key_pair.neo4j_key_pair[0].key_name : data.aws_key_pair.existing_key_pair[0].key_name
 
-  vpc_security_group_ids = var.create_security_groups ? [aws_security_group.neo4j[0].id] : [data.aws_security_group.existing_neo4j[0].id]
+  vpc_security_group_ids = var.create_security_groups ? [aws_security_group.neo4j[0].id] : [data.aws_security_group.neo4j[0].id]
   subnet_id              = data.aws_subnets.default.ids[count.index % length(data.aws_subnets.default.ids)]
 
   tags = merge(local.common_tags, {

@@ -35,7 +35,7 @@ locals {
 # ECS tasks security group
 resource "aws_security_group" "ecs_tasks" {
   count       = var.create_security_groups ? 1 : 0
-  name_prefix = "credex-core-ecs-tasks-sg-${var.environment}"
+  name        = "credex-core-ecs-tasks-sg-${var.environment}"
   description = "Allow inbound access from the ALB only"
   vpc_id      = local.vpc_id
 
@@ -54,18 +54,24 @@ resource "aws_security_group" "ecs_tasks" {
     description = "Allow all outbound traffic"
   }
 
-  tags = local.common_tags
+  tags = merge(local.common_tags, {
+    Name = "credex-core-ecs-tasks-sg-${var.environment}"
+  })
 }
 
 data "aws_security_group" "ecs_tasks" {
   count = var.create_security_groups ? 0 : 1
-  name  = "credex-core-ecs-tasks-sg-${var.environment}"
+  
+  filter {
+    name   = "tag:Name"
+    values = ["credex-core-ecs-tasks-sg-${var.environment}"]
+  }
 }
 
 # Neo4j security group
 resource "aws_security_group" "neo4j" {
   count       = var.create_security_groups ? 1 : 0
-  name_prefix = "credex-neo4j-sg-${var.environment}"
+  name        = "credex-neo4j-sg-${var.environment}"
   description = "Security group for Neo4j instances"
   vpc_id      = local.vpc_id
 
@@ -93,12 +99,18 @@ resource "aws_security_group" "neo4j" {
     description = "Allow all outbound traffic"
   }
 
-  tags = local.common_tags
+  tags = merge(local.common_tags, {
+    Name = "credex-neo4j-sg-${var.environment}"
+  })
 }
 
 data "aws_security_group" "neo4j" {
   count = var.create_security_groups ? 0 : 1
-  name  = "credex-neo4j-sg-${var.environment}"
+  
+  filter {
+    name   = "tag:Name"
+    values = ["credex-neo4j-sg-${var.environment}"]
+  }
 }
 
 # ALB
@@ -238,7 +250,7 @@ resource "aws_route53_record" "api" {
 # ALB security group
 resource "aws_security_group" "alb" {
   count       = var.create_security_groups ? 1 : 0
-  name_prefix = "credex-alb-sg-${var.environment}"
+  name        = "credex-alb-sg-${var.environment}"
   description = "Controls access to the ALB"
   vpc_id      = local.vpc_id
 
@@ -266,10 +278,16 @@ resource "aws_security_group" "alb" {
     description = "Allow all outbound traffic"
   }
 
-  tags = local.common_tags
+  tags = merge(local.common_tags, {
+    Name = "credex-alb-sg-${var.environment}"
+  })
 }
 
 data "aws_security_group" "alb" {
   count = var.create_security_groups ? 0 : 1
-  name  = "credex-alb-sg-${var.environment}"
+  
+  filter {
+    name   = "tag:Name"
+    values = ["credex-alb-sg-${var.environment}"]
+  }
 }
