@@ -133,7 +133,7 @@ variable "neo4j_search_space_bolt_url" {
 variable "neo4j_public_key" {
   description = "Public key for Neo4j instances"
   type        = string
-  default     = "placeholder"
+  default     = ""
 }
 
 variable "ssh_key_name" {

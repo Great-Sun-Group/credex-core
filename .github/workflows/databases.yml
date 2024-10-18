@@ -145,3 +145,10 @@ jobs:
           echo "NEO_4J_LEDGER_SPACE_PASS: $NEO_4J_LEDGER_SPACE_PASS"
           echo "NEO_4J_SEARCH_SPACE_USER: $NEO_4J_SEARCH_SPACE_USER"
           echo "NEO_4J_SEARCH_SPACE_PASS: $NEO_4J_SEARCH_SPACE_PASS"
+
+      - name: Handle Terraform Error
+        if: failure()
+        run: |
+          echo "Terraform encountered an error. Here's the error message:"
+          cat terraform.tfstate
+          echo "Please check the Terraform configuration and try again."

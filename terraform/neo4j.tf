@@ -23,7 +23,7 @@ resource "aws_key_pair" "neo4j_key_pair" {
 }
 
 data "aws_key_pair" "existing_neo4j_key_pair" {
-  count    = var.create_resource ? 0 : 1
+  count    = var.create_resource && var.neo4j_public_key == "" ? 1 : 0
   key_name = local.key_pair_name
 }
 
@@ -42,10 +42,10 @@ resource "random_string" "neo4j_username_suffix" {
 }
 
 resource "aws_instance" "neo4j" {
-  count         = 2
+  count         = var.create_resource ? 2 : 0
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = local.neo4j_instance_type[var.environment]
-  key_name      = var.create_resource && var.neo4j_public_key != "" ? aws_key_pair.neo4j_key_pair[0].key_name : (var.create_resource ? null : data.aws_key_pair.existing_neo4j_key_pair[0].key_name)
+  key_name      = var.neo4j_public_key != "" ? aws_key_pair.neo4j_key_pair[0].key_name : try(data.aws_key_pair.existing_neo4j_key_pair[0].key_name, null)
 
   vpc_security_group_ids = [aws_security_group.neo4j[0].id]
   subnet_id              = data.aws_subnets.default.ids[count.index % length(data.aws_subnets.default.ids)]
@@ -82,7 +82,7 @@ resource "aws_instance" "neo4j" {
 
   root_block_device {
     volume_type = "gp3"
-    volume_size = 50  # Set to the desired size (e.g., 100 GB)
+    volume_size = 50
     encrypted   = true
   }
 
