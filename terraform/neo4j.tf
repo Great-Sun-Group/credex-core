@@ -47,12 +47,7 @@ resource "random_string" "neo4j_username_suffix" {
 }
 
 data "aws_security_group" "neo4j" {
-  count = var.create_security_groups ? 0 : 1
-  
-  filter {
-    name   = "tag:Name"
-    values = ["credex-neo4j-sg-${var.environment}"]
-  }
+  name = "credex-neo4j-sg-${var.environment}"
 }
 
 resource "aws_instance" "neo4j" {
@@ -61,7 +56,7 @@ resource "aws_instance" "neo4j" {
   instance_type = local.neo4j_instance_type[var.environment]
   key_name      = var.create_key_pair ? aws_key_pair.neo4j_key_pair[0].key_name : data.aws_key_pair.existing_key_pair[0].key_name
 
-  vpc_security_group_ids = var.create_security_groups ? [aws_security_group.neo4j[0].id] : [data.aws_security_group.neo4j[0].id]
+  vpc_security_group_ids = [data.aws_security_group.neo4j.id]
   subnet_id              = data.aws_subnets.default.ids[count.index % length(data.aws_subnets.default.ids)]
 
   tags = merge(local.common_tags, {
@@ -153,5 +148,3 @@ output "neo4j_search_space_password" {
   description = "Neo4j Search Space password"
   sensitive   = true
 }
-
-# Note: The security group for Neo4j is defined in networking.tf

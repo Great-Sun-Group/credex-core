@@ -1,4 +1,4 @@
-name: Deploy Connectors
+name: Deploy Foundation Infrastructure
 
 on:
   workflow_dispatch:
@@ -32,26 +32,47 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Terraform Init and Apply for Application Infrastructure
+      - name: Terraform Init and Apply for Shared Infrastructure
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+        run: |
+          cd terraform
+          terraform init
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+          terraform apply -auto-approve \
+            -target=aws_security_group.neo4j \
+            -target=aws_security_group.alb \
+            -target=aws_security_group.ecs_tasks \
+            -var="environment=${{ env.ENVIRONMENT }}"
+
+      - name: Terraform Apply for ALB and Application Infrastructure
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_create_resource: "true"
           TF_VAR_create_ecr: "true"
           TF_VAR_create_ecs_cluster: "true"
           TF_VAR_create_log_group: "true"
+          TF_VAR_create_load_balancer: "true"
+          TF_VAR_create_target_group: "true"
         run: |
           cd terraform
-          terraform init
-          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
           terraform apply -auto-approve \
             -target=module.ecs \
-            -target=module.vpc \
-            -target=module.security_groups \
+            -target=aws_lb.credex_alb \
+            -target=aws_lb_target_group.credex_core \
+            -target=aws_acm_certificate.credex_cert \
+            -target=aws_route53_record.cert_validation \
+            -target=aws_acm_certificate_validation.cert_validation \
+            -target=aws_lb_listener.credex_listener \
+            -target=aws_lb_listener.redirect_http_to_https \
+            -target=aws_route53_record.api \
             -var="environment=${{ env.ENVIRONMENT }}" \
             -var="create_resource=true" \
             -var="create_ecr=true" \
             -var="create_ecs_cluster=true" \
-            -var="create_log_group=true"
+            -var="create_log_group=true" \
+            -var="create_load_balancer=true" \
+            -var="create_target_group=true"
 
       - name: Get Infrastructure Outputs
         run: |
