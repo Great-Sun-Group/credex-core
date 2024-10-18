@@ -29,6 +29,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Check for existing Neo4j instances
+        id: check_instances
+        run: |
+          INSTANCE_COUNT=$(aws ec2 describe-instances --filters "Name=tag:Project,Values=CredEx" "Name=tag:Environment,Values=${{ env.ENVIRONMENT }}" "Name=instance-state-name,Values=running" --query 'length(Reservations[*].Instances[*])' --output text)
+          echo "INSTANCE_COUNT=$INSTANCE_COUNT" >> $GITHUB_ENV
+          if [ "$INSTANCE_COUNT" -ge 2 ]; then
+            echo "create_resource=false" >> $GITHUB_ENV
+          else
+            echo "create_resource=true" >> $GITHUB_ENV
+          fi
+
       - name: Generate Neo4j Credentials
         run: |
           generate_username() {
@@ -49,10 +60,10 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Terraform Init and Plan
+      - name: Terraform Init and Apply
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
-          TF_VAR_create_resource: "true"
+          TF_VAR_create_resource: ${{ env.create_resource }}
           TF_VAR_create_ecr: "false"
           TF_VAR_create_ecs_cluster: "false"
           TF_VAR_create_log_group: "false"
@@ -64,34 +75,37 @@ jobs:
           cd terraform
           terraform init
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
-          terraform plan -out=tfplan -target=module.neo4j \
+          terraform apply -auto-approve \
             -var="environment=${{ env.ENVIRONMENT }}" \
-            -var="create_resource=true" \
+            -var="create_resource=${{ env.create_resource }}" \
             -var="create_ecr=false" \
             -var="create_ecs_cluster=false" \
             -var="create_log_group=false"
-
-      - name: Terraform Apply
-        if: success()
-        run: |
-          cd terraform
-          terraform apply -auto-approve tfplan
 
       - name: Get Neo4j Information
         run: |
           cd terraform
           echo "Terraform outputs:"
-          terraform output
+          terraform output || echo "No outputs found"
           
-          NEO_4J_LEDGER_SPACE_BOLT_URL=$(terraform output -raw neo4j_ledger_space_bolt_url || echo "FAILED_TO_RETRIEVE")
-          NEO_4J_SEARCH_SPACE_BOLT_URL=$(terraform output -raw neo4j_search_space_bolt_url || echo "FAILED_TO_RETRIEVE")
+          NEO_4J_LEDGER_SPACE_BOLT_URL=$(terraform output -raw neo4j_ledger_space_bolt_url 2>/dev/null || echo "")
+          NEO_4J_SEARCH_SPACE_BOLT_URL=$(terraform output -raw neo4j_search_space_bolt_url 2>/dev/null || echo "")
           
-          if [ "$NEO_4J_LEDGER_SPACE_BOLT_URL" = "FAILED_TO_RETRIEVE" ] || [ "$NEO_4J_SEARCH_SPACE_BOLT_URL" = "FAILED_TO_RETRIEVE" ]; then
-            echo "Failed to retrieve one or both Neo4j Bolt URLs. Please check Terraform output for errors."
-          else
-            echo "NEO_4J_LEDGER_SPACE_BOLT_URL=$NEO_4J_LEDGER_SPACE_BOLT_URL" >> $GITHUB_ENV
-            echo "NEO_4J_SEARCH_SPACE_BOLT_URL=$NEO_4J_SEARCH_SPACE_BOLT_URL" >> $GITHUB_ENV
+          if [ -z "$NEO_4J_LEDGER_SPACE_BOLT_URL" ] || [ -z "$NEO_4J_SEARCH_SPACE_BOLT_URL" ]; then
+            echo "Failed to retrieve Neo4j Bolt URLs from Terraform outputs. Attempting to fetch from AWS..."
+            INSTANCE_IPS=$(aws ec2 describe-instances --filters "Name=tag:Project,Values=CredEx" "Name=tag:Environment,Values=${{ env.ENVIRONMENT }}" --query 'Reservations[*].Instances[*].PrivateIpAddress' --output text)
+            IPS_ARRAY=($INSTANCE_IPS)
+            if [ ${#IPS_ARRAY[@]} -ge 2 ]; then
+              NEO_4J_LEDGER_SPACE_BOLT_URL="bolt://${IPS_ARRAY[0]}:7687"
+              NEO_4J_SEARCH_SPACE_BOLT_URL="bolt://${IPS_ARRAY[1]}:7687"
+            else
+              echo "Error: Unable to find Neo4j instances."
+              exit 1
+            fi
           fi
+          
+          echo "NEO_4J_LEDGER_SPACE_BOLT_URL=$NEO_4J_LEDGER_SPACE_BOLT_URL" >> $GITHUB_ENV
+          echo "NEO_4J_SEARCH_SPACE_BOLT_URL=$NEO_4J_SEARCH_SPACE_BOLT_URL" >> $GITHUB_ENV
 
       - name: Print Neo4j Information
         run: |
