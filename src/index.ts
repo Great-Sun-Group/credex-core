@@ -109,7 +109,7 @@ async function initializeApp() {
 
     // Add health check endpoint
     app.get('/health', (req: Request, res: Response) => {
-      res.status(200).json({ status: 'healthy' });
+      res.status(200).json({ status: 'healthy and updateable' });
     });
     logger.debug("Health check endpoint added");
 
