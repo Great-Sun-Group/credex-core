@@ -35,7 +35,7 @@ jobs:
             echo "neo4j$(openssl rand -base64 8 | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)"
           }
           generate_password() {
-            echo "neo4j$(printf '%06d' $((RANDOM % 1000000)))"
+            echo "neo4j$(openssl rand -hex 3 | tr '[:lower:]' '[:upper:]')"
           }
           NEO_4J_LEDGER_SPACE_USER=$(generate_username)
           NEO_4J_SEARCH_SPACE_USER=$(generate_username)
@@ -74,10 +74,18 @@ jobs:
       - name: Get Neo4j Information
         run: |
           cd terraform
-          NEO_4J_LEDGER_SPACE_BOLT_URL=$(terraform output -raw neo4j_ledger_space_bolt_url)
-          NEO_4J_SEARCH_SPACE_BOLT_URL=$(terraform output -raw neo4j_search_space_bolt_url)
-          echo "NEO_4J_LEDGER_SPACE_BOLT_URL=$NEO_4J_LEDGER_SPACE_BOLT_URL" >> $GITHUB_ENV
-          echo "NEO_4J_SEARCH_SPACE_BOLT_URL=$NEO_4J_SEARCH_SPACE_BOLT_URL" >> $GITHUB_ENV
+          echo "Terraform outputs:"
+          terraform output
+          
+          NEO_4J_LEDGER_SPACE_BOLT_URL=$(terraform output -raw neo4j_ledger_space_bolt_url || echo "FAILED_TO_RETRIEVE")
+          NEO_4J_SEARCH_SPACE_BOLT_URL=$(terraform output -raw neo4j_search_space_bolt_url || echo "FAILED_TO_RETRIEVE")
+          
+          if [ "$NEO_4J_LEDGER_SPACE_BOLT_URL" = "FAILED_TO_RETRIEVE" ] || [ "$NEO_4J_SEARCH_SPACE_BOLT_URL" = "FAILED_TO_RETRIEVE" ]; then
+            echo "Failed to retrieve one or both Neo4j Bolt URLs. Please check Terraform output for errors."
+          else
+            echo "NEO_4J_LEDGER_SPACE_BOLT_URL=$NEO_4J_LEDGER_SPACE_BOLT_URL" >> $GITHUB_ENV
+            echo "NEO_4J_SEARCH_SPACE_BOLT_URL=$NEO_4J_SEARCH_SPACE_BOLT_URL" >> $GITHUB_ENV
+          fi
 
       - name: Print Neo4j Information
         run: |
