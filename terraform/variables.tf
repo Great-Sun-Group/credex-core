@@ -1,4 +1,32 @@
-# Hardcoded variables
+# Provider configuration
+provider "aws" {
+  region = var.aws_region
+}
+
+# Data sources to fetch shared resources
+data "terraform_remote_state" "connectors" {
+  backend = "s3"
+  config = {
+    bucket = var.terraform_state_bucket
+    key    = "connectors/terraform.tfstate"
+    region = var.aws_region
+  }
+}
+
+# Neo4j Module
+module "neo4j" {
+  source                   = "./neo4j"
+  environment              = var.environment
+  vpc_id                   = data.terraform_remote_state.connectors.outputs.vpc_id
+  subnet_ids               = data.terraform_remote_state.connectors.outputs.subnet_ids
+  neo4j_security_group_id  = data.terraform_remote_state.connectors.outputs.neo4j_security_group_id
+  key_pair_name            = data.terraform_remote_state.connectors.outputs.key_pair_name
+  neo4j_instance_type      = local.neo4j_instance_type[var.environment]
+  neo4j_instance_size      = local.neo4j_instance_size[var.environment]
+  neo4j_enterprise_license = var.neo4j_enterprise_license
+}
+
+# Existing variables
 variable "aws_region" {
   description = "The AWS region to deploy to"
   type        = string
@@ -101,21 +129,29 @@ variable "jwt_secret" {
   description = "JWT secret for authentication"
   type        = string
   sensitive   = true
-  default     = "placeholder"
 }
 
 variable "open_exchange_rates_api" {
   description = "API key for Open Exchange Rates"
   type        = string
   sensitive   = true
-  default     = "placeholder"
 }
 
 variable "neo4j_enterprise_license" {
   description = "Neo4j Enterprise License"
   type        = string
   sensitive   = true
-  default     = "placeholder"
+}
+
+variable "terraform_state_bucket" {
+  description = "The S3 bucket name for Terraform state"
+  type        = string
+}
+
+variable "common_tags" {
+  description = "Common tags to be applied to all resources"
+  type        = map(string)
+  default     = {}
 }
 
 locals {
@@ -123,7 +159,6 @@ locals {
   neo4j_instance_count = 2
 
   # Neo4j instance types compliant with the 24 Cores / 256 GB RAM limit
-  # see docs/deploy/instance_size_first200k.md
   neo4j_instance_type = {
     development = "t3.medium"  
     staging     = "r5.2xlarge" 
@@ -141,8 +176,14 @@ locals {
   full_domain = "${var.subdomain_prefix[var.environment]}.${var.domain_base}"
 }
 
-# Note: This configuration complies with the Neo4j Startup Software License Agreement:
-# - Limits production instances to a maximum of 3
-# - Ensures each instance doesn't exceed 24 Cores / 256 GB of RAM (limited in neo4j.tf)
-# - Provides separate instances for LedgerSpace and SearchSpace in all environments
-# - Allows up to 3 instances for non-production testing (currently set to 2 for staging)
+# Outputs
+output "neo4j_instance_ips" {
+  value       = module.neo4j.neo4j_instance_ips
+  description = "Private IPs of Neo4j instances"
+}
+
+output "neo4j_bolt_urls" {
+  value       = module.neo4j.neo4j_bolt_urls
+  description = "Neo4j Bolt URLs"
+  sensitive   = true
+}

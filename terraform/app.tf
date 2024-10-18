@@ -4,11 +4,11 @@ provider "aws" {
 }
 
 # Data sources to fetch shared resources and database information
-data "terraform_remote_state" "foundations" {
+data "terraform_remote_state" "connectors" {
   backend = "s3"
   config = {
     bucket = var.terraform_state_bucket
-    key    = "foundations/terraform.tfstate"
+    key    = "connectors/terraform.tfstate"
     region = var.aws_region
   }
 }
@@ -24,6 +24,7 @@ data "terraform_remote_state" "databases" {
 
 # ECR repository
 resource "aws_ecr_repository" "credex_core" {
+  count                = var.create_ecr ? 1 : 0
   name                 = "credex-core-${var.environment}"
   image_tag_mutability = "MUTABLE"
   tags                 = var.common_tags
@@ -31,14 +32,16 @@ resource "aws_ecr_repository" "credex_core" {
 
 # ECS cluster
 resource "aws_ecs_cluster" "credex_cluster" {
-  name = "credex-cluster-${var.environment}"
-  tags = var.common_tags
+  count = var.create_ecs_cluster ? 1 : 0
+  name  = "credex-cluster-${var.environment}"
+  tags  = var.common_tags
 }
 
 # CloudWatch log group
 resource "aws_cloudwatch_log_group" "ecs_logs" {
-  name = "/ecs/credex-core-${var.environment}"
-  tags = var.common_tags
+  count = var.create_log_group ? 1 : 0
+  name  = "/ecs/credex-core-${var.environment}"
+  tags  = var.common_tags
 }
 
 # ECS task definition
@@ -48,13 +51,13 @@ resource "aws_ecs_task_definition" "credex_core" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = "512"
   memory                   = "1024"
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
-  task_role_arn            = aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = aws_iam_role.ecs_execution_role[0].arn
+  task_role_arn            = aws_iam_role.ecs_task_role[0].arn
 
   container_definitions = jsonencode([
     {
       name  = "credex-core"
-      image = "${aws_ecr_repository.credex_core.repository_url}:latest"
+      image = "${aws_ecr_repository.credex_core[0].repository_url}:latest"
       portMappings = [
         {
           containerPort = 5000
@@ -73,7 +76,7 @@ resource "aws_ecs_task_definition" "credex_core" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = aws_cloudwatch_log_group.ecs_logs.name
+          awslogs-group         = aws_cloudwatch_log_group.ecs_logs[0].name
           awslogs-region        = var.aws_region
           awslogs-stream-prefix = "ecs"
         }
@@ -93,25 +96,26 @@ resource "aws_ecs_service" "credex_core" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = data.terraform_remote_state.foundations.outputs.subnet_ids
-    security_groups  = [data.terraform_remote_state.foundations.outputs.ecs_tasks_security_group_id]
+    subnets          = data.terraform_remote_state.connectors.outputs.subnet_ids
+    security_groups  = [data.terraform_remote_state.connectors.outputs.ecs_tasks_security_group_id]
     assign_public_ip = true
   }
 
   load_balancer {
-    target_group_arn = data.terraform_remote_state.foundations.outputs.target_group_arn
+    target_group_arn = data.terraform_remote_state.connectors.outputs.target_group_arn
     container_name   = "credex-core"
     container_port   = 5000
   }
 
-  depends_on = [data.terraform_remote_state.foundations.outputs.alb_listener]
+  depends_on = [data.terraform_remote_state.connectors.outputs.alb_listener]
 
   tags = var.common_tags
 }
 
 # IAM roles
 resource "aws_iam_role" "ecs_execution_role" {
-  name = "ecs-execution-role-${var.environment}"
+  count = var.create_iam_roles ? 1 : 0
+  name  = "ecs-execution-role-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -130,7 +134,8 @@ resource "aws_iam_role" "ecs_execution_role" {
 }
 
 resource "aws_iam_role" "ecs_task_role" {
-  name = "ecs-task-role-${var.environment}"
+  count = var.create_iam_roles ? 1 : 0
+  name  = "ecs-task-role-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -150,54 +155,25 @@ resource "aws_iam_role" "ecs_task_role" {
 
 # Attach necessary policies to the roles
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
-  role       = aws_iam_role.ecs_execution_role.name
+  count      = var.create_iam_roles ? 1 : 0
+  role       = aws_iam_role.ecs_execution_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_role_policy" {
-  role       = aws_iam_role.ecs_task_role.name
+  count      = var.create_iam_roles ? 1 : 0
+  role       = aws_iam_role.ecs_task_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
-}
-
-# Variables
-variable "aws_region" {
-  description = "The AWS region to deploy to"
-  type        = string
-}
-
-variable "environment" {
-  description = "The deployment environment"
-  type        = string
-}
-
-variable "terraform_state_bucket" {
-  description = "The S3 bucket name for Terraform state"
-  type        = string
-}
-
-variable "common_tags" {
-  description = "Common tags to be applied to all resources"
-  type        = map(string)
-}
-
-variable "jwt_secret" {
-  description = "Secret for JWT token generation"
-  type        = string
-}
-
-variable "open_exchange_rates_api" {
-  description = "API key for Open Exchange Rates"
-  type        = string
 }
 
 # Outputs
 output "ecr_repository_url" {
-  value       = aws_ecr_repository.credex_core.repository_url
+  value       = var.create_ecr ? aws_ecr_repository.credex_core[0].repository_url : ""
   description = "The URL of the ECR repository"
 }
 
 output "ecs_cluster_arn" {
-  value       = aws_ecs_cluster.credex_cluster.arn
+  value       = var.create_ecs_cluster ? aws_ecs_cluster.credex_cluster[0].arn : ""
   description = "The ARN of the ECS cluster"
 }
 
