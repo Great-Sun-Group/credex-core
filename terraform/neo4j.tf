@@ -82,7 +82,7 @@ resource "aws_instance" "neo4j" {
 
   root_block_device {
     volume_type = "gp3"
-    volume_size = 50
+    volume_size = local.neo4j_instance_size[var.environment]
     encrypted   = true
   }
 

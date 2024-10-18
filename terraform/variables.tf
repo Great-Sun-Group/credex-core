@@ -154,6 +154,13 @@ locals {
     production  = "r5.2xlarge"
   }
 
+  # Neo4j instance sizes (in GB)
+  neo4j_instance_size = {
+    development = 50
+    staging     = 100
+    production  = 100
+  }
+
   # Full domain construction
   full_domain = "${var.subdomain_prefix[var.environment]}.${var.domain_base}"
 }
