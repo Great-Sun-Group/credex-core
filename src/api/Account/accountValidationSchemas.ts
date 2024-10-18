@@ -7,18 +7,37 @@ export const createAccountSchema = {
   ownerID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
+  },
+  accountType: {
+    sanitizer: s.sanitizeAccountType,
+    validator: v.validateAccountType,
+    required: true,
   },
   accountName: {
     sanitizer: s.sanitizeAccountName,
     validator: v.validateAccountName,
+    required: true,
   },
   accountHandle: {
     sanitizer: s.sanitizeAccountHandle,
     validator: v.validateAccountHandle,
+    required: true,
   },
   defaultDenom: {
     sanitizer: s.sanitizeDenomination,
     validator: v.validateDenomination,
+    required: true,
+  },
+  DCOgiveInCXX: {
+    sanitizer: s.sanitizeNumber,
+    validator: v.validatePositiveNumber,
+    required: false,
+  },
+  DCOdenom: {
+    sanitizer: s.sanitizeDenomination,
+    validator: v.validateDenomination,
+    required: false,
   },
 };
 logger.debug("createAccountSchema initialized");
