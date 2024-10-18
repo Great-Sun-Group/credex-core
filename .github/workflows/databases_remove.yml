@@ -35,34 +35,29 @@ jobs:
     - name: Terraform Init
       run: |
         cd terraform
-        uses: hashicorp/setup-terraform@v2
+        terraform init
 
-      - name: Terraform Init
-        run: |
-          cd terraform
-          terraform init
+    - name: Terraform Destroy Databases
+      run: |
+        cd terraform
+        terraform destroy -auto-approve \
+          -var="environment=${{ github.event.inputs.environment }}" \
+          -var="create_resource=false" \
+          -var="create_ecr=false" \
+          -var="create_ecs_cluster=false" \
+          -var="create_log_group=false" \
+          -target=aws_instance.neo4j \
+          -target=aws_security_group.neo4j
 
-      - name: Terraform Destroy
-        env:
-          TF_VAR_environment: ${{ env.ENVIRONMENT }}
-        run: |
-          cd terraform
-          terraform workspace select ${{ env.ENVIRONMENT }} || echo "Workspace ${{ env.ENVIRONMENT }} not found, proceeding with default"
-          terraform destroy -auto-approve
+    - name: Cleanup SSM Parameters
+      run: |
+        aws ssm delete-parameter --name "/credex/${{ github.event.inputs.environment }}/neo4j_ledger_space_bolt_url" || true
+        aws ssm delete-parameter --name "/credex/${{ github.event.inputs.environment }}/neo4j_search_space_bolt_url" || true
+        aws ssm delete-parameter --name "/credex/${{ github.event.inputs.environment }}/neo4j_ledger_space_user" || true
+        aws ssm delete-parameter --name "/credex/${{ github.event.inputs.environment }}/neo4j_ledger_space_pass" || true
+        aws ssm delete-parameter --name "/credex/${{ github.event.inputs.environment }}/neo4j_search_space_user" || true
+        aws ssm delete-parameter --name "/credex/${{ github.event.inputs.environment }}/neo4j_search_space_pass" || true
 
-      - name: Remove GitHub Secrets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh secret remove NEO_4J_LEDGER_SPACE_BOLT_URL --env ${{ env.ENVIRONMENT }}
-          gh secret remove NEO_4J_SEARCH_SPACE_BOLT_URL --env ${{ env.ENVIRONMENT }}
-          gh secret remove NEO_4J_PRIVATE_KEY --env ${{ env.ENVIRONMENT }}
-          gh secret remove NEO_4J_LEDGER_SPACE_USERNAME --env ${{ env.ENVIRONMENT }}
-          gh secret remove NEO_4J_SEARCH_SPACE_USERNAME --env ${{ env.ENVIRONMENT }}
-          gh secret remove NEO_4J_LEDGER_SPACE_PASSWORD --env ${{ env.ENVIRONMENT }}
-          gh secret remove NEO_4J_SEARCH_SPACE_PASSWORD --env ${{ env.ENVIRONMENT }}
-
-      - name: Confirmation
-        run: |
-          echo "Database resources have been removed for the ${{ env.ENVIRONMENT }} environment."
-          echo "GitHub secrets related to Neo4j have been deleted."
+    - name: Cleanup Key Pair
+      run: |
+        aws ec2 delete-key-pair --key-name "neo4j-key-pair-${{ github.event.inputs.environment }}" || true
