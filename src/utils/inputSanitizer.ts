@@ -12,7 +12,7 @@ export const sanitizeString = (input: string | undefined | null): string => {
 
 // Function to sanitize UUIDs (ensure it only contains valid UUID characters)
 export const sanitizeUUID = (input: any): string => {
-  logger.debug("[S0] sanitizeUUID called with input", { input });
+  logger.debug("[S0] sanitizeUUID called with input", { input, type: typeof input });
 
   logger.debug("[S1] Entering sanitizeUUID", {
     input,
