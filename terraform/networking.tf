@@ -29,24 +29,12 @@ data "aws_subnets" "default" {
 }
 
 locals {
-  subnet_ids = var.create_resource ? slice(data.aws_subnets.default.ids, 0, 2) : []
-}
-
-# Validate that we have at least two subnets
-resource "null_resource" "validate_subnets" {
-  count = var.create_resource ? 1 : 0
-
-  lifecycle {
-    precondition {
-      condition     = length(local.subnet_ids) >= 2
-      error_message = "At least two subnets in different Availability Zones are required for the ALB."
-    }
-  }
+  subnet_ids = slice(data.aws_subnets.default.ids, 0, 2)
 }
 
 # ECS tasks security group
 resource "aws_security_group" "ecs_tasks" {
-  count       = var.create_resource ? 1 : 0
+  count       = var.create_security_groups ? 1 : 0
   name_prefix = "credex-core-ecs-tasks-sg-${var.environment}"
   description = "Allow inbound access from the ALB only"
   vpc_id      = local.vpc_id
@@ -55,7 +43,7 @@ resource "aws_security_group" "ecs_tasks" {
     protocol        = "tcp"
     from_port       = 5000
     to_port         = 5000
-    security_groups = [aws_security_group.alb[0].id]
+    security_groups = [var.create_security_groups ? aws_security_group.alb[0].id : data.aws_security_group.alb[0].id]
   }
 
   egress {
@@ -69,9 +57,14 @@ resource "aws_security_group" "ecs_tasks" {
   tags = local.common_tags
 }
 
+data "aws_security_group" "ecs_tasks" {
+  count = var.create_security_groups ? 0 : 1
+  name  = "credex-core-ecs-tasks-sg-${var.environment}"
+}
+
 # Neo4j security group
 resource "aws_security_group" "neo4j" {
-  count       = var.create_resource ? 1 : 0
+  count       = var.create_security_groups ? 1 : 0
   name_prefix = "credex-neo4j-sg-${var.environment}"
   description = "Security group for Neo4j instances"
   vpc_id      = local.vpc_id
@@ -103,22 +96,30 @@ resource "aws_security_group" "neo4j" {
   tags = local.common_tags
 }
 
+data "aws_security_group" "neo4j" {
+  count = var.create_security_groups ? 0 : 1
+  name  = "credex-neo4j-sg-${var.environment}"
+}
+
 # ALB
 resource "aws_lb" "credex_alb" {
-  count              = var.create_resource ? 1 : 0
+  count              = var.create_load_balancer ? 1 : 0
   name               = "credex-alb-${var.environment}"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb[0].id]
+  security_groups    = [var.create_security_groups ? aws_security_group.alb[0].id : data.aws_security_group.alb[0].id]
   subnets            = local.subnet_ids
 
   tags = local.common_tags
+}
 
-  depends_on = [null_resource.validate_subnets]
+data "aws_lb" "credex_alb" {
+  count = var.create_load_balancer ? 0 : 1
+  name  = "credex-alb-${var.environment}"
 }
 
 resource "aws_lb_target_group" "credex_core" {
-  count       = var.create_resource ? 1 : 0
+  count       = var.create_target_group ? 1 : 0
   name        = "credex-tg-${var.environment}"
   port        = 5000
   protocol    = "HTTP"
@@ -138,9 +139,14 @@ resource "aws_lb_target_group" "credex_core" {
   tags = local.common_tags
 }
 
+data "aws_lb_target_group" "credex_core" {
+  count = var.create_target_group ? 0 : 1
+  name  = "credex-tg-${var.environment}"
+}
+
 # ACM Certificate
 resource "aws_acm_certificate" "credex_cert" {
-  count             = var.create_resource ? 1 : 0
+  count             = var.create_load_balancer ? 1 : 0
   domain_name       = local.full_domain
   validation_method = "DNS"
 
@@ -159,7 +165,7 @@ data "aws_route53_zone" "selected" {
 }
 
 resource "aws_route53_record" "cert_validation" {
-  for_each = var.create_resource ? {
+  for_each = var.create_load_balancer ? {
     for dvo in aws_acm_certificate.credex_cert[0].domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
@@ -176,14 +182,14 @@ resource "aws_route53_record" "cert_validation" {
 }
 
 resource "aws_acm_certificate_validation" "cert_validation" {
-  count                   = var.create_resource ? 1 : 0
+  count                   = var.create_load_balancer ? 1 : 0
   certificate_arn         = aws_acm_certificate.credex_cert[0].arn
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
 # ALB Listener
 resource "aws_lb_listener" "credex_listener" {
-  count             = var.create_resource ? 1 : 0
+  count             = var.create_load_balancer ? 1 : 0
   load_balancer_arn = aws_lb.credex_alb[0].arn
   port              = "443"
   protocol          = "HTTPS"
@@ -192,14 +198,14 @@ resource "aws_lb_listener" "credex_listener" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.credex_core[0].arn
+    target_group_arn = var.create_target_group ? aws_lb_target_group.credex_core[0].arn : data.aws_lb_target_group.credex_core[0].arn
   }
 
   depends_on = [aws_acm_certificate_validation.cert_validation]
 }
 
 resource "aws_lb_listener" "redirect_http_to_https" {
-  count             = var.create_resource ? 1 : 0
+  count             = var.create_load_balancer ? 1 : 0
   load_balancer_arn = aws_lb.credex_alb[0].arn
   port              = "80"
   protocol          = "HTTP"
@@ -216,22 +222,22 @@ resource "aws_lb_listener" "redirect_http_to_https" {
 }
 
 resource "aws_route53_record" "api" {
-  count           = var.create_resource ? 1 : 0
+  count           = var.create_load_balancer ? 1 : 0
   zone_id         = data.aws_route53_zone.selected.zone_id
   name            = local.full_domain
   type            = "A"
   allow_overwrite = true
 
   alias {
-    name                   = aws_lb.credex_alb[0].dns_name
-    zone_id                = aws_lb.credex_alb[0].zone_id
+    name                   = var.create_load_balancer ? aws_lb.credex_alb[0].dns_name : data.aws_lb.credex_alb[0].dns_name
+    zone_id                = var.create_load_balancer ? aws_lb.credex_alb[0].zone_id : data.aws_lb.credex_alb[0].zone_id
     evaluate_target_health = true
   }
 }
 
 # ALB security group
 resource "aws_security_group" "alb" {
-  count       = var.create_resource ? 1 : 0
+  count       = var.create_security_groups ? 1 : 0
   name_prefix = "credex-alb-sg-${var.environment}"
   description = "Controls access to the ALB"
   vpc_id      = local.vpc_id
@@ -261,4 +267,9 @@ resource "aws_security_group" "alb" {
   }
 
   tags = local.common_tags
+}
+
+data "aws_security_group" "alb" {
+  count = var.create_security_groups ? 0 : 1
+  name  = "credex-alb-sg-${var.environment}"
 }

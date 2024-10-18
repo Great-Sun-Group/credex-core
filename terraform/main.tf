@@ -57,8 +57,8 @@ resource "aws_ecs_task_definition" "credex_core" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = "512"
   memory                   = "1024"
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
-  task_role_arn            = aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = var.create_iam_roles ? aws_iam_role.ecs_execution_role[0].arn : data.aws_iam_role.ecs_execution_role[0].arn
+  task_role_arn            = var.create_iam_roles ? aws_iam_role.ecs_task_role[0].arn : data.aws_iam_role.ecs_task_role[0].arn
 
   container_definitions = jsonencode([
     {
@@ -99,19 +99,19 @@ resource "aws_ecs_task_definition" "credex_core" {
 resource "aws_ecs_service" "credex_core" {
   count           = var.create_ecs_cluster ? 1 : 0
   name            = "credex-core-service-${var.environment}"
-  cluster         = aws_ecs_cluster.credex_cluster[0].id
+  cluster         = var.create_ecs_cluster ? aws_ecs_cluster.credex_cluster[0].id : data.aws_ecs_cluster.credex_cluster[0].id
   task_definition = aws_ecs_task_definition.credex_core[0].arn
   desired_count   = 1
   launch_type     = "FARGATE"
 
   network_configuration {
     subnets          = data.aws_subnets.default.ids
-    security_groups  = [aws_security_group.ecs_tasks[0].id]
+    security_groups  = [var.create_security_groups ? aws_security_group.ecs_tasks[0].id : data.aws_security_group.ecs_tasks[0].id]
     assign_public_ip = true
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.credex_core[0].arn
+    target_group_arn = var.create_target_group ? aws_lb_target_group.credex_core[0].arn : data.aws_lb_target_group.credex_core[0].arn
     container_name   = "credex-core"
     container_port   = 5000
   }
@@ -123,7 +123,8 @@ resource "aws_ecs_service" "credex_core" {
 
 # IAM roles
 resource "aws_iam_role" "ecs_execution_role" {
-  name = "ecs-execution-role-${var.environment}"
+  count = var.create_iam_roles ? 1 : 0
+  name  = "ecs-execution-role-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -141,8 +142,14 @@ resource "aws_iam_role" "ecs_execution_role" {
   tags = local.common_tags
 }
 
+data "aws_iam_role" "ecs_execution_role" {
+  count = var.create_iam_roles ? 0 : 1
+  name  = "ecs-execution-role-${var.environment}"
+}
+
 resource "aws_iam_role" "ecs_task_role" {
-  name = "ecs-task-role-${var.environment}"
+  count = var.create_iam_roles ? 1 : 0
+  name  = "ecs-task-role-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -158,24 +165,31 @@ resource "aws_iam_role" "ecs_task_role" {
   })
 
   tags = local.common_tags
+}
+
+data "aws_iam_role" "ecs_task_role" {
+  count = var.create_iam_roles ? 0 : 1
+  name  = "ecs-task-role-${var.environment}"
 }
 
 # Attach necessary policies to the roles
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
-  role       = aws_iam_role.ecs_execution_role.name
+  count      = var.create_iam_roles ? 1 : 0
+  role       = aws_iam_role.ecs_execution_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_role_policy" {
-  role       = aws_iam_role.ecs_task_role.name
+  count      = var.create_iam_roles ? 1 : 0
+  role       = aws_iam_role.ecs_task_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
 # Add ECR pull permissions to the ECS execution role
 resource "aws_iam_role_policy" "ecs_ecr_policy" {
-  count = var.create_resource ? 1 : 0
+  count = var.create_iam_roles ? 1 : 0
   name  = "ecs-ecr-policy-${var.environment}"
-  role  = aws_iam_role.ecs_execution_role.id
+  role  = aws_iam_role.ecs_execution_role[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -196,9 +210,9 @@ resource "aws_iam_role_policy" "ecs_ecr_policy" {
 
 # Add explicit CloudWatch Logs permissions to the ECS execution role
 resource "aws_iam_role_policy" "ecs_cloudwatch_logs_policy" {
-  count = var.create_resource ? 1 : 0
+  count = var.create_iam_roles ? 1 : 0
   name  = "ecs-cloudwatch-logs-policy-${var.environment}"
-  role  = aws_iam_role.ecs_execution_role.id
+  role  = aws_iam_role.ecs_execution_role[0].id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

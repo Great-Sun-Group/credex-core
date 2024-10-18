@@ -41,13 +41,7 @@ variable "log_level" {
   }
 }
 
-variable "create_resource" {
-  description = "Boolean flag to indicate whether to create/update (true) or delete (false) resources"
-  type        = bool
-  default     = true
-}
-
-# Variables passed from Github Action script checks on whether these resources exist
+# Variables for resource creation control
 variable "create_ecr" {
   description = "Whether to create the ECR repository"
   type        = bool
@@ -62,6 +56,42 @@ variable "create_ecs_cluster" {
 
 variable "create_log_group" {
   description = "Whether to create the CloudWatch log group"
+  type        = bool
+  default     = true
+}
+
+variable "create_iam_roles" {
+  description = "Whether to create IAM roles"
+  type        = bool
+  default     = true
+}
+
+variable "create_key_pair" {
+  description = "Whether to create the key pair"
+  type        = bool
+  default     = true
+}
+
+variable "create_load_balancer" {
+  description = "Whether to create the load balancer"
+  type        = bool
+  default     = true
+}
+
+variable "create_target_group" {
+  description = "Whether to create the target group"
+  type        = bool
+  default     = true
+}
+
+variable "create_security_groups" {
+  description = "Whether to create security groups"
+  type        = bool
+  default     = true
+}
+
+variable "create_neo4j_instances" {
+  description = "Whether to create Neo4j instances"
   type        = bool
   default     = true
 }
