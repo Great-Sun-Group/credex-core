@@ -39,6 +39,6 @@ output "alb_listener" {
 }
 
 output "key_pair_name" {
-  value       = data.aws_key_pair.existing_key_pair.key_name
-  description = "The name of the existing key pair"
+  value       = aws_key_pair.credex_key_pair.key_name
+  description = "The name of the created key pair"
 }
