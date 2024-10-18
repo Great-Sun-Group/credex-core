@@ -40,23 +40,6 @@ jobs:
             echo "create_resource=true" >> $GITHUB_ENV
           fi
 
-      - name: Generate Neo4j Credentials
-        run: |
-          generate_username() {
-            echo "neo4j$(openssl rand -base64 8 | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)"
-          }
-          generate_password() {
-            echo "neo4j$(openssl rand -hex 3 | tr '[:lower:]' '[:upper:]')"
-          }
-          NEO_4J_LEDGER_SPACE_USER=$(generate_username)
-          NEO_4J_SEARCH_SPACE_USER=$(generate_username)
-          NEO_4J_LEDGER_SPACE_PASS=$(generate_password)
-          NEO_4J_SEARCH_SPACE_PASS=$(generate_password)
-          echo "NEO_4J_LEDGER_SPACE_USER=$NEO_4J_LEDGER_SPACE_USER" >> $GITHUB_ENV
-          echo "NEO_4J_SEARCH_SPACE_USER=$NEO_4J_SEARCH_SPACE_USER" >> $GITHUB_ENV
-          echo "NEO_4J_LEDGER_SPACE_PASS=$NEO_4J_LEDGER_SPACE_PASS" >> $GITHUB_ENV
-          echo "NEO_4J_SEARCH_SPACE_PASS=$NEO_4J_SEARCH_SPACE_PASS" >> $GITHUB_ENV
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
@@ -73,10 +56,6 @@ jobs:
           TF_VAR_create_ecr: "false"
           TF_VAR_create_ecs_cluster: "false"
           TF_VAR_create_log_group: "false"
-          TF_VAR_neo4j_ledger_space_user: ${{ env.NEO_4J_LEDGER_SPACE_USER }}
-          TF_VAR_neo4j_search_space_user: ${{ env.NEO_4J_SEARCH_SPACE_USER }}
-          TF_VAR_neo4j_ledger_space_pass: ${{ env.NEO_4J_LEDGER_SPACE_PASS }}
-          TF_VAR_neo4j_search_space_pass: ${{ env.NEO_4J_SEARCH_SPACE_PASS }}
         run: |
           cd terraform
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
@@ -95,10 +74,6 @@ jobs:
           TF_VAR_create_ecr: "false"
           TF_VAR_create_ecs_cluster: "false"
           TF_VAR_create_log_group: "false"
-          TF_VAR_neo4j_ledger_space_user: ${{ env.NEO_4J_LEDGER_SPACE_USER }}
-          TF_VAR_neo4j_search_space_user: ${{ env.NEO_4J_SEARCH_SPACE_USER }}
-          TF_VAR_neo4j_ledger_space_pass: ${{ env.NEO_4J_LEDGER_SPACE_PASS }}
-          TF_VAR_neo4j_search_space_pass: ${{ env.NEO_4J_SEARCH_SPACE_PASS }}
         run: |
           cd terraform
           terraform apply -auto-approve tfplan
@@ -115,25 +90,22 @@ jobs:
           cd terraform
           echo "Terraform outputs:"
           terraform output || echo "No outputs found"
-
+          
           NEO_4J_LEDGER_SPACE_BOLT_URL=$(terraform output -raw neo4j_ledger_space_bolt_url 2>/dev/null || echo "")
           NEO_4J_SEARCH_SPACE_BOLT_URL=$(terraform output -raw neo4j_search_space_bolt_url 2>/dev/null || echo "")
-
-          if [ -z "$NEO_4J_LEDGER_SPACE_BOLT_URL" ] || [ -z "$NEO_4J_SEARCH_SPACE_BOLT_URL" ]; then
-            echo "Failed to retrieve Neo4j Bolt URLs from Terraform outputs. Attempting to fetch from AWS..."
-            INSTANCE_IPS=$(aws ec2 describe-instances --filters "Name=tag:Project,Values=CredEx" "Name=tag:Environment,Values=${{ env.ENVIRONMENT }}" --query 'Reservations[*].Instances[*].PrivateIpAddress' --output text)
-            IPS_ARRAY=($INSTANCE_IPS)
-            if [ ${#IPS_ARRAY[@]} -ge 2 ]; then
-              NEO_4J_LEDGER_SPACE_BOLT_URL="bolt://${IPS_ARRAY[0]}:7687"
-              NEO_4J_SEARCH_SPACE_BOLT_URL="bolt://${IPS_ARRAY[1]}:7687"
-            else
-              echo "Error: Unable to find Neo4j instances."
-              exit 1
-            fi
-          fi
-
+          NEO_4J_PRIVATE_KEY=$(terraform output -raw neo4j_private_key 2>/dev/null || echo "")
+          NEO_4J_LEDGER_SPACE_USERNAME=$(terraform output -raw neo4j_ledger_space_username 2>/dev/null || echo "")
+          NEO_4J_SEARCH_SPACE_USERNAME=$(terraform output -raw neo4j_search_space_username 2>/dev/null || echo "")
+          NEO_4J_LEDGER_SPACE_PASSWORD=$(terraform output -raw neo4j_ledger_space_password 2>/dev/null || echo "")
+          NEO_4J_SEARCH_SPACE_PASSWORD=$(terraform output -raw neo4j_search_space_password 2>/dev/null || echo "")
+          
           echo "NEO_4J_LEDGER_SPACE_BOLT_URL=$NEO_4J_LEDGER_SPACE_BOLT_URL" >> $GITHUB_ENV
           echo "NEO_4J_SEARCH_SPACE_BOLT_URL=$NEO_4J_SEARCH_SPACE_BOLT_URL" >> $GITHUB_ENV
+          echo "NEO_4J_PRIVATE_KEY=$NEO_4J_PRIVATE_KEY" >> $GITHUB_ENV
+          echo "NEO_4J_LEDGER_SPACE_USERNAME=$NEO_4J_LEDGER_SPACE_USERNAME" >> $GITHUB_ENV
+          echo "NEO_4J_SEARCH_SPACE_USERNAME=$NEO_4J_SEARCH_SPACE_USERNAME" >> $GITHUB_ENV
+          echo "NEO_4J_LEDGER_SPACE_PASSWORD=$NEO_4J_LEDGER_SPACE_PASSWORD" >> $GITHUB_ENV
+          echo "NEO_4J_SEARCH_SPACE_PASSWORD=$NEO_4J_SEARCH_SPACE_PASSWORD" >> $GITHUB_ENV
 
       - name: Print Neo4j Information
         if: env.PLAN_EXIT_CODE == '2'
@@ -141,14 +113,21 @@ jobs:
           echo "Changes applied. Updated Neo4j information for the ${{ env.ENVIRONMENT }} environment:"
           echo "NEO_4J_LEDGER_SPACE_BOLT_URL: $NEO_4J_LEDGER_SPACE_BOLT_URL"
           echo "NEO_4J_SEARCH_SPACE_BOLT_URL: $NEO_4J_SEARCH_SPACE_BOLT_URL"
-          echo "NEO_4J_LEDGER_SPACE_USER: $NEO_4J_LEDGER_SPACE_USER"
-          echo "NEO_4J_LEDGER_SPACE_PASS: $NEO_4J_LEDGER_SPACE_PASS"
-          echo "NEO_4J_SEARCH_SPACE_USER: $NEO_4J_SEARCH_SPACE_USER"
-          echo "NEO_4J_SEARCH_SPACE_PASS: $NEO_4J_SEARCH_SPACE_PASS"
+          echo "NEO_4J_LEDGER_SPACE_USERNAME: $NEO_4J_LEDGER_SPACE_USERNAME"
+          echo "NEO_4J_SEARCH_SPACE_USERNAME: $NEO_4J_SEARCH_SPACE_USERNAME"
+          echo "NEO_4J_LEDGER_SPACE_PASSWORD: $NEO_4J_LEDGER_SPACE_PASSWORD"
+          echo "NEO_4J_SEARCH_SPACE_PASSWORD: $NEO_4J_SEARCH_SPACE_PASSWORD"
+          echo "NEO_4J_PRIVATE_KEY has been generated and saved to the environment variables."
 
-      - name: Handle Terraform Error
-        if: failure()
+      - name: Save Neo4j Information to GitHub Secrets
+        if: env.PLAN_EXIT_CODE == '2'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Terraform encountered an error. Here's the error message:"
-          cat terraform.tfstate
-          echo "Please check the Terraform configuration and try again."
+          gh secret set NEO_4J_LEDGER_SPACE_BOLT_URL --body "$NEO_4J_LEDGER_SPACE_BOLT_URL" --env ${{ env.ENVIRONMENT }}
+          gh secret set NEO_4J_SEARCH_SPACE_BOLT_URL --body "$NEO_4J_SEARCH_SPACE_BOLT_URL" --env ${{ env.ENVIRONMENT }}
+          gh secret set NEO_4J_PRIVATE_KEY --body "$NEO_4J_PRIVATE_KEY" --env ${{ env.ENVIRONMENT }}
+          gh secret set NEO_4J_LEDGER_SPACE_USERNAME --body "$NEO_4J_LEDGER_SPACE_USERNAME" --env ${{ env.ENVIRONMENT }}
+          gh secret set NEO_4J_SEARCH_SPACE_USERNAME --body "$NEO_4J_SEARCH_SPACE_USERNAME" --env ${{ env.ENVIRONMENT }}
+          gh secret set NEO_4J_LEDGER_SPACE_PASSWORD --body "$NEO_4J_LEDGER_SPACE_PASSWORD" --env ${{ env.ENVIRONMENT }}
+          gh secret set NEO_4J_SEARCH_SPACE_PASSWORD --body "$NEO_4J_SEARCH_SPACE_PASSWORD" --env ${{ env.ENVIRONMENT }}

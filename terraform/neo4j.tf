@@ -15,16 +15,15 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-resource "aws_key_pair" "neo4j_key_pair" {
-  count      = var.create_resource && var.neo4j_public_key != "" ? 1 : 0
-  key_name   = local.key_pair_name
-  public_key = var.neo4j_public_key
-  tags       = local.common_tags
+resource "tls_private_key" "neo4j_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
 }
 
-data "aws_key_pair" "existing_neo4j_key_pair" {
-  count    = var.create_resource && var.neo4j_public_key == "" ? 1 : 0
-  key_name = local.key_pair_name
+resource "aws_key_pair" "neo4j_key_pair" {
+  key_name   = local.key_pair_name
+  public_key = tls_private_key.neo4j_key.public_key_openssh
+  tags       = local.common_tags
 }
 
 resource "random_string" "neo4j_password" {
@@ -45,7 +44,7 @@ resource "aws_instance" "neo4j" {
   count         = var.create_resource ? 2 : 0
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = local.neo4j_instance_type[var.environment]
-  key_name      = var.neo4j_public_key != "" ? aws_key_pair.neo4j_key_pair[0].key_name : try(data.aws_key_pair.existing_neo4j_key_pair[0].key_name, null)
+  key_name      = aws_key_pair.neo4j_key_pair.key_name
 
   vpc_security_group_ids = [aws_security_group.neo4j[0].id]
   subnet_id              = data.aws_subnets.default.ids[count.index % length(data.aws_subnets.default.ids)]
@@ -112,6 +111,36 @@ output "neo4j_ledger_space_bolt_url" {
 output "neo4j_search_space_bolt_url" {
   value       = length(aws_instance.neo4j) > 1 ? "bolt://${aws_instance.neo4j[1].private_ip}:7687" : ""
   description = "Neo4j Search Space Bolt URL"
+  sensitive   = true
+}
+
+output "neo4j_private_key" {
+  value       = tls_private_key.neo4j_key.private_key_pem
+  description = "Private key for Neo4j instances"
+  sensitive   = true
+}
+
+output "neo4j_ledger_space_username" {
+  value       = "neo4j${random_string.neo4j_username_suffix[0].result}"
+  description = "Neo4j Ledger Space username"
+  sensitive   = true
+}
+
+output "neo4j_search_space_username" {
+  value       = "neo4j${random_string.neo4j_username_suffix[1].result}"
+  description = "Neo4j Search Space username"
+  sensitive   = true
+}
+
+output "neo4j_ledger_space_password" {
+  value       = random_string.neo4j_password[0].result
+  description = "Neo4j Ledger Space password"
+  sensitive   = true
+}
+
+output "neo4j_search_space_password" {
+  value       = random_string.neo4j_password[1].result
+  description = "Neo4j Search Space password"
   sensitive   = true
 }
 
