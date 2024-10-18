@@ -1,4 +1,4 @@
-name: Deploy Foundation Infrastructure
+name: Deploy Connectors
 
 on:
   workflow_dispatch:
