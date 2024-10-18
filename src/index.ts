@@ -24,8 +24,8 @@ export const app = express();
 
 // Create a JSON parser middleware with custom configuration
 const jsonParser = bodyParser.json({
-  limit: '1mb', // Increase the size limit if necessary
-  strict: false, // Changed from true to false
+  limit: '1mb',
+  strict: true,
   verify: (req: Request, res: Response, buf: Buffer, encoding: string) => {
     try {
       JSON.parse(buf.toString());
@@ -35,15 +35,38 @@ const jsonParser = bodyParser.json({
       } else {
         logger.error('Invalid JSON', { error: 'Unknown error', body: buf.toString() });
       }
-      // Changed from throwing an error to just logging it
-      logger.error('Invalid JSON in request body');
+      throw new Error('Invalid JSON in request body');
     }
   }
 });
 
-// Middleware to log request body (modified to use req.body instead of raw data)
+// Middleware to log raw request
+const logRawRequest = (req: Request, res: Response, next: NextFunction) => {
+  let data = '';
+  req.setEncoding('utf8');
+  req.on('data', (chunk) => {
+    data += chunk;
+  });
+  req.on('end', () => {
+    logger.debug('Raw request:', {
+      method: req.method,
+      path: req.path,
+      headers: req.headers,
+      body: data,
+    });
+    next();
+  });
+};
+
+// Middleware to log request body
 const logRequestBody = (req: Request, res: Response, next: NextFunction) => {
-  logger.debug('Request body:', { body: req.body, path: req.path });
+  logger.debug('Request details:', {
+    method: req.method,
+    path: req.path,
+    headers: req.headers,
+    body: req.body,
+    rawBody: (req as any).rawBody,
+  });
   next();
 };
 
@@ -65,6 +88,10 @@ async function initializeApp() {
     // Apply custom logging middleware
     app.use(expressLogger);
     logger.debug("Applied logging middleware");
+
+    // Apply logRawRequest before jsonParser
+    app.use(logRawRequest);
+    logger.debug("Applied logRawRequest middleware");
 
     // Apply jsonParser globally
     app.use(jsonParser);

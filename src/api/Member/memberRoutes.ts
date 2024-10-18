@@ -95,6 +95,14 @@ export default function MemberRoutes(
 
   router.post(
     `/member/authForTierSpendLimit`,
+    (req, res, next) => {
+      logger.debug("Entering authForTierSpendLimit route", {
+        method: req.method,
+        path: req.path,
+        headers: req.headers,
+      });
+      next();
+    },
     logRawBody,
     (req, res, next) => {
       logger.debug("Before jsonParser for authForTierSpendLimit", {
@@ -116,6 +124,7 @@ export default function MemberRoutes(
           });
           return res.status(400).json({ message: "Invalid JSON in request body" });
         }
+        logger.debug("jsonParser completed successfully for authForTierSpendLimit");
         next();
       });
     },
@@ -145,7 +154,23 @@ export default function MemberRoutes(
       });
       next();
     },
+    (req, res, next) => {
+      logger.debug("Before validateRequest for authForTierSpendLimit", {
+        body: req.body,
+        issuerAccountID: req.body?.issuerAccountID,
+        issuerAccountIDType: typeof req.body?.issuerAccountID,
+      });
+      next();
+    },
     validateRequest(authForTierSpendLimitSchema),
+    (req, res, next) => {
+      logger.debug("After validateRequest for authForTierSpendLimit", {
+        body: req.body,
+        issuerAccountID: req.body?.issuerAccountID,
+        issuerAccountIDType: typeof req.body?.issuerAccountID,
+      });
+      next();
+    },
     authForTierSpendLimitExpressHandler
   );
   logger.info("Route registered: POST /member/authForTierSpendLimit");

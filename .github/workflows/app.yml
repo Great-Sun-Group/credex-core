@@ -39,7 +39,7 @@ jobs:
           ECR_REPOSITORY: credex-core-${{ env.ENVIRONMENT }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build --target deploy \
+          docker build --no-cache --target deploy \
             --build-arg NODE_ENV=${{ env.ENVIRONMENT }} \
             --build-arg NEO_4J_LEDGER_SPACE_USER="${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" \
             --build-arg NEO_4J_LEDGER_SPACE_PASS="${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" \
@@ -60,8 +60,8 @@ jobs:
           # Get the current task definition
           TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition credex-core-$ENVIRONMENT --query 'taskDefinition' --output json)
           
-          # Update the task definition with new environment variables
-          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq '.containerDefinitions[0].environment += [
+          # Update the task definition with new image and environment variables
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment += [
             {"name": "NODE_ENV", "value": "${{ env.ENVIRONMENT }}"},
             {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_USER }}"},
             {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}"},

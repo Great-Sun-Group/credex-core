@@ -84,7 +84,7 @@ function sanitizeAndValidateObject(
 
       let sanitizedValue;
       try {
-        if (key === 'issuerAccountID') {
+        if (key === "issuerAccountID") {
           logger.debug(`[VR7.1] Sanitizing issuerAccountID`, {
             value: obj[key],
             type: typeof obj[key],
