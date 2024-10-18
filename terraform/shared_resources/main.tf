@@ -27,13 +27,8 @@ locals {
 }
 
 # Key Pair
-resource "aws_key_pair" "credex_key_pair" {
-  key_name   = "credex-key-pair-${var.environment}"
-  public_key = var.public_key
-
-  tags = merge(var.common_tags, {
-    Name = "credex-key-pair-${var.environment}"
-  })
+data "aws_key_pair" "existing_key_pair" {
+  key_name = "credex-key-pair-${var.environment}"
 }
 
 # ALB security group
@@ -55,6 +50,11 @@ resource "aws_security_group" "alb" {
     from_port   = 443
     to_port     = 443
     cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTPS inbound traffic"
+  }
+
+  egress {
+    protocol    = "-1"
     description = "Allow HTTPS inbound traffic"
   }
 
