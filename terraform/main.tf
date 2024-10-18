@@ -229,3 +229,48 @@ output "ecs_task_definition_arn" {
   value       = var.create_ecs_cluster ? aws_ecs_task_definition.credex_core[0].arn : null
   description = "The ARN of the ECS task definition"
 }
+
+# Data source for Amazon Linux 2 AMI
+data "aws_ami" "amazon_linux_2" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+}
+
+# Neo4j instances
+resource "aws_instance" "neo4j" {
+  count         = var.create_resource ? 2 : 0
+  ami           = data.aws_ami.amazon_linux_2.id
+  instance_type = local.neo4j_instance_type[var.environment]
+
+  tags = merge(local.common_tags, {
+    Name = count.index == 0 ? "Neo4j-${var.environment}-LedgerSpace" : "Neo4j-${var.environment}-SearchSpace"
+  })
+
+  vpc_security_group_ids = [aws_security_group.neo4j[0].id]
+  
+  # Only add key_name if ssh_key_name is provided
+  key_name               = var.ssh_key_name != "" ? var.ssh_key_name : null
+
+  root_block_device {
+    volume_type = "gp2"
+    volume_size = 50
+  }
+}
+
+# Outputs
+output "neo4j_ledger_space_bolt_url" {
+  value       = var.create_resource && length(aws_instance.neo4j) > 0 ? "bolt://${aws_instance.neo4j[0].private_ip}:7687" : null
+  description = "Neo4j Ledger Space Bolt URL"
+}
+
+output "neo4j_search_space_bolt_url" {
+  value       = var.create_resource && length(aws_instance.neo4j) > 1 ? "bolt://${aws_instance.neo4j[1].private_ip}:7687" : null
+  description = "Neo4j Search Space Bolt URL"
+}
+
+# Rest of your existing configuration...

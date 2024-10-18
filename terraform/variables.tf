@@ -136,6 +136,12 @@ variable "neo4j_public_key" {
   default     = "placeholder"
 }
 
+variable "ssh_key_name" {
+  description = "The name of the SSH key pair to use for EC2 instances"
+  type        = string
+  default     = ""
+}
+
 locals {
   # Neo4j instance count compliant with the Startup Software License Agreement
   neo4j_instance_count = 2
