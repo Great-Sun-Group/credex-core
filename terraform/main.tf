@@ -51,13 +51,14 @@ data "aws_cloudwatch_log_group" "ecs_logs" {
 
 # ECS task definition
 resource "aws_ecs_task_definition" "credex_core" {
-  family                   = "credex-core-${var.environment}"
-  network_mode             = "awsvpc"
+  count                  = var.create_ecs_cluster ? 1 : 0
+  family                 = "credex-core-${var.environment}"
+  network_mode           = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "512"
-  memory                   = "1024"
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
-  task_role_arn            = aws_iam_role.ecs_task_role.arn
+  cpu                    = "512"
+  memory                 = "1024"
+  execution_role_arn     = aws_iam_role.ecs_execution_role.arn
+  task_role_arn          = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
@@ -96,20 +97,21 @@ resource "aws_ecs_task_definition" "credex_core" {
 
 # ECS service
 resource "aws_ecs_service" "credex_core" {
+  count           = var.create_ecs_cluster ? 1 : 0
   name            = "credex-core-service-${var.environment}"
-  cluster         = var.create_ecs_cluster ? aws_ecs_cluster.credex_cluster[0].id : data.aws_ecs_cluster.credex_cluster[0].arn
-  task_definition = aws_ecs_task_definition.credex_core.arn
+  cluster         = aws_ecs_cluster.credex_cluster[0].id
+  task_definition = aws_ecs_task_definition.credex_core[0].arn
   desired_count   = 1
   launch_type     = "FARGATE"
 
   network_configuration {
     subnets          = data.aws_subnets.default.ids
-    security_groups  = [aws_security_group.ecs_tasks.id]
+    security_groups  = [aws_security_group.ecs_tasks[0].id]
     assign_public_ip = true
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.credex_core.arn
+    target_group_arn = aws_lb_target_group.credex_core[0].arn
     container_name   = "credex-core"
     container_port   = 5000
   }
@@ -224,6 +226,6 @@ output "ecs_cluster_arn" {
 }
 
 output "ecs_task_definition_arn" {
-  value       = aws_ecs_task_definition.credex_core.arn
+  value       = var.create_ecs_cluster ? aws_ecs_task_definition.credex_core[0].arn : null
   description = "The ARN of the ECS task definition"
 }
