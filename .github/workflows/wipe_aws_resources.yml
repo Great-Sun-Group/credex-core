@@ -11,6 +11,7 @@ jobs:
   wipe-aws-resources:
     runs-on: ubuntu-latest
     if: github.event.inputs.confirm_wipe == 'YES'
+    environment: development
     
     steps:
     - name: Checkout code
