@@ -141,10 +141,11 @@ locals {
   neo4j_instance_count = 2
 
   # Neo4j instance types compliant with the 24 Cores / 256 GB RAM limit
+  # see docs/deploy/instance_size_first200k.md
   neo4j_instance_type = {
-    development = "t3.xlarge"  # 4 vCPU, 16 GB RAM
-    staging     = "r5.2xlarge" # 8 vCPU, 64 GB RAM
-    production  = "r5.12xlarge" # 48 vCPU, 384 GB RAM (will be limited to 24 cores in user_data)
+    development = "t3.medium"  
+    staging     = "r5.2xlarge" 
+    production  = "r5.2xlarge"
   }
 
   # Full domain construction
