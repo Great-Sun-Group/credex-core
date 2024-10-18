@@ -10,7 +10,6 @@ locals {
     Project     = "CredEx"
     ManagedBy   = "Terraform"
   }
-  full_domain = "${var.subdomain_prefix[var.environment]}.${var.domain_base}"
 }
 
 # Shared Resources Module
