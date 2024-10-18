@@ -106,7 +106,19 @@ export default function MemberRoutes(
       });
       next();
     },
-    jsonParser,
+    (req, res, next) => {
+      jsonParser(req, res, (err) => {
+        if (err) {
+          logger.error("Error in jsonParser for authForTierSpendLimit", {
+            error: err.message,
+            stack: err.stack,
+            path: req.path,
+          });
+          return res.status(400).json({ message: "Invalid JSON in request body" });
+        }
+        next();
+      });
+    },
     (req, res, next) => {
       try {
         logger.debug("After jsonParser for authForTierSpendLimit", {
