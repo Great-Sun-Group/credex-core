@@ -31,10 +31,16 @@ jobs:
 
       - name: Generate Neo4j Credentials
         run: |
-          NEO_4J_LEDGER_SPACE_USER="neo4j$(openssl rand -base64 8 | tr -dc '0-9' | fold -w 6 | head -n 1)"
-          NEO_4J_SEARCH_SPACE_USER="neo4j$(openssl rand -base64 8 | tr -dc '0-9' | fold -w 6 | head -n 1)"
-          NEO_4J_LEDGER_SPACE_PASS=$(openssl rand -base64 32)
-          NEO_4J_SEARCH_SPACE_PASS=$(openssl rand -base64 32)
+          generate_username() {
+            echo "neo4j$(openssl rand -base64 8 | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)"
+          }
+          generate_password() {
+            echo "neo4j$(printf '%06d' $((RANDOM % 1000000)))"
+          }
+          NEO_4J_LEDGER_SPACE_USER=$(generate_username)
+          NEO_4J_SEARCH_SPACE_USER=$(generate_username)
+          NEO_4J_LEDGER_SPACE_PASS=$(generate_password)
+          NEO_4J_SEARCH_SPACE_PASS=$(generate_password)
           echo "NEO_4J_LEDGER_SPACE_USER=$NEO_4J_LEDGER_SPACE_USER" >> $GITHUB_ENV
           echo "NEO_4J_SEARCH_SPACE_USER=$NEO_4J_SEARCH_SPACE_USER" >> $GITHUB_ENV
           echo "NEO_4J_LEDGER_SPACE_PASS=$NEO_4J_LEDGER_SPACE_PASS" >> $GITHUB_ENV
@@ -50,6 +56,10 @@ jobs:
           TF_VAR_create_ecr: "false"
           TF_VAR_create_ecs_cluster: "false"
           TF_VAR_create_log_group: "false"
+          TF_VAR_neo4j_ledger_space_user: ${{ env.NEO_4J_LEDGER_SPACE_USER }}
+          TF_VAR_neo4j_search_space_user: ${{ env.NEO_4J_SEARCH_SPACE_USER }}
+          TF_VAR_neo4j_ledger_space_pass: ${{ env.NEO_4J_LEDGER_SPACE_PASS }}
+          TF_VAR_neo4j_search_space_pass: ${{ env.NEO_4J_SEARCH_SPACE_PASS }}
         run: |
           cd terraform
           terraform init
@@ -61,12 +71,17 @@ jobs:
             -var="create_ecs_cluster=false" \
             -var="create_log_group=false"
 
-      - name: Print Neo4j Information
+      - name: Get Neo4j Information
         run: |
           cd terraform
+          NEO_4J_LEDGER_SPACE_BOLT_URL=$(terraform output -raw neo4j_ledger_space_bolt_url)
+          NEO_4J_SEARCH_SPACE_BOLT_URL=$(terraform output -raw neo4j_search_space_bolt_url)
+          echo "NEO_4J_LEDGER_SPACE_BOLT_URL=$NEO_4J_LEDGER_SPACE_BOLT_URL" >> $GITHUB_ENV
+          echo "NEO_4J_SEARCH_SPACE_BOLT_URL=$NEO_4J_SEARCH_SPACE_BOLT_URL" >> $GITHUB_ENV
+
+      - name: Print Neo4j Information
+        run: |
           echo "Please manually add the following secrets to your GitHub repository for the ${{ env.ENVIRONMENT }} environment:"
-          echo "NEO_4J_LEDGER_SPACE_BOLT_URL=$(terraform output -raw neo4j_ledger_space_bolt_url)" >> $GITHUB_ENV
-          echo "NEO_4J_SEARCH_SPACE_BOLT_URL=$(terraform output -raw neo4j_search_space_bolt_url)" >> $GITHUB_ENV
           echo "NEO_4J_LEDGER_SPACE_BOLT_URL: $NEO_4J_LEDGER_SPACE_BOLT_URL"
           echo "NEO_4J_SEARCH_SPACE_BOLT_URL: $NEO_4J_SEARCH_SPACE_BOLT_URL"
           echo "NEO_4J_LEDGER_SPACE_USER: $NEO_4J_LEDGER_SPACE_USER"
