@@ -113,6 +113,12 @@ async function initializeApp() {
     });
     logger.debug("Health check endpoint added");
 
+    // Add health2 check endpoint
+    app.get('/health2', (req: Request, res: Response) => {
+      res.status(200).json({ status: 'healthy2', message: 'This is the new health2 endpoint' });
+    });
+    logger.debug("Health2 check endpoint added");
+
     // Start cron jobs for scheduled tasks
     startCronJobs();
     logger.info("Cronjobs engaged for DCO and MTQ");
