@@ -32,8 +32,6 @@ module "neo4j" {
   source                   = "./neo4j"
   environment              = var.environment
   common_tags              = local.common_tags
-  create_key_pair          = false
-  neo4j_security_group_id  = module.shared_resources.neo4j_security_group_id
   subnet_ids               = module.shared_resources.subnet_ids
   neo4j_enterprise_license = var.neo4j_enterprise_license
   neo4j_instance_type      = local.neo4j_instance_type
