@@ -37,85 +37,72 @@ jobs:
     - name: Wipe EC2 Resources
       run: |
         echo "Terminating EC2 instances..."
-        instance_ids=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --output text)
-        for id in $instance_ids; do
-          if ! aws ec2 terminate-instances --instance-ids $id 2>/dev/null; then
-            echo "Failed to terminate EC2 instance $id. It may require manual deletion."
-          fi
-        done
+        instance_ids=$(aws ec2 describe-instances --filters Name=instance-state-name,Values=pending,running,stopping,stopped --query 'Reservations[*].Instances[*].[InstanceId]' --output text)
+        if [ -n "$instance_ids" ]; then
+          aws ec2 terminate-instances --instance-ids $instance_ids
+          echo "Waiting for instances to terminate..."
+          aws ec2 wait instance-terminated --instance-ids $instance_ids
+        else
+          echo "No running instances to terminate."
+        fi
 
-        echo "Waiting for instances to terminate..."
-        sleep 60
-
-        echo "Attempting to delete EC2 security groups..."
+        echo "Deleting EC2 security groups..."
         sg_ids=$(aws ec2 describe-security-groups --query 'SecurityGroups[?GroupName!=`default`].[GroupId]' --output text)
         for sg_id in $sg_ids; do
           if ! aws ec2 delete-security-group --group-id $sg_id 2>/dev/null; then
-            echo "Failed to delete security group $sg_id. It may have dependencies or be the default security group."
+            echo "Failed to delete security group $sg_id. It may have dependencies."
           fi
         done
 
         echo "Deleting EC2 key pairs..."
         key_pairs=$(aws ec2 describe-key-pairs --query 'KeyPairs[*].[KeyName]' --output text)
         for key in $key_pairs; do
-          if ! aws ec2 delete-key-pair --key-name $key 2>/dev/null; then
-            echo "Failed to delete key pair $key. It may require manual deletion."
-          fi
+          aws ec2 delete-key-pair --key-name $key
         done
 
     - name: Wipe VPC Resources
       run: |
-        echo "Attempting to delete VPC resources..."
+        echo "Deleting VPC resources..."
         vpc_ids=$(aws ec2 describe-vpcs --query 'Vpcs[?IsDefault==`false`].[VpcId]' --output text)
         for id in $vpc_ids; do
-          if ! aws ec2 delete-vpc --vpc-id $id 2>/dev/null; then
-            echo "Failed to delete VPC $id. It may have dependencies or require manual deletion."
-          fi
+          aws ec2 delete-vpc --vpc-id $id
         done
 
     - name: Wipe S3 Buckets
       run: |
-        echo "Attempting to delete S3 buckets..."
+        echo "Deleting S3 buckets..."
         buckets=$(aws s3 ls | awk '{print $3}')
         for bucket in $buckets; do
-          if ! aws s3 rb s3://$bucket --force 2>/dev/null; then
-            echo "Failed to delete S3 bucket $bucket. It may require manual deletion."
-          fi
+          aws s3 rb s3://$bucket --force
         done
 
     - name: Wipe RDS Instances
       run: |
-        echo "Attempting to delete RDS instances..."
+        echo "Deleting RDS instances..."
         rds_instances=$(aws rds describe-db-instances --query 'DBInstances[*].[DBInstanceIdentifier]' --output text)
         for instance in $rds_instances; do
-          if ! aws rds delete-db-instance --db-instance-identifier $instance --skip-final-snapshot 2>/dev/null; then
-            echo "Failed to delete RDS instance $instance. It may require manual deletion."
-          fi
+          aws rds delete-db-instance --db-instance-identifier $instance --skip-final-snapshot
         done
 
     - name: Wipe ECS Clusters
       run: |
-        echo "Attempting to delete ECS clusters..."
+        echo "Deleting ECS clusters..."
         clusters=$(aws ecs list-clusters --query 'clusterArns[]' --output text)
         for cluster in $clusters; do
-          if ! aws ecs delete-cluster --cluster $cluster 2>/dev/null; then
-            echo "Failed to delete ECS cluster $cluster. It may require manual deletion."
-          fi
+          aws ecs delete-cluster --cluster $cluster
         done
 
     - name: Wipe ECR Repositories
       run: |
-        echo "Attempting to delete ECR repositories..."
+        echo "Deleting ECR repositories..."
         repos=$(aws ecr describe-repositories --query 'repositories[*].[repositoryName]' --output text)
         for repo in $repos; do
-          if ! aws ecr delete-repository --repository-name $repo --force 2>/dev/null; then
-            echo "Failed to delete ECR repository $repo. It may require manual deletion."
-          fi
+          aws ecr delete-repository --repository-name $repo --force
         done
 
     - name: Final Message
       run: |
-        echo "AWS resource wipe attempt completed."
-        echo "Some resources may not have been deleted due to dependencies or permission issues."
-        echo "Please review the output logs and manually delete any remaining resources as needed."
-        echo "After confirming all resources are deleted, you can use your Terraform configurations to rebuild the infrastructure from scratch."
+        echo "AWS resource wipe completed."
+        echo "All resources created by these workflows should now be deleted, except for any security groups with dependencies."
+        echo "If you encounter any issues or find remaining resources, please investigate and delete them manually."
+        echo "You can now use your Terraform configurations to rebuild the infrastructure from scratch if needed."
