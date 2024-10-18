@@ -25,17 +25,19 @@ function sanitizeAndValidateObject(
   path: string
 ): { sanitizedObj: any; error: string | null } {
   const sanitizedObj: any = {};
-  logger.debug(`[1] Entering sanitizeAndValidateObject`, {
+  logger.debug(`[VR1] Entering sanitizeAndValidateObject`, {
     obj,
     schema,
     path,
+    issuerAccountID: obj.issuerAccountID,
   });
 
   for (const [key, schemaItem] of Object.entries(schema)) {
-    logger.debug(`[2] Processing key: ${key}`, {
+    logger.debug(`[VR2] Processing key: ${key}`, {
       value: obj[key],
       schemaItem,
       path,
+      issuerAccountID: obj.issuerAccountID,
     });
 
     if (
@@ -45,90 +47,102 @@ function sanitizeAndValidateObject(
     ) {
       const { sanitizer, validator, required } = schemaItem as SchemaItem;
 
-      logger.debug(`[3] Before checking if ${key} is undefined`, {
+      logger.debug(`[VR3] Before checking if ${key} is undefined`, {
         value: obj[key],
         required,
         path,
+        issuerAccountID: obj.issuerAccountID,
       });
 
       if (obj[key] === undefined) {
-        logger.debug(`[4] ${key} is undefined`, {
+        logger.debug(`[VR4] ${key} is undefined`, {
           required,
           path,
+          issuerAccountID: obj.issuerAccountID,
         });
         if (required) {
-          logger.error(`[5] Required field missing: ${key}`, {
+          logger.error(`[VR5] Required field missing: ${key}`, {
             path,
+            issuerAccountID: obj.issuerAccountID,
           });
           return { sanitizedObj, error: `Required field missing: ${key}` };
         } else {
-          logger.debug(`[6] Optional field missing: ${key}`, {
+          logger.debug(`[VR6] Optional field missing: ${key}`, {
             path,
+            issuerAccountID: obj.issuerAccountID,
           });
           continue;
         }
       }
 
-      logger.debug(`[7] Before sanitizing ${key}`, {
+      logger.debug(`[VR7] Before sanitizing ${key}`, {
         value: obj[key],
         sanitizer: sanitizer.name,
         path,
+        issuerAccountID: obj.issuerAccountID,
       });
 
       let sanitizedValue;
       try {
         sanitizedValue = sanitizer(obj[key]);
-        logger.debug(`[8] After sanitizing ${key}`, {
+        logger.debug(`[VR8] After sanitizing ${key}`, {
           originalValue: obj[key],
           sanitizedValue,
           path,
+          issuerAccountID: obj.issuerAccountID,
         });
       } catch (error) {
-        logger.error(`[9] Error during sanitization for key: ${key}`, {
+        logger.error(`[VR9] Error during sanitization for key: ${key}`, {
           error,
           value: obj[key],
           path,
+          issuerAccountID: obj.issuerAccountID,
         });
         return { sanitizedObj, error: `Sanitization error for ${key}` };
       }
 
       sanitizedObj[key] = sanitizedValue;
-      logger.debug(`[10] After assigning sanitized value`, {
+      logger.debug(`[VR10] After assigning sanitized value`, {
         key,
         sanitizedValue,
         path,
+        issuerAccountID: obj.issuerAccountID,
       });
 
       if (sanitizedValue !== undefined) {
-        logger.debug(`[11] Before validation for ${key}`, {
+        logger.debug(`[VR11] Before validation for ${key}`, {
           sanitizedValue,
           path,
+          issuerAccountID: obj.issuerAccountID,
         });
         const validationResult = validator(sanitizedValue);
         if (!validationResult.isValid) {
-          logger.debug(`[12] Validation failed for key: ${key}`, {
+          logger.debug(`[VR12] Validation failed for key: ${key}`, {
             value: sanitizedValue,
             error: validationResult.message,
             path,
+            issuerAccountID: obj.issuerAccountID,
           });
           return {
             sanitizedObj,
             error: validationResult.message || `Invalid ${key}`,
           };
         }
-        logger.debug(`[13] Validation passed for ${key}`, {
+        logger.debug(`[VR13] Validation passed for ${key}`, {
           path,
+          issuerAccountID: obj.issuerAccountID,
         });
       } else if (required) {
         logger.error(
-          `[14] Required field is undefined after sanitization: ${key}`,
-          { path }
+          `[VR14] Required field is undefined after sanitization: ${key}`,
+          { path, issuerAccountID: obj.issuerAccountID }
         );
         return { sanitizedObj, error: `Required field is undefined: ${key}` };
       }
     } else if (typeof schemaItem === "object") {
-      logger.debug(`[15] Processing nested object for ${key}`, {
+      logger.debug(`[VR15] Processing nested object for ${key}`, {
         path,
+        issuerAccountID: obj.issuerAccountID,
       });
       const { sanitizedObj: nestedSanitizedObj, error: nestedError } =
         sanitizeAndValidateObject(
@@ -143,9 +157,10 @@ function sanitizeAndValidateObject(
     }
   }
 
-  logger.debug(`[16] Exiting sanitizeAndValidateObject`, {
+  logger.debug(`[VR16] Exiting sanitizeAndValidateObject`, {
     sanitizedObj,
     path,
+    issuerAccountID: sanitizedObj.issuerAccountID,
   });
   return { sanitizedObj, error: null };
 }
@@ -155,29 +170,34 @@ export function validateRequest(
   source: "body" | "query" | "params" = "body"
 ) {
   return (req: Request, res: Response, next: NextFunction) => {
-    logger.debug("[VR1] Entering validateRequest middleware", {
+    logger.debug("[VR17] Entering validateRequest middleware", {
       path: req.path,
       method: req.method,
       source,
+      issuerAccountIDInQuery: req.query.issuerAccountID,
+      issuerAccountIDInBody: req.body ? req.body.issuerAccountID : undefined,
     });
 
-    logger.debug("[VR2] Request details", {
+    logger.debug("[VR18] Request details", {
       body: req.body,
       query: req.query,
       params: req.params,
       headers: req.headers,
+      issuerAccountIDInQuery: req.query.issuerAccountID,
+      issuerAccountIDInBody: req.body ? req.body.issuerAccountID : undefined,
     });
 
-    logger.debug("[VR3] Request data before sanitization", {
+    logger.debug("[VR19] Request data before sanitization", {
       path: req.path,
       method: req.method,
       source,
       requestData: req[source],
+      issuerAccountID: req[source]?.issuerAccountID,
     });
 
     if (req.path.includes("authForTierSpendLimit")) {
       logger.debug(
-        "[VR4] authForTierSpendLimit request data before sanitization",
+        "[VR20] authForTierSpendLimit request data before sanitization",
         {
           body: req[source],
           issuerAccountID: req[source]?.issuerAccountID,
@@ -194,11 +214,12 @@ export function validateRequest(
       );
 
       if (error) {
-        logger.warn("[VR5] Request validation failed", {
+        logger.warn("[VR21] Request validation failed", {
           path: req.path,
           method: req.method,
           source,
           error,
+          issuerAccountID: req[source]?.issuerAccountID,
         });
         return res.status(400).json({ message: error });
       }
@@ -206,15 +227,16 @@ export function validateRequest(
       // Replace the original request data with the sanitized data
       req[source] = sanitizedObj;
 
-      logger.debug("[VR6] Request sanitization and validation passed", {
+      logger.debug("[VR22] Request sanitization and validation passed", {
         path: req.path,
         method: req.method,
         source,
         sanitizedData: sanitizedObj,
+        issuerAccountID: sanitizedObj.issuerAccountID,
       });
 
       if (req.path.includes("authForTierSpendLimit")) {
-        logger.debug("[VR7] authForTierSpendLimit sanitized data", {
+        logger.debug("[VR23] authForTierSpendLimit sanitized data", {
           sanitizedBody: req[source],
           sanitizedIssuerAccountID: req[source]?.issuerAccountID,
           sanitizedIssuerAccountIDType: typeof req[source]?.issuerAccountID,
@@ -223,10 +245,11 @@ export function validateRequest(
 
       next();
     } catch (error) {
-      logger.error("[VR8] Error in sanitizeAndValidateObject", {
+      logger.error("[VR24] Error in sanitizeAndValidateObject", {
         error: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
         requestBody: req[source],
+        issuerAccountID: req[source]?.issuerAccountID,
       });
       return res
         .status(500)
