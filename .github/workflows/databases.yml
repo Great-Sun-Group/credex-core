@@ -2,10 +2,6 @@ name: Deploy Databases
 
 on:
   workflow_dispatch:
-    inputs:
-      confirm_reinstall:
-        description: 'Type "REINSTALL" to confirm database reinstallation'
-        required: true
 
 jobs:
   deploy_neo4j:
@@ -57,7 +53,7 @@ jobs:
         run: |
           cd terraform
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
-          terraform apply -auto-approve -target=aws_instance.neo4j -target=aws_security_group.neo4j
+          terraform apply -auto-approve
 
       - name: Print Neo4j Information
         run: |

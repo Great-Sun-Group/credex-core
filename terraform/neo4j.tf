@@ -15,14 +15,21 @@ data "aws_ami" "amazon_linux_2" {
 }
 
 resource "tls_private_key" "neo4j_key" {
+  count     = var.create_key_pair ? 1 : 0
   algorithm = "RSA"
   rsa_bits  = 4096
 }
 
 resource "aws_key_pair" "neo4j_key_pair" {
+  count      = var.create_key_pair ? 1 : 0
   key_name   = local.key_pair_name
-  public_key = tls_private_key.neo4j_key.public_key_openssh
+  public_key = tls_private_key.neo4j_key[0].public_key_openssh
   tags       = local.common_tags
+}
+
+data "aws_key_pair" "existing_key_pair" {
+  count    = var.create_key_pair ? 0 : 1
+  key_name = local.key_pair_name
 }
 
 resource "random_string" "neo4j_password" {
@@ -39,13 +46,18 @@ resource "random_string" "neo4j_username_suffix" {
   numeric = true
 }
 
+data "aws_security_group" "existing_neo4j" {
+  count = var.create_security_groups ? 0 : 1
+  name  = "credex-neo4j-sg-${var.environment}"
+}
+
 resource "aws_instance" "neo4j" {
   count         = 2
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = local.neo4j_instance_type[var.environment]
-  key_name      = aws_key_pair.neo4j_key_pair.key_name
+  key_name      = var.create_key_pair ? aws_key_pair.neo4j_key_pair[0].key_name : data.aws_key_pair.existing_key_pair[0].key_name
 
-  vpc_security_group_ids = [aws_security_group.neo4j[0].id]
+  vpc_security_group_ids = var.create_security_groups ? [aws_security_group.neo4j[0].id] : [data.aws_security_group.existing_neo4j[0].id]
   subnet_id              = data.aws_subnets.default.ids[count.index % length(data.aws_subnets.default.ids)]
 
   tags = merge(local.common_tags, {
@@ -109,7 +121,7 @@ output "neo4j_search_space_bolt_url" {
 }
 
 output "neo4j_private_key" {
-  value       = tls_private_key.neo4j_key.private_key_pem
+  value       = var.create_key_pair ? tls_private_key.neo4j_key[0].private_key_pem : "Key pair not created in this run"
   description = "Private key for Neo4j instances"
   sensitive   = true
 }
