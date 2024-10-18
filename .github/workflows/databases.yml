@@ -60,7 +60,13 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Terraform Init and Apply
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Plan
+        id: plan
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_create_resource: ${{ env.create_resource }}
@@ -73,24 +79,46 @@ jobs:
           TF_VAR_neo4j_search_space_pass: ${{ env.NEO_4J_SEARCH_SPACE_PASS }}
         run: |
           cd terraform
-          terraform init
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
-          terraform apply -auto-approve \
-            -var="environment=${{ env.ENVIRONMENT }}" \
-            -var="create_resource=${{ env.create_resource }}" \
-            -var="create_ecr=false" \
-            -var="create_ecs_cluster=false" \
-            -var="create_log_group=false"
+          terraform plan -detailed-exitcode -out=tfplan || echo "PLAN_EXIT_CODE=$?" >> $GITHUB_ENV
+          
+          if [ "${PLAN_EXIT_CODE:-0}" == "2" ]; then
+            echo "Changes detected. Here's a summary of the changes:"
+            terraform show -no-color tfplan | sed '1,/Terraform will perform the following actions/d' | sed '/Plan:/,$d'
+          fi
+
+      - name: Terraform Apply
+        if: env.PLAN_EXIT_CODE == '2'
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_create_resource: ${{ env.create_resource }}
+          TF_VAR_create_ecr: "false"
+          TF_VAR_create_ecs_cluster: "false"
+          TF_VAR_create_log_group: "false"
+          TF_VAR_neo4j_ledger_space_user: ${{ env.NEO_4J_LEDGER_SPACE_USER }}
+          TF_VAR_neo4j_search_space_user: ${{ env.NEO_4J_SEARCH_SPACE_USER }}
+          TF_VAR_neo4j_ledger_space_pass: ${{ env.NEO_4J_LEDGER_SPACE_PASS }}
+          TF_VAR_neo4j_search_space_pass: ${{ env.NEO_4J_SEARCH_SPACE_PASS }}
+        run: |
+          cd terraform
+          terraform apply -auto-approve tfplan
+
+      - name: No Changes Detected
+        if: env.PLAN_EXIT_CODE == '0'
+        run: |
+          echo "No changes detected in the Terraform state. Exiting workflow."
+          exit 0
 
       - name: Get Neo4j Information
+        if: env.PLAN_EXIT_CODE == '2'
         run: |
           cd terraform
           echo "Terraform outputs:"
           terraform output || echo "No outputs found"
-          
+
           NEO_4J_LEDGER_SPACE_BOLT_URL=$(terraform output -raw neo4j_ledger_space_bolt_url 2>/dev/null || echo "")
           NEO_4J_SEARCH_SPACE_BOLT_URL=$(terraform output -raw neo4j_search_space_bolt_url 2>/dev/null || echo "")
-          
+
           if [ -z "$NEO_4J_LEDGER_SPACE_BOLT_URL" ] || [ -z "$NEO_4J_SEARCH_SPACE_BOLT_URL" ]; then
             echo "Failed to retrieve Neo4j Bolt URLs from Terraform outputs. Attempting to fetch from AWS..."
             INSTANCE_IPS=$(aws ec2 describe-instances --filters "Name=tag:Project,Values=CredEx" "Name=tag:Environment,Values=${{ env.ENVIRONMENT }}" --query 'Reservations[*].Instances[*].PrivateIpAddress' --output text)
@@ -103,13 +131,14 @@ jobs:
               exit 1
             fi
           fi
-          
+
           echo "NEO_4J_LEDGER_SPACE_BOLT_URL=$NEO_4J_LEDGER_SPACE_BOLT_URL" >> $GITHUB_ENV
           echo "NEO_4J_SEARCH_SPACE_BOLT_URL=$NEO_4J_SEARCH_SPACE_BOLT_URL" >> $GITHUB_ENV
 
       - name: Print Neo4j Information
+        if: env.PLAN_EXIT_CODE == '2'
         run: |
-          echo "Please manually add the following secrets to your GitHub repository for the ${{ env.ENVIRONMENT }} environment:"
+          echo "Changes applied. Updated Neo4j information for the ${{ env.ENVIRONMENT }} environment:"
           echo "NEO_4J_LEDGER_SPACE_BOLT_URL: $NEO_4J_LEDGER_SPACE_BOLT_URL"
           echo "NEO_4J_SEARCH_SPACE_BOLT_URL: $NEO_4J_SEARCH_SPACE_BOLT_URL"
           echo "NEO_4J_LEDGER_SPACE_USER: $NEO_4J_LEDGER_SPACE_USER"

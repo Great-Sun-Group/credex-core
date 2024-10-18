@@ -28,13 +28,13 @@ data "aws_key_pair" "existing_neo4j_key_pair" {
 }
 
 resource "random_string" "neo4j_password" {
-  count   = var.create_resource ? 2 : 0
+  count   = 2
   length  = 16
   special = true
 }
 
 resource "random_string" "neo4j_username_suffix" {
-  count   = var.create_resource ? 2 : 0
+  count   = 2
   length  = 6
   special = false
   upper   = false
@@ -42,7 +42,7 @@ resource "random_string" "neo4j_username_suffix" {
 }
 
 resource "aws_instance" "neo4j" {
-  count         = var.create_resource ? 2 : 0
+  count         = 2
   ami           = data.aws_ami.amazon_linux_2.id
   instance_type = local.neo4j_instance_type[var.environment]
   key_name      = var.create_resource && var.neo4j_public_key != "" ? aws_key_pair.neo4j_key_pair[0].key_name : (var.create_resource ? null : data.aws_key_pair.existing_neo4j_key_pair[0].key_name)
@@ -82,7 +82,7 @@ resource "aws_instance" "neo4j" {
 
   root_block_device {
     volume_type = "gp3"
-    volume_size = 50
+    volume_size = 50  # Set to the desired size (e.g., 100 GB)
     encrypted   = true
   }
 
@@ -93,24 +93,24 @@ resource "aws_instance" "neo4j" {
 }
 
 output "neo4j_instance_ips" {
-  value       = var.create_resource ? aws_instance.neo4j[*].private_ip : []
+  value       = aws_instance.neo4j[*].private_ip
   description = "Private IPs of Neo4j instances"
 }
 
 output "neo4j_bolt_urls" {
-  value = var.create_resource ? [for instance in aws_instance.neo4j : "bolt://${instance.private_ip}:7687"] : []
+  value = [for instance in aws_instance.neo4j : "bolt://${instance.private_ip}:7687"]
   description = "Neo4j Bolt URLs"
   sensitive   = true
 }
 
 output "neo4j_ledger_space_bolt_url" {
-  value       = var.create_resource && length(aws_instance.neo4j) > 0 ? "bolt://${aws_instance.neo4j[0].private_ip}:7687" : ""
+  value       = length(aws_instance.neo4j) > 0 ? "bolt://${aws_instance.neo4j[0].private_ip}:7687" : ""
   description = "Neo4j Ledger Space Bolt URL"
   sensitive   = true
 }
 
 output "neo4j_search_space_bolt_url" {
-  value       = var.create_resource && length(aws_instance.neo4j) > 1 ? "bolt://${aws_instance.neo4j[1].private_ip}:7687" : ""
+  value       = length(aws_instance.neo4j) > 1 ? "bolt://${aws_instance.neo4j[1].private_ip}:7687" : ""
   description = "Neo4j Search Space Bolt URL"
   sensitive   = true
 }
