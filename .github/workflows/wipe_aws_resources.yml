@@ -86,9 +86,19 @@ jobs:
 
     - name: Wipe ECS Clusters
       run: |
-        echo "Deleting ECS clusters..."
+        echo "Deleting ECS clusters and services..."
         clusters=$(aws ecs list-clusters --query 'clusterArns[]' --output text)
         for cluster in $clusters; do
+          # List all services in the cluster
+          services=$(aws ecs list-services --cluster $cluster --query 'serviceArns[]' --output text)
+          
+          # Update each service to have 0 desired tasks and delete it
+          for service in $services; do
+            aws ecs update-service --cluster $cluster --service $service --desired-count 0
+            aws ecs delete-service --cluster $cluster --service $service --force
+          done
+          
+          # Delete the cluster
           aws ecs delete-cluster --cluster $cluster
         done
 
