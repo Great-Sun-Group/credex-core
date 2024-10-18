@@ -6,7 +6,6 @@ on:
 jobs:
   deploy_neo4j:
     runs-on: ubuntu-latest
-    if: github.event.inputs.confirm_reinstall == 'REINSTALL'
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
 
     steps:
