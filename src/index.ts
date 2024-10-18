@@ -40,24 +40,6 @@ const jsonParser = bodyParser.json({
   }
 });
 
-// Middleware to log raw request
-const logRawRequest = (req: Request, res: Response, next: NextFunction) => {
-  let data = '';
-  req.setEncoding('utf8');
-  req.on('data', (chunk) => {
-    data += chunk;
-  });
-  req.on('end', () => {
-    logger.debug('Raw request:', {
-      method: req.method,
-      path: req.path,
-      headers: req.headers,
-      body: data,
-    });
-    next();
-  });
-};
-
 // Middleware to log request body
 const logRequestBody = (req: Request, res: Response, next: NextFunction) => {
   logger.debug('Request details:', {
@@ -65,7 +47,6 @@ const logRequestBody = (req: Request, res: Response, next: NextFunction) => {
     path: req.path,
     headers: req.headers,
     body: req.body,
-    rawBody: (req as any).rawBody,
   });
   next();
 };
@@ -89,10 +70,6 @@ async function initializeApp() {
     app.use(expressLogger);
     logger.debug("Applied logging middleware");
 
-    // Apply logRawRequest before jsonParser
-    app.use(logRawRequest);
-    logger.debug("Applied logRawRequest middleware");
-
     // Apply jsonParser globally
     app.use(jsonParser);
     // Apply logRequestBody after jsonParser
@@ -109,15 +86,9 @@ async function initializeApp() {
 
     // Add health check endpoint
     app.get('/health', (req: Request, res: Response) => {
-      res.status(200).json({ status: 'healthy and updateable' });
+      res.status(200).json({ status: 'healthy' });
     });
     logger.debug("Health check endpoint added");
-
-    // Add health2 check endpoint
-    app.get('/health2', (req: Request, res: Response) => {
-      res.status(200).json({ status: 'healthy2', message: 'This is the new health2 endpoint' });
-    });
-    logger.debug("Health2 check endpoint added");
 
     // Start cron jobs for scheduled tasks
     startCronJobs();
