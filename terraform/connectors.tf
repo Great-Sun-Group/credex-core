@@ -1,7 +1,4 @@
-# Provider configuration
-provider "aws" {
-  region = var.aws_region
-}
+# Remove the provider "aws" block from the top of this file
 
 # Local variables
 locals {
@@ -23,24 +20,8 @@ module "shared_resources" {
   source      = "./shared_resources"
   environment = var.environment
   common_tags = local.common_tags
-  domain      = var.domain
+  domain      = var.domain_base
   public_key  = tls_private_key.credex_key.public_key_openssh
-}
-
-# Variables
-variable "aws_region" {
-  description = "The AWS region to deploy to"
-  type        = string
-}
-
-variable "environment" {
-  description = "The deployment environment"
-  type        = string
-}
-
-variable "domain" {
-  description = "The domain name for the application"
-  type        = string
 }
 
 # Outputs

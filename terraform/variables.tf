@@ -1,7 +1,4 @@
-# Provider configuration
-provider "aws" {
-  region = var.aws_region
-}
+# Remove the provider "aws" block from the top of this file
 
 # Data sources to fetch shared resources
 data "terraform_remote_state" "connectors" {
@@ -26,7 +23,7 @@ module "neo4j" {
   neo4j_enterprise_license = var.neo4j_enterprise_license
 }
 
-# Existing variables
+# Variables
 variable "aws_region" {
   description = "The AWS region to deploy to"
   type        = string
