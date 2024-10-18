@@ -35,10 +35,17 @@ jobs:
       - name: Terraform Init and Apply
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+          TF_VAR_terraform_state_bucket: ${{ secrets.TERRAFORM_STATE_BUCKET }}
           TF_VAR_create_ecr: "true"
           TF_VAR_create_ecs_cluster: "true"
           TF_VAR_create_log_group: "true"
           TF_VAR_create_key_pair: "true"
+          TF_VAR_create_iam_roles: "true"
+          TF_VAR_create_load_balancer: "true"
+          TF_VAR_create_target_group: "true"
+          TF_VAR_create_security_groups: "true"
+          TF_VAR_create_neo4j_instances: "true"
         run: |
           cd terraform
           terraform init
@@ -48,13 +55,23 @@ jobs:
       - name: Get Infrastructure Outputs
         run: |
           cd terraform
-          echo "ECR_REPO_URL=$(terraform output -raw ecr_repository_url)" >> $GITHUB_ENV
-          echo "ECS_CLUSTER_ARN=$(terraform output -raw ecs_cluster_arn)" >> $GITHUB_ENV
+          echo "VPC_ID=$(terraform output -raw vpc_id)" >> $GITHUB_ENV
+          echo "SUBNET_IDS=$(terraform output -raw subnet_ids)" >> $GITHUB_ENV
+          echo "NEO4J_SECURITY_GROUP_ID=$(terraform output -raw neo4j_security_group_id)" >> $GITHUB_ENV
+          echo "KEY_PAIR_NAME=$(terraform output -raw key_pair_name)" >> $GITHUB_ENV
+          echo "ALB_SECURITY_GROUP_ID=$(terraform output -raw alb_security_group_id)" >> $GITHUB_ENV
+          echo "ECS_TASKS_SECURITY_GROUP_ID=$(terraform output -raw ecs_tasks_security_group_id)" >> $GITHUB_ENV
           echo "ALB_DNS_NAME=$(terraform output -raw alb_dns_name)" >> $GITHUB_ENV
+          echo "TARGET_GROUP_ARN=$(terraform output -raw target_group_arn)" >> $GITHUB_ENV
 
       - name: Print Infrastructure Information
         run: |
-          echo "Please manually add the following secrets to your GitHub repository for the ${{ env.ENVIRONMENT }} environment:"
-          echo "ECR_REPO_URL: $ECR_REPO_URL"
-          echo "ECS_CLUSTER_ARN: $ECS_CLUSTER_ARN"
+          echo "Infrastructure deployed for the ${{ env.ENVIRONMENT }} environment:"
+          echo "VPC_ID: $VPC_ID"
+          echo "SUBNET_IDS: $SUBNET_IDS"
+          echo "NEO4J_SECURITY_GROUP_ID: $NEO4J_SECURITY_GROUP_ID"
+          echo "KEY_PAIR_NAME: $KEY_PAIR_NAME"
+          echo "ALB_SECURITY_GROUP_ID: $ALB_SECURITY_GROUP_ID"
+          echo "ECS_TASKS_SECURITY_GROUP_ID: $ECS_TASKS_SECURITY_GROUP_ID"
           echo "ALB_DNS_NAME: $ALB_DNS_NAME"
+          echo "TARGET_GROUP_ARN: $TARGET_GROUP_ARN"
