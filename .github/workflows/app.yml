@@ -39,6 +39,7 @@ jobs:
           ECR_REPOSITORY: credex-core-${{ env.ENVIRONMENT }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          echo "Building Docker image..."
           docker build --no-cache --target deploy \
             --build-arg NODE_ENV=${{ env.ENVIRONMENT }} \
             --build-arg NEO_4J_LEDGER_SPACE_USER="${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" \
@@ -50,17 +51,23 @@ jobs:
             --build-arg OPEN_EXCHANGE_RATES_API="${{ secrets.OPEN_EXCHANGE_RATES_API }}" \
             --build-arg JWT_SECRET="${{ secrets.JWT_SECRET }}" \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          echo "Docker image built successfully."
+          
+          echo "Pushing image to ECR..."
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "Image pushed successfully: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          
           echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Deploy Application
         run: |
           echo "Deploying application to $ENVIRONMENT from branch ${{ github.ref_name }}"
-          
-          # Get the current task definition
+
+          echo "Fetching current task definition..."
           TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition credex-core-$ENVIRONMENT --query 'taskDefinition' --output json)
-          
-          # Update the task definition with new image and environment variables
+          echo "Current task definition fetched."
+
+          echo "Updating task definition with new image and environment variables..."
           NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment += [
             {"name": "NODE_ENV", "value": "${{ env.ENVIRONMENT }}"},
             {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_USER }}"},
@@ -72,11 +79,13 @@ jobs:
             {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
             {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"}
           ]' | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
-          
-          # Register new task definition
+          echo "Task definition updated."
+
+          echo "Registering new task definition..."
           NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEFINITION" --query 'taskDefinition.taskDefinitionArn' --output text)
-          
-          # Update the service with the new task definition
+          echo "New task definition registered: $NEW_TASK_DEF_ARN"
+
+          echo "Updating ECS service with new task definition..."
           aws ecs update-service --cluster credex-cluster-$ENVIRONMENT --service credex-core-service-$ENVIRONMENT --task-definition $NEW_TASK_DEF_ARN --force-new-deployment
 
           echo "Waiting for service to stabilize..."
