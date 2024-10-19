@@ -120,6 +120,12 @@ jobs:
           echo "Selecting/Creating Terraform workspace..."
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
           
+          if [ $? -ne 0 ]; then
+            echo "Failed to select or create workspace. Attempting to force unlock..."
+            terraform force-unlock -force $(terraform show -json | jq -r '.values.root_module.resources[] | select(.type == "terraform_remote_state") | .values.config.key')
+            terraform workspace new ${{ env.ENVIRONMENT }}
+          fi
+          
           check_and_remove_lock
           echo "Applying Terraform changes..."
           terraform apply -auto-approve -target=module.shared_resources
