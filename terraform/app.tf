@@ -16,7 +16,7 @@ module "app" {
   ecs_task_memory            = var.ecs_task_memory[var.environment]
 
   vpc_id                     = module.connectors.vpc_id
-  subnet_ids                 = module.connectors.subnet_ids
+  subnet_ids                 = module.connectors.private_subnet_ids
   ecs_tasks_security_group_id = module.connectors.ecs_tasks_security_group_id
   target_group_arn           = module.connectors.target_group_arn
   alb_listener               = module.connectors.alb_listener
@@ -42,4 +42,14 @@ output "ecs_cluster_arn" {
 output "ecs_task_definition_arn" {
   value       = module.app.ecs_task_definition_arn
   description = "The ARN of the ECS task definition"
+}
+
+output "ecs_service_name" {
+  value       = module.app.ecs_service_name
+  description = "The name of the ECS service"
+}
+
+output "ecs_service_id" {
+  value       = module.app.ecs_service_id
+  description = "The ID of the ECS service"
 }

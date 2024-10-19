@@ -29,7 +29,7 @@ variable "neo4j_instance_type" {
   type        = string
 }
 
-variable "neo4j_instance_size" {
+variable "neo4j_volume_size" {
   description = "The root volume size for Neo4j instances"
   type        = number
 }
@@ -105,7 +105,7 @@ resource "aws_instance" "neo4j" {
 
   root_block_device {
     volume_type = "gp3"
-    volume_size = var.neo4j_instance_size
+    volume_size = var.neo4j_volume_size
     encrypted   = true
   }
 }

@@ -136,7 +136,7 @@ variable "neo4j_instance_type" {
   }
 }
 
-variable "neo4j_instance_size" {
+variable "neo4j_volume_size" {
   description = "Map of environment to Neo4j instance sizes (in GB)"
   type        = map(number)
   default = {
