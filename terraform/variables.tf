@@ -41,13 +41,7 @@ variable "log_level" {
   }
 }
 
-variable "create_resource" {
-  description = "Boolean flag to indicate whether to create/update (true) or delete (false) resources"
-  type        = bool
-  default     = true
-}
-
-# Variables passed from Github Action script checks on whether these resources exist
+# Variables for resource creation control
 variable "create_ecr" {
   description = "Whether to create the ECR repository"
   type        = bool
@@ -62,6 +56,42 @@ variable "create_ecs_cluster" {
 
 variable "create_log_group" {
   description = "Whether to create the CloudWatch log group"
+  type        = bool
+  default     = true
+}
+
+variable "create_iam_roles" {
+  description = "Whether to create IAM roles"
+  type        = bool
+  default     = true
+}
+
+variable "create_key_pair" {
+  description = "Whether to create the key pair"
+  type        = bool
+  default     = true
+}
+
+variable "create_load_balancer" {
+  description = "Whether to create the load balancer"
+  type        = bool
+  default     = true
+}
+
+variable "create_target_group" {
+  description = "Whether to create the target group"
+  type        = bool
+  default     = true
+}
+
+variable "create_security_groups" {
+  description = "Whether to create security groups"
+  type        = bool
+  default     = true
+}
+
+variable "create_neo4j_instances" {
+  description = "Whether to create Neo4j instances"
   type        = bool
   default     = true
 }
@@ -81,58 +111,10 @@ variable "open_exchange_rates_api" {
   default     = "placeholder"
 }
 
-variable "neo4j_ledger_space_user" {
-  description = "Neo4j LedgerSpace username"
-  type        = string
-  sensitive   = true
-  default     = "placeholder"
-}
-
-variable "neo4j_ledger_space_pass" {
-  description = "Neo4j LedgerSpace password"
-  type        = string
-  sensitive   = true
-  default     = "placeholder"
-}
-
-variable "neo4j_search_space_user" {
-  description = "Neo4j SearchSpace username"
-  type        = string
-  sensitive   = true
-  default     = "placeholder"
-}
-
-variable "neo4j_search_space_pass" {
-  description = "Neo4j SearchSpace password"
-  type        = string
-  sensitive   = true
-  default     = "placeholder"
-}
-
 variable "neo4j_enterprise_license" {
   description = "Neo4j Enterprise License"
   type        = string
   sensitive   = true
-  default     = "placeholder"
-}
-
-variable "neo4j_ledger_space_bolt_url" {
-  description = "Neo4j LedgerSpace Bolt URL"
-  type        = string
-  sensitive   = true
-  default     = "placeholder"
-}
-
-variable "neo4j_search_space_bolt_url" {
-  description = "Neo4j SearchSpace Bolt URL"
-  type        = string
-  sensitive   = true
-  default     = "placeholder"
-}
-
-variable "neo4j_public_key" {
-  description = "Public key for Neo4j instances"
-  type        = string
   default     = "placeholder"
 }
 
@@ -141,10 +123,18 @@ locals {
   neo4j_instance_count = 2
 
   # Neo4j instance types compliant with the 24 Cores / 256 GB RAM limit
+  # see docs/deploy/instance_size_first200k.md
   neo4j_instance_type = {
-    development = "t3.xlarge"  # 4 vCPU, 16 GB RAM
-    staging     = "r5.2xlarge" # 8 vCPU, 64 GB RAM
-    production  = "r5.12xlarge" # 48 vCPU, 384 GB RAM (will be limited to 24 cores in user_data)
+    development = "t3.medium"  
+    staging     = "r5.2xlarge" 
+    production  = "r5.2xlarge"
+  }
+
+  # Neo4j instance sizes (in GB)
+  neo4j_instance_size = {
+    development = 50
+    staging     = 100
+    production  = 100
   }
 
   # Full domain construction

@@ -66,6 +66,7 @@ Note: The staging environment is identical to production but runs for approximat
 
 ### LedgerSpace
 - **Instance Type**: r5.12xlarge (48 vCPU, 384 GB RAM, limited to 24 cores)
+- **Storage**: 100 GB gp3 SSD
 - **Justification**: 
   - Handles all historical data and DCO calculations
   - Needs high memory for caching and complex query processing
@@ -73,6 +74,7 @@ Note: The staging environment is identical to production but runs for approximat
 
 ### SearchSpace
 - **Instance Type**: r5.12xlarge (48 vCPU, 384 GB RAM, limited to 24 cores)
+- **Storage**: 100 GB gp3 SSD
 - **Justification**: 
   - CPU-intensive for real-time query processing and loopfinder operations
 - **Loopfinder Considerations**:
@@ -152,11 +154,7 @@ Additional considerations:
 - Regularly perform security assessments and penetration testing
 - Ensure compliance with relevant standards (e.g., GDPR, PCI DSS) based on the nature of data handled
 
-## 10. Future Considerations
-
-[Content remains the same as in the original document]
-
-## 11. Cost Projections
+## 10. Cost Projections
 
 The following cost projections are based on AWS pricing for the af-south-1 region and are approximate. Actual costs may vary based on usage patterns, data transfer, and other factors.
 
@@ -230,22 +228,22 @@ Based on this analysis, moving the DCO to a separate instance that is turned on 
 For an initial setup capable of handling 10,000 members, we recommend the following:
 
 1. **Neo4j Instances**:
-   - LedgerSpace: 1 x r5.2xlarge (8 vCPU, 64 GB RAM)
-   - SearchSpace: 1 x r5.2xlarge (8 vCPU, 64 GB RAM)
-   - Storage: 100 GB gp3 SSD per instance
+   - LedgerSpace: 1 x r5.large (2 vCPU, 16 GB RAM)
+   - SearchSpace: 1 x r5.large (2 vCPU, 16 GB RAM)
+   - Storage: 50 GB gp3 SSD per instance
 
 2. **API and Application Servers**:
-   - ECS Fargate: 5 tasks with 1 vCPU and 2 GB RAM each
+   - ECS Fargate: 2 tasks with 1 vCPU and 2 GB RAM each
 
 3. **Load Balancer**:
    - 1 x Application Load Balancer
 
 4. **Additional Resources**:
-   - ElastiCache: cache.t3.medium
+   - ElastiCache: cache.t3.micro
    - CloudWatch: Basic monitoring
-   - S3: 100 GB storage
+   - S3: 50 GB storage
 
-Estimated monthly cost for this setup: $2,500
+Estimated monthly cost for this setup: $500 - $700 when running constantly. Dev environment may be able to be shut down at times.
 
 ### Upgrade Path to 200,000 Members
 
@@ -257,16 +255,18 @@ To scale from 10,000 to 200,000 members, follow these steps:
 
 2. **Gradual Instance Upgrades**:
    - As member count increases, gradually upgrade Neo4j instances:
-     - 25,000 members: Upgrade to r5.4xlarge
-     - 50,000 members: Upgrade to r5.8xlarge
-     - 100,000 members: Upgrade to r5.12xlarge
-   - Increase storage as needed, adding 100 GB increments.
+     - 25,000 members: Upgrade to r5.xlarge (4 vCPU, 32 GB RAM)
+     - 50,000 members: Upgrade to r5.2xlarge (8 vCPU, 64 GB RAM)
+     - 100,000 members: Upgrade to r5.4xlarge (16 vCPU, 128 GB RAM)
+     - 200,000 members: Upgrade to r5.12xlarge (48 vCPU, 384 GB RAM)
+   - Increase storage as needed, adding 50 GB increments.
 
 3. **Scaling API and Application Servers**:
    - Increase the number of Fargate tasks and their resources:
-     - 25,000 members: 7 tasks, 2 vCPU, 4 GB RAM each
-     - 50,000 members: 8 tasks, 2 vCPU, 4 GB RAM each
-     - 100,000 members: 10 tasks, 2 vCPU, 4 GB RAM each
+     - 25,000 members: 3 tasks, 1 vCPU, 2 GB RAM each
+     - 50,000 members: 4 tasks, 2 vCPU, 4 GB RAM each
+     - 100,000 members: 6 tasks, 2 vCPU, 4 GB RAM each
+     - 200,000 members: 10 tasks, 2 vCPU, 4 GB RAM each
    - Adjust auto-scaling policies as load increases.
 
 4. **Database Optimization**:
@@ -279,7 +279,7 @@ To scale from 10,000 to 200,000 members, follow these steps:
    - Regularly review and update security groups and network ACLs.
 
 6. **Monitoring and Logging**:
-   - Upgrade to detailed CloudWatch monitoring.
+   - Upgrade to detailed CloudWatch monitoring as member count increases.
    - Implement custom metrics for more granular system insights.
 
 7. **Backup and Recovery**:
@@ -287,7 +287,7 @@ To scale from 10,000 to 200,000 members, follow these steps:
    - Test and refine disaster recovery procedures regularly.
 
 8. **Consider DCO Separation**:
-   - Around 100,000 members, evaluate moving the DCO process to a separate instance as analyzed in section 10.
+   - Around 100,000 members, evaluate moving the DCO process to a separate instance.
 
 Key Considerations:
 - Each upgrade step should be thoroughly tested in the staging environment before implementation in production.
@@ -297,7 +297,7 @@ Key Considerations:
 
 By following this gradual upgrade path, the Credex system can smoothly scale from 10,000 to 200,000 members while maintaining performance and cost-efficiency. Regular monitoring, optimization, and timely upgrades are key to successful scaling.
 
-## 12. Neo4j Aura Enterprise Considerations
+## 11. Neo4j Aura Enterprise Considerations
 
 Neo4j Aura Enterprise is a fully managed cloud service for Neo4j, which could be an alternative to self-managed Neo4j instances on AWS. Here, we'll explore the considerations for using Aura Enterprise in different scenarios.
 
@@ -389,7 +389,7 @@ Remember to get accurate, up-to-date pricing from Neo4j for Aura Enterprise befo
 
 By carefully considering these factors, you can choose the most appropriate Neo4j deployment method for Credex, balancing performance, scalability, operational overhead, and cost-effectiveness.
 
-## 13. 2 Million Member Scenario
+## 12. 2 Million Member Scenario
 
 To provide insight into potential future growth, here's a brief cost analysis for a 2 million member scenario:
 
@@ -447,7 +447,7 @@ At 2 million members, it would be crucial to:
 4. Invest in extensive optimization efforts to control costs.
 5. Re-evaluate the trade-offs between self-managed Neo4j and Aura Enterprise, considering both cost and operational complexity at this scale.
 
-## 14. Zimbabwean Economy Analysis
+## 13. Zimbabwean Economy Analysis
 
 This section analyzes the infrastructure requirements and costs for managing the full Zimbabwean economy using the Credex system.
 
@@ -556,3 +556,4 @@ Estimated monthly costs based on AWS pricing (prices may vary):
 Managing the full Zimbabwean economy with Credex would require a substantial infrastructure investment, with an estimated base cost of around $1.5 million per month. However, through various optimization techniques, volume discounts, and efficiency improvements, it's possible to potentially reduce this cost by 40-60%, bringing it down to an estimated range of $600,000 - $900,000 per month.
 
 These estimates are based on current AWS pricing and assumptions about transaction volumes and system efficiency. Actual costs may vary based on real-world usage patterns, technological advancements, and potential custom solutions developed for this scale of operation. Regular performance analysis, cost optimization, and technology upgrades would be crucial for maintaining an efficient and cost-effective system at this scale.
+
