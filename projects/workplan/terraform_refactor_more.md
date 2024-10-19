@@ -1,6 +1,70 @@
 # Revised Terraform Refactor Workplan
 
+We are partway through a terraform restructure, and things have gotten a little messy. We have analyzed the current situation and recommend the workplan solution below.
+
+## Background and End State
+
+**content here about the three workflows:
+1. Basic resource setup (once to set up each environment, then very infrequent)
+   - This workflow, implemented in connectors.yml, is responsible for setting up the foundational infrastructure.
+   - It includes creating VPCs, subnets, security groups, and other core networking components.
+   - Runs once per environment (development, staging, production) during initial setup.
+   - After initial setup, it will only run for rare, major infrastructure changes.
+   - Uses the `connectors` Terraform workspace and modules.
+
+2. Database setup (once to setup databases, then occasional perhaps monthly)
+   - This workflow, implemented in databases.yml, manages database-related resources.
+   - It includes creating and configuring database instances, setting up replication, and managing database security groups.
+   - Runs initially to set up databases for each environment.
+   - After initial setup, it may run monthly or as needed for database changes or upgrades.
+   - Uses the `databases` Terraform workspace and module.
+   - Depends on the successful execution of the connectors workflow.
+
+3. App deployment (daily)
+   - This workflow, implemented in app.yml, manages application-specific resources.
+   - It includes updating ECS task definitions, managing ECR repositories, and handling application-specific configurations.
+   - Runs frequently, potentially multiple times daily with each application deployment.
+   - Uses the `app` Terraform workspace.
+   - Depends on the successful execution of both connectors and databases workflows.
+
+This structure allows for independent management of different aspects of the infrastructure, reducing the risk of unintended changes and improving deployment efficiency.
+
 ## 1. Project Structure Reorganization
+### Recommended Folder Structure
+
+```
+terraform/
+├── modules/
+│   ├── connectors/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   ├── databases/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   └── outputs.tf
+│   └── app/
+│       ├── main.tf
+│       ├── variables.tf
+│       └── outputs.tf
+├── environments/
+│   ├── development.tfvars
+│   ├── staging.tfvars
+│   └── production.tfvars
+├── connectors.tf
+├── databases.tf
+├── app.tf
+├── providers.tf
+├── backend.tf
+├── connectors-variables.tf
+├── databases-variables.tf
+├── app-variables.tf
+├── connectors-outputs.tf
+├── databases-outputs.tf
+└── app-outputs.tf
+```
+
+This structure separates concerns between the three main components (connectors, databases, and app) while keeping environment-specific variables in separate files. The root-level .tf files serve as entry points for each component, calling the respective modules and managing workspace-specific configurations.
 
 ### 1.1 Restructure Modules
 - Create the following subdirectories in `terraform/modules/`:
@@ -57,34 +121,14 @@
 
 ## 5. CI/CD Integration
 
-### 5.1 Update Existing Workflow
-- Modify `.github/workflows/connectors.yml`:
+### 5 Update Existing Workflows
+1. Modify `.github/workflows/connectors.yml`:
   - Update to only apply changes to the connectors module
   - Adjust the trigger to run on specific branches or manual dispatch
-
-### 5.2 Create New Workflows
-- Create `.github/workflows/databases.yml`:
+2. Modify `.github/workflows/databases.yml`:
   - Configure to apply changes to the databases module
   - Set up to run on specific triggers (e.g., changes to database configurations)
 
-- Create `.github/workflows/app-deploy.yml`:
+3. Modify `.github/workflows/app.yml`:
   - Configure to apply changes to the app module
-  - Set up to run frequently (e.g., on every push to main branch)
-
-### 5.3 Workflow File Notes
-- connectors.yml:
-  - Runs infrequently, mainly for initial setup or rare infrastructure changes
-  - Uses the `connectors` workspace
-  - Applies only to resources in the `modules/connectors/` directory
-
-- databases.yml:
-  - Runs occasionally, when database configurations change
-  - Uses the `databases` workspace
-  - Applies only to resources in the `modules/databases/` directory
-  - Should depend on successful execution of connectors.yml
-
-- app-deploy.yml:
-  - Runs frequently, for application deployments
-  - Uses the `app` workspace
-  - Applies only to resources in the `modules/app/` directory
-  - Should depend on successful execution of both connectors.yml and databases.yml
+  - Set up to run frequently on manual triggers (later to trigger on pushes to specific branches)
