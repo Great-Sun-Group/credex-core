@@ -3,7 +3,6 @@ module "app" {
 
   environment                = var.environment
   aws_region                 = var.aws_region
-  terraform_state_bucket     = var.terraform_state_bucket
   create_ecr                 = var.create_ecr
   create_ecs_cluster         = var.create_ecs_cluster
   create_log_group           = var.create_log_group

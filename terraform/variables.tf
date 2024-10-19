@@ -115,11 +115,6 @@ variable "create_neo4j_instances" {
   default     = true
 }
 
-variable "terraform_state_bucket" {
-  description = "The S3 bucket name for Terraform state"
-  type        = string
-}
-
 variable "common_tags" {
   description = "Common tags to be applied to all resources"
   type        = map(string)

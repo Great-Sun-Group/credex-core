@@ -8,11 +8,6 @@ variable "aws_region" {
   type        = string
 }
 
-variable "terraform_state_bucket" {
-  description = "The S3 bucket name for Terraform state"
-  type        = string
-}
-
 variable "create_ecr" {
   description = "Whether to create the ECR repository"
   type        = bool

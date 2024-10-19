@@ -11,7 +11,6 @@ module "databases" {
   neo4j_enterprise_license = var.neo4j_enterprise_license
   create_neo4j_instances   = var.create_neo4j_instances
   common_tags              = var.common_tags
-  terraform_state_bucket   = var.terraform_state_bucket
   aws_region               = var.aws_region
 }
 
