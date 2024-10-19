@@ -1,4 +1,5 @@
 import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
 
 // Determine if the environment is deployed
 export const isDeployed = process.argv.includes("dev");
@@ -11,73 +12,73 @@ export const axiosInstance = axios.create({
   },
 });
 
-/**
- * Creates test members required for account tests.
- * @returns An object containing JWTs and IDs of the created members.
- */
+// ... (keep the existing imports and constants)
+
 export const createTestMembers = async () => {
-  // URLs for onboarding members
   const onboardUrl = `${BASE_URL}/api/v1/member/onboardMember`;
-  const authorizeOnboardUrl = `${BASE_URL}/api/v1/member/onboardMember`;
 
-  // Generate random phone numbers for uniqueness
-  const phoneNumber = Math.floor(100000000000 + Math.random() * 900000000000).toString();
-  const authorizePhoneNumber = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+  const createMember = async (data: any) => {
+    const response = await axiosInstance.post(onboardUrl, data);
+    return {
+      jwt: response.data.token,
+      id: response.data.memberDashboard.memberID,
+      phone: data.phone,
+      personalAccountID: response.data.defaultAccountID,
+    };
+  };
 
-  // Data for test member
-  const memberData = {
+  const testMember = await createMember({
     firstname: "TestMember",
     lastname: "ForAccountTests",
-    phone: phoneNumber,
+    phone: Math.floor(100000000000 + Math.random() * 900000000000).toString(),
     defaultDenom: "USD",
-  };
+    memberTier: 3, // Entrepreneur tier
+  });
 
-  // Data for member to authorize
-  const authorizeMemberData = {
+  const memberToAuthorize = await createMember({
     firstname: "Authorizing",
     lastname: "Member",
-    phone: authorizePhoneNumber,
+    phone: Math.floor(100000000000 + Math.random() * 900000000000).toString(),
     defaultDenom: "USD",
+    memberTier: 3,
+  });
+
+  console.log("Test members created:", {
+    testMember: { id: testMember.id, tier: 3 },
+    memberToAuthorize: { id: memberToAuthorize.id, tier: 3 },
+  });
+
+  return {
+    testMemberJWT: testMember.jwt,
+    testMemberID: testMember.id,
+    testPersonalAccountID: testMember.personalAccountID,
+    testMemberPhone: testMember.phone,
+    memberToAuthorizeJWT: memberToAuthorize.jwt,
+    memberToAuthorizeID: memberToAuthorize.id,
+    memberToAuthorizePhone: memberToAuthorize.phone,
+  };
+};
+
+export const createTestMemberWithTier = async (tier: number) => {
+  const onboardUrl = `${BASE_URL}/api/v1/member/onboardMember`;
+  const memberData = {
+    firstname: "TierTest",
+    lastname: "Member",
+    phone: Math.floor(100000000000 + Math.random() * 900000000000).toString(),
+    defaultDenom: "USD",
+    memberTier: tier,
   };
 
-  // Variables to store member details
-  let testMemberJWT: string;
-  let testMemberID: string;
-  let testPersonalAccountID: string;
-  let testMemberPhone: string;
+  const response = await axiosInstance.post(onboardUrl, memberData);
+  console.log(`Test member created with tier ${tier}:`, {
+    id: response.data.memberDashboard.memberID,
+    tier: tier,
+  });
 
-  let memberToAuthorizeJWT: string;
-  let memberToAuthorizeID: string;
-  let memberToAuthorizePhone: string;
-
-  try {
-    // Create Test Member
-    const response = await axiosInstance.post(onboardUrl, memberData);
-    testMemberJWT = response.data.token;
-    testMemberID = response.data.memberDashboard.memberID;
-    testPersonalAccountID = response.data.defaultAccountID;
-    testMemberPhone = phoneNumber;
-    console.log("Test member created with ID:", testMemberID);
-
-    // Create Member to Authorize
-    const authorizeResponse = await axiosInstance.post(authorizeOnboardUrl, authorizeMemberData);
-    memberToAuthorizeJWT = authorizeResponse.data.token;
-    memberToAuthorizeID = authorizeResponse.data.memberDashboard.memberID;
-    memberToAuthorizePhone = authorizePhoneNumber;
-    console.log("Member to authorize created with ID:", memberToAuthorizeID);
-
-    // Return all necessary details
-    return {
-      testMemberJWT,
-      testMemberID,
-      testPersonalAccountID,
-      testMemberPhone,
-      memberToAuthorizeJWT,
-      memberToAuthorizeID,
-      memberToAuthorizePhone,
-    };
-  } catch (error) {
-    console.error("Error in setup (creating test members):", error);
-    throw error;
-  }
+  return {
+    jwt: response.data.token,
+    id: response.data.memberDashboard.memberID,
+    phone: memberData.phone,
+    personalAccountID: response.data.defaultAccountID,
+  };
 };
