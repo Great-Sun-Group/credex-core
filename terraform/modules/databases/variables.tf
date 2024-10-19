@@ -49,11 +49,6 @@ variable "common_tags" {
   type        = map(string)
 }
 
-variable "terraform_state_bucket" {
-  description = "The S3 bucket name for Terraform state"
-  type        = string
-}
-
 variable "aws_region" {
   description = "The AWS region to deploy to"
   type        = string

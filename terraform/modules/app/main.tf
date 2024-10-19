@@ -5,25 +5,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Data sources to fetch shared resources and database information
-data "terraform_remote_state" "connectors" {
-  backend = "s3"
-  config = {
-    bucket = var.terraform_state_bucket
-    key    = "${var.environment}/connectors.tfstate"
-    region = var.aws_region
-  }
-}
-
-data "terraform_remote_state" "databases" {
-  backend = "s3"
-  config = {
-    bucket = var.terraform_state_bucket
-    key    = "${var.environment}/databases.tfstate"
-    region = var.aws_region
-  }
-}
-
 # ECR repository
 resource "aws_ecr_repository" "credex_core" {
   count                = var.create_ecr ? 1 : 0
