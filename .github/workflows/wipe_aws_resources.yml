@@ -73,7 +73,15 @@ jobs:
         echo "Deleting S3 buckets..."
         buckets=$(aws s3 ls | awk '{print $3}')
         for bucket in $buckets; do
-          aws s3 rb s3://$bucket --force
+          echo "Processing bucket: $bucket"
+          # Empty the bucket first
+          if ! aws s3 rm s3://$bucket --recursive; then
+            echo "Failed to empty bucket $bucket"
+          fi
+          # Delete the bucket
+          if ! aws s3 rb s3://$bucket --force; then
+            echo "Failed to delete bucket $bucket"
+          fi
         done
 
     - name: Wipe RDS Instances
