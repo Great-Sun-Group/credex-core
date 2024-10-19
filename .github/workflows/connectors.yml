@@ -80,21 +80,34 @@ jobs:
             -backend-config="region=af-south-1" \
             -backend-config="dynamodb_table=${{ env.TF_LOCK_TABLE }}"
           
+          if [ $? -ne 0 ]; then
+            echo "Terraform init failed"
+            exit 1
+          fi
+          
           echo "Applying Terraform changes..."
           terraform apply -auto-approve -input=false -lock=false -target=module.shared_resources
+          
+          if [ $? -ne 0 ]; then
+            echo "Terraform apply failed"
+            exit 1
+          fi
+          
+          echo "Terraform apply completed successfully"
 
       - name: Get Infrastructure Outputs
         run: |
           cd terraform
           echo "Retrieving infrastructure outputs..."
-          echo "VPC_ID=$(terraform output -raw vpc_id)" >> $GITHUB_ENV
-          echo "SUBNET_IDS=$(terraform output -raw subnet_ids)" >> $GITHUB_ENV
-          echo "NEO4J_SECURITY_GROUP_ID=$(terraform output -raw neo4j_security_group_id)" >> $GITHUB_ENV
-          echo "KEY_PAIR_NAME=$(terraform output -raw key_pair_name)" >> $GITHUB_ENV
-          echo "ALB_SECURITY_GROUP_ID=$(terraform output -raw alb_security_group_id)" >> $GITHUB_ENV
-          echo "ECS_TASKS_SECURITY_GROUP_ID=$(terraform output -raw ecs_tasks_security_group_id)" >> $GITHUB_ENV
-          echo "ALB_DNS_NAME=$(terraform output -raw alb_dns_name)" >> $GITHUB_ENV
-          echo "TARGET_GROUP_ARN=$(terraform output -raw target_group_arn)" >> $GITHUB_ENV
+          terraform output || { echo "Failed to retrieve Terraform outputs"; exit 1; }
+          echo "VPC_ID=$(terraform output -raw vpc_id)" >> $GITHUB_ENV || true
+          echo "SUBNET_IDS=$(terraform output -raw subnet_ids)" >> $GITHUB_ENV || true
+          echo "NEO4J_SECURITY_GROUP_ID=$(terraform output -raw neo4j_security_group_id)" >> $GITHUB_ENV || true
+          echo "KEY_PAIR_NAME=$(terraform output -raw key_pair_name)" >> $GITHUB_ENV || true
+          echo "ALB_SECURITY_GROUP_ID=$(terraform output -raw alb_security_group_id)" >> $GITHUB_ENV || true
+          echo "ECS_TASKS_SECURITY_GROUP_ID=$(terraform output -raw ecs_tasks_security_group_id)" >> $GITHUB_ENV || true
+          echo "ALB_DNS_NAME=$(terraform output -raw alb_dns_name)" >> $GITHUB_ENV || true
+          echo "TARGET_GROUP_ARN=$(terraform output -raw target_group_arn)" >> $GITHUB_ENV || true
 
       - name: Print Infrastructure Information
         run: |
