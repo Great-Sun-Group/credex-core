@@ -91,9 +91,28 @@ export function validatePositiveInteger(value: number): { isValid: boolean; mess
 }
 
 export function validatePositiveNumber(value: number): { isValid: boolean; message?: string } {
-  const isValid = typeof value === 'number' && value > 0 && isFinite(value);
-  const message = isValid ? undefined : 'Invalid value: must be a positive number';
-  return { isValid, message };
+  if (typeof value !== 'number' || isNaN(value) || value <= 0) {
+    return { isValid: false, message: 'Must be a positive number' };
+  }
+  return { isValid: true };
+}
+
+export function validateOptionalPositiveNumber(value: any): { isValid: boolean; message?: string } {
+  if (value === null) {
+    return { isValid: true };
+  }
+  if (typeof value !== 'number' || isNaN(value) || value <= 0) {
+    return { isValid: false, message: 'If provided, must be a positive number' };
+  }
+  return { isValid: true };
+}
+
+export function validateOptionalDenomination(value: any): { isValid: boolean; message?: string } {
+  if (value === null) {
+    return { isValid: true };
+  }
+  // Assuming validateDenomination is your existing function to validate denominations
+  return validateDenomination(value);
 }
 
 export const v = {
@@ -112,3 +131,12 @@ export const v = {
     return { isValid: true };
   },
 };
+
+const VALID_ACCOUNT_TYPES = ['PERSONAL_CONSUMPTION', 'BUSINESS', /* add other types */];
+
+export function validateAccountType(value: any): { isValid: boolean; message?: string } {
+  if (!VALID_ACCOUNT_TYPES.includes(value)) {
+    return { isValid: false, message: `Invalid account type. Must be one of: ${VALID_ACCOUNT_TYPES.join(', ')}` };
+  }
+  return { isValid: true };
+}

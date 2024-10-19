@@ -106,3 +106,25 @@ export const generateSafeIdIfInvalid = (input: string): string => {
   logger.debug("Safe ID check complete", { input, result });
   return result;
 };
+
+export function sanitizeAccountType(value: any): string {
+  return typeof value === 'string' ? value.trim().toUpperCase() : '';
+}
+
+export function sanitizeNumber(value: any): number {
+  return typeof value === 'number' ? value : Number(value);
+}
+
+export function sanitizeOptionalNumber(value: any): number | null {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  return typeof value === 'number' ? value : Number(value);
+}
+
+export function sanitizeOptionalDenomination(value: any): string | null {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  return typeof value === 'string' ? value.trim().toUpperCase() : String(value).trim().toUpperCase();
+}

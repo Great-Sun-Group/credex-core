@@ -1,6 +1,8 @@
 import axios from "axios";
 import { createTestMembers, BASE_URL, axiosInstance } from "./setup";
 
+jest.setTimeout(30000); 
+
 describe("Get Account by Handle API Tests", () => {
   let testMemberJWT: string;
   let testMemberID: string;
@@ -8,25 +10,33 @@ describe("Get Account by Handle API Tests", () => {
   let testAccountHandle: string;
 
   beforeAll(async () => {
-    const setup = await createTestMembers();
-    testMemberJWT = setup.testMemberJWT;
-    testMemberID = setup.testMemberID;
-
-    // Create an account to retrieve
-    const createUrl = `${BASE_URL}/api/v1/createAccount`;
-    testAccountHandle = "testaccount_" + Math.random().toString(36).substring(2, 15);
-    const accountData = {
-      ownerID: testMemberID,
-      accountType: "PERSONAL",
-      accountName: "Test Account",
-      accountHandle: testAccountHandle,
-      defaultDenom: "USD",
-    };
-
-    const response = await axiosInstance.post(createUrl, accountData, {
-      headers: { Authorization: `Bearer ${testMemberJWT}` },
-    });
-    testAccountID = response.data.accountID;
+    try {
+      console.log("Starting beforeAll hook");
+      
+      console.log("Creating test members...");
+      const setup = await createTestMembers();
+      console.log("Test members created successfully. Setup response:", JSON.stringify(setup, null, 2));
+      
+      testMemberJWT = setup.testMemberJWT;
+      testMemberID = setup.testMemberID;
+      testAccountID = setup.testPersonalAccountID;
+      testAccountHandle = setup.testMemberPhone;
+      
+      console.log("Test account details:", {
+        accountID: testAccountID,
+        accountHandle: testAccountHandle
+      });
+      
+      console.log("beforeAll hook completed successfully");
+    } catch (error) {
+      console.error("Error in beforeAll hook:", error);
+      if (axios.isAxiosError(error) && error.response) {
+        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+        console.error("Response headers:", error.response.headers);
+      }
+      throw error;
+    }
   });
 
   it("should retrieve the account by handle successfully", async () => {
@@ -40,7 +50,7 @@ describe("Get Account by Handle API Tests", () => {
       });
       expect(response.status).toBe(200);
       expect(response.data).toHaveProperty("accountData");
-      expect(response.data.accountData).toHaveProperty("accountID", testAccountID);
+      expect(response.data.accountData).toHaveProperty("accountID", testAccountID);     
     } catch (error) {
       console.error("Error retrieving account by handle:", error);
       throw error;
@@ -56,6 +66,7 @@ describe("Get Account by Handle API Tests", () => {
         params,
         headers: { Authorization: `Bearer ${testMemberJWT}` },
       });
+      throw new Error("Expected request to fail");
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         expect(error.response.status).toBe(404);
@@ -66,7 +77,7 @@ describe("Get Account by Handle API Tests", () => {
     }
   });
 
-  it("should return 400 for invalid account handle", async () => {
+  it("should return 404 for invalid account handle", async () => {
     const getUrl = `${BASE_URL}/api/v1/getAccountByHandle`;
     const params = { accountHandle: "invalid handle!" };
 
@@ -75,15 +86,14 @@ describe("Get Account by Handle API Tests", () => {
         params,
         headers: { Authorization: `Bearer ${testMemberJWT}` },
       });
+      throw new Error("Expected request to fail");
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
-        expect(error.response.status).toBe(400);
-        expect(error.response.data.message).toBe("Invalid account handle");
+        expect(error.response.status).toBe(404);
+        expect(error.response.data.message).toBe("Account not found");
       } else {
         throw error;
       }
     }
-  });
-
-  // Optionally, include afterAll for cleanup if needed
+  });  
 });

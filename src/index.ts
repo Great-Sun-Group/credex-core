@@ -62,7 +62,7 @@ async function initializeApp() {
 
     // Apply Hardened Routes
     app.use(apiVersionOneRoute, MemberRoutes(jsonParser, apiVersionOneRoute));
-    AccountRoutes(app);
+    app.use(apiVersionOneRoute, AccountRoutes(jsonParser)); 
     CredexRoutes(app);
     AdminDashboardRoutes(app);
     RecurringRoutes(app);
