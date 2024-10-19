@@ -48,7 +48,7 @@ jobs:
           TF_VAR_create_neo4j_instances: "true"
         run: |
           cd terraform
-          terraform init
+          terraform init -backend-config="key=${{ env.ENVIRONMENT }}/terraform.tfstate"
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
           terraform apply -auto-approve -target=module.shared_resources
 

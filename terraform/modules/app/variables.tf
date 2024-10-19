@@ -1,0 +1,104 @@
+variable "environment" {
+  description = "The deployment environment (development, staging, or production)"
+  type        = string
+}
+
+variable "aws_region" {
+  description = "The AWS region to deploy to"
+  type        = string
+}
+
+variable "terraform_state_bucket" {
+  description = "The S3 bucket name for Terraform state"
+  type        = string
+}
+
+variable "create_ecr" {
+  description = "Whether to create the ECR repository"
+  type        = bool
+  default     = true
+}
+
+variable "create_ecs_cluster" {
+  description = "Whether to create the ECS cluster"
+  type        = bool
+  default     = true
+}
+
+variable "create_log_group" {
+  description = "Whether to create the CloudWatch log group"
+  type        = bool
+  default     = true
+}
+
+variable "create_iam_roles" {
+  description = "Whether to create IAM roles"
+  type        = bool
+  default     = true
+}
+
+variable "jwt_secret" {
+  description = "The secret used for JWT token generation"
+  type        = string
+  sensitive   = true
+}
+
+variable "open_exchange_rates_api" {
+  description = "API key for Open Exchange Rates"
+  type        = string
+  sensitive   = true
+}
+
+variable "common_tags" {
+  description = "Common tags to be applied to all resources"
+  type        = map(string)
+  default     = {}
+}
+
+variable "ecs_task_cpu" {
+  description = "The amount of CPU to allocate for the ECS task"
+  type        = string
+  default     = "256"
+}
+
+variable "ecs_task_memory" {
+  description = "The amount of memory to allocate for the ECS task"
+  type        = string
+  default     = "512"
+}
+
+variable "app_port" {
+  description = "The port the app runs on"
+  type        = number
+  default     = 5000
+}
+
+variable "vpc_id" {
+  description = "The ID of the VPC"
+  type        = string
+}
+
+variable "subnet_ids" {
+  description = "The IDs of the subnets"
+  type        = list(string)
+}
+
+variable "ecs_tasks_security_group_id" {
+  description = "The ID of the ECS tasks security group"
+  type        = string
+}
+
+variable "target_group_arn" {
+  description = "The ARN of the target group"
+  type        = string
+}
+
+variable "alb_listener" {
+  description = "The ARN of the ALB listener"
+  type        = string
+}
+
+variable "neo4j_bolt_urls" {
+  description = "The Neo4j Bolt URLs"
+  type        = list(string)
+}

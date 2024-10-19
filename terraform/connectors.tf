@@ -1,71 +1,62 @@
-# Remove the provider "aws" block from the top of this file
+module "connectors" {
+  source = "./modules/connectors"
 
-# Local variables
-locals {
-  common_tags = {
-    Environment = var.environment
-    Project     = "Credex"
-    ManagedBy   = "Terraform"
-  }
+  environment           = terraform.workspace
+  aws_region            = var.aws_region
+  vpc_cidr              = var.vpc_cidr
+  create_key_pair       = var.create_key_pair
+  create_load_balancer  = var.create_load_balancer
+  create_target_group   = var.create_target_group
+  create_security_groups = var.create_security_groups
+  common_tags           = local.common_tags
+  domain_base           = var.domain_base
+  public_key            = tls_private_key.ssh.public_key_openssh
 }
 
-# Generate key pair
-resource "tls_private_key" "credex_key" {
+# Generate SSH key
+resource "tls_private_key" "ssh" {
   algorithm = "RSA"
   rsa_bits  = 4096
 }
 
-# Shared Resources Module
-module "shared_resources" {
-  source      = "./shared_resources"
-  environment = var.environment
-  common_tags = local.common_tags
-  domain      = var.domain_base
-  public_key  = tls_private_key.credex_key.public_key_openssh
-}
-
 # Outputs
 output "vpc_id" {
-  value       = module.shared_resources.vpc_id
-  description = "The ID of the VPC"
+  value = module.connectors.vpc_id
 }
 
 output "subnet_ids" {
-  value       = module.shared_resources.subnet_ids
-  description = "The IDs of the subnets"
+  value = module.connectors.subnet_ids
 }
 
 output "neo4j_security_group_id" {
-  value       = module.shared_resources.neo4j_security_group_id
-  description = "The ID of the Neo4j security group"
+  value = module.connectors.neo4j_security_group_id
 }
 
 output "key_pair_name" {
-  value       = module.shared_resources.key_pair_name
-  description = "The name of the key pair"
+  value = module.connectors.key_pair_name
 }
 
 output "alb_security_group_id" {
-  value       = module.shared_resources.alb_security_group_id
-  description = "The ID of the ALB security group"
+  value = module.connectors.alb_security_group_id
 }
 
 output "ecs_tasks_security_group_id" {
-  value       = module.shared_resources.ecs_tasks_security_group_id
-  description = "The ID of the ECS tasks security group"
+  value = module.connectors.ecs_tasks_security_group_id
 }
 
 output "alb_dns_name" {
-  value       = module.shared_resources.alb_dns_name
-  description = "The DNS name of the Application Load Balancer"
+  value = module.connectors.alb_dns_name
 }
 
 output "target_group_arn" {
-  value       = module.shared_resources.target_group_arn
-  description = "The ARN of the target group"
+  value = module.connectors.target_group_arn
 }
 
 output "alb_listener" {
-  value       = module.shared_resources.alb_listener
-  description = "The ARN of the ALB listener"
+  value = module.connectors.alb_listener
+}
+
+output "ssh_private_key" {
+  value     = tls_private_key.ssh.private_key_pem
+  sensitive = true
 }
