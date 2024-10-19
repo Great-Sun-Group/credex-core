@@ -42,38 +42,20 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: af-south-1
 
-      - name: Check and Create S3 Bucket
-        run: |
-          if ! aws s3api head-bucket --bucket ${{ env.TF_STATE_BUCKET }} 2>/dev/null; then
-            echo "Creating S3 bucket: ${{ env.TF_STATE_BUCKET }}"
-            aws s3api create-bucket --bucket ${{ env.TF_STATE_BUCKET }} --create-bucket-configuration LocationConstraint=af-south-1
-            aws s3api put-bucket-versioning --bucket ${{ env.TF_STATE_BUCKET }} --versioning-configuration Status=Enabled
-          else
-            echo "S3 bucket ${{ env.TF_STATE_BUCKET }} already exists"
-          fi
-
-      - name: Check and Create DynamoDB Table
-        run: |
-          if ! aws dynamodb describe-table --table-name ${{ env.TF_LOCK_TABLE }} 2>/dev/null; then
-            echo "Creating DynamoDB table: ${{ env.TF_LOCK_TABLE }}"
-            aws dynamodb create-table \
-              --table-name ${{ env.TF_LOCK_TABLE }} \
-              --attribute-definitions AttributeName=LockID,AttributeType=S \
-              --key-schema AttributeName=LockID,KeyType=HASH \
-              --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5
-          else
-            echo "DynamoDB table ${{ env.TF_LOCK_TABLE }} already exists"
-          fi
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-
       - name: Remove Terraform State Lock
         run: |
           aws dynamodb delete-item \
             --table-name ${{ env.TF_LOCK_TABLE }} \
             --key '{"LockID": {"S": "${{ env.TF_STATE_BUCKET }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}'
           echo "Terraform state lock removed (if it existed)"
+
+      - name: Clear Terraform State
+        run: |
+          aws s3 rm s3://${{ env.TF_STATE_BUCKET }}/${{ env.ENVIRONMENT }}/terraform.tfstate
+          echo "Terraform state cleared (if it existed)"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
 
       - name: Terraform Init and Apply
         env:
@@ -92,17 +74,14 @@ jobs:
         run: |
           cd terraform
           echo "Initializing Terraform..."
-          terraform init \
+          terraform init -input=false \
             -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
             -backend-config="key=${{ env.ENVIRONMENT }}/terraform.tfstate" \
             -backend-config="region=af-south-1" \
             -backend-config="dynamodb_table=${{ env.TF_LOCK_TABLE }}"
           
-          echo "Selecting/Creating Terraform workspace..."
-          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
-          
           echo "Applying Terraform changes..."
-          terraform apply -auto-approve -target=module.shared_resources -lock=false
+          terraform apply -auto-approve -input=false -lock=false -target=module.shared_resources
 
       - name: Get Infrastructure Outputs
         run: |
