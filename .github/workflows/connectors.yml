@@ -48,41 +48,37 @@ jobs:
 
       - name: Check and Manage Terraform State Lock
         run: |
-          echo "Checking for existing Terraform state lock..."
-          LOCK_ID=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.LockID.S' --output text)
-          echo "Lock ID: $LOCK_ID"
-          if [ "$LOCK_ID" != "None" ]; then
-            echo "Found existing lock. Checking lock details..."
-            LOCK_INFO=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.Info.S' --output text)
-            echo "Full Lock Info:"
-            echo "$LOCK_INFO"
-            LOCK_TIME=$(echo $LOCK_INFO | jq -r '.Created')
-            CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S.%NZ")
-            TIME_DIFF=$(( $(date -d "$CURRENT_TIME" +%s) - $(date -d "$LOCK_TIME" +%s) ))
-            
-            echo "Lock created at: $LOCK_TIME"
-            echo "Current time: $CURRENT_TIME"
-            echo "Lock Age: $TIME_DIFF seconds"
-            
-            if [ $TIME_DIFF -gt 7200 ] || [ "${{ inputs.force_unlock }}" == "true" ]; then
-              echo "Lock is older than 2 hours or force unlock is enabled. Attempting to remove lock..."
-              aws dynamodb delete-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}'
-              echo "Lock removal attempt completed. Verifying..."
-              LOCK_ID_AFTER=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.LockID.S' --output text)
-              if [ "$LOCK_ID_AFTER" == "None" ]; then
-                echo "Lock successfully removed. Proceeding with deployment."
+          check_and_remove_lock() {
+            LOCK_ID=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.LockID.S' --output text)
+            if [ "$LOCK_ID" != "None" ]; then
+              echo "Found existing lock. Checking lock details..."
+              LOCK_INFO=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.Info.S' --output text)
+              echo "Full Lock Info:"
+              echo "$LOCK_INFO"
+              LOCK_TIME=$(echo $LOCK_INFO | jq -r '.Created')
+              CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S.%NZ")
+              TIME_DIFF=$(( $(date -d "$CURRENT_TIME" +%s) - $(date -d "$LOCK_TIME" +%s) ))
+              
+              echo "Lock created at: $LOCK_TIME"
+              echo "Current time: $CURRENT_TIME"
+              echo "Lock Age: $TIME_DIFF seconds"
+              
+              if [ $TIME_DIFF -gt 3600 ] || [ "${{ inputs.force_unlock }}" == "true" ]; then
+                echo "Lock is older than 1 hour or force unlock is enabled. Removing lock..."
+                aws dynamodb delete-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}'
+                echo "Lock removed."
+                return 0
               else
-                echo "Failed to remove lock. Manual intervention may be required."
-                exit 1
+                echo "Lock is less than 1 hour old and force unlock is not enabled."
+                return 1
               fi
             else
-              echo "Lock is less than 2 hours old and force unlock is not enabled."
-              echo "Please wait for the lock to expire or use force unlock with caution."
-              exit 1
+              echo "No existing lock found."
+              return 0
             fi
-          else
-            echo "No existing lock found. Proceeding with deployment."
-          fi
+          }
+
+          check_and_remove_lock
 
       - name: Terraform Init and Apply
         env:
@@ -100,16 +96,29 @@ jobs:
           TF_VAR_create_neo4j_instances: "true"
         run: |
           cd terraform
-          echo "Running Terraform init..."
           terraform init \
             -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
             -backend-config="key=${{ env.ENVIRONMENT }}/terraform.tfstate" \
             -backend-config="region=af-south-1" \
             -backend-config="dynamodb_table=${{ env.TF_LOCK_TABLE }}"
-          echo "Selecting or creating Terraform workspace..."
+          
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
-          echo "Running Terraform apply..."
-          terraform apply -auto-approve -target=module.shared_resources
+          
+          for i in {1..3}; do
+            if terraform apply -auto-approve -target=module.shared_resources; then
+              echo "Terraform apply succeeded."
+              break
+            else
+              echo "Terraform apply failed. Attempt $i of 3."
+              if [ $i -eq 3 ]; then
+                echo "All attempts failed. Exiting."
+                exit 1
+              fi
+              echo "Checking and removing lock before retry..."
+              check_and_remove_lock
+              sleep 30
+            fi
+          done
 
       - name: Get Infrastructure Outputs
         run: |
