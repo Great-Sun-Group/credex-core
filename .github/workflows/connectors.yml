@@ -88,6 +88,9 @@ jobs:
           TF_VAR_create_neo4j_instances: "true"
         run: |
           cd terraform
+          echo "Setting Terraform workspace..."
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+          
           echo "Initializing Terraform..."
           terraform init -input=false \
             -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
