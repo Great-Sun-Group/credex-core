@@ -30,9 +30,19 @@ output "vpc_id" {
   description = "The ID of the VPC"
 }
 
+output "private_subnet_ids" {
+  value       = module.shared_resources.private_subnet_ids
+  description = "The IDs of the private subnets"
+}
+
+output "public_subnet_ids" {
+  value       = module.shared_resources.public_subnet_ids
+  description = "The IDs of the public subnets"
+}
+
 output "subnet_ids" {
-  value       = module.shared_resources.subnet_ids
-  description = "The IDs of the subnets"
+  value       = concat(module.shared_resources.private_subnet_ids, module.shared_resources.public_subnet_ids)
+  description = "The IDs of all subnets (private and public)"
 }
 
 output "neo4j_security_group_id" {
