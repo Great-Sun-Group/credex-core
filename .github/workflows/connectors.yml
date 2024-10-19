@@ -46,7 +46,20 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Check and Manage Terraform State Lock
+      - name: Terraform Init and Apply
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_terraform_state_bucket: ${{ env.TF_STATE_BUCKET }}
+          TF_VAR_terraform_lock_table: ${{ env.TF_LOCK_TABLE }}
+          TF_VAR_create_ecr: "true"
+          TF_VAR_create_ecs_cluster: "true"
+          TF_VAR_create_log_group: "true"
+          TF_VAR_create_key_pair: "true"
+          TF_VAR_create_iam_roles: "true"
+          TF_VAR_create_load_balancer: "true"
+          TF_VAR_create_target_group: "true"
+          TF_VAR_create_security_groups: "true"
+          TF_VAR_create_neo4j_instances: "true"
         run: |
           check_and_remove_lock() {
             LOCK_ID=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.LockID.S' --output text)
@@ -78,23 +91,6 @@ jobs:
             fi
           }
 
-          check_and_remove_lock
-
-      - name: Terraform Init and Apply
-        env:
-          TF_VAR_environment: ${{ env.ENVIRONMENT }}
-          TF_VAR_terraform_state_bucket: ${{ env.TF_STATE_BUCKET }}
-          TF_VAR_terraform_lock_table: ${{ env.TF_LOCK_TABLE }}
-          TF_VAR_create_ecr: "true"
-          TF_VAR_create_ecs_cluster: "true"
-          TF_VAR_create_log_group: "true"
-          TF_VAR_create_key_pair: "true"
-          TF_VAR_create_iam_roles: "true"
-          TF_VAR_create_load_balancer: "true"
-          TF_VAR_create_target_group: "true"
-          TF_VAR_create_security_groups: "true"
-          TF_VAR_create_neo4j_instances: "true"
-        run: |
           cd terraform
           terraform init \
             -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
@@ -105,6 +101,8 @@ jobs:
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
           
           for i in {1..3}; do
+            echo "Attempt $i of 3"
+            check_and_remove_lock
             if terraform apply -auto-approve -target=module.shared_resources; then
               echo "Terraform apply succeeded."
               break
@@ -114,8 +112,7 @@ jobs:
                 echo "All attempts failed. Exiting."
                 exit 1
               fi
-              echo "Checking and removing lock before retry..."
-              check_and_remove_lock
+              echo "Waiting 30 seconds before next attempt..."
               sleep 30
             fi
           done
