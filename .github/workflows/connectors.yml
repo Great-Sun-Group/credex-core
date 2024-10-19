@@ -15,11 +15,19 @@ jobs:
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
 
     steps:
+      - name: Mask repository URL
+        run: echo "::add-mask::https://github.com/${GITHUB_REPOSITORY}.git"
+
+      - name: Configure Git
+        run: |
+          git config --global core.compression 0
+          git config --global advice.detachedHead false
+          git config --global advice.fetchShowForcedUpdates false
+
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
-          quiet: true
 
       - name: Set Environment
         run: |
