@@ -6,7 +6,8 @@ on:
       force_unlock:
         description: 'Force remove Terraform state lock'
         required: false
-        default: 'false'
+        type: boolean
+        default: false
 
 jobs:
   deploy_application:
@@ -48,7 +49,7 @@ jobs:
             LOCK_TIME=$(echo $LOCK_INFO | jq -r '.Created')
             CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S.%NZ")
             TIME_DIFF=$(( $(date -d "$CURRENT_TIME" +%s) - $(date -d "$LOCK_TIME" +%s) ))
-            if [ $TIME_DIFF -gt 3600 ] || [ "${{ github.event.inputs.force_unlock }}" == "true" ]; then
+            if [ $TIME_DIFF -gt 3600 ] || [ "${{ inputs.force_unlock }}" == "true" ]; then
               echo "Removing lock..."
               aws dynamodb delete-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}'
             else
