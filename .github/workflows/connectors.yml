@@ -15,19 +15,19 @@ jobs:
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
 
     steps:
-      - name: Mask repository URL
-        run: echo "::add-mask::https://github.com/${GITHUB_REPOSITORY}.git"
-
-      - name: Configure Git
-        run: |
-          git config --global core.compression 0
-          git config --global advice.detachedHead false
-          git config --global advice.fetchShowForcedUpdates false
-
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
+        env:
+          GIT_TRACE: 0
+        continue-on-error: true
+
+      - name: Suppress checkout output
+        run: |
+          git config --global core.pager cat
+          git fetch --depth=1 origin ${{ github.ref }} > /dev/null 2>&1
+          git checkout FETCH_HEAD > /dev/null 2>&1
 
       - name: Set Environment
         run: |
