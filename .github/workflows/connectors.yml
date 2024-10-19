@@ -68,6 +68,13 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
+      - name: Remove Terraform State Lock
+        run: |
+          aws dynamodb delete-item \
+            --table-name ${{ env.TF_LOCK_TABLE }} \
+            --key '{"LockID": {"S": "${{ env.TF_STATE_BUCKET }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}'
+          echo "Terraform state lock removed (if it existed)"
+
       - name: Terraform Init and Apply
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
@@ -91,22 +98,11 @@ jobs:
             -backend-config="region=af-south-1" \
             -backend-config="dynamodb_table=${{ env.TF_LOCK_TABLE }}"
           
-          if [[ "${{ inputs.force_unlock }}" == "true" ]]; then
-            echo "Force unlocking Terraform state..."
-            LOCK_ID=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "${{ env.TF_STATE_BUCKET }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.LockID.S' --output text)
-            if [[ "$LOCK_ID" != "None" ]]; then
-              aws dynamodb delete-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "${{ env.TF_STATE_BUCKET }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}'
-              echo "Lock removed from DynamoDB table"
-            else
-              echo "No lock found in DynamoDB table"
-            fi
-          fi
-          
           echo "Selecting/Creating Terraform workspace..."
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
           
           echo "Applying Terraform changes..."
-          terraform apply -auto-approve -target=module.shared_resources
+          terraform apply -auto-approve -target=module.shared_resources -lock=false
 
       - name: Get Infrastructure Outputs
         run: |
