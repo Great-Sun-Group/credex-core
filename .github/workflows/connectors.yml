@@ -24,6 +24,12 @@ jobs:
           echo "TF_STATE_BUCKET=credex-terraform-state-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
           echo "TF_LOCK_TABLE=credex-terraform-lock-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
 
+      - name: Debug Environment Variables
+        run: |
+          echo "ENVIRONMENT: ${{ env.ENVIRONMENT }}"
+          echo "TF_STATE_BUCKET: ${{ env.TF_STATE_BUCKET }}"
+          echo "TF_LOCK_TABLE: ${{ env.TF_LOCK_TABLE }}"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -33,7 +39,7 @@ jobs:
 
       - name: Check and Create S3 bucket for Terraform state
         run: |
-          # Note: This step is typically run rarely, mainly for initial setup or recovery.
+          echo "Attempting to create bucket: ${{ env.TF_STATE_BUCKET }}"
           if aws s3api head-bucket --bucket ${{ env.TF_STATE_BUCKET }} 2>/dev/null; then
             echo "S3 bucket ${{ env.TF_STATE_BUCKET }} already exists. Skipping creation."
           else
@@ -45,7 +51,6 @@ jobs:
 
       - name: Check and Create DynamoDB table for Terraform state locking
         run: |
-          # Note: This step is typically run rarely, mainly for initial setup or recovery.
           if aws dynamodb describe-table --table-name ${{ env.TF_LOCK_TABLE }} 2>/dev/null; then
             echo "DynamoDB table ${{ env.TF_LOCK_TABLE }} already exists. Skipping creation."
           else
