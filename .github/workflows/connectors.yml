@@ -15,24 +15,10 @@ jobs:
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
 
     steps:
-      - name: Suppress Git output
-        run: |
-          echo "GIT_TRACE=0" >> $GITHUB_ENV
-          echo "GIT_CURL_VERBOSE=0" >> $GITHUB_ENV
-
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
-        env:
-          GIT_TRACE: 0
-          GIT_CURL_VERBOSE: 0
-        run: |
-          git -c core.askpass=true -c credential.helper= \
-            -c protocol.version=2 \
-            clone -q --depth=1 --no-tags --branch ${{ github.ref }} \
-            https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git . \
-            > /dev/null 2>&1
 
       - name: Set Environment
         run: |
