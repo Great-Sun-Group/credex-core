@@ -14,30 +14,19 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
 
+    env:
+      ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
 
-      - name: Set Environment
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-          else
-            echo "ENVIRONMENT=development" >> $GITHUB_ENV
-          fi
-          echo "GitHub ref: ${{ github.ref }}"
-          echo "Environment set to: ${{ env.ENVIRONMENT }}"
-
-      - name: Set Bucket and Table Names
+      - name: Set Environment Variables
         run: |
           echo "TF_STATE_BUCKET=credex-terraform-state-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
           echo "TF_LOCK_TABLE=credex-terraform-lock-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-          echo "State bucket set to: ${{ env.TF_STATE_BUCKET }}"
-          echo "Lock table set to: ${{ env.TF_LOCK_TABLE }}"
 
       - name: Debug Environment Variables
         run: |
@@ -76,18 +65,6 @@ jobs:
             echo "DynamoDB table ${{ env.TF_LOCK_TABLE }} already exists"
           fi
 
-      - name: Force Refresh Terraform State
-        if: ${{ inputs.force_unlock }}
-        run: |
-          echo "Force refreshing Terraform state..."
-          cd terraform
-          terraform init \
-            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
-            -backend-config="key=${{ env.ENVIRONMENT }}/terraform.tfstate" \
-            -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=${{ env.TF_LOCK_TABLE }}"
-          terraform force-unlock -force $(terraform show -json | jq -r '.values.root_module.resources[] | select(.type == "terraform_remote_state") | .values.config.key')
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
@@ -114,6 +91,16 @@ jobs:
             -backend-config="region=af-south-1" \
             -backend-config="dynamodb_table=${{ env.TF_LOCK_TABLE }}"
           
+          if [[ "${{ inputs.force_unlock }}" == "true" ]]; then
+            echo "Force unlocking Terraform state..."
+            LOCK_ID=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "${{ env.TF_STATE_BUCKET }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.LockID.S' --output text)
+            if [[ "$LOCK_ID" != "None" ]]; then
+              terraform force-unlock -force $LOCK_ID
+            else
+              echo "No lock found, skipping force-unlock"
+            fi
+          fi
+          
           echo "Selecting/Creating Terraform workspace..."
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
           
@@ -136,11 +123,11 @@ jobs:
       - name: Print Infrastructure Information
         run: |
           echo "Infrastructure deployed for the ${{ env.ENVIRONMENT }} environment:"
-          echo "VPC_ID: $VPC_ID"
-          echo "SUBNET_IDS: $SUBNET_IDS"
-          echo "NEO4J_SECURITY_GROUP_ID: $NEO4J_SECURITY_GROUP_ID"
-          echo "KEY_PAIR_NAME: $KEY_PAIR_NAME"
-          echo "ALB_SECURITY_GROUP_ID: $ALB_SECURITY_GROUP_ID"
-          echo "ECS_TASKS_SECURITY_GROUP_ID: $ECS_TASKS_SECURITY_GROUP_ID"
-          echo "ALB_DNS_NAME: $ALB_DNS_NAME"
-          echo "TARGET_GROUP_ARN: $TARGET_GROUP_ARN"
+          echo "VPC_ID: ${{ env.VPC_ID }}"
+          echo "SUBNET_IDS: ${{ env.SUBNET_IDS }}"
+          echo "NEO4J_SECURITY_GROUP_ID: ${{ env.NEO4J_SECURITY_GROUP_ID }}"
+          echo "KEY_PAIR_NAME: ${{ env.KEY_PAIR_NAME }}"
+          echo "ALB_SECURITY_GROUP_ID: ${{ env.ALB_SECURITY_GROUP_ID }}"
+          echo "ECS_TASKS_SECURITY_GROUP_ID: ${{ env.ECS_TASKS_SECURITY_GROUP_ID }}"
+          echo "ALB_DNS_NAME: ${{ env.ALB_DNS_NAME }}"
+          echo "TARGET_GROUP_ARN: ${{ env.TARGET_GROUP_ARN }}"
