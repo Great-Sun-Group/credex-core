@@ -21,14 +21,16 @@ jobs:
           else
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
-          echo "TF_STATE_BUCKET=credex-terraform-state-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-          echo "TF_LOCK_TABLE=credex-terraform-lock-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+          echo "ENVIRONMENT set to: $ENVIRONMENT"
+          echo "TF_STATE_BUCKET=credex-terraform-state-$ENVIRONMENT" >> $GITHUB_ENV
+          echo "TF_LOCK_TABLE=credex-terraform-lock-$ENVIRONMENT" >> $GITHUB_ENV
 
       - name: Debug Environment Variables
         run: |
           echo "ENVIRONMENT: ${{ env.ENVIRONMENT }}"
           echo "TF_STATE_BUCKET: ${{ env.TF_STATE_BUCKET }}"
           echo "TF_LOCK_TABLE: ${{ env.TF_LOCK_TABLE }}"
+          echo "Current branch: ${{ github.ref }}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
