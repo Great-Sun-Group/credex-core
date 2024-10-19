@@ -21,9 +21,11 @@ jobs:
           else
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
-          echo "ENVIRONMENT set to: $ENVIRONMENT"
-          echo "TF_STATE_BUCKET=credex-terraform-state-$ENVIRONMENT" >> $GITHUB_ENV
-          echo "TF_LOCK_TABLE=credex-terraform-lock-$ENVIRONMENT" >> $GITHUB_ENV
+
+      - name: Set Bucket and Table Names
+        run: |
+          echo "TF_STATE_BUCKET=credex-terraform-state-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+          echo "TF_LOCK_TABLE=credex-terraform-lock-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
 
       - name: Debug Environment Variables
         run: |
