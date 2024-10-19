@@ -2,6 +2,11 @@ name: Deploy Connectors
 
 on:
   workflow_dispatch:
+    inputs:
+      force_unlock:
+        description: 'Force remove Terraform state lock'
+        required: false
+        default: 'false'
 
 jobs:
   deploy_infrastructure:
@@ -33,6 +38,7 @@ jobs:
           echo "TF_STATE_BUCKET: ${{ env.TF_STATE_BUCKET }}"
           echo "TF_LOCK_TABLE: ${{ env.TF_LOCK_TABLE }}"
           echo "Current branch: ${{ github.ref }}"
+          echo "Force unlock: ${{ github.event.inputs.force_unlock }}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -67,6 +73,26 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
+
+      - name: Check and Remove Terraform State Lock
+        run: |
+          LOCK_ID=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.LockID.S' --output text)
+          if [ "$LOCK_ID" != "None" ]; then
+            echo "Found existing lock. Checking if it's stale or force unlock is enabled..."
+            LOCK_INFO=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.Info.S' --output text)
+            LOCK_TIME=$(echo $LOCK_INFO | jq -r '.Created')
+            CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S.%NZ")
+            TIME_DIFF=$(( $(date -d "$CURRENT_TIME" +%s) - $(date -d "$LOCK_TIME" +%s) ))
+            if [ $TIME_DIFF -gt 3600 ] || [ "${{ github.event.inputs.force_unlock }}" == "true" ]; then
+              echo "Removing lock..."
+              aws dynamodb delete-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}'
+            else
+              echo "Lock is not stale and force unlock is not enabled. Please wait for the other operation to complete or use force unlock."
+              exit 1
+            fi
+          else
+            echo "No existing lock found."
+          fi
 
       - name: Terraform Init and Apply
         env:

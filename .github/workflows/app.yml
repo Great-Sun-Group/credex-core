@@ -2,6 +2,11 @@ name: Deploy Application
 
 on:
   workflow_dispatch:
+    inputs:
+      force_unlock:
+        description: 'Force remove Terraform state lock'
+        required: false
+        default: 'false'
 
 jobs:
   deploy_application:
@@ -22,12 +27,37 @@ jobs:
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
 
+      - name: Set Bucket and Table Names
+        run: |
+          echo "TF_STATE_BUCKET=credex-terraform-state-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+          echo "TF_LOCK_TABLE=credex-terraform-lock-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: af-south-1
+
+      - name: Check and Remove Terraform State Lock
+        run: |
+          LOCK_ID=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.LockID.S' --output text)
+          if [ "$LOCK_ID" != "None" ]; then
+            echo "Found existing lock. Checking if it's stale or force unlock is enabled..."
+            LOCK_INFO=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.Info.S' --output text)
+            LOCK_TIME=$(echo $LOCK_INFO | jq -r '.Created')
+            CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S.%NZ")
+            TIME_DIFF=$(( $(date -d "$CURRENT_TIME" +%s) - $(date -d "$LOCK_TIME" +%s) ))
+            if [ $TIME_DIFF -gt 3600 ] || [ "${{ github.event.inputs.force_unlock }}" == "true" ]; then
+              echo "Removing lock..."
+              aws dynamodb delete-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}'
+            else
+              echo "Lock is not stale and force unlock is not enabled. Please wait for the other operation to complete or use force unlock."
+              exit 1
+            fi
+          else
+            echo "No existing lock found."
+          fi
 
       - name: Login to Amazon ECR
         id: login-ecr
