@@ -8,6 +8,11 @@ on:
         required: false
         type: boolean
         default: false
+      clear_state:
+        description: 'Clear Terraform state'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   deploy_infrastructure:
@@ -42,7 +47,16 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: af-south-1
 
+      - name: Verify S3 bucket and DynamoDB table
+        run: |
+          echo "Verifying S3 bucket..."
+          aws s3 ls s3://${{ env.TF_STATE_BUCKET }} || echo "S3 bucket not found or no access"
+          
+          echo "Verifying DynamoDB table..."
+          aws dynamodb describe-table --table-name ${{ env.TF_LOCK_TABLE }} || echo "DynamoDB table not found or no access"
+
       - name: Remove Terraform State Lock
+        if: github.event.inputs.force_unlock == 'true'
         run: |
           aws dynamodb delete-item \
             --table-name ${{ env.TF_LOCK_TABLE }} \
@@ -50,6 +64,7 @@ jobs:
           echo "Terraform state lock removed (if it existed)"
 
       - name: Clear Terraform State
+        if: github.event.inputs.clear_state == 'true'
         run: |
           aws s3 rm s3://${{ env.TF_STATE_BUCKET }}/${{ env.ENVIRONMENT }}/terraform.tfstate
           echo "Terraform state cleared (if it existed)"
@@ -86,7 +101,7 @@ jobs:
           fi
           
           echo "Applying Terraform changes..."
-          terraform apply -auto-approve -input=false -lock=false -target=module.shared_resources
+          terraform apply -auto-approve -input=false
           
           if [ $? -ne 0 ]; then
             echo "Terraform apply failed"
