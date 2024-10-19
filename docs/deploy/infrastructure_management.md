@@ -8,22 +8,27 @@ We have implemented an automated process that handles both the deployment and ve
 
 1. AWS credentials verification
 2. Neo4j credentials verification
-3. Terraform deployment
+3. Terraform deployment (split into three workflows)
 4. ECS service stability check
 5. API health check
 
-The deployment process is managed through a unified GitHub Actions workflow, which can be triggered automatically for staging and production environments, or manually for any environment.
+The deployment process is managed through three separate GitHub Actions workflows, which can be triggered automatically for staging and production environments, or manually for any environment.
 
 ## Key Files in the Deployment Process
 
-- GitHub Actions Workflow:
-  - `.github/workflows/deploy.yml`: Unified workflow for all environments (development, staging, production)
+- GitHub Actions Workflows:
+  - `.github/workflows/connectors.yml`: Deploys infrequently changed infrastructure
+  - `.github/workflows/databases.yml`: Deploys database resources, including Neo4j instances
+  - `.github/workflows/app.yml`: Deploys the application (ECS tasks, services, and ECR)
 
 - Terraform Configuration:
-  - `terraform/main.tf`: Main Terraform configuration including Neo4j-related resources
-  - `terraform/neo4j.tf`: Specific Terraform configuration for Neo4j instances
-  - `terraform/networking.tf`: Network-related resources configuration
-  - `terraform/variables.tf`: Terraform variables definition
+  - `terraform/modules/connectors/`: Connectors module for infrequently changed infrastructure
+  - `terraform/modules/databases/`: Databases module for database resources
+  - `terraform/modules/app/`: App module for application-specific resources
+  - `terraform/connectors.tf`, `terraform/databases.tf`, `terraform/app.tf`: Root configuration files
+  - `terraform/providers.tf`: Provider configurations
+  - `terraform/backend.tf`: Backend configuration
+  - `terraform/environments/`: Environment-specific .tfvars files
 
 - Other Important Files:
   - `terraform/task-definition.json`: ECS task definition template
@@ -34,15 +39,17 @@ The deployment process is managed through a unified GitHub Actions workflow, whi
 
 The Terraform deployment process is designed to create and manage the necessary AWS resources for the credex-core application. Key aspects of this process include:
 
-1. **Environment-specific Configurations**: Separate Terraform workspaces are used for development, staging, and production environments.
+1. **Modular Structure**: The Terraform configuration is split into three modules: connectors, databases, and app.
 
-2. **Resource Creation**: The process creates various AWS resources including ECS clusters, EC2 instances for Neo4j, security groups, and networking components.
+2. **Environment-specific Configurations**: Separate Terraform workspaces are used for development, staging, and production environments. Environment-specific variables are stored in .tfvars files in the `terraform/environments/` directory.
 
-3. **Neo4j Instance Management**: Terraform manages the creation and configuration of Neo4j instances, including the application of the Enterprise license.
+3. **Resource Creation**: The process creates various AWS resources including VPCs, security groups, ECS clusters, EC2 instances for Neo4j, and other networking components.
 
-4. **Secrets Management**: Sensitive information such as database credentials and API keys are managed through GitHub Secrets and injected into the ECS task definition.
+4. **Neo4j Instance Management**: Terraform manages the creation and configuration of Neo4j instances, including the application of the Enterprise license.
 
-5. **Output Management**: After resource creation, important information like Neo4j Bolt URLs are output and stored as GitHub Secrets for use in the application.
+5. **Secrets Management**: Sensitive information such as database credentials and API keys are managed through GitHub Secrets and injected into the ECS task definition.
+
+6. **Output Management**: After resource creation, important information like Neo4j Bolt URLs are output and stored as GitHub Secrets for use in the application.
 
 ## Manual Terraform Management
 
@@ -50,8 +57,8 @@ If you need to manage Terraform manually, follow these steps:
 
 1. Navigate to the `terraform` directory.
 2. Run `terraform init` to initialize the Terraform working directory.
-3. Select the appropriate workspace for your environment (e.g., `terraform workspace select production`).
-4. Review and modify the `main.tf` file if necessary.
+3. Select the appropriate workspace for your environment and module (e.g., `terraform workspace select connectors_production`).
+4. Review and modify the relevant .tf files if necessary.
 5. Run `terraform plan` to see proposed changes.
 6. Run `terraform apply` to create or update the necessary AWS resources.
 
@@ -65,7 +72,7 @@ The ECS task definition is managed using a template file [task-definition.json](
 
 ## ECS Service Configuration
 
-The ECS service is configured in the `main.tf` file, including:
+The ECS service is configured in the `terraform/modules/app/main.tf` file, including:
 
 - Service name: "credex-core-service-${environment}"
 - Cluster: "credex-cluster-${environment}"
@@ -89,7 +96,7 @@ The project uses Neo4j Enterprise Edition for all environments, managed through 
    - Two instances: LedgerSpace and SearchSpace
    - Deployed on AWS EC2 instances (t3.xlarge)
 
-Neo4j instances are defined and deployed automatically through the Terraform configuration in `terraform/main.tf` and `terraform/neo4j.tf`.
+Neo4j instances are defined and deployed automatically through the Terraform configuration in the databases module.
 
 Key aspects of Neo4j deployment:
 - The Neo4j Enterprise license is stored as a GitHub secret (`NEO4J_ENTERPRISE_LICENSE`) and must be inputted manually.

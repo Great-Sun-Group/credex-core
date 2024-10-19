@@ -10,31 +10,31 @@ The credex-core application is deployed using AWS services (including ECS, ECR),
 
 **Any work that changes files in /.github/workflows or /terraform impacts the application deployment process**, and must first be tested by a developer with the appropriate AWS keys. For the purpose of these docs, a developer with the AWS access codes is a "deployer".
 
-Our deployment process runs in three separate workflows:
+Our deployment process now runs in three separate workflows:
 
-1. **deploy_neo4j.yml**: Handles the deployment of Neo4j instances.
-2. **deploy_application_infrastructure.yml**: Sets up the application infrastructure.
-3. **deploy_application.yml**: Deploys the application itself.
+1. **connectors.yml**: Handles the deployment of infrequently changed infrastructure.
+2. **databases.yml**: Sets up and manages database resources, including Neo4j instances.
+3. **app.yml**: Deploys the application itself.
 
 This separation allows for granular control over each part of the deployment process and makes it easier to manage and troubleshoot specific aspects of the deployment.
 
-### deploy_neo4j.yml
+### connectors.yml
 This workflow is responsible for:
+- Setting up the core AWS infrastructure (VPC, security groups, etc.)
+- Applying Terraform configurations for shared resources
+- Outputting important infrastructure information
+
+### databases.yml
+This workflow handles:
 - Setting up and configuring Neo4j instances
 - Generating Neo4j credentials
-- Applying Terraform configurations for Neo4j resources
+- Applying Terraform configurations for database resources
 - Outputting Neo4j connection information
 
-### deploy_application_infrastructure.yml
-This workflow handles:
-- Setting up the core AWS infrastructure (VPC, ECS cluster, security groups, etc.)
-- Applying Terraform configurations for application infrastructure
-- Outputting important infrastructure information (ECR repo URL, ECS cluster ARN, etc.)
-
-### deploy_application.yml
+### app.yml
 This workflow manages:
 - Building and pushing the Docker image to ECR
-- Updating the ECS task definition
+- Updating the ECS task definition and cluster
 - Deploying the application to ECS
 - Generating and managing application secrets (e.g., JWT token)
 
@@ -49,7 +49,7 @@ Note to code reviewers: Developers are technically able to make changes to deplo
 
 ## Terraform Workspaces
 
-We use Terraform workspaces consistently across all workflows to manage different environments (development, staging, production). This approach allows for management of environment-specific resources and configurations. Each workflow selects or creates a new Terraform workspace based on the current environment, ensuring that each environment has its own isolated set of resources managed by Terraform.
+We use Terraform workspaces consistently across all workflows to manage different environments (development, staging, production) and components (connectors, databases, app). This approach allows for management of environment-specific and component-specific resources and configurations. Each workflow selects or creates a new Terraform workspace based on the current environment and component, ensuring that each environment and component has its own isolated set of resources managed by Terraform.
 
 ## Neo4j in credex-core
 
