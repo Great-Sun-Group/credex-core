@@ -27,19 +27,14 @@ jobs:
           else
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
+          echo "Environment set to: $ENVIRONMENT"
 
       - name: Set Bucket and Table Names
         run: |
           echo "TF_STATE_BUCKET=credex-terraform-state-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
           echo "TF_LOCK_TABLE=credex-terraform-lock-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-
-      - name: Debug Environment Variables
-        run: |
-          echo "ENVIRONMENT: ${{ env.ENVIRONMENT }}"
-          echo "TF_STATE_BUCKET: ${{ env.TF_STATE_BUCKET }}"
-          echo "TF_LOCK_TABLE: ${{ env.TF_LOCK_TABLE }}"
-          echo "Current branch: ${{ github.ref }}"
-          echo "Force unlock: ${{ inputs.force_unlock }}"
+          echo "State bucket set to: $TF_STATE_BUCKET"
+          echo "Lock table set to: $TF_LOCK_TABLE"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -48,51 +43,45 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: af-south-1
 
-      - name: Check and Create S3 bucket for Terraform state
-        run: |
-          echo "Attempting to create bucket: ${{ env.TF_STATE_BUCKET }}"
-          if aws s3api head-bucket --bucket ${{ env.TF_STATE_BUCKET }} 2>/dev/null; then
-            echo "S3 bucket ${{ env.TF_STATE_BUCKET }} already exists. Skipping creation."
-          else
-            echo "Creating S3 bucket ${{ env.TF_STATE_BUCKET }}..."
-            aws s3api create-bucket --bucket ${{ env.TF_STATE_BUCKET }} --region af-south-1 --create-bucket-configuration LocationConstraint=af-south-1
-            aws s3api put-bucket-versioning --bucket ${{ env.TF_STATE_BUCKET }} --versioning-configuration Status=Enabled
-            aws s3api put-bucket-encryption --bucket ${{ env.TF_STATE_BUCKET }} --server-side-encryption-configuration '{"Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]}'
-          fi
-
-      - name: Check and Create DynamoDB table for Terraform state locking
-        run: |
-          if aws dynamodb describe-table --table-name ${{ env.TF_LOCK_TABLE }} 2>/dev/null; then
-            echo "DynamoDB table ${{ env.TF_LOCK_TABLE }} already exists. Skipping creation."
-          else
-            echo "Creating DynamoDB table ${{ env.TF_LOCK_TABLE }}..."
-            aws dynamodb create-table --table-name ${{ env.TF_LOCK_TABLE }} \
-              --attribute-definitions AttributeName=LockID,AttributeType=S \
-              --key-schema AttributeName=LockID,KeyType=HASH \
-              --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5
-          fi
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Check and Remove Terraform State Lock
+      - name: Check and Manage Terraform State Lock
         run: |
+          echo "Checking for existing Terraform state lock..."
           LOCK_ID=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.LockID.S' --output text)
+          echo "Lock ID: $LOCK_ID"
           if [ "$LOCK_ID" != "None" ]; then
-            echo "Found existing lock. Checking if it's stale or force unlock is enabled..."
+            echo "Found existing lock. Checking lock details..."
             LOCK_INFO=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.Info.S' --output text)
+            echo "Full Lock Info:"
+            echo "$LOCK_INFO"
             LOCK_TIME=$(echo $LOCK_INFO | jq -r '.Created')
             CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S.%NZ")
             TIME_DIFF=$(( $(date -d "$CURRENT_TIME" +%s) - $(date -d "$LOCK_TIME" +%s) ))
-            if [ $TIME_DIFF -gt 3600 ] || [ "${{ inputs.force_unlock }}" == "true" ]; then
-              echo "Removing lock..."
+            
+            echo "Lock created at: $LOCK_TIME"
+            echo "Current time: $CURRENT_TIME"
+            echo "Lock Age: $TIME_DIFF seconds"
+            
+            if [ $TIME_DIFF -gt 7200 ] || [ "${{ inputs.force_unlock }}" == "true" ]; then
+              echo "Lock is older than 2 hours or force unlock is enabled. Attempting to remove lock..."
               aws dynamodb delete-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}'
+              echo "Lock removal attempt completed. Verifying..."
+              LOCK_ID_AFTER=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.LockID.S' --output text)
+              if [ "$LOCK_ID_AFTER" == "None" ]; then
+                echo "Lock successfully removed. Proceeding with deployment."
+              else
+                echo "Failed to remove lock. Manual intervention may be required."
+                exit 1
+              fi
             else
-              echo "Lock is not stale and force unlock is not enabled. Please wait for the other operation to complete or use force unlock."
+              echo "Lock is less than 2 hours old and force unlock is not enabled."
+              echo "Please wait for the lock to expire or use force unlock with caution."
               exit 1
             fi
           else
-            echo "No existing lock found."
+            echo "No existing lock found. Proceeding with deployment."
           fi
 
       - name: Terraform Init and Apply
@@ -111,17 +100,21 @@ jobs:
           TF_VAR_create_neo4j_instances: "true"
         run: |
           cd terraform
+          echo "Running Terraform init..."
           terraform init \
             -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
             -backend-config="key=${{ env.ENVIRONMENT }}/terraform.tfstate" \
             -backend-config="region=af-south-1" \
             -backend-config="dynamodb_table=${{ env.TF_LOCK_TABLE }}"
+          echo "Selecting or creating Terraform workspace..."
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+          echo "Running Terraform apply..."
           terraform apply -auto-approve -target=module.shared_resources
 
       - name: Get Infrastructure Outputs
         run: |
           cd terraform
+          echo "Retrieving infrastructure outputs..."
           echo "VPC_ID=$(terraform output -raw vpc_id)" >> $GITHUB_ENV
           echo "SUBNET_IDS=$(terraform output -raw subnet_ids)" >> $GITHUB_ENV
           echo "NEO4J_SECURITY_GROUP_ID=$(terraform output -raw neo4j_security_group_id)" >> $GITHUB_ENV
