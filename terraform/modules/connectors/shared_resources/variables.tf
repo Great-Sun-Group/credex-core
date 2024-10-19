@@ -9,7 +9,7 @@ variable "common_tags" {
 }
 
 variable "domain" {
-  description = "The domain name for the ALB certificate"
+  description = "The full domain name for the ALB certificate"
   type        = string
 }
 

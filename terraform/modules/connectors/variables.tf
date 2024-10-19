@@ -20,6 +20,11 @@ variable "domain_base" {
   type        = string
 }
 
+variable "subdomain_prefix" {
+  description = "The subdomain prefix for each environment"
+  type        = map(string)
+}
+
 variable "common_tags" {
   description = "Common tags to be applied to all resources"
   type        = map(string)

@@ -10,6 +10,16 @@ variable "domain_base" {
   default     = "mycredex.app"
 }
 
+variable "subdomain_prefix" {
+  description = "The subdomain prefix for each environment"
+  type        = map(string)
+  default     = {
+    development = "dev.api"
+    staging     = "stage.api"
+    production  = "api"
+  }
+}
+
 locals {
   environment = terraform.workspace
 }
@@ -102,24 +112,6 @@ variable "create_neo4j_instances" {
   description = "Whether to create Neo4j instances"
   type        = bool
   default     = true
-}
-
-variable "jwt_secret" {
-  description = "JWT secret for authentication"
-  type        = string
-  sensitive   = true
-}
-
-variable "open_exchange_rates_api" {
-  description = "API key for Open Exchange Rates"
-  type        = string
-  sensitive   = true
-}
-
-variable "neo4j_enterprise_license" {
-  description = "Neo4j Enterprise License"
-  type        = string
-  sensitive   = true
 }
 
 variable "terraform_state_bucket" {

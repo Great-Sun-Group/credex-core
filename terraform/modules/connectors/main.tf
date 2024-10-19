@@ -1,5 +1,3 @@
-# Remove the provider "aws" block from the top of this file
-
 # Local variables
 locals {
   common_tags = {
@@ -7,6 +5,7 @@ locals {
     Project     = "Credex"
     ManagedBy   = "Terraform"
   }
+  full_domain = "${var.subdomain_prefix[var.environment]}.${var.domain_base}"
 }
 
 # Generate key pair
@@ -20,7 +19,7 @@ module "shared_resources" {
   source      = "./shared_resources"
   environment = var.environment
   common_tags = local.common_tags
-  domain      = var.domain_base
+  domain      = local.full_domain
   public_key  = tls_private_key.credex_key.public_key_openssh
 }
 

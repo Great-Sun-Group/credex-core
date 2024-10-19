@@ -1,16 +1,17 @@
 module "connectors" {
   source = "./modules/connectors"
 
-  environment           = terraform.workspace
-  aws_region            = var.aws_region
-  vpc_cidr              = var.vpc_cidr
-  create_key_pair       = var.create_key_pair
-  create_load_balancer  = var.create_load_balancer
-  create_target_group   = var.create_target_group
+  environment            = terraform.workspace
+  aws_region             = var.aws_region
+  vpc_cidr               = var.vpc_cidr
+  create_key_pair        = var.create_key_pair
+  create_load_balancer   = var.create_load_balancer
+  create_target_group    = var.create_target_group
   create_security_groups = var.create_security_groups
-  common_tags           = local.common_tags
-  domain_base           = var.domain_base
-  public_key            = tls_private_key.ssh.public_key_openssh
+  common_tags            = local.common_tags
+  domain_base            = var.domain_base
+  subdomain_prefix       = var.subdomain_prefix
+  public_key             = tls_private_key.ssh.public_key_openssh
 }
 
 # Generate SSH key
