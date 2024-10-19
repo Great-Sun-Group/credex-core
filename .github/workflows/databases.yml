@@ -27,7 +27,6 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -53,12 +52,12 @@ jobs:
           cd terraform
           echo "Neo4j Information for ${{ env.ENVIRONMENT }} environment:"
           echo "----------------------------------------"
-          echo "NEO4J_LEDGER_SPACE_BOLT_URL: $(terraform output -raw neo4j_ledger_space_bolt_url)"
-          echo "NEO4J_SEARCH_SPACE_BOLT_URL: $(terraform output -raw neo4j_search_space_bolt_url)"
-          echo "NEO4J_LEDGER_SPACE_USERNAME: $(terraform output -raw neo4j_ledger_space_username)"
-          echo "NEO4J_SEARCH_SPACE_USERNAME: $(terraform output -raw neo4j_search_space_username)"
-          echo "NEO4J_LEDGER_SPACE_PASSWORD: $(terraform output -raw neo4j_ledger_space_password)"
-          echo "NEO4J_SEARCH_SPACE_PASSWORD: $(terraform output -raw neo4j_search_space_password)"
+          echo "NEO_4J_LEDGER_SPACE_BOLT_URL: $(terraform output -raw NEO_4J_LEDGER_SPACE_BOLT_URL)"
+          echo "NEO_4J_SEARCH_SPACE_BOLT_URL: $(terraform output -raw NEO_4J_SEARCH_SPACE_BOLT_URL)"
+          echo "NEO_4J_LEDGER_SPACE_USERNAME: $(terraform output -raw NEO_4J_LEDGER_SPACE_USERNAME)"
+          echo "NEO_4J_SEARCH_SPACE_USERNAME: $(terraform output -raw NEO_4J_SEARCH_SPACE_USERNAME)"
+          echo "NEO_4J_LEDGER_SPACE_PASSWORD: $(terraform output -raw NEO_4J_LEDGER_SPACE_PASSWORD)"
+          echo "NEO_4J_SEARCH_SPACE_PASSWORD: $(terraform output -raw NEO_4J_SEARCH_SPACE_PASSWORD)"
           echo "----------------------------------------"
           echo "NEO4J_PRIVATE_KEY:"
           terraform output -raw neo4j_private_key

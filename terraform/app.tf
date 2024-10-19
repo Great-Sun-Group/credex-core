@@ -12,13 +12,21 @@ module "app" {
   open_exchange_rates_api    = var.open_exchange_rates_api
   common_tags                = var.common_tags
 
+  ecs_task_cpu               = var.ecs_task_cpu[var.environment]
+  ecs_task_memory            = var.ecs_task_memory[var.environment]
+
   vpc_id                     = module.connectors.vpc_id
   subnet_ids                 = module.connectors.subnet_ids
   ecs_tasks_security_group_id = module.connectors.ecs_tasks_security_group_id
   target_group_arn           = module.connectors.target_group_arn
   alb_listener               = module.connectors.alb_listener
 
-  neo4j_bolt_urls            = module.databases.neo4j_bolt_urls
+  neo_4j_ledger_space_bolt_url   = var.neo_4j_ledger_space_bolt_url
+  neo_4j_search_space_bolt_url   = var.neo_4j_search_space_bolt_url
+  neo_4j_ledger_space_user   = var.neo_4j_ledger_space_user
+  neo_4j_search_space_user   = var.neo_4j_search_space_user
+  neo_4j_ledger_space_password = var.neo_4j_ledger_space_password
+  neo_4j_search_space_password = var.neo_4j_search_space_password
 }
 
 output "ecr_repository_url" {

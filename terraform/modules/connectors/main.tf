@@ -21,6 +21,7 @@ module "shared_resources" {
   common_tags = local.common_tags
   domain      = local.full_domain
   public_key  = tls_private_key.credex_key.public_key_openssh
+  vpc_cidr    = var.vpc_cidr[var.environment]
 }
 
 # Outputs

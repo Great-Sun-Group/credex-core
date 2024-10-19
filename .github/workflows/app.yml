@@ -27,7 +27,6 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -68,8 +67,8 @@ jobs:
           echo "Current task definition fetched."
 
           echo "Updating task definition with new image and environment variables..."
-          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment += [
-            {"name": "NODE_ENV", "value": "${{ env.ENVIRONMENT }}"},
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment += [
+            {"name": "NODE_ENV", "value": $NODE_ENV},
             {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_USER }}"},
             {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}"},
             {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}"},

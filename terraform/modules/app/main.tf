@@ -49,8 +49,8 @@ resource "aws_ecs_task_definition" "credex_core" {
   family                   = "credex-core-${var.environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "512"
-  memory                   = "1024"
+  cpu                      = var.ecs_task_cpu
+  memory                   = var.ecs_task_memory
   execution_role_arn       = var.create_iam_roles ? aws_iam_role.ecs_execution_role[0].arn : null
   task_role_arn            = var.create_iam_roles ? aws_iam_role.ecs_task_role[0].arn : null
 
@@ -66,12 +66,16 @@ resource "aws_ecs_task_definition" "credex_core" {
       ]
       environment = [
         { name = "NODE_ENV", value = var.environment },
-        { name = "NEO_4J_LEDGER_SPACE_BOLT_URL", value = var.neo4j_bolt_urls[0] },
-        { name = "NEO_4J_SEARCH_SPACE_BOLT_URL", value = var.neo4j_bolt_urls[1] },
-        { name = "NEO_4J_LEDGER_SPACE_USER", value = "neo4j" },
-        { name = "NEO_4J_SEARCH_SPACE_USER", value = "neo4j" },
+        { name = "NEO_4J_LEDGER_SPACE_BOLT_URL", value = var.neo_4j_ledger_space_bolt_url },
+        { name = "NEO_4J_SEARCH_SPACE_BOLT_URL", value = var.neo_4j_search_space_bolt_url },
+        { name = "NEO_4J_LEDGER_SPACE_USER", value = var.neo_4j_ledger_space_user },
+        { name = "NEO_4J_SEARCH_SPACE_USER", value = var.neo_4j_search_space_user },
         { name = "JWT_SECRET", value = var.jwt_secret },
         { name = "OPEN_EXCHANGE_RATES_API", value = var.open_exchange_rates_api }
+      ]
+      secrets = [
+        { name = "NEO_4J_LEDGER_SPACE_PASSWORD", valueFrom = var.neo_4j_ledger_space_password },
+        { name = "NEO_4J_SEARCH_SPACE_PASSWORD", valueFrom = var.neo_4j_search_space_password }
       ]
       logConfiguration = {
         logDriver = "awslogs"

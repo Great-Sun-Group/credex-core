@@ -26,13 +26,11 @@ variable "key_pair_name" {
 variable "neo4j_instance_type" {
   description = "The instance type for Neo4j"
   type        = string
-  default     = "t3.medium"
 }
 
-variable "neo4j_volume_size" {
+variable "neo4j_instance_size" {
   description = "The size of the EBS volume for Neo4j in GB"
   type        = number
-  default     = 100
 }
 
 variable "neo4j_enterprise_license" {
@@ -44,11 +42,9 @@ variable "neo4j_enterprise_license" {
 variable "create_neo4j_instances" {
   description = "Whether to create Neo4j instances"
   type        = bool
-  default     = true
 }
 
 variable "common_tags" {
   description = "Common tags to be applied to all resources"
   type        = map(string)
-  default     = {}
 }

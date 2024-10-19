@@ -58,13 +58,11 @@ variable "common_tags" {
 variable "ecs_task_cpu" {
   description = "The amount of CPU to allocate for the ECS task"
   type        = string
-  default     = "256"
 }
 
 variable "ecs_task_memory" {
   description = "The amount of memory to allocate for the ECS task"
   type        = string
-  default     = "512"
 }
 
 variable "app_port" {
@@ -98,7 +96,38 @@ variable "alb_listener" {
   type        = string
 }
 
-variable "neo4j_bolt_urls" {
-  description = "The Neo4j Bolt URLs"
-  type        = list(string)
+variable "neo_4j_ledger_space_bolt_url" {
+  description = "The Neo4j Bolt URL for Ledger Space"
+  type        = string
+  sensitive   = true
+}
+
+variable "neo_4j_search_space_bolt_url" {
+  description = "The Neo4j Bolt URL for Search Space"
+  type        = string
+  sensitive   = true
+}
+
+variable "neo_4j_ledger_space_user" {
+  description = "The username for the Neo4j Ledger Space"
+  type        = string
+  sensitive   = true
+}
+
+variable "neo_4j_search_space_user" {
+  description = "The username for the Neo4j Search Space"
+  type        = string
+  sensitive   = true
+}
+
+variable "neo_4j_ledger_space_password" {
+  description = "The password for the Neo4j Ledger Space"
+  type        = string
+  sensitive   = true
+}
+
+variable "neo_4j_search_space_password" {
+  description = "The password for the Neo4j Search Space"
+  type        = string
+  sensitive   = true
 }

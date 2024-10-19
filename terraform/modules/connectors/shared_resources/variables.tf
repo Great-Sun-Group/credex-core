@@ -17,3 +17,8 @@ variable "public_key" {
   description = "The public key for the EC2 key pair"
   type        = string
 }
+
+variable "vpc_cidr" {
+  description = "The CIDR block for the VPC"
+  type        = string
+}

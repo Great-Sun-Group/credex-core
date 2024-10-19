@@ -57,6 +57,14 @@ resource "random_password" "neo4j_password" {
   special = true
 }
 
+# Generate usernames
+resource "random_string" "neo4j_username" {
+  count   = 2
+  length  = 8
+  special = false
+  upper   = false
+}
+
 # Neo4j instances
 resource "aws_instance" "neo4j" {
   count         = 2
@@ -103,18 +111,34 @@ resource "aws_instance" "neo4j" {
 }
 
 # Outputs
-output "neo4j_instance_ips" {
-  value       = aws_instance.neo4j[*].private_ip
-  description = "Private IPs of Neo4j instances"
+output "NEO_4J_LEDGER_SPACE_BOLT_URL" {
+  value       = "bolt://${aws_instance.neo4j[0].private_ip}:7687"
+  description = "Neo4j LedgerSpace Bolt URL"
 }
 
-output "neo4j_bolt_urls" {
-  value       = [for instance in aws_instance.neo4j : "bolt://${instance.private_ip}:7687"]
-  description = "Neo4j Bolt URLs"
+output "NEO_4J_SEARCH_SPACE_BOLT_URL" {
+  value       = "bolt://${aws_instance.neo4j[1].private_ip}:7687"
+  description = "Neo4j SearchSpace Bolt URL"
 }
 
-output "neo4j_passwords" {
-  value       = random_password.neo4j_password[*].result
+output "NEO_4J_LEDGER_SPACE_USERNAME" {
+  value       = random_string.neo4j_username[0].result
+  description = "Neo4j LedgerSpace username"
+}
+
+output "NEO_4J_SEARCH_SPACE_USER" {
+  value       = random_string.neo4j_username[1].result
+  description = "Neo4j SearchSpace username"
+}
+
+output "NEO_4J_LEDGER_SPACE_PASS" {
+  value       = random_password.neo4j_password[0].result
   sensitive   = true
-  description = "Generated passwords for Neo4j instances"
+  description = "Neo4j LedgerSpace password"
+}
+
+output "NEO_4J_SEARCH_SPACE_PASS" {
+  value       = random_password.neo4j_password[1].result
+  sensitive   = true
+  description = "Neo4j SearchSpace password"
 }

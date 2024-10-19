@@ -20,8 +20,9 @@ variable "subdomain_prefix" {
   }
 }
 
-locals {
-  environment = terraform.workspace
+variable "environment" {
+  description = "The deployment environment (development, staging, or production)"
+  type        = string
 }
 
 variable "vpc_cidr" {
@@ -135,12 +136,66 @@ variable "neo4j_instance_type" {
   }
 }
 
-variable "neo4j_volume_size" {
-  description = "Map of environment to Neo4j volume sizes (in GB)"
+variable "neo4j_instance_size" {
+  description = "Map of environment to Neo4j instance sizes (in GB)"
   type        = map(number)
   default = {
     development = 50
     staging     = 100
     production  = 100
   }
+}
+
+variable "jwt_secret" {
+  description = "The secret used for JWT token generation"
+  type        = string
+  sensitive   = true
+}
+
+variable "open_exchange_rates_api" {
+  description = "API key for Open Exchange Rates"
+  type        = string
+  sensitive   = true
+}
+
+variable "neo_4j_ledger_space_bolt_url" {
+  description = "The Neo4j Bolt URL for Ledger Space"
+  type        = string
+  sensitive   = true
+}
+
+variable "neo_4j_search_space_bolt_url" {
+  description = "The Neo4j Bolt URL for Search Space"
+  type        = string
+  sensitive   = true
+}
+
+variable "neo_4j_ledger_space_user" {
+  description = "The username for the Neo4j Ledger Space"
+  type        = string
+  sensitive   = true
+}
+
+variable "neo_4j_search_space_user" {
+  description = "The username for the Neo4j Search Space"
+  type        = string
+  sensitive   = true
+}
+
+variable "neo_4j_ledger_space_password" {
+  description = "The password for the Neo4j Ledger Space"
+  type        = string
+  sensitive   = true
+}
+
+variable "neo_4j_search_space_password" {
+  description = "The password for the Neo4j Search Space"
+  type        = string
+  sensitive   = true
+}
+
+variable "neo4j_enterprise_license" {
+  description = "The Neo4j Enterprise License"
+  type        = string
+  sensitive   = true
 }

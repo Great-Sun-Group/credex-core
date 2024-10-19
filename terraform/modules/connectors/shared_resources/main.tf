@@ -103,7 +103,7 @@ resource "aws_security_group" "neo4j" {
     protocol    = "tcp"
     from_port   = 7474
     to_port     = 7474
-    cidr_blocks = [var.environment == "production" ? "10.0.0.0/16" : "10.0.0.0/8"]
+    cidr_blocks = [var.vpc_cidr]
     description = "Allow Neo4j HTTP"
   }
 
@@ -111,7 +111,7 @@ resource "aws_security_group" "neo4j" {
     protocol    = "tcp"
     from_port   = 7687
     to_port     = 7687
-    cidr_blocks = [var.environment == "production" ? "10.0.0.0/16" : "10.0.0.0/8"]
+    cidr_blocks = [var.vpc_cidr]
     description = "Allow Neo4j Bolt"
   }
 
