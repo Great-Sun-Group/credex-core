@@ -19,6 +19,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
+          quiet: true
 
       - name: Set Environment
         run: |
