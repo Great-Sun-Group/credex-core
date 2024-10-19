@@ -95,9 +95,10 @@ jobs:
             echo "Force unlocking Terraform state..."
             LOCK_ID=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "${{ env.TF_STATE_BUCKET }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.LockID.S' --output text)
             if [[ "$LOCK_ID" != "None" ]]; then
-              terraform force-unlock -force $LOCK_ID
+              aws dynamodb delete-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "${{ env.TF_STATE_BUCKET }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}'
+              echo "Lock removed from DynamoDB table"
             else
-              echo "No lock found, skipping force-unlock"
+              echo "No lock found in DynamoDB table"
             fi
           fi
           
