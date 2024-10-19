@@ -2,17 +2,6 @@ name: Deploy Connectors
 
 on:
   workflow_dispatch:
-    inputs:
-      force_unlock:
-        description: 'Force remove Terraform state lock'
-        required: false
-        type: boolean
-        default: false
-      clear_state:
-        description: 'Clear Terraform state'
-        required: false
-        type: boolean
-        default: false
 
 jobs:
   deploy_infrastructure:
@@ -28,18 +17,6 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Set Environment Variables
-        run: |
-          echo "TF_STATE_BUCKET=credex-terraform-state-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-          echo "TF_LOCK_TABLE=credex-terraform-lock-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-
-      - name: Debug Environment Variables
-        run: |
-          echo "Debugging Environment Variables:"
-          echo "ENVIRONMENT: ${{ env.ENVIRONMENT }}"
-          echo "TF_STATE_BUCKET: ${{ env.TF_STATE_BUCKET }}"
-          echo "TF_LOCK_TABLE: ${{ env.TF_LOCK_TABLE }}"
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -47,33 +24,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: af-south-1
 
-      - name: Verify S3 bucket and DynamoDB table
-        run: |
-          echo "Verifying S3 bucket..."
-          aws s3 ls s3://${{ env.TF_STATE_BUCKET }} || echo "S3 bucket not found or no access"
-          
-          echo "Verifying DynamoDB table..."
-          aws dynamodb describe-table --table-name ${{ env.TF_LOCK_TABLE }} || echo "DynamoDB table not found or no access"
-
-      - name: Clear DynamoDB Lock Table
-        run: |
-          aws dynamodb scan --table-name ${{ env.TF_LOCK_TABLE }} --attributes-to-get LockID --query "Items[*].LockID.S" --output text | xargs -I {} aws dynamodb delete-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "{}"}}' || true
-          echo "DynamoDB lock table cleared"
-
-      - name: Clear Terraform State
-        if: github.event.inputs.clear_state == 'true'
-        run: |
-          aws s3 rm s3://${{ env.TF_STATE_BUCKET }}/${{ env.ENVIRONMENT }}/terraform.tfstate
-          echo "Terraform state cleared (if it existed)"
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
       - name: Terraform Init and Apply
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
-          TF_VAR_terraform_state_bucket: ${{ env.TF_STATE_BUCKET }}
-          TF_VAR_terraform_lock_table: ${{ env.TF_LOCK_TABLE }}
           TF_VAR_create_ecr: "true"
           TF_VAR_create_ecs_cluster: "true"
           TF_VAR_create_log_group: "true"
@@ -86,33 +42,11 @@ jobs:
         run: |
           cd terraform
           echo "Initializing Terraform..."
-          terraform init -input=false \
-            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
-            -backend-config="key=${{ env.ENVIRONMENT }}/terraform.tfstate" \
-            -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=${{ env.TF_LOCK_TABLE }}"
-          
-          if [ $? -ne 0 ]; then
-            echo "Terraform init failed"
-            exit 1
-          fi
-          
-          echo "Setting Terraform workspace..."
-          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
-          
-          if [ $? -ne 0 ]; then
-            echo "Failed to set Terraform workspace"
-            exit 1
-          fi
-          
+          terraform init
+
           echo "Applying Terraform changes..."
-          terraform apply -auto-approve -input=false -lock-timeout=5m -force-unlock=54dbdaab-100b-05c6-e4b8-d8bf85c03a31
-          
-          if [ $? -ne 0 ]; then
-            echo "Terraform apply failed"
-            exit 1
-          fi
-          
+          terraform apply -auto-approve -input=false
+
           echo "Terraform apply completed successfully"
 
       - name: Get Infrastructure Outputs
