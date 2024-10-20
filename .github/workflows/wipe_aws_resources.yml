@@ -11,21 +11,10 @@ jobs:
   wipe-aws-resources:
     runs-on: ubuntu-latest
     if: github.event.inputs.confirm_wipe == 'YES'
-    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Set Environment
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-          else
-            echo "ENVIRONMENT=development" >> $GITHUB_ENV
-          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -234,8 +223,8 @@ jobs:
 
       - name: Final Message
         run: |
-          echo "AWS resource wipe attempt completed for the current environment."
+          echo "AWS resource wipe attempt completed for the entire AWS account."
           echo "Please review the logs for any resources that failed to delete."
           echo "You may need to manually delete some resources or investigate permission issues."
           echo "Note: Route 53 resources were not affected by this workflow as they are managed separately."
-          echo "After ensuring all environment-specific resources are properly deleted, you can use your Terraform configurations to rebuild the infrastructure if needed."
+          echo "After ensuring all resources are properly deleted, you can use your Terraform configurations to rebuild the infrastructure if needed."
