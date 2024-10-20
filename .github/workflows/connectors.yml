@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "Action to perform (deploy/import/update)"
+        description: 'Action to perform (create/update/import)'
         required: true
-        default: "deploy"
-      resource:
-        description: "Resource to manage (all/log_group/iam_roles) - only for import/update"
-        required: false
-        default: "all"
+        default: 'update'
+      component:
+        description: 'Component to manage (all/vpc/subnets/igw/nat/routes/sg/ecr/ecs/logs/iam/alb/keypair/neo4j/acm)'
+        required: true
+        default: 'all'
 
 jobs:
   deploy_infrastructure:
@@ -42,24 +42,74 @@ jobs:
           echo "Initializing Terraform..."
           terraform init
 
-      - name: Check Existing Resources
-        if: github.event.inputs.action != 'import'
+      - name: Set Terraform Variables
         run: |
-          LOG_GROUP=$(aws logs describe-log-groups --log-group-name-prefix "/ecs/credex-core-${{ env.ENVIRONMENT }}" --query 'logGroups[0].logGroupName' --output text)
-          EXEC_ROLE=$(aws iam get-role --role-name ecs-execution-role-${{ env.ENVIRONMENT }} --query 'Role.RoleName' --output text || echo "")
-          TASK_ROLE=$(aws iam get-role --role-name ecs-task-role-${{ env.ENVIRONMENT }} --query 'Role.RoleName' --output text || echo "")
+          echo "TF_VAR_create_vpc=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_subnets=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_igw=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_nat=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_routes=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_sg=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_ecr=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_ecs=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_logs=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_iam=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_alb=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_keypair=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_neo4j=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_acm=false" >> $GITHUB_ENV
 
-          echo "TF_VAR_create_log_group=${{ $LOG_GROUP == 'None' }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_iam_roles=${{ $EXEC_ROLE == '' && $TASK_ROLE == '' }}" >> $GITHUB_ENV
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "vpc" ]]; then
+            echo "TF_VAR_create_vpc=true" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "subnets" ]]; then
+            echo "TF_VAR_create_subnets=true" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "igw" ]]; then
+            echo "TF_VAR_create_igw=true" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "nat" ]]; then
+            echo "TF_VAR_create_nat=true" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "routes" ]]; then
+            echo "TF_VAR_create_routes=true" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "sg" ]]; then
+            echo "TF_VAR_create_sg=true" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "ecr" ]]; then
+            echo "TF_VAR_create_ecr=true" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "ecs" ]]; then
+            echo "TF_VAR_create_ecs=true" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "logs" ]]; then
+            echo "TF_VAR_create_logs=true" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "iam" ]]; then
+            echo "TF_VAR_create_iam=true" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "alb" ]]; then
+            echo "TF_VAR_create_alb=true" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "keypair" ]]; then
+            echo "TF_VAR_create_keypair=true" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "neo4j" ]]; then
+            echo "TF_VAR_create_neo4j=true" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "acm" ]]; then
+            echo "TF_VAR_create_acm=true" >> $GITHUB_ENV
+          fi
 
       - name: Import Resources
         if: github.event.inputs.action == 'import'
         run: |
           cd terraform
-          if [[ "${{ github.event.inputs.resource }}" == "all" || "${{ github.event.inputs.resource }}" == "log_group" ]]; then
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "logs" ]]; then
             terraform import module.app.aws_cloudwatch_log_group.ecs_logs[0] /ecs/credex-core-${{ env.ENVIRONMENT }}
           fi
-          if [[ "${{ github.event.inputs.resource }}" == "all" || "${{ github.event.inputs.resource }}" == "iam_roles" ]]; then
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "iam" ]]; then
             terraform import module.app.aws_iam_role.ecs_execution_role[0] ecs-execution-role-${{ env.ENVIRONMENT }}
             terraform import module.app.aws_iam_role.ecs_task_role[0] ecs-task-role-${{ env.ENVIRONMENT }}
           fi
@@ -67,15 +117,6 @@ jobs:
       - name: Terraform Plan
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
-          TF_VAR_create_ecr: "true"
-          TF_VAR_create_ecs_cluster: "true"
-          TF_VAR_create_log_group: ${{ env.TF_VAR_create_log_group }}
-          TF_VAR_create_key_pair: "true"
-          TF_VAR_create_iam_roles: ${{ env.TF_VAR_create_iam_roles }}
-          TF_VAR_create_load_balancer: "true"
-          TF_VAR_create_target_group: "true"
-          TF_VAR_create_security_groups: "true"
-          TF_VAR_create_neo4j_instances: "true"
         run: |
           cd terraform
           echo "Planning Terraform changes..."
@@ -85,15 +126,6 @@ jobs:
         if: github.event.inputs.action != 'import'
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
-          TF_VAR_create_ecr: "true"
-          TF_VAR_create_ecs_cluster: "true"
-          TF_VAR_create_log_group: ${{ env.TF_VAR_create_log_group }}
-          TF_VAR_create_key_pair: "true"
-          TF_VAR_create_iam_roles: ${{ env.TF_VAR_create_iam_roles }}
-          TF_VAR_create_load_balancer: "true"
-          TF_VAR_create_target_group: "true"
-          TF_VAR_create_security_groups: "true"
-          TF_VAR_create_neo4j_instances: "true"
         run: |
           cd terraform
           echo "Applying Terraform changes..."

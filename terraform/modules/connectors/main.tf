@@ -16,12 +16,27 @@ resource "tls_private_key" "credex_key" {
 
 # Shared Resources Module
 module "shared_resources" {
-  source      = "./shared_resources"
-  environment = var.environment
-  common_tags = local.common_tags
-  domain      = local.full_domain
-  public_key  = tls_private_key.credex_key.public_key_openssh
-  vpc_cidr    = lookup(var.vpc_cidr, var.environment, var.vpc_cidr["development"])
+  source               = "./shared_resources"
+  environment          = var.environment
+  common_tags          = local.common_tags
+  domain               = local.full_domain
+  public_key           = tls_private_key.credex_key.public_key_openssh
+  vpc_cidr             = lookup(var.vpc_cidr, var.environment, var.vpc_cidr["development"])
+  create_vpc           = var.create_vpc
+  create_subnets       = var.create_subnets
+  create_igw           = var.create_igw
+  create_nat           = var.create_nat
+  create_routes        = var.create_routes
+  create_sg            = var.create_sg
+  create_ecr           = var.create_ecr
+  create_ecs           = var.create_ecs
+  create_logs          = var.create_logs
+  create_iam           = var.create_iam
+  create_key_pair      = var.create_key_pair
+  create_load_balancer = var.create_load_balancer
+  create_target_group  = var.create_target_group
+  create_neo4j         = var.create_neo4j
+  create_acm           = var.create_acm
 }
 
 # Outputs
