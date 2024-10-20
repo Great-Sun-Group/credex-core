@@ -34,6 +34,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: af-south-1
 
+      - name: Check AWS Permissions
+        run: |
+          echo "Checking AWS permissions..."
+          aws sts get-caller-identity
+          aws ec2 describe-vpcs --output json
+
       - name: Wipe EC2 Resources
         run: |
           echo "Terminating EC2 instances..."
@@ -70,7 +76,7 @@ jobs:
                 if aws ec2 disassociate-address --association-id $association_id; then
                   echo "Successfully disassociated Elastic IP $eip_alloc_id"
                 else
-                  echo "Failed to disassociate Elastic IP $eip_alloc_id. It may be attached to a running instance or ENI."
+                  echo "Failed to disassociate Elastic IP $eip_alloc_id. Attempting to force disassociation..."
                   instance_id=$(aws ec2 describe-addresses --allocation-ids $eip_alloc_id --query 'Addresses[0].InstanceId' --output text)
                   if [ "$instance_id" != "None" ] && [ -n "$instance_id" ]; then
                     echo "Terminating associated instance $instance_id"
@@ -92,8 +98,17 @@ jobs:
             echo "Detaching and deleting Internet Gateways..."
             igw_ids=$(aws ec2 describe-internet-gateways --filters Name=attachment.vpc-id,Values=$vpc_id --query 'InternetGateways[*].[InternetGatewayId]' --output text)
             for igw_id in $igw_ids; do
-              aws ec2 detach-internet-gateway --internet-gateway-id $igw_id --vpc-id $vpc_id
-              aws ec2 delete-internet-gateway --internet-gateway-id $igw_id
+              if ! aws ec2 detach-internet-gateway --internet-gateway-id $igw_id --vpc-id $vpc_id; then
+                echo "Failed to detach Internet Gateway $igw_id. Attempting to force detachment..."
+                aws ec2 delete-internet-gateway --internet-gateway-id $igw_id --dry-run
+                if [ $? -eq 254 ]; then
+                  echo "Internet Gateway $igw_id is still in use. Skipping deletion."
+                else
+                  aws ec2 delete-internet-gateway --internet-gateway-id $igw_id
+                fi
+              else
+                aws ec2 delete-internet-gateway --internet-gateway-id $igw_id
+              fi
             done
 
             # Delete Subnets
