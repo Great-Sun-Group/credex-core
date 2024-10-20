@@ -8,7 +8,7 @@ on:
         required: true
         default: "update"
       component:
-        description: "Component to manage (all/vpc/subnets/igw/nat/routes/sg/ecr/ecs/logs/iam/alb/keypair/neo4j_sg/acm/route53)"
+        description: "Component to manage (all/vpc/subnets/igw/nat/routes/sg/ecr/ecs/logs/iam/alb/keypair/neo4j_sg/acm)"
         required: true
         default: "all"
 
@@ -63,7 +63,6 @@ jobs:
           echo "TF_VAR_create_ecs_cluster=false" >> $GITHUB_ENV
           echo "TF_VAR_create_log_group=false" >> $GITHUB_ENV
           echo "TF_VAR_create_iam_roles=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_route53_zone=false" >> $GITHUB_ENV
 
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "vpc" ]]; then
             echo "TF_VAR_create_vpc=true" >> $GITHUB_ENV
@@ -112,9 +111,6 @@ jobs:
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "acm" ]]; then
             echo "TF_VAR_create_acm=true" >> $GITHUB_ENV
           fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "route53" ]]; then
-            echo "TF_VAR_create_route53_zone=true" >> $GITHUB_ENV
-          fi
 
       - name: Import Resources
         if: github.event.inputs.action == 'import'
@@ -159,4 +155,3 @@ jobs:
           echo "NEO4J_SECURITY_GROUP_ID=$(terraform output -raw neo4j_security_group_id)" >> $GITHUB_ENV || true
           echo "KEY_PAIR_NAME=$(terraform output -raw key_pair_name)" >> $GITHUB_ENV || true
           echo "ALB_SECURITY_GROUP_ID=$(terraform output -raw alb_security_group_id)" >> $GITHUB_ENV || true
-          echo "ROUTE53_ZONE_ID=$(terraform output -raw route53_zone_id)" >> $GITHUB_ENV || true

@@ -52,13 +52,3 @@ output "alb_listener" {
   value       = module.shared_resources.alb_listener
   description = "The ARN of the ALB listener"
 }
-
-output "route53_zone_id" {
-  value       = var.create_route53_zone ? aws_route53_zone.main[0].zone_id : null
-  description = "The ID of the Route 53 hosted zone"
-}
-
-output "route53_name_servers" {
-  value       = var.create_route53_zone ? aws_route53_zone.main[0].name_servers : null
-  description = "The name servers for the Route 53 hosted zone"
-}

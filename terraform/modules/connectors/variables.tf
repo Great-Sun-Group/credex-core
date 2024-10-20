@@ -128,9 +128,3 @@ variable "public_key" {
   description = "The public key for the EC2 key pair"
   type        = string
 }
-
-variable "create_route53_zone" {
-  description = "Whether to create a Route 53 hosted zone"
-  type        = bool
-  default     = false
-}

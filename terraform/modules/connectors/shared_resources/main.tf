@@ -240,6 +240,11 @@ resource "aws_lb_target_group" "credex_core" {
 }
 
 # ACM Certificate
+# Note: This certificate relies on DNS validation through Route 53.
+# Nameservers are pointing to AWS.
+# Route 53 is configured outside of this Terraform setup.
+# The DNS validation should happen automatically as long
+# as the Route 53 zone for the domain exists and is properly configured.
 resource "aws_acm_certificate" "credex_cert" {
   count             = var.create_acm ? 1 : 0
   domain_name       = var.domain

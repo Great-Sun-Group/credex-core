@@ -229,32 +229,13 @@ jobs:
             aws elbv2 delete-target-group --target-group-arn $tg || echo "Failed to delete Target Group $tg"
           done
 
-      - name: Wipe Route 53 Resources
-        run: |
-          echo "Deleting Route 53 resources..."
-          hosted_zones=$(aws route53 list-hosted-zones --query 'HostedZones[*].[Id]' --output text)
-          for zone in $hosted_zones; do
-            echo "Processing hosted zone: $zone"
-            
-            record_sets=$(aws route53 list-resource-record-sets --hosted-zone-id $zone --query "ResourceRecordSets[?Type!='SOA']|[?Type!='NS']" --output text)
-            if [ -n "$record_sets" ]; then
-              echo "Deleting record sets in zone $zone"
-              aws route53 change-resource-record-sets --hosted-zone-id $zone --change-batch '{
-                "Changes": [
-                  {
-                    "Action": "DELETE",
-                    "ResourceRecordSet": '"$record_sets"'
-                  }
-                ]
-              }' || echo "Failed to delete record sets in zone $zone"
-            fi
-            
-            aws route53 delete-hosted-zone --id $zone || echo "Failed to delete hosted zone $zone"
-          done
+      # Note: Route 53 resources are not included in this wipe workflow as they are shared across environments
+      # and are managed separately in the connectors.yml workflow.
 
       - name: Final Message
         run: |
-          echo "AWS resource wipe attempt completed."
+          echo "AWS resource wipe attempt completed for the current environment."
           echo "Please review the logs for any resources that failed to delete."
           echo "You may need to manually delete some resources or investigate permission issues."
-          echo "After ensuring all resources are properly deleted, you can use your Terraform configurations to rebuild the infrastructure if needed."
+          echo "Note: Route 53 resources were not affected by this workflow as they are managed separately."
+          echo "After ensuring all environment-specific resources are properly deleted, you can use your Terraform configurations to rebuild the infrastructure if needed."
