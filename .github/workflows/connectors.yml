@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: 'Action to perform (create/update/import)'
+        description: "Action to perform (create/update/import)"
         required: true
-        default: 'update'
+        default: "update"
       component:
-        description: 'Component to manage (all/vpc/subnets/igw/nat/routes/sg/ecr/ecs/logs/iam/alb/keypair/neo4j/acm)'
+        description: "Component to manage (all/vpc/subnets/igw/nat/routes/sg/ecr/ecs/logs/iam/alb/keypair/neo4j/acm)"
         required: true
-        default: 'all'
+        default: "all"
 
 jobs:
   deploy_infrastructure:
@@ -54,10 +54,16 @@ jobs:
           echo "TF_VAR_create_ecs=false" >> $GITHUB_ENV
           echo "TF_VAR_create_logs=false" >> $GITHUB_ENV
           echo "TF_VAR_create_iam=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_alb=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_keypair=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_load_balancer=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_target_group=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_key_pair=false" >> $GITHUB_ENV
           echo "TF_VAR_create_neo4j=false" >> $GITHUB_ENV
           echo "TF_VAR_create_acm=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_security_groups=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_ecs_cluster=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_log_group=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_iam_roles=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_neo4j_instances=false" >> $GITHUB_ENV
 
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "vpc" ]]; then
             echo "TF_VAR_create_vpc=true" >> $GITHUB_ENV
@@ -76,27 +82,33 @@ jobs:
           fi
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "sg" ]]; then
             echo "TF_VAR_create_sg=true" >> $GITHUB_ENV
+            echo "TF_VAR_create_security_groups=true" >> $GITHUB_ENV
           fi
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "ecr" ]]; then
             echo "TF_VAR_create_ecr=true" >> $GITHUB_ENV
           fi
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "ecs" ]]; then
             echo "TF_VAR_create_ecs=true" >> $GITHUB_ENV
+            echo "TF_VAR_create_ecs_cluster=true" >> $GITHUB_ENV
           fi
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "logs" ]]; then
             echo "TF_VAR_create_logs=true" >> $GITHUB_ENV
+            echo "TF_VAR_create_log_group=true" >> $GITHUB_ENV
           fi
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "iam" ]]; then
             echo "TF_VAR_create_iam=true" >> $GITHUB_ENV
+            echo "TF_VAR_create_iam_roles=true" >> $GITHUB_ENV
           fi
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "alb" ]]; then
-            echo "TF_VAR_create_alb=true" >> $GITHUB_ENV
+            echo "TF_VAR_create_load_balancer=true" >> $GITHUB_ENV
+            echo "TF_VAR_create_target_group=true" >> $GITHUB_ENV
           fi
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "keypair" ]]; then
-            echo "TF_VAR_create_keypair=true" >> $GITHUB_ENV
+            echo "TF_VAR_create_key_pair=true" >> $GITHUB_ENV
           fi
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "neo4j" ]]; then
             echo "TF_VAR_create_neo4j=true" >> $GITHUB_ENV
+            echo "TF_VAR_create_neo4j_instances=true" >> $GITHUB_ENV
           fi
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "acm" ]]; then
             echo "TF_VAR_create_acm=true" >> $GITHUB_ENV

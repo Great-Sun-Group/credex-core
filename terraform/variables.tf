@@ -61,25 +61,61 @@ variable "app_port" {
   default     = 5000
 }
 
+variable "create_vpc" {
+  description = "Whether to create the VPC"
+  type        = bool
+  default     = true
+}
+
+variable "create_subnets" {
+  description = "Whether to create subnets"
+  type        = bool
+  default     = true
+}
+
+variable "create_igw" {
+  description = "Whether to create the Internet Gateway"
+  type        = bool
+  default     = true
+}
+
+variable "create_nat" {
+  description = "Whether to create NAT Gateways"
+  type        = bool
+  default     = true
+}
+
+variable "create_routes" {
+  description = "Whether to create route tables"
+  type        = bool
+  default     = true
+}
+
+variable "create_sg" {
+  description = "Whether to create security groups"
+  type        = bool
+  default     = true
+}
+
 variable "create_ecr" {
   description = "Whether to create the ECR repository"
   type        = bool
   default     = true
 }
 
-variable "create_ecs_cluster" {
-  description = "Whether to create the ECS cluster"
+variable "create_ecs" {
+  description = "Whether to create ECS resources"
   type        = bool
   default     = true
 }
 
-variable "create_log_group" {
+variable "create_logs" {
   description = "Whether to create the CloudWatch log group"
   type        = bool
   default     = true
 }
 
-variable "create_iam_roles" {
+variable "create_iam" {
   description = "Whether to create IAM roles"
   type        = bool
   default     = true
@@ -103,8 +139,38 @@ variable "create_target_group" {
   default     = true
 }
 
+variable "create_neo4j" {
+  description = "Whether to create Neo4j instances"
+  type        = bool
+  default     = true
+}
+
+variable "create_acm" {
+  description = "Whether to create ACM certificates"
+  type        = bool
+  default     = true
+}
+
 variable "create_security_groups" {
   description = "Whether to create security groups"
+  type        = bool
+  default     = true
+}
+
+variable "create_ecs_cluster" {
+  description = "Whether to create the ECS cluster"
+  type        = bool
+  default     = true
+}
+
+variable "create_log_group" {
+  description = "Whether to create the CloudWatch log group"
+  type        = bool
+  default     = true
+}
+
+variable "create_iam_roles" {
+  description = "Whether to create IAM roles"
   type        = bool
   default     = true
 }
