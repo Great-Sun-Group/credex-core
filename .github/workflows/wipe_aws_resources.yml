@@ -65,6 +65,20 @@ jobs:
           for vpc_id in $vpc_ids; do
             echo "Processing VPC: $vpc_id"
             
+            # Delete NAT Gateways
+            echo "Deleting NAT Gateways..."
+            nat_gateway_ids=$(aws ec2 describe-nat-gateways --filter Name=vpc-id,Values=$vpc_id --query 'NatGateways[*].[NatGatewayId]' --output text)
+            for nat_gw_id in $nat_gateway_ids; do
+              echo "Deleting NAT Gateway: $nat_gw_id"
+              aws ec2 delete-nat-gateway --nat-gateway-id $nat_gw_id
+            done
+            
+            # Wait for NAT Gateways to be deleted
+            for nat_gw_id in $nat_gateway_ids; do
+              echo "Waiting for NAT Gateway $nat_gw_id to be deleted..."
+              aws ec2 wait nat-gateway-deleted --nat-gateway-ids $nat_gw_id
+            done
+
             # Handle public IP addresses
             echo "Handling public IP addresses..."
             network_interfaces=$(aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=$vpc_id --query 'NetworkInterfaces[*].[NetworkInterfaceId]' --output text)
