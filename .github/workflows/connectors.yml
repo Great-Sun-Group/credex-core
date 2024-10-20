@@ -104,14 +104,16 @@ jobs:
 
       - name: Import Resources
         if: github.event.inputs.action == 'import'
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
         run: |
           cd terraform
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "logs" ]]; then
-            terraform import module.app.aws_cloudwatch_log_group.ecs_logs[0] /ecs/credex-core-${{ env.ENVIRONMENT }}
+            terraform import -var="environment=${ENVIRONMENT}" module.app.aws_cloudwatch_log_group.ecs_logs[0] /ecs/credex-core-${ENVIRONMENT}
           fi
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "iam" ]]; then
-            terraform import module.app.aws_iam_role.ecs_execution_role[0] ecs-execution-role-${{ env.ENVIRONMENT }}
-            terraform import module.app.aws_iam_role.ecs_task_role[0] ecs-task-role-${{ env.ENVIRONMENT }}
+            terraform import -var="environment=${ENVIRONMENT}" module.app.aws_iam_role.ecs_execution_role[0] ecs-execution-role-${ENVIRONMENT}
+            terraform import -var="environment=${ENVIRONMENT}" module.app.aws_iam_role.ecs_task_role[0] ecs-task-role-${ENVIRONMENT}
           fi
 
       - name: Terraform Plan
