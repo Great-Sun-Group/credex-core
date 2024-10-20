@@ -67,10 +67,25 @@ jobs:
               association_id=$(aws ec2 describe-addresses --allocation-ids $eip_alloc_id --query 'Addresses[0].AssociationId' --output text)
               if [ "$association_id" != "None" ] && [ -n "$association_id" ]; then
                 echo "Disassociating Elastic IP $eip_alloc_id from $association_id"
-                aws ec2 disassociate-address --association-id $association_id
+                if aws ec2 disassociate-address --association-id $association_id; then
+                  echo "Successfully disassociated Elastic IP $eip_alloc_id"
+                else
+                  echo "Failed to disassociate Elastic IP $eip_alloc_id. It may be attached to a running instance or ENI."
+                  instance_id=$(aws ec2 describe-addresses --allocation-ids $eip_alloc_id --query 'Addresses[0].InstanceId' --output text)
+                  if [ "$instance_id" != "None" ] && [ -n "$instance_id" ]; then
+                    echo "Terminating associated instance $instance_id"
+                    aws ec2 terminate-instances --instance-ids $instance_id
+                    echo "Waiting for instance to terminate..."
+                    aws ec2 wait instance-terminated --instance-ids $instance_id
+                    echo "Retrying disassociation..."
+                    aws ec2 disassociate-address --association-id $association_id
+                  fi
+                fi
               fi
               echo "Releasing Elastic IP $eip_alloc_id"
-              aws ec2 release-address --allocation-id $eip_alloc_id
+              if ! aws ec2 release-address --allocation-id $eip_alloc_id; then
+                echo "Failed to release Elastic IP $eip_alloc_id. Skipping..."
+              fi
             done
 
             # Detach and delete Internet Gateways
