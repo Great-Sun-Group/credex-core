@@ -64,8 +64,46 @@ jobs:
       run: |
         echo "Deleting VPC resources..."
         vpc_ids=$(aws ec2 describe-vpcs --query 'Vpcs[?IsDefault==`false`].[VpcId]' --output text)
-        for id in $vpc_ids; do
-          aws ec2 delete-vpc --vpc-id $id
+        for vpc_id in $vpc_ids; do
+          echo "Processing VPC: $vpc_id"
+          
+          # Detach and delete Internet Gateways
+          igw_ids=$(aws ec2 describe-internet-gateways --filters Name=attachment.vpc-id,Values=$vpc_id --query 'InternetGateways[*].[InternetGatewayId]' --output text)
+          for igw_id in $igw_ids; do
+            aws ec2 detach-internet-gateway --internet-gateway-id $igw_id --vpc-id $vpc_id
+            aws ec2 delete-internet-gateway --internet-gateway-id $igw_id
+          done
+
+          # Delete Subnets
+          subnet_ids=$(aws ec2 describe-subnets --filters Name=vpc-id,Values=$vpc_id --query 'Subnets[*].[SubnetId]' --output text)
+          for subnet_id in $subnet_ids; do
+            aws ec2 delete-subnet --subnet-id $subnet_id
+          done
+
+          # Delete Route Tables
+          rt_ids=$(aws ec2 describe-route-tables --filters Name=vpc-id,Values=$vpc_id --query 'RouteTables[?Associations[0].Main!=`true`].[RouteTableId]' --output text)
+          for rt_id in $rt_ids; do
+            aws ec2 delete-route-table --route-table-id $rt_id
+          done
+
+          # Delete Network ACLs
+          nacl_ids=$(aws ec2 describe-network-acls --filters Name=vpc-id,Values=$vpc_id --query 'NetworkAcls[?!IsDefault].[NetworkAclId]' --output text)
+          for nacl_id in $nacl_ids; do
+            aws ec2 delete-network-acl --network-acl-id $nacl_id
+          done
+
+          # Delete Security Groups (except the default one)
+          sg_ids=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values=$vpc_id --query 'SecurityGroups[?GroupName!=`default`].[GroupId]' --output text)
+          for sg_id in $sg_ids; do
+            aws ec2 delete-security-group --group-id $sg_id
+          done
+
+          # Finally, delete the VPC
+          if aws ec2 delete-vpc --vpc-id $vpc_id; then
+            echo "Successfully deleted VPC $vpc_id"
+          else
+            echo "Failed to delete VPC $vpc_id. It may still have dependencies."
+          fi
         done
 
     - name: Wipe S3 Buckets
@@ -199,6 +237,6 @@ jobs:
     - name: Final Message
       run: |
         echo "AWS resource wipe completed."
-        echo "All resources created by these workflows should now be deleted, except for any security groups with dependencies."
+        echo "All resources created by these workflows should now be deleted."
         echo "If you encounter any issues or find remaining resources, please investigate and delete them manually."
         echo "You can now use your Terraform configurations to rebuild the infrastructure from scratch if needed."
