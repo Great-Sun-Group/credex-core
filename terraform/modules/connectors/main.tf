@@ -5,7 +5,7 @@ locals {
     Project     = "Credex"
     ManagedBy   = "Terraform"
   }
-  full_domain = "${var.subdomain_prefix[var.environment]}.${var.domain_base}"
+  full_domain = "${lookup(var.subdomain_prefix, var.environment, var.subdomain_prefix["development"])}.${var.domain_base}"
 }
 
 # Generate key pair

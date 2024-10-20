@@ -1,5 +1,5 @@
 locals {
-  environment = terraform.workspace
+  environment = var.environment == "" ? "development" : var.environment
 
   # Common locals
   common_tags = {

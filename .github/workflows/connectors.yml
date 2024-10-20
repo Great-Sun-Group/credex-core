@@ -27,7 +27,13 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Terraform Init and Apply
+      - name: Terraform Init
+        run: |
+          cd terraform
+          echo "Initializing Terraform..."
+          terraform init
+
+      - name: Terraform Plan
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_create_ecr: "true"
@@ -41,9 +47,23 @@ jobs:
           TF_VAR_create_neo4j_instances: "true"
         run: |
           cd terraform
-          echo "Initializing Terraform..."
-          terraform init
+          echo "Planning Terraform changes..."
+          terraform plan -input=false
 
+      - name: Terraform Apply
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_create_ecr: "true"
+          TF_VAR_create_ecs_cluster: "true"
+          TF_VAR_create_log_group: "true"
+          TF_VAR_create_key_pair: "true"
+          TF_VAR_create_iam_roles: "true"
+          TF_VAR_create_load_balancer: "true"
+          TF_VAR_create_target_group: "true"
+          TF_VAR_create_security_groups: "true"
+          TF_VAR_create_neo4j_instances: "true"
+        run: |
+          cd terraform
           echo "Applying Terraform changes..."
           terraform apply -auto-approve -input=false
 
