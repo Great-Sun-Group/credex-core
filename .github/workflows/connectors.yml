@@ -1,7 +1,16 @@
-name: Deploy Connectors
+name: Deploy and Manage Connectors
 
 on:
   workflow_dispatch:
+    inputs:
+      action:
+        description: "Action to perform (deploy/import/update)"
+        required: true
+        default: "deploy"
+      resource:
+        description: "Resource to manage (all/log_group/iam_roles) - only for import/update"
+        required: false
+        default: "all"
 
 jobs:
   deploy_infrastructure:
@@ -33,14 +42,36 @@ jobs:
           echo "Initializing Terraform..."
           terraform init
 
+      - name: Check Existing Resources
+        if: github.event.inputs.action != 'import'
+        run: |
+          LOG_GROUP=$(aws logs describe-log-groups --log-group-name-prefix "/ecs/credex-core-${{ env.ENVIRONMENT }}" --query 'logGroups[0].logGroupName' --output text)
+          EXEC_ROLE=$(aws iam get-role --role-name ecs-execution-role-${{ env.ENVIRONMENT }} --query 'Role.RoleName' --output text || echo "")
+          TASK_ROLE=$(aws iam get-role --role-name ecs-task-role-${{ env.ENVIRONMENT }} --query 'Role.RoleName' --output text || echo "")
+
+          echo "TF_VAR_create_log_group=${{ $LOG_GROUP == 'None' }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_iam_roles=${{ $EXEC_ROLE == '' && $TASK_ROLE == '' }}" >> $GITHUB_ENV
+
+      - name: Import Resources
+        if: github.event.inputs.action == 'import'
+        run: |
+          cd terraform
+          if [[ "${{ github.event.inputs.resource }}" == "all" || "${{ github.event.inputs.resource }}" == "log_group" ]]; then
+            terraform import module.app.aws_cloudwatch_log_group.ecs_logs[0] /ecs/credex-core-${{ env.ENVIRONMENT }}
+          fi
+          if [[ "${{ github.event.inputs.resource }}" == "all" || "${{ github.event.inputs.resource }}" == "iam_roles" ]]; then
+            terraform import module.app.aws_iam_role.ecs_execution_role[0] ecs-execution-role-${{ env.ENVIRONMENT }}
+            terraform import module.app.aws_iam_role.ecs_task_role[0] ecs-task-role-${{ env.ENVIRONMENT }}
+          fi
+
       - name: Terraform Plan
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_create_ecr: "true"
           TF_VAR_create_ecs_cluster: "true"
-          TF_VAR_create_log_group: "true"
+          TF_VAR_create_log_group: ${{ env.TF_VAR_create_log_group }}
           TF_VAR_create_key_pair: "true"
-          TF_VAR_create_iam_roles: "true"
+          TF_VAR_create_iam_roles: ${{ env.TF_VAR_create_iam_roles }}
           TF_VAR_create_load_balancer: "true"
           TF_VAR_create_target_group: "true"
           TF_VAR_create_security_groups: "true"
@@ -48,16 +79,17 @@ jobs:
         run: |
           cd terraform
           echo "Planning Terraform changes..."
-          terraform plan -input=false
+          terraform plan -input=false -out=tfplan
 
       - name: Terraform Apply
+        if: github.event.inputs.action != 'import'
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_create_ecr: "true"
           TF_VAR_create_ecs_cluster: "true"
-          TF_VAR_create_log_group: "true"
+          TF_VAR_create_log_group: ${{ env.TF_VAR_create_log_group }}
           TF_VAR_create_key_pair: "true"
-          TF_VAR_create_iam_roles: "true"
+          TF_VAR_create_iam_roles: ${{ env.TF_VAR_create_iam_roles }}
           TF_VAR_create_load_balancer: "true"
           TF_VAR_create_target_group: "true"
           TF_VAR_create_security_groups: "true"
@@ -65,7 +97,7 @@ jobs:
         run: |
           cd terraform
           echo "Applying Terraform changes..."
-          terraform apply -auto-approve -input=false
+          terraform apply -auto-approve -input=false tfplan
 
           echo "Terraform apply completed successfully"
 
@@ -79,18 +111,3 @@ jobs:
           echo "NEO4J_SECURITY_GROUP_ID=$(terraform output -raw neo4j_security_group_id)" >> $GITHUB_ENV || true
           echo "KEY_PAIR_NAME=$(terraform output -raw key_pair_name)" >> $GITHUB_ENV || true
           echo "ALB_SECURITY_GROUP_ID=$(terraform output -raw alb_security_group_id)" >> $GITHUB_ENV || true
-          echo "ECS_TASKS_SECURITY_GROUP_ID=$(terraform output -raw ecs_tasks_security_group_id)" >> $GITHUB_ENV || true
-          echo "ALB_DNS_NAME=$(terraform output -raw alb_dns_name)" >> $GITHUB_ENV || true
-          echo "TARGET_GROUP_ARN=$(terraform output -raw target_group_arn)" >> $GITHUB_ENV || true
-
-      - name: Print Infrastructure Information
-        run: |
-          echo "Infrastructure deployed for the ${{ env.ENVIRONMENT }} environment:"
-          echo "VPC_ID: ${{ env.VPC_ID }}"
-          echo "SUBNET_IDS: ${{ env.SUBNET_IDS }}"
-          echo "NEO4J_SECURITY_GROUP_ID: ${{ env.NEO4J_SECURITY_GROUP_ID }}"
-          echo "KEY_PAIR_NAME: ${{ env.KEY_PAIR_NAME }}"
-          echo "ALB_SECURITY_GROUP_ID: ${{ env.ALB_SECURITY_GROUP_ID }}"
-          echo "ECS_TASKS_SECURITY_GROUP_ID: ${{ env.ECS_TASKS_SECURITY_GROUP_ID }}"
-          echo "ALB_DNS_NAME: ${{ env.ALB_DNS_NAME }}"
-          echo "TARGET_GROUP_ARN: ${{ env.TARGET_GROUP_ARN }}"
