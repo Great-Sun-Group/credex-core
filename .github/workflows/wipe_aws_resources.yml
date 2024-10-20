@@ -71,7 +71,13 @@ jobs:
           echo "Releasing Elastic IP addresses..."
           eip_alloc_ids=$(aws ec2 describe-addresses --filters "Name=domain,Values=vpc" --query 'Addresses[*].[AllocationId]' --output text)
           for eip_alloc_id in $eip_alloc_ids; do
-            aws ec2 release-address --allocation-id $eip_alloc_id
+            echo "Attempting to release Elastic IP with allocation ID: $eip_alloc_id"
+            if ! aws ec2 release-address --allocation-id $eip_alloc_id 2>&1; then
+              echo "Failed to release Elastic IP $eip_alloc_id. Error details:"
+              aws ec2 describe-addresses --allocation-ids $eip_alloc_id
+            else
+              echo "Successfully released Elastic IP $eip_alloc_id"
+            fi
           done
 
           # Detach and delete Internet Gateways
