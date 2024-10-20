@@ -65,11 +65,26 @@ jobs:
           for vpc_id in $vpc_ids; do
             echo "Processing VPC: $vpc_id"
             
-            # Unmap public IP addresses
-            echo "Unmapping public IP addresses..."
+            # Handle public IP addresses
+            echo "Handling public IP addresses..."
             network_interfaces=$(aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=$vpc_id --query 'NetworkInterfaces[*].[NetworkInterfaceId]' --output text)
             for eni in $network_interfaces; do
-              aws ec2 unassign-private-ip-addresses --network-interface-id $eni --private-ip-addresses $(aws ec2 describe-network-interfaces --network-interface-ids $eni --query 'NetworkInterfaces[0].PrivateIpAddresses[?Primary==`false`].PrivateIpAddress' --output text)
+              echo "Processing network interface: $eni"
+              # Get all private IP addresses except the primary one
+              private_ips=$(aws ec2 describe-network-interfaces --network-interface-ids $eni --query 'NetworkInterfaces[0].PrivateIpAddresses[?Primary==`false`].PrivateIpAddress' --output text)
+              if [ -n "$private_ips" ]; then
+                echo "Unassigning private IP addresses: $private_ips"
+                aws ec2 unassign-private-ip-addresses --network-interface-id $eni --private-ip-addresses $private_ips || echo "Failed to unassign private IPs for $eni"
+              else
+                echo "No secondary private IPs to unassign for $eni"
+              fi
+              
+              # Disassociate any associated public IP
+              association_id=$(aws ec2 describe-network-interfaces --network-interface-ids $eni --query 'NetworkInterfaces[0].Association.AssociationId' --output text)
+              if [ "$association_id" != "None" ] && [ -n "$association_id" ]; then
+                echo "Disassociating public IP from $eni"
+                aws ec2 disassociate-address --association-id $association_id || echo "Failed to disassociate public IP from $eni"
+              fi
             done
 
             # Disassociate and release Elastic IP addresses
