@@ -92,12 +92,18 @@ jobs:
           fi
         done
 
-    - name: Wipe RDS Instances
+    - name: Wipe RDS Instances and Subnet Groups
       run: |
         echo "Deleting RDS instances..."
         rds_instances=$(aws rds describe-db-instances --query 'DBInstances[*].[DBInstanceIdentifier]' --output text)
         for instance in $rds_instances; do
           aws rds delete-db-instance --db-instance-identifier $instance --skip-final-snapshot
+        done
+
+        echo "Deleting RDS DB Subnet Groups..."
+        subnet_groups=$(aws rds describe-db-subnet-groups --query 'DBSubnetGroups[*].[DBSubnetGroupName]' --output text)
+        for group in $subnet_groups; do
+          aws rds delete-db-subnet-group --db-subnet-group-name $group
         done
 
     - name: Wipe ECS Clusters
@@ -152,6 +158,42 @@ jobs:
         repos=$(aws ecr describe-repositories --query 'repositories[*].[repositoryName]' --output text)
         for repo in $repos; do
           aws ecr delete-repository --repository-name $repo --force
+        done
+
+    - name: Wipe CloudWatch Log Groups
+      run: |
+        echo "Deleting CloudWatch Log Groups..."
+        log_groups=$(aws logs describe-log-groups --query 'logGroups[*].[logGroupName]' --output text)
+        for log_group in $log_groups; do
+          aws logs delete-log-group --log-group-name $log_group
+        done
+
+    - name: Wipe IAM Roles
+      run: |
+        echo "Deleting IAM Roles..."
+        roles=$(aws iam list-roles --query 'Roles[?starts_with(RoleName, `ecs-`) == `true`].[RoleName]' --output text)
+        for role in $roles; do
+          # Detach all policies from the role
+          attached_policies=$(aws iam list-attached-role-policies --role-name $role --query 'AttachedPolicies[*].[PolicyArn]' --output text)
+          for policy in $attached_policies; do
+            aws iam detach-role-policy --role-name $role --policy-arn $policy
+          done
+          # Delete the role
+          aws iam delete-role --role-name $role
+        done
+
+    - name: Wipe Load Balancers and Target Groups
+      run: |
+        echo "Deleting Application Load Balancers..."
+        albs=$(aws elbv2 describe-load-balancers --query 'LoadBalancers[*].[LoadBalancerArn]' --output text)
+        for alb in $albs; do
+          aws elbv2 delete-load-balancer --load-balancer-arn $alb
+        done
+
+        echo "Deleting Target Groups..."
+        target_groups=$(aws elbv2 describe-target-groups --query 'TargetGroups[*].[TargetGroupArn]' --output text)
+        for tg in $target_groups; do
+          aws elbv2 delete-target-group --target-group-arn $tg
         done
 
     - name: Final Message

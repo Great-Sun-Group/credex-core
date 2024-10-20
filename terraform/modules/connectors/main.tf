@@ -35,7 +35,7 @@ module "shared_resources" {
   create_key_pair      = var.create_key_pair
   create_load_balancer = var.create_load_balancer
   create_target_group  = var.create_target_group
-  create_neo4j         = var.create_neo4j
+  create_neo4j_security_group = var.create_neo4j_security_group
   create_acm           = var.create_acm
 }
 

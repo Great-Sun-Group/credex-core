@@ -18,7 +18,7 @@ module "connectors" {
   create_load_balancer   = var.create_load_balancer
   create_target_group    = var.create_target_group
   create_security_groups = var.create_security_groups
-  create_neo4j           = var.create_neo4j
+  create_neo4j_security_group = var.create_neo4j_security_group
   create_acm             = var.create_acm
   common_tags            = local.common_tags
   domain_base            = var.domain_base

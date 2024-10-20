@@ -171,7 +171,7 @@ resource "aws_security_group" "ecs_tasks" {
 
 # Neo4j security group
 resource "aws_security_group" "neo4j" {
-  count       = var.create_sg ? 1 : 0
+  count       = var.create_neo4j_security_group ? 1 : 0
   name        = "credex-neo4j-sg-${var.environment}"
   description = "Security group for Neo4j instances"
   vpc_id      = aws_vpc.main[0].id
@@ -300,7 +300,7 @@ output "public_subnet_ids" {
 }
 
 output "neo4j_security_group_id" {
-  value = var.create_sg ? aws_security_group.neo4j[0].id : null
+  value = var.create_neo4j_security_group ? aws_security_group.neo4j[0].id : null
 }
 
 output "key_pair_name" {

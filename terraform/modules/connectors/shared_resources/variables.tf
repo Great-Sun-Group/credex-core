@@ -107,8 +107,8 @@ variable "create_target_group" {
   default     = true
 }
 
-variable "create_neo4j" {
-  description = "Whether to create the Neo4j instances"
+variable "create_neo4j_security_group" {
+  description = "Whether to create the Neo4j security group"
   type        = bool
   default     = true
 }

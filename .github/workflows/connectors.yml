@@ -8,7 +8,7 @@ on:
         required: true
         default: "update"
       component:
-        description: "Component to manage (all/vpc/subnets/igw/nat/routes/sg/ecr/ecs/logs/iam/alb/keypair/neo4j/acm)"
+        description: "Component to manage (all/vpc/subnets/igw/nat/routes/sg/ecr/ecs/logs/iam/alb/keypair/neo4j_sg/acm)"
         required: true
         default: "all"
 
@@ -57,13 +57,12 @@ jobs:
           echo "TF_VAR_create_load_balancer=false" >> $GITHUB_ENV
           echo "TF_VAR_create_target_group=false" >> $GITHUB_ENV
           echo "TF_VAR_create_key_pair=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_neo4j=false" >> $GITHUB_ENV
+          echo "TF_VAR_create_neo4j_security_group=false" >> $GITHUB_ENV
           echo "TF_VAR_create_acm=false" >> $GITHUB_ENV
           echo "TF_VAR_create_security_groups=false" >> $GITHUB_ENV
           echo "TF_VAR_create_ecs_cluster=false" >> $GITHUB_ENV
           echo "TF_VAR_create_log_group=false" >> $GITHUB_ENV
           echo "TF_VAR_create_iam_roles=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_neo4j_instances=false" >> $GITHUB_ENV
 
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "vpc" ]]; then
             echo "TF_VAR_create_vpc=true" >> $GITHUB_ENV
@@ -106,9 +105,8 @@ jobs:
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "keypair" ]]; then
             echo "TF_VAR_create_key_pair=true" >> $GITHUB_ENV
           fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "neo4j" ]]; then
-            echo "TF_VAR_create_neo4j=true" >> $GITHUB_ENV
-            echo "TF_VAR_create_neo4j_instances=true" >> $GITHUB_ENV
+          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "neo4j_sg" ]]; then
+            echo "TF_VAR_create_neo4j_security_group=true" >> $GITHUB_ENV
           fi
           if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "acm" ]]; then
             echo "TF_VAR_create_acm=true" >> $GITHUB_ENV
