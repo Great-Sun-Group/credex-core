@@ -39,58 +39,24 @@ module "shared_resources" {
   create_acm           = var.create_acm
 }
 
-# Outputs
-output "vpc_id" {
-  value       = module.shared_resources.vpc_id
-  description = "The ID of the VPC"
+resource "aws_route53_zone" "main" {
+  count = var.create_route53_zone ? 1 : 0
+  name  = local.full_domain
+  
+  tags = merge(var.common_tags, {
+    Name = "credex-zone-${var.environment}"
+  })
 }
 
-output "private_subnet_ids" {
-  value       = module.shared_resources.private_subnet_ids
-  description = "The IDs of the private subnets"
-}
+resource "aws_route53_record" "api" {
+  count   = var.create_route53_zone ? 1 : 0
+  zone_id = aws_route53_zone.main[0].zone_id
+  name    = local.full_domain
+  type    = "A"
 
-output "public_subnet_ids" {
-  value       = module.shared_resources.public_subnet_ids
-  description = "The IDs of the public subnets"
-}
-
-output "subnet_ids" {
-  value       = concat(module.shared_resources.private_subnet_ids, module.shared_resources.public_subnet_ids)
-  description = "The IDs of all subnets (private and public)"
-}
-
-output "neo4j_security_group_id" {
-  value       = module.shared_resources.neo4j_security_group_id
-  description = "The ID of the Neo4j security group"
-}
-
-output "key_pair_name" {
-  value       = module.shared_resources.key_pair_name
-  description = "The name of the key pair"
-}
-
-output "alb_security_group_id" {
-  value       = module.shared_resources.alb_security_group_id
-  description = "The ID of the ALB security group"
-}
-
-output "ecs_tasks_security_group_id" {
-  value       = module.shared_resources.ecs_tasks_security_group_id
-  description = "The ID of the ECS tasks security group"
-}
-
-output "alb_dns_name" {
-  value       = module.shared_resources.alb_dns_name
-  description = "The DNS name of the Application Load Balancer"
-}
-
-output "target_group_arn" {
-  value       = module.shared_resources.target_group_arn
-  description = "The ARN of the target group"
-}
-
-output "alb_listener" {
-  value       = module.shared_resources.alb_listener
-  description = "The ARN of the ALB listener"
+  alias {
+    name                   = module.shared_resources.alb_dns_name
+    zone_id                = module.shared_resources.alb_zone_id
+    evaluate_target_health = true
+  }
 }

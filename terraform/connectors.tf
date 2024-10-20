@@ -20,6 +20,7 @@ module "connectors" {
   create_security_groups = var.create_security_groups
   create_neo4j_security_group = var.create_neo4j_security_group
   create_acm             = var.create_acm
+  create_route53_zone    = var.create_route53_zone
   common_tags            = local.common_tags
   domain_base            = var.domain_base
   subdomain_prefix       = var.subdomain_prefix
@@ -72,4 +73,14 @@ output "alb_listener" {
 output "ssh_private_key" {
   value     = tls_private_key.ssh.private_key_pem
   sensitive = true
+}
+
+output "route53_zone_id" {
+  value       = module.connectors.route53_zone_id
+  description = "The ID of the Route 53 hosted zone"
+}
+
+output "route53_name_servers" {
+  value       = module.connectors.route53_name_servers
+  description = "The name servers for the Route 53 hosted zone"
 }

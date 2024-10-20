@@ -181,6 +181,18 @@ variable "create_neo4j_instances" {
   default     = true
 }
 
+variable "create_neo4j_security_group" {
+  description = "Whether to create the Neo4j security group"
+  type        = bool
+  default     = true
+}
+
+variable "create_route53_zone" {
+  description = "Whether to create a Route 53 hosted zone"
+  type        = bool
+  default     = false
+}
+
 variable "common_tags" {
   description = "Common tags to be applied to all resources"
   type        = map(string)
