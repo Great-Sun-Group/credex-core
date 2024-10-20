@@ -79,41 +79,17 @@ jobs:
               aws ec2 wait nat-gateway-deleted --nat-gateway-ids $nat_gw_id
             done
 
-            # Handle public IP addresses
-            echo "Handling public IP addresses..."
-            network_interfaces=$(aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=$vpc_id --query 'NetworkInterfaces[*].[NetworkInterfaceId]' --output text)
-            for eni in $network_interfaces; do
-              echo "Processing network interface: $eni"
-              # Get all private IP addresses except the primary one
-              private_ips=$(aws ec2 describe-network-interfaces --network-interface-ids $eni --query 'NetworkInterfaces[0].PrivateIpAddresses[?Primary==`false`].PrivateIpAddress' --output text)
-              if [ -n "$private_ips" ]; then
-                echo "Unassigning private IP addresses: $private_ips"
-                aws ec2 unassign-private-ip-addresses --network-interface-id $eni --private-ip-addresses $private_ips || echo "Failed to unassign private IPs for $eni"
-              else
-                echo "No secondary private IPs to unassign for $eni"
+            # Handle Elastic IP addresses
+            echo "Handling Elastic IP addresses..."
+            eips=$(aws ec2 describe-addresses --filters "Name=domain,Values=vpc" --query 'Addresses[*].[AllocationId,AssociationId]' --output text)
+            while IFS=$'\t' read -r allocation_id association_id; do
+              if [ -n "$association_id" ] && [ "$association_id" != "None" ]; then
+                echo "Disassociating Elastic IP $allocation_id"
+                aws ec2 disassociate-address --association-id "$association_id" || echo "Failed to disassociate Elastic IP $allocation_id"
               fi
-              
-              # Disassociate any associated public IP
-              association_id=$(aws ec2 describe-network-interfaces --network-interface-ids $eni --query 'NetworkInterfaces[0].Association.AssociationId' --output text)
-              if [ "$association_id" != "None" ] && [ -n "$association_id" ]; then
-                echo "Disassociating public IP from $eni"
-                aws ec2 disassociate-address --association-id $association_id || echo "Failed to disassociate public IP from $eni"
-              fi
-            done
-
-            # Disassociate and release Elastic IP addresses
-            echo "Disassociating and releasing Elastic IP addresses..."
-            eip_alloc_ids=$(aws ec2 describe-addresses --filters "Name=domain,Values=vpc" --query 'Addresses[*].[AllocationId]' --output text)
-            for eip_alloc_id in $eip_alloc_ids; do
-              echo "Processing Elastic IP: $eip_alloc_id"
-              association_id=$(aws ec2 describe-addresses --allocation-ids $eip_alloc_id --query 'Addresses[0].AssociationId' --output text)
-              if [ "$association_id" != "None" ] && [ -n "$association_id" ]; then
-                echo "Disassociating Elastic IP $eip_alloc_id from $association_id"
-                aws ec2 disassociate-address --association-id $association_id || echo "Failed to disassociate Elastic IP $eip_alloc_id"
-              fi
-              echo "Releasing Elastic IP $eip_alloc_id"
-              aws ec2 release-address --allocation-id $eip_alloc_id || echo "Failed to release Elastic IP $eip_alloc_id"
-            done
+              echo "Releasing Elastic IP $allocation_id"
+              aws ec2 release-address --allocation-id "$allocation_id" || echo "Failed to release Elastic IP $allocation_id"
+            done <<< "$eips"
 
             # Detach and delete Internet Gateways
             echo "Detaching and deleting Internet Gateways..."
@@ -154,6 +130,13 @@ jobs:
               aws ec2 delete-security-group --group-id $sg_id || echo "Failed to delete Security Group $sg_id"
             done
 
+            # Delete Network Interfaces
+            echo "Deleting Network Interfaces..."
+            eni_ids=$(aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=$vpc_id --query 'NetworkInterfaces[*].[NetworkInterfaceId]' --output text)
+            for eni_id in $eni_ids; do
+              aws ec2 delete-network-interface --network-interface-id $eni_id || echo "Failed to delete Network Interface $eni_id"
+            done
+
             # Finally, delete the VPC
             echo "Deleting VPC..."
             aws ec2 delete-vpc --vpc-id $vpc_id || echo "Failed to delete VPC $vpc_id"
@@ -174,7 +157,7 @@ jobs:
           echo "Deleting RDS instances..."
           rds_instances=$(aws rds describe-db-instances --query 'DBInstances[*].[DBInstanceIdentifier]' --output text)
           for instance in $rds_instances; do
-            aws rds delete-db-instance --db-instance-identifier $instance --skip-final-snapshot || echo "Failed to delete RDS instance $instance"
+            aws rds delete-db-instance --db-instance-identifier $instance --skip-final-snapshot --delete-automated-backups || echo "Failed to delete RDS instance $instance"
           done
 
           echo "Deleting RDS DB Subnet Groups..."
@@ -228,6 +211,10 @@ jobs:
             attached_policies=$(aws iam list-attached-role-policies --role-name $role --query 'AttachedPolicies[*].[PolicyArn]' --output text)
             for policy in $attached_policies; do
               aws iam detach-role-policy --role-name $role --policy-arn $policy || echo "Failed to detach policy $policy from role $role"
+            done
+            instance_profiles=$(aws iam list-instance-profiles-for-role --role-name $role --query 'InstanceProfiles[*].[InstanceProfileName]' --output text)
+            for profile in $instance_profiles; do
+              aws iam remove-role-from-instance-profile --instance-profile-name $profile --role-name $role || echo "Failed to remove role $role from instance profile $profile"
             done
             aws iam delete-role --role-name $role || echo "Failed to delete IAM role $role"
           done
