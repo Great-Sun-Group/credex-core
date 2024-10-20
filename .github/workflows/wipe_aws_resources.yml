@@ -65,6 +65,13 @@ jobs:
           for vpc_id in $vpc_ids; do
             echo "Processing VPC: $vpc_id"
             
+            # Unmap public IP addresses
+            echo "Unmapping public IP addresses..."
+            network_interfaces=$(aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=$vpc_id --query 'NetworkInterfaces[*].[NetworkInterfaceId]' --output text)
+            for eni in $network_interfaces; do
+              aws ec2 unassign-private-ip-addresses --network-interface-id $eni --private-ip-addresses $(aws ec2 describe-network-interfaces --network-interface-ids $eni --query 'NetworkInterfaces[0].PrivateIpAddresses[?Primary==`false`].PrivateIpAddress' --output text)
+            done
+
             # Disassociate and release Elastic IP addresses
             echo "Disassociating and releasing Elastic IP addresses..."
             eip_alloc_ids=$(aws ec2 describe-addresses --filters "Name=domain,Values=vpc" --query 'Addresses[*].[AllocationId]' --output text)
@@ -73,79 +80,51 @@ jobs:
               association_id=$(aws ec2 describe-addresses --allocation-ids $eip_alloc_id --query 'Addresses[0].AssociationId' --output text)
               if [ "$association_id" != "None" ] && [ -n "$association_id" ]; then
                 echo "Disassociating Elastic IP $eip_alloc_id from $association_id"
-                if aws ec2 disassociate-address --association-id $association_id; then
-                  echo "Successfully disassociated Elastic IP $eip_alloc_id"
-                else
-                  echo "Failed to disassociate Elastic IP $eip_alloc_id. Attempting to force disassociation..."
-                  instance_id=$(aws ec2 describe-addresses --allocation-ids $eip_alloc_id --query 'Addresses[0].InstanceId' --output text)
-                  if [ "$instance_id" != "None" ] && [ -n "$instance_id" ]; then
-                    echo "Terminating associated instance $instance_id"
-                    aws ec2 terminate-instances --instance-ids $instance_id
-                    echo "Waiting for instance to terminate..."
-                    aws ec2 wait instance-terminated --instance-ids $instance_id
-                    echo "Retrying disassociation..."
-                    aws ec2 disassociate-address --association-id $association_id
-                  fi
-                fi
+                aws ec2 disassociate-address --association-id $association_id || echo "Failed to disassociate Elastic IP $eip_alloc_id"
               fi
               echo "Releasing Elastic IP $eip_alloc_id"
-              if ! aws ec2 release-address --allocation-id $eip_alloc_id; then
-                echo "Failed to release Elastic IP $eip_alloc_id. Skipping..."
-              fi
+              aws ec2 release-address --allocation-id $eip_alloc_id || echo "Failed to release Elastic IP $eip_alloc_id"
             done
 
             # Detach and delete Internet Gateways
             echo "Detaching and deleting Internet Gateways..."
             igw_ids=$(aws ec2 describe-internet-gateways --filters Name=attachment.vpc-id,Values=$vpc_id --query 'InternetGateways[*].[InternetGatewayId]' --output text)
             for igw_id in $igw_ids; do
-              if ! aws ec2 detach-internet-gateway --internet-gateway-id $igw_id --vpc-id $vpc_id; then
-                echo "Failed to detach Internet Gateway $igw_id. Attempting to force detachment..."
-                aws ec2 delete-internet-gateway --internet-gateway-id $igw_id --dry-run
-                if [ $? -eq 254 ]; then
-                  echo "Internet Gateway $igw_id is still in use. Skipping deletion."
-                else
-                  aws ec2 delete-internet-gateway --internet-gateway-id $igw_id
-                fi
-              else
-                aws ec2 delete-internet-gateway --internet-gateway-id $igw_id
-              fi
+              aws ec2 detach-internet-gateway --internet-gateway-id $igw_id --vpc-id $vpc_id || echo "Failed to detach Internet Gateway $igw_id"
+              aws ec2 delete-internet-gateway --internet-gateway-id $igw_id || echo "Failed to delete Internet Gateway $igw_id"
             done
 
             # Delete Subnets
             echo "Deleting Subnets..."
             subnet_ids=$(aws ec2 describe-subnets --filters Name=vpc-id,Values=$vpc_id --query 'Subnets[*].[SubnetId]' --output text)
             for subnet_id in $subnet_ids; do
-              aws ec2 delete-subnet --subnet-id $subnet_id
+              aws ec2 delete-subnet --subnet-id $subnet_id || echo "Failed to delete Subnet $subnet_id"
             done
 
             # Delete Route Tables
             echo "Deleting Route Tables..."
             rt_ids=$(aws ec2 describe-route-tables --filters Name=vpc-id,Values=$vpc_id --query 'RouteTables[?Associations[0].Main!=`true`].[RouteTableId]' --output text)
             for rt_id in $rt_ids; do
-              aws ec2 delete-route-table --route-table-id $rt_id
+              aws ec2 delete-route-table --route-table-id $rt_id || echo "Failed to delete Route Table $rt_id"
             done
 
             # Delete Network ACLs
             echo "Deleting Network ACLs..."
             nacl_ids=$(aws ec2 describe-network-acls --filters Name=vpc-id,Values=$vpc_id --query 'NetworkAcls[?!IsDefault].[NetworkAclId]' --output text)
             for nacl_id in $nacl_ids; do
-              aws ec2 delete-network-acl --network-acl-id $nacl_id
+              aws ec2 delete-network-acl --network-acl-id $nacl_id || echo "Failed to delete Network ACL $nacl_id"
             done
 
             # Delete Security Groups (except the default one)
             echo "Deleting Security Groups..."
             sg_ids=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values=$vpc_id --query 'SecurityGroups[?GroupName!=`default`].[GroupId]' --output text)
             for sg_id in $sg_ids; do
-              aws ec2 delete-security-group --group-id $sg_id
+              aws ec2 delete-security-group --group-id $sg_id || echo "Failed to delete Security Group $sg_id"
             done
 
             # Finally, delete the VPC
             echo "Deleting VPC..."
-            if aws ec2 delete-vpc --vpc-id $vpc_id; then
-              echo "Successfully deleted VPC $vpc_id"
-            else
-              echo "Failed to delete VPC $vpc_id. It may still have dependencies."
-            fi
+            aws ec2 delete-vpc --vpc-id $vpc_id || echo "Failed to delete VPC $vpc_id"
           done
 
       - name: Wipe S3 Buckets
@@ -154,22 +133,8 @@ jobs:
           buckets=$(aws s3 ls | awk '{print $3}')
           for bucket in $buckets; do
             echo "Processing bucket: $bucket"
-            # Remove all versions and delete markers
-            versions=$(aws s3api list-object-versions --bucket $bucket --output json --query '{Objects: Versions[].{Key:Key,VersionId:VersionId}, DeleteMarkers: DeleteMarkers[].{Key:Key,VersionId:VersionId}}')
-            if [ "$versions" != "{}" ]; then
-              echo "$versions" | jq -r '.Objects[] | .Key + " " + .VersionId' | while read key version_id; do
-                aws s3api delete-object --bucket $bucket --key "$key" --version-id "$version_id"
-              done
-              echo "$versions" | jq -r '.DeleteMarkers[] | .Key + " " + .VersionId' | while read key version_id; do
-                aws s3api delete-object --bucket $bucket --key "$key" --version-id "$version_id"
-              done
-            fi
-            # Delete the bucket
-            if aws s3 rb s3://$bucket --force 2>/dev/null; then
-              echo "Successfully deleted bucket $bucket"
-            else
-              echo "Failed to delete bucket $bucket"
-            fi
+            aws s3 rm s3://$bucket --recursive
+            aws s3api delete-bucket --bucket $bucket || echo "Failed to delete bucket $bucket"
           done
 
       - name: Wipe RDS Instances and Subnet Groups
@@ -177,13 +142,13 @@ jobs:
           echo "Deleting RDS instances..."
           rds_instances=$(aws rds describe-db-instances --query 'DBInstances[*].[DBInstanceIdentifier]' --output text)
           for instance in $rds_instances; do
-            aws rds delete-db-instance --db-instance-identifier $instance --skip-final-snapshot
+            aws rds delete-db-instance --db-instance-identifier $instance --skip-final-snapshot || echo "Failed to delete RDS instance $instance"
           done
 
           echo "Deleting RDS DB Subnet Groups..."
           subnet_groups=$(aws rds describe-db-subnet-groups --query 'DBSubnetGroups[*].[DBSubnetGroupName]' --output text)
           for group in $subnet_groups; do
-            aws rds delete-db-subnet-group --db-subnet-group-name $group
+            aws rds delete-db-subnet-group --db-subnet-group-name $group || echo "Failed to delete DB Subnet Group $group"
           done
 
       - name: Wipe ECS Clusters
@@ -193,43 +158,18 @@ jobs:
           for cluster in $clusters; do
             echo "Processing cluster: $cluster"
             
-            # List and stop all tasks
-            tasks=$(aws ecs list-tasks --cluster $cluster --query 'taskArns[]' --output text)
-            if [ -n "$tasks" ]; then
-              echo "Stopping tasks in cluster $cluster"
-              for task in $tasks; do
-                if ! aws ecs stop-task --cluster $cluster --task $task > /dev/null 2>&1; then
-                  echo "Failed to stop task $task in cluster $cluster"
-                fi
-              done
-              
-              echo "Waiting for tasks to stop..."
-              aws ecs wait tasks-stopped --cluster $cluster --tasks $tasks
-            else
-              echo "No tasks found in cluster $cluster"
-            fi
-            
-            # List and delete all services
             services=$(aws ecs list-services --cluster $cluster --query 'serviceArns[]' --output text)
-            if [ -n "$services" ]; then
-              echo "Deleting services in cluster $cluster"
-              for service in $services; do
-                if ! aws ecs update-service --cluster $cluster --service $service --desired-count 0 > /dev/null 2>&1; then
-                  echo "Failed to update service $service in cluster $cluster"
-                fi
-                if ! aws ecs delete-service --cluster $cluster --service $service --force > /dev/null 2>&1; then
-                  echo "Failed to delete service $service in cluster $cluster"
-                fi
-              done
-            else
-              echo "No services found in cluster $cluster"
-            fi
+            for service in $services; do
+              aws ecs update-service --cluster $cluster --service $service --desired-count 0
+              aws ecs delete-service --cluster $cluster --service $service --force || echo "Failed to delete service $service in cluster $cluster"
+            done
             
-            # Delete the cluster
-            echo "Deleting cluster $cluster"
-            if ! aws ecs delete-cluster --cluster $cluster > /dev/null 2>&1; then
-              echo "Failed to delete cluster $cluster"
-            fi
+            tasks=$(aws ecs list-tasks --cluster $cluster --query 'taskArns[]' --output text)
+            for task in $tasks; do
+              aws ecs stop-task --cluster $cluster --task $task || echo "Failed to stop task $task in cluster $cluster"
+            done
+            
+            aws ecs delete-cluster --cluster $cluster || echo "Failed to delete cluster $cluster"
           done
 
       - name: Wipe ECR Repositories
@@ -237,7 +177,7 @@ jobs:
           echo "Deleting ECR repositories..."
           repos=$(aws ecr describe-repositories --query 'repositories[*].[repositoryName]' --output text)
           for repo in $repos; do
-            aws ecr delete-repository --repository-name $repo --force
+            aws ecr delete-repository --repository-name $repo --force || echo "Failed to delete ECR repository $repo"
           done
 
       - name: Wipe CloudWatch Log Groups
@@ -245,7 +185,7 @@ jobs:
           echo "Deleting CloudWatch Log Groups..."
           log_groups=$(aws logs describe-log-groups --query 'logGroups[*].[logGroupName]' --output text)
           for log_group in $log_groups; do
-            aws logs delete-log-group --log-group-name $log_group
+            aws logs delete-log-group --log-group-name $log_group || echo "Failed to delete Log Group $log_group"
           done
 
       - name: Wipe IAM Roles
@@ -253,13 +193,11 @@ jobs:
           echo "Deleting IAM Roles..."
           roles=$(aws iam list-roles --query 'Roles[?starts_with(RoleName, `ecs-`) == `true`].[RoleName]' --output text)
           for role in $roles; do
-            # Detach all policies from the role
             attached_policies=$(aws iam list-attached-role-policies --role-name $role --query 'AttachedPolicies[*].[PolicyArn]' --output text)
             for policy in $attached_policies; do
-              aws iam detach-role-policy --role-name $role --policy-arn $policy
+              aws iam detach-role-policy --role-name $role --policy-arn $policy || echo "Failed to detach policy $policy from role $role"
             done
-            # Delete the role
-            aws iam delete-role --role-name $role
+            aws iam delete-role --role-name $role || echo "Failed to delete IAM role $role"
           done
 
       - name: Wipe Load Balancers and Target Groups
@@ -267,13 +205,13 @@ jobs:
           echo "Deleting Application Load Balancers..."
           albs=$(aws elbv2 describe-load-balancers --query 'LoadBalancers[*].[LoadBalancerArn]' --output text)
           for alb in $albs; do
-            aws elbv2 delete-load-balancer --load-balancer-arn $alb
+            aws elbv2 delete-load-balancer --load-balancer-arn $alb || echo "Failed to delete Load Balancer $alb"
           done
 
           echo "Deleting Target Groups..."
           target_groups=$(aws elbv2 describe-target-groups --query 'TargetGroups[*].[TargetGroupArn]' --output text)
           for tg in $target_groups; do
-            aws elbv2 delete-target-group --target-group-arn $tg
+            aws elbv2 delete-target-group --target-group-arn $tg || echo "Failed to delete Target Group $tg"
           done
 
       - name: Wipe Route 53 Resources
@@ -283,7 +221,6 @@ jobs:
           for zone in $hosted_zones; do
             echo "Processing hosted zone: $zone"
             
-            # Delete all non-SOA and non-NS records
             record_sets=$(aws route53 list-resource-record-sets --hosted-zone-id $zone --query "ResourceRecordSets[?Type!='SOA']|[?Type!='NS']" --output text)
             if [ -n "$record_sets" ]; then
               echo "Deleting record sets in zone $zone"
@@ -294,19 +231,15 @@ jobs:
                     "ResourceRecordSet": '"$record_sets"'
                   }
                 ]
-              }'
-            else
-              echo "No record sets to delete in zone $zone"
+              }' || echo "Failed to delete record sets in zone $zone"
             fi
             
-            # Delete the hosted zone
-            echo "Deleting hosted zone $zone"
-            aws route53 delete-hosted-zone --id $zone
+            aws route53 delete-hosted-zone --id $zone || echo "Failed to delete hosted zone $zone"
           done
 
       - name: Final Message
         run: |
-          echo "AWS resource wipe completed."
-          echo "All resources created by these workflows should now be deleted."
-          echo "If you encounter any issues or find remaining resources, please investigate and delete them manually."
-          echo "You can now use your Terraform configurations to rebuild the infrastructure from scratch if needed."
+          echo "AWS resource wipe attempt completed."
+          echo "Please review the logs for any resources that failed to delete."
+          echo "You may need to manually delete some resources or investigate permission issues."
+          echo "After ensuring all resources are properly deleted, you can use your Terraform configurations to rebuild the infrastructure if needed."
