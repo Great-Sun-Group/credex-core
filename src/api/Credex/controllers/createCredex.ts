@@ -1,5 +1,5 @@
 import express from "express";
-import { OfferCredexService } from "../services/OfferCredex";
+import { CreateCredexService } from "../services/CreateCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { checkDueDate, credspan } from "../../../constants/credspan";
 import { AuthForTierSpendLimitController } from "../../Member/controllers/authForTierSpendLimit";
@@ -13,21 +13,21 @@ import {
 } from "../../../utils/validators";
 
 /**
- * OfferCredexController
+ * CreateCredexControler
  *
  * This controller handles the creation of new Credex offers.
  * It validates the required fields, performs additional validations,
- * calls the OfferCredexService, and returns the result along with updated dashboard data.
+ * calls the CreateCredexService, and returns the result along with updated dashboard data.
  *
  * @param req - Express request object
  * @param res - Express response object
  */
-export async function OfferCredexController(
+export async function CreateCredexControler(
   req: express.Request,
   res: express.Response
 ) {
   const requestId = req.id;
-  logger.debug("OfferCredexController called", { body: req.body, requestId });
+  logger.debug("CreateCredexControler called", { body: req.body, requestId });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -176,9 +176,9 @@ export async function OfferCredexController(
       }
     }
 
-    // Call OfferCredexService to create the Credex offer
-    logger.debug("Calling OfferCredexService", { body: req.body, requestId });
-    const offerCredexData = await OfferCredexService(req.body);
+    // Call CreateCredexService to create the Credex offer
+    logger.debug("Calling CreateCredexService", { body: req.body, requestId });
+    const offerCredexData = await CreateCredexService(req.body);
 
     if (!offerCredexData || typeof offerCredexData.credex === "boolean") {
       logger.warn("Failed to create Credex offer", {
@@ -225,7 +225,7 @@ export async function OfferCredexController(
       dashboardData: dashboardData,
     });
   } catch (err) {
-    logger.error("Unhandled error in OfferCredexController", {
+    logger.error("Unhandled error in CreateCredexControler", {
       error: err instanceof Error ? err.message : "Unknown error",
       stack: err instanceof Error ? err.stack : undefined,
       requestId,

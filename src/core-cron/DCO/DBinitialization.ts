@@ -3,7 +3,7 @@ import { getDenominations } from "../../constants/denominations";
 import { OnboardMemberController } from "../../api/Member/controllers/onboardMember";
 import { UpdateMemberTierController } from "../../api/Dev/controllers/updateMemberTier";
 import { CreateAccountService } from "../../api/Account/services/CreateAccount";
-import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
+import { CreateCredexService } from "../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
 import { setDCOparticipantRateExpressHandler } from "../../api/Member/controllers/setDCOparticipantRate";
 import { fetchZwgRate, ZwgRateError } from "./fetchZwgRate";
@@ -462,44 +462,45 @@ async function createInitialCredex(
     Denomination: "CAD",
     InitialAmount: 365, // fund DCO for a year with no adjustments
     credexType: "PURCHASE",
+    OFFERSorREQUESTS: "OFFERS",
     securedCredex: true,
     requestId,
   };
 
   logger.debug("Offering initial Credex", { requestId, credexData });
-  const DCOinitializationOfferCredex = await OfferCredexService(credexData);
+  const DCOinitializationCreateCredex = await CreateCredexService(credexData);
 
-  if (typeof DCOinitializationOfferCredex.credex === "boolean") {
-    logger.error("Invalid response from OfferCredexService", { requestId });
-    throw new Error("Invalid response from OfferCredexService");
+  if (typeof DCOinitializationCreateCredex.credex === "boolean") {
+    logger.error("Invalid response from CreateCredexService", { requestId });
+    throw new Error("Invalid response from CreateCredexService");
   }
 
   if (
-    DCOinitializationOfferCredex.credex &&
-    typeof DCOinitializationOfferCredex.credex.credexID === "string"
+    DCOinitializationCreateCredex.credex &&
+    typeof DCOinitializationCreateCredex.credex.credexID === "string"
   ) {
     logger.info("Initial Credex offered successfully", {
       requestId,
-      credexID: DCOinitializationOfferCredex.credex.credexID,
+      credexID: DCOinitializationCreateCredex.credex.credexID,
     });
 
     logger.debug("Accepting initial Credex", {
       requestId,
-      credexID: DCOinitializationOfferCredex.credex.credexID,
+      credexID: DCOinitializationCreateCredex.credex.credexID,
       memberID,
     });
     await AcceptCredexService(
-      DCOinitializationOfferCredex.credex.credexID,
+      DCOinitializationCreateCredex.credex.credexID,
       memberID,
       requestId
     );
     logger.info("Initial Credex accepted successfully", {
       requestId,
-      credexID: DCOinitializationOfferCredex.credex.credexID,
+      credexID: DCOinitializationCreateCredex.credex.credexID,
     });
   } else {
-    logger.error("Invalid credexID from OfferCredexService", { requestId });
-    throw new Error("Invalid credexID from OfferCredexService");
+    logger.error("Invalid credexID from CreateCredexService", { requestId });
+    throw new Error("Invalid credexID from CreateCredexService");
   }
 
   logger.info("Initial Credex creation completed", { requestId });

@@ -3,7 +3,7 @@ import _ from "lodash";
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { getDenominations, Denomination } from "../../constants/denominations";
 import { GetSecuredAuthorizationService } from "../../api/Credex/services/GetSecuredAuthorization";
-import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
+import { CreateCredexService } from "../../api/Credex/services/OfferCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
 import { fetchZwgRate, ZwgRateError, ExchangeRate } from "./fetchZwgRate";
 import { createNeo4jBackup } from "./DBbackup";
@@ -567,17 +567,18 @@ async function processDCOTransactions(
         Denomination: participant.DCOdenom,
         InitialAmount: participant.DCOgiveInDenom,
         credexType: "DCO_GIVE",
+        OFFERSorREQUESTS: "OFFERS",
         securedCredex: true,
         requestId, // Add the requestId to the dataForDCOgive
       };
 
-      const DCOgiveCredex = await OfferCredexService(dataForDCOgive);
+      const DCOgiveCredex = await CreateCredexService(dataForDCOgive);
       if (
         typeof DCOgiveCredex.credex === "boolean" ||
         !DCOgiveCredex.credex?.credexID
       ) {
         throw new Error(
-          "Invalid response from OfferCredexService for DCO give"
+          "Invalid response from CreateCredexService for DCO give"
         );
       }
 
@@ -627,17 +628,18 @@ async function processDCOTransactions(
         Denomination: "CXX",
         InitialAmount: receiveAmount,
         credexType: "DCO_RECEIVE",
+        OFFERSorREQUESTS: "OFFERS",
         securedCredex: true,
         requestId, // Add the requestId to the dataForDCOreceive
       };
 
-      const DCOreceiveCredex = await OfferCredexService(dataForDCOreceive);
+      const DCOreceiveCredex = await CreateCredexService(dataForDCOreceive);
       if (
         typeof DCOreceiveCredex.credex === "boolean" ||
         !DCOreceiveCredex.credex?.credexID
       ) {
         throw new Error(
-          "Invalid response from OfferCredexService for DCO receive"
+          "Invalid response from CreateCredexService for DCO receive"
         );
       }
 
