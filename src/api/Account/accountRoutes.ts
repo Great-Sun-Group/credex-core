@@ -56,6 +56,7 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
     CreateAccountController,
     errorHandler
   );
+  logger.info("Create Account route registered");
 
   /**
    * @swagger
@@ -92,6 +93,7 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
     GetAccountByHandleController,
     errorHandler
   );
+  logger.info("Get Account By Handle route registered");
 
   /**
    * @swagger
