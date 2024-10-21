@@ -1,0 +1,63 @@
+name: Remove Databases
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to remove databases from'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+        - development
+        - staging
+        - production
+
+jobs:
+  remove_databases:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: af-south-1
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+
+    - name: Terraform Init
+      run: |
+        cd terraform
+        terraform init
+
+    - name: Terraform Destroy Databases
+      run: |
+        cd terraform
+        terraform destroy -auto-approve \
+          -var="environment=${{ github.event.inputs.environment }}" \
+          -var="create_resource=false" \
+          -var="create_ecr=false" \
+          -var="create_ecs_cluster=false" \
+          -var="create_log_group=false" \
+          -target=aws_instance.neo4j \
+          -target=aws_security_group.neo4j
+
+    - name: Cleanup SSM Parameters
+      run: |
+        aws ssm delete-parameter --name "/credex/${{ github.event.inputs.environment }}/neo4j_ledger_space_bolt_url" || true
+        aws ssm delete-parameter --name "/credex/${{ github.event.inputs.environment }}/neo4j_search_space_bolt_url" || true
+        aws ssm delete-parameter --name "/credex/${{ github.event.inputs.environment }}/neo4j_ledger_space_user" || true
+        aws ssm delete-parameter --name "/credex/${{ github.event.inputs.environment }}/neo4j_ledger_space_pass" || true
+        aws ssm delete-parameter --name "/credex/${{ github.event.inputs.environment }}/neo4j_search_space_user" || true
+        aws ssm delete-parameter --name "/credex/${{ github.event.inputs.environment }}/neo4j_search_space_pass" || true
+
+    - name: Cleanup Key Pair
+      run: |
+        aws ec2 delete-key-pair --key-name "neo4j-key-pair-${{ github.event.inputs.environment }}" || true

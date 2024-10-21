@@ -135,24 +135,20 @@ curl -X POST "https://${CODESPACE_NAME}-5000.app.github.dev/api/v1/dev/forceDCO"
    ```
    npm run docker:dev
    ```
-   Then in another terminal window run the command below to test basic functions of user onboarding and login, and the creation of three secured credex making a credloop.
+   Then in another terminal window, run the commands outlined in the [Testing Guide](/docs/tests/testing_guide.md).
    
-   To be added to the tests are confirmations that the information is in the DB as expected, a test that the loopfinder processes it as expected, and a test run of the DCO and check for expected changes in the database.
-   ```
-   npx jest tests/basic_functions.test.ts
-   ```
 3. Do checks in production mode then run tests in the Docker environment:
    ```
    npm run docker:dev:prod
    npm run docker:test (not really developed yet)
    ```
 4. Commit your changes and push to your branch.
-6. To create a pull request to merge your changes into a project branch or the `dev` branch itself, enter this in the Cline plugin:
+5. To create a pull request to merge your changes into a project branch or the `dev` branch itself, enter this in the Cline plugin:
    ```
    read projects/merge/getDiff.sh and execute from <your-branch-name> to <branch-to-merge-to>
    ```
-7. Cline should step you through the process to create and submit a complete merge summary from the code pushed to the Github repo.
-8. Once created, visit the pull request online, make any necessary edits, then request review by the codeowner.
+6. Cline should step you through the process to create and submit a complete merge summary from the code pushed to the Github repo.
+7. Once created, visit the pull request online, make any necessary edits, then request review by the codeowner.
 
 ## Troubleshooting
 

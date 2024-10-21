@@ -52,11 +52,11 @@ jobs:
             --build-arg JWT_SECRET="${{ secrets.JWT_SECRET }}" \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           echo "Docker image built successfully."
-          
+
           echo "Pushing image to ECR..."
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "Image pushed successfully: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-          
+
           echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Deploy Application
@@ -89,21 +89,7 @@ jobs:
           aws ecs update-service --cluster credex-cluster-$ENVIRONMENT --service credex-core-service-$ENVIRONMENT --task-definition $NEW_TASK_DEF_ARN --force-new-deployment
 
           echo "Waiting for service to stabilize..."
-          timeout 900s bash -c "
-          while true; do
-            STATUS=\$(aws ecs describe-services --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT --query \"services[0].status\" --output text)
-            if [ \"\$STATUS\" = \"ACTIVE\" ]; then
-              echo \"Service is stable\"
-              exit 0
-            fi
-            echo \"Service status: \$STATUS. Waiting...\"
-            sleep 30
-          done
-          "
-          if [ $? -eq 124 ]; then
-            echo "Timeout reached. Service did not stabilize within 15 minutes."
-            exit 1
-          fi
+          aws ecs wait services-stable --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT
 
           echo "Deployment completed. Checking service status..."
           aws ecs describe-services --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT \
