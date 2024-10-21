@@ -3,7 +3,7 @@ import _ from "lodash";
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { getDenominations, Denomination } from "../../constants/denominations";
 import { GetSecuredAuthorizationService } from "../../api/Credex/services/GetSecuredAuthorization";
-import { CreateCredexService } from "../../api/Credex/services/OfferCredex";
+import { CreateCredexService } from "../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
 import { fetchZwgRate, ZwgRateError, ExchangeRate } from "./fetchZwgRate";
 import { createNeo4jBackup } from "./DBbackup";
