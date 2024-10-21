@@ -39,7 +39,7 @@ export async function DBinitialization(): Promise<void> {
       dayZeroCXXrates,
       requestId
     );
-    await createInitialAccounts(ledgerSpaceSession, requestId);
+    await createInitialMembersAndAccounts(ledgerSpaceSession, requestId);
   } catch (error) {
     logger.error("Error during DBinitialization", {
       error: error instanceof Error ? error.message : "Unknown error",
@@ -192,7 +192,7 @@ async function createDayZeroDaynode(
 /**
  * Creates initial accounts and relationships for the DCO process.
  */
-async function createInitialAccounts(
+async function createInitialMembersAndAccounts(
   session: any,
   requestId: string
 ): Promise<void> {
@@ -200,14 +200,60 @@ async function createInitialAccounts(
     requestId,
   });
 
-  const rdubs = await createRdubsAccount(requestId);
-  const credexFoundationID = await createCredexFoundation(
-    rdubs.onboardedMemberID,
+  const rdubs = await createInitialMember(
+    "Ryan",
+    "Watson",
+    "263778177125",
+    "USD",
+    true,
     requestId
   );
-  const greatSunID = await createGreatSun(rdubs.onboardedMemberID, requestId);
-  const vimbisoPayID = await createVimbisoPay(
+  const magicmike = await createInitialMember(
+    "Mike",
+    "Dube",
+    "263787379972",
+    "USD",
+    false,
+    requestId
+  );
+  const bennita = await createInitialMember(
+    "Bennita",
+    "Muranda",
+    "263788435091",
+    "USD",
+    false,
+    requestId
+  );
+  const credexFoundationID = await createInitialAccount(
     rdubs.onboardedMemberID,
+    "CREDEX_FOUNDATION",
+    "Credex Foundation: Daily Credcoin Offering",
+    "credexfoundation.dco",
+    "CXX",
+    requestId
+  );
+  const greatSunID = await createInitialAccount(
+    rdubs.onboardedMemberID,
+    "TRUST",
+    "Great Sun Financial: Trust",
+    "greatsunfinancial.trust",
+    "CAD",
+    requestId
+  );
+  const vimbisoPayTrustID = await createInitialAccount(
+    bennita.onboardedMemberID,
+    "TRUST",
+    "VimbisoPay: Trust",
+    "vimbisopay.trust",
+    "USD",
+    requestId
+  );
+  const vimbisoPayOpsID = await createInitialAccount(
+    magicmike.onboardedMemberID,
+    "OPERATIONS",
+    "VimbisoPay: Operations",
+    "vimbisopay.ops",
+    "USD",
     requestId
   );
 
@@ -215,7 +261,10 @@ async function createInitialAccounts(
     session,
     credexFoundationID,
     greatSunID,
-    vimbisoPayID,
+    vimbisoPayTrustID,
+    vimbisoPayOpsID,
+    rdubs.onboardedMemberID,
+    bennita.onboardedMemberID,
     requestId
   );
   await createInitialCredex(
@@ -230,24 +279,31 @@ async function createInitialAccounts(
   });
 }
 
-async function createRdubsAccount(requestId: string): Promise<{
+async function createInitialMember(
+  firstname: string,
+  lastname: string,
+  phone: string,
+  defaultDenom: string,
+  DCOparticipant: boolean,
+  requestId: string
+): Promise<{
   onboardedMemberID: string;
   defaultAccountID: string;
 }> {
   const result = await OnboardMemberController(
-    "Ryan",
-    "Watson",
-    "263778177125",
-    "CAD",
+    firstname,
+    lastname,
+    phone,
+    defaultDenom,
     requestId
   );
 
   if ("error" in result) {
-    logger.error("Failed to create rdubs account", {
+    logger.error("Failed to create initial account", {
       error: result.error,
       requestId,
     });
-    throw new Error(`Failed to create rdubs account: ${result.error}`);
+    throw new Error(`Failed to create initial account: ${result.error}`);
   }
 
   const onboardedMemberID = result.memberDashboard.memberID;
@@ -269,35 +325,42 @@ async function createRdubsAccount(requestId: string): Promise<{
     );
   }
 
-  // Call setDCOparticipantRateExpressHandler
-  try {
-    const req = {
-      body: {
-        memberID: onboardedMemberID,
-        personalAccountID: defaultAccountID,
-        DCOgiveInCXX: 1,
-        DCOdenom: "CAD"
-      }
-    } as any;
-    const res = {
-      status: (code: number) => ({
-        json: (data: any) => {
-          if (code !== 200) {
-            throw new Error(`Failed to set DCO participant rate: ${JSON.stringify(data)}`);
-          }
-        }
-      })
-    } as any;
+  if (DCOparticipant) {
+    // Call setDCOparticipantRateExpressHandler
+    try {
+      const req = {
+        body: {
+          memberID: onboardedMemberID,
+          personalAccountID: defaultAccountID,
+          DCOgiveInCXX: 1,
+          DCOdenom: "CAD",
+        },
+      } as any;
+      const res = {
+        status: (code: number) => ({
+          json: (data: any) => {
+            if (code !== 200) {
+              throw new Error(
+                `Failed to set DCO participant rate: ${JSON.stringify(data)}`
+              );
+            }
+          },
+        }),
+      } as any;
 
-    await setDCOparticipantRateExpressHandler(req, res);
-    logger.info("DCO participant rate set successfully", { memberID: onboardedMemberID, requestId });
-  } catch (error) {
-    logger.error("Failed to set DCO participant rate", {
-      memberID: onboardedMemberID,
-      error: error instanceof Error ? error.message : String(error),
-      requestId,
-    });
-    throw error;
+      await setDCOparticipantRateExpressHandler(req, res);
+      logger.info("DCO participant rate set successfully", {
+        memberID: onboardedMemberID,
+        requestId,
+      });
+    } catch (error) {
+      logger.error("Failed to set DCO participant rate", {
+        memberID: onboardedMemberID,
+        error: error instanceof Error ? error.message : String(error),
+        requestId,
+      });
+      throw error;
+    }
   }
 
   return {
@@ -306,110 +369,81 @@ async function createRdubsAccount(requestId: string): Promise<{
   };
 }
 
-async function createCredexFoundation(
+
+async function createInitialAccount(
   memberID: string,
+  accountType: string,
+  accountName: string,
+  accountHandle: string,
+  defaaultDenom: string,
   requestId: string
 ): Promise<string> {
-  const credexFoundation = await CreateAccountService(
+  const addnlAccount = await CreateAccountService(
     memberID,
-    "CREDEX_FOUNDATION",
-    "Credex Foundation",
-    "credexfoundation",
-    "CXX"
+    accountType,
+    accountName,
+    accountHandle,
+    defaaultDenom
   );
 
-  if (
-    typeof credexFoundation.account === "boolean" ||
-    !credexFoundation.accountID
-  ) {
-    logger.error("Failed to create Credex Foundation account", {
-      memberID,
+  if (!addnlAccount || !addnlAccount.accountID) {
+    logger.error("Failed to create additional account", {
+      accountHandle,
       requestId,
     });
-    throw new Error("Failed to create Credex Foundation account");
+    throw new Error("Failed to create additional account");
   }
 
-  logger.info("Credex Foundation account created successfully", {
-    accountID: credexFoundation.accountID,
+  logger.info("Account created successfully", {
+    accountHandle: accountHandle,
+    accountID: addnlAccount.accountID,
     requestId,
   });
-  return credexFoundation.accountID;
-}
-
-async function createGreatSun(
-  memberID: string,
-  requestId: string
-): Promise<string> {
-  const greatSun = await CreateAccountService(
-    memberID,
-    "BUSINESS",
-    "Great Sun Financial",
-    "greatsunfinancial.trust",
-    "CAD"
-  );
-
-  if (!greatSun || !greatSun.accountID) {
-    logger.error("Failed to create Great Sun account", { memberID, requestId });
-    throw new Error("Failed to create Great Sun account");
-  }
-
-  logger.info("Great Sun account created successfully", {
-    accountID: greatSun.accountID,
-    requestId,
-  });
-  return greatSun.accountID;
-}
-
-async function createVimbisoPay(
-  memberID: string,
-  requestId: string
-): Promise<string> {
-  const vimbisoPay = await CreateAccountService(
-    memberID,
-    "BUSINESS",
-    "VimbisoPay",
-    "vimbisopay.trust",
-    "USD"
-  );
-
-  if (!vimbisoPay || !vimbisoPay.accountID) {
-    logger.error("Failed to create VimbisoPay account", {
-      memberID,
-      requestId,
-    });
-    throw new Error("Failed to create VimbisoPay account");
-  }
-
-  logger.info("VimbisoPay account created successfully", {
-    accountID: vimbisoPay.accountID,
-    requestId,
-  });
-  return vimbisoPay.accountID;
+  return addnlAccount.accountID;
 }
 
 async function createInitialRelationships(
   session: any,
   credexFoundationID: string,
   greatSunID: string,
-  vimbisoPayID: string,
+  vimbisoPayTrustID: string,
+  vimbisoPayOpsID: string,
+  rdubsID: string,
+  bennitaID: string,
   requestId: string
 ): Promise<void> {
   await session.run(
     `
     MATCH (credexFoundation: Account { accountID: $credexFoundationID })
     MATCH (greatSun: Account { accountID: $greatSunID })
-    MATCH (vimbisoPay: Account { accountID: $vimbisoPayID })
-    MERGE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (credexFoundation)
-    MERGE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (greatSun)
-    MERGE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (vimbisoPay)
+    MATCH (vimbisoPayTrust: Account { accountID: $vimbisoPayTrustID })
+    MATCH (vimbisoPayOps: Account { accountID: $vimbisoPayOpsID })
+    MATCH (rdubs: Member { memberID: $rdubsID })
+    MATCH (bennita: Member { memberID: $bennitaID })
+    CREATE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (credexFoundation)
+    CREATE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (greatSun)
+    CREATE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (vimbisoPayTrust)
+    CREATE (rdubs) - [:AUTHORIZED_FOR] -> (vimbisoPayTrust)
+    CREATE (rdubs) - [:AUTHORIZED_FOR] -> (vimbisoPayOps)
+    CREATE (bennita) - [:AUTHORIZED_FOR] -> (vimbisoPayOps)
   `,
-    { credexFoundationID, greatSunID, vimbisoPayID }
+    {
+      credexFoundationID,
+      greatSunID,
+      vimbisoPayTrustID,
+      vimbisoPayOpsID,
+      rdubsID,
+      bennitaID,
+    }
   );
 
   logger.info("Initial relationships created successfully", {
     credexFoundationID,
     greatSunID,
-    vimbisoPayID,
+    vimbisoPayTrustID,
+    vimbisoPayOpsID,
+    rdubsID,
+    bennitaID,
     requestId,
   });
 }

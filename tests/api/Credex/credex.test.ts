@@ -62,10 +62,8 @@ describe("Credex API Tests", () => {
       secondMemberID = secondResponse.data.memberDashboard.memberID;
       secondAccountID = secondResponse.data.memberDashboard.accountIDS[0];
 
-      // Login as vimbisopay.trust
-      const vimbisopayLoginResponse = await axios.post("/v1/login", {
-        accountHandle: "vimbisopay.trust",
-      });
+      // Login as Bennita Murranda to get uth for vimbisopay.trust
+      const vimbisopayLoginResponse = await axios.post("/v1/login", { phone: "263788435091" });
       expect(vimbisopayLoginResponse.status).toBe(200);
       expect(vimbisopayLoginResponse.data).toHaveProperty("token");
       vimbisopayJWT = vimbisopayLoginResponse.data.token;
