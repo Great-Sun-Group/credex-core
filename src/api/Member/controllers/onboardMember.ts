@@ -5,7 +5,6 @@ import logger from "../../../utils/logger";
 import { validateName, validatePhone, validateDenomination } from "../../../utils/validators";
 import { generateToken } from "../../../../config/authenticate";
 import { searchSpaceDriver } from "../../../../config/neo4j";
-import { CreateAccountController } from "../../Account/controllers/createAccount";
 import { CreateAccountService } from "../../Account/services/CreateAccount";
 
 export async function OnboardMemberController(

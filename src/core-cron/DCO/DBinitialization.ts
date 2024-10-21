@@ -344,7 +344,7 @@ async function createGreatSun(
     memberID,
     "BUSINESS",
     "Great Sun Financial",
-    "greatsunfinancial",
+    "greatsunfinancial.trust",
     "CAD"
   );
 
@@ -368,8 +368,8 @@ async function createVimbisoPay(
     memberID,
     "BUSINESS",
     "VimbisoPay",
-    "vimbisopay.audited",
-    "CAD"
+    "vimbisopay.trust",
+    "USD"
   );
 
   if (!vimbisoPay || !vimbisoPay.accountID) {
