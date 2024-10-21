@@ -62,16 +62,18 @@ describe("Credex API Tests", () => {
       secondMemberID = secondResponse.data.memberDashboard.memberID;
       secondAccountID = secondResponse.data.memberDashboard.accountIDS[0];
 
-      // Login as Bennita Murranda to get uth for vimbisopay.trust
-      const vimbisopayLoginResponse = await axios.post("/v1/login", { phone: "263788435091" });
+      // Login as Bennita Murranda to get auth for vimbisopay_trust
+      const vimbisopayLoginResponse = await axios.post("/v1/login", {
+        phone: "263788435091",
+      });
       expect(vimbisopayLoginResponse.status).toBe(200);
       expect(vimbisopayLoginResponse.data).toHaveProperty("token");
       vimbisopayJWT = vimbisopayLoginResponse.data.token;
 
-      // Get vimbisopay.trust account ID
+      // Get vimbisopay_trust account ID
       const vimbisopayResponse = await axios.post(
         "/v1/getAccountByHandle",
-        { accountHandle: "vimbisopay.trust" },
+        { accountHandle: "vimbisopay_trust" },
         {
           headers: { Authorization: `Bearer ${vimbisopayJWT}` },
         }
@@ -89,7 +91,7 @@ describe("Credex API Tests", () => {
     });
 
     it("should create a loop of three secured credexes successfully", async () => {
-      // First credex: vimbisopay.trust to first member
+      // First credex: vimbisopay_trust to first member
       const credexData1 = {
         memberID: vimbisopayAccountID,
         issuerAccountID: vimbisopayAccountID,
@@ -169,7 +171,7 @@ describe("Credex API Tests", () => {
       expect(acceptResponse2.status).toBe(200);
       expect(acceptResponse2.data).toHaveProperty("status", "ACCEPTED");
 
-      // Third credex: second member back to vimbisopay.trust
+      // Third credex: second member back to vimbisopay_trust
       const credexData3 = {
         memberID: secondMemberID,
         issuerAccountID: secondAccountID,

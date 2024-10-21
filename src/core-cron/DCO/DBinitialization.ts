@@ -236,7 +236,7 @@ async function createInitialMembersAndAccounts(
     rdubs.onboardedMemberID,
     "TRUST",
     "Great Sun Financial: Trust",
-    "greatsunfinancial.trust",
+    "greatsunfinancial_trust",
     "CAD",
     requestId
   );
@@ -244,7 +244,7 @@ async function createInitialMembersAndAccounts(
     bennita.onboardedMemberID,
     "TRUST",
     "VimbisoPay: Trust",
-    "vimbisopay.trust",
+    "vimbisopay_trust",
     "USD",
     requestId
   );
@@ -252,7 +252,7 @@ async function createInitialMembersAndAccounts(
     magicmike.onboardedMemberID,
     "OPERATIONS",
     "VimbisoPay: Operations",
-    "vimbisopay.ops",
+    "vimbisopay_ops",
     "USD",
     requestId
   );
@@ -368,7 +368,6 @@ async function createInitialMember(
     defaultAccountID,
   };
 }
-
 
 async function createInitialAccount(
   memberID: string,

@@ -11,9 +11,9 @@ export function validateUUID(uuid: string): { isValid: boolean; message?: string
 }
 
 export function validateMemberHandle(handle: string): { isValid: boolean; message?: string } {
-  const handleRegex = /^[a-z0-9._]{3,30}$/;
+  const handleRegex = /^[a-z0-9_]{3,30}$/;
   const isValid = handleRegex.test(handle);
-  const message = isValid ? "Valid member handle" : "Invalid member handle: must be 3-30 characters long and contain only lowercase letters, numbers, dots, and underscores";
+  const message = isValid ? "Valid member handle" : "Invalid member handle: must be 3-30 characters long and contain only lowercase letters, numbers, and underscores";
   logger.debug(message, { handle, isValid });
   return { isValid, message };
 }
@@ -26,9 +26,9 @@ export function validateAccountName(name: string): { isValid: boolean; message?:
 }
 
 export function validateAccountHandle(handle: string): { isValid: boolean; message?: string } {
-  const handleRegex = /^[a-z0-9._]{3,30}$/;
+  const handleRegex = /^[a-z0-9_]{3,30}$/;
   const isValid = handleRegex.test(handle);
-  const message = isValid ? "Valid account handle" : "Invalid account handle: must be 3-30 characters long and contain only lowercase letters, numbers, dots, and underscores";
+  const message = isValid ? "Valid account handle" : "Invalid account handle: must be 3-30 characters long and contain only lowercase letters, numbers, and underscores";
   logger.debug(message, { handle, isValid });
   return { isValid, message };
 }
