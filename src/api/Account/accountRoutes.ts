@@ -85,7 +85,7 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
    *       429:
    *         description: Too many requests
    */
-  router.get(
+  router.post(
     `/getAccountByHandle`,
     rateLimiter,
     validateRequest(getAccountByHandleSchema, "query"),
@@ -121,7 +121,7 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
    *       429:
    *         description: Too many requests
    */
-  router.patch(
+  router.post(
     `/updateAccount`,
     rateLimiter,
     jsonParser,

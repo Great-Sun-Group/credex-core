@@ -21,7 +21,10 @@ describe("Credex API Tests", () => {
         defaultDenom: "USD",
       };
 
-      const firstResponse = await axios.post("/v1/onboardMember", firstMemberData);
+      const firstResponse = await axios.post(
+        "/v1/onboardMember",
+        firstMemberData
+      );
 
       expect(firstResponse.status).toBe(201);
       expect(firstResponse.data).toHaveProperty("token");
@@ -43,7 +46,10 @@ describe("Credex API Tests", () => {
         defaultDenom: "USD",
       };
 
-      const secondResponse = await axios.post("/v1/onboardMember", secondMemberData);
+      const secondResponse = await axios.post(
+        "/v1/onboardMember",
+        secondMemberData
+      );
 
       expect(secondResponse.status).toBe(201);
       expect(secondResponse.data).toHaveProperty("token");
@@ -57,15 +63,20 @@ describe("Credex API Tests", () => {
       secondAccountID = secondResponse.data.memberDashboard.accountIDS[0];
 
       // Login as vimbisopay.trust
-      const vimbisopayLoginResponse = await axios.post("/v1/login", { accountHandle: "vimbisopay.trust" });
+      const vimbisopayLoginResponse = await axios.post("/v1/login", {
+        accountHandle: "vimbisopay.trust",
+      });
       expect(vimbisopayLoginResponse.status).toBe(200);
       expect(vimbisopayLoginResponse.data).toHaveProperty("token");
       vimbisopayJWT = vimbisopayLoginResponse.data.token;
 
       // Get vimbisopay.trust account ID
-      const vimbisopayResponse = await axios.get("/v1/getAccountByHandle?accountHandle=vimbisopay.trust", {
-        headers: { Authorization: `Bearer ${vimbisopayJWT}` },
-      });
+      const vimbisopayResponse = await axios.get(
+        "/v1/getAccountByHandle?accountHandle=vimbisopay.trust",
+        {
+          headers: { Authorization: `Bearer ${vimbisopayJWT}` },
+        }
+      );
       expect(vimbisopayResponse.status).toBe(200);
       expect(vimbisopayResponse.data).toHaveProperty("accountID");
       vimbisopayAccountID = vimbisopayResponse.data.accountID;
@@ -89,7 +100,7 @@ describe("Credex API Tests", () => {
         credspan: 30,
       };
 
-      const response1 = await axios.post("/v1/offerSecuredCredex", credexData1, {
+      const response1 = await axios.post("/v1/offerCredex", credexData1, {
         headers: { Authorization: `Bearer ${vimbisopayJWT}` },
       });
 
@@ -120,7 +131,7 @@ describe("Credex API Tests", () => {
         credspan: 30,
       };
 
-      const response2 = await axios.post("/v1/offerSecuredCredex", credexData2, {
+      const response2 = await axios.post("/v1/offerCredex", credexData2, {
         headers: { Authorization: `Bearer ${firstMemberJWT}` },
       });
 
@@ -151,7 +162,7 @@ describe("Credex API Tests", () => {
         credspan: 30,
       };
 
-      const response3 = await axios.post("/v1/offerSecuredCredex", credexData3, {
+      const response3 = await axios.post("/v1/offerCredex", credexData3, {
         headers: { Authorization: `Bearer ${secondMemberJWT}` },
       });
 
@@ -184,7 +195,7 @@ describe("Credex API Tests", () => {
       };
 
       try {
-        await axios.post("/v1/offerSecuredCredex", credexData, {
+        await axios.post("/v1/offerCredex", credexData, {
           headers: { Authorization: `Bearer ${firstMemberJWT}` },
         });
         fail("Expected an error to be thrown");
@@ -196,6 +207,5 @@ describe("Credex API Tests", () => {
     });
 
     // Additional tests...
-
   });
 });
