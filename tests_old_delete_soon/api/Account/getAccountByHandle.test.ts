@@ -1,7 +1,7 @@
 import axios from "axios";
 import { createTestMembers, BASE_URL, axiosInstance } from "./setup";
 
-jest.setTimeout(30000); 
+jest.setTimeout(30000);
 
 describe("Get Account by Handle API Tests", () => {
   let testMemberJWT: string;
@@ -12,21 +12,24 @@ describe("Get Account by Handle API Tests", () => {
   beforeAll(async () => {
     try {
       console.log("Starting beforeAll hook");
-      
+
       console.log("Creating test members...");
       const setup = await createTestMembers();
-      console.log("Test members created successfully. Setup response:", JSON.stringify(setup, null, 2));
-      
+      console.log(
+        "Test members created successfully. Setup response:",
+        JSON.stringify(setup, null, 2)
+      );
+
       testMemberJWT = setup.testMemberJWT;
       testMemberID = setup.testMemberID;
       testAccountID = setup.testPersonalAccountID;
       testAccountHandle = setup.testMemberPhone;
-      
+
       console.log("Test account details:", {
         accountID: testAccountID,
-        accountHandle: testAccountHandle
+        accountHandle: testAccountHandle,
       });
-      
+
       console.log("beforeAll hook completed successfully");
     } catch (error) {
       console.error("Error in beforeAll hook:", error);
@@ -40,7 +43,7 @@ describe("Get Account by Handle API Tests", () => {
   });
 
   it("should retrieve the account by handle successfully", async () => {
-    const getUrl = `${BASE_URL}/api/v1/getAccountByHandle`;
+    const getUrl = `${BASE_URL}/v1/getAccountByHandle`;
     const params = { accountHandle: testAccountHandle };
 
     try {
@@ -50,7 +53,10 @@ describe("Get Account by Handle API Tests", () => {
       });
       expect(response.status).toBe(200);
       expect(response.data).toHaveProperty("accountData");
-      expect(response.data.accountData).toHaveProperty("accountID", testAccountID);     
+      expect(response.data.accountData).toHaveProperty(
+        "accountID",
+        testAccountID
+      );
     } catch (error) {
       console.error("Error retrieving account by handle:", error);
       throw error;
@@ -58,7 +64,7 @@ describe("Get Account by Handle API Tests", () => {
   });
 
   it("should return 404 for non-existent account handle", async () => {
-    const getUrl = `${BASE_URL}/api/v1/getAccountByHandle`;
+    const getUrl = `${BASE_URL}/v1/getAccountByHandle`;
     const params = { accountHandle: "nonexistenthandle123" };
 
     try {
@@ -78,7 +84,7 @@ describe("Get Account by Handle API Tests", () => {
   });
 
   it("should return 404 for invalid account handle", async () => {
-    const getUrl = `${BASE_URL}/api/v1/getAccountByHandle`;
+    const getUrl = `${BASE_URL}/v1/getAccountByHandle`;
     const params = { accountHandle: "invalid handle!" };
 
     try {
@@ -95,5 +101,5 @@ describe("Get Account by Handle API Tests", () => {
         throw error;
       }
     }
-  });  
+  });
 });

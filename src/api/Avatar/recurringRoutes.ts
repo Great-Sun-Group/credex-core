@@ -17,7 +17,7 @@ export default function RecurringRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/requestRecurring:
+   * /v1/requestRecurring:
    *   post:
    *     summary: Request a recurring payment
    *     tags: [Recurring]
@@ -56,7 +56,7 @@ export default function RecurringRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/acceptRecurring:
+   * /v1/acceptRecurring:
    *   put:
    *     summary: Accept a recurring payment request
    *     tags: [Recurring]
@@ -95,7 +95,7 @@ export default function RecurringRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/cancelRecurring:
+   * /v1/cancelRecurring:
    *   delete:
    *     summary: Cancel a recurring payment
    *     tags: [Recurring]

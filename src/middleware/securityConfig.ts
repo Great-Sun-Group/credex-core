@@ -83,13 +83,18 @@ export const applySecurityMiddleware = (app: Application) => {
       logData.bodyIssuerAccountID = req.body.issuerAccountID;
     }
 
-    logger.debug("[SC1] Request passed through all security middleware", logData);
+    logger.debug(
+      "[SC1] Request passed through all security middleware",
+      logData
+    );
 
     if (req.path.includes("authForTierSpendLimit")) {
       logger.debug("[SC2] authForTierSpendLimit request details", {
         issuerAccountIDInQuery: req.query.issuerAccountID,
         issuerAccountIDInBody: req.body ? req.body.issuerAccountID : undefined,
-        issuerAccountIDInBodyType: req.body ? typeof req.body.issuerAccountID : undefined,
+        issuerAccountIDInBodyType: req.body
+          ? typeof req.body.issuerAccountID
+          : undefined,
       });
     }
 
@@ -103,18 +108,18 @@ export const applyAuthMiddleware = (app: Application) => {
   app.use((req, res, next) => {
     if (
       // Keyholes in the auth layer where we don't apply the middleware
-      req.path === "/api/v1/member/login" ||
-      req.path === "/api/v1/member/onboardMember" ||
-      req.path.includes("/api/v1/dev/") // routes are not published in prod
+      req.path === "/v1/login" ||
+      req.path === "/v1/onboardMember" ||
+      req.path.includes("/v1/dev/") // routes are not published in prod
     ) {
-      logger.debug("[SC3] Skipping auth middleware for path", { 
+      logger.debug("[SC3] Skipping auth middleware for path", {
         path: req.path,
         issuerAccountIDInQuery: req.query.issuerAccountID,
         issuerAccountIDInBody: req.body ? req.body.issuerAccountID : undefined,
       });
       return next();
     }
-    logger.debug("[SC4] Applying auth middleware for path", { 
+    logger.debug("[SC4] Applying auth middleware for path", {
       path: req.path,
       query: req.query,
       issuerAccountIDInQuery: req.query.issuerAccountID,

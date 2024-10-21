@@ -9,14 +9,17 @@ Our application uses JSON Web Tokens (JWT) for authentication. This setup provid
 ### Key Features
 
 1. **Token Generation and Verification**
+
    - JWT tokens are generated with member-specific information and signed with a secret key.
    - Tokens are verified on each request using the same secret key.
 
 2. **Member-specific Authorization**
+
    - After token verification, the system fetches the member's information from the database using the ID in the token.
    - This ensures that the token corresponds to an actual member in the system.
 
 3. **Short-lived Tokens with Automatic Refresh**
+
    - Tokens expire after 5 minutes of inactivity, reducing the risk of token misuse.
    - Automatic token refresh is implemented for valid sessions.
    - The token's expiration is extended with each valid request.
@@ -40,10 +43,10 @@ Our application uses JSON Web Tokens (JWT) for authentication. This setup provid
 4. After each request, check the Authorization header in the response for a new token. Always use the most recent token for subsequent requests.
 
 ### Keyholes
-The /api/v1/member/login and /api/v1/member/onboardMember routes are keyholes in the JWT authorization layer so that members can onboard and login when they do not have valid JWT tokens.
+
+The /v1/login and /v1/onboardMember routes are keyholes in the JWT authorization layer so that members can onboard and login when they do not have valid JWT tokens.
 
 If any request in your client application returns a `400 Bad Request` or `401 Unauthorized` code, hit the login endpoint with the phone number. If the login endpoint returns `400 Bad Request` instead of `200 OK` and a valid token, request user name to onboard a new member with the onboardMember endpoint.
-
 
 ## CORS Configuration
 
@@ -82,9 +85,10 @@ These mechanisms work together to ensure that each request is properly authentic
 - Regularly review logs for rate-limited requests to identify potential abuse or the need for limit adjustments.
 
 # Keyholes
-The /api/v1/member/login and /api/v1/member/onboardMember routes are keyholes in the JWT authorization layer so that members can onboard and login when they do not have valid JWT tokens.
 
-## Endpoint: `/api/v1/member/login`
+The /v1/login and /v1/onboardMember routes are keyholes in the JWT authorization layer so that members can onboard and login when they do not have valid JWT tokens.
+
+## Endpoint: `/v1/login`
 
 This endpoint is used for both new and existing members to log in or attempt to access the system.
 
@@ -130,7 +134,7 @@ This endpoint is used for both new and existing members to log in or attempt to 
 - To distinguish between these cases, check the specific error message in the response body.
 - For security reasons, the API does not explicitly state whether a member exists or not.
 
-## Endpoint: `/api/v1/member/onboardMember`
+## Endpoint: `/v1/onboardMember`
 
 This endpoint is used to onboard new members into the system. It creates a new member account and returns a JWT token for authentication.
 

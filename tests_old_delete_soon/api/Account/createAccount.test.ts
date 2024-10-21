@@ -11,23 +11,24 @@ describe("Create Account API Tests", () => {
 
   beforeAll(async () => {
     console.log("Starting beforeAll hook");
-    
+
     // Generate JWT for the test member
-    const loginUrl = `${BASE_URL}/api/v1/member/login`;
+    const loginUrl = `${BASE_URL}/v1/login`;
     const loginResponse = await axiosInstance.post(loginUrl, {
       phone: "264865622145",
-      password: "testpassword" // Assume this is the password set during member creation
+      password: "testpassword", // Assume this is the password set during member creation
     });
     testMemberJWT = loginResponse.data.token;
-    
+
     console.log("beforeAll hook completed");
     console.log(`Base URL: ${BASE_URL}`);
   });
 
   it("should create a new account successfully", async () => {
-    const createUrl = `${BASE_URL}/api/v1/createAccount`;
+    const createUrl = `${BASE_URL}/v1/createAccount`;
     console.log(`Create account URL: ${createUrl}`);
-    testAccountHandle = "testaccount_" + Math.random().toString(36).substring(2, 15);
+    testAccountHandle =
+      "testaccount_" + Math.random().toString(36).substring(2, 15);
     const accountData = {
       ownerID: testMemberID,
       accountType: "BUSINESS",
@@ -42,16 +43,22 @@ describe("Create Account API Tests", () => {
       const response = await axiosInstance.post(createUrl, accountData, {
         headers: { Authorization: `Bearer ${testMemberJWT}` },
       });
-      console.log("Create account response:", JSON.stringify(response.data, null, 2));
+      console.log(
+        "Create account response:",
+        JSON.stringify(response.data, null, 2)
+      );
 
       expect(response.status).toBe(201);
       expect(response.data).toHaveProperty("accountID");
       expect(response.data.message).toBe("Account created successfully");
       //expect(response.data.memberTier).toEqual(3); // Updated expectation
-      
+
       testAccountID = response.data.accountID;
     } catch (error: any) {
-      console.error("Error creating account:", error.response?.data || error.message);
+      console.error(
+        "Error creating account:",
+        error.response?.data || error.message
+      );
       console.error("Error status:", error.response?.status);
       console.error("Error headers:", error.response?.headers);
       console.error("Full error object:", JSON.stringify(error, null, 2));
@@ -60,7 +67,7 @@ describe("Create Account API Tests", () => {
   });
 
   it("should fail to create account with invalid data", async () => {
-    const createUrl = `${BASE_URL}/api/v1/createAccount`;
+    const createUrl = `${BASE_URL}/v1/createAccount`;
     const invalidAccountData = {
       ownerID: "invalid-uuid",
       accountType: "INVALID_TYPE",
@@ -85,7 +92,7 @@ describe("Create Account API Tests", () => {
 
   it("should fail to create account for lower tier members with existing accounts", async () => {
     const lowTierMember = await createTestMemberWithTier(1);
-    const createUrl = `${BASE_URL}/api/v1/createAccount`;
+    const createUrl = `${BASE_URL}/v1/createAccount`;
     const accountData = {
       ownerID: lowTierMember.id,
       accountType: "PERSONAL_CONSUMPTION",
@@ -101,12 +108,17 @@ describe("Create Account API Tests", () => {
       });
 
       // Try to create a second account (should fail)
-      await axiosInstance.post(createUrl, {
-        ...accountData,
-        accountHandle: "lowtier2_" + Math.random().toString(36).substring(2, 15),
-      }, {
-        headers: { Authorization: `Bearer ${lowTierMember.jwt}` },
-      });
+      await axiosInstance.post(
+        createUrl,
+        {
+          ...accountData,
+          accountHandle:
+            "lowtier2_" + Math.random().toString(36).substring(2, 15),
+        },
+        {
+          headers: { Authorization: `Bearer ${lowTierMember.jwt}` },
+        }
+      );
       throw new Error("Second account creation should have failed");
     } catch (error: any) {
       console.log("Low tier account creation response:", error.response?.data);

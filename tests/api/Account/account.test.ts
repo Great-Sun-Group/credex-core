@@ -17,10 +17,7 @@ describe("Account API Tests", () => {
     };
 
     try {
-      const response = await axios.post(
-        "/api/v1/member/onboardMember",
-        memberData
-      );
+      const response = await axios.post("/v1/onboardMember", memberData);
       testMemberID = response.data.memberDashboard.memberID;
       testMemberJWT = response.data.token;
       console.log("Onboarded member ID:", testMemberID);
@@ -39,7 +36,7 @@ describe("Account API Tests", () => {
         defaultDenom: "USD",
       };
 
-      const response = await axios.post("/api/v1/createAccount", accountData, {
+      const response = await axios.post("/v1/createAccount", accountData, {
         headers: { Authorization: `Bearer ${testMemberJWT}` },
       });
 
@@ -55,7 +52,7 @@ describe("Account API Tests", () => {
 
     it("should get account by handle", async () => {
       const response = await axios.get(
-        `/api/v1/getAccountByHandle?accountHandle=${testAccountHandle}`,
+        `/v1/getAccountByHandle?accountHandle=${testAccountHandle}`,
         {
           headers: { Authorization: `Bearer ${testMemberJWT}` },
         }
@@ -73,7 +70,7 @@ describe("Account API Tests", () => {
         accountHandle: `updated_${testAccountHandle}`,
       };
 
-      const response = await axios.patch("/api/v1/updateAccount", updateData, {
+      const response = await axios.patch("/v1/updateAccount", updateData, {
         headers: { Authorization: `Bearer ${testMemberJWT}` },
       });
 
@@ -96,13 +93,9 @@ describe("Account API Tests", () => {
         memberID: "another-test-member-id", // This should be a different valid member ID
       };
 
-      const response = await axios.post(
-        "/api/v1/authorizeForAccount",
-        authData,
-        {
-          headers: { Authorization: `Bearer ${testMemberJWT}` },
-        }
-      );
+      const response = await axios.post("/v1/authorizeForAccount", authData, {
+        headers: { Authorization: `Bearer ${testMemberJWT}` },
+      });
 
       expect(response.status).toBe(200);
       expect(response.data).toHaveProperty("message");
@@ -115,7 +108,7 @@ describe("Account API Tests", () => {
       };
 
       const response = await axios.post(
-        "/api/v1/unauthorizeForAccount",
+        "/v1/unauthorizeForAccount",
         unauthData,
         {
           headers: { Authorization: `Bearer ${testMemberJWT}` },
@@ -132,13 +125,9 @@ describe("Account API Tests", () => {
         memberID: testMemberID,
       };
 
-      const response = await axios.post(
-        "/api/v1/updateSendOffersTo",
-        updateData,
-        {
-          headers: { Authorization: `Bearer ${testMemberJWT}` },
-        }
-      );
+      const response = await axios.post("/v1/updateSendOffersTo", updateData, {
+        headers: { Authorization: `Bearer ${testMemberJWT}` },
+      });
 
       expect(response.status).toBe(200);
       expect(response.data).toHaveProperty("message");

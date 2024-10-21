@@ -24,52 +24,52 @@ export default function MemberRoutes(
   logger.info("Initializing Member routes");
 
   router.post(
-    `/member/login`,
+    `/login`,
     jsonParser,
     validateRequest(loginMemberSchema),
     loginMemberExpressHandler
   );
-  logger.info("Route registered: POST /member/login");
+  logger.info("Route registered: POST /login");
 
   router.post(
-    `/member/getMemberByHandle`,
+    `/getMemberByHandle`,
     jsonParser,
     validateRequest(getMemberByHandleSchema),
     GetMemberByHandleController
   );
-  logger.info("Route registered: POST /member/getMemberByHandle");
+  logger.info("Route registered: POST /getMemberByHandle");
 
   router.post(
-    `/member/getMemberDashboardByPhone`,
+    `/getMemberDashboardByPhone`,
     jsonParser,
     validateRequest(getMemberDashboardByPhoneSchema),
     GetMemberDashboardByPhoneController
   );
-  logger.info("Route registered: POST /member/getMemberDashboardByPhone");
+  logger.info("Route registered: POST /getMemberDashboardByPhone");
 
   router.post(
-    `/member/onboardMember`,
+    `/onboardMember`,
     jsonParser,
     validateRequest(onboardMemberSchema),
     onboardMemberExpressHandler
   );
-  logger.info("Route registered: POST /member/onboardMember");
+  logger.info("Route registered: POST /onboardMember");
 
   router.post(
-    `/member/authForTierSpendLimit`,
+    `/authForTierSpendLimit`,
     jsonParser,
     validateRequest(authForTierSpendLimitSchema),
     authForTierSpendLimitExpressHandler
   );
-  logger.info("Route registered: POST /member/authForTierSpendLimit");
+  logger.info("Route registered: POST /authForTierSpendLimit");
 
   router.post(
-    `/member/setDCOparticipantRate`,
+    `/setDCOparticipantRate`,
     jsonParser,
     validateRequest(setDCOparticipantRateSchema),
     setDCOparticipantRateExpressHandler
   );
-  logger.info("Route registered: POST /member/setDCOparticipantRate");
+  logger.info("Route registered: POST /setDCOparticipantRate");
 
   logger.info("Member routes initialized successfully", {
     module: "memberRoutes",

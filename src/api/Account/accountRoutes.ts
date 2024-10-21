@@ -24,7 +24,7 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/createAccount:
+   * /v1/createAccount:
    *   post:
    *     summary: Create a new account
    *     tags: [Accounts]
@@ -59,7 +59,7 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/getAccountByHandle:
+   * /v1/getAccountByHandle:
    *   get:
    *     summary: Get account by handle
    *     tags: [Accounts]
@@ -95,7 +95,7 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/updateAccount:
+   * /v1/updateAccount:
    *   patch:
    *     summary: Update account information
    *     tags: [Accounts]
@@ -132,7 +132,7 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/authorizeForAccount:
+   * /v1/authorizeForAccount:
    *   post:
    *     summary: Authorize a member for an account
    *     tags: [Accounts]
@@ -167,7 +167,7 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/unauthorizeForAccount:
+   * /v1/unauthorizeForAccount:
    *   post:
    *     summary: Unauthorize a member for an account
    *     tags: [Accounts]
@@ -202,7 +202,7 @@ export default function AccountRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/updateSendOffersTo:
+   * /v1/updateSendOffersTo:
    *   post:
    *     summary: Update the member to receive offers for an account
    *     tags: [Accounts]

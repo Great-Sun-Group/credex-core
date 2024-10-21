@@ -23,7 +23,7 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/offerCredex:
+   * /v1/offerCredex:
    *   post:
    *     summary: Offer a new Credex
    *     tags: [Credex]
@@ -81,7 +81,7 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/acceptCredex:
+   * /v1/acceptCredex:
    *   put:
    *     summary: Accept a Credex offer
    *     tags: [Credex]
@@ -123,7 +123,7 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/acceptCredexBulk:
+   * /v1/acceptCredexBulk:
    *   put:
    *     summary: Accept multiple Credex offers in bulk
    *     tags: [Credex]
@@ -171,7 +171,10 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
           for (const credexID of value) {
             const result = acceptCredexSchema.credexID.validator(credexID);
             if (!result.isValid) {
-              return { isValid: false, message: `Invalid credexID: ${result.message}` };
+              return {
+                isValid: false,
+                message: `Invalid credexID: ${result.message}`,
+              };
             }
           }
           return { isValid: true };
@@ -187,7 +190,7 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/declineCredex:
+   * /v1/declineCredex:
    *   put:
    *     summary: Decline a Credex offer
    *     tags: [Credex]
@@ -226,7 +229,7 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/cancelCredex:
+   * /v1/cancelCredex:
    *   put:
    *     summary: Cancel a Credex offer
    *     tags: [Credex]
@@ -265,7 +268,7 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/getCredex:
+   * /v1/getCredex:
    *   get:
    *     summary: Get Credex details
    *     tags: [Credex]
@@ -305,7 +308,7 @@ export default function CredexRoutes(jsonParser: express.RequestHandler) {
 
   /**
    * @swagger
-   * /api/v1/getLedger:
+   * /v1/getLedger:
    *   get:
    *     summary: Get account ledger
    *     tags: [Credex]

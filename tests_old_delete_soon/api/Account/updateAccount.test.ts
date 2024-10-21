@@ -13,8 +13,9 @@ describe("Update Account API Tests", () => {
     testMemberID = setup.testMemberID;
 
     // Create an account to update
-    const createUrl = `${BASE_URL}/api/v1/createAccount`;
-    testAccountHandle = "testaccount_" + Math.random().toString(36).substring(2, 15);
+    const createUrl = `${BASE_URL}/v1/createAccount`;
+    testAccountHandle =
+      "testaccount_" + Math.random().toString(36).substring(2, 15);
     const accountData = {
       ownerID: testMemberID,
       accountType: "PERSONAL",
@@ -30,8 +31,9 @@ describe("Update Account API Tests", () => {
   });
 
   it("should update account information successfully", async () => {
-    const updateUrl = `${BASE_URL}/api/v1/updateAccount`;
-    const updatedAccountHandle = "updatedtestaccount_" + Math.random().toString(36).substring(2, 15);
+    const updateUrl = `${BASE_URL}/v1/updateAccount`;
+    const updatedAccountHandle =
+      "updatedtestaccount_" + Math.random().toString(36).substring(2, 15);
     const updateData = {
       ownerID: testMemberID,
       accountID: testAccountID,
@@ -54,7 +56,7 @@ describe("Update Account API Tests", () => {
   });
 
   it("should fail to update account with invalid data", async () => {
-    const updateUrl = `${BASE_URL}/api/v1/updateAccount`;
+    const updateUrl = `${BASE_URL}/v1/updateAccount`;
     const invalidUpdateData = {
       ownerID: "invalid-uuid",
       accountID: "invalid-uuid",
@@ -78,13 +80,14 @@ describe("Update Account API Tests", () => {
   });
 
   it("should return 404 when updating non-existent account", async () => {
-    const updateUrl = `${BASE_URL}/api/v1/updateAccount`;
+    const updateUrl = `${BASE_URL}/v1/updateAccount`;
     const nonExistentAccountID = "00000000-0000-0000-0000-000000000000";
     const updateData = {
       ownerID: testMemberID,
       accountID: nonExistentAccountID,
       accountName: "Non-existent Account",
-      accountHandle: "nonexistentaccount_" + Math.random().toString(36).substring(2, 15),
+      accountHandle:
+        "nonexistentaccount_" + Math.random().toString(36).substring(2, 15),
       defaultDenom: "GBP",
     };
 
@@ -93,11 +96,15 @@ describe("Update Account API Tests", () => {
         headers: { Authorization: `Bearer ${testMemberJWT}` },
       });
       expect(response.status).toBe(404);
-      expect(response.data.message).toBe("Account not found or no update performed");
+      expect(response.data.message).toBe(
+        "Account not found or no update performed"
+      );
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         expect(error.response.status).toBe(404);
-        expect(error.response.data.message).toBe("Account not found or no update performed");
+        expect(error.response.data.message).toBe(
+          "Account not found or no update performed"
+        );
       } else {
         throw error;
       }
