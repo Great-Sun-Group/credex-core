@@ -27,6 +27,7 @@ export default function AccountRoutes() {
     CreateAccountController,
     errorHandler
   );
+  logger.info("Create Account route registered");
 
   router.post(
     `/getAccountByHandle`,
