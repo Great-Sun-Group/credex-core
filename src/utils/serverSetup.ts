@@ -2,16 +2,18 @@ import { Server } from "http";
 import { Application } from "express";
 import logger from "./logger";
 
-const DEFAULT_PORT = 5000;
+const DEFAULT_PORT = 3000;
 
 export async function startServer(app: Application): Promise<Server> {
   const port = parseInt(process.env.PORT || DEFAULT_PORT.toString(), 10);
-  const host = process.env.HOST || '0.0.0.0';
+  const host = process.env.HOST || "0.0.0.0";
 
   return new Promise((resolve) => {
     const server = app.listen(port, host, () => {
       logger.info(`Server is running on http://${host}:${port}`);
-      logger.info(`API documentation available at http://${host}:${port}/api-docs`);
+      logger.info(
+        `API documentation available at http://${host}:${port}/api-docs`
+      );
       logger.info(`Server started at ${new Date().toISOString()}`);
       logger.info(`Log level: ${process.env.LOG_LEVEL || "info"}`);
       resolve(server);

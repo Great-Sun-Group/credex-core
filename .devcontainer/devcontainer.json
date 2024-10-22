@@ -29,7 +29,7 @@
     "ghcr.io/devcontainers/features/terraform:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-  "forwardPorts": [5000],
+  "forwardPorts": [3000],
   "postCreateCommand": "npm install && sudo apt-get update && sudo apt-get install -y docker-compose",
   "remoteEnv": {
     "NODE_ENV": "development"
