@@ -256,24 +256,28 @@ jobs:
           echo "Deleting IAM Roles..."
           roles=$(aws iam list-roles --query 'Roles[?starts_with(Path, `/`) == `true`].[RoleName]' --output text)
           for role in $roles; do
+            if [[ $role == AWSReservedSSO_* || $role == aws-service-role/* ]]; then
+              echo "Skipping system-managed role: $role"
+              continue
+            fi
             echo "Processing role: $role"
             # Detach policies
             policies=$(aws iam list-attached-role-policies --role-name $role --query 'AttachedPolicies[*].[PolicyArn]' --output text)
             for policy in $policies; do
-              retry_command "aws iam detach-role-policy --role-name $role --policy-arn $policy" || log_error "IAM_POLICY_DETACH" "Failed to detach policy $policy from role $role"
+              retry_command "aws iam detach-role-policy --role-name $role --policy-arn $policy" || echo "Failed to detach policy $policy from role $role"
             done
             # Remove role from instance profiles
             profiles=$(aws iam list-instance-profiles-for-role --role-name $role --query 'InstanceProfiles[*].[InstanceProfileName]' --output text)
             for profile in $profiles; do
-              retry_command "aws iam remove-role-from-instance-profile --instance-profile-name $profile --role-name $role" || log_error "IAM_ROLE_PROFILE_REMOVE" "Failed to remove role $role from instance profile $profile"
+              retry_command "aws iam remove-role-from-instance-profile --instance-profile-name $profile --role-name $role" || echo "Failed to remove role $role from instance profile $profile"
             done
             # Delete inline policies
             inline_policies=$(aws iam list-role-policies --role-name $role --query 'PolicyNames[]' --output text)
             for inline_policy in $inline_policies; do
-              retry_command "aws iam delete-role-policy --role-name $role --policy-name $inline_policy" || log_error "IAM_INLINE_POLICY_DELETION" "Failed to delete inline policy $inline_policy from role $role"
+              retry_command "aws iam delete-role-policy --role-name $role --policy-name $inline_policy" || echo "Failed to delete inline policy $inline_policy from role $role"
             done
             # Delete the role
-            retry_command "aws iam delete-role --role-name $role" || log_error "IAM_ROLE_DELETION" "Failed to delete IAM Role $role"
+            retry_command "aws iam delete-role --role-name $role" && echo "Successfully deleted IAM Role $role" || log_error "IAM_ROLE_DELETION" "Failed to delete IAM Role $role"
           done
 
       - name: Check for Remaining Resources
