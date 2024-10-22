@@ -364,7 +364,7 @@ jobs:
           echo "Summary report generated: summary_report.md"
 
       - name: Upload Summary Report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: wipe-summary-report
           path: summary_report.md
