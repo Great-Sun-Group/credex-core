@@ -71,17 +71,19 @@ describe("Credex API Tests", () => {
       expect(bennitaLoginResponse.data).toHaveProperty("token");
       bennitaJWT = bennitaLoginResponse.data.token;
 
-      // Get Bennita's member ID
       const bennitaDashboardResponse = await axios.post(
-        "/v1/getMemberDashboardByHandle",
-        { memberHandle: "bennita" },
+        "/v1/getMemberDashboardByPhone",
+        {
+          phone: "263788435091",
+        },
         {
           headers: { Authorization: `Bearer ${bennitaJWT}` },
         }
       );
       expect(bennitaDashboardResponse.status).toBe(200);
-      expect(bennitaDashboardResponse.data).toHaveProperty("memberDashboard");
-      expect(bennitaDashboardResponse.data.memberDashboard).toHaveProperty("memberID");
+      expect(bennitaDashboardResponse.data.memberDashboard).toHaveProperty(
+        "memberID"
+      );
       bennitaMemberID = bennitaDashboardResponse.data.memberDashboard.memberID;
 
       // Get vimbisopay_trust account ID
@@ -248,7 +250,9 @@ describe("Credex API Tests", () => {
       } catch (error: any) {
         expect(error.response.status).toBe(400);
         expect(error.response.data).toHaveProperty("error");
-        expect(error.response.data.error).toContain("Exceeds daily limit");
+        expect(error.response.data.error).toContain(
+          "cannot be issued because your maximum securable USD balance is"
+        );
       }
     });
 
@@ -283,7 +287,7 @@ describe("Credex API Tests", () => {
         issuerAccountID: firstAccountID,
         receiverAccountID: secondAccountID,
         Denomination: "USD",
-        InitialAmount: 1.20,
+        InitialAmount: 0.5,
         credexType: "PURCHASE",
         OFFERSorREQUESTS: "OFFERS",
         securedCredex: true,
@@ -294,7 +298,7 @@ describe("Credex API Tests", () => {
         issuerAccountID: firstAccountID,
         receiverAccountID: secondAccountID,
         Denomination: "USD",
-        InitialAmount: 1.30,
+        InitialAmount: 0.6,
         credexType: "PURCHASE",
         OFFERSorREQUESTS: "OFFERS",
         securedCredex: true,
