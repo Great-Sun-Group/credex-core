@@ -30,6 +30,7 @@
         "iam:ListRolePolicies",
         "iam:GetUser",
         "iam:SimulatePrincipalPolicy",
+        "iam:ListRoles",
         "cloudwatch:*",
         "autoscaling:*",
         "application-autoscaling:*",
