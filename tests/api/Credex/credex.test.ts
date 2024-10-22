@@ -7,7 +7,8 @@ describe("Credex API Tests", () => {
   let secondMemberID: string;
   let secondMemberJWT: string;
   let secondAccountID: string;
-  let vimbisopayJWT: string;
+  let bennitaJWT: string;
+  let bennitaMemberID: string;
   let vimbisopayAccountID: string;
 
   describe("Credex Endpoints", () => {
@@ -63,24 +64,38 @@ describe("Credex API Tests", () => {
       secondAccountID = secondResponse.data.memberDashboard.accountIDS[0];
 
       // Login as Bennita Murranda to get auth for vimbisopay_trust
-      const vimbisopayLoginResponse = await axios.post("/v1/login", {
+      const bennitaLoginResponse = await axios.post("/v1/login", {
         phone: "263788435091",
       });
-      expect(vimbisopayLoginResponse.status).toBe(200);
-      expect(vimbisopayLoginResponse.data).toHaveProperty("token");
-      vimbisopayJWT = vimbisopayLoginResponse.data.token;
+      expect(bennitaLoginResponse.status).toBe(200);
+      expect(bennitaLoginResponse.data).toHaveProperty("token");
+      bennitaJWT = bennitaLoginResponse.data.token;
+
+      // Get Bennita's member ID
+      const bennitaDashboardResponse = await axios.post(
+        "/v1/getMemberDashboardByHandle",
+        { memberHandle: "bennita" },
+        {
+          headers: { Authorization: `Bearer ${bennitaJWT}` },
+        }
+      );
+      expect(bennitaDashboardResponse.status).toBe(200);
+      expect(bennitaDashboardResponse.data).toHaveProperty("memberDashboard");
+      expect(bennitaDashboardResponse.data.memberDashboard).toHaveProperty("memberID");
+      bennitaMemberID = bennitaDashboardResponse.data.memberDashboard.memberID;
 
       // Get vimbisopay_trust account ID
       const vimbisopayResponse = await axios.post(
         "/v1/getAccountByHandle",
         { accountHandle: "vimbisopay_trust" },
         {
-          headers: { Authorization: `Bearer ${vimbisopayJWT}` },
+          headers: { Authorization: `Bearer ${bennitaJWT}` },
         }
       );
       expect(vimbisopayResponse.status).toBe(200);
-      expect(vimbisopayResponse.data).toHaveProperty("accountID");
-      vimbisopayAccountID = vimbisopayResponse.data.accountID;
+      expect(vimbisopayResponse.data).toHaveProperty("accountData");
+      expect(vimbisopayResponse.data.accountData).toHaveProperty("accountID");
+      vimbisopayAccountID = vimbisopayResponse.data.accountData.accountID;
 
       console.log("Test data setup completed");
       console.log("First Member ID:", firstMemberID);
@@ -88,35 +103,36 @@ describe("Credex API Tests", () => {
       console.log("Second Member ID:", secondMemberID);
       console.log("Second Account ID:", secondAccountID);
       console.log("Vimbisopay Account ID:", vimbisopayAccountID);
+      console.log("Bennita's Member ID:", bennitaMemberID);
     });
 
     it("should create a loop of three secured credexes successfully", async () => {
       // First credex: vimbisopay_trust to first member
       const credexData1 = {
-        memberID: vimbisopayAccountID,
+        memberID: bennitaMemberID,
         issuerAccountID: vimbisopayAccountID,
         receiverAccountID: firstAccountID,
         Denomination: "USD",
-        InitialAmount: 10,
+        InitialAmount: 1,
         credexType: "PURCHASE",
         OFFERSorREQUESTS: "OFFERS",
         securedCredex: true,
       };
 
       const response1 = await axios.post("/v1/createCredex", credexData1, {
-        headers: { Authorization: `Bearer ${vimbisopayJWT}` },
+        headers: { Authorization: `Bearer ${bennitaJWT}` },
       });
 
       expect(response1.status).toBe(200);
-      expect(response1.data.offerCredexData.credex).toHaveProperty("credexID");
-      expect(response1.data.offerCredexData.credex).toHaveProperty(
+      expect(response1.data.createCredexData.credex).toHaveProperty("credexID");
+      expect(response1.data.createCredexData.credex).toHaveProperty(
         "status",
         "OFFERED"
       );
 
       // Accept first credex
       const acceptData1 = {
-        credexID: response1.data.offerCredexData.credex.credexID,
+        credexID: response1.data.createCredexData.credex.credexID,
         signerID: firstMemberID,
       };
 
@@ -137,7 +153,7 @@ describe("Credex API Tests", () => {
         issuerAccountID: firstAccountID,
         receiverAccountID: secondAccountID,
         Denomination: "USD",
-        InitialAmount: 10,
+        InitialAmount: 1,
         credexType: "PURCHASE",
         OFFERSorREQUESTS: "OFFERS",
         securedCredex: true,
@@ -148,15 +164,15 @@ describe("Credex API Tests", () => {
       });
 
       expect(response2.status).toBe(200);
-      expect(response2.data.offerCredexData.credex).toHaveProperty("credexID");
-      expect(response2.data.offerCredexData.credex).toHaveProperty(
+      expect(response2.data.createCredexData.credex).toHaveProperty("credexID");
+      expect(response2.data.createCredexData.credex).toHaveProperty(
         "status",
         "OFFERED"
       );
 
       // Accept second credex
       const acceptData2 = {
-        credexID: response2.data.offerCredexData.credex.credexID,
+        credexID: response2.data.createCredexData.credex.credexID,
         signerID: secondMemberID,
       };
 
@@ -177,7 +193,7 @@ describe("Credex API Tests", () => {
         issuerAccountID: secondAccountID,
         receiverAccountID: vimbisopayAccountID,
         Denomination: "USD",
-        InitialAmount: 10,
+        InitialAmount: 1,
         credexType: "PURCHASE",
         OFFERSorREQUESTS: "OFFERS",
         securedCredex: true,
@@ -188,23 +204,23 @@ describe("Credex API Tests", () => {
       });
 
       expect(response3.status).toBe(200);
-      expect(response3.data.offerCredexData.credex).toHaveProperty("credexID");
-      expect(response3.data.offerCredexData.credex).toHaveProperty(
+      expect(response3.data.createCredexData.credex).toHaveProperty("credexID");
+      expect(response3.data.createCredexData.credex).toHaveProperty(
         "status",
         "OFFERED"
       );
 
       // Accept third credex
       const acceptData3 = {
-        credexID: response3.data.offerCredexData.credex.credexID,
-        signerID: vimbisopayAccountID,
+        credexID: response3.data.createCredexData.credex.credexID,
+        signerID: bennitaMemberID,
       };
 
       const acceptResponse3 = await axios.post(
         "/v1/acceptCredex",
         acceptData3,
         {
-          headers: { Authorization: `Bearer ${vimbisopayJWT}` },
+          headers: { Authorization: `Bearer ${bennitaJWT}` },
         }
       );
 
@@ -218,7 +234,7 @@ describe("Credex API Tests", () => {
         issuerAccountID: firstAccountID,
         receiverAccountID: secondAccountID,
         Denomination: "USD",
-        InitialAmount: 0.01, // has already created a $10 credex
+        InitialAmount: 10, // has already created a $1 credex
         credexType: "PURCHASE",
         OFFERSorREQUESTS: "OFFERS",
         securedCredex: true,
@@ -255,57 +271,57 @@ describe("Credex API Tests", () => {
         fail("Expected an error to be thrown");
       } catch (error: any) {
         expect(error.response.status).toBe(400);
-        expect(error.response.data).toHaveProperty("error");
-        expect(error.response.data.error).toContain("Invalid");
+        expect(error.response.data).toHaveProperty("message");
+        expect(error.response.data.message).toContain("Invalid UUID format");
       }
     });
 
     it("should accept multiple credexes in bulk", async () => {
       // Create two credexes to accept
       const credexData1 = {
-        memberID: vimbisopayAccountID,
-        issuerAccountID: vimbisopayAccountID,
-        receiverAccountID: firstAccountID,
+        memberID: firstMemberID,
+        issuerAccountID: firstAccountID,
+        receiverAccountID: secondAccountID,
         Denomination: "USD",
-        InitialAmount: 5,
+        InitialAmount: 1.20,
         credexType: "PURCHASE",
         OFFERSorREQUESTS: "OFFERS",
         securedCredex: true,
       };
 
       const credexData2 = {
-        memberID: vimbisopayAccountID,
-        issuerAccountID: vimbisopayAccountID,
-        receiverAccountID: firstAccountID,
+        memberID: firstMemberID,
+        issuerAccountID: firstAccountID,
+        receiverAccountID: secondAccountID,
         Denomination: "USD",
-        InitialAmount: 5,
+        InitialAmount: 1.30,
         credexType: "PURCHASE",
         OFFERSorREQUESTS: "OFFERS",
         securedCredex: true,
       };
 
       const response1 = await axios.post("/v1/createCredex", credexData1, {
-        headers: { Authorization: `Bearer ${vimbisopayJWT}` },
+        headers: { Authorization: `Bearer ${firstMemberJWT}` },
       });
 
       const response2 = await axios.post("/v1/createCredex", credexData2, {
-        headers: { Authorization: `Bearer ${vimbisopayJWT}` },
+        headers: { Authorization: `Bearer ${firstMemberJWT}` },
       });
 
-      const credexID1 = response1.data.offerCredexData.credex.credexID;
-      const credexID2 = response2.data.offerCredexData.credex.credexID;
+      const credexID1 = response1.data.createCredexData.credex.credexID;
+      const credexID2 = response2.data.createCredexData.credex.credexID;
 
       // Accept both credexes in bulk
       const bulkAcceptData = {
         credexIDs: [credexID1, credexID2],
-        signerID: firstMemberID,
+        signerID: secondMemberID,
       };
 
       const bulkAcceptResponse = await axios.post(
         "/v1/acceptCredexBulk",
         bulkAcceptData,
         {
-          headers: { Authorization: `Bearer ${firstMemberJWT}` },
+          headers: { Authorization: `Bearer ${secondMemberJWT}` },
         }
       );
 

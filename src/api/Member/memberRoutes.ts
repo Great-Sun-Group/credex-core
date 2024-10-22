@@ -16,15 +16,12 @@ import {
 } from "./memberValidationSchemas";
 import logger from "../../utils/logger";
 
-export default function MemberRoutes(
-  jsonParser: express.RequestHandler,
-) {
+export default function MemberRoutes() {
   const router = express.Router();
   logger.info("Initializing Member routes");
 
   router.post(
     `/login`,
-    jsonParser,
     validateRequest(loginMemberSchema),
     loginMemberExpressHandler
   );
@@ -32,7 +29,6 @@ export default function MemberRoutes(
 
   router.post(
     `/getMemberByHandle`,
-    jsonParser,
     validateRequest(getMemberByHandleSchema),
     GetMemberByHandleController
   );
@@ -40,7 +36,6 @@ export default function MemberRoutes(
 
   router.post(
     `/getMemberDashboardByPhone`,
-    jsonParser,
     validateRequest(getMemberDashboardByPhoneSchema),
     GetMemberDashboardByPhoneController
   );
@@ -48,7 +43,6 @@ export default function MemberRoutes(
 
   router.post(
     `/onboardMember`,
-    jsonParser,
     validateRequest(onboardMemberSchema),
     onboardMemberExpressHandler
   );
@@ -56,7 +50,6 @@ export default function MemberRoutes(
 
   router.post(
     `/authForTierSpendLimit`,
-    jsonParser,
     validateRequest(authForTierSpendLimitSchema),
     authForTierSpendLimitExpressHandler
   );
@@ -64,7 +57,6 @@ export default function MemberRoutes(
 
   router.post(
     `/setDCOparticipantRate`,
-    jsonParser,
     validateRequest(setDCOparticipantRateSchema),
     setDCOparticipantRateExpressHandler
   );

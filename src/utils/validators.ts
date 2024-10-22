@@ -111,8 +111,14 @@ export function validateOptionalDenomination(value: any): { isValid: boolean; me
   if (value === null) {
     return { isValid: true };
   }
-  // Assuming validateDenomination is your existing function to validate denominations
   return validateDenomination(value);
+}
+
+export function validateBoolean(value: any): { isValid: boolean; message?: string } {
+  const isValid = typeof value === 'boolean';
+  const message = isValid ? "Valid boolean" : "Invalid value: must be a boolean (true or false)";
+  logger.debug(message, { value, isValid });
+  return { isValid, message };
 }
 
 export const v = {
@@ -130,6 +136,7 @@ export const v = {
 
     return { isValid: true };
   },
+  validateBoolean,
 };
 
 const VALID_ACCOUNT_TYPES = ['PERSONAL_CONSUMPTION', 'BUSINESS', /* add other types */];

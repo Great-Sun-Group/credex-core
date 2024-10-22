@@ -13,7 +13,7 @@ import {
 } from "../../../utils/validators";
 
 /**
- * CreateCredexControler
+ * CreateCredexController
  *
  * This controller handles the creation of new Credex offers.
  * It validates the required fields, performs additional validations,
@@ -22,12 +22,12 @@ import {
  * @param req - Express request object
  * @param res - Express response object
  */
-export async function CreateCredexControler(
+export async function CreateCredexController(
   req: express.Request,
   res: express.Response
 ) {
   const requestId = req.id;
-  logger.debug("CreateCredexControler called", { body: req.body, requestId });
+  logger.debug("CreateCredexController called", { body: req.body, requestId });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -42,6 +42,12 @@ export async function CreateCredexControler(
       securedCredex,
       dueDate,
     } = req.body;
+
+    logger.debug("Received request body", {
+      fullBody: req.body,
+      OFFERSorREQUESTS: OFFERSorREQUESTS,
+      requestId,
+    });
 
     logger.debug("Validating input parameters", {
       memberID,
@@ -178,15 +184,15 @@ export async function CreateCredexControler(
 
     // Call CreateCredexService to create the Credex offer
     logger.debug("Calling CreateCredexService", { body: req.body, requestId });
-    const offerCredexData = await CreateCredexService(req.body);
+    const createCredexData = await CreateCredexService(req.body);
 
-    if (!offerCredexData || typeof offerCredexData.credex === "boolean") {
+    if (!createCredexData || typeof createCredexData.credex === "boolean") {
       logger.warn("Failed to create Credex offer", {
-        offerCredexData,
+        createCredexData,
         requestId,
       });
       return res.status(400).json({
-        error: offerCredexData.message || "Failed to create Credex offer",
+        error: createCredexData.message || "Failed to create Credex offer",
       });
     }
 
@@ -212,7 +218,7 @@ export async function CreateCredexControler(
 
     // Log successful Credex offer
     logger.info("Credex offer created successfully", {
-      credexID: offerCredexData.credex.credexID,
+      credexID: createCredexData.credex.credexID,
       memberID,
       issuerAccountID,
       receiverAccountID,
@@ -221,11 +227,11 @@ export async function CreateCredexControler(
 
     // Return the offer data and updated dashboard data
     return res.status(200).json({
-      offerCredexData: offerCredexData,
+      createCredexData: createCredexData,
       dashboardData: dashboardData,
     });
   } catch (err) {
-    logger.error("Unhandled error in CreateCredexControler", {
+    logger.error("Unhandled error in CreateCredexController", {
       error: err instanceof Error ? err.message : "Unknown error",
       stack: err instanceof Error ? err.stack : undefined,
       requestId,

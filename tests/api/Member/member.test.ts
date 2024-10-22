@@ -73,8 +73,9 @@ describe("Member API Tests", () => {
     it("should authenticate for tier spend limit", async () => {
       const data = {
         issuerAccountID: testAccountID,
-        Amount: 5, // Reduced from 100 to 5 to be within the limit
+        Amount: 5, // Under the $10 USD per day limit for new Open tier accounts
         Denomination: "USD",
+        securedCredex: true,
       };
 
       const response = await axios.post("/v1/authForTierSpendLimit", data, {

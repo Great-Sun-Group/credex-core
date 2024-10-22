@@ -1,5 +1,5 @@
 import express from "express";
-import { CreateCredexControler } from "./controllers/createCredex";
+import { CreateCredexController } from "./controllers/createCredex";
 import { AcceptCredexController } from "./controllers/acceptCredex";
 import { AcceptCredexBulkController } from "./controllers/acceptCredexBulk";
 import { DeclineCredexController } from "./controllers/declineCredex";
@@ -8,7 +8,7 @@ import { GetCredexController } from "./controllers/getCredex";
 import { GetLedgerController } from "./controllers/getLedger";
 import { validateRequest } from "../../middleware/validateRequest";
 import {
-  offerCredexSchema,
+  createCredexSchema,
   acceptCredexSchema,
   declineCredexSchema,
   cancelCredexSchema,
@@ -23,10 +23,10 @@ export default function CredexRoutes() {
 
   router.post(
     `/createCredex`,
-    validateRequest(offerCredexSchema),
-    CreateCredexControler
+    validateRequest(createCredexSchema),
+    CreateCredexController
   );
-  logger.debug("Route registered: POST /offerCredex");
+  logger.debug("Route registered: POST /createCredex");
 
   router.post(
     `/acceptCredex`,

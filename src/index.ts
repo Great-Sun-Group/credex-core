@@ -23,6 +23,7 @@ import {
   setupUnhandledRejectionHandler,
 } from "./utils/serverSetup";
 import { getConfig } from "../config/config";
+import { rateLimiter } from "./middleware/rateLimiter";
 
 // Create an Express application
 export const app = express();
@@ -50,6 +51,9 @@ async function initializeApp() {
     // Apply jsonParser globally
     app.use(jsonParser);
 
+    // Apply rate limiter globally
+    app.use(rateLimiter);
+
     // Generate Swagger specification
     const swaggerSpec = await generateSwaggerSpec();
 
@@ -66,9 +70,9 @@ async function initializeApp() {
     logger.info("Cronjobs engaged for DCO and MTQ");
 
     // Apply Hardened Routes
-    app.use(apiVersionOneRoute, MemberRoutes(jsonParser, apiVersionOneRoute));
-    app.use(apiVersionOneRoute, AccountRoutes(jsonParser));
-    app.use(apiVersionOneRoute, CredexRoutes(jsonParser));
+    app.use(apiVersionOneRoute, MemberRoutes());
+    app.use(apiVersionOneRoute, AccountRoutes());
+    app.use(apiVersionOneRoute, CredexRoutes());
     AdminDashboardRoutes(app);
     RecurringRoutes(app);
     logger.info("Route handlers applied for hardened modules");
