@@ -125,11 +125,20 @@ describe("Credex API Tests", () => {
         headers: { Authorization: `Bearer ${bennitaJWT}` },
       });
 
+      console.log(
+        "First credex response:",
+        JSON.stringify(response1.data, null, 2)
+      );
+
       expect(response1.status).toBe(200);
       expect(response1.data.createCredexData.credex).toHaveProperty("credexID");
       expect(response1.data.createCredexData.credex).toHaveProperty(
-        "status",
-        "OFFERED"
+        "formattedInitialAmount",
+        "1.00"
+      );
+      expect(response1.data.createCredexData.credex).toHaveProperty(
+        "secured",
+        true
       );
 
       // Accept first credex
@@ -168,8 +177,12 @@ describe("Credex API Tests", () => {
       expect(response2.status).toBe(200);
       expect(response2.data.createCredexData.credex).toHaveProperty("credexID");
       expect(response2.data.createCredexData.credex).toHaveProperty(
-        "status",
-        "OFFERED"
+        "formattedInitialAmount",
+        "1.00"
+      );
+      expect(response2.data.createCredexData.credex).toHaveProperty(
+        "secured",
+        true
       );
 
       // Accept second credex
@@ -208,8 +221,12 @@ describe("Credex API Tests", () => {
       expect(response3.status).toBe(200);
       expect(response3.data.createCredexData.credex).toHaveProperty("credexID");
       expect(response3.data.createCredexData.credex).toHaveProperty(
-        "status",
-        "OFFERED"
+        "formattedInitialAmount",
+        "1.00"
+      );
+      expect(response3.data.createCredexData.credex).toHaveProperty(
+        "secured",
+        true
       );
 
       // Accept third credex
