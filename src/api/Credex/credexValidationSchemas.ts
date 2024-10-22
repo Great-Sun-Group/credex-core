@@ -3,8 +3,12 @@ import logger from "../../utils/logger";
 
 logger.debug("Initializing credex validation schemas");
 
-export const offerCredexSchema = {
-  offerorAccountID: {
+export const createCredexSchema = {
+  memberID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
+  issuerAccountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
   },
@@ -12,24 +16,47 @@ export const offerCredexSchema = {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
   },
-  amount: {
-    sanitizer: (value: any) => Number(value),
-    validator: v.validateAmount,
-  },
-  denomination: {
+  Denomination: {
     sanitizer: s.sanitizeDenomination,
     validator: v.validateDenomination,
+  },
+  InitialAmount: {
+    sanitizer: (value: any) => Number(value),
+    validator: v.validateAmount,
   },
   credexType: {
     sanitizer: s.sanitizeString,
     validator: v.validateCredexType,
   },
-  credspan: {
-    sanitizer: (value: any) => Number(value),
-    validator: v.validatePositiveInteger,
+  OFFERSorREQUESTS: {
+    sanitizer: s.sanitizeString,
+    validator: (value: string) => {
+      if (value !== "OFFERS" && value !== "REQUESTS") {
+        return { isValid: false, message: "OFFERSorREQUESTS must be either 'OFFERS' or 'REQUESTS'" };
+      }
+      return { isValid: true };
+    },
+  },
+  securedCredex: {
+    sanitizer: (value: any) => Boolean(value),
+    validator: (value: boolean) => {
+      if (typeof value !== "boolean") {
+        return { isValid: false, message: "securedCredex must be a boolean" };
+      }
+      return { isValid: true };
+    },
+  },
+  dueDate: {
+    sanitizer: s.sanitizeString,
+    validator: (value: string) => {
+      if (value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return { isValid: false, message: "dueDate must be in YYYY-MM-DD format" };
+      }
+      return { isValid: true };
+    },
   },
 };
-logger.debug("offerCredexSchema initialized");
+logger.debug("createCredexSchema initialized");
 
 export const acceptCredexSchema = {
   credexID: {

@@ -80,6 +80,11 @@ export const authForTierSpendLimitSchema = {
     validator: v.validateDenomination,
     required: true,
   },
+  securedCredex: {
+    sanitizer: (value: boolean) => value,
+    validator: v.validateBoolean,
+    required: true,
+  },
 };
 logger.debug("authForTierSpendLimitSchema initialized", { schema: authForTierSpendLimitSchema });
 

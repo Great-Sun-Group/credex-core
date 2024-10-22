@@ -16,60 +16,51 @@ import {
 } from "./memberValidationSchemas";
 import logger from "../../utils/logger";
 
-export default function MemberRoutes(
-  jsonParser: express.RequestHandler,
-  apiVersionOneRoute: string
-) {
+export default function MemberRoutes() {
   const router = express.Router();
   logger.info("Initializing Member routes");
 
   router.post(
-    `/member/login`,
-    jsonParser,
+    `/login`,
     validateRequest(loginMemberSchema),
     loginMemberExpressHandler
   );
-  logger.info("Route registered: POST /member/login");
+  logger.debug("Route registered: POST /login");
 
   router.post(
-    `/member/getMemberByHandle`,
-    jsonParser,
+    `/getMemberByHandle`,
     validateRequest(getMemberByHandleSchema),
     GetMemberByHandleController
   );
-  logger.info("Route registered: POST /member/getMemberByHandle");
+  logger.debug("Route registered: POST /getMemberByHandle");
 
   router.post(
-    `/member/getMemberDashboardByPhone`,
-    jsonParser,
+    `/getMemberDashboardByPhone`,
     validateRequest(getMemberDashboardByPhoneSchema),
     GetMemberDashboardByPhoneController
   );
-  logger.info("Route registered: POST /member/getMemberDashboardByPhone");
+  logger.debug("Route registered: POST /getMemberDashboardByPhone");
 
   router.post(
-    `/member/onboardMember`,
-    jsonParser,
+    `/onboardMember`,
     validateRequest(onboardMemberSchema),
     onboardMemberExpressHandler
   );
-  logger.info("Route registered: POST /member/onboardMember");
+  logger.debug("Route registered: POST /onboardMember");
 
   router.post(
-    `/member/authForTierSpendLimit`,
-    jsonParser,
+    `/authForTierSpendLimit`,
     validateRequest(authForTierSpendLimitSchema),
     authForTierSpendLimitExpressHandler
   );
-  logger.info("Route registered: POST /member/authForTierSpendLimit");
+  logger.debug("Route registered: POST /authForTierSpendLimit");
 
   router.post(
-    `/member/setDCOparticipantRate`,
-    jsonParser,
+    `/setDCOparticipantRate`,
     validateRequest(setDCOparticipantRateSchema),
     setDCOparticipantRateExpressHandler
   );
-  logger.info("Route registered: POST /member/setDCOparticipantRate");
+  logger.debug("Route registered: POST /setDCOparticipantRate");
 
   logger.info("Member routes initialized successfully", {
     module: "memberRoutes",

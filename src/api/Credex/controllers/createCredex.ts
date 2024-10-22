@@ -1,5 +1,5 @@
 import express from "express";
-import { OfferCredexService } from "../services/OfferCredex";
+import { CreateCredexService } from "../services/CreateCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { checkDueDate, credspan } from "../../../constants/credspan";
 import { AuthForTierSpendLimitController } from "../../Member/controllers/authForTierSpendLimit";
@@ -13,21 +13,21 @@ import {
 } from "../../../utils/validators";
 
 /**
- * OfferCredexController
+ * CreateCredexController
  *
  * This controller handles the creation of new Credex offers.
  * It validates the required fields, performs additional validations,
- * calls the OfferCredexService, and returns the result along with updated dashboard data.
+ * calls the CreateCredexService, and returns the result along with updated dashboard data.
  *
  * @param req - Express request object
  * @param res - Express response object
  */
-export async function OfferCredexController(
+export async function CreateCredexController(
   req: express.Request,
   res: express.Response
 ) {
   const requestId = req.id;
-  logger.debug("OfferCredexController called", { body: req.body, requestId });
+  logger.debug("CreateCredexController called", { body: req.body, requestId });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -42,6 +42,12 @@ export async function OfferCredexController(
       securedCredex,
       dueDate,
     } = req.body;
+
+    logger.debug("Received request body", {
+      fullBody: req.body,
+      OFFERSorREQUESTS: OFFERSorREQUESTS,
+      requestId,
+    });
 
     logger.debug("Validating input parameters", {
       memberID,
@@ -137,20 +143,28 @@ export async function OfferCredexController(
         .json({ error: "Issuer and receiver cannot be the same account" });
     }
 
-    // Get member tier
-    logger.debug("Fetching member tier", { issuerAccountID, requestId });
-    const getMemberTier = await ledgerSpaceSession.run(
-      `
-        MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
-        RETURN member.memberTier as memberTier
-      `,
-      { issuerAccountID }
-    );
-
-    const memberTier = getMemberTier.records[0]?.get("memberTier");
-    if (!memberTier) {
-      logger.warn("Member tier not found", { issuerAccountID, requestId });
-      return res.status(404).json({ error: "Member tier not found" });
+    // Check if credex is authorized based on membership tier
+    if (securedCredex) {
+      logger.debug("Checking memberTier credex limits", {
+        issuerAccountID,
+        requestId,
+      });
+      const tierAuth = await AuthForTierSpendLimitController(
+        issuerAccountID,
+        InitialAmount,
+        Denomination,
+        securedCredex,
+        requestId
+      );
+      if (!tierAuth.isAuthorized) {
+        logger.warn(tierAuth.message, {
+          issuerAccountID,
+          InitialAmount,
+          Denomination,
+          requestId,
+        });
+        return res.status(400).json({ error: tierAuth.message });
+      }
     }
 
     // Check due date for unsecured credex
@@ -166,60 +180,19 @@ export async function OfferCredexController(
           error: `Due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan / 7} weeks from today.`,
         });
       }
-
-      // Check if unsecured credex is permitted on membership tier
-      if (memberTier == 1) {
-        logger.warn("Unauthorized unsecured credex for Open Tier", {
-          issuerAccountID,
-          memberTier,
-          requestId,
-        });
-        return res.status(400).json({
-          error: "Members on the Open Tier cannot issue unsecured credexes",
-        });
-      }
     }
 
-    // Check secured credex limits based on membership tier
-    if (securedCredex) {
-      logger.debug("Checking secured credex limits", {
-        issuerAccountID,
-        requestId,
-      });
-      logger.debug("Calling AuthForTierSpendLimitController", {
-        issuerAccountID,
-        InitialAmount,
-        Denomination,
-        requestId,
-      });
-      const tierAuth = await AuthForTierSpendLimitController(
-        issuerAccountID,
-        InitialAmount,
-        Denomination,
-        requestId
-      );
-      if (!tierAuth.isAuthorized) {
-        logger.warn("Unauthorized secured credex", {
-          issuerAccountID,
-          InitialAmount,
-          Denomination,
-          requestId,
-        });
-        return res.status(400).json({ error: tierAuth.message });
-      }
-    }
+    // Call CreateCredexService to create the Credex offer
+    logger.debug("Calling CreateCredexService", { body: req.body, requestId });
+    const createCredexData = await CreateCredexService(req.body);
 
-    // Call OfferCredexService to create the Credex offer
-    logger.debug("Calling OfferCredexService", { body: req.body, requestId });
-    const offerCredexData = await OfferCredexService(req.body);
-
-    if (!offerCredexData || typeof offerCredexData.credex === "boolean") {
+    if (!createCredexData || typeof createCredexData.credex === "boolean") {
       logger.warn("Failed to create Credex offer", {
-        offerCredexData,
+        createCredexData,
         requestId,
       });
       return res.status(400).json({
-        error: offerCredexData.message || "Failed to create Credex offer",
+        error: createCredexData.message || "Failed to create Credex offer",
       });
     }
 
@@ -245,7 +218,7 @@ export async function OfferCredexController(
 
     // Log successful Credex offer
     logger.info("Credex offer created successfully", {
-      credexID: offerCredexData.credex.credexID,
+      credexID: createCredexData.credex.credexID,
       memberID,
       issuerAccountID,
       receiverAccountID,
@@ -254,11 +227,11 @@ export async function OfferCredexController(
 
     // Return the offer data and updated dashboard data
     return res.status(200).json({
-      offerCredexData: offerCredexData,
+      createCredexData: createCredexData,
       dashboardData: dashboardData,
     });
   } catch (err) {
-    logger.error("Unhandled error in OfferCredexController", {
+    logger.error("Unhandled error in CreateCredexController", {
       error: err instanceof Error ? err.message : "Unknown error",
       stack: err instanceof Error ? err.stack : undefined,
       requestId,

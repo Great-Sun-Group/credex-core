@@ -3,50 +3,62 @@ import { GetAccountByHandleService } from "../services/GetAccountByHandle";
 import logger from "../../../utils/logger";
 import { validateAccountHandle } from "../../../utils/validators";
 
-/**
- * Controller for retrieving an account by its handle
- * @param req - Express request object
- * @param res - Express response object
- * @param next - Express next function
- */
-export async function GetAccountByHandleController(
+export const GetAccountByHandleController = async (
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
-) {
-  logger.debug("GetAccountByHandleController called", { query: req.query });
+): Promise<void> => {
+  const requestId = req.id;
+  const { accountHandle } = req.body;
 
-  const { accountHandle } = req.query;
+  logger.debug("Entering GetAccountByHandleController", {
+    accountHandle,
+    requestId,
+  });
 
   try {
-    if (!validateAccountHandle(accountHandle as string)) {
-      logger.warn("Invalid account handle provided", { accountHandle });
-      res.status(400).json({ message: "Invalid account handle" });
+    if (!validateAccountHandle(accountHandle)) {
+      logger.warn("Invalid account handle", { accountHandle, requestId });
+      res.status(400).json({
+        message:
+          "Invalid account handle. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters.",
+      });
+      logger.debug(
+        "Exiting GetAccountByHandleController with invalid account handle",
+        { requestId }
+      );
       return;
     }
 
-    logger.info("Retrieving account by handle", { accountHandle });
+    logger.info("Retrieving account by handle", { accountHandle, requestId });
 
-    const accountData = await GetAccountByHandleService(
-      accountHandle as string
-    );
+    const accountData = await GetAccountByHandleService(accountHandle);
 
     if (accountData) {
       logger.info("Account retrieved successfully", {
         accountHandle,
         accountID: accountData.accountID,
+        requestId,
       });
       res.status(200).json({ accountData });
     } else {
-      logger.info("Account not found", { accountHandle });
+      logger.warn("Account not found", { accountHandle, requestId });
       res.status(404).json({ message: "Account not found" });
     }
+
+    logger.debug("Exiting GetAccountByHandleController successfully", {
+      requestId,
+    });
   } catch (error) {
     logger.error("Error in GetAccountByHandleController", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
       accountHandle,
+      requestId,
+    });
+    logger.debug("Exiting GetAccountByHandleController with error", {
+      requestId,
     });
     next(error);
   }
-}
+};

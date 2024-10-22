@@ -1,4 +1,5 @@
 import axios from "../../setup";
+import { AxiosError } from "axios";
 
 describe("Account API Tests", () => {
   let testAccountID: string;
@@ -17,15 +18,12 @@ describe("Account API Tests", () => {
     };
 
     try {
-      const response = await axios.post(
-        "/api/v1/member/onboardMember",
-        memberData
-      );
+      const response = await axios.post("/v1/onboardMember", memberData);
       testMemberID = response.data.memberDashboard.memberID;
       testMemberJWT = response.data.token;
       console.log("Onboarded member ID:", testMemberID);
     } catch (error) {
-      console.error("Error onboarding member:", error);
+      console.error("Error onboarding member:", (error as AxiosError).response?.data || (error as Error).message);
       throw error;
     }
   });
@@ -37,33 +35,44 @@ describe("Account API Tests", () => {
         accountName: "Test Account",
         accountHandle: `test_account_${Math.floor(Math.random() * 10000)}`,
         defaultDenom: "USD",
+        accountType: "OPERATIONS",
       };
 
-      const response = await axios.post("/api/v1/createAccount", accountData, {
-        headers: { Authorization: `Bearer ${testMemberJWT}` },
-      });
+      try {
+        const response = await axios.post("/v1/createAccount", accountData, {
+          headers: { Authorization: `Bearer ${testMemberJWT}` },
+        });
 
-      expect(response.status).toBe(200);
-      expect(response.data).toHaveProperty("accountID");
+        expect(response.status).toBe(200);
+        expect(response.data).toHaveProperty("accountID");
 
-      testAccountID = response.data.accountID;
-      testAccountHandle = accountData.accountHandle;
+        testAccountID = response.data.accountID;
+        testAccountHandle = accountData.accountHandle;
 
-      console.log("Created account ID:", testAccountID);
-      console.log("Created account handle:", testAccountHandle);
+        console.log("Created account ID:", testAccountID);
+        console.log("Created account handle:", testAccountHandle);
+      } catch (error) {
+        console.error("Error creating account:", (error as AxiosError).response?.data || (error as Error).message);
+        throw error;
+      }
     });
 
     it("should get account by handle", async () => {
-      const response = await axios.get(
-        `/api/v1/getAccountByHandle?accountHandle=${testAccountHandle}`,
-        {
-          headers: { Authorization: `Bearer ${testMemberJWT}` },
-        }
-      );
+      try {
+        const response = await axios.get(
+          `/v1/getAccountByHandle?accountHandle=${testAccountHandle}`,
+          {
+            headers: { Authorization: `Bearer ${testMemberJWT}` },
+          }
+        );
 
-      expect(response.status).toBe(200);
-      expect(response.data).toHaveProperty("accountID");
-      expect(response.data.accountID).toBe(testAccountID);
+        expect(response.status).toBe(200);
+        expect(response.data).toHaveProperty("accountID");
+        expect(response.data.accountID).toBe(testAccountID);
+      } catch (error) {
+        console.error("Error getting account by handle:", (error as AxiosError).response?.data || (error as Error).message);
+        throw error;
+      }
     });
 
     it("should update an existing account", async () => {
@@ -73,21 +82,26 @@ describe("Account API Tests", () => {
         accountHandle: `updated_${testAccountHandle}`,
       };
 
-      const response = await axios.patch("/api/v1/updateAccount", updateData, {
-        headers: { Authorization: `Bearer ${testMemberJWT}` },
-      });
+      try {
+        const response = await axios.patch("/v1/updateAccount", updateData, {
+          headers: { Authorization: `Bearer ${testMemberJWT}` },
+        });
 
-      expect(response.status).toBe(200);
-      expect(response.data).toHaveProperty(
-        "accountName",
-        "Updated Test Account"
-      );
-      expect(response.data).toHaveProperty(
-        "accountHandle",
-        `updated_${testAccountHandle}`
-      );
+        expect(response.status).toBe(200);
+        expect(response.data).toHaveProperty(
+          "accountName",
+          "Updated Test Account"
+        );
+        expect(response.data).toHaveProperty(
+          "accountHandle",
+          `updated_${testAccountHandle}`
+        );
 
-      testAccountHandle = `updated_${testAccountHandle}`;
+        testAccountHandle = `updated_${testAccountHandle}`;
+      } catch (error) {
+        console.error("Error updating account:", (error as AxiosError).response?.data || (error as Error).message);
+        throw error;
+      }
     });
 
     it("should authorize a member for an account", async () => {
@@ -96,16 +110,17 @@ describe("Account API Tests", () => {
         memberID: "another-test-member-id", // This should be a different valid member ID
       };
 
-      const response = await axios.post(
-        "/api/v1/authorizeForAccount",
-        authData,
-        {
+      try {
+        const response = await axios.post("/v1/authorizeForAccount", authData, {
           headers: { Authorization: `Bearer ${testMemberJWT}` },
-        }
-      );
+        });
 
-      expect(response.status).toBe(200);
-      expect(response.data).toHaveProperty("message");
+        expect(response.status).toBe(200);
+        expect(response.data).toHaveProperty("message");
+      } catch (error) {
+        console.error("Error authorizing member for account:", (error as AxiosError).response?.data || (error as Error).message);
+        throw error;
+      }
     });
 
     it("should unauthorize a member for an account", async () => {
@@ -114,16 +129,21 @@ describe("Account API Tests", () => {
         memberID: "another-test-member-id", // This should be the same member ID used in the authorize test
       };
 
-      const response = await axios.post(
-        "/api/v1/unauthorizeForAccount",
-        unauthData,
-        {
-          headers: { Authorization: `Bearer ${testMemberJWT}` },
-        }
-      );
+      try {
+        const response = await axios.post(
+          "/v1/unauthorizeForAccount",
+          unauthData,
+          {
+            headers: { Authorization: `Bearer ${testMemberJWT}` },
+          }
+        );
 
-      expect(response.status).toBe(200);
-      expect(response.data).toHaveProperty("message");
+        expect(response.status).toBe(200);
+        expect(response.data).toHaveProperty("message");
+      } catch (error) {
+        console.error("Error unauthorizing member for account:", (error as AxiosError).response?.data || (error as Error).message);
+        throw error;
+      }
     });
 
     it("should update send offers to", async () => {
@@ -132,16 +152,17 @@ describe("Account API Tests", () => {
         memberID: testMemberID,
       };
 
-      const response = await axios.post(
-        "/api/v1/updateSendOffersTo",
-        updateData,
-        {
+      try {
+        const response = await axios.post("/v1/updateSendOffersTo", updateData, {
           headers: { Authorization: `Bearer ${testMemberJWT}` },
-        }
-      );
+        });
 
-      expect(response.status).toBe(200);
-      expect(response.data).toHaveProperty("message");
+        expect(response.status).toBe(200);
+        expect(response.data).toHaveProperty("message");
+      } catch (error) {
+        console.error("Error updating send offers to:", (error as AxiosError).response?.data || (error as Error).message);
+        throw error;
+      }
     });
   });
 });

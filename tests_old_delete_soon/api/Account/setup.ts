@@ -3,7 +3,9 @@ import { v4 as uuidv4 } from "uuid";
 
 // Determine if the environment is deployed
 export const isDeployed = process.argv.includes("dev");
-export const BASE_URL = isDeployed ? "https://dev.api.mycredex.app" : "http://localhost:5000";
+export const BASE_URL = isDeployed
+  ? "https://dev.api.mycredex.app"
+  : "http://localhost:5000";
 
 // Create an Axios instance with default headers
 export const axiosInstance = axios.create({
@@ -15,7 +17,7 @@ export const axiosInstance = axios.create({
 // ... (keep the existing imports and constants)
 
 export const createTestMembers = async () => {
-  const onboardUrl = `${BASE_URL}/api/v1/member/onboardMember`;
+  const onboardUrl = `${BASE_URL}/v1/onboardMember`;
 
   const createMember = async (data: any) => {
     const response = await axiosInstance.post(onboardUrl, data);
@@ -60,7 +62,7 @@ export const createTestMembers = async () => {
 };
 
 export const createTestMemberWithTier = async (tier: number) => {
-  const onboardUrl = `${BASE_URL}/api/v1/member/onboardMember`;
+  const onboardUrl = `${BASE_URL}/v1/onboardMember`;
   const memberData = {
     firstname: "TierTest",
     lastname: "Member",

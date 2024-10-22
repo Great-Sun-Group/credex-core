@@ -16,8 +16,14 @@ import {
   applySecurityMiddleware,
   applyAuthMiddleware,
 } from "./middleware/securityConfig";
-import { startServer, setupGracefulShutdown, setupUncaughtExceptionHandler, setupUnhandledRejectionHandler } from "./utils/serverSetup";
+import {
+  startServer,
+  setupGracefulShutdown,
+  setupUncaughtExceptionHandler,
+  setupUnhandledRejectionHandler,
+} from "./utils/serverSetup";
 import { getConfig } from "../config/config";
+import { rateLimiter } from "./middleware/rateLimiter";
 
 // Create an Express application
 export const app = express();
@@ -26,7 +32,7 @@ export const app = express();
 const jsonParser = bodyParser.json();
 
 // Define the API version route prefix
-export const apiVersionOneRoute = "/api/v1";
+export const apiVersionOneRoute = "/v1";
 
 async function initializeApp() {
   try {
@@ -45,6 +51,9 @@ async function initializeApp() {
     // Apply jsonParser globally
     app.use(jsonParser);
 
+    // Apply rate limiter globally
+    app.use(rateLimiter);
+
     // Generate Swagger specification
     const swaggerSpec = await generateSwaggerSpec();
 
@@ -52,8 +61,8 @@ async function initializeApp() {
     app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
     // Add health check endpoint
-    app.get('/health', (req: Request, res: Response) => {
-      res.status(200).json({ status: 'healthy' });
+    app.get("/health", (req: Request, res: Response) => {
+      res.status(200).json({ status: "healthy" });
     });
 
     // Start cron jobs for scheduled tasks
@@ -61,10 +70,10 @@ async function initializeApp() {
     logger.info("Cronjobs engaged for DCO and MTQ");
 
     // Apply Hardened Routes
-    app.use(apiVersionOneRoute, MemberRoutes(jsonParser, apiVersionOneRoute));
-    app.use(apiVersionOneRoute, AccountRoutes(jsonParser)); 
-    CredexRoutes(app);
-    app.use(apiVersionOneRoute, AdminDashboardRoutes(jsonParser));
+    app.use(apiVersionOneRoute, MemberRoutes());
+    app.use(apiVersionOneRoute, AccountRoutes());
+    app.use(apiVersionOneRoute, CredexRoutes());
+    AdminDashboardRoutes(app);
     RecurringRoutes(app);
     logger.info("Route handlers applied for hardened modules");
 

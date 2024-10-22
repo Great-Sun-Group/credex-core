@@ -19,8 +19,9 @@ describe("Authorize for Account API Tests", () => {
     memberToAuthorizePhone = setup.memberToAuthorizePhone;
 
     // Create an account to authorize
-    const createUrl = `${BASE_URL}/api/v1/createAccount`;
-    testAccountHandle = "testaccount_" + Math.random().toString(36).substring(2, 15);
+    const createUrl = `${BASE_URL}/v1/createAccount`;
+    testAccountHandle =
+      "testaccount_" + Math.random().toString(36).substring(2, 15);
     const accountData = {
       ownerID: testMemberID,
       accountType: "PERSONAL",
@@ -36,7 +37,7 @@ describe("Authorize for Account API Tests", () => {
   });
 
   it("should authorize a member for the account successfully", async () => {
-    const authorizeUrl = `${BASE_URL}/api/v1/authorizeForAccount`;
+    const authorizeUrl = `${BASE_URL}/v1/authorizeForAccount`;
     const authorizeData = {
       memberHandleToBeAuthorized: memberToAuthorizePhone,
       accountID: testAccountID,
@@ -48,7 +49,10 @@ describe("Authorize for Account API Tests", () => {
         headers: { Authorization: `Bearer ${testMemberJWT}` },
       });
       expect(response.status).toBe(200);
-      expect(response.data).toHaveProperty("message", "Member authorized successfully");
+      expect(response.data).toHaveProperty(
+        "message",
+        "Member authorized successfully"
+      );
     } catch (error) {
       console.error("Error authorizing member for account:", error);
       throw error;
@@ -56,7 +60,7 @@ describe("Authorize for Account API Tests", () => {
   });
 
   it("should not authorize with invalid member handle", async () => {
-    const authorizeUrl = `${BASE_URL}/api/v1/authorizeForAccount`;
+    const authorizeUrl = `${BASE_URL}/v1/authorizeForAccount`;
     const authorizeData = {
       memberHandleToBeAuthorized: "invalid handle!",
       accountID: testAccountID,
@@ -70,7 +74,9 @@ describe("Authorize for Account API Tests", () => {
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         expect(error.response.status).toBe(400);
-        expect(error.response.data.message).toBe("Invalid memberHandleToBeAuthorized");
+        expect(error.response.data.message).toBe(
+          "Invalid memberHandleToBeAuthorized"
+        );
       } else {
         throw error;
       }
@@ -78,7 +84,7 @@ describe("Authorize for Account API Tests", () => {
   });
 
   it("should fail to authorize member due to account not found", async () => {
-    const authorizeUrl = `${BASE_URL}/api/v1/authorizeForAccount`;
+    const authorizeUrl = `${BASE_URL}/v1/authorizeForAccount`;
     const authorizeData = {
       memberHandleToBeAuthorized: memberToAuthorizePhone,
       accountID: "00000000-0000-0000-0000-000000000000",
@@ -100,7 +106,7 @@ describe("Authorize for Account API Tests", () => {
   });
 
   it("should fail to authorize due to tier restrictions", async () => {
-    const authorizeUrl = `${BASE_URL}/api/v1/authorizeForAccount`;
+    const authorizeUrl = `${BASE_URL}/v1/authorizeForAccount`;
     const authorizeData = {
       memberHandleToBeAuthorized: memberToAuthorizePhone,
       accountID: testAccountID,
