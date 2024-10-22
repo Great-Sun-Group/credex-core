@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       confirm_wipe:
-        description: 'Type "YES" to confirm wiping all AWS resources'
+        description: '"YES" deletes all resources in the AWS env for this branch'
         required: true
 
 jobs:
@@ -152,20 +152,6 @@ jobs:
             aws s3api delete-bucket --bucket $bucket || echo "Failed to delete bucket $bucket"
           done
 
-      - name: Wipe RDS Instances and Subnet Groups
-        run: |
-          echo "Deleting RDS instances..."
-          rds_instances=$(aws rds describe-db-instances --query 'DBInstances[*].[DBInstanceIdentifier]' --output text)
-          for instance in $rds_instances; do
-            aws rds delete-db-instance --db-instance-identifier $instance --skip-final-snapshot --delete-automated-backups || echo "Failed to delete RDS instance $instance"
-          done
-
-          echo "Deleting RDS DB Subnet Groups..."
-          subnet_groups=$(aws rds describe-db-subnet-groups --query 'DBSubnetGroups[*].[DBSubnetGroupName]' --output text)
-          for group in $subnet_groups; do
-            aws rds delete-db-subnet-group --db-subnet-group-name $group || echo "Failed to delete DB Subnet Group $group"
-          done
-
       - name: Wipe ECS Clusters
         run: |
           echo "Deleting ECS clusters, services, and tasks..."
@@ -203,22 +189,6 @@ jobs:
             aws logs delete-log-group --log-group-name $log_group || echo "Failed to delete Log Group $log_group"
           done
 
-      - name: Wipe IAM Roles
-        run: |
-          echo "Deleting IAM Roles..."
-          roles=$(aws iam list-roles --query 'Roles[?starts_with(RoleName, `ecs-`) == `true`].[RoleName]' --output text)
-          for role in $roles; do
-            attached_policies=$(aws iam list-attached-role-policies --role-name $role --query 'AttachedPolicies[*].[PolicyArn]' --output text)
-            for policy in $attached_policies; do
-              aws iam detach-role-policy --role-name $role --policy-arn $policy || echo "Failed to detach policy $policy from role $role"
-            done
-            instance_profiles=$(aws iam list-instance-profiles-for-role --role-name $role --query 'InstanceProfiles[*].[InstanceProfileName]' --output text)
-            for profile in $instance_profiles; do
-              aws iam remove-role-from-instance-profile --instance-profile-name $profile --role-name $role || echo "Failed to remove role $role from instance profile $profile"
-            done
-            aws iam delete-role --role-name $role || echo "Failed to delete IAM role $role"
-          done
-
       - name: Wipe Load Balancers and Target Groups
         run: |
           echo "Deleting Application Load Balancers..."
@@ -233,13 +203,37 @@ jobs:
             aws elbv2 delete-target-group --target-group-arn $tg || echo "Failed to delete Target Group $tg"
           done
 
-      # Note: Route 53 resources are not included in this wipe workflow as they are shared across environments
-      # and are managed separately in the connectors.yml workflow.
+      - name: Wipe ACM Certificates
+        run: |
+          echo "Deleting ACM Certificates..."
+          certificates=$(aws acm list-certificates --query 'CertificateSummaryList[*].[CertificateArn]' --output text)
+          for cert in $certificates; do
+            aws acm delete-certificate --certificate-arn $cert || echo "Failed to delete ACM Certificate $cert"
+          done
+
+      - name: Wipe IAM Roles
+        run: |
+          echo "Deleting IAM Roles created by the current user..."
+          roles=$(aws iam list-roles --query 'Roles[?starts_with(RoleName, `ecs-`) == `true`].[RoleName]' --output text)
+          for role in $roles; do
+            # Detach policies
+            policies=$(aws iam list-attached-role-policies --role-name $role --query 'AttachedPolicies[*].[PolicyArn]' --output text)
+            for policy in $policies; do
+              aws iam detach-role-policy --role-name $role --policy-arn $policy
+            done
+            # Remove role from instance profiles
+            profiles=$(aws iam list-instance-profiles-for-role --role-name $role --query 'InstanceProfiles[*].[InstanceProfileName]' --output text)
+            for profile in $profiles; do
+              aws iam remove-role-from-instance-profile --instance-profile-name $profile --role-name $role
+            done
+            # Delete the role
+            aws iam delete-role --role-name $role || echo "Failed to delete IAM Role $role"
+          done
 
       - name: Final Message
         run: |
           echo "AWS resource wipe attempt completed for the current environment."
           echo "Please review the logs for any resources that failed to delete."
           echo "You may need to manually delete some resources or investigate permission issues."
-          echo "Note: Route 53 resources were not affected by this workflow as they are managed separately."
+          echo "Note: Route 53 resources are not affected by this workflow, as they are managed separately."
           echo "After ensuring all environment-specific resources are properly deleted, you can use your Terraform configurations to rebuild the infrastructure if needed."
