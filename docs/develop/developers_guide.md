@@ -116,13 +116,13 @@ For development environments, the `NODE_ENV` variable defaults to 'development'.
 To clear your dev databases, hit the `v1/dev/clearDevDBs` endpoint with your dev server running. Use API software, or in local dev use this command in a different terminal from where the server is running:
 
 ```
-curl -X DELETE "http://localhost:5000/v1/dev/clearDevDBs" -H "Content-Type: application/json" -v
+curl -X DELETE "http://localhost:3000/v1/dev/clearDevDBs" -H "Content-Type: application/json" -v
 ```
 
 In codespaces, use this:
 
 ```
-curl -X DELETE "https://${CODESPACE_NAME}-5000.app.github.dev/v1/dev/clearDevDBs" -H "X-Github-Token: $GITHUB_TOKEN" -H "Content-Type: application/json" -v
+curl -X DELETE "https://${CODESPACE_NAME}-3000.app.github.dev/v1/dev/clearDevDBs" -H "X-Github-Token: $GITHUB_TOKEN" -H "Content-Type: application/json" -v
 ```
 
 To run the DCO and advance the day state, including new exchange rates, hit the `v1/dev/forceDCO` endpoint. If the database has been wiped or is new, this will first create initialization nodes and relationship then run the first DCO, bringing the credex ecosystem online.
@@ -130,13 +130,13 @@ To run the DCO and advance the day state, including new exchange rates, hit the 
 This can be done from API software, or in local dev with:
 
 ```
-curl -X POST "http://localhost:5000/v1/dev/forceDCO" -H "Content-Type: application/json" -v
+curl -X POST "http://localhost:3000/v1/dev/forceDCO" -H "Content-Type: application/json" -v
 ```
 
 In codespaces:
 
 ```
-curl -X POST "https://${CODESPACE_NAME}-5000.app.github.dev/v1/dev/forceDCO" -H "X-Github-Token: $GITHUB_TOKEN" -H "Content-Type: application/json" -v
+curl -X POST "https://${CODESPACE_NAME}-3000.app.github.dev/v1/dev/forceDCO" -H "X-Github-Token: $GITHUB_TOKEN" -H "Content-Type: application/json" -v
 ```
 
 ## Development Process

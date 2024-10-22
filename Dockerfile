@@ -33,7 +33,7 @@ COPY --from=build /app/build ./build
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/config ./config
 RUN npm ci --only=production
-EXPOSE 5000
+EXPOSE 3000
 ENV NODE_ENV=${NODE_ENV}
 ENV NEO_4J_LEDGER_SPACE_USER=${NEO_4J_LEDGER_SPACE_USER}
 ENV NEO_4J_LEDGER_SPACE_PASS=${NEO_4J_LEDGER_SPACE_PASS}
