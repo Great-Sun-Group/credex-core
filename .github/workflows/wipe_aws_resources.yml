@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       confirm_wipe:
-        description: '"YES" deletes all resources in the AWS env for this branch'
+        description: '"yes" deletes all resources in the AWS env for this branch'
         required: true
 
 jobs:
   wipe-aws-resources:
     runs-on: ubuntu-latest
-    if: github.event.inputs.confirm_wipe == 'YES'
+    if: github.event.inputs.confirm_wipe == 'yes'
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
 
     steps:
