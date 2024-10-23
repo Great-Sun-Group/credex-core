@@ -14,25 +14,27 @@ jobs:
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
 
     steps:
-      - name: Wipe IAM Roles
-        run: |
-          # Define functions again to ensure they are available in this step
-          function log_error() {
-            local error_type="$1"
-            local message="$2"
-            echo "ERROR [$error_type]: $message" >&2
-            echo "[$error_type] $message" >> wipe_errors.log
-          }
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-          function retry_command() {
-            local max_attempts=3
-            local command="$@"
-            local attempt=1
-            
-            until eval "$command"
-            do
-              if ((attempt == max_attempts))
-              then
+      - name: Set Environment
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=development" >> $GITHUB_ENV
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: af-south-1
+
+      - name: Check AWS Permissions
         run: |
           echo "Checking AWS permissions..."
           aws sts get-caller-identity
@@ -293,8 +295,8 @@ jobs:
           echo "Deleting IAM Roles..."
           roles=$(aws iam list-roles --query 'Roles[?starts_with(Path, `/`) == `true`].[RoleName]' --output text)
           for role in $roles; do
-            if [[ $role == AWSReservedSSO_* || $role == AWSServiceRoleFor* ]]; then
-              echo "Skipping AWS-managed role: $role"
+            if [[ $role == AWSReservedSSO_* || $role == aws-service-role/* ]]; then
+              echo "Skipping system-managed role: $role"
               continue
             fi
             echo "Processing role: $role"
@@ -303,14 +305,14 @@ jobs:
             for policy in $policies; do
               retry_command "aws iam detach-role-policy --role-name $role --policy-arn $policy" || echo "Failed to detach policy $policy from role $role"
             done
-            # Remove role from instance profiles (if permissions allow)
-            profiles=$(aws iam list-instance-profiles-for-role --role-name $role --query 'InstanceProfiles[*].[InstanceProfileName]' --output text 2>/dev/null || echo "")
+            # Remove role from instance profiles
+            profiles=$(aws iam list-instance-profiles-for-role --role-name $role --query 'InstanceProfiles[*].[InstanceProfileName]' --output text || echo "")
             if [ -n "$profiles" ]; then
               for profile in $profiles; do
                 retry_command "aws iam remove-role-from-instance-profile --instance-profile-name $profile --role-name $role" || echo "Failed to remove role $role from instance profile $profile"
               done
             else
-              echo "No instance profiles found for role $role or insufficient permissions to list them"
+              echo "No instance profiles found for role $role"
             fi
             # Delete inline policies
             inline_policies=$(aws iam list-role-policies --role-name $role --query 'PolicyNames[]' --output text)
@@ -318,11 +320,7 @@ jobs:
               retry_command "aws iam delete-role-policy --role-name $role --policy-name $inline_policy" || echo "Failed to delete inline policy $inline_policy from role $role"
             done
             # Delete the role
-            if retry_command "aws iam delete-role --role-name $role"; then
-              echo "Successfully deleted IAM Role $role"
-            else
-              log_error "IAM_ROLE_DELETION" "Failed to delete IAM Role $role"
-            fi
+            retry_command "aws iam delete-role --role-name $role" && echo "Successfully deleted IAM Role $role" || log_error "IAM_ROLE_DELETION" "Failed to delete IAM Role $role"
           done
 
       - name: Check for Remaining Resources
