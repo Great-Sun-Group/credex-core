@@ -54,8 +54,8 @@ resource "aws_ecs_task_definition" "credex_core" {
         image = var.create_ecr ? "${aws_ecr_repository.credex_core[0].repository_url}:latest" : "placeholder-image:latest"
         portMappings = [
           {
-            containerPort = 5000
-            hostPort      = 5000
+            containerPort = 3000
+            hostPort      = 3000
           }
         ]
         environment = [
@@ -104,7 +104,7 @@ resource "aws_ecs_service" "credex_core" {
   load_balancer {
     target_group_arn = var.target_group_arn
     container_name   = "credex-core"
-    container_port   = 5000
+    container_port   = 3000
   }
 
   tags = merge(var.common_tags, {
@@ -225,12 +225,12 @@ variable "subnet_ids" {
 # Add a new security group rule to allow inbound traffic from ALB
 resource "aws_security_group_rule" "allow_alb_traffic" {
   type                     = "ingress"
-  from_port                = 5000
-  to_port                  = 5000
+  from_port                = 3000
+  to_port                  = 3000
   protocol                 = "tcp"
   security_group_id        = var.ecs_tasks_security_group_id
   source_security_group_id = var.alb_security_group_id
-  description              = "Allow inbound traffic from ALB on port 5000"
+  description              = "Allow inbound traffic from ALB on port 3000"
 }
 
 # Add new variable for ALB security group ID
@@ -241,6 +241,6 @@ variable "alb_security_group_id" {
 
 # Ensure that when calling this module:
 # 1. subnet_ids are private subnets with a route to a NAT Gateway
-# 2. ecs_tasks_security_group_id allows inbound traffic from the ALB security group on port 5000
+# 2. ecs_tasks_security_group_id allows inbound traffic from the ALB security group on port 3000
 # 3. target_group_arn is associated with an ALB in public subnets
 # 4. alb_security_group_id is passed to allow the new security group rule

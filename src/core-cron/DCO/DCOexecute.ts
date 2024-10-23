@@ -171,7 +171,7 @@ async function waitForMTQCompletion(session: any): Promise<void> {
     MTQflag = result.records[0]?.get("MTQflag");
     if (MTQflag) {
       logDebug("MTQ running. Waiting 5 seconds...");
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
     }
   }
   logInfo("MTQ not running. Proceeding...");

@@ -63,7 +63,7 @@ variable "ecs_task_memory" {
 variable "app_port" {
   description = "The port the app runs on"
   type        = number
-  default     = 5000
+  default     = 3000
 }
 
 variable "vpc_id" {

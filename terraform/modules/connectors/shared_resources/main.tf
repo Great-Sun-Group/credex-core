@@ -151,8 +151,8 @@ resource "aws_security_group" "ecs_tasks" {
 
   ingress {
     protocol        = "tcp"
-    from_port       = 5000
-    to_port         = 5000
+    from_port       = 3000
+    to_port         = 3000
     security_groups = [aws_security_group.alb[0].id]
   }
 
@@ -221,7 +221,7 @@ resource "aws_lb" "credex_alb" {
 resource "aws_lb_target_group" "credex_core" {
   count       = var.create_target_group ? 1 : 0
   name        = "credex-tg-${var.environment}"
-  port        = 5000
+  port        = 3000
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main[0].id
   target_type = "ip"

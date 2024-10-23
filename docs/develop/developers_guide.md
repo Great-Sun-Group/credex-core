@@ -40,6 +40,7 @@ To use devcontainers:
 4. VS Code will build the devcontainer (this may take a few minutes the first time) and open the project inside the container.
 
 Benefits of using devcontainers:
+
 - Consistent development environment across team members
 - Easy onboarding for new developers
 - Isolation from the host system
@@ -55,20 +56,24 @@ Benefits of using devcontainers:
 ## Start Development Server
 
 To start the development environment using Docker:
-   ```
-   npm run docker:dev
-   ```
-   This command builds the Docker image and starts the container with hot-reloading enabled.
+
+```
+npm run docker:dev
+```
+
+This command builds the Docker image and starts the container with hot-reloading enabled.
 
 To run the application in production mode within Docker:
-   ```
-   npm run docker:dev:prod
-   ```
+
+```
+npm run docker:dev:prod
+```
 
 To run tests within a Docker container:
-   ```
-   npm run docker:test
-   ```
+
+```
+npm run docker:test
+```
 
 When using devcontainers or GitHub Codespaces, these commands can be run directly in the integrated terminal, as you're already working within the container environment.
 
@@ -84,21 +89,24 @@ NEO_4J_LEDGER_SPACE_USER
 NEO_4J_SEARCH_SPACE_BOLT_URL
 NEO_4J_SEARCH_SPACE_PASS
 NEO_4J_SEARCH_SPACE_USER
+
 - To set up Neo4j Aura databases:
-   1. Go to https://neo4j.com/cloud/aura/ and sign up for two separate accounts using different email addresses.
-   2. For each account, create a new database instance. One should be name ledgerSpace and the other searchSpace.
-   3. Once the databases are created, you'll be provided with connection details.
-   4. Use the Bolt URL, username, and password for each database to fill in the corresponding environment variables.
+  1.  Go to https://neo4j.com/cloud/aura/ and sign up for two separate accounts using different email addresses.
+  2.  For each account, create a new database instance. One should be name ledgerSpace and the other searchSpace.
+  3.  Once the databases are created, you'll be provided with connection details.
+  4.  Use the Bolt URL, username, and password for each database to fill in the corresponding environment variables.
 - The LEDGER_SPACE variables correspond to one database, and the SEARCH_SPACE variables to the other.
 
 OPEN_EXCHANGE_RATES_API
+
 - To get this secret from Open Exchange Rates:
-   1. Go to https://openexchangerates.org/ and sign up for an account.
-   2. Once logged in, navigate to your account dashboard.
-   3. Look for your App ID or API Key.
-   4. Copy this key and use it as the value for OPEN_EXCHANGE_RATES_API.
+  1.  Go to https://openexchangerates.org/ and sign up for an account.
+  2.  Once logged in, navigate to your account dashboard.
+  3.  Look for your App ID or API Key.
+  4.  Copy this key and use it as the value for OPEN_EXCHANGE_RATES_API.
 
 JWT_SECRET
+
 - create your own unique random string
 
 For development environments, the `NODE_ENV` variable defaults to 'development'.
@@ -106,23 +114,29 @@ For development environments, the `NODE_ENV` variable defaults to 'development'.
 ## Initializing, Resetting, and Progressing the Databases
 
 To clear your dev databases, hit the `api/v1/dev/clearDevDBs` endpoint with your dev server running. Use API software, or in local dev use this command in a different terminal from where the server is running:
+
 ```
-curl -X DELETE "http://localhost:5000/api/v1/dev/clearDevDBs" -H "Content-Type: application/json" -v
+curl -X DELETE "http://localhost:3000/api/v1/dev/clearDevDBs" -H "Content-Type: application/json" -v
 ```
+
 In codespaces, use this:
+
 ```
-curl -X DELETE "https://${CODESPACE_NAME}-5000.app.github.dev/api/v1/dev/clearDevDBs" -H "X-Github-Token: $GITHUB_TOKEN" -H "Content-Type: application/json" -v
+curl -X DELETE "https://${CODESPACE_NAME}-3000.app.github.dev/api/v1/dev/clearDevDBs" -H "X-Github-Token: $GITHUB_TOKEN" -H "Content-Type: application/json" -v
 ```
 
 To run the DCO and advance the day state, including new exchange rates, hit the `api/v1/dev/forceDCO` endpoint. If the database has been wiped or is new, this will first create initialization nodes and relationship then run the first DCO, bringing the credex ecosystem online.
 
 This can be done from API software, or in local dev with:
+
 ```
-curl -X POST "http://localhost:5000/api/v1/dev/forceDCO" -H "Content-Type: application/json" -v
+curl -X POST "http://localhost:3000/api/v1/dev/forceDCO" -H "Content-Type: application/json" -v
 ```
+
 In codespaces:
+
 ```
-curl -X POST "https://${CODESPACE_NAME}-5000.app.github.dev/api/v1/dev/forceDCO" -H "X-Github-Token: $GITHUB_TOKEN" -H "Content-Type: application/json" -v
+curl -X POST "https://${CODESPACE_NAME}-3000.app.github.dev/api/v1/dev/forceDCO" -H "X-Github-Token: $GITHUB_TOKEN" -H "Content-Type: application/json" -v
 ```
 
 ## Development Process
@@ -136,7 +150,6 @@ curl -X POST "https://${CODESPACE_NAME}-5000.app.github.dev/api/v1/dev/forceDCO"
    npm run docker:dev
    ```
    Then in another terminal window, run the commands outlined in the [Testing Guide](/docs/tests/testing_guide.md).
-   
 3. Do checks in production mode then run tests in the Docker environment:
    ```
    npm run docker:dev:prod

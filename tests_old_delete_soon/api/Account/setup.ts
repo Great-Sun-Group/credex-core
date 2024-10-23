@@ -2,7 +2,9 @@ import axios from "axios";
 
 // Determine if the environment is deployed
 export const isDeployed = process.argv.includes("dev");
-export const BASE_URL = isDeployed ? "https://dev.api.mycredex.app" : "http://localhost:5000";
+export const BASE_URL = isDeployed
+  ? "https://dev.api.mycredex.app"
+  : "http://localhost:3000";
 
 // Create an Axios instance with default headers
 export const axiosInstance = axios.create({
@@ -21,8 +23,12 @@ export const createTestMembers = async () => {
   const authorizeOnboardUrl = `${BASE_URL}/api/v1/member/onboardMember`;
 
   // Generate random phone numbers for uniqueness
-  const phoneNumber = Math.floor(100000000000 + Math.random() * 900000000000).toString();
-  const authorizePhoneNumber = Math.floor(100000000000 + Math.random() * 900000000000).toString();
+  const phoneNumber = Math.floor(
+    100000000000 + Math.random() * 900000000000
+  ).toString();
+  const authorizePhoneNumber = Math.floor(
+    100000000000 + Math.random() * 900000000000
+  ).toString();
 
   // Data for test member
   const memberData = {
@@ -60,7 +66,10 @@ export const createTestMembers = async () => {
     console.log("Test member created with ID:", testMemberID);
 
     // Create Member to Authorize
-    const authorizeResponse = await axiosInstance.post(authorizeOnboardUrl, authorizeMemberData);
+    const authorizeResponse = await axiosInstance.post(
+      authorizeOnboardUrl,
+      authorizeMemberData
+    );
     memberToAuthorizeJWT = authorizeResponse.data.token;
     memberToAuthorizeID = authorizeResponse.data.memberDashboard.memberID;
     memberToAuthorizePhone = authorizePhoneNumber;
