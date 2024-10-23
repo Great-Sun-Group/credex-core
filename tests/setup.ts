@@ -3,9 +3,11 @@ import axios from 'axios';
 const getBaseUrl = () => {
   const args = process.argv.slice(2);
   if (args.includes('dev')) {
-    return 'https://dev.api.mycredex.app';
+    //return 'https://dev.api.mycredex.app';
+    return 'http://localhost:5000';
   } else if (args.includes('stage')) {
-    return 'https://stage.api.mycredex.app';
+    //return 'https://stage.api.mycredex.app';
+    return 'http://localhost:5000';
   }
   return 'http://localhost:5000'; // Default to local
 };
@@ -34,3 +36,4 @@ beforeAll(() => {
 
 // Export the configured axios instance
 export default axios;
+

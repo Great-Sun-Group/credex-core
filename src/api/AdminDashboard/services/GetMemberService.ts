@@ -1,23 +1,23 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j"
 import logger from "../../../utils/logger";
 
-export default async function GetMemberService(memberHandle: string):Promise<any> {
-  logger.debug('GetMemberService called', { memberHandle });
+export default async function GetMemberService(memberID: string):Promise<any> {
+  logger.debug('GetMemberService called', { memberID });
 
-  if(!memberHandle){
+  if(!memberID){
     logger.warn('memberHandle not provided');
     return {
-      message: 'The memberHandle is required'
+      message: 'The memberID is required'
     }
   }
   
   const ledgerSpaceSession = ledgerSpaceDriver.session()
   try {
-    logger.info('Executing query to fetch member details', { memberHandle });
+    logger.info('Executing query to fetch member details', { memberID });
 
     const result = await ledgerSpaceSession.run(
       `Match (member:Member)
-          WHERE member.memberHandle = $memberHandle
+          WHERE member.memberID = $memberID
           WITH member
           MATCH (member)-[:OWNS]->(account:Account)
             Return
@@ -32,7 +32,7 @@ export default async function GetMemberService(memberHandle: string):Promise<any
               member.updatedAt AS updatedAt,        
               member.createdAt AS createdAt
       `,
-      { memberHandle }
+      { memberID }
     );
 
     const records = result.records.map((record) => {
@@ -42,7 +42,7 @@ export default async function GetMemberService(memberHandle: string):Promise<any
        firstname: record.get("firstname"),
        lastname: record.get("lastname"),
        phone: record.get("phone"),
-       memberTier: record.get("memberTier"),
+       memberTier: record.get('memberTier').toNumber(), // Convert Int to JavaScript number
        defaultDenom: record.get("defaultDenom"),
        updatedAt: record.get("updatedAt"),
        createdAt: record.get("createdAt"),
@@ -50,13 +50,13 @@ export default async function GetMemberService(memberHandle: string):Promise<any
     });
 
     if(!records.length){
-      logger.warn('Member not found', { memberHandle });
+      logger.warn('Member not found', { memberID });
       return {
         message: 'User not found',
       }
     }
 
-    logger.info('Member fetched successfully', { memberHandle });
+    logger.info('Member fetched successfully', { memberID });
     return {
       message: 'User fetched successfully',
       data: records
@@ -64,7 +64,7 @@ export default async function GetMemberService(memberHandle: string):Promise<any
   
   } catch (error) {
     logger.error('Error fetching member', { 
-      memberHandle, 
+      memberID, 
       error: (error as Error).message,
       stack: (error as Error).stack
     });

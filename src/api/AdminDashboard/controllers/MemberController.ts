@@ -3,27 +3,27 @@ import GetMemberService from '../services/GetMemberService';
 import UpdateMemberTierService from '../services/UpdateMemberTierService';
 import logger from '../../../utils/logger';
 import { ApiError } from '../../../utils/errorUtils';
-import { validateMemberHandle, validateTier } from '../../../utils/validators';
+import { validateMemberHandle, validateTier, validateUUID } from '../../../utils/validators';
 
 export async function getMemberDetails(req: Request, res: Response, next: NextFunction) {
-  const { memberHandle } = req.query as { memberHandle: string };
+  const { memberID } = req.query as { memberID: string };
   const requestId = req.id;
 
-  logger.debug('getMemberDetails function called', { requestId, memberHandle });
+  logger.debug('getMemberDetails function called', { requestId, memberID });
 
-  if (!memberHandle || !validateMemberHandle(memberHandle)) {
-    logger.warn('Invalid memberHandle provided', { requestId, memberHandle });
-    return next(new ApiError('Invalid memberHandle', 400));
+  if (!memberID || !validateUUID(memberID)) {
+    logger.warn('Invalid memberID provided', { requestId, memberID });
+    return next(new ApiError('Invalid memberID', 400));
   }
 
   try {
-    const result = await GetMemberService(memberHandle);
-    logger.info('Successfully fetched member details', { requestId, memberHandle });
+    const result = await GetMemberService(memberID);
+    logger.info('Successfully fetched member details', { requestId, memberID });
     res.status(200).json(result);
   } catch (error) {
     logger.error('Error fetching member details', { 
       requestId, 
-      memberHandle, 
+      memberID, 
       error: (error as Error).message,
       stack: (error as Error).stack
     });
@@ -32,30 +32,30 @@ export async function getMemberDetails(req: Request, res: Response, next: NextFu
 }
 
 export async function updateMemberTier(req: Request, res: Response, next: NextFunction) {
-  const { memberHandle, newTier } = req.body;
+  const { memberID, tier } = req.body;
   const requestId = req.id;
 
-  logger.debug('updateMemberTier function called', { requestId, memberHandle, newTier });
+  logger.debug('updateMemberTier function called', { requestId, memberID, tier });
 
-  if (!memberHandle || !validateMemberHandle(memberHandle)) {
-    logger.warn('Invalid memberHandle provided', { requestId, memberHandle });
-    return next(new ApiError('Invalid memberHandle', 400));
+  if (!memberID || !validateUUID(memberID)) {
+    logger.warn('Invalid memberID provided', { requestId, memberID });
+    return next(new ApiError('Invalid memberID', 400));
   }
 
-  if (!newTier || !validateTier(Number(newTier))) {
-    logger.warn('Invalid newTier provided', { requestId, newTier });
-    return next(new ApiError('Invalid newTier', 400));
+  if (tier === undefined || !validateTier(tier)) {
+    logger.warn('Invalid tier provided', { requestId, tier });
+    return next(new ApiError('Invalid tier', 400));
   }
 
   try {
-    const result = await UpdateMemberTierService(memberHandle, newTier);
-    logger.info('Successfully updated member tier', { requestId, memberHandle, newTier });
+    const result = await UpdateMemberTierService(memberID, tier);
+    logger.info('Successfully updated member tier', { requestId, memberID, tier });
     res.status(200).json(result);
   } catch (error) {
     logger.error('Error updating member tier', { 
       requestId, 
-      memberHandle, 
-      newTier,
+      memberID, 
+      tier,
       error: (error as Error).message,
       stack: (error as Error).stack
     });

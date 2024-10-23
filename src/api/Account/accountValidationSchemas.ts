@@ -51,6 +51,10 @@ export const getAccountByHandleSchema = {
 logger.debug("getAccountByHandleSchema initialized");
 
 export const updateAccountSchema = {
+  ownerID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
   accountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
@@ -63,6 +67,10 @@ export const updateAccountSchema = {
     sanitizer: s.sanitizeAccountHandle,
     validator: v.validateAccountHandle,
   },
+  defaultDenom: {
+    sanitizer: s.sanitizeDenomination,
+    validator: v.validateDenomination,
+  },
 };
 logger.debug("updateAccountSchema initialized");
 
@@ -70,10 +78,17 @@ export const authorizeForAccountSchema = {
   accountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
   },
-  memberID: {
+  memberHandleToBeAuthorized: {
+    sanitizer: s.sanitizeString,
+    validator: v.validateMemberHandle,
+    required: true,
+  },
+  ownerID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
   },
 };
 logger.debug("authorizeForAccountSchema initialized");
