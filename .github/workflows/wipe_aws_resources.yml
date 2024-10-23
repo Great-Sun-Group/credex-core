@@ -292,13 +292,15 @@ jobs:
             return 0
           }
 
-          echo "Deleting IAM Roles..."
-          roles=$(aws iam list-roles --query 'Roles[?starts_with(Path, `/`) == `true`].[RoleName]' --output text)
-          for role in $roles; do
-            if [[ $role == AWSReservedSSO_* || $role == aws-service-role/* ]]; then
-              echo "Skipping system-managed role: $role"
-              continue
-            fi
+            echo "Deleting IAM Roles..."
+            roles=$(aws iam list-roles --query 'Roles[?starts_with(Path, `/`) == `true`].[RoleName]' --output text)
+            for role in $roles; do
+              if [[ $role == AWSReservedSSO_* || 
+                    $role == AWSServiceRoleFor* || 
+                    $role == aws-service-role/* ]]; then
+                echo "Skipping system-managed role: $role"
+                continue
+              fi
             echo "Processing role: $role"
             # Detach policies
             policies=$(aws iam list-attached-role-policies --role-name $role --query 'AttachedPolicies[*].[PolicyArn]' --output text)
