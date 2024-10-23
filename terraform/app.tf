@@ -16,7 +16,9 @@ module "app" {
 
   vpc_id                     = module.connectors.vpc_id
   subnet_ids                 = module.connectors.private_subnet_ids
+  private_subnet_ids         = module.connectors.private_subnet_ids
   ecs_tasks_security_group_id = module.connectors.ecs_tasks_security_group_id
+  alb_security_group_id      = module.connectors.alb_security_group_id
   target_group_arn           = module.connectors.target_group_arn
   alb_listener               = module.connectors.alb_listener
 
