@@ -51,10 +51,10 @@ jobs:
 
           function retry_command() {
             local max_attempts=3
-            local command="$1"
+            local command="$@"
             local attempt=1
             
-            until $command
+            until eval "$command"
             do
               if ((attempt == max_attempts))
               then
@@ -75,6 +75,10 @@ jobs:
             
             return 0
           }
+
+          # Export functions to make them available in subsequent steps
+          export -f log_error
+          export -f retry_command
 
       - name: Wipe EC2 Resources
         run: |
@@ -267,10 +271,14 @@ jobs:
               retry_command "aws iam detach-role-policy --role-name $role --policy-arn $policy" || echo "Failed to detach policy $policy from role $role"
             done
             # Remove role from instance profiles
-            profiles=$(aws iam list-instance-profiles-for-role --role-name $role --query 'InstanceProfiles[*].[InstanceProfileName]' --output text)
-            for profile in $profiles; do
-              retry_command "aws iam remove-role-from-instance-profile --instance-profile-name $profile --role-name $role" || echo "Failed to remove role $role from instance profile $profile"
-            done
+            profiles=$(aws iam list-instance-profiles-for-role --role-name $role --query 'InstanceProfiles[*].[InstanceProfileName]' --output text || echo "")
+            if [ -n "$profiles" ]; then
+              for profile in $profiles; do
+                retry_command "aws iam remove-role-from-instance-profile --instance-profile-name $profile --role-name $role" || echo "Failed to remove role $role from instance profile $profile"
+              done
+            else
+              echo "No instance profiles found for role $role"
+            fi
             # Delete inline policies
             inline_policies=$(aws iam list-role-policies --role-name $role --query 'PolicyNames[]' --output text)
             for inline_policy in $inline_policies; do
