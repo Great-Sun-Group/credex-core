@@ -257,6 +257,41 @@ jobs:
 
       - name: Wipe IAM Roles
         run: |
+          # Define functions again to ensure they are available in this step
+          function log_error() {
+            local error_type="$1"
+            local message="$2"
+            echo "ERROR [$error_type]: $message" >&2
+            echo "[$error_type] $message" >> wipe_errors.log
+          }
+
+          function retry_command() {
+            local max_attempts=3
+            local command="$@"
+            local attempt=1
+            
+            until eval "$command"
+            do
+              if ((attempt == max_attempts))
+              then
+                log_error "PERMANENT_FAILURE" "Command '$command' failed after $max_attempts attempts"
+                return 1
+              fi
+              
+              echo "Command '$command' failed. Retrying in 5 seconds... (Attempt $attempt/$max_attempts)"
+              sleep 5
+              ((attempt++))
+            done
+            
+            if ((attempt > 1)); then
+              echo "RETRY_SUCCESS: Command '$command' succeeded after $((attempt - 1)) retries" >> wipe_success.log
+            else
+              echo "SUCCESS: Command '$command' succeeded on first attempt" >> wipe_success.log
+            fi
+            
+            return 0
+          }
+
           echo "Deleting IAM Roles..."
           roles=$(aws iam list-roles --query 'Roles[?starts_with(Path, `/`) == `true`].[RoleName]' --output text)
           for role in $roles; do
