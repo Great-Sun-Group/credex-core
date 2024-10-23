@@ -14,8 +14,6 @@ jobs:
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
 
     steps:
-      # ... (previous steps remain unchanged)
-
       - name: Wipe IAM Roles
         run: |
           # Define functions again to ensure they are available in this step
