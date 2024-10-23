@@ -62,6 +62,19 @@ jobs:
             echo "No existing lock found."
           fi
 
+      - name: Get Shared Resources
+        run: |
+          cd terraform
+          echo "Retrieving shared resources..."
+          VPC_ID=$(terraform output -raw vpc_id)
+          SUBNET_IDS=$(terraform output -raw subnet_ids)
+          ALB_SECURITY_GROUP_ID=$(terraform output -raw alb_security_group_id)
+          ECS_TASKS_SECURITY_GROUP_ID=$(terraform output -raw ecs_tasks_security_group_id)
+          echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
+          echo "SUBNET_IDS=$SUBNET_IDS" >> $GITHUB_ENV
+          echo "ALB_SECURITY_GROUP_ID=$ALB_SECURITY_GROUP_ID" >> $GITHUB_ENV
+          echo "ECS_TASKS_SECURITY_GROUP_ID=$ECS_TASKS_SECURITY_GROUP_ID" >> $GITHUB_ENV
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
@@ -101,7 +114,7 @@ jobs:
           echo "Current task definition fetched."
 
           echo "Updating task definition with new image and environment variables..."
-          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment += [
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" --arg VPC_ID "$VPC_ID" --arg SUBNET_IDS "$SUBNET_IDS" --arg ECS_TASKS_SECURITY_GROUP_ID "$ECS_TASKS_SECURITY_GROUP_ID" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment += [
             {"name": "NODE_ENV", "value": $NODE_ENV},
             {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_USER }}"},
             {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}"},
@@ -111,7 +124,7 @@ jobs:
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}"},
             {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
             {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"}
-          ]' | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+          ] | .networkConfiguration.awsvpcConfiguration.subnets = ($SUBNET_IDS | split(",")) | .networkConfiguration.awsvpcConfiguration.securityGroups = [$ECS_TASKS_SECURITY_GROUP_ID]' | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "Task definition updated."
 
           echo "Registering new task definition..."
@@ -133,3 +146,7 @@ jobs:
           echo "Deployment completed successfully. Updated ECS service with latest image and task definition."
           echo "Environment: $ENVIRONMENT"
           echo "Image: $IMAGE"
+          echo "VPC ID: $VPC_ID"
+          echo "Subnet IDs: $SUBNET_IDS"
+          echo "ALB Security Group ID: $ALB_SECURITY_GROUP_ID"
+          echo "ECS Tasks Security Group ID: $ECS_TASKS_SECURITY_GROUP_ID"

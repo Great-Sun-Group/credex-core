@@ -145,13 +145,19 @@ jobs:
 
           echo "Terraform apply completed successfully"
 
-      - name: Get Infrastructure Outputs
+      - name: Print Infrastructure Outputs
         run: |
           cd terraform
           echo "Retrieving infrastructure outputs..."
-          terraform output || { echo "Failed to retrieve Terraform outputs"; exit 1; }
-          echo "VPC_ID=$(terraform output -raw vpc_id)" >> $GITHUB_ENV || true
-          echo "SUBNET_IDS=$(terraform output -raw subnet_ids)" >> $GITHUB_ENV || true
-          echo "NEO4J_SECURITY_GROUP_ID=$(terraform output -raw neo4j_security_group_id)" >> $GITHUB_ENV || true
-          echo "KEY_PAIR_NAME=$(terraform output -raw key_pair_name)" >> $GITHUB_ENV || true
-          echo "ALB_SECURITY_GROUP_ID=$(terraform output -raw alb_security_group_id)" >> $GITHUB_ENV || true
+          echo "========================================"
+          echo "Infrastructure Outputs:"
+          echo "========================================"
+          terraform output
+          echo "========================================"
+          echo "Key Outputs:"
+          echo "VPC ID: $(terraform output -raw vpc_id)"
+          echo "Subnet IDs: $(terraform output -raw subnet_ids)"
+          echo "Neo4j Security Group ID: $(terraform output -raw neo4j_security_group_id)"
+          echo "Key Pair Name: $(terraform output -raw key_pair_name)"
+          echo "ALB Security Group ID: $(terraform output -raw alb_security_group_id)"
+          echo "========================================"
