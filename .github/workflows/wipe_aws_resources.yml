@@ -186,6 +186,14 @@ jobs:
             sleep 30
           done
 
+      - name: Wipe RDS DB Subnet Groups
+        run: |
+          echo "Deleting RDS DB Subnet Groups..."
+          subnet_groups=$(aws rds describe-db-subnet-groups --query 'DBSubnetGroups[*].[DBSubnetGroupName]' --output text)
+          for subnet_group in $subnet_groups; do
+            retry_command "aws rds delete-db-subnet-group --db-subnet-group-name $subnet_group" || log_error "RDS_SUBNET_GROUP_DELETION" "Failed to delete RDS DB Subnet Group $subnet_group"
+          done
+
       - name: Wipe S3 Buckets
         run: |
           echo "Deleting S3 buckets..."
@@ -380,6 +388,12 @@ jobs:
           roles=$(aws iam list-roles --query 'Roles[?starts_with(Path, `/`) == `true`].[RoleName]' --output text)
           if [ -n "$roles" ]; then
             echo "Remaining IAM Roles: $roles" >> remaining_resources.log
+          fi
+
+          # Check RDS DB Subnet Groups
+          subnet_groups=$(aws rds describe-db-subnet-groups --query 'DBSubnetGroups[*].[DBSubnetGroupName]' --output text)
+          if [ -n "$subnet_groups" ]; then
+            echo "Remaining RDS DB Subnet Groups: $subnet_groups" >> remaining_resources.log
           fi
 
       - name: Generate Summary Report
