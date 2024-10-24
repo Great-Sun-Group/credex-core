@@ -10,25 +10,66 @@ on:
         options:
           - create
           - update
-      components:
+      components_to_manage:
         description: "Components to manage"
-        required: true
-        type: multi-select
-        options:
-          - vpc
-          - subnets
-          - igw
-          - nat
-          - routes
-          - sg
-          - ecr
-          - ecs
-          - logs
-          - iam
-          - alb
-          - keypair
-          - neo4j_sg
-          - acm
+        required: false
+        type: string
+      vpc:
+        description: "Manage VPC"
+        required: false
+        type: boolean
+      subnets:
+        description: "Manage Subnets"
+        required: false
+        type: boolean
+      igw:
+        description: "Manage Internet Gateway"
+        required: false
+        type: boolean
+      nat:
+        description: "Manage NAT Gateway"
+        required: false
+        type: boolean
+      routes:
+        description: "Manage Routes"
+        required: false
+        type: boolean
+      sg:
+        description: "Manage Security Groups"
+        required: false
+        type: boolean
+      ecr:
+        description: "Manage ECR"
+        required: false
+        type: boolean
+      ecs:
+        description: "Manage ECS"
+        required: false
+        type: boolean
+      logs:
+        description: "Manage Logs"
+        required: false
+        type: boolean
+      iam:
+        description: "Manage IAM"
+        required: false
+        type: boolean
+      alb:
+        description: "Manage ALB"
+        required: false
+        type: boolean
+      keypair:
+        description: "Manage Key Pair"
+        required: false
+        type: boolean
+      neo4j_sg:
+        description: "Manage Neo4j Security Group"
+        required: false
+        type: boolean
+      acm:
+        description: "Manage ACM"
+        required: false
+        type: boolean
 
 jobs:
   deploy_infrastructure:
@@ -62,25 +103,25 @@ jobs:
 
       - name: Set Terraform Variables
         run: |
-          echo "TF_VAR_create_vpc=${{ contains(github.event.inputs.components, 'vpc') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_subnets=${{ contains(github.event.inputs.components, 'subnets') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_igw=${{ contains(github.event.inputs.components, 'igw') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_nat=${{ contains(github.event.inputs.components, 'nat') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_routes=${{ contains(github.event.inputs.components, 'routes') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_sg=${{ contains(github.event.inputs.components, 'sg') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_ecr=${{ contains(github.event.inputs.components, 'ecr') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_ecs=${{ contains(github.event.inputs.components, 'ecs') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_logs=${{ contains(github.event.inputs.components, 'logs') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_iam=${{ contains(github.event.inputs.components, 'iam') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_load_balancer=${{ contains(github.event.inputs.components, 'alb') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_target_group=${{ contains(github.event.inputs.components, 'alb') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_key_pair=${{ contains(github.event.inputs.components, 'keypair') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_neo4j_security_group=${{ contains(github.event.inputs.components, 'neo4j_sg') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_acm=${{ contains(github.event.inputs.components, 'acm') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_security_groups=${{ contains(github.event.inputs.components, 'sg') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_ecs_cluster=${{ contains(github.event.inputs.components, 'ecs') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_log_group=${{ contains(github.event.inputs.components, 'logs') }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_iam_roles=${{ contains(github.event.inputs.components, 'iam') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_vpc=${{ github.event.inputs.vpc }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_subnets=${{ github.event.inputs.subnets }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_igw=${{ github.event.inputs.igw }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_nat=${{ github.event.inputs.nat }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_routes=${{ github.event.inputs.routes }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_sg=${{ github.event.inputs.sg }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_ecr=${{ github.event.inputs.ecr }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_ecs=${{ github.event.inputs.ecs }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_logs=${{ github.event.inputs.logs }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_iam=${{ github.event.inputs.iam }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_load_balancer=${{ github.event.inputs.alb }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_target_group=${{ github.event.inputs.alb }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_key_pair=${{ github.event.inputs.keypair }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_neo4j_security_group=${{ github.event.inputs.neo4j_sg }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_acm=${{ github.event.inputs.acm }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_security_groups=${{ github.event.inputs.sg }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_ecs_cluster=${{ github.event.inputs.ecs }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_log_group=${{ github.event.inputs.logs }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_iam_roles=${{ github.event.inputs.iam }}" >> $GITHUB_ENV
 
       - name: Terraform Plan
         env:
