@@ -54,16 +54,28 @@ jobs:
             echo "DynamoDB table already exists: $TABLE_NAME"
           fi
 
-      - name: Terraform Init
+      - name: Check Terraform state and initialize
         run: |
           cd terraform
-          echo "Current environment: ${ENVIRONMENT}"
-          echo "Initializing Terraform..."
-          terraform init \
-            -backend-config="bucket=credex-terraform-state-${ENVIRONMENT}" \
-            -backend-config="key=terraform.tfstate" \
-            -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=credex-terraform-state-lock-${ENVIRONMENT}"
+          BUCKET_NAME="credex-terraform-state-${ENVIRONMENT}"
+          
+          # Check if Terraform state file exists in S3
+          if aws s3 ls s3://$BUCKET_NAME/terraform.tfstate; then
+            echo "Terraform state file found. Initializing normally..."
+            terraform init \
+              -backend-config="bucket=credex-terraform-state-${ENVIRONMENT}" \
+              -backend-config="key=terraform.tfstate" \
+              -backend-config="region=af-south-1" \
+              -backend-config="dynamodb_table=credex-terraform-state-lock-${ENVIRONMENT}"
+          else
+            echo "Terraform state file not found. Initializing with -force-copy..."
+            terraform init \
+              -backend-config="bucket=credex-terraform-state-${ENVIRONMENT}" \
+              -backend-config="key=terraform.tfstate" \
+              -backend-config="region=af-south-1" \
+              -backend-config="dynamodb_table=credex-terraform-state-lock-${ENVIRONMENT}" \
+              -force-copy
+          fi
 
       - name: Terraform Plan
         env:
