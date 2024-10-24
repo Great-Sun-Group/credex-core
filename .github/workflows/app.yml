@@ -138,5 +138,9 @@ jobs:
           echo "========================================"
           echo "App Infrastructure Outputs:"
           echo "========================================"
-          terraform output -json module.app | jq 'to_entries | map("\(.key): \(.value.value)") | .[]'
+          echo "Raw terraform output:"
+          terraform output -json module.app
+          echo "========================================"
+          echo "Processed output:"
+          terraform output -json module.app | jq 'to_entries | map("\(.key): \(.value.value)") | .[]' || echo "Error processing terraform output"
           echo "========================================"
