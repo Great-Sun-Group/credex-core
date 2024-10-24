@@ -122,7 +122,6 @@ variable "neo_4j_search_space_password" {
   sensitive   = true
 }
 
-# Updated and new variables from main.tf
 variable "subnet_ids" {
   description = "List of subnet IDs (public) for the ALB"
   type        = list(string)
@@ -135,5 +134,10 @@ variable "private_subnet_ids" {
 
 variable "alb_security_group_id" {
   description = "ID of the ALB security group"
+  type        = string
+}
+
+variable "ecr_repository_url" {
+  description = "The URL of the ECR repository"
   type        = string
 }

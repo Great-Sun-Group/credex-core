@@ -5,16 +5,6 @@ provider "aws" {
   region = var.aws_region
 }
 
-# ECR repository
-resource "aws_ecr_repository" "credex_core" {
-  name                 = "credex-core-${var.environment}"
-  image_tag_mutability = "MUTABLE"
-  
-  tags = merge(var.common_tags, {
-    Name = "credex-core-${var.environment}"
-  })
-}
-
 # ECS cluster
 resource "aws_ecs_cluster" "credex_cluster" {
   name  = "credex-cluster-${var.environment}"
@@ -116,7 +106,7 @@ resource "aws_ecs_task_definition" "credex_core" {
     [
       {
         name  = "credex-core"
-        image = "${aws_ecr_repository.credex_core.repository_url}:latest"
+        image = "${var.ecr_repository_url}:latest"
         portMappings = [
           {
             containerPort = 3000
@@ -174,15 +164,4 @@ resource "aws_ecs_service" "credex_core" {
   tags = merge(var.common_tags, {
     Name = "credex-core-service-${var.environment}"
   })
-}
-
-# Add a new security group rule to allow inbound traffic from ALB
-resource "aws_security_group_rule" "allow_alb_traffic" {
-  type                     = "ingress"
-  from_port                = 3000
-  to_port                  = 3000
-  protocol                 = "tcp"
-  security_group_id        = var.ecs_tasks_security_group_id
-  source_security_group_id = var.alb_security_group_id
-  description              = "Allow inbound traffic from ALB on port 3000"
 }

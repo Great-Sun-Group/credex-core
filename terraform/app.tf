@@ -18,6 +18,8 @@ module "app" {
   target_group_arn           = module.connectors.target_group_arn
   alb_listener               = module.connectors.alb_listener
 
+  ecr_repository_url         = module.connectors.ecr_repository_url
+
   neo_4j_ledger_space_bolt_url   = var.neo_4j_ledger_space_bolt_url
   neo_4j_search_space_bolt_url   = var.neo_4j_search_space_bolt_url
   neo_4j_ledger_space_user   = var.neo_4j_ledger_space_user
@@ -27,7 +29,7 @@ module "app" {
 }
 
 output "ecr_repository_url" {
-  value       = module.app.ecr_repository_url
+  value       = module.connectors.ecr_repository_url
   description = "The URL of the ECR repository"
 }
 
