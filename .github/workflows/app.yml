@@ -37,7 +37,8 @@ jobs:
       - name: Terraform Init
         run: |
           cd terraform
-          terraform init
+          echo "Initializing Terraform..."
+          terraform init -backend-config="path=terraform.${ENVIRONMENT}.tfstate"
 
       - name: Login to Amazon ECR
         id: login-ecr

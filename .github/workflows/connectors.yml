@@ -31,7 +31,7 @@ jobs:
         run: |
           cd terraform
           echo "Initializing Terraform..."
-          terraform init
+          terraform init -backend-config="path=terraform.${ENVIRONMENT}.tfstate"
 
       - name: Terraform Plan
         env:
