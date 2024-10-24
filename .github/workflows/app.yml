@@ -80,7 +80,6 @@ jobs:
           TF_VAR_docker_image: ${{ env.IMAGE }}
         run: |
           cd terraform
-          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
           echo "Planning Terraform changes..."
           terraform plan -input=false -out=tfplan -target=module.app
 
@@ -90,7 +89,6 @@ jobs:
           TF_VAR_docker_image: ${{ env.IMAGE }}
         run: |
           cd terraform
-          terraform workspace select ${{ env.ENVIRONMENT }}
           echo "Applying Terraform changes..."
           terraform apply -auto-approve -input=false tfplan
 
