@@ -46,7 +46,6 @@ jobs:
             local error_type="$1"
             local message="$2"
             echo "ERROR [$error_type]: $message" >&2
-            echo "[$error_type] $message" >> wipe_errors.log
           }
 
           echo "Terminating EC2 instances..."
@@ -71,7 +70,6 @@ jobs:
             local error_type="$1"
             local message="$2"
             echo "ERROR [$error_type]: $message" >&2
-            echo "[$error_type] $message" >> wipe_errors.log
           }
 
           echo "Deleting VPC resources..."
@@ -166,7 +164,6 @@ jobs:
             local error_type="$1"
             local message="$2"
             echo "ERROR [$error_type]: $message" >&2
-            echo "[$error_type] $message" >> wipe_errors.log
           }
 
           echo "Deleting RDS DB Subnet Groups..."
@@ -181,7 +178,6 @@ jobs:
             local error_type="$1"
             local message="$2"
             echo "ERROR [$error_type]: $message" >&2
-            echo "[$error_type] $message" >> wipe_errors.log
           }
 
           echo "Deleting S3 buckets..."
@@ -198,7 +194,6 @@ jobs:
             local error_type="$1"
             local message="$2"
             echo "ERROR [$error_type]: $message" >&2
-            echo "[$error_type] $message" >> wipe_errors.log
           }
 
           echo "Deleting ECS clusters, services, and tasks..."
@@ -226,7 +221,6 @@ jobs:
             local error_type="$1"
             local message="$2"
             echo "ERROR [$error_type]: $message" >&2
-            echo "[$error_type] $message" >> wipe_errors.log
           }
 
           echo "Deleting ECR repositories..."
@@ -241,7 +235,6 @@ jobs:
             local error_type="$1"
             local message="$2"
             echo "ERROR [$error_type]: $message" >&2
-            echo "[$error_type] $message" >> wipe_errors.log
           }
 
           echo "Deleting CloudWatch Log Groups..."
@@ -256,7 +249,6 @@ jobs:
             local error_type="$1"
             local message="$2"
             echo "ERROR [$error_type]: $message" >&2
-            echo "[$error_type] $message" >> wipe_errors.log
           }
 
           echo "Deleting Application Load Balancers..."
@@ -277,7 +269,6 @@ jobs:
             local error_type="$1"
             local message="$2"
             echo "ERROR [$error_type]: $message" >&2
-            echo "[$error_type] $message" >> wipe_errors.log
           }
 
           echo "Deleting ACM Certificates..."
@@ -292,7 +283,6 @@ jobs:
             local error_type="$1"
             local message="$2"
             echo "ERROR [$error_type]: $message" >&2
-            echo "[$error_type] $message" >> wipe_errors.log
           }
 
           echo "Deleting IAM Roles..."
@@ -334,7 +324,6 @@ jobs:
             local error_type="$1"
             local message="$2"
             echo "ERROR [$error_type]: $message" >&2
-            echo "[$error_type] $message" >> wipe_errors.log
           }
 
           echo "Checking for remaining resources..."
@@ -342,114 +331,86 @@ jobs:
           # Check EC2 instances
           instances=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --output text)
           if [ -n "$instances" ]; then
-            echo "Remaining EC2 instances: $instances" >> remaining_resources.log
+            echo "Remaining EC2 instances: $instances"
           fi
 
           # Check VPCs
           vpcs=$(aws ec2 describe-vpcs --query 'Vpcs[?IsDefault==`false`].[VpcId]' --output text)
           if [ -n "$vpcs" ]; then
-            echo "Remaining VPCs: $vpcs" >> remaining_resources.log
+            echo "Remaining VPCs: $vpcs"
           fi
 
           # Check S3 buckets
           buckets=$(aws s3 ls | awk '{print $3}')
           if [ -n "$buckets" ]; then
-            echo "Remaining S3 buckets: $buckets" >> remaining_resources.log
+            echo "Remaining S3 buckets: $buckets"
           fi
 
           # Check ECS clusters
           clusters=$(aws ecs list-clusters --query 'clusterArns[]' --output text)
           if [ -n "$clusters" ]; then
-            echo "Remaining ECS clusters: $clusters" >> remaining_resources.log
+            echo "Remaining ECS clusters: $clusters"
           fi
 
           # Check ECR repositories
           repos=$(aws ecr describe-repositories --query 'repositories[*].[repositoryName]' --output text)
           if [ -n "$repos" ]; then
-            echo "Remaining ECR repositories: $repos" >> remaining_resources.log
+            echo "Remaining ECR repositories: $repos"
           fi
 
           # Check CloudWatch Log Groups
           log_groups=$(aws logs describe-log-groups --query 'logGroups[*].[logGroupName]' --output text)
           if [ -n "$log_groups" ]; then
-            echo "Remaining CloudWatch Log Groups: $log_groups" >> remaining_resources.log
+            echo "Remaining CloudWatch Log Groups: $log_groups"
           fi
 
           # Check Load Balancers
           lbs=$(aws elbv2 describe-load-balancers --query 'LoadBalancers[*].[LoadBalancerArn]' --output text)
           if [ -n "$lbs" ]; then
-            echo "Remaining Load Balancers: $lbs" >> remaining_resources.log
+            echo "Remaining Load Balancers: $lbs"
           fi
 
           # Check ACM Certificates
           certs=$(aws acm list-certificates --query 'CertificateSummaryList[*].[CertificateArn]' --output text)
           if [ -n "$certs" ]; then
-            echo "Remaining ACM Certificates: $certs" >> remaining_resources.log
+            echo "Remaining ACM Certificates: $certs"
           fi
 
           roles=$(aws iam list-roles --query 'Roles[?starts_with(Path, `/`) == `true`].[RoleName]' --output text)
           if [ -n "$roles" ]; then
-            echo "Remaining IAM Roles: $roles" >> remaining_resources.log
+            echo "Remaining IAM Roles: $roles"
           fi
 
           # Check RDS DB Subnet Groups
           subnet_groups=$(aws rds describe-db-subnet-groups --query 'DBSubnetGroups[*].[DBSubnetGroupName]' --output text)
           if [ -n "$subnet_groups" ]; then
-            echo "Remaining RDS DB Subnet Groups: $subnet_groups" >> remaining_resources.log
+            echo "Remaining RDS DB Subnet Groups: $subnet_groups"
           fi
 
       - name: Generate Summary Report
         run: |
           echo "Generating summary report..."
-          echo "AWS Resource Wipe Summary Report" > summary_report.md
-          echo "================================" >> summary_report.md
-          echo "" >> summary_report.md
+          echo "AWS Resource Wipe Summary Report"
+          echo "================================"
+          echo ""
 
-          echo "## Errors" >> summary_report.md
-          if [ -f wipe_errors.log ]; then
-            echo "The following errors were encountered during the wipe process:" >> summary_report.md
-            echo '```' >> summary_report.md
-            cat wipe_errors.log >> summary_report.md
-            echo '```' >> summary_report.md
-          else
-            echo "No errors were logged during the wipe process." >> summary_report.md
-          fi
-          echo "" >> summary_report.md
+          echo "## Errors"
+          echo "Any errors encountered during the wipe process were printed to the console."
+          echo ""
 
-          echo "## Successful Operations" >> summary_report.md
-          if [ -f wipe_success.log ]; then
-            echo "The following operations were successful:" >> summary_report.md
-            echo '```' >> summary_report.md
-            cat wipe_success.log >> summary_report.md
-            echo '```' >> summary_report.md
-          else
-            echo "No successful operations were logged." >> summary_report.md
-          fi
-          echo "" >> summary_report.md
+          echo "## Successful Operations"
+          echo "Successful operations were logged to the console during execution."
+          echo ""
 
-          echo "## Remaining Resources" >> summary_report.md
-          if [ -f remaining_resources.log ]; then
-            echo "The following resources still remain after the wipe process:" >> summary_report.md
-            echo '```' >> summary_report.md
-            cat remaining_resources.log >> summary_report.md
-            echo '```' >> summary_report.md
-          else
-            echo "No remaining resources were detected." >> summary_report.md
-          fi
+          echo "## Remaining Resources"
+          echo "Any remaining resources after the wipe process were printed to the console."
 
-          echo "Summary report generated: summary_report.md"
-
-      - name: Upload Summary Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: wipe-summary-report
-          path: summary_report.md
+          echo "Summary report generated and printed to console."
 
       - name: Final Message
         run: |
           echo "AWS resource wipe attempt completed for the current environment."
-          echo "Please review the summary report for details on the wipe process."
-          echo "You can download the summary report from the workflow artifacts."
+          echo "Please review the console output for details on the wipe process."
           echo "Note: Route 53 resources are not affected by this workflow, as they are managed separately."
-          echo "After reviewing the report, you may need to manually delete any remaining resources or investigate permission issues."
+          echo "After reviewing the output, you may need to manually delete any remaining resources or investigate permission issues."
           echo "Once all environment-specific resources are properly deleted, you can use your Terraform configurations to rebuild the infrastructure if needed."
