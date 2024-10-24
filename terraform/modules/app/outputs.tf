@@ -1,10 +1,5 @@
 # Outputs for the app module
 
-output "ecr_repository_url" {
-  value       = aws_ecr_repository.credex_core.repository_url
-  description = "The URL of the ECR repository"
-}
-
 output "ecs_cluster_arn" {
   value       = aws_ecs_cluster.credex_cluster.arn
   description = "The ARN of the ECS cluster"

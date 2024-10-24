@@ -52,3 +52,8 @@ output "alb_listener" {
   value       = module.shared_resources.alb_listener
   description = "The ARN of the ALB listener"
 }
+
+output "ecr_repository_url" {
+  value       = module.shared_resources.ecr_repository_url
+  description = "The URL of the ECR repository"
+}
