@@ -2,74 +2,6 @@ name: Deploy and Manage Connectors
 
 on:
   workflow_dispatch:
-    inputs:
-      action:
-        description: "Action to perform"
-        required: true
-        type: choice
-        options:
-          - create
-          - update
-      components_to_manage:
-        description: "Components to manage"
-        required: false
-        type: string
-      vpc:
-        description: "Manage VPC"
-        required: false
-        type: boolean
-      subnets:
-        description: "Manage Subnets"
-        required: false
-        type: boolean
-      igw:
-        description: "Manage Internet Gateway"
-        required: false
-        type: boolean
-      nat:
-        description: "Manage NAT Gateway"
-        required: false
-        type: boolean
-      routes:
-        description: "Manage Routes"
-        required: false
-        type: boolean
-      sg:
-        description: "Manage Security Groups"
-        required: false
-        type: boolean
-      ecr:
-        description: "Manage ECR"
-        required: false
-        type: boolean
-      ecs:
-        description: "Manage ECS"
-        required: false
-        type: boolean
-      logs:
-        description: "Manage Logs"
-        required: false
-        type: boolean
-      iam:
-        description: "Manage IAM"
-        required: false
-        type: boolean
-      alb:
-        description: "Manage ALB"
-        required: false
-        type: boolean
-      keypair:
-        description: "Manage Key Pair"
-        required: false
-        type: boolean
-      neo4j_sg:
-        description: "Manage Neo4j Security Group"
-        required: false
-        type: boolean
-      acm:
-        description: "Manage ACM"
-        required: false
-        type: boolean
 
 jobs:
   deploy_infrastructure:
@@ -101,27 +33,44 @@ jobs:
           echo "Initializing Terraform..."
           terraform init
 
-      - name: Set Terraform Variables
+      - name: Check Infrastructure State
+        id: check_state
         run: |
-          echo "TF_VAR_create_vpc=${{ github.event.inputs.vpc }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_subnets=${{ github.event.inputs.subnets }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_igw=${{ github.event.inputs.igw }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_nat=${{ github.event.inputs.nat }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_routes=${{ github.event.inputs.routes }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_sg=${{ github.event.inputs.sg }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_ecr=${{ github.event.inputs.ecr }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_ecs=${{ github.event.inputs.ecs }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_logs=${{ github.event.inputs.logs }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_iam=${{ github.event.inputs.iam }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_load_balancer=${{ github.event.inputs.alb }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_target_group=${{ github.event.inputs.alb }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_key_pair=${{ github.event.inputs.keypair }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_neo4j_security_group=${{ github.event.inputs.neo4j_sg }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_acm=${{ github.event.inputs.acm }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_security_groups=${{ github.event.inputs.sg }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_ecs_cluster=${{ github.event.inputs.ecs }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_log_group=${{ github.event.inputs.logs }}" >> $GITHUB_ENV
-          echo "TF_VAR_create_iam_roles=${{ github.event.inputs.iam }}" >> $GITHUB_ENV
+          cd terraform
+          echo "Checking current infrastructure state..."
+          terraform show -json > current_state.json
+          
+          # Function to check if a resource exists
+          resource_exists() {
+            jq -e ".values.root_module.resources[] | select(.type == \"$1\")" current_state.json > /dev/null
+            return $?
+          }
+          
+          # Check existence of all relevant resources
+          resources=(
+            "aws_vpc"
+            "aws_subnet"
+            "aws_internet_gateway"
+            "aws_nat_gateway"
+            "aws_route_table"
+            "aws_security_group"
+            "aws_ecr_repository"
+            "aws_ecs_cluster"
+            "aws_cloudwatch_log_group"
+            "aws_iam_role"
+            "aws_lb"
+            "aws_lb_target_group"
+            "aws_key_pair"
+            "aws_acm_certificate"
+          )
+          
+          for resource in "${resources[@]}"; do
+            if resource_exists "$resource"; then
+              echo "$resource exists"
+            else
+              echo "$resource does not exist"
+            fi
+          done
 
       - name: Terraform Plan
         env:
