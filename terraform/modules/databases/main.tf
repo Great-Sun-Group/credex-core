@@ -45,15 +45,24 @@ resource "aws_instance" "neo4j_ledger" {
 
               # Update the system
               echo "Updating system packages..."
-              yum update -y || { echo "Failed to update system packages"; exit 1; }
+              if ! yum update -y; then
+                echo "Failed to update system packages"
+                exit 1
+              fi
 
               # Install Java
               echo "Installing Java..."
-              amazon-linux-extras install java-openjdk11 -y || { echo "Failed to install Java"; exit 1; }
+              if ! amazon-linux-extras install java-openjdk11 -y; then
+                echo "Failed to install Java"
+                exit 1
+              fi
 
               # Add Neo4j repository
               echo "Adding Neo4j repository..."
-              rpm --import https://debian.neo4j.com/neotechnology.gpg.key || { echo "Failed to import Neo4j GPG key"; exit 1; }
+              if ! rpm --import https://debian.neo4j.com/neotechnology.gpg.key; then
+                echo "Failed to import Neo4j GPG key"
+                exit 1
+              fi
               cat << REPO > /etc/yum.repos.d/neo4j.repo
               [neo4j]
               name=Neo4j RPM Repository
@@ -64,17 +73,32 @@ resource "aws_instance" "neo4j_ledger" {
 
               # Install Neo4j
               echo "Installing Neo4j..."
-              yum install neo4j-enterprise -y || { echo "Failed to install Neo4j"; exit 1; }
+              if ! yum install neo4j-enterprise -y; then
+                echo "Failed to install Neo4j"
+                exit 1
+              fi
 
               # Configure Neo4j
               echo "Configuring Neo4j..."
-              sed -i 's/#dbms.default_listen_address=0.0.0.0/dbms.default_listen_address=0.0.0.0/' /etc/neo4j/neo4j.conf || { echo "Failed to configure Neo4j listen address"; exit 1; }
-              echo "${var.neo4j_enterprise_license}" > /etc/neo4j/neo4j.license || { echo "Failed to set Neo4j license"; exit 1; }
+              if ! sed -i 's/#dbms.default_listen_address=0.0.0.0/dbms.default_listen_address=0.0.0.0/' /etc/neo4j/neo4j.conf; then
+                echo "Failed to configure Neo4j listen address"
+                exit 1
+              fi
+              if ! echo "${var.neo4j_enterprise_license}" > /etc/neo4j/neo4j.license; then
+                echo "Failed to set Neo4j license"
+                exit 1
+              fi
 
               # Start Neo4j
               echo "Starting Neo4j service..."
-              systemctl enable neo4j || { echo "Failed to enable Neo4j service"; exit 1; }
-              systemctl start neo4j || { echo "Failed to start Neo4j service"; exit 1; }
+              if ! systemctl enable neo4j; then
+                echo "Failed to enable Neo4j service"
+                exit 1
+              fi
+              if ! systemctl start neo4j; then
+                echo "Failed to start Neo4j service"
+                exit 1
+              fi
 
               echo "Neo4j installation and configuration for LedgerSpace completed successfully."
               EOF
@@ -106,15 +130,24 @@ resource "aws_instance" "neo4j_search" {
 
               # Update the system
               echo "Updating system packages..."
-              yum update -y || { echo "Failed to update system packages"; exit 1; }
+              if ! yum update -y; then
+                echo "Failed to update system packages"
+                exit 1
+              fi
 
               # Install Java
               echo "Installing Java..."
-              amazon-linux-extras install java-openjdk11 -y || { echo "Failed to install Java"; exit 1; }
+              if ! amazon-linux-extras install java-openjdk11 -y; then
+                echo "Failed to install Java"
+                exit 1
+              fi
 
               # Add Neo4j repository
               echo "Adding Neo4j repository..."
-              rpm --import https://debian.neo4j.com/neotechnology.gpg.key || { echo "Failed to import Neo4j GPG key"; exit 1; }
+              if ! rpm --import https://debian.neo4j.com/neotechnology.gpg.key; then
+                echo "Failed to import Neo4j GPG key"
+                exit 1
+              fi
               cat << REPO > /etc/yum.repos.d/neo4j.repo
               [neo4j]
               name=Neo4j RPM Repository
@@ -125,17 +158,32 @@ resource "aws_instance" "neo4j_search" {
 
               # Install Neo4j
               echo "Installing Neo4j..."
-              yum install neo4j-enterprise -y || { echo "Failed to install Neo4j"; exit 1; }
+              if ! yum install neo4j-enterprise -y; then
+                echo "Failed to install Neo4j"
+                exit 1
+              fi
 
               # Configure Neo4j
               echo "Configuring Neo4j..."
-              sed -i 's/#dbms.default_listen_address=0.0.0.0/dbms.default_listen_address=0.0.0.0/' /etc/neo4j/neo4j.conf || { echo "Failed to configure Neo4j listen address"; exit 1; }
-              echo "${var.neo4j_enterprise_license}" > /etc/neo4j/neo4j.license || { echo "Failed to set Neo4j license"; exit 1; }
+              if ! sed -i 's/#dbms.default_listen_address=0.0.0.0/dbms.default_listen_address=0.0.0.0/' /etc/neo4j/neo4j.conf; then
+                echo "Failed to configure Neo4j listen address"
+                exit 1
+              fi
+              if ! echo "${var.neo4j_enterprise_license}" > /etc/neo4j/neo4j.license; then
+                echo "Failed to set Neo4j license"
+                exit 1
+              fi
 
               # Start Neo4j
               echo "Starting Neo4j service..."
-              systemctl enable neo4j || { echo "Failed to enable Neo4j service"; exit 1; }
-              systemctl start neo4j || { echo "Failed to start Neo4j service"; exit 1; }
+              if ! systemctl enable neo4j; then
+                echo "Failed to enable Neo4j service"
+                exit 1
+              fi
+              if ! systemctl start neo4j; then
+                echo "Failed to start Neo4j service"
+                exit 1
+              fi
 
               echo "Neo4j installation and configuration for SearchSpace completed successfully."
               EOF
