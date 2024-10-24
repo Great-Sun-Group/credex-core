@@ -96,7 +96,7 @@ resource "aws_ecs_service" "credex_core" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = var.subnet_ids # These should be private subnet IDs
+    subnets          = var.private_subnet_ids
     security_groups  = [var.ecs_tasks_security_group_id]
     assign_public_ip = false
   }
@@ -184,44 +184,6 @@ resource "aws_iam_role_policy" "cloudwatch_logs_access" {
   })
 }
 
-# Outputs
-output "ecr_repository_url" {
-  value       = var.create_ecr ? aws_ecr_repository.credex_core[0].repository_url : null
-  description = "The URL of the ECR repository"
-}
-
-output "ecs_cluster_arn" {
-  value       = var.create_ecs_cluster ? aws_ecs_cluster.credex_cluster[0].arn : null
-  description = "The ARN of the ECS cluster"
-}
-
-output "ecs_task_definition_arn" {
-  value       = aws_ecs_task_definition.credex_core.arn
-  description = "The ARN of the ECS task definition"
-}
-
-output "ecs_service_name" {
-  value       = var.create_ecs_cluster ? aws_ecs_service.credex_core[0].name : null
-  description = "The name of the ECS service"
-}
-
-output "ecs_service_id" {
-  value       = var.create_ecs_cluster ? aws_ecs_service.credex_core[0].id : null
-  description = "The ID of the ECS service"
-}
-
-# Add a new variable for private subnet IDs
-variable "private_subnet_ids" {
-  description = "List of private subnet IDs for the ECS tasks"
-  type        = list(string)
-}
-
-# Update the existing subnet_ids variable (if it exists) or add it if it doesn't
-variable "subnet_ids" {
-  description = "List of subnet IDs (public) for the ALB"
-  type        = list(string)
-}
-
 # Add a new security group rule to allow inbound traffic from ALB
 resource "aws_security_group_rule" "allow_alb_traffic" {
   type                     = "ingress"
@@ -233,14 +195,8 @@ resource "aws_security_group_rule" "allow_alb_traffic" {
   description              = "Allow inbound traffic from ALB on port 3000"
 }
 
-# Add new variable for ALB security group ID
-variable "alb_security_group_id" {
-  description = "ID of the ALB security group"
-  type        = string
-}
-
 # Ensure that when calling this module:
-# 1. subnet_ids are private subnets with a route to a NAT Gateway
+# 1. private_subnet_ids are private subnets with a route to a NAT Gateway
 # 2. ecs_tasks_security_group_id allows inbound traffic from the ALB security group on port 3000
 # 3. target_group_arn is associated with an ALB in public subnets
 # 4. alb_security_group_id is passed to allow the new security group rule

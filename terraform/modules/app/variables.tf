@@ -71,11 +71,6 @@ variable "vpc_id" {
   type        = string
 }
 
-variable "subnet_ids" {
-  description = "The IDs of the subnets"
-  type        = list(string)
-}
-
 variable "ecs_tasks_security_group_id" {
   description = "The ID of the ECS tasks security group"
   type        = string
@@ -125,4 +120,20 @@ variable "neo_4j_search_space_password" {
   description = "The password for the Neo4j Search Space"
   type        = string
   sensitive   = true
+}
+
+# Updated and new variables from main.tf
+variable "subnet_ids" {
+  description = "List of subnet IDs (public) for the ALB"
+  type        = list(string)
+}
+
+variable "private_subnet_ids" {
+  description = "List of private subnet IDs for the ECS tasks"
+  type        = list(string)
+}
+
+variable "alb_security_group_id" {
+  description = "ID of the ALB security group"
+  type        = string
 }
