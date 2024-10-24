@@ -29,6 +29,7 @@ jobs:
 
       - name: Create S3 bucket and DynamoDB table if not exist
         run: |
+          echo "Current environment: ${ENVIRONMENT}"
           BUCKET_NAME="credex-terraform-state-${ENVIRONMENT}"
           TABLE_NAME="credex-terraform-state-lock-${ENVIRONMENT}"
 
@@ -56,6 +57,7 @@ jobs:
       - name: Terraform Init
         run: |
           cd terraform
+          echo "Current environment: ${ENVIRONMENT}"
           echo "Initializing Terraform..."
           terraform init \
             -backend-config="bucket=credex-terraform-state-${ENVIRONMENT}" \
@@ -68,6 +70,7 @@ jobs:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
         run: |
           cd terraform
+          echo "Current environment: ${ENVIRONMENT}"
           echo "Planning Terraform changes..."
           terraform plan -input=false -out=tfplan -target=module.connectors
 
@@ -76,6 +79,7 @@ jobs:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
         run: |
           cd terraform
+          echo "Current environment: ${ENVIRONMENT}"
           echo "Applying Terraform changes..."
           terraform apply -auto-approve -input=false tfplan
 
@@ -84,6 +88,7 @@ jobs:
       - name: Print Infrastructure Outputs
         run: |
           cd terraform
+          echo "Current environment: ${ENVIRONMENT}"
           echo "Retrieving infrastructure outputs..."
           echo "========================================"
           echo "Infrastructure Outputs:"

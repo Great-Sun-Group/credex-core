@@ -1,7 +1,7 @@
 module "connectors" {
   source = "./modules/connectors"
 
-  environment            = terraform.workspace
+  environment            = var.environment
   aws_region             = var.aws_region
   vpc_cidr               = var.vpc_cidr
   create_vpc             = var.create_vpc
