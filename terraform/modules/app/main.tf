@@ -193,6 +193,10 @@ resource "aws_security_group_rule" "allow_alb_traffic" {
   security_group_id        = var.ecs_tasks_security_group_id
   source_security_group_id = var.alb_security_group_id
   description              = "Allow inbound traffic from ALB on port 3000"
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # Ensure that when calling this module:
