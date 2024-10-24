@@ -16,9 +16,16 @@ export async function UnauthorizeForAccountController(
 ) {
   logger.debug("UnauthorizeForAccountController called", { body: req.body });
 
-  const requiredFields = ["memberIDtoBeUnauthorized", "accountID", "ownerID"];
+  const { memberIDtoBeUnauthorized, accountID } = req.body;
+
+  if (!memberIDtoBeUnauthorized || !accountID) {
+    logger.warn("Missing required parameters", { body: req.body });
+    return res.status(400).json({ message: "Missing required parameters" });
+  }
 
   try {
+    const requiredFields = ["memberIDtoBeUnauthorized", "accountID", "ownerID"];
+
     for (const field of requiredFields) {
       if (!req.body[field]) {
         logger.warn(`Missing required field: ${field}`, { body: req.body });
