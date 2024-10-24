@@ -287,48 +287,6 @@ resource "aws_ecr_repository" "credex_core" {
   })
 }
 
-# S3 bucket for Terraform state
-resource "aws_s3_bucket" "terraform_state" {
-  bucket = "credex-terraform-state-${var.environment}"
-
-  tags = merge(var.common_tags, {
-    Name = "credex-terraform-state-${var.environment}"
-  })
-}
-
-resource "aws_s3_bucket_versioning" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-# DynamoDB table for Terraform state locking
-resource "aws_dynamodb_table" "terraform_state_lock" {
-  name           = "credex-terraform-state-lock-${var.environment}"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "LockID"
-
-  attribute {
-    name = "LockID"
-    type = "S"
-  }
-
-  tags = merge(var.common_tags, {
-    Name = "credex-terraform-state-lock-${var.environment}"
-  })
-}
-
 # Outputs
 output "vpc_id" {
   value = aws_vpc.main.id
@@ -372,12 +330,4 @@ output "alb_listener" {
 
 output "ecr_repository_url" {
   value = aws_ecr_repository.credex_core.repository_url
-}
-
-output "terraform_state_bucket" {
-  value = aws_s3_bucket.terraform_state.id
-}
-
-output "terraform_state_lock_table" {
-  value = aws_dynamodb_table.terraform_state_lock.name
 }
