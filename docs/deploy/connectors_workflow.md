@@ -6,24 +6,7 @@ This document provides an overview of the connectors workflow and the associated
 
 The `.github/workflows/connectors.yml` file defines a GitHub Actions workflow for deploying and managing AWS infrastructure components. Key aspects of this workflow include:
 
-1. **Trigger**: The workflow is manually triggered (`workflow_dispatch`) with two input parameters:
-   - `action`: Specifies the action to perform (create/update/import)
-   - `component`: Specifies which component to manage. Options include:
-     - `all`: Manages all components
-     - `vpc`: Virtual Private Cloud
-     - `subnets`: Network subnets
-     - `igw`: Internet Gateway
-     - `nat`: NAT Gateway
-     - `routes`: Route tables
-     - `sg`: Security Groups
-     - `ecr`: Elastic Container Registry
-     - `ecs`: Elastic Container Service
-     - `logs`: CloudWatch Logs
-     - `iam`: Identity and Access Management roles
-     - `alb`: Application Load Balancer
-     - `keypair`: EC2 Key Pair
-     - `neo4j_sg`: Neo4j Security Group
-     - `acm`: AWS Certificate Manager
+1. **Trigger**: The workflow is manually triggered (`workflow_dispatch`).
 
 2. **Environment**: The workflow determines the environment (development, staging, or production) based on the Git branch.
 
@@ -31,15 +14,15 @@ The `.github/workflows/connectors.yml` file defines a GitHub Actions workflow fo
    - Checkout code
    - Configure AWS credentials
    - Setup Terraform
+   - Create S3 bucket and DynamoDB table for Terraform state (if they don't exist)
    - Initialize Terraform
-   - Set Terraform variables based on the selected component
    - Plan Terraform changes
    - Apply Terraform changes
    - Retrieve and output infrastructure details
 
-## Terraform Module Structure
+## Terraform Configuration
 
-The Terraform configuration for the connectors is organized into two main parts:
+The Terraform configuration for the connectors is organized into a main module and a shared resources submodule:
 
 ### 1. Main Connectors Module
 
@@ -51,21 +34,7 @@ The entry point is `terraform/modules/connectors/main.tf`. This file:
 
 ### 2. Shared Resources Submodule
 
-Located at `terraform/modules/connectors/shared_resources/`, this submodule is responsible for creating all the actual AWS resources. It includes:
-
-- VPC
-- Public and private subnets
-- Internet Gateway
-- NAT Gateway
-- Route tables
-- Security groups (ALB, ECS tasks, Neo4j)
-- Key pair
-- Application Load Balancer
-- Target group
-- ACM certificate
-- ALB listener
-
-The main module controls which resources are created by passing boolean variables (e.g., `create_vpc`, `create_subnets`, etc.) to the shared resources submodule. This allows for selective creation of resources based on the `component` input in the GitHub Actions workflow.
+Located at `terraform/modules/connectors/shared_resources/`, this submodule is responsible for creating all the actual AWS resources.
 
 ## Infrastructure Components
 
@@ -108,4 +77,4 @@ The actual creation and management of the ECS cluster, task definitions, and ser
 
 ## Conclusion
 
-The connectors workflow and associated Terraform configuration provide a flexible and modular approach to managing AWS infrastructure. It sets up the core networking, security, and load balancing components that support both EC2-based Neo4j databases and Fargate-based application deployment. By using variables to control resource creation, it allows for granular management of different components across various environments.
+The connectors workflow and associated Terraform configuration provide a flexible and modular approach to managing AWS infrastructure. It sets up the core networking, security, and load balancing components that support both EC2-based Neo4j databases and Fargate-based application deployment. The workflow ensures that the necessary infrastructure is in place before the databases and application are deployed.
