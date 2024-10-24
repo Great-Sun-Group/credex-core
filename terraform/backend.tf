@@ -1,5 +1,7 @@
 terraform {
-  backend "local" {
-    path = "terraform.tfstate"
+  backend "s3" {
+    region = "af-south-1"
+    encrypt = true
+    key    = "terraform.tfstate"
   }
 }

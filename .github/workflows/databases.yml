@@ -38,7 +38,11 @@ jobs:
         run: |
           cd terraform
           echo "Initializing Terraform..."
-          terraform init -backend-config="path=terraform.${ENVIRONMENT}.tfstate"
+          terraform init \
+            -backend-config="bucket=credex-terraform-state-${ENVIRONMENT}" \
+            -backend-config="key=terraform.tfstate" \
+            -backend-config="region=af-south-1" \
+            -backend-config="dynamodb_table=credex-terraform-state-lock-${ENVIRONMENT}"
 
       - name: Terraform Plan
         env:
