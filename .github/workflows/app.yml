@@ -2,12 +2,6 @@ name: Deploy Application
 
 on:
   workflow_dispatch:
-    inputs:
-      force_unlock:
-        description: 'Force remove Terraform state lock'
-        required: false
-        type: boolean
-        default: false
 
 jobs:
   deploy_application:
@@ -30,11 +24,6 @@ jobs:
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
 
-      - name: Set Bucket and Table Names
-        run: |
-          echo "TF_STATE_BUCKET=credex-terraform-state-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-          echo "TF_LOCK_TABLE=credex-terraform-lock-${{ env.ENVIRONMENT }}" >> $GITHUB_ENV
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -42,38 +31,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: af-south-1
 
-      - name: Check and Remove Terraform State Lock
-        run: |
-          LOCK_ID=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.LockID.S' --output text)
-          if [ "$LOCK_ID" != "None" ]; then
-            echo "Found existing lock. Checking if it's stale or force unlock is enabled..."
-            LOCK_INFO=$(aws dynamodb get-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}' --query 'Item.Info.S' --output text)
-            LOCK_TIME=$(echo $LOCK_INFO | jq -r '.Created')
-            CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S.%NZ")
-            TIME_DIFF=$(( $(date -d "$CURRENT_TIME" +%s) - $(date -d "$LOCK_TIME" +%s) ))
-            if [ $TIME_DIFF -gt 3600 ] || [ "${{ inputs.force_unlock }}" == "true" ]; then
-              echo "Removing lock..."
-              aws dynamodb delete-item --table-name ${{ env.TF_LOCK_TABLE }} --key '{"LockID": {"S": "credex-terraform-state-${{ env.ENVIRONMENT }}/${{ env.ENVIRONMENT }}/terraform.tfstate-md5"}}'
-            else
-              echo "Lock is not stale and force unlock is not enabled. Please wait for the other operation to complete or use force unlock."
-              exit 1
-            fi
-          else
-            echo "No existing lock found."
-          fi
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
 
-      - name: Get Shared Resources
+      - name: Terraform Init
         run: |
           cd terraform
-          echo "Retrieving shared resources..."
-          VPC_ID=$(terraform output -raw vpc_id)
-          SUBNET_IDS=$(terraform output -raw subnet_ids)
-          ALB_SECURITY_GROUP_ID=$(terraform output -raw alb_security_group_id)
-          ECS_TASKS_SECURITY_GROUP_ID=$(terraform output -raw ecs_tasks_security_group_id)
-          echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
-          echo "SUBNET_IDS=$SUBNET_IDS" >> $GITHUB_ENV
-          echo "ALB_SECURITY_GROUP_ID=$ALB_SECURITY_GROUP_ID" >> $GITHUB_ENV
-          echo "ECS_TASKS_SECURITY_GROUP_ID=$ECS_TASKS_SECURITY_GROUP_ID" >> $GITHUB_ENV
+          terraform init
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -105,6 +69,26 @@ jobs:
 
           echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
+      - name: Terraform Plan
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_docker_image: ${{ env.IMAGE }}
+        run: |
+          cd terraform
+          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+          echo "Planning Terraform changes..."
+          terraform plan -input=false -out=tfplan -target=module.app
+
+      - name: Terraform Apply
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_docker_image: ${{ env.IMAGE }}
+        run: |
+          cd terraform
+          terraform workspace select ${{ env.ENVIRONMENT }}
+          echo "Applying Terraform changes..."
+          terraform apply -auto-approve -input=false tfplan
+
       - name: Deploy Application
         run: |
           echo "Deploying application to $ENVIRONMENT from branch ${{ github.ref_name }}"
@@ -114,7 +98,7 @@ jobs:
           echo "Current task definition fetched."
 
           echo "Updating task definition with new image and environment variables..."
-          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" --arg VPC_ID "$VPC_ID" --arg SUBNET_IDS "$SUBNET_IDS" --arg ECS_TASKS_SECURITY_GROUP_ID "$ECS_TASKS_SECURITY_GROUP_ID" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment += [
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment += [
             {"name": "NODE_ENV", "value": $NODE_ENV},
             {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_USER }}"},
             {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}"},
@@ -124,7 +108,7 @@ jobs:
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}"},
             {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
             {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"}
-          ] | .networkConfiguration.awsvpcConfiguration.subnets = ($SUBNET_IDS | split(",")) | .networkConfiguration.awsvpcConfiguration.securityGroups = [$ECS_TASKS_SECURITY_GROUP_ID]' | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+          ]' | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "Task definition updated."
 
           echo "Registering new task definition..."
@@ -146,7 +130,10 @@ jobs:
           echo "Deployment completed successfully. Updated ECS service with latest image and task definition."
           echo "Environment: $ENVIRONMENT"
           echo "Image: $IMAGE"
-          echo "VPC ID: $VPC_ID"
-          echo "Subnet IDs: $SUBNET_IDS"
-          echo "ALB Security Group ID: $ALB_SECURITY_GROUP_ID"
-          echo "ECS Tasks Security Group ID: $ECS_TASKS_SECURITY_GROUP_ID"
+          
+          cd terraform
+          echo "========================================"
+          echo "App Infrastructure Outputs:"
+          echo "========================================"
+          terraform output -json module.app | jq 'to_entries | map("\(.key): \(.value.value)") | .[]'
+          echo "========================================"

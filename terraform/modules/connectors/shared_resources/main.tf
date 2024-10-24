@@ -1,6 +1,5 @@
 # VPC
 resource "aws_vpc" "main" {
-  count                = var.create_vpc ? 1 : 0
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
@@ -13,24 +12,24 @@ resource "aws_vpc" "main" {
 # Fetch AZs in the current region
 data "aws_availability_zones" "available" {}
 
-# Create var.az_count private subnets, each in a different AZ
+# Create private subnets, each in a different AZ
 resource "aws_subnet" "private" {
-  count             = var.create_subnets ? var.az_count : 0
-  cidr_block        = cidrsubnet(aws_vpc.main[0].cidr_block, 8, count.index)
+  count             = var.az_count
+  cidr_block        = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
   availability_zone = data.aws_availability_zones.available.names[count.index]
-  vpc_id            = aws_vpc.main[0].id
+  vpc_id            = aws_vpc.main.id
 
   tags = merge(var.common_tags, {
     Name = "credex-private-subnet-${var.environment}-${count.index + 1}"
   })
 }
 
-# Create var.az_count public subnets, each in a different AZ
+# Create public subnets, each in a different AZ
 resource "aws_subnet" "public" {
-  count                   = var.create_subnets ? var.az_count : 0
-  cidr_block              = cidrsubnet(aws_vpc.main[0].cidr_block, 8, var.az_count + count.index)
+  count                   = var.az_count
+  cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, var.az_count + count.index)
   availability_zone       = data.aws_availability_zones.available.names[count.index]
-  vpc_id                  = aws_vpc.main[0].id
+  vpc_id                  = aws_vpc.main.id
   map_public_ip_on_launch = true
 
   tags = merge(var.common_tags, {
@@ -40,8 +39,7 @@ resource "aws_subnet" "public" {
 
 # Internet Gateway for the public subnet
 resource "aws_internet_gateway" "main" {
-  count  = var.create_igw ? 1 : 0
-  vpc_id = aws_vpc.main[0].id
+  vpc_id = aws_vpc.main.id
 
   tags = merge(var.common_tags, {
     Name = "credex-igw-${var.environment}"
@@ -50,15 +48,14 @@ resource "aws_internet_gateway" "main" {
 
 # Route the public subnet traffic through the IGW
 resource "aws_route" "internet_access" {
-  count                  = var.create_routes ? 1 : 0
-  route_table_id         = aws_vpc.main[0].main_route_table_id
+  route_table_id         = aws_vpc.main.main_route_table_id
   destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.main[0].id
+  gateway_id             = aws_internet_gateway.main.id
 }
 
 # Create a NAT gateway with an Elastic IP for each private subnet to get internet connectivity
 resource "aws_eip" "nat" {
-  count      = var.create_nat ? var.az_count : 0
+  count      = var.az_count
   vpc        = true
   depends_on = [aws_internet_gateway.main]
 
@@ -68,7 +65,7 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "main" {
-  count         = var.create_nat ? var.az_count : 0
+  count         = var.az_count
   subnet_id     = element(aws_subnet.public[*].id, count.index)
   allocation_id = element(aws_eip.nat[*].id, count.index)
 
@@ -79,8 +76,8 @@ resource "aws_nat_gateway" "main" {
 
 # Create a new route table for the private subnets
 resource "aws_route_table" "private" {
-  count  = var.create_routes ? var.az_count : 0
-  vpc_id = aws_vpc.main[0].id
+  count  = var.az_count
+  vpc_id = aws_vpc.main.id
 
   route {
     cidr_block     = "0.0.0.0/0"
@@ -94,24 +91,22 @@ resource "aws_route_table" "private" {
 
 # Associate the private subnets with the appropriate route tables
 resource "aws_route_table_association" "private" {
-  count          = var.create_routes ? var.az_count : 0
+  count          = var.az_count
   subnet_id      = element(aws_subnet.private[*].id, count.index)
   route_table_id = element(aws_route_table.private[*].id, count.index)
 }
 
 # Key Pair
 resource "aws_key_pair" "credex_key_pair" {
-  count      = var.create_key_pair ? 1 : 0
   key_name   = "credex-key-pair-${var.environment}"
   public_key = var.public_key
 }
 
 # ALB security group
 resource "aws_security_group" "alb" {
-  count       = var.create_sg ? 1 : 0
   name        = "credex-alb-sg-${var.environment}"
   description = "Controls access to the ALB"
-  vpc_id      = aws_vpc.main[0].id
+  vpc_id      = aws_vpc.main.id
 
   ingress {
     protocol    = "tcp"
@@ -144,16 +139,15 @@ resource "aws_security_group" "alb" {
 
 # ECS tasks security group
 resource "aws_security_group" "ecs_tasks" {
-  count       = var.create_sg ? 1 : 0
   name        = "credex-core-ecs-tasks-sg-${var.environment}"
   description = "Allow inbound access from the ALB only"
-  vpc_id      = aws_vpc.main[0].id
+  vpc_id      = aws_vpc.main.id
 
   ingress {
     protocol        = "tcp"
     from_port       = 3000
     to_port         = 3000
-    security_groups = [aws_security_group.alb[0].id]
+    security_groups = [aws_security_group.alb.id]
   }
 
   egress {
@@ -171,10 +165,9 @@ resource "aws_security_group" "ecs_tasks" {
 
 # Neo4j security group
 resource "aws_security_group" "neo4j" {
-  count       = var.create_neo4j_security_group ? 1 : 0
   name        = "credex-neo4j-sg-${var.environment}"
   description = "Security group for Neo4j instances"
-  vpc_id      = aws_vpc.main[0].id
+  vpc_id      = aws_vpc.main.id
 
   ingress {
     protocol    = "tcp"
@@ -207,11 +200,10 @@ resource "aws_security_group" "neo4j" {
 
 # Application Load Balancer (ALB)
 resource "aws_lb" "credex_alb" {
-  count              = var.create_load_balancer ? 1 : 0
   name               = "credex-alb-${var.environment}"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb[0].id]
+  security_groups    = [aws_security_group.alb.id]
   subnets            = aws_subnet.public[*].id
 
   tags = var.common_tags
@@ -219,11 +211,10 @@ resource "aws_lb" "credex_alb" {
 
 # Target Group
 resource "aws_lb_target_group" "credex_core" {
-  count       = var.create_target_group ? 1 : 0
   name        = "credex-tg-${var.environment}"
   port        = 3000
   protocol    = "HTTP"
-  vpc_id      = aws_vpc.main[0].id
+  vpc_id      = aws_vpc.main.id
   target_type = "ip"
 
   health_check {
@@ -240,13 +231,7 @@ resource "aws_lb_target_group" "credex_core" {
 }
 
 # ACM Certificate
-# Note: This certificate relies on DNS validation through Route 53.
-# Nameservers are pointing to AWS.
-# Route 53 is configured outside of this Terraform setup.
-# The DNS validation should happen automatically as long
-# as the Route 53 zone for the domain exists and is properly configured.
 resource "aws_acm_certificate" "credex_cert" {
-  count             = var.create_acm ? 1 : 0
   domain_name       = var.domain
   validation_method = "DNS"
 
@@ -261,22 +246,20 @@ resource "aws_acm_certificate" "credex_cert" {
 
 # ALB Listener
 resource "aws_lb_listener" "credex_listener" {
-  count             = var.create_load_balancer && var.create_target_group ? 1 : 0
-  load_balancer_arn = aws_lb.credex_alb[0].arn
+  load_balancer_arn = aws_lb.credex_alb.arn
   port              = "443"
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-2016-08"
-  certificate_arn   = aws_acm_certificate.credex_cert[0].arn
+  certificate_arn   = aws_acm_certificate.credex_cert.arn
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.credex_core[0].arn
+    target_group_arn = aws_lb_target_group.credex_core.arn
   }
 }
 
 resource "aws_lb_listener" "redirect_http_to_https" {
-  count             = var.create_load_balancer ? 1 : 0
-  load_balancer_arn = aws_lb.credex_alb[0].arn
+  load_balancer_arn = aws_lb.credex_alb.arn
   port              = "80"
   protocol          = "HTTP"
 
@@ -293,41 +276,41 @@ resource "aws_lb_listener" "redirect_http_to_https" {
 
 # Outputs
 output "vpc_id" {
-  value = var.create_vpc ? aws_vpc.main[0].id : null
+  value = aws_vpc.main.id
 }
 
 output "private_subnet_ids" {
-  value = var.create_subnets ? aws_subnet.private[*].id : null
+  value = aws_subnet.private[*].id
 }
 
 output "public_subnet_ids" {
-  value = var.create_subnets ? aws_subnet.public[*].id : null
+  value = aws_subnet.public[*].id
 }
 
 output "neo4j_security_group_id" {
-  value = var.create_neo4j_security_group ? aws_security_group.neo4j[0].id : null
+  value = aws_security_group.neo4j.id
 }
 
 output "key_pair_name" {
-  value = var.create_key_pair ? aws_key_pair.credex_key_pair[0].key_name : null
+  value = aws_key_pair.credex_key_pair.key_name
 }
 
 output "alb_security_group_id" {
-  value = var.create_sg ? aws_security_group.alb[0].id : null
+  value = aws_security_group.alb.id
 }
 
 output "ecs_tasks_security_group_id" {
-  value = var.create_sg ? aws_security_group.ecs_tasks[0].id : null
+  value = aws_security_group.ecs_tasks.id
 }
 
 output "alb_dns_name" {
-  value = var.create_load_balancer ? aws_lb.credex_alb[0].dns_name : null
+  value = aws_lb.credex_alb.dns_name
 }
 
 output "target_group_arn" {
-  value = var.create_target_group ? aws_lb_target_group.credex_core[0].arn : null
+  value = aws_lb_target_group.credex_core.arn
 }
 
 output "alb_listener" {
-  value = var.create_load_balancer && var.create_target_group ? aws_lb_listener.credex_listener[0].arn : null
+  value = aws_lb_listener.credex_listener.arn
 }

@@ -318,7 +318,7 @@ jobs:
             aws iam delete-role --role-name $role && echo "Successfully deleted IAM Role $role" || log_error "IAM_ROLE_DELETION" "Failed to delete IAM Role $role"
           done
 
-      - name: Check for Remaining Resources
+      - name: Print Remaining Resources
         run: |
           function log_error() {
             local error_type="$1"
@@ -387,30 +387,3 @@ jobs:
             echo "Remaining RDS DB Subnet Groups: $subnet_groups"
           fi
 
-      - name: Generate Summary Report
-        run: |
-          echo "Generating summary report..."
-          echo "AWS Resource Wipe Summary Report"
-          echo "================================"
-          echo ""
-
-          echo "## Errors"
-          echo "Any errors encountered during the wipe process were printed to the console."
-          echo ""
-
-          echo "## Successful Operations"
-          echo "Successful operations were logged to the console during execution."
-          echo ""
-
-          echo "## Remaining Resources"
-          echo "Any remaining resources after the wipe process were printed to the console."
-
-          echo "Summary report generated and printed to console."
-
-      - name: Final Message
-        run: |
-          echo "AWS resource wipe attempt completed for the current environment."
-          echo "Please review the console output for details on the wipe process."
-          echo "Note: Route 53 resources are not affected by this workflow, as they are managed separately."
-          echo "After reviewing the output, you may need to manually delete any remaining resources or investigate permission issues."
-          echo "Once all environment-specific resources are properly deleted, you can use your Terraform configurations to rebuild the infrastructure if needed."

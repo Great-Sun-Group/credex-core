@@ -21,7 +21,6 @@ data "aws_ami" "amazon_linux_2" {
 
 # Neo4j instance for ledgerSpace
 resource "aws_instance" "neo4j_ledger" {
-  count                  = var.create_neo4j_instances ? 1 : 0
   ami                    = data.aws_ami.amazon_linux_2.id
   instance_type          = var.neo4j_instance_type
   key_name               = var.key_pair_name
@@ -83,7 +82,6 @@ resource "aws_instance" "neo4j_ledger" {
 
 # Neo4j instance for searchSpace
 resource "aws_instance" "neo4j_search" {
-  count                  = var.create_neo4j_instances ? 1 : 0
   ami                    = data.aws_ami.amazon_linux_2.id
   instance_type          = var.neo4j_instance_type
   key_name               = var.key_pair_name
@@ -146,30 +144,30 @@ resource "aws_instance" "neo4j_search" {
 # Outputs
 output "neo4j_ledger_instance_id" {
   description = "The ID of the Neo4j LedgerSpace instance"
-  value       = var.create_neo4j_instances ? aws_instance.neo4j_ledger[0].id : null
+  value       = aws_instance.neo4j_ledger.id
 }
 
 output "neo4j_search_instance_id" {
   description = "The ID of the Neo4j SearchSpace instance"
-  value       = var.create_neo4j_instances ? aws_instance.neo4j_search[0].id : null
+  value       = aws_instance.neo4j_search.id
 }
 
 output "neo4j_ledger_private_ip" {
   description = "The private IP of the Neo4j LedgerSpace instance"
-  value       = var.create_neo4j_instances ? aws_instance.neo4j_ledger[0].private_ip : null
+  value       = aws_instance.neo4j_ledger.private_ip
 }
 
 output "neo4j_search_private_ip" {
   description = "The private IP of the Neo4j SearchSpace instance"
-  value       = var.create_neo4j_instances ? aws_instance.neo4j_search[0].private_ip : null
+  value       = aws_instance.neo4j_search.private_ip
 }
 
 output "neo4j_ledger_bolt_endpoint" {
   description = "The Bolt endpoint for the Neo4j LedgerSpace instance"
-  value       = var.create_neo4j_instances ? "bolt://${aws_instance.neo4j_ledger[0].private_ip}:7687" : null
+  value       = "bolt://${aws_instance.neo4j_ledger.private_ip}:7687"
 }
 
 output "neo4j_search_bolt_endpoint" {
   description = "The Bolt endpoint for the Neo4j SearchSpace instance"
-  value       = var.create_neo4j_instances ? "bolt://${aws_instance.neo4j_search[0].private_ip}:7687" : null
+  value       = "bolt://${aws_instance.neo4j_search.private_ip}:7687"
 }

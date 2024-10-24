@@ -3,10 +3,6 @@ module "app" {
 
   environment                = var.environment
   aws_region                 = var.aws_region
-  create_ecr                 = var.create_ecr
-  create_ecs_cluster         = var.create_ecs_cluster
-  create_log_group           = var.create_log_group
-  create_iam_roles           = var.create_iam_roles
   jwt_secret                 = var.jwt_secret
   open_exchange_rates_api    = var.open_exchange_rates_api
   common_tags                = var.common_tags

@@ -1,4 +1,4 @@
-name: Deploy and Manage Connectors
+name: Deploy Connectors
 
 on:
   workflow_dispatch:
@@ -33,52 +33,13 @@ jobs:
           echo "Initializing Terraform..."
           terraform init
 
-      - name: Check Infrastructure State
-        id: check_state
-        run: |
-          cd terraform
-          echo "Checking current infrastructure state..."
-          terraform show -json > current_state.json
-          
-          # Function to check if a resource exists
-          resource_exists() {
-            jq -e ".values.root_module.resources[] | select(.type == \"$1\")" current_state.json > /dev/null
-            return $?
-          }
-          
-          # Check existence of all relevant resources
-          resources=(
-            "aws_vpc"
-            "aws_subnet"
-            "aws_internet_gateway"
-            "aws_nat_gateway"
-            "aws_route_table"
-            "aws_security_group"
-            "aws_ecr_repository"
-            "aws_ecs_cluster"
-            "aws_cloudwatch_log_group"
-            "aws_iam_role"
-            "aws_lb"
-            "aws_lb_target_group"
-            "aws_key_pair"
-            "aws_acm_certificate"
-          )
-          
-          for resource in "${resources[@]}"; do
-            if resource_exists "$resource"; then
-              echo "$resource exists"
-            else
-              echo "$resource does not exist"
-            fi
-          done
-
       - name: Terraform Plan
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
         run: |
           cd terraform
           echo "Planning Terraform changes..."
-          terraform plan -input=false -out=tfplan
+          terraform plan -input=false -out=tfplan -target=module.connectors
 
       - name: Terraform Apply
         env:
