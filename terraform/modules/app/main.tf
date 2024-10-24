@@ -185,34 +185,4 @@ resource "aws_security_group_rule" "allow_alb_traffic" {
   security_group_id        = var.ecs_tasks_security_group_id
   source_security_group_id = var.alb_security_group_id
   description              = "Allow inbound traffic from ALB on port 3000"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Outputs
-output "ecr_repository_url" {
-  value       = aws_ecr_repository.credex_core.repository_url
-  description = "The URL of the ECR repository"
-}
-
-output "ecs_cluster_arn" {
-  value       = aws_ecs_cluster.credex_cluster.arn
-  description = "The ARN of the ECS cluster"
-}
-
-output "ecs_task_definition_arn" {
-  value       = aws_ecs_task_definition.credex_core.arn
-  description = "The ARN of the ECS task definition"
-}
-
-output "ecs_service_name" {
-  value       = aws_ecs_service.credex_core.name
-  description = "The name of the ECS service"
-}
-
-output "ecs_service_id" {
-  value       = aws_ecs_service.credex_core.id
-  description = "The ID of the ECS service"
 }
