@@ -141,3 +141,18 @@ variable "ecr_repository_url" {
   description = "The URL of the ECR repository"
   type        = string
 }
+
+variable "ecs_execution_role_arn" {
+  description = "The ARN of the ECS execution role"
+  type        = string
+}
+
+variable "ecs_task_role_arn" {
+  description = "The ARN of the ECS task role"
+  type        = string
+}
+
+variable "cloudwatch_log_group_name" {
+  description = "The name of the CloudWatch log group"
+  type        = string
+}

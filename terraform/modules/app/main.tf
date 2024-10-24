@@ -14,84 +14,6 @@ resource "aws_ecs_cluster" "credex_cluster" {
   })
 }
 
-# CloudWatch log group
-resource "aws_cloudwatch_log_group" "ecs_logs" {
-  name              = "/ecs/credex-core-${var.environment}"
-  retention_in_days = 30
-  
-  tags = merge(var.common_tags, {
-    Name = "/ecs/credex-core-${var.environment}"
-  })
-}
-
-# IAM roles
-resource "aws_iam_role" "ecs_execution_role" {
-  name  = "ecs-execution-role-${var.environment}"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = merge(var.common_tags, {
-    Name = "ecs-execution-role-${var.environment}"
-  })
-}
-
-resource "aws_iam_role" "ecs_task_role" {
-  name  = "ecs-task-role-${var.environment}"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = merge(var.common_tags, {
-    Name = "ecs-task-role-${var.environment}"
-  })
-}
-
-# Attach necessary policies to the roles
-resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
-  role       = aws_iam_role.ecs_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-resource "aws_iam_role_policy" "cloudwatch_logs_access" {
-  name  = "cloudwatch-logs-access"
-  role  = aws_iam_role.ecs_task_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = ["${aws_cloudwatch_log_group.ecs_logs.arn}:*"]
-      }
-    ]
-  })
-}
-
 # ECS task definition
 resource "aws_ecs_task_definition" "credex_core" {
   family                   = "credex-core-${var.environment}"
@@ -99,8 +21,8 @@ resource "aws_ecs_task_definition" "credex_core" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.ecs_task_cpu
   memory                   = var.ecs_task_memory
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
-  task_role_arn            = aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = var.ecs_execution_role_arn
+  task_role_arn            = var.ecs_task_role_arn
 
   container_definitions = jsonencode(
     [
@@ -127,7 +49,7 @@ resource "aws_ecs_task_definition" "credex_core" {
         logConfiguration = {
           logDriver = "awslogs"
           options = {
-            awslogs-group         = aws_cloudwatch_log_group.ecs_logs.name
+            awslogs-group         = var.cloudwatch_log_group_name
             awslogs-region        = var.aws_region
             awslogs-stream-prefix = "ecs"
           }

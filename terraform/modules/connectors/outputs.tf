@@ -57,3 +57,18 @@ output "ecr_repository_url" {
   value       = module.shared_resources.ecr_repository_url
   description = "The URL of the ECR repository"
 }
+
+output "ecs_execution_role_arn" {
+  value       = module.shared_resources.ecs_execution_role_arn
+  description = "The ARN of the ECS execution role"
+}
+
+output "ecs_task_role_arn" {
+  value       = module.shared_resources.ecs_task_role_arn
+  description = "The ARN of the ECS task role"
+}
+
+output "cloudwatch_log_group_name" {
+  value       = module.shared_resources.cloudwatch_log_group_name
+  description = "The name of the CloudWatch log group"
+}
