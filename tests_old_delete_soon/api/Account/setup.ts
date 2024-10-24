@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 export const isDeployed = process.argv.includes("dev");
 export const BASE_URL = isDeployed
   ? "https://dev.api.mycredex.app"
-  : "http://localhost:5000";
+  : "http://localhost:3000";
 
 // Create an Axios instance with default headers
 export const axiosInstance = axios.create({

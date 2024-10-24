@@ -57,8 +57,8 @@ resource "aws_ecs_task_definition" "credex_core" {
       image = "${aws_ecr_repository.credex_core.repository_url}:latest"
       portMappings = [
         {
-          containerPort = 5000
-          hostPort      = 5000
+          containerPort = 3000
+          hostPort      = 3000
         }
       ]
       environment = [
@@ -101,7 +101,7 @@ resource "aws_ecs_service" "credex_core" {
   load_balancer {
     target_group_arn = data.terraform_remote_state.foundations.outputs.target_group_arn
     container_name   = "credex-core"
-    container_port   = 5000
+    container_port   = 3000
   }
 
   depends_on = [data.terraform_remote_state.foundations.outputs.alb_listener]
