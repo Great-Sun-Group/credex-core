@@ -4,13 +4,31 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "Action to perform (create/update/import)"
+        description: "Action to perform"
         required: true
-        default: "update"
-      component:
-        description: "Component to manage (all/vpc/subnets/igw/nat/routes/sg/ecr/ecs/logs/iam/alb/keypair/neo4j_sg/acm)"
+        type: choice
+        options:
+          - create
+          - update
+      components:
+        description: "Components to manage"
         required: true
-        default: "all"
+        type: boolean
+        options:
+          - vpc
+          - subnets
+          - igw
+          - nat
+          - routes
+          - sg
+          - ecr
+          - ecs
+          - logs
+          - iam
+          - alb
+          - keypair
+          - neo4j_sg
+          - acm
 
 jobs:
   deploy_infrastructure:
@@ -44,87 +62,25 @@ jobs:
 
       - name: Set Terraform Variables
         run: |
-          echo "TF_VAR_create_vpc=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_subnets=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_igw=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_nat=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_routes=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_sg=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_ecr=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_ecs=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_logs=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_iam=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_load_balancer=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_target_group=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_key_pair=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_neo4j_security_group=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_acm=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_security_groups=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_ecs_cluster=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_log_group=false" >> $GITHUB_ENV
-          echo "TF_VAR_create_iam_roles=false" >> $GITHUB_ENV
-
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "vpc" ]]; then
-            echo "TF_VAR_create_vpc=true" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "subnets" ]]; then
-            echo "TF_VAR_create_subnets=true" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "igw" ]]; then
-            echo "TF_VAR_create_igw=true" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "nat" ]]; then
-            echo "TF_VAR_create_nat=true" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "routes" ]]; then
-            echo "TF_VAR_create_routes=true" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "sg" ]]; then
-            echo "TF_VAR_create_sg=true" >> $GITHUB_ENV
-            echo "TF_VAR_create_security_groups=true" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "ecr" ]]; then
-            echo "TF_VAR_create_ecr=true" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "ecs" ]]; then
-            echo "TF_VAR_create_ecs=true" >> $GITHUB_ENV
-            echo "TF_VAR_create_ecs_cluster=true" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "logs" ]]; then
-            echo "TF_VAR_create_logs=true" >> $GITHUB_ENV
-            echo "TF_VAR_create_log_group=true" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "iam" ]]; then
-            echo "TF_VAR_create_iam=true" >> $GITHUB_ENV
-            echo "TF_VAR_create_iam_roles=true" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "alb" ]]; then
-            echo "TF_VAR_create_load_balancer=true" >> $GITHUB_ENV
-            echo "TF_VAR_create_target_group=true" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "keypair" ]]; then
-            echo "TF_VAR_create_key_pair=true" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "neo4j_sg" ]]; then
-            echo "TF_VAR_create_neo4j_security_group=true" >> $GITHUB_ENV
-          fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "acm" ]]; then
-            echo "TF_VAR_create_acm=true" >> $GITHUB_ENV
-          fi
-
-      - name: Import Resources
-        if: github.event.inputs.action == 'import'
-        env:
-          TF_VAR_environment: ${{ env.ENVIRONMENT }}
-        run: |
-          cd terraform
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "logs" ]]; then
-            terraform import -var="environment=${ENVIRONMENT}" module.app.aws_cloudwatch_log_group.ecs_logs[0] /ecs/credex-core-${ENVIRONMENT}
-          fi
-          if [[ "${{ github.event.inputs.component }}" == "all" || "${{ github.event.inputs.component }}" == "iam" ]]; then
-            terraform import -var="environment=${ENVIRONMENT}" module.app.aws_iam_role.ecs_execution_role[0] ecs-execution-role-${ENVIRONMENT}
-            terraform import -var="environment=${ENVIRONMENT}" module.app.aws_iam_role.ecs_task_role[0] ecs-task-role-${ENVIRONMENT}
-          fi
+          echo "TF_VAR_create_vpc=${{ contains(github.event.inputs.components, 'vpc') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_subnets=${{ contains(github.event.inputs.components, 'subnets') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_igw=${{ contains(github.event.inputs.components, 'igw') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_nat=${{ contains(github.event.inputs.components, 'nat') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_routes=${{ contains(github.event.inputs.components, 'routes') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_sg=${{ contains(github.event.inputs.components, 'sg') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_ecr=${{ contains(github.event.inputs.components, 'ecr') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_ecs=${{ contains(github.event.inputs.components, 'ecs') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_logs=${{ contains(github.event.inputs.components, 'logs') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_iam=${{ contains(github.event.inputs.components, 'iam') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_load_balancer=${{ contains(github.event.inputs.components, 'alb') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_target_group=${{ contains(github.event.inputs.components, 'alb') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_key_pair=${{ contains(github.event.inputs.components, 'keypair') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_neo4j_security_group=${{ contains(github.event.inputs.components, 'neo4j_sg') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_acm=${{ contains(github.event.inputs.components, 'acm') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_security_groups=${{ contains(github.event.inputs.components, 'sg') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_ecs_cluster=${{ contains(github.event.inputs.components, 'ecs') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_log_group=${{ contains(github.event.inputs.components, 'logs') }}" >> $GITHUB_ENV
+          echo "TF_VAR_create_iam_roles=${{ contains(github.event.inputs.components, 'iam') }}" >> $GITHUB_ENV
 
       - name: Terraform Plan
         env:
@@ -135,7 +91,6 @@ jobs:
           terraform plan -input=false -out=tfplan
 
       - name: Terraform Apply
-        if: github.event.inputs.action != 'import'
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
         run: |
