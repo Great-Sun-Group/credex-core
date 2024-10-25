@@ -1,70 +1,45 @@
-# Provider configuration
-provider "aws" {
-  region = var.aws_region
-}
+module "databases" {
+  source = "./modules/databases"
 
-# Data sources to fetch shared resources
-data "terraform_remote_state" "foundations" {
-  backend = "s3"
-  config = {
-    bucket = var.terraform_state_bucket
-    key    = "foundations/terraform.tfstate"
-    region = var.aws_region
-  }
-}
-
-# Neo4j Module
-module "neo4j" {
-  source                   = "./neo4j"
   environment              = var.environment
-  vpc_id                   = data.terraform_remote_state.foundations.outputs.vpc_id
-  subnet_ids               = data.terraform_remote_state.foundations.outputs.subnet_ids
-  neo4j_security_group_id  = data.terraform_remote_state.foundations.outputs.neo4j_security_group_id
-  key_name                 = data.terraform_remote_state.foundations.outputs.key_pair_name
-  neo4j_instance_type      = var.neo4j_instance_type
-  neo4j_instance_size      = var.neo4j_instance_size
+  vpc_id                   = module.connectors.vpc_id
+  subnet_ids               = module.connectors.private_subnet_ids
+  neo4j_security_group_id  = module.connectors.neo4j_security_group_id
+  key_pair_name            = module.connectors.key_pair_name
+  neo4j_instance_type      = var.neo4j_instance_type[var.environment]
+  neo4j_volume_size        = var.neo4j_volume_size[var.environment]
   neo4j_enterprise_license = var.neo4j_enterprise_license
+  create_neo4j_instances   = var.create_neo4j_instances
+  common_tags              = var.common_tags
+  aws_region               = var.aws_region
 }
 
-# Variables
-variable "aws_region" {
-  description = "The AWS region to deploy to"
-  type        = string
+output "neo4j_ledger_instance_id" {
+  value       = module.databases.neo4j_ledger_instance_id
+  description = "The ID of the Neo4j LedgerSpace instance"
 }
 
-variable "environment" {
-  description = "The deployment environment"
-  type        = string
+output "neo4j_search_instance_id" {
+  value       = module.databases.neo4j_search_instance_id
+  description = "The ID of the Neo4j SearchSpace instance"
 }
 
-variable "terraform_state_bucket" {
-  description = "The S3 bucket name for Terraform state"
-  type        = string
+output "neo4j_ledger_private_ip" {
+  value       = module.databases.neo4j_ledger_private_ip
+  description = "The private IP address of the Neo4j LedgerSpace instance"
 }
 
-variable "neo4j_instance_type" {
-  description = "The EC2 instance type for Neo4j"
-  type        = string
+output "neo4j_search_private_ip" {
+  value       = module.databases.neo4j_search_private_ip
+  description = "The private IP address of the Neo4j SearchSpace instance"
 }
 
-variable "neo4j_instance_size" {
-  description = "The root volume size for Neo4j instances"
-  type        = number
+output "neo4j_ledger_bolt_endpoint" {
+  value       = module.databases.neo4j_ledger_bolt_endpoint
+  description = "The Bolt endpoint for the Neo4j LedgerSpace instance"
 }
 
-variable "neo4j_enterprise_license" {
-  description = "The Neo4j Enterprise license key"
-  type        = string
-}
-
-# Outputs
-output "neo4j_instance_ips" {
-  value       = module.neo4j.neo4j_instance_ips
-  description = "Private IPs of Neo4j instances"
-}
-
-output "neo4j_bolt_urls" {
-  value       = module.neo4j.neo4j_bolt_urls
-  description = "Neo4j Bolt URLs"
-  sensitive   = true
+output "neo4j_search_bolt_endpoint" {
+  value       = module.databases.neo4j_search_bolt_endpoint
+  description = "The Bolt endpoint for the Neo4j SearchSpace instance"
 }

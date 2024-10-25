@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
 
       - name: Set Environment
         run: |
@@ -27,7 +29,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: af-south-1
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -35,32 +37,38 @@ jobs:
       - name: Terraform Init
         run: |
           cd terraform
-          terraform init
+          echo "Initializing Terraform..."
+          terraform init \
+            -backend-config="bucket=credex-terraform-state-${ENVIRONMENT}" \
+            -backend-config="key=terraform.tfstate" \
+            -backend-config="region=af-south-1" \
+            -backend-config="dynamodb_table=credex-terraform-state-lock-${ENVIRONMENT}"
 
-      - name: Terraform Apply
+      - name: Terraform Plan
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
-          TF_VAR_create_neo4j_instances: "true"
-          TF_VAR_create_key_pair: "true"
           TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
         run: |
           cd terraform
           terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
-          terraform apply -auto-approve -target=module.neo4j
+          terraform plan -input=false -out=tfplan -target=module.databases
 
-      - name: Print Neo4j Information
+      - name: Terraform Apply
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
         run: |
           cd terraform
-          echo "Neo4j Information for ${{ env.ENVIRONMENT }} environment:"
-          echo "----------------------------------------"
-          echo "NEO4J_LEDGER_SPACE_BOLT_URL: $(terraform output -raw neo4j_ledger_space_bolt_url)"
-          echo "NEO4J_SEARCH_SPACE_BOLT_URL: $(terraform output -raw neo4j_search_space_bolt_url)"
-          echo "NEO4J_LEDGER_SPACE_USERNAME: $(terraform output -raw neo4j_ledger_space_username)"
-          echo "NEO4J_SEARCH_SPACE_USERNAME: $(terraform output -raw neo4j_search_space_username)"
-          echo "NEO4J_LEDGER_SPACE_PASSWORD: $(terraform output -raw neo4j_ledger_space_password)"
-          echo "NEO4J_SEARCH_SPACE_PASSWORD: $(terraform output -raw neo4j_search_space_password)"
-          echo "----------------------------------------"
-          echo "NEO4J_PRIVATE_KEY:"
-          terraform output -raw neo4j_private_key
-          echo "----------------------------------------"
+          terraform workspace select ${{ env.ENVIRONMENT }}
+          terraform apply -auto-approve -input=false tfplan
+
+      - name: Print Database Infrastructure Outputs
+        run: |
+          cd terraform
+          echo "Retrieving database infrastructure outputs..."
+          echo "========================================"
+          echo "Database Infrastructure Outputs:"
+          echo "========================================"
+          terraform output -json module.databases | jq 'to_entries | map("\(.key): \(.value.value)") | .[]'
+          echo "========================================"
           echo "Please save these values securely. You may need to manually set them as GitHub secrets or use them in your application configuration."

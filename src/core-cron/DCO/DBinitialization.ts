@@ -232,11 +232,19 @@ async function createInitialMembersAndAccounts(
     "CXX",
     requestId
   );
-  const greatSunID = await createInitialAccount(
+  const greatSunTrustID = await createInitialAccount(
     rdubs.onboardedMemberID,
     "TRUST",
     "Great Sun Financial: Trust",
-    "greatsunfinancial_trust",
+    "greatsun_trust",
+    "CAD",
+    requestId
+  );
+  const greatSunOpsID = await createInitialAccount(
+    rdubs.onboardedMemberID,
+    "OPERATIONS",
+    "Great Sun Financial: Operations",
+    "greatsun_ops",
     "CAD",
     requestId
   );
@@ -260,7 +268,7 @@ async function createInitialMembersAndAccounts(
   await createInitialRelationships(
     session,
     credexFoundationID,
-    greatSunID,
+    greatSunTrustID,
     vimbisoPayTrustID,
     vimbisoPayOpsID,
     rdubs.onboardedMemberID,
@@ -269,7 +277,7 @@ async function createInitialMembersAndAccounts(
   );
   await createInitialCredex(
     rdubs.onboardedMemberID,
-    greatSunID,
+    greatSunTrustID,
     rdubs.defaultAccountID,
     requestId
   );
@@ -404,7 +412,7 @@ async function createInitialAccount(
 async function createInitialRelationships(
   session: any,
   credexFoundationID: string,
-  greatSunID: string,
+  greatSunTrustID: string,
   vimbisoPayTrustID: string,
   vimbisoPayOpsID: string,
   rdubsID: string,
@@ -414,7 +422,7 @@ async function createInitialRelationships(
   await session.run(
     `
     MATCH (credexFoundation: Account { accountID: $credexFoundationID })
-    MATCH (greatSun: Account { accountID: $greatSunID })
+    MATCH (greatSun: Account { accountID: $greatSunTrustID })
     MATCH (vimbisoPayTrust: Account { accountID: $vimbisoPayTrustID })
     MATCH (vimbisoPayOps: Account { accountID: $vimbisoPayOpsID })
     MATCH (rdubs: Member { memberID: $rdubsID })
@@ -428,7 +436,7 @@ async function createInitialRelationships(
   `,
     {
       credexFoundationID,
-      greatSunID,
+      greatSunTrustID,
       vimbisoPayTrustID,
       vimbisoPayOpsID,
       rdubsID,
@@ -438,7 +446,7 @@ async function createInitialRelationships(
 
   logger.info("Initial relationships created successfully", {
     credexFoundationID,
-    greatSunID,
+    greatSunTrustID,
     vimbisoPayTrustID,
     vimbisoPayOpsID,
     rdubsID,

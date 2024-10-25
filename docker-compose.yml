@@ -8,6 +8,7 @@ services:
       PORT: ${PORT:-3000}
       LOG_LEVEL: ${LOG_LEVEL:-debug}
       JWT_SECRET: ${JWT_SECRET}
+      CLIENT_API_KEY: ${CLIENT_API_KEY}
       OPEN_EXCHANGE_RATES_API: ${OPEN_EXCHANGE_RATES_API}
       NEO_4J_LEDGER_SPACE_BOLT_URL: ${NEO_4J_LEDGER_SPACE_BOLT_URL}
       NEO_4J_LEDGER_SPACE_USER: ${NEO_4J_LEDGER_SPACE_USER}
@@ -28,6 +29,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_REGION: ${AWS_REGION:-af-south-1}
     profiles:
       - aws

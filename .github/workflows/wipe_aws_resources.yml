@@ -4,143 +4,386 @@ on:
   workflow_dispatch:
     inputs:
       confirm_wipe:
-        description: 'Type "YES" to confirm wiping all AWS resources'
+        description: '"yes" deletes all resources in the AWS env for this branch'
         required: true
 
 jobs:
   wipe-aws-resources:
     runs-on: ubuntu-latest
-    if: github.event.inputs.confirm_wipe == 'YES'
+    if: github.event.inputs.confirm_wipe == 'yes'
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set Environment
-      run: |
-        if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
-          echo "ENVIRONMENT=production" >> $GITHUB_ENV
-        elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
-          echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-        else
-          echo "ENVIRONMENT=development" >> $GITHUB_ENV
-        fi
-
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
-
-    - name: Wipe EC2 Resources
-      run: |
-        echo "Terminating EC2 instances..."
-        instance_ids=$(aws ec2 describe-instances --filters Name=instance-state-name,Values=pending,running,stopping,stopped --query 'Reservations[*].Instances[*].[InstanceId]' --output text)
-        if [ -n "$instance_ids" ]; then
-          aws ec2 terminate-instances --instance-ids $instance_ids
-          echo "Waiting for instances to terminate..."
-          aws ec2 wait instance-terminated --instance-ids $instance_ids
-        else
-          echo "No running instances to terminate."
-        fi
-
-        echo "Deleting EC2 security groups..."
-        sg_ids=$(aws ec2 describe-security-groups --query 'SecurityGroups[?GroupName!=`default`].[GroupId]' --output text)
-        for sg_id in $sg_ids; do
-          if ! aws ec2 delete-security-group --group-id $sg_id 2>/dev/null; then
-            echo "Failed to delete security group $sg_id. It may have dependencies."
+      - name: Set Environment
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=development" >> $GITHUB_ENV
           fi
-        done
 
-        echo "Deleting EC2 key pairs..."
-        key_pairs=$(aws ec2 describe-key-pairs --query 'KeyPairs[*].[KeyName]' --output text)
-        for key in $key_pairs; do
-          aws ec2 delete-key-pair --key-name $key
-        done
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: af-south-1
 
-    - name: Wipe VPC Resources
-      run: |
-        echo "Deleting VPC resources..."
-        vpc_ids=$(aws ec2 describe-vpcs --query 'Vpcs[?IsDefault==`false`].[VpcId]' --output text)
-        for id in $vpc_ids; do
-          aws ec2 delete-vpc --vpc-id $id
-        done
+      - name: Check AWS Permissions
+        run: |
+          echo "Checking AWS permissions..."
+          aws sts get-caller-identity
+          aws ec2 describe-vpcs --output json
 
-    - name: Wipe S3 Buckets
-      run: |
-        echo "Deleting S3 buckets..."
-        buckets=$(aws s3 ls | awk '{print $3}')
-        for bucket in $buckets; do
-          aws s3 rb s3://$bucket --force
-        done
+      - name: Wipe EC2 Resources
+        run: |
+          function log_error() {
+            local error_type="$1"
+            local message="$2"
+            echo "ERROR [$error_type]: $message" >&2
+          }
 
-    - name: Wipe RDS Instances
-      run: |
-        echo "Deleting RDS instances..."
-        rds_instances=$(aws rds describe-db-instances --query 'DBInstances[*].[DBInstanceIdentifier]' --output text)
-        for instance in $rds_instances; do
-          aws rds delete-db-instance --db-instance-identifier $instance --skip-final-snapshot
-        done
+          echo "Terminating EC2 instances..."
+          instance_ids=$(aws ec2 describe-instances --filters Name=instance-state-name,Values=pending,running,stopping,stopped --query 'Reservations[*].Instances[*].[InstanceId]' --output text)
+          if [ -n "$instance_ids" ]; then
+            aws ec2 terminate-instances --instance-ids $instance_ids || log_error "EC2_TERMINATION" "Failed to terminate EC2 instances"
+            echo "Waiting for instances to terminate..."
+            aws ec2 wait instance-terminated --instance-ids $instance_ids || log_error "EC2_TERMINATION_TIMEOUT" "Timeout waiting for EC2 instances to terminate"
+          else
+            echo "No running instances to terminate."
+          fi
 
-    - name: Wipe ECS Clusters
-      run: |
-        echo "Deleting ECS clusters, services, and tasks..."
-        clusters=$(aws ecs list-clusters --query 'clusterArns[]' --output text)
-        for cluster in $clusters; do
-          echo "Processing cluster: $cluster"
-          
-          # List and stop all tasks
-          tasks=$(aws ecs list-tasks --cluster $cluster --query 'taskArns[]' --output text)
-          if [ -n "$tasks" ]; then
-            echo "Stopping tasks in cluster $cluster"
-            for task in $tasks; do
-              if ! aws ecs stop-task --cluster $cluster --task $task > /dev/null 2>&1; then
-                echo "Failed to stop task $task in cluster $cluster"
-              fi
+          echo "Deleting EC2 key pairs..."
+          key_pairs=$(aws ec2 describe-key-pairs --query 'KeyPairs[*].[KeyName]' --output text)
+          for key in $key_pairs; do
+            aws ec2 delete-key-pair --key-name $key || log_error "KEY_PAIR_DELETION" "Failed to delete key pair $key"
+          done
+
+      - name: Wipe VPC Resources
+        run: |
+          function log_error() {
+            local error_type="$1"
+            local message="$2"
+            echo "ERROR [$error_type]: $message" >&2
+          }
+
+          echo "Deleting VPC resources..."
+          vpc_ids=$(aws ec2 describe-vpcs --query 'Vpcs[?IsDefault==`false`].[VpcId]' --output text)
+          for vpc_id in $vpc_ids; do
+            echo "Processing VPC: $vpc_id"
+            
+            # Delete NAT Gateways
+            echo "Deleting NAT Gateways..."
+            nat_gateway_ids=$(aws ec2 describe-nat-gateways --filter Name=vpc-id,Values=$vpc_id --query 'NatGateways[*].[NatGatewayId]' --output text)
+            for nat_gw_id in $nat_gateway_ids; do
+              echo "Deleting NAT Gateway: $nat_gw_id"
+              aws ec2 delete-nat-gateway --nat-gateway-id $nat_gw_id || log_error "NAT_GATEWAY_DELETION" "Failed to delete NAT Gateway $nat_gw_id"
             done
             
-            echo "Waiting for tasks to stop..."
-            aws ecs wait tasks-stopped --cluster $cluster --tasks $tasks
-          else
-            echo "No tasks found in cluster $cluster"
-          fi
-          
-          # List and delete all services
-          services=$(aws ecs list-services --cluster $cluster --query 'serviceArns[]' --output text)
-          if [ -n "$services" ]; then
-            echo "Deleting services in cluster $cluster"
-            for service in $services; do
-              if ! aws ecs update-service --cluster $cluster --service $service --desired-count 0 > /dev/null 2>&1; then
-                echo "Failed to update service $service in cluster $cluster"
-              fi
-              if ! aws ecs delete-service --cluster $cluster --service $service --force > /dev/null 2>&1; then
-                echo "Failed to delete service $service in cluster $cluster"
-              fi
+            # Wait for NAT Gateways to be deleted
+            for nat_gw_id in $nat_gateway_ids; do
+              echo "Waiting for NAT Gateway $nat_gw_id to be deleted..."
+              aws ec2 wait nat-gateway-deleted --nat-gateway-ids $nat_gw_id || log_error "NAT_GATEWAY_DELETION_TIMEOUT" "Timeout waiting for NAT Gateway $nat_gw_id to be deleted"
             done
-          else
-            echo "No services found in cluster $cluster"
-          fi
-          
-          # Delete the cluster
-          echo "Deleting cluster $cluster"
-          if ! aws ecs delete-cluster --cluster $cluster > /dev/null 2>&1; then
-            echo "Failed to delete cluster $cluster"
-          fi
-        done
 
-    - name: Wipe ECR Repositories
-      run: |
-        echo "Deleting ECR repositories..."
-        repos=$(aws ecr describe-repositories --query 'repositories[*].[repositoryName]' --output text)
-        for repo in $repos; do
-          aws ecr delete-repository --repository-name $repo --force
-        done
+            # Handle Elastic IP addresses
+            echo "Handling Elastic IP addresses..."
+            eips=$(aws ec2 describe-addresses --filters "Name=domain,Values=vpc" --query 'Addresses[*].[AllocationId,AssociationId]' --output text)
+            while IFS=$'\t' read -r allocation_id association_id; do
+              if [ -n "$association_id" ] && [ "$association_id" != "None" ]; then
+                echo "Disassociating Elastic IP $allocation_id"
+                aws ec2 disassociate-address --association-id "$association_id" || log_error "EIP_DISASSOCIATION" "Failed to disassociate Elastic IP $allocation_id"
+              fi
+              echo "Releasing Elastic IP $allocation_id"
+              aws ec2 release-address --allocation-id "$allocation_id" || log_error "EIP_RELEASE" "Failed to release Elastic IP $allocation_id"
+            done <<< "$eips"
 
-    - name: Final Message
-      run: |
-        echo "AWS resource wipe completed."
-        echo "All resources created by these workflows should now be deleted, except for any security groups with dependencies."
-        echo "If you encounter any issues or find remaining resources, please investigate and delete them manually."
-        echo "You can now use your Terraform configurations to rebuild the infrastructure from scratch if needed."
+            # Detach and delete Internet Gateways
+            echo "Detaching and deleting Internet Gateways..."
+            igw_ids=$(aws ec2 describe-internet-gateways --filters Name=attachment.vpc-id,Values=$vpc_id --query 'InternetGateways[*].[InternetGatewayId]' --output text)
+            for igw_id in $igw_ids; do
+              aws ec2 detach-internet-gateway --internet-gateway-id $igw_id --vpc-id $vpc_id || log_error "IGW_DETACH" "Failed to detach Internet Gateway $igw_id"
+              aws ec2 delete-internet-gateway --internet-gateway-id $igw_id || log_error "IGW_DELETION" "Failed to delete Internet Gateway $igw_id"
+            done
+
+            # Delete Subnets
+            echo "Deleting Subnets..."
+            subnet_ids=$(aws ec2 describe-subnets --filters Name=vpc-id,Values=$vpc_id --query 'Subnets[*].[SubnetId]' --output text)
+            for subnet_id in $subnet_ids; do
+              aws ec2 delete-subnet --subnet-id $subnet_id || log_error "SUBNET_DELETION" "Failed to delete Subnet $subnet_id"
+            done
+
+            # Delete Route Tables
+            echo "Deleting Route Tables..."
+            rt_ids=$(aws ec2 describe-route-tables --filters Name=vpc-id,Values=$vpc_id --query 'RouteTables[?Associations[0].Main!=`true`].[RouteTableId]' --output text)
+            for rt_id in $rt_ids; do
+              aws ec2 delete-route-table --route-table-id $rt_id || log_error "ROUTE_TABLE_DELETION" "Failed to delete Route Table $rt_id"
+            done
+
+            # Delete Network ACLs
+            echo "Deleting Network ACLs..."
+            nacl_ids=$(aws ec2 describe-network-acls --filters Name=vpc-id,Values=$vpc_id --query 'NetworkAcls[?!IsDefault].[NetworkAclId]' --output text)
+            for nacl_id in $nacl_ids; do
+              aws ec2 delete-network-acl --network-acl-id $nacl_id || log_error "NACL_DELETION" "Failed to delete Network ACL $nacl_id"
+            done
+
+            # Delete Security Groups (except the default one)
+            echo "Deleting Security Groups..."
+            sg_ids=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values=$vpc_id --query 'SecurityGroups[?GroupName!=`default`].[GroupId]' --output text)
+            for sg_id in $sg_ids; do
+              # Remove all ingress and egress rules before deleting
+              aws ec2 revoke-security-group-ingress --group-id $sg_id --protocol all --source-group $sg_id || log_error "SG_INGRESS_REVOKE" "Failed to revoke ingress rules for $sg_id"
+              aws ec2 revoke-security-group-egress --group-id $sg_id --protocol all --source-group $sg_id || log_error "SG_EGRESS_REVOKE" "Failed to revoke egress rules for $sg_id"
+              aws ec2 delete-security-group --group-id $sg_id || log_error "SG_DELETION" "Failed to delete Security Group $sg_id"
+            done
+
+            # Delete Network Interfaces
+            echo "Deleting Network Interfaces..."
+            eni_ids=$(aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=$vpc_id --query 'NetworkInterfaces[*].[NetworkInterfaceId]' --output text)
+            for eni_id in $eni_ids; do
+              aws ec2 delete-network-interface --network-interface-id $eni_id || log_error "ENI_DELETION" "Failed to delete Network Interface $eni_id"
+            done
+
+            # Finally, delete the VPC
+            echo "Deleting VPC..."
+            aws ec2 delete-vpc --vpc-id $vpc_id || log_error "VPC_DELETION" "Failed to delete VPC $vpc_id"
+            
+            # Add a wait time after deleting each VPC to allow for eventual consistency
+            echo "Waiting for 30 seconds after VPC deletion..."
+            sleep 30
+          done
+
+      - name: Wipe RDS DB Subnet Groups
+        run: |
+          function log_error() {
+            local error_type="$1"
+            local message="$2"
+            echo "ERROR [$error_type]: $message" >&2
+          }
+
+          echo "Deleting RDS DB Subnet Groups..."
+          subnet_groups=$(aws rds describe-db-subnet-groups --query 'DBSubnetGroups[*].[DBSubnetGroupName]' --output text)
+          for subnet_group in $subnet_groups; do
+            aws rds delete-db-subnet-group --db-subnet-group-name $subnet_group || log_error "RDS_SUBNET_GROUP_DELETION" "Failed to delete RDS DB Subnet Group $subnet_group"
+          done
+
+      - name: Wipe S3 Buckets
+        run: |
+          function log_error() {
+            local error_type="$1"
+            local message="$2"
+            echo "ERROR [$error_type]: $message" >&2
+          }
+
+          echo "Deleting S3 buckets..."
+          buckets=$(aws s3 ls | awk '{print $3}')
+          for bucket in $buckets; do
+            echo "Processing bucket: $bucket"
+            aws s3 rm s3://$bucket --recursive || log_error "S3_BUCKET_EMPTY" "Failed to empty bucket $bucket"
+            aws s3api delete-bucket --bucket $bucket || log_error "S3_BUCKET_DELETION" "Failed to delete bucket $bucket"
+          done
+
+      - name: Wipe ECS Clusters
+        run: |
+          function log_error() {
+            local error_type="$1"
+            local message="$2"
+            echo "ERROR [$error_type]: $message" >&2
+          }
+
+          echo "Deleting ECS clusters, services, and tasks..."
+          clusters=$(aws ecs list-clusters --query 'clusterArns[]' --output text)
+          for cluster in $clusters; do
+            echo "Processing cluster: $cluster"
+            
+            services=$(aws ecs list-services --cluster $cluster --query 'serviceArns[]' --output text)
+            for service in $services; do
+              aws ecs update-service --cluster $cluster --service $service --desired-count 0 || log_error "ECS_SERVICE_UPDATE" "Failed to update service $service in cluster $cluster"
+              aws ecs delete-service --cluster $cluster --service $service --force || log_error "ECS_SERVICE_DELETION" "Failed to delete service $service in cluster $cluster"
+            done
+            
+            tasks=$(aws ecs list-tasks --cluster $cluster --query 'taskArns[]' --output text)
+            for task in $tasks; do
+              aws ecs stop-task --cluster $cluster --task $task || log_error "ECS_TASK_STOP" "Failed to stop task $task in cluster $cluster"
+            done
+            
+            aws ecs delete-cluster --cluster $cluster || log_error "ECS_CLUSTER_DELETION" "Failed to delete cluster $cluster"
+          done
+
+      - name: Wipe ECR Repositories
+        run: |
+          function log_error() {
+            local error_type="$1"
+            local message="$2"
+            echo "ERROR [$error_type]: $message" >&2
+          }
+
+          echo "Deleting ECR repositories..."
+          repos=$(aws ecr describe-repositories --query 'repositories[*].[repositoryName]' --output text)
+          for repo in $repos; do
+            aws ecr delete-repository --repository-name $repo --force || log_error "ECR_REPO_DELETION" "Failed to delete ECR repository $repo"
+          done
+
+      - name: Wipe CloudWatch Log Groups
+        run: |
+          function log_error() {
+            local error_type="$1"
+            local message="$2"
+            echo "ERROR [$error_type]: $message" >&2
+          }
+
+          echo "Deleting CloudWatch Log Groups..."
+          log_groups=$(aws logs describe-log-groups --query 'logGroups[*].[logGroupName]' --output text)
+          for log_group in $log_groups; do
+            aws logs delete-log-group --log-group-name $log_group || log_error "CLOUDWATCH_LOG_GROUP_DELETION" "Failed to delete Log Group $log_group"
+          done
+
+      - name: Wipe Load Balancers and Target Groups
+        run: |
+          function log_error() {
+            local error_type="$1"
+            local message="$2"
+            echo "ERROR [$error_type]: $message" >&2
+          }
+
+          echo "Deleting Application Load Balancers..."
+          albs=$(aws elbv2 describe-load-balancers --query 'LoadBalancers[*].[LoadBalancerArn]' --output text)
+          for alb in $albs; do
+            aws elbv2 delete-load-balancer --load-balancer-arn $alb || log_error "ALB_DELETION" "Failed to delete Load Balancer $alb"
+          done
+
+          echo "Deleting Target Groups..."
+          target_groups=$(aws elbv2 describe-target-groups --query 'TargetGroups[*].[TargetGroupArn]' --output text)
+          for tg in $target_groups; do
+            aws elbv2 delete-target-group --target-group-arn $tg || log_error "TARGET_GROUP_DELETION" "Failed to delete Target Group $tg"
+          done
+
+      - name: Wipe ACM Certificates
+        run: |
+          function log_error() {
+            local error_type="$1"
+            local message="$2"
+            echo "ERROR [$error_type]: $message" >&2
+          }
+
+          echo "Deleting ACM Certificates..."
+          certificates=$(aws acm list-certificates --query 'CertificateSummaryList[*].[CertificateArn]' --output text)
+          for cert in $certificates; do
+            aws acm delete-certificate --certificate-arn $cert || log_error "ACM_CERTIFICATE_DELETION" "Failed to delete ACM Certificate $cert"
+          done
+
+      - name: Wipe IAM Roles
+        run: |
+          function log_error() {
+            local error_type="$1"
+            local message="$2"
+            echo "ERROR [$error_type]: $message" >&2
+          }
+
+          echo "Deleting IAM Roles..."
+          roles=$(aws iam list-roles --query 'Roles[?starts_with(Path, `/`) == `true`].[RoleName]' --output text)
+          for role in $roles; do
+            if [[ $role == AWSReservedSSO_* || 
+                  $role == AWSServiceRoleFor* || 
+                  $role == aws-service-role/* ]]; then
+              echo "Skipping system-managed role: $role"
+              continue
+            fi
+            echo "Processing role: $role"
+            # Detach policies
+            policies=$(aws iam list-attached-role-policies --role-name $role --query 'AttachedPolicies[*].[PolicyArn]' --output text)
+            for policy in $policies; do
+              aws iam detach-role-policy --role-name $role --policy-arn $policy || echo "Failed to detach policy $policy from role $role"
+            done
+            # Remove role from instance profiles
+            profiles=$(aws iam list-instance-profiles-for-role --role-name $role --query 'InstanceProfiles[*].[InstanceProfileName]' --output text || echo "")
+            if [ -n "$profiles" ]; then
+              for profile in $profiles; do
+                aws iam remove-role-from-instance-profile --instance-profile-name $profile --role-name $role || echo "Failed to remove role $role from instance profile $profile"
+              done
+            else
+              echo "No instance profiles found for role $role"
+            fi
+            # Delete inline policies
+            inline_policies=$(aws iam list-role-policies --role-name $role --query 'PolicyNames[]' --output text)
+            for inline_policy in $inline_policies; do
+              aws iam delete-role-policy --role-name $role --policy-name $inline_policy || echo "Failed to delete inline policy $inline_policy from role $role"
+            done
+            # Delete the role
+            aws iam delete-role --role-name $role && echo "Successfully deleted IAM Role $role" || log_error "IAM_ROLE_DELETION" "Failed to delete IAM Role $role"
+          done
+
+      - name: Print Remaining Resources
+        run: |
+          function log_error() {
+            local error_type="$1"
+            local message="$2"
+            echo "ERROR [$error_type]: $message" >&2
+          }
+
+          echo "Checking for remaining resources..."
+
+          # Check EC2 instances
+          instances=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].[InstanceId]' --output text)
+          if [ -n "$instances" ]; then
+            echo "Remaining EC2 instances: $instances"
+          fi
+
+          # Check VPCs
+          vpcs=$(aws ec2 describe-vpcs --query 'Vpcs[?IsDefault==`false`].[VpcId]' --output text)
+          if [ -n "$vpcs" ]; then
+            echo "Remaining VPCs: $vpcs"
+          fi
+
+          # Check S3 buckets
+          buckets=$(aws s3 ls | awk '{print $3}')
+          if [ -n "$buckets" ]; then
+            echo "Remaining S3 buckets: $buckets"
+          fi
+
+          # Check ECS clusters
+          clusters=$(aws ecs list-clusters --query 'clusterArns[]' --output text)
+          if [ -n "$clusters" ]; then
+            echo "Remaining ECS clusters: $clusters"
+          fi
+
+          # Check ECR repositories
+          repos=$(aws ecr describe-repositories --query 'repositories[*].[repositoryName]' --output text)
+          if [ -n "$repos" ]; then
+            echo "Remaining ECR repositories: $repos"
+          fi
+
+          # Check CloudWatch Log Groups
+          log_groups=$(aws logs describe-log-groups --query 'logGroups[*].[logGroupName]' --output text)
+          if [ -n "$log_groups" ]; then
+            echo "Remaining CloudWatch Log Groups: $log_groups"
+          fi
+
+          # Check Load Balancers
+          lbs=$(aws elbv2 describe-load-balancers --query 'LoadBalancers[*].[LoadBalancerArn]' --output text)
+          if [ -n "$lbs" ]; then
+            echo "Remaining Load Balancers: $lbs"
+          fi
+
+          # Check ACM Certificates
+          certs=$(aws acm list-certificates --query 'CertificateSummaryList[*].[CertificateArn]' --output text)
+          if [ -n "$certs" ]; then
+            echo "Remaining ACM Certificates: $certs"
+          fi
+
+          roles=$(aws iam list-roles --query 'Roles[?starts_with(Path, `/`) == `true`].[RoleName]' --output text)
+          if [ -n "$roles" ]; then
+            echo "Remaining IAM Roles: $roles"
+          fi
+
+          # Check RDS DB Subnet Groups
+          subnet_groups=$(aws rds describe-db-subnet-groups --query 'DBSubnetGroups[*].[DBSubnetGroupName]' --output text)
+          if [ -n "$subnet_groups" ]; then
+            echo "Remaining RDS DB Subnet Groups: $subnet_groups"
+          fi
+

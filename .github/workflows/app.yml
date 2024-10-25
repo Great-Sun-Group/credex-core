@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
 
       - name: Set Environment
         run: |
@@ -27,7 +29,20 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: af-south-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          echo "Initializing Terraform..."
+          terraform init \
+            -backend-config="bucket=credex-terraform-state-${ENVIRONMENT}" \
+            -backend-config="key=terraform.tfstate" \
+            -backend-config="region=af-south-1" \
+            -backend-config="dynamodb_table=credex-terraform-state-lock-${ENVIRONMENT}"
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -50,6 +65,7 @@ jobs:
             --build-arg NEO_4J_SEARCH_SPACE_BOLT_URL="${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}" \
             --build-arg OPEN_EXCHANGE_RATES_API="${{ secrets.OPEN_EXCHANGE_RATES_API }}" \
             --build-arg JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --build-arg CLIENT_API_KEY="${{ secrets.CLIENT_API_KEY }}" \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           echo "Docker image built successfully."
 
@@ -58,6 +74,24 @@ jobs:
           echo "Image pushed successfully: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
           echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Terraform Plan
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_docker_image: ${{ env.IMAGE }}
+        run: |
+          cd terraform
+          echo "Planning Terraform changes..."
+          terraform plan -input=false -out=tfplan -target=module.app
+
+      - name: Terraform Apply
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_docker_image: ${{ env.IMAGE }}
+        run: |
+          cd terraform
+          echo "Applying Terraform changes..."
+          terraform apply -auto-approve -input=false tfplan
 
       - name: Deploy Application
         run: |
@@ -68,8 +102,8 @@ jobs:
           echo "Current task definition fetched."
 
           echo "Updating task definition with new image and environment variables..."
-          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment += [
-            {"name": "NODE_ENV", "value": "${{ env.ENVIRONMENT }}"},
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment += [
+            {"name": "NODE_ENV", "value": $NODE_ENV},
             {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_USER }}"},
             {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}"},
             {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}"},
@@ -77,6 +111,7 @@ jobs:
             {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}"},
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}"},
             {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
+            {"name": "CLIENT_API_KEY", "value": "${{ secrets.CLIENT_API_KEY }}"},
             {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"}
           ]' | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "Task definition updated."
@@ -100,3 +135,14 @@ jobs:
           echo "Deployment completed successfully. Updated ECS service with latest image and task definition."
           echo "Environment: $ENVIRONMENT"
           echo "Image: $IMAGE"
+          
+          cd terraform
+          echo "========================================"
+          echo "App Infrastructure Outputs:"
+          echo "========================================"
+          echo "Raw terraform output:"
+          terraform output -json module.app
+          echo "========================================"
+          echo "Processed output:"
+          terraform output -json module.app | jq 'to_entries | map("\(.key): \(.value.value)") | .[]' || echo "Error processing terraform output"
+          echo "========================================"

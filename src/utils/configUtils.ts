@@ -20,7 +20,6 @@ interface Config {
     password: string;
   };
   jwtSecret: string;
-  jwtExpiresIn: string;
   rateLimit: {
     windowMs: number;
     max: number;
@@ -49,7 +48,6 @@ class ConfigUtils {
         password: process.env.NEO_4J_SEARCH_SPACE_PASS || "",
       },
       jwtSecret: process.env.JWT_SECRET || "",
-      jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1h",
       rateLimit: {
         windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000", 10), // 15 minutes
         max: parseInt(process.env.RATE_LIMIT_MAX || "100", 10),
