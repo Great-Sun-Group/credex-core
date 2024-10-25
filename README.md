@@ -8,9 +8,9 @@ Credex is a tool for financial inclusion, financial empowerment, and financial s
 
 ## Developer Guides
 
-For a full overview and links to all development and deployment guides, see the complete [Developer Documentation](docs/developerAPI/README.md). If you are not working directly with Great Sun Group, make sure to also view the [license](#license) below.
+For a full overview and links to all development and deployment guides, see the complete [Developer Documentation](docs/README.md). If you are not working directly with Great Sun Group, make sure to also view the [license](#license) below.
 
-Important commands and features for development of the credex-core API itself are listed in the [API Dev Reference](docs/developerAPI/quickref.md).
+Important commands and features for development of the credex-core API itself are listed in the [API Dev Reference](docs/developerAPI/README.md).
 
 Developing a client app that queries the credex-core API? See the [Client Dev Reference](docs/developerClient/README.md).
 
