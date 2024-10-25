@@ -1,19 +1,20 @@
 # Deployer's Guide for Development, Staging, and Production
 
-The credex-core application is deployed using AWS services (including ECS, ECR), Terraform for infrastructure management, and GitHub Actions for CI/CD. The application relies on Neo4j Enterprise Edition for data storage and management. This guide provides comprehensive instructions for setting up, deploying, and maintaining the application and its associated Neo4j instances across all environments.
+The credex-core application is deployed using AWS services (including ECS, ECR), Terraform for infrastructure management, and GitHub Actions for CI/CD. The application relies on Neo4j Enterprise Edition for data storage and management. This guide and linked resources in this docs/deploy/ folder provide comprehensive instructions for setting up, deploying, and maintaining the application and its associated Neo4j instances across all environments.
+
+## Development, Deployment and CI/CD Overview
+
 
 - The `development` environment and databases are intended to provide initial deployment testing of deployment changes on private data by manually-triggered deployment off the `dev` branch.
 - The `staging` environment and databases are intended to provide large-scale testing in a stable environment, and are deployed automatically by pushes to the `stage` branch.
 - The `production` environment enables members to interact with the production databases that host the live ledger of the credex ecosystem. This environment is deployed automatically by pushes to the `prod` branch (to be changed to any changes to `prod` being deployed every day just after midnight UTC at the end of the DCO).
 
-## Deployment Overview
+**Any work that changes files in /.github/workflows or /terraform impacts the application deployment process**, and must be tested by a developer ("deployer") with the appropriate AWS keys before pushing the changes to stage and prod.
 
-**Any work that changes files in /.github/workflows or /terraform impacts the application deployment process**, and must first be tested by a developer with the appropriate AWS keys. For the purpose of these docs, a developer with the AWS access codes is a "deployer".
+Our deployment process runs in three separate workflows:
 
-Our deployment process now runs in three separate workflows:
-
-1. **connectors.yml**: Handles the deployment of infrequently changed infrastructure.
-2. **databases.yml**: Sets up and manages database resources, including Neo4j instances.
+1. **connectors.yml**: Handles the deployment of infrequently changed infrastructure such as clusters and load balancers.
+2. **databases.yml**: Sets up and manages Neo4j database resources (ledgerSpace and searchSpace).
 3. **app.yml**: Deploys the application itself.
 
 This separation allows for granular control over each part of the deployment process and makes it easier to manage and troubleshoot specific aspects of the deployment.

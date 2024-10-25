@@ -10,7 +10,9 @@ The `.github/workflows/connectors.yml` file defines a GitHub Actions workflow fo
 
 2. **Environment**: The workflow determines the environment (development, staging, or production) based on the Git branch.
 
-3. **Steps**:
+3. **AWS Region**: The workflow is configured to use the af-south-1 (Cape Town) region.
+
+4. **Steps**:
    - Checkout code
    - Configure AWS credentials
    - Setup Terraform
@@ -74,6 +76,18 @@ For the Fargate deployment, the following parts of the infrastructure are used:
 6. **ECR**: Stores the Docker images used by the Fargate tasks.
 
 The actual creation and management of the ECS cluster, task definitions, and services for Fargate are handled in the `app.yml` workflow and associated terraform module.
+
+## Infrastructure Outputs
+
+After applying the Terraform changes, the workflow outputs key infrastructure details, including:
+
+- VPC ID
+- Subnet IDs
+- Neo4j Security Group ID
+- Key Pair Name
+- ALB Security Group ID
+
+These outputs are crucial for other modules and workflows that depend on the infrastructure created by the connectors workflow. These values are printed to the workflow logs, and are made accessible programmatically to the other modules.
 
 ## Conclusion
 
