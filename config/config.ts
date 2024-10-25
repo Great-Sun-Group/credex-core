@@ -58,6 +58,7 @@ const requiredEnvVars = [
   "NEO_4J_SEARCH_SPACE_BOLT_URL",
   "OPEN_EXCHANGE_RATES_API",
   "JWT_SECRET",
+  "CLIENT_API_KEY",
 ];
 
 let configPromise: Promise<any>;

@@ -226,6 +226,13 @@ variable "jwt_secret" {
   sensitive   = true
 }
 
+variable "client_api_key" {
+  description = "The secret used to access the login endpoint"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "open_exchange_rates_api" {
   description = "API key for Open Exchange Rates"
   type        = string

@@ -44,6 +44,7 @@ resource "aws_ecs_task_definition" "credex_core" {
           { name = "NEO_4J_LEDGER_SPACE_PASSWORD", value = var.neo_4j_ledger_space_password },
           { name = "NEO_4J_SEARCH_SPACE_PASSWORD", value = var.neo_4j_search_space_password },
           { name = "JWT_SECRET", value = var.jwt_secret },
+          { name = "CLIENT_API_KEY", value = var.client_api_key },
           { name = "OPEN_EXCHANGE_RATES_API", value = var.open_exchange_rates_api }
         ]
         logConfiguration = {

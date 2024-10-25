@@ -1,10 +1,18 @@
-# Credex Ecosystem Core API
+# The Credex Ecosystem
 
-The credex ecosystem provides a shared ledger that enables the efficient circulation of value, accumulation of capital, investment of profits, and giving of gifts. Credex is a tool for financial inclusion, financial empowerment, and financial sovereignty.
+The credex ecosystem is a shared ledger that enables the efficient circulation of value, accumulation of capital, investment of profits, and giving of gifts.
+
+Credex is a tool for financial inclusion, financial empowerment, and financial sovereignty. This credex-core API is the portal through which our members access their sovereign financial rights, and sidestep the economic distortions and extortions imposed by obsolete and destructive monetary paradigms.
+
+[mycredex.app](https://mycredex.app)
 
 ## Developer Guides
 
-See the [Developer Documentation](docs/README.md) for a list of development and deployment guides and references. Make sure to also view the [license](#license) below.
+For a full overview and links to all development and deployment guides, see the complete [Developer Documentation](docs/developerAPI/README.md). If you are not working directly with Great Sun Group, make sure to also view the [license](#license) below.
+
+Important commands and features for development of the credex-core API itself are listed in the [API Dev Reference](docs/developerAPI/quickref.md).
+
+Developing a client app that queries the credex-core API? See the [Client Dev Reference](docs/developerClient/README.md).
 
 ## Credex Principle
 
@@ -36,9 +44,9 @@ The credex ecosystem actualizes the Credcoin Principle in the Daily Credcoin Off
 
 The organic economy is a subset of the credex ecosystem, which is a subset of the global economy, which is the human-enhanced subset of the world that is given to us by nature. The organic economy is an economy in which wealth circulates, profit accumulates, investment is made, and gifts are given in alignment and long-term harmony with the biological environment of our habitat, the physical laws of our universe, and the spiritual laws of our existence.
 
-The credex ecosystem stores values in credcoin (CXX). In order to natively enable multi-denominational accounting, a CXXmultiplier value is stored alongside every CXX value. Both of these values are updated in every DCO so that the credex remains true to the face value in the denomination specified, and to other values stored in the ecosystem. A value expressed in CXX represents that value in relationship to every other value stored in the ecosystem, expressed in today's value of credcoin. A value in CXX divided by its CXX multiplier expresses the value in the chosen denomination (face value).
+The credex ecosystem stores values in credcoin (CXX). In order to natively enable multi-denominational accounting, a CXXmultiplier value is stored alongside every CXX value. Both of these values are updated in every DCO so that the credex remains true both to the face value in the denomination specified, and to other values stored in the ecosystem. A value expressed in CXX represents that value in relationship to every other value stored in the ecosystem, expressed in today's value of credcoin. A value in CXX divided by its CXX multiplier expresses the value in the chosen denomination (face value).
 
-The credex ecosystem uses the flows of value that are created by members participating in the DCO as the anchor point for exchange rates across the ecosystem. These flows provide a daily peg that connects financial reality to the reality of underlying natural resources available to the economy, in a way that all other economic values can orient on. This mechanism manages the balance between local truth (preserving the face value of credex contracts in their specified denomination) and global truth (adjusting all values relative to credcoin) through the daily rate and value adjustments in the DCO.
+The credex ecosystem uses the flows of value that are created by members participating in the DCO as the anchor point for exchange rates across the ecosystem. These flows provide a daily peg that connects financial reality in the oganic economy and the credex ecosystem as a whole to the reality of underlying natural resource flows, in a way that all other economic values can orient on. This mechanism manages the balance between local truth (preserving the face value of credex contracts in their specified denomination) and global truth (adjusting all values relative to credcoin) through the daily rate and value adjustments in the DCO.
 
 ### Credcoin Services
 
@@ -46,7 +54,7 @@ The credex ecosystem provides the non-sovereign and non-monetary services of:
 1. Processing and distributing the daily flows of value that actualize the entitlements and responsibilities of the Credex Principle for participating sovereign members.
 2. Setting the relative values (exchange rates) of denominations in the ecosystem daily based on global market data including the real flows of value occuring in the DCO.
 
-These credcoin services empower a second layer of distributed financial sovereignty by connecting every member to the underlying resource reality of their financial decisions, and relating every other measure of value to that underlying reality. In this way we replace our reliance on measures of value that are created and controlled by the international financial system with a measure of value that is structurally locked to the daily flows of real natural resources that sustain our economy.
+These credcoin services empower a second layer of distributed financial sovereignty by connecting every member to the underlying resource reality of their financial decisions, and relating every other measure of value all across the global economy to that underlying reality. In this way we replace our reliance on measures of value that are created and controlled by obsolete monetary paradigms with a measure of value that is structurally locked to the daily flows of real natural resources that sustain us.
 
 ## Ecosystem Services
 While the credcoin services mathmatically lock all values in the the credex ecosystem to the market values of real natural resource flows, the credex services provide liquidity to meet all needs and fuel strong credit-based economic growth when conditions warrant, as determined by the distributed risk tolerance and risk/reward calculations of economic participants.
@@ -55,7 +63,7 @@ These non-sovereign and non-monetary services provided by the credex ecosystem e
 
 ## License
 
-You are welcome to explore, experiment with, and build upon this work within the purposes and exclusions below. If you fork this project or create something new based on this codebase this license will automatically apply to all such work.
+You are welcome to explore, experiment with, and build upon this work within the purposes and exclusions below. If you fork this project or create something new based on this codebase, this license will automatically apply to all such work.
 
 ### Development and testing of apps connecting to the credex-core API
 
@@ -73,7 +81,7 @@ The use of this codebase for economic modeling is welcomed. Additions to the cod
 
 ### Development and testing of the credex-core API itself
 
-Contributions, bug fixes, and security testing and patches are welcome.
+Contributions, bug fixes, and security testing and patches are welcome. If you'd like to collaborate or contribute, please get in touch.
 
 ### EXCLUSION: Live ledger
 
@@ -82,22 +90,3 @@ Contributions, bug fixes, and security testing and patches are welcome.
 ### Licensing Summary
 
 This customized licensing approach ensures the integrity and unity of the credex ecosystem as a shared economic network that all can access and benefit from, while still encouraging community engagement and experimentation, economic research, and the development of interdependent software ecosystems that retain the option to self-fund and charge for their own software in whatever way they choose.
-
-## Neo4j Databases
-
-Credex-core runs on two neo4j databases. LedgerSpace is the shared ledger containing the full state of the credex ecosystem. SearchSpace contains only unredeemed credexes, and is optimized to find credloops. On every credloop found and cleared, LedgerSpace is updated accordingly.
-
-## Express.js Server
-
-The express.js server is initialized in `src/index.ts`, which provides the cronjobs and endpoints that power the ecosystem and enable members and client apps to interact with its ledger.
-
-### Cronjobs
-
-The src/core-cron/ module hosts the cronjobs:
-
-- DailyCredcoinOffering runs every day at midnight UTC, calculating the value of 1 CXX and updating all ecosystem values accordingly.
-- MinuteTransactionQueue runs every minute, clearing credloops of value creation across the ecosystem.
-
-### Endpoints
-
-Endpoints and routes are deployed for the modules: Member, Account, Credex, Avatar, and AdminDashboard. Endpoints for the Dev module are included in development and staging deployments, but not in production.

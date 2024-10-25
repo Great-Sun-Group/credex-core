@@ -65,6 +65,7 @@ jobs:
             --build-arg NEO_4J_SEARCH_SPACE_BOLT_URL="${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}" \
             --build-arg OPEN_EXCHANGE_RATES_API="${{ secrets.OPEN_EXCHANGE_RATES_API }}" \
             --build-arg JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --build-arg CLIENT_API_KEY="${{ secrets.CLIENT_API_KEY }}" \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           echo "Docker image built successfully."
 
@@ -110,6 +111,7 @@ jobs:
             {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}"},
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}"},
             {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
+            {"name": "CLIENT_API_KEY", "value": "${{ secrets.CLIENT_API_KEY }}"},
             {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"}
           ]' | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "Task definition updated."

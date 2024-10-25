@@ -1,6 +1,6 @@
 # MinuteTransactionQueue (MTQ)
 
-The Minute Transaction Queue is a crucial part of the Credex ecosystem that runs every minute. It links the main ledgerSpace database (the source of truth and full information) to a searchSpace database (optimized to find credloops). New accounts are first added to the searchSpace, then new credexes. After each new credex is added, the ecosystem finds and clears all possible loops created by the new credex.
+The Minute Transaction Queue (MTQ) is a crucial component of the Credex ecosystem that runs every minute. It links the main ledgerSpace database (the source of truth and full information) to a searchSpace database (optimized to find credloops). Every minute, first any new accounts are added to the searchSpace, then any new credexes. After each new credex is added, the ecosystem finds and clears all possible loops created by the new credex before moving on to the next.
 
 1. Processing new accounts:
 
@@ -11,21 +11,21 @@ The Minute Transaction Queue is a crucial part of the Credex ecosystem that runs
 2. Processing new Credexes:
    - Retrieves Credexes with "PENDING_CREDEX" status from the ledger space.
    - Sorts them by acceptance time.
-   - For each Credex, it calls the LoopFinder function.
+   - For each Credex, calls the LoopFinder function.
 
 ## LoopFinder.ts
 
-Checks if the credex already exists in the search space. If not, it creates it.
+Checks if the credex already exists in searchSpace (in case of previous error). If not, it creates it.
 
 1. Finds all loops starting and ending at the specified account.
    - Identifies the loop with the earliest due date.
    - For each node in the loop, it selects the Credex with the earliest due date (or largest amount if tied).
    - Identifies the minimum outstanding amount among all credexes in the loop.
 2. If a loop is found:
-   - Subtract the minimum amount from all Credexes in the loop.
-   - Update the searchSpace, removing fully redeemed credexes and updating the earliest due dates.
-   - Update the ledgerSpace, creating a LoopAnchor to represent the cleared loop, update the Credexes' outstanding and redeemed amounts, and create REDEEMED and CREDLOOP relationships.
-   - For fully redeemed credexes, replace the OWES relationships with CLEARED relationships in ledgerSpace.
+   - Subtracts the minimum amount from all Credexes in the loop.
+   - Updates the searchSpace, removing fully redeemed credexes and updating the earliest due dates.
+   - Updates the ledgerSpace, creating a LoopAnchor to represent the cleared loop, update the Credexes' outstanding and redeemed amounts, and create REDEEMED and CREDLOOP relationships.
+   - For fully redeemed credexes, replaces the OWES relationships with CLEARED relationships in ledgerSpace.
 3. Go back to step one until no loop is found.
 4. Once no more loops can be found, mark the original Credex as processed and exit the loop.
 

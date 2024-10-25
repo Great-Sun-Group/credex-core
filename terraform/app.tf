@@ -4,6 +4,7 @@ module "app" {
   environment                = var.environment
   aws_region                 = var.aws_region
   jwt_secret                 = var.jwt_secret
+  client_api_key             = var.client_api_key
   open_exchange_rates_api    = var.open_exchange_rates_api
   common_tags                = var.common_tags
 
