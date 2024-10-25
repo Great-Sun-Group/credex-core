@@ -5,7 +5,6 @@ import { UpdateAccountController } from "./controllers/updateAccount";
 import { AuthorizeForAccountController } from "./controllers/authorizeForAccount";
 import { UnauthorizeForAccountController } from "./controllers/unauthorizeForAccount";
 import { UpdateSendOffersToController } from "./controllers/updateSendOffersTo";
-import { rateLimiter } from "../../middleware/rateLimiter";
 import { errorHandler } from "../../middleware/errorHandler";
 import { validateRequest } from "../../middleware/validateRequest";
 import {
@@ -18,218 +17,48 @@ import {
 } from "./accountValidationSchemas";
 import logger from "../../utils/logger";
 
-export default function AccountRoutes(jsonParser: express.RequestHandler) {
+export default function AccountRoutes() {
   const router = express.Router();
   logger.info("Initializing Account routes");
 
-  /**
-   * @swagger
-   * /api/v1/createAccount:
-   *   post:
-   *     summary: Create a new account
-   *     tags: [Accounts]
-   *     security:
-   *       - bearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/CreateAccountRequest'
-   *     responses:
-   *       200:
-   *         description: Account created successfully
-   *       400:
-   *         description: Bad request
-   *       401:
-   *         description: Unauthorized
-   *       403:
-   *         description: Forbidden
-   *       429:
-   *         description: Too many requests
-   */
   router.post(
     `/createAccount`,
-    rateLimiter,
-    jsonParser,
     validateRequest(createAccountSchema),
     CreateAccountController,
     errorHandler
   );
+  logger.info("Create Account route registered");
 
-  /**
-   * @swagger
-   * /api/v1/getAccountByHandle:
-   *   get:
-   *     summary: Get account by handle
-   *     tags: [Accounts]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: query
-   *         name: accountHandle
-   *         required: true
-   *         schema:
-   *           type: string
-   *     responses:
-   *       200:
-   *         description: Account retrieved successfully
-   *       400:
-   *         description: Bad request
-   *       401:
-   *         description: Unauthorized
-   *       403:
-   *         description: Forbidden
-   *       404:
-   *         description: Account not found
-   *       429:
-   *         description: Too many requests
-   */
-  router.get(
+  router.post(
     `/getAccountByHandle`,
-    rateLimiter,
-    validateRequest(getAccountByHandleSchema, "query"),
+    validateRequest(getAccountByHandleSchema),
     GetAccountByHandleController,
-    errorHandler
   );
+  logger.debug("Route registered: POST /getAccountByHandle");
 
-  /**
-   * @swagger
-   * /api/v1/updateAccount:
-   *   patch:
-   *     summary: Update account information
-   *     tags: [Accounts]
-   *     security:
-   *       - bearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/UpdateAccountRequest'
-   *     responses:
-   *       200:
-   *         description: Account updated successfully
-   *       400:
-   *         description: Bad request
-   *       401:
-   *         description: Unauthorized
-   *       403:
-   *         description: Forbidden
-   *       404:
-   *         description: Account not found
-   *       429:
-   *         description: Too many requests
-   */
-  router.patch(
+  router.post(
     `/updateAccount`,
-    rateLimiter,
-    jsonParser,
     validateRequest(updateAccountSchema),
     UpdateAccountController,
     errorHandler
   );
 
-  /**
-   * @swagger
-   * /api/v1/authorizeForAccount:
-   *   post:
-   *     summary: Authorize a member for an account
-   *     tags: [Accounts]
-   *     security:
-   *       - bearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/AuthorizeForAccountRequest'
-   *     responses:
-   *       200:
-   *         description: Member authorized successfully
-   *       400:
-   *         description: Bad request
-   *       401:
-   *         description: Unauthorized
-   *       403:
-   *         description: Forbidden
-   *       429:
-   *         description: Too many requests
-   */
   router.post(
     `/authorizeForAccount`,
-    rateLimiter,
-    jsonParser,
     validateRequest(authorizeForAccountSchema),
     AuthorizeForAccountController,
     errorHandler
   );
 
-  /**
-   * @swagger
-   * /api/v1/unauthorizeForAccount:
-   *   post:
-   *     summary: Unauthorize a member for an account
-   *     tags: [Accounts]
-   *     security:
-   *       - bearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/UnauthorizeForAccountRequest'
-   *     responses:
-   *       200:
-   *         description: Member unauthorized successfully
-   *       400:
-   *         description: Bad request
-   *       401:
-   *         description: Unauthorized
-   *       403:
-   *         description: Forbidden
-   *       429:
-   *         description: Too many requests
-   */
   router.post(
     `/unauthorizeForAccount`,
-    rateLimiter,
-    jsonParser,
     validateRequest(unauthorizeForAccountSchema),
     UnauthorizeForAccountController,
     errorHandler
   );
 
-  /**
-   * @swagger
-   * /api/v1/updateSendOffersTo:
-   *   post:
-   *     summary: Update the member to receive offers for an account
-   *     tags: [Accounts]
-   *     security:
-   *       - bearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/UpdateSendOffersToRequest'
-   *     responses:
-   *       200:
-   *         description: Send offers recipient updated successfully
-   *       400:
-   *         description: Bad request
-   *       401:
-   *         description: Unauthorized
-   *       403:
-   *         description: Forbidden
-   *       429:
-   *         description: Too many requests
-   */
   router.post(
     `/updateSendOffersTo`,
-    rateLimiter,
-    jsonParser,
     validateRequest(updateSendOffersToSchema),
     UpdateSendOffersToController,
     errorHandler

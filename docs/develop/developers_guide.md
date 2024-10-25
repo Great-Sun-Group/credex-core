@@ -125,13 +125,14 @@ In codespaces, use this:
 curl -X DELETE "https://${CODESPACE_NAME}-3000.app.github.dev/api/v1/dev/clearDevDBs" -H "X-Github-Token: $GITHUB_TOKEN" -H "Content-Type: application/json" -v
 ```
 
-To run the DCO and advance the day state, including new exchange rates, hit the `api/v1/dev/forceDCO` endpoint. If the database has been wiped or is new, this will first create initialization nodes and relationship then run the first DCO, bringing the credex ecosystem online.
+To run the DCO and advance the day state, including new exchange rates, hit the `v1/dev/forceDCO` endpoint. If the database has been wiped or is new, this will first create initialization nodes and relationship then run the first DCO, bringing the credex ecosystem online.
 
 This can be done from API software, or in local dev with:
 
 ```
 curl -X POST "http://localhost:3000/api/v1/dev/forceDCO" -H "Content-Type: application/json" -v
 ```
+
 
 In codespaces:
 

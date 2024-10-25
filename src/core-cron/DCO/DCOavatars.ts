@@ -1,6 +1,6 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { Session, Record } from "neo4j-driver";
-import { OfferCredexService } from "../../api/Credex/services/OfferCredex";
+import { CreateCredexService } from "../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
 import moment from "moment-timezone";
 import logger from "../../utils/logger";
@@ -220,7 +220,7 @@ async function createCredexOffer(offerData: any): Promise<CredexOfferResult> {
     requestId: offerData.requestId,
     avatarId: offerData.memberID,
   });
-  const offerResult = await OfferCredexService(offerData);
+  const offerResult = await CreateCredexService(offerData);
 
   if (
     offerResult &&

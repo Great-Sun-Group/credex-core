@@ -8,8 +8,8 @@ The Credex Core API uses Swagger for comprehensive API documentation. This provi
 
 To use the Swagger documentation for AI context:
 
-1. Access the Swagger UI at `https://mycredex.app/api/v1/api-docs` (adjust host and port if necessary).
-2. For programmatic access or to provide to AI models, use the raw Swagger JSON at `https://mycredex.app/api/v1/api-docs.json`.
+1. Access the Swagger UI at `https://mycredex.app/v1/api-docs` (adjust host and port if necessary).
+2. For programmatic access or to provide to AI models, use the raw Swagger JSON at `https://mycredex.app/v1/api-docs.json`.
 
 ## Benefits of Swagger for AI-Assisted Development
 

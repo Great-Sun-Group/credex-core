@@ -5,7 +5,8 @@ import logger from "../../../utils/logger";
 export async function AuthForTierSpendLimitService(
   issuerAccountID: string,
   amount: number,
-  denom: string
+  denom: string,
+  securedCredex: boolean
 ) {
   logger.debug("Entering AuthForTierSpendLimitService", {
     issuerAccountID,
@@ -15,19 +16,37 @@ export async function AuthForTierSpendLimitService(
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    logger.debug("Preparing database query for tier spend limit authorization", {
-      issuerAccountID,
-      amount,
-      denom,
-    });
+    logger.debug(
+      "Preparing database query for tier spend limit authorization",
+      {
+        issuerAccountID,
+        amount,
+        denom,
+      }
+    );
     const queryResult = await ledgerSpaceSession.run(
       `
+        // If memberTier = 1, and securedCredex = false return false immediately as "result"
         MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
         WITH member, member.memberTier AS memberTier
+        WHERE memberTier = 1 AND NOT $securedCredex
+        RETURN
+          {
+            isAuthorized: false,
+            message: "Unsecured credex not permitted on open tier"
+          } AS result
+
+        UNION
 
         // If memberTier > 2, return true immediately as "result"
+        MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
+        WITH member, member.memberTier AS memberTier
         WHERE memberTier > 2
-        RETURN true AS result
+        RETURN
+          {
+            isAuthorized: true,
+            message: "No daily limits on credex for paid tiers"
+          } AS result
 
         UNION
 
@@ -52,7 +71,7 @@ export async function AuthForTierSpendLimitService(
             memberTier: memberTier
           } AS result
     `,
-      { issuerAccountID, amount, denom }
+      { issuerAccountID, amount, denom, securedCredex }
     );
 
     logger.debug("Database query executed", {
@@ -77,23 +96,23 @@ export async function AuthForTierSpendLimitService(
       firstResultType: typeof queryResult.records[0].get("result"),
     });
 
-    if (queryResult.records[0].get("result") === true) {
-      logger.info("Authorization granted for high tier member", {
-        issuerAccountID,
-        amount,
-        denom,
-      });
-      return {
-        isAuthorized: true,
-        message: "Authorization granted for high tier member",
-      };
-    }
-
     const result = queryResult.records[0].get("result");
     logger.debug("Query result details", {
       issuerAccountID,
       result,
     });
+
+    if (result.isAuthorized !== undefined) {
+      logger.info("Authorization result from query", {
+        issuerAccountID,
+        isAuthorized: result.isAuthorized,
+        message: result.message,
+      });
+      return {
+        isAuthorized: result.isAuthorized,
+        message: result.message,
+      };
+    }
 
     const memberTier = result.memberTier;
     const dayTotalUSD = result.dayTotalUSD;

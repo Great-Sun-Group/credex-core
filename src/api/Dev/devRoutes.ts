@@ -7,11 +7,11 @@ import logger from "../../utils/logger";
 // import { getMemberListSchema } from "./devValidationSchemas";
 
 export default function DevRoutes(app: express.Application) {
-  const apiVersionOneRoute = "/api/v1";
+  const apiVersionOneRoute = "/v1";
   logger.info("Initializing Dev routes");
   /**
    * @swagger
-   * /api/v1/dev/getMemberList:
+   * /v1/dev/getMemberList:
    *   post:
    *     summary: Get member list (Dev only)
    *     tags: [Dev]
@@ -29,7 +29,7 @@ export default function DevRoutes(app: express.Application) {
 
   /**
    * @swagger
-   * /api/v1/dev/clearDevDBs:
+   * /v1/dev/clearDevDBs:
    *   delete:
    *     summary: Clear development databases (Dev only)
    *     tags: [Dev]
@@ -45,7 +45,7 @@ export default function DevRoutes(app: express.Application) {
 
   /**
    * @swagger
-   * /api/v1/dev/forceDCO:
+   * /v1/dev/forceDCO:
    *   post:
    *     summary: Force Daily Credcoin Offering (Dev only)
    *     tags: [Dev]

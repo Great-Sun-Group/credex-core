@@ -7,6 +7,57 @@ export const createAccountSchema = {
   ownerID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
+  },
+  accountType: {
+    sanitizer: s.sanitizeAccountType,
+    validator: v.validateAccountType,
+    required: true,
+  },
+  accountName: {
+    sanitizer: s.sanitizeAccountName,
+    validator: v.validateAccountName,
+    required: true,
+  },
+  accountHandle: {
+    sanitizer: s.sanitizeAccountHandle,
+    validator: v.validateAccountHandle,
+    required: true,
+  },
+  defaultDenom: {
+    sanitizer: s.sanitizeDenomination,
+    validator: v.validateDenomination,
+    required: true,
+  },
+  DCOgiveInCXX: {
+    sanitizer: s.sanitizeNumber,
+    validator: v.validatePositiveNumber,
+    required: false,
+  },
+  DCOdenom: {
+    sanitizer: s.sanitizeDenomination,
+    validator: v.validateDenomination,
+    required: false,
+  },
+};
+logger.debug("createAccountSchema initialized");
+
+export const getAccountByHandleSchema = {
+  accountHandle: {
+    sanitizer: s.sanitizeAccountHandle,
+    validator: v.validateAccountHandle,
+  },
+};
+logger.debug("getAccountByHandleSchema initialized");
+
+export const updateAccountSchema = {
+  ownerID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
+  accountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
   },
   accountName: {
     sanitizer: s.sanitizeAccountName,
@@ -21,40 +72,23 @@ export const createAccountSchema = {
     validator: v.validateDenomination,
   },
 };
-logger.debug("createAccountSchema initialized");
-
-export const getAccountByHandleSchema = {
-  accountHandle: {
-    sanitizer: s.sanitizeAccountHandle,
-    validator: v.validateAccountHandle,
-  },
-};
-logger.debug("getAccountByHandleSchema initialized");
-
-export const updateAccountSchema = {
-  accountID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-  },
-  accountName: {
-    sanitizer: s.sanitizeAccountName,
-    validator: v.validateAccountName,
-  },
-  accountHandle: {
-    sanitizer: s.sanitizeAccountHandle,
-    validator: v.validateAccountHandle,
-  },
-};
 logger.debug("updateAccountSchema initialized");
 
 export const authorizeForAccountSchema = {
   accountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
   },
-  memberID: {
+  memberHandleToBeAuthorized: {
+    sanitizer: s.sanitizeString,
+    validator: v.validateMemberHandle,
+    required: true,
+  },
+  ownerID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
   },
 };
 logger.debug("authorizeForAccountSchema initialized");

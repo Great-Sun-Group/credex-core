@@ -11,13 +11,15 @@ export async function AuthForTierSpendLimitController(
   issuerAccountID: string,
   Amount: number,
   Denomination: string,
+  securedCredex: boolean,
   requestId: string
 ): Promise<{ isAuthorized: boolean; message: string }> {
   try {
     const result = await AuthForTierSpendLimitService(
       issuerAccountID,
       Amount,
-      Denomination
+      Denomination,
+      securedCredex
     );
 
     if (!result.isAuthorized) {
@@ -52,7 +54,7 @@ export async function authForTierSpendLimitExpressHandler(
   const requestId = req.id;
 
   try {
-    const { issuerAccountID, Amount, Denomination } = req.body;
+    const { issuerAccountID, Amount, Denomination, securedCredex } = req.body;
 
     if (issuerAccountID === undefined) {
       res.status(400).json({ message: "issuerAccountID is required" });
@@ -78,6 +80,7 @@ export async function authForTierSpendLimitExpressHandler(
       issuerAccountID,
       Amount,
       Denomination,
+      securedCredex,
       requestId
     );
 

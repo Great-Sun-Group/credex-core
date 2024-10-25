@@ -62,7 +62,7 @@ export async function AuthorizeForAccountService(
         RETURN
           value.message AS message,
           value.accountID AS accountID,
-          value.memberIDtoAuthorize AS memberIDtoAuthorize
+          value.memberIDtoAuthorize AS memberIDtoAuthorized
       `,
       {
         memberHandleToBeAuthorized,
@@ -98,7 +98,7 @@ export async function AuthorizeForAccountService(
 
     if (record.get("message") == "accountAuthorized") {
       logger.info("Account authorized successfully", {
-        memberIDtoAuthorize: record.get("memberIDtoAuthorize"),
+        memberIDtoAuthorize: record.get("memberIDtoAuthorized"),
         accountID: record.get("accountID"),
       });
       return {
