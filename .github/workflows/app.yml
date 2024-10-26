@@ -140,9 +140,8 @@ jobs:
           echo "========================================"
           echo "App Infrastructure Outputs:"
           echo "========================================"
-          echo "Raw terraform output:"
-          terraform output -json module.app
-          echo "========================================"
-          echo "Processed output:"
-          terraform output -json module.app | jq 'to_entries | map("\(.key): \(.value.value)") | .[]' || echo "Error processing terraform output"
+          echo "ECS Cluster ARN: $(terraform output -raw ecs_cluster_arn)"
+          echo "ECS Task Definition ARN: $(terraform output -raw ecs_task_definition_arn)"
+          echo "ECS Service Name: $(terraform output -raw ecs_service_name)"
+          echo "ECS Service ID: $(terraform output -raw ecs_service_id)"
           echo "========================================"

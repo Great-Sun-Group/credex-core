@@ -115,7 +115,7 @@ To manage access to AWS resources for deployment, we have manually created the f
 3. IAM Policy:
    - `credex-core-permissions`: Policy that defines the permissions needed for deployment
 
-The `credex-core-permissions` policy is attached to the `credex-core-deployment` group, granting necessary permissions to all deployment users. While stored and implemented in AWS, and manually updated through the console, we keep a local copy of this policy up to date at [credex-permissions.json](docs/deployment/credex-permissions.json).
+The `credex-core-permissions` policy is attached to the `credex-core-deployment` group, granting necessary permissions to all deployment users. While stored and implemented in AWS, and manually updated through the console, we keep a local copy of this policy up to date at [credex-permissions.json](deployment/credex-permissions.json).
 
 **When Terraform scripts are modified, the IAM policy may need to be updated.** This is uncommon, but must be kept in mind.
 

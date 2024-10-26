@@ -1,9 +1,9 @@
 # Developer Documentation for the credex-core API
 
-This documentation includes a complete overview and orientation to developing, testing and deploying the credex-core codebase. Continue reading for an outline of the architecture, jump to the [full list of developer resources](#complete-list-of-developer-resources) below, or use these quick references for working on the [API code](docs/developerAPI/README.md) or a [client app](docs/developerClient/README.md).
+This documentation includes a complete overview and orientation to developing, testing and deploying the credex-core codebase. Continue reading for an outline of the architecture, jump to the [full list of developer resources](#complete-list-of-developer-resources) below, or use these quick references for working on the [API code](developerAPI/README.md) or a [client app](developerClient/README.md).
 
 ## Environments
-Configuration for all environments is outlined in [Environment Setup](docs/developerAPI/environment_setup.md).
+Configuration for all environments is outlined in [Environment Setup](environment_setup.md).
 
 ### Local
 A local environment is supplied by a developer's own machine or a virtual Github Codespaces machine, and linked cloud-deployed instances of neo4j (Neo4j Aura). Testing in this environment (link) ensures that all endpoints return data as expected. The value of the environment variable in this deployment is `development`, like the first deployed environment below.
@@ -49,42 +49,42 @@ This separation allows for granular control over each part of the deployment pro
 ## Complete List of Developer Resources
 
 ### README References
-- [Development of the credex-core API](docs/developerAPI/README.md)
-- [Development of Client Apps](docs/developerClient/README.md)
+- [Development of the credex-core API](developerAPI/README.md)
+- [Development of Client Apps](developerClient/README.md)
 
 ### Getting Started
-- [Environment Setup](docs/environment_setup.md)
-- [Connectors Workflow and Terraform Module](docs/deployment/connectors_workflow.md)
-- [Databases Workflow and Terraform Module](docs/deployment/databases_workflow.md)
-- [Application Workflow and Terraform Module](docs/deployment/app_workflow.md)
-- [credex-permissions.json for manual AWS entry](docs/deployment/credex-permissions.json)
+- [Environment Setup](environment_setup.md)
+- [Connectors Workflow and Terraform Module](deployment/connectors_workflow.md)
+- [Databases Workflow and Terraform Module](deployment/databases_workflow.md)
+- [Application Workflow and Terraform Module](deployment/app_workflow.md)
+- [credex-permissions.json for manual AWS entry](deployment/credex-permissions.json)
 
 ### Deployment
-- [Neo4j License Management](docs/deployment/neo4j_license.md)
-- [Infrastructure Scaling Report](docs/deployment/instance_size_first200k.md)
+- [Neo4j License Management](deployment/neo4j_license.md)
+- [Infrastructure Scaling Report](deployment/instance_size_first200k.md)
 
 ### Member Modules
-- [Account](docs/developerClient/module/Account.md)
-- [Avatar](docs/developerClient/module/Avatar.md)
-- [Credex](docs/developerClient/module/Credex.md)
-- [Member](docs/developerClient/module/Member.md)
+- [Account](developerClient/module/Account.md)
+- [Avatar](developerClient/module/Avatar.md)
+- [Credex](developerClient/module/Credex.md)
+- [Member](developerClient/module/Member.md)
 
 ### Admin Modules
-- [AdminDashboard](docs/developerClient/module/AdminDashboard.md)
-- [DevAdmin](docs/developerClient/module/DevAdmin.md)
+- [AdminDashboard](developerClient/module/AdminDashboard.md)
+- [DevAdmin](developerClient/module/DevAdmin.md)
 
 ### Core Cronjobs
-- [Daily Credcoin Offering](docs/developerClient/module/DCO.md)
-- [Minute Transaction Queue](docs/developerClient/module/MTQ.md)
+- [Daily Credcoin Offering](DCO.md)
+- [Minute Transaction Queue](MTQ.md)
 
 ### Database Schemas
-- [ledgerSpace Schema](docs/developerAPI/ledgerSpace_schema.md)
-- [searchSpace Schema](docs/developerAPI/searchSpace_schema.md)
+- [ledgerSpace Schema](developerAPI/ledgerSpace_schema.md)
+- [searchSpace Schema](developerAPI/searchSpace_schema.md)
 
 ### Development Guides
-- [Endpoint Security and Authorization](docs/auth_security.md)
-- [Swagger for AI-assisted client app dev](docs/developerClient/swagger.md)
-- [Logging Best Practices](docs/developerAPI/logging_best_practices.md)
+- [Endpoint Security and Authorization](auth_security.md)
+- [Swagger for AI-assisted client app dev](developerClient/swagger.md)
+- [Logging Best Practices](developerAPI/logging_best_practices.md)
 
 ### Testing
-- [Testing Guide](docs/tests/testing_guide.md)
+- [Testing Guide](tests/testing_guide.md)

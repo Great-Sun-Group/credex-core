@@ -71,10 +71,10 @@ To protect the API from abuse and ensure fair usage, rate limiting has been impl
 
 ## Implementation Locations:
 
-1. [config/authenticate.ts](config/authenticate.ts)
-2. [src/middleware/authMiddleware.ts](consrc/middleware/authMiddleware.ts)
-3. [src/middleware/rateLimiter.ts](src/middleware/rateLimiter.ts)
-4. [src/middleware/securityConfig.ts](src/middleware/securityConfig.ts)
+1. [config/authenticate.ts](../config/authenticate.ts)
+2. [src/middleware/authMiddleware.ts](../src/middleware/authMiddleware.ts)
+3. [src/middleware/rateLimiter.ts](../src/middleware/rateLimiter.ts)
+4. [src/middleware/securityConfig.ts](../src/middleware/securityConfig.ts)
 
 These mechanisms work together to ensure that each request is properly authenticated, authorized for the specific member making the request, and within the allowed rate limits.
 

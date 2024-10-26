@@ -14,7 +14,7 @@ You have two options to start a local server for development:
 2. `npm run dev` fires up a dev server on your local machine/codespace using nodemon. Run directly on your machine, this is slightly more resource efficient than the above, and seems to have slightly better hot-reload functionality and error messaging, but might introduce irregularities vs the deployed environments.
 
 ## Testing Code
-Assuming your code passes all automatic checks and can be compiled by the server, testing will usually be done by hitting an endpoint or a series of endpoints, and can be conducted using the commands outlined in the [Testing Guide](docs/tests/testing_guide.md).
+Assuming your code passes all automatic checks and can be compiled by the server, testing will usually be done by hitting an endpoint or a series of endpoints, and can be conducted using the commands outlined in the [Testing Guide](../tests/testing_guide.md).
 
 These two critical "test" commands can be used to wipe, initialize, and progress your development databases:
 
@@ -26,29 +26,29 @@ Test commands (still to create):
 ## Resources
 
 ### Getting Started
-- [Environment Setup](docs/environment_setup.md)
+- [Environment Setup](../environment_setup.md)
 
 ### Member Modules
-- [Account](docs/developerClient/module/Account.md)
-- [Avatar](docs/developerClient/module/Avatar.md)
-- [Credex](docs/developerClient/module/Credex.md)
-- [Member](docs/developerClient/module/Member.md)
+- [Account](../developerClient/module/Account.md)
+- [Avatar](../developerClient/module/Avatar.md)
+- [Credex](../developerClient/module/Credex.md)
+- [Member](../developerClient/module/Member.md)
 
 ### Admin Modules
-- [AdminDashboard](docs/developerClient/module/AdminDashboard.md)
-- [DevAdmin](docs/developerClient/module/DevAdmin.md)
+- [AdminDashboard](../developerClient/module/AdminDashboard.md)
+- [DevAdmin](../developerClient/module/DevAdmin.md)
 
 ### Cronjobs
-- [Daily Credcoin Offering](docs/developerClient/module/DCO.md)
-- [Minute Transaction Queue](docs/developerClient/module/MTQ.md)
+- [Daily Credcoin Offering](../DCO.md)
+- [Minute Transaction Queue](../MTQ.md)
 
 ### Development Guides
-- [Endpoint Security and Authorization](docs/auth_security.md)
-- [Logging Best Practices](docs/developerAPI/logging_best_practices.md)
+- [Endpoint Security and Authorization](../auth_security.md)
+- [Logging Best Practices](../developerAPI/logging_best_practices.md)
 
 ### Database Schemas
-- [ledgerSpace Schema](docs/developerAPI/ledgerSpace_schema.md)
-- [searchSpace Schema](docs/developerAPI/searchSpace_schema.md)
+- [ledgerSpace Schema](../developerAPI/ledgerSpace_schema.md)
+- [searchSpace Schema](../developerAPI/searchSpace_schema.md)
 
 ### Testing
-- [Testing Guide](docs/tests/testing_guide.md)
+- [Testing Guide](../tests/testing_guide.md)

@@ -16,18 +16,18 @@ These endpoints can be used to wipe, initialize, and progress your development d
 ## Resources
 
 ### Getting Started
-- [Environment Setup](docs/environment_setup.md)
+- [Environment Setup](../environment_setup.md)
 
 ### Member Modules
-- [Account](docs/developerClient/module/Account.md)
-- [Avatar](docs/developerClient/module/Avatar.md)
-- [Credex](docs/developerClient/module/Credex.md)
-- [Member](docs/developerClient/module/Member.md)
+- [Account](../developerClient/module/Account.md)
+- [Avatar](../developerClient/module/Avatar.md)
+- [Credex](../developerClient/module/Credex.md)
+- [Member](../developerClient/module/Member.md)
 
 ### Admin Modules
-- [AdminDashboard](docs/developerClient/module/AdminDashboard.md)
-- [DevAdmin](docs/developerClient/module/DevAdmin.md)
+- [AdminDashboard](../developerClient/module/AdminDashboard.md)
+- [DevAdmin](../developerClient/module/DevAdmin.md)
 
 ### Development Guides
-- [Endpoint Security and Authorization](docs/auth_security.md)
-- [Swagger for AI-assisted client app dev](docs/developerClient/swagger.md)
+- [Endpoint Security and Authorization](../auth_security.md)
+- [Swagger for AI-assisted client app dev](../developerClient/swagger.md)
