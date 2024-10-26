@@ -20,6 +20,7 @@ module "shared_resources" {
   environment          = var.environment
   common_tags          = local.common_tags
   domain               = local.full_domain
+  domain_base          = var.domain_base
   public_key           = tls_private_key.credex_key.public_key_openssh
   vpc_cidr             = lookup(var.vpc_cidr, var.environment, var.vpc_cidr["development"])
 }
