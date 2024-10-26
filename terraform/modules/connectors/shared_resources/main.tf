@@ -244,13 +244,18 @@ resource "aws_acm_certificate" "credex_cert" {
   }
 }
 
+resource "aws_acm_certificate_validation" "credex_cert" {
+  certificate_arn         = aws_acm_certificate.credex_cert.arn
+  validation_record_fqdns = [for record in aws_acm_certificate.credex_cert.domain_validation_options : record.resource_record_name]
+}
+
 # ALB Listener
 resource "aws_lb_listener" "credex_listener" {
   load_balancer_arn = aws_lb.credex_alb.arn
   port              = "443"
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-2016-08"
-  certificate_arn   = aws_acm_certificate.credex_cert.arn
+  certificate_arn   = aws_acm_certificate_validation.credex_cert.certificate_arn
 
   default_action {
     type             = "forward"
