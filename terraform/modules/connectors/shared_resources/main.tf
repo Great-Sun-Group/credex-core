@@ -238,10 +238,6 @@ resource "aws_acm_certificate" "credex_cert" {
   tags = merge(var.common_tags, {
     Name = "credex-cert-${var.environment}"
   })
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 resource "aws_acm_certificate_validation" "credex_cert" {
