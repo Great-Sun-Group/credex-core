@@ -1,5 +1,11 @@
-research this:
 
+notis on offerCredex, requestRecurring, and loopFinder
+
+
+prebuild codespaces
+
+
+research this:
 
 To run tests within a Docker container:
 
