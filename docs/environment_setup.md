@@ -86,31 +86,92 @@ Locally, you can use VS Code's "Attach to Running Container" feature to work wit
 
 For development environments, the `NODE_ENV` variable defaults to 'development'.
 
-# Deployed Environments Setup
+# Deployed Environments
 
-These environment configurations are required for work on the application deployment process or the infrastructure that undergirds the application (connectors and databases), and for the daily management of the portion of the CI/CD pipeline that occurs in deployed `development` and `staging` environments for final approval to deploy to the`production` environment that provides members access to the credex ecosystem.
+Our infrastructure supports two distinct types of environments:
 
-## Prerequisites
+1. Development Pipeline Environments (dev/stage/prod)
+2. Model Environments (for research and forecasting)
 
-Our Infrastructure as Code implementation of Terraform manages the majority of our infrastructure and application deployment processes. However, for this codebase to function properly it requires the manual registration and configuration of certain elements.
+## Development Pipeline Environments
 
-### Domain, AWS Account, and Neo4j License
+These environments form our development and deployment pipeline, progressing from development through staging to production. They are designed for application development, testing, and production deployment.
 
-Our domain `mycredex.app` is registered with a third-party provider, with nameservers pointed to Route 53 at AWS, which is manually configured by logging into the console as root. Region `af-south-1` was manually activate in the account. We have received a Neo4j Startup License, whose value is required as a secret below.
+### Environment Types
 
-### Route 53
-Route 53 is manually configured with a hosted zone that manages traffic at the highest level of doman and subdomain.
+1. **Development Environment**
+   - Subdomain: dev.mycredex.app
+   - Purpose: Active development and initial testing
+   - Branch: 'dev' or any branch with a name including the pattern "deploy"
+   - Configuration:
+     - NODE_ENV: development
+     - LOG_LEVEL: debug
+     - Smaller instance sizes for cost efficiency
 
-### IAM
-To manage access to AWS resources for deployment, we have manually created the following IAM setup:
+2. **Staging Environment**
+   - Subdomain: stage.mycredex.app
+   - Purpose: Pre-production testing and validation
+   - Branch: 'stage'
+   - Configuration:
+     - NODE_ENV: staging
+     - LOG_LEVEL: debug
+     - Production-like instance sizes
+
+3. **Production Environment**
+   - Domain: mycredex.app
+   - Purpose: Live production environment
+   - Branch: 'prod'
+   - Configuration:
+     - NODE_ENV: production
+     - LOG_LEVEL: info
+     - Full-size production instances
+
+### Infrastructure Configuration
+
+Each environment is deployed with:
+- Dedicated VPC with proper networking
+- ECS Fargate for application hosting
+- Neo4j Enterprise instances for data storage
+- Health monitoring and automated recovery
+- Proper security groups and access controls
+
+## Model Environments
+
+Model environments are specialized deployments designed for economic research and forecasting. They are separate from the development pipeline and configured specifically for data analysis and modeling purposes.
+
+### Purpose
+- Economic modeling and simulation
+- Research deployments
+- Data analysis and forecasting
+- Testing economic theories and scenarios
+
+### Example: model_001 Environment
+- Subdomain: model-001.mycredex.app
+- Configured for research workloads
+- Isolated from production data
+- Specialized instance types for analytical workloads
+- Custom security groups for research access (might not be implemented yet?)
+
+See [Adding Research and Modeling Deployments](#adding-research-and-modeling-deployments)
+
+## Prerequisites for Deployment
+
+### Domain and AWS Setup
+- Domain: mycredex.app and mycredex.dev registered with third-party provider
+- Route 53 configured with hosted zones
+- Neo4j Enterprise License required
+
+### IAM Configuration
+Manually configured IAM setup with:
 
 1. IAM Users:
-   - `credex-core-development-deployment`: User for development deployments
-   - `credex-core-staging-deployment`: User for staging deployments
-   - `credex-core-production-deployment`: User for production deployments
+   - credex-core-development-deployment
+   - credex-core-staging-deployment
+   - credex-core-production-deployment
+   - credex-core-model_001-deployment
 
 2. IAM Group:
-   - `credex-core-deployment`: Group that includes all deployment users
+   - `credex-core-deployment`: Group that includes all users above
 
 3. IAM Policy:
    - `credex-core-permissions`: Policy that defines the permissions needed for deployment
@@ -120,7 +181,7 @@ The `credex-core-permissions` policy is attached to the `credex-core-deployment`
 **When Terraform scripts are modified, the IAM policy may need to be updated.** This is uncommon, but must be kept in mind.
 
 ### Secrets
-Each of the IAM users above has generated an access key, which has been entered in a Github Environment, along with the Neo4J License referenced above:\
+Each of the IAM users above requires an access key, which is entered in a Github Environment, along with the Neo4J License referenced above:\
 \
 **AWS_ACCESS_KEY**\
 **AWS_SECRET_ACCESS_KEY**\
@@ -130,7 +191,7 @@ Each of the IAM users above has generated an access key, which has been entered 
 The Github Actions (Workflows) manage an S3 bucket and DynamoDB table that stores a terraform state for every deployed environment.
 
 ## Terraform
-Our terraform codebase inserts A (and CNAME?) records into Route 53 for each subdomain, which links it to an environment that is deployed and managed by the codebase.
+Our terraform codebase inserts DNS records into Route 53 for each subdomain, which links it to an environment that is deployed and managed by the codebase.
 
 ## Summary of Deployment Architecture
 The `dev` branch (which is our default/main branch on Github) and any branch starting with "deploy" can be deployed to the `development` environment, and is linked to the `dev.api.mycredex.app` subdomain, with `NODE_ENV` set to `development` and LOG_LEVEL set to `debug`.
@@ -138,6 +199,8 @@ The `dev` branch (which is our default/main branch on Github) and any branch sta
 The `stage` branch is deployed to the `staging` environment, linked to the `stage.api.mycredex.app` subdomain, with `NODE_ENV` set to `staging` and LOG_LEVEL set to `debug`.
 
 The `prod` branch is deployed to the `production` environment, linked to the `api.mycredex.app` subdomain, with `NODE_ENV` set to `production` and LOG_LEVEL set to `info`.
+
+See [Adding Research and Modeling Deployments](#adding-research-and-modeling-deployments)
 
 ## App Deployment Secrets
 Once the connectors and databases have been deployed, the database secrets output by the latter must be entered into it's respective Github Environment, along with the additional secrets below.
@@ -156,3 +219,54 @@ separate key for `prod`, other deployments on a single key.
 **JWT_SECRET**\
 **CLIENT_API_KEY**\
 unique random strings
+
+### Adding Research and Modeling Deployments
+
+To add a new research/modeling environment, several files need to be updated:
+
+1. **Terraform Environment File**
+   Create a new file in `/terraform/environments/` based on `model_001.tf`
+
+2. **Update locals.tf**
+   Add the new environment to the env_config map in [terraform/locals.tf](../terraform/locals.tf)
+
+3. **Update variables.tf**
+   Add the new environment to the validation in [terraform/variables.tf](../terraform/variables.tf)
+
+4. **GitHub Workflows**
+   Update the environment matrix in:
+   - `.github/workflows/connectors.yml`
+   - `.github/workflows/databases.yml`
+   - `.github/workflows/app.yml`
+
+   Add the new environment to the matrix:
+   ```yaml
+   strategy:
+     matrix:
+       environment: [development, staging, production, model_001, model_002]
+   ```
+
+5. **IAM Setup**
+   - Create a new IAM user: `credex-core-model_002-deployment`
+   - Add user to the `credex-core-deployment` group
+   - Generate access keys and add to GitHub Environment secrets
+
+6. **GitHub Environment**
+   Create a new environment in GitHub repository settings:
+   - Name: model_002
+   - Add required secrets:
+     - AWS_ACCESS_KEY
+     - AWS_SECRET_ACCESS_KEY
+     - NEO4J_ENTERPRISE_LICENSE
+     - (Other secrets after database deployment etc)
+
+7. **DNS Configuration**
+   The terraform code will automatically:
+   - Create necessary DNS records in Route 53
+   - Link subdomain (model-002.mycredex.dev) to the environment
+
+Remember to:
+- Use unique CIDR ranges for each environment
+- Configure instance sizes appropriate for research workloads
+- Consider data isolation requirements
+- Update documentation to reflect new environment
