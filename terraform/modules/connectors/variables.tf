@@ -1,5 +1,5 @@
 variable "environment" {
-  description = "The deployment environment (development, staging, or production)"
+  description = "The deployment environment (development, staging, production, model_001, etc)"
   type        = string
 }
 
@@ -13,13 +13,18 @@ variable "vpc_cidr" {
   type        = map(string)
 }
 
-variable "domain_base" {
-  description = "The base domain for all environments"
+variable "production_domain" {
+  description = "The domain for production environment"
   type        = string
 }
 
-variable "subdomain_prefix" {
-  description = "The subdomain prefix for each environment"
+variable "dev_domain_base" {
+  description = "The base domain for non-production environments"
+  type        = string
+}
+
+variable "environment_subdomains" {
+  description = "Map of environment names to their subdomains on mycredex.dev (production not included)"
   type        = map(string)
 }
 
