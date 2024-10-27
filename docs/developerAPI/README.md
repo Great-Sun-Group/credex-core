@@ -18,9 +18,9 @@ Assuming your code passes all automatic checks and can be compiled by the server
 
 These two critical "test" commands can be used to wipe, initialize, and progress your development databases:
 
-Test commands (still to create):
-- `npm test cleardbs` to clear the databases
-- `npm test forcedco` to run the DCO and advance the day state, including new exchange rates.
+Test commands:
+- `npm test "cleardbs"` to clear the databases
+- `npm test "forcedco"` to run the DCO and advance the day state, including new exchange rates.
   - If the database has been wiped or is new, this will first create initialization nodes and relationship then run the first DCO, bringing the credex ecosystem online.
 
 ## Resources
