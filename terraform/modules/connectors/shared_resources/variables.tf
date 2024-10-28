@@ -13,6 +13,11 @@ variable "domain" {
   type        = string
 }
 
+variable "domain_base" {
+  description = "The base domain for Route53 zone lookup"
+  type        = string
+}
+
 variable "public_key" {
   description = "The public key for the EC2 key pair"
   type        = string
