@@ -4,9 +4,7 @@
   "dev_domain_base": "mycredex.dev",
   "aws_region": "af-south-1",
   "app_port": 3000,
-  "vpc_cidr": {
-    "main": "10.2.0.0/16"
-  },
+  "vpc_cidr": "10.2.0.0/16",
   "ecs_task": {
     "cpu": "1024",
     "memory": "2048"

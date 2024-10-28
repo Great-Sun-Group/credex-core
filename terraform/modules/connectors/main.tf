@@ -15,9 +15,6 @@ locals {
     "${var.environment_subdomains[var.environment]}.${var.dev_domain_base}" :
     null # Will be caught by validation below
   )
-
-  # Validate VPC CIDR
-  selected_vpc_cidr = lookup(var.vpc_cidr, var.environment, null)
 }
 
 # Validate configurations
@@ -29,13 +26,8 @@ resource "null_resource" "validations" {
     }
     
     precondition {
-      condition     = local.selected_vpc_cidr != null
-      error_message = "Missing VPC CIDR configuration for environment: ${var.environment}"
-    }
-    
-    precondition {
-      condition     = can(cidrhost(local.selected_vpc_cidr, 0))
-      error_message = "Invalid VPC CIDR format: ${local.selected_vpc_cidr}"
+      condition     = can(cidrhost(var.vpc_cidr, 0))
+      error_message = "Invalid VPC CIDR format: ${var.vpc_cidr}"
     }
   }
 }
@@ -54,5 +46,5 @@ module "shared_resources" {
   domain               = local.domain
   domain_base          = local.is_production ? var.production_domain : var.dev_domain_base
   public_key           = tls_private_key.credex_key.public_key_openssh
-  vpc_cidr             = local.selected_vpc_cidr
+  vpc_cidr             = var.vpc_cidr
 }
