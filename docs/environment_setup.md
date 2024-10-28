@@ -1,6 +1,6 @@
 # Environment Setup
 
-This document outlines environment configuration for developers working on the credex-core API and/or client apps, and additional configuration required for developers working on the deployment infrastructure and managing the CI/CD pipeline.
+This document outlines environment configuration for developers working on the credex-core API and/or client apps, and additional configuration required for developers working on the deployment infrastructure and managing the CI/CD pipeline ([jump](#deployed-environments-setup)).
 
 # Dev Env Setup for API and Client Apps
 Configuration for your local or codespaces development environment.
@@ -148,7 +148,7 @@ Model environments are specialized deployments designed for economic research an
 ### Top Level Authorization
 Top level authorization is managed by Ryan Watson. In his personal accounts are:
 - Domains `mycredex.app` and `mycredex.dev` are registered at [Hover.com](https://www.hover.com/), with nameservers pointed to Route 53 at AWS.
-- A single AWS root login has been created under hq@greatsunfinancial.ca, an email address managed by a Google Workspace with primary domain ryanlukewatson.com. 2FA is implemented for the root login, linked to Ryan's phone.
+- A master AWS root login has been created under hq@greatsunfinancial.ca, an email address managed by a Google Workspace with primary domain ryanlukewatson.com. 2FA is implemented for the root login, linked to Ryan's phone. Root users have been set for AWS accounts associated with each domain, isolating the production environment to it's own AWS account and domain, which also has manual IAM configuration as below.
 
 In case of Ryan's incapacitation, contact sister Hayley Watson for root access.
 
