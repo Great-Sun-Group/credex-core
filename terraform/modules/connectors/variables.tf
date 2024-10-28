@@ -21,6 +21,7 @@ variable "production_domain" {
 variable "dev_domain_base" {
   description = "The base domain for non-production environments"
   type        = string
+  default     = null
 }
 
 variable "environment_subdomains" {
