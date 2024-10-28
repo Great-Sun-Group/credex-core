@@ -14,11 +14,10 @@ CMD ["ts-node-dev", "--respawn", "--transpile-only", "src/index.ts"]
 
 FROM base AS build
 ARG NODE_ENV
-# Install all dependencies including devDependencies for build
 RUN npm install
 RUN npm install -g typescript
 COPY . .
-RUN tsc
+RUN npx tsc --noEmitOnError false
 
 FROM node:${NODE_VERSION}-alpine AS deploy
 ARG NODE_ENV
