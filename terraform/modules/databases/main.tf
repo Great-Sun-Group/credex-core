@@ -97,13 +97,13 @@ locals {
               }
 
               # Configure memory settings based on instance size
-              total_mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-              heap_size_mb=$((total_mem_kb / 1024 / 4))  # Use 25% of total memory for heap
-              page_cache_mb=$((total_mem_kb / 1024 / 2))  # Use 50% of total memory for page cache
+              total_mem_kb=$$(grep MemTotal /proc/meminfo | awk '{print $$2}')
+              heap_size_mb=$$(($total_mem_kb / 1024 / 4))  # Use 25% of total memory for heap
+              page_cache_mb=$$(($total_mem_kb / 1024 / 2))  # Use 50% of total memory for page cache
 
-              echo "dbms.memory.heap.initial_size=${heap_size_mb}m" >> /etc/neo4j/neo4j.conf
-              echo "dbms.memory.heap.max_size=${heap_size_mb}m" >> /etc/neo4j/neo4j.conf
-              echo "dbms.memory.pagecache.size=${page_cache_mb}m" >> /etc/neo4j/neo4j.conf
+              echo "dbms.memory.heap.initial_size=$${heap_size_mb}m" >> /etc/neo4j/neo4j.conf
+              echo "dbms.memory.heap.max_size=$${heap_size_mb}m" >> /etc/neo4j/neo4j.conf
+              echo "dbms.memory.pagecache.size=$${page_cache_mb}m" >> /etc/neo4j/neo4j.conf
 
               # Start Neo4j
               echo "Starting Neo4j service..."
