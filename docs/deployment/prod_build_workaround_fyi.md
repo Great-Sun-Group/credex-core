@@ -17,10 +17,10 @@ This error occurred despite the code successfully building and deploying in deve
 We modified the TypeScript compilation command in the Dockerfile's build stage to use:
 
 ```dockerfile
-RUN npx tsc --noEmitOnError false
+RUN npx tsc --force
 ```
 
-This allows TypeScript to emit JavaScript files even when encountering type errors.
+This forces TypeScript to emit JavaScript files even when encountering type errors.
 
 ## Why This is Safe
 

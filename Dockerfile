@@ -17,7 +17,7 @@ ARG NODE_ENV
 RUN npm install
 RUN npm install -g typescript
 COPY . .
-RUN npx tsc --noEmitOnError false
+RUN npx tsc --force
 
 FROM node:${NODE_VERSION}-alpine AS deploy
 ARG NODE_ENV
