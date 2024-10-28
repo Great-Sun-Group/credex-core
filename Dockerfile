@@ -15,6 +15,7 @@ CMD ["ts-node-dev", "--respawn", "--transpile-only", "src/index.ts"]
 FROM base AS build
 ARG NODE_ENV
 RUN npm ci
+RUN npm install -g typescript
 COPY . .
 RUN npm run build
 
