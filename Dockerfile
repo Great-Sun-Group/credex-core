@@ -17,7 +17,7 @@ ARG NODE_ENV
 RUN npm ci
 RUN npm install -g typescript
 COPY . .
-RUN npm run build -- --project tsconfig.prod.json
+RUN tsc --project tsconfig.prod.json
 
 FROM node:${NODE_VERSION}-alpine AS deploy
 ARG NODE_ENV
