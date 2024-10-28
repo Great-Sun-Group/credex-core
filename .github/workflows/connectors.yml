@@ -27,7 +27,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Create S3 bucket and DynamoDB table if not exist
+      - name: Setup and Initialize Terraform Backend
         run: |
           echo "Current environment: ${ENVIRONMENT}"
           BUCKET_NAME="credex-terraform-state-${ENVIRONMENT}"
@@ -54,10 +54,8 @@ jobs:
             echo "DynamoDB table already exists: $TABLE_NAME"
           fi
 
-      - name: Terraform Init
-        run: |
+          # Initialize Terraform
           cd terraform
-          echo "Current environment: ${ENVIRONMENT}"
           echo "Initializing Terraform..."
           terraform init \
             -backend-config="bucket=credex-terraform-state-${ENVIRONMENT}" \
