@@ -257,11 +257,11 @@ Remember to:
 - Update documentation to reflect new environment
 
 ## Summary of Deployment Architecture
-The `dev` branch (which is our default/main branch on Github) and any branch starting with "deploy" can be deployed to the `development` environment, and is linked to the `dev.api.mycredex.dev` subdomain, with `NODE_ENV` set to `development` and LOG_LEVEL set to `debug`.
+The `dev` branch (which is our default/main branch on Github) and any branch starting with "deploy" can be deployed to the `development` environment, and is linked to the `dev.mycredex.dev` subdomain, with `NODE_ENV` set to `development` and LOG_LEVEL set to `debug`.
 
-The `stage` branch is deployed to the `staging` environment, linked to the `stage.api.mycredex.dev` subdomain, with `NODE_ENV` set to `staging` and LOG_LEVEL set to `info`.
+The `stage` branch is deployed to the `staging` environment, linked to the `stage.mycredex.dev` subdomain, with `NODE_ENV` set to `staging` and LOG_LEVEL set to `info`.
 
-Branches can be configured to deploy to research environments with unique environment names such as `model_001`, which would be linked to the `model_001.api.mycredex.dev` subdomain, with `NODE_ENV` set to `staging` and LOG_LEVEL set to `info`.
+Branches can be configured to deploy to research environments with unique environment names such as `model_001`, which would be linked to the `model_001.mycredex.dev` subdomain, with `NODE_ENV` set to `staging` and LOG_LEVEL set to `info`.
 
 The `prod` branch is deployed to the `production` environment, linked to the `api.mycredex.app` subdomain, with `NODE_ENV` set to `production` and LOG_LEVEL set to `info`.
 
