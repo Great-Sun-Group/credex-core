@@ -55,16 +55,7 @@ resource "aws_ecs_task_definition" "credex_core" {
       ]
       environment = [
         { name = "NODE_ENV", value = var.environment },
-        { name = "PORT", value = tostring(var.app_port) },
-        { name = "NEO_4J_LEDGER_SPACE_BOLT_URL", value = var.neo_4j_ledger_space_bolt_url },
-        { name = "NEO_4J_SEARCH_SPACE_BOLT_URL", value = var.neo_4j_search_space_bolt_url },
-        { name = "NEO_4J_LEDGER_SPACE_USER", value = var.neo_4j_ledger_space_user },
-        { name = "NEO_4J_SEARCH_SPACE_USER", value = var.neo_4j_search_space_user },
-        { name = "NEO_4J_LEDGER_SPACE_PASSWORD", value = var.neo_4j_ledger_space_password },
-        { name = "NEO_4J_SEARCH_SPACE_PASSWORD", value = var.neo_4j_search_space_password },
-        { name = "JWT_SECRET", value = var.jwt_secret },
-        { name = "CLIENT_API_KEY", value = var.client_api_key },
-        { name = "OPEN_EXCHANGE_RATES_API", value = var.open_exchange_rates_api }
+        { name = "PORT", value = tostring(var.app_port) }
       ]
       healthCheck = {
         command     = ["CMD-SHELL", "curl -f http://localhost:${var.app_port}/health || exit 1"]

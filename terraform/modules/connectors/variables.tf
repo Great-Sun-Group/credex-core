@@ -10,7 +10,7 @@ variable "aws_region" {
 
 variable "vpc_cidr" {
   description = "The CIDR block for the VPC"
-  type        = map(string)
+  type        = string
 }
 
 variable "production_domain" {
