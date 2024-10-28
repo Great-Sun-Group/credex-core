@@ -14,9 +14,9 @@ CMD ["ts-node-dev", "--respawn", "--transpile-only", "src/index.ts"]
 
 FROM base AS build
 ARG NODE_ENV
-RUN npm ci
+# Install all dependencies including devDependencies for build
+RUN npm install
 RUN npm install -g typescript
-RUN npm install --no-save @types/jest
 COPY . .
 RUN tsc
 
