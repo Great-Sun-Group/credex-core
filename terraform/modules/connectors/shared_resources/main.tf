@@ -273,6 +273,19 @@ resource "aws_acm_certificate_validation" "credex_cert" {
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
+# Create Route53 record for the ALB
+resource "aws_route53_record" "alb" {
+  zone_id = data.aws_route53_zone.domain.zone_id
+  name    = var.domain
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.credex_alb.dns_name
+    zone_id                = aws_lb.credex_alb.zone_id
+    evaluate_target_health = true
+  }
+}
+
 # ALB Listener
 resource "aws_lb_listener" "credex_listener" {
   load_balancer_arn = aws_lb.credex_alb.arn
