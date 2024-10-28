@@ -79,6 +79,14 @@ jobs:
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_docker_image: ${{ env.IMAGE }}
+          # Dummy values for Neo4j variables since we're only targeting app module
+          TF_VAR_neo_4j_ledger_space_bolt_url: "dummy"
+          TF_VAR_neo_4j_search_space_bolt_url: "dummy"
+          TF_VAR_neo_4j_ledger_space_user: "dummy"
+          TF_VAR_neo_4j_search_space_user: "dummy"
+          TF_VAR_neo_4j_ledger_space_password: "dummy"
+          TF_VAR_neo_4j_search_space_password: "dummy"
+          TF_VAR_neo4j_enterprise_license: "dummy"
         run: |
           cd terraform
           echo "Planning Terraform changes..."
@@ -88,6 +96,14 @@ jobs:
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_docker_image: ${{ env.IMAGE }}
+          # Dummy values for Neo4j variables since we're only targeting app module
+          TF_VAR_neo_4j_ledger_space_bolt_url: "dummy"
+          TF_VAR_neo_4j_search_space_bolt_url: "dummy"
+          TF_VAR_neo_4j_ledger_space_user: "dummy"
+          TF_VAR_neo_4j_search_space_user: "dummy"
+          TF_VAR_neo_4j_ledger_space_password: "dummy"
+          TF_VAR_neo_4j_search_space_password: "dummy"
+          TF_VAR_neo4j_enterprise_license: "dummy"
         run: |
           cd terraform
           echo "Applying Terraform changes..."

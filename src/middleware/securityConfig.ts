@@ -110,7 +110,7 @@ export const applyAuthMiddleware = (app: Application) => {
       // Keyholes in the auth layer where we don't apply the middleware
       req.path === "/v1/login" ||
       req.path === "/v1/onboardMember" ||
-      req.path.includes("/v1/dev/") // routes are not published in prod
+      req.path.includes("/v1/devadmin/") // routes are not published in prod
     ) {
       logger.debug("[SC3] Skipping auth middleware for path", {
         path: req.path,

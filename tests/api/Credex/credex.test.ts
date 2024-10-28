@@ -23,7 +23,7 @@ describe("Credex API Tests", () => {
       };
 
       const firstResponse = await axios.post(
-        "/v1/onboardMember",
+        "/onboardMember",
         firstMemberData
       );
 
@@ -48,7 +48,7 @@ describe("Credex API Tests", () => {
       };
 
       const secondResponse = await axios.post(
-        "/v1/onboardMember",
+        "/onboardMember",
         secondMemberData
       );
 
@@ -64,7 +64,7 @@ describe("Credex API Tests", () => {
       secondAccountID = secondResponse.data.memberDashboard.accountIDS[0];
 
       // Login as Bennita Murranda to get auth for vimbisopay_trust
-      const bennitaLoginResponse = await axios.post("/v1/login", {
+      const bennitaLoginResponse = await axios.post("/login", {
         phone: "263788435091",
       });
       expect(bennitaLoginResponse.status).toBe(200);
@@ -72,7 +72,7 @@ describe("Credex API Tests", () => {
       bennitaJWT = bennitaLoginResponse.data.token;
 
       const bennitaDashboardResponse = await axios.post(
-        "/v1/getMemberDashboardByPhone",
+        "/getMemberDashboardByPhone",
         {
           phone: "263788435091",
         },
@@ -88,7 +88,7 @@ describe("Credex API Tests", () => {
 
       // Get vimbisopay_trust account ID
       const vimbisopayResponse = await axios.post(
-        "/v1/getAccountByHandle",
+        "/getAccountByHandle",
         { accountHandle: "vimbisopay_trust" },
         {
           headers: { Authorization: `Bearer ${bennitaJWT}` },
@@ -121,7 +121,7 @@ describe("Credex API Tests", () => {
         securedCredex: true,
       };
 
-      const response1 = await axios.post("/v1/createCredex", credexData1, {
+      const response1 = await axios.post("/createCredex", credexData1, {
         headers: { Authorization: `Bearer ${bennitaJWT}` },
       });
 
@@ -148,7 +148,7 @@ describe("Credex API Tests", () => {
       };
 
       const acceptResponse1 = await axios.post(
-        "/v1/acceptCredex",
+        "/acceptCredex",
         acceptData1,
         {
           headers: { Authorization: `Bearer ${firstMemberJWT}` },
@@ -170,7 +170,7 @@ describe("Credex API Tests", () => {
         securedCredex: true,
       };
 
-      const response2 = await axios.post("/v1/createCredex", credexData2, {
+      const response2 = await axios.post("/createCredex", credexData2, {
         headers: { Authorization: `Bearer ${firstMemberJWT}` },
       });
 
@@ -192,7 +192,7 @@ describe("Credex API Tests", () => {
       };
 
       const acceptResponse2 = await axios.post(
-        "/v1/acceptCredex",
+        "/acceptCredex",
         acceptData2,
         {
           headers: { Authorization: `Bearer ${secondMemberJWT}` },
@@ -214,7 +214,7 @@ describe("Credex API Tests", () => {
         securedCredex: true,
       };
 
-      const response3 = await axios.post("/v1/createCredex", credexData3, {
+      const response3 = await axios.post("/createCredex", credexData3, {
         headers: { Authorization: `Bearer ${secondMemberJWT}` },
       });
 
@@ -236,7 +236,7 @@ describe("Credex API Tests", () => {
       };
 
       const acceptResponse3 = await axios.post(
-        "/v1/acceptCredex",
+        "/acceptCredex",
         acceptData3,
         {
           headers: { Authorization: `Bearer ${bennitaJWT}` },
@@ -260,7 +260,7 @@ describe("Credex API Tests", () => {
       };
 
       try {
-        await axios.post("/v1/createCredex", credexData, {
+        await axios.post("/createCredex", credexData, {
           headers: { Authorization: `Bearer ${firstMemberJWT}` },
         });
         fail("Expected an error to be thrown");
@@ -286,7 +286,7 @@ describe("Credex API Tests", () => {
       };
 
       try {
-        await axios.post("/v1/createCredex", invalidCredexData, {
+        await axios.post("/createCredex", invalidCredexData, {
           headers: { Authorization: `Bearer ${firstMemberJWT}` },
         });
         fail("Expected an error to be thrown");
@@ -321,11 +321,11 @@ describe("Credex API Tests", () => {
         securedCredex: true,
       };
 
-      const response1 = await axios.post("/v1/createCredex", credexData1, {
+      const response1 = await axios.post("/createCredex", credexData1, {
         headers: { Authorization: `Bearer ${firstMemberJWT}` },
       });
 
-      const response2 = await axios.post("/v1/createCredex", credexData2, {
+      const response2 = await axios.post("/createCredex", credexData2, {
         headers: { Authorization: `Bearer ${firstMemberJWT}` },
       });
 
@@ -339,7 +339,7 @@ describe("Credex API Tests", () => {
       };
 
       const bulkAcceptResponse = await axios.post(
-        "/v1/acceptCredexBulk",
+        "/acceptCredexBulk",
         bulkAcceptData,
         {
           headers: { Authorization: `Bearer ${secondMemberJWT}` },

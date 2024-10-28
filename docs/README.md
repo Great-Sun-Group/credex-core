@@ -6,7 +6,7 @@ This documentation includes a complete overview and orientation to developing, t
 Configuration for all environments is outlined in [Environment Setup](environment_setup.md).
 
 ### Local
-A local environment is supplied by a developer's own machine or a virtual Github Codespaces machine, and linked cloud-deployed instances of neo4j (Neo4j Aura). Testing in this environment (link) ensures that all endpoints return data as expected. The value of the environment variable in this deployment is `development`, like the first deployed environment below.
+A local environment is supplied by a developer's own machine or a virtual Github Codespaces machine, and linked cloud-deployed instances of neo4j (Neo4j Aura). Testing in this environment (link) ensures that all endpoints return data as expected. The value of the environment variable in this deployment is `development`, like the first deployed environment below (this should probably be changed).
 
 ### Development
 The `development` environment and databases are intended to provide initial deployment testing on isolated data in dev DBs by manually-triggered deployment off the `dev` branch using Github Workflows. This testing (link), done over HTTPS via the API endpoints, includes data integrity checks across larger data sets and mutiple DCO exchange rate updates.
@@ -15,7 +15,7 @@ The `development` environment and databases are intended to provide initial depl
 The `staging` environment and databases are intended to provide production-scale testing in a mock production environment, and are deployed and tested automatically by pushes to the `stage` branch. When triggered, the deployment of the staging environment includes the full deployment of production-scale infrastructor (connectors, databases, application), automatic performance testing on production-scale data sets, spot checks for data integrity, and full deployment tear-down when tests are passed to satisfaction. Scale tests bypass the HTTPS protocols, running fully internal to the server. This environment can also mimic the update of deployed neo4j infrastructure. (Not yet true, still manually deployed from `stage` branch and no large scale test, tear-down, or DB deploy/update scripts written.)
 
 ### Production
-The `production` environment enables members to interact with the production databases that host the live ledger of the credex ecosystem. This environment automatically redeploys the app by running the application workflow every day just after midnight UTC at the end of the DCO. (Not yet true, still manually deployed from `prod` branch). Updates to the underlying database or connectors infrastructure are manually deployed from the `prod` branch using Github Workflows.
+The `production` environment enables members to interact with the production databases that host the live ledger of the credex ecosystem. This environment automatically redeploys the app by running the application workflow every day just after midnight UTC at the end of the DCO. (Not yet true, still manually deployed from `prod` branch). Updates to the underlying database or connectors infrastructure are manually deployed from the `prod` branch using Github Workflows (behaviour intended to remain).
 
 ## Neo4j Databases
 
@@ -23,7 +23,7 @@ Credex-core runs on two neo4j databases. LedgerSpace is the shared ledger contai
 
 ## Express.js Server
 
-The express.js server is initialized in `src/index.ts`, which provides the cronjobs and endpoints that power the ecosystem and enable members and client apps to interact with its ledger.
+The express.js server is initialized in `src/index.ts`, which provides the cronjobs and endpoints that power the ecosystem and enable members and client apps to interact with its ledger, locking in the security and authorization, as well as parsing, logging, and other middleware.
 
 ### Cronjobs
 

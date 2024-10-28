@@ -3,11 +3,11 @@ import axios from "axios";
 const getBaseUrl = () => {
   const args = process.argv.slice(2);
   if (args.includes("dev")) {
-    return "https://dev.api.mycredex.app";
+    return "https://dev.api.mycredex.app/v1";
   } else if (args.includes("stage")) {
-    return "https://stage.api.mycredex.app";
+    return "https://stage.api.mycredex.app/v1";
   }
-  return "http://localhost:3000"; // Default to local
+  return "http://localhost:3000/v1"; // Default to local
 };
 
 const API_BASE_URL = getBaseUrl();
