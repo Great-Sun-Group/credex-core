@@ -9,25 +9,7 @@ variable "environment" {
   }
 }
 
-# Sensitive variables that can't be stored in environment files
-variable "jwt_secret" {
-  description = "The secret used for JWT token generation"
-  type        = string
-  sensitive   = true
-}
-
-variable "client_api_key" {
-  description = "The secret used to access the login endpoint"
-  type        = string
-  sensitive   = true
-}
-
-variable "open_exchange_rates_api" {
-  description = "API key for Open Exchange Rates"
-  type        = string
-  sensitive   = true
-}
-
+# Neo4j related variables needed by databases module
 variable "neo_4j_ledger_space_bolt_url" {
   description = "The Neo4j Bolt URL for Ledger Space"
   type        = string
