@@ -16,8 +16,9 @@ FROM base AS build
 ARG NODE_ENV
 RUN npm ci
 RUN npm install -g typescript
+RUN npm install --no-save @types/jest
 COPY . .
-RUN tsc --project tsconfig.prod.json
+RUN tsc
 
 FROM node:${NODE_VERSION}-alpine AS deploy
 ARG NODE_ENV
