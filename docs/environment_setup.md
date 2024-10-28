@@ -1,6 +1,6 @@
 # Environment Setup
 
-This document outlines environment configuration for developers working on the credex-core API and/or client apps, and additional configuration required for developers working on the deployment infrastructure and managing the CI/CD pipeline ([jump](#deployed-environments-setup)).
+This document outlines environment configuration for developers working on the credex-core API and/or client apps, and additional configuration required for developers working on the deployment infrastructure and managing the CI/CD pipeline ([jump](#deployed-environments)).
 
 # Dev Env Setup for API and Client Apps
 Configuration for your local or codespaces development environment.
@@ -100,7 +100,7 @@ These environments form our development and deployment pipeline, progressing fro
 ### Environment Types
 
 1. **Development Environment**
-   - Subdomain: dev.mycredex.app
+   - Subdomain: dev.api.mycredex.dev
    - Purpose: Active development and initial testing
    - Branch: 'dev' or any branch with a name including the pattern "deploy"
    - Configuration:
@@ -109,7 +109,7 @@ These environments form our development and deployment pipeline, progressing fro
      - Smaller instance sizes for cost efficiency
 
 2. **Staging Environment**
-   - Subdomain: stage.mycredex.app
+   - Subdomain: stage.api.mycredex.dev
    - Purpose: Pre-production testing and validation
    - Branch: 'stage'
    - Configuration:
@@ -118,7 +118,7 @@ These environments form our development and deployment pipeline, progressing fro
      - Production-like instance sizes
 
 3. **Production Environment**
-   - Domain: mycredex.app
+   - Domain: api.mycredex.app
    - Purpose: Live production environment
    - Branch: 'prod'
    - Configuration:
@@ -148,7 +148,7 @@ Model environments are specialized deployments designed for economic research an
 ### Top Level Authorization
 Top level authorization is managed by Ryan Watson. In his personal accounts are:
 - Domains `mycredex.app` and `mycredex.dev` are registered at [Hover.com](https://www.hover.com/), with nameservers pointed to Route 53 at AWS.
-- A master AWS root login has been created under hq@greatsunfinancial.ca, an email address managed by a Google Workspace with primary domain ryanlukewatson.com. 2FA is implemented for the root login, linked to Ryan's phone. Root users have been set for AWS accounts associated with each domain, isolating the production environment to it's own AWS account and domain, which also has manual IAM configuration as below.
+- A master AWS root login has been created under hq@greatsunfinancial.ca, an email address managed by a Google Workspace with primary domain ryanlukewatson.com. 2FA is implemented for the root login, linked to Ryan's phone. Root users have been set for AWS accounts associated with each domain, isolating the production environment to it's own AWS account and domain. Production domain `mycredex.app` and development/testing/modeling domain `mycredex.dev` both have a manual Route 53 and IAM configuration as below.
 
 In case of Ryan's incapacitation, contact sister Hayley Watson for root access.
 
@@ -156,32 +156,36 @@ In case of Ryan's incapacitation, contact sister Hayley Watson for root access.
 Great Sun Financial Inc. has received a Neo4j Startup License, whose value is required as a secret below. A single value is currently used across all environments, but an environment can be configured under a different license by updating its individual secret.
 
 ### AWS Manual Configuration
-Within the root account above, a `production` AWS account has been set up to manage the production deployment to mycredex.app, a `development` AWS account has been set up with identical configuration as below to manage the development and modeling deployments to mycredex.dev. Each environment has been manually configured by logging into the console as the root of the respective AWS account.
+Within the root account above:
+- a `production` AWS account has been set up to manage the production deployment to `mycredex.app`
+- a `development` AWS account has been set up with identical configuration to manage the development and modeling deployments to `mycredex.dev`.
+- Each environment has been manually configured as below by logging into the console as the root of the respective AWS account.
 
 #### Region
-We deploy to `af-south-1`, which must be activated in an AWS account.
+We deploy to `af-south-1`, which must be specifically activated in an AWS account before resources can be deployed there.
 
 #### Route 53
-Route 53 is manually configured with a hosted zone that manages traffic at the highest level of doman and subdomain.
+Route 53 is manually configured with a hosted zone that manages traffic at the highest level of domain and subdomain DNS records.
 
 #### IAM
 To manage access to AWS resources for deployment, we have manually created the following IAM setup:
 
-1. a. IAM Users in `production`:
+1. IAM Policy (both accounts):
+   - `credex-core-permissions`: Policy that defines the permissions needed for deployment
+
+2. IAM Group (both accounts):
+   - `credex-core-deployment`: Group assigned the above policy to connect it will deployment users below.
+
+3. a. IAM Users in `production` assigned to group above:
    - `credex-core-production-deployment`: User for production deployments
 
-   b. IAM Users in `development`:
+   b. IAM Users in `development` assigned to group above:
    - `credex-core-development-deployment`: User for development deployments
    - `credex-core-staging-deployment`: User for staging deployments
    - `credex-core-model_01-deployment`: User required for each model environment deployment
 
-2. IAM Group (both accounts):
-   - `credex-core-deployment`: Group that includes all deployment users
 
-3. IAM Policy (both accounts):
-   - `credex-core-permissions`: Policy that defines the permissions needed for deployment
-
-The `credex-core-permissions` policy is attached to the `credex-core-deployment`, granting necessary permissions to all deployment users. While stored and implemented in AWS in both accounts and manually updated through the console, we keep a local copy of this policy up to date at [credex-permissions.json](deployment/credex-permissions.json), which the policy in each account should match.
+The `credex-core-permissions` policy is attached to the `credex-core-deployment`, granting necessary permissions to all deployment users. While stored and implemented in AWS in both accounts and manually updated through the console, we keep a local copy of this policy up to date at [credex-core-permissions.json](deployment/credex-core-permissions.json), which the policy in each account should match.
 
 **When Terraform scripts are modified, both the IAM policies may need to be updated.** This is uncommon, but must be kept in mind.
 

@@ -68,6 +68,17 @@ jobs:
       - name: Terraform Plan
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          # Add dummy values for required variables since they're not used by the connectors module
+          TF_VAR_jwt_secret: "dummy"
+          TF_VAR_client_api_key: "dummy"
+          TF_VAR_open_exchange_rates_api: "dummy"
+          TF_VAR_neo_4j_ledger_space_bolt_url: "dummy"
+          TF_VAR_neo_4j_search_space_bolt_url: "dummy"
+          TF_VAR_neo_4j_ledger_space_user: "dummy"
+          TF_VAR_neo_4j_search_space_user: "dummy"
+          TF_VAR_neo_4j_ledger_space_password: "dummy"
+          TF_VAR_neo_4j_search_space_password: "dummy"
+          TF_VAR_neo4j_enterprise_license: "dummy"
         run: |
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
@@ -77,6 +88,17 @@ jobs:
       - name: Terraform Apply
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          # Add dummy values for required variables since they're not used by the connectors module
+          TF_VAR_jwt_secret: "dummy"
+          TF_VAR_client_api_key: "dummy"
+          TF_VAR_open_exchange_rates_api: "dummy"
+          TF_VAR_neo_4j_ledger_space_bolt_url: "dummy"
+          TF_VAR_neo_4j_search_space_bolt_url: "dummy"
+          TF_VAR_neo_4j_ledger_space_user: "dummy"
+          TF_VAR_neo_4j_search_space_user: "dummy"
+          TF_VAR_neo_4j_ledger_space_password: "dummy"
+          TF_VAR_neo_4j_search_space_password: "dummy"
+          TF_VAR_neo4j_enterprise_license: "dummy"
         run: |
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
