@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { getDenominations } from "../../constants/denominations";
 import { OnboardMemberController } from "../../api/Member/controllers/onboardMember";
-import { UpdateMemberTierController } from "../../api/Dev/controllers/updateMemberTier";
+import { UpdateMemberTierController } from "../../api/DevAdmin/controllers/updateMemberTier";
 import { CreateAccountService } from "../../api/Account/services/CreateAccount";
 import { CreateCredexService } from "../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";

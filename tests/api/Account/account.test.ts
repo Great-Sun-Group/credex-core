@@ -19,7 +19,7 @@ describe("Account API Tests", () => {
     };
 
     try {
-      const response = await axios.post("/v1/onboardMember", memberData);
+      const response = await axios.post("/onboardMember", memberData);
       testMemberID = response.data.memberDashboard.memberID;
       testMemberJWT = response.data.token;
       testAccountID = response.data.memberDashboard.accountIDS[0];
@@ -40,7 +40,7 @@ describe("Account API Tests", () => {
       console.log("Getting account by handle:", testAccountHandle);
       try {
         const response = await axios.post(
-          "/v1/getAccountByHandle",
+          "/getAccountByHandle",
           { accountHandle: testAccountHandle },
           {
             headers: { Authorization: `Bearer ${testMemberJWT}` },
@@ -69,7 +69,7 @@ describe("Account API Tests", () => {
         accountType: "PERSONAL_CONSUMPTION", 
       };
       try {
-        await axios.post("/v1/createAccount", accountData, {
+        await axios.post("/createAccount", accountData, {
           headers: { Authorization: `Bearer ${testMemberJWT}` },
         });
         fail("Should have thrown an error");
@@ -85,7 +85,7 @@ describe("Account API Tests", () => {
 
     it("should update member tier to 3", async () => {
       try {
-        const response = await axios.patch("/v1/updateMemberTier", {
+        const response = await axios.patch("/updateMemberTier", {
           memberID: testMemberID,
           tier: 3 
         }, {
@@ -124,7 +124,7 @@ describe("Account API Tests", () => {
       };
       try {
         console.log("Attempting to create account with data:", JSON.stringify(accountData));
-        const response = await axios.post("/v1/createAccount", accountData, {
+        const response = await axios.post("/createAccount", accountData, {
           headers: { Authorization: `Bearer ${testMemberJWT}` },
         });
         expect(response.status).toBe(201);
@@ -152,7 +152,7 @@ describe("Account API Tests", () => {
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         const response = await axios.post(
-          "/v1/getAccountByHandle",
+          "/getAccountByHandle",
           { accountHandle: testAccountHandle },
           {
             headers: { Authorization: `Bearer ${testMemberJWT}` },
@@ -180,7 +180,7 @@ describe("Account API Tests", () => {
       };
     
       try {
-        const response = await axios.post("/v1/updateAccount", updateData, {
+        const response = await axios.post("/updateAccount", updateData, {
           headers: { Authorization: `Bearer ${testMemberJWT}` },
         });
     
@@ -205,7 +205,7 @@ describe("Account API Tests", () => {
       };
 
       try {
-        await axios.post("/v1/authorizeForAccount", authData, {
+        await axios.post("/authorizeForAccount", authData, {
           headers: { Authorization: `Bearer ${testMemberJWT}` },
         });
         fail("Should have thrown an error");
@@ -221,7 +221,7 @@ describe("Account API Tests", () => {
 
     it("should update member tier to 4 or 5", async () => {
       try {
-        const response = await axios.patch("/v1/updateMemberTier", {
+        const response = await axios.patch("/updateMemberTier", {
           memberID: testMemberID,
           tier: 5
         }, {
@@ -255,7 +255,7 @@ describe("Account API Tests", () => {
       };
 
       try {
-        const response = await axios.post("/v1/authorizeForAccount", authData, {
+        const response = await axios.post("/authorizeForAccount", authData, {
           headers: { Authorization: `Bearer ${testMemberJWT}` },
         });
 
@@ -284,7 +284,7 @@ describe("Account API Tests", () => {
     
       try {
         const response = await axios.post(
-          "/v1/unauthorizeForAccount",
+          "/unauthorizeForAccount",
           unauthData,
           {
             headers: { Authorization: `Bearer ${testMemberJWT}` },
@@ -316,7 +316,7 @@ describe("Account API Tests", () => {
       };
     
       try {
-        const response = await axios.post("/v1/updateSendOffersTo", updateData, {
+        const response = await axios.post("/updateSendOffersTo", updateData, {
           headers: { Authorization: `Bearer ${testMemberJWT}` },
         });
     

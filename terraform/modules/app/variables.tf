@@ -32,24 +32,6 @@ variable "create_iam_roles" {
   default     = true
 }
 
-variable "jwt_secret" {
-  description = "The secret used for JWT token generation"
-  type        = string
-  sensitive   = true
-}
-
-variable "client_api_key" {
-  description = "The secret used to access the login endpoint"
-  type        = string
-  sensitive   = true
-}
-
-variable "open_exchange_rates_api" {
-  description = "API key for Open Exchange Rates"
-  type        = string
-  sensitive   = true
-}
-
 variable "common_tags" {
   description = "Common tags to be applied to all resources"
   type        = map(string)
@@ -92,6 +74,7 @@ variable "alb_listener" {
   type        = string
 }
 
+# Neo4j variables needed by databases module
 variable "neo_4j_ledger_space_bolt_url" {
   description = "The Neo4j Bolt URL for Ledger Space"
   type        = string
