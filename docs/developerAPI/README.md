@@ -23,7 +23,7 @@ Test commands:
 - `npm test "forcedco"` to run the DCO and advance the day state, including new exchange rates.
   - If the database has been wiped or is new, this will first create initialization nodes and relationship then run the first DCO, bringing the credex ecosystem online.
 
-**There appears to be a bug running individual tests as above. Until fixed, the tests cannot be run individuall, but both can be run (clear then force) with `npm test DevAdmin`.
+**There appears to be a bug running individual tests as above. Until fixed, the tests cannot be run individually, but both can be run (clear then force) with `npm test DevAdmin`.**
 
 ## Resources
 

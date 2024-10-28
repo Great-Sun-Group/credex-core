@@ -4,8 +4,6 @@ The credex ecosystem is a shared ledger that enables the efficient circulation o
 
 Credex is a tool for financial inclusion, financial empowerment, and financial sovereignty. This credex-core API is the portal through which members access their sovereign financial rights, and sidestep the economic distortions and extortions imposed by obsolete and destructive monetary paradigms.
 
-[mycredex.app](https://mycredex.app)
-
 ## Developer Guides
 
 For a full overview and links to all development and deployment guides, see the complete [Developer Documentation](docs/README.md). If you are not working directly with Great Sun Group, make sure to also view the [license](#license) below.
@@ -56,6 +54,12 @@ The credex ecosystem provides the non-sovereign and non-monetary services of:
 
 These credcoin services empower a second layer of distributed financial sovereignty by connecting every member to the underlying resource reality of their financial decisions, and relating every other measure of value all across the global economy to that underlying reality. In this way we replace our reliance on measures of value that are created and controlled by obsolete monetary paradigms with a measure of value that is structurally locked to the daily flows of real natural resources that sustain us.
 
+## Secured Credex
+placeholder
+
+### Secured Credex Services
+placeholder
+
 ## Ecosystem Services
 While the credcoin services mathmatically lock all values in the the credex ecosystem to the market values of real natural resource flows, the credex services provide liquidity to meet all needs and fuel strong credit-based economic growth when conditions warrant, as determined by the distributed risk tolerance and risk/reward calculations of economic participants.
 
@@ -69,7 +73,7 @@ You are welcome to explore, experiment with, and build upon this work within the
 
 You are invited to use this codebase to run credex-core development servers so that you can develop apps that integrate with the live credex ecosystem. Any app built while using this codebase for development and testing remains solely the property of its developer(s) without limitation or restriction, including charging for their services at their own discretion, provided that all underlying data remains in the possesion of the member, stored in their credex account.
 
-If necessary, an "App Store" type registration and code review process may be put in place for developers so that members will know they can trust 3rd party software. This review process will be free, minimal, and prompt. Its only purpose will be to ensure that member's data is being handled securely and stored appropriately.
+Currently, a CLIENT_API_KEY is required to log a member in. Third-party developers are invited to contact us for access. If necessary, an "App Store" type registration and code review process may be put in place for developers so that members will know they can trust third-party software. This review process will be free, minimal, and prompt. Its only purpose will be to ensure that member's data is being handled securely and stored appropriately.
 
 Should any updates to the ecosystem codebase itself be required to facilitate the operation of a third-party app, requests will be welcomed. Please get in touch.
 
