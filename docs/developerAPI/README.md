@@ -10,8 +10,10 @@ This quick reference guide for developers working on the credex-core API contain
 ## Running a local dev server
 You have two options to start a local server for development:
 
-1. `npm run docker:dev` fires up a dev server in an isolated Docker environment on your machine/codespace. As a virtual machine, this environment is nearly identical to the deployed production environment.
-2. `npm run dev` fires up a dev server on your local machine/codespace using nodemon. Run directly on your machine, this is slightly more resource efficient than the above, and seems to have slightly better hot-reload functionality and error messaging, but might introduce irregularities vs the deployed environments.
+1. `npm run dev` fires up a dev server on your local machine/codespace using nodemon. Run directly on your machine, this is the most resource efficient option, with slightly better hot-reload functionality and error messaging, but introduces irregularities vs deployed environments. *This environment is likely sufficient for most development work on the credex-core api.*
+2. `npm run docker:dev` fires up a dev server in an isolated Docker environment on your machine/codespace. As a virtual machine, this environment is nearly identical to the deployed production environment, with development settings for logging etc. *This environment can effectively be used for daily development work on the credex-core api in a production-similar environment, with solid hot reload and error checking.*
+3. `npm run docker:prod` starts a dev server in production mode, utilizing a separate build process to maximize the efficiency of the deployed code and setting log setting etc appropriately. *This environment is likely only helpful for testing and debugging the process of deploying a production build of the app.*
+4. 4. `npm run docker:test` **need content here**
 
 ## Testing Code
 Assuming your code passes all automatic checks and can be compiled by the server, testing will usually be done by hitting an endpoint or a series of endpoints, and can be conducted using the commands outlined in the [Testing Guide](../tests/testing_guide.md).

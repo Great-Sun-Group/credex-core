@@ -69,9 +69,9 @@ These non-sovereign and non-monetary services provided by the credex ecosystem e
 
 This project is available under a custom license that allows for development, testing, and research while maintaining the integrity of the credex ecosystem. Key points:
 
-- You can develop and test apps that connect to the credex-core API
-- You can use the codebase for economic research and modeling
-- You can contribute to the development of credex-core itself
-- You cannot use this software to track real outstanding debts
+- You are invited to use the codebase to run dev servers to develop and test apps that connect to the deployed credex-core API
+- You are invited to use the codebase for economic research and modeling
+- You are welcome to contribute to the development of the credex-core API itself
+- You are prohibited from using this software to track real outstanding debts.
 
 See the full [LICENSE](LICENSE) file for detailed terms and conditions.
