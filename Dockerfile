@@ -1,52 +1,51 @@
 # syntax=docker/dockerfile:1
 
-ARG NODE_VERSION=18.17.1
-
-FROM node:${NODE_VERSION}-alpine AS base
+FROM node:18.17.1-alpine AS base
 WORKDIR /app
 COPY package*.json ./
 
+# Build stage that creates production assets
+FROM base AS build
+RUN npm ci
+COPY . .
+# Force rebuild and show TypeScript version and compilation details
+RUN echo $(date) > buildtime && \
+    npx tsc --version && \
+    echo "Starting TypeScript compilation..." && \
+    npx tsc && \
+    echo "TypeScript compilation completed" && \
+    echo "Build output structure:" && \
+    ls -la /app/build && \
+    echo "Source build:" && \
+    ls -la /app/build/src || exit 1
+
+# Production stage with minimal image
+FROM node:18.17.1-alpine AS production
+WORKDIR /app
+# Copy build output and necessary files
+COPY --from=build /app/build ./build
+COPY --from=build /app/package*.json ./
+RUN npm ci --only=production && \
+    echo "Production files:" && \
+    ls -la /app && \
+    echo "Build directory:" && \
+    ls -la /app/build && \
+    echo "Source directory:" && \
+    ls -la /app/build/src
+EXPOSE 3000
+ENV NODE_ENV=production
+# Update the command to use the correct path
+CMD ["node", "build/src/index.js"]
+
+# Development stage extends base
 FROM base AS development
 RUN npm install
 RUN npm install -g ts-node-dev
 COPY . .
+ENV NODE_ENV=development
 CMD ["ts-node-dev", "--respawn", "--transpile-only", "src/index.ts"]
 
-FROM base AS build
-ARG NODE_ENV
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM node:${NODE_VERSION}-alpine AS deploy
-ARG NODE_ENV
-ARG NEO_4J_LEDGER_SPACE_USER
-ARG NEO_4J_LEDGER_SPACE_PASS
-ARG NEO_4J_LEDGER_SPACE_BOLT_URL
-ARG NEO_4J_SEARCH_SPACE_USER
-ARG NEO_4J_SEARCH_SPACE_PASS
-ARG NEO_4J_SEARCH_SPACE_BOLT_URL
-ARG OPEN_EXCHANGE_RATES_API
-ARG JWT_SECRET
-ARG CLIENT_API_KEY
-WORKDIR /app
-COPY --from=build /app/build ./build
-COPY --from=build /app/package*.json ./
-COPY --from=build /app/config ./config
-RUN npm ci --only=production
-EXPOSE 3000
-ENV NODE_ENV=${NODE_ENV}
-ENV NEO_4J_LEDGER_SPACE_USER=${NEO_4J_LEDGER_SPACE_USER}
-ENV NEO_4J_LEDGER_SPACE_PASS=${NEO_4J_LEDGER_SPACE_PASS}
-ENV NEO_4J_LEDGER_SPACE_BOLT_URL=${NEO_4J_LEDGER_SPACE_BOLT_URL}
-ENV NEO_4J_SEARCH_SPACE_USER=${NEO_4J_SEARCH_SPACE_USER}
-ENV NEO_4J_SEARCH_SPACE_PASS=${NEO_4J_SEARCH_SPACE_PASS}
-ENV NEO_4J_SEARCH_SPACE_BOLT_URL=${NEO_4J_SEARCH_SPACE_BOLT_URL}
-ENV OPEN_EXCHANGE_RATES_API=${OPEN_EXCHANGE_RATES_API}
-ENV JWT_SECRET=${JWT_SECRET}
-ENV CLIENT_API_KEY=${CLIENT_API_KEY}
-CMD ["node", "build/src/index.js"]
-
+# Test stage
 FROM base AS test
 RUN npm ci
 COPY . .
