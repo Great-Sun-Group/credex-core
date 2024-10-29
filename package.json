@@ -11,9 +11,9 @@
     "test": "node tests/run.js",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "docker:dev": "docker-compose up --build",
-    "docker:dev:prod": "NODE_ENV=production docker-compose up --build",
-    "docker:test": "docker-compose run --rm server npm test"
+    "docker:prod": "docker-compose up --build",
+    "docker:dev": "BUILD_TARGET=development NODE_ENV=development docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build",
+    "docker:test": "docker-compose run --rm --build --target test server npm test"
   },
   "keywords": [
     "credex",

@@ -1,0 +1,6 @@
+services:
+  server:
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+      - /app/node_modules
