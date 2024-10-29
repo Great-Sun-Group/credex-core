@@ -2,9 +2,9 @@ services:
   server:
     build:
       context: .
-      target: ${BUILD_TARGET:-development}
+      target: ${BUILD_TARGET:-production}
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-3000}
       LOG_LEVEL: ${LOG_LEVEL:-debug}
       JWT_SECRET: ${JWT_SECRET}
@@ -20,7 +20,6 @@ services:
       - "${PORT:-3000}:3000"
     volumes:
       - ./logs:/app/logs
-      - .:/app
       - /app/node_modules
     restart: unless-stopped
 
