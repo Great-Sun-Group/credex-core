@@ -4,8 +4,6 @@ The credex ecosystem is a shared ledger that enables the efficient circulation o
 
 Credex is a tool for financial inclusion, financial empowerment, and financial sovereignty. This credex-core API is the portal through which members access their sovereign financial rights, and sidestep the economic distortions and extortions imposed by obsolete and destructive monetary paradigms.
 
-[mycredex.app](https://mycredex.app)
-
 ## Developer Guides
 
 For a full overview and links to all development and deployment guides, see the complete [Developer Documentation](docs/README.md). If you are not working directly with Great Sun Group, make sure to also view the [license](#license) below.
@@ -55,6 +53,12 @@ The credex ecosystem provides the non-sovereign and non-monetary services of:
 2. Setting the relative values (exchange rates) of denominations in the ecosystem daily based on global market data including the real flows of value occuring in the DCO.
 
 These credcoin services empower a second layer of distributed financial sovereignty by connecting every member to the underlying resource reality of their financial decisions, and relating every other measure of value all across the global economy to that underlying reality. In this way we replace our reliance on measures of value that are created and controlled by obsolete monetary paradigms with a measure of value that is structurally locked to the daily flows of real natural resources that sustain us.
+
+## Secured Credex
+placeholder
+
+### Secured Credex Services
+placeholder
 
 ## Ecosystem Services
 While the credcoin services mathmatically lock all values in the the credex ecosystem to the market values of real natural resource flows, the credex services provide liquidity to meet all needs and fuel strong credit-based economic growth when conditions warrant, as determined by the distributed risk tolerance and risk/reward calculations of economic participants.

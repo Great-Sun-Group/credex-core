@@ -7,7 +7,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "./build",
+    "outDir": "../build/config",
     "rootDir": ".",
     "moduleResolution": "node",
     "resolveJsonModule": true,
@@ -16,16 +16,17 @@
     "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": true,
     "sourceMap": true,
-    "types": ["node", "jest"],
-    "baseUrl": "."
+    "types": ["node", "jest"]
   },
   "include": [
-    "src/**/*.ts"
+    "./**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "**/*.spec.ts",
-    "**/*.test.ts",
-    "config"
+    "**/*.test.ts"
+  ],
+  "references": [
+    { "path": "../" }
   ]
 }
