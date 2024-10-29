@@ -67,30 +67,11 @@ These non-sovereign and non-monetary services provided by the credex ecosystem e
 
 ## License
 
-You are welcome to explore, experiment with, and build upon this work within the purposes and exclusions below. If you fork this project or create something new based on this codebase, this license will automatically apply to all such work.
+This project is available under a custom license that allows for development, testing, and research while maintaining the integrity of the credex ecosystem. Key points:
 
-### Development and testing of apps connecting to the credex-core API
+- You can develop and test apps that connect to the credex-core API
+- You can use the codebase for economic research and modeling
+- You can contribute to the development of credex-core itself
+- You cannot use this software to track real outstanding debts
 
-You are invited to use this codebase to run credex-core development servers so that you can develop apps that integrate with the live credex ecosystem. Any app built while using this codebase for development and testing remains solely the property of its developer(s) without limitation or restriction, including charging for their services at their own discretion, provided that all underlying data remains in the possesion of the member, stored in their credex account.
-
-Currently, a CLIENT_API_KEY is required to log a member in. Third-party developers are invited to contact us for access. If necessary, an "App Store" type registration and code review process may be put in place for developers so that members will know they can trust third-party software. This review process will be free, minimal, and prompt. Its only purpose will be to ensure that member's data is being handled securely and stored appropriately.
-
-Should any updates to the ecosystem codebase itself be required to facilitate the operation of a third-party app, requests will be welcomed. Please get in touch.
-
-### Economic research and modeling
-
-The credex-core software and connected neo4j databases have the power to model economic activity and circulation of value with 100% precision across large-scale networks of members and accounts. The scale at which it can model, and the associated computational costs, will soon be determined as we implement automated testing.
-
-The use of this codebase for economic modeling is welcomed. Additions to the codebase that enhance its modeling capacity are also welcomed, provided they do not impact security. Forks from this codebase that reduce security in order to increase modeling ease or capacity are welcomed, provided they are shared publicly under these license terms.
-
-### Development and testing of the credex-core API itself
-
-Contributions, bug fixes, and security testing and patches are welcome. If you'd like to collaborate or contribute, please get in touch.
-
-### EXCLUSION: Live ledger
-
-**You do not have permission to use this software to track real outstanding debts.** You may not deploy this software to be used by real users transacting at arms length from each other. Data of real past transactions may be used, but only as modeling, testing, or research input. If you want to transact real value with credex, you are invited to use the live shared ledger of the credex ecosystem at [mycredex.app](https://mycredex.app), and to develop apps that connect your users to their credex accounts through `api.mycredex.app` as outlined in the welcomed uses above.
-
-### Licensing Summary
-
-This customized licensing approach ensures the integrity and unity of the credex ecosystem as a shared economic network that all can access and benefit from, while still encouraging community engagement and experimentation, economic research, and the development of interdependent software ecosystems that retain the option to self-fund and charge for their own software in whatever way they choose.
+See the full [LICENSE](LICENSE) file for detailed terms and conditions.
