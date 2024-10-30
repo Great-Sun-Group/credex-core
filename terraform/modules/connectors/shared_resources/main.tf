@@ -1,3 +1,9 @@
+# Add us-east-1 provider for CloudFront certificate
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+}
+
 # VPC
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
@@ -242,6 +248,132 @@ resource "aws_s3_bucket_policy" "docs" {
   })
 }
 
+# ACM Certificate for ALB (in current region)
+resource "aws_acm_certificate" "credex_cert" {
+  domain_name               = var.domain
+  subject_alternative_names = ["*.${var.domain}"]
+  validation_method         = "DNS"
+
+  tags = merge(var.common_tags, {
+    Name = "credex-cert-${var.environment}"
+  })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# ACM Certificate for CloudFront (in us-east-1)
+resource "aws_acm_certificate" "cloudfront_cert" {
+  provider = aws.us_east_1
+  
+  domain_name               = "docs.${var.domain}"
+  validation_method         = "DNS"
+
+  tags = merge(var.common_tags, {
+    Name = "credex-cloudfront-cert-${var.environment}"
+  })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Get the hosted zone for the domain
+data "aws_route53_zone" "domain" {
+  name = var.domain_base
+}
+
+# Create DNS records for certificate validation (for both certificates)
+resource "aws_route53_record" "cert_validation" {
+  for_each = {
+    for dvo in concat(
+      [for opt in aws_acm_certificate.credex_cert.domain_validation_options : opt],
+      [for opt in aws_acm_certificate.cloudfront_cert.domain_validation_options : opt]
+    ) : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = data.aws_route53_zone.domain.zone_id
+}
+
+# Certificate validation for both certificates
+resource "aws_acm_certificate_validation" "credex_cert" {
+  certificate_arn         = aws_acm_certificate.credex_cert.arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+}
+
+resource "aws_acm_certificate_validation" "cloudfront_cert" {
+  provider = aws.us_east_1
+  
+  certificate_arn         = aws_acm_certificate.cloudfront_cert.arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+}
+
+# CloudFront distribution for docs
+resource "aws_cloudfront_distribution" "docs" {
+  enabled             = true
+  is_ipv6_enabled     = true
+  default_root_object = "index.html"
+  aliases             = ["docs.${var.domain}"]
+  price_class         = "PriceClass_100"
+
+  origin {
+    domain_name = aws_s3_bucket_website_configuration.docs.website_endpoint
+    origin_id   = "S3-docs.${var.domain}"
+    
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  default_cache_behavior {
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "S3-docs.${var.domain}"
+    viewer_protocol_policy = "redirect-to-https"
+    compress              = true
+
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
+
+    min_ttl     = 0
+    default_ttl = 3600
+    max_ttl     = 86400
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    acm_certificate_arn      = aws_acm_certificate_validation.cloudfront_cert.certificate_arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
+  }
+
+  tags = merge(var.common_tags, {
+    Name = "docs-cloudfront-${var.environment}"
+  })
+}
+
 # Application Load Balancer (ALB)
 resource "aws_lb" "credex_alb" {
   name               = "credex-alb-${var.environment}"
@@ -274,50 +406,6 @@ resource "aws_lb_target_group" "credex_core" {
   tags = var.common_tags
 }
 
-# ACM Certificate
-resource "aws_acm_certificate" "credex_cert" {
-  domain_name               = var.domain
-  subject_alternative_names = ["*.${var.domain}"]
-  validation_method         = "DNS"
-
-  tags = merge(var.common_tags, {
-    Name = "credex-cert-${var.environment}"
-  })
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Get the hosted zone for the domain
-data "aws_route53_zone" "domain" {
-  name = var.domain_base
-}
-
-# Create DNS records for certificate validation
-resource "aws_route53_record" "cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.credex_cert.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-
-  allow_overwrite = true
-  name            = each.value.name
-  records         = [each.value.record]
-  ttl             = 60
-  type            = each.value.type
-  zone_id         = data.aws_route53_zone.domain.zone_id
-}
-
-# Certificate validation
-resource "aws_acm_certificate_validation" "credex_cert" {
-  certificate_arn         = aws_acm_certificate.credex_cert.arn
-  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
-}
-
 # Create Route53 records
 resource "aws_route53_record" "alb" {
   zone_id = data.aws_route53_zone.domain.zone_id
@@ -331,14 +419,15 @@ resource "aws_route53_record" "alb" {
   }
 }
 
+# Update Route53 record for docs to point to CloudFront
 resource "aws_route53_record" "docs" {
   zone_id = data.aws_route53_zone.domain.zone_id
   name    = "docs.${var.domain}"
   type    = "A"
 
   alias {
-    name                   = aws_s3_bucket_website_configuration.docs.website_endpoint
-    zone_id                = aws_s3_bucket.docs.hosted_zone_id
+    name                   = aws_cloudfront_distribution.docs.domain_name
+    zone_id                = aws_cloudfront_distribution.docs.hosted_zone_id
     evaluate_target_health = false
   }
 }
@@ -529,4 +618,8 @@ output "docs_bucket_name" {
 
 output "docs_bucket_website_endpoint" {
   value = aws_s3_bucket_website_configuration.docs.website_endpoint
+}
+
+output "docs_cloudfront_domain_name" {
+  value = aws_cloudfront_distribution.docs.domain_name
 }
