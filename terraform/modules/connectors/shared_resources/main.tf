@@ -198,6 +198,50 @@ resource "aws_security_group" "neo4j" {
   })
 }
 
+# S3 bucket for docs
+resource "aws_s3_bucket" "docs" {
+  bucket = "docs.${var.domain}"
+
+  tags = merge(var.common_tags, {
+    Name = "docs-${var.environment}"
+  })
+}
+
+# Add block public access configuration before bucket policy
+resource "aws_s3_bucket_public_access_block" "docs" {
+  bucket = aws_s3_bucket.docs.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_website_configuration" "docs" {
+  bucket = aws_s3_bucket.docs.id
+  index_document {
+    suffix = "index.html"
+  }
+}
+
+resource "aws_s3_bucket_policy" "docs" {
+  bucket = aws_s3_bucket.docs.id
+  depends_on = [aws_s3_bucket_public_access_block.docs]
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.docs.arn}/*"
+      },
+    ]
+  })
+}
+
 # Application Load Balancer (ALB)
 resource "aws_lb" "credex_alb" {
   name               = "credex-alb-${var.environment}"
@@ -232,8 +276,9 @@ resource "aws_lb_target_group" "credex_core" {
 
 # ACM Certificate
 resource "aws_acm_certificate" "credex_cert" {
-  domain_name       = var.domain
-  validation_method = "DNS"
+  domain_name               = var.domain
+  subject_alternative_names = ["*.${var.domain}"]
+  validation_method         = "DNS"
 
   tags = merge(var.common_tags, {
     Name = "credex-cert-${var.environment}"
@@ -273,7 +318,7 @@ resource "aws_acm_certificate_validation" "credex_cert" {
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
-# Create Route53 record for the ALB
+# Create Route53 records
 resource "aws_route53_record" "alb" {
   zone_id = data.aws_route53_zone.domain.zone_id
   name    = var.domain
@@ -283,6 +328,18 @@ resource "aws_route53_record" "alb" {
     name                   = aws_lb.credex_alb.dns_name
     zone_id                = aws_lb.credex_alb.zone_id
     evaluate_target_health = true
+  }
+}
+
+resource "aws_route53_record" "docs" {
+  zone_id = data.aws_route53_zone.domain.zone_id
+  name    = "docs.${var.domain}"
+  type    = "A"
+
+  alias {
+    name                   = aws_s3_bucket_website_configuration.docs.website_endpoint
+    zone_id                = aws_s3_bucket.docs.hosted_zone_id
+    evaluate_target_health = false
   }
 }
 
@@ -297,6 +354,27 @@ resource "aws_lb_listener" "credex_listener" {
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.credex_core.arn
+  }
+}
+
+resource "aws_lb_listener_rule" "docs" {
+  listener_arn = aws_lb_listener.credex_listener.arn
+  priority     = 100
+
+  condition {
+    host_header {
+      values = ["docs.${var.domain}"]
+    }
+  }
+
+  action {
+    type = "fixed-response"
+    
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Please visit the docs at https://docs.${var.domain}"
+      status_code  = "200"
+    }
   }
 }
 
@@ -443,4 +521,12 @@ output "ecs_task_role_arn" {
 
 output "cloudwatch_log_group_name" {
   value = aws_cloudwatch_log_group.ecs_logs.name
+}
+
+output "docs_bucket_name" {
+  value = aws_s3_bucket.docs.id
+}
+
+output "docs_bucket_website_endpoint" {
+  value = aws_s3_bucket_website_configuration.docs.website_endpoint
 }

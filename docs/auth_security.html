@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security and Authentication Overview</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Security and Authentication Overview</h1>
+
+    <p>This document provides a comprehensive overview of the security measures and authentication process implemented in our application, with a focus on JWT (JSON Web Token) authentication, CORS configuration, and rate limiting.</p>
+
+    <h2>JWT Authentication</h2>
+
+    <p>Our application uses JSON Web Tokens (JWT) for authentication. This setup provides protection against unauthorized access and ensures that only the appropriate member is authorized on the endpoints.</p>
+
+    <h3>Key Features</h3>
+
+    <ol>
+        <li><strong>Token Generation and Verification</strong>
+            <ul>
+                <li>JWT tokens are generated with member-specific information and signed with a secret key.</li>
+                <li>Tokens are verified on each request using the same secret key.</li>
+            </ul>
+        </li>
+
+        <li><strong>Member-specific Authorization</strong>
+            <ul>
+                <li>After token verification, the system fetches the member's information from the database using the ID in the token.</li>
+                <li>This ensures that the token corresponds to an actual member in the system.</li>
+            </ul>
+        </li>
+
+        <li><strong>Short-lived Tokens with Automatic Refresh</strong>
+            <ul>
+                <li>Tokens expire after 5 minutes of inactivity, reducing the risk of token misuse.</li>
+                <li>Automatic token refresh is implemented for valid sessions.</li>
+                <li>The token's expiration is extended with each valid request.</li>
+                <li>If no requests are made for 5 minutes, the token will expire, and the user will need to log in again.</li>
+            </ul>
+        </li>
+
+        <li><strong>Role-based Access Control</strong>
+            <ul>
+                <li>The authMiddleware supports role-based access control for fine-grained permissions.</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h3>Authentication Process</h3>
+
+    <ol>
+        <li>When a new member is onboarded or an existing member logs in, a JWT token is generated and returned.</li>
+
+        <li>For subsequent requests to protected routes, the client should include the JWT token in the Authorization header of the request:
+            <pre><code>Authorization: Bearer <token></code></pre>
+        </li>
+
+        <li>The server will validate the token for each request to a protected route. If the token is valid, the request will be processed. If not, a 401 Unauthorized response will be returned.</li>
+
+        <li>After each request, check the Authorization header in the response for a new token. Always use the most recent token for subsequent requests.</li>
+    </ol>
+
+    <h2>CORS Configuration</h2>
+
+    <p>Cross-Origin Resource Sharing (CORS) is currently configured to be permissive, allowing requests from all origins. This setup facilitates integration with various front-end applications and third-party services.</p>
+
+    <ul>
+        <li>All origins are allowed (<code>origin: '*'</code>)</li>
+        <li>Supported methods: GET, POST, PUT, PATCH, DELETE</li>
+        <li>Allowed headers: Content-Type, Authorization</li>
+        <li>Credentials are allowed</li>
+        <li>Preflight requests are cached for 1 day (86400 seconds)</li>
+    </ul>
+
+    <p>While this configuration is more open, it's important to note that authentication and rate limiting are still in place to protect the API.</p>
+
+    <h2>Rate Limiting</h2>
+
+    <p>To protect the API from abuse and ensure fair usage, rate limiting has been implemented based on authenticated members.</p>
+
+    <ul>
+        <li>Limit: 10 requests per minute per member or IP address</li>
+        <li>The rate limiter uses the authenticated member's ID as the primary key for limiting</li>
+        <li>If the member ID is not available, it falls back to using the IP address or remote address</li>
+        <li>When the rate limit is exceeded, a 429 (Too Many Requests) status code is returned</li>
+    </ul>
+
+    <h2>Implementation Locations:</h2>
+
+    <ol>
+        <li><code>config/authenticate.ts</code></li>
+        <li><code>src/middleware/authMiddleware.ts</code></li>
+        <li><code>src/middleware/rateLimiter.ts</code></li>
+        <li><code>src/middleware/securityConfig.ts</code></li>
+    </ol>
+
+    <p>These mechanisms work together to ensure that each request is properly authenticated, authorized for the specific member making the request, and within the allowed rate limits.</p>
+
+    <h2>Important Notes</h2>
+
+    <ul>
+        <li>It's crucial to ensure that the JWT_SECRET is kept secure and properly set in the environment variables.</li>
+        <li>Make sure to set the <code>JWT_SECRET</code> environment variable in your <code>.env</code> file. This secret is used to sign and verify the JWT tokens. You can create your own random string for this in dev environments.</li>
+        <li>Regularly review logs for rate-limited requests to identify potential abuse or the need for limit adjustments.</li>
+    </ul>
+
+    <h1>Keyholes</h1>
+
+    <p>The /v1/login and /v1/onboardMember routes are keyholes in the JWT authorization layer so that members can onboard and login when they do not have valid JWT tokens.</p>
+
+    <h2>Endpoint: <code>/v1/login</code></h2>
+
+    <p>This endpoint is used for both new and existing members to log in or attempt to access the system.</p>
+
+    <h3>Request</h3>
+
+    <ul>
+        <li><strong>Method:</strong> POST</li>
+        <li><strong>Headers:</strong> No special authentication headers required</li>
+        <li><strong>Body:</strong>
+            <pre><code>{
+  "phone": "string"
+}</code></pre>
+            The <code>phone</code> should be a valid international phone number.
+        </li>
+    </ul>
+
+    <h3>Responses</h3>
+
+    <h4>Successful Login (Existing Member)</h4>
+
+    <ul>
+        <li><strong>Status Code:</strong> 200 OK</li>
+        <li><strong>Body:</strong>
+            <pre><code>{
+  "token": "string"
+}</code></pre>
+            The <code>token</code> is a JWT that can be used for subsequent authenticated requests.
+        </li>
+    </ul>
+
+    <h4>Failed Login (No Matching Member or Invalid Phone)</h4>
+
+    <ul>
+        <li><strong>Status Code:</strong> 400 Bad Request</li>
+        <li><strong>Body:</strong>
+            <pre><code>{
+  "message": "string"
+}</code></pre>
+            The <code>message</code> will provide details about the failure, such as "Failed to login member" or a more specific error message.
+        </li>
+    </ul>
+
+    <h3>Notes</h3>
+
+    <ul>
+        <li>The same 400 status code is used for both invalid phone numbers and failed logins (including non-existent members).</li>
+        <li>To distinguish between these cases, check the specific error message in the response body.</li>
+        <li>For security reasons, the API does not explicitly state whether a member exists or not.</li>
+    </ul>
+
+    <h2>Endpoint: <code>/v1/onboardMember</code></h2>
+
+    <p>This endpoint is used to onboard new members into the system. It creates a new member account and returns a JWT token for authentication.</p>
+
+    <h3>Request</h3>
+
+    <ul>
+        <li><strong>Method:</strong> POST</li>
+        <li><strong>Headers:</strong> No special authentication headers required</li>
+        <li><strong>Body:</strong>
+            <pre><code>{
+  "firstname": "string",
+  "lastname": "string",
+  "phone": "string"
+}</code></pre>
+            <ul>
+                <li><code>firstname</code>: The first name of the new member</li>
+                <li><code>lastname</code>: The last name of the new member</li>
+                <li><code>phone</code>: A valid international phone number</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>Responses</h3>
+
+    <h4>Successful Onboarding</h4>
+
+    <ul>
+        <li><strong>Status Code:</strong> 201 Created</li>
+        <li><strong>Body:</strong>
+            <pre><code>{
+  "token": "string",
+  "member": {
+    "id": "string",
+    "firstname": "string",
+    "lastname": "string",
+    "phone": "string"
+  }
+}</code></pre>
+            <ul>
+                <li><code>token</code>: A JWT that can be used for subsequent authenticated requests</li>
+                <li><code>member</code>: An object containing the newly created member's details</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h4>Failed Onboarding</h4>
+
+    <ul>
+        <li><strong>Status Code:</strong> 400 Bad Request</li>
+        <li><strong>Body:</strong>
+            <pre><code>{
+  "message": "string"
+}</code></pre>
+            The <code>message</code> will provide details about the failure, such as "Failed to onboard member" or a more specific error message.
+        </li>
+    </ul>
+
+    <h3>Notes</h3>
+
+    <ul>
+        <li>This endpoint should only be used for new members. If an account with the provided phone number already exists, the onboarding will fail.</li>
+        <li>The system performs validation on the input data:
+            <ul>
+                <li>The phone number must be in a valid international format</li>
+                <li>The firstname and lastname must not be empty</li>
+            </ul>
+        </li>
+        <li>After successful onboarding, the returned JWT token can be used immediately for authenticated requests.</li>
+        <li>For security and privacy reasons, detailed error messages about existing accounts are not provided to prevent enumeration attacks.</li>
+    </ul>
+
+</body>
+</html>

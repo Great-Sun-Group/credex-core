@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MinuteTransactionQueue (MTQ)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>MinuteTransactionQueue (MTQ)</h1>
+
+    <p>The Minute Transaction Queue (MTQ) is a crucial component of the Credex ecosystem that runs every minute. It links the main ledgerSpace database (the source of truth and full information) to a searchSpace database (optimized to find credloops). Every minute, first any new accounts are added to the searchSpace, then any new credexes. After each new credex is added, the ecosystem finds and clears all possible loops created by the new credex before moving on to the next.</p>
+
+    <ol>
+        <li>Processing new accounts:
+            <ul>
+                <li>Finds accounts with "PENDING_ACCOUNT" status in the ledger space.</li>
+                <li>Creates corresponding accounts in the search space.</li>
+                <li>Updates the account status to "PROCESSED" in the ledger space.</li>
+            </ul>
+        </li>
+        <li>Processing new Credexes:
+            <ul>
+                <li>Retrieves Credexes with "PENDING_CREDEX" status from the ledger space.</li>
+                <li>Sorts them by acceptance time.</li>
+                <li>For each Credex, calls the LoopFinder function.</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h2>LoopFinder.ts</h2>
+
+    <p>Checks if the credex already exists in searchSpace (in case of previous error). If not, it creates it.</p>
+
+    <ol>
+        <li>Finds all loops starting and ending at the specified account.
+            <ul>
+                <li>Identifies the loop with the earliest due date.</li>
+                <li>For each node in the loop, it selects the Credex with the earliest due date (or largest amount if tied).</li>
+                <li>Identifies the minimum outstanding amount among all credexes in the loop.</li>
+            </ul>
+        </li>
+        <li>If a loop is found:
+            <ul>
+                <li>Subtracts the minimum amount from all Credexes in the loop.</li>
+                <li>Updates the searchSpace, removing fully redeemed credexes and updating the earliest due dates.</li>
+                <li>Updates the ledgerSpace, creating a LoopAnchor to represent the cleared loop, update the Credexes' outstanding and redeemed amounts, and create REDEEMED and CREDLOOP relationships.</li>
+                <li>For fully redeemed credexes, replaces the OWES relationships with CLEARED relationships in ledgerSpace.</li>
+            </ul>
+        </li>
+        <li>Go back to step one until no loop is found.</li>
+        <li>Once no more loops can be found, mark the original Credex as processed and exit the loop.</li>
+    </ol>
+
+    <p>This implementation actualizes the Credex Principle by finding loops where "If I owe you, and you owe them, and they owe me, we're square." It automatically clears these loops, reducing the outstanding amounts of all involved credexes by the same amount (the minimum amount in the loop).</p>
+
+    <p>The LoopFinder is called by the MinuteTransactionQueue for each new Credex, ensuring that loops are found and cleared as soon as possible after new Credexes are created.</p>
+
+</body>
+</html>
