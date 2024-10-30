@@ -8,7 +8,7 @@ import DevAdminRoutes from "./api/DevAdmin/devAdminRoutes";
 import logger, { expressLogger, updateLoggerConfig } from "./utils/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./core-cron/cronJobs";
-import AdminDashboardRoutes from "./api/AdminDashboard/adminDashboardRoutes";
+import AdminRoutes from "./api/Admin/adminRoutes";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import swaggerUi from "swagger-ui-express";
 import { generateSwaggerSpec } from "../config/swagger";
@@ -75,7 +75,7 @@ async function initializeApp() {
     app.use(apiVersionOneRoute, AccountRoutes());
     app.use(apiVersionOneRoute, CredexRoutes());
     // still to be fixed
-    app.use(apiVersionOneRoute, AdminDashboardRoutes(jsonParser));
+    app.use(apiVersionOneRoute, AdminRoutes());
     RecurringRoutes(app);
     logger.info("Route handlers applied for hardened modules");
 

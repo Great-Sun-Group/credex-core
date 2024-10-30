@@ -16,7 +16,7 @@ export default async function GetCredexService(credexID: string): Promise<any> {
   try {
     logger.info('Executing query to fetch credex details', { credexID });
 
-    const credexResult = await ledgerSpaceSession.run(
+    const result = await ledgerSpaceSession.run(
       `MATCH (credex:Credex {credexID:$credexID})<-[:OFFERED]-(sendingAccount:Account)
         WITH credex, sendingAccount
         MATCH (credex)-[:OFFERED]-> (receivingAccount:Account)
@@ -42,9 +42,15 @@ export default async function GetCredexService(credexID: string): Promise<any> {
           receivingAccount.accountHandle AS receivingAccountHandle,
           receivingAccount.accountType AS receivingAccountType`,
           { credexID }
-    )
+    );
+    if (!result.records.length) {
+      logger.warn("Credex not found", { credexID });
+      return {
+        message: "Credex not found",
+      };
+    }
 
-    const credex = credexResult.records.map((record) => {
+    const credexData = result.records.map((record) => {
       return {
         credexID: record.get("credexID"),
         credexType: record.get("credexType"),
@@ -69,33 +75,24 @@ export default async function GetCredexService(credexID: string): Promise<any> {
       }
     }); 
 
-    if(!credex.length) {
-      logger.warn('Credex not found', { credexID });
-      return {
-        message: 'Credex not found'
-      }
-    }
-
-    logger.info('Credex retrieved successfully', { credexID });
+    
+    logger.info("Credex fetched successfully", { credexID });
     return {
-      message: 'Credex retrieved successfully',
-      data: {
-        credex
-      }
-    }
-  }
-  catch (error) {
-    logger.error('Error retrieving credex', { 
-      credexID, 
-      error: (error as Error).message,
-      stack: (error as Error).stack
+      message: "Credex fetched successfully",
+      data: credexData,
+    };
+  } catch (error) {
+    logger.error("Error fetching credex data", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      credexID,
     });
     return {
-      message: 'Error retrieving credex',
-      error: error
-    }
+      message: "Error fetching credex",
+      error: error instanceof Error ? error.message : String(error),
+    };
   } finally {
+    logger.debug("Closing database session", { credexID });
     await ledgerSpaceSession.close();
-    logger.debug('LedgerSpace session closed');
   }
 }
