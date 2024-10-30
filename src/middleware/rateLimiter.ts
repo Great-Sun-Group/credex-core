@@ -15,7 +15,7 @@ declare global {
 
 const memberLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 20, // limit to 20 requests per minute per member
+  max: 100, // limit to 20 requests per minute per member
   message: "Too many requests, please try again later",
   keyGenerator: (req: Request): string => {
     // Use the authenticated member's ID as the rate limit key, or fall back to IP address

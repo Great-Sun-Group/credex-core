@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credex Instance Sizing Overview</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Credex Instance Sizing Overview</h1>
+
+        <nav>
+            <h2>Related Documentation</h2>
+            <ul>
+                <li><a href="instance_sizing_technical.html">Technical Specifications</a></li>
+                <li><a href="instance_sizing_costs.html">Cost Analysis</a></li>
+                <li><a href="instance_sizing_scaling.html">Scaling Scenarios</a></li>
+            </ul>
+        </nav>
+
+        <h2>Introduction</h2>
+        <p>This document provides an overview of instance sizing and infrastructure requirements for the Credex system, focusing on supporting up to 200,000 members. For detailed technical specifications, cost analysis, and scaling scenarios, please refer to the linked documentation above.</p>
+
+        <h2>Environment Overview</h2>
+
+        <h3>Development Environment</h3>
+        <ul>
+            <li><strong>Neo4j Instances</strong>: 2 x t3.medium (2 vCPU, 4 GB RAM)</li>
+            <li><strong>ECS Fargate</strong>: 2 tasks with 1 vCPU and 2 GB RAM each</li>
+            <li><strong>Storage</strong>: 20 GB gp3 SSD per instance</li>
+            <li><strong>Monitoring</strong>: Basic CloudWatch setup</li>
+        </ul>
+
+        <h3>Production Environment</h3>
+        <p>Designed to handle:</p>
+        <ul>
+            <li>200,000 members</li>
+            <li>300,000 accounts (1.5 per member)</li>
+            <li>6,000,000 daily transactions</li>
+            <li>30,000,000 daily database calls</li>
+        </ul>
+
+        <h4>Key Components</h4>
+        <ul>
+            <li><strong>Neo4j Instances</strong>: 
+                <ul>
+                    <li>LedgerSpace: r5.12xlarge (48 vCPU, 384 GB RAM)</li>
+                    <li>SearchSpace: r5.12xlarge (48 vCPU, 384 GB RAM)</li>
+                </ul>
+            </li>
+            <li><strong>Application Servers</strong>: 10 Fargate tasks (2 vCPU, 4 GB RAM each)</li>
+            <li><strong>Storage</strong>: 500 GB gp3 SSD per Neo4j instance</li>
+        </ul>
+
+        <h2>Infrastructure Components</h2>
+
+        <h3>Core Services</h3>
+        <ul>
+            <li><strong>Load Balancing</strong>: Application Load Balancer with HTTPS</li>
+            <li><strong>Networking</strong>: Custom VPC with public/private subnets</li>
+            <li><strong>Security</strong>: IAM roles, security groups, encryption</li>
+            <li><strong>Monitoring</strong>: CloudWatch with detailed metrics</li>
+        </ul>
+
+        <h3>Supporting Services</h3>
+        <ul>
+            <li><strong>ElastiCache</strong>: For session and data caching</li>
+            <li><strong>S3</strong>: For backups and static assets</li>
+            <li><strong>Route 53</strong>: DNS management</li>
+            <li><strong>ACM</strong>: SSL/TLS certificates</li>
+        </ul>
+
+        <h2>Key Considerations</h2>
+
+        <h3>Performance</h3>
+        <ul>
+            <li>Neo4j instances optimized for graph operations</li>
+            <li>Auto-scaling configured for application layer</li>
+            <li>Caching strategy implemented for frequent queries</li>
+        </ul>
+
+        <h3>Security</h3>
+        <ul>
+            <li>Private subnets for databases</li>
+            <li>Encryption at rest and in transit</li>
+            <li>Regular security audits and updates</li>
+        </ul>
+
+        <h3>Reliability</h3>
+        <ul>
+            <li>Multi-AZ deployment</li>
+            <li>Automated backups</li>
+            <li>Monitoring and alerting</li>
+        </ul>
+
+        <p>For detailed technical specifications, cost analysis, and scaling scenarios, please refer to the documentation linked at the top of this page.</p>
+    </div>
+</body>
+</html>
