@@ -288,8 +288,8 @@ data "aws_route53_zone" "domain" {
 resource "aws_route53_record" "cert_validation" {
   for_each = {
     for dvo in concat(
-      aws_acm_certificate.credex_cert.domain_validation_options,
-      aws_acm_certificate.cloudfront_cert.domain_validation_options
+      [for opt in aws_acm_certificate.credex_cert.domain_validation_options : opt],
+      [for opt in aws_acm_certificate.cloudfront_cert.domain_validation_options : opt]
     ) : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
