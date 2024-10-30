@@ -1,4 +1,4 @@
-name: Deploy Application and Documentation
+name: Deploy Application
 
 on:
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
           elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
             echo "ENVIRONMENT=staging" >> $GITHUB_ENV
             echo "BUILD_TARGET=production" >> $GITHUB_ENV
-            echo "DOMAIN=dev.mycredex.dev" >> $GITHUB_ENV
+            echo "DOMAIN=stage.mycredex.dev" >> $GITHUB_ENV
           else
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
             echo "BUILD_TARGET=development" >> $GITHUB_ENV
@@ -185,6 +185,9 @@ jobs:
           if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
             echo "ENVIRONMENT=production" >> $GITHUB_ENV
             echo "DOMAIN=mycredex.app" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
+            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+            echo "DOMAIN=stage.mycredex.dev" >> $GITHUB_ENV
           else
             echo "ENVIRONMENT=development" >> $GITHUB_ENV
             echo "DOMAIN=dev.mycredex.dev" >> $GITHUB_ENV
