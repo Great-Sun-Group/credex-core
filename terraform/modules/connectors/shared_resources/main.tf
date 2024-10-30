@@ -331,7 +331,6 @@ resource "aws_route53_record" "alb" {
   }
 }
 
-# Update Route53 record to use website_endpoint
 resource "aws_route53_record" "docs" {
   zone_id = data.aws_route53_zone.domain.zone_id
   name    = "docs.${var.domain}"
@@ -358,7 +357,6 @@ resource "aws_lb_listener" "credex_listener" {
   }
 }
 
-# Update ALB listener rule to use fixed-response
 resource "aws_lb_listener_rule" "docs" {
   listener_arn = aws_lb_listener.credex_listener.arn
   priority     = 100
@@ -375,7 +373,7 @@ resource "aws_lb_listener_rule" "docs" {
     fixed_response {
       content_type = "text/plain"
       message_body = "Please visit the docs at https://docs.${var.domain}"
-      status_code  = "301"
+      status_code  = "200"
     }
   }
 }
@@ -530,5 +528,5 @@ output "docs_bucket_name" {
 }
 
 output "docs_bucket_website_endpoint" {
-  value = aws_s3_bucket.docs.website_endpoint
+  value = aws_s3_bucket_website_configuration.docs.website_endpoint
 }
