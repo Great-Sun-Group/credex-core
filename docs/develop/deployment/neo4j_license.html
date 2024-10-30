@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neo4j License Management</title>
+    <link rel="stylesheet" href="../../style.css" />
+    <style>
+      .license-info {
+        background-color: #f1f8ff;
+        border-left: 4px solid #0366d6;
+        padding: 1em;
+        margin: 1em 0;
+      }
+      .process-step {
+        background-color: #f6f8fa;
+        padding: 1em;
+        margin: 0.5em 0;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Neo4j License Management</h1>
+
+      <div class="license-info">
+        <h2>License Limitations</h2>
+        <p>
+          We use a Neo4j Enterprise Startup Edition license with the following
+          limitations:
+        </p>
+        <ul>
+          <li>
+            Up to 3 Machines for production use (24 Cores / 256 GB RAM each)
+          </li>
+          <li>Up to 6 Machines for development</li>
+          <li>
+            Up to 3 Machines for non-production internal testing (e.g., staging)
+          </li>
+        </ul>
+      </div>
+
+      <h2>Current Allocation</h2>
+      <ul>
+        <li>
+          <strong>Production</strong>: 2 instances
+          <ul>
+            <li>1 LedgerSpace</li>
+            <li>1 SearchSpace</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Staging</strong>: 2 instances
+          <ul>
+            <li>1 LedgerSpace</li>
+            <li>1 SearchSpace</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Development</strong>: 2 instances
+          <ul>
+            <li>1 LedgerSpace</li>
+            <li>1 SearchSpace</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h2>License Management Process</h2>
+      <div class="process-step">
+        <p>
+          1. The license is stored as a secret in GitHub Actions
+          (<code>NEO4J_ENTERPRISE_LICENSE</code>).
+        </p>
+      </div>
+      <div class="process-step">
+        <p>
+          2. During deployment, the license is retrieved and applied to Neo4j
+          instances.
+        </p>
+      </div>
+      <div class="process-step">
+        <p>
+          3. Instance counts and specifications are enforced through Terraform
+          configurations in <code>terraform/neo4j.tf</code> and
+          <code>terraform/variables.tf</code>.
+        </p>
+      </div>
+      <div class="process-step">
+        <p>
+          4. Pre-deployment checks verify compliance with license limitations.
+        </p>
+      </div>
+      <div class="process-step">
+        <p>5. Regular audits are conducted to ensure ongoing compliance.</p>
+      </div>
+
+      <h2>License Update Process</h2>
+      <ol>
+        <li>Obtain the new license file from Neo4j.</li>
+        <li>
+          Update the <code>NEO4J_ENTERPRISE_LICENSE</code> secret in GitHub
+          Environments.
+        </li>
+        <li>Trigger a new deployment to apply the updated license.</li>
+      </ol>
+    </div>
+  </body>
+</html>

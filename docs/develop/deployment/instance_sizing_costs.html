@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Credex Instance Sizing - Cost Analysis</title>
+    <link rel="stylesheet" href="../../style.css" />
+    <style>
+      .cost-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1em 0;
+      }
+      .cost-table th,
+      .cost-table td {
+        padding: 8px;
+        border: 1px solid #ddd;
+        text-align: left;
+      }
+      .cost-table th {
+        background-color: #f6f8fa;
+      }
+      .cost-table tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+      .savings-tip {
+        background-color: #f1f8ff;
+        border-left: 4px solid #0366d6;
+        padding: 1em;
+        margin: 1em 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Credex Instance Sizing - Cost Analysis</h1>
+
+      <nav>
+        <p><a href="instance_sizing.html">← Back to Overview</a></p>
+      </nav>
+
+      <h2>Development Environment Costs</h2>
+      <table class="cost-table">
+        <tr>
+          <th>Resource</th>
+          <th>Specification</th>
+          <th>Monthly Cost (USD)</th>
+        </tr>
+        <tr>
+          <td>Neo4j Instances (2)</td>
+          <td>t3.medium, 20 GB gp3 SSD each</td>
+          <td>$70</td>
+        </tr>
+        <tr>
+          <td>ECS Fargate</td>
+          <td>2 tasks, 1 vCPU, 2 GB RAM each</td>
+          <td>$50</td>
+        </tr>
+        <tr>
+          <td>ALB</td>
+          <td>1 ALB</td>
+          <td>$20</td>
+        </tr>
+        <tr>
+          <td>ElastiCache</td>
+          <td>cache.t3.micro</td>
+          <td>$15</td>
+        </tr>
+        <tr>
+          <td>CloudWatch</td>
+          <td>Basic monitoring</td>
+          <td>$10</td>
+        </tr>
+        <tr>
+          <td>S3</td>
+          <td>50 GB storage</td>
+          <td>$2</td>
+        </tr>
+        <tr>
+          <td>Data Transfer</td>
+          <td>Estimated 100 GB/month</td>
+          <td>$10</td>
+        </tr>
+        <tr>
+          <th colspan="2">Total Estimated Monthly Cost</th>
+          <th>$177</th>
+        </tr>
+      </table>
+
+      <div class="savings-tip">
+        <strong>Development Cost Optimization:</strong>
+        <ul>
+          <li>Consider stopping instances during non-working hours</li>
+          <li>Use spot instances for development workloads</li>
+          <li>Implement automatic shutdown of unused resources</li>
+        </ul>
+      </div>
+
+      <h2>Production Environment Costs</h2>
+      <table class="cost-table">
+        <tr>
+          <th>Resource</th>
+          <th>Specification</th>
+          <th>Monthly Cost (USD)</th>
+        </tr>
+        <tr>
+          <td>Neo4j Instances (2)</td>
+          <td>r5.12xlarge, 500 GB gp3 SSD each</td>
+          <td>$8,400</td>
+        </tr>
+        <tr>
+          <td>ECS Fargate</td>
+          <td>10 tasks, 2 vCPU, 4 GB RAM each</td>
+          <td>$500</td>
+        </tr>
+        <tr>
+          <td>ALB</td>
+          <td>1 ALB</td>
+          <td>$25</td>
+        </tr>
+        <tr>
+          <td>NAT Gateway</td>
+          <td>2 NAT Gateways</td>
+          <td>$70</td>
+        </tr>
+        <tr>
+          <td>ElastiCache</td>
+          <td>cache.r5.large</td>
+          <td>$150</td>
+        </tr>
+        <tr>
+          <td>CloudWatch</td>
+          <td>Detailed monitoring</td>
+          <td>$100</td>
+        </tr>
+        <tr>
+          <td>S3</td>
+          <td>1 TB storage</td>
+          <td>$25</td>
+        </tr>
+        <tr>
+          <td>Route 53</td>
+          <td>DNS management</td>
+          <td>$5</td>
+        </tr>
+        <tr>
+          <td>Data Transfer</td>
+          <td>Estimated 5 TB/month</td>
+          <td>$500</td>
+        </tr>
+        <tr>
+          <th colspan="2">Total Estimated Monthly Cost</th>
+          <th>$9,780</th>
+        </tr>
+      </table>
+
+      <h2>Cost Optimization Strategies</h2>
+
+      <h3>Reserved Instance Strategy</h3>
+      <div class="savings-tip">
+        <p>
+          Using 3-year Reserved Instances for Neo4j could reduce costs by up to
+          60%:
+        </p>
+        <ul>
+          <li>Current Neo4j monthly cost: $8,400</li>
+          <li>With Reserved Instances: ~$3,360</li>
+          <li>Potential monthly savings: $5,040</li>
+        </ul>
+      </div>
+
+      <h3>DCO Instance Optimization</h3>
+      <p>Running DCO on a separate instance:</p>
+      <ul>
+        <li>
+          Separate r5.4xlarge instance for DCO: $15/month (based on 5 hours
+          usage)
+        </li>
+        <li>Reduce main LedgerSpace to r5.8xlarge: Save $1,400/month</li>
+        <li>Net monthly savings: $1,385</li>
+      </ul>
+
+      <h3>Additional Cost Optimization Techniques</h3>
+      <ul>
+        <li>
+          <strong>Auto Scaling</strong>: Implement proper scaling policies to
+          reduce costs during low-traffic periods
+        </li>
+        <li>
+          <strong>S3 Lifecycle Policies</strong>: Move infrequently accessed
+          data to cheaper storage tiers
+        </li>
+        <li>
+          <strong>CloudWatch Optimization</strong>: Review and adjust monitoring
+          frequency for non-critical metrics
+        </li>
+        <li>
+          <strong>Data Transfer</strong>: Implement caching strategies to reduce
+          data transfer costs
+        </li>
+      </ul>
+
+      <h2>Staging Environment Costs</h2>
+      <p>
+        Staging environment runs approximately 15 hours per week (65 hours per
+        month):
+      </p>
+      <table class="cost-table">
+        <tr>
+          <th>Resource</th>
+          <th>Monthly Cost (USD)</th>
+        </tr>
+        <tr>
+          <td>Neo4j Instances</td>
+          <td>$630</td>
+        </tr>
+        <tr>
+          <td>Other Infrastructure</td>
+          <td>$149</td>
+        </tr>
+        <tr>
+          <th>Total Estimated Monthly Cost</th>
+          <th>$779</th>
+        </tr>
+      </table>
+
+      <div class="savings-tip">
+        <strong>Total Infrastructure Cost Summary:</strong>
+        <ul>
+          <li>Development: $177/month</li>
+          <li>Staging: $779/month</li>
+          <li>Production: $9,780/month</li>
+          <li>Total Monthly Cost: $10,736</li>
+          <li>
+            Potential Optimized Cost: $5,867 (with all optimizations applied)
+          </li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>

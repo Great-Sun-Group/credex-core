@@ -134,7 +134,7 @@ cd credex-core</code></pre>
     <ol>
         <li><strong>Development Environment</strong>
             <ul>
-                <li>Subdomain: dev.api.mycredex.dev</li>
+                <li>Subdomain: dev.mycredex.dev</li>
                 <li>Purpose: Active development and initial testing</li>
                 <li>Branch: 'dev' or any branch with a name including the pattern "deploy"</li>
                 <li>Configuration:
@@ -149,7 +149,7 @@ cd credex-core</code></pre>
 
         <li><strong>Staging Environment</strong>
             <ul>
-                <li>Subdomain: stage.api.mycredex.dev</li>
+                <li>Subdomain: stage.mycredex.dev</li>
                 <li>Purpose: Pre-production testing and validation</li>
                 <li>Branch: 'stage'</li>
                 <li>Configuration:
@@ -164,7 +164,7 @@ cd credex-core</code></pre>
 
         <li><strong>Production Environment</strong>
             <ul>
-                <li>Domain: api.mycredex.app</li>
+                <li>Domain: mycredex.app</li>
                 <li>Purpose: Live production environment</li>
                 <li>Branch: 'prod'</li>
                 <li>Configuration:
@@ -383,7 +383,7 @@ cd credex-core</code></pre>
     <p>Builds and deploys the application image.</p>
 
     <h1>Full Environment Setup Complete</h1>
-    <p>This completes the steps to deploy credex-core to production, staging, development, and model environments.</p>
+    <p>This completes the steps to deploy credex-core to production, staging, development, and model environments. Each workflow now only needs to be run on changes to it's relevant part of the codebase. Connectors will be redeployed rarely, Databases occasionally, and Application daily or more.</p>
 
 </body>
 </html>
