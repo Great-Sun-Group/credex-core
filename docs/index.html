@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Documentation for the credex-core API</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Developer Documentation for the credex-core API</h1>
+
+    <p>This documentation includes a complete overview and orientation to developing, testing and deploying the credex-core codebase. Continue reading for an outline of the architecture, jump to the <a href="#resources">full list of developer resources</a> below, or use these quick references for working on the <a href="developerAPI/index.html">API code</a> or a <a href="developerClient/index.html">client app</a>.</p>
+
+    <h2>Environments</h2>
+    <p>Configuration for all environments is outlined in <a href="environment_setup.html">Environment Setup</a>.</p>
+
+    <h3>Local</h3>
+    <p>A local environment is supplied by a developer's own machine or a virtual Github Codespaces machine, and linked cloud-deployed instances of neo4j (Neo4j Aura). Testing in this environment ensures that all endpoints return data as expected. The value of the environment variable in this deployment is <code>development</code>, like the first deployed environment below (this should probably be changed).</p>
+
+    <h3>Development</h3>
+    <p>The <code>development</code> environment and databases are intended to provide initial deployment testing on isolated data in dev DBs by manually-triggered deployment off the <code>dev</code> branch using Github Workflows. This testing includes data integrity checks across larger data sets and mutiple DCO exchange rate updates.</p>
+
+    <h3>Staging</h3>
+    <p>The <code>staging</code> environment and databases are intended to provide production-scale testing in a mock production environment, and are deployed and tested automatically by pushes to the <code>stage</code> branch. When triggered, the deployment of the staging environment includes the full deployment of production-scale infrastructor (connectors, databases, application), automatic performance testing on production-scale data sets, spot checks for data integrity, and full deployment tear-down when tests are passed to satisfaction. Scale tests bypass the HTTPS protocols, running fully internal to the server. This environment can also mimic the update of deployed neo4j infrastructure. (Not yet true, still manually deployed from <code>stage</code> branch and no large scale test, tear-down, or DB deploy/update scripts written.)</p>
+
+    <h3>Production</h3>
+    <p>The <code>production</code> environment enables members to interact with the production databases that host the live ledger of the credex ecosystem. This environment automatically redeploys the app by running the application workflow every day just after midnight UTC at the end of the DCO. (Not yet true, still manually deployed from <code>prod</code> branch). Updates to the underlying database or connectors infrastructure are manually deployed from the <code>prod</code> branch using Github Workflows (behaviour intended to remain).</p>
+
+    <h2>Neo4j Databases</h2>
+    <p>Credex-core runs on two neo4j databases. LedgerSpace is the shared ledger containing the full state of the credex ecosystem. SearchSpace contains only unredeemed credexes, and is optimized to find credloops. On every credloop found and cleared, LedgerSpace is updated accordingly.</p>
+
+    <h2>Express.js Server</h2>
+    <p>The express.js server is initialized in <code>src/index.ts</code>, which provides the cronjobs and endpoints that power the ecosystem and enable members and client apps to interact with its ledger, locking in the security and authorization, as well as parsing, logging, and other middleware.</p>
+
+    <h3>Cronjobs</h3>
+    <p>The src/core-cron/ module hosts the cronjobs:</p>
+    <ul>
+        <li><a href="DCO.html">DailyCredcoinOffering</a> runs every day at midnight UTC, calculating the value of 1 CXX and updating all ecosystem values accordingly.</li>
+        <li><a href="MTQ.html">MinuteTransactionQueue</a> runs every minute, clearing credloops of value creation across the ecosystem.</li>
+    </ul>
+
+    <h3>Endpoints</h3>
+    <p>Endpoints and routes are deployed for the modules: Member, Account, Credex, Avatar, and AdminDashboard. Endpoints for the Dev module are included in development and staging deployments, but not in production.</p>
+
+    <h2>Deployment Summary</h2>
+    <p>The credex-core application is deployed using AWS services (including ECS, ECR), Terraform for infrastructure management, and GitHub Actions for CI/CD. The application relies on Neo4j Enterprise Edition for data storage and management. The deployment process runs in three separate workflows:</p>
+
+    <ol>
+        <li><code>connectors.yml</code>: Handles the deployment of infrequently changed infrastructure such as clusters and load balancers.</li>
+        <li><code>databases.yml</code>: Sets up and manages Neo4j database resources (ledgerSpace and searchSpace).</li>
+        <li><code>app.yml</code>: Deploys the application itself.</li>
+    </ol>
+
+    <p>This separation allows for granular control over each part of the deployment process and makes it easier to manage and troubleshoot specific aspects of the deployment. Environment is determined at run time by which branch the workflow is run on, enabling same workflow files to manage all environments.</p>
+
+    <h2 id="resources">Complete List of Developer Resources</h2>
+
+    <h3>README References</h3>
+    <ul>
+        <li><a href="developerAPI/index.html">Development of the credex-core API</a></li>
+        <li><a href="developerClient/index.html">Development of Client Apps</a></li>
+    </ul>
+
+    <h3>Getting Started</h3>
+    <ul>
+        <li><a href="environment_setup.html">Environment Setup</a></li>
+        <li><a href="deployment/connectors_workflow.html">Connectors Workflow and Terraform Module</a></li>
+        <li><a href="deployment/databases_workflow.html">Databases Workflow and Terraform Module</a></li>
+        <li><a href="deployment/app_workflow.html">Application Workflow and Terraform Module</a></li>
+    </ul>
+
+    <h3>Deployment</h3>
+    <ul>
+        <li><a href="deployment/neo4j_license.html">Neo4j License Management</a></li>
+        <li><a href="deployment/instance_size_first200k.html">Infrastructure Scaling Report</a></li>
+    </ul>
+
+    <h3>Member Modules</h3>
+    <ul>
+        <li><a href="developerClient/module/Account.html">Account</a></li>
+        <li><a href="developerClient/module/Avatar.html">Avatar</a></li>
+        <li><a href="developerClient/module/Credex.html">Credex</a></li>
+        <li><a href="developerClient/module/Member.html">Member</a></li>
+    </ul>
+
+    <h3>Admin Modules</h3>
+    <ul>
+        <li><a href="developerClient/module/AdminDashboard.html">AdminDashboard</a></li>
+        <li><a href="developerClient/module/DevAdmin.html">DevAdmin</a></li>
+    </ul>
+
+    <h3>Core Cronjobs</h3>
+    <ul>
+        <li><a href="DCO.html">Daily Credcoin Offering</a></li>
+        <li><a href="MTQ.html">Minute Transaction Queue</a></li>
+    </ul>
+
+    <h3>Database Schemas</h3>
+    <ul>
+        <li><a href="developerAPI/ledgerSpace_schema.html">ledgerSpace Schema</a></li>
+        <li><a href="developerAPI/searchSpace_schema.html">searchSpace Schema</a></li>
+    </ul>
+
+    <h3>Development Guides</h3>
+    <ul>
+        <li><a href="auth_security.html">Endpoint Security and Authorization</a></li>
+        <li><a href="developerClient/swagger.html">Swagger for AI-assisted client app dev</a></li>
+        <li><a href="developerAPI/logging_best_practices.html">Logging Best Practices</a></li>
+    </ul>
+
+    <h3>Testing</h3>
+    <ul>
+        <li><a href="tests/testing_guide.html">Testing Guide</a></li>
+    </ul>
+</body>
+</html>
