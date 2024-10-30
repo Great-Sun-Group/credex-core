@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credex Core AWS Permissions</title>
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        .copy-instructions {
+            background-color: #f8f9fa;
+            border-left: 4px solid #0366d6;
+            padding: 1em;
+            margin: 1em 0;
+        }
+        pre {
+            margin: 1em 0;
+            padding: 1em;
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Credex Core AWS Permissions</h1>
+        
+        <div class="copy-instructions">
+            <p><strong>To use this JSON:</strong></p>
+            <ol>
+                <li>Click anywhere in the JSON code block below</li>
+                <li>Press Ctrl+A (Cmd+A on Mac) to select all</li>
+                <li>Press Ctrl+C (Cmd+C on Mac) to copy</li>
+                <li>The JSON is now ready to paste into your AWS IAM policy editor</li>
+            </ol>
+        </div>
+
+        <pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecs:*",
+        "ecr:*",
+        "logs:*",
+        "secretsmanager:*",
+        "ec2:*",
+        "elasticloadbalancing:*",
+        "iam:PassRole",
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:TagRole",
+        "iam:GetRole",
+        "iam:CreateInstanceProfile",
+        "iam:DeleteInstanceProfile",
+        "iam:AddRoleToInstanceProfile",
+        "iam:RemoveRoleFromInstanceProfile",
+        "iam:ListAttachedRolePolicies",
+        "iam:TagInstanceProfile",
+        "iam:GetInstanceProfile",
+        "iam:GetRolePolicy",
+        "iam:ListRolePolicies",
+        "iam:GetUser",
+        "iam:SimulatePrincipalPolicy",
+        "iam:ListRoles",
+        "cloudwatch:*",
+        "autoscaling:*",
+        "application-autoscaling:*",
+        "ssm:*",
+        "sns:*",
+        "kms:*",
+        "route53:*",
+        "elasticfilesystem:*",
+        "servicediscovery:*",
+        "acm:*",
+        "cloudformation:*",
+        "elasticache:*",
+        "rds:*",
+        "dynamodb:*",
+        "sqs:*",
+        "s3:*",
+        "lambda:*",
+        "apigateway:*",
+        "events:*",
+        "xray:*",
+        "tag:*",
+        "cloudfront:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/elasticloadbalancing.amazonaws.com/AWSServiceRoleForElasticLoadBalancing",
+      "Condition": {
+        "StringLike": {
+          "iam:AWSServiceName": "elasticloadbalancing.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+      "Condition": {
+        "StringLike": {
+          "iam:AWSServiceName": "ecs.amazonaws.com"
+        }
+      }
+    }
+  ]
+}</code></pre>
+    </div>
+</body>
+</html>

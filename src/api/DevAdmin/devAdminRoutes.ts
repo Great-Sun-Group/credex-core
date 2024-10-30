@@ -1,5 +1,5 @@
 import express from "express";
-import { GetMemberListController } from "./controllers/getMemberList";
+import { GimmeSecuredController } from "./controllers/gimmeSecured";
 import { ClearDevDBsController } from "./controllers/clearDevDBs";
 import { ForceDCOController } from "./controllers/forceDCO";
 import logger from "../../utils/logger";
@@ -14,6 +14,9 @@ export default function DevRoutes() {
 
   router.post(`/devadmin/forceDCO`, ForceDCOController);
   logger.debug("Route registered: POST /devadmin/forceDCO");
+
+  router.post(`/devadmin/gimmeSecured`, GimmeSecuredController);
+  logger.debug("Route registered: POST /devadmin/gimmeSecured");
 
   logger.info("DevAdmin routes initialized successfully", {
     module: "devAdminRoutes",

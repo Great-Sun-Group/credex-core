@@ -6,7 +6,7 @@ module "connectors" {
 
   # Domain configuration
   production_domain     = local.env_config.production.domain
-  dev_domain_base      = local.current_env.dev_domain_base
+  dev_domain_base      = var.environment == "production" ? null : local.current_env.dev_domain_base
   environment_subdomains = {
     for k, v in local.env_config : k => v.subdomain if k != "production"
   }
