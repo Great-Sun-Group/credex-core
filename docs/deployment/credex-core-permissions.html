@@ -1,4 +1,45 @@
-{
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credex Core AWS Permissions</title>
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        .copy-instructions {
+            background-color: #f8f9fa;
+            border-left: 4px solid #0366d6;
+            padding: 1em;
+            margin: 1em 0;
+        }
+        pre {
+            margin: 1em 0;
+            padding: 1em;
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Credex Core AWS Permissions</h1>
+        
+        <div class="copy-instructions">
+            <p><strong>To use this JSON:</strong></p>
+            <ol>
+                <li>Click anywhere in the JSON code block below</li>
+                <li>Press Ctrl+A (Cmd+A on Mac) to select all</li>
+                <li>Press Ctrl+C (Cmd+C on Mac) to copy</li>
+                <li>The JSON is now ready to paste into your AWS IAM policy editor</li>
+            </ol>
+        </div>
+
+        <pre><code>{
   "Version": "2012-10-17",
   "Statement": [
     {
@@ -51,7 +92,8 @@
         "apigateway:*",
         "events:*",
         "xray:*",
-        "tag:*"
+        "tag:*",
+        "cloudfront:*"
       ],
       "Resource": "*"
     },
@@ -76,4 +118,7 @@
       }
     }
   ]
-}
+}</code></pre>
+    </div>
+</body>
+</html>
