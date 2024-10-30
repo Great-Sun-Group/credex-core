@@ -207,6 +207,16 @@ resource "aws_s3_bucket" "docs" {
   })
 }
 
+# Add block public access configuration before bucket policy
+resource "aws_s3_bucket_public_access_block" "docs" {
+  bucket = aws_s3_bucket.docs.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
 resource "aws_s3_bucket_website_configuration" "docs" {
   bucket = aws_s3_bucket.docs.id
   index_document {
@@ -216,6 +226,7 @@ resource "aws_s3_bucket_website_configuration" "docs" {
 
 resource "aws_s3_bucket_policy" "docs" {
   bucket = aws_s3_bucket.docs.id
+  depends_on = [aws_s3_bucket_public_access_block.docs]
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -320,13 +331,14 @@ resource "aws_route53_record" "alb" {
   }
 }
 
+# Update Route53 record to use website_endpoint
 resource "aws_route53_record" "docs" {
   zone_id = data.aws_route53_zone.domain.zone_id
   name    = "docs.${var.domain}"
   type    = "A"
 
   alias {
-    name                   = aws_s3_bucket.docs.website_domain
+    name                   = aws_s3_bucket_website_configuration.docs.website_endpoint
     zone_id                = aws_s3_bucket.docs.hosted_zone_id
     evaluate_target_health = false
   }
@@ -346,6 +358,7 @@ resource "aws_lb_listener" "credex_listener" {
   }
 }
 
+# Update ALB listener rule to use fixed-response
 resource "aws_lb_listener_rule" "docs" {
   listener_arn = aws_lb_listener.credex_listener.arn
   priority     = 100
@@ -357,12 +370,12 @@ resource "aws_lb_listener_rule" "docs" {
   }
 
   action {
-    type = "redirect"
-    redirect {
-      host        = aws_s3_bucket.docs.website_endpoint
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
+    type = "fixed-response"
+    
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Please visit the docs at https://docs.${var.domain}"
+      status_code  = "301"
     }
   }
 }
