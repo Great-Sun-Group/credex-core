@@ -16,7 +16,7 @@ describe("Member API Tests", () => {
         defaultDenom: "USD",
       };
 
-      const response = await axios.post("/v1/onboardMember", memberData);
+      const response = await axios.post("/onboardMember", memberData);
 
       expect(response.status).toBe(201);
       expect(response.data).toHaveProperty("token");
@@ -39,7 +39,7 @@ describe("Member API Tests", () => {
     it("should login a member", async () => {
       const loginData = { phone: testMemberPhone };
 
-      const response = await axios.post("/v1/login", loginData);
+      const response = await axios.post("/login", loginData);
 
       expect(response.status).toBe(200);
       expect(response.data).toHaveProperty("token");
@@ -49,7 +49,7 @@ describe("Member API Tests", () => {
       console.log("Getting member by handle:", testMemberPhone);
       const data = { memberHandle: testMemberPhone };
 
-      const response = await axios.post("/v1/getMemberByHandle", data, {
+      const response = await axios.post("/getMemberByHandle", data, {
         headers: { Authorization: `Bearer ${testMemberJWT}` },
       });
 
@@ -60,7 +60,7 @@ describe("Member API Tests", () => {
     it("should get member dashboard by phone", async () => {
       const data = { phone: testMemberPhone };
 
-      const response = await axios.post("/v1/getMemberDashboardByPhone", data, {
+      const response = await axios.post("/getMemberDashboardByPhone", data, {
         headers: { Authorization: `Bearer ${testMemberJWT}` },
       });
 
@@ -78,7 +78,7 @@ describe("Member API Tests", () => {
         securedCredex: true,
       };
 
-      const response = await axios.post("/v1/authForTierSpendLimit", data, {
+      const response = await axios.post("/authForTierSpendLimit", data, {
         headers: { Authorization: `Bearer ${testMemberJWT}` },
       });
 
@@ -95,7 +95,7 @@ describe("Member API Tests", () => {
         DCOdenom: "USD",
       };
 
-      const response = await axios.post("/v1/setDCOparticipantRate", data, {
+      const response = await axios.post("/setDCOparticipantRate", data, {
         headers: { Authorization: `Bearer ${testMemberJWT}` },
       });
 
