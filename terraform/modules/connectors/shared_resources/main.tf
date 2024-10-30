@@ -1,3 +1,9 @@
+# Add us-east-1 provider for CloudFront certificate
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+}
+
 # VPC
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
@@ -242,6 +248,76 @@ resource "aws_s3_bucket_policy" "docs" {
   })
 }
 
+# ACM Certificate for ALB (in current region)
+resource "aws_acm_certificate" "credex_cert" {
+  domain_name               = var.domain
+  subject_alternative_names = ["*.${var.domain}"]
+  validation_method         = "DNS"
+
+  tags = merge(var.common_tags, {
+    Name = "credex-cert-${var.environment}"
+  })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# ACM Certificate for CloudFront (in us-east-1)
+resource "aws_acm_certificate" "cloudfront_cert" {
+  provider = aws.us_east_1
+  
+  domain_name               = "docs.${var.domain}"
+  validation_method         = "DNS"
+
+  tags = merge(var.common_tags, {
+    Name = "credex-cloudfront-cert-${var.environment}"
+  })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Get the hosted zone for the domain
+data "aws_route53_zone" "domain" {
+  name = var.domain_base
+}
+
+# Create DNS records for certificate validation (for both certificates)
+resource "aws_route53_record" "cert_validation" {
+  for_each = {
+    for dvo in concat(
+      aws_acm_certificate.credex_cert.domain_validation_options,
+      aws_acm_certificate.cloudfront_cert.domain_validation_options
+    ) : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = data.aws_route53_zone.domain.zone_id
+}
+
+# Certificate validation for both certificates
+resource "aws_acm_certificate_validation" "credex_cert" {
+  certificate_arn         = aws_acm_certificate.credex_cert.arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+}
+
+resource "aws_acm_certificate_validation" "cloudfront_cert" {
+  provider = aws.us_east_1
+  
+  certificate_arn         = aws_acm_certificate.cloudfront_cert.arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+}
+
 # CloudFront distribution for docs
 resource "aws_cloudfront_distribution" "docs" {
   enabled             = true
@@ -288,7 +364,7 @@ resource "aws_cloudfront_distribution" "docs" {
   }
 
   viewer_certificate {
-    acm_certificate_arn      = aws_acm_certificate_validation.credex_cert.certificate_arn
+    acm_certificate_arn      = aws_acm_certificate_validation.cloudfront_cert.certificate_arn
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
   }
@@ -328,50 +404,6 @@ resource "aws_lb_target_group" "credex_core" {
   }
 
   tags = var.common_tags
-}
-
-# ACM Certificate
-resource "aws_acm_certificate" "credex_cert" {
-  domain_name               = var.domain
-  subject_alternative_names = ["*.${var.domain}"]
-  validation_method         = "DNS"
-
-  tags = merge(var.common_tags, {
-    Name = "credex-cert-${var.environment}"
-  })
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Get the hosted zone for the domain
-data "aws_route53_zone" "domain" {
-  name = var.domain_base
-}
-
-# Create DNS records for certificate validation
-resource "aws_route53_record" "cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.credex_cert.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-
-  allow_overwrite = true
-  name            = each.value.name
-  records         = [each.value.record]
-  ttl             = 60
-  type            = each.value.type
-  zone_id         = data.aws_route53_zone.domain.zone_id
-}
-
-# Certificate validation
-resource "aws_acm_certificate_validation" "credex_cert" {
-  certificate_arn         = aws_acm_certificate.credex_cert.arn
-  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
 # Create Route53 records
