@@ -67,34 +67,18 @@
       </ul>
 
       <h2>License Management Process</h2>
-      <div class="process-step">
-        <p>
-          1. The license is stored as a secret in GitHub Actions
-          (<code>NEO4J_ENTERPRISE_LICENSE</code>).
-        </p>
-      </div>
-      <div class="process-step">
-        <p>
-          2. During deployment, the license is retrieved and applied to Neo4j
-          instances.
-        </p>
-      </div>
-      <div class="process-step">
-        <p>
-          3. Instance counts and specifications are enforced through Terraform
+        <ol>
+          <li>The license is stored as a secret in GitHub Actions
+          (<code>NEO4J_ENTERPRISE_LICENSE</code>).</li>
+          <li>During deployment, the license is retrieved and applied to Neo4j
+          instances.</li>
+          <li>Instance counts and specifications are enforced through Terraform
           configurations in <code>terraform/neo4j.tf</code> and
-          <code>terraform/variables.tf</code>.
-        </p>
-      </div>
-      <div class="process-step">
-        <p>
-          4. Pre-deployment checks verify compliance with license limitations.
-        </p>
-      </div>
-      <div class="process-step">
-        <p>5. Regular audits are conducted to ensure ongoing compliance.</p>
-      </div>
-
+          <code>terraform/variables.tf</code>.</li>
+          <li>Pre-deployment checks verify compliance with license limitations.</li>
+          <li>Regular audits are conducted to ensure ongoing compliance.</li>
+        </ol>
+        
       <h2>License Update Process</h2>
       <ol>
         <li>Obtain the new license file from Neo4j.</li>
