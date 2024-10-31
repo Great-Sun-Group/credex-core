@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Application Deployment Workflow</title>
+    <link rel="stylesheet" href="../../style.css" />
+    <script src="../../menu.js"></script>
+  </head>
+  <body>
+    <div class="header-logo">
+      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+    <div class="container">
+      <h1>Application Deployment Workflow</h1>
+
+      <p>
+        This document provides an overview of the application deployment
+        workflow, which is defined in <code>.github/workflows/app.yml</code>.
+      </p>
+
+      <h2>Prerequisites</h2>
+
+      <p>
+        Before running this workflow, ensure that:
+      </p>
+      <ol>
+        <li>
+          The connectors workflow has been run at least once for the target environment
+          to create the necessary Terraform state infrastructure.
+        </li>
+        <li>
+          The databases workflow has been run and the Neo4j connection details are
+          properly set as GitHub secrets.
+        </li>
+        <li>
+          All required secrets (JWT_SECRET, CLIENT_API_KEY, etc.) are properly
+          configured in GitHub.
+        </li>
+      </ol>
+
+      <h2>Workflow Overview</h2>
+
+      <p>
+        The workflow consists of two jobs:
+      </p>
+
+      <ol>
+        <li>
+          <strong>deploy_application</strong>: Builds and deploys the application
+          to AWS ECS
+        </li>
+        <li>
+          <strong>deploy_docs</strong>: Deploys the documentation to S3 after the
+          application deployment succeeds
+        </li>
+      </ol>
+
+      <h2>Environment Configuration</h2>
+
+      <p>
+        The workflow determines the environment and related settings based on the Git branch:
+      </p>
+
+      <table>
+        <tr>
+          <th>Branch</th>
+          <th>Environment</th>
+          <th>Build Target</th>
+          <th>Domain</th>
+        </tr>
+        <tr>
+          <td>prod</td>
+          <td>production</td>
+          <td>production</td>
+          <td>mycredex.app</td>
+        </tr>
+        <tr>
+          <td>stage</td>
+          <td>staging</td>
+          <td>production</td>
+          <td>stage.mycredex.dev</td>
+        </tr>
+        <tr>
+          <td>other</td>
+          <td>development</td>
+          <td>development</td>
+          <td>dev.mycredex.dev</td>
+        </tr>
+      </table>
+
+      <h2>Application Deployment Process</h2>
+
+      <h3>1. Docker Image Build</h3>
+      <p>
+        The workflow builds a Docker image with environment-specific configuration:
+      </p>
+      <ul>
+        <li>Uses multi-stage builds with environment-specific targets</li>
+        <li>
+          Includes build arguments for sensitive information:
+          <ul>
+            <li>NODE_ENV</li>
+            <li>Neo4j connection details (both LedgerSpace and SearchSpace)</li>
+            <li>JWT_SECRET</li>
+            <li>CLIENT_API_KEY</li>
+            <li>OPEN_EXCHANGE_RATES_API</li>
+          </ul>
+        </li>
+        <li>Tags the image with the Git SHA</li>
+        <li>Pushes to environment-specific ECR repository</li>
+      </ul>
+
+      <h3>2. Infrastructure Deployment</h3>
+      <p>
+        Uses Terraform to manage the application infrastructure:
+      </p>
+      <ul>
+        <li>Initializes with environment-specific backend configuration</li>
+        <li>Targets only the app module</li>
+        <li>Uses dummy values for Neo4j variables since they're not needed</li>
+        <li>Applies infrastructure changes if needed</li>
+      </ul>
+
+      <h3>3. ECS Deployment</h3>
+      <p>
+        Updates the ECS service with the new application version:
+      </p>
+      <ul>
+        <li>Fetches current task definition</li>
+        <li>
+          Updates task definition with:
+          <ul>
+            <li>New Docker image</li>
+            <li>Environment variables from GitHub secrets</li>
+            <li>Node environment configuration</li>
+          </ul>
+        </li>
+        <li>Registers new task definition</li>
+        <li>Updates ECS service</li>
+        <li>Waits for service to stabilize (up to 40 attempts)</li>
+      </ul>
+
+      <h2>Documentation Deployment Process</h2>
+
+      <p>
+        After successful application deployment, the workflow:
+      </p>
+      <ul>
+        <li>
+          Syncs the docs/ directory to the environment-specific S3 bucket
+          (docs.${DOMAIN})
+        </li>
+        <li>Deletes any files in the bucket that don't exist locally</li>
+        <li>Makes the documentation available at https://docs.${DOMAIN}</li>
+      </ul>
+
+      <h2>State Management</h2>
+
+      <p>
+        The workflow uses the same state management infrastructure as the connectors
+        workflow:
+      </p>
+      <ul>
+        <li>
+          <strong>S3 Backend</strong>: credex-terraform-state-${ENVIRONMENT}
+        </li>
+        <li>
+          <strong>DynamoDB Lock Table</strong>: credex-terraform-state-lock-${ENVIRONMENT}
+        </li>
+      </ul>
+
+      <h2>Infrastructure Outputs</h2>
+
+      <p>
+        The workflow outputs detailed information about the deployed application:
+      </p>
+
+      <ul>
+        <li>
+          <strong>ECS Information</strong>:
+          <ul>
+            <li>Cluster ARN</li>
+            <li>Task Definition ARN</li>
+            <li>Service Name</li>
+            <li>Service ID</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Deployment Details</strong>:
+          <ul>
+            <li>Environment</li>
+            <li>Docker Image URI</li>
+            <li>Build Target</li>
+            <li>Documentation URL</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h2>Security Considerations</h2>
+
+      <ol>
+        <li>
+          <strong>Secrets Management</strong>:
+          <ul>
+            <li>AWS credentials stored as GitHub secrets</li>
+            <li>Application secrets passed as build arguments</li>
+            <li>Environment variables set in ECS task definition</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Image Security</strong>:
+          <ul>
+            <li>Images stored in private ECR repository</li>
+            <li>Tagged with Git SHA for traceability</li>
+            <li>Built with no-cache option for fresh dependencies</li>
+          </ul>
+        </li>
+      </ol>
+
+      <h2>Troubleshooting</h2>
+
+      <p>
+        If deployment fails, check:
+      </p>
+
+      <ol>
+        <li>
+          <strong>Docker Build Issues</strong>:
+          <ul>
+            <li>Build logs for compilation errors</li>
+            <li>ECR push permissions</li>
+            <li>Build argument configuration</li>
+          </ul>
+        </li>
+        <li>
+          <strong>ECS Deployment Issues</strong>:
+          <ul>
+            <li>Service events in AWS console</li>
+            <li>Container logs in CloudWatch</li>
+            <li>Task definition configuration</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Documentation Deployment Issues</strong>:
+          <ul>
+            <li>S3 bucket permissions</li>
+            <li>CloudFront cache invalidation</li>
+          </ul>
+        </li>
+      </ol>
+
+      <h2>Post-Deployment Verification</h2>
+
+      <ol>
+        <li>
+          <strong>Application Health</strong>:
+          <ul>
+            <li>Check ECS service status</li>
+            <li>Verify application health endpoint</li>
+            <li>Monitor application logs</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Documentation Access</strong>:
+          <ul>
+            <li>Verify documentation is accessible at https://docs.${DOMAIN}</li>
+            <li>Check for any broken links or missing content</li>
+          </ul>
+        </li>
+      </ol>
+
+      <h2>Conclusion</h2>
+
+      <p>
+        The application deployment workflow provides a comprehensive solution for
+        deploying both the application and its documentation. It ensures consistent
+        deployments across environments through environment-specific configuration
+        and state management. The workflow includes proper security measures,
+        handles sensitive information appropriately, and provides detailed output
+        for monitoring and troubleshooting. The multi-stage deployment process,
+        with separate jobs for application and documentation, ensures that all
+        components are updated together while maintaining proper dependencies.
+      </p>
+    </div>
+  </body>
+</html>

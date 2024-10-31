@@ -1,116 +1,280 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Developer Documentation for the credex-core API</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <h1>Developer Documentation for the credex-core API</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=0.8" />
+    <title>mycredex.app - Your portal to the credex ecosystem</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="menu.js"></script>
+  </head>
+  <body>
+    <div class="header-logo">
+      <img src="images/logo.png" alt="Credex Logo" class="main-logo" />
+    </div>
+    <h1>mycredex.app</h1>
+    <h3 class="subtitle">Our portal to the credex ecosystem</h3>
 
-    <p>This documentation includes a complete overview and orientation to developing, testing and deploying the credex-core codebase. Continue reading for an outline of the architecture, jump to the <a href="#resources">full list of developer resources</a> below, or use these quick references for working on the <a href="developerAPI/index.html">API code</a> or a <a href="developerClient/index.html">client app</a>.</p>
+    <p>
+      The credex ecosystem is a shared ledger that enables the efficient
+      circulation of value, accumulation of capital, investment of profits, and
+      giving of gifts. Credex is a tool for financial inclusion, financial
+      empowerment, and financial sovereignty.
+    </p>
 
-    <h2>Environments</h2>
-    <p>Configuration for all environments is outlined in <a href="environment_setup.html">Environment Setup</a>.</p>
+    <p>
+      The credex-core API deployed at mycredex.app is the portal through which
+      members access their sovereign financial rights on the shared ledger and
+      sidestep the economic distortions and extortions imposed by obsolete and
+      destructive monetary paradigms.
+    </p>
 
-    <h3>Local</h3>
-    <p>A local environment is supplied by a developer's own machine or a virtual Github Codespaces machine, and linked cloud-deployed instances of neo4j (Neo4j Aura). Testing in this environment ensures that all endpoints return data as expected. The value of the environment variable in this deployment is <code>development</code>, like the first deployed environment below (this should probably be changed).</p>
+    <p>
+      This API is the core interface that connects members to their data in the
+      credex ecosystem. The processes of creating an account, logging in,
+      arranging queries for the API endpoints, and processing query results for
+      human-friendly presentation and interaction is managed by a client app
+      such as the <a href="https://vimbisopay.co.zw">VimbisoPay</a> WhatsApp
+      chatbot client.
+    </p>
 
-    <h3>Development</h3>
-    <p>The <code>development</code> environment and databases are intended to provide initial deployment testing on isolated data in dev DBs by manually-triggered deployment off the <code>dev</code> branch using Github Workflows. This testing includes data integrity checks across larger data sets and mutiple DCO exchange rate updates.</p>
+    <h2>Purpose and Offering</h2>
+    <p>
+      The purpose of the credex ecosystem is to distribute a political
+      architecture based on the entitlements and responsibilities of universal
+      human sovereignty. This distributed architecture is designed to open space
+      for a market economy of cooperative wealth creation and value circulation
+      in long-term harmony with our biosphere.
+    </p>
 
-    <h3>Staging</h3>
-    <p>The <code>staging</code> environment and databases are intended to provide production-scale testing in a mock production environment, and are deployed and tested automatically by pushes to the <code>stage</code> branch. When triggered, the deployment of the staging environment includes the full deployment of production-scale infrastructor (connectors, databases, application), automatic performance testing on production-scale data sets, spot checks for data integrity, and full deployment tear-down when tests are passed to satisfaction. Scale tests bypass the HTTPS protocols, running fully internal to the server. This environment can also mimic the update of deployed neo4j infrastructure. (Not yet true, still manually deployed from <code>stage</code> branch and no large scale test, tear-down, or DB deploy/update scripts written.)</p>
+    <p>
+      Therefore, in order to help every sovereign human live in freedom,
+      justice, and prosperity, with the aspiration that we grow into our
+      potential as a multiplanetary, multidimensional and spiritually mature
+      global civilization, we offer the credex ecosystem for the benefit of all
+      beings.
+    </p>
 
-    <h3>Production</h3>
-    <p>The <code>production</code> environment enables members to interact with the production databases that host the live ledger of the credex ecosystem. This environment automatically redeploys the app by running the application workflow every day just after midnight UTC at the end of the DCO. (Not yet true, still manually deployed from <code>prod</code> branch). Updates to the underlying database or connectors infrastructure are manually deployed from the <code>prod</code> branch using Github Workflows (behaviour intended to remain).</p>
+    <h2>Credex Principle</h2>
+    <h3 class="subtitle2">
+      If I owe you,<br />
+      and you owe them,<br />
+      and they owe me,<br />
+      we're square.
+    </h3>
 
-    <h2>Neo4j Databases</h2>
-    <p>Credex-core runs on two neo4j databases. LedgerSpace is the shared ledger containing the full state of the credex ecosystem. SearchSpace contains only unredeemed credexes, and is optimized to find credloops. On every credloop found and cleared, LedgerSpace is updated accordingly.</p>
+    <p>
+      The credex ecosystem actualizes the Credex Principle in the Minute
+      Transaction Queue (MTQ), which tracks payable and receivable invoices for
+      members' accounts, finds loops of value creation, and cancels payable and
+      receivable invoices against each other in "credloops" in which every debt
+      is reduced by an equal value. This is a GAAP-compliant accounting
+      procedure that anyone and any business can benefit from.
+    </p>
 
-    <h2>Express.js Server</h2>
-    <p>The express.js server is initialized in <code>src/index.ts</code>, which provides the cronjobs and endpoints that power the ecosystem and enable members and client apps to interact with its ledger, locking in the security and authorization, as well as parsing, logging, and other middleware.</p>
+    <p>
+      In accounting terms, an outstanding credex is a contingent asset for one
+      party and a contingent liability for the other. These asset/liability
+      pairs are automatically strung together into credloops wherever possible
+      across the credex ecosystem. When a credloop is found and cleared, every
+      account in the loop will have an accounts payable invoice cleared against
+      an equivalent accounts receivable invoice.
+    </p>
 
-    <h3>Cronjobs</h3>
-    <p>The src/core-cron/ module hosts the cronjobs:</p>
+    <p>
+      This behaviour enables members to replace the use of third party money or
+      other debt instruments that are issued by an outside sovereign with
+      accounting entries on a shared ledger that are backed only by the credit,
+      assets, and value-producing capacities of the transacting members.
+    </p>
+
+    <h3>Credex Services</h3>
+    <p>
+      The credex ecosystem provides the non-sovereign and non-monetary services
+      of:
+    </p>
     <ul>
-        <li><a href="DCO.html">DailyCredcoinOffering</a> runs every day at midnight UTC, calculating the value of 1 CXX and updating all ecosystem values accordingly.</li>
-        <li><a href="MTQ.html">MinuteTransactionQueue</a> runs every minute, clearing credloops of value creation across the ecosystem.</li>
+      <li>
+        Verifying the identity of the sovereign human counterparties and their
+        corporations.
+      </li>
+      <li>
+        Managing the technical verification and standardization of the credex
+        transaction contract between the counterparties by providing templates
+        that include conditions for fulfillment, default, and other states, and
+        actions executed on each condition or state change.
+      </li>
+      <li>
+        Executing these credex smart contracts according to the terms agreed by
+        the counterparties, including triggering the agreed follow on actions
+        dependent on the contract state and outcome.
+      </li>
     </ul>
 
-    <h3>Endpoints</h3>
-    <p>Endpoints and routes are deployed for the modules: Member, Account, Credex, Avatar, and AdminDashboard. Endpoints for the Dev module are included in development and staging deployments, but not in production.</p>
+    <p>
+      These credex services empower a first layer of distributed financial
+      sovereignty by enabling members to issue their own smart contracts. In so
+      doing, we replace our reliance on the currencies of outside sovereigns and
+      give ourselves options that insulate us from the financial dislocations of
+      inflation and deflation in those currencies.
+    </p>
 
-    <h2>Deployment Summary</h2>
-    <p>The credex-core application is deployed using AWS services (including ECS, ECR), Terraform for infrastructure management, and GitHub Actions for CI/CD. The application relies on Neo4j Enterprise Edition for data storage and management. The deployment process runs in three separate workflows:</p>
+    <h2>Credcoin Principle</h2>
+    <h3 class="subtitle2">
+      Every human is entitled to one equal share of<br />
+      the value of the natural wealth entering the organic economy.<br /><br />
+      Every human is responsible to provide value equal to<br />
+      the amount of natural wealth that they consume.
+    </h3>
 
-    <ol>
-        <li><code>connectors.yml</code>: Handles the deployment of infrequently changed infrastructure such as clusters and load balancers.</li>
-        <li><code>databases.yml</code>: Sets up and manages Neo4j database resources (ledgerSpace and searchSpace).</li>
-        <li><code>app.yml</code>: Deploys the application itself.</li>
-    </ol>
+    <p>
+      The credex ecosystem actualizes the Credcoin Principle in the Daily
+      Credcoin Offering (DCO), which updates exchange rates across the ecosystem
+      daily. Every 24h, the DCO makes this equation true: one credcoin today
+      equals the number of members participating in the DCO today divided by the
+      value of natural wealth entering the organic economy through the DCO
+      today.
+    </p>
 
-    <p>This separation allows for granular control over each part of the deployment process and makes it easier to manage and troubleshoot specific aspects of the deployment. Environment is determined at run time by which branch the workflow is run on, enabling same workflow files to manage all environments.</p>
+    <p>
+      The organic economy is a subset of the credex ecosystem, which is a subset
+      of the global economy, which is the human-enhanced subset of the world
+      that is given to us by nature. The organic economy is an economy in which
+      wealth circulates, profit accumulates, investment is made, and gifts are
+      given in alignment and long-term harmony with the biological environment
+      of our habitat, the physical laws of our universe, and the spiritual laws
+      of our existence.
+    </p>
 
-    <h2 id="resources">Complete List of Developer Resources</h2>
+    <p>
+      The credex ecosystem stores values in credcoin (CXX). In order to natively
+      enable multi-denominational accounting, a CXXmultiplier value is stored
+      alongside every CXX value. Both of these values are updated in every DCO
+      so that the credex remains true both to the face value in the denomination
+      specified, and to other values stored in the ecosystem. A value expressed
+      in CXX is expressed in relation to every other value stored in the
+      ecosystem. A CXX value can be divided by its CXX multiplier to express its
+      face value.
+    </p>
 
-    <h3>README References</h3>
+    <p>
+      The credex ecosystem uses the flows of value that are created by members
+      participating in the DCO as the anchor point for exchange rates across the
+      ecosystem. These flows provide a daily peg that connects financial reality
+      in the organic economy and the credex ecosystem as a whole to the reality
+      of underlying natural resource flows, in a way that all other economic
+      values can orient on. This mechanism manages the balance between local
+      truth (preserving the face value of credex contracts in their specified
+      denomination) and global truth (adjusting all values relative to credcoin)
+      through the daily rate and value adjustments in the DCO.
+    </p>
+
+    <h3>Credcoin Services</h3>
+    <p>
+      The credex ecosystem provides the non-sovereign and non-monetary services
+      of:
+    </p>
     <ul>
-        <li><a href="developerAPI/index.html">Development of the credex-core API</a></li>
-        <li><a href="developerClient/index.html">Development of Client Apps</a></li>
+      <li>
+        Processing and distributing the daily flows of value that actualize the
+        entitlements and responsibilities of the Credex Principle for
+        participating sovereign members.
+      </li>
+      <li>
+        Setting the relative values (exchange rates) of denominations in the
+        ecosystem daily based on global market data including the real flows of
+        value occuring in the DCO.
+      </li>
     </ul>
 
-    <h3>Getting Started</h3>
+    <p>
+      These credcoin services empower a second layer of distributed financial
+      sovereignty by connecting every member to the underlying resource reality
+      of their financial decisions, and relating every other measure of value
+      all across the global economy to that underlying reality. In this way we
+      replace our reliance on measures of value that are created and controlled
+      by obsolete monetary paradigms with a measure of value that is
+      structurally locked to the daily flows of real natural resources that
+      sustain us.
+    </p>
+
+    <h2>Secured Credexes</h2>
+    <p>
+      The basic protocol underlying the credex ecosystem clears unsecured IOUs
+      against each other. Overlaying this protocol is the protocol for secured
+      credexes. A secured credex balance is created when a member purchases a
+      secured credex from an authorized and audited account such as the ones
+      managed by <a href="https://vimbisopay.co.zw">VimbisoPay</a> and
+      <a href="https://greatsunfinancial.com">Great Sun Financial</a>.
+    </p>
+
+    <p>
+      Whereas unsecured credexes are based on pure peer-to-peer credit,
+      accepting a secured credex provides the recipient assurances that the
+      issuer has already provided an asset of real value that the recipient can
+      now claim title to by virtue of accepting the secured credex. Secured
+      credexes provide onramp/offramp services for cash in and cash out of the
+      ecosystem.
+    </p>
+
+    <p>
+      Secured credexes are not produced internally by the credex ecosystem, nor
+      does the credex ecosystem ever come into contact with money itself.
+      Secured credexes exist in a one to one relationship with underlying assets
+      held by third parties in audited accounts.
+    </p>
+
+    <p>
+      Credex is a pure accounting platform that members can connect to real
+      underlying assets by the purchase of secured credexes.
+    </p>
+
+    <h3>Secured Credex Services</h3>
+    <p>
+      The credex ecosystem provides the non-sovereign and non-monetary services
+      of:
+    </p>
     <ul>
-        <li><a href="environment_setup.html">Environment Setup</a></li>
-        <li><a href="deployment/connectors_workflow.html">Connectors Workflow and Terraform Module</a></li>
-        <li><a href="deployment/databases_workflow.html">Databases Workflow and Terraform Module</a></li>
-        <li><a href="deployment/app_workflow.html">Application Workflow and Terraform Module</a></li>
+      <li>
+        Daily auditing of the trust accounts of secured credex agents like
+        VimbisoPay and Great Sun Financial that are permitted to issue
+        unrestricted secured credexes, ensuring the amount issued matches the
+        amount of currency held.
+      </li>
+      <li>
+        Only allowing accounts to issue secured credex in denominations and
+        values that they have previously received into their account balances.
+      </li>
+      <li>
+        Isolating secured credexes of each denomination into their own
+        searchSpace substructure so that they only close against other secured
+        credexes of the same denomination.
+      </li>
     </ul>
 
-    <h3>Deployment</h3>
+    <h2>Ecosystem Services</h2>
+    <p>
+      These non-sovereign and non-monetary services provided by the credex
+      ecosystem establish a network protocol that enables financial sovereignty
+      for all:
+    </p>
     <ul>
-        <li><a href="deployment/neo4j_license.html">Neo4j License Management</a></li>
-        <li><a href="deployment/instance_size_first200k.html">Infrastructure Scaling Report</a></li>
+      <li>
+        Secured credex services enable members to base accounting entries on a
+        trustworthy foundation of their real assets such as currency, with
+        previous metals implementation coming in the future.
+      </li>
+      <li>
+        Unsecured credex services provide liquidity to meet all needs and fuel
+        strong credit-based economic growth when conditions warrant, as
+        determined by the distributed risk tolerance and risk/reward
+        calculations of economic participants.
+      </li>
+      <li>
+        Credcoin services mathematically lock all values in the credex ecosystem
+        to the market values of real natural resource flows, keeping the economy
+        oriented on the most meaningful reference point possible without
+        limiting systemic liquidity or personal choice.
+      </li>
     </ul>
-
-    <h3>Member Modules</h3>
-    <ul>
-        <li><a href="developerClient/module/Account.html">Account</a></li>
-        <li><a href="developerClient/module/Avatar.html">Avatar</a></li>
-        <li><a href="developerClient/module/Credex.html">Credex</a></li>
-        <li><a href="developerClient/module/Member.html">Member</a></li>
-    </ul>
-
-    <h3>Admin Modules</h3>
-    <ul>
-        <li><a href="developerClient/module/AdminDashboard.html">AdminDashboard</a></li>
-        <li><a href="developerClient/module/DevAdmin.html">DevAdmin</a></li>
-    </ul>
-
-    <h3>Core Cronjobs</h3>
-    <ul>
-        <li><a href="DCO.html">Daily Credcoin Offering</a></li>
-        <li><a href="MTQ.html">Minute Transaction Queue</a></li>
-    </ul>
-
-    <h3>Database Schemas</h3>
-    <ul>
-        <li><a href="developerAPI/ledgerSpace_schema.html">ledgerSpace Schema</a></li>
-        <li><a href="developerAPI/searchSpace_schema.html">searchSpace Schema</a></li>
-    </ul>
-
-    <h3>Development Guides</h3>
-    <ul>
-        <li><a href="auth_security.html">Endpoint Security and Authorization</a></li>
-        <li><a href="developerClient/swagger.html">Swagger for AI-assisted client app dev</a></li>
-        <li><a href="developerAPI/logging_best_practices.html">Logging Best Practices</a></li>
-    </ul>
-
-    <h3>Testing</h3>
-    <ul>
-        <li><a href="tests/testing_guide.html">Testing Guide</a></li>
-    </ul>
-</body>
+  </body>
 </html>
