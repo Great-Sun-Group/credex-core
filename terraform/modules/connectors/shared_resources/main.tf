@@ -453,7 +453,7 @@ resource "aws_lb_listener" "credex_listener" {
   ssl_policy        = "ELBSecurityPolicy-2016-08"
   certificate_arn   = aws_acm_certificate_validation.credex_cert.certificate_arn
 
-  # Update default action to redirect to docs subdomain
+  # Default action forwards to target group (API)
   default_action {
     type = "redirect"
 
@@ -466,14 +466,20 @@ resource "aws_lb_listener" "credex_listener" {
   }
 }
 
-# Add listener rule for docs subdomain to redirect to CloudFront
-resource "aws_lb_listener_rule" "docs" {
+# Listener rule for exact domain root to redirect to docs
+resource "aws_lb_listener_rule" "root_to_docs" {
   listener_arn = aws_lb_listener.credex_listener.arn
-  priority     = 100
+  priority     = 1
 
   condition {
     host_header {
-      values = ["docs.${var.domain}"]
+      values = [var.domain]
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/"]
     }
   }
 
@@ -484,6 +490,33 @@ resource "aws_lb_listener_rule" "docs" {
       host        = "docs.${var.domain}"
       port        = "443"
       protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+# Listener rule for docs subdomain root to redirect to index.html
+resource "aws_lb_listener_rule" "docs" {
+  listener_arn = aws_lb_listener.credex_listener.arn
+  priority     = 2
+
+  condition {
+    host_header {
+      values = ["docs.${var.domain}"]
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/"]
+    }
+  }
+
+  action {
+    type = "redirect"
+
+    redirect {
+      path        = "/index.html"
       status_code = "HTTP_301"
     }
   }
