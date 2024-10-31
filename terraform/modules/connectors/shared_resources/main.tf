@@ -357,6 +357,19 @@ resource "aws_cloudfront_distribution" "docs" {
     max_ttl     = 86400
   }
 
+  # Add custom error response to redirect /docs to /docs/index.html
+  custom_error_response {
+    error_code         = 403
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
+
+  custom_error_response {
+    error_code         = 404
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
+
   restrictions {
     geo_restriction {
       restriction_type = "none"
@@ -440,12 +453,20 @@ resource "aws_lb_listener" "credex_listener" {
   ssl_policy        = "ELBSecurityPolicy-2016-08"
   certificate_arn   = aws_acm_certificate_validation.credex_cert.certificate_arn
 
+  # Update default action to redirect to docs subdomain
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.credex_core.arn
+    type = "redirect"
+
+    redirect {
+      host        = "docs.${var.domain}"
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
   }
 }
 
+# Add listener rule for docs subdomain to redirect to CloudFront
 resource "aws_lb_listener_rule" "docs" {
   listener_arn = aws_lb_listener.credex_listener.arn
   priority     = 100
@@ -457,12 +478,13 @@ resource "aws_lb_listener_rule" "docs" {
   }
 
   action {
-    type = "fixed-response"
-    
-    fixed_response {
-      content_type = "text/plain"
-      message_body = "Please visit the docs at https://docs.${var.domain}"
-      status_code  = "200"
+    type = "redirect"
+
+    redirect {
+      host        = "docs.${var.domain}"
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
     }
   }
 }
