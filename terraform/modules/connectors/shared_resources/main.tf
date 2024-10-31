@@ -455,12 +455,18 @@ resource "aws_lb_listener" "credex_listener" {
 
   # Default action forwards to target group (API)
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.credex_core.arn
+    type = "redirect"
+
+    redirect {
+      host        = "docs.${var.domain}"
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
   }
 }
 
-# Add listener rule for exact domain root to redirect to docs
+# Listener rule for exact domain root to redirect to docs
 resource "aws_lb_listener_rule" "root_to_docs" {
   listener_arn = aws_lb_listener.credex_listener.arn
   priority     = 1
@@ -489,7 +495,7 @@ resource "aws_lb_listener_rule" "root_to_docs" {
   }
 }
 
-# Add listener rule for docs subdomain root to redirect to index.html
+# Listener rule for docs subdomain root to redirect to index.html
 resource "aws_lb_listener_rule" "docs" {
   listener_arn = aws_lb_listener.credex_listener.arn
   priority     = 2
