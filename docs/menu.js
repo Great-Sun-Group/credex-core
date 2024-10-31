@@ -34,6 +34,10 @@ const menuData = {
           text: "Client App Developer Reference",
           link: "develop/developerClient/index.html",
         },
+        {
+          text: "Credex-Core Software License",
+          link: "develop/license.html",
+        },
       ],
       "Getting Started": [
         {
