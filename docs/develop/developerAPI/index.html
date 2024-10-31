@@ -4,11 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>API Developer Guide</title>
-    <link rel="stylesheet" href="../../style.css" />
+    <link rel="stylesheet" href="../../style.css">
+    <script src="../../menu.js"></script>
   </head>
   <body>
+    <div class="header-logo">
+      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
     <div class="container">
-      <h1>API Developer Guide</h1>
+      <h1>API Developer Reference</h1>
       <p>
         This quick reference guide for developers working on the credex-core API
         contains common processes, commands and links.
@@ -31,7 +35,7 @@
       </ol>
 
       <h2>Running a local dev server</h2>
-      <p>You have two options to start a local server for development:</p>
+      <p>Options for starting a local server for development:</p>
 
       <ol>
         <li>
@@ -66,7 +70,7 @@
           >
         </li>
         <li>
-          <code>npm run docker:test</code> <strong>need content here</strong>
+          <code>npm run docker:test</code> runs the full jest test suite in an isolated docker environment.
         </li>
       </ol>
 
@@ -106,60 +110,6 @@
           (clear then force) with <code>npm test DevAdmin</code>.</strong
         >
       </p>
-
-      <h2>Resources</h2>
-
-      <h3>Getting Started</h3>
-      <ul>
-        <li><a href="../environment_setup.html">Environment Setup</a></li>
-      </ul>
-
-      <h3>Member Modules</h3>
-      <ul>
-        <li><a href="../developerClient/module/Account.html">Account</a></li>
-        <li><a href="../developerClient/module/Avatar.html">Avatar</a></li>
-        <li><a href="../developerClient/module/Credex.html">Credex</a></li>
-        <li><a href="../developerClient/module/Member.html">Member</a></li>
-      </ul>
-
-      <h3>Admin Modules</h3>
-      <ul>
-        <li>
-          <a href="../developerClient/module/AdminDashboard.html"
-            >AdminDashboard</a
-          >
-        </li>
-        <li><a href="../developerClient/module/DevAdmin.html">DevAdmin</a></li>
-      </ul>
-
-      <h3>Cronjobs</h3>
-      <ul>
-        <li><a href="../DCO.html">Daily Credcoin Offering</a></li>
-        <li><a href="../MTQ.html">Minute Transaction Queue</a></li>
-      </ul>
-
-      <h3>Development Guides</h3>
-      <ul>
-        <li>
-          <a href="../auth_security.html"
-            >Endpoint Security and Authorization</a
-          >
-        </li>
-        <li>
-          <a href="logging_best_practices.html">Logging Best Practices</a>
-        </li>
-      </ul>
-
-      <h3>Database Schemas</h3>
-      <ul>
-        <li><a href="ledgerSpace_schema.html">ledgerSpace Schema</a></li>
-        <li><a href="searchSpace_schema.html">searchSpace Schema</a></li>
-      </ul>
-
-      <h3>Testing</h3>
-      <ul>
-        <li><a href="../tests/testing_guide.html">Testing Guide</a></li>
-      </ul>
     </div>
   </body>
 </html>

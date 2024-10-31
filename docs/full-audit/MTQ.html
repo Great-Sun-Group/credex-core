@@ -4,10 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MinuteTransactionQueue (MTQ)</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../style.css" />
     <script src="../menu.js"></script>
-</head>
-<body>
+  </head>
+  <body>
+    <div class="header-logo">
+      <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
     <h1>MinuteTransactionQueue (MTQ)</h1>
 
     <p>The Minute Transaction Queue (MTQ) is a crucial component of the Credex ecosystem that runs every minute. It links the main ledgerSpace database (the source of truth and full information) to a searchSpace database (optimized to find credloops). Every minute, first any new accounts are added to the searchSpace, then any new credexes. After each new credex is added, the ecosystem finds and clears all possible loops created by the new credex before moving on to the next.</p>

@@ -5,8 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Connectors Workflow and Infrastructure</title>
     <link rel="stylesheet" href="../../style.css" />
+    <script src="../../menu.js"></script>
   </head>
   <body>
+    <div class="header-logo">
+      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
     <div class="container">
       <h1>Connectors Workflow and Infrastructure</h1>
 
@@ -30,11 +34,16 @@
         </li>
         <li>
           <strong>Environment</strong>: The workflow determines the environment
-          (development, staging, or production) based on the Git branch.
+          (development, staging, or production) based on the Git branch:
+          <ul>
+            <li>prod branch → production environment</li>
+            <li>stage branch → staging environment</li>
+            <li>other branches → development environment</li>
+          </ul>
         </li>
         <li>
           <strong>AWS Region</strong>: The workflow is configured to use the
-          af-south-1 (Cape Town) region.
+          af-south-1 (Cape Town) region, with an additional us-east-1 provider for CloudFront certificates.
         </li>
         <li>
           <strong>Steps</strong>:
@@ -47,7 +56,7 @@
               don't exist)
             </li>
             <li>Initialize Terraform</li>
-            <li>Plan Terraform changes</li>
+            <li>Plan Terraform changes (targeting the connectors module)</li>
             <li>Apply Terraform changes</li>
             <li>Retrieve and output infrastructure details</li>
           </ul>
@@ -68,7 +77,13 @@
       </p>
       <ul>
         <li>
-          Defines local variables for common tags and the full domain name.
+          Defines local variables for common tags and domain configuration.
+        </li>
+        <li>
+          Implements environment-specific domain logic with validation.
+        </li>
+        <li>
+          Validates VPC CIDR and domain configurations.
         </li>
         <li>
           Generates an RSA key pair using the
@@ -95,96 +110,93 @@
 
       <ol>
         <li>
-          <strong>Networking</strong>: VPC, subnets, Internet Gateway, NAT
-          Gateway, and route tables.
+          <strong>Networking</strong>:
+          <ul>
+            <li>VPC with DNS support and hostnames enabled</li>
+            <li>Public and private subnets across multiple availability zones</li>
+            <li>Internet Gateway for public subnet access</li>
+            <li>NAT Gateways with Elastic IPs for private subnet internet access</li>
+            <li>Route tables for both public and private subnets</li>
+          </ul>
         </li>
         <li>
-          <strong>Security</strong>: Security groups for ALB, ECS tasks, and
-          Neo4j.
+          <strong>Security</strong>:
+          <ul>
+            <li>ALB security group (ports 80 and 443)</li>
+            <li>ECS tasks security group (port 3000)</li>
+            <li>Neo4j security group (ports 7474 and 7687)</li>
+          </ul>
         </li>
         <li>
-          <strong>Load Balancing</strong>: Application Load Balancer with HTTPS
-          listener and target group.
-        </li>
-        <li><strong>Certificates</strong>: ACM certificate for HTTPS.</li>
-        <li><strong>Access</strong>: EC2 key pair for SSH access.</li>
-        <li>
-          <strong>Container Services</strong>: ECR for storing Docker images and
-          ECS for running containers.
+          <strong>Load Balancing</strong>:
+          <ul>
+            <li>Application Load Balancer with HTTPS listener</li>
+            <li>Target group for ECS tasks</li>
+            <li>HTTP to HTTPS redirect</li>
+          </ul>
         </li>
         <li>
-          <strong>Monitoring</strong>: CloudWatch Logs for log management.
+          <strong>Documentation Hosting</strong>:
+          <ul>
+            <li>S3 bucket configured for static website hosting</li>
+            <li>CloudFront distribution for global content delivery</li>
+            <li>DNS records for docs subdomain</li>
+          </ul>
         </li>
         <li>
-          <strong>Identity and Access Management</strong>: IAM roles for various
-          services.
+          <strong>SSL/TLS Certificates</strong>:
+          <ul>
+            <li>ACM certificate for the ALB (in af-south-1)</li>
+            <li>ACM certificate for CloudFront (in us-east-1)</li>
+            <li>DNS validation records for both certificates</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Container Services</strong>:
+          <ul>
+            <li>ECR repository for Docker images</li>
+            <li>ECS execution and task IAM roles</li>
+            <li>CloudWatch log group for container logs</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Access Management</strong>:
+          <ul>
+            <li>EC2 key pair for SSH access</li>
+            <li>IAM roles and policies for ECS tasks</li>
+          </ul>
         </li>
       </ol>
 
-      <h2>EC2 Instances and Application Deployment</h2>
+      <h2>Documentation Hosting Architecture</h2>
 
       <p>
-        The connectors workflow sets up the infrastructure that supports EC2
-        instances for Neo4j databases and the application deployment:
-      </p>
-      <ul>
-        <li>The VPC and subnets provide the network environment.</li>
-        <li>Security groups control access to the instances.</li>
-        <li>The key pair allows SSH access to the instances.</li>
-      </ul>
-
-      <p>EC2 instances and application deployment are managed as follows:</p>
-      <ul>
-        <li>
-          <strong>Neo4j Databases</strong>: The databases module creates EC2
-          instances for Neo4j databases.
-        </li>
-        <li>
-          <strong>Application Deployment</strong>: The application is deployed
-          using AWS Fargate, which is a serverless compute engine for containers
-          that works with Amazon ECS.
-        </li>
-      </ul>
-
-      <h3>Fargate Deployment</h3>
-
-      <p>
-        For the Fargate deployment, the following parts of the infrastructure
-        are used:
+        The documentation hosting infrastructure is set up as follows:
       </p>
 
       <ol>
         <li>
-          <strong>VPC and Subnets</strong>: Fargate tasks run in the private
-          subnets of the VPC.
+          <strong>S3 Bucket</strong>: Configured for static website hosting at
+          <code>docs.{domain}</code>
         </li>
         <li>
-          <strong>Security Groups</strong>: The ECS tasks security group
-          controls access to the Fargate tasks.
+          <strong>CloudFront Distribution</strong>:
+          <ul>
+            <li>Serves content from the S3 bucket website endpoint</li>
+            <li>Enables HTTPS with a custom SSL certificate</li>
+            <li>Configured for IPv6 support</li>
+            <li>Uses Price Class 100 for cost optimization</li>
+            <li>Implements proper caching behaviors</li>
+          </ul>
         </li>
         <li>
-          <strong>Load Balancer</strong>: The Application Load Balancer routes
-          traffic to the Fargate tasks.
-        </li>
-        <li>
-          <strong>Target Group</strong>: The ALB target group is used to
-          register the Fargate tasks.
-        </li>
-        <li>
-          <strong>ECS Cluster</strong>: An ECS cluster is used to manage the
-          Fargate tasks.
-        </li>
-        <li>
-          <strong>ECR</strong>: Stores the Docker images used by the Fargate
-          tasks.
+          <strong>DNS Configuration</strong>:
+          <ul>
+            <li>Route53 A record points docs subdomain to CloudFront</li>
+            <li>ALB listener rule redirects docs traffic to CloudFront</li>
+          </ul>
         </li>
       </ol>
-
-      <p>
-        The actual creation and management of the ECS cluster, task definitions,
-        and services for Fargate are handled in the
-        <code>app.yml</code> workflow and associated terraform module.
-      </p>
 
       <h2>Infrastructure Outputs</h2>
 
@@ -195,16 +207,22 @@
 
       <ul>
         <li>VPC ID</li>
-        <li>Subnet IDs</li>
+        <li>Private and Public Subnet IDs</li>
         <li>Neo4j Security Group ID</li>
         <li>Key Pair Name</li>
         <li>ALB Security Group ID</li>
+        <li>ECS Tasks Security Group ID</li>
+        <li>ALB DNS Name and Listener ARN</li>
+        <li>ECR Repository URL</li>
+        <li>ECS Role ARNs</li>
+        <li>CloudWatch Log Group Name</li>
+        <li>Documentation Hosting Details (S3 bucket, CloudFront domain)</li>
       </ul>
 
       <p>
         These outputs are crucial for other modules and workflows that depend on
         the infrastructure created by the connectors workflow. These values are
-        printed to the workflow logs, and are made accessible programmatically
+        printed to the workflow logs and are made accessible programmatically
         to the other modules.
       </p>
 
@@ -213,10 +231,12 @@
       <p>
         The connectors workflow and associated Terraform configuration provide a
         flexible and modular approach to managing AWS infrastructure. It sets up
-        the core networking, security, and load balancing components that
-        support both EC2-based Neo4j databases and Fargate-based application
-        deployment. The workflow ensures that the necessary infrastructure is in
-        place before the databases and application are deployed.
+        the core networking, security, load balancing, and content delivery
+        components that support both EC2-based Neo4j databases and Fargate-based
+        application deployment. The workflow ensures that the necessary
+        infrastructure is in place before the databases and application are
+        deployed, while also providing a robust documentation hosting solution
+        through CloudFront.
       </p>
     </div>
   </body>

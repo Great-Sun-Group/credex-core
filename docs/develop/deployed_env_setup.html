@@ -4,129 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Environment Setup</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../style.css" />
     <script src="../menu.js"></script>
-</head>
-<body>
-    <h1>Environment Setup</h1>
+  </head>
+  <body>
+    <div class="header-logo">
+      <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
 
-    <p>This document outlines environment configuration for developers working on the credex-core API and/or client apps, and additional configuration required for developers working on the deployment infrastructure and managing the CI/CD pipeline (<a href="#deployed-environments">jump</a>).</p>
+    <h1>Deployed Environments Setup</h1>
 
-    <h1>Dev Env Setup for API and Client Apps</h1>
-    <p>Configuration for your local or codespaces development environment.</p>
-
-    <h2>Prerequisites</h2>
-
-    <ul>
-        <li>GitHub account with access to this repository.</li>
-    </ul>
-
-    <h3>Addnl Prereq for Local Dev</h3>
-
-    <ul>
-        <li>Git</li>
-        <li>Docker and Docker Compose</li>
-        <li>Visual Studio Code</li>
-        <li>Visual Studio Code Remote - Containers extension</li>
-        <li>Node.js and npm</li>
-    </ul>
-
-    <h2>Dev Env Setup</h2>
-
-    <h3>Local Development</h3>
-
-    <ol>
-        <li>Clone the repository:
-            <pre><code>git clone https://github.com/Great-Sun-Group/credex-core.git
-cd credex-core</code></pre>
-        </li>
-        <li>Create a <code>.env</code> file in the root of the project based on <code>.env.example</code> and fill in the required environment variables (see below).</li>
-        <li><code>git checkout -b new-branch-name</code> to start local development</li>
-    </ol>
-
-    <h4>Using Devcontainers with VS Code</h4>
-
-    <p>Devcontainers provide a consistent, reproducible development environment across different machines. This project is set up to use devcontainers, which encapsulate the development environment in a Docker container.</p>
-
-    <p>To use devcontainers:</p>
-
-    <ol>
-        <li>Ensure you have the "Remote - Containers" extension installed in VS Code.</li>
-        <li>Open the project folder in VS Code.</li>
-        <li>When prompted, click "Reopen in Container" or use the command palette (F1) and select "Remote-Containers: Reopen in Container".</li>
-        <li>VS Code will build the devcontainer (this may take a few minutes the first time) and open the project inside the container.</li>
-    </ol>
-
-    <h3>GitHub Codespaces</h3>
-
-    <ol>
-        <li>Go to your personal GitHub Settings -> Codespaces and Add New Secret for each secret listed below, giving it access to the credex-core repository.</li>
-        <li>Go to the main page of the credex-core repository (dev branch), and create a new branch from dev, or from the branch of the project you are contributing to.</li>
-        <li>Within the new branch, click on the "Code" button, select the "Codespaces" tab, and click "Create codespace on new-branch-name".</li>
-        <li>The Codespace will automatically set up the environment within the devcontainer.</li>
-    </ol>
-
-    <h3>Benefits of Devcontainers</h3>
-
-    <ul>
-        <li>Consistent development environment across team members and hardware</li>
-        <li>Easy onboarding for new developers</li>
-        <li>Isolation from the host system</li>
-        <li>Pre-configured development tools and extensions</li>
-    </ul>
-
-    <p>Locally, you can use VS Code's "Attach to Running Container" feature to work within the Docker container, or use <code>docker exec</code> to access the container's shell.</p>
-
-    <h2>Environment Variables</h2>
-
-    <p><strong>NEO_4J_LEDGER_SPACE_BOLT_URL</strong><br>
-    <strong>NEO_4J_LEDGER_SPACE_PASS</strong><br>
-    <strong>NEO_4J_LEDGER_SPACE_USER</strong><br>
-    <strong>NEO_4J_SEARCH_SPACE_BOLT_URL</strong><br>
-    <strong>NEO_4J_SEARCH_SPACE_PASS</strong><br>
-    <strong>NEO_4J_SEARCH_SPACE_USER</strong></p>
-    <ul>
-        <li>To set up Neo4j Aura databases:
-            <ol>
-                <li>Go to https://neo4j.com/cloud/aura/ and sign up for two separate accounts using different email addresses.</li>
-                <li>For each account, create a new database instance. One should be name ledgerSpace and the other searchSpace.</li>
-                <li>Once the databases are created, you'll be provided with connection details.</li>
-                <li>Use the Bolt URL, username, and password for each database to fill in the corresponding environment variables.</li>
-            </ol>
-        </li>
-        <li>The LEDGER_SPACE variables correspond to one database, and the SEARCH_SPACE variables to the other.</li>
-    </ul>
-
-    <p><strong>OPEN_EXCHANGE_RATES_API</strong></p>
-    <ul>
-        <li>To get this secret from Open Exchange Rates:
-            <ol>
-                <li>Go to https://openexchangerates.org/ and sign up for an account.</li>
-                <li>Once logged in, navigate to your account dashboard.</li>
-                <li>Look for your App ID or API Key.</li>
-                <li>Copy this key and use it as the value for OPEN_EXCHANGE_RATES_API.</li>
-            </ol>
-        </li>
-    </ul>
-
-    <p><strong>JWT_SECRET</strong><br>
-    <strong>CLIENT_API_KEY</strong></p>
-    <ul>
-        <li>create your own unique random strings</li>
-    </ul>
-
-    <p>For development environments, the <code>NODE_ENV</code> variable defaults to 'development'.</p>
-
-    <h1 id="deployed-environments">Deployed Environments</h1>
-
+    <h3>Types of Environments</h3>
     <p>Our infrastructure supports two distinct types of environments:</p>
 
     <ol>
-        <li>Development Pipeline Environments (dev/stage/prod)</li>
+        <li>CI/CD Pipeline Environments (dev/stage/prod)</li>
         <li>Model Environments (for research and forecasting)</li>
     </ol>
 
-    <h2>Development Pipeline Environments</h2>
+    <h2>CI/CD Pipeline Environments</h2>
 
     <p>These environments form our development and deployment pipeline, progressing from development through staging to production. They are designed for application development, testing, and production deployment.</p>
 
