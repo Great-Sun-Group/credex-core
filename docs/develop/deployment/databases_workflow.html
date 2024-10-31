@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Database Deployment Workflow</title>
+    <link rel="stylesheet" href="../../style.css" />
+    <script src="../../menu.js"></script>
+  </head>
+  <body>
+    <div class="header-logo">
+      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+    <div class="container">
+      <h1>Database Deployment Workflow</h1>
+
+      <p>
+        This document provides an overview of the database deployment workflow,
+        which is defined in <code>.github/workflows/databases.yml</code>.
+      </p>
+
+      <h2>Prerequisites</h2>
+
+      <p>
+        Before running this workflow, ensure that:
+      </p>
+      <ol>
+        <li>
+          The connectors workflow has been run at least once for the target environment
+          to create the necessary Terraform state infrastructure (S3 bucket and DynamoDB
+          table).
+        </li>
+        <li>
+          The Neo4j Enterprise License is properly set as a GitHub secret.
+        </li>
+      </ol>
+
+      <h2>Workflow Overview</h2>
+
+      <p>
+        The "Deploy Databases" workflow is designed to deploy Neo4j database
+        instances using Terraform. It can be manually triggered and uses the same
+        state management infrastructure as the connectors workflow.
+      </p>
+
+      <p>Key aspects of this workflow include:</p>
+
+      <ol>
+        <li>
+          <strong>Trigger</strong>: The workflow is manually triggered
+          (<code>workflow_dispatch</code>).
+        </li>
+        <li>
+          <strong>Environment</strong>: The workflow determines the environment
+          based on the Git branch:
+          <ul>
+            <li>prod branch → production environment</li>
+            <li>stage branch → staging environment</li>
+            <li>other branches → development environment</li>
+          </ul>
+        </li>
+        <li>
+          <strong>AWS Region</strong>: The workflow is configured to use the
+          af-south-1 (Cape Town) region.
+        </li>
+        <li>
+          <strong>Steps</strong>:
+          <ul>
+            <li>Checkout code</li>
+            <li>Configure AWS credentials</li>
+            <li>Setup Terraform</li>
+            <li>Initialize Terraform with environment-specific backend</li>
+            <li>Plan Terraform changes</li>
+            <li>Apply Terraform changes</li>
+            <li>Print detailed Neo4j instance information</li>
+          </ul>
+        </li>
+      </ol>
+
+      <h2>Infrastructure Components</h2>
+
+      <h3>Neo4j Instances</h3>
+      <p>
+        The workflow can deploy two Neo4j Enterprise instances, controlled by the
+        <code>create_neo4j_instances</code> variable:
+      </p>
+      <ol>
+        <li>
+          <strong>LedgerSpace Instance</strong>: Primary database for ledger operations
+        </li>
+        <li>
+          <strong>SearchSpace Instance</strong>: Dedicated instance for search operations
+        </li>
+      </ol>
+
+      <p>
+        Both instances are currently configured identically in terms of instance type and
+        storage.
+      </p>
+
+      <h3>Instance Specifications</h3>
+      <ul>
+        <li>
+          <strong>Instance Type</strong>:
+          <ul>
+            <li>Must be a valid AWS instance type (e.g., t3.medium, r5.xlarge)</li>
+            <li>Must match the pattern ^[tr][3-6][.][\\w]+$</li>
+            <li>Same instance type is used for both LedgerSpace and SearchSpace</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Storage</strong>:
+          <ul>
+            <li>GP3 EBS volumes with 3000 IOPS and 125 MB/s throughput</li>
+            <li>Volume size must be between 20 and 16384 GB</li>
+            <li>Same volume size is used for both instances</li>
+            <li>Volumes are encrypted by default</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Network Requirements</strong>:
+          <ul>
+            <li>At least 2 subnets are required for deployment</li>
+            <li>Instances are placed in different subnets for high availability</li>
+            <li>Must be associated with a pre-configured Neo4j security group</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Access</strong>:
+          <ul>
+            <li>Requires a valid key pair name for SSH access</li>
+            <li>Same key pair is used for both instances</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h3>Resource Tagging</h3>
+      <p>
+        All resources are tagged with common tags including:
+      </p>
+      <ul>
+        <li>Environment identifier</li>
+        <li>Resource-specific names</li>
+        <li>Additional custom tags as specified in the common_tags variable</li>
+      </ul>
+
+      <h3>Neo4j Installation and Configuration</h3>
+      <p>
+        Each instance is automatically configured with:
+      </p>
+      <ul>
+        <li>Amazon Linux 2 as the base operating system</li>
+        <li>OpenJDK 11 installation</li>
+        <li>Neo4j Enterprise edition installation</li>
+        <li>
+          Automatic memory configuration based on instance size:
+          <ul>
+            <li>Heap Size: 25% of total system memory</li>
+            <li>Page Cache: 50% of total system memory</li>
+          </ul>
+        </li>
+        <li>Enterprise license configuration</li>
+        <li>Network configuration to allow external connections</li>
+        <li>Automatic service startup and health verification</li>
+      </ul>
+
+      <h2>Configuration Variables</h2>
+
+      <h3>Required Variables</h3>
+      <ul>
+        <li>
+          <strong>environment</strong>: The deployment environment (development,
+          staging, or production)
+        </li>
+        <li>
+          <strong>vpc_id</strong>: The ID of the VPC where instances will be deployed
+        </li>
+        <li>
+          <strong>subnet_ids</strong>: List of subnet IDs for Neo4j instances
+        </li>
+        <li>
+          <strong>neo4j_security_group_id</strong>: ID of the pre-configured
+          security group
+        </li>
+        <li>
+          <strong>key_pair_name</strong>: Name of the SSH key pair
+        </li>
+        <li>
+          <strong>neo4j_instance_type</strong>: AWS instance type for both instances
+        </li>
+        <li>
+          <strong>neo4j_volume_size</strong>: EBS volume size in GB for both
+          instances
+        </li>
+        <li>
+          <strong>neo4j_enterprise_license</strong>: Valid Neo4j Enterprise License
+          (sensitive value)
+        </li>
+      </ul>
+
+      <h3>Optional Variables</h3>
+      <ul>
+        <li>
+          <strong>create_neo4j_instances</strong>: Boolean flag to control instance
+          creation
+        </li>
+        <li>
+          <strong>common_tags</strong>: Map of tags to apply to all resources
+        </li>
+        <li>
+          <strong>aws_region</strong>: AWS region for deployment (defaults to
+          af-south-1)
+        </li>
+      </ul>
+
+      <h2>State Management</h2>
+
+      <p>
+        The workflow uses the same state management infrastructure as the connectors
+        workflow:
+      </p>
+      <ul>
+        <li>
+          <strong>S3 Backend</strong>: credex-terraform-state-${ENVIRONMENT}
+        </li>
+        <li>
+          <strong>DynamoDB Lock Table</strong>: credex-terraform-state-lock-${ENVIRONMENT}
+        </li>
+      </ul>
+
+      <p>
+        These resources are created and managed by the connectors workflow, which
+        must be run first to set up the state infrastructure.
+      </p>
+
+      <h2>Infrastructure Outputs</h2>
+
+      <p>
+        The workflow outputs detailed information about the deployed instances:
+      </p>
+
+      <ul>
+        <li>
+          <strong>Instance IDs</strong>:
+          <ul>
+            <li>Neo4j LedgerSpace instance ID</li>
+            <li>Neo4j SearchSpace instance ID</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Network Information</strong>:
+          <ul>
+            <li>Private IP addresses for both instances</li>
+            <li>Bolt endpoints (bolt://private-ip:7687)</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h2>Security Considerations</h2>
+
+      <ol>
+        <li>
+          <strong>Secrets Management</strong>:
+          <ul>
+            <li>AWS credentials are stored as GitHub secrets</li>
+            <li>Neo4j Enterprise License is stored as a GitHub secret</li>
+            <li>Output information should be stored securely</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Network Security</strong>:
+          <ul>
+            <li>Instances are deployed in private subnets</li>
+            <li>Access is controlled via security groups</li>
+            <li>All EBS volumes are encrypted</li>
+          </ul>
+        </li>
+      </ol>
+
+      <h2>Post-Deployment Steps</h2>
+
+      <ol>
+        <li>
+          Save the output information securely:
+          <ul>
+            <li>Store connection details as GitHub Environment secrets</li>
+            <li>Update application configurations with new endpoints</li>
+          </ul>
+        </li>
+        <li>
+          Verify instance health:
+          <ul>
+            <li>Check Neo4j service status</li>
+            <li>Verify Bolt connectivity</li>
+            <li>Test basic database operations</li>
+          </ul>
+        </li>
+        <li>
+          Configure database users and permissions
+        </li>
+        <li>
+          Perform any required data migrations
+        </li>
+      </ol>
+
+      <h2>Troubleshooting</h2>
+
+      <p>
+        If deployment fails, check:
+      </p>
+
+      <ol>
+        <li>
+          Instance logs via AWS CloudWatch or SSH:
+          <ul>
+            <li>/var/log/user-data.log for installation issues</li>
+            <li>/var/log/neo4j/neo4j.log for Neo4j specific issues</li>
+          </ul>
+        </li>
+        <li>
+          Terraform state and backend configuration
+        </li>
+        <li>
+          Network connectivity and security group rules
+        </li>
+        <li>
+          Neo4j Enterprise License validity
+        </li>
+      </ol>
+
+      <h2>Conclusion</h2>
+
+      <p>
+        The database deployment workflow provides a robust and automated way to
+        deploy Neo4j Enterprise instances. It uses the same environment-specific
+        state management infrastructure as the connectors workflow, ensuring
+        consistent state handling across different components. The workflow includes
+        comprehensive validation, automatic instance configuration, and detailed
+        output information necessary for application configuration. The deployment
+        process is designed with security in mind, utilizing encrypted storage and
+        proper secrets management. The ability to control instance creation and
+        configure both instances identically ensures a predictable and maintainable
+        database infrastructure.
+      </p>
+    </div>
+  </body>
+</html>

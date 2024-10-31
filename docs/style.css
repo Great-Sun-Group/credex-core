@@ -4,7 +4,8 @@ body {
     max-width: 900px;
     margin: 0 auto;
     padding: 20px;
-    color: #333;
+    color: #FFFFFF;
+    background-color: #06151F;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -12,27 +13,45 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: 16px;
     font-weight: 600;
     line-height: 1.25;
+    color: #04A0B2;
 }
 
 h1 {
     padding-bottom: 0.3em;
-    font-size: 2em;
-    border-bottom: 1px solid #eaecef;
+    text-align: center;
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+
+.subtitle {
+    text-align: center;
+    color: #FBB016;
+    margin-top: 0;
+    margin-bottom: 30px;
+}
+
+.subtitle2 {
+    text-align: center;
+    color: #FBB016;
+    margin-top: 0;
+    margin-bottom: 30px;
+    font-weight:normal
 }
 
 h2 {
     padding-bottom: 0.3em;
     font-size: 1.5em;
-    border-bottom: 1px solid #eaecef;
+    border-bottom: 1px solid #04A0B2;
 }
 
 code {
     padding: 0.2em 0.4em;
     margin: 0;
     font-size: 85%;
-    background-color: rgba(27,31,35,0.05);
+    background-color: #000000;
     border-radius: 3px;
     font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    color: #FBB016;
 }
 
 pre {
@@ -40,7 +59,7 @@ pre {
     overflow: auto;
     font-size: 85%;
     line-height: 1.45;
-    background-color: #f6f8fa;
+    background-color: #000000;
     border-radius: 3px;
 }
 
@@ -51,12 +70,14 @@ pre code {
 }
 
 a {
-    color: #0366d6;
+    color: #FBB016;
     text-decoration: none;
+    transition: color 0.2s ease;
 }
 
 a:hover {
-    text-decoration: underline;
+    color: #04A0B2;
+    text-decoration: none;
 }
 
 ul, ol {
@@ -72,20 +93,251 @@ table {
 
 table th, table td {
     padding: 6px 13px;
-    border: 1px solid #dfe2e5;
+    border: 1px solid #04A0B2;
 }
 
 table th {
     font-weight: 600;
+    background-color: #000000;
 }
 
 table tr:nth-child(2n) {
-    background-color: #f6f8fa;
+    background-color: rgba(4, 160, 178, 0.1);
 }
 
 blockquote {
     padding: 0 1em;
-    color: #6a737d;
-    border-left: 0.25em solid #dfe2e5;
+    color: #FBB016;
+    border-left: 0.25em solid #04A0B2;
     margin: 0;
+}
+
+/* Header Logo */
+.header-logo {
+    text-align: center;
+    margin: 20px auto;
+    max-width: 400px;
+}
+
+.main-logo {
+    width: 100%;
+    height: auto;
+}
+
+.secondary-logo {
+    width: 50%;
+    height: auto;
+}
+
+/* Menu Styles */
+#menuButton {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: auto;
+    padding: 8px;
+    border-radius: 8px;
+    background: rgba(6, 21, 31, 0.9);
+    border: 1px solid #04A0B2;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+#menuButton:hover {
+    transform: scale(1.05);
+    border-color: #FBB016;
+}
+
+.menu-logo {
+    width: 25px;
+    height: auto;
+    margin-bottom: 3px;
+}
+
+.menu-text {
+    color: #04A0B2;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+#menuOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(6, 21, 31, 0.98);
+    z-index: 1001;
+    display: none;
+    justify-content: center;
+    align-items: flex-start;
+    overflow-y: auto;
+    padding-top: 20px;
+}
+
+#menuContent {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 20px;
+    padding: 20px;
+}
+
+.overlay-logo {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.overlay-logo img {
+    width: 80px;
+    height: auto;
+}
+
+#closeMenuButton {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #04A0B2;
+    color: #FBB016;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+#closeMenuButton:hover {
+    background: #FBB016;
+    transform: scale(1.1);
+}
+
+.menuCategory {
+    margin-bottom: 15px;
+}
+
+.categoryButton {
+    width: 100%;
+    padding: 15px;
+    background: rgba(4, 160, 178, 0.1);
+    border: 1px solid #04A0B2;
+    border-radius: 5px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 600;
+    display: block;
+    color: #FBB016;
+    transition: all 0.3s ease;
+}
+
+.categoryButton:hover {
+    background: rgba(4, 160, 178, 0.2);
+    border-color: #FBB016;
+}
+
+.categoryButton .subtitleButton {
+    display: block;
+    font-size: 14px;
+    color: #04A0B2;
+    font-weight: normal;
+    margin-top: 5px;
+}
+
+.submenu {
+    display: none;
+    padding-left: 20px;
+    margin-top: 10px;
+}
+
+.subcategory {
+    margin: 10px 0;
+}
+
+.subcategoryButton {
+    width: 100%;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #04A0B2;
+    border-radius: 3px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 16px;
+    color: #FBB016;
+    transition: all 0.3s ease;
+}
+
+.subcategoryButton:hover {
+    background: rgba(4, 160, 178, 0.2);
+    border-color: #FBB016;
+}
+
+.itemsList {
+    display: none;
+    padding: 10px 0 10px 20px;
+}
+
+.itemsList a {
+    display: block;
+    padding: 8px 0;
+    color: #04A0B2;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.itemsList a:hover {
+    color: #FBB016;
+    padding-left: 5px;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    .header-logo {
+        max-width: 300px;
+    }
+
+    #menuContent {
+        margin: 10px;
+        padding: 10px;
+    }
+    
+    .categoryButton {
+        padding: 12px;
+        font-size: 16px;
+    }
+    
+    .subcategoryButton {
+        padding: 8px;
+        font-size: 14px;
+    }
+    
+    .itemsList {
+        padding-left: 15px;
+    }
+    
+    .itemsList a {
+        padding: 6px 0;
+        font-size: 14px;
+    }
+}
+
+/* Selection color */
+::selection {
+    background: #04A0B2;
+    color: #FFFFFF;
+}
+
+::-moz-selection {
+    background: #04A0B2;
+    color: #FFFFFF;
 }
