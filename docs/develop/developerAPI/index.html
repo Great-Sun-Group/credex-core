@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>API Developer Guide</title>
+    <link rel="stylesheet" href="../../style.css">
+    <script src="../../menu.js"></script>
+  </head>
+  <body>
+    <div class="header-logo">
+      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+    <div class="container">
+      <h1>API Developer Reference</h1>
+      <p>
+        This quick reference guide for developers working on the credex-core API
+        contains common processes, commands and links.
+      </p>
+
+      <h2>Development Process</h2>
+      <ol>
+        <li>
+          Create a branch from <code>dev</code> or an active project branch.
+        </li>
+        <li>Make and test your changes.</li>
+        <li>
+          Push changes and request merge back to your source branch with a
+          detailed pull request.
+        </li>
+        <li>
+          Expect your remote branch and any codespaces on it with no uncommited
+          changes to be deleted once the merge has been approved and completed.
+        </li>
+      </ol>
+
+      <h2>Running a local dev server</h2>
+      <p>Options for starting a local server for development:</p>
+
+      <ol>
+        <li>
+          <code>npm run dev</code> fires up a dev server on your local
+          machine/codespace using nodemon. Run directly on your machine, this is
+          the most resource efficient option, with slightly better hot-reload
+          functionality and error messaging, but introduces irregularities vs
+          deployed environments.
+          <em
+            >This environment is likely sufficient for most development work on
+            the credex-core api.</em
+          >
+        </li>
+        <li>
+          <code>npm run docker:dev</code> fires up a dev server in an isolated
+          Docker environment on your machine/codespace. As a virtual machine,
+          this environment is nearly identical to the deployed production
+          environment, with development settings for logging etc.
+          <em
+            >This environment can effectively be used for daily development work
+            on the credex-core api in a production-similar environment, with
+            solid hot reload and error checking.</em
+          >
+        </li>
+        <li>
+          <code>npm run docker:prod</code> starts a dev server in production
+          mode, utilizing a separate build process to maximize the efficiency of
+          the deployed code and setting log setting etc appropriately.
+          <em
+            >This environment is likely only helpful for testing and debugging
+            the process of deploying a production build of the app.</em
+          >
+        </li>
+        <li>
+          <code>npm run docker:test</code> runs the full jest test suite in an isolated docker environment.
+        </li>
+      </ol>
+
+      <h2>Testing Code</h2>
+      <p>
+        Assuming your code passes all automatic checks and can be compiled by
+        the server, testing will usually be done by hitting an endpoint or a
+        series of endpoints, and can be conducted using the commands outlined in
+        the <a href="../tests/testing_guide.html">Testing Guide</a>.
+      </p>
+
+      <p>
+        These two critical "test" commands can be used to wipe, initialize, and
+        progress your development databases:
+      </p>
+
+      <p>Test commands:</p>
+      <ul>
+        <li><code>npm test "cleardbs"</code> to clear the databases</li>
+        <li>
+          <code>npm test "forcedco"</code> to run the DCO and advance the day
+          state, including new exchange rates.
+          <ul>
+            <li>
+              If the database has been wiped or is new, this will first create
+              initialization nodes and relationship then run the first DCO,
+              bringing the credex ecosystem online.
+            </li>
+          </ul>
+        </li>
+      </ul>
+
+      <p>
+        <strong
+          >There appears to be a bug running individual tests as above. Until
+          fixed, the tests cannot be run individually, but both can be run
+          (clear then force) with <code>npm test DevAdmin</code>.</strong
+        >
+      </p>
+    </div>
+  </body>
+</html>
