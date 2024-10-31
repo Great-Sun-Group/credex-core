@@ -8,27 +8,16 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
 
+    env:
+      ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+      BUILD_TARGET: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'production' || 'development' }}
+      DOMAIN: ${{ github.ref == 'refs/heads/prod' && 'mycredex.app' || github.ref == 'refs/heads/stage' && 'stage.mycredex.dev' || 'dev.mycredex.dev' }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
-
-      - name: Set Environment
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-            echo "BUILD_TARGET=production" >> $GITHUB_ENV
-            echo "DOMAIN=mycredex.app" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-            echo "BUILD_TARGET=production" >> $GITHUB_ENV
-            echo "DOMAIN=stage.mycredex.dev" >> $GITHUB_ENV
-          else
-            echo "ENVIRONMENT=development" >> $GITHUB_ENV
-            echo "BUILD_TARGET=development" >> $GITHUB_ENV
-            echo "DOMAIN=dev.mycredex.dev" >> $GITHUB_ENV
-          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -43,7 +32,7 @@ jobs:
       - name: Terraform Init
         run: |
           cd terraform
-          echo "Initializing Terraform..."
+          echo "Current environment: ${ENVIRONMENT}"
           terraform init \
             -backend-config="bucket=credex-terraform-state-${ENVIRONMENT}" \
             -backend-config="key=terraform.tfstate" \
@@ -95,6 +84,7 @@ jobs:
           TF_VAR_neo4j_enterprise_license: "dummy"
         run: |
           cd terraform
+          echo "Current environment: ${ENVIRONMENT}"
           echo "Planning Terraform changes..."
           terraform plan -input=false -out=tfplan -target=module.app
 
@@ -112,6 +102,7 @@ jobs:
           TF_VAR_neo4j_enterprise_license: "dummy"
         run: |
           cd terraform
+          echo "Current environment: ${ENVIRONMENT}"
           echo "Applying Terraform changes..."
           terraform apply -auto-approve -input=false tfplan
 
@@ -174,24 +165,15 @@ jobs:
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
     needs: deploy_application
 
+    env:
+      ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+      DOMAIN: ${{ github.ref == 'refs/heads/prod' && 'mycredex.app' || github.ref == 'refs/heads/stage' && 'stage.mycredex.dev' || 'dev.mycredex.dev' }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
-
-      - name: Set Environment
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-            echo "DOMAIN=mycredex.app" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-            echo "DOMAIN=stage.mycredex.dev" >> $GITHUB_ENV
-          else
-            echo "ENVIRONMENT=development" >> $GITHUB_ENV
-            echo "DOMAIN=dev.mycredex.dev" >> $GITHUB_ENV
-          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
