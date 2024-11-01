@@ -446,6 +446,7 @@ resource "aws_lb_listener" "credex_listener" {
   }
 }
 
+# Rule for docs subdomain requests
 resource "aws_lb_listener_rule" "docs" {
   listener_arn = aws_lb_listener.credex_listener.arn
   priority     = 100
@@ -463,6 +464,35 @@ resource "aws_lb_listener_rule" "docs" {
       content_type = "text/plain"
       message_body = "Please visit the docs at https://docs.${var.domain}"
       status_code  = "200"
+    }
+  }
+}
+
+# Rule for root path on main domain
+resource "aws_lb_listener_rule" "root_to_docs" {
+  listener_arn = aws_lb_listener.credex_listener.arn
+  priority     = 90  # Higher priority than default but lower than docs subdomain rule
+
+  condition {
+    host_header {
+      values = [var.domain]
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/"]
+    }
+  }
+
+  action {
+    type = "redirect"
+
+    redirect {
+      host        = "docs.${var.domain}"
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
     }
   }
 }
