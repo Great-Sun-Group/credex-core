@@ -481,7 +481,7 @@ resource "aws_lb_listener_rule" "root_to_docs" {
 
   condition {
     path_pattern {
-      values = ["/"]
+      values = ["/$"]  # Exact match for root path only
     }
   }
 
@@ -493,22 +493,7 @@ resource "aws_lb_listener_rule" "root_to_docs" {
       port        = "443"
       protocol    = "HTTPS"
       status_code = "HTTP_301"
-    }
-  }
-}
-
-resource "aws_lb_listener" "redirect_http_to_https" {
-  load_balancer_arn = aws_lb.credex_alb.arn
-  port              = "80"
-  protocol          = "HTTP"
-
-  default_action {
-    type = "redirect"
-
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
+      path        = "/"
     }
   }
 }
