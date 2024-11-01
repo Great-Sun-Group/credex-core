@@ -6,6 +6,7 @@ body {
     padding: 20px;
     color: #FFFFFF;
     background-color: #06151F;
+    text-align: justify;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -21,21 +22,30 @@ h1 {
     text-align: center;
     font-size: 3em;
     margin-bottom: 10px;
+    color: #FBB016;
 }
 
 .subtitle {
     text-align: center;
-    color: #FBB016;
+    color: #04A0B2;
     margin-top: 0;
     margin-bottom: 30px;
+    font-size: 1.7em;
+    font-weight:normal
 }
 
-.subtitle2 {
+.big-words {
     text-align: center;
     color: #FBB016;
     margin-top: 0;
     margin-bottom: 30px;
+    font-size: 1.7em;
     font-weight:normal
+}
+
+.chapter-title {
+    color: #FBB016;
+    text-align: left;
 }
 
 h2 {
@@ -112,21 +122,66 @@ blockquote {
     margin: 0;
 }
 
-/* Header Logo */
+.header-container {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
 .header-logo {
-    text-align: center;
-    margin: 20px auto;
-    max-width: 400px;
+    flex-shrink: 0;
+    width: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-text {
+    flex-grow: 1;
+}
+
+.header-text h1,
+.header-text .subtitle {
+    text-align: left;
+    margin: 0;
+}
+
+.trust-again-logo {
+    width: auto;
+    height: 200px;
+    display: block;
 }
 
 .main-logo {
     width: 100%;
     height: auto;
+    max-width: 400px;
+    margin: 0 auto;
+    display: block;
 }
 
 .secondary-logo {
     width: 50%;
     height: auto;
+    max-width: 200px;
+    margin: 0 auto;
+    display: block;
+}
+
+.credex-principle-flowchart {
+    width: 70%;
+    height: auto;
+    max-width: 600px;
+    margin: 0 auto;
+    display: block;
+}
+
+.resources-and-value-flowchart {
+    width: 100%;
+    height: auto;
+    margin: 0 auto;
+    display: block;
 }
 
 /* Menu Styles */
@@ -302,8 +357,28 @@ blockquote {
 
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
-    .header-logo {
+    .header-container {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .header-text h1,
+    .header-text .subtitle {
+        text-align: center;
+    }
+
+    .trust-again-logo {
+        height: 150px;
+        margin-bottom: 20px;
+    }
+
+    .main-logo {
         max-width: 300px;
+    }
+
+    .secondary-logo {
+        max-width: 150px;
     }
 
     #menuContent {
@@ -340,4 +415,34 @@ blockquote {
 ::-moz-selection {
     background: #04A0B2;
     color: #FFFFFF;
+}
+
+.equation-container {
+  display: flex;
+  justify-content: center;
+  margin: 2em 0;
+}
+
+.equation {
+  display: inline-block;
+  text-align: center;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1.2em;
+  color: #FBB016;
+}
+
+.fraction {
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+  margin: 0 0.2em;
+}
+
+.numerator {
+  border-bottom: 2px solid #FBB016;
+  padding: 0 0.2em;
+}
+
+.denominator {
+  padding: 0 0.2em;
 }
