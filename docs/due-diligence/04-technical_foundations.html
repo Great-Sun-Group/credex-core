@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=0.8" />
+    <title>Technical Foundations</title>
+    <link rel="stylesheet" href="../style.css" />
+    <script src="../menu.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+  </head>
+  <body>
+    <div class="header-container">
+      <div class="header-logo">
+        <img
+          src="../images/logo.png"
+          alt="Credex Logo"
+          class="subsection-logo"
+        />
+      </div>
+      <div class="header-text">
+        <h1>Due Diligence</h1>
+        <h3 class="subtitle">Mathematical logic and conceptual specifics</h3>
+      </div>
+    </div>
+
+    <h1 class="chapter-title">Technical Foundations and Implementation</h1>
+
+    <h2>
+      Information being stored, retrieved, and processed by the credex ecosystem
+    </h2>
+
+    <p>
+      The most critical pieces of information in the credex ecosystem are stored
+      in smart contracts that behave in trusted and mutually agreed ways within
+      the ground rules of the ecosystem. The ground rules of the system, which
+      are encoded in credloops and credcoin, are the core of this invention. The
+      critical pieces of information retrieved to implement the invention
+      include:
+    </p>
+
+    <ol>
+      <li>
+        Credexes conceptualized, modelled and implemented as
+        <em>connections between member nodes</em> in the credex ecosystem.
+        Programmatically/visually expressed in its most simple form:
+        <em>(member)-[CREDEX]-&gt;(member).</em>
+        <ol type="a">
+          <li>
+            Whether the credex has a current outstanding balance, and the CXX
+            value of that balance.
+          </li>
+          <li>The denomination of the credex.</li>
+          <li>
+            The current CXXmultiplier of the credex, by which the CXX value is divided by to provide the face values for credexes denominated in anything other than CXX. The CXXmultiplier is one of the unique aspects of this invention, and is explored in more detail in the Credcoin section below.
+          </li>
+        </ol>
+      </li>
+      <li>
+        Daily exchange rates
+        <ol type="a">
+          <li>
+            Retrieved into the programmatic space of the ecosystem expressed as
+            values in ounces of gold (XAU).
+          </li>
+          <li>Immediately processed and stored as CXX values.</li>
+        </ol>
+      </li>
+      <li>
+        Formulas
+        <ol type="a">
+          <li>
+            The value of each credex can be updated daily according to custom
+            formulas based on the exchange rates and market rates imported.
+            Credcoin itself is the core implementation of this approach, which
+            enables additional formulas to be overlaid as their own
+            "denominations" (protocols under development).
+          </li>
+        </ol>
+      </li>
+      <li>
+        DCO gift variables set by participating members and their DCO security
+        account holders.
+        <ol type="a">
+          <li>Amount to be given daily in CXX.</li>
+          <li>Denomination of DCO linked currency account for gift.</li>
+          <li>
+            Verification that currency account balance is sufficient for DCO
+            participation at member set levels.
+          </li>
+        </ol>
+      </li>
+      <li>
+        DCO market variables set by participating businesses along the value
+        production and consumption chains of the network.
+        <ol type="a">
+          <li>
+            Amount to be paid daily in CXX, which will primarily be determined
+            by market mechanics (see credcoin section).
+          </li>
+        </ol>
+      </li>
+    </ol>
+
+    <h2>How is this information acquired, stored, processed, and displayed?</h2>
+
+    <h3>Data acquisition</h3>
+
+    <ol>
+      <li>
+        Credexes
+        <ul>
+          <li>
+            Requires digital signatures by two recognized member nodes. This
+            information is acquired via the credex app or api. Credexes are
+            offered or requested by one party, and accepted or declined by the
+            other party. An accepted credex becomes part of the critical
+            information of the invention.
+          </li>
+        </ul>
+      </li>
+      <li>
+        Daily exchange rates
+        <ul>
+          <li>
+            Programmatically queried from a third party every 24 hours just
+            after midnight UTC during the DCO.
+          </li>
+        </ul>
+      </li>
+      <li>
+        Formulas
+        <ul>
+          <li>Theoretically from any source.</li>
+        </ul>
+      </li>
+      <li>
+        DCO gift variables
+        <ul>
+          <li>Set by participating members via the credex app or api.</li>
+          <li>
+            Verified by participants' chosen DCO security account holders.
+          </li>
+        </ul>
+      </li>
+      <li>
+        DCO market variables (implementation under development)
+        <ul>
+          <li>
+            Set by participating members and their businesses via the credex app
+            or api.
+          </li>
+          <li>
+            Prices and values set by markets to be established within the
+            ecosystem.
+          </li>
+        </ul>
+      </li>
+    </ol>
+
+    <h3>Data storage and processing</h3>
+
+    <p>
+      Ecosystem data is currently stored in Neo4j databases on a Google/Neo4j
+      Aura cloud server and/or AWS EC2 instance with automatic backups. Programmatic processes and
+      protocols to access the data and implement the invention are executed with the <a href="https://github.com/Great-Sun-Group/credex-core/">credex-core codebase</a>. Data storage and processing solutions for the
+      ecosystem will evolve, especially as web3 architecture is built out.</p>
+
+    <h3>Data output</h3>
+
+    <p>
+      Data is output in json format in response to API calls.
+    </p>
+
+    <h2>Physical components required for data acquisition</h2>
+
+    <ol>
+      <li>
+        Member supplied devices (phones, browser, etc) or member owned servers
+        making api calls to the ecosystem.
+      </li>
+      <li>Api connection to currency rate data.</li>
+    </ol>
+
+    <h2>Steps involved in acquiring and processing the data</h2>
+
+    <h3>1. Initial value of CXX set arbitrarily to $1.00 CAD</h3>
+    <p>
+      This step will happen once, at the initialization of the ecosystem, and is
+      the only arbitrary variable ever required.
+    </p>
+
+    <h3>
+      2. Ecosystem members create accounts and initial DCO participants set
+      their DCO variables
+    </h3>
+
+    <h3>3. DCO executed daily</h3>
+    <p>
+      Sets exchange rates in the ecosystem for the next 24 hours and
+      re-calculates existing credex values and CXX multipliers at the new
+      exchange rates. See the <a href="DCO.html">detailed DCO documentation</a>.
+    </p>
+
+    <h3>4. Accepted credex</h3>
+    <p>A credex is offered or requested, then accepted.</p>
+
+    <h3>
+      5. Identify any credloops formed by the accepted credex, and clear a
+      payable vs a receivable for all credlooped members
+    </h3>
+    <p>
+      The addition of each smart contract to the ecosystem may create
+      opportunities to close one or more credloops with existing credexes. These
+      opportunities must be identified, prioritized, and processed. See the <a href="MTQ.html">detailed MTQ documentation</a>.
+    </p>
+  </body>
+</html>

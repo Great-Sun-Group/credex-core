@@ -156,14 +156,46 @@ const menuData = {
       ],
     },
   },
-  "Technical Auditing": {
+  "Due Diligence": {
     title: "Mathematical logic and conceptual specifics",
     items: {
-      "Core Cronjobs": [
-        { text: "Daily Credcoin Offering", link: "full-audit/DCO.html" },
-        { text: "Minute Transaction Queue", link: "full-audit/MTQ.html" },
+      "Concept Audit": [
+        {
+          text: "Background: The Problem",
+          link: "due-diligence/01-background.html",
+        },
+        {
+          text: "Credex Ecosystem",
+          link: "due-diligence/02-credex_ecosystem.html",
+        },
+        {
+          text: "Credcoin",
+          link: "due-diligence/03-credcoin.html",
+        },
+        {
+          text: "Technical Foundations",
+          link: "due-diligence/04-technical_foundations.html",
+        },
+        {
+          text: "Real World Outcomes",
+          link: "due-diligence/05-real_world_outcomes.html",
+        },
+        {
+          text: "Claims",
+          link: "due-diligence/06-claims.html",
+        },
       ],
-    },
+      "Implementation Audit": [
+        {
+          text: "Minute Transaction Queue",
+          link: "full-audit/MTQ.html",
+        },
+        {
+          text: "Daily Credcoin Offering",
+          link: "full-audit/DCO.html",
+        },
+      ],
+    }
   },
   "Trust Again": {
     title: "How peer-to-peer trust between sovereign humans changes everything",
