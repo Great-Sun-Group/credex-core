@@ -34,19 +34,23 @@ const menuData = {
           link: "",
         },
       ],
-      "Political Impact": [
+      Politics: [
         {
           text: "COMING SOON",
           link: "",
         },
       ],
-    }, // To be filled later
+      Culture: [
+        {
+          text: "COMING SOON",
+          link: "",
+        },
+      ],
+    },
   },
   "Member Guides": {
     title: "How to use the credex ecosystem **COMING SOON**",
-    items: [
-      { text: "Glossary", link: "member-guides/glossary.html" },
-    ]
+    items: [{ text: "Glossary", link: "member-guides/glossary.html" }],
   },
   "Developer Guides": {
     title: "How to deploy and develop the credex ecosystem",
