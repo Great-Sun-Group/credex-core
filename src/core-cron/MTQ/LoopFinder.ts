@@ -82,7 +82,7 @@ export async function LoopFinder(
 function getSearchOwesType(credexSecuredDenom: string): string {
   return credexSecuredDenom !== "floating"
     ? `${credexSecuredDenom}_SECURED`
-    : "FLOATING";
+    : "UNSECURED";
 }
 
 async function adjustCredexDueDate(

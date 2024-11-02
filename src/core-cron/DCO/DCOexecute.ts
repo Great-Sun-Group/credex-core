@@ -70,7 +70,7 @@ export async function DCOexecute(): Promise<boolean> {
       DCOinCXX,
       DCOinXAU,
       numberConfirmedParticipants,
-    } = await processDCOParticipants(ledgerSpaceSession, USDbaseRates);
+    } = await establishNewCXXrates(ledgerSpaceSession, USDbaseRates);
 
     await createNewDaynode(
       ledgerSpaceSession,
@@ -296,7 +296,7 @@ function validateRates(rates: Rates): void {
   }
 }
 
-async function processDCOParticipants(
+async function establishNewCXXrates(
   session: any,
   USDbaseRates: Rates
 ): Promise<any> {
