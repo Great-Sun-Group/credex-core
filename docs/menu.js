@@ -188,14 +188,14 @@ const menuData = {
       "Implementation Audit": [
         {
           text: "Minute Transaction Queue",
-          link: "full-audit/MTQ.html",
+          link: "due-diligence/MTQ.html",
         },
         {
           text: "Daily Credcoin Offering",
-          link: "full-audit/DCO.html",
+          link: "due-diligence/DCO.html",
         },
       ],
-    }
+    },
   },
   "Trust Again": {
     title: "How peer-to-peer trust between sovereign humans changes everything",

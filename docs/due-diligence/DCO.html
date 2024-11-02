@@ -243,5 +243,202 @@
         To get new CXX values of currency credexes, first we note the face value of the credex (CXX value / CXXmultiplier). This face value must be preserved for continuity of local accounting truth. Then we divide the previous CXX value of the credex by CXXprior_CXXcurrent, performing the same transformation as for CXX credexes above, thus preserving accounting truth relative to every other value as of the contracted day. This is the behaviour native to all CXX amounts, which anchor on a specific day's resource flows. We then refer to the face value noted before, get the current day's rate in the face denomination, and set the CXXmultiplier so that CXX value * CXXmultiplier = noted face value in face denomination.
     </p>
 
+        <h2>Example DCO Rate Calculations</h2>
+
+    <table class="calculation-table">
+        <tr>
+            <th></th>
+            <th>Day One</th>
+            <th>Day Two</th>
+            <th>Day Three</th>
+        </tr>
+        <tr>
+            <td>Starting CXX value</td>
+            <td>$1.00 CAD</td>
+            <td>$1.25 CAD</td>
+            <td>$1.44 CAD</td>
+        </tr>
+        <tr>
+            <td>DCO participants</td>
+            <td>4</td>
+            <td>5</td>
+            <td>5</td>
+        </tr>
+        <tr>
+            <td>Contributions</td>
+            <td>
+                $1.00 CAD/1.000 CXX<br>
+                $1.00 CAD/1.000 CXX<br>
+                $1.00 CAD/1.000 CXX<br>
+                $2.00 CAD/2.000 CXX
+            </td>
+            <td>
+                $1.25 CAD/1.000 CXX<br>
+                $1.25 CAD/1.000 CXX<br>
+                $1.25 CAD/1.000 CXX<br>
+                $2.50 CAD/2.000 CXX<br>
+                $0.97 USD/1.000 CXX
+            </td>
+            <td>
+                $1.44 CAD/1.000 CXX<br>
+                $1.44 CAD/1.000 CXX<br>
+                $1.44 CAD/1.000 CXX<br>
+                $0.05 CAD/0.038 CXX<br>
+                $1.17 USD/1.031 CXX
+            </td>
+        </tr>
+        <tr>
+            <td>Total contributions</td>
+            <td>$5.00 CAD/ 5.000 CXX</td>
+            <td>$7.22 CAD / 6.000 CXX</td>
+            <td>$5.86 CAD / 4.069 CXX</td>
+        </tr>
+        <tr>
+            <td>CXXprior_CXXcurrent</td>
+            <td>5.000 / 4 = 1.2500</td>
+            <td>6.000 / 5 = 1.2000</td>
+            <td>4.069 / 5 = 0.8138</td>
+        </tr>
+        <tr>
+            <td>New value of CXX</td>
+            <td>
+                5.00 / 4 = <strong>$1.25 CAD</strong><br><br>
+                = $0.97 USD<br>
+                (arbitrary FX rate used<br>
+                1.00 CAD = 0.789 USD)
+            </td>
+            <td>
+                7.22 / 5 = <strong>$1.44 CAD</strong><br><br>
+                = $1.14 USD<br>
+                (arbitrary FX rate used<br>
+                1.00 CAD = 0.791 USD)
+            </td>
+            <td>
+                5.86 / 5 = <strong>$1.17 CAD</strong><br><br>
+                = $0.93 USD<br>
+                (arbitrary FX rate used<br>
+                1.00 CAD = 0.790 USD)
+            </td>
+        </tr>
+    </table>
+
+    <h2>Example DCO Updates for a Credcoin Denominated Asset</h2>
+
+    <table class="calculation-table">
+        <tr>
+            <th></th>
+            <th>Day One</th>
+            <th>Day Two</th>
+            <th>Day Three</th>
+        </tr>
+        <tr>
+            <td>Wrap day face value<br>(calculated)</td>
+            <td>100.000 CXX</td>
+            <td>80.000 CXX</td>
+            <td>66.6667 CXX</td>
+        </tr>
+        <tr>
+            <td>Wrap day CXX value of asset (stored)</td>
+            <td>100.000 CXX</td>
+            <td>80.000 CXX</td>
+            <td>66.6667 CXX</td>
+        </tr>
+        <tr>
+            <td>Wrap day CXXmultiplier of asset (stored)</td>
+            <td>1.00000</td>
+            <td>0.80000</td>
+            <td>0.66667</td>
+        </tr>
+        <tr>
+            <td>Wrap day CAD value of asset (calculated)</td>
+            <td>$100.00 CAD</td>
+            <td>$100.00 CAD<br><br>(won't change here because DCO all in CAD yesterday)</td>
+            <td>will be slight fluctuation here, too much for back-of-envelope calcs. influenced by relative CAD/USD fluctuations at the ratio of their use in the DCO.</td>
+        </tr>
+        <tr>
+            <td>CXXprior_CXXcurrent (calculated above)</td>
+            <td>1.2500</td>
+            <td>1.2000</td>
+            <td>0.8138</td>
+        </tr>
+        <tr>
+            <td>New day CXX value</td>
+            <td>100 / 1.2500 = 80.000 CXX</td>
+            <td>80 / 1.2000 = 66.667 CXX</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>New day CXXmultiplier</td>
+            <td>1.00000 / 1.2500 = 0.80000</td>
+            <td>0.80000 / 1.2000 = 0.66667</td>
+            <td>0.66667 / 0.8138 = 0.81921</td>
+        </tr>
+        <tr>
+            <td>New day CAD value of asset (calculated)</td>
+            <td>$100.00 CAD<br><br>(won't change here because DCO all in CAD)</td>
+            <td>will be slight fluctuation here, too much for back-of-envelope calcs. influenced by relative CAD/USD fluctuations at the ratio of their use in the DCO.</td>
+            <td>will be slight fluctuation here, too much for back-of-envelope calcs. influenced by relative CAD/USD fluctuations at the ratio of their use in the DCO.</td>
+        </tr>
+    </table>
+
+    <h2>Example DCO Updates for a Currency Denominated Asset</h2>
+
+    <table class="calculation-table">
+        <tr>
+            <th></th>
+            <th>Day One</th>
+            <th>Day Two</th>
+            <th>Day Three</th>
+        </tr>
+        <tr>
+            <td>Wrap day face value<br>(calculated)</td>
+            <td>$45.00 CAD</td>
+            <td>$45.00 CAD</td>
+            <td>$45.00 CAD</td>
+        </tr>
+        <tr>
+            <td>Wrap day CXX value of asset (stored)</td>
+            <td>45.000 CXX</td>
+            <td>36.000 CXX</td>
+            <td>fluctuates based on CXXmultiplier plus relative currency rate fluctuations as above</td>
+        </tr>
+        <tr>
+            <td>Wrap day CXXmultiplier of asset (stored)</td>
+            <td>1.00000</td>
+            <td>1.00000</td>
+            <td>fluctuates as necessary so that the currency value and face value never changes</td>
+        </tr>
+        <tr>
+            <td>Wrap day CAD value of asset (calculated)</td>
+            <td>$45.00 CAD</td>
+            <td>$45.00 CAD</td>
+            <td>$45.00 CAD</td>
+        </tr>
+        <tr>
+            <td>CXXprior_CXXcurrent (calculated above)</td>
+            <td>1.2500</td>
+            <td>1.2000</td>
+            <td>0.8138</td>
+        </tr>
+        <tr>
+            <td>New day CXX value</td>
+            <td>45 / 1.2500 * FXfluctuations = 36.000 CXX<br><br>(DCO all in CAD so FXfluctuations=1)</td>
+            <td>36 / 1.2000 * FXfluctuations = too much for back-of-envelope calcs</td>
+            <td>too much for back-of-envelope calcs</td>
+        </tr>
+        <tr>
+            <td>New day CXXmultiplier</td>
+            <td>1.0000<br><br>(won't change here because DCO all in CAD so FXfluctuations=1)</td>
+            <td>fluctuates as necessary so that the currency value and face value never changes</td>
+            <td>fluctuates as necessary so that the currency value and face value never changes</td>
+        </tr>
+        <tr>
+            <td>New day CAD value of asset (calculated)</td>
+            <td>$45.00 CAD</td>
+            <td>$45.00 CAD</td>
+            <td>$45.00 CAD</td>
+        </tr>
+    </table>
+
   </body>
 </html>
