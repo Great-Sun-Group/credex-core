@@ -11,16 +11,47 @@ function getBasePath() {
 
 // Menu data structure
 const menuData = {
-  /*
   "Credex in the World": {
     title: "The plausible promise of the credex ecosystem",
-    items: {}, // To be filled later
+    items: {
+      "Strategic Orientation": [
+        {
+          text: "Our Campaign",
+          link: "strategic-orientation/our_campaign.html",
+        },
+        {
+          text: "African Heart",
+          link: "strategic-orientation/african_heart.html",
+        },
+        {
+          text: "Walk the Talk",
+          link: "strategic-orientation/walk_the_talk.html",
+        },
+      ],
+      Business: [
+        {
+          text: "COMING SOON",
+          link: "",
+        },
+      ],
+      Politics: [
+        {
+          text: "COMING SOON",
+          link: "",
+        },
+      ],
+      Culture: [
+        {
+          text: "COMING SOON",
+          link: "",
+        },
+      ],
+    },
   },
   "Member Guides": {
-    title: "How to use the credex ecosystem",
-    items: {}, // To be filled later
+    title: "How to use the credex ecosystem **COMING SOON**",
+    items: [{ text: "Glossary", link: "member-guides/glossary.html" }],
   },
-  */
   "Developer Guides": {
     title: "How to deploy and develop the credex ecosystem",
     items: {
@@ -71,8 +102,8 @@ const menuData = {
           link: "develop/deployment/instance_sizing.html",
         },
       ],
-      /*
       "Member Modules": [
+        /*
         {
           text: "Account",
           link: "develop/developerClient/module/Account.html",
@@ -90,8 +121,8 @@ const menuData = {
           text: "DevAdmin",
           link: "develop/developerClient/module/DevAdmin.html",
         },
-      ],
       */
+      ],
       "Core Cronjobs": [
         { text: "Daily Credcoin Offering", link: "full-audit/DCO.html" },
         { text: "Minute Transaction Queue", link: "full-audit/MTQ.html" },
@@ -125,21 +156,85 @@ const menuData = {
       ],
     },
   },
-  "Technical Auditing": {
-    title: "Mathematical logic and patent presentation",
+  "Due Diligence": {
+    title: "Mathematical logic and conceptual specifics",
     items: {
-      "Core Cronjobs": [
-        { text: "Daily Credcoin Offering", link: "full-audit/DCO.html" },
-        { text: "Minute Transaction Queue", link: "full-audit/MTQ.html" },
+      "Concept Audit": [
+        {
+          text: "Background: The Problem",
+          link: "due-diligence/01-background.html",
+        },
+        {
+          text: "Credex Ecosystem",
+          link: "due-diligence/02-credex_ecosystem.html",
+        },
+        {
+          text: "Credcoin",
+          link: "due-diligence/03-credcoin.html",
+        },
+        {
+          text: "Technical Foundations",
+          link: "due-diligence/04-technical_foundations.html",
+        },
+        {
+          text: "Real World Outcomes",
+          link: "due-diligence/05-real_world_outcomes.html",
+        },
+        {
+          text: "Claims",
+          link: "due-diligence/06-claims.html",
+        },
       ],
-    },
+      "Implementation Audit": [
+        {
+          text: "Minute Transaction Queue",
+          link: "full-audit/MTQ.html",
+        },
+        {
+          text: "Daily Credcoin Offering",
+          link: "full-audit/DCO.html",
+        },
+      ],
+    }
   },
-  /*
   "Trust Again": {
     title: "How peer-to-peer trust between sovereign humans changes everything",
-    items: {}, // To be filled later
+    items: [
+      { text: "Credex", link: "trust-again/01-credex.html" },
+      {
+        text: "Credcoin: Foundations",
+        link: "trust-again/02-credcoin_foundations.html",
+      },
+      {
+        text: "Credcoin: Markets",
+        link: "trust-again/03-credcoin_markets.html",
+      },
+      {
+        text: "Credcoin: Economic Reality",
+        link: "trust-again/04-credcoin_economic_reality.html",
+      },
+      {
+        text: "Corporations & Compliance",
+        link: "trust-again/05-corporations_and_compliance.html",
+      },
+      {
+        text: "Trusted Intermediary",
+        link: "trust-again/06-trusted_intermediary.html",
+      },
+      {
+        text: "Organic Economics",
+        link: "trust-again/07-organic_economics.html",
+      },
+      {
+        text: "Societal Impact",
+        link: "trust-again/08-societal_impact.html",
+      },
+      {
+        text: "Utilitarian Value",
+        link: "trust-again/09-utilitarian_value.html",
+      },
+    ],
   },
-  */
 };
 
 // Create menu button
@@ -207,7 +302,7 @@ function createMenuOverlay() {
   homeLink.style.textDecoration = "none";
   homeLink.style.borderBottom = "1px solid #eee";
   homeLink.style.marginBottom = "10px";
-  homeLink.textContent = "mycredex.app: your portal to the credex ecosystem";
+  homeLink.textContent = "MyCredex.app: Our portal to the credex ecosystem";
   mainMenu.appendChild(homeLink);
 
   // Add menu items
@@ -224,30 +319,47 @@ function createMenuOverlay() {
     const submenu = document.createElement("div");
     submenu.className = "submenu";
 
-    // Add subcategories
-    Object.entries(data.items).forEach(([subcategory, items]) => {
-      const subcategoryDiv = document.createElement("div");
-      subcategoryDiv.className = "subcategory";
-
-      const subcategoryButton = document.createElement("button");
-      subcategoryButton.className = "subcategoryButton";
-      subcategoryButton.innerHTML = subcategory;
-      subcategoryButton.onclick = () => toggleSubcategory(subcategoryDiv);
-      subcategoryDiv.appendChild(subcategoryButton);
-
+    // Handle both array and object items
+    if (Array.isArray(data.items)) {
+      // Direct array of items
       const itemsList = document.createElement("div");
       itemsList.className = "itemsList";
+      itemsList.style.display = "none"; // Initially hidden
 
-      items.forEach((item) => {
+      data.items.forEach((item) => {
         const link = document.createElement("a");
         link.href = getBasePath() + item.link;
         link.textContent = item.text;
         itemsList.appendChild(link);
       });
 
-      subcategoryDiv.appendChild(itemsList);
-      submenu.appendChild(subcategoryDiv);
-    });
+      submenu.appendChild(itemsList);
+    } else {
+      // Object with subcategories
+      Object.entries(data.items).forEach(([subcategory, items]) => {
+        const subcategoryDiv = document.createElement("div");
+        subcategoryDiv.className = "subcategory";
+
+        const subcategoryButton = document.createElement("button");
+        subcategoryButton.className = "subcategoryButton";
+        subcategoryButton.innerHTML = subcategory;
+        subcategoryButton.onclick = () => toggleSubcategory(subcategoryDiv);
+        subcategoryDiv.appendChild(subcategoryButton);
+
+        const itemsList = document.createElement("div");
+        itemsList.className = "itemsList";
+
+        items.forEach((item) => {
+          const link = document.createElement("a");
+          link.href = getBasePath() + item.link;
+          link.textContent = item.text;
+          itemsList.appendChild(link);
+        });
+
+        subcategoryDiv.appendChild(itemsList);
+        submenu.appendChild(subcategoryDiv);
+      });
+    }
 
     categoryDiv.appendChild(submenu);
     mainMenu.appendChild(categoryDiv);
@@ -274,6 +386,12 @@ function toggleCategory(categoryDiv) {
 
   if (!isExpanded) {
     submenu.style.display = "block";
+  }
+
+  // For categories with direct items (no subcategories)
+  const itemsList = submenu.querySelector(".itemsList");
+  if (itemsList && !isExpanded) {
+    itemsList.style.display = "block";
   }
 }
 

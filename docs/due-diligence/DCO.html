@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=0.8" />
+    <title>Daily Credcoin Offering (DCO)</title>
+    <link rel="stylesheet" href="../style.css" />
+    <script src="../menu.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+  </head>
+  <body>
+    <div class="header-container">
+      <div class="header-logo">
+        <img
+          src="../images/logo.png"
+          alt="Credex Logo"
+          class="subsection-logo"
+        />
+      </div>
+      <div class="header-text">
+        <h1>Due Diligence</h1>
+        <h3 class="subtitle">Mathematical logic and conceptual specifics</h3>
+      </div>
+    </div>
+
+    <h1 class="chapter-title">Daily Credcoin Offering (DCO)</h1>
+
+    <p>
+      The Daily Credcoin Offering (DCO) is a crucial component of the Credex
+      ecosystem that runs every 24 hours at midnight UTC, while most of the
+      world's population centres are in darkness.
+    </p>
+
+    <h2>DBinitialization.ts</h2>
+
+    <p>
+      The DCO checks for an active daynode as a proxy for an active or empty
+      database, and if no daynode exists the
+      <code>DBinitialization</code> function is called, which sets up the basic
+      structure and relationships required for the first DCO to run.
+    </p>
+
+    <ol>
+      <li>
+        Sets up database constraints and indexes for Daynode, Member, and
+        Account.
+      </li>
+      <li>
+        Fetches "day zero" rates as of the day prior to launch and stores them
+        on a day zero Daynode relative to an arbitrarily set initial CXX value
+        of $1 CAD.
+      </li>
+      <li>
+        Creates at an initial member, Credex Foundation, audited account, and
+        secured balance.
+      </li>
+    </ol>
+
+    <p>
+      The DCO outputs the new day's CXX rate, which is required as an input to
+      the next day's DCO calculations. Therefore in the initialzation process a
+      CXX value must be set arbitrarily. From there the mathematics rely purely
+      on market data.
+    </p>
+    <p>
+        This arbitrariness could be altered, but it cannot be removed. It would be possible for participating members to set the value of their DCO gifts in currency, and if this was implemented, we would not need the initial reference point to be set arbitrarily. The downside of this approach is that every single DCO must then pull in the arbitrary outside reference point of all currencies at a point that would make the system dependent on that outside input in perpetuity. The credex ecosystem would mathematically require the existence of outside currency economies to persist. By setting DCO give values in CXX this is avoided, but the arbitrary reference point is still mathematically required, so it has been isolated to a single initialization variable.
+    </p>
+
+    <h2>DCOexecute.ts</h2>
+
+    <p>
+      The DCOexecute function implements the Daily Credcoin Offering (DCO)
+      process.
+    </p>
+
+    <ol>
+      <li>
+        Check if the Minute Transaction Queue (MTQ) is running and wait if it is
+        and retry in a few seconds.
+      </li>
+      <li>Set the DCOrunningNow flag and fetch the current and next date.</li>
+      <li>Perform an end-of-day backup.</li>
+      <li>
+        Process defaulting unsecured credexes and expire pending
+        offers/requests.
+      </li>
+      <li>Process recurring transactions.</li>
+      <li>Fetch current exchange rates.</li>
+      <li>
+        Fetch declared DCO participants and filter them based on available
+        secured balance.
+      </li>
+      <li>
+        Calculate new CXX (Credcoin) rates based on the total DCO amount and
+        number of participants.
+      </li>
+      <li>Create a new daynode with the updated CXX rates.</li>
+      <li>
+        Create DCO give transactions from participants to the Credex Foundation.
+      </li>
+      <li>
+        Update credex and asset balances across the system to reflect the new
+        exchange rates.
+      </li>
+      <li>
+        Create DCO receive transactions from the Credex Foundation to
+        participants.
+      </li>
+      <li>Perform a start-of-day backup for the new day.</li>
+    </ol>
+
+    <p>This process implements the Credcoin Principle by:</p>
+
+    <ul>
+      <li>
+        Allowing participants to contribute value to the ecosystem (DCO give
+        transactions).
+      </li>
+      <li>
+        Distributing an equal share of the new value to all participants (DCO
+        receive transactions).
+      </li>
+      <li>
+        Adjusting the value of Credcoin relative to other currencies based on
+        the total contribution and number of participants.
+      </li>
+      <li>
+        Updating all existing balances and transactions to maintain their
+        relative value in the new exchange rate environment.
+      </li>
+    </ul>
+
+    <p>
+      The DCO process ensures that the value of one Credcoin is always equal to
+      the number of participants divided by the value of natural wealth entering
+      the organic economy through the DCO, as stated in the Credcoin Principle.
+    </p>
+
+    <p>
+      This implementation allows for a dynamic, daily adjustment of the
+      ecosystem's internal economy, reflecting the contributions and
+      participation of its members while maintaining the relative value of
+      existing transactions and balances.
+    </p>
+
+    <h2>Exchange Rate Calculations</h2>
+
+    <p>
+        Amounts in the credex ecosystem are stored in CXX alongside a companion CXXmultiplier that is used to express the amount in it's face value. This section describes the specific calculations and logic used to set the value of CXX in the establishNewCXXrates function, and the subsequent update of all CXX values and CXXmultipliers across the ecosystem in the updateCredexBalances function.
+    </p>
+
+    <p>
+        It is the act of participating in the gift portion of the DCO that anchors the value of CXX vs every other asset everywhere by establishing the real flows of measurable value that serve as a reference point. Mathematically, as long as a single member gives a single measurable unit of economic value, the DCO can proceed.
+    </p>
+    <p>
+        <ol>
+            <li>
+                DCO gifts are given in secured credex, so a real asset of precisely measuable value moves from claimable possession of a member to claimable possession of the Credex Foundation.
+            </li>
+            <li>
+                That value is combined with gift values from all other participating members
+            </li>
+            <li>
+                In the future this will be combined with value flows from the market-based portion of the DCO.
+            </li>
+            <li>
+                The Credex Foundation issues a credex for 1.000 CXX to each participating member, which acts as a secured credex, secured against the assets received by the Credex Foundation, effectively distributing their claimable value equally in the form of a 1.000 CXX credex.
+            </li>
+        </ol>
+    </p>
+    <p>
+        Conceptually, even in a moneyless world we would still need the anchor point of real assets of real value at this stage in order to create a real anchor point. In a moneyless world, something with a known market value vs other assets would still have to be given. It could be gold, it could be grain, it could be goats. It doesn't matter what, it simply must be at least one thing of real value that can provide a market-based reference point for CXX. If you know the price of a goat vs other goods, and one goat is given in the DCO by the only participating member, then one CXX would be the value of one goat, and therefore the value of anything could be could be expressed in CXX via the price of the goat.
+    </p>
+    <p>
+        The mathematics permit incoming values to be in CXX and still be used in the calculation of next day's CXX without creating an infinite loop, because gifts are calculated at the prior day's known CXX rate vs other assets.
+    </p>
+    <p>
+        What we need is the total value of a pool of assets expressed in something other than CXX. Our implementation has acheived this by pooling secured credexes representing real currency values, and expressing the total of that pool in Troy Ounces of Gold (XAU). Any asset could be used here. Gold has been chosen as a nod to it's unique relationship to human economies. Gold will continue in this special relationship when in the future it takes a long-term role in the credex ecosystem as the primary security.
+    </p>
+    <p>
+        The day's pool of DCO assets, in the form of secured credexes, is held by the Credex Foundation, which issues a credex to every participating member for 1.000 CXX, locking the total issued to the total value of the assets held. These values are then available to be credlooped. Conceptually this could be related to selling the goat and distributing the proceeds. Every participating member gets to claim one equal portion of the pooled assets via credloop.
+    </p>
+
+    <h2>Function: establishNewCXXrates</h2>
+
+    <h4>denomsInXAU</h4>
+
+    <p>
+        We calculate exchange rates for all denominations in terms of XAU (gold). We first fetch exchange rates in USD because this is what is provided for free by OpenExchangeRates.com, enabling easy set up for dev environments. We convert this to XAU:
+        <pre><code>denomsInXAU[currency] = USDbaseRates[currency] / USDbaseRates.XAU</code></pre>
+
+        Participant DCO give rates are set in CXX but given in currency for reasons outlined above. We calculate DCOgiveInDenom earlier in the code, right in the cypher query with:
+        <pre><code>DCOparticipantsDeclared.DCOgiveInCXX / daynode[DCOparticipantsDeclared.DCOdenom] AS DCOgiveInDenom,</code></pre></p>
+
+    <h3>DCOinXAU</h3>
+    <p>
+        While the currency amount is transferred by means of secured credex, here we convert each participant's contribution to XAU and add it to the incremental total as we progress through the loop:
+    <pre><code>DCOinXAU += DCOgiveInDenom / denomsInXAU[DCOdenom]</code></pre></p>
+
+    <h3>nextCXXinXAU</h3>
+    <p>
+        Then we calculate the new CXX value in terms of XAU. This represents the new gold peg of the new day's CXX, which is used to set it's relative value against all currency denominations and assets. Note the similarity here to the core Credcoin Formula of 1.000 CXX = natural wealth / number participants.
+        <pre><code>nextCXXinXAU = DCOinXAU / numberConfirmedParticipants</code></pre>
+            This formula expresses one core relationship we need: the new day's value of CXX in XAU.</p>
+
+    <h3>CXXprior_CXXcurrent</h3>
+    <p>
+        We previously calculated the total DCOinCXX alongside DCOinXAU. We need this to calculate continuity in values from one day and set of rates to the next.</p>
+    <p>
+        If every DCO participant gave 1.000 CXX, there would be no change in the CXX rate, representing no day over day change in the flow of value per participant, and a CXXprior_CXXcurrent value of 1. CXXprior_CXXcurrent measures the day over day change in the value of resource flows entering the organic economy per participant. CXXprior_CXXcurrent values below 1 represent decline in per capita resource flow value, and above 1 represent an increase in per capita value.</p>
+    <p>
+        This ratio is used to adjust existing CXX values across the ecosystem. Again note the similarity here to the core Credcoin Formula of 1.000 CXX = natural wealth / number participants.
+        <pre><code>CXXprior_CXXcurrent = DCOinCXX / numberConfirmedParticipants</code></pre>
+        This formula expresses the other core relationship we need: the new day's value of CXX vs it's previous value.</p>
+
+    <h3>newCXXrates</h3>
+    <p>
+        Calculates new exchange rates for all denominations in terms of CXX to store on the new Daynode. For each denomination:
+    <ol>
+        <li>Take its XAU rate (denomsInXAU[denom])</li>
+        <li>Divide by the new CXX-to-XAU rate (nextCXXinXAU)</li>
+        <li>Invert the result to get CXX per denomination unit</li>
+    </ol>
+    <pre><code>newCXXrates[denom] = 1 / (nextCXXinXAU * denomsInXAU[denom])</code></pre></p>
+ 
+    <h2>Function: updateCredexBalances</h2>
+    <p>
+      Now, with the new rates expressed and saved on the new Daynode, we update all values in the ecosystem so that they remain true to original intentions when filtered through current financial reality as expressed in the day's rates.
+    </p>
+    <h3>CXX values</h3>
+    <p>
+        Credexes and other values denominated in CXX have been intentionally denominated relative to the flow of natural resource value per person on a specific day. As the flow of resource value per participant changes, the numerical value of a credex denominated in CXX needs to change in proportion, so that it remains true relative to the contracted intention of participants.
+    </p>
+    <p>
+        To get new CXX values we divide all CXX values by CXXprior_CXXcurrent, and save the new values. The CXXmultiplier of a CXX denominated credex is always 1.
+    </p>
+
+    <h3>Currency and asset values</h3>
+    <p>
+        Credexes and other values denominated in currencies or other assets are denominated relative to the value of that asset. A credex denominated in currency will fluctuate in value in lockstep with fluctuations in the value of that currency vs all other economic values. A USD credex expressed in USD behaves like an accounting entry in a single denomination accounting system with a base currency of USD. This keeps fluctuations in the underlying CXX and CXXmultiplier immaterial for single denomination accounting. The two can link seemlessly.
+    </p>
+    <p>
+        To get new CXX values of currency credexes, first we note the face value of the credex (CXX value / CXXmultiplier). This face value must be preserved for continuity of local accounting truth. Then we divide the previous CXX value of the credex by CXXprior_CXXcurrent, performing the same transformation as for CXX credexes above, thus preserving accounting truth relative to every other value as of the contracted day. This is the behaviour native to all CXX amounts, which anchor on a specific day's resource flows. We then refer to the face value noted before, get the current day's rate in the face denomination, and set the CXXmultiplier so that CXX value * CXXmultiplier = noted face value in face denomination.
+    </p>
+
+  </body>
+</html>
