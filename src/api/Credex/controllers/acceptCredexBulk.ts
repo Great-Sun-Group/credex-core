@@ -3,6 +3,7 @@ import { AcceptCredexService } from "../services/AcceptCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { validateUUID } from "../../../utils/validators";
 import logger from "../../../utils/logger";
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * AcceptCredexBulkController
@@ -18,13 +19,13 @@ export async function AcceptCredexBulkController(
   req: express.Request,
   res: express.Response
 ) {
-  const requestId = req.id;
-  logger.debug("Entering AcceptCredexBulkController", { requestId });
+  const parentRequestId = req.id;
+  logger.debug("Entering AcceptCredexBulkController", { parentRequestId });
 
   const fieldsRequired = ["credexIDs", "signerID"];
   for (const field of fieldsRequired) {
     if (!req.body[field]) {
-      logger.warn(`${field} is required`, { requestId, field });
+      logger.warn(`${field} is required`, { parentRequestId, field });
       return res.status(400).json({ message: `${field} is required` });
     }
   }
@@ -36,7 +37,7 @@ export async function AcceptCredexBulkController(
     )
   ) {
     logger.warn("Invalid credexIDs", {
-      requestId,
+      parentRequestId,
       credexIDs: req.body.credexIDs,
     });
     return res.status(400).json({
@@ -45,7 +46,7 @@ export async function AcceptCredexBulkController(
   }
 
   if (!validateUUID(req.body.signerID)) {
-    logger.warn("Invalid signerID", { requestId, signerID: req.body.signerID });
+    logger.warn("Invalid signerID", { parentRequestId, signerID: req.body.signerID });
     return res
       .status(400)
       .json({ message: "Invalid signerID. Must be a valid UUID." });
@@ -53,97 +54,133 @@ export async function AcceptCredexBulkController(
 
   try {
     logger.debug("Starting bulk accept process", {
-      requestId,
+      parentRequestId,
       credexCount: req.body.credexIDs.length,
     });
-    const acceptCredexData = await Promise.all(
+
+    const results = await Promise.all(
       req.body.credexIDs.map(async (credexID: string) => {
-        logger.debug("Accepting individual Credex", { requestId, credexID });
-        const data = await AcceptCredexService(
-          credexID,
-          req.body.signerID,
-          requestId
-        );
-        if (data) {
-          logger.debug("Credex accepted successfully", { requestId, credexID });
-          return data;
+        const childRequestId = `${parentRequestId}-${uuidv4()}`;
+        logger.debug("Processing individual Credex", { parentRequestId, childRequestId, credexID });
+        
+        try {
+          const data = await AcceptCredexService(
+            credexID,
+            req.body.signerID,
+            childRequestId
+          );
+          
+          if (data) {
+            logger.debug("Credex accepted successfully", { parentRequestId, childRequestId, credexID });
+            return {
+              status: 'accepted',
+              credexID,
+              data
+            };
+          }
+          
+          logger.warn("Failed to accept Credex", { parentRequestId, childRequestId, credexID });
+          return {
+            status: 'failed',
+            credexID,
+            error: 'Failed to accept credex'
+          };
+        } catch (error) {
+          const errorMessage = (error as Error).message;
+          
+          // Handle already accepted credex gracefully
+          if (errorMessage.includes('already accepted')) {
+            logger.info("Credex was already accepted", { parentRequestId, childRequestId, credexID });
+            return {
+              status: 'already_accepted',
+              credexID
+            };
+          }
+          
+          logger.error("Error accepting credex", {
+            error: errorMessage,
+            parentRequestId,
+            childRequestId,
+            credexID
+          });
+          return {
+            status: 'error',
+            credexID,
+            error: errorMessage
+          };
         }
-        logger.warn("Failed to accept Credex", { requestId, credexID });
-        return null;
       })
     );
 
-    // Filter out any null values
-    const validCredexData = acceptCredexData.filter(
-      (
-        item
-      ): item is {
-        acceptedCredexID: any;
-        acceptorAccountID: any;
-        memberID: any;
-      } => item !== null
+    // Filter successful acceptances
+    const acceptedCredex = results.filter(
+      (result): result is { status: 'accepted', credexID: string, data: any } => 
+        result.status === 'accepted'
     );
 
-    logger.debug("Filtered valid Credex data", {
-      requestId,
-      validCount: validCredexData.length,
-      totalCount: acceptCredexData.length,
+    // Group other results for reporting
+    const alreadyAccepted = results.filter(result => result.status === 'already_accepted');
+    const failed = results.filter(result => result.status === 'failed' || result.status === 'error');
+
+    logger.debug("Processed all credex", {
+      parentRequestId,
+      accepted: acceptedCredex.length,
+      alreadyAccepted: alreadyAccepted.length,
+      failed: failed.length
     });
 
-    if (validCredexData.length > 0) {
-      // Assuming that memberID and acceptorAccountID are the same for all returned objects
-      const { memberID, acceptorAccountID } = validCredexData[0];
+    if (acceptedCredex.length > 0 || alreadyAccepted.length > 0) {
+      // Get dashboard data if any credex were processed successfully
+      const firstAccepted = acceptedCredex[0]?.data;
+      const memberID = firstAccepted?.memberID || req.body.signerID;
+      const acceptorAccountID = firstAccepted?.acceptorAccountID;
 
       logger.debug("Fetching dashboard data", {
-        requestId,
+        parentRequestId,
         memberID,
         acceptorAccountID,
       });
-      const dashboardData = await GetAccountDashboardService(
-        memberID,
-        acceptorAccountID
-      );
 
-      if (!dashboardData) {
-        logger.error("Failed to fetch dashboard data", {
-          error: "GetAccountDashboardService returned null",
-          requestId,
-          memberID,
-          acceptorAccountID,
-        });
-        return res
-          .status(500)
-          .json({ error: "Failed to fetch dashboard data" });
-      }
+      const dashboardData = acceptorAccountID ? 
+        await GetAccountDashboardService(memberID, acceptorAccountID) :
+        null;
 
-      logger.info("Credexes accepted in bulk successfully", {
-        count: validCredexData.length,
-        requestId,
-        memberID,
-        acceptorAccountID,
+      logger.info("Bulk accept operation completed", {
+        accepted: acceptedCredex.length,
+        alreadyAccepted: alreadyAccepted.length,
+        failed: failed.length,
+        parentRequestId
       });
+
       res.json({
-        acceptCredexData: validCredexData,
-        dashboardData: dashboardData,
+        summary: {
+          accepted: acceptedCredex.map(r => r.credexID),
+          alreadyAccepted: alreadyAccepted.map(r => r.credexID),
+          failed: failed.map(r => ({ credexID: r.credexID, error: r.error }))
+        },
+        acceptCredexData: acceptedCredex.map(r => r.data),
+        dashboardData: dashboardData
       });
     } else {
-      // Handle the case when there are no valid data returned from AcceptCredexService
-      logger.warn("No valid data returned from AcceptCredexService", {
-        requestId,
-        credexIDs: req.body.credexIDs,
+      // If nothing was processed successfully
+      logger.warn("No credex were processed successfully", {
+        parentRequestId,
+        failedCount: failed.length,
+        errors: failed.map(f => f.error)
       });
-      res
-        .status(400)
-        .json({ error: "No valid data returned from AcceptCredexService" });
+      res.status(400).json({ 
+        error: "No credex were processed successfully",
+        details: failed.map(f => ({ credexID: f.credexID, error: f.error }))
+      });
     }
   } catch (err) {
     logger.error("Error in AcceptCredexBulkController", {
       error: (err as Error).message,
       stack: (err as Error).stack,
-      requestId,
+      parentRequestId,
     });
     res.status(500).json({ error: "Internal server error" });
   }
 
-  logger.debug("Exiting AcceptCredexBulkController", { requestId });
+  logger.debug("Exiting AcceptCredexBulkController", { parentRequestId });
 }

@@ -99,6 +99,10 @@ export const getCredexSchema = {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
   },
+  accountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
 };
 logger.debug("getCredexSchema initialized");
 

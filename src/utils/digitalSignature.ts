@@ -19,15 +19,19 @@ export async function digitallySign(
   });
   
   const query = `
+    MATCH (daynode:Daynode {Active: true})
     MATCH (signer:Member|Avatar {memberID: $signerID})
     MATCH (entity:${entityType} {${entityType.toLowerCase()}ID: $entityId})
-    CREATE (signer)-[:SIGNED]->(signature:Signature {
-      signatureID: apoc.create.uuid(),
-      createdAt: datetime(),
-      actionType: $actionType,
-      inputData: $inputData,
-      requestId: $requestId
-    })-[:SIGNED]->(entity)
+    CREATE
+      (signer)-[:SIGNED]->
+      (signature:Signature {
+        signatureID: apoc.create.uuid(),
+        createdAt: datetime(),
+        actionType: $actionType,
+        inputData: $inputData,
+        requestId: $requestId
+      })-[:SIGNED]->(entity),
+      (signature)-[:CREATED_ON]->(daynode)
   `;
 
   try {
