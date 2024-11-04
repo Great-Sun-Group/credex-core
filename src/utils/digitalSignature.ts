@@ -17,7 +17,7 @@ export async function digitallySign(
     actionType,
     requestId,
   });
-
+  
   const query = `
     MATCH (signer:Member|Avatar {memberID: $signerID})
     MATCH (entity:${entityType} {${entityType.toLowerCase()}ID: $entityId})
