@@ -7,5 +7,8 @@ export const authRequest = async (endpoint: string, data: any, token?: string) =
         headers: { Authorization: `Bearer ${token}` },
       }
     : {};
+  console.log("Making request to:", endpoint);
+  console.log("With data:", data);
+  console.log("And config:", config);
   return axios.post(endpoint, data, config);
 };
