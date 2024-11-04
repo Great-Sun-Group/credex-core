@@ -37,16 +37,9 @@ if (command === 'basic') {
   const testPath = path.join('tests', 'api', 'endpoints', 'devadmin.test.ts');
   jestCommand = `TEST_OPERATION=${command.toLowerCase()} jest "${testPath}" ${envFlags[env]}`;
 } else {
-  // Handle endpoint tests
-  const testPath = path.join('tests', 'api', 'endpoints', `${command}.test.ts`);
-  
-  // Build command with proper test name pattern and exact file match
-  jestCommand = `TEST_OPERATION=${remainingArgs[0] || ''} jest "^${testPath}$" ${envFlags[env]}`;
-}
-
-// Add remaining arguments as test arguments if present
-if (remainingArgs.length > 1 && !devAdminCommands.includes(command?.toLowerCase())) {
-  jestCommand = `${jestCommand} -- ${remainingArgs.slice(1).join(' ')}`;
+  // Handle endpoint tests - use case-insensitive pattern matching
+  const pattern = `tests/api/endpoints/.*${command.toLowerCase()}.*\\.test\\.ts`;
+  jestCommand = `jest --testPathPattern="${pattern}" ${envFlags[env]}`;
 }
 
 try {
@@ -56,7 +49,7 @@ try {
     env: {
       ...process.env,
       NODE_ENV: env,
-      TEST_PARAMS: remainingArgs.slice(1).join(' '),
+      TEST_PARAMS: remainingArgs.join(' '),
       API_ENV: env
     }
   });
