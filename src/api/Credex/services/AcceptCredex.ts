@@ -69,11 +69,6 @@ export async function AcceptCredexService(
           (acceptedCredex:Credex {credexID: $credexID})-[rel2:OFFERS]->
           (acceptor:Account)<-[:AUTHORIZED_FOR]-
           (signer:Member|Avatar { memberID: $signerID })
-        WITH issuer, rel1, acceptedCredex, rel2, acceptor, signer
-        WHERE acceptedCredex IS NOT NULL 
-          AND signer IS NOT NULL
-          AND rel1 IS NOT NULL
-          AND rel2 IS NOT NULL
         DELETE rel1, rel2
         CREATE (issuer)-[:OWES]->(acceptedCredex)-[:OWES]->(acceptor)
         SET acceptedCredex.acceptedAt = datetime()
