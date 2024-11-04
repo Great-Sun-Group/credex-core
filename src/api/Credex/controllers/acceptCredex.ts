@@ -19,10 +19,20 @@ export async function AcceptCredexController(
   res: express.Response
 ) {
   const requestId = req.id;
-  logger.debug("AcceptCredexController called", { requestId, body: req.body });
+  logger.debug("AcceptCredexController called", { 
+    body: req.body, 
+    requestId,
+    context: 'AcceptCredexController'
+  });
 
   try {
     const { credexID, signerID } = req.body;
+
+    logger.debug("RequestId check", {
+      requestId,
+      hasRequestId: !!requestId,
+      context: 'AcceptCredexController'
+    });
 
     if (!validateUUID(credexID)) {
       logger.warn("Invalid credexID provided", { credexID, requestId });
@@ -38,13 +48,14 @@ export async function AcceptCredexController(
       credexID,
       signerID,
       requestId,
+      context: 'AcceptCredexController'
     });
     const acceptCredexData = await AcceptCredexService(
       credexID,
       signerID,
       requestId
     );
-
+    
     if (!acceptCredexData) {
       logger.warn("Failed to accept Credex", { credexID, signerID, requestId });
       return res.status(400).json({ error: "Failed to accept Credex" });

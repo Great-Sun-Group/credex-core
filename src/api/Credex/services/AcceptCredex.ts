@@ -27,17 +27,42 @@ export async function AcceptCredexService(
 ): Promise<AcceptCredexResult | null> {
   logDebug(`Entering AcceptCredexService`, { credexID, signerID, requestId });
 
-  if (!credexID || !signerID) {
-    logError("AcceptCredexService: credexID and signerID are required", new Error("Missing parameters"), { credexID, signerID, requestId });
+  if (!credexID || !signerID || !requestId) {
+    logError("AcceptCredexService: Missing required parameters", new Error("Missing parameters"), { credexID, signerID, requestId });
     return null;
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    logDebug(`Attempting to accept Credex in database`, { credexID, signerID, requestId });
+    logDebug(`Attempting to accept Credex in database`, { 
+      credexID, 
+      signerID, 
+      requestId,
+      sessionState: ledgerSpaceSession.lastBookmark() 
+    });
 
     const result = await ledgerSpaceSession.executeWrite(async (tx) => {
+      // First, verify the nodes exist
+      const verifyQuery = `
+        MATCH (credex:Credex {credexID: $credexID})
+        MATCH (signer:Member|Avatar {memberID: $signerID})
+        RETURN 
+          credex IS NOT NULL as credexExists,
+          signer IS NOT NULL as signerExists
+      `;
+      
+      const verifyResult = await tx.run(verifyQuery, { credexID, signerID });
+      
+      if (verifyResult.records.length === 0) {
+        logError("Verification failed - Credex or Signer not found", new Error("Entities not found"), {
+          credexID,
+          signerID,
+          requestId
+        });
+        return null;
+      }
+
       const query = `
         MATCH
           (issuer:Account)-[rel1:OFFERS]->
@@ -53,22 +78,42 @@ export async function AcceptCredexService(
           signer.memberID AS signerID
       `;
 
-      const queryResult = await tx.run(query, { credexID, signerID });
+      try {
+        const queryResult = await tx.run(query, { credexID, signerID });
+        
+        if (queryResult.records.length === 0) {
+          logWarning(
+            `No matching records found for acceptance pattern. Debugging info:`,
+            { 
+              credexID, 
+              signerID, 
+              requestId,
+              summary: queryResult.summary.counters.updates()
+            }
+          );
+          return null;
+        }
 
-      if (queryResult.records.length === 0) {
-        logWarning(
-          `No records found or credex no longer pending for credexID: ${credexID}`,
-          { credexID, signerID, requestId }
+        const record = queryResult.records[0];
+        return {
+          acceptedCredexID: record.get("credexID"),
+          acceptorAccountID: record.get("acceptorAccountID"),
+          acceptorSignerID: record.get("signerID"),
+        };
+      } catch (txError) {
+        logError(
+          "Transaction error during Credex acceptance", 
+          txError as Error,
+          {
+            credexID,
+            signerID,
+            requestId,
+            errorCode: (txError as any).code,
+            errorMessage: (txError as Error).message
+          }
         );
-        return null;
+        throw txError;
       }
-
-      const record = queryResult.records[0];
-      return {
-        acceptedCredexID: record.get("credexID"),
-        acceptorAccountID: record.get("acceptorAccountID"),
-        acceptorSignerID: record.get("signerID"),
-      };
     });
 
     if (result) {
@@ -99,7 +144,17 @@ export async function AcceptCredexService(
 
     return result;
   } catch (error) {
-    logError(`Error accepting credex for credexID ${credexID}`, error as Error, { credexID, signerID, requestId });
+    logError(
+      `Error accepting credex for credexID ${credexID}`, 
+      error as Error, 
+      { 
+        credexID, 
+        signerID, 
+        requestId,
+        errorStack: (error as Error).stack,
+        errorCode: (error as any).code
+      }
+    );
     throw new Error(`Failed to accept Credex: ${(error as Error).message}`);
   } finally {
     await ledgerSpaceSession.close();
