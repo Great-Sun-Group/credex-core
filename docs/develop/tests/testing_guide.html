@@ -109,5 +109,111 @@ npm test credex getCredex phone credexID</code></pre>
     <h3>Integration Tests</h3>
     <pre><code>npm test basic           # Run all integration test scenarios</code></pre>
 
+
+    <h2>Test Development Guide</h2>
+
+    <h3>Endpoint Tests</h3>
+
+    <p>
+      Each API endpoint has a dedicated test file in tests/api/endpoints/ that:
+    </p>
+
+    <ul>
+      <li>Can be run independently for testing specific functionality</li>
+      <li>Handles its own authentication when needed</li>
+      <li>Validates required parameters</li>
+      <li>Can be imported and used by integration tests</li>
+    </ul>
+
+    <h3>Integration Test Patterns</h3>
+
+    <p>
+      Integration tests combine endpoint tests to verify complete workflows. The basic_integration.test.ts demonstrates this pattern:
+    </p>
+
+    <h4>Member Creation and Authentication Flow</h4>
+    <ul>
+      <li>Clears test environment (clearDevDBs)</li>
+      <li>Forces DCO setup (forceDCO)</li>
+      <li>Creates test members (onboardMember)</li>
+      <li>Verifies login functionality (login)</li>
+    </ul>
+
+    <h4>Credex Creation and Processing Flow</h4>
+    <ul>
+      <li>Creates secured credex (createCredex)</li>
+      <li>Tests acceptance flow (acceptCredex)</li>
+      <li>Tests bulk acceptance (acceptCredexBulk)</li>
+      <li>Verifies decline functionality (declineCredex)</li>
+      <li>Tests cancellation (cancelCredex)</li>
+    </ul>
+
+    <h4>Account and Balance Verification Flow</h4>
+    <ul>
+      <li>Verifies member dashboard (getMemberDashboardByPhone)</li>
+      <li>Checks credex details (getCredex)</li>
+      <li>Validates account ledger (getLedger)</li>
+    </ul>
+
+    <p>
+      When creating new integration tests:
+    </p>
+    <ul>
+      <li>Start with environment setup (clearforce)</li>
+      <li>Create necessary test members</li>
+      <li>Use endpoint tests in a logical sequence</li>
+      <li>Verify state changes after each operation</li>
+      <li>Clean up test data if needed</li>
+    </ul>
+
+    <h3>Adding Tests for New Endpoints</h3>
+
+    <p>
+      When adding a new API endpoint, follow these steps to create its test:
+    </p>
+
+    <ol>
+      <li>Add the operation to the appropriate endpoint test file (or create a new one if needed)</li>
+      <li>Define required parameters in the operationParams object</li>
+      <li>Create a test function that:
+        <ul>
+          <li>Validates required parameters</li>
+          <li>Makes the API request</li>
+          <li>Verifies the response</li>
+          <li>Maintains consistent delay between requests</li>
+        </ul>
+      </li>
+      <li>Update the command reference if adding a new operation type</li>
+    </ol>
+
+    <p>
+      Example test structure:
+    </p>
+
+    <pre><code>// Add to operationParams
+const operationParams = {
+  existingOp: ["param1", "param2"],
+  newOperation: ["phone", "requiredParam1", "requiredParam2"]
+};
+
+// Add test function
+(operation === "newOperation" ? it : it.skip)("newOperation", async () => {
+  if (operation !== "newOperation") return;
+  
+  const [, param1, param2] = params;
+  if (!param1 || !param2) {
+    throw new Error("Usage: npm test category newOperation <phone> <param1> <param2>");
+  }
+
+  console.log("\nExecuting new operation...");
+  const response = await authRequest("/newEndpoint", {
+    param1,
+    param2
+  }, jwt);
+  console.log("Response:", response.data);
+  expect(response.status).toBe(200);
+  await delay(DELAY_MS);
+});</code></pre>
+
   </body>
 </html>
