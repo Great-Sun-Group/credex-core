@@ -37,8 +37,8 @@ if (command === 'basic') {
   const testPath = path.join('tests', 'api', 'endpoints', 'devadmin', `${command.toLowerCase()}.test.ts`);
   jestCommand = `jest "${testPath}" ${envFlags[env]}`;
 } else {
-  // Handle endpoint tests - use case-insensitive pattern matching
-  const pattern = `tests/api/endpoints/.*${command.toLowerCase()}.*\\.test\\.ts`;
+  // Handle endpoint tests - use exact pattern matching
+  const pattern = `tests/api/endpoints/${command.toLowerCase()}\\.test\\.ts`;
   jestCommand = `jest --testPathPattern="${pattern}" ${envFlags[env]}`;
 }
 

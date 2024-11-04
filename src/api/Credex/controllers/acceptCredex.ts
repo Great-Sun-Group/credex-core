@@ -91,6 +91,25 @@ export async function AcceptCredexController(
       dashboardData: dashboardData,
     });
   } catch (err) {
+    // Handle specific error cases
+    if (err instanceof Error) {
+      if (err.message === 'Credex already accepted') {
+        logger.warn("Attempt to accept already accepted Credex", { 
+          error: err.message,
+          requestId 
+        });
+        return res.status(400).json({ error: "Credex has already been accepted" });
+      }
+      if (err.message.includes('digital signature')) {
+        logger.error("Digital signature error in AcceptCredexController", {
+          error: err.message,
+          stack: err.stack,
+          requestId,
+        });
+        return res.status(400).json({ error: `Failed to accept Credex: ${err.message}` });
+      }
+    }
+
     logger.error("Unhandled error in AcceptCredexController", {
       error: err instanceof Error ? err.message : "Unknown error",
       stack: err instanceof Error ? err.stack : undefined,
