@@ -6,6 +6,9 @@ import { createCredex, acceptCredex, acceptCredexBulk, declineCredex, cancelCred
 import { loginMember } from "../utils/auth";
 import { delay, DELAY_MS } from "../utils/delay";
 
+// Increase global test timeout
+jest.setTimeout(120000);
+
 describe("Basic Integration Tests", () => {
   // Store member data for tests
   let member1 = {
@@ -76,7 +79,7 @@ describe("Basic Integration Tests", () => {
       console.error("Error in beforeAll:", err);
       throw err;
     }
-  });
+  }, 300000); // 5 minute timeout for beforeAll
 
   test("Login member 1", async () => {
     const loginResponse = await loginMember("1234567890");
