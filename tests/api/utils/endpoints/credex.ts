@@ -39,6 +39,8 @@ export async function acceptCredex(credexID: string, signerID: string, jwt: stri
   }, jwt);
   console.log("Accept credex response:", response.data);
   expect(response.status).toBe(200);
+  expect(response.data.acceptCredexData).toBeTruthy();
+  expect(response.data.dashboardData).toBeTruthy();
   await delay(DELAY_MS);
   return response;
 }
@@ -51,6 +53,8 @@ export async function acceptCredexBulk(credexIDs: string[], signerID: string, jw
   }, jwt);
   console.log("Accept bulk response:", response.data);
   expect(response.status).toBe(200);
+  expect(response.data.acceptCredexData).toBeTruthy();
+  expect(response.data.dashboardData).toBeTruthy();
   await delay(DELAY_MS);
   return response;
 }

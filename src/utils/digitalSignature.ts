@@ -19,10 +19,10 @@ export async function digitallySign(
   });
 
   const query = `
-    MATCH (signer:Member|Avatar {id: $signerID})
-    MATCH (entity:${entityType} {id: $entityId})
+    MATCH (signer:Member|Avatar {memberID: $signerID})
+    MATCH (entity:${entityType} {${entityType.toLowerCase()}ID: $entityId})
     CREATE (signer)-[:SIGNED]->(signature:Signature {
-      id: apoc.create.uuid(),
+      signatureID: apoc.create.uuid(),
       createdAt: datetime(),
       actionType: $actionType,
       inputData: $inputData,
@@ -66,11 +66,11 @@ export async function getSignerMember(
   logger.debug("Attempting to get signer member", { signerID });
 
   const query = `
-    MATCH (signer:Member|Avatar {id: $signerID})
+    MATCH (signer:Member|Avatar {memberID: $signerID})
     RETURN 
       CASE 
-        WHEN signer:Member THEN signer.id 
-        WHEN signer:Avatar THEN [(signer)<-[:OWNS]-(member:Member) | member.id][0]
+        WHEN signer:Member THEN signer.memberID 
+        WHEN signer:Avatar THEN [(signer)<-[:OWNS]-(member:Member) | member.memberID][0]
       END AS memberID
   `;
 
