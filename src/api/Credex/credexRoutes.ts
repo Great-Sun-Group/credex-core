@@ -79,7 +79,7 @@ export default function CredexRoutes() {
 
   router.post(
     `/getCredex`,
-    validateRequest(getCredexSchema, "query"),
+    validateRequest(getCredexSchema),
     GetCredexController
   );
   logger.debug("Route registered: POST /getCredex");
