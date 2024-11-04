@@ -24,7 +24,7 @@ export const loginMember = async (phone: string): Promise<{jwt: string, memberID
 
     return {
       jwt: loginResponse.data.token,
-      memberID: dashboardResponse.data.memberID
+      memberID: dashboardResponse.data.memberDashboard.memberID
     };
   } catch (err) {
     const error = err as AxiosError;

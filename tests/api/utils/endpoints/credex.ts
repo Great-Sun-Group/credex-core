@@ -25,6 +25,8 @@ export async function createCredex(
   }, jwt);
   console.log("Create credex response:", response.data);
   expect(response.status).toBe(200);
+  expect(response.data.createCredexData).toBeTruthy();
+  expect(response.data.dashboardData).toBeTruthy();
   await delay(DELAY_MS);
   return response;
 }
