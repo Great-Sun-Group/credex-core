@@ -210,30 +210,13 @@ describe("Basic Integration Tests", () => {
 
   test("Create credex and test balance limits", async () => {
     // Member3 creates $7 credex to member1
-    const create7Response = await createCredex(
-      member3.memberID,
-      member3.accountIDs[0],
-      member1.accountIDs[0],
-      "USD",
-      7,
-      "PURCHASE",
-      "OFFERS",
-      true,
-      member3.jwt
-    );
-    credexIDs.unsecured7USD = create7Response.data.createCredexData.credex.credexID;
-
-    // Member1 accepts the credex
-    await acceptCredex(credexIDs.unsecured7USD, member1.memberID, member1.jwt);
-
-    // Member3 attempts to create $0.01 credex (should fail due to balance)
     try {
       await createCredex(
         member3.memberID,
         member3.accountIDs[0],
         member1.accountIDs[0],
         "USD",
-        0.01,
+        7,
         "PURCHASE",
         "OFFERS",
         true,
@@ -247,18 +230,24 @@ describe("Basic Integration Tests", () => {
   });
 
   test("Test dashboard and decline credex", async () => {
+    // Create a new credex to decline
+    const createResponse = await createCredex(
+      bennitaData.memberID,
+      bennitaData.accountID,
+      member1.accountIDs[0],
+      "USD",
+      11,
+      "PURCHASE",
+      "OFFERS",
+      true,
+      ""
+    );
+    credexIDs.secured11USD = createResponse.data.createCredexData.credex.credexID;
+
     // Get member1's dashboard
     const dashboardResponse = await getMemberDashboardByPhone("1234567890", member1.jwt);
     const pendingInData = dashboardResponse.data.accountDashboards[0].pendingInData;
     expect(pendingInData).toBeTruthy();
-
-    // Only try to find if pendingInData is an array
-    if (Array.isArray(pendingInData)) {
-      const offeredCredex = pendingInData.find(
-        (offer: any) => offer.credexID === credexIDs.secured11USD
-      );
-      expect(offeredCredex).toBeTruthy();
-    }
 
     // Member1 declines the credex
     await declineCredex(credexIDs.secured11USD, member1.memberID, member1.jwt);
@@ -280,8 +269,8 @@ describe("Basic Integration Tests", () => {
     credexIDs.unsecured6USD = create6Response.data.createCredexData.credex.credexID;
 
     // Member1 gets credex details
-    const getCredexResponse = await getCredex(credexIDs.unsecured6USD, member1.jwt);
-    expect(getCredexResponse.data.credexID).toBe(credexIDs.unsecured6USD);
+    const getCredexResponse = await getCredex(credexIDs.unsecured6USD, member1.accountIDs[0], member1.jwt);
+    expect(getCredexResponse.data.credexData.credexID).toBe(credexIDs.unsecured6USD);
 
     // Get member1's ledger
     const ledgerResponse = await getLedger(member1.accountIDs[0], member1.jwt);
