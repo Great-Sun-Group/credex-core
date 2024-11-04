@@ -102,14 +102,4 @@ export const getCredexSchema = {
 };
 logger.debug("getCredexSchema initialized");
 
-export const getLedgerSchema = {
-  accountID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-  },
-};
-logger.debug("getLedgerSchema initialized");
-
-// Add more schemas as needed for other Credex operations
-
 logger.debug("All credex validation schemas initialized");

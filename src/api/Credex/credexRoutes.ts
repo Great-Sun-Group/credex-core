@@ -5,7 +5,6 @@ import { AcceptCredexBulkController } from "./controllers/acceptCredexBulk";
 import { DeclineCredexController } from "./controllers/declineCredex";
 import { CancelCredexController } from "./controllers/cancelCredex";
 import { GetCredexController } from "./controllers/getCredex";
-import { GetLedgerController } from "./controllers/getLedger";
 import { validateRequest } from "../../middleware/validateRequest";
 import {
   createCredexSchema,
@@ -13,7 +12,6 @@ import {
   declineCredexSchema,
   cancelCredexSchema,
   getCredexSchema,
-  getLedgerSchema,
 } from "./credexValidationSchemas";
 import logger from "../../utils/logger";
 
@@ -86,16 +84,9 @@ export default function CredexRoutes() {
   );
   logger.debug("Route registered: POST /getCredex");
 
-  router.post(
-    `/getLedger`,
-    validateRequest(getLedgerSchema, "query"),
-    GetLedgerController
-  );
-  logger.debug("Route registered: POST /getLedger");
-
   logger.info("Credex routes initialized successfully", {
     module: "credexRoutes",
-    routesCount: 7,
+    routesCount: 6,
   });
 
   return router;
