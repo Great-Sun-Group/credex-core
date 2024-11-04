@@ -32,8 +32,13 @@
     <pre><code>tests/
   api/
     endpoints/          # Individual endpoint tests
+      devadmin/        # DevAdmin operation tests
     basic/             # Integration test scenarios
-    utils/             # Shared test utilities</code></pre>
+    utils/
+      endpoints/       # Shared endpoint functions
+      auth.ts         # Authentication utilities
+      delay.ts        # Request delay utilities
+      request.ts      # HTTP request utilities</code></pre>
 
     <h2>Local Development Testing</h2>
 
@@ -45,7 +50,7 @@
 npm test basic
 
 # Test a specific endpoint
-npm test member onboardMember Test Member1 1234567890 USD
+npm test onboardmember Test Member1 1234567890 USD
 
 # Reset test environment
 npm test clearforce</code></pre>
@@ -69,7 +74,7 @@ npm test clearforce</code></pre>
 npm test dev basic
 
 # Test endpoint on dev
-npm test dev member onboardMember Test Member1 1234567890 USD
+npm test dev onboardmember Test Member1 1234567890 USD
 
 # Reset dev environment
 npm test dev clearforce</code></pre>
@@ -89,28 +94,52 @@ npm test dev clearforce</code></pre>
 npm test forcedco        # Force Daily Credcoin Offering
 npm test clearforce      # Clear DBs and force DCO</code></pre>
 
-    <h3>Member Operations</h3>
-    <pre><code>npm test member onboardMember firstname lastname phone defaultDenom
-npm test member getMemberByHandle phone memberHandle
-npm test member getMemberDashboardByPhone phone</code></pre>
+    <h3>Member Endpoints</h3>
+    <pre><code>npm test onboardmember firstname lastname phone defaultDenom
+npm test getmemberbyhandle phone memberHandle
+npm test getmemberdashboardbyphone phone</code></pre>
 
-    <h3>Account Operations</h3>
-    <pre><code>npm test account getAccountByHandle phone accountHandle
-npm test account getLedger phone accountID</code></pre>
+    <h3>Account Endpoints</h3>
+    <pre><code>npm test getaccountbyhandle phone accountHandle
+npm test getledger phone accountID</code></pre>
 
-    <h3>Credex Operations</h3>
-    <pre><code>npm test credex createCredex phone issuerAccountID receiverAccountID Denomination InitialAmount credexType OFFERSorREQUESTS securedCredex
-npm test credex acceptCredex phone credexID
-npm test credex acceptCredexBulk phone credexIDs
-npm test credex declineCredex phone credexID
-npm test credex cancelCredex phone credexID
-npm test credex getCredex phone credexID</code></pre>
+    <h3>Credex Endpoints</h3>
+    <pre><code>npm test createcredex phone issuerAccountID receiverAccountID Denomination InitialAmount credexType OFFERSorREQUESTS securedCredex
+npm test acceptcredex phone credexID
+npm test acceptcredexbulk phone credexIDs
+npm test declinecredex phone credexID
+npm test cancelcredex phone credexID
+npm test getcredex phone credexID</code></pre>
 
     <h3>Integration Tests</h3>
     <pre><code>npm test basic           # Run all integration test scenarios</code></pre>
 
 
     <h2>Test Development Guide</h2>
+
+    <h3>Shared Endpoint Functions</h3>
+
+    <p>
+      Common endpoint functionality is encapsulated in shared functions under tests/api/utils/endpoints/:
+    </p>
+
+    <ul>
+      <li><strong>member.ts</strong>: Member-related operations (onboardMember, getMemberByHandle, etc.)</li>
+      <li><strong>account.ts</strong>: Account operations (getAccountByHandle, getLedger)</li>
+      <li><strong>credex.ts</strong>: Credex operations (createCredex, acceptCredex, etc.)</li>
+      <li><strong>devadmin.ts</strong>: Administrative operations (clearDevDBs, forceDCO)</li>
+    </ul>
+
+    <p>
+      These shared functions handle:
+    </p>
+    <ul>
+      <li>API requests and responses</li>
+      <li>Response validation</li>
+      <li>Error handling</li>
+      <li>Request delays</li>
+      <li>Logging</li>
+    </ul>
 
     <h3>Endpoint Tests</h3>
 
@@ -119,16 +148,16 @@ npm test credex getCredex phone credexID</code></pre>
     </p>
 
     <ul>
-      <li>Can be run independently for testing specific functionality</li>
-      <li>Handles its own authentication when needed</li>
-      <li>Validates required parameters</li>
-      <li>Can be imported and used by integration tests</li>
+      <li>Uses shared endpoint functions for core functionality</li>
+      <li>Focuses on parameter validation and usage</li>
+      <li>Handles authentication when needed</li>
+      <li>Provides clear usage instructions</li>
     </ul>
 
     <h3>Integration Test Patterns</h3>
 
     <p>
-      Integration tests combine endpoint tests to verify complete workflows. The basic_integration.test.ts demonstrates this pattern:
+      Integration tests use the same shared endpoint functions to verify complete workflows. The basic_integration.test.ts demonstrates this pattern:
     </p>
 
     <h4>Member Creation and Authentication Flow</h4>
@@ -161,7 +190,7 @@ npm test credex getCredex phone credexID</code></pre>
     <ul>
       <li>Start with environment setup (clearforce)</li>
       <li>Create necessary test members</li>
-      <li>Use endpoint tests in a logical sequence</li>
+      <li>Use shared endpoint functions in a logical sequence</li>
       <li>Verify state changes after each operation</li>
       <li>Clean up test data if needed</li>
     </ul>
@@ -169,42 +198,25 @@ npm test credex getCredex phone credexID</code></pre>
     <h3>Adding Tests for New Endpoints</h3>
 
     <p>
-      When adding a new API endpoint, follow these steps to create its test:
+      When adding a new API endpoint, follow these steps:
     </p>
 
     <ol>
-      <li>Add the operation to the appropriate endpoint test file (or create a new one if needed)</li>
-      <li>Define required parameters in the operationParams object</li>
-      <li>Create a test function that:
-        <ul>
-          <li>Validates required parameters</li>
-          <li>Makes the API request</li>
-          <li>Verifies the response</li>
-          <li>Maintains consistent delay between requests</li>
-        </ul>
-      </li>
-      <li>Update the command reference if adding a new operation type</li>
+      <li>Add shared endpoint function in appropriate utils/endpoints/ file</li>
+      <li>Create endpoint test file in tests/api/endpoints/</li>
+      <li>Import and use the shared function in both unit and integration tests</li>
+      <li>Update the command reference in this guide</li>
     </ol>
 
     <p>
-      Example test structure:
+      Example shared endpoint function:
     </p>
 
-    <pre><code>// Add to operationParams
-const operationParams = {
-  existingOp: ["param1", "param2"],
-  newOperation: ["phone", "requiredParam1", "requiredParam2"]
-};
+    <pre><code>// In utils/endpoints/member.ts
+import { authRequest } from "../request";
+import { delay, DELAY_MS } from "../delay";
 
-// Add test function
-(operation === "newOperation" ? it : it.skip)("newOperation", async () => {
-  if (operation !== "newOperation") return;
-  
-  const [, param1, param2] = params;
-  if (!param1 || !param2) {
-    throw new Error("Usage: npm test category newOperation <phone> <param1> <param2>");
-  }
-
+export async function newOperation(param1: string, param2: string, jwt: string) {
   console.log("\nExecuting new operation...");
   const response = await authRequest("/newEndpoint", {
     param1,
@@ -213,6 +225,30 @@ const operationParams = {
   console.log("Response:", response.data);
   expect(response.status).toBe(200);
   await delay(DELAY_MS);
+  return response;
+}</code></pre>
+
+    <p>
+      Example endpoint test:
+    </p>
+
+    <pre><code>// In endpoints/newoperation.test.ts
+import { newOperation } from "../utils/endpoints/member";
+import { loginMember } from "../utils/auth";
+
+describe("newOperation Endpoint Test", () => {
+  it("newOperation", async () => {
+    const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
+    const [phone, param1, param2] = params;
+    
+    if (!phone || !param1 || !param2) {
+      throw new Error("Usage: npm test newoperation <phone> <param1> <param2>");
+    }
+
+    // Login if needed
+    const auth = await loginMember(phone);
+    await newOperation(param1, param2, auth.jwt);
+  });
 });</code></pre>
 
   </body>

@@ -33,9 +33,9 @@ if (command === 'basic') {
   // Handle basic integration tests
   jestCommand = `jest --testPathPattern=tests/api/basic ${envFlags[env]}`;
 } else if (devAdminCommands.includes(command?.toLowerCase())) {
-  // Handle devadmin operations
-  const testPath = path.join('tests', 'api', 'endpoints', 'devadmin.test.ts');
-  jestCommand = `TEST_OPERATION=${command.toLowerCase()} jest "${testPath}" ${envFlags[env]}`;
+  // Handle devadmin operations - use the devadmin directory
+  const testPath = path.join('tests', 'api', 'endpoints', 'devadmin', `${command.toLowerCase()}.test.ts`);
+  jestCommand = `jest "${testPath}" ${envFlags[env]}`;
 } else {
   // Handle endpoint tests - use case-insensitive pattern matching
   const pattern = `tests/api/endpoints/.*${command.toLowerCase()}.*\\.test\\.ts`;
