@@ -11,46 +11,39 @@ function getBasePath() {
 
 // Menu data structure
 const menuData = {
-  "Credex in the World": {
-    title: "The plausible promise of the credex ecosystem",
-    items: {
-      "Strategic Orientation": [
-        {
-          text: "Our Campaign",
-          link: "strategic-orientation/our_campaign.html",
-        },
-        {
-          text: "African Heart",
-          link: "strategic-orientation/african_heart.html",
-        },
-        {
-          text: "Walk the Talk",
-          link: "strategic-orientation/walk_the_talk.html",
-        },
-      ],
-      Business: [
-        {
-          text: "COMING SOON",
-          link: "",
-        },
-      ],
-      Politics: [
-        {
-          text: "COMING SOON",
-          link: "",
-        },
-      ],
-      Culture: [
-        {
-          text: "COMING SOON",
-          link: "",
-        },
-      ],
-    },
+  "The Credex Movement": {
+    title: "The plausible promise of the credex ecosystem **COMING SOON**",
+    items: [
+      {
+        text: "Our Campaign",
+        link: "credex-movement/our_campaign.html",
+      },
+      {
+        text: "African Heart",
+        link: "credex-movement/african_heart.html",
+      },
+      {
+        text: "Walk the Talk",
+        link: "credex-movement/walk_the_talk.html",
+      },
+      {
+        text: "Our Politics",
+        link: "credex-movement/our_politics.html",
+      },
+    ],
   },
   "Member Guides": {
     title: "How to use the credex ecosystem **COMING SOON**",
-    items: [{ text: "Glossary", link: "member-guides/glossary.html" }],
+    items: [
+      {
+        text: "Using Credcoin",
+        link: "member-guides/credcoin.html",
+      },
+      {
+        text: "Glossary",
+        link: "member-guides/glossary.html",
+      },
+    ],
   },
   "Developer Guides": {
     title: "How to deploy and develop the credex ecosystem",
@@ -124,8 +117,8 @@ const menuData = {
       */
       ],
       "Core Cronjobs": [
-        { text: "Daily Credcoin Offering", link: "full-audit/DCO.html" },
-        { text: "Minute Transaction Queue", link: "full-audit/MTQ.html" },
+        { text: "Daily Credcoin Offering", link: "due-diligence/DCO.html" },
+        { text: "Minute Transaction Queue", link: "due-diligence/MTQ.html" },
       ],
       "Database Schemas": [
         {
@@ -153,6 +146,79 @@ const menuData = {
       ],
       Testing: [
         { text: "Testing Guide", link: "develop/tests/testing_guide.html" },
+      ],
+    },
+  },
+  "Great Sun Financial Inc.": {
+    title: "Business plans and investment opportunities",
+    items: {
+      Backgrounders: [
+        {
+          text: "Credex Ecosystem Services",
+          link: "great-sun/ecosystem_services.html",
+        },
+        {
+          text: "Base Revenue Model",
+          link: "great-sun/base_revenue.html",
+        },
+        {
+          text: "Software Costs",
+          link: "great-sun/software_costs.html",
+        },
+        {
+          text: "Positioning and Competition",
+          link: "great-sun/positioning_competition.html",
+        },
+        {
+          text: "Compliance",
+          link: "great-sun/compliance.html",
+        },
+      ],
+      "African Heart": [
+        {
+          text: "African Century",
+          link: "great-sun/african-heart/african_century.html",
+        },
+        {
+          text: "Continental Resource Flows",
+          link: "great-sun/african-heart/resource_flows.html",
+        },
+        {
+          text: "Continental Financing",
+          link: "great-sun/african-heart/financing.html",
+        },
+        {
+          text: "Demographics",
+          link: "great-sun/african-heart/demographics.html",
+        },
+      ],
+      "Wedge Market": [
+        {
+          text: "Clusters of Greatest Need",
+          link: "great-sun/greatest_need.html",
+        },
+        {
+          text: "Zimbabwe Heart",
+          link: "great-sun/zimbabwe_heart.html",
+        },
+        {
+          text: "Mbare Wedge",
+          link: "great-sun/mbare_wedge.html",
+        },
+      ],
+      "Pan-African Growth": [
+        {
+          text: "Transaction Markets",
+          link: "great-sun/transaction_markets.html",
+        },
+        {
+          text: "Investment Markets",
+          link: "great-sun/investment_markets.html",
+        },
+        {
+          text: "Commercial Hubs",
+          link: "great-sun/commercial_hubs.html",
+        },
       ],
     },
   },
@@ -228,10 +294,6 @@ const menuData = {
       {
         text: "Societal Impact",
         link: "trust-again/08-societal_impact.html",
-      },
-      {
-        text: "Utilitarian Value",
-        link: "trust-again/09-utilitarian_value.html",
       },
     ],
   },
