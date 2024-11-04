@@ -2,11 +2,13 @@ import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { denomFormatter } from "../../../utils/denomUtils";
 import { GetSecuredAuthorizationService } from "./GetSecuredAuthorization";
 import { logDebug, logInfo, logWarning, logError } from "../../../utils/logger";
+import { digitallySign } from "../../../utils/digitalSignature";
 
 export async function CreateCredexService(credexData: any) {
   logDebug(`Entering CreateCredexService`, { credexData });
 
   const {
+    memberID,
     issuerAccountID,
     receiverAccountID,
     InitialAmount,
@@ -15,6 +17,7 @@ export async function CreateCredexService(credexData: any) {
     OFFERSorREQUESTS,
     securedCredex = false,
     dueDate = "",
+    requestId = "",
   } = credexData;
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -81,7 +84,9 @@ export async function CreateCredexService(credexData: any) {
         MERGE (issuer)-[:${OFFEREDorREQUESTED}]->(newCredex)-[:${OFFEREDorREQUESTED}]->(receiver)
         RETURN
           newCredex.credexID AS credexID,
-          receiver.accountName AS receiverAccountName
+          receiver.accountName AS receiverAccountName,
+          issuer.accountID AS issuerAccountID,
+          daynode[$Denomination] AS cxxMultiplier
       `,
       {
         issuerAccountID,
@@ -93,6 +98,7 @@ export async function CreateCredexService(credexData: any) {
     );
 
     const credexID = createCredexQuery.records[0].get("credexID");
+    const cxxMultiplier = createCredexQuery.records[0].get("cxxMultiplier");
     logInfo(`Credex created successfully`, { credexID });
 
     // Add dueDate for unsecured credex
@@ -140,6 +146,39 @@ export async function CreateCredexService(credexData: any) {
       secured: securedCredex,
       dueDate: dueDate,
     };
+
+    // Create digital signature
+    try {
+      logDebug(`Creating digital signature for credex`, { credexID, memberID });
+      const inputData = JSON.stringify({
+        credexID,
+        issuerAccountID,
+        receiverAccountID,
+        InitialAmount,
+        Denomination,
+        credexType,
+        OFFERSorREQUESTS,
+        securedCredex,
+        dueDate,
+        cxxMultiplier,
+        createdAt: new Date().toISOString()
+      });
+
+      await digitallySign(
+        ledgerSpaceSession,
+        memberID,
+        "Credex",
+        credexID,
+        "CREATE_CREDEX",
+        inputData,
+        requestId
+      );
+
+      logDebug(`Digital signature created successfully`, { credexID });
+    } catch (error) {
+      logError(`Digital signature error for credexID ${credexID}`, error as Error, { credexID, memberID });
+      throw new Error(`Digital signature error: ${(error as Error).message}`);
+    }
 
     logInfo(`Credex creation completed`, { credexID: newCredex.credexID });
     return {

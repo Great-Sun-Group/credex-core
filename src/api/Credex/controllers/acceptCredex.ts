@@ -19,10 +19,20 @@ export async function AcceptCredexController(
   res: express.Response
 ) {
   const requestId = req.id;
-  logger.debug("AcceptCredexController called", { requestId, body: req.body });
+  logger.debug("AcceptCredexController called", { 
+    body: req.body, 
+    requestId,
+    context: 'AcceptCredexController'
+  });
 
   try {
     const { credexID, signerID } = req.body;
+
+    logger.debug("RequestId check", {
+      requestId,
+      hasRequestId: !!requestId,
+      context: 'AcceptCredexController'
+    });
 
     if (!validateUUID(credexID)) {
       logger.warn("Invalid credexID provided", { credexID, requestId });
@@ -38,13 +48,14 @@ export async function AcceptCredexController(
       credexID,
       signerID,
       requestId,
+      context: 'AcceptCredexController'
     });
     const acceptCredexData = await AcceptCredexService(
       credexID,
       signerID,
       requestId
     );
-
+    
     if (!acceptCredexData) {
       logger.warn("Failed to accept Credex", { credexID, signerID, requestId });
       return res.status(400).json({ error: "Failed to accept Credex" });
@@ -80,6 +91,25 @@ export async function AcceptCredexController(
       dashboardData: dashboardData,
     });
   } catch (err) {
+    // Handle specific error cases
+    if (err instanceof Error) {
+      if (err.message === 'Credex already accepted') {
+        logger.warn("Attempt to accept already accepted Credex", { 
+          error: err.message,
+          requestId 
+        });
+        return res.status(400).json({ error: "Credex has already been accepted" });
+      }
+      if (err.message.includes('digital signature')) {
+        logger.error("Digital signature error in AcceptCredexController", {
+          error: err.message,
+          stack: err.stack,
+          requestId,
+        });
+        return res.status(400).json({ error: `Failed to accept Credex: ${err.message}` });
+      }
+    }
+
     logger.error("Unhandled error in AcceptCredexController", {
       error: err instanceof Error ? err.message : "Unknown error",
       stack: err instanceof Error ? err.stack : undefined,

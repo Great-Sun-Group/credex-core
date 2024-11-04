@@ -1,33 +1,58 @@
 const { execSync } = require('child_process');
+const path = require('path');
 
-function runTest(args) {
-  const jestArgs = ['jest'];
-  const env = args.includes('dev') ? 'dev' : args.includes('stage') ? 'stage' : 'local';
-  
-  if (env !== 'local') {
-    jestArgs.push('--runInBand', env);
-    args = args.filter(arg => arg !== env);
-  }
+// Get command line arguments
+const args = process.argv.slice(2);
 
-  if (args.length > 0) {
-    const moduleName = args.find(arg => !arg.startsWith('"') && !arg.startsWith("'"));
-    const testName = args.find(arg => arg.startsWith('"') || arg.startsWith("'"));
+// Check for environment argument
+let env = 'local';
+let command = args[0];
+let remainingArgs = args.slice(1);
 
-    if (moduleName) {
-      jestArgs.push(`--testPathPattern=tests/api/${moduleName}`);
-    }
-
-    if (testName) {
-      jestArgs.push('-t', testName);
-    }
-  }
-
-  try {
-    execSync(`npx ${jestArgs.join(' ')}`, { stdio: 'inherit' });
-  } catch (error) {
-    console.error('Test execution failed:', error);
-    process.exit(1);
-  }
+// Handle environment selection
+if (command === 'dev' || command === 'stage') {
+  env = command;
+  command = remainingArgs[0];
+  remainingArgs = remainingArgs.slice(1);
 }
 
-runTest(process.argv.slice(2));
+// Special commands that map to devadmin operations
+const devAdminCommands = ['cleardevdbs', 'forcedco', 'clearforce'];
+
+// Build the Jest command
+let jestCommand;
+
+// Add environment-specific flags
+const envFlags = {
+  local: '',
+  dev: '--runInBand',
+  stage: '--runInBand'
+};
+
+if (command === 'basic') {
+  // Handle basic integration tests
+  jestCommand = `jest --testPathPattern=tests/api/basic ${envFlags[env]}`;
+} else if (devAdminCommands.includes(command?.toLowerCase())) {
+  // Handle devadmin operations - use the devadmin directory
+  const testPath = path.join('tests', 'api', 'endpoints', 'devadmin', `${command.toLowerCase()}.test.ts`);
+  jestCommand = `jest "${testPath}" ${envFlags[env]}`;
+} else {
+  // Handle endpoint tests - use exact pattern matching
+  const pattern = `tests/api/endpoints/${command.toLowerCase()}\\.test\\.ts`;
+  jestCommand = `jest --testPathPattern="${pattern}" ${envFlags[env]}`;
+}
+
+try {
+  // Execute the Jest command with environment variables
+  execSync(jestCommand, { 
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      NODE_ENV: env,
+      TEST_PARAMS: remainingArgs.join(' '),
+      API_ENV: env
+    }
+  });
+} catch (error) {
+  process.exit(1);
+}
