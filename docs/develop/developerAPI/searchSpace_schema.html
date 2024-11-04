@@ -6,37 +6,13 @@
     <title>searchSpace Schema</title>
     <link rel="stylesheet" href="../../style.css" />
     <script src="../../menu.js"></script>
-    <style>
-      .node-type {
-        padding: 2px 8px;
-        border-radius: 4px;
-        color: white;
-        display: inline-block;
-        margin: 2px 0;
-      }
-      .account {
-        background-color: #3498db;
-      }
-      .floating {
-        background-color: #006400;
-      }
-      .usd-secured {
-        background-color: #b87333;
-      }
-      .cad-secured {
-        background-color: #008080;
-      }
-      .credex {
-        background-color: #4b0082;
-      }
-    </style>
   </head>
   <body>
     <div class="header-logo">
       <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
     </div>
     <div class="container">
-      <h1>searchSpace Schema</h1>
+      <h1>searchSpace Schema (looks complete but needs new visual)</h1>
 
       <p>
         The SearchSpace schema represents a simplified and optimized version of
@@ -48,7 +24,7 @@
 
       <h2>Graph Structure Overview</h2>
       <pre>
-Account ----FLOATING----> SearchAnchor(FLOATING) ----FLOATING----> Account
+Account ----UNSECURED----> SearchAnchor(UNSECURED) ----UNSECURED----> Account
                                     |
                                     +----SEARCH_SECURED----> Credex
 
@@ -126,7 +102,7 @@ Account ----CAD_SECURED--> SearchAnchor(CAD_SECURED) ----CAD_SECURED----> Accoun
 
       <h2>Relationship Properties</h2>
 
-      <h3>FLOATING</h3>
+      <h3>UNSECURED</h3>
       <p>No properties</p>
 
       <h3>USD_SECURED, CAD_SECURED</h3>
@@ -139,7 +115,7 @@ Account ----CAD_SECURED--> SearchAnchor(CAD_SECURED) ----CAD_SECURED----> Accoun
 
       <ol>
         <li>
-          <strong>Accounts</strong> <span class="node-type account">Blue</span
+          <strong>Accounts</strong>
           ><br />
           These are simplified versions of the accounts in the ledger space.
           They contain only essential information needed for loop finding.
@@ -150,23 +126,19 @@ Account ----CAD_SECURED--> SearchAnchor(CAD_SECURED) ----CAD_SECURED----> Accoun
           These nodes come in three types:
           <ul>
             <li>
-              <span class="node-type floating">FLOATING</span> Represent
-              unsecured credit relationships between accounts.
+              UNSECURED Represent unsecured credit relationships between accounts.
             </li>
             <li>
-              <span class="node-type usd-secured">USD_SECURED</span> Represent
-              secured credit relationships in USD.
+              USD_SECURED Represent secured credit relationships in USD.
             </li>
             <li>
-              <span class="node-type cad-secured">CAD_SECURED</span> Represent
-              secured credit relationships in CAD.
+              CAD_SECURED Represent secured credit relationships in CAD.
             </li>
           </ul>
         </li>
 
         <li>
-          <strong>Credexes</strong> <span class="node-type credex">Purple</span
-          ><br />
+          <strong>Credexes</strong><br />
           These represent individual credit transactions in the system.
         </li>
 
@@ -174,7 +146,7 @@ Account ----CAD_SECURED--> SearchAnchor(CAD_SECURED) ----CAD_SECURED----> Accoun
           <strong>Relationships</strong>
           <ul>
             <li>
-              <strong>FLOATING:</strong> Connects accounts to floating
+              <strong>UNSECURED:</strong> Connects accounts to UNSECURED
               SearchAnchors, representing unsecured credit relationships.
             </li>
             <li>
