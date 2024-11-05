@@ -19,61 +19,61 @@ Each task is designed to be:
 ## Implementation Tasks
 
 ### Infrastructure Setup
-1. [AWS Base Infrastructure](tasks/001-aws-base-setup.md)
+1. [AWS Base Infrastructure](001-aws-base-setup.md)
    - Terraform configuration for Rekognition
    - IAM roles and policies
    - S3 bucket setup
 
-2. [Storage Configuration](tasks/002-storage-setup.md)
+2. [Storage Configuration](002-storage-setup.md)
    - S3 bucket policies
    - File organization structure
    - Retention policies
 
 ### API Development
-3. [Photo Upload API](tasks/003-photo-upload-api.md)
+3. [Photo Upload API](003-photo-upload-api.md)
    - WhatsApp integration
    - File validation
    - S3 storage integration
 
-4. [Verification API](tasks/004-verification-api.md)
+4. [Verification API](004-verification-api.md)
    - Rekognition integration
    - Response handling
    - Error management
 
 ### Verification Process
-5. [Image Quality Validation](tasks/005-image-quality.md)
+5. [Image Quality Validation](005-image-quality.md)
    - Resolution checking
    - Blur detection
    - Lighting assessment
 
-6. [ID Document Processing](tasks/006-id-processing.md)
+6. [ID Document Processing](006-id-processing.md)
    - Format validation
    - Text extraction
    - Data storage
 
-7. [Face Comparison Implementation](tasks/007-face-comparison.md)
+7. [Face Comparison Implementation](007-face-comparison.md)
    - Rekognition integration
    - Threshold management
    - Result handling
 
 ### Security & Fraud Prevention
-8. [Security Implementation](tasks/008-security-setup.md)
+8. [Security Implementation](008-security-setup.md)
    - Data encryption
    - Access controls
    - API security
 
-9. [Fraud Detection System](tasks/009-fraud-detection.md)
+9. [Fraud Detection System](009-fraud-detection.md)
    - Metrics tracking
    - Flag system
    - Blacklist management
 
 ### Testing & Documentation
-10. [Testing Suite](tasks/010-testing-suite.md)
+10. [Testing Suite](010-testing-suite.md)
     - Unit tests
     - Integration tests
     - Load testing
 
-11. [Documentation](tasks/011-documentation.md)
+11. [Documentation](011-documentation.md)
     - API documentation
     - User guides
     - Error catalogs
