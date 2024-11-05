@@ -1,7 +1,7 @@
 # Task: Verification API Implementation
 
 ## Overview
-Implement the Express.js API endpoint for photo verification using AWS Rekognition, including face comparison and result handling.
+Implement the Express.js API endpoint for photo verification using AWS Rekognition, including collection initialization, face comparison, and result handling.
 
 ## Prerequisites
 - Completed Task 001 (AWS Base Infrastructure)
@@ -11,7 +11,7 @@ Implement the Express.js API endpoint for photo verification using AWS Rekogniti
 
 ## Acceptance Criteria
 1. Express endpoint processes verification requests
-2. AWS Rekognition integration complete
+2. AWS Rekognition collection initialized on startup
 3. Face comparison with 90% similarity threshold
 4. Comprehensive error handling
 5. Verification results stored
@@ -20,18 +20,80 @@ Implement the Express.js API endpoint for photo verification using AWS Rekogniti
 
 ## Implementation Steps
 
-### 1. Create Verification Controller
+### 1. Create Collection Service
+```javascript
+// src/api/verification/services/collectionService.js
+import AWS from 'aws-sdk';
+import { logger } from '../utils/logger';
+
+export class CollectionService {
+  constructor() {
+    this.rekognition = new AWS.Rekognition();
+    this.collectionId = `credex-member-faces-${process.env.ENVIRONMENT}`;
+  }
+
+  async initialize() {
+    try {
+      await this.createCollection();
+      logger.info(`Rekognition collection ${this.collectionId} initialized`);
+    } catch (error) {
+      if (error.code !== 'ResourceAlreadyExistsException') {
+        logger.error('Failed to initialize Rekognition collection:', error);
+        throw error;
+      }
+      logger.info(`Rekognition collection ${this.collectionId} already exists`);
+    }
+  }
+
+  async createCollection() {
+    const params = {
+      CollectionId: this.collectionId
+    };
+    
+    await this.rekognition.createCollection(params).promise();
+  }
+
+  async ensureCollection() {
+    try {
+      await this.rekognition.describeCollection({
+        CollectionId: this.collectionId
+      }).promise();
+    } catch (error) {
+      if (error.code === 'ResourceNotFoundException') {
+        await this.initialize();
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  async deleteCollection() {
+    const params = {
+      CollectionId: this.collectionId
+    };
+    
+    await this.rekognition.deleteCollection(params).promise();
+  }
+}
+```
+
+### 2. Create Verification Controller
 ```javascript
 // src/api/verification/controllers/verificationController.js
 import AWS from 'aws-sdk';
 import { storeVerificationResult } from '../services/storageService';
 import { trackMetrics } from '../services/metricsService';
+import { CollectionService } from '../services/collectionService';
 
 const rekognition = new AWS.Rekognition();
+const collectionService = new CollectionService();
 const SIMILARITY_THRESHOLD = 90;
 
 export const verifyPhotos = async (req, res) => {
   try {
+    // Ensure collection exists
+    await collectionService.ensureCollection();
+
     const { idPhotoKey, selfiePhotoKey } = req.body;
     
     // Get images from S3
@@ -46,7 +108,8 @@ export const verifyPhotos = async (req, res) => {
       TargetImage: {
         Bytes: idPhoto
       },
-      SimilarityThreshold: SIMILARITY_THRESHOLD
+      SimilarityThreshold: SIMILARITY_THRESHOLD,
+      CollectionId: collectionService.collectionId
     }).promise();
     
     // Process results
@@ -83,7 +146,7 @@ export const verifyPhotos = async (req, res) => {
 };
 ```
 
-### 2. Create Processing Service
+### 3. Create Processing Service
 ```javascript
 // src/api/verification/services/processingService.js
 export const processComparisonResult = (result) => {
@@ -108,7 +171,7 @@ export const processComparisonResult = (result) => {
 };
 ```
 
-### 3. Create Storage Service
+### 4. Create Storage Service
 ```javascript
 // src/api/verification/services/storageService.js
 import { DynamoDB } from 'aws-sdk';
@@ -129,7 +192,7 @@ export const storeVerificationResult = async (result) => {
 };
 ```
 
-### 4. Create Metrics Service
+### 5. Create Metrics Service
 ```javascript
 // src/api/verification/services/metricsService.js
 import { CloudWatch } from 'aws-sdk';
@@ -163,7 +226,28 @@ export const trackMetrics = async (metrics) => {
 };
 ```
 
-### 5. Create Route Configuration
+### 6. Create Application Startup
+```javascript
+// src/app.ts
+import express from 'express';
+import { CollectionService } from './api/verification/services/collectionService';
+
+export async function startApp() {
+  const app = express();
+  const collectionService = new CollectionService();
+
+  // Initialize Rekognition collection
+  await collectionService.initialize();
+
+  // Configure middleware
+  app.use(express.json());
+  app.use('/api/verify', verificationRoutes);
+
+  return app;
+}
+```
+
+### 7. Create Route Configuration
 ```javascript
 // src/api/verification/routes/verificationRoutes.js
 import express from 'express';
@@ -179,6 +263,20 @@ export default router;
 ## Testing Requirements
 1. Unit Tests
 ```javascript
+describe('Collection Service', () => {
+  test('initializes collection on startup', async () => {
+    // Test implementation
+  });
+  
+  test('handles existing collection', async () => {
+    // Test implementation
+  });
+  
+  test('handles initialization errors', async () => {
+    // Test implementation
+  });
+});
+
 describe('Verification Processing', () => {
   test('handles successful match', async () => {
     // Test implementation
@@ -208,11 +306,16 @@ describe('Verification API Integration', () => {
   test('stores results correctly', async () => {
     // Test implementation
   });
+  
+  test('handles missing collection', async () => {
+    // Test implementation
+  });
 });
 ```
 
 ## Documentation Requirements
 1. API Documentation
+   - Collection initialization process
    - Endpoint specifications
    - Request/response formats
    - Error codes and messages
@@ -236,6 +339,7 @@ describe('Verification API Integration', () => {
 - [ ] Branch up to date with verify-project
 
 ## Notes
+- Collection initialization happens at application startup
 - Monitor Rekognition API usage and costs
 - Consider implementing result caching
 - Document retry strategies

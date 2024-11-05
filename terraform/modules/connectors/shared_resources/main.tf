@@ -610,11 +610,6 @@ resource "aws_s3_bucket_public_access_block" "verification_photos" {
   restrict_public_buckets = true
 }
 
-# Rekognition collection for face matching
-resource "aws_rekognition_collection" "member_faces" {
-  collection_id = "credex-member-faces-${var.environment}"
-}
-
 # IAM role for Rekognition access
 resource "aws_iam_role" "rekognition_role" {
   name = "rekognition-role-${var.environment}"
@@ -651,9 +646,13 @@ resource "aws_iam_role_policy" "rekognition_policy" {
           "rekognition:CompareFaces",
           "rekognition:DetectFaces",
           "rekognition:SearchFacesByImage",
-          "rekognition:IndexFaces"
+          "rekognition:IndexFaces",
+          "rekognition:CreateCollection",
+          "rekognition:DeleteCollection",
+          "rekognition:DescribeCollection",
+          "rekognition:ListCollections"
         ]
-        Resource = aws_rekognition_collection.member_faces.arn
+        Resource = "*"
       },
       {
         Effect = "Allow"
@@ -769,13 +768,9 @@ output "docs_cloudfront_domain_name" {
   value = aws_cloudfront_distribution.docs.domain_name
 }
 
-# New outputs for verification system
+# Outputs for verification system
 output "verification_photos_bucket" {
   value = aws_s3_bucket.verification_photos.id
-}
-
-output "rekognition_collection_id" {
-  value = aws_rekognition_collection.member_faces.id
 }
 
 output "rekognition_role_arn" {
