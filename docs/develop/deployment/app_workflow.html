@@ -141,6 +141,52 @@
         <li>Waits for service to stabilize (up to 40 attempts)</li>
       </ul>
 
+      <h2>Verification System Infrastructure</h2>
+
+      <h3>1. AWS Resources</h3>
+      <p>
+        The verification system requires the following AWS resources:
+      </p>
+      <ul>
+        <li>
+          <strong>S3 Bucket</strong>:
+          <ul>
+            <li>Name: credex-verification-photos-${environment}</li>
+            <li>Versioning enabled</li>
+            <li>Server-side encryption (AES-256)</li>
+            <li>Public access blocked</li>
+          </ul>
+        </li>
+        <li>
+          <strong>IAM Roles</strong>:
+          <ul>
+            <li>Rekognition service role</li>
+            <li>ECS task role with Rekognition permissions</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h3>2. Rekognition Setup</h3>
+      <p>
+        The Rekognition collection must be created via AWS SDK in the application code:
+      </p>
+      <ul>
+        <li>Collection ID: credex-member-faces-${environment}</li>
+        <li>Created during application initialization</li>
+        <li>Managed through IAM roles and policies</li>
+      </ul>
+
+      <h3>3. Security Configuration</h3>
+      <p>
+        The verification system includes the following security measures:
+      </p>
+      <ul>
+        <li>Encrypted storage for verification photos</li>
+        <li>Least privilege IAM roles</li>
+        <li>Private S3 bucket access</li>
+        <li>Secure API endpoints</li>
+      </ul>
+
       <h2>Documentation Deployment Process</h2>
 
       <p>
@@ -195,6 +241,13 @@
             <li>Documentation URL</li>
           </ul>
         </li>
+        <li>
+          <strong>Verification System</strong>:
+          <ul>
+            <li>S3 Bucket Name</li>
+            <li>Rekognition Role ARN</li>
+          </ul>
+        </li>
       </ul>
 
       <h2>Security Considerations</h2>
@@ -214,6 +267,14 @@
             <li>Images stored in private ECR repository</li>
             <li>Tagged with Git SHA for traceability</li>
             <li>Built with no-cache option for fresh dependencies</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Verification System Security</strong>:
+          <ul>
+            <li>Encrypted storage for verification photos</li>
+            <li>Private S3 bucket access</li>
+            <li>Least privilege IAM roles</li>
           </ul>
         </li>
       </ol>
@@ -248,6 +309,14 @@
             <li>CloudFront cache invalidation</li>
           </ul>
         </li>
+        <li>
+          <strong>Verification System Issues</strong>:
+          <ul>
+            <li>S3 bucket permissions</li>
+            <li>Rekognition role permissions</li>
+            <li>Collection creation logs</li>
+          </ul>
+        </li>
       </ol>
 
       <h2>Post-Deployment Verification</h2>
@@ -266,6 +335,14 @@
           <ul>
             <li>Verify documentation is accessible at https://docs.${DOMAIN}</li>
             <li>Check for any broken links or missing content</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Verification System</strong>:
+          <ul>
+            <li>Verify S3 bucket configuration</li>
+            <li>Test Rekognition collection access</li>
+            <li>Validate IAM role permissions</li>
           </ul>
         </li>
       </ol>

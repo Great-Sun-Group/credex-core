@@ -1,7 +1,7 @@
 # Task: Face Comparison Implementation
 
 ## Overview
-Implement face comparison functionality using AWS Rekognition, including similarity threshold management, face detection optimization, and result handling.
+Implement face comparison functionality using AWS Rekognition, including collection access, similarity threshold management, face detection optimization, and result handling.
 
 ## Prerequisites
 - Completed Task 004 (Verification API)
@@ -26,9 +26,11 @@ Implement face comparison functionality using AWS Rekognition, including similar
 import AWS from 'aws-sdk';
 import { validateFaceQuality } from '../utils/faceQuality';
 import { MetricsService } from './metricsService';
+import { CollectionService } from './collectionService';
 
 const rekognition = new AWS.Rekognition();
 const metrics = new MetricsService();
+const collectionService = new CollectionService();
 
 export class FaceComparison {
   constructor(config = {}) {
@@ -39,6 +41,9 @@ export class FaceComparison {
 
   async compareFaces(sourceImage, targetImage) {
     try {
+      // Ensure collection exists
+      await collectionService.ensureCollection();
+
       // Validate face quality
       const sourceQuality = await this.validateFaceQuality(sourceImage);
       const targetQuality = await this.validateFaceQuality(targetImage);
@@ -62,6 +67,12 @@ export class FaceComparison {
 
       return comparisonResult;
     } catch (error) {
+      if (error.code === 'ResourceNotFoundException') {
+        // Collection doesn't exist, try to create it
+        await collectionService.initialize();
+        // Retry comparison
+        return this.compareFaces(sourceImage, targetImage);
+      }
       console.error('Face comparison error:', error);
       throw new Error('Failed to compare faces');
     }
@@ -122,7 +133,8 @@ export class FaceComparison {
         Bytes: targetImage
       },
       SimilarityThreshold: this.similarityThreshold,
-      QualityFilter: 'HIGH'
+      QualityFilter: 'HIGH',
+      CollectionId: collectionService.collectionId
     };
 
     const response = await rekognition.compareFaces(params).promise();
@@ -266,6 +278,10 @@ describe('Face Comparison', () => {
     // Test implementation
   });
   
+  test('handles missing collection', async () => {
+    // Test implementation
+  });
+  
   test('tracks metrics properly', async () => {
     // Test implementation
   });
@@ -286,12 +302,17 @@ describe('Face Comparison Integration', () => {
   test('manages edge cases appropriately', async () => {
     // Test implementation
   });
+  
+  test('recovers from missing collection', async () => {
+    // Test implementation
+  });
 });
 ```
 
 ## Documentation Requirements
 1. Technical Documentation
    - Face comparison process
+   - Collection access handling
    - Quality thresholds
    - Metric tracking
    - Performance optimization
@@ -316,6 +337,7 @@ describe('Face Comparison Integration', () => {
 - Consider caching comparison results
 - Document threshold configurations
 - Monitor false positive/negative rates
+- Handle collection access errors gracefully
 
 ## Estimated Time
 5-7 hours
