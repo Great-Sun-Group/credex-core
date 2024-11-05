@@ -123,3 +123,34 @@ variable "create_acm" {
   type        = bool
   default     = true
 }
+
+# Verification system variables
+variable "verification_photos_retention_days" {
+  description = "Number of days to retain verification photos before archival"
+  type        = number
+  default     = 90
+}
+
+variable "verification_photos_expiration_days" {
+  description = "Number of days to retain verification photos before deletion"
+  type        = number
+  default     = 365
+}
+
+variable "verification_temp_retention_days" {
+  description = "Number of days to retain temporary verification files"
+  type        = number
+  default     = 1
+}
+
+variable "verification_processed_transition_days" {
+  description = "Number of days before transitioning processed files to STANDARD_IA"
+  type        = number
+  default     = 30
+}
+
+variable "verification_processed_archive_days" {
+  description = "Number of days before archiving processed files to Glacier"
+  type        = number
+  default     = 90
+}
