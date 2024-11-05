@@ -96,7 +96,17 @@
         "events:*",
         "xray:*",
         "tag:*",
-        "cloudfront:*"
+        "cloudfront:*",
+        "rekognition:CreateCollection",
+        "rekognition:DeleteCollection",
+        "rekognition:DescribeCollection",
+        "rekognition:ListCollections",
+        "rekognition:CompareFaces",
+        "rekognition:DetectFaces",
+        "rekognition:SearchFacesByImage",
+        "rekognition:IndexFaces",
+        "rekognition:DeleteFaces",
+        "rekognition:ListFaces"
       ],
       "Resource": "*"
     },
@@ -117,6 +127,16 @@
       "Condition": {
         "StringLike": {
           "iam:AWSServiceName": "ecs.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/rekognition.amazonaws.com/AWSServiceRoleForRekognition",
+      "Condition": {
+        "StringLike": {
+          "iam:AWSServiceName": "rekognition.amazonaws.com"
         }
       }
     }
