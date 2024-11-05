@@ -570,6 +570,136 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
   })
 }
 
+# Verification System Resources
+
+# S3 bucket for verification photos
+resource "aws_s3_bucket" "verification_photos" {
+  bucket = "credex-verification-photos-${var.environment}"
+
+  tags = merge(var.common_tags, {
+    Name = "verification-photos-${var.environment}"
+  })
+}
+
+# Enable versioning for verification photos bucket
+resource "aws_s3_bucket_versioning" "verification_photos" {
+  bucket = aws_s3_bucket.verification_photos.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# Enable server-side encryption for verification photos bucket
+resource "aws_s3_bucket_server_side_encryption_configuration" "verification_photos" {
+  bucket = aws_s3_bucket.verification_photos.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Block public access for verification photos bucket
+resource "aws_s3_bucket_public_access_block" "verification_photos" {
+  bucket = aws_s3_bucket.verification_photos.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Rekognition collection for face matching
+resource "aws_rekognition_collection" "member_faces" {
+  collection_id = "credex-member-faces-${var.environment}"
+}
+
+# IAM role for Rekognition access
+resource "aws_iam_role" "rekognition_role" {
+  name = "rekognition-role-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "rekognition.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = merge(var.common_tags, {
+    Name = "rekognition-role-${var.environment}"
+  })
+}
+
+# IAM policy for Rekognition access
+resource "aws_iam_role_policy" "rekognition_policy" {
+  name = "rekognition-policy-${var.environment}"
+  role = aws_iam_role.rekognition_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "rekognition:CompareFaces",
+          "rekognition:DetectFaces",
+          "rekognition:SearchFacesByImage",
+          "rekognition:IndexFaces"
+        ]
+        Resource = aws_rekognition_collection.member_faces.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = "${aws_s3_bucket.verification_photos.arn}/*"
+      }
+    ]
+  })
+}
+
+# Add Rekognition permissions to ECS task role
+resource "aws_iam_role_policy_attachment" "ecs_task_rekognition" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonRekognitionFullAccess"
+}
+
+# Add S3 permissions to ECS task role for verification photos
+resource "aws_iam_role_policy" "ecs_task_s3_verification" {
+  name = "ecs-task-s3-verification-${var.environment}"
+  role = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "${aws_s3_bucket.verification_photos.arn}/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = aws_s3_bucket.verification_photos.arn
+      }
+    ]
+  })
+}
+
 # Outputs
 output "vpc_id" {
   value = aws_vpc.main.id
@@ -637,4 +767,17 @@ output "docs_bucket_website_endpoint" {
 
 output "docs_cloudfront_domain_name" {
   value = aws_cloudfront_distribution.docs.domain_name
+}
+
+# New outputs for verification system
+output "verification_photos_bucket" {
+  value = aws_s3_bucket.verification_photos.id
+}
+
+output "rekognition_collection_id" {
+  value = aws_rekognition_collection.member_faces.id
+}
+
+output "rekognition_role_arn" {
+  value = aws_iam_role.rekognition_role.arn
 }
