@@ -21,19 +21,19 @@ export async function GetCredexController(
   logger.debug("Entering GetCredexController", { requestId });
 
   try {
-    const { credexID, accountID } = req.query;
+    const { credexID, accountID } = req.body;
     logger.debug("Received get Credex request", {
       requestId,
       credexID,
       accountID,
     });
 
-    if (!validateUUID(credexID as string)) {
+    if (!validateUUID(credexID)) {
       logger.warn("Invalid credexID", { credexID, requestId });
       return res.status(400).json({ error: "Invalid credexID" });
     }
 
-    if (!validateUUID(accountID as string)) {
+    if (!validateUUID(accountID)) {
       logger.warn("Invalid accountID", { accountID, requestId });
       return res.status(400).json({ error: "Invalid accountID" });
     }
@@ -44,8 +44,8 @@ export async function GetCredexController(
       accountID,
     });
     const responseData = await GetCredexService(
-      credexID as string,
-      accountID as string
+      credexID,
+      accountID
     );
 
     if (!responseData) {

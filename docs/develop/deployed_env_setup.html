@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Environment Setup</title>
+    <link rel="stylesheet" href="../style.css" />
+    <script src="../menu.js"></script>
+  </head>
+  <body>
+    <div class="header-logo">
+      <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+
+    <h1>Deployed Environments Setup</h1>
+
+    <h3>Types of Environments</h3>
+    <p>Our infrastructure supports two distinct types of environments:</p>
+
+    <ol>
+        <li>CI/CD Pipeline Environments (dev/stage/prod)</li>
+        <li>Model Environments (for research and forecasting)</li>
+    </ol>
+
+    <h2>CI/CD Pipeline Environments</h2>
+
+    <p>These environments form our development and deployment pipeline, progressing from development through staging to production. They are designed for application development, testing, and production deployment.</p>
+
+    <h3>Environment Types</h3>
+
+    <ol>
+        <li><strong>Development Environment</strong>
+            <ul>
+                <li>Subdomain: dev.mycredex.dev</li>
+                <li>Purpose: Active development and initial testing</li>
+                <li>Branch: 'dev' or any branch with a name including the pattern "deploy"</li>
+                <li>Configuration:
+                    <ul>
+                        <li>NODE_ENV: development</li>
+                        <li>LOG_LEVEL: debug</li>
+                        <li>Smaller instance sizes for cost efficiency</li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+
+        <li><strong>Staging Environment</strong>
+            <ul>
+                <li>Subdomain: stage.mycredex.dev</li>
+                <li>Purpose: Pre-production testing and validation</li>
+                <li>Branch: 'stage'</li>
+                <li>Configuration:
+                    <ul>
+                        <li>NODE_ENV: staging</li>
+                        <li>LOG_LEVEL: debug</li>
+                        <li>Production-like instance sizes</li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+
+        <li><strong>Production Environment</strong>
+            <ul>
+                <li>Domain: mycredex.app</li>
+                <li>Purpose: Live production environment</li>
+                <li>Branch: 'prod'</li>
+                <li>Configuration:
+                    <ul>
+                        <li>NODE_ENV: production</li>
+                        <li>LOG_LEVEL: info</li>
+                        <li>Full-size production instances</li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+    </ol>
+
+    <h3>Infrastructure Configuration</h3>
+
+    <p>Each environment is deployed with:</p>
+    <ul>
+        <li>Dedicated VPC with proper networking</li>
+        <li>ECS Fargate for application hosting</li>
+        <li>Neo4j Enterprise instances for data storage</li>
+        <li>Health monitoring and automated recovery</li>
+        <li>Proper security groups and access controls</li>
+    </ul>
+
+    <h2>Model Environments</h2>
+
+    <h3>Purpose</h3>
+    <ul>
+        <li>Economic modeling and simulation</li>
+        <li>Research deployments</li>
+        <li>Data analysis and forecasting</li>
+        <li>Testing economic theories and scenarios</li>
+    </ul>
+
+    <h3>Top Level Authorization</h3>
+    <p>Top level authorization is managed by Ryan Watson. In his personal accounts are:</p>
+    <ul>
+        <li>Domains <code>mycredex.app</code> and <code>mycredex.dev</code> are registered at <a href="https://www.hover.com/">Hover.com</a>, with nameservers pointed to Route 53 at AWS.</li>
+        <li>A master AWS root login has been created under hq@greatsunfinancial.ca, an email address managed by a Google Workspace with primary domain ryanlukewatson.com. 2FA is implemented for the root login, linked to Ryan's phone. Root users have been set for AWS accounts associated with each domain, isolating the production environment to it's own AWS account and domain. Production domain <code>mycredex.app</code> and development/testing/modeling domain <code>mycredex.dev</code> both have a manual Route 53 and IAM configuration as below.</li>
+    </ul>
+
+    <p>In case of Ryan's incapacitation, contact sister Hayley Watson for root access.</p>
+
+    <h3>Neo4j License</h3>
+    <p>Great Sun Financial Inc. has received a Neo4j Startup License, whose value is required as a secret below. A single value is currently used across all environments, but an environment can be configured under a different license by updating its individual secret.</p>
+
+    <h3>AWS Manual Configuration</h3>
+    <p>Within the root account above:</p>
+    <ul>
+        <li>a <code>production</code> AWS account has been set up to manage the production deployment to <code>mycredex.app</code></li>
+        <li>a <code>development</code> AWS account has been set up with identical configuration to manage the development and modeling deployments to <code>mycredex.dev</code>.</li>
+        <li>Each environment has been manually configured as below by logging into the console as the root of the respective AWS account.</li>
+    </ul>
+
+    <h4>Region</h4>
+    <p>We deploy to <code>af-south-1</code>, which must be specifically activated in an AWS account before resources can be deployed there.</p>
+
+    <h4>Route 53</h4>
+    <p>Route 53 is manually configured with a hosted zone that manages traffic at the highest level of domain and subdomain DNS records.</p>
+
+    <h4>IAM</h4>
+    <p>To manage access to AWS resources for deployment, we have manually created the following IAM setup:</p>
+
+    <ol>
+        <li>IAM Policy (both accounts):
+            <ul>
+                <li><code>credex-core-permissions</code>: Policy that defines the permissions needed for deployment</li>
+            </ul>
+        </li>
+
+        <li>IAM Group (both accounts):
+            <ul>
+                <li><code>credex-core-deployment</code>: Group assigned the above policy to connect it will deployment users below.</li>
+            </ul>
+        </li>
+
+        <li>a. IAM Users in <code>production</code> assigned to group above:
+            <ul>
+                <li><code>credex-core-production-deployment</code>: User for production deployments</li>
+            </ul>
+        </li>
+
+        <li>b. IAM Users in <code>development</code> assigned to group above:
+            <ul>
+                <li><code>credex-core-development-deployment</code>: User for development deployments</li>
+                <li><code>credex-core-staging-deployment</code>: User for staging deployments</li>
+                <li><code>credex-core-model_01-deployment</code>: User required for each model environment deployment</li>
+            </ul>
+        </li>
+    </ol>
+
+    <p>The <code>credex-core-permissions</code> policy is attached to the <code>credex-core-deployment</code>, granting necessary permissions to all deployment users. While stored and implemented in AWS in both accounts and manually updated through the console, we keep a local copy of this policy up to date at <a href="deployment/credex-core-permissions.json">credex-core-permissions.json</a>, which the policy in each account should match.</p>
+
+    <p><strong>When Terraform scripts are modified, both the IAM policies may need to be updated.</strong> This is uncommon, but must be kept in mind.</p>
+
+    <h3>Secrets and Github Environment Setup</h3>
+    <p>Each of the IAM users above has generated an access key, which has been entered in a Github Environment, along with the Neo4J License referenced above:</p>
+
+    <p><strong>AWS_ACCESS_KEY</strong><br>
+    <strong>AWS_SECRET_ACCESS_KEY</strong><br>
+    <strong>NEO4J_ENTERPRISE_LICENSE</strong></p>
+
+    <h2>Infrastructure as Code</h2>
+    <p>From this point the credex-core api can be deployed into any environment and made securely available on the public internet at api.mycredex.app or chosen_env_prefix.api.mycredex.dev. The process requires the injection of database and other secrets into the GitHub Environment prior to app deployment.</p>
+
+    <h3>Github direct to AWS</h3>
+    <p>The Github Actions (Workflows) manage an S3 bucket and DynamoDB table that stores a terraform state for every deployed environment.</p>
+
+    <h3>Terraform</h3>
+    <p>Our terraform codebase inserts DNS records into Route 53 for each subdomain, which links it to an environment that is deployed and managed by the codebase.</p>
+
+    <h2>Adding Research and Modeling Deployments</h2>
+
+    <p>To add a new research/modeling environment, several files need to be updated:</p>
+
+    <ol>
+        <li><strong>Terraform Environment File</strong><br>
+        Create a new file in <code>/terraform/environments/</code> based on <code>model_001.tf</code></li>
+
+        <li><strong>Update locals.tf</strong><br>
+        Add the new environment to the env_config map in <a href="../terraform/locals.tf">terraform/locals.tf</a></li>
+
+        <li><strong>Update variables.tf</strong><br>
+        Add the new environment to the validation in <a href="../terraform/variables.tf">terraform/variables.tf</a></li>
+
+        <li><strong>GitHub Workflows</strong><br>
+        Update the environment matrix in:
+            <ul>
+                <li><code>.github/workflows/connectors.yml</code></li>
+                <li><code>.github/workflows/databases.yml</code></li>
+                <li><code>.github/workflows/app.yml</code></li>
+            </ul>
+            Add the new environment to the matrix:
+            <pre><code>strategy:
+  matrix:
+    environment: [development, staging, production, model_001, model_002]</code></pre>
+        </li>
+
+        <li><strong>IAM Setup</strong>
+            <ul>
+                <li>Create a new IAM user in mycredex.dev profile: <code>credex-core-model_002-deployment</code></li>
+                <li>Add user to the <code>credex-core-deployment</code> group</li>
+                <li>Generate access keys and add to GitHub Environment secrets</li>
+            </ul>
+        </li>
+
+        <li><strong>GitHub Environment</strong><br>
+        Create a new environment in GitHub repository settings:
+            <ul>
+                <li>Name: model_002</li>
+                <li>Add required secrets:
+                    <ul>
+                        <li>AWS_ACCESS_KEY</li>
+                        <li>AWS_SECRET_ACCESS_KEY</li>
+                        <li>NEO4J_ENTERPRISE_LICENSE</li>
+                        <li>(Other secrets after database deployment etc)</li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+
+        <li><strong>DNS Configuration</strong><br>
+        The terraform code will automatically:
+            <ul>
+                <li>Create necessary DNS records in Route 53</li>
+                <li>Link subdomain (model-002.api.mycredex.dev) to the environment</li>
+            </ul>
+        </li>
+    </ol>
+
+    <p>Remember to:</p>
+    <ul>
+        <li>Use unique CIDR ranges for each environment</li>
+        <li>Configure instance sizes appropriate for research workloads</li>
+        <li>Consider data isolation requirements</li>
+        <li>Update documentation to reflect new environment</li>
+    </ul>
+
+    <h2>Summary of Deployment Architecture</h2>
+    <p>The <code>dev</code> branch (which is our default/main branch on Github) and any branch starting with "deploy" can be deployed to the <code>development</code> environment, and is linked to the <code>dev.mycredex.dev</code> subdomain, with <code>NODE_ENV</code> set to <code>development</code> and LOG_LEVEL set to <code>debug</code>.</p>
+
+    <p>The <code>stage</code> branch is deployed to the <code>staging</code> environment, linked to the <code>stage.mycredex.dev</code> subdomain, with <code>NODE_ENV</code> set to <code>staging</code> and LOG_LEVEL set to <code>info</code>.</p>
+
+    <p>Branches can be configured to deploy to research environments with unique environment names such as <code>model_001</code>, which would be linked to the <code>model_001.mycredex.dev</code> subdomain, with <code>NODE_ENV</code> set to <code>staging</code> and LOG_LEVEL set to <code>info</code>.</p>
+
+    <p>The <code>prod</code> branch is deployed to the <code>production</code> environment, linked to the <code>api.mycredex.app</code> subdomain, with <code>NODE_ENV</code> set to <code>production</code> and LOG_LEVEL set to <code>info</code>.</p>
+
+    <h2>Deployment Process</h2>
+    <p>When a branch is ready to be deployed, with appropriate Github Environment, permissions, etc:</p>
+
+    <h3>1. Run the Github Action <code>Deploy Connectors</code></h3>
+    <p>Deploys the core infrastructure including DNS records, load balancers, security groups, etc</p>
+
+    <h3>2. Run the Github Action <code>Deploy Databases</code></h3>
+    <p>Deploys ledgerSpace and searchSpace neo4j databases. Currently skipped, and cloud-based Neo4j Aura is being used.</p>
+
+    <h3>3. Enter Application Secrets</h3>
+    <p>Once the connectors and databases have been deployed, the database secrets output by the latter must be entered into it's respective Github Environment, along with the additional secrets below.</p>
+
+    <p><strong>NEO_4J_LEDGER_SPACE_BOLT_URL</strong><br>
+    <strong>NEO_4J_LEDGER_SPACE_PASS</strong><br>
+    <strong>NEO_4J_LEDGER_SPACE_USER</strong><br>
+    <strong>NEO_4J_SEARCH_SPACE_BOLT_URL</strong><br>
+    <strong>NEO_4J_SEARCH_SPACE_PASS</strong><br>
+    <strong>NEO_4J_SEARCH_SPACE_USER</strong><br>
+    outputs from <code>databases.yml</code> workflow</p>
+
+    <p><strong>OPEN_EXCHANGE_RATES_API</strong><br>
+    single paid account with separate keys for <code>prod</code>, <code>stage</code> and <code>dev</code>.</p>
+
+    <p><strong>JWT_SECRET</strong><br>
+    <strong>CLIENT_API_KEY</strong><br>
+    unique random strings</p>
+
+    <h3>4. Run the Github Action <code>Deploy App</code></h3>
+    <p>Builds and deploys the application image.</p>
+
+    <h1>Full Environment Setup Complete</h1>
+    <p>This completes the steps to deploy credex-core to production, staging, development, and model environments. Each workflow now only needs to be run on changes to it's relevant part of the codebase. Connectors will be redeployed rarely, Databases occasionally, and Application daily or more.</p>
+
+</body>
+</html>

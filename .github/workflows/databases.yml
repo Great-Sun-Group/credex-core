@@ -8,21 +8,14 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
 
+    env:
+      ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
-
-      - name: Set Environment
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
-            echo "ENVIRONMENT=production" >> $GITHUB_ENV
-          elif [[ "${{ github.ref }}" == "refs/heads/stage" ]]; then
-            echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-          else
-            echo "ENVIRONMENT=development" >> $GITHUB_ENV
-          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -34,8 +27,11 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Terraform Init
+      - name: Setup and Initialize Terraform Backend
         run: |
+          echo "Current environment: ${ENVIRONMENT}"
+
+          # Initialize Terraform
           cd terraform
           echo "Initializing Terraform..."
           terraform init \
@@ -48,19 +44,31 @@ jobs:
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
+          # Add dummy values for required variables since they're not used by the databases module
+          TF_VAR_jwt_secret: "dummy"
+          TF_VAR_client_api_key: "dummy"
+          TF_VAR_open_exchange_rates_api: "dummy"
         run: |
           cd terraform
-          terraform workspace select ${{ env.ENVIRONMENT }} || terraform workspace new ${{ env.ENVIRONMENT }}
+          echo "Current environment: ${ENVIRONMENT}"
+          echo "Planning Terraform changes..."
           terraform plan -input=false -out=tfplan -target=module.databases
 
       - name: Terraform Apply
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
+          # Add dummy values for required variables since they're not used by the databases module
+          TF_VAR_jwt_secret: "dummy"
+          TF_VAR_client_api_key: "dummy"
+          TF_VAR_open_exchange_rates_api: "dummy"
         run: |
           cd terraform
-          terraform workspace select ${{ env.ENVIRONMENT }}
+          echo "Current environment: ${ENVIRONMENT}"
+          echo "Applying Terraform changes..."
           terraform apply -auto-approve -input=false tfplan
+
+          echo "Terraform apply completed successfully"
 
       - name: Print Database Infrastructure Outputs
         run: |

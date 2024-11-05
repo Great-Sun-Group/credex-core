@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Client App Developer Guide</title>
+    <link rel="stylesheet" href="../../style.css" />
+    <script src="../../menu.js"></script>
+  </head>
+  <body>
+    <div class="header-logo">
+      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+    <div class="container">
+      <h1>Client App Developer Guide</h1>
+
+      <p>
+        This quick reference guide for developers working on client apps for the
+        credex-core API contains common processes, commands and links.
+      </p>
+
+      <h2>Development Process</h2>
+
+      <ol>
+        <li>
+          Create a codespace on <code>prod</code> or pull the latest from that
+          branch to your local to run a dev server on the latest stable code.
+        </li>
+        <li>
+          <code>npm run docker:dev</code> fires up a dev server in an isolated
+          Docker environment on your machine/codespace and exposes the API on
+          port 3000.
+        </li>
+        <li>
+          You can now hit the server using localhost:3000 or at the codespace
+          url with the Github Token in the header.
+          <ul>
+            <li>
+              The codespace url is available in the PORT window, and the Github
+              Token can be printed with <code>echo $GITHUB_TOKEN</code> and sent
+              in the request header as <code>X-Github-Token</code>.
+            </li>
+          </ul>
+        </li>
+        <li>
+          Use the codebase you are developing to hit the dev server endpoints
+          and process the results.
+        </li>
+      </ol>
+
+      <p>
+        These endpoints can be used to wipe, initialize, and progress your
+        development databases. They are not active in the production deployment.
+      </p>
+
+      <ul>
+        <li><code>v1/devadmin/clearDevDBs</code> to clear the databases</li>
+        <li>
+          <code>v1/devadmin/forceDCO</code> to run the DCO and advance the day
+          state, including new exchange rates.
+          <ul>
+            <li>
+              If the database has been wiped or is new, this will first create
+              initialization nodes and relationship then run the first DCO,
+              bringing the credex ecosystem online.
+            </li>
+          </ul>
+        </li>
+      </ul>
+
+    </div>
+  </body>
+</html>

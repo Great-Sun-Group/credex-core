@@ -1,11 +1,11 @@
 import axios from "axios";
 
 const getBaseUrl = () => {
-  const args = process.argv.slice(2);
-  if (args.includes("dev")) {
-    return "https://dev.api.mycredex.app/v1";
-  } else if (args.includes("stage")) {
-    return "https://stage.api.mycredex.app/v1";
+  const apiEnv = process.env.API_ENV;
+  if (apiEnv === "dev") {
+    return "https://dev.mycredex.dev/v1";
+  } else if (apiEnv === "stage") {
+    return "https://stage.mycredex.dev/v1";
   }
   return "http://localhost:3000/v1"; // Default to local
 };
@@ -13,11 +13,32 @@ const getBaseUrl = () => {
 const API_BASE_URL = getBaseUrl();
 
 // Set up global axios defaults
-axios.defaults.baseURL = API_BASE_URL;
-axios.defaults.headers.common["Content-Type"] = "application/json";
+const instance = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
 
-// Add a response interceptor for better error logging
-axios.interceptors.response.use(
+// Add request interceptor to handle auth token
+instance.interceptors.request.use(
+  (config) => {
+    // If token is in the request body, move it to Authorization header
+    if (config.data && config.data.token) {
+      config.headers.Authorization = `Bearer ${config.data.token}`;
+      // Remove token from request body
+      const { token, ...rest } = config.data;
+      config.data = rest;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for better error logging
+instance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
@@ -29,9 +50,8 @@ axios.interceptors.response.use(
 
 // Global setup
 beforeAll(() => {
-  console.log(`Using API_BASE_URL: ${axios.defaults.baseURL}`);
+  console.log(`Using API_BASE_URL: ${API_BASE_URL}`);
 });
 
 // Export the configured axios instance
-export default axios;
-
+export default instance;

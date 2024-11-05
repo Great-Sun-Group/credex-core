@@ -117,4 +117,12 @@ export const updateSendOffersToSchema = {
 };
 logger.debug("updateSendOffersToSchema initialized");
 
+export const getLedgerSchema = {
+  accountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+  },
+};
+logger.debug("getLedgerSchema initialized");
+
 logger.debug("All account validation schemas initialized");

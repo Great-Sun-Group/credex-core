@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Credex Instance Sizing - Technical Specifications</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Credex Instance Sizing - Technical Specifications</h1>
+
+      <nav>
+        <p><a href="instance_sizing.html">← Back to Overview</a></p>
+      </nav>
+
+      <h2>Neo4j Instance Specifications</h2>
+
+      <h3>LedgerSpace Configuration</h3>
+      <ul>
+        <li>
+          <strong>Instance Type</strong>: r5.12xlarge
+          <ul>
+            <li>48 vCPU (limited to 24 cores by license)</li>
+            <li>384 GB RAM</li>
+            <li>Network: Up to 10 Gbps</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Storage</strong>:
+          <ul>
+            <li>500 GB gp3 SSD</li>
+            <li>IOPS: 3000 baseline</li>
+            <li>Throughput: 125 MB/s baseline</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Neo4j Configuration</strong>:
+          <ul>
+            <li>dbms.memory.heap.initial_size=256g</li>
+            <li>dbms.memory.heap.max_size=256g</li>
+            <li>dbms.memory.pagecache.size=64g</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h3>SearchSpace Configuration</h3>
+      <ul>
+        <li>
+          <strong>Instance Type</strong>: r5.12xlarge (same as LedgerSpace)
+        </li>
+        <li><strong>Storage</strong>: Same as LedgerSpace</li>
+        <li>
+          <strong>Neo4j Configuration</strong>:
+          <ul>
+            <li>dbms.memory.heap.initial_size=256g</li>
+            <li>dbms.memory.heap.max_size=256g</li>
+            <li>dbms.memory.pagecache.size=64g</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h2>Network Architecture</h2>
+
+      <h3>VPC Configuration</h3>
+      <ul>
+        <li><strong>CIDR Block</strong>: 10.0.0.0/16</li>
+        <li>
+          <strong>Availability Zones</strong>: 3 AZs for high availability
+        </li>
+        <li>
+          <strong>Subnets</strong>:
+          <ul>
+            <li>Public Subnets: 10.0.0.0/24, 10.0.1.0/24, 10.0.2.0/24</li>
+            <li>
+              Private App Subnets: 10.0.10.0/24, 10.0.11.0/24, 10.0.12.0/24
+            </li>
+            <li>
+              Private DB Subnets: 10.0.20.0/24, 10.0.21.0/24, 10.0.22.0/24
+            </li>
+          </ul>
+        </li>
+      </ul>
+
+      <h3>Security Groups</h3>
+      <ul>
+        <li>
+          <strong>ALB Security Group</strong>:
+          <ul>
+            <li>Inbound: 80, 443 from 0.0.0.0/0</li>
+            <li>Outbound: All to VPC CIDR</li>
+          </ul>
+        </li>
+        <li>
+          <strong>ECS Security Group</strong>:
+          <ul>
+            <li>Inbound: 8080 from ALB Security Group</li>
+            <li>Outbound: All to VPC CIDR</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Neo4j Security Group</strong>:
+          <ul>
+            <li>Inbound: 7687 from ECS Security Group</li>
+            <li>Inbound: 7474 from ECS Security Group</li>
+            <li>Outbound: All to VPC CIDR</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h2>Application Layer</h2>
+
+      <h3>ECS Fargate Configuration</h3>
+      <ul>
+        <li>
+          <strong>Task Definition</strong>:
+          <ul>
+            <li>CPU: 2 vCPU</li>
+            <li>Memory: 4 GB</li>
+            <li>Container Port: 8080</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Auto Scaling</strong>:
+          <ul>
+            <li>Minimum Tasks: 10</li>
+            <li>Maximum Tasks: 30</li>
+            <li>Scale Out: CPU > 70% for 3 minutes</li>
+            <li>Scale In: CPU < 30% for 10 minutes</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h3>Load Balancer Configuration</h3>
+      <ul>
+        <li><strong>Type</strong>: Application Load Balancer</li>
+        <li>
+          <strong>Listeners</strong>:
+          <ul>
+            <li>HTTP (80) → Redirect to HTTPS</li>
+            <li>HTTPS (443) → Forward to target group</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Target Group</strong>:
+          <ul>
+            <li>Protocol: HTTP</li>
+            <li>Port: 8080</li>
+            <li>Health Check: /health</li>
+            <li>Interval: 30 seconds</li>
+            <li>Timeout: 5 seconds</li>
+            <li>Healthy Threshold: 2</li>
+            <li>Unhealthy Threshold: 3</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h2>Monitoring and Logging</h2>
+
+      <h3>CloudWatch Configuration</h3>
+      <ul>
+        <li>
+          <strong>Metrics</strong>:
+          <ul>
+            <li>Neo4j CPU Utilization</li>
+            <li>Neo4j Memory Usage</li>
+            <li>ECS Service CPU Utilization</li>
+            <li>ECS Service Memory Usage</li>
+            <li>ALB Request Count</li>
+            <li>ALB Target Response Time</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Alarms</strong>:
+          <ul>
+            <li>Neo4j CPU > 80% for 5 minutes</li>
+            <li>Neo4j Memory > 85% for 5 minutes</li>
+            <li>ALB 5XX errors > 1% for 5 minutes</li>
+            <li>Target Response Time > 1s for 5 minutes</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h2>Backup and Recovery</h2>
+
+      <h3>Backup Configuration</h3>
+      <ul>
+        <li>
+          <strong>Neo4j Backups</strong>:
+          <ul>
+            <li>Full backup daily at 00:00 UTC</li>
+            <li>Transaction logs every 6 hours</li>
+            <li>Retention: 30 days</li>
+          </ul>
+        </li>
+        <li>
+          <strong>S3 Configuration</strong>:
+          <ul>
+            <li>Lifecycle Policy: Move to IA after 7 days</li>
+            <li>Versioning: Enabled</li>
+            <li>Encryption: AWS KMS</li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </body>
+</html>

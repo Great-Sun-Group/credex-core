@@ -5,6 +5,7 @@ import { UpdateAccountController } from "./controllers/updateAccount";
 import { AuthorizeForAccountController } from "./controllers/authorizeForAccount";
 import { UnauthorizeForAccountController } from "./controllers/unauthorizeForAccount";
 import { UpdateSendOffersToController } from "./controllers/updateSendOffersTo";
+import { GetLedgerController } from "./controllers/getLedger";
 import { errorHandler } from "../../middleware/errorHandler";
 import { validateRequest } from "../../middleware/validateRequest";
 import {
@@ -14,6 +15,7 @@ import {
   authorizeForAccountSchema,
   unauthorizeForAccountSchema,
   updateSendOffersToSchema,
+  getLedgerSchema,
 } from "./accountValidationSchemas";
 import logger from "../../utils/logger";
 
@@ -63,6 +65,14 @@ export default function AccountRoutes() {
     UpdateSendOffersToController,
     errorHandler
   );
+
+  router.post(
+    `/getLedger`,
+    validateRequest(getLedgerSchema),
+    GetLedgerController,
+    errorHandler
+  );
+  logger.debug("Route registered: POST /getLedger");
 
   logger.info("Account routes initialized successfully");
   return router;

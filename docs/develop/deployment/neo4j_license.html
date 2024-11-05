@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neo4j License Management</title>
+    <link rel="stylesheet" href="../../style.css" />
+    <script src="../../menu.js"></script>
+  </head>
+  <body>
+    <div class="header-logo">
+      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+    <div class="container">
+      <h1>Neo4j License Management</h1>
+
+        <h2>License Limitations</h2>
+        <p>
+          We use a Neo4j Enterprise Startup Edition license with the following
+          limitations:
+        </p>
+        <ul>
+          <li>
+            Up to 3 Machines for production use (24 Cores / 256 GB RAM each)
+          </li>
+          <li>Up to 6 Machines for development</li>
+          <li>
+            Up to 3 Machines for non-production internal testing (e.g., staging)
+          </li>
+        </ul>
+
+      <h2>Current Allocation</h2>
+      <ul>
+        <li>
+          <strong>Production</strong>: 2 instances
+          <ul>
+            <li>1 LedgerSpace</li>
+            <li>1 SearchSpace</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Staging</strong>: 2 instances
+          <ul>
+            <li>1 LedgerSpace</li>
+            <li>1 SearchSpace</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Development</strong>: 2 instances
+          <ul>
+            <li>1 LedgerSpace</li>
+            <li>1 SearchSpace</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h2>License Management Process</h2>
+        <ol>
+          <li>The license is stored as a secret in GitHub Actions
+          (<code>NEO4J_ENTERPRISE_LICENSE</code>).</li>
+          <li>During deployment, the license is retrieved and applied to Neo4j
+          instances.</li>
+          <li>Instance counts and specifications are enforced through Terraform
+          configurations in <code>terraform/neo4j.tf</code> and
+          <code>terraform/variables.tf</code>.</li>
+          <li>Pre-deployment checks verify compliance with license limitations.</li>
+          <li>Regular audits are conducted to ensure ongoing compliance.</li>
+        </ol>
+        
+      <h2>License Update Process</h2>
+      <ol>
+        <li>Obtain the new license file from Neo4j.</li>
+        <li>
+          Update the <code>NEO4J_ENTERPRISE_LICENSE</code> secret in GitHub
+          Environments.
+        </li>
+        <li>Trigger a new deployment to apply the updated license.</li>
+      </ol>
+    </div>
+  </body>
+</html>

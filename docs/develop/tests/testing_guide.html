@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Credex API Testing Guide</title>
+    <link rel="stylesheet" href="../../style.css" />
+    <script src="../../menu.js"></script>
+  </head>
+  <body>
+    <div class="header-logo">
+      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+    <h1>Credex API Testing Guide</h1>
+
+    <h2>Test Architecture</h2>
+
+    <p>
+      The Credex test suite is organized into three main categories:
+    </p>
+
+    <ul>
+      <li><strong>Endpoint Tests</strong>: Individual API endpoint tests that can be run in isolation or as part of larger flows</li>
+      <li><strong>Integration Tests</strong>: End-to-end scenarios testing multiple endpoints in sequence</li>
+      <li><strong>DevAdmin Operations</strong>: Administrative commands for test environment setup</li>
+    </ul>
+
+    <p>
+      Tests are structured in the following directories:
+    </p>
+
+    <pre><code>tests/
+  api/
+    endpoints/          # Individual endpoint tests
+      devadmin/        # DevAdmin operation tests
+    basic/             # Integration test scenarios
+    utils/
+      endpoints/       # Shared endpoint functions
+      auth.ts         # Authentication utilities
+      delay.ts        # Request delay utilities
+      request.ts      # HTTP request utilities</code></pre>
+
+    <h2>Local Development Testing</h2>
+
+    <p>
+      During local development, tests run against your local API server. Basic test commands:
+    </p>
+
+    <pre><code># Run all integration tests
+npm test basic
+
+# Test a specific endpoint
+npm test onboardmember Test Member1 1234567890 USD
+
+# Reset test environment
+npm test clearforce</code></pre>
+
+    <h2>Testing Against Deployed Environments</h2>
+
+    <p>
+      To test against deployed environments, add the environment prefix to any test command:
+    </p>
+
+    <ul>
+      <li><strong>Development</strong>: dev.mycredex.dev - prefix commands with <code>dev</code></li>
+      <li><strong>Staging</strong>: stage.mycredex.dev - prefix commands with <code>stage</code></li>
+    </ul>
+
+    <p>
+      Examples of testing against the development environment:
+    </p>
+
+    <pre><code># Run integration tests on dev
+npm test dev basic
+
+# Test endpoint on dev
+npm test dev onboardmember Test Member1 1234567890 USD
+
+# Reset dev environment
+npm test dev clearforce</code></pre>
+
+    <p>
+      Note: Tests on deployed environments run with --runInBand to prevent concurrency issues.
+    </p>
+
+    <h2>Command Reference</h2>
+
+    <p>
+      All commands below can be run against any environment by adding the environment prefix (dev/stage).
+    </p>
+
+    <h3>DevAdmin Operations</h3>
+    <pre><code>npm test cleardevdbs     # Clear test databases
+npm test forcedco        # Force Daily Credcoin Offering
+npm test clearforce      # Clear DBs and force DCO</code></pre>
+
+    <h3>Member Endpoints</h3>
+    <pre><code>npm test onboardmember firstname lastname phone defaultDenom
+npm test getmemberbyhandle phone memberHandle
+npm test getmemberdashboardbyphone phone</code></pre>
+
+    <h3>Account Endpoints</h3>
+    <pre><code>npm test getaccountbyhandle phone accountHandle
+npm test getledger phone accountID</code></pre>
+
+    <h3>Credex Endpoints</h3>
+    <pre><code>npm test createcredex phone issuerAccountID receiverAccountID Denomination InitialAmount credexType OFFERSorREQUESTS securedCredex
+npm test acceptcredex phone credexID
+npm test acceptcredexbulk phone credexIDs
+npm test declinecredex phone credexID
+npm test cancelcredex phone credexID
+npm test getcredex phone credexID</code></pre>
+
+    <h3>Integration Tests</h3>
+    <pre><code>npm test basic           # Run all integration test scenarios</code></pre>
+
+
+    <h2>Test Development Guide</h2>
+
+    <h3>Shared Endpoint Functions</h3>
+
+    <p>
+      Common endpoint functionality is encapsulated in shared functions under tests/api/utils/endpoints/:
+    </p>
+
+    <ul>
+      <li><strong>member.ts</strong>: Member-related operations (onboardMember, getMemberByHandle, etc.)</li>
+      <li><strong>account.ts</strong>: Account operations (getAccountByHandle, getLedger)</li>
+      <li><strong>credex.ts</strong>: Credex operations (createCredex, acceptCredex, etc.)</li>
+      <li><strong>devadmin.ts</strong>: Administrative operations (clearDevDBs, forceDCO)</li>
+    </ul>
+
+    <p>
+      These shared functions handle:
+    </p>
+    <ul>
+      <li>API requests and responses</li>
+      <li>Response validation</li>
+      <li>Error handling</li>
+      <li>Request delays</li>
+      <li>Logging</li>
+    </ul>
+
+    <h3>Endpoint Tests</h3>
+
+    <p>
+      Each API endpoint has a dedicated test file in tests/api/endpoints/ that:
+    </p>
+
+    <ul>
+      <li>Uses shared endpoint functions for core functionality</li>
+      <li>Focuses on parameter validation and usage</li>
+      <li>Handles authentication when needed</li>
+      <li>Provides clear usage instructions</li>
+    </ul>
+
+    <h3>Integration Test Patterns</h3>
+
+    <p>
+      Integration tests use the same shared endpoint functions to verify complete workflows. The basic_integration.test.ts demonstrates this pattern:
+    </p>
+
+    <h4>Member Creation and Authentication Flow</h4>
+    <ul>
+      <li>Clears test environment (clearDevDBs)</li>
+      <li>Forces DCO setup (forceDCO)</li>
+      <li>Creates test members (onboardMember)</li>
+      <li>Verifies login functionality (login)</li>
+    </ul>
+
+    <h4>Credex Creation and Processing Flow</h4>
+    <ul>
+      <li>Creates secured credex (createCredex)</li>
+      <li>Tests acceptance flow (acceptCredex)</li>
+      <li>Tests bulk acceptance (acceptCredexBulk)</li>
+      <li>Verifies decline functionality (declineCredex)</li>
+      <li>Tests cancellation (cancelCredex)</li>
+    </ul>
+
+    <h4>Account and Balance Verification Flow</h4>
+    <ul>
+      <li>Verifies member dashboard (getMemberDashboardByPhone)</li>
+      <li>Checks credex details (getCredex)</li>
+      <li>Validates account ledger (getLedger)</li>
+    </ul>
+
+    <p>
+      When creating new integration tests:
+    </p>
+    <ul>
+      <li>Start with environment setup (clearforce)</li>
+      <li>Create necessary test members</li>
+      <li>Use shared endpoint functions in a logical sequence</li>
+      <li>Verify state changes after each operation</li>
+      <li>Clean up test data if needed</li>
+    </ul>
+
+    <h3>Adding Tests for New Endpoints</h3>
+
+    <p>
+      When adding a new API endpoint, follow these steps:
+    </p>
+
+    <ol>
+      <li>Add shared endpoint function in appropriate utils/endpoints/ file</li>
+      <li>Create endpoint test file in tests/api/endpoints/</li>
+      <li>Import and use the shared function in both unit and integration tests</li>
+      <li>Update the command reference in this guide</li>
+    </ol>
+
+    <p>
+      Example shared endpoint function:
+    </p>
+
+    <pre><code>// In utils/endpoints/member.ts
+import { authRequest } from "../request";
+import { delay, DELAY_MS } from "../delay";
+
+export async function newOperation(param1: string, param2: string, jwt: string) {
+  console.log("\nExecuting new operation...");
+  const response = await authRequest("/newEndpoint", {
+    param1,
+    param2
+  }, jwt);
+  console.log("Response:", response.data);
+  expect(response.status).toBe(200);
+  await delay(DELAY_MS);
+  return response;
+}</code></pre>
+
+    <p>
+      Example endpoint test:
+    </p>
+
+    <pre><code>// In endpoints/newoperation.test.ts
+import { newOperation } from "../utils/endpoints/member";
+import { loginMember } from "../utils/auth";
+
+describe("newOperation Endpoint Test", () => {
+  it("newOperation", async () => {
+    const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
+    const [phone, param1, param2] = params;
+    
+    if (!phone || !param1 || !param2) {
+      throw new Error("Usage: npm test newoperation <phone> <param1> <param2>");
+    }
+
+    // Login if needed
+    const auth = await loginMember(phone);
+    await newOperation(param1, param2, auth.jwt);
+  });
+});</code></pre>
+
+  </body>
+</html>
