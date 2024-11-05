@@ -91,6 +91,10 @@ const menuData = {
           link: "develop/deployment/neo4j_license.html",
         },
         {
+          text: "S3 Storage Structure for ID Verification Data",
+          link: "develop/deployment/storage_configuration.html",
+        },
+        {
           text: "Infrastructure Scaling Report",
           link: "develop/deployment/instance_sizing.html",
         },
