@@ -872,6 +872,10 @@ resource "aws_s3_bucket_replication_configuration" "verification_photos" {
     id     = "verification-backup"
     status = "Enabled"
 
+    delete_marker_replication {
+      status = "Enabled"
+    }
+
     filter {
       prefix = "processed/"  # Only replicate processed files
     }
