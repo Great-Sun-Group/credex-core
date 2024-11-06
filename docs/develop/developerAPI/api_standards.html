@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Standards</title>
+    <link rel="stylesheet" href="../../style.css" />
+    <script src="../../menu.js"></script>
+</head>
+<body>
+    <div class="header-logo">
+      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+    <h1>API Standards</h1>
+
+    <p>This document outlines the standardization requirements for all API endpoints in the credex-core project.</p>
+
+    <h2>Module Organization</h2>
+
+    <ul>
+        <li><strong>Member Module:</strong> Member management and authentication</li>
+        <li><strong>Account Module:</strong> Account operations and management</li>
+        <li><strong>Credex Module:</strong> Credex transaction operations</li>
+        <li><strong>Avatar Module:</strong> Recurring payment management</li>
+        <li><strong>Admin Module:</strong> Production environment administration</li>
+        <li><strong>DevAdmin Module:</strong> Development environment utilities (not deployed to production)</li>
+    </ul>
+
+    <h2>Endpoint Structure</h2>
+
+    <h3>HTTP Method</h3>
+    <p>All endpoints must use the POST method for consistency and security. This includes operations that might traditionally use other HTTP methods:</p>
+    <ul>
+        <li>Creation operations (traditionally POST)</li>
+        <li>Read operations (traditionally GET)</li>
+        <li>Update operations (traditionally PUT/PATCH)</li>
+        <li>Delete operations (traditionally DELETE)</li>
+    </ul>
+
+    <h3>Path Format</h3>
+    <p>Endpoints must follow the format: <code>/v1/[module]/[operation]</code></p>
+    <p>Examples:</p>
+    <ul>
+        <li><code>/v1/admin/getCredexDetails</code></li>
+        <li><code>/v1/member/getMemberByHandle</code></li>
+        <li><code>/v1/account/createAccount</code></li>
+    </ul>
+
+    <h2>Request Format</h2>
+
+    <h3>Headers</h3>
+    <pre><code>{
+  "Content-Type": "application/json",
+  "Authorization": "Bearer [token]",  // Required for authenticated routes
+  "x-client-api-key": "[key]"        // Required for keyhole routes
+}</code></pre>
+
+    <h3>Body</h3>
+    <p>All request parameters must be in the request body, not query parameters:</p>
+    <pre><code>{
+  "param1": "value1",
+  "param2": "value2"
+}</code></pre>
+
+    <h2>Response Format</h2>
+
+    <pre><code>{
+  "status": "success" | "error",
+  "statusCode": number,
+  "data": any,           // Present on success
+  "message": string      // Present on error
+}</code></pre>
+
+    <h2>Validation Requirements</h2>
+
+    <h3>Schema Structure</h3>
+    <pre><code>export const exampleSchema = {
+  field: {
+    sanitizer: s.sanitizeType,
+    validator: v.validateType,
+    required: boolean
+  }
+};</code></pre>
+
+    <h3>Required Fields</h3>
+    <p>All schemas must explicitly specify which fields are required:</p>
+    <pre><code>export const createAccountSchema = {
+  ownerID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true
+  }
+};</code></pre>
+
+    <h2>Error Handling</h2>
+
+    <p>All routes must implement consistent error handling using the errorHandler middleware:</p>
+
+    <pre><code>router.post('/endpoint',
+  validateRequest(schema),
+  controller,
+  errorHandler
+);</code></pre>
+
+    <h2>Security Implementation</h2>
+
+    <h3>Authentication</h3>
+    <p>All routes except keyholes must implement authentication:</p>
+    <pre><code>router.post('/endpoint',
+  validateRequest(schema),
+  authMiddleware(),
+  controller,
+  errorHandler
+);</code></pre>
+
+    <h3>Keyhole Routes</h3>
+    <p>Keyhole routes (login, onboard) require client API key verification instead of authentication:</p>
+    <ul>
+        <li><code>/v1/login</code></li>
+        <li><code>/v1/onboardMember</code></li>
+        <li><code>/v1/devadmin/*</code> (development only)</li>
+    </ul>
+
+    <h2>Logging Standards</h2>
+
+    <h3>Route Logging</h3>
+    <pre><code>logger.debug("Route called", {
+  path: req.path,
+  method: req.method,
+  userId: req.user?.id,
+  requestId: req.id
+});</code></pre>
+
+    <h3>Error Logging</h3>
+    <pre><code>logger.error("Error in route", {
+  error: error.message,
+  stack: error.stack,
+  path: req.path,
+  method: req.method,
+  userId: req.user?.id,
+  requestId: req.id
+});</code></pre>
+
+    <h2>Implementation Checklist</h2>
+
+    <p>When implementing or updating an endpoint, ensure:</p>
+    <ul>
+        <li>Uses POST method</li>
+        <li>Follows path format standards</li>
+        <li>Implements proper validation schema</li>
+        <li>Uses errorHandler middleware</li>
+        <li>Implements proper security measures</li>
+        <li>Follows logging standards</li>
+        <li>Returns standardized response format</li>
+    </ul>
+
+    <h2>Related Documentation</h2>
+    <ul>
+        <li><a href="../auth_security.html">Security and Authentication Overview</a></li>
+        <li><a href="logging_best_practices.html">Logging Best Practices</a></li>
+    </ul>
+
+</body>
+</html>
