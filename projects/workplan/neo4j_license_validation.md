@@ -1,7 +1,7 @@
 # Neo4j License Validation Test Cases
 
 ## Objective
-Ensure that the Neo4j Enterprise license is correctly applied and functioning across all environments (development, staging, and production).
+Ensure that the Neo4j Enterprise license is correctly applied and functioning across all environments (development, staging, and production). This has not been done yet.
 
 ## Test Cases
 
