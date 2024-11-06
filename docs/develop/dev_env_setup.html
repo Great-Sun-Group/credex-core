@@ -110,10 +110,27 @@ cd credex-core</code></pre>
         </li>
     </ul>
 
-    <p><strong>JWT_SECRET</strong><br>
-    <strong>CLIENT_API_KEY</strong></p>
+    <p><strong>JWT_SECRET</strong></p>
     <ul>
-        <li>create your own unique random strings</li>
+        <li>Create your own unique random string for signing JWT tokens</li>
+        <li>This should be a long, complex string to ensure security</li>
+        <li>Keep this secret secure as it's used to verify authentication tokens</li>
+    </ul>
+
+    <p><strong>CLIENT_API_KEY</strong></p>
+    <ul>
+        <li>Create your own unique random string</li>
+        <li>This key is required for accessing the /login and /onboardMember endpoints</li>
+        <li>In production, this is used to ensure only authorized clients (like the WhatsApp chatbot) can create and authenticate members</li>
+        <li>For development, you can create any random string</li>
+    </ul>
+
+    <p><strong>CHATBOT_API_TOKEN</strong></p>
+    <ul>
+        <li>Create your own unique random string</li>
+        <li>This token is used to identify and exempt chatbot traffic from rate limiting</li>
+        <li>Required when testing chatbot integration scenarios</li>
+        <li>For development, you can create any random string</li>
     </ul>
 
     <p>For development environments, the <code>NODE_ENV</code> variable defaults to 'development'.</p>

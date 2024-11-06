@@ -42,6 +42,7 @@
                 <li>Automatic token refresh is implemented for valid sessions.</li>
                 <li>The token's expiration is extended with each valid request.</li>
                 <li>If no requests are made for 5 minutes, the token will expire, and the user will need to log in again.</li>
+                <li>Additionally, tokens have an absolute maximum age of 6 hours, after which re-authentication is required regardless of activity.</li>
             </ul>
         </li>
 
@@ -68,26 +69,34 @@
 
     <h2>CORS Configuration</h2>
 
-    <p>Cross-Origin Resource Sharing (CORS) is currently configured to be permissive, allowing requests from all origins. This setup facilitates integration with various front-end applications and third-party services.</p>
+    <p>Cross-Origin Resource Sharing (CORS) is configured differently for development and production environments:</p>
 
+    <h3>Development Environment</h3>
     <ul>
         <li>All origins are allowed (<code>origin: '*'</code>)</li>
         <li>Supported methods: GET, POST, PUT, PATCH, DELETE</li>
-        <li>Allowed headers: Content-Type, Authorization</li>
+        <li>Allowed headers: Content-Type, Authorization, x-client-api-key, x-chatbot-token</li>
         <li>Credentials are allowed</li>
         <li>Preflight requests are cached for 1 day (86400 seconds)</li>
     </ul>
 
-    <p>While this configuration is more open, it's important to note that authentication and rate limiting are still in place to protect the API.</p>
+    <h3>Production Environment</h3>
+    <ul>
+        <li>Only whatsapp-bot.vimbisopay.co.zw is allowed</li>
+        <li>Same methods and headers as development</li>
+        <li>Strict origin checking with proper error logging</li>
+        <li>Credentials are allowed</li>
+    </ul>
 
     <h2>Rate Limiting</h2>
 
     <p>To protect the API from abuse and ensure fair usage, rate limiting has been implemented based on authenticated members.</p>
 
     <ul>
-        <li>Limit: 10 requests per minute per member or IP address</li>
+        <li>Standard limit: 100 requests per minute per member or IP address</li>
         <li>The rate limiter uses the authenticated member's ID as the primary key for limiting</li>
         <li>If the member ID is not available, it falls back to using the IP address or remote address</li>
+        <li>Chatbot traffic is exempted from rate limiting when proper CHATBOT_API_TOKEN is provided</li>
         <li>When the rate limit is exceeded, a 429 (Too Many Requests) status code is returned</li>
     </ul>
 
@@ -112,7 +121,18 @@
 
     <h1>Keyholes</h1>
 
-    <p>The /v1/login and /v1/onboardMember routes are keyholes in the JWT authorization layer so that members can onboard and login when they do not have valid JWT tokens.</p>
+    <p>The /v1/login and /v1/onboardMember routes are keyholes in the JWT authorization layer so that members can onboard and login when they do not have valid JWT tokens. These endpoints require a valid CLIENT_API_KEY for access.</p>
+
+    <h2>Client API Key Authentication</h2>
+
+    <p>Access to login and onboard endpoints is restricted to authorized clients (like the vimbiso-pay WhatsApp chatbot) through API key verification:</p>
+
+    <ul>
+        <li>Clients must include the CLIENT_API_KEY in the x-client-api-key header</li>
+        <li>The key must match the CLIENT_API_KEY environment variable</li>
+        <li>Invalid or missing API keys result in 401 Unauthorized responses</li>
+        <li>This ensures only trusted clients can create or authenticate members</li>
+    </ul>
 
     <h2>Endpoint: <code>/v1/login</code></h2>
 
@@ -122,7 +142,11 @@
 
     <ul>
         <li><strong>Method:</strong> POST</li>
-        <li><strong>Headers:</strong> No special authentication headers required</li>
+        <li><strong>Headers:</strong> 
+            <ul>
+                <li>x-client-api-key: Required for client authentication</li>
+            </ul>
+        </li>
         <li><strong>Body:</strong>
             <pre><code>{
   "phone": "string"
@@ -173,7 +197,11 @@
 
     <ul>
         <li><strong>Method:</strong> POST</li>
-        <li><strong>Headers:</strong> No special authentication headers required</li>
+        <li><strong>Headers:</strong>
+            <ul>
+                <li>x-client-api-key: Required for client authentication</li>
+            </ul>
+        </li>
         <li><strong>Body:</strong>
             <pre><code>{
   "firstname": "string",
