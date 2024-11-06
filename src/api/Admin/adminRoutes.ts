@@ -22,44 +22,44 @@ export default function AdminRoutes() {
   const router = express.Router();
   logger.info("Initializing Admin routes");
 
-  router.get(
+  router.post(
     `/admin/getCredexDetails`,    
     validateRequest(getCredexSchema),    
     getCredexDetailsController,
     errorHandler
   );
 
-  router.get(
+  router.post(
     `/admin/getMemberDetails`,
-    validateRequest(getMemberSchema, 'query'),
+    validateRequest(getMemberSchema),
     getMemberDetailsController,
     errorHandler
   );
 
-  router.patch(
+  router.post(
     `/admin/updateMemberTier`,
     validateRequest(updateMemberTierSchema),
     updateMemberTierController,
     errorHandler
   );
 
-  router.get(
+  router.post(
     `/admin/getAccountDetails`,
-    validateRequest(getAccountSchema),
+    validateRequest(getAccountSchema),  // Validate body
     getAccountDetailsController,
     errorHandler
   );
 
-  router.get(
+  router.post(
     `/admin/getReceivedCredexOffers`,
-    validateRequest(getAccountReceivedCredexOffersSchema),
+    validateRequest(getAccountReceivedCredexOffersSchema),  // Validate body
     getReceivedCredexOffersController,
     errorHandler
   );
 
-  router.get(
+  router.post(
     `/admin/getSentCredexOffers`,
-    validateRequest(getSentCredexOffersSchema),
+    validateRequest(getSentCredexOffersSchema),  // Validate body
     getSentCredexOffersController,
     errorHandler
   );

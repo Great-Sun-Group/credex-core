@@ -4,13 +4,12 @@ import { validateUUID, validateAccountHandle } from "../../../utils/validators";
 import GetAccountReceivedCredexOffers from "../services/GetAccountReceivedCredexOffers";
 
 export async function getReceivedCredexOffersController(req: Request, res: Response, next: NextFunction) {
-  const accountID = req.query.accountID as string;
-  const accountHandle = req.query.accountHandle as string;
+  const { accountID, accountHandle } = req.body as { accountID?: string, accountHandle?: string };
   const requestId = req.id;
   
   logger.debug('getReceivedCredexOffers function called', { requestId, accountID, accountHandle });
 
-  if (!validateUUID(accountID)) {
+  if (accountID && !validateUUID(accountID)) {
     logger.warn('Invalid accountID provided', { requestId, accountID });
       return res.status(400).json({ message: 'Invalid accountID' });
     }

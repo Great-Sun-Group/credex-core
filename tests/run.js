@@ -36,6 +36,13 @@ if (command === 'basic') {
   // Handle devadmin operations - use the devadmin directory
   const testPath = path.join('tests', 'api', 'endpoints', 'devadmin', `${command.toLowerCase()}.test.ts`);
   jestCommand = `jest "${testPath}" ${envFlags[env]}`;
+} else if (command === 'admin') {
+  // Handle admin tests - use admin.test.ts
+  jestCommand = `jest --testPathPattern=tests/api/endpoints/admin/admin\\.test\\.ts ${envFlags[env]}`;
+} else if (command?.toLowerCase().startsWith('admin/')) {
+  // Handle individual admin operation tests
+  const operation = command.split('/')[1];
+  jestCommand = `jest --testPathPattern=tests/api/endpoints/admin/${operation}\\.test\\.ts ${envFlags[env]}`;
 } else {
   // Handle endpoint tests - use exact pattern matching
   const pattern = `tests/api/endpoints/${command.toLowerCase()}\\.test\\.ts`;

@@ -7,7 +7,7 @@ import { validateAccountHandle, validateUUID } from "../../../utils/validators";
 
 
 export async function getSentCredexOffersController(req: Request, res: Response, next: NextFunction) {
-  const { accountID, accountHandle } = req.query as { accountID?: string, accountHandle?: string };
+  const { accountID, accountHandle } = req.body as { accountID?: string, accountHandle?: string };
   const requestId = req.id;
 
   logger.debug('getSentCredexOffers function called', { requestId, accountID, accountHandle });
