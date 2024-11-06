@@ -49,6 +49,9 @@
     <pre><code># Run all integration tests
 npm test basic
 
+# Run all Member tests
+npm test member
+
 # Test a specific endpoint
 npm test onboardmember Test Member1 1234567890 USD
 
@@ -72,6 +75,9 @@ npm test clearforce</code></pre>
 
     <pre><code># Run integration tests on dev
 npm test dev basic
+
+# Run member tests on dev
+npm test dev member
 
 # Test endpoint on dev
 npm test dev onboardmember Test Member1 1234567890 USD
@@ -99,23 +105,28 @@ npm test clearforce      # Clear DBs and force DCO</code></pre>
 npm test getmemberbyhandle phone memberHandle
 npm test getmemberdashboardbyphone phone</code></pre>
 
+    <h3>Admin Endpoints</h3>
+    <pre><code># Run all admin tests together
+npm test admin
+
+# Individual admin endpoints
+npm test admin getmemberdetails phone memberID
+npm test admin getaccountdetails phone accountID
+npm test admin updatemembertier phone memberID tier
+npm test admin getreceivedcredexoffers phone accountID
+npm test admin getsentcredexoffers phone accountID</code></pre>
+
     <h3>Account Endpoints</h3>
     <pre><code>npm test getaccountbyhandle phone accountHandle
 npm test getledger phone accountID</code></pre>
 
     <h3>Credex Endpoints</h3>
-    <pre><code>npm test createcredex phone issuerAccountID receiverAccountID Denomination InitialAmount credexType OFFERSorREQUESTS securedCredex
+    <pre><code>npm test createcredex phone amount denom receiverHandle
 npm test acceptcredex phone credexID
 npm test acceptcredexbulk phone credexIDs
 npm test declinecredex phone credexID
 npm test cancelcredex phone credexID
 npm test getcredex phone credexID</code></pre>
-
-    <h3>Integration Tests</h3>
-    <pre><code>npm test basic           # Run all integration test scenarios</code></pre>
-
-
-    <h2>Test Development Guide</h2>
 
     <h3>Shared Endpoint Functions</h3>
 
@@ -127,6 +138,7 @@ npm test getcredex phone credexID</code></pre>
       <li><strong>member.ts</strong>: Member-related operations (onboardMember, getMemberByHandle, etc.)</li>
       <li><strong>account.ts</strong>: Account operations (getAccountByHandle, getLedger)</li>
       <li><strong>credex.ts</strong>: Credex operations (createCredex, acceptCredex, etc.)</li>
+      <li><strong>admin.ts</strong>: Admin operations (getMemberDetails, updateMemberTier, etc.)</li>
       <li><strong>devadmin.ts</strong>: Administrative operations (clearDevDBs, forceDCO)</li>
     </ul>
 
@@ -166,6 +178,16 @@ npm test getcredex phone credexID</code></pre>
       <li>Forces DCO setup (forceDCO)</li>
       <li>Creates test members (onboardMember)</li>
       <li>Verifies login functionality (login)</li>
+    </ul>
+
+    <h4>Admin Dashboard Flow</h4>
+    <ul>
+      <li>Creates test member with known data</li>
+      <li>Retrieves member details (getMemberDetails)</li>
+      <li>Updates member tier (updateMemberTier)</li>
+      <li>Verifies account details (getAccountDetails)</li>
+      <li>Checks received credex offers (getReceivedCredexOffers)</li>
+      <li>Checks sent credex offers (getSentCredexOffers)</li>
     </ul>
 
     <h4>Credex Creation and Processing Flow</h4>
