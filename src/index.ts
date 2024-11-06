@@ -5,10 +5,14 @@ import AccountRoutes from "./api/Account/accountRoutes";
 import CredexRoutes from "./api/Credex/credexRoutes";
 import RecurringRoutes from "./api/Avatar/recurringRoutes";
 import DevAdminRoutes from "./api/DevAdmin/devAdminRoutes";
-import logger, { addRequestId, expressLogger, updateLoggerConfig } from "./utils/logger";
+import logger, {
+  addRequestId,
+  expressLogger,
+  updateLoggerConfig,
+} from "./utils/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./core-cron/cronJobs";
-import AdminDashboardRoutes from "./api/AdminDashboard/adminDashboardRoutes";
+import AdminRoutes from "./api/Admin/adminRoutes";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import swaggerUi from "swagger-ui-express";
 import { generateSwaggerSpec } from "../config/swagger";
@@ -45,8 +49,8 @@ async function initializeApp() {
     // Apply security middleware
     applySecurityMiddleware(app);
 
-    // Add request ID middleware 
-    app.use(addRequestId)
+    // Add request ID middleware
+    app.use(addRequestId);
 
     // Apply custom logging middleware
     app.use(expressLogger);
@@ -78,7 +82,7 @@ async function initializeApp() {
     app.use(apiVersionOneRoute, AccountRoutes());
     app.use(apiVersionOneRoute, CredexRoutes());
     // still to be fixed
-    app.use(apiVersionOneRoute, AdminDashboardRoutes(jsonParser));
+    app.use(apiVersionOneRoute, AdminRoutes());
     RecurringRoutes(app);
     logger.info("Route handlers applied for hardened modules");
 
