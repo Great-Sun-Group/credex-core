@@ -16,13 +16,20 @@ if (!JWT_SECRET) {
 
 // Set token expiration to 5 minutes after the last activity
 const TOKEN_EXPIRATION = 5 * 60; // 5 minutes in seconds
+// Set absolute maximum token age to 6 hours
+const MAX_TOKEN_AGE = 6 * 60 * 60; // 6 hours in seconds
 
 const generateToken = (memberID: string): string => {
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not set");
   }
   const now = Math.floor(Date.now() / 1000);
-  return jwt.sign({ memberID, iat: now, lastActivity: now }, JWT_SECRET);
+  return jwt.sign({ 
+    memberID, 
+    iat: now, 
+    lastActivity: now,
+    absoluteExpiry: now + MAX_TOKEN_AGE 
+  }, JWT_SECRET);
 };
 
 const verifyToken = (token: string): any => {
@@ -41,7 +48,14 @@ const refreshToken = (decoded: any): string => {
     throw new Error("JWT_SECRET is not set");
   }
   const now = Math.floor(Date.now() / 1000);
-  return jwt.sign({ memberID: decoded.memberID, iat: decoded.iat, lastActivity: now }, JWT_SECRET);
+  
+  // Maintain the original absolute expiry when refreshing
+  return jwt.sign({ 
+    memberID: decoded.memberID, 
+    iat: decoded.iat, 
+    lastActivity: now,
+    absoluteExpiry: decoded.absoluteExpiry 
+  }, JWT_SECRET);
 };
 
 const authenticate = async (req: UserRequest, res: Response, next: NextFunction) => {
@@ -60,8 +74,15 @@ const authenticate = async (req: UserRequest, res: Response, next: NextFunction)
   }
 
   const now = Math.floor(Date.now() / 1000);
+  
+  // Check both activity timeout and absolute expiry
   if (now - decoded.lastActivity > TOKEN_EXPIRATION) {
-    logger.warn("Token expired", { path: req.path, method: req.method, ip: req.ip });
+    logger.warn("Token activity timeout", { path: req.path, method: req.method, ip: req.ip });
+    return next(new Error("Token expired"));
+  }
+
+  if (now > decoded.absoluteExpiry) {
+    logger.warn("Token absolute expiry reached", { path: req.path, method: req.method, ip: req.ip });
     return next(new Error("Token expired"));
   }
 
@@ -79,7 +100,7 @@ const authenticate = async (req: UserRequest, res: Response, next: NextFunction)
 
     req.user = result.records[0].get('m').properties;
 
-    // Refresh the token
+    // Refresh the token while maintaining absolute expiry
     const newToken = refreshToken(decoded);
     res.setHeader('Authorization', `Bearer ${newToken}`);
 

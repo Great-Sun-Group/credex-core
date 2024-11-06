@@ -81,9 +81,8 @@ async function initializeApp() {
     app.use(apiVersionOneRoute, MemberRoutes());
     app.use(apiVersionOneRoute, AccountRoutes());
     app.use(apiVersionOneRoute, CredexRoutes());
-    // still to be fixed
     app.use(apiVersionOneRoute, AdminRoutes());
-    RecurringRoutes(app);
+    app.use(apiVersionOneRoute, RecurringRoutes());
     logger.info("Route handlers applied for hardened modules");
 
     // Apply route handlers for dev-only routes
