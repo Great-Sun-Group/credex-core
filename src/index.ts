@@ -5,7 +5,11 @@ import AccountRoutes from "./api/Account/accountRoutes";
 import CredexRoutes from "./api/Credex/credexRoutes";
 import RecurringRoutes from "./api/Avatar/recurringRoutes";
 import DevAdminRoutes from "./api/DevAdmin/devAdminRoutes";
-import logger, { addRequestId, expressLogger, updateLoggerConfig } from "./utils/logger";
+import logger, {
+  addRequestId,
+  expressLogger,
+  updateLoggerConfig,
+} from "./utils/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./core-cron/cronJobs";
 import AdminRoutes from "./api/Admin/adminRoutes";
@@ -45,8 +49,8 @@ async function initializeApp() {
     // Apply security middleware
     applySecurityMiddleware(app);
 
-    // Add request ID middleware 
-    app.use(addRequestId)
+    // Add request ID middleware
+    app.use(addRequestId);
 
     // Apply custom logging middleware
     app.use(expressLogger);

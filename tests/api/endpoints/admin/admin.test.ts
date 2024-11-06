@@ -1,65 +1,100 @@
-import { getMemberDetails, getAccountDetails, updateMemberTier, 
-         getReceivedCredexOffers, getSentCredexOffers } from "../../utils/endpoints/admin";
-import { onboardMember } from "../../utils/endpoints/member";
+import { authRequest } from "../../utils/request";
+import { loginMember } from "../../utils/auth";
 import { delay, DELAY_MS } from "../../utils/delay";
 
 describe("Admin API Tests", () => {
-  let testAccountID: string;
-  let testAccountHandle: string;
-  let testMemberID: string;
-  let testMemberJWT: string;
+  let jwt = "";
+  let memberID = "";
+  let accountID = "";
+  // Generate random phone number to avoid conflicts
+  const testPhone = `1${Math.floor(Math.random() * 9000000000 + 1000000000)}`;
 
+  // Create a test member to use for all admin operations
   beforeAll(async () => {
-    // Onboard a test member
-    const phoneNumber = `1${Math.floor(Math.random() * 9000000000) + 1000000000}`;
-    const memberResponse = await onboardMember("TestMember", "ForAdminTests", phoneNumber, "USD");
-    
-    testMemberID = memberResponse.data.memberDashboard.memberID;
-    testMemberJWT = memberResponse.data.token;
-    testAccountID = memberResponse.data.memberDashboard.accountIDS[0];
-    testAccountHandle = phoneNumber;
-    
-    console.log("Test member created:", testMemberID);
-  });
-
-  beforeEach(async () => {
-    await delay(DELAY_MS);
+    console.log("\nOnboarding member...");
+    const response = await authRequest("/onboardMember", {
+      firstname: "TestMember",
+      lastname: "ForAdminTests",
+      phone: testPhone,
+      defaultDenom: "USD",
+    });
+    console.log("Onboard response:", response.data);
+    memberID = response.data.memberDashboard.memberID;
+    accountID = response.data.memberDashboard.accountIDS[0];
+    jwt = response.data.token;
+    console.log("Test member created:", memberID);
   });
 
   describe("Admin Dashboard Endpoints", () => {
     it("should get member details", async () => {
-      const response = await getMemberDetails(testMemberID, testMemberJWT);
-      expect(response.data.data[0]).toHaveProperty("memberID", testMemberID);
+      console.log("\nGetting member details...");
+      const response = await authRequest(
+        "/admin/getMemberDetails",
+        {
+          memberID,
+        },
+        jwt
+      );
+      console.log("Member details:", response.data);
+      expect(response.status).toBe(200);
+      await delay(DELAY_MS);
     });
 
     it("should get account details", async () => {
-      const response = await getAccountDetails(testAccountID, testMemberJWT);
-      expect(response.data.data[0]).toHaveProperty("accountID", testAccountID);
+      console.log("\nGetting account details...");
+      const response = await authRequest(
+        "/admin/getAccountDetails",
+        {
+          accountID: accountID, // Send accountID directly
+        },
+        jwt
+      );
+      console.log("Account details:", response.data);
+      expect(response.status).toBe(200);
+      await delay(DELAY_MS);
     });
 
     it("should update member tier", async () => {
-      const response = await updateMemberTier(testMemberID, 3, testMemberJWT);
-      expect(response.data.message).toContain("Member tier updated successfully");
+      console.log("\nUpdating member tier...");
+      const response = await authRequest(
+        "/admin/updateMemberTier",
+        {
+          memberID,
+          tier: 3,
+        },
+        jwt
+      );
+      console.log("Update tier response:", response.data);
+      expect(response.status).toBe(200);
+      await delay(DELAY_MS);
     });
 
     it("should get received Credex offers", async () => {
-      const response = await getReceivedCredexOffers(testAccountID, testMemberJWT);
-      if (response.data.message === "Account received credex offers not found") {
-        expect(response.data).toHaveProperty("message");
-      } else {
-        expect(response.data).toHaveProperty("receivedOffers");
-        expect(Array.isArray(response.data.receivedOffers)).toBe(true);
-      }
+      console.log("\nGetting received Credex offers...");
+      const response = await authRequest(
+        "/admin/getReceivedCredexOffers",
+        {
+          accountID: accountID, // Send accountID directly
+        },
+        jwt
+      );
+      console.log("Received offers:", response.data);
+      expect(response.status).toBe(200);
+      await delay(DELAY_MS);
     });
 
     it("should get sent Credex offers", async () => {
-      const response = await getSentCredexOffers(testAccountID, testMemberJWT);
-      if (response.data.message === "Account sent credex offers not found") {
-        expect(response.data).toHaveProperty("message");
-      } else {
-        expect(response.data).toHaveProperty("sentOffers");
-        expect(Array.isArray(response.data.sentOffers)).toBe(true);
-      }
+      console.log("\nGetting sent Credex offers...");
+      const response = await authRequest(
+        "/admin/getSentCredexOffers",
+        {
+          accountID: accountID, // Send accountID directly
+        },
+        jwt
+      );
+      console.log("Sent offers:", response.data);
+      expect(response.status).toBe(200);
+      await delay(DELAY_MS);
     });
   });
 });

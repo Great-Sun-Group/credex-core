@@ -5,7 +5,7 @@ import logger from "../../../utils/logger";
 import GetAccountService from "../services/GetAccountService";
 
 export async function getAccountDetailsController(req: Request, res: Response, next: NextFunction) {
-  const { accountID, accountHandle } = req.query as { accountID?: string, accountHandle?: string };
+  const { accountID, accountHandle } = req.body as { accountID?: string, accountHandle?: string };
   const requestId = req.id;
 
   logger.debug('getAccountDetails function called', { requestId, accountID, accountHandle });
