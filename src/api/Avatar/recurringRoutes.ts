@@ -57,7 +57,7 @@ export default function RecurringRoutes(jsonParser: express.RequestHandler) {
   /**
    * @swagger
    * /v1/acceptRecurring:
-   *   put:
+   *   post:
    *     summary: Accept a recurring payment request
    *     tags: [Recurring]
    *     security:
@@ -78,7 +78,7 @@ export default function RecurringRoutes(jsonParser: express.RequestHandler) {
    *       403:
    *         description: Forbidden
    */
-  router.put(
+  router.post(
     `/acceptRecurring`,
     jsonParser,
     validateRequest(acceptRecurringSchema),
@@ -87,7 +87,7 @@ export default function RecurringRoutes(jsonParser: express.RequestHandler) {
       res: express.Response,
       next: express.NextFunction
     ) => {
-      logger.debug("PUT /acceptRecurring called", { requestId: req.id });
+      logger.debug("POST /acceptRecurring called", { requestId: req.id });
       AcceptRecurringController(req, res);
     },
     errorHandler
@@ -96,7 +96,7 @@ export default function RecurringRoutes(jsonParser: express.RequestHandler) {
   /**
    * @swagger
    * /v1/cancelRecurring:
-   *   delete:
+   *   post:
    *     summary: Cancel a recurring payment
    *     tags: [Recurring]
    *     security:
@@ -117,7 +117,7 @@ export default function RecurringRoutes(jsonParser: express.RequestHandler) {
    *       403:
    *         description: Forbidden
    */
-  router.delete(
+  router.post(
     `/cancelRecurring`,
     jsonParser,
     validateRequest(cancelRecurringSchema),
@@ -126,7 +126,7 @@ export default function RecurringRoutes(jsonParser: express.RequestHandler) {
       res: express.Response,
       next: express.NextFunction
     ) => {
-      logger.debug("DELETE /cancelRecurring called", { requestId: req.id });
+      logger.debug("POST /cancelRecurring called", { requestId: req.id });
       DeclineRecurringController(req, res);
     },
     errorHandler

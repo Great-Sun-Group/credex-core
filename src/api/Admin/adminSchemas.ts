@@ -45,7 +45,7 @@ export const getAccountSchema = {
     validator: v.validateAccountHandle,
     required: false,
   },
- // $atLeastOne: ['accountID', 'accountHandle'],
+  $atLeastOne: ['accountID', 'accountHandle'],
 };
 logger.debug("getAccountSchema initialized");
 
@@ -60,7 +60,7 @@ export const getAccountReceivedCredexOffersSchema = {
     validator: v.validateAccountHandle,
     required: false,
   },
- // $atLeastOne: ['accountID', 'accountHandle'],
+  $atLeastOne: ['accountID', 'accountHandle'],
 };
 logger.debug("getAccountReceivedCredexOffersSchema initialized");
 
@@ -75,7 +75,7 @@ export const getSentCredexOffersSchema = {
     validator: v.validateAccountHandle,
     required: false,
   },
- 
+  $atLeastOne: ['accountID', 'accountHandle'],
 };
 logger.debug("getSentCredexOffersSchema initialized");
 

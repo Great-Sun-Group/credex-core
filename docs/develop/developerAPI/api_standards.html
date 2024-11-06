@@ -21,29 +21,38 @@
         <li><strong>Member Module:</strong> Member management and authentication</li>
         <li><strong>Account Module:</strong> Account operations and management</li>
         <li><strong>Credex Module:</strong> Credex transaction operations</li>
-        <li><strong>Avatar Module:</strong> Recurring payment management</li>
+        <li><strong>Recurring Module:</strong> Recurring payment management</li>
+        <li><strong>Avatar Module:</strong> Avatar-specific operations</li>
         <li><strong>Admin Module:</strong> Production environment administration</li>
         <li><strong>DevAdmin Module:</strong> Development environment utilities (not deployed to production)</li>
     </ul>
 
-    <h2>Endpoint Structure</h2>
+    <h2>Module Structure</h2>
+    <p>Each module follows a consistent structure:</p>
+    <pre><code>src/api/ModuleName/
+├── moduleRoutes.ts
+├── moduleValidationSchemas.ts
+├── controllers/
+│   └── specific controllers...
+└── services/
+    └── specific services...</code></pre>
+
+    <h2>Route Standards</h2>
 
     <h3>HTTP Method</h3>
-    <p>All endpoints must use the POST method for consistency and security. This includes operations that might traditionally use other HTTP methods:</p>
-    <ul>
-        <li>Creation operations (traditionally POST)</li>
-        <li>Read operations (traditionally GET)</li>
-        <li>Update operations (traditionally PUT/PATCH)</li>
-        <li>Delete operations (traditionally DELETE)</li>
-    </ul>
+    <p>All endpoints must use the POST method for consistency, including operations that might traditionally use other HTTP methods.</p>
 
     <h3>Path Format</h3>
-    <p>Endpoints must follow the format: <code>/v1/[module]/[operation]</code></p>
+    <p>Regular endpoints follow the format: <code>/v1/[operation]</code></p>
     <p>Examples:</p>
     <ul>
+        <li><code>/v1/getMemberByHandle</code></li>
+        <li><code>/v1/createAccount</code></li>
+    </ul>
+
+    <p>Admin and DevAdmin endpoints follow the format: <code>/v1/[module]/[operation]</code></p>
+    <ul>
         <li><code>/v1/admin/getCredexDetails</code></li>
-        <li><code>/v1/member/getMemberByHandle</code></li>
-        <li><code>/v1/account/createAccount</code></li>
     </ul>
 
     <h2>Request Format</h2>
@@ -73,8 +82,10 @@
 
     <h2>Validation Requirements</h2>
 
-    <h3>Schema Structure</h3>
-    <pre><code>export const exampleSchema = {
+    <h3>Basic Schema Structure</h3>
+    <pre><code>import { ValidationSchema } from '../../middleware/types';
+
+export const exampleSchema: ValidationSchema = {
   field: {
     sanitizer: s.sanitizeType,
     validator: v.validateType,
@@ -83,8 +94,7 @@
 };</code></pre>
 
     <h3>Required Fields</h3>
-    <p>All schemas must explicitly specify which fields are required:</p>
-    <pre><code>export const createAccountSchema = {
+    <pre><code>export const createAccountSchema: ValidationSchema = {
   ownerID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
@@ -92,72 +102,55 @@
   }
 };</code></pre>
 
+    <h3>Complex Validation</h3>
+    <p>For schemas requiring at least one of multiple fields:</p>
+    <pre><code>import { RequireAtLeastOne } from '../../middleware/types';
+
+export const getAccountSchema: RequireAtLeastOne<{
+  accountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: false
+  },
+  accountHandle: {
+    sanitizer: s.sanitizeAccountHandle,
+    validator: v.validateAccountHandle,
+    required: false
+  }
+}> = {
+  accountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: false
+  },
+  accountHandle: {
+    sanitizer: s.sanitizeAccountHandle,
+    validator: v.validateAccountHandle,
+    required: false
+  },
+  $atLeastOne: ['accountID', 'accountHandle']
+};</code></pre>
+
     <h2>Error Handling</h2>
 
-    <p>All routes must implement consistent error handling using the errorHandler middleware:</p>
+    <p>All routes must implement consistent error handling:</p>
 
     <pre><code>router.post('/endpoint',
   validateRequest(schema),
   controller,
   errorHandler
 );</code></pre>
-
-    <h2>Security Implementation</h2>
-
-    <h3>Authentication</h3>
-    <p>All routes except keyholes must implement authentication:</p>
-    <pre><code>router.post('/endpoint',
-  validateRequest(schema),
-  authMiddleware(),
-  controller,
-  errorHandler
-);</code></pre>
-
-    <h3>Keyhole Routes</h3>
-    <p>Keyhole routes (login, onboard) require client API key verification instead of authentication:</p>
-    <ul>
-        <li><code>/v1/login</code></li>
-        <li><code>/v1/onboardMember</code></li>
-        <li><code>/v1/devadmin/*</code> (development only)</li>
-    </ul>
-
-    <h2>Logging Standards</h2>
-
-    <h3>Route Logging</h3>
-    <pre><code>logger.debug("Route called", {
-  path: req.path,
-  method: req.method,
-  userId: req.user?.id,
-  requestId: req.id
-});</code></pre>
-
-    <h3>Error Logging</h3>
-    <pre><code>logger.error("Error in route", {
-  error: error.message,
-  stack: error.stack,
-  path: req.path,
-  method: req.method,
-  userId: req.user?.id,
-  requestId: req.id
-});</code></pre>
 
     <h2>Implementation Checklist</h2>
 
     <p>When implementing or updating an endpoint, ensure:</p>
     <ul>
         <li>Uses POST method</li>
-        <li>Follows path format standards</li>
-        <li>Implements proper validation schema</li>
+        <li>Follows path format standards (no module prefix except admin/devadmin)</li>
+        <li>Implements proper validation schema with correct types</li>
         <li>Uses errorHandler middleware</li>
-        <li>Implements proper security measures</li>
-        <li>Follows logging standards</li>
         <li>Returns standardized response format</li>
-    </ul>
-
-    <h2>Related Documentation</h2>
-    <ul>
-        <li><a href="../auth_security.html">Security and Authentication Overview</a></li>
-        <li><a href="logging_best_practices.html">Logging Best Practices</a></li>
+        <li>Follows module structure</li>
     </ul>
 
 </body>
