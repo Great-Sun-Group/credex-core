@@ -5,6 +5,27 @@ import { rateLimiter } from "./rateLimiter";
 import { authMiddleware } from "./authMiddleware";
 import logger from "../utils/logger";
 
+const verifyClientApiKey = (req: Request, res: Response, next: NextFunction) => {
+  const clientApiKey = req.headers['x-client-api-key'];
+  const validApiKey = process.env.CLIENT_API_KEY;
+
+  if (!validApiKey) {
+    logger.error("CLIENT_API_KEY not set in environment");
+    return res.status(500).json({ message: "Server configuration error" });
+  }
+
+  if (!clientApiKey || clientApiKey !== validApiKey) {
+    logger.warn("Invalid or missing client API key", {
+      path: req.path,
+      method: req.method,
+      ip: req.ip
+    });
+    return res.status(401).json({ message: "Unauthorized client" });
+  }
+
+  next();
+};
+
 export const applySecurityMiddleware = (app: Application) => {
   logger.debug("Applying security middleware");
 
@@ -39,20 +60,37 @@ export const applySecurityMiddleware = (app: Application) => {
     const corsOptions = {
       origin: "*", // Allow all origins
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-      allowedHeaders: ["Content-Type", "Authorization"],
+      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key", "x-chatbot-token"],
       credentials: true,
       maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
     };
     app.use(cors(corsOptions));
     logger.debug("CORS middleware applied (non-production)");
   } else {
-    // to restrict origins in production deployment
+    // Strict CORS for production
+    const allowedOrigins = [
+      'https://whatsapp-bot.vimbisopay.co.zw'
+    ];
+
     const corsOptions = {
-      origin: "*", // change this to restrict
+      origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          logger.warn("Blocked by CORS", { origin });
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-      allowedHeaders: ["Content-Type", "Authorization"],
+      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key", "x-chatbot-token"],
       credentials: true,
-      maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
+      maxAge: 86400,
     };
     app.use(cors(corsOptions));
     logger.debug("CORS middleware applied (production)");
@@ -61,6 +99,15 @@ export const applySecurityMiddleware = (app: Application) => {
   // Apply rate limiting
   app.use(rateLimiter);
   logger.debug("Rate limiter middleware applied");
+
+  // Apply client API key verification for keyholes
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path === "/v1/login" || req.path === "/v1/onboardMember") {
+      return verifyClientApiKey(req, res, next);
+    }
+    next();
+  });
+  logger.debug("Client API key verification middleware applied");
 
   // Add a logging middleware to track requests after security middleware
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -87,16 +134,6 @@ export const applySecurityMiddleware = (app: Application) => {
       "[SC1] Request passed through all security middleware",
       logData
     );
-
-    if (req.path.includes("authForTierSpendLimit")) {
-      logger.debug("[SC2] authForTierSpendLimit request details", {
-        issuerAccountIDInQuery: req.query.issuerAccountID,
-        issuerAccountIDInBody: req.body ? req.body.issuerAccountID : undefined,
-        issuerAccountIDInBodyType: req.body
-          ? typeof req.body.issuerAccountID
-          : undefined,
-      });
-    }
 
     next();
   });
