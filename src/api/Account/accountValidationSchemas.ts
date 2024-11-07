@@ -21,7 +21,7 @@ export const createAccountSchema = {
   },
   accountHandle: {
     sanitizer: s.sanitizeAccountHandle,
-    validator: v.validateAccountHandle,
+    validator: (handle: string) => v.validateHandle(handle, 'account'),
     required: true,
   },
   defaultDenom: {
@@ -45,7 +45,8 @@ logger.debug("createAccountSchema initialized");
 export const getAccountByHandleSchema = {
   accountHandle: {
     sanitizer: s.sanitizeAccountHandle,
-    validator: v.validateAccountHandle,
+    validator: (handle: string) => v.validateHandle(handle, 'account'),
+    required: true,
   },
 };
 logger.debug("getAccountByHandleSchema initialized");
@@ -54,22 +55,37 @@ export const updateAccountSchema = {
   ownerID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
   },
   accountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
   },
   accountName: {
     sanitizer: s.sanitizeAccountName,
     validator: v.validateAccountName,
+    required: false,
   },
   accountHandle: {
     sanitizer: s.sanitizeAccountHandle,
-    validator: v.validateAccountHandle,
+    validator: (handle: string) => v.validateHandle(handle, 'account'),
+    required: false,
   },
   defaultDenom: {
     sanitizer: s.sanitizeDenomination,
     validator: v.validateDenomination,
+    required: false,
+  },
+  DCOgiveInCXX: {
+    sanitizer: s.sanitizeNumber,
+    validator: v.validatePositiveNumber,
+    required: false,
+  },
+  DCOdenom: {
+    sanitizer: s.sanitizeDenomination,
+    validator: v.validateDenomination,
+    required: false,
   },
 };
 logger.debug("updateAccountSchema initialized");
@@ -82,7 +98,7 @@ export const authorizeForAccountSchema = {
   },
   memberHandleToBeAuthorized: {
     sanitizer: s.sanitizeString,
-    validator: v.validateMemberHandle,
+    validator: (handle: string) => v.validateHandle(handle, 'member'),
     required: true,
   },
   ownerID: {
@@ -97,10 +113,12 @@ export const unauthorizeForAccountSchema = {
   accountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
   },
   memberID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
   },
 };
 logger.debug("unauthorizeForAccountSchema initialized");
@@ -109,10 +127,12 @@ export const updateSendOffersToSchema = {
   accountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
   },
   memberID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
   },
 };
 logger.debug("updateSendOffersToSchema initialized");
@@ -121,8 +141,28 @@ export const getLedgerSchema = {
   accountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
   },
 };
 logger.debug("getLedgerSchema initialized");
+
+export const setDCOparticipantRateSchema = {
+  accountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+  DCOgiveInCXX: {
+    sanitizer: (value: number) => value,
+    validator: v.validatePositiveNumber,
+    required: true,
+  },
+  DCOdenom: {
+    sanitizer: s.sanitizeDenomination,
+    validator: v.validateDenomination,
+    required: true,
+  },
+};
+logger.debug("setDCOparticipantRateSchema initialized");
 
 logger.debug("All account validation schemas initialized");

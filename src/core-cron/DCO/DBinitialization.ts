@@ -5,7 +5,7 @@ import { UpdateMemberTierController } from "../../api/DevAdmin/controllers/updat
 import { CreateAccountService } from "../../api/Account/services/CreateAccount";
 import { CreateCredexService } from "../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
-import { setDCOparticipantRateExpressHandler } from "../../api/Member/controllers/setDCOparticipantRate";
+import { SetDCOparticipantRateController } from "../../api/Account/controllers/setDCOparticipantRate";
 import { fetchZwgRate, ZwgRateError } from "./fetchZwgRate";
 import axios from "axios";
 import _ from "lodash";
@@ -334,12 +334,10 @@ async function createInitialMember(
   }
 
   if (DCOparticipant) {
-    // Call setDCOparticipantRateExpressHandler
     try {
       const req = {
         body: {
-          memberID: onboardedMemberID,
-          personalAccountID: defaultAccountID,
+          accountID: defaultAccountID,
           DCOgiveInCXX: 1,
           DCOdenom: "CAD",
         },
@@ -355,15 +353,18 @@ async function createInitialMember(
           },
         }),
       } as any;
+      const next = (error: any) => {
+        if (error) throw error;
+      };
 
-      await setDCOparticipantRateExpressHandler(req, res);
+      await SetDCOparticipantRateController(req, res, next);
       logger.info("DCO participant rate set successfully", {
-        memberID: onboardedMemberID,
+        accountID: defaultAccountID,
         requestId,
       });
     } catch (error) {
       logger.error("Failed to set DCO participant rate", {
-        memberID: onboardedMemberID,
+        accountID: defaultAccountID,
         error: error instanceof Error ? error.message : String(error),
         requestId,
       });

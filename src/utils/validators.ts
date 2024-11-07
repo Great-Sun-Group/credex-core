@@ -10,11 +10,14 @@ export function validateUUID(uuid: string): { isValid: boolean; message?: string
   return { isValid, message };
 }
 
-export function validateMemberHandle(handle: string): { isValid: boolean; message?: string } {
+export function validateHandle(handle: string, type: 'member' | 'account'): { isValid: boolean; message?: string } {
   const handleRegex = /^[a-z0-9_]{3,30}$/;
   const isValid = handleRegex.test(handle);
-  const message = isValid ? "Valid member handle" : "Invalid member handle: must be 3-30 characters long and contain only lowercase letters, numbers, and underscores";
-  logger.debug(message, { handle, isValid });
+  const entityType = type.charAt(0).toUpperCase() + type.slice(1);
+  const message = isValid 
+    ? `Valid ${type} handle` 
+    : `Invalid ${type} handle: must be 3-30 characters long and contain only lowercase letters, numbers, and underscores`;
+  logger.debug(message, { handle, isValid, type });
   return { isValid, message };
 }
 
@@ -22,14 +25,6 @@ export function validateAccountName(name: string): { isValid: boolean; message?:
   const isValid = name.length >= 3 && name.length <= 50;
   const message = isValid ? "Valid account name" : `Invalid account name: must be between 3 and 50 characters long. Received length: ${name.length}`;
   logger.debug(message, { name, isValid });
-  return { isValid, message };
-}
-
-export function validateAccountHandle(handle: string): { isValid: boolean; message?: string } {
-  const handleRegex = /^[a-z0-9_]{3,30}$/;
-  const isValid = handleRegex.test(handle);
-  const message = isValid ? "Valid account handle" : "Invalid account handle: must be 3-30 characters long and contain only lowercase letters, numbers, and underscores";
-  logger.debug(message, { handle, isValid });
   return { isValid, message };
 }
 
@@ -139,7 +134,7 @@ export const v = {
   validateBoolean,
 };
 
-const VALID_ACCOUNT_TYPES = ['PERSONAL_CONSUMPTION', 'BUSINESS', /* add other types */];
+const VALID_ACCOUNT_TYPES = ['PERSONAL_CONSUMPTION', 'BUSINESS', 'CREDEX_FOUNDATION', 'TRUST', 'OPERATIONS'];
 
 export function validateAccountType(value: any): { isValid: boolean; message?: string } {
   if (!VALID_ACCOUNT_TYPES.includes(value)) {
