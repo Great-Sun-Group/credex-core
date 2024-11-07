@@ -121,6 +121,17 @@ export const getLedgerSchema = {
   accountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
+    required: true,
+  },
+  numRows: {
+    sanitizer: s.sanitizeNumber,
+    validator: v.validatePositiveInteger,
+    required: false,
+  },
+  startRow: {
+    sanitizer: s.sanitizeNumber,
+    validator: v.validatePositiveInteger,
+    required: false,
   },
 };
 logger.debug("getLedgerSchema initialized");
