@@ -1,92 +1,87 @@
 import { Neo4jError } from "neo4j-driver";
-import logger from "./logger";
 
-export class BaseError extends Error {
-  constructor(
-    message: string,
-    public code: string,
-    public statusCode: number = 500
-  ) {
+export class MemberError extends Error {
+  constructor(message: string, public code: string, public statusCode: number = 500) {
     super(message);
-    this.name = this.constructor.name;
+    this.name = "MemberError";
   }
 }
 
-export class MemberError extends BaseError {
-  constructor(message: string, code: string, statusCode: number = 400) {
-    super(message, `MEMBER_${code}`, statusCode);
+export class AccountError extends Error {
+  constructor(message: string, public code: string, public statusCode: number = 500) {
+    super(message);
+    this.name = "AccountError";
   }
 }
 
-export class AccountError extends BaseError {
-  constructor(message: string, code: string, statusCode: number = 400) {
-    super(message, `ACCOUNT_${code}`, statusCode);
+export class CredexError extends Error {
+  constructor(message: string, public code: string, public statusCode: number = 500) {
+    super(message);
+    this.name = "CredexError";
   }
 }
 
-export class CredexError extends BaseError {
-  constructor(message: string, code: string, statusCode: number = 400) {
-    super(message, `CREDEX_${code}`, statusCode);
+export class RecurringError extends Error {
+  constructor(message: string, public code: string, public statusCode: number = 500) {
+    super(message);
+    this.name = "RecurringError";
   }
 }
 
 export function isNeo4jError(error: unknown): error is Neo4jError {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    typeof (error as any).code === 'string' &&
-    (error as any).code.startsWith('Neo.')
-  );
+  return error instanceof Neo4jError;
 }
 
-export function handleNeo4jError(error: Neo4jError): BaseError {
-  logger.error("Neo4j error occurred", {
-    code: error.code,
-    message: error.message
-  });
-
-  if (error.code === "Neo.ClientError.Schema.ConstraintValidationFailed") {
-    if (error.message.includes("phone")) {
-      return new MemberError("Phone number already in use", "DUPLICATE_PHONE", 409);
-    }
-    if (error.message.includes("handle")) {
-      return new MemberError("Handle already in use", "DUPLICATE_HANDLE", 409);
-    }
-    return new BaseError("Unique constraint violation", "CONSTRAINT_ERROR", 409);
-  }
-
-  if (error.code.startsWith("Neo.ClientError.Security")) {
-    return new BaseError("Database security error", "SECURITY_ERROR", 403);
-  }
-
-  if (error.code.startsWith("Neo.ClientError.Transaction")) {
-    return new BaseError("Transaction error", "TRANSACTION_ERROR", 500);
-  }
-
-  return new BaseError(
-    "Database error occurred",
-    "DB_ERROR",
-    500
-  );
-}
-
-export function handleServiceError(error: unknown): BaseError {
-  if (error instanceof BaseError) {
+export function handleServiceError(error: unknown): Error {
+  if (error instanceof MemberError ||
+      error instanceof AccountError ||
+      error instanceof CredexError ||
+      error instanceof RecurringError) {
     return error;
   }
 
   if (isNeo4jError(error)) {
-    return handleNeo4jError(error);
+    if (error.code === "Neo.ClientError.Schema.ConstraintValidationFailed") {
+      return new Error(`Database constraint error: ${error.message}`);
+    }
+    return new Error(`Database error: ${error.message}`);
   }
 
-  logger.error("Unexpected error", {
-    error: error instanceof Error ? error.message : "Unknown error",
-    stack: error instanceof Error ? error.stack : undefined
-  });
+  if (error instanceof Error) {
+    return error;
+  }
 
-  return new BaseError(
-    "An unexpected error occurred",
-    "INTERNAL_ERROR",
-    500
-  );
+  return new Error("Unknown error occurred");
 }
+
+export const ErrorCodes = {
+  Member: {
+    NOT_FOUND: 404,
+    INVALID_PHONE: 400,
+    TIER_LIMIT: 403,
+    DUPLICATE_HANDLE: 409,
+    AUTH_FAILED: 401
+  },
+  Account: {
+    NOT_FOUND: 404,
+    AUTH_LIMIT: 400,
+    INVALID_TYPE: 400,
+    UNAUTHORIZED: 403,
+    DUPLICATE_HANDLE: 409
+  },
+  Credex: {
+    NOT_FOUND: 404,
+    INVALID_AMOUNT: 400,
+    INSUFFICIENT_BALANCE: 400,
+    ALREADY_PROCESSED: 409,
+    UNAUTHORIZED: 403
+  },
+  Recurring: {
+    NOT_FOUND: 404,
+    INVALID_SCHEDULE: 400,
+    INVALID_AMOUNT: 400,
+    SCHEDULE_CONFLICT: 409,
+    UNAUTHORIZED: 403,
+    ALREADY_CANCELLED: 410
+  }
+};

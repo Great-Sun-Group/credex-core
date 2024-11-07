@@ -1,6 +1,6 @@
 # Module-Specific Patterns Guide
 
-This guide documents the patterns identified in existing modules (Credex, Member, Account) to inform the standardization of new modules.
+This guide documents the patterns identified in existing modules (Credex, Member, Account, Recurring) to inform the standardization of new modules.
 
 ## Entity Identification Patterns
 
@@ -19,6 +19,11 @@ This guide documents the patterns identified in existing modules (Credex, Member
 - UUID-only for all operations
 - No handle-based lookups needed
 - Rationale: Internal transaction system, no public discovery needed
+
+### Recurring Module
+- UUID-only for all operations
+- Schedule-based identification
+- Rationale: Internal scheduling system, no public discovery needed
 
 ## Authorization Patterns
 
@@ -68,6 +73,21 @@ if (securedCredex && secureableAmount < amount) {
 }
 ```
 
+### Recurring Module
+- Owner-only modification rights
+- Schedule validation checks
+- Active status validations
+```typescript
+// Example from CreateRecurring
+if (!isOwner) {
+  throw new RecurringError(
+    "Only account owner can create recurring transactions",
+    "UNAUTHORIZED",
+    403
+  );
+}
+```
+
 ## Data Relationship Patterns
 
 ### Member Module
@@ -90,6 +110,15 @@ MATCH (account)<-[:AUTHORIZED_FOR]-(authorizedMembers:Member)
 MATCH (issuer:Account)-[rel:OFFERS|OWES]->(credex:Credex)
   -[rel2:OFFERS|OWES]->(receiver:Account)
 OPTIONAL MATCH (credex)<-[:SECURES]-(securer:Account)
+```
+
+### Recurring Module
+```typescript
+// Core relationships
+MATCH (sourceAccount:Account)-[:SCHEDULES]->(recurring:Recurring)
+  -[:TARGETS]->(targetAccount:Account)
+MATCH (recurring)-[:ACTIVE]-(targetAccount:Account)
+OPTIONAL MATCH (recurring)-[:LAST_RUN]->(execution:Execution)
 ```
 
 ## Response Patterns
@@ -160,6 +189,33 @@ interface CredexResponse {
 }
 ```
 
+### Recurring Module
+```typescript
+interface RecurringResponse {
+  success: boolean;
+  data?: {
+    recurringID: string;
+    scheduleInfo: {
+      frequency: string;
+      nextRunDate: string;
+      amount: string;
+      denomination: string;
+      status: string;
+    };
+    execution: {
+      lastRunDate?: string;
+      lastRunStatus?: string;
+      totalExecutions: number;
+    };
+    participants: {
+      sourceAccountID: string;
+      targetAccountID: string;
+    };
+  };
+  message: string;
+}
+```
+
 ## Error Patterns
 
 ### Member Module
@@ -208,6 +264,23 @@ const CredexErrorCodes = {
 // Error examples
 throw new CredexError("Credex not found", "NOT_FOUND", 404);
 throw new CredexError("Invalid amount", "INVALID_AMOUNT", 400);
+```
+
+### Recurring Module
+```typescript
+// Common error codes
+const RecurringErrorCodes = {
+  NOT_FOUND: 404,
+  INVALID_SCHEDULE: 400,
+  INVALID_AMOUNT: 400,
+  SCHEDULE_CONFLICT: 409,
+  UNAUTHORIZED: 403,
+  ALREADY_CANCELLED: 410
+};
+
+// Error examples
+throw new RecurringError("Recurring transaction not found", "NOT_FOUND", 404);
+throw new RecurringError("Invalid schedule format", "INVALID_SCHEDULE", 400);
 ```
 
 ## Key Takeaways for New Modules
