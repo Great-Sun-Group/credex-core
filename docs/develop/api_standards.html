@@ -82,6 +82,43 @@
 
     <h2>Validation Requirements</h2>
 
+    <h3>Handle Standardization</h3>
+
+    <p>Handle requirements:</p>
+    <ul>
+        <li>Length: 3-30 characters</li>
+        <li>Allowed characters: lowercase letters (a-z), numbers (0-9), underscores (_)</li>
+        <li>Pattern: /^[a-z0-9_]{3,30}$/</li>
+    </ul>
+
+    <p>While handles must ultimately be lowercase, the API is forgiving of uppercase letters in input. However, all other requirements are strictly enforced.</p>
+
+    <p>Examples:</p>
+    <ul>
+        <li>✅ "john_doe" → accepted as "john_doe"</li>
+        <li>✅ "JOHN_DOE" → accepted as "john_doe"</li>
+        <li>❌ "john-doe" → rejected with error "only lowercase letters, numbers, and underscores are allowed"</li>
+        <li>❌ "john.doe" → rejected with error "only lowercase letters, numbers, and underscores are allowed"</li>
+        <li>❌ "jo" → rejected with error "must be between 3 and 30 characters long"</li>
+    </ul>
+
+    <p>Handle processing:</p>
+    <ol>
+        <li>Sanitization (as data enters API):
+            <ul>
+                <li>Converts to lowercase</li>
+                <li>No other character transformations</li>
+            </ul>
+        </li>
+        <li>Validation:
+            <ul>
+                <li>Verifies length (3-30 characters)</li>
+                <li>Verifies only allowed characters are present</li>
+                <li>Provides specific error messages for different validation failures</li>
+            </ul>
+        </li>
+    </ol>
+
     <h3>Basic Schema Structure</h3>
     <pre><code>import { ValidationSchema } from '../../middleware/types';
 
@@ -113,8 +150,8 @@ export const getAccountSchema: RequireAtLeastOne<{
     required: false
   },
   accountHandle: {
-    sanitizer: s.sanitizeAccountHandle,
-    validator: v.validateAccountHandle,
+    sanitizer: s.sanitizeHandle,
+    validator: v.validateHandle,
     required: false
   }
 }> = {
@@ -124,8 +161,8 @@ export const getAccountSchema: RequireAtLeastOne<{
     required: false
   },
   accountHandle: {
-    sanitizer: s.sanitizeAccountHandle,
-    validator: v.validateAccountHandle,
+    sanitizer: s.sanitizeHandle,
+    validator: v.validateHandle,
     required: false
   },
   $atLeastOne: ['accountID', 'accountHandle']

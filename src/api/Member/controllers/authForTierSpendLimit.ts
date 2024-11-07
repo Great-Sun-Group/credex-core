@@ -1,82 +1,49 @@
 import express from "express";
 import { AuthForTierSpendLimitService } from "../services/AuthForTierSpendLimit";
+import { MemberError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
-import {
-  validateUUID,
-  validateAmount,
-  validateDenomination,
-} from "../../../utils/validators";
 
-export async function AuthForTierSpendLimitController(
-  issuerAccountID: string,
-  Amount: number,
-  Denomination: string,
-  securedCredex: boolean,
-  requestId: string
-): Promise<{ isAuthorized: boolean; message: string }> {
-  try {
-    const result = await AuthForTierSpendLimitService(
-      issuerAccountID,
-      Amount,
-      Denomination,
-      securedCredex
-    );
-
-    if (!result.isAuthorized) {
-      logger.warn("Secured credex authorization failed", {
-        issuerAccountID,
-        Amount,
-        Denomination,
-        message: result.message,
-        requestId,
-      });
-    }
-
-    return result;
-  } catch (error) {
-    logger.error("Error in AuthForTierSpendLimitController", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-      issuerAccountID,
-      Amount,
-      Denomination,
-      requestId,
-    });
-    return { isAuthorized: false, message: "Internal Server Error" };
-  }
+interface AuthForTierSpendLimitResponse {
+  success: boolean;
+  data?: {
+    isAuthorized: boolean;
+    availableAmount?: string;
+    memberTier?: number;
+  };
+  message: string;
 }
 
-export async function authForTierSpendLimitExpressHandler(
+/**
+ * AuthForTierSpendLimitController
+ * 
+ * Handles requests to validate if a member's tier permits the requested spend amount.
+ * Different tiers have different daily spend limits and secured/unsecured permissions.
+ * 
+ * @param req - Express request object
+ * @param res - Express response object
+ * @param next - Express next function
+ */
+export async function AuthForTierSpendLimitController(
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ): Promise<void> {
   const requestId = req.id;
+  logger.debug("Entering AuthForTierSpendLimitController", { requestId });
 
   try {
     const { issuerAccountID, Amount, Denomination, securedCredex } = req.body;
 
-    if (issuerAccountID === undefined) {
-      res.status(400).json({ message: "issuerAccountID is required" });
-      return;
-    }
+    // Basic validation is handled by validateRequest middleware
+    logger.info("Checking tier spend limit", {
+      issuerAccountID,
+      Amount,
+      Denomination,
+      securedCredex,
+      requestId
+    });
 
-    if (!validateUUID(issuerAccountID)) {
-      res.status(400).json({ message: "Invalid issuerAccountID" });
-      return;
-    }
-
-    if (!validateAmount(Amount)) {
-      res.status(400).json({ message: "Invalid Amount" });
-      return;
-    }
-
-    if (!validateDenomination(Denomination)) {
-      res.status(400).json({ message: "Invalid Denomination" });
-      return;
-    }
-
-    const result = await AuthForTierSpendLimitController(
+    const result = await AuthForTierSpendLimitService(
       issuerAccountID,
       Amount,
       Denomination,
@@ -84,17 +51,72 @@ export async function authForTierSpendLimitExpressHandler(
       requestId
     );
 
-    if (result.isAuthorized) {
-      res.status(200).json(result);
-    } else {
+    if (!result.success) {
+      logger.warn("Tier spend limit check failed", {
+        issuerAccountID,
+        Amount,
+        Denomination,
+        message: result.message,
+        requestId
+      });
+
       res.status(400).json(result);
+      return;
     }
-  } catch (error) {
-    logger.error("Error in authForTierSpendLimitExpressHandler", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-      requestId,
+
+    // For authorization checks, we want 403 when not authorized
+    if (!result.data?.isAuthorized) {
+      logger.warn("Spend not authorized by tier limits", {
+        issuerAccountID,
+        Amount,
+        Denomination,
+        availableAmount: result.data?.availableAmount,
+        memberTier: result.data?.memberTier,
+        requestId
+      });
+
+      res.status(403).json(result);
+      return;
+    }
+
+    logger.info("Spend authorized by tier limits", {
+      issuerAccountID,
+      Amount,
+      Denomination,
+      memberTier: result.data?.memberTier,
+      requestId
     });
-    next(error);
+
+    res.status(200).json(result);
+
+  } catch (error) {
+    const handledError = handleServiceError(error);
+    logger.error("Error in AuthForTierSpendLimitController", {
+      error: handledError.message,
+      code: handledError.code,
+      stack: handledError instanceof Error ? handledError.stack : undefined,
+      issuerAccountID: req.body.issuerAccountID,
+      Amount: req.body.Amount,
+      Denomination: req.body.Denomination,
+      requestId
+    });
+
+    if (handledError instanceof MemberError) {
+      const statusCode = 
+        handledError.message.includes("not found") ? 404 :
+        handledError.message.includes("Invalid") ? 400 :
+        handledError.statusCode || 500;
+
+      res.status(statusCode).json({
+        success: false,
+        message: handledError.message
+      });
+      return;
+    }
+
+    next(handledError);
+
+  } finally {
+    logger.debug("Exiting AuthForTierSpendLimitController", { requestId });
   }
 }

@@ -20,8 +20,8 @@ export const createAccountSchema = {
     required: true,
   },
   accountHandle: {
-    sanitizer: s.sanitizeAccountHandle,
-    validator: (handle: string) => v.validateHandle(handle, 'account'),
+    sanitizer: s.sanitizeHandle,
+    validator: v.validateHandle,
     required: true,
   },
   defaultDenom: {
@@ -44,8 +44,8 @@ logger.debug("createAccountSchema initialized");
 
 export const getAccountByHandleSchema = {
   accountHandle: {
-    sanitizer: s.sanitizeAccountHandle,
-    validator: (handle: string) => v.validateHandle(handle, 'account'),
+    sanitizer: s.sanitizeHandle,
+    validator: v.validateHandle,
     required: true,
   },
 };
@@ -68,8 +68,8 @@ export const updateAccountSchema = {
     required: false,
   },
   accountHandle: {
-    sanitizer: s.sanitizeAccountHandle,
-    validator: (handle: string) => v.validateHandle(handle, 'account'),
+    sanitizer: s.sanitizeHandle,
+    validator: v.validateHandle,
     required: false,
   },
   defaultDenom: {
@@ -97,8 +97,8 @@ export const authorizeForAccountSchema = {
     required: true,
   },
   memberHandleToBeAuthorized: {
-    sanitizer: s.sanitizeString,
-    validator: (handle: string) => v.validateHandle(handle, 'member'),
+    sanitizer: s.sanitizeHandle,
+    validator: v.validateHandle,
     required: true,
   },
   ownerID: {
@@ -164,5 +164,14 @@ export const setDCOparticipantRateSchema = {
   },
 };
 logger.debug("setDCOparticipantRateSchema initialized");
+
+export const getBalancesSchema = {
+  accountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+};
+logger.debug("getBalancesSchema initialized");
 
 logger.debug("All account validation schemas initialized");

@@ -1,48 +1,35 @@
 import express from "express";
 import { CancelCredexService } from "../services/CancelCredex";
-import { validateUUID } from "../../../utils/validators";
 import logger from "../../../utils/logger";
 
 /**
  * CancelCredexController
  *
  * This controller handles the cancellation of Credex offers.
- * It validates the required fields, calls the CancelCredexService,
- * and returns the result.
+ * It processes the cancellation request and returns the updated status.
  *
  * @param req - Express request object
  * @param res - Express response object
+ * @param next - Express next function
  */
 export async function CancelCredexController(
   req: express.Request,
-  res: express.Response
+  res: express.Response,
+  next: express.NextFunction
 ) {
   const requestId = req.id;
   logger.debug("Entering CancelCredexController", { requestId });
 
   try {
     const { credexID, signerID } = req.body;
-    logger.debug("Received cancellation request", {
-      requestId,
+
+    // Basic validation is handled by validateRequest middleware
+    logger.info("Cancelling Credex", {
       credexID,
       signerID,
+      requestId
     });
 
-    if (!validateUUID(credexID)) {
-      logger.warn("Invalid credexID", { credexID, requestId });
-      return res.status(400).json({ error: "Invalid credexID" });
-    }
-
-    if (!validateUUID(signerID)) {
-      logger.warn("Invalid signerID", { signerID, requestId });
-      return res.status(400).json({ error: "Invalid signerID" });
-    }
-
-    logger.debug("Calling CancelCredexService", {
-      requestId,
-      credexID,
-      signerID,
-    });
     const responseData = await CancelCredexService(
       credexID,
       signerID,
@@ -50,30 +37,87 @@ export async function CancelCredexController(
     );
 
     if (!responseData) {
-      logger.warn("Credex not found or already processed", {
+      logger.warn("Failed to cancel Credex - not found or already processed", {
         credexID,
-        requestId,
+        signerID,
+        requestId
       });
-      return res
-        .status(404)
-        .json({ error: "Credex not found or already processed" });
+      return res.status(404).json({
+        success: false,
+        error: "Credex not found or already processed"
+      });
     }
 
-    logger.info("Credex cancelled successfully", { credexID, requestId });
-    logger.debug("Exiting CancelCredexController with success", { requestId });
-    return res
-      .status(200)
-      .json({
-        message: "Credex cancelled successfully",
-        credexID: responseData,
-      });
-  } catch (err) {
-    logger.error("Unhandled error in CancelCredexController", {
-      error: (err as Error).message,
-      stack: (err as Error).stack,
-      requestId,
+    logger.info("Credex cancelled successfully", {
+      credexID,
+      signerID,
+      requestId
     });
-    logger.debug("Exiting CancelCredexController with error", { requestId });
-    return res.status(500).json({ error: "Internal server error" });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        credexID: responseData
+      },
+      message: "Credex cancelled successfully"
+    });
+
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message.includes('already processed')) {
+        logger.warn("Attempt to cancel already processed Credex", {
+          error: error.message,
+          requestId
+        });
+        return res.status(409).json({
+          success: false,
+          error: "Credex has already been processed"
+        });
+      }
+
+      if (error.message.includes('not found')) {
+        logger.warn("Attempt to cancel non-existent Credex", {
+          error: error.message,
+          requestId
+        });
+        return res.status(404).json({
+          success: false,
+          error: "Credex not found"
+        });
+      }
+
+      if (error.message.includes('not authorized')) {
+        logger.warn("Unauthorized attempt to cancel Credex", {
+          error: error.message,
+          requestId
+        });
+        return res.status(403).json({
+          success: false,
+          error: "Not authorized to cancel this Credex"
+        });
+      }
+
+      if (error.message.includes('digital signature')) {
+        logger.error("Digital signature error in CancelCredexController", {
+          error: error.message,
+          stack: error.stack,
+          requestId
+        });
+        return res.status(400).json({
+          success: false,
+          error: "Failed to cancel Credex: Digital signature error"
+        });
+      }
+    }
+
+    logger.error("Unexpected error in CancelCredexController", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      requestId
+    });
+    
+    next(error);
+  } finally {
+    logger.debug("Exiting CancelCredexController", { requestId });
   }
 }

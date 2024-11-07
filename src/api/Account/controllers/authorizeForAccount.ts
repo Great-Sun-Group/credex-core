@@ -1,93 +1,68 @@
 import express from "express";
 import { AuthorizeForAccountService } from "../services/AuthorizeForAccount";
+import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
-import { validateUUID, validateMemberHandle } from "../../../utils/validators";
 
+interface AuthorizeResponse {
+  success: boolean;
+  data?: {
+    accountID: string;
+    memberIdAuthorized: string;
+  };
+  message: string;
+}
+
+/**
+ * AuthorizeForAccountController
+ * 
+ * Handles requests to authorize a member for account access.
+ * Validates membership tier requirements and authorization limits.
+ * 
+ * @param req - Express request object
+ * @param res - Express response object
+ * @param next - Express next function
+ */
 export async function AuthorizeForAccountController(
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
-) {
-  logger.debug("AuthorizeForAccountController called", { body: req.body });
-
-  const { memberHandleToBeAuthorized, accountID, ownerID } = req.body;
+): Promise<void> {
+  const requestId = req.id;
+  logger.debug("Entering AuthorizeForAccountController", { requestId });
 
   try {
-    // Validate input
-    if (!validateMemberHandle(memberHandleToBeAuthorized)) {
-      logger.warn("Invalid memberHandleToBeAuthorized provided", {
-        memberHandleToBeAuthorized,
-      });
-      return res
-        .status(400)
-        .json({ message: "Invalid memberHandleToBeAuthorized" });
-    }
-    if (!validateUUID(accountID)) {
-      logger.warn("Invalid accountID provided", { accountID });
-      return res.status(400).json({ message: "Invalid accountID" });
-    }
-    if (!validateUUID(ownerID)) {
-      logger.warn("Invalid ownerID provided", { ownerID });
-      return res.status(400).json({ message: "Invalid ownerID" });
-    }
+    const { memberHandleToBeAuthorized, accountID, ownerID } = req.body;
 
+    // Basic validation is handled by validateRequest middleware
     logger.info("Authorizing member for account", {
       memberHandleToBeAuthorized,
       accountID,
       ownerID,
+      requestId
     });
 
-    const responseData = await AuthorizeForAccountService(
+    const result = await AuthorizeForAccountService(
       memberHandleToBeAuthorized,
       accountID,
-      ownerID
+      ownerID,
+      requestId
     );
 
-    if (!responseData) {
-      logger.warn("Failed to authorize member for account", {
-        memberHandleToBeAuthorized,
-        accountID,
-        ownerID,
-      });
-      res
-        .status(400)
-        .json({ message: "Failed to authorize member for account" });
-      return;
-    }
+    if (!result.success) {
+      const statusCode = 
+        result.message.includes("Entrepreneur tier") ? 403 :
+        result.message.includes("Limit of 5") ? 400 :
+        400;
 
-    if (responseData.message === "accounts not found") {
-      logger.warn("Accounts not found during authorization", {
+      logger.warn("Authorization failed", {
         memberHandleToBeAuthorized,
         accountID,
         ownerID,
+        message: result.message,
+        requestId
       });
-      res.status(404).json({ message: "Accounts not found" });
-      return;
-    }
 
-    if (
-      responseData.message ===
-      "Limit of 5 authorized accounts reached. Remove an authorized account if you want to add another."
-    ) {
-      logger.warn("Authorization limit reached", {
-        memberHandleToBeAuthorized,
-        accountID,
-        ownerID,
-      });
-      res.status(400).json({ message: responseData.message });
-      return;
-    }
-
-    if (
-      responseData.message ===
-      "You can only authorize someone to transact on behalf of your account when you are on the Entrepreneur tier or above."
-    ) {
-      logger.warn("Insufficient tier for authorization", {
-        memberHandleToBeAuthorized,
-        accountID,
-        ownerID,
-      });
-      res.status(403).json({ message: responseData.message });
+      res.status(statusCode).json(result);
       return;
     }
 
@@ -95,16 +70,39 @@ export async function AuthorizeForAccountController(
       memberHandleToBeAuthorized,
       accountID,
       ownerID,
+      requestId
     });
-    res.status(200).json(responseData);
+
+    res.status(200).json(result);
+
   } catch (error) {
+    const handledError = handleServiceError(error);
     logger.error("Error in AuthorizeForAccountController", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
+      error: handledError.message,
+      code: handledError.code,
+      stack: handledError instanceof Error ? handledError.stack : undefined,
       memberHandleToBeAuthorized: req.body.memberHandleToBeAuthorized,
       accountID: req.body.accountID,
       ownerID: req.body.ownerID,
+      requestId
     });
-    next(error);
+
+    if (handledError instanceof AccountError) {
+      const statusCode = 
+        handledError.message.includes("not found") ? 404 :
+        handledError.message.includes("Invalid") ? 400 :
+        handledError.statusCode || 500;
+
+      res.status(statusCode).json({
+        success: false,
+        message: handledError.message
+      });
+      return;
+    }
+
+    next(handledError);
+
+  } finally {
+    logger.debug("Exiting AuthorizeForAccountController", { requestId });
   }
 }

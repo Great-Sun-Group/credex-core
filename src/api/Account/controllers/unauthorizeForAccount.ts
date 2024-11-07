@@ -1,10 +1,22 @@
 import express from "express";
-import { UnauthorizeForCompanyService } from "../services/UnauthorizeForAccount";
+import { UnauthorizeForAccountService } from "../services/UnauthorizeForAccount";
+import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
-import { validateUUID } from "../../../utils/validators";
+
+interface UnauthorizeResponse {
+  success: boolean;
+  data?: {
+    accountID: string;
+    memberIdUnauthorized: string;
+  };
+  message: string;
+}
 
 /**
- * Controller for unauthorizing a member for an account
+ * UnauthorizeForAccountController
+ * 
+ * Handles requests to remove authorization for a member to access an account.
+ * 
  * @param req - Express request object
  * @param res - Express response object
  * @param next - Express next function
@@ -13,81 +25,38 @@ export async function UnauthorizeForAccountController(
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
-) {
-  logger.debug("UnauthorizeForAccountController called", { body: req.body });
-
-  const { memberIDtoBeUnauthorized, accountID } = req.body;
-
-  if (!memberIDtoBeUnauthorized || !accountID) {
-    logger.warn("Missing required parameters", { body: req.body });
-    return res.status(400).json({ message: "Missing required parameters" });
-  }
+): Promise<void> {
+  const requestId = req.id;
+  logger.debug("Entering UnauthorizeForAccountController", { requestId });
 
   try {
-    const requiredFields = ["memberIDtoBeUnauthorized", "accountID", "ownerID"];
-
-    for (const field of requiredFields) {
-      if (!req.body[field]) {
-        logger.warn(`Missing required field: ${field}`, { body: req.body });
-        res.status(400).json({ message: `${field} is required` });
-        return;
-      }
-    }
-
     const { memberIDtoBeUnauthorized, accountID, ownerID } = req.body;
 
-    // Validate memberIDtoBeUnauthorized
-    if (!validateUUID(memberIDtoBeUnauthorized)) {
-      logger.warn("Invalid memberIDtoBeUnauthorized provided", {
-        memberIDtoBeUnauthorized,
-      });
-      res
-        .status(400)
-        .json({
-          message: "Invalid memberIDtoBeUnauthorized. Must be a valid UUID.",
-        });
-      return;
-    }
-
-    // Validate accountID
-    if (!validateUUID(accountID)) {
-      logger.warn("Invalid accountID provided", { accountID });
-      res
-        .status(400)
-        .json({ message: "Invalid accountID. Must be a valid UUID." });
-      return;
-    }
-
-    // Validate ownerID
-    if (!validateUUID(ownerID)) {
-      logger.warn("Invalid ownerID provided", { ownerID });
-      res
-        .status(400)
-        .json({ message: "Invalid ownerID. Must be a valid UUID." });
-      return;
-    }
-
+    // Basic validation is handled by validateRequest middleware
     logger.info("Unauthorizing member for account", {
       memberIDtoBeUnauthorized,
       accountID,
       ownerID,
+      requestId
     });
 
-    const responseData = await UnauthorizeForCompanyService(
+    const result = await UnauthorizeForAccountService(
       memberIDtoBeUnauthorized,
       accountID,
-      ownerID
+      ownerID,
+      requestId
     );
 
-    if (!responseData) {
+    if (!result.success) {
       logger.warn("Failed to unauthorize member for account", {
         memberIDtoBeUnauthorized,
         accountID,
         ownerID,
+        message: result.message,
+        requestId
       });
-      res
-        .status(400)
-        .json({ message: "Failed to unauthorize member for the account" });
+
+      res.status(400).json(result);
       return;
     }
 
@@ -95,16 +64,40 @@ export async function UnauthorizeForAccountController(
       memberIDtoBeUnauthorized,
       accountID,
       ownerID,
+      requestId
     });
-    res.status(200).json(responseData);
+
+    res.status(200).json(result);
+
   } catch (error) {
+    const handledError = handleServiceError(error);
     logger.error("Error in UnauthorizeForAccountController", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
+      error: handledError.message,
+      code: handledError.code,
+      stack: handledError instanceof Error ? handledError.stack : undefined,
       memberIDtoBeUnauthorized: req.body.memberIDtoBeUnauthorized,
       accountID: req.body.accountID,
       ownerID: req.body.ownerID,
+      requestId
     });
-    next(error);
+
+    if (handledError instanceof AccountError) {
+      const statusCode = 
+        handledError.message.includes("not found") ? 404 :
+        handledError.message.includes("not authorized") ? 403 :
+        handledError.message.includes("Invalid") ? 400 :
+        handledError.statusCode || 500;
+
+      res.status(statusCode).json({
+        success: false,
+        message: handledError.message
+      });
+      return;
+    }
+
+    next(handledError);
+
+  } finally {
+    logger.debug("Exiting UnauthorizeForAccountController", { requestId });
   }
 }

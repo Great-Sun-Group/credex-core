@@ -1,9 +1,9 @@
 import express from "express";
 import { GetMemberByHandleController } from "./controllers/getMemberByHandle";
 import { GetMemberDashboardByPhoneController } from "./controllers/getMemberDashboardByPhone";
-import { onboardMemberExpressHandler } from "./controllers/onboardMember";
+import { OnboardMemberController } from "./controllers/onboardMember";
 import { loginMemberExpressHandler } from "./controllers/loginMember";
-import { authForTierSpendLimitExpressHandler } from "./controllers/authForTierSpendLimit";
+import { AuthForTierSpendLimitController } from "./controllers/authForTierSpendLimit";
 import { validateRequest } from "../../middleware/validateRequest";
 import { errorHandler } from "../../middleware/errorHandler";
 import {
@@ -174,7 +174,7 @@ export default function MemberRoutes() {
   router.post(
     `/onboardMember`,
     validateRequest(onboardMemberSchema),
-    onboardMemberExpressHandler,
+    OnboardMemberController,
     errorHandler
   );
   logger.debug("Route registered: POST /onboardMember");
@@ -216,13 +216,40 @@ export default function MemberRoutes() {
    *     responses:
    *       200:
    *         description: Tier spend limit authorized successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     isAuthorized:
+   *                       type: boolean
+   *                       example: true
+   *                     availableAmount:
+   *                       type: string
+   *                       example: "100.00 USD"
+   *                     memberTier:
+   *                       type: number
+   *                       example: 2
+   *                 message:
+   *                   type: string
+   *                   example: "Authorization granted"
    *       400:
    *         description: Invalid input data
+   *       403:
+   *         description: Not authorized due to tier limits
+   *       404:
+   *         description: Account not found
    */
   router.post(
     `/authForTierSpendLimit`,
     validateRequest(authForTierSpendLimitSchema),
-    authForTierSpendLimitExpressHandler,
+    AuthForTierSpendLimitController,
     errorHandler
   );
   logger.debug("Route registered: POST /authForTierSpendLimit");

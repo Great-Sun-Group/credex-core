@@ -7,6 +7,7 @@ import { UnauthorizeForAccountController } from "./controllers/unauthorizeForAcc
 import { UpdateSendOffersToController } from "./controllers/updateSendOffersTo";
 import { GetLedgerController } from "./controllers/getLedger";
 import { SetDCOparticipantRateController } from "./controllers/setDCOparticipantRate";
+import { GetBalancesController } from "./controllers/getBalances";
 import { errorHandler } from "../../middleware/errorHandler";
 import { validateRequest } from "../../middleware/validateRequest";
 import {
@@ -18,6 +19,7 @@ import {
   updateSendOffersToSchema,
   getLedgerSchema,
   setDCOparticipantRateSchema,
+  getBalancesSchema,
 } from "./accountValidationSchemas";
 import logger from "../../utils/logger";
 
@@ -31,6 +33,76 @@ import logger from "../../utils/logger";
 export default function AccountRoutes() {
   const router = express.Router();
   logger.info("Initializing Account routes");
+
+  /**
+   * @swagger
+   * /api/account/getBalances:
+   *   post:
+   *     tags: [Accounts]
+   *     summary: Get account balances
+   *     description: Retrieve secured and unsecured balances for an account
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - accountID
+   *             properties:
+   *               accountID:
+   *                 type: string
+   *                 format: uuid
+   *                 description: ID of the account to get balances for
+   *     responses:
+   *       200:
+   *         description: Balances retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: true
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     securedNetBalancesByDenom:
+   *                       type: array
+   *                       items:
+   *                         type: string
+   *                       example: ["100.00 USD", "50.00 CAD"]
+   *                     unsecuredBalancesInDefaultDenom:
+   *                       type: object
+   *                       properties:
+   *                         totalPayables:
+   *                           type: string
+   *                           example: "200.00 USD"
+   *                         totalReceivables:
+   *                           type: string
+   *                           example: "300.00 USD"
+   *                         netPayRec:
+   *                           type: string
+   *                           example: "100.00 USD"
+   *                     netCredexAssetsInDefaultDenom:
+   *                       type: string
+   *                       example: "150.00 USD"
+   *                 message:
+   *                   type: string
+   *                   example: "Account balances retrieved successfully"
+   *       400:
+   *         description: Invalid input data
+   *       404:
+   *         description: Account not found
+   */
+  router.post(
+    `/getBalances`,
+    validateRequest(getBalancesSchema),
+    GetBalancesController,
+    errorHandler
+  );
+  logger.debug("Route registered: POST /getBalances");
 
   /**
    * @swagger

@@ -10,15 +10,29 @@ export function validateUUID(uuid: string): { isValid: boolean; message?: string
   return { isValid, message };
 }
 
-export function validateHandle(handle: string, type: 'member' | 'account'): { isValid: boolean; message?: string } {
+export function validateHandle(handle: string): { isValid: boolean; message?: string } {
   const handleRegex = /^[a-z0-9_]{3,30}$/;
   const isValid = handleRegex.test(handle);
-  const entityType = type.charAt(0).toUpperCase() + type.slice(1);
-  const message = isValid 
-    ? `Valid ${type} handle` 
-    : `Invalid ${type} handle: must be 3-30 characters long and contain only lowercase letters, numbers, and underscores`;
-  logger.debug(message, { handle, isValid, type });
-  return { isValid, message };
+  
+  if (!isValid) {
+    if (handle.length < 3 || handle.length > 30) {
+      return {
+        isValid: false,
+        message: `Invalid handle: must be between 3 and 30 characters long`
+      };
+    }
+    if (/[^a-z0-9_]/.test(handle)) {
+      return {
+        isValid: false,
+        message: `Invalid handle: only lowercase letters, numbers, and underscores are allowed. Received "${handle}"`
+      };
+    }
+  }
+  
+  return { 
+    isValid,
+    message: isValid ? `Valid handle` : `Invalid handle format`
+  };
 }
 
 export function validateAccountName(name: string): { isValid: boolean; message?: string } {

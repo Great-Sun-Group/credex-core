@@ -2,45 +2,83 @@ import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { denomFormatter } from "../../../utils/denomUtils";
 import logger from "../../../utils/logger";
 
-export async function GetBalancesService(accountID: string) {
+interface BalanceData {
+  securedNetBalancesByDenom: string[];
+  unsecuredBalancesInDefaultDenom: {
+    totalPayables: string;
+    totalReceivables: string;
+    netPayRec: string;
+  };
+  netCredexAssetsInDefaultDenom: string;
+}
+
+class AccountError extends Error {
+  constructor(message: string, public code: string) {
+    super(message);
+    this.name = 'AccountError';
+  }
+}
+
+/**
+ * GetBalancesService
+ * 
+ * This service retrieves the secured and unsecured balances for an account,
+ * including net balances by denomination and total assets in default denomination.
+ * 
+ * @param accountID - The ID of the account to get balances for
+ * @param requestId - The ID of the HTTP request
+ * @returns Object containing secured and unsecured balance information
+ * @throws AccountError with specific error codes
+ */
+export async function GetBalancesService(
+  accountID: string,
+  requestId: string
+): Promise<BalanceData> {
+  logger.debug("Entering GetBalancesService", { accountID, requestId });
+
+  if (!accountID) {
+    throw new AccountError("Missing required accountID", "INVALID_PARAMS");
+  }
+
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-  logger.debug("GetBalancesService entered", { accountID });
 
   try {
-    logger.debug("Fetching secured balances");
-    const getSecuredBalancesQuery = await ledgerSpaceSession.run(
-      `
-      MATCH (account:Account {accountID: $accountID})
+    logger.debug("Fetching secured balances", { accountID, requestId });
+    const getSecuredBalancesQuery = await ledgerSpaceSession.executeRead(async (tx) => {
+      return tx.run(
+        `
+        MATCH (account:Account {accountID: $accountID})
 
-      // Get all unique denominations from Credex nodes related to the account
-      OPTIONAL MATCH (account)-[:OWES|OFFERED]-(securedCredex:Credex)<-[:SECURES]-()
-      WITH DISTINCT securedCredex.Denomination AS denom, account
+        // Get all unique denominations from Credex nodes related to the account
+        OPTIONAL MATCH (account)-[:OWES|OFFERED]-(securedCredex:Credex)<-[:SECURES]-()
+        WITH DISTINCT securedCredex.Denomination AS denom, account
 
-      // Aggregate incoming secured amounts for each denomination ensuring uniqueness
-      OPTIONAL MATCH (account)<-[:OWES]-(inSecuredCredex:Credex {Denomination: denom})<-[:SECURES]-()
-      WITH denom, account, 
-          collect(DISTINCT inSecuredCredex) AS inSecuredCredexes
+        // Aggregate incoming secured amounts for each denomination ensuring uniqueness
+        OPTIONAL MATCH (account)<-[:OWES]-(inSecuredCredex:Credex {Denomination: denom})<-[:SECURES]-()
+        WITH denom, account, 
+            collect(DISTINCT inSecuredCredex) AS inSecuredCredexes
 
-      // Aggregate outgoing secured amounts for each denomination ensuring uniqueness
-      OPTIONAL MATCH (account)-[:OWES|OFFERED]->(outSecuredCredex:Credex {Denomination: denom})<-[:SECURES]-()
-      WITH denom, 
-          reduce(s = 0, n IN inSecuredCredexes | s + n.OutstandingAmount) AS sumSecuredIn, 
-          collect(DISTINCT outSecuredCredex) AS outSecuredCredexes
+        // Aggregate outgoing secured amounts for each denomination ensuring uniqueness
+        OPTIONAL MATCH (account)-[:OWES|OFFERED]->(outSecuredCredex:Credex {Denomination: denom})<-[:SECURES]-()
+        WITH denom, 
+            reduce(s = 0, n IN inSecuredCredexes | s + n.OutstandingAmount) AS sumSecuredIn, 
+            collect(DISTINCT outSecuredCredex) AS outSecuredCredexes
 
-      // Calculate the total outgoing amount
-      WITH denom, sumSecuredIn, 
-          reduce(s = 0, n IN outSecuredCredexes | s + n.OutstandingAmount) AS sumSecuredOut
+        // Calculate the total outgoing amount
+        WITH denom, sumSecuredIn, 
+            reduce(s = 0, n IN outSecuredCredexes | s + n.OutstandingAmount) AS sumSecuredOut
 
-      // Get the current day node which should have active status
-      MATCH (daynode:Daynode {Active: true})
+        // Get the current day node which should have active status
+        MATCH (daynode:Daynode {Active: true})
 
-      // Calculate the net secured balance for each denomination and return the result
-      RETURN denom, (sumSecuredIn - sumSecuredOut) / daynode[denom] AS netSecured
-      `,
-      { accountID }
-    );
+        // Calculate the net secured balance for each denomination and return the result
+        RETURN denom, (sumSecuredIn - sumSecuredOut) / daynode[denom] AS netSecured
+        `,
+        { accountID }
+      );
+    });
 
-    logger.debug("Processing secured balances");
+    logger.debug("Processing secured balances", { accountID, requestId });
     const securedNetBalancesByDenom: string[] = getSecuredBalancesQuery.records
       .filter((record) => {
         const amount = record.get("netSecured");
@@ -52,9 +90,9 @@ export async function GetBalancesService(accountID: string) {
         return `${denomFormatter(amount, denom)} ${denom}`;
       });
 
-    logger.debug("Fetching unsecured balances and total assets");
-    const getUnsecuredBalancesAndTotalAssetsQuery =
-      await ledgerSpaceSession.run(
+    logger.debug("Fetching unsecured balances and total assets", { accountID, requestId });
+    const getUnsecuredBalancesAndTotalAssetsQuery = await ledgerSpaceSession.executeRead(async (tx) => {
+      return tx.run(
         `
         MATCH (account:Account{accountID:$accountID})
 
@@ -87,14 +125,23 @@ export async function GetBalancesService(accountID: string) {
           payablesTotalCXX / daynode[defaultDenom] AS payablesTotalInDefaultDenom,
           unsecuredNetCXX / daynode[defaultDenom] AS unsecuredNetInDefaultDenom,
           netCredexAssetsCXX / daynode[defaultDenom] AS netCredexAssetsInDefaultDenom
-      `,
+        `,
         { accountID }
       );
+    });
 
-    logger.debug("Processing unsecured balances and total assets");
-    const unsecuredBalancesAndTotalAssets =
-      getUnsecuredBalancesAndTotalAssetsQuery.records[0];
+    if (getUnsecuredBalancesAndTotalAssetsQuery.records.length === 0) {
+      throw new AccountError("Account not found", "NOT_FOUND");
+    }
+
+    logger.debug("Processing unsecured balances and total assets", { accountID, requestId });
+    const unsecuredBalancesAndTotalAssets = getUnsecuredBalancesAndTotalAssetsQuery.records[0];
     const defaultDenom = unsecuredBalancesAndTotalAssets.get("defaultDenom");
+
+    if (!defaultDenom) {
+      throw new AccountError("Account missing default denomination", "INVALID_ACCOUNT_STATE");
+    }
+
     const unsecuredBalancesInDefaultDenom = {
       totalPayables: `${denomFormatter(
         unsecuredBalancesAndTotalAssets.get("payablesTotalInDefaultDenom"),
@@ -110,7 +157,7 @@ export async function GetBalancesService(accountID: string) {
       )} ${defaultDenom}`,
     };
 
-    const result = {
+    const result: BalanceData = {
       securedNetBalancesByDenom,
       unsecuredBalancesInDefaultDenom,
       netCredexAssetsInDefaultDenom: `${denomFormatter(
@@ -119,24 +166,27 @@ export async function GetBalancesService(accountID: string) {
       )} ${defaultDenom}`,
     };
 
-    logger.info("Balances fetched successfully", { accountID });
-    logger.debug("GetBalancesService exiting", { accountID });
+    logger.info("Balances retrieved successfully", { accountID, requestId });
+    logger.debug("Exiting GetBalancesService", { accountID, requestId });
     return result;
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      logger.error("Error fetching balances:", {
-        accountID,
-        error: error.message,
-        stack: error.stack,
-      });
-    } else {
-      logger.error("Unknown error fetching balances:", {
-        accountID,
-        error: String(error),
-      });
+
+  } catch (error) {
+    if (error instanceof AccountError) {
+      throw error;
     }
-    logger.debug("GetBalancesService exiting with error", { accountID });
-    throw new Error("Failed to fetch balances. Please try again later.");
+
+    logger.error("Unexpected error in GetBalancesService", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      accountID,
+      requestId
+    });
+
+    throw new AccountError(
+      `Failed to retrieve balances: ${error instanceof Error ? error.message : "Unknown error"}`,
+      "INTERNAL_ERROR"
+    );
+
   } finally {
     await ledgerSpaceSession.close();
   }

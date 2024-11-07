@@ -1,46 +1,82 @@
 import express from "express";
 import { LoginMemberService } from "../services/LoginMember";
+import { MemberError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 import { validatePhone } from "../../../utils/validators";
 
+interface LoginResponse {
+  success: boolean;
+  data?: {
+    token: string;
+    memberID: string;
+  };
+  message: string;
+}
+
+/**
+ * LoginMemberController
+ * 
+ * Handles member authentication via phone number.
+ * 
+ * @param phone - The member's phone number
+ * @param requestId - Request tracking ID
+ * @returns LoginResponse containing authentication result
+ * @throws MemberError for validation and business logic errors
+ */
 export async function LoginMemberController(
   phone: string,
   requestId: string
-): Promise<{ token: string } | { error: string }> {
+): Promise<LoginResponse> {
   logger.debug("Entering LoginMemberController", { phone, requestId });
 
   try {
-    logger.info("Attempting to login member", { phone, requestId });
-
-    const loginResult = await LoginMemberService(phone);
-
-    if (!loginResult.token) {
-      logger.warn("Failed to login member", {
-        phone,
-        error: loginResult.error,
-        requestId,
-      });
-      logger.debug("Exiting LoginMemberController with login failure", {
-        requestId,
-      });
-      return { error: loginResult.error || "Failed to login member" };
+    const phoneValidation = validatePhone(phone);
+    if (!phoneValidation.isValid) {
+      throw new MemberError(
+        phoneValidation.message || "Invalid phone number format",
+        "INVALID_PHONE",
+        400
+      );
     }
 
-    logger.info("Member logged in successfully", { phone, requestId });
-    logger.debug("Exiting LoginMemberController successfully", { requestId });
-    return { token: loginResult.token };
+    logger.info("Attempting to login member", { phone, requestId });
+    const result = await LoginMemberService(phone);
+
+    if (!result.success) {
+      logger.warn("Login failed", {
+        phone,
+        message: result.message,
+        requestId
+      });
+    } else {
+      logger.info("Login successful", {
+        phone,
+        memberID: result.data?.memberID,
+        requestId
+      });
+    }
+
+    return result;
+
   } catch (error) {
+    const handledError = handleServiceError(error);
     logger.error("Error in LoginMemberController", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
+      error: handledError.message,
+      code: handledError.code,
       phone,
-      requestId,
+      requestId
     });
-    logger.debug("Exiting LoginMemberController with error", { requestId });
-    return { error: "Internal Server Error" };
+    
+    return {
+      success: false,
+      message: handledError.message
+    };
   }
 }
 
+/**
+ * Express handler for member login requests
+ */
 export async function loginMemberExpressHandler(
   req: express.Request,
   res: express.Response,
@@ -48,48 +84,42 @@ export async function loginMemberExpressHandler(
 ): Promise<void> {
   const requestId = req.id;
   logger.debug("Entering loginMemberExpressHandler", {
-    body: req.body,
     requestId,
+    body: req.body
   });
 
   try {
     const { phone } = req.body;
 
-    if (!validatePhone(phone)) {
-      logger.warn("Invalid phone number", { phone, requestId });
-      res
-        .status(400)
-        .json({
-          message:
-            "Invalid phone number. Please provide a valid international phone number.",
-        });
-      logger.debug(
-        "Exiting loginMemberExpressHandler with invalid phone number",
-        { requestId }
-      );
+    if (!phone) {
+      logger.warn("Missing phone number", { requestId });
+      res.status(400).json({
+        success: false,
+        message: "Phone number is required"
+      });
       return;
     }
 
     const result = await LoginMemberController(phone, requestId);
 
-    if ("error" in result) {
-      logger.warn("Login failed", { error: result.error, phone, requestId });
-      res.status(400).json({ message: result.error });
+    if (!result.success) {
+      const statusCode = result.message.includes("not found") ? 404 : 400;
+      res.status(statusCode).json(result);
     } else {
-      logger.info("Login successful", { phone, requestId });
       res.status(200).json(result);
     }
-    logger.debug("Exiting loginMemberExpressHandler successfully", {
-      requestId,
-    });
+
   } catch (error) {
-    logger.error("Error in loginMemberExpressHandler", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-      body: req.body,
-      requestId,
+    const handledError = handleServiceError(error);
+    logger.error("Unexpected error in loginMemberExpressHandler", {
+      error: handledError.message,
+      code: handledError.code,
+      stack: handledError instanceof Error ? handledError.stack : undefined,
+      requestId
     });
-    logger.debug("Exiting loginMemberExpressHandler with error", { requestId });
-    next(error);
+    
+    next(handledError);
+  } finally {
+    logger.debug("Exiting loginMemberExpressHandler", { requestId });
   }
 }

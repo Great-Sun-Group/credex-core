@@ -14,8 +14,8 @@ logger.debug("Initializing member validation schemas");
 
 export const getMemberByHandleSchema = {
   memberHandle: {
-    sanitizer: s.sanitizeString,
-    validator: (handle: string) => v.validateHandle(handle, 'member'),
+    sanitizer: s.sanitizeHandle,
+    validator: v.validateHandle,
     required: true,
   },
 };

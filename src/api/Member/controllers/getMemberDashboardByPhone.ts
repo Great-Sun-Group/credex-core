@@ -1,10 +1,33 @@
 import express from "express";
 import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { MemberError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
+import { validatePhone } from "../../../utils/validators";
+
+interface DashboardResponse {
+  success: boolean;
+  data?: {
+    memberDashboard: {
+      memberID: string;
+      firstname: string;
+      lastname: string;
+      memberHandle: string;
+      defaultDenom: string;
+      memberTier: number;
+      remainingAvailableUSD: number;
+      accountIDS: string[];
+    };
+    accountDashboards: any[]; // Type will be refined when AccountDashboard is standardized
+  };
+  message: string;
+}
 
 /**
- * Controller for retrieving a member's dashboard by phone number
+ * GetMemberDashboardByPhoneController
+ * 
+ * Retrieves a member's dashboard and associated account information.
+ * 
  * @param req - Express request object
  * @param res - Express response object
  * @param next - Express next function
@@ -20,66 +43,103 @@ export async function GetMemberDashboardByPhoneController(
   try {
     const { phone } = req.body;
 
-    if (!phone) {
-      logger.warn(
-        "GetMemberDashboardByPhoneController called with empty phone number",
-        { requestId }
+    // Validate phone number
+    const phoneValidation = validatePhone(phone);
+    if (!phoneValidation.isValid) {
+      throw new MemberError(
+        phoneValidation.message || "Invalid phone number format",
+        "INVALID_PHONE",
+        400
       );
-      res.status(400).json({ message: "Phone number is required" });
-      logger.debug(
-        "Exiting GetMemberDashboardByPhoneController due to missing phone number",
-        { requestId }
-      );
+    }
+
+    logger.info("Retrieving member dashboard", { phone, requestId });
+
+    // Get member dashboard
+    const memberDashboardResult = await GetMemberDashboardByPhoneService(phone);
+
+    if (!memberDashboardResult.success || !memberDashboardResult.data) {
+      const statusCode = 
+        memberDashboardResult.message.includes("not found") ? 404 : 400;
+
+      logger.warn("Failed to retrieve member dashboard", {
+        phone,
+        message: memberDashboardResult.message,
+        requestId
+      });
+
+      res.status(statusCode).json(memberDashboardResult);
       return;
     }
 
-    logger.info("Retrieving member dashboard by phone", { phone, requestId });
-
-    const memberDashboard = await GetMemberDashboardByPhoneService(phone);
-    if (!memberDashboard) {
-      logger.warn("Could not retrieve member dashboard", { phone, requestId });
-      res.status(404).json({ message: "Could not retrieve member dashboard" });
-      logger.debug(
-        "Exiting GetMemberDashboardByPhoneController due to missing member dashboard",
-        { requestId }
-      );
-      return;
-    }
-
+    // Get associated account dashboards
     logger.debug("Retrieving account dashboards", {
-      memberID: memberDashboard.memberID,
-      accountCount: memberDashboard.accountIDS.length,
+      memberID: memberDashboardResult.data.memberID,
+      accountCount: memberDashboardResult.data.accountIDS.length,
       requestId,
     });
+
     const accountDashboards = await Promise.all(
-      memberDashboard.accountIDS.map(async (accountId: string) => {
-        return GetAccountDashboardService(memberDashboard.memberID, accountId);
+      memberDashboardResult.data.accountIDS.map(async (accountId: string) => {
+        try {
+          return await GetAccountDashboardService(
+            memberDashboardResult.data!.memberID,
+            accountId
+          );
+        } catch (error) {
+          logger.error("Error fetching account dashboard", {
+            error: error instanceof Error ? error.message : "Unknown error",
+            accountId,
+            memberID: memberDashboardResult.data!.memberID,
+            requestId
+          });
+          return null;
+        }
       })
     );
 
-    logger.info(
-      "Member dashboard and account dashboards retrieved successfully",
-      {
-        phone,
-        memberID: memberDashboard.memberID,
-        accountCount: accountDashboards.length,
-        requestId,
-      }
+    // Filter out any failed account dashboard retrievals
+    const validAccountDashboards = accountDashboards.filter(
+      (dashboard): dashboard is NonNullable<typeof dashboard> => dashboard !== null
     );
-    res.status(200).json({ memberDashboard, accountDashboards });
-    logger.debug("Exiting GetMemberDashboardByPhoneController successfully", {
+
+    logger.info("Dashboard data retrieved successfully", {
+      memberID: memberDashboardResult.data.memberID,
+      accountCount: validAccountDashboards.length,
       requestId,
     });
+
+    const response: DashboardResponse = {
+      success: true,
+      data: {
+        memberDashboard: memberDashboardResult.data,
+        accountDashboards: validAccountDashboards
+      },
+      message: "Dashboard retrieved successfully"
+    };
+
+    res.status(200).json(response);
+
   } catch (error) {
+    const handledError = handleServiceError(error);
     logger.error("Error in GetMemberDashboardByPhoneController", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
+      error: handledError.message,
+      code: handledError.code,
+      stack: handledError instanceof Error ? handledError.stack : undefined,
       phone: req.body.phone,
       requestId,
     });
-    logger.debug("Exiting GetMemberDashboardByPhoneController with error", {
-      requestId,
-    });
-    next(error);
+
+    if (handledError instanceof MemberError) {
+      res.status(handledError.statusCode).json({
+        success: false,
+        message: handledError.message
+      });
+      return;
+    }
+
+    next(handledError);
+  } finally {
+    logger.debug("Exiting GetMemberDashboardByPhoneController", { requestId });
   }
 }
