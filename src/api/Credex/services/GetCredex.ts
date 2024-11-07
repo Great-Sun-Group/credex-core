@@ -91,18 +91,15 @@ export async function GetCredexService(credexID: string, accountID: string) {
       return acc;
     }, {} as Record<string, string>);
 
-    const acceptedAt = moment(record.get("acceptedAt"))
-      .subtract(1, "month")
-      .format("YYYY-MM-DD");
-    const declinedAt = moment(record.get("declinedAt"))
-      .subtract(1, "month")
-      .format("YYYY-MM-DD");
-    const cancelledAt = moment(record.get("cancelledAt"))
-      .subtract(1, "month")
-      .format("YYYY-MM-DD");
-    const dueDate = moment(record.get("dueDate"))
-      .subtract(1, "month")
-      .format("YYYY-MM-DD");
+    const formatDate = (date: string | null) => {
+      if (!date) return null;
+      return moment(date).subtract(1, "month").format("YYYY-MM-DD");
+    };
+
+    const acceptedAt = formatDate(record.get("acceptedAt"));
+    const declinedAt = formatDate(record.get("declinedAt"));
+    const cancelledAt = formatDate(record.get("cancelledAt"));
+    const dueDate = formatDate(record.get("dueDate"));
     const counterpartyAccountName = record.get("counterpartyAccountName")
 
     const credexData = {
@@ -113,10 +110,10 @@ export async function GetCredexService(credexID: string, accountID: string) {
       securerID: record.get("securerID"),
       securerName: record.get("securerName"),
       Denomination,
-      acceptedAt: acceptedAt,
-      declinedAt: declinedAt,
-      cancelledAt: cancelledAt,
-      dueDate: dueDate,
+      acceptedAt,
+      declinedAt,
+      cancelledAt,
+      dueDate,
       ...formattedAmounts,
     };
 
