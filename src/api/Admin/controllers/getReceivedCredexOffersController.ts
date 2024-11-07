@@ -1,37 +1,96 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import logger from "../../../utils/logger";
-import { validateUUID, validateAccountHandle } from "../../../utils/validators";
+import { validateUUID, validateHandle } from "../../../utils/validators";
+import { AdminError, ErrorCodes } from "../../../utils/errorUtils";
 import GetAccountReceivedCredexOffers from "../services/GetAccountReceivedCredexOffers";
 
-export async function getReceivedCredexOffersController(req: Request, res: Response, next: NextFunction) {
-  const { accountID, accountHandle } = req.body as { accountID?: string, accountHandle?: string };
+interface CustomRequest extends Request {
+  id: string;
+}
+
+interface ReceivedCredexOffer {
+  receivedCredexOfferID: string;
+  receivedCredexOfferType: string;
+  receivedCredexOfferDenomination: string;
+  receivedCredexOfferInitialAmount: string;
+  receivedCredexOfferOutstandingAmount: string;
+  receivedCredexOfferDefaultedAmount: string;
+  receivedCredexOfferRedeemedAmount: string;
+  receivedCredexOfferQueueStatus: string;
+  receivedCredexOfferCXXmultiplier: number;
+  receivedCredexOfferWrittenOffAmount: string;
+  receivedCredexOfferDueDate: string;
+  receivedCredexOfferCreatedAt: string;
+  sendingAccountID: string;
+  sendingAccountDefaultDenom: string;
+  sendingAccountHandle: string;
+  receiverAccountID?: string;
+}
+
+interface GetReceivedCredexOffersResponse {
+  data: {
+    accountReceivedCredexOffers: ReceivedCredexOffer[];
+  };
+}
+
+export async function getReceivedCredexOffersController(req: CustomRequest, res: Response, next: NextFunction) {
+  const { accountID, accountHandle } = req.body;
   const requestId = req.id;
   
   logger.debug('getReceivedCredexOffers function called', { requestId, accountID, accountHandle });
 
-  if (accountID && !validateUUID(accountID)) {
+  if (accountID && !validateUUID(accountID).isValid) {
     logger.warn('Invalid accountID provided', { requestId, accountID });
-      return res.status(400).json({ message: 'Invalid accountID' });
-    }
+    return next(new AdminError('Invalid accountID', 'INVALID_ID', ErrorCodes.Admin.INVALID_ID));
+  }
 
-  if (accountHandle && !validateAccountHandle(accountHandle)) {
+  if (accountHandle && !validateHandle(accountHandle).isValid) {
     logger.warn('Invalid accountHandle provided', { requestId, accountHandle });
-    return res.status(400).json({ message: 'Invalid accountHandle' });
+    return next(new AdminError('Invalid accountHandle', 'INVALID_ID', ErrorCodes.Admin.INVALID_ID));
   }
 
   if (!accountID && !accountHandle) {
     logger.warn('Neither accountID nor accountHandle provided', { requestId });
-    return res.status(400).json({ message: 'Either accountID or accountHandle is required' });
+    return next(new AdminError('Either accountID or accountHandle is required', 'INVALID_ID', ErrorCodes.Admin.INVALID_ID));
   }
 
-  logger.info('Attempting to fetch received credex offers', { requestId, accountID, accountHandle });
-
   try {
-    const result = await GetAccountReceivedCredexOffers(accountHandle || '', accountID || '');
+    const result = await GetAccountReceivedCredexOffers(accountHandle || '', accountID || '') as GetReceivedCredexOffersResponse;
+
+    if (!result.data || !result.data.accountReceivedCredexOffers.length) {
+      logger.warn('No received credex offers found', { requestId, accountID, accountHandle });
+      return next(new AdminError('No received credex offers found', 'NOT_FOUND', ErrorCodes.Admin.NOT_FOUND));
+    }
+
     logger.info('Successfully fetched received credex offers', { requestId, accountID, accountHandle });
-    res.status(200).json(result);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Received credex offers fetched successfully',
+      data: {
+        accountID: accountID || result.data.accountReceivedCredexOffers[0].receiverAccountID,
+        credexOffers: result.data.accountReceivedCredexOffers.map((offer: ReceivedCredexOffer) => ({
+          credexID: offer.receivedCredexOfferID,
+          credexInfo: {
+            type: offer.receivedCredexOfferType,
+            denomination: offer.receivedCredexOfferDenomination,
+            amount: offer.receivedCredexOfferInitialAmount,
+            status: offer.receivedCredexOfferQueueStatus
+          },
+          relationships: {
+            issuerID: offer.sendingAccountID
+          }
+        }))
+      }
+    });
   } catch (error) {
-    logger.error('Error fetching received credex offers', { requestId, accountID, accountHandle, error: (error as Error).message });
-    res.status(500).json({ message: 'Error fetching received credex offers', error: (error as Error).message });
+    logger.error('Error fetching received credex offers', {
+      requestId,
+      accountID,
+      accountHandle,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    next(new AdminError('Error fetching received credex offers', 'INTERNAL_ERROR', ErrorCodes.Admin.INTERNAL_ERROR));
   }
 }

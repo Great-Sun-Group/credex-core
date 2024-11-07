@@ -28,6 +28,13 @@ export class RecurringError extends Error {
   }
 }
 
+export class AdminError extends Error {
+  constructor(message: string, public code: string, public statusCode: number = 500) {
+    super(message);
+    this.name = "AdminError";
+  }
+}
+
 export function isNeo4jError(error: unknown): error is Neo4jError {
   return error instanceof Neo4jError;
 }
@@ -36,7 +43,8 @@ export function handleServiceError(error: unknown): Error {
   if (error instanceof MemberError ||
       error instanceof AccountError ||
       error instanceof CredexError ||
-      error instanceof RecurringError) {
+      error instanceof RecurringError ||
+      error instanceof AdminError) {
     return error;
   }
 
@@ -83,5 +91,12 @@ export const ErrorCodes = {
     SCHEDULE_CONFLICT: 409,
     UNAUTHORIZED: 403,
     ALREADY_CANCELLED: 410
+  },
+  Admin: {
+    NOT_FOUND: 404,
+    INVALID_ID: 400,
+    TIER_LIMIT: 403,
+    UNAUTHORIZED: 403,
+    INTERNAL_ERROR: 500
   }
 };

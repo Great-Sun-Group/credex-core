@@ -1,17 +1,37 @@
-import { ledgerSpaceDriver } from "../../../../config/neo4j"
+import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import logger from "../../../utils/logger";
+import { AdminError, ErrorCodes } from "../../../utils/errorUtils";
 
-export default async function GetAccountReceivedCredexOffers(accountHandle?: string, accountID?: string): Promise<any> {
+interface ReceivedCredexOffer {
+  receivedCredexOfferID: string;
+  receivedCredexOfferType: string;
+  receivedCredexOfferDenomination: string;
+  receivedCredexOfferInitialAmount: string;
+  receivedCredexOfferOutstandingAmount: string;
+  receivedCredexOfferDefaultedAmount: string;
+  receivedCredexOfferRedeemedAmount: string;
+  receivedCredexOfferQueueStatus: string;
+  receivedCredexOfferCXXmultiplier: number;
+  receivedCredexOfferWrittenOffAmount: string;
+  receivedCredexOfferDueDate: string;
+  receivedCredexOfferCreatedAt: string;
+  sendingAccountID: string;
+  sendingAccountDefaultDenom: string;
+  sendingAccountHandle: string;
+}
+
+export default async function GetAccountReceivedCredexOffers(
+  accountHandle: string,
+  accountID: string
+): Promise<{ data: { accountReceivedCredexOffers: ReceivedCredexOffer[] } }> {
   logger.debug('GetAccountReceivedCredexOffers service called', { accountHandle, accountID });
 
   if (!accountHandle && !accountID) {
     logger.warn('No accountHandle or accountID provided');
-    return {
-      message: 'Either accountHandle or accountID is required'
-    }
+    throw new AdminError('Either accountHandle or accountID is required', 'INVALID_ID', ErrorCodes.Admin.INVALID_ID);
   }
 
-  const ledgerSpaceSession = ledgerSpaceDriver.session()
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
   
   const accountMatchCondition = accountHandle ? "accountHandle:$accountHandle" : "accountID: $accountID";
   const parameters = accountHandle ? { accountHandle } : { accountID };
@@ -39,9 +59,9 @@ export default async function GetAccountReceivedCredexOffers(accountHandle?: str
         sendingAccount.accountHandle AS sendingAccountHandle
     `;
 
-    const accountReceivedCredexOffersResult = await ledgerSpaceSession.run(query, parameters);
+    const result = await ledgerSpaceSession.run(query, parameters);
 
-    const accountReceivedCredexOffers = accountReceivedCredexOffersResult.records.map((record) => ({
+    const accountReceivedCredexOffers = result.records.map((record) => ({
       receivedCredexOfferID: record.get("receivedCredexOfferID"),
       receivedCredexOfferType: record.get("receivedCredexOfferType"),
       receivedCredexOfferDenomination: record.get("receivedCredexOfferDenomination"),
@@ -59,37 +79,32 @@ export default async function GetAccountReceivedCredexOffers(accountHandle?: str
       sendingAccountHandle: record.get("sendingAccountHandle")
     }));
 
-    if(!accountReceivedCredexOffers.length) {
-      logger.warn('No received credex offers found for account', { accountHandle, accountID });
-      return {
-        message: 'Account received credex offers not found'
-      }
-    }
-
     logger.info('Account received credex offers fetched successfully', { 
       accountHandle, 
       accountID, 
       offersCount: accountReceivedCredexOffers.length 
     });
+
     return {
-      message: 'Account received credex offers fetched successfully',
       data: {
         accountReceivedCredexOffers
       }
-    }
+    };
   } catch (error) {
     logger.error('Error fetching account received credex offers', { 
       accountHandle, 
       accountID, 
-      error: (error as Error).message,
-      stack: (error as Error).stack
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
     });
-    return {
-      message: 'Error fetching account received credex offers',
-      error: error
+    
+    if (error instanceof AdminError) {
+      throw error;
     }
+    
+    throw new AdminError('Error fetching account received credex offers', 'INTERNAL_ERROR', ErrorCodes.Admin.INTERNAL_ERROR);
   } finally {
-    await ledgerSpaceSession.close()
+    await ledgerSpaceSession.close();
     logger.debug('LedgerSpace session closed');
   }
 }

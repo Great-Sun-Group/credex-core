@@ -1,14 +1,32 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { ClearDevDBsService } from '../services/ClearDevDBsService';
 import logger from '../../../utils/logger';
+import { AdminError, ErrorCodes } from '../../../utils/errorUtils';
 
-export const ClearDevDBsController = async (req: Request, res: Response) => {
+interface CustomRequest extends Request {
+  id: string;
+}
+
+export async function ClearDevDBsController(req: CustomRequest, res: Response, next: NextFunction) {
+  const requestId = req.id;
+  
+  logger.debug('ClearDevDBs function called', { requestId });
+
   try {
     await ClearDevDBsService();
-    logger.info('Development databases cleared successfully');
-    res.status(200).json({ message: 'Development databases cleared successfully' });
+    
+    logger.info('Development databases cleared successfully', { requestId });
+    
+    res.status(200).json({
+      success: true,
+      message: 'Development databases cleared successfully'
+    });
   } catch (error) {
-    logger.error('Error clearing development databases', { error });
-    res.status(500).json({ error: 'An error occurred while clearing development databases' });
+    logger.error('Error clearing development databases', { 
+      requestId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    next(new AdminError('Error clearing development databases', 'INTERNAL_ERROR', ErrorCodes.Admin.INTERNAL_ERROR));
   }
-};
+}
