@@ -60,18 +60,14 @@ export const applySecurityMiddleware = (app: Application) => {
     const corsOptions = {
       origin: "*", // Allow all origins
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key", "x-chatbot-token"],
+      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key"],
       credentials: true,
       maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
     };
     app.use(cors(corsOptions));
     logger.debug("CORS middleware applied (non-production)");
   } else {
-    // Strict CORS for production
-    const allowedOrigins = [
-      'https://whatsapp-bot.vimbisopay.co.zw'
-    ];
-
+    // Production CORS configured for third-party access with reasonable limits
     const corsOptions = {
       origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
         // Allow requests with no origin (like mobile apps or curl requests)
@@ -80,15 +76,32 @@ export const applySecurityMiddleware = (app: Application) => {
           return;
         }
 
-        if (allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          logger.warn("Blocked by CORS", { origin });
+        // Block high-risk origins
+        const blockedPatterns = [
+          /^file:/,  // file protocol
+          /^data:/,  // data protocol
+          /^localhost/,  // localhost
+          /\d+\.\d+\.\d+\.\d+/  // IP addresses
+        ];
+
+        if (blockedPatterns.some(pattern => pattern.test(origin))) {
+          logger.warn("Blocked high-risk origin", { origin });
           callback(new Error('Not allowed by CORS'));
+          return;
         }
+
+        // Require HTTPS in production
+        if (!origin.startsWith('https://')) {
+          logger.warn("Blocked non-HTTPS origin", { origin });
+          callback(new Error('HTTPS required'));
+          return;
+        }
+
+        // Allow all other origins
+        callback(null, true);
       },
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key", "x-chatbot-token"],
+      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key"],
       credentials: true,
       maxAge: 86400,
     };

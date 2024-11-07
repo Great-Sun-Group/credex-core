@@ -190,5 +190,455 @@ export const getAccountSchema: RequireAtLeastOne<{
         <li>Follows module structure</li>
     </ul>
 
+    <h2>Module-Specific Patterns</h2>
+
+    <p>This section documents the patterns identified in existing modules to inform the standardization of new modules.</p>
+
+    <h3>Entity Identification Patterns</h3>
+
+    <h4>Member Module</h4>
+    <ul>
+        <li>Phone-based lookup for authentication flows</li>
+        <li>Handle-based lookup for discovery/social features</li>
+        <li>UUID for internal operations</li>
+        <li>Rationale: Different lookup methods serve specific user experience needs</li>
+    </ul>
+
+    <h4>Account Module</h4>
+    <ul>
+        <li>Handle-based lookup for discovery</li>
+        <li>UUID for internal operations and relationships</li>
+        <li>Rationale: Balances public discovery with secure operations</li>
+    </ul>
+
+    <h4>Credex Module</h4>
+    <ul>
+        <li>UUID-only for all operations</li>
+        <li>No handle-based lookups needed</li>
+        <li>Rationale: Internal transaction system, no public discovery needed</li>
+    </ul>
+
+    <h4>Recurring Module</h4>
+    <ul>
+        <li>UUID-only for all operations</li>
+        <li>Schedule-based identification</li>
+        <li>Rationale: Internal scheduling system, no public discovery needed</li>
+    </ul>
+
+    <h4>Admin Module</h4>
+    <ul>
+        <li>UUID-based lookups for member and account operations</li>
+        <li>Handle-based lookups as alternative identifiers</li>
+        <li>Rationale: Administrative operations need flexible lookup methods</li>
+    </ul>
+
+    <h4>DevAdmin Module</h4>
+    <ul>
+        <li>No entity identification needed</li>
+        <li>Operation-based endpoints only</li>
+        <li>Rationale: Development and maintenance operations don't require entity lookups</li>
+    </ul>
+
+    <h3>Authorization Patterns</h3>
+
+    <h4>Member Module</h4>
+    <p>Key features:</p>
+    <ul>
+        <li>Tier-based authorization checks</li>
+        <li>Phone verification flows</li>
+        <li>Membership level validations</li>
+    </ul>
+    <pre><code>// Example from AuthForTierSpendLimit
+if (memberTier <= 2 && !securedCredex) {
+  throw new MemberError(
+    "Unsecured credex not permitted on this tier",
+    "TIER_LIMIT",
+    403
+  );
+}</code></pre>
+
+    <h4>Account Module</h4>
+    <p>Key features:</p>
+    <ul>
+        <li>Owner vs authorized user checks</li>
+        <li>Multi-member authorization tracking</li>
+        <li>Authorization limit validations</li>
+    </ul>
+    <pre><code>// Example from AuthorizeForAccount
+const numAuthorized = await getAuthorizationCount(accountID);
+if (numAuthorized >= 5) {
+  throw new AccountError(
+    "Authorization limit reached",
+    "AUTH_LIMIT",
+    400
+  );
+}</code></pre>
+
+    <h4>Credex Module</h4>
+    <p>Key features:</p>
+    <ul>
+        <li>Transaction-based authorization</li>
+        <li>Balance and limit checks</li>
+        <li>Secured vs unsecured validations</li>
+    </ul>
+    <pre><code>// Example from CreateCredex
+if (securedCredex && secureableAmount < amount) {
+  throw new CredexError(
+    "Insufficient securable balance",
+    "INSUFFICIENT_BALANCE",
+    400
+  );
+}</code></pre>
+
+    <h4>Recurring Module</h4>
+    <p>Key features:</p>
+    <ul>
+        <li>Owner-only modification rights</li>
+        <li>Schedule validation checks</li>
+        <li>Active status validations</li>
+    </ul>
+    <pre><code>// Example from CreateRecurring
+if (!isOwner) {
+  throw new RecurringError(
+    "Only account owner can create recurring transactions",
+    "UNAUTHORIZED",
+    403
+  );
+}</code></pre>
+
+    <h4>Admin Module</h4>
+    <p>Key features:</p>
+    <ul>
+        <li>Administrative privilege checks</li>
+        <li>Cross-entity operation validations</li>
+    </ul>
+    <pre><code>// Example from UpdateMemberTier
+if (newTier < 1 || newTier > 5) {
+  throw new AdminError(
+    "Invalid tier value",
+    "INVALID_ID",
+    ErrorCodes.Admin.INVALID_ID
+  );
+}</code></pre>
+
+    <h4>DevAdmin Module</h4>
+    <p>Key features:</p>
+    <ul>
+        <li>Development environment checks</li>
+        <li>Maintenance operation validations</li>
+    </ul>
+    <pre><code>// Example from ClearDevDBs
+if (process.env.NODE_ENV === 'production') {
+  throw new AdminError(
+    "Operation not allowed in production",
+    "UNAUTHORIZED",
+    ErrorCodes.Admin.UNAUTHORIZED
+  );
+}</code></pre>
+
+    <h3>Data Relationship Patterns</h3>
+
+    <h4>Member Module</h4>
+    <pre><code>// Core relationships
+MATCH (member:Member)-[:OWNS]->(account:Account)
+MATCH (member)-[:AUTHORIZED_FOR]->(authorizedAccounts:Account)</code></pre>
+
+    <h4>Account Module</h4>
+    <pre><code>// Core relationships
+MATCH (account:Account)<-[:OWNS]-(owner:Member)
+MATCH (account)<-[:AUTHORIZED_FOR]-(authorizedMembers:Member)</code></pre>
+
+    <h4>Credex Module</h4>
+    <pre><code>// Core relationships
+MATCH (issuer:Account)-[rel:OFFERS|OWES]->(credex:Credex)
+  -[rel2:OFFERS|OWES]->(receiver:Account)
+OPTIONAL MATCH (credex)<-[:SECURES]-(securer:Account)</code></pre>
+
+    <h4>Recurring Module</h4>
+    <pre><code>// Core relationships
+MATCH (sourceAccount:Account)-[:SCHEDULES]->(recurring:Recurring)
+  -[:TARGETS]->(targetAccount:Account)
+MATCH (recurring)-[:ACTIVE]-(targetAccount:Account)
+OPTIONAL MATCH (recurring)-[:LAST_RUN]->(execution:Execution)</code></pre>
+
+    <h4>Admin Module</h4>
+    <pre><code>// Core relationships - Member lookup
+MATCH (member:Member)-[:OWNS]->(account:Account)
+OPTIONAL MATCH (account)-[:OFFERS|OWES]->(credex:Credex)
+
+// Core relationships - Account lookup
+MATCH (account:Account {accountID: $accountID})<-[:OWNS]-(member:Member)
+WITH account, member
+OPTIONAL MATCH (account)-[:OWES]->(owedCredex)-[:OWES]->(owedAccount)</code></pre>
+
+    <h4>DevAdmin Module</h4>
+    <pre><code>// No persistent relationships
+// Operations focus on database maintenance and development tasks
+MATCH (n) DETACH DELETE n  // Example from ClearDevDBs</code></pre>
+
+    <h3>Response Patterns</h3>
+
+    <h4>Member Module</h4>
+    <pre><code>interface MemberResponse {
+  success: boolean;
+  data?: {
+    memberID: string;
+    memberInfo: {
+      firstname: string;
+      lastname: string;
+      phone: string;
+      memberHandle: string;
+      memberTier: number;
+    };
+    accounts: {
+      owned: string[];
+      authorized: string[];
+    };
+  };
+  message: string;
+}</code></pre>
+
+    <h4>Account Module</h4>
+    <pre><code>interface AccountResponse {
+  success: boolean;
+  data?: {
+    accountID: string;
+    accountInfo: {
+      accountName: string;
+      accountHandle: string;
+      accountType: string;
+      defaultDenom: string;
+    };
+    balances: BalanceData;
+    authorizations: AuthorizationData;
+  };
+  message: string;
+}</code></pre>
+
+    <h4>Credex Module</h4>
+    <pre><code>interface CredexResponse {
+  success: boolean;
+  data?: {
+    credexID: string;
+    transactionInfo: {
+      amount: string;
+      denomination: string;
+      type: string;
+      status: string;
+    };
+    security: {
+      secured: boolean;
+      securerID?: string;
+    };
+    participants: {
+      issuerID: string;
+      receiverID: string;
+    };
+  };
+  message: string;
+}</code></pre>
+
+    <h4>Recurring Module</h4>
+    <pre><code>interface RecurringResponse {
+  success: boolean;
+  data?: {
+    recurringID: string;
+    scheduleInfo: {
+      frequency: string;
+      nextRunDate: string;
+      amount: string;
+      denomination: string;
+      status: string;
+    };
+    execution: {
+      lastRunDate?: string;
+      lastRunStatus?: string;
+      totalExecutions: number;
+    };
+    participants: {
+      sourceAccountID: string;
+      targetAccountID: string;
+    };
+  };
+  message: string;
+}</code></pre>
+
+    <h4>Admin Module</h4>
+    <pre><code>interface AdminResponse {
+  success: boolean;
+  data?: {
+    memberID?: string;
+    accountID?: string;
+    credexID?: string;
+    memberInfo?: {
+      firstname?: string;
+      lastname?: string;
+      phone?: string;
+      memberHandle?: string;
+      memberTier?: number;
+    };
+    accountInfo?: {
+      accountName?: string;
+      accountHandle?: string;
+      accountType?: string;
+      defaultDenom?: string;
+    };
+    credexInfo?: {
+      amount?: string;
+      denomination?: string;
+      type?: string;
+      status?: string;
+      secured?: boolean;
+      securerID?: string;
+    };
+    relationships?: {
+      issuerID?: string;
+      receiverID?: string;
+      ownerID?: string;
+    };
+  };
+  message: string;
+}</code></pre>
+
+    <h4>DevAdmin Module</h4>
+    <pre><code>interface DevAdminResponse {
+  success: boolean;
+  message: string;
+  // No standard data structure as responses are operation-specific
+}</code></pre>
+
+    <h3>Error Patterns</h3>
+
+    <h4>Member Module</h4>
+    <pre><code>// Common error codes
+const MemberErrorCodes = {
+  NOT_FOUND: 404,
+  INVALID_PHONE: 400,
+  TIER_LIMIT: 403,
+  DUPLICATE_HANDLE: 409,
+  AUTH_FAILED: 401
+};
+
+// Error examples
+throw new MemberError("Member not found", "NOT_FOUND", 404);
+throw new MemberError("Invalid phone format", "INVALID_PHONE", 400);</code></pre>
+
+    <h4>Account Module</h4>
+    <pre><code>// Common error codes
+const AccountErrorCodes = {
+  NOT_FOUND: 404,
+  AUTH_LIMIT: 400,
+  INVALID_TYPE: 400,
+  UNAUTHORIZED: 403,
+  DUPLICATE_HANDLE: 409
+};
+
+// Error examples
+throw new AccountError("Account not found", "NOT_FOUND", 404);
+throw new AccountError("Authorization limit reached", "AUTH_LIMIT", 400);</code></pre>
+
+    <h4>Credex Module</h4>
+    <pre><code>// Common error codes
+const CredexErrorCodes = {
+  NOT_FOUND: 404,
+  INVALID_AMOUNT: 400,
+  INSUFFICIENT_BALANCE: 400,
+  ALREADY_PROCESSED: 409,
+  UNAUTHORIZED: 403
+};
+
+// Error examples
+throw new CredexError("Credex not found", "NOT_FOUND", 404);
+throw new CredexError("Invalid amount", "INVALID_AMOUNT", 400);</code></pre>
+
+    <h4>Recurring Module</h4>
+    <pre><code>// Common error codes
+const RecurringErrorCodes = {
+  NOT_FOUND: 404,
+  INVALID_SCHEDULE: 400,
+  INVALID_AMOUNT: 400,
+  SCHEDULE_CONFLICT: 409,
+  UNAUTHORIZED: 403,
+  ALREADY_CANCELLED: 410
+};
+
+// Error examples
+throw new RecurringError("Recurring transaction not found", "NOT_FOUND", 404);
+throw new RecurringError("Invalid schedule format", "INVALID_SCHEDULE", 400);</code></pre>
+
+    <h4>Admin Module</h4>
+    <pre><code>// Common error codes
+const AdminErrorCodes = {
+  NOT_FOUND: 404,
+  INVALID_ID: 400,
+  TIER_LIMIT: 403,
+  UNAUTHORIZED: 403,
+  INTERNAL_ERROR: 500
+};
+
+// Error examples
+throw new AdminError("Member not found", "NOT_FOUND", ErrorCodes.Admin.NOT_FOUND);
+throw new AdminError("Invalid member tier", "INVALID_ID", ErrorCodes.Admin.INVALID_ID);</code></pre>
+
+    <h4>DevAdmin Module</h4>
+    <pre><code>// Uses Admin error codes
+// Focus on operation-specific errors
+throw new AdminError("Database clearing failed", "INTERNAL_ERROR", ErrorCodes.Admin.INTERNAL_ERROR);
+throw new AdminError("Operation not allowed", "UNAUTHORIZED", ErrorCodes.Admin.UNAUTHORIZED);</code></pre>
+
+    <h2>Key Takeaways for New Modules</h2>
+
+    <ol>
+        <li><strong>Entity Identification:</strong>
+            <ul>
+                <li>Consider if public discovery is needed (handle-based lookup)</li>
+                <li>Use UUIDs for all internal operations</li>
+                <li>Add additional lookup methods only if required by UX</li>
+            </ul>
+        </li>
+
+        <li><strong>Authorization:</strong>
+            <ul>
+                <li>Define clear authorization hierarchy</li>
+                <li>Implement appropriate limit checks</li>
+                <li>Consider relationship-based permissions</li>
+            </ul>
+        </li>
+
+        <li><strong>Data Relationships:</strong>
+            <ul>
+                <li>Define clear ownership patterns</li>
+                <li>Consider authorization relationships</li>
+                <li>Plan for complex relationship queries</li>
+            </ul>
+        </li>
+
+        <li><strong>Response Format:</strong>
+            <ul>
+                <li>Follow standard success/error pattern</li>
+                <li>Include appropriate context in responses</li>
+                <li>Consider partial success scenarios</li>
+            </ul>
+        </li>
+
+        <li><strong>Error Handling:</strong>
+            <ul>
+                <li>Define module-specific error codes</li>
+                <li>Use appropriate HTTP status codes</li>
+                <li>Include helpful error messages</li>
+            </ul>
+        </li>
+
+        <li><strong>Database Operations:</strong>
+            <ul>
+                <li>Use appropriate transaction types</li>
+                <li>Handle relationship integrity</li>
+                <li>Consider performance implications</li>
+            </ul>
+        </li>
+    </ol>
+
+    <p>These patterns should guide new module development while allowing for module-specific requirements and variations.</p>
+
 </body>
 </html>
