@@ -15,8 +15,20 @@ type SchemaItem = {
   required?: boolean;
 };
 
+// Separate validation rules from schema fields
+type ValidationRules = {
+  atLeastOneOf?: string[];  // Changed from atLeastOne for clarity
+};
+
+// Simple schema type - just fields
+type SchemaFields = {
+  [key: string]: SchemaItem;
+};
+
+// Combined type for the full schema
 type ValidationSchema = {
-  [key: string]: SchemaItem | ValidationSchema;
+  fields: SchemaFields;
+  rules?: ValidationRules;
 };
 
 function sanitizeAndValidateObject(
@@ -26,53 +38,45 @@ function sanitizeAndValidateObject(
 ): { sanitizedObj: any; error: string | null } {
   const sanitizedObj: any = {};
 
-  for (const [key, schemaItem] of Object.entries(schema)) {
-    if (
-      typeof schemaItem === "object" &&
-      "sanitizer" in schemaItem &&
-      "validator" in schemaItem
-    ) {
-      const { sanitizer, validator, required } = schemaItem as SchemaItem;
+  // Handle atLeastOneOf validation rule
+  if (schema.rules?.atLeastOneOf) {
+    const hasAtLeastOne = schema.rules.atLeastOneOf.some(field => obj[field] !== undefined);
+    if (!hasAtLeastOne) {
+      return { 
+        sanitizedObj, 
+        error: `At least one of these fields is required: ${schema.rules.atLeastOneOf.join(', ')}` 
+      };
+    }
+  }
 
-      if (obj[key] === undefined) {
-        if (required) {
-          return { sanitizedObj, error: `Required field missing: ${key}` };
-        } else {
-          continue;
-        }
+  // Validate fields
+  for (const [key, schemaItem] of Object.entries(schema.fields)) {
+    if (obj[key] === undefined) {
+      if (schemaItem.required) {
+        return { sanitizedObj, error: `Required field missing: ${key}` };
       }
+      continue;
+    }
 
-      let sanitizedValue;
-      try {
-        sanitizedValue = sanitizer(obj[key]);
-      } catch (error) {
-        return { sanitizedObj, error: `Sanitization error for ${key}` };
-      }
+    let sanitizedValue;
+    try {
+      sanitizedValue = schemaItem.sanitizer(obj[key]);
+    } catch (error) {
+      return { sanitizedObj, error: `Sanitization error for ${key}` };
+    }
 
-      sanitizedObj[key] = sanitizedValue;
+    sanitizedObj[key] = sanitizedValue;
 
-      if (sanitizedValue !== undefined) {
-        const validationResult = validator(sanitizedValue);
-        if (!validationResult.isValid) {
-          return {
-            sanitizedObj,
-            error: validationResult.message || `Invalid ${key}`,
-          };
-        }
-      } else if (required) {
-        return { sanitizedObj, error: `Required field is undefined: ${key}` };
+    if (sanitizedValue !== undefined) {
+      const validationResult = schemaItem.validator(sanitizedValue);
+      if (!validationResult.isValid) {
+        return {
+          sanitizedObj,
+          error: validationResult.message || `Invalid ${key}`,
+        };
       }
-    } else if (typeof schemaItem === "object") {
-      const { sanitizedObj: nestedSanitizedObj, error: nestedError } =
-        sanitizeAndValidateObject(
-          obj[key] || {},
-          schemaItem as ValidationSchema,
-          `${path}.${key}`
-        );
-      if (nestedError) {
-        return { sanitizedObj, error: nestedError };
-      }
-      sanitizedObj[key] = nestedSanitizedObj;
+    } else if (schemaItem.required) {
+      return { sanitizedObj, error: `Required field is undefined: ${key}` };
     }
   }
 

@@ -33,6 +33,7 @@
             <ul>
                 <li>After token verification, the system fetches the member's information from the database using the ID in the token.</li>
                 <li>This ensures that the token corresponds to an actual member in the system.</li>
+                <li>Member properties, including admin levels, are verified on each request.</li>
             </ul>
         </li>
 
@@ -48,7 +49,10 @@
 
         <li><strong>Role-based Access Control</strong>
             <ul>
-                <li>The authMiddleware supports role-based access control for fine-grained permissions.</li>
+                <li>Admin authorization is level-based, with different permissions per level</li>
+                <li>Level 1: Read-only operations (viewing details)</li>
+                <li>Level 2: Write operations (member updates)</li>
+                <li>Admin levels are verified against the database on each request</li>
             </ul>
         </li>
     </ol>
@@ -75,17 +79,25 @@
     <ul>
         <li>All origins are allowed (<code>origin: '*'</code>)</li>
         <li>Supported methods: GET, POST, PUT, PATCH, DELETE</li>
-        <li>Allowed headers: Content-Type, Authorization, x-client-api-key, x-chatbot-token</li>
+        <li>Allowed headers: Content-Type, Authorization, x-client-api-key</li>
         <li>Credentials are allowed</li>
         <li>Preflight requests are cached for 1 day (86400 seconds)</li>
     </ul>
 
     <h3>Production Environment</h3>
     <ul>
-        <li>Only whatsapp-bot.vimbisopay.co.zw is allowed</li>
+        <li>Origins must use HTTPS</li>
+        <li>High-risk origins are blocked:
+            <ul>
+                <li>file:// protocol</li>
+                <li>data:// protocol</li>
+                <li>localhost</li>
+                <li>IP addresses</li>
+            </ul>
+        </li>
         <li>Same methods and headers as development</li>
-        <li>Strict origin checking with proper error logging</li>
         <li>Credentials are allowed</li>
+        <li>Preflight requests cached for 1 day</li>
     </ul>
 
     <h2>Rate Limiting</h2>
@@ -93,11 +105,11 @@
     <p>To protect the API from abuse and ensure fair usage, rate limiting has been implemented based on authenticated members.</p>
 
     <ul>
-        <li>Standard limit: 100 requests per minute per member or IP address</li>
+        <li>Standard limit: 30 requests per minute per member</li>
         <li>The rate limiter uses the authenticated member's ID as the primary key for limiting</li>
-        <li>If the member ID is not available, it falls back to using the IP address or remote address</li>
-        <li>Chatbot traffic is exempted from rate limiting when proper CHATBOT_API_TOKEN is provided</li>
+        <li>For unauthenticated requests, falls back to using the IP address</li>
         <li>When the rate limit is exceeded, a 429 (Too Many Requests) status code is returned</li>
+        <li>Comprehensive logging of rate limit violations for monitoring</li>
     </ul>
 
     <h2>Implementation Locations:</h2>
@@ -105,6 +117,7 @@
     <ol>
         <li><code>config/authenticate.ts</code></li>
         <li><code>src/middleware/authMiddleware.ts</code></li>
+        <li><code>src/middleware/adminAuth.ts</code></li>
         <li><code>src/middleware/rateLimiter.ts</code></li>
         <li><code>src/middleware/securityConfig.ts</code></li>
     </ol>
@@ -117,6 +130,7 @@
         <li>It's crucial to ensure that the JWT_SECRET is kept secure and properly set in the environment variables.</li>
         <li>Make sure to set the <code>JWT_SECRET</code> environment variable in your <code>.env</code> file. This secret is used to sign and verify the JWT tokens. You can create your own random string for this in dev environments.</li>
         <li>Regularly review logs for rate-limited requests to identify potential abuse or the need for limit adjustments.</li>
+        <li>Admin levels are enforced through database validation on every request, ensuring real-time permission updates.</li>
     </ul>
 
     <h1>Keyholes</h1>
@@ -125,7 +139,7 @@
 
     <h2>Client API Key Authentication</h2>
 
-    <p>Access to login and onboard endpoints is restricted to authorized clients (like the vimbiso-pay WhatsApp chatbot) through API key verification:</p>
+    <p>Access to login and onboard endpoints is restricted to authorized clients through API key verification:</p>
 
     <ul>
         <li>Clients must include the CLIENT_API_KEY in the x-client-api-key header</li>

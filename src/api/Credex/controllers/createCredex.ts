@@ -3,32 +3,29 @@ import { CreateCredexService } from "../services/CreateCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { checkDueDate, credspan } from "../../../constants/credspan";
 import { AuthForTierSpendLimitController } from "../../Member/controllers/authForTierSpendLimit";
-import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import logger from "../../../utils/logger";
-import {
-  validateUUID,
-  validateDenomination,
-  validateAmount,
-  validateCredexType,
-} from "../../../utils/validators";
 
 /**
  * CreateCredexController
  *
  * This controller handles the creation of new Credex offers.
- * It validates the required fields, performs additional validations,
- * calls the CreateCredexService, and returns the result along with updated dashboard data.
+ * It validates business rules, performs authorization checks,
+ * and creates the Credex with appropriate relationships.
  *
  * @param req - Express request object
  * @param res - Express response object
+ * @param next - Express next function
  */
 export async function CreateCredexController(
   req: express.Request,
-  res: express.Response
+  res: express.Response,
+  next: express.NextFunction
 ) {
   const requestId = req.id;
-  logger.debug("CreateCredexController called", { body: req.body, requestId });
-  const ledgerSpaceSession = ledgerSpaceDriver.session();
+  logger.debug("Entering CreateCredexController", { 
+    requestId,
+    body: req.body 
+  });
 
   try {
     const {
@@ -43,112 +40,37 @@ export async function CreateCredexController(
       dueDate,
     } = req.body;
 
-    logger.debug("Received request body", {
-      fullBody: req.body,
-      OFFERSorREQUESTS: OFFERSorREQUESTS,
+    // Basic validation is handled by validateRequest middleware
+    logger.debug("Validating business rules", {
       requestId,
-    });
-
-    logger.debug("Validating input parameters", {
-      memberID,
       issuerAccountID,
       receiverAccountID,
-      Denomination,
-      InitialAmount,
-      credexType,
-      OFFERSorREQUESTS,
       securedCredex,
-      dueDate,
-      requestId,
+      dueDate
     });
 
-    // Validate input
-    if (!validateUUID(memberID)) {
-      logger.warn("Invalid memberID provided", { memberID, requestId });
-      return res.status(400).json({ error: "Invalid memberID" });
-    }
-    if (!validateUUID(issuerAccountID)) {
-      logger.warn("Invalid issuerAccountID provided", {
-        issuerAccountID,
-        requestId,
-      });
-      return res.status(400).json({ error: "Invalid issuerAccountID" });
-    }
-    if (!validateUUID(receiverAccountID)) {
-      logger.warn("Invalid receiverAccountID provided", {
-        receiverAccountID,
-        requestId,
-      });
-      return res.status(400).json({ error: "Invalid receiverAccountID" });
-    }
-    if (!validateDenomination(Denomination)) {
-      logger.warn("Invalid Denomination provided", { Denomination, requestId });
-      return res.status(400).json({ error: "Invalid Denomination" });
-    }
-    if (!validateAmount(InitialAmount)) {
-      logger.warn("Invalid InitialAmount provided", {
-        InitialAmount,
-        requestId,
-      });
-      return res.status(400).json({ error: "Invalid InitialAmount" });
-    }
-    if (!validateCredexType(credexType)) {
-      logger.warn("Invalid credexType provided", { credexType, requestId });
-      return res.status(400).json({ error: "Invalid credexType" });
-    }
-    if (OFFERSorREQUESTS !== "OFFERS" && OFFERSorREQUESTS !== "REQUESTS") {
-      logger.warn("Invalid OFFERSorREQUESTS value provided", {
-        OFFERSorREQUESTS,
-        requestId,
-      });
-      return res.status(400).json({ error: "Invalid OFFERSorREQUESTS value" });
-    }
-    if (typeof securedCredex !== "boolean") {
-      logger.warn("Invalid securedCredex value provided", {
-        securedCredex,
-        requestId,
-      });
-      return res.status(400).json({ error: "Invalid securedCredex value" });
-    }
-    if (!securedCredex && !dueDate) {
-      logger.warn("dueDate is required for unsecured credex", {
-        securedCredex,
-        dueDate,
-        requestId,
-      });
-      return res
-        .status(400)
-        .json({ error: "dueDate is required for unsecured credex" });
-    }
-    if (securedCredex && dueDate) {
-      logger.warn("dueDate is not allowed for secured credex", {
-        securedCredex,
-        dueDate,
-        requestId,
-      });
-      return res
-        .status(400)
-        .json({ error: "dueDate is not allowed for secured credex" });
-    }
-
-    // Check if issuerAccountID and receiverAccountID are the same
+    // Check if issuer and receiver are different
     if (issuerAccountID === receiverAccountID) {
-      logger.warn("Issuer and receiver are the same account", {
+      logger.warn("Attempted to create Credex with same issuer and receiver", {
         issuerAccountID,
         receiverAccountID,
         requestId,
       });
-      return res
-        .status(400)
-        .json({ error: "Issuer and receiver cannot be the same account" });
+      return res.status(400).json({
+        success: false,
+        error: "Issuer and receiver cannot be the same account"
+      });
     }
 
-    // Check if credex is authorized based on membership tier
+    // Check membership tier authorization for secured credex
     if (securedCredex) {
-      logger.debug("Checking memberTier credex limits", {
+      logger.debug("Checking membership tier authorization", {
         issuerAccountID,
-        requestId,
+        InitialAmount,
+        Denomination,
+        requestId
       });
+
       const tierAuth = await AuthForTierSpendLimitController(
         issuerAccountID,
         InitialAmount,
@@ -156,43 +78,67 @@ export async function CreateCredexController(
         securedCredex,
         requestId
       );
+
       if (!tierAuth.isAuthorized) {
-        logger.warn(tierAuth.message, {
+        logger.warn("Insufficient membership tier for secured credex", {
           issuerAccountID,
           InitialAmount,
           Denomination,
           requestId,
+          message: tierAuth.message
         });
-        return res.status(400).json({ error: tierAuth.message });
+        return res.status(403).json({
+          success: false,
+          error: tierAuth.message
+        });
       }
     }
 
-    // Check due date for unsecured credex
+    // Validate due date for unsecured credex
     if (!securedCredex) {
-      logger.debug("Checking due date for unsecured credex", {
-        dueDate,
-        requestId,
-      });
+      if (!dueDate) {
+        logger.warn("Missing due date for unsecured credex", { requestId });
+        return res.status(400).json({
+          success: false,
+          error: "Due date is required for unsecured credex"
+        });
+      }
+
       const dueDateOK = await checkDueDate(dueDate);
       if (!dueDateOK) {
         logger.warn("Invalid due date", { dueDate, requestId });
         return res.status(400).json({
-          error: `Due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan / 7} weeks from today.`,
+          success: false,
+          error: `Due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan / 7} weeks from today.`
         });
       }
+    } else if (dueDate) {
+      logger.warn("Due date provided for secured credex", { requestId });
+      return res.status(400).json({
+        success: false,
+        error: "Due date is not allowed for secured credex"
+      });
     }
 
-    // Call CreateCredexService to create the Credex offer
-    logger.debug("Calling CreateCredexService", { body: req.body, requestId });
+    // Create the Credex
+    logger.info("Creating new Credex", {
+      memberID,
+      issuerAccountID,
+      receiverAccountID,
+      credexType,
+      requestId
+    });
+
     const createCredexData = await CreateCredexService(req.body);
 
     if (!createCredexData || typeof createCredexData.credex === "boolean") {
-      logger.warn("Failed to create Credex offer", {
-        createCredexData,
-        requestId,
+      logger.warn("Failed to create Credex", {
+        error: createCredexData.message,
+        requestId
       });
       return res.status(400).json({
-        error: createCredexData.message || "Failed to create Credex offer",
+        success: false,
+        error: createCredexData.message || "Failed to create Credex"
       });
     }
 
@@ -200,45 +146,56 @@ export async function CreateCredexController(
     logger.debug("Fetching updated dashboard data", {
       memberID,
       issuerAccountID,
-      requestId,
+      requestId
     });
+
     const dashboardData = await GetAccountDashboardService(
       memberID,
       issuerAccountID
     );
 
     if (!dashboardData) {
-      logger.warn("Failed to fetch dashboard data", {
+      logger.warn("Failed to fetch dashboard data after successful creation", {
         memberID,
         issuerAccountID,
-        requestId,
+        requestId
       });
-      return res.status(404).json({ error: "Failed to fetch dashboard data" });
+      return res.status(200).json({
+        success: true,
+        data: {
+          createCredexData,
+          dashboardData: null
+        },
+        message: "Credex created successfully but failed to fetch updated dashboard"
+      });
     }
 
-    // Log successful Credex offer
-    logger.info("Credex offer created successfully", {
+    logger.info("Credex created successfully", {
       credexID: createCredexData.credex.credexID,
       memberID,
       issuerAccountID,
       receiverAccountID,
-      requestId,
+      requestId
     });
 
-    // Return the offer data and updated dashboard data
     return res.status(200).json({
-      createCredexData: createCredexData,
-      dashboardData: dashboardData,
+      success: true,
+      data: {
+        createCredexData,
+        dashboardData
+      },
+      message: "Credex created successfully"
     });
-  } catch (err) {
-    logger.error("Unhandled error in CreateCredexController", {
-      error: err instanceof Error ? err.message : "Unknown error",
-      stack: err instanceof Error ? err.stack : undefined,
-      requestId,
+
+  } catch (error) {
+    logger.error("Unexpected error in CreateCredexController", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      requestId
     });
-    return res.status(500).json({ error: "Internal server error" });
+    
+    next(error);
   } finally {
-    logger.debug("Closing database session", { requestId });
-    await ledgerSpaceSession.close();
+    logger.debug("Exiting CreateCredexController", { requestId });
   }
 }

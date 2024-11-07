@@ -1,44 +1,89 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import logger from "../../../utils/logger";
 
+interface AuthorizeForAccountResult {
+  success: boolean;
+  data?: {
+    accountID: string;
+    memberIdAuthorized: string;
+  };
+  message: string;
+}
+
+class AccountError extends Error {
+  constructor(message: string, public code: string) {
+    super(message);
+    this.name = 'AccountError';
+  }
+}
+
+/**
+ * AuthorizeForAccountService
+ * 
+ * This service handles authorizing a member to transact on behalf of an account.
+ * It validates membership tier requirements and authorization limits.
+ * 
+ * @param memberHandleToBeAuthorized - Handle of the member to authorize
+ * @param accountID - ID of the account to authorize for
+ * @param ownerID - ID of the account owner
+ * @param requestId - The ID of the HTTP request
+ * @returns Object containing authorization result
+ * @throws AccountError with specific error codes
+ */
 export async function AuthorizeForAccountService(
   memberHandleToBeAuthorized: string,
   accountID: string,
-  ownerID: string
-) {
-  logger.debug("AuthorizeForAccountService called", {
+  ownerID: string,
+  requestId: string
+): Promise<AuthorizeForAccountResult> {
+  logger.debug("Entering AuthorizeForAccountService", {
     memberHandleToBeAuthorized,
     accountID,
     ownerID,
+    requestId
   });
+
+  if (!memberHandleToBeAuthorized || !accountID || !ownerID) {
+    throw new AccountError("Missing required parameters", "INVALID_PARAMS");
+  }
+
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    // Check that account authorization is permitted on membership tier
-    logger.debug("Checking membership tier for authorization permission");
-    const getMemberTier = await ledgerSpaceSession.run(
-      `
+    // Check membership tier
+    logger.debug("Checking membership tier for authorization permission", { requestId });
+    const getMemberTier = await ledgerSpaceSession.executeRead(async (tx) => {
+      return tx.run(
+        `
         MATCH (member:Member{ memberID: $ownerID })
         RETURN member.memberTier as memberTier
-      `,
-      { ownerID }
-    );
+        `,
+        { ownerID }
+      );
+    });
+
+    if (getMemberTier.records.length === 0) {
+      throw new AccountError("Owner not found", "NOT_FOUND");
+    }
 
     const memberTier = getMemberTier.records[0].get("memberTier");
     if (memberTier <= 3) {
       logger.warn("Insufficient membership tier for authorization", {
         ownerID,
         memberTier,
+        requestId
       });
       return {
-        message:
-          "You can only authorize someone to transact on behalf of your account when you are on the Entrepreneur tier or above.",
+        success: false,
+        message: "You can only authorize someone to transact on behalf of your account when you are on the Entrepreneur tier or above."
       };
     }
 
-    logger.debug("Executing database query for account authorization");
-    const result = await ledgerSpaceSession.run(
-      `
+    // Perform authorization
+    logger.debug("Executing authorization query", { requestId });
+    const result = await ledgerSpaceSession.executeWrite(async (tx) => {
+      return tx.run(
+        `
         MATCH (account:Account { accountID: $accountID })
             <-[:OWNS]-(owner:Member { memberID: $ownerID })
         MATCH (memberToAuthorize:Member { memberHandle: $memberHandleToBeAuthorized })
@@ -63,72 +108,79 @@ export async function AuthorizeForAccountService(
           value.message AS message,
           value.accountID AS accountID,
           value.memberIDtoAuthorize AS memberIDtoAuthorized
-      `,
-      {
-        memberHandleToBeAuthorized,
-        accountID,
-        ownerID,
-      }
-    );
+        `,
+        {
+          memberHandleToBeAuthorized,
+          accountID,
+          ownerID,
+        }
+      );
+    });
 
     if (!result.records.length) {
-      logger.warn("Accounts not found during authorization", {
-        memberHandleToBeAuthorized,
-        accountID,
-        ownerID,
-      });
-      return {
-        message: "accounts not found",
-      };
+      throw new AccountError("Account or member not found", "NOT_FOUND");
     }
 
     const record = result.records[0];
+    const message = record.get("message");
 
-    if (record.get("message") == "limitReached") {
+    if (message === "limitReached") {
       logger.warn("Authorization limit reached", {
         memberHandleToBeAuthorized,
         accountID,
-        ownerID,
+        requestId
       });
       return {
-        message:
-          "Limit of 5 authorized accounts reached. Remove an authorized account if you want to add another.",
+        success: false,
+        message: "Limit of 5 authorized accounts reached. Remove an authorized account if you want to add another."
       };
     }
 
-    if (record.get("message") == "accountAuthorized") {
+    if (message === "accountAuthorized") {
       logger.info("Account authorized successfully", {
         memberIDtoAuthorize: record.get("memberIDtoAuthorized"),
         accountID: record.get("accountID"),
+        requestId
       });
       return {
-        message: "account authorized",
-        accountID: record.get("accountID"),
-        memberIdAuthorized: record.get("memberIDtoAuthorized"),
+        success: true,
+        data: {
+          accountID: record.get("accountID"),
+          memberIdAuthorized: record.get("memberIDtoAuthorized")
+        },
+        message: "Account authorized successfully"
       };
-    } else {
-      logger.warn("Could not authorize account", {
-        memberHandleToBeAuthorized,
-        accountID,
-        ownerID,
-      });
-      return false;
     }
+
+    // Should not reach here due to APOC procedure
+    throw new AccountError("Unexpected authorization result", "INTERNAL_ERROR");
+
   } catch (error) {
-    logger.error("Error authorizing account", {
+    if (error instanceof AccountError) {
+      throw error;
+    }
+
+    logger.error("Unexpected error in AuthorizeForAccountService", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
       memberHandleToBeAuthorized,
       accountID,
       ownerID,
+      requestId
     });
-    throw error;
+
+    throw new AccountError(
+      `Failed to authorize account: ${error instanceof Error ? error.message : "Unknown error"}`,
+      "INTERNAL_ERROR"
+    );
+
   } finally {
-    logger.debug("Closing database session", {
+    await ledgerSpaceSession.close();
+    logger.debug("Exiting AuthorizeForAccountService", {
       memberHandleToBeAuthorized,
       accountID,
       ownerID,
+      requestId
     });
-    await ledgerSpaceSession.close();
   }
 }

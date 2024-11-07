@@ -59,11 +59,19 @@ export const sanitizeAccountName = (input: string): string => {
   return sanitized;
 };
 
-// Function to sanitize account handles (allow only alphanumeric characters and underscores)
-export const sanitizeAccountHandle = (input: string): string => {
-  logger.debug("Sanitizing account handle", { input });
-  const sanitized = sanitizeString(input).replace(/[^a-zA-Z0-9_]/g, "");
-  logger.debug("Account handle sanitized", { input, sanitized });
+// Function to sanitize handles (only converts to lowercase, preserves all other characters for validation)
+export const sanitizeHandle = (input: string): string => {
+  logger.debug("Sanitizing handle", { input, type: typeof input });
+  if (typeof input !== 'string') {
+    logger.warn("Handle sanitization received non-string input", { input, type: typeof input });
+    return '';
+  }
+  // Only convert to lowercase, preserve all other characters for validation
+  const sanitized = sanitizeString(input).toLowerCase();
+  logger.debug("Handle sanitized", { 
+    originalInput: input, 
+    sanitized: sanitized 
+  });
   return sanitized;
 };
 

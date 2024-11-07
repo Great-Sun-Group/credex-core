@@ -1,71 +1,141 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { generateToken } from "../../../../config/authenticate";
+import { MemberError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 
+interface MemberProperties {
+  memberID: string;
+  firstname: string;
+  lastname: string;
+  phone: string;
+  memberHandle: string;
+  memberTier: number;
+}
+
+interface LoginResult {
+  success: boolean;
+  data?: {
+    token: string;
+    memberID: string;
+  };
+  message: string;
+}
+
+/**
+ * LoginMemberService
+ * 
+ * Authenticates a member using their phone number and generates a new token.
+ * 
+ * @param phone - The member's phone number
+ * @returns LoginResult containing token if successful
+ * @throws MemberError for validation and business logic errors
+ */
 export async function LoginMemberService(
   phone: string
-): Promise<{ token?: string; error?: string }> {
-  const ledgerSpaceSession = ledgerSpaceDriver.session();
+): Promise<LoginResult> {
   logger.debug("Entering LoginMemberService", { phone });
+
+  if (!phone) {
+    throw new MemberError(
+      "Phone number is required",
+      "MISSING_PHONE",
+      400
+    );
+  }
+
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
     const result = await ledgerSpaceSession.executeWrite(async (tx) => {
-      // First, find the member
+      // Find the member
       const memberResult = await tx.run(
-        "MATCH (m:Member {phone: $phone}) RETURN m",
+        `
+        MATCH (m:Member {phone: $phone})
+        RETURN m {
+          .memberID,
+          .firstname,
+          .lastname,
+          .phone,
+          .memberHandle,
+          .memberTier
+        } as member
+        `,
         { phone }
       );
 
       if (memberResult.records.length === 0) {
-        logger.warn("Member not found", { phone });
-        return { error: "Member not found" };
+        throw new MemberError(
+          "Member not found",
+          "NOT_FOUND",
+          404
+        );
       }
 
-      const member = memberResult.records[0].get("m").properties;
+      const member = memberResult.records[0].get("member") as MemberProperties;
       
-      // Ensure member.memberID exists
+      // Validate member data
       if (!member.memberID) {
-        logger.error("Member found but memberID is missing", { phone, member });
-        return { error: "Invalid member data" };
+        throw new MemberError(
+          "Invalid member data - missing memberID",
+          "INVALID_DATA",
+          500
+        );
       }
 
       const token = generateToken(member.memberID);
 
-      // Then, update the token
+      // Update the member's token
       const updateResult = await tx.run(
-        "MATCH (m:Member {memberID: $memberID}) SET m.token = $token RETURN m",
+        `
+        MATCH (m:Member {memberID: $memberID})
+        SET
+          m.token = $token,
+          m.lastLoginAt = datetime()
+        RETURN m.memberID
+        `,
         { memberID: member.memberID, token }
       );
 
-      // Verify the update was successful
       if (updateResult.records.length === 0) {
-        logger.error("Failed to update member token", {
-          phone,
-          memberID: member.memberID,
-        });
-        return { error: "Failed to update member token" };
+        throw new MemberError(
+          "Failed to update member token",
+          "TOKEN_UPDATE_FAILED",
+          500
+        );
       }
 
-      return { member, token };
+      logger.info("Member logged in successfully", {
+        memberID: member.memberID,
+        phone: member.phone
+      });
+
+      return {
+        success: true,
+        data: {
+          token,
+          memberID: member.memberID
+        },
+        message: "Login successful"
+      };
     });
 
-    if ('error' in result) {
-      return result;
-    }
+    return result;
 
-    logger.info("Member logged in successfully", {
-      phone,
-      memberId: result.member.memberID,
-    });
-    return { token: result.token };
   } catch (error) {
+    const handledError = handleServiceError(error);
     logger.error("Error in LoginMemberService", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-      phone,
+      error: handledError.message,
+      code: handledError.code,
+      phone
     });
-    return { error: "Internal server error" };
+    
+    return {
+      success: false,
+      message: handledError.message
+    };
+
   } finally {
     await ledgerSpaceSession.close();
+    logger.debug("Exiting LoginMemberService", { phone });
   }
 }
