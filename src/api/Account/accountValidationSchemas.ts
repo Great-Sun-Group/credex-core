@@ -4,11 +4,6 @@ import logger from "../../utils/logger";
 logger.debug("Initializing account validation schemas");
 
 export const createAccountSchema = {
-  ownerID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
   accountType: {
     sanitizer: s.sanitizeAccountType,
     validator: v.validateAccountType,
@@ -52,11 +47,6 @@ export const getAccountByHandleSchema = {
 logger.debug("getAccountByHandleSchema initialized");
 
 export const updateAccountSchema = {
-  ownerID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
   accountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
@@ -99,11 +89,6 @@ export const authorizeForAccountSchema = {
   memberHandleToBeAuthorized: {
     sanitizer: s.sanitizeHandle,
     validator: v.validateHandle,
-    required: true,
-  },
-  ownerID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
     required: true,
   },
 };

@@ -4,11 +4,6 @@ import logger from "../../utils/logger";
 logger.debug("Initializing credex validation schemas");
 
 export const createCredexSchema = {
-  memberID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
   issuerAccountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
@@ -68,12 +63,7 @@ export const acceptCredexSchema = {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
     required: true,
-  },
-  signerID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
+  }
 };
 logger.debug("acceptCredexSchema initialized");
 
@@ -82,12 +72,7 @@ export const declineCredexSchema = {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
     required: true,
-  },
-  signerID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
+  }
 };
 logger.debug("declineCredexSchema initialized");
 
@@ -96,12 +81,7 @@ export const cancelCredexSchema = {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
     required: true,
-  },
-  signerID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
+  }
 };
 logger.debug("cancelCredexSchema initialized");
 
@@ -115,7 +95,7 @@ export const getCredexSchema = {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
     required: true,
-  },
+  }
 };
 logger.debug("getCredexSchema initialized");
 
@@ -139,12 +119,7 @@ export const acceptCredexBulkSchema = {
       return { isValid: true };
     },
     required: true,
-  },
-  signerID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
+  }
 };
 logger.debug("acceptCredexBulkSchema initialized");
 

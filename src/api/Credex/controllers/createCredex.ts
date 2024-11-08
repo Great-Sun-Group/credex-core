@@ -5,6 +5,10 @@ import { checkDueDate, credspan } from "../../../constants/credspan";
 import { AuthForTierSpendLimitService } from "../../Member/services/AuthForTierSpendLimit";
 import logger from "../../../utils/logger";
 
+interface UserRequest extends express.Request {
+  user?: any;
+}
+
 /**
  * CreateCredexController
  *
@@ -17,19 +21,18 @@ import logger from "../../../utils/logger";
  * @param next - Express next function
  */
 export async function CreateCredexController(
-  req: express.Request,
+  req: UserRequest,
   res: express.Response,
   next: express.NextFunction
 ) {
   const requestId = req.id;
-  logger.debug("Entering CreateCredexController", { 
+  logger.debug("Entering CreateCredexController", {
     requestId,
-    body: req.body 
+    body: req.body,
   });
 
   try {
     const {
-      memberID,
       issuerAccountID,
       receiverAccountID,
       Denomination,
@@ -40,13 +43,15 @@ export async function CreateCredexController(
       dueDate,
     } = req.body;
 
+    const memberID = req.user.memberID;
+
     // Basic validation is handled by validateRequest middleware
     logger.debug("Validating business rules", {
       requestId,
       issuerAccountID,
       receiverAccountID,
       securedCredex,
-      dueDate
+      dueDate,
     });
 
     // Check if issuer and receiver are different
@@ -58,7 +63,7 @@ export async function CreateCredexController(
       });
       return res.status(400).json({
         success: false,
-        error: "Issuer and receiver cannot be the same account"
+        error: "Issuer and receiver cannot be the same account",
       });
     }
 
@@ -68,7 +73,7 @@ export async function CreateCredexController(
         issuerAccountID,
         InitialAmount,
         Denomination,
-        requestId
+        requestId,
       });
 
       const tierAuth = await AuthForTierSpendLimitService(
@@ -85,11 +90,11 @@ export async function CreateCredexController(
           InitialAmount,
           Denomination,
           requestId,
-          message: tierAuth.message
+          message: tierAuth.message,
         });
         return res.status(403).json({
           success: false,
-          error: tierAuth.message
+          error: tierAuth.message,
         });
       }
     }
@@ -100,7 +105,7 @@ export async function CreateCredexController(
         logger.warn("Missing due date for unsecured credex", { requestId });
         return res.status(400).json({
           success: false,
-          error: "Due date is required for unsecured credex"
+          error: "Due date is required for unsecured credex",
         });
       }
 
@@ -109,14 +114,14 @@ export async function CreateCredexController(
         logger.warn("Invalid due date", { dueDate, requestId });
         return res.status(400).json({
           success: false,
-          error: `Due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan / 7} weeks from today.`
+          error: `Due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan / 7} weeks from today.`,
         });
       }
     } else if (dueDate) {
       logger.warn("Due date provided for secured credex", { requestId });
       return res.status(400).json({
         success: false,
-        error: "Due date is not allowed for secured credex"
+        error: "Due date is not allowed for secured credex",
       });
     }
 
@@ -126,19 +131,30 @@ export async function CreateCredexController(
       issuerAccountID,
       receiverAccountID,
       credexType,
-      requestId
+      requestId,
     });
 
-    const createCredexData = await CreateCredexService(req.body);
+    const createCredexData = await CreateCredexService({
+      memberID,
+      issuerAccountID,
+      receiverAccountID,
+      Denomination,
+      InitialAmount,
+      credexType,
+      OFFERSorREQUESTS,
+      securedCredex,
+      dueDate,
+      requestId,
+    });
 
     if (!createCredexData || typeof createCredexData.credex === "boolean") {
       logger.warn("Failed to create Credex", {
         error: createCredexData.message,
-        requestId
+        requestId,
       });
       return res.status(400).json({
         success: false,
-        error: createCredexData.message || "Failed to create Credex"
+        error: createCredexData.message || "Failed to create Credex",
       });
     }
 
@@ -146,7 +162,7 @@ export async function CreateCredexController(
     logger.debug("Fetching updated dashboard data", {
       memberID,
       issuerAccountID,
-      requestId
+      requestId,
     });
 
     const dashboardData = await GetAccountDashboardService(
@@ -158,15 +174,16 @@ export async function CreateCredexController(
       logger.warn("Failed to fetch dashboard data after successful creation", {
         memberID,
         issuerAccountID,
-        requestId
+        requestId,
       });
       return res.status(200).json({
         success: true,
         data: {
           createCredexData,
-          dashboardData: null
+          dashboardData: null,
         },
-        message: "Credex created successfully but failed to fetch updated dashboard"
+        message:
+          "Credex created successfully but failed to fetch updated dashboard",
       });
     }
 
@@ -175,25 +192,24 @@ export async function CreateCredexController(
       memberID,
       issuerAccountID,
       receiverAccountID,
-      requestId
+      requestId,
     });
 
     return res.status(200).json({
       success: true,
       data: {
         createCredexData,
-        dashboardData
+        dashboardData,
       },
-      message: "Credex created successfully"
+      message: "Credex created successfully",
     });
-
   } catch (error) {
     logger.error("Unexpected error in CreateCredexController", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      requestId
+      requestId,
     });
-    
+
     next(error);
   } finally {
     logger.debug("Exiting CreateCredexController", { requestId });

@@ -18,21 +18,21 @@ export const getCredexSchema = {
 
 export const getMemberSchema = {
   fields: {
-    memberID: {
+    targetMemberID: {
       sanitizer: s.sanitizeUUID,
       validator: v.validateUUID,
       required: true,
     }
   },
   rules: {
-    atLeastOneOf: ['memberID']
+    atLeastOneOf: ['targetMemberID']
   }
 };
 logger.debug("getMemberSchema initialized");
 
 export const updateMemberTierSchema = {
   fields: {
-    memberID: {
+    targetMemberID: {
       sanitizer: s.sanitizeUUID,
       validator: v.validateUUID,
       required: true,
@@ -44,7 +44,7 @@ export const updateMemberTierSchema = {
     }
   },
   rules: {
-    atLeastOneOf: ['memberID', 'tier']
+    atLeastOneOf: ['targetMemberID', 'tier']
   }
 };
 logger.debug("updateMemberTierSchema initialized");

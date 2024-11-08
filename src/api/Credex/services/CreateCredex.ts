@@ -5,13 +5,15 @@ import { digitallySign } from "../../../utils/digitalSignature";
 import logger from "../../../utils/logger";
 
 interface CreateCredexResult {
-  credex: {
-    credexID: string;
-    formattedInitialAmount: string;
-    counterpartyAccountName: string;
-    secured: boolean;
-    dueDate?: string;
-  } | boolean;
+  credex:
+    | {
+        credexID: string;
+        formattedInitialAmount: string;
+        counterpartyAccountName: string;
+        secured: boolean;
+        dueDate?: string;
+      }
+    | boolean;
   message: string;
 }
 
@@ -22,25 +24,28 @@ interface CreateCredexInput {
   InitialAmount: number;
   Denomination: string;
   credexType: string;
-  OFFERSorREQUESTS: 'OFFERS' | 'REQUESTS';
+  OFFERSorREQUESTS: "OFFERS" | "REQUESTS";
   securedCredex: boolean;
   dueDate?: string;
   requestId: string;
 }
 
 class CredexError extends Error {
-  constructor(message: string, public code: string) {
+  constructor(
+    message: string,
+    public code: string
+  ) {
     super(message);
-    this.name = 'CredexError';
+    this.name = "CredexError";
   }
 }
 
 /**
  * CreateCredexService
- * 
+ *
  * This service handles the creation of new Credex offers.
  * It performs necessary validations, creates the Credex, and establishes relationships.
- * 
+ *
  * @param credexData - The data required to create a new Credex
  * @returns Object containing the created Credex details or error information
  * @throws CredexError with specific error codes
@@ -64,7 +69,8 @@ export async function CreateCredexService(
   } = credexData;
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-  const OFFEREDorREQUESTED = OFFERSorREQUESTS === "OFFERS" ? "OFFERED" : "REQUESTED";
+  const OFFEREDorREQUESTED =
+    OFFERSorREQUESTS === "OFFERS" ? "OFFERED" : "REQUESTED";
 
   try {
     // Handle secured Credex authorization
@@ -72,7 +78,7 @@ export async function CreateCredexService(
       logger.debug("Verifying secured authorization", {
         issuerAccountID,
         Denomination,
-        requestId
+        requestId,
       });
 
       const secureableData = await GetSecuredAuthorizationService(
@@ -94,12 +100,12 @@ export async function CreateCredexService(
           InitialAmount,
           availableAmount: secureableData.securableAmountInDenom,
           Denomination,
-          requestId
+          requestId,
         });
 
         return {
           credex: false,
-          message
+          message,
         };
       }
     }
@@ -109,11 +115,12 @@ export async function CreateCredexService(
       issuerAccountID,
       receiverAccountID,
       credexType,
-      requestId
+      requestId,
     });
 
-    const createCredexQuery = await ledgerSpaceSession.executeWrite(async (tx) => {
-      const query = `
+    const createCredexQuery = await ledgerSpaceSession.executeWrite(
+      async (tx) => {
+        const query = `
         MATCH (daynode:Daynode {Active: true})
         MATCH (issuer:Account {accountID: $issuerAccountID})
         MATCH (receiver:Account {accountID: $receiverAccountID})
@@ -140,14 +147,15 @@ export async function CreateCredexService(
           daynode[$Denomination] AS cxxMultiplier
       `;
 
-      return tx.run(query, {
-        issuerAccountID,
-        receiverAccountID,
-        InitialAmount,
-        Denomination,
-        credexType,
-      });
-    });
+        return tx.run(query, {
+          issuerAccountID,
+          receiverAccountID,
+          InitialAmount,
+          Denomination,
+          credexType,
+        });
+      }
+    );
 
     if (createCredexQuery.records.length === 0) {
       throw new CredexError("Failed to create Credex", "CREATE_FAILED");
@@ -161,18 +169,20 @@ export async function CreateCredexService(
       logger.debug("Adding due date for unsecured Credex", {
         credexID,
         dueDate,
-        requestId
+        requestId,
       });
 
-      const addDueDateQuery = await ledgerSpaceSession.executeWrite(async (tx) => {
-        const query = `
+      const addDueDateQuery = await ledgerSpaceSession.executeWrite(
+        async (tx) => {
+          const query = `
           MATCH (newCredex:Credex {credexID: $credexID})
           SET newCredex.dueDate = date($dueDate)
           RETURN newCredex.dueDate AS dueDate
         `;
 
-        return tx.run(query, { credexID, dueDate });
-      });
+          return tx.run(query, { credexID, dueDate });
+        }
+      );
 
       if (addDueDateQuery.records.length === 0) {
         throw new CredexError("Failed to add due date", "DUE_DATE_ERROR");
@@ -190,7 +200,7 @@ export async function CreateCredexService(
         logger.debug("Adding secured relationship", {
           credexID,
           securerID: secureableData.securerID,
-          requestId
+          requestId,
         });
 
         await ledgerSpaceSession.executeWrite(async (tx) => {
@@ -212,7 +222,7 @@ export async function CreateCredexService(
     logger.debug("Creating digital signature", {
       credexID,
       memberID,
-      requestId
+      requestId,
     });
 
     const inputData = JSON.stringify({
@@ -226,7 +236,7 @@ export async function CreateCredexService(
       securedCredex,
       dueDate,
       cxxMultiplier,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     });
 
     await digitallySign(
@@ -242,21 +252,22 @@ export async function CreateCredexService(
     const newCredex = {
       credexID: createCredexQuery.records[0].get("credexID"),
       formattedInitialAmount: denomFormatter(InitialAmount, Denomination),
-      counterpartyAccountName: createCredexQuery.records[0].get("receiverAccountName"),
+      counterpartyAccountName: createCredexQuery.records[0].get(
+        "receiverAccountName"
+      ),
       secured: securedCredex,
       dueDate: dueDate || undefined,
     };
 
     logger.info("Credex created successfully", {
       credexID: newCredex.credexID,
-      requestId
+      requestId,
     });
 
     return {
       credex: newCredex,
       message: `Credex created: ${newCredex.credexID}`,
     };
-
   } catch (error) {
     if (error instanceof CredexError) {
       throw error;
@@ -265,14 +276,13 @@ export async function CreateCredexService(
     logger.error("Unexpected error in CreateCredexService", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      requestId
+      requestId,
     });
 
     throw new CredexError(
       `Failed to create Credex: ${error instanceof Error ? error.message : "Unknown error"}`,
       "INTERNAL_ERROR"
     );
-
   } finally {
     await ledgerSpaceSession.close();
     logger.debug("Exiting CreateCredexService", { requestId });

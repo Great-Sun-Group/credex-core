@@ -98,7 +98,10 @@ const authenticate = async (req: UserRequest, res: Response, next: NextFunction)
       return next(new Error("Invalid token"));
     }
 
-    req.user = result.records[0].get('m').properties;
+    req.user = {
+      ...result.records[0].get('m').properties,
+      memberID: decoded.memberID  // Ensure memberID is set from token
+    };
 
     // Refresh the token while maintaining absolute expiry
     const newToken = refreshToken(decoded);

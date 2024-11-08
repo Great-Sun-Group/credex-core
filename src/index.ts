@@ -76,6 +76,9 @@ async function initializeApp() {
     startCronJobs();
     logger.info("Cronjobs engaged for DCO and MTQ");
 
+    // Apply authentication middleware before routes
+    applyAuthMiddleware(app);
+
     // Apply Hardened Routes
     // proper format
     app.use(apiVersionOneRoute, MemberRoutes());
@@ -89,9 +92,6 @@ async function initializeApp() {
     if (config.environment !== "production") {
       app.use(apiVersionOneRoute, DevAdminRoutes());
     }
-
-    // Apply authentication middleware after routes are set up
-    applyAuthMiddleware(app);
 
     // Apply error handling middleware
     app.use(notFoundHandler); // Handle 404 errors
