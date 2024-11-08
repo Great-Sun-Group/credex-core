@@ -30,7 +30,6 @@ export default function RecurringRoutes() {
    *   post:
    *     tags: [Recurring]
    *     summary: Create a recurring transaction
-   *     description: Create a new recurring transaction schedule
    *     requestBody:
    *       required: true
    *       content:
@@ -57,25 +56,23 @@ export default function RecurringRoutes() {
    *                 format: uuid
    *               amount:
    *                 type: number
+   *                 minimum: 0
+   *                 exclusiveMinimum: true
    *               denomination:
    *                 type: string
+   *                 enum: [CXX, CAD, USD, XAU, ZWG]
    *               frequency:
    *                 type: string
    *                 enum: [DAILY, WEEKLY, MONTHLY]
    *               startDate:
    *                 type: string
-   *                 format: date
+   *                 pattern: ^\d{4}-\d{2}-\d{2}$
+   *                 example: "2024-01-01"
    *               duration:
    *                 type: integer
+   *                 minimum: 1
    *               securedCredex:
    *                 type: boolean
-   *     responses:
-   *       201:
-   *         description: Recurring transaction created successfully
-   *       400:
-   *         description: Invalid input data
-   *       403:
-   *         description: Unauthorized
    */
   router.post(
     `/createRecurring`,
@@ -91,7 +88,6 @@ export default function RecurringRoutes() {
    *   post:
    *     tags: [Recurring]
    *     summary: Accept a recurring transaction
-   *     description: Accept a pending recurring transaction request
    *     requestBody:
    *       required: true
    *       content:
@@ -108,13 +104,6 @@ export default function RecurringRoutes() {
    *               signerID:
    *                 type: string
    *                 format: uuid
-   *     responses:
-   *       200:
-   *         description: Recurring transaction accepted successfully
-   *       400:
-   *         description: Invalid input data
-   *       404:
-   *         description: Recurring transaction not found
    */
   router.post(
     `/acceptRecurring`,
@@ -130,7 +119,6 @@ export default function RecurringRoutes() {
    *   post:
    *     tags: [Recurring]
    *     summary: Cancel a recurring transaction
-   *     description: Cancel an active recurring transaction
    *     requestBody:
    *       required: true
    *       content:
@@ -147,15 +135,6 @@ export default function RecurringRoutes() {
    *               ownerID:
    *                 type: string
    *                 format: uuid
-   *     responses:
-   *       200:
-   *         description: Recurring transaction cancelled successfully
-   *       400:
-   *         description: Invalid input data
-   *       403:
-   *         description: Unauthorized
-   *       404:
-   *         description: Recurring transaction not found
    */
   router.post(
     `/cancelRecurring`,
@@ -171,7 +150,6 @@ export default function RecurringRoutes() {
    *   post:
    *     tags: [Recurring]
    *     summary: Get recurring transaction details
-   *     description: Retrieve details of a recurring transaction
    *     requestBody:
    *       required: true
    *       content:
@@ -188,13 +166,6 @@ export default function RecurringRoutes() {
    *               accountID:
    *                 type: string
    *                 format: uuid
-   *     responses:
-   *       200:
-   *         description: Recurring transaction details retrieved successfully
-   *       400:
-   *         description: Invalid input data
-   *       404:
-   *         description: Recurring transaction not found
    */
   router.post(
     `/getRecurring`,

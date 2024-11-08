@@ -36,81 +36,10 @@ export default function AccountRoutes() {
 
   /**
    * @swagger
-   * /api/account/getBalances:
-   *   post:
-   *     tags: [Accounts]
-   *     summary: Get account balances
-   *     description: Retrieve secured and unsecured balances for an account
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - accountID
-   *             properties:
-   *               accountID:
-   *                 type: string
-   *                 format: uuid
-   *                 description: ID of the account to get balances for
-   *     responses:
-   *       200:
-   *         description: Balances retrieved successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
-   *                 data:
-   *                   type: object
-   *                   properties:
-   *                     securedNetBalancesByDenom:
-   *                       type: array
-   *                       items:
-   *                         type: string
-   *                       example: ["100.00 USD", "50.00 CAD"]
-   *                     unsecuredBalancesInDefaultDenom:
-   *                       type: object
-   *                       properties:
-   *                         totalPayables:
-   *                           type: string
-   *                           example: "200.00 USD"
-   *                         totalReceivables:
-   *                           type: string
-   *                           example: "300.00 USD"
-   *                         netPayRec:
-   *                           type: string
-   *                           example: "100.00 USD"
-   *                     netCredexAssetsInDefaultDenom:
-   *                       type: string
-   *                       example: "150.00 USD"
-   *                 message:
-   *                   type: string
-   *                   example: "Account balances retrieved successfully"
-   *       400:
-   *         description: Invalid input data
-   *       404:
-   *         description: Account not found
-   */
-  router.post(
-    `/getBalances`,
-    validateRequest(getBalancesSchema),
-    GetBalancesController,
-    errorHandler
-  );
-  logger.debug("Route registered: POST /getBalances");
-
-  /**
-   * @swagger
    * /api/account/createAccount:
    *   post:
    *     tags: [Accounts]
    *     summary: Create a new account
-   *     description: Create a new account with optional DCO participation settings
    *     requestBody:
    *       required: true
    *       content:
@@ -127,31 +56,26 @@ export default function AccountRoutes() {
    *               ownerID:
    *                 type: string
    *                 format: uuid
-   *                 description: ID of the account owner
    *               accountType:
    *                 type: string
-   *                 description: Type of account
-   *                 enum: [PERSONAL_CONSUMPTION, BUSINESS]
+   *                 enum: [PERSONAL_CONSUMPTION, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
    *               accountName:
    *                 type: string
-   *                 description: Name of the account
+   *                 minLength: 3
+   *                 maxLength: 50
    *               accountHandle:
    *                 type: string
-   *                 description: Unique handle for the account
+   *                 pattern: ^[a-z0-9_]{3,30}$
    *               defaultDenom:
    *                 type: string
-   *                 description: Default denomination for the account
+   *                 enum: [CXX, CAD, USD, XAU, ZWG]
    *               DCOgiveInCXX:
    *                 type: number
-   *                 description: DCO give rate in CXX (optional)
+   *                 minimum: 0
+   *                 exclusiveMinimum: true
    *               DCOdenom:
    *                 type: string
-   *                 description: DCO denomination (optional)
-   *     responses:
-   *       200:
-   *         description: Account created successfully
-   *       400:
-   *         description: Invalid input data
+   *                 enum: [CXX, CAD, USD, XAU, ZWG]
    */
   router.post(
     `/createAccount`,
@@ -159,7 +83,6 @@ export default function AccountRoutes() {
     CreateAccountController,
     errorHandler
   );
-  logger.info("Create Account route registered");
 
   /**
    * @swagger
@@ -167,7 +90,6 @@ export default function AccountRoutes() {
    *   post:
    *     tags: [Accounts]
    *     summary: Get account by handle
-   *     description: Retrieve account information using its handle
    *     requestBody:
    *       required: true
    *       content:
@@ -179,12 +101,7 @@ export default function AccountRoutes() {
    *             properties:
    *               accountHandle:
    *                 type: string
-   *                 description: Account's unique handle
-   *     responses:
-   *       200:
-   *         description: Account information retrieved successfully
-   *       404:
-   *         description: Account not found
+   *                 pattern: ^[a-z0-9_]{3,30}$
    */
   router.post(
     `/getAccountByHandle`,
@@ -192,7 +109,6 @@ export default function AccountRoutes() {
     GetAccountByHandleController,
     errorHandler
   );
-  logger.debug("Route registered: POST /getAccountByHandle");
 
   /**
    * @swagger
@@ -200,7 +116,6 @@ export default function AccountRoutes() {
    *   post:
    *     tags: [Accounts]
    *     summary: Update account details
-   *     description: Update account information including optional DCO settings
    *     requestBody:
    *       required: true
    *       content:
@@ -214,33 +129,26 @@ export default function AccountRoutes() {
    *               ownerID:
    *                 type: string
    *                 format: uuid
-   *                 description: ID of the account owner
    *               accountID:
    *                 type: string
    *                 format: uuid
-   *                 description: ID of the account to update
    *               accountName:
    *                 type: string
-   *                 description: New account name (optional)
+   *                 minLength: 3
+   *                 maxLength: 50
    *               accountHandle:
    *                 type: string
-   *                 description: New account handle (optional)
+   *                 pattern: ^[a-z0-9_]{3,30}$
    *               defaultDenom:
    *                 type: string
-   *                 description: New default denomination (optional)
+   *                 enum: [CXX, CAD, USD, XAU, ZWG]
    *               DCOgiveInCXX:
    *                 type: number
-   *                 description: New DCO give rate in CXX (optional)
+   *                 minimum: 0
+   *                 exclusiveMinimum: true
    *               DCOdenom:
    *                 type: string
-   *                 description: New DCO denomination (optional)
-   *     responses:
-   *       200:
-   *         description: Account updated successfully
-   *       400:
-   *         description: Invalid input data
-   *       404:
-   *         description: Account not found
+   *                 enum: [CXX, CAD, USD, XAU, ZWG]
    */
   router.post(
     `/updateAccount`,
@@ -255,7 +163,6 @@ export default function AccountRoutes() {
    *   post:
    *     tags: [Accounts]
    *     summary: Authorize member for account
-   *     description: Grant account access authorization to a member
    *     requestBody:
    *       required: true
    *       content:
@@ -270,19 +177,12 @@ export default function AccountRoutes() {
    *               accountID:
    *                 type: string
    *                 format: uuid
-   *                 description: ID of the account
    *               memberHandleToBeAuthorized:
    *                 type: string
-   *                 description: Handle of the member to authorize
+   *                 pattern: ^[a-z0-9_]{3,30}$
    *               ownerID:
    *                 type: string
    *                 format: uuid
-   *                 description: ID of the account owner
-   *     responses:
-   *       200:
-   *         description: Authorization granted successfully
-   *       400:
-   *         description: Invalid input data
    */
   router.post(
     `/authorizeForAccount`,
@@ -297,7 +197,6 @@ export default function AccountRoutes() {
    *   post:
    *     tags: [Accounts]
    *     summary: Remove member authorization
-   *     description: Remove account access authorization from a member
    *     requestBody:
    *       required: true
    *       content:
@@ -311,16 +210,9 @@ export default function AccountRoutes() {
    *               accountID:
    *                 type: string
    *                 format: uuid
-   *                 description: ID of the account
    *               memberID:
    *                 type: string
    *                 format: uuid
-   *                 description: ID of the member to unauthorize
-   *     responses:
-   *       200:
-   *         description: Authorization removed successfully
-   *       400:
-   *         description: Invalid input data
    */
   router.post(
     `/unauthorizeForAccount`,
@@ -335,7 +227,6 @@ export default function AccountRoutes() {
    *   post:
    *     tags: [Accounts]
    *     summary: Update send offers settings
-   *     description: Update settings for sending offers to a member
    *     requestBody:
    *       required: true
    *       content:
@@ -349,16 +240,9 @@ export default function AccountRoutes() {
    *               accountID:
    *                 type: string
    *                 format: uuid
-   *                 description: ID of the account
    *               memberID:
    *                 type: string
    *                 format: uuid
-   *                 description: ID of the member
-   *     responses:
-   *       200:
-   *         description: Send offers settings updated successfully
-   *       400:
-   *         description: Invalid input data
    */
   router.post(
     `/updateSendOffersTo`,
@@ -373,7 +257,6 @@ export default function AccountRoutes() {
    *   post:
    *     tags: [Accounts]
    *     summary: Get account ledger
-   *     description: Retrieve the ledger for a specific account
    *     requestBody:
    *       required: true
    *       content:
@@ -386,12 +269,6 @@ export default function AccountRoutes() {
    *               accountID:
    *                 type: string
    *                 format: uuid
-   *                 description: ID of the account
-   *     responses:
-   *       200:
-   *         description: Ledger retrieved successfully
-   *       404:
-   *         description: Account not found
    */
   router.post(
     `/getLedger`,
@@ -399,7 +276,6 @@ export default function AccountRoutes() {
     GetLedgerController,
     errorHandler
   );
-  logger.debug("Route registered: POST /getLedger");
 
   /**
    * @swagger
@@ -407,7 +283,6 @@ export default function AccountRoutes() {
    *   post:
    *     tags: [Accounts]
    *     summary: Set DCO participant rate
-   *     description: Set or update the DCO participation rate for an account
    *     requestBody:
    *       required: true
    *       content:
@@ -422,22 +297,13 @@ export default function AccountRoutes() {
    *               accountID:
    *                 type: string
    *                 format: uuid
-   *                 description: ID of the account
    *               DCOgiveInCXX:
    *                 type: number
-   *                 description: DCO give rate in CXX
-   *                 example: 1
+   *                 minimum: 0
+   *                 exclusiveMinimum: true
    *               DCOdenom:
    *                 type: string
-   *                 description: DCO denomination
-   *                 example: "CAD"
-   *     responses:
-   *       200:
-   *         description: DCO participant rate set successfully
-   *       400:
-   *         description: Invalid input data
-   *       404:
-   *         description: Account not found
+   *                 enum: [CXX, CAD, USD, XAU, ZWG]
    */
   router.post(
     `/setDCOparticipantRate`,
@@ -445,7 +311,32 @@ export default function AccountRoutes() {
     SetDCOparticipantRateController,
     errorHandler
   );
-  logger.debug("Route registered: POST /setDCOparticipantRate");
+
+  /**
+   * @swagger
+   * /api/account/getBalances:
+   *   post:
+   *     tags: [Accounts]
+   *     summary: Get account balances
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - accountID
+   *             properties:
+   *               accountID:
+   *                 type: string
+   *                 format: uuid
+   */
+  router.post(
+    `/getBalances`,
+    validateRequest(getBalancesSchema),
+    GetBalancesController,
+    errorHandler
+  );
 
   logger.info("Account routes initialized successfully");
   return router;
