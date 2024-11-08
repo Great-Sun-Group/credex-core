@@ -1,27 +1,13 @@
 import { authRequest } from "../../utils/request";
-import { loginMember } from "../../utils/auth";
 import { delay, DELAY_MS } from "../../utils/delay";
 
-const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
-
 describe("Get Sent Credex Offers Test", () => {
-  let jwt = "";
-  let memberID = "";
-
-  beforeAll(async () => {
-    const [phone] = params;
-    if (!phone) {
-      throw new Error("Usage: npm test admin/getSentCredexOffers <phone> <accountID>");
-    }
-    const auth = await loginMember(phone);
-    jwt = auth.jwt;
-    memberID = auth.memberID;
-  });
-
   it("getSentCredexOffers", async () => {
-    const [, accountID] = params;
-    if (!accountID) {
-      throw new Error("Usage: npm test admin/getSentCredexOffers <phone> <accountID>");
+    const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
+    const [jwt, memberID, accountID] = params;
+    
+    if (!jwt || !memberID || !accountID) {
+      throw new Error("Usage: npm test admin/getsentcredexoffers <jwt> <memberID> <accountID>");
     }
 
     console.log("\nGetting sent Credex offers...");

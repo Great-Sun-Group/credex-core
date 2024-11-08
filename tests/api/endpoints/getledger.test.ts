@@ -1,17 +1,21 @@
-import { getLedger } from "../utils/endpoints/account";
-import { loginMember } from "../utils/auth";
+import { authRequest } from "../utils/request";
+import { delay, DELAY_MS } from "../utils/delay";
 
 describe("getLedger Endpoint Test", () => {
   it("getLedger", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
-    const [phone, accountID] = params;
+    const [jwt, memberID, accountID] = params;
     
-    if (!phone || !accountID) {
-      throw new Error("Usage: npm test getledger <phone> <accountID>");
+    if (!jwt || !memberID || !accountID) {
+      throw new Error("Usage: npm test getledger <jwt> <memberID> <accountID>");
     }
 
-    // Login first since this endpoint requires authentication
-    const auth = await loginMember(phone);
-    await getLedger(accountID, auth.jwt);
+    console.log("\nGetting ledger...");
+    const response = await authRequest("/getLedger", {
+      accountID
+    }, jwt);
+    console.log("Get ledger response:", response.data);
+    expect(response.status).toBe(200);
+    await delay(DELAY_MS);
   });
 });

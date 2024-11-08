@@ -1,27 +1,13 @@
 import { authRequest } from "../../utils/request";
-import { loginMember } from "../../utils/auth";
 import { delay, DELAY_MS } from "../../utils/delay";
 
-const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
-
 describe("Get Member Details Test", () => {
-  let jwt = "";
-  let memberID = "";
-
-  beforeAll(async () => {
-    const [phone] = params;
-    if (!phone) {
-      throw new Error("Usage: npm test admin/getMemberDetails <phone> <memberID>");
-    }
-    const auth = await loginMember(phone);
-    jwt = auth.jwt;
-    memberID = auth.memberID;
-  });
-
   it("getMemberDetails", async () => {
-    const [, targetMemberID] = params;
-    if (!targetMemberID) {
-      throw new Error("Usage: npm test admin/getMemberDetails <phone> <memberID>");
+    const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
+    const [jwt, memberID, targetMemberID] = params;
+    
+    if (!jwt || !memberID || !targetMemberID) {
+      throw new Error("Usage: npm test admin/getmemberdetails <jwt> <memberID> <targetMemberID>");
     }
 
     console.log("\nGetting member details...");

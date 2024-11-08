@@ -1,17 +1,22 @@
-import { cancelCredex } from "../utils/endpoints/credex";
-import { loginMember } from "../utils/auth";
+import { authRequest } from "../utils/request";
+import { delay, DELAY_MS } from "../utils/delay";
 
 describe("cancelCredex Endpoint Test", () => {
   it("cancelCredex", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
-    const [phone, credexID] = params;
+    const [jwt, credexID, signerID] = params;
     
-    if (!phone || !credexID) {
-      throw new Error("Usage: npm test cancelcredex <phone> <credexID>");
+    if (!jwt || !credexID || !signerID) {
+      throw new Error("Usage: npm test cancelcredex <jwt> <credexID> <signerID>");
     }
 
-    // Login first since this endpoint requires authentication
-    const auth = await loginMember(phone);
-    await cancelCredex(credexID, auth.memberID, auth.jwt);
+    console.log("\nCanceling Credex...");
+    const response = await authRequest("/cancelCredex", {
+      credexID,
+      signerID
+    }, jwt);
+    console.log("Cancel Credex response:", response.data);
+    expect(response.status).toBe(200);
+    await delay(DELAY_MS);
   });
 });
