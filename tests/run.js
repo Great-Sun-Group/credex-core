@@ -19,8 +19,8 @@ if (command === 'dev' || command === 'stage') {
 // Special commands that map to devadmin operations
 const devAdminCommands = ['cleardevdbs', 'forcedco', 'clearforce'];
 
-// Build the Jest command
-let jestCommand;
+// Tests that don't require JWT
+const noJwtTests = ['onboardmember', 'login'];
 
 // Add environment-specific flags
 const envFlags = {
@@ -29,37 +29,74 @@ const envFlags = {
   stage: '--runInBand'
 };
 
-if (command === 'basic') {
-  // Handle basic integration tests
-  jestCommand = `jest --testPathPattern=tests/api/basic ${envFlags[env]}`;
-} else if (devAdminCommands.includes(command?.toLowerCase())) {
-  // Handle devadmin operations - use the devadmin directory
-  const testPath = path.join('tests', 'api', 'endpoints', 'devadmin', `${command.toLowerCase()}.test.ts`);
-  jestCommand = `jest "${testPath}" ${envFlags[env]}`;
-} else if (command === 'admin') {
-  // Handle admin tests - use admin.test.ts
-  jestCommand = `jest --testPathPattern=tests/api/endpoints/admin/admin\\.test\\.ts ${envFlags[env]}`;
-} else if (command?.toLowerCase().startsWith('admin/')) {
-  // Handle individual admin operation tests
-  const operation = command.split('/')[1];
-  jestCommand = `jest --testPathPattern=tests/api/endpoints/admin/${operation}\\.test\\.ts ${envFlags[env]}`;
-} else {
-  // Handle endpoint tests - use exact pattern matching
-  const pattern = `tests/api/endpoints/${command.toLowerCase()}\\.test\\.ts`;
-  jestCommand = `jest --testPathPattern="${pattern}" ${envFlags[env]}`;
+// Build and execute the Jest command
+async function runTest() {
+  try {
+    let jestCommand;
+    let testParams = remainingArgs;
+
+    if (command === 'basic') {
+      // Handle basic integration tests
+      jestCommand = `jest --testPathPattern=tests/api/basic ${envFlags[env]}`;
+    } else if (devAdminCommands.includes(command?.toLowerCase())) {
+      // Handle devadmin operations
+      const testPath = path.join('tests', 'api', 'endpoints', 'devadmin', `${command.toLowerCase()}.test.ts`);
+      jestCommand = `jest "${testPath}" ${envFlags[env]}`;
+    } else if (command === 'admin') {
+      // Handle admin tests
+      jestCommand = `jest --testPathPattern=tests/api/endpoints/admin/admin\\.test\\.ts ${envFlags[env]}`;
+    } else if (command?.toLowerCase().startsWith('admin/')) {
+      // Handle individual admin operation tests
+      const operation = command.split('/')[1];
+      jestCommand = `jest --testPathPattern=tests/api/endpoints/admin/${operation}\\.test\\.ts ${envFlags[env]}`;
+    } else {
+      // Handle endpoint tests
+      const pattern = `tests/api/endpoints/${command.toLowerCase()}\\.test\\.ts`;
+
+      if (!noJwtTests.includes(command.toLowerCase()) && remainingArgs.length > 0) {
+        // For tests requiring JWT, first run login with the first arg (phone)
+        const phone = remainingArgs[0];
+        const loginOutput = execSync(
+          `jest tests/api/endpoints/login.test.ts --testNamePattern=login ${envFlags[env]}`,
+          {
+            env: {
+              ...process.env,
+              NODE_ENV: env,
+              TEST_PARAMS: phone,
+              API_ENV: env
+            },
+            encoding: 'utf8'
+          }
+        );
+
+        // Extract JWT from login response
+        const tokenMatch = loginOutput.match(/token: '([^']+)'/);
+        if (tokenMatch) {
+          const jwt = tokenMatch[1];
+          // Pass JWT and all args EXCEPT the phone number used for login
+          testParams = [jwt, ...remainingArgs.slice(1)];
+        } else {
+          console.error('Failed to extract JWT from login response');
+          process.exit(1);
+        }
+      }
+
+      jestCommand = `jest --testPathPattern="${pattern}" ${envFlags[env]}`;
+    }
+
+    // Execute the Jest command
+    execSync(jestCommand, {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        NODE_ENV: env,
+        TEST_PARAMS: testParams.join(' '),
+        API_ENV: env
+      }
+    });
+  } catch (error) {
+    process.exit(1);
+  }
 }
 
-try {
-  // Execute the Jest command with environment variables
-  execSync(jestCommand, { 
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      NODE_ENV: env,
-      TEST_PARAMS: remainingArgs.join(' '),
-      API_ENV: env
-    }
-  });
-} catch (error) {
-  process.exit(1);
-}
+runTest();

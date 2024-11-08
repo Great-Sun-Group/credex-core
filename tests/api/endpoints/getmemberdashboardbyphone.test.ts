@@ -4,10 +4,10 @@ import { delay, DELAY_MS } from "../utils/delay";
 describe("getMemberDashboardByPhone Endpoint Test", () => {
   it("getMemberDashboardByPhone", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
-    const [jwt, memberID, phone] = params;
+    const [jwt, phone] = params;
     
-    if (!jwt || !memberID || !phone) {
-      throw new Error("Usage: npm test getmemberdashboardbyphone <jwt> <memberID> <phone>");
+    if (!jwt || !phone) {
+      throw new Error("Usage: npm test getmemberdashboardbyphone <jwt> <phone>");
     }
 
     console.log("\nGetting member dashboard...");

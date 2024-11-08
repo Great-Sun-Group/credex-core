@@ -11,8 +11,8 @@ describe("getBalances Endpoint Test", () => {
     }
 
     console.log("\nGetting account balances...");
-    const response = await authRequest("/account/getBalances", {
-      accountID
+    const response = await authRequest("/getBalances", {
+      accountID: accountID
     }, jwt);
     console.log("Get balances response:", response.data);
     expect(response.status).toBe(200);
