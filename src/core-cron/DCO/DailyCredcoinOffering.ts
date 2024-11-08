@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
-import { DBinitialization } from "./DBinitialization";
-import { DCOexecute } from "./DCOexecute";
-import { DCOavatars } from "./DCOavatars";
+import { DBinitialization } from "./DBinitialization/index";
+import { DCOexecute } from "./DCOexecute/index";
+import { DCOavatars } from "./DCOavatars/index";
 import logger from "../../utils/logger";
 
 /**

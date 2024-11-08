@@ -1,11 +1,11 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { getDenominations } from "../../constants/denominations";
-import { OnboardMemberController } from "../../api/Member/controllers/onboardMember";
-import { UpdateMemberTierController } from "../../api/DevAdmin/controllers/updateMemberTier";
+import { OnboardMemberService } from "../../api/Member/services/OnboardMember";
+import UpdateMemberTierService from "../../api/Admin/services/UpdateMemberTierService";
 import { CreateAccountService } from "../../api/Account/services/CreateAccount";
 import { CreateCredexService } from "../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../api/Credex/services/AcceptCredex";
-import { SetDCOparticipantRateController } from "../../api/Account/controllers/setDCOparticipantRate";
+import { SetDCOparticipantRate } from "../../api/Account/services/SetDCOparticipantRate";
 import { fetchZwgRate, ZwgRateError } from "./fetchZwgRate";
 import axios from "axios";
 import _ from "lodash";
@@ -298,66 +298,50 @@ async function createInitialMember(
   onboardedMemberID: string;
   defaultAccountID: string;
 }> {
-  const result = await OnboardMemberController(
+  const result = await OnboardMemberService({
     firstname,
     lastname,
     phone,
     defaultDenom,
-    requestId
-  );
+    requestId,
+    memberHandle: `${firstname.toLowerCase()}_${lastname.toLowerCase()}`,
+    memberTier: 1,
+    token: uuidv4(),
+  });
 
-  if ("error" in result) {
-    logger.error("Failed to create initial account", {
-      error: result.error,
+  if (!result.success || !result.data) {
+    logger.error("Failed to create initial member", {
+      error: result.message,
       requestId,
     });
-    throw new Error(`Failed to create initial account: ${result.error}`);
+    throw new Error(`Failed to create initial member: ${result.message}`);
   }
 
-  const onboardedMemberID = result.memberDashboard.memberID;
-  const defaultAccountID = result.defaultAccountID;
+  const onboardedMemberID = result.data.memberID;
+  const defaultAccountID = result.data.defaultAccountID;
 
-  const updateTierResult = await UpdateMemberTierController(
-    onboardedMemberID,
-    5,
-    requestId
-  );
-  if (!updateTierResult.success) {
+  const updateTierResult = await UpdateMemberTierService(onboardedMemberID, 5);
+  if (!updateTierResult.data) {
     logger.error("Failed to update member tier", {
       memberID: onboardedMemberID,
-      error: updateTierResult.message,
       requestId,
     });
-    throw new Error(
-      `Failed to update member tier: ${updateTierResult.message}`
-    );
+    throw new Error("Failed to update member tier");
   }
 
   if (DCOparticipant) {
     try {
-      const req = {
-        body: {
-          accountID: defaultAccountID,
-          DCOgiveInCXX: 1,
-          DCOdenom: "CAD",
-        },
-      } as any;
-      const res = {
-        status: (code: number) => ({
-          json: (data: any) => {
-            if (code !== 200) {
-              throw new Error(
-                `Failed to set DCO participant rate: ${JSON.stringify(data)}`
-              );
-            }
-          },
-        }),
-      } as any;
-      const next = (error: any) => {
-        if (error) throw error;
-      };
+      const setRateResult = await SetDCOparticipantRate({
+        accountID: defaultAccountID,
+        DCOgiveInCXX: 1,
+        DCOdenom: "CAD",
+        requestId,
+      });
 
-      await SetDCOparticipantRateController(req, res, next);
+      if (!setRateResult.success) {
+        throw new Error(setRateResult.message);
+      }
+
       logger.info("DCO participant rate set successfully", {
         accountID: defaultAccountID,
         requestId,
@@ -383,7 +367,7 @@ async function createInitialAccount(
   accountType: string,
   accountName: string,
   accountHandle: string,
-  defaaultDenom: string,
+  defaultDenom: string,
   requestId: string
 ): Promise<string> {
   const addnlAccount = await CreateAccountService(
@@ -391,10 +375,12 @@ async function createInitialAccount(
     accountType,
     accountName,
     accountHandle,
-    defaaultDenom
+    defaultDenom,
+    null,
+    null
   );
 
-  if (!addnlAccount || !addnlAccount.accountID) {
+  if (!addnlAccount.success || !addnlAccount.data) {
     logger.error("Failed to create additional account", {
       accountHandle,
       requestId,
@@ -404,10 +390,10 @@ async function createInitialAccount(
 
   logger.info("Account created successfully", {
     accountHandle: accountHandle,
-    accountID: addnlAccount.accountID,
+    accountID: addnlAccount.data.accountID,
     requestId,
   });
-  return addnlAccount.accountID;
+  return addnlAccount.data.accountID;
 }
 
 async function createInitialRelationships(
@@ -471,7 +457,7 @@ async function createInitialCredex(
     Denomination: "CAD",
     InitialAmount: 365, // fund DCO for a year with no adjustments
     credexType: "PURCHASE",
-    OFFERSorREQUESTS: "OFFERS",
+    OFFERSorREQUESTS: "OFFERS" as const,
     securedCredex: true,
     requestId,
   };
@@ -479,38 +465,45 @@ async function createInitialCredex(
   logger.debug("Offering initial Credex", { requestId, credexData });
   const DCOinitializationCreateCredex = await CreateCredexService(credexData);
 
-  if (typeof DCOinitializationCreateCredex.credex === "boolean") {
+  if (
+    !DCOinitializationCreateCredex.credex ||
+    typeof DCOinitializationCreateCredex.credex === "boolean"
+  ) {
     logger.error("Invalid response from CreateCredexService", { requestId });
     throw new Error("Invalid response from CreateCredexService");
   }
 
-  if (
-    DCOinitializationCreateCredex.credex &&
-    typeof DCOinitializationCreateCredex.credex.credexID === "string"
-  ) {
-    logger.info("Initial Credex offered successfully", {
-      requestId,
-      credexID: DCOinitializationCreateCredex.credex.credexID,
-    });
+  const credexID = DCOinitializationCreateCredex.credex.credexID;
+  logger.info("Initial Credex offered successfully", {
+    requestId,
+    credexID,
+  });
 
-    logger.debug("Accepting initial Credex", {
+  logger.debug("Accepting initial Credex", {
+    requestId,
+    credexID,
+    memberID,
+  });
+
+  const acceptResult = await AcceptCredexService({
+    credexID,
+    memberID,
+    requestId,
+  });
+
+  if (!acceptResult.success) {
+    logger.error("Failed to accept initial Credex", {
       requestId,
-      credexID: DCOinitializationCreateCredex.credex.credexID,
-      memberID,
+      credexID,
+      error: acceptResult.message,
     });
-    await AcceptCredexService(
-      DCOinitializationCreateCredex.credex.credexID,
-      memberID,
-      requestId
-    );
-    logger.info("Initial Credex accepted successfully", {
-      requestId,
-      credexID: DCOinitializationCreateCredex.credex.credexID,
-    });
-  } else {
-    logger.error("Invalid credexID from CreateCredexService", { requestId });
-    throw new Error("Invalid credexID from CreateCredexService");
+    throw new Error(`Failed to accept initial Credex: ${acceptResult.message}`);
   }
+
+  logger.info("Initial Credex accepted successfully", {
+    requestId,
+    credexID,
+  });
 
   logger.info("Initial Credex creation completed", { requestId });
 }

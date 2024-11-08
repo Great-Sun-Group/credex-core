@@ -17,10 +17,22 @@ interface Avatar {
   dueDate?: string;
 }
 
+interface CredexObject {
+  credexID: string;
+  formattedInitialAmount: string;
+  counterpartyAccountName: string;
+  secured: boolean;
+  dueDate?: string;
+}
+
+interface CreateCredexResult {
+  credex: CredexObject | boolean;
+  message: string;
+}
+
 interface CredexOfferResult {
-  credex: {
-    credexID: string;
-  };
+  credex: CredexObject | boolean;
+  message: string;
 }
 
 interface AvatarData {
@@ -28,6 +40,11 @@ interface AvatarData {
   issuerAccountID: string;
   acceptorAccountID: string;
   date: string;
+}
+
+// Type guard to check if credex is a CredexObject
+function isCredexObject(credex: CredexObject | boolean): credex is CredexObject {
+  return typeof credex === 'object' && credex !== null && 'credexID' in credex;
 }
 
 /**
@@ -145,7 +162,7 @@ async function processAvatar(
     );
     const offerResult = await createCredexOffer(offerData);
 
-    if (offerResult && offerResult.credex && offerResult.credex.credexID) {
+    if (offerResult.credex && isCredexObject(offerResult.credex)) {
       await acceptCredexOffer(
         offerResult.credex.credexID,
         avatar.memberID,
@@ -194,7 +211,7 @@ function prepareOfferData(
     Denomination: avatar.Denomination,
     InitialAmount: avatar.InitialAmount,
     credexType: "PURCHASE",
-    OFFERSorREQUESTS: "OFFERS",
+    OFFERSorREQUESTS: "OFFERS" as const,
     requestId,
   };
 
@@ -222,11 +239,7 @@ async function createCredexOffer(offerData: any): Promise<CredexOfferResult> {
   });
   const offerResult = await CreateCredexService(offerData);
 
-  if (
-    offerResult &&
-    typeof offerResult.credex === "object" &&
-    offerResult.credex.credexID
-  ) {
+  if (offerResult.credex && isCredexObject(offerResult.credex)) {
     logger.info("Credex offer created", {
       requestId: offerData.requestId,
       credexID: offerResult.credex.credexID,
