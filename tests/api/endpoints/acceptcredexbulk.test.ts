@@ -1,18 +1,23 @@
-import { acceptCredexBulk } from "../utils/endpoints/credex";
-import { loginMember } from "../utils/auth";
+import { authRequest } from "../utils/request";
+import { delay, DELAY_MS } from "../utils/delay";
 
 describe("acceptCredexBulk Endpoint Test", () => {
   it("acceptCredexBulk", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
-    const [phone, credexIDsStr] = params;
+    const [jwt, ...credexIDs] = params;
     
-    if (!phone || !credexIDsStr) {
-      throw new Error("Usage: npm test acceptcredexbulk <phone> <credexIDs> (comma-separated list)");
+    if (!jwt || credexIDs.length === 0) {
+      throw new Error("Usage: npm test acceptcredexbulk <jwt> <credexID1> [credexID2...]");
     }
 
-    // Login first since this endpoint requires authentication
-    const auth = await loginMember(phone);
-    const credexIDs = credexIDsStr.split(",");
-    await acceptCredexBulk(credexIDs, auth.memberID, auth.jwt);
+    console.log("\nAccepting Credexes in bulk...");
+    const response = await authRequest(
+      "/acceptCredexBulk",
+      { credexIDs },
+      jwt
+    );
+    console.log("Accept Credex Bulk response:", response.data);
+    expect(response.status).toBe(200);
+    await delay(DELAY_MS);
   });
 });

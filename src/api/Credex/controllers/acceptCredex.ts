@@ -3,6 +3,12 @@ import { AcceptCredexService } from "../services/AcceptCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import logger from "../../../utils/logger";
 
+// Import the UserRequest interface from authentication module
+import type { Request } from "express";
+interface UserRequest extends Request {
+  user: any;
+}
+
 /**
  * AcceptCredexController
  *
@@ -10,11 +16,11 @@ import logger from "../../../utils/logger";
  * It validates the required fields, calls the AcceptCredexService,
  * and returns the result along with updated dashboard data.
  *
- * @param req - Express request object
+ * @param req - Express request object with user information
  * @param res - Express response object
  */
 export async function AcceptCredexController(
-  req: express.Request,
+  req: UserRequest,
   res: express.Response,
   next: express.NextFunction
 ) {
@@ -25,7 +31,8 @@ export async function AcceptCredexController(
   });
 
   try {
-    const { credexID, signerID } = req.body;
+    const { credexID } = req.body;
+    const signerID = req.user.memberID;
 
     // Input validation is handled by validateRequest middleware
     logger.info("Accepting Credex", {

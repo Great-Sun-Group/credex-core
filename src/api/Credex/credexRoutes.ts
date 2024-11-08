@@ -127,16 +127,12 @@ export default function CredexRoutes() {
    *             type: object
    *             required:
    *               - credexIDs
-   *               - signerID
    *             properties:
    *               credexIDs:
    *                 type: array
    *                 items:
    *                   type: string
    *                   format: uuid
-   *               signerID:
-   *                 type: string
-   *                 format: uuid
    */
   router.post(
     `/acceptCredexBulk`,
@@ -161,8 +157,7 @@ export default function CredexRoutes() {
           }
           return { isValid: true };
         },
-      },
-      signerID: acceptCredexSchema.signerID,
+      }
     }),
     AcceptCredexBulkController
   );

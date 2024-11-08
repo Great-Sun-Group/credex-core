@@ -53,38 +53,32 @@ async function runTest() {
       // Handle endpoint tests
       const pattern = `tests/api/endpoints/${command.toLowerCase()}\\.test\\.ts`;
 
-      // Check if first argument looks like a JWT (contains dots)
+      // If not a no-JWT test and we have args, handle login
       if (!noJwtTests.includes(command.toLowerCase()) && remainingArgs.length > 0) {
-        const firstArg = remainingArgs[0];
-        if (firstArg.includes('.')) {
-          // If it looks like a JWT, use all args as is
-          testParams = remainingArgs;
-        } else {
-          // Otherwise, try to get JWT through login
-          const phone = remainingArgs[0];
-          const loginOutput = execSync(
-            `jest tests/api/endpoints/login.test.ts --testNamePattern=login ${envFlags[env]}`,
-            {
-              env: {
-                ...process.env,
-                NODE_ENV: env,
-                TEST_PARAMS: phone,
-                API_ENV: env
-              },
-              encoding: 'utf8'
-            }
-          );
-
-          // Extract JWT from login response
-          const tokenMatch = loginOutput.match(/token: '([^']+)'/);
-          if (tokenMatch) {
-            const jwt = tokenMatch[1];
-            // Pass JWT and all args EXCEPT the phone number used for login
-            testParams = [jwt, ...remainingArgs.slice(1)];
-          } else {
-            console.error('Failed to extract JWT from login response');
-            process.exit(1);
+        const phone = remainingArgs[0];
+        // Run login test to get JWT
+        const loginOutput = execSync(
+          `jest tests/api/endpoints/login.test.ts --testNamePattern=login ${envFlags[env]}`,
+          {
+            env: {
+              ...process.env,
+              NODE_ENV: env,
+              TEST_PARAMS: phone,
+              API_ENV: env
+            },
+            encoding: 'utf8'
           }
+        );
+
+        // Extract JWT from login response
+        const tokenMatch = loginOutput.match(/token: '([^']+)'/);
+        if (tokenMatch) {
+          const jwt = tokenMatch[1];
+          // Use JWT and all remaining args except phone
+          testParams = [jwt, ...remainingArgs.slice(1)];
+        } else {
+          console.error('Failed to extract JWT from login response');
+          process.exit(1);
         }
       }
 

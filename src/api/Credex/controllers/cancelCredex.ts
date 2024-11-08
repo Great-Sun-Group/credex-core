@@ -2,6 +2,12 @@ import express from "express";
 import { CancelCredexService } from "../services/CancelCredex";
 import logger from "../../../utils/logger";
 
+// Import the UserRequest interface from authentication module
+import type { Request } from "express";
+interface UserRequest extends Request {
+  user: any;
+}
+
 /**
  * CancelCredexController
  *
@@ -13,7 +19,7 @@ import logger from "../../../utils/logger";
  * @param next - Express next function
  */
 export async function CancelCredexController(
-  req: express.Request,
+  req: UserRequest,
   res: express.Response,
   next: express.NextFunction
 ) {
@@ -21,7 +27,8 @@ export async function CancelCredexController(
   logger.debug("Entering CancelCredexController", { requestId });
 
   try {
-    const { credexID, signerID } = req.body;
+    const { credexID } = req.body;
+    const signerID = req.user.memberID;
 
     // Basic validation is handled by validateRequest middleware
     logger.info("Cancelling Credex", {
