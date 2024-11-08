@@ -1,6 +1,6 @@
-import { authRequest } from "../../utils/request";
-import { loginMember } from "../../utils/auth";
-import { delay, DELAY_MS } from "../../utils/delay";
+import { authRequest } from "../utils/request";
+import { loginMember } from "../utils/auth";
+import { delay, DELAY_MS } from "../utils/delay";
 
 describe("Admin API Tests", () => {
   let jwt = "";
