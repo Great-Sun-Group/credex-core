@@ -4,10 +4,10 @@ import { delay, DELAY_MS } from "../../utils/delay";
 describe("Get Account Details Test", () => {
   it("getAccountDetails", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
-    const [jwt, memberID, accountID] = params;
+    const [jwt, accountID] = params;
     
-    if (!jwt || !memberID || !accountID) {
-      throw new Error("Usage: npm test admin/getaccountdetails <jwt> <memberID> <accountID>");
+    if (!jwt || !accountID) {
+      throw new Error("Usage: npm test admin/getaccountdetails <jwt> <accountID>");
     }
 
     console.log("\nGetting account details...");

@@ -11,7 +11,7 @@ describe("updateSendOffersTo Endpoint Test", () => {
     }
 
     console.log("\nUpdating send offers settings...");
-    const response = await authRequest("/account/updateSendOffersTo", {
+    const response = await authRequest("/updateSendOffersTo", {
       accountID,
       memberID
     }, jwt);

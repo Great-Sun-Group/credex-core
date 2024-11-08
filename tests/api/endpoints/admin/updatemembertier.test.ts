@@ -4,10 +4,10 @@ import { delay, DELAY_MS } from "../../utils/delay";
 describe("Update Member Tier Test", () => {
   it("updateMemberTier", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
-    const [jwt, memberID, targetMemberID, tier] = params;
+    const [jwt, targetMemberID, tier] = params;
     
-    if (!jwt || !memberID || !targetMemberID || !tier) {
-      throw new Error("Usage: npm test admin/updatemembertier <jwt> <memberID> <targetMemberID> <tier>");
+    if (!jwt || !targetMemberID || !tier) {
+      throw new Error("Usage: npm test admin/updatemembertier <jwt> <targetMemberID> <tier>");
     }
 
     console.log("\nUpdating member tier...");

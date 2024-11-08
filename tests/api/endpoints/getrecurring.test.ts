@@ -11,7 +11,7 @@ describe("getRecurring Endpoint Test", () => {
     }
 
     console.log("\nGetting recurring transaction details...");
-    const response = await authRequest("/recurring/getRecurring", {
+    const response = await authRequest("/getRecurring", {
       recurringID,
       accountID
     }, jwt);

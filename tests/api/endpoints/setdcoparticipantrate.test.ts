@@ -11,7 +11,7 @@ describe("setDCOparticipantRate Endpoint Test", () => {
     }
 
     console.log("\nSetting DCO participant rate...");
-    const response = await authRequest("/account/setDCOparticipantRate", {
+    const response = await authRequest("/setDCOparticipantRate", {
       accountID,
       DCOgiveInCXX: Number(DCOgiveInCXX),
       DCOdenom

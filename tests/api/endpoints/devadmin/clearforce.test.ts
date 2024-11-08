@@ -1,19 +1,15 @@
-import { authRequest } from "../../utils/request";
+import axios from "../../../setup";
 import { delay, DELAY_MS } from "../../utils/delay";
 
-describe("clearforce DevAdmin Operation", () => {
-  it("clearforce", async () => {
-    // First clear dev DBs
-    console.log("\nClearing dev DBs...");
-    let response = await authRequest("/devadmin/clearDevDBs", {});
-    console.log("Clear DBs response:", response.data);
-    expect(response.status).toBe(200);
-    await delay(DELAY_MS);
-
-    // Then force DCO
-    console.log("\nForcing DCO...");
-    response = await authRequest("/devadmin/forceDCO", {});
-    console.log("Force DCO response:", response.data);
+describe("clearForce DevAdmin Operation", () => {
+  it("clearForce", async () => {
+    console.log("\nClearing force...");
+    const response = await axios.post("/devadmin/clearForce", {}, {
+      headers: {
+        'x-client-api-key': process.env.CLIENT_API_KEY || ''
+      }
+    });
+    console.log("Clear force response:", response.data);
     expect(response.status).toBe(200);
     await delay(DELAY_MS);
   });

@@ -4,10 +4,10 @@ import { delay, DELAY_MS } from "../../utils/delay";
 describe("Get Sent Credex Offers Test", () => {
   it("getSentCredexOffers", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
-    const [jwt, memberID, accountID] = params;
+    const [jwt, accountID] = params;
     
-    if (!jwt || !memberID || !accountID) {
-      throw new Error("Usage: npm test admin/getsentcredexoffers <jwt> <memberID> <accountID>");
+    if (!jwt || !accountID) {
+      throw new Error("Usage: npm test admin/getsentcredexoffers <jwt> <accountID>");
     }
 
     console.log("\nGetting sent Credex offers...");

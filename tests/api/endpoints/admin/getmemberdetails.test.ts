@@ -4,10 +4,10 @@ import { delay, DELAY_MS } from "../../utils/delay";
 describe("Get Member Details Test", () => {
   it("getMemberDetails", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
-    const [jwt, memberID, targetMemberID] = params;
+    const [jwt, targetMemberID] = params;
     
-    if (!jwt || !memberID || !targetMemberID) {
-      throw new Error("Usage: npm test admin/getmemberdetails <jwt> <memberID> <targetMemberID>");
+    if (!jwt || !targetMemberID) {
+      throw new Error("Usage: npm test admin/getmemberdetails <jwt> <targetMemberID>");
     }
 
     console.log("\nGetting member details...");

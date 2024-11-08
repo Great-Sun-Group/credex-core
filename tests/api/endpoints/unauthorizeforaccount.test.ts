@@ -11,7 +11,7 @@ describe("unauthorizeForAccount Endpoint Test", () => {
     }
 
     console.log("\nUnauthorizing member for account...");
-    const response = await authRequest("/account/unauthorizeForAccount", {
+    const response = await authRequest("/unauthorizeForAccount", {
       accountID,
       memberID
     }, jwt);

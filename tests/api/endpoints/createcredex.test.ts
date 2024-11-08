@@ -6,7 +6,6 @@ describe("createCredex Endpoint Test", () => {
     const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
     const [
       jwt,
-      memberID,
       issuerAccountID,
       receiverAccountID,
       Denomination,
@@ -18,7 +17,6 @@ describe("createCredex Endpoint Test", () => {
 
     if (
       !jwt ||
-      !memberID ||
       !issuerAccountID ||
       !receiverAccountID ||
       !Denomination ||
@@ -27,7 +25,7 @@ describe("createCredex Endpoint Test", () => {
       !OFFERSorREQUESTS
     ) {
       throw new Error(
-        "Usage: npm test createcredex <jwt> <memberID> <issuerAccountID> <receiverAccountID> <Denomination> <InitialAmount> <credexType> <OFFERSorREQUESTS> [securedCredex]"
+        "Usage: npm test createcredex <jwt> <issuerAccountID> <receiverAccountID> <Denomination> <InitialAmount> <credexType> <OFFERSorREQUESTS> [securedCredex]"
       );
     }
 
@@ -35,7 +33,6 @@ describe("createCredex Endpoint Test", () => {
     const response = await authRequest(
       "/createCredex",
       {
-        memberID,
         issuerAccountID,
         receiverAccountID,
         Denomination,

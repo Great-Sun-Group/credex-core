@@ -4,10 +4,10 @@ import { delay, DELAY_MS } from "../utils/delay";
 describe("getAccountByHandle Endpoint Test", () => {
   it("getAccountByHandle", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
-    const [jwt, memberID, accountHandle] = params;
+    const [jwt, accountHandle] = params;
     
-    if (!jwt || !memberID || !accountHandle) {
-      throw new Error("Usage: npm test getaccountbyhandle <jwt> <memberID> <accountHandle>");
+    if (!jwt || !accountHandle) {
+      throw new Error("Usage: npm test getaccountbyhandle <jwt> <accountHandle>");
     }
 
     console.log("\nGetting account by handle...");
