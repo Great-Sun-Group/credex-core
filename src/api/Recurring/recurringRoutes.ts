@@ -1,5 +1,5 @@
 import express from "express";
-import { CreateRecurringController } from "controllers/createRecurring";
+import { CreateRecurringController } from "./controllers/createRecurring";
 import { AcceptRecurringController } from "./controllers/acceptRecurring";
 import { CancelRecurringController } from "./controllers/cancelRecurring";
 import { GetRecurringController } from "./controllers/getRecurring";

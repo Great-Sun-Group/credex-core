@@ -17,19 +17,25 @@ type SchemaItem = {
 
 // Separate validation rules from schema fields
 type ValidationRules = {
-  atLeastOneOf?: string[];  // Changed from atLeastOne for clarity
+  atLeastOneOf: string[];
 };
 
-// Simple schema type - just fields
-type SchemaFields = {
+// Define the two possible schema types
+type SimpleSchema = {
   [key: string]: SchemaItem;
 };
 
-// Combined type for the full schema
-type ValidationSchema = {
-  fields: SchemaFields;
-  rules?: ValidationRules;
+type ComplexSchema = {
+  fields: { [key: string]: SchemaItem };
+  rules: ValidationRules;
 };
+
+type ValidationSchema = SimpleSchema | ComplexSchema;
+
+// Type guard to check if schema is ComplexSchema
+function isComplexSchema(schema: ValidationSchema): schema is ComplexSchema {
+  return 'fields' in schema && 'rules' in schema;
+}
 
 function sanitizeAndValidateObject(
   obj: any,
@@ -37,10 +43,11 @@ function sanitizeAndValidateObject(
   path: string
 ): { sanitizedObj: any; error: string | null } {
   const sanitizedObj: any = {};
+  const fields = isComplexSchema(schema) ? schema.fields : schema;
 
   // Handle atLeastOneOf validation rule
-  if (schema.rules?.atLeastOneOf) {
-    const hasAtLeastOne = schema.rules.atLeastOneOf.some(field => obj[field] !== undefined);
+  if (isComplexSchema(schema) && schema.rules.atLeastOneOf) {
+    const hasAtLeastOne = schema.rules.atLeastOneOf.some((field: string) => obj[field] !== undefined);
     if (!hasAtLeastOne) {
       return { 
         sanitizedObj, 
@@ -50,7 +57,7 @@ function sanitizeAndValidateObject(
   }
 
   // Validate fields
-  for (const [key, schemaItem] of Object.entries(schema.fields)) {
+  for (const [key, schemaItem] of Object.entries(fields)) {
     if (obj[key] === undefined) {
       if (schemaItem.required) {
         return { sanitizedObj, error: `Required field missing: ${key}` };

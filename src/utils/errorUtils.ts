@@ -1,34 +1,40 @@
 import { Neo4jError } from "neo4j-driver";
 
-export class MemberError extends Error {
+// Base interface for all service errors
+export interface ServiceError extends Error {
+  code?: string;
+  statusCode?: number;
+}
+
+export class MemberError extends Error implements ServiceError {
   constructor(message: string, public code: string, public statusCode: number = 500) {
     super(message);
     this.name = "MemberError";
   }
 }
 
-export class AccountError extends Error {
+export class AccountError extends Error implements ServiceError {
   constructor(message: string, public code: string, public statusCode: number = 500) {
     super(message);
     this.name = "AccountError";
   }
 }
 
-export class CredexError extends Error {
+export class CredexError extends Error implements ServiceError {
   constructor(message: string, public code: string, public statusCode: number = 500) {
     super(message);
     this.name = "CredexError";
   }
 }
 
-export class RecurringError extends Error {
+export class RecurringError extends Error implements ServiceError {
   constructor(message: string, public code: string, public statusCode: number = 500) {
     super(message);
     this.name = "RecurringError";
   }
 }
 
-export class AdminError extends Error {
+export class AdminError extends Error implements ServiceError {
   constructor(message: string, public code: string, public statusCode: number = 500) {
     super(message);
     this.name = "AdminError";
@@ -39,7 +45,7 @@ export function isNeo4jError(error: unknown): error is Neo4jError {
   return error instanceof Neo4jError;
 }
 
-export function handleServiceError(error: unknown): Error {
+export function handleServiceError(error: unknown): ServiceError {
   if (error instanceof MemberError ||
       error instanceof AccountError ||
       error instanceof CredexError ||
@@ -50,16 +56,38 @@ export function handleServiceError(error: unknown): Error {
 
   if (isNeo4jError(error)) {
     if (error.code === "Neo.ClientError.Schema.ConstraintValidationFailed") {
-      return new Error(`Database constraint error: ${error.message}`);
+      const err = new Error(`Database constraint error: ${error.message}`) as ServiceError;
+      err.code = "DB_CONSTRAINT_ERROR";
+      return err;
     }
-    return new Error(`Database error: ${error.message}`);
+    const err = new Error(`Database error: ${error.message}`) as ServiceError;
+    err.code = "DB_ERROR";
+    return err;
   }
 
   if (error instanceof Error) {
-    return error;
+    return error as ServiceError;
   }
 
-  return new Error("Unknown error occurred");
+  return new Error("Unknown error occurred") as ServiceError;
+}
+
+// Helper function to create error details object
+export function createErrorDetails(error: ServiceError, additionalDetails: Record<string, any> = {}): Record<string, any> {
+  const details: Record<string, any> = {
+    error: error.message,
+    ...additionalDetails
+  };
+
+  if (error.code) {
+    details.code = error.code;
+  }
+
+  if (error.stack) {
+    details.stack = error.stack;
+  }
+
+  return details;
 }
 
 export const ErrorCodes = {

@@ -49,7 +49,8 @@ export async function GetAccountDashboardService(
   memberID: string,
   accountID: string
 ): Promise<DashboardResult> {
-  logger.debug("Entering GetAccountDashboardService", { memberID, accountID });
+  const requestId = `acct_dash_${Date.now()}`; // Generate a request ID
+  logger.debug("Entering GetAccountDashboardService", { memberID, accountID, requestId });
 
   if (!memberID || !accountID) {
     throw new AccountError(
@@ -128,10 +129,10 @@ export async function GetAccountDashboardService(
     }
 
     // Get additional dashboard components
-    logger.debug("Fetching additional dashboard components", { accountID });
+    logger.debug("Fetching additional dashboard components", { accountID, requestId });
 
     const [balanceData, pendingInData, pendingOutData] = await Promise.all([
-      GetBalancesService(accountID),
+      GetBalancesService(accountID, requestId),
       GetPendingOffersInService(accountID),
       GetPendingOffersOutService(accountID),
     ]);
@@ -143,7 +144,8 @@ export async function GetAccountDashboardService(
     logger.info("Account dashboard retrieved successfully", {
       accountID,
       memberID,
-      isOwned: dashboardData.isOwnedAccount
+      isOwned: dashboardData.isOwnedAccount,
+      requestId
     });
 
     return {
@@ -168,6 +170,6 @@ export async function GetAccountDashboardService(
 
   } finally {
     await ledgerSpaceSession.close();
-    logger.debug("Exiting GetAccountDashboardService", { memberID, accountID });
+    logger.debug("Exiting GetAccountDashboardService", { memberID, accountID, requestId });
   }
 }

@@ -2,7 +2,7 @@ import express from "express";
 import { CreateCredexService } from "../services/CreateCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { checkDueDate, credspan } from "../../../constants/credspan";
-import { AuthForTierSpendLimitController } from "../../Member/controllers/authForTierSpendLimit";
+import { AuthForTierSpendLimitService } from "../../Member/services/AuthForTierSpendLimit";
 import logger from "../../../utils/logger";
 
 /**
@@ -71,7 +71,7 @@ export async function CreateCredexController(
         requestId
       });
 
-      const tierAuth = await AuthForTierSpendLimitController(
+      const tierAuth = await AuthForTierSpendLimitService(
         issuerAccountID,
         InitialAmount,
         Denomination,
@@ -79,7 +79,7 @@ export async function CreateCredexController(
         requestId
       );
 
-      if (!tierAuth.isAuthorized) {
+      if (!tierAuth.success || !tierAuth.data?.isAuthorized) {
         logger.warn("Insufficient membership tier for secured credex", {
           issuerAccountID,
           InitialAmount,

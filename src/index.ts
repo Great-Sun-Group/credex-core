@@ -3,7 +3,7 @@ import express, { Request, Response, NextFunction } from "express";
 import MemberRoutes from "./api/Member/memberRoutes";
 import AccountRoutes from "./api/Account/accountRoutes";
 import CredexRoutes from "./api/Credex/credexRoutes";
-import RecurringRoutes from "./api/Avatar/recurringRoutes";
+import RecurringRoutes from "./api/Recurring/recurringRoutes";
 import DevAdminRoutes from "./api/DevAdmin/devAdminRoutes";
 import logger, {
   addRequestId,

@@ -1,6 +1,6 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { generateToken } from "../../../../config/authenticate";
-import { MemberError, handleServiceError } from "../../../utils/errorUtils";
+import { MemberError, handleServiceError, createErrorDetails } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 
 interface MemberProperties {
@@ -123,11 +123,7 @@ export async function LoginMemberService(
 
   } catch (error) {
     const handledError = handleServiceError(error);
-    logger.error("Error in LoginMemberService", {
-      error: handledError.message,
-      code: handledError.code,
-      phone
-    });
+    logger.error("Error in LoginMemberService", createErrorDetails(handledError, { phone }));
     
     return {
       success: false,

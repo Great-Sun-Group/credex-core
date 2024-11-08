@@ -10,6 +10,9 @@ export const getCredexSchema = {
       validator: v.validateUUID,
       required: true,
     }
+  },
+  rules: {
+    atLeastOneOf: ['credexID']
   }
 };
 
@@ -20,6 +23,9 @@ export const getMemberSchema = {
       validator: v.validateUUID,
       required: true,
     }
+  },
+  rules: {
+    atLeastOneOf: ['memberID']
   }
 };
 logger.debug("getMemberSchema initialized");
@@ -36,6 +42,9 @@ export const updateMemberTierSchema = {
       validator: v.validateTier,
       required: true,
     }
+  },
+  rules: {
+    atLeastOneOf: ['memberID', 'tier']
   }
 };
 logger.debug("updateMemberTierSchema initialized");

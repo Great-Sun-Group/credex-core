@@ -1,7 +1,7 @@
 import express from "express";
 import { GetMemberByHandleService } from "../services/GetMemberByHandle";
 import logger from "../../../utils/logger";
-import { validateMemberHandle } from "../../../utils/validators";
+import { validateHandle } from "../../../utils/validators";
 
 export const GetMemberByHandleController = async (
   req: express.Request,
@@ -17,7 +17,7 @@ export const GetMemberByHandleController = async (
   });
 
   try {
-    if (!validateMemberHandle(memberHandle)) {
+    if (!validateHandle(memberHandle).isValid) {
       logger.warn("Invalid member handle", { memberHandle, requestId });
       res
         .status(400)

@@ -1,7 +1,7 @@
 import express from "express";
 import { GetAccountByHandleService } from "../services/GetAccountByHandle";
 import logger from "../../../utils/logger";
-import { validateAccountHandle } from "../../../utils/validators";
+import { validateHandle } from "../../../utils/validators";
 
 export const GetAccountByHandleController = async (
   req: express.Request,
@@ -17,11 +17,12 @@ export const GetAccountByHandleController = async (
   });
 
   try {
-    if (!validateAccountHandle(accountHandle)) {
+    const handleValidation = validateHandle(accountHandle);
+    if (!handleValidation.isValid) {
       logger.warn("Invalid account handle", { accountHandle, requestId });
       res.status(400).json({
-        message:
-          "Invalid account handle. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters.",
+        message: handleValidation.message || 
+          "Invalid account handle. Only lowercase letters, numbers, and underscores are allowed. Length must be between 3 and 30 characters.",
       });
       logger.debug(
         "Exiting GetAccountByHandleController with invalid account handle",
