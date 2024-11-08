@@ -157,3 +157,6 @@ For each test case, document:
 - Address any failed test cases.
 - Update deployment scripts or configuration as necessary.
 - Document any changes made to the system as a result of these tests.
+
+## 8. DCO updateBalances for CXX and CXX multipliers
+Needs to be updated to search for a flag that indicates nodes/rels to perform the updates on

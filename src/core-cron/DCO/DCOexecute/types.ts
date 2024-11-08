@@ -1,5 +1,3 @@
-import { Denomination } from "../../../constants/denominations";
-
 export interface Rates {
   [key: string]: number;
 }
