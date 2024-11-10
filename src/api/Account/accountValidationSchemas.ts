@@ -131,25 +131,6 @@ export const getLedgerSchema = {
 };
 logger.debug("getLedgerSchema initialized");
 
-export const setDCOparticipantRateSchema = {
-  accountID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
-  DCOgiveInCXX: {
-    sanitizer: (value: number) => value,
-    validator: v.validatePositiveNumber,
-    required: true,
-  },
-  DCOdenom: {
-    sanitizer: s.sanitizeDenomination,
-    validator: v.validateDenomination,
-    required: true,
-  },
-};
-logger.debug("setDCOparticipantRateSchema initialized");
-
 export const getBalancesSchema = {
   accountID: {
     sanitizer: s.sanitizeUUID,

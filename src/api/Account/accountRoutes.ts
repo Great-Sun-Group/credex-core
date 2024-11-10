@@ -6,7 +6,6 @@ import { AuthorizeForAccountController } from "./controllers/authorizeForAccount
 import { UnauthorizeForAccountController } from "./controllers/unauthorizeForAccount";
 import { UpdateSendOffersToController } from "./controllers/updateSendOffersTo";
 import { GetLedgerController } from "./controllers/getLedger";
-import { SetDCOparticipantRateController } from "./controllers/setDCOparticipantRate";
 import { GetBalancesController } from "./controllers/getBalances";
 import { errorHandler } from "../../middleware/errorHandler";
 import { validateRequest } from "../../middleware/validateRequest";
@@ -18,7 +17,6 @@ import {
   unauthorizeForAccountSchema,
   updateSendOffersToSchema,
   getLedgerSchema,
-  setDCOparticipantRateSchema,
   getBalancesSchema,
 } from "./accountValidationSchemas";
 import logger from "../../utils/logger";
@@ -274,41 +272,6 @@ export default function AccountRoutes() {
     `/getLedger`,
     validateRequest(getLedgerSchema),
     GetLedgerController,
-    errorHandler
-  );
-
-  /**
-   * @swagger
-   * /api/account/setDCOparticipantRate:
-   *   post:
-   *     tags: [Accounts]
-   *     summary: Set DCO participant rate
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required:
-   *               - accountID
-   *               - DCOgiveInCXX
-   *               - DCOdenom
-   *             properties:
-   *               accountID:
-   *                 type: string
-   *                 format: uuid
-   *               DCOgiveInCXX:
-   *                 type: number
-   *                 minimum: 0
-   *                 exclusiveMinimum: true
-   *               DCOdenom:
-   *                 type: string
-   *                 enum: [CXX, CAD, USD, XAU, ZWG]
-   */
-  router.post(
-    `/setDCOparticipantRate`,
-    validateRequest(setDCOparticipantRateSchema),
-    SetDCOparticipantRateController,
     errorHandler
   );
 
