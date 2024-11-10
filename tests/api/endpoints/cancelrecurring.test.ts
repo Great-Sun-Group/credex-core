@@ -10,7 +10,7 @@ describe("cancelRecurring Endpoint Test", () => {
       throw new Error("Usage: npm test cancelrecurring <jwt> <recurringID>");
     }
 
-    console.log("\nCanceling recurring transaction...");
+    console.log("\nCancelling recurring transaction...");
     const response = await authRequest("/cancelRecurring", {
       recurringID
     }, jwt);

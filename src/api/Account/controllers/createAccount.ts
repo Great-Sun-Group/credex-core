@@ -11,6 +11,12 @@ import {
   validateAmount,
 } from "../../../utils/validators";
 
+// Import the UserRequest interface from authentication module
+import type { Request } from "express";
+interface UserRequest extends Request {
+  user: any;
+}
+
 interface CreateAccountResponse {
   success: boolean;
   data?: {
@@ -32,12 +38,12 @@ interface CreateAccountResponse {
  * 
  * Handles the creation of new accounts with validation and proper error handling.
  * 
- * @param req - Express request object
+ * @param req - Express request object with user information
  * @param res - Express response object
  * @param next - Express next function
  */
 export async function CreateAccountController(
-  req: express.Request,
+  req: UserRequest,
   res: express.Response,
   next: express.NextFunction
 ): Promise<void> {
@@ -49,7 +55,6 @@ export async function CreateAccountController(
 
   try {
     const {
-      ownerID,
       accountType,
       accountName,
       accountHandle,
@@ -57,6 +62,8 @@ export async function CreateAccountController(
       DCOgiveInCXX,
       DCOdenom,
     } = req.body;
+
+    const ownerID = req.user.memberID;
 
     // Validate all inputs
     if (!validateUUID(ownerID)) {

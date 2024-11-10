@@ -4,6 +4,11 @@ import { GetAccountDashboardService } from "../../Account/services/GetAccountDas
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 
+// Import the UserRequest interface
+interface UserRequest extends express.Request {
+  user: any;
+}
+
 interface AcceptRecurringResponse {
   success: boolean;
   data?: {
@@ -29,12 +34,12 @@ interface AcceptRecurringResponse {
  * Handles the acceptance of recurring transactions.
  * Validates authorization and updates recurring status.
  *
- * @param req - Express request object
+ * @param req - Express request object with user information
  * @param res - Express response object
  * @param next - Express next function
  */
 export async function AcceptRecurringController(
-  req: express.Request,
+  req: UserRequest,
   res: express.Response,
   next: express.NextFunction
 ): Promise<void> {
@@ -42,7 +47,8 @@ export async function AcceptRecurringController(
   logger.debug("Entering AcceptRecurringController", { requestId });
 
   try {
-    const { recurringID, signerID } = req.body;
+    const { recurringID } = req.body;
+    const signerID = req.user.memberID;
 
     // Basic validation is handled by validateRequest middleware
     logger.info("Accepting recurring transaction", {

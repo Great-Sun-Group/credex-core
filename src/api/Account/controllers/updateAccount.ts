@@ -2,8 +2,13 @@ import { Request, Response, NextFunction } from "express";
 import { UpdateAccountService } from "../services/UpdateAccount";
 import logger from "../../../utils/logger";
 
+// Import the UserRequest interface
+interface UserRequest extends Request {
+  user: any;
+}
+
 export const UpdateAccountController = async (
-  req: Request,
+  req: UserRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -11,7 +16,6 @@ export const UpdateAccountController = async (
 
   try {
     const {
-      ownerID,
       accountID,
       accountName,
       accountHandle,
@@ -19,6 +23,8 @@ export const UpdateAccountController = async (
       DCOgiveInCXX,
       DCOdenom,
     } = req.body;
+
+    const ownerID = req.user.memberID;
 
     logger.debug("Updating account", {
       ownerID,

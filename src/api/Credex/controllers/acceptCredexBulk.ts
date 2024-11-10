@@ -3,7 +3,6 @@ import { AcceptCredexService } from "../services/AcceptCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { validateUUID } from "../../../utils/validators";
 import logger from "../../../utils/logger";
-import { v4 as uuidv4 } from 'uuid';
 
 // Import the UserRequest interface from authentication module
 import type { Request } from "express";
@@ -51,20 +50,20 @@ export async function AcceptCredexBulkController(
   res: express.Response,
   next: express.NextFunction
 ) {
-  const parentRequestId = req.id;
-  logger.debug("Entering AcceptCredexBulkController", { parentRequestId });
+  const requestId = req.id;
+  logger.debug("Entering AcceptCredexBulkController", { requestId });
 
   // Get signerID from authenticated user
   const signerID = req.user?.memberID;
   if (!signerID) {
-    logger.warn("No authenticated user found", { parentRequestId });
+    logger.warn("No authenticated user found", { requestId });
     return res.status(401).json({ message: "Authentication required" });
   }
 
   // Validate required fields
   const { credexIDs } = req.body;
   if (!credexIDs) {
-    logger.warn("credexIDs is required", { parentRequestId });
+    logger.warn("credexIDs is required", { requestId });
     return res.status(400).json({ message: "credexIDs is required" });
   }
 
@@ -76,7 +75,7 @@ export async function AcceptCredexBulkController(
     )
   ) {
     logger.warn("Invalid credexIDs", {
-      parentRequestId,
+      requestId,
       credexIDs,
     });
     return res.status(400).json({
@@ -86,24 +85,25 @@ export async function AcceptCredexBulkController(
 
   try {
     logger.debug("Starting bulk accept process", {
-      parentRequestId,
+      requestId,
       credexCount: credexIDs.length,
     });
 
     const results = await Promise.all(
-      credexIDs.map(async (credexID: string) => {
-        const childRequestId = `${parentRequestId}-${uuidv4()}`;
-        logger.debug("Processing individual Credex", { parentRequestId, childRequestId, credexID });
+      credexIDs.map(async (credexID: string, index: number) => {
+        logger.debug("Processing individual Credex", { requestId, credexID });
         
         try {
           const data = await AcceptCredexService(
             credexID,
             signerID,
-            childRequestId
+            requestId,
+            true, // This is a bulk operation
+            credexIDs // Pass all credexIDs for bulk signature
           );
           
           if (data) {
-            logger.debug("Credex accepted successfully", { parentRequestId, childRequestId, credexID });
+            logger.debug("Credex accepted successfully", { requestId, credexID });
             return {
               status: 'accepted' as const,
               credexID,
@@ -111,7 +111,7 @@ export async function AcceptCredexBulkController(
             };
           }
           
-          logger.warn("Failed to accept Credex", { parentRequestId, childRequestId, credexID });
+          logger.warn("Failed to accept Credex", { requestId, credexID });
           return {
             status: 'failed' as const,
             credexID,
@@ -122,7 +122,7 @@ export async function AcceptCredexBulkController(
           
           // Handle already accepted credex gracefully
           if (errorMessage.includes('already accepted')) {
-            logger.info("Credex was already accepted", { parentRequestId, childRequestId, credexID });
+            logger.info("Credex was already accepted", { requestId, credexID });
             return {
               status: 'already_accepted' as const,
               credexID
@@ -131,8 +131,7 @@ export async function AcceptCredexBulkController(
           
           logger.error("Error accepting credex", {
             error: errorMessage,
-            parentRequestId,
-            childRequestId,
+            requestId,
             credexID
           });
           return {
@@ -156,7 +155,7 @@ export async function AcceptCredexBulkController(
     );
 
     logger.debug("Processed all credex", {
-      parentRequestId,
+      requestId,
       accepted: acceptedCredex.length,
       alreadyAccepted: alreadyAccepted.length,
       failed: failed.length
@@ -168,7 +167,7 @@ export async function AcceptCredexBulkController(
       const acceptorAccountID = firstAccepted?.acceptorAccountID;
 
       logger.debug("Fetching dashboard data", {
-        parentRequestId,
+        requestId,
         memberID: signerID,
         acceptorAccountID,
       });
@@ -181,7 +180,7 @@ export async function AcceptCredexBulkController(
         accepted: acceptedCredex.length,
         alreadyAccepted: alreadyAccepted.length,
         failed: failed.length,
-        parentRequestId
+        requestId
       });
 
       return res.json({
@@ -200,7 +199,7 @@ export async function AcceptCredexBulkController(
     } else {
       // If nothing was processed successfully
       logger.warn("No credex were processed successfully", {
-        parentRequestId,
+        requestId,
         failedCount: failed.length,
         errors: failed.map(f => f.error)
       });
@@ -214,10 +213,10 @@ export async function AcceptCredexBulkController(
     logger.error("Error in AcceptCredexBulkController", {
       error: err instanceof Error ? err.message : "Unknown error",
       stack: err instanceof Error ? err.stack : undefined,
-      parentRequestId,
+      requestId,
     });
     next(err);
   }
 
-  logger.debug("Exiting AcceptCredexBulkController", { parentRequestId });
+  logger.debug("Exiting AcceptCredexBulkController", { requestId });
 }

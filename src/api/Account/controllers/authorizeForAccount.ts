@@ -3,6 +3,12 @@ import { AuthorizeForAccountService } from "../services/AuthorizeForAccount";
 import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 
+// Import the UserRequest interface from authentication module
+import type { Request } from "express";
+interface UserRequest extends Request {
+  user?: any;
+}
+
 interface AuthorizeResponse {
   success: boolean;
   data?: {
@@ -23,7 +29,7 @@ interface AuthorizeResponse {
  * @param next - Express next function
  */
 export async function AuthorizeForAccountController(
-  req: express.Request,
+  req: UserRequest,
   res: express.Response,
   next: express.NextFunction
 ): Promise<void> {
@@ -31,7 +37,17 @@ export async function AuthorizeForAccountController(
   logger.debug("Entering AuthorizeForAccountController", { requestId });
 
   try {
-    const { memberHandleToBeAuthorized, accountID, ownerID } = req.body;
+    const ownerID = req.user?.memberID;
+    if (!ownerID) {
+      logger.warn("No authenticated user found", { requestId });
+      res.status(401).json({ 
+        success: false,
+        message: "Authentication required" 
+      });
+      return;
+    }
+
+    const { memberHandleToBeAuthorized, accountID } = req.body;
 
     // Basic validation is handled by validateRequest middleware
     logger.info("Authorizing member for account", {
@@ -83,7 +99,6 @@ export async function AuthorizeForAccountController(
       stack: handledError instanceof Error ? handledError.stack : undefined,
       memberHandleToBeAuthorized: req.body.memberHandleToBeAuthorized,
       accountID: req.body.accountID,
-      ownerID: req.body.ownerID,
       requestId
     });
 

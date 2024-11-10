@@ -4,6 +4,11 @@ import { GetAccountDashboardService } from "../../Account/services/GetAccountDas
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 
+// Import the UserRequest interface
+interface UserRequest extends express.Request {
+  user: any;
+}
+
 interface CancelRecurringResponse {
   success: boolean;
   data?: {
@@ -29,12 +34,12 @@ interface CancelRecurringResponse {
  * Handles the cancellation of recurring transactions.
  * Validates authorization and updates recurring status.
  *
- * @param req - Express request object
+ * @param req - Express request object with user information
  * @param res - Express response object
  * @param next - Express next function
  */
 export async function CancelRecurringController(
-  req: express.Request,
+  req: UserRequest,
   res: express.Response,
   next: express.NextFunction
 ): Promise<void> {
@@ -42,7 +47,8 @@ export async function CancelRecurringController(
   logger.debug("Entering CancelRecurringController", { requestId });
 
   try {
-    const { recurringID, ownerID } = req.body;
+    const { recurringID } = req.body;
+    const ownerID = req.user.memberID;
 
     // Basic validation is handled by validateRequest middleware
     logger.info("Cancelling recurring transaction", {

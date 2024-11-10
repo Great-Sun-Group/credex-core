@@ -3,14 +3,20 @@ import { UpdateSendOffersToService } from "../services/UpdateSendOffersTo";
 import logger from "../../../utils/logger";
 import { validateUUID } from "../../../utils/validators";
 
+// Import the UserRequest interface
+interface UserRequest extends express.Request {
+  user: any;
+}
+
 export async function UpdateSendOffersToController(
-  req: express.Request,
+  req: UserRequest,
   res: express.Response,
   next: express.NextFunction
 ) {
   logger.debug("UpdateSendOffersToController called", { body: req.body });
 
-  const { memberIDtoSendOffers, accountID, ownerID } = req.body;
+  const { memberIDtoSendOffers, accountID } = req.body;
+  const ownerID = req.user.memberID;
 
   try {
     // Validate input
@@ -65,7 +71,7 @@ export async function UpdateSendOffersToController(
       stack: error instanceof Error ? error.stack : undefined,
       memberIDtoSendOffers: req.body.memberIDtoSendOffers,
       accountID: req.body.accountID,
-      ownerID: req.body.ownerID,
+      ownerID,
     });
     next(error);
   }

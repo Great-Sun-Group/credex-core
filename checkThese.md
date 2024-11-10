@@ -2,17 +2,19 @@
 
 From tests/api/endpoints/:
 
-- acceptcredexbulk.test.ts
-- acceptrecurring.test.ts
-- authorizeforaccount.test.ts
-- createaccount.test.ts
-- createrecurring.test.ts
-- getrecurring.test.ts
 - setdcoparticipantrate.test.ts
-- updateaccount.test.ts
-- updatesendoffersto.test.ts
 
 We've already checked:
+
+- acceptrecurring.test.ts
+- cancelrecurring.test.ts
+- getrecurring.test.ts
+- createrecurring.test.ts
+- createaccount.test.ts
+- updateaccount.test.ts
+- updatesendoffersto.test.ts
+- authorizeforaccount.test.ts
+- acceptcredexbulk.test.ts
 - acceptcredex.test.ts
 - cancelcredex.test.ts
 - declinecredex.test.ts
@@ -24,4 +26,3 @@ We've already checked:
 - getledger.test.ts
 - getmemberbyhandle.test.ts
 - getmemberdashboardbyphone.test.ts
-

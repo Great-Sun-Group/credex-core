@@ -5,6 +5,7 @@ import logger from "../../../utils/logger";
 interface GetRecurringParams {
   recurringID: string;
   accountID: string;
+  memberID: string;
   requestId: string;
 }
 
@@ -41,6 +42,7 @@ class RecurringError extends Error {
  * 
  * Retrieves details of a recurring transaction template.
  * Includes schedule information and remaining executions.
+ * Verifies that the member owns either the source or target account.
  * 
  * @param params - Parameters for retrieving recurring transaction
  * @returns Object containing the recurring transaction details
@@ -51,7 +53,7 @@ export async function GetRecurringService(
 ): Promise<GetRecurringResult> {
   logger.debug("Entering GetRecurringService", { ...params });
 
-  const { recurringID, accountID, requestId } = params;
+  const { recurringID, accountID, memberID, requestId } = params;
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -59,6 +61,7 @@ export async function GetRecurringService(
     logger.debug("Retrieving recurring transaction details", {
       recurringID,
       accountID,
+      memberID,
       requestId
     });
 
@@ -67,6 +70,10 @@ export async function GetRecurringService(
         MATCH (recurring:Recurring {recurringID: $recurringID})
         MATCH (source:Account)-[:REQUESTS|ACTIVE|CANCELLED]->(recurring)-[:REQUESTS|ACTIVE|CANCELLED]->(target:Account)
         WHERE source.accountID = $accountID OR target.accountID = $accountID
+        // Verify account ownership
+        WITH recurring, source, target
+        MATCH (member:Member {memberID: $memberID})-[:OWNS]->(account)
+        WHERE account.accountID IN [source.accountID, target.accountID]
         RETURN
           recurring.recurringID as recurringID,
           recurring.frequency as frequency,
@@ -80,7 +87,7 @@ export async function GetRecurringService(
           target.accountID as targetAccountID
       `;
 
-      return tx.run(query, { recurringID, accountID });
+      return tx.run(query, { recurringID, accountID, memberID });
     });
 
     if (query.records.length === 0) {
@@ -115,6 +122,7 @@ export async function GetRecurringService(
     logger.info("Recurring transaction details retrieved successfully", {
       recurringID,
       accountID,
+      memberID,
       requestId
     });
 

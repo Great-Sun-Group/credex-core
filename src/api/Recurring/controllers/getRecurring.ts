@@ -3,6 +3,11 @@ import { GetRecurringService } from "../services/GetRecurring";
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 
+// Import the UserRequest interface
+interface UserRequest extends express.Request {
+  user: any;
+}
+
 interface GetRecurringResponse {
   success: boolean;
   data?: {
@@ -33,12 +38,12 @@ interface GetRecurringResponse {
  * Handles retrieving recurring transaction details.
  * Validates authorization and returns transaction information.
  *
- * @param req - Express request object
+ * @param req - Express request object with user information
  * @param res - Express response object
  * @param next - Express next function
  */
 export async function GetRecurringController(
-  req: express.Request,
+  req: UserRequest,
   res: express.Response,
   next: express.NextFunction
 ): Promise<void> {
@@ -47,17 +52,20 @@ export async function GetRecurringController(
 
   try {
     const { recurringID, accountID } = req.body;
+    const memberID = req.user.memberID;
 
     // Basic validation is handled by validateRequest middleware
     logger.info("Retrieving recurring transaction details", {
       recurringID,
       accountID,
+      memberID,
       requestId
     });
 
     const result = await GetRecurringService({
       recurringID,
       accountID,
+      memberID,
       requestId
     });
 
@@ -79,6 +87,7 @@ export async function GetRecurringController(
     logger.info("Recurring transaction details retrieved successfully", {
       recurringID,
       accountID,
+      memberID,
       requestId
     });
 

@@ -114,7 +114,7 @@ export const updateSendOffersToSchema = {
     validator: v.validateUUID,
     required: true,
   },
-  memberID: {
+  memberIDtoSendOffers: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
     required: true,

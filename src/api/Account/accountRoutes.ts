@@ -58,7 +58,7 @@ export default function AccountRoutes() {
    *                 format: uuid
    *               accountType:
    *                 type: string
-   *                 enum: [PERSONAL_CONSUMPTION, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
+   *                 enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
    *               accountName:
    *                 type: string
    *                 minLength: 3

@@ -148,7 +148,7 @@ export const v = {
   validateBoolean,
 };
 
-const VALID_ACCOUNT_TYPES = ['PERSONAL_CONSUMPTION', 'BUSINESS', 'CREDEX_FOUNDATION', 'TRUST', 'OPERATIONS'];
+const VALID_ACCOUNT_TYPES = ['PERSONAL', 'BUSINESS', 'CREDEX_FOUNDATION', 'TRUST', 'OPERATIONS'];
 
 export function validateAccountType(value: any): { isValid: boolean; message?: string } {
   if (!VALID_ACCOUNT_TYPES.includes(value)) {

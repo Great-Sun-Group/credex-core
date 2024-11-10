@@ -4,11 +4,6 @@ import logger from "../../utils/logger";
 logger.debug("Initializing recurring validation schemas");
 
 export const createRecurringSchema = {
-  ownerID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
   sourceAccountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
@@ -68,20 +63,10 @@ export const acceptRecurringSchema = {
     validator: v.validateUUID,
     required: true,
   },
-  signerID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
 };
 
 export const cancelRecurringSchema = {
   recurringID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
-  ownerID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
     required: true,

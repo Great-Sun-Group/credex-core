@@ -67,7 +67,7 @@ export async function OnboardMemberController(
 
     const accountResult = await CreateAccountService(
       memberResult.data!.memberID,
-      "PERSONAL_CONSUMPTION",
+      "PERSONAL",
       `${firstname} ${lastname} Personal`,
       phone,
       defaultDenom,

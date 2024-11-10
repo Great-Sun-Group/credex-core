@@ -4,6 +4,11 @@ import { GetAccountDashboardService } from "../../Account/services/GetAccountDas
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 
+// Import the UserRequest interface
+interface UserRequest extends express.Request {
+  user: any;
+}
+
 interface CreateRecurringResponse {
   success: boolean;
   data?: {
@@ -29,12 +34,12 @@ interface CreateRecurringResponse {
  * Handles the creation of new recurring transactions.
  * Validates input and creates a new recurring schedule.
  *
- * @param req - Express request object
+ * @param req - Express request object with user information
  * @param res - Express response object
  * @param next - Express next function
  */
 export async function CreateRecurringController(
-  req: express.Request,
+  req: UserRequest,
   res: express.Response,
   next: express.NextFunction
 ): Promise<void> {
@@ -43,7 +48,6 @@ export async function CreateRecurringController(
 
   try {
     const {
-      ownerID,
       sourceAccountID,
       targetAccountID,
       amount,
@@ -53,6 +57,8 @@ export async function CreateRecurringController(
       duration,
       securedCredex = false,
     } = req.body;
+
+    const ownerID = req.user.memberID;
 
     // Basic validation is handled by validateRequest middleware
     logger.info("Creating recurring transaction", {
