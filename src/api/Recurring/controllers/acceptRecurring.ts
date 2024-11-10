@@ -2,6 +2,7 @@ import express from "express";
 import { AcceptRecurringService } from "../services/AcceptRecurring";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
+import { TEMPLATE_TYPES } from "../types";
 import logger from "../../../utils/logger";
 
 // Import the UserRequest interface
@@ -16,9 +17,12 @@ interface AcceptRecurringResponse {
     scheduleInfo: {
       frequency: string;
       nextRunDate: string;
-      amount: string;
-      denomination: string;
+      amount?: string;
+      DCOgiveInCXX?: string;
+      denomination?: string;
+      DCOdenom?: string;
       status: string;
+      templateType: string;
     };
     participants: {
       sourceAccountID: string;
@@ -33,6 +37,7 @@ interface AcceptRecurringResponse {
  *
  * Handles the acceptance of recurring transactions.
  * Validates authorization and updates recurring status.
+ * Note: DCO_GIVE templates are automatically accepted without signature.
  *
  * @param req - Express request object with user information
  * @param res - Express response object
@@ -109,8 +114,13 @@ export async function AcceptRecurringController(
     logger.info("Recurring transaction accepted successfully", {
       recurringID,
       signerID,
+      templateType: result.data?.scheduleInfo.templateType,
       requestId
     });
+
+    const message = result.data?.scheduleInfo.templateType === TEMPLATE_TYPES.DCO_GIVE
+      ? "DCO_GIVE template activated automatically"
+      : "Recurring transaction accepted successfully";
 
     res.status(200).json({
       success: true,
@@ -118,7 +128,7 @@ export async function AcceptRecurringController(
         recurringData: result.data,
         dashboardData
       },
-      message: "Recurring transaction accepted successfully"
+      message
     });
 
   } catch (error) {

@@ -10,6 +10,13 @@ export interface Participant {
   DCOdenom: string;
 }
 
+export interface ParticipantData {
+  confirmedParticipants: Participant[];
+  DCOinCXX: number;
+  DCOinXAU: number;
+  numberConfirmedParticipants: number;
+}
+
 export interface FoundationData {
   foundationID: string;
   foundationXOid: string;

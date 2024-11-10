@@ -4,8 +4,7 @@ import { logInfo, logWarning, logError, logDCORates } from "../../../utils/logge
 import { getDenominations, Denomination } from "../../../constants/denominations";
 import { validateDenomination, validateAmount } from "../../../utils/validators";
 import { fetchZwgRate, ZwgRateError, ExchangeRate } from "../fetchZwgRate";
-import { GetSecuredAuthorizationService } from "../../../api/Credex/services/GetSecuredAuthorization";
-import { Rates, DCOResult, Participant } from "./types";
+import { Rates, DCOResult, ParticipantData } from "./types";
 
 /**
  * Fetches and validates currency rates from external sources
@@ -80,78 +79,19 @@ function validateRates(rates: Rates): void {
  * Establishes new CXX rates based on participant data
  */
 export async function establishNewCXXrates(
-  session: any,
-  USDbaseRates: Rates
+  USDbaseRates: Rates,
+  participantData: ParticipantData
 ): Promise<DCOResult> {
-  logInfo("Processing DCO participants");
+  const { DCOinCXX, DCOinXAU, numberConfirmedParticipants, confirmedParticipants } = participantData;
+
   const denomsInXAU = _.mapValues(
     USDbaseRates,
     (value) => value / USDbaseRates.XAU
   );
 
-  const result = await session.run(`
-    MATCH (daynode:Daynode{Active:true})
-    MATCH (DCOparticipantsDeclared:Account)<-[:OWNS]-(DCOmember:Member)
-    WHERE DCOparticipantsDeclared.DCOgiveInCXX > 0
-    RETURN
-      DCOparticipantsDeclared.accountID AS accountID,
-      DCOmember.memberID AS DCOmemberID,
-      DCOparticipantsDeclared.DCOgiveInCXX AS DCOgiveInCXX,
-      DCOparticipantsDeclared.DCOgiveInCXX / daynode[DCOparticipantsDeclared.DCOdenom] AS DCOgiveInDenom,
-      DCOparticipantsDeclared.DCOdenom AS DCOdenom
-  `);
-
-  const declaredParticipants = result.records;
-  logInfo(`Declared participants: ${declaredParticipants.length}`);
-
-  let DCOinCXX = 0;
-  let DCOinXAU = 0;
-  const confirmedParticipants: Participant[] = [];
-
-  for (const participant of declaredParticipants) {
-    const { accountID, DCOmemberID, DCOdenom, DCOgiveInCXX, DCOgiveInDenom } =
-      participant.toObject();
-
-    if (
-      !validateDenomination(DCOdenom) ||
-      !validateAmount(DCOgiveInCXX) ||
-      !validateAmount(DCOgiveInDenom)
-    ) {
-      logWarning("Invalid participant data", {
-        accountID,
-        DCOmemberID,
-        DCOdenom,
-        DCOgiveInCXX,
-        DCOgiveInDenom,
-      });
-      continue;
-    }
-
-    const { securableAmountInDenom } = await GetSecuredAuthorizationService(
-      accountID,
-      DCOdenom
-    );
-
-    if (DCOgiveInDenom <= securableAmountInDenom) {
-      confirmedParticipants.push({
-        accountID,
-        DCOmemberID,
-        DCOdenom,
-        DCOgiveInCXX,
-        DCOgiveInDenom,
-      });
-      DCOinCXX += DCOgiveInCXX;
-      DCOinXAU += DCOgiveInDenom / denomsInXAU[DCOdenom];
-    }
-  }
-
-  const numberConfirmedParticipants = confirmedParticipants.length;
   const nextCXXinXAU = DCOinXAU / numberConfirmedParticipants;
   const CXXprior_CXXcurrent = DCOinCXX / numberConfirmedParticipants;
 
-  logInfo(`Confirmed participants: ${numberConfirmedParticipants}`);
-  logInfo(`DCO in CXX: ${DCOinCXX}`);
-  logInfo(`DCO in XAU: ${DCOinXAU}`);
   logInfo(`Next CXX in XAU: ${nextCXXinXAU}`);
 
   const newCXXrates = _.mapValues(
@@ -168,6 +108,6 @@ export async function establishNewCXXrates(
     DCOinCXX,
     DCOinXAU,
     numberConfirmedParticipants,
-    confirmedParticipants,
+    confirmedParticipants
   };
 }

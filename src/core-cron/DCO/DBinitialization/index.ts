@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from "uuid";
 /**
  * Initializes the database for the Daily Credcoin Offering (DCO) process.
  * This function sets up necessary constraints, creates initial accounts,
- * establishes the starting state for the DCO, and creates the recurring template (avatar).
+ * establishes the starting state for the DCO, and creates rdubs' DCO_GIVE template.
  */
 export async function DBinitialization(): Promise<void> {
   const requestId = uuidv4();
@@ -38,7 +38,6 @@ export async function DBinitialization(): Promise<void> {
       "Watson",
       "263778177125",
       "USD",
-      true,
       requestId
     );
     const magicmike = await createInitialMember(
@@ -46,7 +45,6 @@ export async function DBinitialization(): Promise<void> {
       "Dube",
       "263787379972",
       "USD",
-      false,
       requestId
     );
     const bennita = await createInitialMember(
@@ -54,7 +52,6 @@ export async function DBinitialization(): Promise<void> {
       "Muranda",
       "263788435091",
       "USD",
-      false,
       requestId
     );
 
@@ -118,10 +115,11 @@ export async function DBinitialization(): Promise<void> {
       requestId
     );
 
-    // Create DCO recurring template (avatar)
+    // Create rdubs' DCO_GIVE template
     await createDCOrecurringTemplate(
       rdubs.onboardedMemberID,
       credexFoundationID,
+      rdubs.defaultAccountID,
       ledgerSpaceSession,
       requestId
     );

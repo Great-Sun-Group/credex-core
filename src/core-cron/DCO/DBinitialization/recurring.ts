@@ -6,37 +6,38 @@ import logger from "../../../utils/logger";
 import { TEMPLATE_TYPES } from "../../../api/Recurring/types";
 
 /**
- * Creates and accepts the DCO recurring template (avatar).
- * The recurring template itself acts as an avatar in the system.
+ * Creates rdubs' DCO_GIVE recurring template.
  */
 export async function createDCOrecurringTemplate(
   foundationXOid: string,
   foundationID: string,
+  defaultAccountID: string,
   ledgerSpaceSession: Session,
   requestId: string
 ): Promise<void> {
-  logger.info("Creating DCO recurring template (avatar)", { requestId });
+  logger.info("Creating DCO recurring template", { requestId });
 
-  // Create recurring template (avatar)
   const recurringData = {
     ownerID: foundationXOid,
-    sourceAccountID: foundationID,
-    targetAccountID: foundationID, // Foundation to foundation for authorization
+    sourceAccountID: defaultAccountID,  // From rdubs
+    targetAccountID: foundationID,      // To foundation
     frequency: DCO_CONSTANTS.RECURRING.FREQUENCY,
-    startDate: new Date().toISOString().split('T')[0], // Today
+    startDate: new Date().toISOString().split("T")[0],
     templateType: TEMPLATE_TYPES.DCO_GIVE,
-    DCOgiveInCXX: 0, // Amount not relevant for authorization
+    DCOgiveInCXX: 1,
     DCOdenom: DCO_CONSTANTS.RECURRING.DEFAULT_DENOMINATION,
-    requestId
+    requestId,
   };
 
-  logger.debug("Creating recurring template", {
+  logger.debug("Creating DCO_GIVE template", {
     ownerID: recurringData.ownerID,
     sourceAccountID: recurringData.sourceAccountID,
     targetAccountID: recurringData.targetAccountID,
     frequency: recurringData.frequency,
     startDate: recurringData.startDate,
-    requestId
+    DCOgiveInCXX: recurringData.DCOgiveInCXX,
+    DCOdenom: recurringData.DCOdenom,
+    requestId,
   });
 
   const createResult = await CreateRecurringService(recurringData);
@@ -44,54 +45,52 @@ export async function createDCOrecurringTemplate(
   if (!createResult.success || !createResult.data) {
     logger.error("Failed to create DCO recurring template", {
       error: createResult.message,
-      requestId
+      requestId,
     });
     throw new Error("Failed to create DCO recurring template");
   }
 
   const recurringID = createResult.data.recurringID;
 
-  // Store the template ID in the foundation account
-  await ledgerSpaceSession.run(`
-    MATCH (foundation:Account {accountID: $foundationID})
-    SET 
-      foundation.${DCO_CONSTANTS.AUTHORIZATION.TEMPLATE_PROPERTY} = $templateID,
-      foundation.${DCO_CONSTANTS.AUTHORIZATION.TYPE_PROPERTY} = $authType
-  `, {
-    foundationID,
-    templateID: recurringID,
-    authType: DCO_CONSTANTS.RECURRING.AUTH_TYPE
-  });
-
-  logger.info("DCO recurring template created and ID stored", {
-    requestId,
+  logger.debug("Accepting DCO_GIVE template", {
     recurringID,
-    foundationID
-  });
-
-  // Accept the recurring template
-  logger.debug("Accepting recurring template", {
+    foundationXOid,
     requestId,
-    recurringID,
-    signerID: foundationXOid
   });
 
   const acceptResult = await AcceptRecurringService({
     recurringID,
     signerID: foundationXOid,
-    requestId
+    requestId,
   });
 
   if (!acceptResult.success) {
     logger.error("Failed to accept DCO recurring template", {
       error: acceptResult.message,
-      requestId
+      requestId,
     });
     throw new Error("Failed to accept DCO recurring template");
   }
 
-  logger.info("DCO recurring template (avatar) created and accepted successfully", {
+  // Store the template ID in the foundation account
+  await ledgerSpaceSession.run(
+    `
+    MATCH (foundation:Account {accountID: $foundationID})
+    SET 
+      foundation.${DCO_CONSTANTS.AUTHORIZATION.TEMPLATE_PROPERTY} = $templateID,
+      foundation.${DCO_CONSTANTS.AUTHORIZATION.TYPE_PROPERTY} = $authType
+  `,
+    {
+      foundationID,
+      templateID: recurringID,
+      authType: DCO_CONSTANTS.RECURRING.AUTH_TYPE,
+    }
+  );
+
+  logger.info("DCO recurring template created and accepted", {
     requestId,
-    recurringID
+    recurringID,
+    foundationID,
+    defaultAccountID,
   });
 }

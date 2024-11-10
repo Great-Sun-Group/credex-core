@@ -8,6 +8,21 @@ export const TEMPLATE_TYPES = {
   REGULAR: 'REGULAR'
 } as const;
 
+// Export template status types
+export const TEMPLATE_STATUS = {
+  PENDING: 'PENDING',
+  ACTIVE: 'ACTIVE',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED'
+} as const;
+
+// Export relationship types
+export const RELATIONSHIP_TYPES = {
+  REQUESTS: 'REQUESTS',
+  REQUESTED: 'REQUESTED',
+  ACTIVE: 'ACTIVE'
+} as const;
+
 // Request type used in controllers
 export interface RecurringRequest extends Request<ParamsDictionary, any, any, ParsedQs> {
   user: any;

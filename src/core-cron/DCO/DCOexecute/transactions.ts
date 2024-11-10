@@ -9,7 +9,7 @@ import { GetRecurringService } from "../../../api/Recurring/services/GetRecurrin
 import { CreateCredexService } from "../../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../../api/Credex/services/AcceptCredex";
 import { DCO_CONSTANTS } from "../constants";
-import { Participant } from "./types";
+import { Participant, ParticipantData } from "./types";
 
 /**
  * Custom error class for DCO-related errors
@@ -236,8 +236,7 @@ export async function processDCOTransactions(
   session: Session,
   foundationID: string,
   foundationXOid: string,
-  DCOinCXX: number,
-  numberConfirmedParticipants: number
+  participantData: ParticipantData
 ): Promise<void> {
   logInfo("Processing DCO transactions");
 
@@ -245,19 +244,7 @@ export async function processDCOTransactions(
   const templateID = await verifyDCOAuthorization(session, foundationID, foundationXOid);
   logInfo("DCO authorization verified", { templateID });
 
-  const confirmedParticipants: Participant[] = (
-    await session.run(`
-    MATCH (daynode:Daynode{Active:true})
-    MATCH (DCOparticipantsDeclared:Account)<-[:OWNS]-(DCOmember:Member)
-    WHERE DCOparticipantsDeclared.DCOgiveInCXX > 0
-    RETURN
-      DCOparticipantsDeclared.accountID AS accountID,
-      DCOmember.memberID AS DCOmemberID,
-      DCOparticipantsDeclared.DCOgiveInCXX AS DCOgiveInCXX,
-      DCOparticipantsDeclared.DCOgiveInCXX / daynode[DCOparticipantsDeclared.DCOdenom] AS DCOgiveInDenom,
-      DCOparticipantsDeclared.DCOdenom AS DCOdenom
-  `)
-  ).records.map((record: any) => record.toObject() as Participant);
+  const { confirmedParticipants, DCOinCXX, numberConfirmedParticipants } = participantData;
 
   // Process DCO give transactions
   await Promise.all(
@@ -288,7 +275,7 @@ export async function processDCOTransactions(
   );
 
   logInfo("DCO transactions processed successfully", {
-    numberParticipants: confirmedParticipants.length,
+    numberParticipants: numberConfirmedParticipants,
     totalDCOinCXX: DCOinCXX,
     receiveAmountPerParticipant: receiveAmount,
     authorizationTemplateID: templateID

@@ -2,10 +2,8 @@ import { InitialMemberResult, ServiceResult } from "./types";
 import { OnboardMemberService } from "../../../api/Member/services/OnboardMember";
 import UpdateMemberTierService from "../../../api/Admin/services/UpdateMemberTierService";
 import { CreateAccountService } from "../../../api/Account/services/CreateAccount";
-import { CreateRecurringService } from "../../../api/Recurring/services/CreateRecurring";
 import { generateToken } from "../../../../config/authenticate";
 import { searchSpaceDriver } from "../../../../config/neo4j";
-import { TEMPLATE_TYPES } from "../../../api/Recurring/types";
 import logger from "../../../utils/logger";
 
 interface OnboardMemberData {
@@ -23,14 +21,13 @@ interface MemberTierData {
 }
 
 /**
- * Creates an initial member with optional DCO participant status.
+ * Creates an initial member.
  */
 export async function createInitialMember(
   firstname: string,
   lastname: string,
   phone: string,
   defaultDenom: string,
-  DCOparticipant: boolean,
   requestId: string
 ): Promise<InitialMemberResult> {
   // Create member
@@ -97,40 +94,6 @@ export async function createInitialMember(
     });
   } finally {
     await session.close();
-  }
-
-  // Set up DCO give recurring transaction if needed
-  if (DCOparticipant) {
-    try {
-      const recurringResult = await CreateRecurringService({
-        ownerID: onboardedMemberID,
-        sourceAccountID: defaultAccountID,
-        targetAccountID: defaultAccountID, // Foundation ID will be validated by service
-        templateType: TEMPLATE_TYPES.DCO_GIVE,
-        frequency: "DAILY",
-        startDate: new Date().toISOString().split('T')[0],
-        DCOgiveInCXX: 1,
-        DCOdenom: "CAD",
-        requestId
-      });
-
-      if (!recurringResult.success) {
-        throw new Error(`Failed to create DCO give recurring: ${recurringResult.message}`);
-      }
-
-      logger.info("DCO give recurring transaction set up successfully", {
-        accountID: defaultAccountID,
-        recurringID: recurringResult.data?.recurringID,
-        requestId,
-      });
-    } catch (error) {
-      logger.error("Failed to set up DCO give recurring transaction", {
-        accountID: defaultAccountID,
-        error: error instanceof Error ? error.message : String(error),
-        requestId,
-      });
-      throw error;
-    }
   }
 
   return {

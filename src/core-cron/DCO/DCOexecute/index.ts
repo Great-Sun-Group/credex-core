@@ -15,6 +15,86 @@ import { fetchCurrencyRates, establishNewCXXrates } from "./currencyRates";
 import { updateCredexBalances } from "./balanceUpdates";
 import { processDCOTransactions } from "./transactions";
 import { createNeo4jBackup } from "../DBbackup";
+import { validateAmount, validateDenomination } from "../../../utils/validators";
+import { GetSecuredAuthorizationService } from "../../../api/Credex/services/GetSecuredAuthorization";
+import { Participant } from "./types";
+
+/**
+ * Finds all active DCO participants using recurring templates.
+ * This is called once at the start of DCO execution to ensure consistency.
+ */
+async function findDCOParticipants(session: any): Promise<{
+  confirmedParticipants: Participant[];
+  DCOinCXX: number;
+  DCOinXAU: number;
+  numberConfirmedParticipants: number;
+}> {
+  const result = await session.run(`
+    MATCH (daynode:Daynode {Active: true})
+    MATCH (account:Account)-[:ACTIVE]->(template:Recurring {templateType: "DCO_GIVE", status: "ACTIVE"})-[:ACTIVE]->(foundation:Account)
+    MATCH (member:Member)-[:OWNS]->(account)
+    RETURN
+      account.accountID AS accountID,
+      member.memberID AS DCOmemberID,
+      template.DCOgiveInCXX AS DCOgiveInCXX,
+      template.DCOgiveInCXX / daynode[template.DCOdenom] AS DCOgiveInDenom,
+      template.DCOdenom AS DCOdenom
+  `);
+
+  const declaredParticipants = result.records;
+  logInfo(`Declared participants: ${declaredParticipants.length}`);
+
+  let DCOinCXX = 0;
+  let DCOinXAU = 0;
+  const confirmedParticipants: Participant[] = [];
+
+  for (const participant of declaredParticipants) {
+    const { accountID, DCOmemberID, DCOdenom, DCOgiveInCXX, DCOgiveInDenom } =
+      participant.toObject();
+
+    if (
+      !validateDenomination(DCOdenom) ||
+      !validateAmount(DCOgiveInCXX) ||
+      !validateAmount(DCOgiveInDenom)
+    ) {
+      logInfo("Invalid participant data", {
+        accountID,
+        DCOmemberID,
+        DCOdenom,
+        DCOgiveInCXX,
+        DCOgiveInDenom,
+      });
+      continue;
+    }
+
+    const { securableAmountInDenom } = await GetSecuredAuthorizationService(
+      accountID,
+      DCOdenom
+    );
+
+    if (DCOgiveInDenom <= securableAmountInDenom) {
+      confirmedParticipants.push({
+        accountID,
+        DCOmemberID,
+        DCOdenom,
+        DCOgiveInCXX,
+        DCOgiveInDenom,
+      });
+      DCOinCXX += DCOgiveInCXX;
+      DCOinXAU += DCOgiveInDenom;
+    }
+  }
+
+  const numberConfirmedParticipants = confirmedParticipants.length;
+  logInfo(`Confirmed participants: ${numberConfirmedParticipants}`);
+
+  return {
+    confirmedParticipants,
+    DCOinCXX,
+    DCOinXAU,
+    numberConfirmedParticipants
+  };
+}
 
 /**
  * Executes the Daily Credcoin Offering (DCO) process.
@@ -49,14 +129,19 @@ export async function DCOexecute(): Promise<boolean> {
     await handleDefaultingCredexes(ledgerSpaceSession);
     await expirePendingOffers(ledgerSpaceSession);
 
+    // Find participants once at the start
+    const participantData = await findDCOParticipants(ledgerSpaceSession);
+    logInfo("DCO participant data", {
+      numberParticipants: participantData.numberConfirmedParticipants,
+      DCOinCXX: participantData.DCOinCXX,
+      DCOinXAU: participantData.DCOinXAU
+    });
+
     const USDbaseRates = await fetchCurrencyRates(nextDate);
     const {
       newCXXrates,
       CXXprior_CXXcurrent,
-      DCOinCXX,
-      DCOinXAU,
-      numberConfirmedParticipants,
-    } = await establishNewCXXrates(ledgerSpaceSession, USDbaseRates);
+    } = await establishNewCXXrates(USDbaseRates, participantData);
 
     await createNewDaynode(
       ledgerSpaceSession,
@@ -77,8 +162,7 @@ export async function DCOexecute(): Promise<boolean> {
       ledgerSpaceSession,
       foundationID,
       foundationXOid,
-      DCOinCXX,
-      numberConfirmedParticipants
+      participantData
     );
 
     await createNeo4jBackup(nextDate, "_start");
@@ -97,9 +181,9 @@ export async function DCOexecute(): Promise<boolean> {
       startTime,
       endTime,
       duration,
-      numberConfirmedParticipants,
-      DCOinCXX,
-      DCOinXAU,
+      numberConfirmedParticipants: participantData.numberConfirmedParticipants,
+      DCOinCXX: participantData.DCOinCXX,
+      DCOinXAU: participantData.DCOinXAU,
       CXXprior_CXXcurrent,
     });
 
