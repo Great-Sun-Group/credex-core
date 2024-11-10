@@ -1,5 +1,5 @@
 import { DatabaseSessions, DayZeroRates } from "./types";
-import { getDenominations } from "../../../constants/denominations";
+import { getDenominations } from "../../constants/denominations";
 import { fetchZwgRate, ZwgRateError } from "../fetchZwgRate";
 import axios from "axios";
 import _ from "lodash";
@@ -79,7 +79,7 @@ export async function fetchAndProcessRates(
     CAD: tempRates.CAD || 1,
     USD: tempRates.USD || 1,
     XAU: tempRates.XAU || 1,
-    ...tempRates // Include any additional rates
+    ...tempRates, // Include any additional rates
   };
 
   logger.info("Day zero CXX rates calculated", { dayZeroCXXrates, requestId });

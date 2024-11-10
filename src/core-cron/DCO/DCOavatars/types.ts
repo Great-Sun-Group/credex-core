@@ -1,3 +1,8 @@
+import { DCO_CONSTANTS } from "../constants";
+
+export type TemplateType = "DCO_GIVE" | "REGULAR";
+export type TemplateStatus = typeof DCO_CONSTANTS.RECURRING.STATUS[keyof typeof DCO_CONSTANTS.RECURRING.STATUS];
+
 export interface Avatar {
   memberID: string;
   Denomination: string;
@@ -7,6 +12,9 @@ export interface Avatar {
   remainingPays: number | null;
   nextPayDate: string | null;
   dueDate?: string;
+  status: TemplateStatus;
+  templateType: TemplateType;
+  lastProcessed?: string;
 }
 
 export interface CredexObject {

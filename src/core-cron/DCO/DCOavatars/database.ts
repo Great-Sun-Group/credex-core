@@ -4,7 +4,7 @@ import { AvatarData } from "./types";
 
 /**
  * Fetches active recurring avatars that are due for processing.
- * Only fetches REGULAR templates, as DCO_GIVE templates are handled 
+ * Only fetches REGULAR templates, as DCO_GIVE templates are handled
  * separately as part of the DCO process.
  */
 export async function getActiveRecurringAvatars(
@@ -18,7 +18,7 @@ export async function getActiveRecurringAvatars(
     AND avatar.templateType = 'REGULAR'
     AND date(avatar.nextPayDate) <= date()
     AND (avatar.remainingPays IS NULL OR avatar.remainingPays > 0)
-    MATCH (issuer:Account)-[:REQUESTS]->(avatar)-[:REQUESTS]->(acceptor:Account)
+    MATCH (issuer:Account)-[:ACTIVE]->(avatar)-[:ACTIVE]->(acceptor:Account)
     RETURN
       avatar,
       issuer.accountID as issuerAccountID,
@@ -57,30 +57,51 @@ export async function getActiveDCOGiveTemplates(
   logger.debug("Fetching active DCO_GIVE templates");
 
   const query = `
+    MATCH (daynode:Daynode {Active: true})
     MATCH (template:Recurring)
     WHERE template.status = 'ACTIVE'
     AND template.templateType = 'DCO_GIVE'
     AND date(template.nextPayDate) <= date()
     AND (template.remainingPays IS NULL OR template.remainingPays > 0)
-    MATCH (source:Account)-[:REQUESTS]->(template)-[:REQUESTS]->(target:Account)
-    WHERE (target)-[:IS_FOUNDATION]->(:Foundation)
-    RETURN
-      template as avatar,
-      source.accountID as issuerAccountID,
-      target.accountID as acceptorAccountID,
-      date() as date
+    MATCH (source:Account)-[:ACTIVE]->(template)-[:ACTIVE]->(target:Account)
+    WHERE target.accountType = "CREDEX_FOUNDATION"
+    WITH template, source, target, daynode, date() as currentDate
+    WITH {
+      memberID: template.memberID,
+      Denomination: template.DCOdenom,
+      InitialAmount: template.DCOgiveInCXX / daynode[template.DCOdenom],
+      securedCredex: true,
+      credspan: template.credspan,
+      remainingPays: template.remainingPays,
+      nextPayDate: template.nextPayDate,
+      status: template.status,
+      templateType: template.templateType
+    } as avatar,
+    source.accountID as issuerAccountID,
+    target.accountID as acceptorAccountID,
+    currentDate as date
+    RETURN avatar, issuerAccountID, acceptorAccountID, date
   `;
 
   try {
     const result = await session.run(query);
     const templates: AvatarData[] = result.records.map((record) => ({
-      avatar: record.get("avatar").properties,
+      avatar: record.get("avatar"),
       issuerAccountID: record.get("issuerAccountID"),
       acceptorAccountID: record.get("acceptorAccountID"),
       date: record.get("date"),
     }));
 
-    logger.debug(`Found ${templates.length} active DCO_GIVE templates`);
+    logger.debug(`Found ${templates.length} active DCO_GIVE templates`, {
+      templateDetails: templates.map((t) => ({
+        memberID: t.avatar.memberID,
+        nextPayDate: t.avatar.nextPayDate,
+        status: t.avatar.status,
+        templateType: t.avatar.templateType,
+        denomination: t.avatar.Denomination,
+        initialAmount: t.avatar.InitialAmount,
+      })),
+    });
     return templates;
   } catch (error) {
     logger.error("Error fetching active DCO_GIVE templates", {

@@ -1,6 +1,6 @@
 import express from "express";
 import { CreateAccountService } from "../services/CreateAccount";
-import { checkPermittedAccountType } from "../../../constants/accountTypes";
+import { checkPermittedAccountType } from "../../../core-cron/constants/accountTypes";
 import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 import {
@@ -30,9 +30,9 @@ interface CreateAccountResponse {
 
 /**
  * CreateAccountController
- * 
+ *
  * Handles the creation of new accounts with validation and proper error handling.
- * 
+ *
  * @param req - Express request object with user information
  * @param res - Express response object
  * @param next - Express next function
@@ -45,7 +45,7 @@ export async function CreateAccountController(
   const requestId = req.id;
   logger.debug("Entering CreateAccountController", {
     requestId,
-    body: req.body
+    body: req.body,
   });
 
   try {
@@ -106,11 +106,7 @@ export async function CreateAccountController(
 
     // Validate optional DCO parameters if provided
     if (DCOgiveInCXX !== undefined && !validateAmount(DCOgiveInCXX)) {
-      throw new AccountError(
-        "Invalid DCO give rate",
-        "INVALID_DCO_RATE",
-        400
-      );
+      throw new AccountError("Invalid DCO give rate", "INVALID_DCO_RATE", 400);
     }
 
     if (DCOdenom && !validateDenomination(DCOdenom)) {
@@ -126,7 +122,7 @@ export async function CreateAccountController(
       accountType,
       accountName,
       accountHandle,
-      requestId
+      requestId,
     });
 
     const result = await CreateAccountService(
@@ -140,17 +136,19 @@ export async function CreateAccountController(
     );
 
     if (!result.success) {
-      const statusCode = 
-        result.message.includes("not found") ? 404 :
-        result.message.includes("permitted") ? 403 :
-        result.message.includes("already in use") ? 409 :
-        400;
+      const statusCode = result.message.includes("not found")
+        ? 404
+        : result.message.includes("permitted")
+          ? 403
+          : result.message.includes("already in use")
+            ? 409
+            : 400;
 
       logger.warn("Failed to create account", {
         message: result.message,
         ownerID,
         accountType,
-        requestId
+        requestId,
       });
 
       res.status(statusCode).json(result);
@@ -161,24 +159,23 @@ export async function CreateAccountController(
       accountID: result.data?.accountID,
       ownerID,
       accountType,
-      requestId
+      requestId,
     });
 
     res.status(201).json(result);
-
   } catch (error) {
     const handledError = handleServiceError(error);
     logger.error("Error in CreateAccountController", {
       error: handledError.message,
       code: handledError.code,
       stack: handledError instanceof Error ? handledError.stack : undefined,
-      requestId
+      requestId,
     });
-    
+
     if (handledError instanceof AccountError) {
       res.status(handledError.statusCode).json({
         success: false,
-        message: handledError.message
+        message: handledError.message,
       });
       return;
     }

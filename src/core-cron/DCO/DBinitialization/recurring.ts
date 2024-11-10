@@ -19,8 +19,8 @@ export async function createDCOrecurringTemplate(
 
   const recurringData = {
     ownerID: foundationXOid,
-    sourceAccountID: defaultAccountID,  // From rdubs
-    targetAccountID: foundationID,      // To foundation
+    sourceAccountID: defaultAccountID, // From rdubs
+    targetAccountID: foundationID, // To foundation
     frequency: DCO_CONSTANTS.RECURRING.FREQUENCY,
     startDate: new Date().toISOString().split("T")[0],
     templateType: TEMPLATE_TYPES.DCO_GIVE,

@@ -1,4 +1,4 @@
-import { Denomination } from "../constants/denominations";
+import { Denomination } from "../core-cron/constants/denominations";
 import logger from "../utils/logger";
 
 /**

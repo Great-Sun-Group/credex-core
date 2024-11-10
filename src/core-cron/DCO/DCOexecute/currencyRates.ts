@@ -1,8 +1,16 @@
 import axios from "axios";
 import _ from "lodash";
-import { logInfo, logWarning, logError, logDCORates } from "../../../utils/logger";
-import { getDenominations, Denomination } from "../../../constants/denominations";
-import { validateDenomination, validateAmount } from "../../../utils/validators";
+import {
+  logInfo,
+  logWarning,
+  logError,
+  logDCORates,
+} from "../../../utils/logger";
+import { getDenominations, Denomination } from "../../constants/denominations";
+import {
+  validateDenomination,
+  validateAmount,
+} from "../../../utils/validators";
 import { fetchZwgRate, ZwgRateError, ExchangeRate } from "../fetchZwgRate";
 import { Rates, DCOResult, ParticipantData } from "./types";
 
@@ -82,7 +90,12 @@ export async function establishNewCXXrates(
   USDbaseRates: Rates,
   participantData: ParticipantData
 ): Promise<DCOResult> {
-  const { DCOinCXX, DCOinXAU, numberConfirmedParticipants, confirmedParticipants } = participantData;
+  const {
+    DCOinCXX,
+    DCOinXAU,
+    numberConfirmedParticipants,
+    confirmedParticipants,
+  } = participantData;
 
   const denomsInXAU = _.mapValues(
     USDbaseRates,
@@ -108,6 +121,6 @@ export async function establishNewCXXrates(
     DCOinCXX,
     DCOinXAU,
     numberConfirmedParticipants,
-    confirmedParticipants
+    confirmedParticipants,
   };
 }

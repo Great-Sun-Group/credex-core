@@ -141,6 +141,7 @@ export async function CreateRecurringService(
           templateType: $templateType,
           frequency: $frequency,
           startDate: date($startDate),
+          nextPayDate: date($startDate),
           status: $status,
           createdAt: datetime(),
           ${Object.entries(templateProperties)
@@ -152,7 +153,7 @@ export async function CreateRecurringService(
         RETURN
           recurring.recurringID as recurringID,
           recurring.frequency as frequency,
-          recurring.startDate as nextRunDate,
+          recurring.nextPayDate as nextRunDate,
           recurring.templateType as templateType,
           ${Object.keys(templateProperties)
             .map((key) => `recurring.${key} as ${key}`)

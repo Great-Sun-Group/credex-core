@@ -1,5 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { getDenominations } from "../../../constants/denominations";
+import { getDenominations } from "../../../core-cron/constants/denominations";
 import logger from "../../../utils/logger";
 
 export async function UpdateAccountService(

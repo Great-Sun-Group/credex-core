@@ -3,6 +3,7 @@ import logger from "../../../utils/logger";
 import { CreateCredexService } from "../../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../../api/Credex/services/AcceptCredex";
 import { Avatar, CredexOfferResult, isCredexObject } from "./types";
+import { DCO_CONSTANTS } from "../constants";
 
 interface OfferData {
   memberID: string;
@@ -33,13 +34,18 @@ export function prepareOfferData(
     receiverAccountID: acceptorAccountID,
     Denomination: avatar.Denomination,
     InitialAmount: avatar.InitialAmount,
-    credexType: "PURCHASE",
+    // Set credexType based on template type
+    credexType: avatar.templateType === "DCO_GIVE" 
+      ? DCO_CONSTANTS.TRANSACTION_TYPES.GIVE 
+      : "PURCHASE",
     OFFERSorREQUESTS: "OFFERS",
     requestId,
-    securedCredex: avatar.securedCredex,
+    // DCO_GIVE templates must be secured
+    securedCredex: avatar.templateType === "DCO_GIVE" ? true : avatar.securedCredex,
   };
 
-  if (!avatar.securedCredex) {
+  // Only set dueDate for non-secured credexes
+  if (!offerData.securedCredex) {
     offerData.dueDate = moment(date)
       .add(parseInt(avatar.credspan), "days")
       .subtract(1, "month")
@@ -49,6 +55,7 @@ export function prepareOfferData(
   logger.debug("Prepared credex offer data", {
     requestId,
     avatarId: avatar.memberID,
+    templateType: avatar.templateType,
     offerData,
   });
   return offerData;
@@ -61,6 +68,7 @@ export async function createCredexOffer(offerData: OfferData): Promise<CredexOff
   logger.debug("Creating new credex offer", {
     requestId: offerData.requestId,
     avatarId: offerData.memberID,
+    credexType: offerData.credexType,
   });
   const offerResult = await CreateCredexService(offerData);
 
@@ -69,6 +77,7 @@ export async function createCredexOffer(offerData: OfferData): Promise<CredexOff
       requestId: offerData.requestId,
       credexID: offerResult.credex.credexID,
       avatarID: offerData.memberID,
+      credexType: offerData.credexType,
       action: "OFFER_CREDEX",
     });
     return offerResult;

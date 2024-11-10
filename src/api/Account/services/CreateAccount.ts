@@ -1,5 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { getDenominations } from "../../../constants/denominations";
+import { getDenominations } from "../../../core-cron/constants/denominations";
 import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 
@@ -26,9 +26,9 @@ interface CreateAccountResult {
 
 /**
  * CreateAccountService
- * 
+ *
  * Creates a new account for a member with optional DCO participation settings.
- * 
+ *
  * @param ownerID - The ID of the member who will own the account
  * @param accountType - The type of account to create
  * @param accountName - The name of the account
@@ -93,16 +93,12 @@ export async function CreateAccountService(
       );
 
       if (result.records.length === 0) {
-        throw new AccountError(
-          "Member not found",
-          "MEMBER_NOT_FOUND",
-          404
-        );
+        throw new AccountError("Member not found", "MEMBER_NOT_FOUND", 404);
       }
 
       return {
         memberTier: result.records[0].get("memberTier"),
-        numAccounts: result.records[0].get("numAccounts").toNumber()
+        numAccounts: result.records[0].get("numAccounts").toNumber(),
       };
     });
 
@@ -157,7 +153,9 @@ export async function CreateAccountService(
         );
       }
 
-      const accountProperties = createResult.records[0].get("accountProperties") as AccountProperties;
+      const accountProperties = createResult.records[0].get(
+        "accountProperties"
+      ) as AccountProperties;
 
       logger.info("Account created successfully", {
         accountID: accountProperties.accountID,
@@ -169,14 +167,13 @@ export async function CreateAccountService(
         success: true,
         data: {
           accountID: accountProperties.accountID,
-          accountProperties
+          accountProperties,
         },
-        message: "Account created successfully"
+        message: "Account created successfully",
       };
     });
 
     return result;
-
   } catch (error) {
     const handledError = handleServiceError(error);
     logger.error("Error in CreateAccountService", {
@@ -184,14 +181,13 @@ export async function CreateAccountService(
       code: handledError.code,
       ownerID,
       accountType,
-      accountName
+      accountName,
     });
 
     return {
       success: false,
-      message: handledError.message
+      message: handledError.message,
     };
-
   } finally {
     await ledgerSpaceSession.close();
     logger.debug("Exiting CreateAccountService", { ownerID });

@@ -1,7 +1,7 @@
 import express from "express";
 import { CreateCredexService } from "../services/CreateCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
-import { checkDueDate, credspan } from "../../../constants/credspan";
+import { checkDueDate, credspan } from "../../../core-cron/constants/credspan";
 import { AuthForTierSpendLimitService } from "../../Member/services/AuthForTierSpendLimit";
 import logger from "../../../utils/logger";
 

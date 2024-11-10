@@ -1,5 +1,5 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { getDenominations } from "../../../constants/denominations";
+import { getDenominations } from "../../../core-cron/constants/denominations";
 import { isNeo4jError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 
@@ -16,18 +16,21 @@ interface OnboardMemberResult {
 }
 
 class MemberError extends Error {
-  constructor(message: string, public code: string) {
+  constructor(
+    message: string,
+    public code: string
+  ) {
     super(message);
-    this.name = 'MemberError';
+    this.name = "MemberError";
   }
 }
 
 /**
  * OnboardMemberService
- * 
+ *
  * This service handles the creation of new member accounts.
  * It validates input data and creates a new member with default tier 1.
- * 
+ *
  * @param firstname - Member's first name
  * @param lastname - Member's last name
  * @param phone - Member's phone number (used as handle)
@@ -48,7 +51,7 @@ export async function OnboardMemberService(
     lastname,
     phone,
     defaultDenom,
-    requestId
+    requestId,
   });
 
   if (!firstname || !lastname || !phone || !defaultDenom) {
@@ -108,21 +111,20 @@ export async function OnboardMemberService(
       firstname: record.get("firstname"),
       lastname: record.get("lastname"),
       phone: record.get("phone"),
-      defaultDenom: record.get("defaultDenom")
+      defaultDenom: record.get("defaultDenom"),
     };
 
     logger.info("Member onboarded successfully", {
       memberID: memberData.memberID,
       phone,
-      requestId
+      requestId,
     });
 
     return {
       success: true,
       data: memberData,
-      message: "Member onboarded successfully"
+      message: "Member onboarded successfully",
     };
-
   } catch (error) {
     if (error instanceof MemberError) {
       throw error;
@@ -131,12 +133,21 @@ export async function OnboardMemberService(
     if (isNeo4jError(error)) {
       if (error.code === "Neo.ClientError.Schema.ConstraintValidationFailed") {
         if (error.message.includes("phone")) {
-          throw new MemberError("Phone number already in use", "DUPLICATE_PHONE");
+          throw new MemberError(
+            "Phone number already in use",
+            "DUPLICATE_PHONE"
+          );
         }
         if (error.message.includes("memberHandle")) {
-          throw new MemberError("Member handle already in use", "DUPLICATE_HANDLE");
+          throw new MemberError(
+            "Member handle already in use",
+            "DUPLICATE_HANDLE"
+          );
         }
-        throw new MemberError("Required unique field not unique", "DUPLICATE_FIELD");
+        throw new MemberError(
+          "Required unique field not unique",
+          "DUPLICATE_FIELD"
+        );
       }
     }
 
@@ -147,14 +158,13 @@ export async function OnboardMemberService(
       lastname,
       phone,
       defaultDenom,
-      requestId
+      requestId,
     });
 
     throw new MemberError(
       `Failed to onboard member: ${error instanceof Error ? error.message : "Unknown error"}`,
       "INTERNAL_ERROR"
     );
-
   } finally {
     await ledgerSpaceSession.close();
     logger.debug("Exiting OnboardMemberService", {
@@ -162,7 +172,7 @@ export async function OnboardMemberService(
       lastname,
       phone,
       defaultDenom,
-      requestId
+      requestId,
     });
   }
 }
