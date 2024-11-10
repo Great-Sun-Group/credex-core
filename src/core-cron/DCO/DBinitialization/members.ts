@@ -55,7 +55,7 @@ export async function createInitialMember(
   // Create default account
   const accountResult = await CreateAccountService(
     onboardedMemberID,
-    "PERSONAL_CONSUMPTION",
+    "PERSONAL",
     `${firstname} ${lastname} Personal`,
     phone,
     defaultDenom,

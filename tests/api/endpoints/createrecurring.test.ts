@@ -22,7 +22,7 @@ describe("createRecurring Endpoint Test", () => {
       ...(securedCredex && { securedCredex: securedCredex === 'true' })
     }, jwt);
     console.log("Create recurring response:", response.data);
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
     await delay(DELAY_MS);
   });
 });

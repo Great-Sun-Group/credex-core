@@ -4,13 +4,14 @@ import { establishDayZero, fetchAndProcessRates, createDayZeroDaynode } from "./
 import { createInitialMember } from "./members";
 import { createInitialAccount, createInitialRelationships } from "./accounts";
 import { createInitialCredex } from "./credex";
+import { createDCOrecurringTemplate } from "./recurring";
 import logger from "../../../utils/logger";
 import { v4 as uuidv4 } from "uuid";
 
 /**
  * Initializes the database for the Daily Credcoin Offering (DCO) process.
  * This function sets up necessary constraints, creates initial accounts,
- * and establishes the starting state for the DCO.
+ * establishes the starting state for the DCO, and creates the recurring template (avatar).
  */
 export async function DBinitialization(): Promise<void> {
   const requestId = uuidv4();
@@ -25,6 +26,7 @@ export async function DBinitialization(): Promise<void> {
   };
 
   try {
+    // Set up database constraints and initial state
     await setupDatabaseConstraints(sessions, requestId);
     const dayZero = establishDayZero(requestId);
     const dayZeroCXXrates = await fetchAndProcessRates(dayZero, requestId);
@@ -116,6 +118,20 @@ export async function DBinitialization(): Promise<void> {
       requestId
     );
 
+    // Create DCO recurring template (avatar)
+    await createDCOrecurringTemplate(
+      rdubs.onboardedMemberID,
+      credexFoundationID,
+      ledgerSpaceSession,
+      requestId
+    );
+
+    logger.info("DBinitialization completed successfully", {
+      requestId,
+      foundationID: credexFoundationID,
+      foundationOwner: rdubs.onboardedMemberID
+    });
+
   } catch (error) {
     logger.error("Error during DBinitialization", {
       error: error instanceof Error ? error.message : "Unknown error",
@@ -126,6 +142,5 @@ export async function DBinitialization(): Promise<void> {
   } finally {
     await ledgerSpaceSession.close();
     await searchSpaceSession.close();
-    logger.info("DBinitialization completed", { requestId });
   }
 }
