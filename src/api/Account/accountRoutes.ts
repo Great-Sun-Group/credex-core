@@ -9,6 +9,7 @@ import { GetLedgerController } from "./controllers/getLedger";
 import { GetBalancesController } from "./controllers/getBalances";
 import { errorHandler } from "../../middleware/errorHandler";
 import { validateRequest } from "../../middleware/validateRequest";
+import { authenticatedHandler } from "../../middleware/authMiddleware";
 import {
   createAccountSchema,
   getAccountByHandleSchema,
@@ -78,7 +79,7 @@ export default function AccountRoutes() {
   router.post(
     `/createAccount`,
     validateRequest(createAccountSchema),
-    CreateAccountController,
+    authenticatedHandler(CreateAccountController),
     errorHandler
   );
 
@@ -151,7 +152,7 @@ export default function AccountRoutes() {
   router.post(
     `/updateAccount`,
     validateRequest(updateAccountSchema),
-    UpdateAccountController,
+    authenticatedHandler(UpdateAccountController),
     errorHandler
   );
 
@@ -185,7 +186,7 @@ export default function AccountRoutes() {
   router.post(
     `/authorizeForAccount`,
     validateRequest(authorizeForAccountSchema),
-    AuthorizeForAccountController,
+    authenticatedHandler(AuthorizeForAccountController),
     errorHandler
   );
 
@@ -215,7 +216,7 @@ export default function AccountRoutes() {
   router.post(
     `/unauthorizeForAccount`,
     validateRequest(unauthorizeForAccountSchema),
-    UnauthorizeForAccountController,
+    authenticatedHandler(UnauthorizeForAccountController),
     errorHandler
   );
 
@@ -245,7 +246,7 @@ export default function AccountRoutes() {
   router.post(
     `/updateSendOffersTo`,
     validateRequest(updateSendOffersToSchema),
-    UpdateSendOffersToController,
+    authenticatedHandler(UpdateSendOffersToController),
     errorHandler
   );
 
@@ -271,7 +272,7 @@ export default function AccountRoutes() {
   router.post(
     `/getLedger`,
     validateRequest(getLedgerSchema),
-    GetLedgerController,
+    authenticatedHandler(GetLedgerController),
     errorHandler
   );
 
@@ -297,7 +298,7 @@ export default function AccountRoutes() {
   router.post(
     `/getBalances`,
     validateRequest(getBalancesSchema),
-    GetBalancesController,
+    authenticatedHandler(GetBalancesController),
     errorHandler
   );
 

@@ -1,95 +1,131 @@
-import { Session, Record } from "neo4j-driver";
+import { Session } from "neo4j-driver";
 import logger from "../../../utils/logger";
 import { AvatarData } from "./types";
 
 /**
- * Retrieves active recurring avatars from the database
+ * Fetches active recurring avatars that are due for processing.
+ * Only fetches REGULAR templates, as DCO_GIVE templates are handled 
+ * separately as part of the DCO process.
  */
 export async function getActiveRecurringAvatars(
   session: Session
 ): Promise<AvatarData[]> {
-  logger.debug("Querying for active recurring avatars");
-  const result = await session.run(`
-    MATCH (daynode:Daynode {Active: true})
-    MATCH
-      (issuer:Account)-[rel1:ACTIVE]->
-      (avatar:Avatar { avatarType: "RECURRING", nextPayDate: daynode.Date})-[rel2:ACTIVE]->
-      (acceptor:Account)
-    MATCH
-      (issuer)<-[authRel1:AUTHORIZED_FOR]-
-      (avatar)-[authRel2:AUTHORIZED_FOR]->
-      (counterparty)
-    WITH daynode, issuer, avatar, acceptor, rel1, rel2, authRel1, authRel2
-    
-    // Reduce remainingPays by 1 if it exists
-    SET avatar.remainingPays = 
-      CASE
-        WHEN avatar.remainingPays IS NOT NULL THEN avatar.remainingPays - 1
-        ELSE null
-      END
-    
-    // Calculate the new nextPayDate
-    WITH daynode, issuer, avatar, acceptor, rel1, rel2, authRel1, authRel2,
-         CASE
-           WHEN avatar.remainingPays IS NULL OR avatar.remainingPays > 0 
-           THEN date(avatar.nextPayDate) + duration({days: avatar.daysBetweenPays})
-           ELSE null
-         END AS newNextPayDate
-    
-    // Update nextPayDate
-    SET avatar.nextPayDate = newNextPayDate
-    
-    WITH daynode, issuer, avatar, acceptor, rel1, rel2, authRel1, authRel2, newNextPayDate
-    
-    // Check if the avatar should be marked as completed
-    OPTIONAL MATCH (issuer)-[completed1:COMPLETED]->(avatar)-[completed2:COMPLETED]->(acceptor)
-    FOREACH(ignoreMe IN CASE WHEN newNextPayDate IS NULL AND completed1 IS NULL
-             THEN [1] ELSE [] END |
-      DELETE rel1, rel2
-      SET
-        authRel1.markedToDelete = true,
-        authRel2.markedToDelete = true
-      CREATE (issuer)-[:COMPLETED]->(avatar)-[:COMPLETED]->(acceptor)
-    )
-    
-    RETURN
-      avatar {
-        .*,
-        remainingPays: avatar.remainingPays,
-        nextPayDate: avatar.nextPayDate
-      } AS avatar,
-      issuer.accountID AS issuerAccountID,
-      acceptor.accountID AS acceptorAccountID,
-      daynode.Date AS Date    
-  `);
+  logger.debug("Fetching active recurring avatars");
 
-  return result.records.map((record: Record) => ({
-    avatar: record.get("avatar"),
-    issuerAccountID: record.get("issuerAccountID"),
-    acceptorAccountID: record.get("acceptorAccountID"),
-    date: record.get("Date"),
-  }));
+  const query = `
+    MATCH (avatar:Recurring)
+    WHERE avatar.status = 'ACTIVE'
+    AND avatar.templateType = 'REGULAR'
+    AND date(avatar.nextPayDate) <= date()
+    AND (avatar.remainingPays IS NULL OR avatar.remainingPays > 0)
+    MATCH (issuer:Account)-[:REQUESTS]->(avatar)-[:REQUESTS]->(acceptor:Account)
+    RETURN
+      avatar,
+      issuer.accountID as issuerAccountID,
+      acceptor.accountID as acceptorAccountID,
+      date() as date
+  `;
+
+  try {
+    const result = await session.run(query);
+    const avatars: AvatarData[] = result.records.map((record) => ({
+      avatar: record.get("avatar").properties,
+      issuerAccountID: record.get("issuerAccountID"),
+      acceptorAccountID: record.get("acceptorAccountID"),
+      date: record.get("date"),
+    }));
+
+    logger.debug(`Found ${avatars.length} active recurring avatars`);
+    return avatars;
+  } catch (error) {
+    logger.error("Error fetching active recurring avatars", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error;
+  }
 }
 
 /**
- * Deletes marked avatar authorizations
+ * Fetches active DCO_GIVE templates that are due for processing.
+ * These templates represent secured credex transfers to the foundation
+ * and are processed before DCO rate calculations.
+ */
+export async function getActiveDCOGiveTemplates(
+  session: Session
+): Promise<AvatarData[]> {
+  logger.debug("Fetching active DCO_GIVE templates");
+
+  const query = `
+    MATCH (template:Recurring)
+    WHERE template.status = 'ACTIVE'
+    AND template.templateType = 'DCO_GIVE'
+    AND date(template.nextPayDate) <= date()
+    AND (template.remainingPays IS NULL OR template.remainingPays > 0)
+    MATCH (source:Account)-[:REQUESTS]->(template)-[:REQUESTS]->(target:Account)
+    WHERE (target)-[:IS_FOUNDATION]->(:Foundation)
+    RETURN
+      template as avatar,
+      source.accountID as issuerAccountID,
+      target.accountID as acceptorAccountID,
+      date() as date
+  `;
+
+  try {
+    const result = await session.run(query);
+    const templates: AvatarData[] = result.records.map((record) => ({
+      avatar: record.get("avatar").properties,
+      issuerAccountID: record.get("issuerAccountID"),
+      acceptorAccountID: record.get("acceptorAccountID"),
+      date: record.get("date"),
+    }));
+
+    logger.debug(`Found ${templates.length} active DCO_GIVE templates`);
+    return templates;
+  } catch (error) {
+    logger.error("Error fetching active DCO_GIVE templates", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Deletes marked authorizations for a given avatar.
  */
 export async function deleteMarkedAuthorizations(
   session: Session,
   requestId: string,
   avatarId: string
 ): Promise<void> {
-  logger.debug("Deleting marked avatar authorizations", {
-    requestId,
-    avatarId,
-  });
-  const deleteResult = await session.run(`
-    MATCH ()-[rel:AUTHORIZED_FOR {markedToDelete: true}]->()
-    DELETE rel
-  `);
-  logger.debug("Deleted marked avatar authorizations", {
-    requestId,
-    avatarId,
-    deletedCount: deleteResult.summary.counters.updates().relationshipsDeleted,
-  });
+  logger.debug("Deleting marked authorizations", { requestId, avatarId });
+
+  const query = `
+    MATCH (avatar:Recurring {memberID: $avatarId})
+    WHERE avatar.status = 'ACTIVE'
+    SET avatar.lastProcessed = datetime()
+    WITH avatar
+    MATCH (avatar)-[r:MARKED_FOR_DELETION]->()
+    DELETE r
+    RETURN count(r) as deletedCount
+  `;
+
+  try {
+    const result = await session.run(query, { avatarId });
+    const deletedCount = result.records[0].get("deletedCount").toNumber();
+    logger.debug(`Deleted ${deletedCount} marked authorizations`, {
+      requestId,
+      avatarId,
+      deletedCount,
+    });
+  } catch (error) {
+    logger.error("Error deleting marked authorizations", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      requestId,
+      avatarId,
+    });
+    throw error;
+  }
 }

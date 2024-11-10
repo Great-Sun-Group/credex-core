@@ -1,13 +1,8 @@
 import express from "express";
 import { AcceptCredexService } from "../services/AcceptCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
-
-// Import the UserRequest interface from authentication module
-import type { Request } from "express";
-interface UserRequest extends Request {
-  user: any;
-}
 
 /**
  * AcceptCredexController

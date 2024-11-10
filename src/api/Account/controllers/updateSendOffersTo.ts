@@ -1,12 +1,8 @@
 import express from "express";
 import { UpdateSendOffersToService } from "../services/UpdateSendOffersTo";
+import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
 import { validateUUID } from "../../../utils/validators";
-
-// Import the UserRequest interface
-interface UserRequest extends express.Request {
-  user: any;
-}
 
 export async function UpdateSendOffersToController(
   req: UserRequest,

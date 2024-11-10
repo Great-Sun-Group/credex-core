@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Response, NextFunction, Request } from "express";
 import { CreateRecurringController } from "./controllers/createRecurring";
 import { AcceptRecurringController } from "./controllers/acceptRecurring";
 import { CancelRecurringController } from "./controllers/cancelRecurring";
@@ -11,6 +11,7 @@ import {
   cancelRecurringSchema,
   getRecurringSchema,
 } from "./recurringValidationSchemas";
+import { RecurringRequest, TEMPLATE_TYPES } from "./types";
 import logger from "../../utils/logger";
 
 /**
@@ -30,6 +31,7 @@ export default function RecurringRoutes() {
    *   post:
    *     tags: [Recurring]
    *     summary: Create a recurring transaction
+   *     description: Creates a new recurring transaction with support for different template types (REGULAR and DCO_GIVE)
    *     requestBody:
    *       required: true
    *       content:
@@ -40,8 +42,7 @@ export default function RecurringRoutes() {
    *               - ownerID
    *               - sourceAccountID
    *               - targetAccountID
-   *               - amount
-   *               - denomination
+   *               - templateType
    *               - frequency
    *               - startDate
    *             properties:
@@ -54,13 +55,11 @@ export default function RecurringRoutes() {
    *               targetAccountID:
    *                 type: string
    *                 format: uuid
-   *               amount:
-   *                 type: number
-   *                 minimum: 0
-   *                 exclusiveMinimum: true
-   *               denomination:
+   *                 description: For DCO_GIVE templates, must be a foundation account
+   *               templateType:
    *                 type: string
-   *                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                 enum: [REGULAR, DCO_GIVE]
+   *                 description: Determines the type of recurring template
    *               frequency:
    *                 type: string
    *                 enum: [DAILY, WEEKLY, MONTHLY]
@@ -71,13 +70,34 @@ export default function RecurringRoutes() {
    *               duration:
    *                 type: integer
    *                 minimum: 1
+   *               # Regular template specific fields
+   *               amount:
+   *                 type: number
+   *                 minimum: 0
+   *                 exclusiveMinimum: true
+   *                 description: Required for REGULAR templates
+   *               denomination:
+   *                 type: string
+   *                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                 description: Required for REGULAR templates
    *               securedCredex:
    *                 type: boolean
+   *                 description: Optional for REGULAR templates
+   *               # DCO_GIVE template specific fields
+   *               DCOgiveInCXX:
+   *                 type: number
+   *                 minimum: 0
+   *                 exclusiveMinimum: true
+   *                 description: Required for DCO_GIVE templates
+   *               DCOdenom:
+   *                 type: string
+   *                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                 description: Required for DCO_GIVE templates
    */
   router.post(
     `/createRecurring`,
     validateRequest(createRecurringSchema),
-    CreateRecurringController,
+    (req: Request, res: Response, next: NextFunction) => CreateRecurringController(req as RecurringRequest, res, next),
     errorHandler
   );
   logger.debug("Route registered: POST /createRecurring");
@@ -108,7 +128,7 @@ export default function RecurringRoutes() {
   router.post(
     `/acceptRecurring`,
     validateRequest(acceptRecurringSchema),
-    AcceptRecurringController,
+    (req: Request, res: Response, next: NextFunction) => AcceptRecurringController(req as RecurringRequest, res, next),
     errorHandler
   );
   logger.debug("Route registered: POST /acceptRecurring");
@@ -139,7 +159,7 @@ export default function RecurringRoutes() {
   router.post(
     `/cancelRecurring`,
     validateRequest(cancelRecurringSchema),
-    CancelRecurringController,
+    (req: Request, res: Response, next: NextFunction) => CancelRecurringController(req as RecurringRequest, res, next),
     errorHandler
   );
   logger.debug("Route registered: POST /cancelRecurring");
@@ -170,7 +190,7 @@ export default function RecurringRoutes() {
   router.post(
     `/getRecurring`,
     validateRequest(getRecurringSchema),
-    GetRecurringController,
+    (req: Request, res: Response, next: NextFunction) => GetRecurringController(req as RecurringRequest, res, next),
     errorHandler
   );
   logger.debug("Route registered: POST /getRecurring");

@@ -3,6 +3,7 @@ import { AcceptRecurringService } from "../../../api/Recurring/services/AcceptRe
 import { DCO_CONSTANTS } from "../constants";
 import { Session } from "neo4j-driver";
 import logger from "../../../utils/logger";
+import { TEMPLATE_TYPES } from "../../../api/Recurring/types";
 
 /**
  * Creates and accepts the DCO recurring template (avatar).
@@ -21,11 +22,11 @@ export async function createDCOrecurringTemplate(
     ownerID: foundationXOid,
     sourceAccountID: foundationID,
     targetAccountID: foundationID, // Foundation to foundation for authorization
-    amount: 0, // Amount not relevant for authorization
-    denomination: DCO_CONSTANTS.RECURRING.DEFAULT_DENOMINATION,
     frequency: DCO_CONSTANTS.RECURRING.FREQUENCY,
     startDate: new Date().toISOString().split('T')[0], // Today
-    securedCredex: DCO_CONSTANTS.RECURRING.SECURED_CREDEX,
+    templateType: TEMPLATE_TYPES.DCO_GIVE,
+    DCOgiveInCXX: 0, // Amount not relevant for authorization
+    DCOdenom: DCO_CONSTANTS.RECURRING.DEFAULT_DENOMINATION,
     requestId
   };
 

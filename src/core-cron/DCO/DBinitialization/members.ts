@@ -1,11 +1,11 @@
 import { InitialMemberResult, ServiceResult } from "./types";
 import { OnboardMemberService } from "../../../api/Member/services/OnboardMember";
 import UpdateMemberTierService from "../../../api/Admin/services/UpdateMemberTierService";
-import { SetDCOparticipantRateController } from "../../../api/Account/controllers/setDCOparticipantRate";
 import { CreateAccountService } from "../../../api/Account/services/CreateAccount";
+import { CreateRecurringService } from "../../../api/Recurring/services/CreateRecurring";
 import { generateToken } from "../../../../config/authenticate";
 import { searchSpaceDriver } from "../../../../config/neo4j";
-import { Request, Response, NextFunction } from "express";
+import { TEMPLATE_TYPES } from "../../../api/Recurring/types";
 import logger from "../../../utils/logger";
 
 interface OnboardMemberData {
@@ -99,40 +99,32 @@ export async function createInitialMember(
     await session.close();
   }
 
-  // Set DCO participant rate if needed
+  // Set up DCO give recurring transaction if needed
   if (DCOparticipant) {
     try {
-      const req = {
-        body: {
-          accountID: defaultAccountID,
-          DCOgiveInCXX: 1,
-          DCOdenom: "CAD",
-        },
-      } as Request;
+      const recurringResult = await CreateRecurringService({
+        ownerID: onboardedMemberID,
+        sourceAccountID: defaultAccountID,
+        targetAccountID: defaultAccountID, // Foundation ID will be validated by service
+        templateType: TEMPLATE_TYPES.DCO_GIVE,
+        frequency: "DAILY",
+        startDate: new Date().toISOString().split('T')[0],
+        DCOgiveInCXX: 1,
+        DCOdenom: "CAD",
+        requestId
+      });
 
-      const res = {
-        status: (code: number) => ({
-          json: (data: ServiceResult<unknown>) => {
-            if (code !== 200) {
-              throw new Error(
-                `Failed to set DCO participant rate: ${JSON.stringify(data)}`
-              );
-            }
-          },
-        }),
-      } as Response;
+      if (!recurringResult.success) {
+        throw new Error(`Failed to create DCO give recurring: ${recurringResult.message}`);
+      }
 
-      const next: NextFunction = (err: unknown) => {
-        if (err) throw err instanceof Error ? err : new Error(String(err));
-      };
-
-      await SetDCOparticipantRateController(req, res, next);
-      logger.info("DCO participant rate set successfully", {
+      logger.info("DCO give recurring transaction set up successfully", {
         accountID: defaultAccountID,
+        recurringID: recurringResult.data?.recurringID,
         requestId,
       });
     } catch (error) {
-      logger.error("Failed to set DCO participant rate", {
+      logger.error("Failed to set up DCO give recurring transaction", {
         accountID: defaultAccountID,
         error: error instanceof Error ? error.message : String(error),
         requestId,

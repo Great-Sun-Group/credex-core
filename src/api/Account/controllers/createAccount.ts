@@ -10,12 +10,7 @@ import {
   validateDenomination,
   validateAmount,
 } from "../../../utils/validators";
-
-// Import the UserRequest interface from authentication module
-import type { Request } from "express";
-interface UserRequest extends Request {
-  user: any;
-}
+import { UserRequest } from "../../../middleware/authMiddleware";
 
 interface CreateAccountResponse {
   success: boolean;

@@ -6,6 +6,7 @@ import { DeclineCredexController } from "./controllers/declineCredex";
 import { CancelCredexController } from "./controllers/cancelCredex";
 import { GetCredexController } from "./controllers/getCredex";
 import { validateRequest } from "../../middleware/validateRequest";
+import { authenticatedHandler } from "../../middleware/authMiddleware";
 import {
   createCredexSchema,
   acceptCredexSchema,
@@ -79,7 +80,7 @@ export default function CredexRoutes() {
   router.post(
     `/createCredex`,
     validateRequest(createCredexSchema),
-    CreateCredexController
+    authenticatedHandler(CreateCredexController)
   );
   logger.debug("Route registered: POST /createCredex");
 
@@ -109,7 +110,7 @@ export default function CredexRoutes() {
   router.post(
     `/acceptCredex`,
     validateRequest(acceptCredexSchema),
-    AcceptCredexController
+    authenticatedHandler(AcceptCredexController)
   );
   logger.debug("Route registered: POST /acceptCredex");
 
@@ -159,7 +160,7 @@ export default function CredexRoutes() {
         },
       }
     }),
-    AcceptCredexBulkController
+    authenticatedHandler(AcceptCredexBulkController)
   );
   logger.debug("Route registered: POST /acceptCredexBulk");
 
@@ -189,7 +190,7 @@ export default function CredexRoutes() {
   router.post(
     `/declineCredex`,
     validateRequest(declineCredexSchema),
-    DeclineCredexController
+    authenticatedHandler(DeclineCredexController)
   );
   logger.debug("Route registered: POST /declineCredex");
 
@@ -219,7 +220,7 @@ export default function CredexRoutes() {
   router.post(
     `/cancelCredex`,
     validateRequest(cancelCredexSchema),
-    CancelCredexController
+    authenticatedHandler(CancelCredexController)
   );
   logger.debug("Route registered: POST /cancelCredex");
 
@@ -249,7 +250,7 @@ export default function CredexRoutes() {
   router.post(
     `/getCredex`,
     validateRequest(getCredexSchema),
-    GetCredexController
+    authenticatedHandler(GetCredexController)
   );
   logger.debug("Route registered: POST /getCredex");
 

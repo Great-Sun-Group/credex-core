@@ -1,11 +1,7 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { UpdateAccountService } from "../services/UpdateAccount";
+import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
-
-// Import the UserRequest interface
-interface UserRequest extends Request {
-  user: any;
-}
 
 export const UpdateAccountController = async (
   req: UserRequest,

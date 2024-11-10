@@ -1,20 +1,14 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { digitallySign } from "../../../utils/digitalSignature";
 import { denomFormatter } from "../../../utils/denomUtils";
+import { 
+  RecurringTemplate, 
+  RegularTemplate,
+  DCOGiveTemplate,
+  TEMPLATE_TYPES, 
+  RecurringError 
+} from "../types";
 import logger from "../../../utils/logger";
-
-interface CreateRecurringParams {
-  ownerID: string;
-  sourceAccountID: string;
-  targetAccountID: string;
-  amount: number;
-  denomination: string;
-  frequency: string;
-  startDate: string;
-  duration?: number;
-  securedCredex?: boolean;
-  requestId: string;
-}
 
 interface CreateRecurringResult {
   success: boolean;
@@ -23,9 +17,12 @@ interface CreateRecurringResult {
     scheduleInfo: {
       frequency: string;
       nextRunDate: string;
-      amount: string;
-      denomination: string;
+      amount?: string;
+      DCOgiveInCXX?: string;
+      denomination?: string;
+      DCOdenom?: string;
       status: string;
+      templateType: string;
     };
     participants: {
       sourceAccountID: string;
@@ -35,25 +32,18 @@ interface CreateRecurringResult {
   message: string;
 }
 
-class RecurringError extends Error {
-  constructor(message: string, public code: string) {
-    super(message);
-    this.name = 'RecurringError';
-  }
-}
-
 /**
  * CreateRecurringService
  * 
  * Creates a new recurring transaction schedule.
- * Validates ownership and creates appropriate relationships.
+ * Supports both regular and DCO_GIVE template types.
  * 
  * @param params - Parameters for creating recurring transaction
  * @returns Object containing the created recurring transaction details
  * @throws RecurringError with specific error codes
  */
 export async function CreateRecurringService(
-  params: CreateRecurringParams
+  params: RecurringTemplate
 ): Promise<CreateRecurringResult> {
   logger.debug("Entering CreateRecurringService", { ...params });
 
@@ -61,12 +51,10 @@ export async function CreateRecurringService(
     ownerID,
     sourceAccountID,
     targetAccountID,
-    amount,
-    denomination,
     frequency,
     startDate,
     duration,
-    securedCredex = false,
+    templateType,
     requestId
   } = params;
 
@@ -85,6 +73,8 @@ export async function CreateRecurringService(
         MATCH (owner:Member {memberID: $ownerID})
         MATCH (source:Account {accountID: $sourceAccountID})
         MATCH (target:Account {accountID: $targetAccountID})
+        ${templateType === TEMPLATE_TYPES.DCO_GIVE ? 
+          'MATCH (target:Account)-[:IS_FOUNDATION]->(f:Foundation)' : ''}
         RETURN
           exists((owner)-[:OWNS]->(source)) as isOwner,
           source.accountID as sourceID,
@@ -100,7 +90,9 @@ export async function CreateRecurringService(
 
     if (authCheck.records.length === 0) {
       throw new RecurringError(
-        "Account not found",
+        templateType === TEMPLATE_TYPES.DCO_GIVE ? 
+          "Target account must be a foundation account for DCO_GIVE templates" :
+          "Account not found",
         "NOT_FOUND"
       );
     }
@@ -117,10 +109,21 @@ export async function CreateRecurringService(
     logger.debug("Creating recurring transaction", {
       sourceAccountID,
       targetAccountID,
-      amount,
-      denomination,
+      templateType,
       requestId
     });
+
+    // Prepare template-specific properties
+    const templateProperties = templateType === TEMPLATE_TYPES.REGULAR ?
+      {
+        amount: (params as RegularTemplate).amount,
+        denomination: (params as RegularTemplate).denomination,
+        securedCredex: (params as RegularTemplate).securedCredex || false
+      } :
+      {
+        DCOgiveInCXX: (params as DCOGiveTemplate).DCOgiveInCXX,
+        DCOdenom: (params as DCOGiveTemplate).DCOdenom
+      };
 
     const result = await ledgerSpaceSession.executeWrite(async (tx) => {
       const query = `
@@ -128,13 +131,14 @@ export async function CreateRecurringService(
         MATCH (target:Account {accountID: $targetAccountID})
         CREATE (recurring:Recurring {
           recurringID: randomUUID(),
-          amount: $amount,
-          denomination: $denomination,
+          templateType: $templateType,
           frequency: $frequency,
           startDate: date($startDate),
           status: "PENDING",
-          securedCredex: $securedCredex,
-          createdAt: datetime()
+          createdAt: datetime(),
+          ${Object.entries(templateProperties)
+            .map(([key, value]) => `${key}: $${key}`)
+            .join(',\n          ')}
         })
         CREATE (source)-[:REQUESTS]->(recurring)-[:REQUESTS]->(target)
         CREATE (source)-[:REQUESTED]->(recurring)-[:REQUESTED]->(target)
@@ -142,8 +146,10 @@ export async function CreateRecurringService(
           recurring.recurringID as recurringID,
           recurring.frequency as frequency,
           recurring.startDate as nextRunDate,
-          recurring.amount as amount,
-          recurring.denomination as denomination,
+          recurring.templateType as templateType,
+          ${Object.keys(templateProperties)
+            .map(key => `recurring.${key} as ${key}`)
+            .join(',\n          ')},
           recurring.status as status,
           source.accountID as sourceAccountID,
           target.accountID as targetAccountID
@@ -152,12 +158,11 @@ export async function CreateRecurringService(
       return tx.run(query, {
         sourceAccountID,
         targetAccountID,
-        amount,
-        denomination,
+        templateType,
         frequency,
         startDate,
-        securedCredex,
-        duration
+        duration,
+        ...templateProperties
       });
     });
 
@@ -182,12 +187,11 @@ export async function CreateRecurringService(
       recurringID,
       sourceAccountID,
       targetAccountID,
-      amount,
-      denomination,
+      templateType,
       frequency,
       startDate,
       duration,
-      securedCredex,
+      ...templateProperties,
       createdAt: new Date().toISOString()
     });
 
@@ -201,15 +205,24 @@ export async function CreateRecurringService(
       requestId
     );
 
+    // Prepare schedule info based on template type
+    const scheduleInfo = {
+      frequency: record.get("frequency"),
+      nextRunDate: record.get("nextRunDate"),
+      status: record.get("status"),
+      templateType: record.get("templateType"),
+      ...(templateType === TEMPLATE_TYPES.REGULAR ? {
+        amount: `${denomFormatter(record.get("amount"), record.get("denomination"))} ${record.get("denomination")}`,
+        denomination: record.get("denomination")
+      } : {
+        DCOgiveInCXX: `${denomFormatter(record.get("DCOgiveInCXX"), "CXX")} CXX`,
+        DCOdenom: record.get("DCOdenom")
+      })
+    };
+
     const responseData = {
       recurringID,
-      scheduleInfo: {
-        frequency: record.get("frequency"),
-        nextRunDate: record.get("nextRunDate"),
-        amount: `${denomFormatter(amount, denomination)} ${denomination}`,
-        denomination,
-        status: record.get("status")
-      },
+      scheduleInfo,
       participants: {
         sourceAccountID: record.get("sourceAccountID"),
         targetAccountID: record.get("targetAccountID")
@@ -220,6 +233,7 @@ export async function CreateRecurringService(
       recurringID,
       sourceAccountID,
       targetAccountID,
+      templateType,
       requestId
     });
 

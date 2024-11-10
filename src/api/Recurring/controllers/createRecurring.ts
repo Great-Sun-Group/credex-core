@@ -2,12 +2,8 @@ import express from "express";
 import { CreateRecurringService } from "../services/CreateRecurring";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
+import { RecurringRequest, RecurringTemplate, TEMPLATE_TYPES } from "../types";
 import logger from "../../../utils/logger";
-
-// Import the UserRequest interface
-interface UserRequest extends express.Request {
-  user: any;
-}
 
 interface CreateRecurringResponse {
   success: boolean;
@@ -16,9 +12,12 @@ interface CreateRecurringResponse {
     scheduleInfo: {
       frequency: string;
       nextRunDate: string;
-      amount: string;
-      denomination: string;
+      amount?: string;
+      DCOgiveInCXX?: string;
+      denomination?: string;
+      DCOdenom?: string;
       status: string;
+      templateType: string;
     };
     participants: {
       sourceAccountID: string;
@@ -32,14 +31,14 @@ interface CreateRecurringResponse {
  * CreateRecurringController
  *
  * Handles the creation of new recurring transactions.
- * Validates input and creates a new recurring schedule.
+ * Supports both regular and DCO_GIVE template types.
  *
  * @param req - Express request object with user information
  * @param res - Express response object
  * @param next - Express next function
  */
 export async function CreateRecurringController(
-  req: UserRequest,
+  req: RecurringRequest,
   res: express.Response,
   next: express.NextFunction
 ): Promise<void> {
@@ -50,39 +49,96 @@ export async function CreateRecurringController(
     const {
       sourceAccountID,
       targetAccountID,
-      amount,
-      denomination,
+      templateType,
       frequency,
       startDate,
       duration,
-      securedCredex = false,
+      // Regular template fields
+      amount,
+      denomination,
+      securedCredex,
+      // DCO_GIVE template fields
+      DCOgiveInCXX,
+      DCOdenom
     } = req.body;
 
     const ownerID = req.user.memberID;
 
-    // Basic validation is handled by validateRequest middleware
+    // Type-specific validation
+    if (templateType === TEMPLATE_TYPES.DCO_GIVE) {
+      if (!DCOgiveInCXX || !DCOdenom) {
+        logger.warn("Invalid DCO_GIVE template request", {
+          requestId,
+          error: "Missing required DCO_GIVE fields"
+        });
+        res.status(400).json({
+          success: false,
+          message: "DCO_GIVE templates require DCOgiveInCXX and DCOdenom"
+        });
+        return;
+      }
+    } else if (templateType === TEMPLATE_TYPES.REGULAR) {
+      if (!amount || !denomination) {
+        logger.warn("Invalid REGULAR template request", {
+          requestId,
+          error: "Missing required REGULAR fields"
+        });
+        res.status(400).json({
+          success: false,
+          message: "Regular templates require amount and denomination"
+        });
+        return;
+      }
+    } else {
+      logger.warn("Invalid template type", {
+        requestId,
+        templateType
+      });
+      res.status(400).json({
+        success: false,
+        message: `Invalid template type. Must be one of: ${Object.values(TEMPLATE_TYPES).join(', ')}`
+      });
+      return;
+    }
+
     logger.info("Creating recurring transaction", {
       ownerID,
       sourceAccountID,
       targetAccountID,
-      amount,
-      denomination,
+      templateType,
       frequency,
       requestId
     });
 
-    const result = await CreateRecurringService({
+    // Prepare template-specific parameters
+    const baseParams = {
       ownerID,
       sourceAccountID,
       targetAccountID,
-      amount,
-      denomination,
+      templateType,
       frequency,
       startDate,
       duration,
-      securedCredex,
       requestId
-    });
+    };
+
+    // Type-safe template creation
+    const templateParams: RecurringTemplate = templateType === TEMPLATE_TYPES.REGULAR
+      ? {
+          ...baseParams,
+          templateType: TEMPLATE_TYPES.REGULAR,
+          amount,
+          denomination,
+          securedCredex: securedCredex || false
+        }
+      : {
+          ...baseParams,
+          templateType: TEMPLATE_TYPES.DCO_GIVE,
+          DCOgiveInCXX,
+          DCOdenom
+        };
+
+    const result = await CreateRecurringService(templateParams);
 
     if (!result.success) {
       logger.warn("Failed to create recurring transaction", {
@@ -131,7 +187,10 @@ export async function CreateRecurringController(
       ownerID,
       sourceAccountID,
       targetAccountID,
-      requestId
+      templateType,
+      requestId,
+      status: result.data?.scheduleInfo.status,
+      nextRunDate: result.data?.scheduleInfo.nextRunDate
     });
 
     res.status(201).json({
