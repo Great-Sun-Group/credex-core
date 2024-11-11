@@ -16,6 +16,52 @@ import logger from "../../utils/logger";
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     RecurringResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *         data:
+ *           type: object
+ *           properties:
+ *             recurringID:
+ *               type: string
+ *               format: uuid
+ *             frequency:
+ *               type: string
+ *               enum: [DAILY, WEEKLY, MONTHLY]
+ *             nextRunDate:
+ *               type: string
+ *             status:
+ *               type: string
+ *             sourceAccountID:
+ *               type: string
+ *               format: uuid
+ *             targetAccountID:
+ *               type: string
+ *               format: uuid
+ *             amount:
+ *               type: string
+ *               description: For REGULAR templates
+ *             denomination:
+ *               type: string
+ *               enum: [CXX, CAD, USD, XAU, ZWG]
+ *               description: For REGULAR templates
+ *             DCOgiveInCXX:
+ *               type: string
+ *               description: For DCO_GIVE templates
+ *             DCOdenom:
+ *               type: string
+ *               enum: [CXX, CAD, USD, XAU, ZWG]
+ *               description: For DCO_GIVE templates
+ *         message:
+ *           type: string
+ */
+
+/**
+ * @swagger
  * tags:
  *   name: Recurring
  *   description: Recurring transaction management
@@ -30,8 +76,7 @@ export default function RecurringRoutes() {
    * /api/recurring/createRecurring:
    *   post:
    *     tags: [Recurring]
-   *     summary: Create a recurring transaction
-   *     description: Creates a new recurring transaction with support for different template types (REGULAR and DCO_GIVE)
+   *     summary: Create recurring transaction
    *     requestBody:
    *       required: true
    *       content:
@@ -39,71 +84,27 @@ export default function RecurringRoutes() {
    *           schema:
    *             type: object
    *             required:
-   *               - ownerID
    *               - sourceAccountID
    *               - targetAccountID
    *               - templateType
    *               - frequency
    *               - startDate
    *             properties:
-   *               ownerID:
-   *                 type: string
-   *                 format: uuid
    *               sourceAccountID:
    *                 type: string
    *                 format: uuid
    *               targetAccountID:
    *                 type: string
    *                 format: uuid
-   *                 description: For DCO_GIVE templates, must be a foundation account
    *               templateType:
    *                 type: string
    *                 enum: [REGULAR, DCO_GIVE]
-   *                 description: Determines the type of recurring template
    *               frequency:
    *                 type: string
    *                 enum: [DAILY, WEEKLY, MONTHLY]
    *               startDate:
    *                 type: string
-   *                 pattern: ^\d{4}-\d{2}-\d{2}$
    *                 example: "2024-01-01"
-   *               duration:
-   *                 type: integer
-   *                 minimum: 1
-   *               # Regular template specific fields
-   *               amount:
-   *                 type: number
-   *                 minimum: 0
-   *                 exclusiveMinimum: true
-   *                 description: Required for REGULAR templates
-   *               denomination:
-   *                 type: string
-   *                 enum: [CXX, CAD, USD, XAU, ZWG]
-   *                 description: Required for REGULAR templates
-   *               securedCredex:
-   *                 type: boolean
-   *                 description: Optional for REGULAR templates
-   *               # DCO_GIVE template specific fields
-   *               DCOgiveInCXX:
-   *                 type: number
-   *                 minimum: 0
-   *                 exclusiveMinimum: true
-   *                 description: Required for DCO_GIVE templates
-   *               DCOdenom:
-   *                 type: string
-   *                 enum: [CXX, CAD, USD, XAU, ZWG]
-   *                 description: Required for DCO_GIVE templates
-   */
-  router.post(
-    `/createRecurring`,
-    validateRequest(createRecurringSchema),
-    (req: Request, res: Response, next: NextFunction) => CreateRecurringController(req as RecurringRequest, res, next),
-    errorHandler
-  );
-  logger.debug("Route registered: POST /createRecurring");
-
-  /**
-   * @swagger
    * /api/recurring/acceptRecurring:
    *   post:
    *     tags: [Recurring]
@@ -128,7 +129,8 @@ export default function RecurringRoutes() {
   router.post(
     `/acceptRecurring`,
     validateRequest(acceptRecurringSchema),
-    (req: Request, res: Response, next: NextFunction) => AcceptRecurringController(req as RecurringRequest, res, next),
+    (req: Request, res: Response, next: NextFunction) =>
+      AcceptRecurringController(req as RecurringRequest, res, next),
     errorHandler
   );
   logger.debug("Route registered: POST /acceptRecurring");
@@ -159,7 +161,8 @@ export default function RecurringRoutes() {
   router.post(
     `/cancelRecurring`,
     validateRequest(cancelRecurringSchema),
-    (req: Request, res: Response, next: NextFunction) => CancelRecurringController(req as RecurringRequest, res, next),
+    (req: Request, res: Response, next: NextFunction) =>
+      CancelRecurringController(req as RecurringRequest, res, next),
     errorHandler
   );
   logger.debug("Route registered: POST /cancelRecurring");
@@ -190,7 +193,8 @@ export default function RecurringRoutes() {
   router.post(
     `/getRecurring`,
     validateRequest(getRecurringSchema),
-    (req: Request, res: Response, next: NextFunction) => GetRecurringController(req as RecurringRequest, res, next),
+    (req: Request, res: Response, next: NextFunction) =>
+      GetRecurringController(req as RecurringRequest, res, next),
     errorHandler
   );
   logger.debug("Route registered: POST /getRecurring");
