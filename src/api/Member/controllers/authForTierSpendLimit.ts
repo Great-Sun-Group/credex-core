@@ -2,34 +2,36 @@ import express from "express";
 import { AuthForTierSpendLimitService } from "../services/AuthForTierSpendLimit";
 import { MemberError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
+import { 
+  TypedApiResponse, 
+  ApiActionType,
+  MemberActionDetails,
+  ErrorActionDetails
+} from "../../../types/apiResponse";
 
-interface AuthResponse {
-  message: string;
-  data: {
-    action: {
-      id: string;
-      type: string;
-      timestamp: string;
-      actor: string;
-      details: {
-        isAuthorized: boolean;
-        availableAmount?: string;
-        memberTier?: number;
-        amount: string;
-        denomination: string;
-        securedCredex: boolean;
-        reason?: string;
-      };
-    };
-    dashboard?: any; // Will be populated when dashboard standardization is complete
-  };
-}
+// Extend MemberActionDetails to include spend authorization fields
+type SpendAuthDetails = MemberActionDetails & {
+  isAuthorized: boolean;
+  availableAmount?: string;
+  memberTier?: number;
+  amount: string;
+  denomination: string;
+  securedCredex: boolean;
+  currentSpendUSD?: number;
+  tierLimitUSD?: number;
+};
+
+type SpendAuthResponse = TypedApiResponse<SpendAuthDetails>;
+type SpendAuthErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * AuthForTierSpendLimitController
  * 
  * Handles requests to validate if a member's tier permits the requested spend amount.
- * Different tiers have different daily spend limits and secured/unsecured permissions.
+ * Different tiers have different daily spend limits and secured/unsecured permissions:
+ * - Tier 1: $10 daily limit, secured credex only
+ * - Tier 2: $100 daily limit, secured and unsecured credex
+ * - Tier 3+: No limits, secured and unsecured credex
  * 
  * @param req - Express request object
  * @param res - Express response object
@@ -68,28 +70,39 @@ export async function AuthForTierSpendLimitController(
         issuerAccountID,
         Amount,
         Denomination,
+        error: result.error,
         message: result.message,
         requestId
       });
 
-      res.status(400).json({
+      const statusCode = 
+        result.error?.code === "NOT_FOUND" ? 404 :
+        result.error?.code === "MISSING_PARAMS" ? 400 :
+        500;
+
+      const errorType = 
+        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+        statusCode === 400 ? ApiActionType.ERROR_VALIDATION :
+        ApiActionType.ERROR_INTERNAL;
+
+      const errorResponse: SpendAuthErrorResponse = {
         message: result.message,
         data: {
           action: {
             id: issuerAccountID,
-            type: "SPEND_AUTH_FAILED",
+            type: errorType,
             timestamp: new Date().toISOString(),
             actor: issuerAccountID,
             details: {
-              isAuthorized: false,
-              amount: Amount.toString(),
-              denomination: Denomination,
-              securedCredex,
-              reason: "VALIDATION_FAILED"
+              code: result.error?.code || "VALIDATION_FAILED",
+              reason: result.error?.details || result.message
             }
-          }
+          },
+          dashboard: {}
         }
-      });
+      };
+
+      res.status(statusCode).json(errorResponse);
       return;
     }
 
@@ -104,24 +117,27 @@ export async function AuthForTierSpendLimitController(
         requestId
       });
 
-      const response: AuthResponse = {
+      const response: SpendAuthResponse = {
         message: result.message,
         data: {
           action: {
             id: issuerAccountID,
-            type: "SPEND_AUTH_DENIED",
+            type: ApiActionType.ERROR_UNAUTHORIZED,
             timestamp: new Date().toISOString(),
             actor: issuerAccountID,
             details: {
+              memberID: issuerAccountID, // Required by MemberActionDetails
               isAuthorized: false,
               availableAmount: result.data?.availableAmount,
               memberTier: result.data?.memberTier,
               amount: Amount.toString(),
               denomination: Denomination,
-              securedCredex,
-              reason: "TIER_LIMIT_EXCEEDED"
+              securedCredex: Boolean(securedCredex),
+              currentSpendUSD: result.data?.currentSpendUSD,
+              tierLimitUSD: result.data?.tierLimitUSD
             }
-          }
+          },
+          dashboard: {} // Empty dashboard since this is just an auth check
         }
       };
 
@@ -137,23 +153,27 @@ export async function AuthForTierSpendLimitController(
       requestId
     });
 
-    const response: AuthResponse = {
+    const response: SpendAuthResponse = {
       message: result.message,
       data: {
         action: {
           id: issuerAccountID,
-          type: "SPEND_AUTHORIZED",
+          type: ApiActionType.SPEND_AUTHORIZED,
           timestamp: new Date().toISOString(),
           actor: issuerAccountID,
           details: {
+            memberID: issuerAccountID, // Required by MemberActionDetails
             isAuthorized: true,
             availableAmount: result.data?.availableAmount,
             memberTier: result.data?.memberTier,
             amount: Amount.toString(),
             denomination: Denomination,
-            securedCredex
+            securedCredex: Boolean(securedCredex),
+            currentSpendUSD: result.data?.currentSpendUSD,
+            tierLimitUSD: result.data?.tierLimitUSD
           }
-        }
+        },
+        dashboard: {} // Empty dashboard since this is just an auth check
       }
     };
 
@@ -171,30 +191,25 @@ export async function AuthForTierSpendLimitController(
       requestId
     });
 
-    const statusCode = 
-      handledError.message.includes("not found") ? 404 :
-      handledError.message.includes("Invalid") ? 400 :
-      handledError.statusCode || 500;
-
-    res.status(statusCode).json({
+    const errorResponse: SpendAuthErrorResponse = {
       message: handledError.message,
       data: {
         action: {
           id: null,
-          type: "SPEND_AUTH_ERROR",
+          type: ApiActionType.ERROR_INTERNAL,
           timestamp: new Date().toISOString(),
           actor: req.body.issuerAccountID,
           details: {
-            isAuthorized: false,
-            reason: handledError.code,
-            error: handledError.message,
-            amount: req.body.Amount?.toString(),
-            denomination: req.body.Denomination,
-            securedCredex: req.body.securedCredex
+            code: handledError.code || "INTERNAL_ERROR",
+            reason: handledError.message
           }
-        }
+        },
+        dashboard: {}
       }
-    });
+    };
+
+    res.status(500).json(errorResponse);
+    next(handledError);
 
   } finally {
     logger.debug("Exiting AuthForTierSpendLimitController", { requestId });

@@ -1,6 +1,7 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { digitallySign } from "../../../utils/digitalSignature";
 import { denomFormatter } from "../../../utils/denomUtils";
+import { RecurringActionDetails } from "../../../types/apiResponse";
 import logger from "../../../utils/logger";
 
 interface CancelRecurringParams {
@@ -11,8 +12,7 @@ interface CancelRecurringParams {
 
 interface CancelRecurringResult {
   success: boolean;
-  data?: {
-    recurringID: string;
+  data?: RecurringActionDetails & {
     scheduleInfo: {
       frequency: string;
       nextRunDate: string;
@@ -23,6 +23,11 @@ interface CancelRecurringResult {
     participants: {
       sourceAccountID: string;
       targetAccountID: string;
+    };
+    execution?: {
+      lastRunDate?: string;
+      lastRunStatus?: string;
+      totalExecutions: number;
     };
   };
   message: string;
@@ -123,6 +128,9 @@ export async function CancelRecurringService(
           recurring.amount as amount,
           recurring.denomination as denomination,
           recurring.status as status,
+          recurring.lastRunDate as lastRunDate,
+          recurring.lastRunStatus as lastRunStatus,
+          recurring.totalExecutions as totalExecutions,
           source.accountID as sourceAccountID,
           target.accountID as targetAccountID
       `;
@@ -168,6 +176,11 @@ export async function CancelRecurringService(
 
     const responseData = {
       recurringID,
+      amount: `${denomFormatter(amount, denomination)} ${denomination}`,
+      denomination,
+      frequency: cancelledRecord.get("frequency"),
+      nextDate: cancelledRecord.get("nextRunDate"),
+      status: cancelledRecord.get("status"),
       scheduleInfo: {
         frequency: cancelledRecord.get("frequency"),
         nextRunDate: cancelledRecord.get("nextRunDate"),
@@ -178,6 +191,11 @@ export async function CancelRecurringService(
       participants: {
         sourceAccountID: cancelledRecord.get("sourceAccountID"),
         targetAccountID: cancelledRecord.get("targetAccountID")
+      },
+      execution: {
+        lastRunDate: cancelledRecord.get("lastRunDate"),
+        lastRunStatus: cancelledRecord.get("lastRunStatus"),
+        totalExecutions: cancelledRecord.get("totalExecutions") || 0
       }
     };
 

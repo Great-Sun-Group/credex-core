@@ -3,29 +3,8 @@ import { CreateRecurringService } from "../services/CreateRecurring";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
 import { RecurringRequest, RecurringTemplate, TEMPLATE_TYPES } from "../types";
+import { ApiActionType } from "../../../types/apiResponse";
 import logger from "../../../utils/logger";
-
-interface CreateRecurringResponse {
-  success: boolean;
-  data?: {
-    recurringID: string;
-    scheduleInfo: {
-      frequency: string;
-      nextRunDate: string;
-      amount?: string;
-      DCOgiveInCXX?: string;
-      denomination?: string;
-      DCOdenom?: string;
-      status: string;
-      templateType: string;
-    };
-    participants: {
-      sourceAccountID: string;
-      targetAccountID: string;
-    };
-  };
-  message: string;
-}
 
 /**
  * CreateRecurringController
@@ -72,8 +51,21 @@ export async function CreateRecurringController(
           error: "Missing required DCO_GIVE fields"
         });
         res.status(400).json({
-          success: false,
-          message: "DCO_GIVE templates require DCOgiveInCXX and DCOdenom"
+          message: "DCO_GIVE templates require DCOgiveInCXX and DCOdenom",
+          data: {
+            action: {
+              id: null,
+              type: ApiActionType.ERROR_VALIDATION,
+              timestamp: new Date().toISOString(),
+              actor: ownerID,
+              details: {
+                code: "400",
+                reason: "Missing required DCO_GIVE fields",
+                field: "DCOgiveInCXX,DCOdenom"
+              }
+            },
+            dashboard: {}
+          }
         });
         return;
       }
@@ -84,8 +76,21 @@ export async function CreateRecurringController(
           error: "Missing required REGULAR fields"
         });
         res.status(400).json({
-          success: false,
-          message: "Regular templates require amount and denomination"
+          message: "Regular templates require amount and denomination",
+          data: {
+            action: {
+              id: null,
+              type: ApiActionType.ERROR_VALIDATION,
+              timestamp: new Date().toISOString(),
+              actor: ownerID,
+              details: {
+                code: "400",
+                reason: "Missing required REGULAR fields",
+                field: "amount,denomination"
+              }
+            },
+            dashboard: {}
+          }
         });
         return;
       }
@@ -95,8 +100,21 @@ export async function CreateRecurringController(
         templateType
       });
       res.status(400).json({
-        success: false,
-        message: `Invalid template type. Must be one of: ${Object.values(TEMPLATE_TYPES).join(', ')}`
+        message: `Invalid template type. Must be one of: ${Object.values(TEMPLATE_TYPES).join(', ')}`,
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: ownerID,
+            details: {
+              code: "400",
+              reason: "Invalid template type",
+              field: "templateType"
+            }
+          },
+          dashboard: {}
+        }
       });
       return;
     }
@@ -151,7 +169,27 @@ export async function CreateRecurringController(
         result.message.includes("unauthorized") ? 403 :
         400;
 
-      res.status(statusCode).json(result);
+      const errorType = 
+        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+        statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
+        ApiActionType.ERROR_VALIDATION;
+
+      res.status(statusCode).json({
+        message: result.message,
+        data: {
+          action: {
+            id: null,
+            type: errorType,
+            timestamp: new Date().toISOString(),
+            actor: ownerID,
+            details: {
+              code: statusCode.toString(),
+              reason: result.message
+            }
+          },
+          dashboard: {}
+        }
+      });
       return;
     }
 
@@ -174,10 +212,18 @@ export async function CreateRecurringController(
         requestId
       });
 
-      res.status(200).json({
-        success: true,
-        data: result.data,
-        message: "Recurring transaction created successfully but failed to fetch updated dashboard"
+      res.status(201).json({
+        message: "Recurring transaction created successfully but failed to fetch updated dashboard",
+        data: {
+          action: {
+            id: result.data?.recurringID,
+            type: ApiActionType.RECURRING_CREATED,
+            timestamp: new Date().toISOString(),
+            actor: ownerID,
+            details: result.data
+          },
+          dashboard: {}
+        }
       });
       return;
     }
@@ -188,18 +234,21 @@ export async function CreateRecurringController(
       sourceAccountID,
       targetAccountID,
       templateType,
-      requestId,
-      status: result.data?.scheduleInfo.status,
-      nextRunDate: result.data?.scheduleInfo.nextRunDate
+      requestId
     });
 
     res.status(201).json({
-      success: true,
+      message: "Recurring transaction created successfully",
       data: {
-        recurringData: result.data,
-        dashboardData
-      },
-      message: "Recurring transaction created successfully"
+        action: {
+          id: result.data?.recurringID,
+          type: ApiActionType.RECURRING_CREATED,
+          timestamp: new Date().toISOString(),
+          actor: ownerID,
+          details: result.data
+        },
+        dashboard: dashboardData
+      }
     });
 
   } catch (error) {
@@ -217,9 +266,27 @@ export async function CreateRecurringController(
         handledError.message.includes("unauthorized") ? 403 :
         handledError.statusCode || 500;
 
+      const errorType = 
+        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+        statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
+        statusCode === 500 ? ApiActionType.ERROR_INTERNAL :
+        ApiActionType.ERROR_VALIDATION;
+
       res.status(statusCode).json({
-        success: false,
-        message: handledError.message
+        message: handledError.message,
+        data: {
+          action: {
+            id: null,
+            type: errorType,
+            timestamp: new Date().toISOString(),
+            actor: req.user.memberID,
+            details: {
+              code: statusCode.toString(),
+              reason: handledError.message
+            }
+          },
+          dashboard: {}
+        }
       });
       return;
     }

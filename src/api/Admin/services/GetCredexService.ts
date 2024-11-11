@@ -36,7 +36,22 @@ interface CredexData {
   securerAccountName: string;
 }
 
-export default async function GetCredexService(credexID: string): Promise<{ data: CredexData[] }> {
+interface GetCredexResult {
+  success: boolean;
+  data?: CredexData;
+  message: string;
+}
+
+/**
+ * GetCredexService
+ * 
+ * Retrieves detailed information about a credex transaction.
+ * 
+ * @param credexID - The unique identifier of the credex transaction
+ * @returns Object containing credex details and success status
+ * @throws AdminError for various error conditions
+ */
+export default async function GetCredexService(credexID: string): Promise<GetCredexResult> {
   logger.debug('GetCredexService called', { credexID });
 
   if (!credexID) {
@@ -92,7 +107,16 @@ export default async function GetCredexService(credexID: string): Promise<{ data
       { credexID }
     );
 
-    const credexData = result.records.map((record) => ({
+    if (!result.records.length) {
+      logger.warn("Credex not found", { credexID });
+      return {
+        success: false,
+        message: "Credex not found"
+      };
+    }
+
+    const record = result.records[0];
+    const credexData: CredexData = {
       credexID: record.get("credexID"),
       credexType: record.get("credexType"),
       credexDenomination: record.get("credexDenomination"),
@@ -124,17 +148,15 @@ export default async function GetCredexService(credexID: string): Promise<{ data
       acceptorSignerID: record.get("acceptorSignerID"),
       securerAccountID: record.get("securerAccountID"),
       securerAccountName: record.get("securerAccountName")
-    }));
-
-    if (!credexData.length) {
-      logger.warn("Credex not found", { credexID });
-      throw new AdminError("Credex not found", "NOT_FOUND", ErrorCodes.Admin.NOT_FOUND);
-    }
+    };
 
     logger.info("Credex fetched successfully", { credexID });
     return {
-      data: credexData
+      success: true,
+      data: credexData,
+      message: "Credex details retrieved successfully"
     };
+
   } catch (error) {
     logger.error("Error fetching credex data", {
       error: error instanceof Error ? error.message : "Unknown error",

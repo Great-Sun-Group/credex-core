@@ -4,35 +4,31 @@ import { GetAccountDashboardService } from "../../Account/services/GetAccountDas
 import { MemberError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 import { validatePhone } from "../../../utils/validators";
+import { 
+  TypedApiResponse, 
+  ApiActionType,
+  MemberActionDetails,
+  ErrorActionDetails
+} from "../../../types/apiResponse";
 
-interface DashboardResponse {
-  message: string;
-  data: {
-    action: {
-      id: string;
-      type: string;
-      timestamp: string;
-      actor: string;
-      details: {
-        memberID: string;
-        firstname: string;
-        lastname: string;
-        memberHandle: string;
-        defaultDenom: string;
-      };
-    };
-    dashboard: {
-      memberTier: number;
-      remainingAvailableUSD: number;
-      accounts: any[]; // Type will be refined when AccountDashboard is standardized
-    };
-  };
-}
+type DashboardDetails = MemberActionDetails & {
+  memberID: string;
+  firstname: string;
+  lastname: string;
+  memberHandle: string;
+  defaultDenom: string;
+  memberTier: number;
+  remainingAvailableUSD: number;
+};
+
+type DashboardResponse = TypedApiResponse<DashboardDetails>;
+type DashboardErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * GetMemberDashboardByPhoneController
  * 
  * Retrieves a member's dashboard and associated account information.
+ * Includes member details, account dashboards, and transaction limits.
  * 
  * @param req - Express request object
  * @param res - Express response object
@@ -52,11 +48,28 @@ export async function GetMemberDashboardByPhoneController(
     // Validate phone number
     const phoneValidation = validatePhone(phone);
     if (!phoneValidation.isValid) {
-      throw new MemberError(
-        phoneValidation.message || "Invalid phone number format",
-        "INVALID_PHONE",
-        400
-      );
+      logger.warn("Invalid phone number", { phone, requestId });
+      
+      const errorResponse: DashboardErrorResponse = {
+        message: phoneValidation.message || "Invalid phone number format",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: "system",
+            details: {
+              code: "INVALID_PHONE",
+              reason: phoneValidation.message || "Invalid phone number format",
+              field: "phone"
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(400).json(errorResponse);
+      return;
     }
 
     logger.info("Retrieving member dashboard", { phone, requestId });
@@ -66,33 +79,44 @@ export async function GetMemberDashboardByPhoneController(
 
     if (!memberDashboardResult.success || !memberDashboardResult.data) {
       const statusCode = 
-        memberDashboardResult.message.includes("not found") ? 404 : 400;
+        memberDashboardResult.error?.code === "NOT_FOUND" ? 404 :
+        memberDashboardResult.error?.code === "MISSING_PHONE" ? 400 :
+        500;
+
+      const errorType = 
+        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+        statusCode === 400 ? ApiActionType.ERROR_VALIDATION :
+        ApiActionType.ERROR_INTERNAL;
 
       logger.warn("Failed to retrieve member dashboard", {
         phone,
+        error: memberDashboardResult.error,
         message: memberDashboardResult.message,
         requestId
       });
 
-      res.status(statusCode).json({
+      const errorResponse: DashboardErrorResponse = {
         message: memberDashboardResult.message,
         data: {
           action: {
             id: null,
-            type: "DASHBOARD_RETRIEVAL_FAILED",
+            type: errorType,
             timestamp: new Date().toISOString(),
-            actor: null,
+            actor: "system",
             details: {
-              reason: statusCode === 404 ? "MEMBER_NOT_FOUND" : "RETRIEVAL_ERROR",
-              phone
+              code: memberDashboardResult.error?.code || "RETRIEVAL_ERROR",
+              reason: memberDashboardResult.error?.details || memberDashboardResult.message
             }
-          }
+          },
+          dashboard: {}
         }
-      });
+      };
+
+      res.status(statusCode).json(errorResponse);
       return;
     }
 
-    const dashboardData = memberDashboardResult.data; // Assign to variable to satisfy TypeScript
+    const dashboardData = memberDashboardResult.data;
 
     // Get associated account dashboards
     logger.debug("Retrieving account dashboards", {
@@ -137,7 +161,7 @@ export async function GetMemberDashboardByPhoneController(
       data: {
         action: {
           id: dashboardData.memberID,
-          type: "DASHBOARD_RETRIEVED",
+          type: ApiActionType.DASHBOARD_RETRIEVED,
           timestamp: new Date().toISOString(),
           actor: dashboardData.memberID,
           details: {
@@ -145,7 +169,9 @@ export async function GetMemberDashboardByPhoneController(
             firstname: dashboardData.firstname,
             lastname: dashboardData.lastname,
             memberHandle: dashboardData.memberHandle,
-            defaultDenom: dashboardData.defaultDenom
+            defaultDenom: dashboardData.defaultDenom,
+            memberTier: dashboardData.memberTier,
+            remainingAvailableUSD: dashboardData.remainingAvailableUSD
           }
         },
         dashboard: {
@@ -168,23 +194,25 @@ export async function GetMemberDashboardByPhoneController(
       requestId,
     });
 
-    const statusCode = handledError.statusCode || 500;
-
-    res.status(statusCode).json({
-      message: handledError.message,
+    const errorResponse: DashboardErrorResponse = {
+      message: "Failed to retrieve dashboard",
       data: {
         action: {
           id: null,
-          type: "DASHBOARD_RETRIEVAL_FAILED",
+          type: ApiActionType.ERROR_INTERNAL,
           timestamp: new Date().toISOString(),
-          actor: null,
+          actor: "system",
           details: {
-            reason: handledError.code,
-            error: handledError.message
+            code: handledError.code || "INTERNAL_ERROR",
+            reason: handledError.message
           }
-        }
+        },
+        dashboard: {}
       }
-    });
+    };
+
+    res.status(500).json(errorResponse);
+    next(handledError);
 
   } finally {
     logger.debug("Exiting GetMemberDashboardByPhoneController", { requestId });

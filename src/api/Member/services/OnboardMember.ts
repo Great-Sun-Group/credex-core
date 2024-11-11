@@ -1,43 +1,44 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { getDenominations } from "../../../core-cron/constants/denominations";
-import { isNeo4jError } from "../../../utils/errorUtils";
+import { MemberError, handleServiceError, isNeo4jError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
+
+interface MemberData {
+  memberID: string;
+  firstname: string;
+  lastname: string;
+  phone: string;
+  memberHandle: string;
+  defaultDenom: string;
+  memberTier: number;
+  createdAt: string;
+}
 
 interface OnboardMemberResult {
   success: boolean;
-  data?: {
-    memberID: string;
-    firstname: string;
-    lastname: string;
-    phone: string;
-    defaultDenom: string;
-  };
+  data?: MemberData;
   message: string;
-}
-
-class MemberError extends Error {
-  constructor(
-    message: string,
-    public code: string
-  ) {
-    super(message);
-    this.name = "MemberError";
-  }
+  error?: {
+    code: string;
+    details?: string;
+  };
 }
 
 /**
  * OnboardMemberService
  *
- * This service handles the creation of new member accounts.
- * It validates input data and creates a new member with default tier 1.
+ * Handles the creation of new member accounts. Creates a new member with:
+ * - Initial tier 1 status
+ * - Phone number as member handle
+ * - Default denomination
+ * - Creation timestamp
  *
  * @param firstname - Member's first name
  * @param lastname - Member's last name
  * @param phone - Member's phone number (used as handle)
  * @param defaultDenom - Member's default denomination
  * @param requestId - The ID of the HTTP request
- * @returns Object containing the created member details
- * @throws MemberError with specific error codes
+ * @returns OnboardMemberResult containing the created member details
  */
 export async function OnboardMemberService(
   firstname: string,
@@ -54,27 +55,39 @@ export async function OnboardMemberService(
     requestId,
   });
 
+  // Validate required parameters
   if (!firstname || !lastname || !phone || !defaultDenom) {
-    throw new MemberError("Missing required parameters", "INVALID_PARAMS");
+    return {
+      success: false,
+      message: "Missing required parameters",
+      error: {
+        code: "MISSING_PARAMS",
+        details: "firstname, lastname, phone, and defaultDenom are required"
+      }
+    };
+  }
+
+  // Validate denomination
+  if (!getDenominations({ code: defaultDenom }).length) {
+    return {
+      success: false,
+      message: `Invalid denomination: ${defaultDenom}`,
+      error: {
+        code: "INVALID_DENOMINATION",
+        details: "The provided denomination is not supported"
+      }
+    };
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    // Validate denomination
-    if (!getDenominations({ code: defaultDenom }).length) {
-      throw new MemberError(
-        `Invalid denomination: ${defaultDenom}`,
-        "INVALID_DENOMINATION"
-      );
-    }
-
     logger.debug("Creating new member", { requestId });
+    
     const result = await ledgerSpaceSession.executeWrite(async (tx) => {
-      return tx.run(
-        `
+      const query = `
         MATCH (daynode:Daynode { Active: true })
-        CREATE (member:Member{
+        CREATE (member:Member {
           firstname: $firstname,
           lastname: $lastname,
           memberHandle: $phone,
@@ -86,68 +99,94 @@ export async function OnboardMemberService(
           updatedAt: datetime()
         })-[:CREATED_ON]->(daynode)
         RETURN
-          member.memberID AS memberID,
-          member.firstname AS firstname,
-          member.lastname AS lastname,
-          member.phone AS phone,
-          member.defaultDenom AS defaultDenom
-        `,
-        {
-          firstname,
-          lastname,
-          defaultDenom,
-          phone,
-        }
-      );
+          member {
+            .memberID,
+            .firstname,
+            .lastname,
+            .phone,
+            .memberHandle,
+            .defaultDenom,
+            .memberTier,
+            toString(.createdAt) AS createdAt
+          } as memberData
+      `;
+
+      const queryResult = await tx.run(query, {
+        firstname,
+        lastname,
+        defaultDenom,
+        phone,
+      });
+
+      if (queryResult.records.length === 0) {
+        return {
+          success: false,
+          error: "CREATE_FAILED"
+        };
+      }
+
+      const memberData = queryResult.records[0].get("memberData");
+      return {
+        success: true,
+        data: memberData
+      };
     });
 
-    if (!result.records.length) {
-      throw new MemberError("Failed to create member", "CREATE_FAILED");
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        message: "Failed to create member",
+        error: {
+          code: "CREATE_FAILED",
+          details: "An error occurred while creating the member"
+        }
+      };
     }
 
-    const record = result.records[0];
-    const memberData = {
-      memberID: record.get("memberID"),
-      firstname: record.get("firstname"),
-      lastname: record.get("lastname"),
-      phone: record.get("phone"),
-      defaultDenom: record.get("defaultDenom"),
-    };
-
     logger.info("Member onboarded successfully", {
-      memberID: memberData.memberID,
+      memberID: result.data.memberID,
       phone,
       requestId,
     });
 
     return {
       success: true,
-      data: memberData,
-      message: "Member onboarded successfully",
+      data: result.data,
+      message: `Member ${firstname} ${lastname} onboarded successfully with default denomination ${defaultDenom}`
     };
-  } catch (error) {
-    if (error instanceof MemberError) {
-      throw error;
-    }
 
+  } catch (error: unknown) {
+    // Handle Neo4j constraint violations
     if (isNeo4jError(error)) {
       if (error.code === "Neo.ClientError.Schema.ConstraintValidationFailed") {
         if (error.message.includes("phone")) {
-          throw new MemberError(
-            "Phone number already in use",
-            "DUPLICATE_PHONE"
-          );
+          return {
+            success: false,
+            message: "Phone number already in use",
+            error: {
+              code: "DUPLICATE_PHONE",
+              details: "A member with this phone number already exists"
+            }
+          };
         }
         if (error.message.includes("memberHandle")) {
-          throw new MemberError(
-            "Member handle already in use",
-            "DUPLICATE_HANDLE"
-          );
+          return {
+            success: false,
+            message: "Member handle already in use",
+            error: {
+              code: "DUPLICATE_HANDLE",
+              details: "A member with this handle already exists"
+            }
+          };
         }
-        throw new MemberError(
-          "Required unique field not unique",
-          "DUPLICATE_FIELD"
-        );
+        return {
+          success: false,
+          message: "Required unique field not unique",
+          error: {
+            code: "DUPLICATE_FIELD",
+            details: "A unique field constraint was violated"
+          }
+        };
       }
     }
 
@@ -161,10 +200,15 @@ export async function OnboardMemberService(
       requestId,
     });
 
-    throw new MemberError(
-      `Failed to onboard member: ${error instanceof Error ? error.message : "Unknown error"}`,
-      "INTERNAL_ERROR"
-    );
+    return {
+      success: false,
+      message: "Failed to onboard member",
+      error: {
+        code: "INTERNAL_ERROR",
+        details: error instanceof Error ? error.message : "An unknown error occurred while onboarding member"
+      }
+    };
+
   } finally {
     await ledgerSpaceSession.close();
     logger.debug("Exiting OnboardMemberService", {

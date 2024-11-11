@@ -1,55 +1,186 @@
 import { Request, Response, NextFunction } from 'express';
 import GetMemberService from '../services/GetMemberService';
-import logger from '../../../utils/logger';
-import { validateUUID } from '../../../utils/validators';
 import { AdminError, ErrorCodes } from '../../../utils/errorUtils';
+import { validateUUID } from '../../../utils/validators';
+import { 
+  AdminActionType, 
+  AdminMemberDetails, 
+  AdminMemberDashboard,
+  AdminErrorDetails,
+  TypedAdminResponse 
+} from '../types';
+import logger from '../../../utils/logger';
 
 interface CustomRequest extends Request {
   id: string;
 }
 
-export async function getMemberDetailsController(req: CustomRequest, res: Response, next: NextFunction) {
-  const memberID = req.body.memberID;
+type MemberResponse = TypedAdminResponse<AdminMemberDetails | AdminErrorDetails, AdminMemberDashboard>;
+
+/**
+ * GetMemberDetailsController
+ * 
+ * Retrieves detailed information about a member.
+ * Validates memberID and returns standardized response with member details.
+ * 
+ * @param req - Express request object with member information
+ * @param res - Express response object
+ * @param next - Express next function
+ */
+export async function getMemberDetailsController(
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const { memberID } = req.body;
   const requestId = req.id;
 
   logger.debug('getMemberDetails function called', { requestId, memberID });
 
-  if (!memberID || !validateUUID(memberID)) {
+  if (!memberID || !validateUUID(memberID).isValid) {
     logger.warn('Invalid memberID provided', { requestId, memberID });
-    return next(new AdminError('Invalid memberID', 'INVALID_ID', ErrorCodes.Admin.INVALID_ID));
+    
+    const response: MemberResponse = {
+      message: 'Invalid memberID format',
+      data: {
+        action: {
+          id: null,
+          type: AdminActionType.ADMIN_ERROR_VALIDATION,
+          timestamp: new Date().toISOString(),
+          actor: 'system',
+          details: {
+            code: ErrorCodes.Admin.INVALID_ID.toString(),
+            reason: 'Invalid memberID format',
+            field: 'memberID'
+          }
+        },
+        dashboard: {} as AdminMemberDashboard
+      }
+    };
+    
+    res.status(400).json(response);
+    return;
   }
 
   try {
     const result = await GetMemberService(memberID);
-    
-    if (!result.data || !result.data.length) {
-      logger.warn('Member not found', { requestId, memberID });
-      return next(new AdminError('Member not found', 'NOT_FOUND', ErrorCodes.Admin.NOT_FOUND));
+
+    if (!result.success || !result.data) {
+      logger.warn('Failed to fetch member details', {
+        error: result.message,
+        requestId
+      });
+
+      const statusCode = 
+        result.message.includes("not found") ? 404 :
+        result.message.includes("unauthorized") ? 403 :
+        400;
+
+      const errorType = 
+        statusCode === 404 ? AdminActionType.ADMIN_ERROR_NOT_FOUND :
+        statusCode === 403 ? AdminActionType.ADMIN_ERROR_UNAUTHORIZED :
+        AdminActionType.ADMIN_ERROR_VALIDATION;
+
+      const response: MemberResponse = {
+        message: result.message,
+        data: {
+          action: {
+            id: memberID,
+            type: errorType,
+            timestamp: new Date().toISOString(),
+            actor: 'system',
+            details: {
+              code: statusCode.toString(),
+              reason: result.message
+            }
+          },
+          dashboard: {} as AdminMemberDashboard
+        }
+      };
+
+      res.status(statusCode).json(response);
+      return;
     }
 
+    const memberData = result.data;
     logger.info('Successfully fetched member details', { requestId, memberID });
-    
-    res.status(200).json({
-      success: true,
-      message: 'Member details fetched successfully',
+
+    const response: MemberResponse = {
+      message: 'Member details retrieved successfully',
       data: {
-        memberID: result.data[0].memberID,
-        memberInfo: {
-          firstname: result.data[0].firstname,
-          lastname: result.data[0].lastname,
-          phone: result.data[0].phone,
-          memberHandle: result.data[0].memberHandle,
-          memberTier: result.data[0].memberTier
+        action: {
+          id: memberID,
+          type: AdminActionType.ADMIN_MEMBER_FOUND,
+          timestamp: new Date().toISOString(),
+          actor: 'system',
+          details: {
+            memberID: memberData.memberID,
+            handle: memberData.memberHandle,
+            phone: memberData.phone,
+            tier: memberData.memberTier.toString(),
+            firstname: memberData.firstname,
+            lastname: memberData.lastname,
+            defaultDenom: memberData.defaultDenom
+          }
+        },
+        dashboard: {
+          memberInfo: {
+            memberID: memberData.memberID,
+            firstname: memberData.firstname,
+            lastname: memberData.lastname,
+            phone: memberData.phone,
+            memberHandle: memberData.memberHandle,
+            memberTier: memberData.memberTier,
+            defaultDenom: memberData.defaultDenom,
+            updatedAt: memberData.updatedAt,
+            createdAt: memberData.createdAt
+          }
         }
       }
-    });
+    };
+
+    res.status(200).json(response);
+
   } catch (error) {
-    logger.error('Error fetching member details', {
-      requestId,
-      memberID,
+    logger.error('Error in getMemberDetailsController', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+      stack: error instanceof Error ? error.stack : undefined,
+      requestId
     });
-    next(new AdminError('Error fetching member details', 'INTERNAL_ERROR', ErrorCodes.Admin.INTERNAL_ERROR));
+
+    if (error instanceof AdminError) {
+      const statusCode = 
+        error.message.includes("not found") ? 404 :
+        error.message.includes("unauthorized") ? 403 :
+        error.statusCode || 500;
+
+      const errorType = 
+        statusCode === 404 ? AdminActionType.ADMIN_ERROR_NOT_FOUND :
+        statusCode === 403 ? AdminActionType.ADMIN_ERROR_UNAUTHORIZED :
+        statusCode === 500 ? AdminActionType.ADMIN_ERROR_INTERNAL :
+        AdminActionType.ADMIN_ERROR_VALIDATION;
+
+      const response: MemberResponse = {
+        message: error.message,
+        data: {
+          action: {
+            id: memberID,
+            type: errorType,
+            timestamp: new Date().toISOString(),
+            actor: 'system',
+            details: {
+              code: statusCode.toString(),
+              reason: error.message
+            }
+          },
+          dashboard: {} as AdminMemberDashboard
+        }
+      };
+
+      res.status(statusCode).json(response);
+      return;
+    }
+
+    next(error);
   }
 }

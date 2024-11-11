@@ -1,7 +1,7 @@
 # API Standard Response Format
 
 ## Overview
-This document defines the standard response format for all API endpoints, and next steps to implement it.
+This document defines the standard response format for all API endpoints and serves as both implementation guide and reference documentation.
 
 The format is designed to be:
 - Consistent across all endpoints
@@ -39,18 +39,31 @@ The format is designed to be:
 - Human-friendly message suitable for direct display to users
 - Contains relevant data in natural language
 - Examples:
-  - "Secured credex for $2.58 USD offered to Vimbisopay: Trust."
-  - "Secured credex for $2.58 USD accepted by Vimbisopay: Trust."
-  - "Unable to process credex: insufficient balance."
-  - "MyCompany: Operations account created with a default denomination of USD."
+  ```typescript
+  // Success messages
+  "Secured credex for $2.58 USD offered to Vimbisopay: Trust."
+  "Member John Doe onboarded successfully with default denomination USD."
+  "Dashboard retrieved successfully"
+  
+  // Error messages
+  "Unable to process credex: insufficient balance."
+  "Phone number already in use"
+  "Invalid member handle format"
+  ```
 
 ### data.action
 Core fields present in every action response:
-- id: Primary identifier for the affected resource
-- type: Specific business action that occurred
-- timestamp: ISO 8601 datetime of when action occurred
-- actor: Identifier for who performed the action
-- details: Action-specific data structure
+```typescript
+{
+  id: string,      // Primary identifier (e.g., memberID, credexID)
+  type: string,    // From ApiActionType enum
+  timestamp: string, // ISO 8601 datetime
+  actor: string,   // Who performed the action
+  details: {       // Action-specific data
+    // Varies by endpoint
+  }
+}
+```
 
 ### data.dashboard
 - Complete dashboard state after the action
@@ -74,14 +87,18 @@ import {
 ### 2. Define Response Types
 Create specific types for your endpoint:
 ```typescript
-// Extend base details if needed
-type LoginDetails = MemberActionDetails & {
-  token?: string;
+// Example from Member module
+type DashboardDetails = MemberActionDetails & {
+  memberID: string;
+  firstname: string;
+  lastname: string;
+  memberHandle: string;
+  defaultDenom: string;
+  memberTier: number;
 };
 
-// Create response types
-type LoginResponse = TypedApiResponse<LoginDetails>;
-type LoginErrorResponse = TypedApiResponse<ErrorActionDetails>;
+type DashboardResponse = TypedApiResponse<DashboardDetails>;
+type DashboardErrorResponse = TypedApiResponse<ErrorActionDetails>;
 ```
 
 ### 3. Service Pattern
@@ -93,11 +110,10 @@ Services should:
 
 Example service response interface:
 ```typescript
-interface ServiceResult {
+// Example from GetMemberByHandle service
+interface GetMemberResult {
   success: boolean;
-  data?: {
-    // Action-specific data
-  };
+  data?: MemberData;
   message: string;
   error?: {
     code: string;
@@ -114,47 +130,49 @@ Controllers should:
 
 Example controller pattern:
 ```typescript
-// Create base response without dashboard
-const baseResponse = {
-  message: "Operation successful",
+// Example from OnboardMember controller
+const response: OnboardResponse = {
+  message: `${firstname} ${lastname}: Personal account created with default denomination ${defaultDenom}.`,
   data: {
     action: {
-      id: resourceId,
-      type: ApiActionType.OPERATION_TYPE,
+      id: memberData.memberID,
+      type: ApiActionType.MEMBER_ONBOARDED,
       timestamp: new Date().toISOString(),
-      actor: actorId,
+      actor: memberData.memberID,
       details: {
-        // Action-specific details
+        memberID: memberData.memberID,
+        firstname: memberData.firstname,
+        lastname: memberData.lastname,
+        memberHandle: memberData.memberHandle,
+        defaultDenom: memberData.defaultDenom,
+        token,
+        defaultAccountID: accountResult.data.accountID
       }
+    },
+    dashboard: {
+      memberTier: dashboardData.memberTier,
+      remainingAvailableUSD: dashboardData.remainingAvailableUSD,
+      accounts: validAccountDashboards
     }
   }
 };
-
-// Add dashboard data to response
-const response = await withDashboard(
-  baseResponse,
-  memberID,
-  accountID,
-  requestId
-);
-
-res.status(200).json(response);
 ```
 
 ### 5. Error Response Pattern
 ```typescript
-const errorResponse: ErrorResponse = {
-  message: "Error message",
+// Example from GetMemberByHandle controller
+const errorResponse: MemberLookupErrorResponse = {
+  message: "Invalid member handle format",
   data: {
     action: {
       id: null,
-      type: ApiActionType.ERROR_TYPE,
+      type: ApiActionType.ERROR_VALIDATION,
       timestamp: new Date().toISOString(),
       actor: "system",
       details: {
-        code: "ERROR_CODE",
-        reason: "Error reason",
-        field?: "field_name"
+        code: "INVALID_HANDLE",
+        reason: "Invalid member handle format",
+        field: "memberHandle"
       }
     },
     dashboard: {}
@@ -193,20 +211,94 @@ const errorResponse: ErrorResponse = {
    - ✓ Better documentation
    - ✓ Dashboard integration where applicable
 
-### Needs Revisiting
-1. Member Module Dashboard Integration:
-   - Update account dashboard types after Account module standardization
-   - Ensure consistent dashboard structure
-   - Verify proper error propagation from Account services
+3. Member Module:
+   Services:
+   - ✓ GetMemberByHandle.ts
+   - ✓ GetMemberDashboardByPhone.ts
+   - ✓ OnboardMember.ts
+   - ✓ AuthForTierSpendLimit.ts
+   - ✓ LoginMember.ts
 
-2. Authentication Flow:
-   - Review login responses after other modules are updated
-   - Ensure consistent token handling
-   - Standardize authentication error patterns
+   Controllers:
+   - ✓ getMemberByHandle.ts
+   - ✓ getMemberDashboardByPhone.ts
+   - ✓ onboardMember.ts
+   - ✓ authForTierSpendLimit.ts
+   - ✓ loginMember.ts
+
+   Key Improvements:
+   - ✓ Standardized response format across all endpoints
+   - ✓ Proper TypeScript interfaces and type safety
+   - ✓ Consistent error handling patterns
+   - ✓ Improved dashboard integration
+   - ✓ Better validation and authorization checks
+   - ✓ Enhanced logging and debugging
+   - ✓ Clear success/error messages
+
+4. Recurring Module:
+   Services:
+   - ✓ AcceptRecurring.ts
+   - ✓ CancelRecurring.ts
+   - ✓ CreateRecurring.ts
+   - ✓ GetRecurring.ts
+
+   Controllers:
+   - ✓ acceptRecurring.ts
+   - ✓ cancelRecurring.ts
+   - ✓ createRecurring.ts
+   - ✓ getRecurring.ts
+
+   Key Improvements:
+   - ✓ Standardized response format across all endpoints
+   - ✓ Proper TypeScript interfaces and type safety
+   - ✓ Consistent error handling with specific codes
+   - ✓ Enhanced logging and debugging
+   - ✓ Improved dashboard integration
+   - ✓ Template-specific validation
+   - ✓ Clear success/error messages
+
+5. Admin Module:
+   Services:
+   - ✓ GetMemberService.ts
+   - ✓ GetCredexService.ts
+   - ✓ GetAccountService.ts
+
+   Controllers:
+   - ✓ getMemberDetailsController.ts
+   - ✓ getCredexDetailsController.ts
+   - ✓ getAccountDetailsController.ts
+
+   Key Improvements:
+   - ✓ Created Admin-specific types and interfaces
+   - ✓ Standardized response format with action and dashboard
+   - ✓ Enhanced error handling with Admin-specific error types
+   - ✓ Improved type safety with TypeScript
+   - ✓ Added comprehensive logging
+   - ✓ Better input validation
+   - ✓ Clear separation of concerns between services and controllers
 
 ### Next Steps
 
-1. Update test suites
+1. Complete Admin Module Standardization
+   - Update getReceivedCredexOffersController and service
+   - Update getSentCredexOffersController and service
+   - Update updateMemberController and service
+   - Add more Admin-specific action types as needed
+
+2. Complete DevAdmin Module Standardization
+   - Standardize service responses
+   - Update controllers with standard patterns
+   - Improve error handling
+   - Add proper TypeScript interfaces
+
+3. Update Routes for Swagger Documentation
+   - Update route definitions with standard format
+   - Add proper request/response schemas
+   - Document error responses
+   - Add authentication requirements
+   - Include example requests/responses
+
+4. Update Test Suites
    - Add response format validation
    - Test error scenarios comprehensively
    - Verify dashboard updates
@@ -214,7 +306,7 @@ const errorResponse: ErrorResponse = {
    - Document testing patterns
    - Add response schema validation
 
-2. Review and update API documentation
+4. Review and Update API Documentation
    - Add new type definitions
    - Update example responses
    - Document error patterns

@@ -18,6 +18,10 @@ interface DashboardResult {
   success: boolean;
   data?: MemberDashboardData;
   message: string;
+  error?: {
+    code: string;
+    details?: string;
+  };
 }
 
 /**
@@ -28,7 +32,6 @@ interface DashboardResult {
  * 
  * @param phone - The member's phone number
  * @returns DashboardResult containing member dashboard data
- * @throws MemberError for validation and business logic errors
  */
 export async function GetMemberDashboardByPhoneService(
   phone: string
@@ -36,11 +39,14 @@ export async function GetMemberDashboardByPhoneService(
   logger.debug("Entering GetMemberDashboardByPhoneService", { phone });
 
   if (!phone) {
-    throw new MemberError(
-      "Phone number is required",
-      "MISSING_PHONE",
-      400
-    );
+    return {
+      success: false,
+      message: "Phone number is required",
+      error: {
+        code: "MISSING_PHONE",
+        details: "The phone number parameter must be provided"
+      }
+    };
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -73,11 +79,13 @@ export async function GetMemberDashboardByPhoneService(
       );
 
       if (queryResult.records.length === 0) {
-        throw new MemberError(
-          "Member not found",
-          "NOT_FOUND",
-          404
-        );
+        return {
+          success: false,
+          error: {
+            code: "NOT_FOUND",
+            details: "Member not found with the provided phone number"
+          }
+        };
       }
 
       const record = queryResult.records[0];
@@ -109,10 +117,17 @@ export async function GetMemberDashboardByPhoneService(
 
       return {
         success: true,
-        data: dashboardData,
-        message: "Dashboard retrieved successfully"
+        data: dashboardData
       };
     });
+
+    if (!result.success) {
+      return {
+        success: false,
+        message: "Failed to retrieve member dashboard",
+        error: result.error
+      };
+    }
 
     logger.info("Member dashboard retrieved successfully", {
       memberID: result.data?.memberID,
@@ -121,19 +136,26 @@ export async function GetMemberDashboardByPhoneService(
       accountCount: result.data?.accountIDS.length
     });
 
-    return result;
+    return {
+      success: true,
+      data: result.data,
+      message: "Dashboard retrieved successfully"
+    };
 
   } catch (error) {
-    const handledError = handleServiceError(error);
     logger.error("Error in GetMemberDashboardByPhoneService", {
-      error: handledError.message,
-      code: handledError.code,
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
       phone
     });
 
     return {
       success: false,
-      message: handledError.message
+      message: "Failed to retrieve member dashboard",
+      error: {
+        code: "INTERNAL_ERROR",
+        details: error instanceof Error ? error.message : "An unknown error occurred while retrieving dashboard"
+      }
     };
 
   } finally {

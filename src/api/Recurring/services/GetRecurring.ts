@@ -1,5 +1,6 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { denomFormatter } from "../../../utils/denomUtils";
+import { RecurringActionDetails } from "../../../types/apiResponse";
 import logger from "../../../utils/logger";
 
 interface GetRecurringParams {
@@ -11,8 +12,7 @@ interface GetRecurringParams {
 
 interface GetRecurringResult {
   success: boolean;
-  data?: {
-    recurringID: string;
+  data?: RecurringActionDetails & {
     scheduleInfo: {
       frequency: string;
       nextRunDate: string;
@@ -25,6 +25,11 @@ interface GetRecurringResult {
     participants: {
       sourceAccountID: string;
       targetAccountID: string;
+    };
+    execution?: {
+      lastRunDate?: string;
+      lastRunStatus?: string;
+      totalExecutions: number;
     };
   };
   message: string;
@@ -83,6 +88,9 @@ export async function GetRecurringService(
           recurring.status as status,
           recurring.remainingPays as remainingPays,
           recurring.daysBetweenPays as daysBetweenPays,
+          recurring.lastRunDate as lastRunDate,
+          recurring.lastRunStatus as lastRunStatus,
+          recurring.totalExecutions as totalExecutions,
           source.accountID as sourceAccountID,
           target.accountID as targetAccountID
       `;
@@ -101,13 +109,19 @@ export async function GetRecurringService(
     const amount = record.get("amount");
     const denomination = record.get("denomination");
     const remainingPays = record.get("remainingPays");
+    const formattedAmount = `${denomFormatter(amount, denomination)} ${denomination}`;
 
     const responseData = {
       recurringID: record.get("recurringID"),
+      amount: formattedAmount,
+      denomination,
+      frequency: record.get("frequency"),
+      nextDate: record.get("nextRunDate"),
+      status: record.get("status"),
       scheduleInfo: {
         frequency: record.get("frequency"),
         nextRunDate: record.get("nextRunDate"),
-        amount: `${denomFormatter(amount, denomination)} ${denomination}`,
+        amount: formattedAmount,
         denomination,
         status: record.get("status"),
         daysBetweenPays: record.get("daysBetweenPays"),
@@ -116,6 +130,11 @@ export async function GetRecurringService(
       participants: {
         sourceAccountID: record.get("sourceAccountID"),
         targetAccountID: record.get("targetAccountID")
+      },
+      execution: {
+        lastRunDate: record.get("lastRunDate"),
+        lastRunStatus: record.get("lastRunStatus"),
+        totalExecutions: record.get("totalExecutions") || 0
       }
     };
 

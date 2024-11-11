@@ -3,33 +3,12 @@ import { AcceptRecurringService } from "../services/AcceptRecurring";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
 import { TEMPLATE_TYPES } from "../types";
+import { ApiActionType } from "../../../types/apiResponse";
 import logger from "../../../utils/logger";
 
 // Import the UserRequest interface
 interface UserRequest extends express.Request {
   user: any;
-}
-
-interface AcceptRecurringResponse {
-  success: boolean;
-  data?: {
-    recurringID: string;
-    scheduleInfo: {
-      frequency: string;
-      nextRunDate: string;
-      amount?: string;
-      DCOgiveInCXX?: string;
-      denomination?: string;
-      DCOdenom?: string;
-      status: string;
-      templateType: string;
-    };
-    participants: {
-      sourceAccountID: string;
-      targetAccountID: string;
-    };
-  };
-  message: string;
 }
 
 /**
@@ -80,7 +59,27 @@ export async function AcceptRecurringController(
         result.message.includes("already accepted") ? 409 :
         400;
 
-      res.status(statusCode).json(result);
+      const errorType = 
+        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+        statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
+        ApiActionType.ERROR_VALIDATION;
+
+      res.status(statusCode).json({
+        message: result.message,
+        data: {
+          action: {
+            id: recurringID,
+            type: errorType,
+            timestamp: new Date().toISOString(),
+            actor: signerID,
+            details: {
+              code: statusCode.toString(),
+              reason: result.message
+            }
+          },
+          dashboard: {}
+        }
+      });
       return;
     }
 
@@ -104,9 +103,17 @@ export async function AcceptRecurringController(
       });
 
       res.status(200).json({
-        success: true,
-        data: result.data,
-        message: "Recurring transaction accepted successfully but failed to fetch updated dashboard"
+        message: "Recurring transaction accepted successfully but failed to fetch updated dashboard",
+        data: {
+          action: {
+            id: recurringID,
+            type: ApiActionType.RECURRING_ACCEPTED,
+            timestamp: new Date().toISOString(),
+            actor: signerID,
+            details: result.data
+          },
+          dashboard: {}
+        }
       });
       return;
     }
@@ -123,12 +130,17 @@ export async function AcceptRecurringController(
       : "Recurring transaction accepted successfully";
 
     res.status(200).json({
-      success: true,
+      message,
       data: {
-        recurringData: result.data,
-        dashboardData
-      },
-      message
+        action: {
+          id: recurringID,
+          type: ApiActionType.RECURRING_ACCEPTED,
+          timestamp: new Date().toISOString(),
+          actor: signerID,
+          details: result.data
+        },
+        dashboard: dashboardData
+      }
     });
 
   } catch (error) {
@@ -147,9 +159,27 @@ export async function AcceptRecurringController(
         handledError.message.includes("already accepted") ? 409 :
         handledError.statusCode || 500;
 
+      const errorType = 
+        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+        statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
+        statusCode === 500 ? ApiActionType.ERROR_INTERNAL :
+        ApiActionType.ERROR_VALIDATION;
+
       res.status(statusCode).json({
-        success: false,
-        message: handledError.message
+        message: handledError.message,
+        data: {
+          action: {
+            id: req.body.recurringID,
+            type: errorType,
+            timestamp: new Date().toISOString(),
+            actor: req.user.memberID,
+            details: {
+              code: statusCode.toString(),
+              reason: handledError.message
+            }
+          },
+          dashboard: {}
+        }
       });
       return;
     }

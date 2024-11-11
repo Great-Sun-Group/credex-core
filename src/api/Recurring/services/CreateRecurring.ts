@@ -10,12 +10,12 @@ import {
   RELATIONSHIP_TYPES,
   RecurringError,
 } from "../types";
+import { RecurringActionDetails } from "../../../types/apiResponse";
 import logger from "../../../utils/logger";
 
 interface CreateRecurringResult {
   success: boolean;
-  data?: {
-    recurringID: string;
+  data?: RecurringActionDetails & {
     scheduleInfo: {
       frequency: string;
       nextRunDate: string;
@@ -29,6 +29,11 @@ interface CreateRecurringResult {
     participants: {
       sourceAccountID: string;
       targetAccountID: string;
+    };
+    execution?: {
+      lastRunDate?: string;
+      lastRunStatus?: string;
+      totalExecutions: number;
     };
   };
   message: string;
@@ -217,7 +222,15 @@ export async function CreateRecurringService(
       requestId
     );
 
-    // Prepare schedule info based on template type
+    // Prepare response data based on template type
+    const formattedAmount = templateType === TEMPLATE_TYPES.REGULAR
+      ? `${denomFormatter(record.get("amount"), record.get("denomination"))} ${record.get("denomination")}`
+      : `${denomFormatter(record.get("DCOgiveInCXX"), "CXX")} CXX`;
+
+    const formattedDenom = templateType === TEMPLATE_TYPES.REGULAR
+      ? record.get("denomination")
+      : record.get("DCOdenom");
+
     const scheduleInfo = {
       frequency: record.get("frequency"),
       nextRunDate: record.get("nextRunDate"),
@@ -225,21 +238,29 @@ export async function CreateRecurringService(
       templateType: record.get("templateType"),
       ...(templateType === TEMPLATE_TYPES.REGULAR
         ? {
-            amount: `${denomFormatter(record.get("amount"), record.get("denomination"))} ${record.get("denomination")}`,
-            denomination: record.get("denomination"),
+            amount: formattedAmount,
+            denomination: formattedDenom,
           }
         : {
-            DCOgiveInCXX: `${denomFormatter(record.get("DCOgiveInCXX"), "CXX")} CXX`,
-            DCOdenom: record.get("DCOdenom"),
+            DCOgiveInCXX: formattedAmount,
+            DCOdenom: formattedDenom,
           }),
     };
 
     const responseData = {
       recurringID,
+      amount: formattedAmount,
+      denomination: formattedDenom,
+      frequency: record.get("frequency"),
+      nextDate: record.get("nextRunDate"),
+      status: record.get("status"),
       scheduleInfo,
       participants: {
         sourceAccountID: record.get("sourceAccountID"),
         targetAccountID: record.get("targetAccountID"),
+      },
+      execution: {
+        totalExecutions: 0,
       },
     };
 

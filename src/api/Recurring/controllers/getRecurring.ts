@@ -1,35 +1,12 @@
 import express from "express";
 import { GetRecurringService } from "../services/GetRecurring";
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
+import { ApiActionType } from "../../../types/apiResponse";
 import logger from "../../../utils/logger";
 
 // Import the UserRequest interface
 interface UserRequest extends express.Request {
   user: any;
-}
-
-interface GetRecurringResponse {
-  success: boolean;
-  data?: {
-    recurringID: string;
-    scheduleInfo: {
-      frequency: string;
-      nextRunDate: string;
-      amount: string;
-      denomination: string;
-      status: string;
-    };
-    execution: {
-      lastRunDate?: string;
-      lastRunStatus?: string;
-      totalExecutions: number;
-    };
-    participants: {
-      sourceAccountID: string;
-      targetAccountID: string;
-    };
-  };
-  message: string;
 }
 
 /**
@@ -80,7 +57,27 @@ export async function GetRecurringController(
         result.message.includes("unauthorized") ? 403 :
         400;
 
-      res.status(statusCode).json(result);
+      const errorType = 
+        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+        statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
+        ApiActionType.ERROR_VALIDATION;
+
+      res.status(statusCode).json({
+        message: result.message,
+        data: {
+          action: {
+            id: recurringID,
+            type: errorType,
+            timestamp: new Date().toISOString(),
+            actor: memberID,
+            details: {
+              code: statusCode.toString(),
+              reason: result.message
+            }
+          },
+          dashboard: {}
+        }
+      });
       return;
     }
 
@@ -92,9 +89,19 @@ export async function GetRecurringController(
     });
 
     res.status(200).json({
-      success: true,
-      data: result.data,
-      message: "Recurring transaction details retrieved successfully"
+      message: "Recurring transaction details retrieved successfully",
+      data: {
+        action: {
+          id: recurringID,
+          type: ApiActionType.RECURRING_RETRIEVED,
+          timestamp: new Date().toISOString(),
+          actor: memberID,
+          details: result.data
+        },
+        dashboard: {
+          recurringTransactions: [result.data]
+        }
+      }
     });
 
   } catch (error) {
@@ -112,9 +119,27 @@ export async function GetRecurringController(
         handledError.message.includes("unauthorized") ? 403 :
         handledError.statusCode || 500;
 
+      const errorType = 
+        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+        statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
+        statusCode === 500 ? ApiActionType.ERROR_INTERNAL :
+        ApiActionType.ERROR_VALIDATION;
+
       res.status(statusCode).json({
-        success: false,
-        message: handledError.message
+        message: handledError.message,
+        data: {
+          action: {
+            id: req.body.recurringID,
+            type: errorType,
+            timestamp: new Date().toISOString(),
+            actor: req.user.memberID,
+            details: {
+              code: statusCode.toString(),
+              reason: handledError.message
+            }
+          },
+          dashboard: {}
+        }
       });
       return;
     }

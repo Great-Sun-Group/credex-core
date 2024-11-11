@@ -2,6 +2,7 @@ import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { digitallySign } from "../../../utils/digitalSignature";
 import { denomFormatter } from "../../../utils/denomUtils";
 import { TEMPLATE_TYPES, TEMPLATE_STATUS, RELATIONSHIP_TYPES } from "../types";
+import { RecurringActionDetails } from "../../../types/apiResponse";
 import logger from "../../../utils/logger";
 
 interface AcceptRecurringParams {
@@ -12,8 +13,7 @@ interface AcceptRecurringParams {
 
 interface AcceptRecurringResult {
   success: boolean;
-  data?: {
-    recurringID: string;
+  data?: RecurringActionDetails & {
     scheduleInfo: {
       frequency: string;
       nextRunDate: string;
@@ -27,6 +27,11 @@ interface AcceptRecurringResult {
     participants: {
       sourceAccountID: string;
       targetAccountID: string;
+    };
+    execution?: {
+      lastRunDate?: string;
+      lastRunStatus?: string;
+      totalExecutions: number;
     };
   };
   message: string;
@@ -135,6 +140,9 @@ export async function AcceptRecurringService(
           recurring.DCOgiveInCXX as DCOgiveInCXX,
           recurring.DCOdenom as DCOdenom,
           recurring.status as status,
+          recurring.lastRunDate as lastRunDate,
+          recurring.lastRunStatus as lastRunStatus,
+          recurring.totalExecutions as totalExecutions,
           source.accountID as sourceAccountID,
           target.accountID as targetAccountID
       `;
@@ -205,10 +213,24 @@ export async function AcceptRecurringService(
 
     const responseData = {
       recurringID,
+      amount: templateType === TEMPLATE_TYPES.REGULAR 
+        ? `${denomFormatter(acceptedRecord.get("amount"), acceptedRecord.get("denomination"))} ${acceptedRecord.get("denomination")}`
+        : `${denomFormatter(acceptedRecord.get("DCOgiveInCXX"), "CXX")} CXX`,
+      denomination: templateType === TEMPLATE_TYPES.REGULAR 
+        ? acceptedRecord.get("denomination")
+        : acceptedRecord.get("DCOdenom"),
+      frequency: acceptedRecord.get("frequency"),
+      nextDate: acceptedRecord.get("nextRunDate"),
+      status: acceptedRecord.get("status"),
       scheduleInfo,
       participants: {
         sourceAccountID: acceptedRecord.get("sourceAccountID"),
         targetAccountID: acceptedRecord.get("targetAccountID")
+      },
+      execution: {
+        lastRunDate: acceptedRecord.get("lastRunDate"),
+        lastRunStatus: acceptedRecord.get("lastRunStatus"),
+        totalExecutions: acceptedRecord.get("totalExecutions") || 0
       }
     };
 

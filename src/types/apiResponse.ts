@@ -7,21 +7,21 @@
  * Base action structure present in every response
  */
 export interface ApiAction {
-  id: string | null;       // Resource ID (e.g., credexID)
-  type: ApiActionType;     // Business action (e.g., "CREDEX_ACCEPTED")
-  timestamp: string;       // When the action occurred (ISO 8601)
-  actor: string;          // Who performed the action (memberID/accountID)
-  details: unknown;       // Action-specific data structure
+  id: string | null; // Resource ID (e.g., credexID)
+  type: ApiActionType; // Business action (e.g., "CREDEX_ACCEPTED")
+  timestamp: string; // When the action occurred (ISO 8601)
+  actor: string; // Who performed the action (memberID/accountID)
+  details: unknown; // Action-specific data structure
 }
 
 /**
  * Standard API response structure
  */
 export interface ApiResponse<T = unknown, D = unknown> {
-  message: string;        // Human-friendly message
+  message: string; // Human-friendly message
   data: {
-    action: ApiAction & { details: T };  // Action with typed details
-    dashboard: D;         // Full dashboard state
+    action: ApiAction & { details: T }; // Action with typed details
+    dashboard: D; // Full dashboard state
   };
 }
 
@@ -30,47 +30,47 @@ export interface ApiResponse<T = unknown, D = unknown> {
  */
 export enum ApiActionType {
   // Member actions
-  MEMBER_LOGIN = 'MEMBER_LOGIN',
-  MEMBER_ONBOARDED = 'MEMBER_ONBOARDED',
-  MEMBER_FOUND = 'MEMBER_FOUND',
-  DASHBOARD_RETRIEVED = 'DASHBOARD_RETRIEVED',
-  SPEND_AUTHORIZED = 'SPEND_AUTHORIZED',
+  MEMBER_LOGIN = "MEMBER_LOGIN",
+  MEMBER_ONBOARDED = "MEMBER_ONBOARDED",
+  MEMBER_FOUND = "MEMBER_FOUND",
+  DASHBOARD_RETRIEVED = "DASHBOARD_RETRIEVED",
+  SPEND_AUTHORIZED = "SPEND_AUTHORIZED",
 
   // Account actions
-  ACCOUNT_CREATED = 'ACCOUNT_CREATED',
-  ACCOUNT_AUTHORIZED = 'ACCOUNT_AUTHORIZED',
-  ACCOUNT_UNAUTHORIZED = 'ACCOUNT_UNAUTHORIZED',
-  ACCOUNT_UPDATED = 'ACCOUNT_UPDATED',
-  ACCOUNT_FOUND = 'ACCOUNT_FOUND',
-  ACCOUNT_NOT_FOUND = 'ACCOUNT_NOT_FOUND',
-  ACCOUNT_AUTHORIZATION_FAILED = 'ACCOUNT_AUTHORIZATION_FAILED',
-  BALANCES_RETRIEVED = 'BALANCES_RETRIEVED',
-  LEDGER_RETRIEVED = 'LEDGER_RETRIEVED',
-  SEND_OFFERS_UPDATED = 'SEND_OFFERS_UPDATED',
+  ACCOUNT_CREATED = "ACCOUNT_CREATED",
+  ACCOUNT_AUTHORIZED = "ACCOUNT_AUTHORIZED",
+  ACCOUNT_UNAUTHORIZED = "ACCOUNT_UNAUTHORIZED",
+  ACCOUNT_UPDATED = "ACCOUNT_UPDATED",
+  ACCOUNT_FOUND = "ACCOUNT_FOUND",
+  ACCOUNT_NOT_FOUND = "ACCOUNT_NOT_FOUND",
+  ACCOUNT_AUTHORIZATION_FAILED = "ACCOUNT_AUTHORIZATION_FAILED",
+  BALANCES_RETRIEVED = "BALANCES_RETRIEVED",
+  LEDGER_RETRIEVED = "LEDGER_RETRIEVED",
+  SEND_OFFERS_UPDATED = "SEND_OFFERS_UPDATED",
 
   // Credex actions
-  CREDEX_CREATED = 'CREDEX_CREATED',
-  CREDEX_ACCEPTED = 'CREDEX_ACCEPTED',
-  CREDEX_REJECTED = 'CREDEX_REJECTED',
-  CREDEX_CANCELLED = 'CREDEX_CANCELLED',
-  CREDEX_CREATE_FAILED = 'CREDEX_CREATE_FAILED',
+  CREDEX_CREATED = "CREDEX_CREATED",
+  CREDEX_ACCEPTED = "CREDEX_ACCEPTED",
+  CREDEX_REJECTED = "CREDEX_REJECTED",
+  CREDEX_CANCELLED = "CREDEX_CANCELLED",
+  CREDEX_CREATE_FAILED = "CREDEX_CREATE_FAILED",
 
   // Recurring actions
-  RECURRING_CREATED = 'RECURRING_CREATED',
-  RECURRING_ACCEPTED = 'RECURRING_ACCEPTED',
-  RECURRING_CANCELLED = 'RECURRING_CANCELLED',
-  RECURRING_RETRIEVED = 'RECURRING_RETRIEVED',
+  RECURRING_CREATED = "RECURRING_CREATED",
+  RECURRING_ACCEPTED = "RECURRING_ACCEPTED",
+  RECURRING_CANCELLED = "RECURRING_CANCELLED",
+  RECURRING_RETRIEVED = "RECURRING_RETRIEVED",
 
   // DevAdmin actions
-  DEV_DBS_CLEARED = 'DEV_DBS_CLEARED',
-  DEV_DCO_FORCED = 'DEV_DCO_FORCED',
-  DEV_ACTION_FAILED = 'DEV_ACTION_FAILED',
+  DEV_DBS_CLEARED = "DEV_DBS_CLEARED",
+  DEV_DCO_FORCED = "DEV_DCO_FORCED",
+  DEV_ACTION_FAILED = "DEV_ACTION_FAILED",
 
   // Error actions
-  ERROR_UNAUTHORIZED = 'ERROR_UNAUTHORIZED',
-  ERROR_NOT_FOUND = 'ERROR_NOT_FOUND',
-  ERROR_VALIDATION = 'ERROR_VALIDATION',
-  ERROR_INTERNAL = 'ERROR_INTERNAL'
+  ERROR_UNAUTHORIZED = "ERROR_UNAUTHORIZED",
+  ERROR_NOT_FOUND = "ERROR_NOT_FOUND",
+  ERROR_VALIDATION = "ERROR_VALIDATION",
+  ERROR_INTERNAL = "ERROR_INTERNAL",
 }
 
 /**
@@ -165,13 +165,13 @@ export type TypedApiResponse<T, D = unknown> = ApiResponse<T, D>;
 
 /**
  * Example usage:
- * 
+ *
  * // For a credex creation response:
  * type CredexResponse = TypedApiResponse<CredexActionDetails, DashboardState>;
- * 
+ *
  * // For a member login response:
  * type LoginResponse = TypedApiResponse<MemberActionDetails, MemberDashboard>;
- * 
+ *
  * // For an error response:
  * type ErrorResponse = TypedApiResponse<ErrorActionDetails>;
  */

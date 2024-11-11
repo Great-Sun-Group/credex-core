@@ -14,7 +14,22 @@ interface MemberData {
   createdAt: string;
 }
 
-export default async function GetMemberService(memberID: string): Promise<{ data: MemberData[] }> {
+interface GetMemberResult {
+  success: boolean;
+  data?: MemberData;
+  message: string;
+}
+
+/**
+ * GetMemberService
+ * 
+ * Retrieves detailed information about a member.
+ * 
+ * @param memberID - The unique identifier of the member
+ * @returns Object containing member details and success status
+ * @throws AdminError for various error conditions
+ */
+export default async function GetMemberService(memberID: string): Promise<GetMemberResult> {
   logger.debug('GetMemberService called', { memberID });
 
   if (!memberID) {
@@ -45,7 +60,16 @@ export default async function GetMemberService(memberID: string): Promise<{ data
       { memberID }
     );
 
-    const records = result.records.map((record) => ({
+    if (!result.records.length) {
+      logger.warn('Member not found', { memberID });
+      return {
+        success: false,
+        message: 'Member not found'
+      };
+    }
+
+    const record = result.records[0];
+    const memberData: MemberData = {
       memberID: record.get("memberID"),
       memberHandle: record.get("memberHandle"),
       firstname: record.get("firstname"),
@@ -55,17 +79,15 @@ export default async function GetMemberService(memberID: string): Promise<{ data
       defaultDenom: record.get("defaultDenom"),
       updatedAt: record.get("updatedAt"),
       createdAt: record.get("createdAt")
-    }));
-
-    if (!records.length) {
-      logger.warn('Member not found', { memberID });
-      throw new AdminError('Member not found', 'NOT_FOUND', ErrorCodes.Admin.NOT_FOUND);
-    }
+    };
 
     logger.info('Member fetched successfully', { memberID });
     return {
-      data: records
+      success: true,
+      data: memberData,
+      message: 'Member details retrieved successfully'
     };
+
   } catch (error) {
     logger.error('Error fetching member', { 
       memberID, 

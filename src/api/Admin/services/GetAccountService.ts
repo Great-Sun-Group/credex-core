@@ -17,10 +17,26 @@ interface AccountData {
   owedAccounts: string[];
 }
 
+interface GetAccountResult {
+  success: boolean;
+  data?: AccountData;
+  message: string;
+}
+
+/**
+ * GetAccountService
+ * 
+ * Retrieves detailed information about an account.
+ * 
+ * @param accountHandle - The account handle to look up
+ * @param accountID - The account ID to look up
+ * @returns Object containing account details and success status
+ * @throws AdminError for various error conditions
+ */
 export default async function GetAccountService(
   accountHandle: string,
   accountID: string
-): Promise<{ data: AccountData[] }> {
+): Promise<GetAccountResult> {
   logger.debug('GetAccount service called', { accountHandle, accountID });
 
   if (!accountHandle && !accountID) {
@@ -56,10 +72,19 @@ export default async function GetAccountService(
 
     const accountResult = await ledgerSpaceSession.run(query, parameters);
 
-    const accounts = accountResult.records.map((record) => ({
+    if (!accountResult.records.length) {
+      logger.warn('Account not found', { accountHandle, accountID });
+      return {
+        success: false,
+        message: 'Account not found'
+      };
+    }
+
+    const record = accountResult.records[0];
+    const accountData: AccountData = {
       accountOwnerID: record.get("accountOwnerID"),
       accountOwnerHandle: record.get("accountOwnerHandle"),
-      accountOwnerTier: record.get("accountOwnerTier"),
+      accountOwnerTier: record.get("accountOwnerTier").toNumber(),
       accountID: record.get("accountID"),
       accountName: record.get("accountName"),
       accountHandle: record.get("accountHandle"),
@@ -69,17 +94,15 @@ export default async function GetAccountService(
       numberOfCredexOwed: record.get("numberOfCredexOwed").toNumber(),
       owedCredexes: record.get("owedCredexes"),
       owedAccounts: record.get("owedAccounts")
-    }));
-
-    if (!accounts.length) {
-      logger.warn('Account not found', { accountHandle, accountID });
-      throw new AdminError('Account not found', 'NOT_FOUND', ErrorCodes.Admin.NOT_FOUND);
-    }
-
-    logger.info('Account fetched successfully', { accountID: accounts[0].accountID });
-    return {
-      data: accounts
     };
+
+    logger.info('Account fetched successfully', { accountID: accountData.accountID });
+    return {
+      success: true,
+      data: accountData,
+      message: 'Account details retrieved successfully'
+    };
+
   } catch (error) {
     logger.error('Error fetching account', {
       accountHandle,

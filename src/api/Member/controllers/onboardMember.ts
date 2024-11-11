@@ -7,31 +7,30 @@ import { MemberError, handleServiceError } from "../../../utils/errorUtils";
 import { generateToken } from "../../../../config/authenticate";
 import { searchSpaceDriver } from "../../../../config/neo4j";
 import logger from "../../../utils/logger";
+import { 
+  TypedApiResponse, 
+  ApiActionType,
+  MemberActionDetails,
+  ErrorActionDetails
+} from "../../../types/apiResponse";
 
-interface OnboardResponse {
-  message: string;
-  data: {
-    action: {
-      id: string;
-      type: string;
-      timestamp: string;
-      actor: string;
-      details: {
-        memberID: string;
-        firstname: string;
-        lastname: string;
-        memberHandle: string;
-        defaultDenom: string;
-        token: string;
-        defaultAccountID: string;
-      };
-    };
-    dashboard: {
-      memberTier: number;
-      remainingAvailableUSD: number;
-      accounts: any[]; // Will be typed when dashboard is standardized
-    };
-  };
+type OnboardDetails = MemberActionDetails & {
+  memberID: string;
+  firstname: string;
+  lastname: string;
+  memberHandle: string;
+  defaultDenom: string;
+  token: string;
+  defaultAccountID: string;
+};
+
+type OnboardResponse = TypedApiResponse<OnboardDetails>;
+type OnboardErrorResponse = TypedApiResponse<ErrorActionDetails>;
+
+interface DashboardData {
+  memberTier: number;
+  remainingAvailableUSD: number;
+  accounts: any[]; // Will be typed when dashboard is standardized
 }
 
 /**
@@ -77,14 +76,46 @@ export async function OnboardMemberController(
     );
 
     if (!memberResult.success || !memberResult.data) {
-      throw new MemberError(
-        memberResult.message || "Failed to create member",
-        "MEMBER_CREATE_FAILED",
-        400
-      );
+      logger.warn("Failed to create member", {
+        error: memberResult.error,
+        message: memberResult.message,
+        requestId
+      });
+
+      const statusCode = 
+        memberResult.error?.code === "DUPLICATE_PHONE" ? 409 :
+        memberResult.error?.code === "DUPLICATE_HANDLE" ? 409 :
+        memberResult.error?.code === "INVALID_DENOMINATION" ? 400 :
+        memberResult.error?.code === "MISSING_PARAMS" ? 400 :
+        500;
+
+      const errorType = 
+        statusCode === 409 ? ApiActionType.ERROR_VALIDATION :
+        statusCode === 400 ? ApiActionType.ERROR_VALIDATION :
+        ApiActionType.ERROR_INTERNAL;
+
+      const errorResponse: OnboardErrorResponse = {
+        message: memberResult.message,
+        data: {
+          action: {
+            id: null,
+            type: errorType,
+            timestamp: new Date().toISOString(),
+            actor: "system",
+            details: {
+              code: memberResult.error?.code || "UNKNOWN_ERROR",
+              reason: memberResult.error?.details || memberResult.message
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(statusCode).json(errorResponse);
+      return;
     }
 
-    const memberData = memberResult.data; // Assign to variable to satisfy TypeScript
+    const memberData = memberResult.data;
 
     // Create default account
     logger.debug("Creating default account", {
@@ -103,10 +134,32 @@ export async function OnboardMemberController(
     );
 
     if (!accountResult.success || !accountResult.data) {
-      throw new MemberError(
-        "Failed to create default account: " + accountResult.message,
-        "ACCOUNT_CREATE_FAILED"
-      );
+      logger.error("Failed to create default account", {
+        error: accountResult.error,
+        message: accountResult.message,
+        memberID: memberData.memberID,
+        requestId
+      });
+
+      const errorResponse: OnboardErrorResponse = {
+        message: "Failed to create default account",
+        data: {
+          action: {
+            id: memberData.memberID,
+            type: ApiActionType.ERROR_INTERNAL,
+            timestamp: new Date().toISOString(),
+            actor: memberData.memberID,
+            details: {
+              code: "ACCOUNT_CREATE_FAILED",
+              reason: accountResult.message || "Failed to create default account"
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(500).json(errorResponse);
+      return;
     }
 
     // Generate and store token
@@ -136,13 +189,35 @@ export async function OnboardMemberController(
     const dashboardResult = await GetMemberDashboardByPhoneService(phone);
     
     if (!dashboardResult.success || !dashboardResult.data) {
-      throw new MemberError(
-        "Failed to retrieve initial dashboard",
-        "DASHBOARD_RETRIEVAL_FAILED"
-      );
+      logger.error("Failed to retrieve initial dashboard", {
+        error: dashboardResult.error,
+        message: dashboardResult.message,
+        memberID: memberData.memberID,
+        requestId
+      });
+
+      const errorResponse: OnboardErrorResponse = {
+        message: "Member created but failed to retrieve dashboard",
+        data: {
+          action: {
+            id: memberData.memberID,
+            type: ApiActionType.ERROR_INTERNAL,
+            timestamp: new Date().toISOString(),
+            actor: memberData.memberID,
+            details: {
+              code: "DASHBOARD_RETRIEVAL_FAILED",
+              reason: dashboardResult.message || "Failed to retrieve initial dashboard"
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(500).json(errorResponse);
+      return;
     }
 
-    const dashboardData = dashboardResult.data; // Assign to variable to satisfy TypeScript
+    const dashboardData = dashboardResult.data;
 
     // Get associated account dashboards
     logger.debug("Retrieving account dashboards", {
@@ -188,14 +263,14 @@ export async function OnboardMemberController(
       data: {
         action: {
           id: memberData.memberID,
-          type: "MEMBER_ONBOARDED",
+          type: ApiActionType.MEMBER_ONBOARDED,
           timestamp: new Date().toISOString(),
           actor: memberData.memberID,
           details: {
             memberID: memberData.memberID,
             firstname: memberData.firstname,
             lastname: memberData.lastname,
-            memberHandle: memberData.phone, // Using phone as handle per current implementation
+            memberHandle: memberData.memberHandle,
             defaultDenom: memberData.defaultDenom,
             token,
             defaultAccountID: accountResult.data.accountID
@@ -213,34 +288,32 @@ export async function OnboardMemberController(
 
   } catch (error) {
     const handledError = handleServiceError(error);
-    logger.error("Error in OnboardMemberController", {
+    logger.error("Unexpected error in OnboardMemberController", {
       error: handledError.message,
       code: handledError.code,
       stack: handledError instanceof Error ? handledError.stack : undefined,
       requestId
     });
 
-    const statusCode = 
-      handledError.message.includes("already in use") ? 409 :
-      handledError.message.includes("Invalid") ? 400 :
-      handledError.message.includes("not found") ? 404 :
-      handledError.statusCode || 500;
-
-    res.status(statusCode).json({
-      message: handledError.message,
+    const errorResponse: OnboardErrorResponse = {
+      message: "Failed to onboard member",
       data: {
         action: {
           id: null,
-          type: "MEMBER_ONBOARD_FAILED",
+          type: ApiActionType.ERROR_INTERNAL,
           timestamp: new Date().toISOString(),
-          actor: null,
+          actor: "system",
           details: {
-            reason: handledError.code,
-            error: handledError.message
+            code: handledError.code || "INTERNAL_ERROR",
+            reason: handledError.message
           }
-        }
+        },
+        dashboard: {}
       }
-    });
+    };
+
+    res.status(500).json(errorResponse);
+    next(handledError);
 
   } finally {
     logger.debug("Exiting OnboardMemberController", { requestId });
