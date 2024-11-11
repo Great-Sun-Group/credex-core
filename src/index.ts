@@ -1,6 +1,6 @@
 // Import required modules and dependencies
 import express, { Request, Response, NextFunction } from "express";
-import MemberRoutes from "./api/Member/memberRoutes";
+import MemberRoutes from "./api/Member/routes";
 import AccountRoutes from "./api/Account/accountRoutes";
 import CredexRoutes from "./api/Credex/credexRoutes";
 import RecurringRoutes from "./api/Recurring/recurringRoutes";
