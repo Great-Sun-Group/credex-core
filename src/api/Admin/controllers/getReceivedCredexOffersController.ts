@@ -3,94 +3,238 @@ import logger from "../../../utils/logger";
 import { validateUUID, validateHandle } from "../../../utils/validators";
 import { AdminError, ErrorCodes } from "../../../utils/errorUtils";
 import GetAccountReceivedCredexOffers from "../services/GetAccountReceivedCredexOffers";
+import { 
+  AdminActionType, 
+  AdminCredexOfferDetails, 
+  AdminCredexOfferDashboard,
+  AdminErrorDetails,
+  TypedAdminResponse 
+} from "../types";
 
 interface CustomRequest extends Request {
   id: string;
 }
 
-interface ReceivedCredexOffer {
-  receivedCredexOfferID: string;
-  receivedCredexOfferType: string;
-  receivedCredexOfferDenomination: string;
-  receivedCredexOfferInitialAmount: string;
-  receivedCredexOfferOutstandingAmount: string;
-  receivedCredexOfferDefaultedAmount: string;
-  receivedCredexOfferRedeemedAmount: string;
-  receivedCredexOfferQueueStatus: string;
-  receivedCredexOfferCXXmultiplier: number;
-  receivedCredexOfferWrittenOffAmount: string;
-  receivedCredexOfferDueDate: string;
-  receivedCredexOfferCreatedAt: string;
-  sendingAccountID: string;
-  sendingAccountDefaultDenom: string;
-  sendingAccountHandle: string;
-  receiverAccountID?: string;
-}
+type CredexOffersResponse = TypedAdminResponse<AdminCredexOfferDetails | AdminErrorDetails, AdminCredexOfferDashboard>;
 
-interface GetReceivedCredexOffersResponse {
-  data: {
-    accountReceivedCredexOffers: ReceivedCredexOffer[];
-  };
-}
-
-export async function getReceivedCredexOffersController(req: CustomRequest, res: Response, next: NextFunction) {
+/**
+ * GetReceivedCredexOffersController
+ * 
+ * Retrieves all credex offers received by an account.
+ * Validates accountID/accountHandle and returns standardized response with offers list.
+ * 
+ * @param req - Express request object with account information
+ * @param res - Express response object
+ * @param next - Express next function
+ */
+export async function getReceivedCredexOffersController(
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
   const { accountID, accountHandle } = req.body;
   const requestId = req.id;
-  
+
   logger.debug('getReceivedCredexOffers function called', { requestId, accountID, accountHandle });
 
+  // Validate accountID if provided
   if (accountID && !validateUUID(accountID).isValid) {
     logger.warn('Invalid accountID provided', { requestId, accountID });
-    return next(new AdminError('Invalid accountID', 'INVALID_ID', ErrorCodes.Admin.INVALID_ID));
+    
+    const response: CredexOffersResponse = {
+      message: 'Invalid accountID format',
+      data: {
+        action: {
+          id: null,
+          type: AdminActionType.ADMIN_ERROR_VALIDATION,
+          timestamp: new Date().toISOString(),
+          actor: 'system',
+          details: {
+            code: ErrorCodes.Admin.INVALID_ID.toString(),
+            reason: 'Invalid accountID format',
+            field: 'accountID'
+          }
+        },
+        dashboard: {} as AdminCredexOfferDashboard
+      }
+    };
+    
+    res.status(400).json(response);
+    return;
   }
 
+  // Validate accountHandle if provided
   if (accountHandle && !validateHandle(accountHandle).isValid) {
     logger.warn('Invalid accountHandle provided', { requestId, accountHandle });
-    return next(new AdminError('Invalid accountHandle', 'INVALID_ID', ErrorCodes.Admin.INVALID_ID));
+    
+    const response: CredexOffersResponse = {
+      message: 'Invalid accountHandle format',
+      data: {
+        action: {
+          id: null,
+          type: AdminActionType.ADMIN_ERROR_VALIDATION,
+          timestamp: new Date().toISOString(),
+          actor: 'system',
+          details: {
+            code: ErrorCodes.Admin.INVALID_ID.toString(),
+            reason: 'Invalid accountHandle format',
+            field: 'accountHandle'
+          }
+        },
+        dashboard: {} as AdminCredexOfferDashboard
+      }
+    };
+    
+    res.status(400).json(response);
+    return;
   }
 
+  // Ensure at least one identifier is provided
   if (!accountID && !accountHandle) {
     logger.warn('Neither accountID nor accountHandle provided', { requestId });
-    return next(new AdminError('Either accountID or accountHandle is required', 'INVALID_ID', ErrorCodes.Admin.INVALID_ID));
+    
+    const response: CredexOffersResponse = {
+      message: 'Either accountID or accountHandle is required',
+      data: {
+        action: {
+          id: null,
+          type: AdminActionType.ADMIN_ERROR_VALIDATION,
+          timestamp: new Date().toISOString(),
+          actor: 'system',
+          details: {
+            code: ErrorCodes.Admin.INVALID_ID.toString(),
+            reason: 'Missing required identifier',
+            field: 'accountID/accountHandle'
+          }
+        },
+        dashboard: {} as AdminCredexOfferDashboard
+      }
+    };
+    
+    res.status(400).json(response);
+    return;
   }
 
   try {
-    const result = await GetAccountReceivedCredexOffers(accountHandle || '', accountID || '') as GetReceivedCredexOffersResponse;
+    const result = await GetAccountReceivedCredexOffers(accountHandle || '', accountID || '');
 
     if (!result.data || !result.data.accountReceivedCredexOffers.length) {
       logger.warn('No received credex offers found', { requestId, accountID, accountHandle });
-      return next(new AdminError('No received credex offers found', 'NOT_FOUND', ErrorCodes.Admin.NOT_FOUND));
+
+      const response: CredexOffersResponse = {
+        message: 'No received credex offers found',
+        data: {
+          action: {
+            id: accountID || null,
+            type: AdminActionType.ADMIN_ERROR_NOT_FOUND,
+            timestamp: new Date().toISOString(),
+            actor: 'system',
+            details: {
+              code: ErrorCodes.Admin.NOT_FOUND.toString(),
+              reason: 'No received credex offers found'
+            }
+          },
+          dashboard: {} as AdminCredexOfferDashboard
+        }
+      };
+
+      res.status(404).json(response);
+      return;
     }
 
-    logger.info('Successfully fetched received credex offers', { requestId, accountID, accountHandle });
-    
-    res.status(200).json({
-      success: true,
-      message: 'Received credex offers fetched successfully',
+    const offers = result.data.accountReceivedCredexOffers;
+    logger.info('Successfully fetched received credex offers', { 
+      requestId, 
+      accountID, 
+      offersCount: offers.length 
+    });
+
+    const response: CredexOffersResponse = {
+      message: 'Received credex offers retrieved successfully',
       data: {
-        accountID: accountID || result.data.accountReceivedCredexOffers[0].receiverAccountID,
-        credexOffers: result.data.accountReceivedCredexOffers.map((offer: ReceivedCredexOffer) => ({
-          credexID: offer.receivedCredexOfferID,
-          credexInfo: {
+        action: {
+          id: accountID || offers[0].sendingAccountID,
+          type: AdminActionType.ADMIN_CREDEX_OFFERS_FOUND,
+          timestamp: new Date().toISOString(),
+          actor: 'system',
+          details: {
+            accountID: accountID || offers[0].sendingAccountID,
+            offersCount: offers.length,
+            totalInitialAmount: offers.reduce((sum, offer) => 
+              sum + parseFloat(offer.receivedCredexOfferInitialAmount), 0).toString(),
+            totalOutstandingAmount: offers.reduce((sum, offer) => 
+              sum + parseFloat(offer.receivedCredexOfferOutstandingAmount), 0).toString()
+          }
+        },
+        dashboard: {
+          accountInfo: {
+            accountID: accountID || offers[0].sendingAccountID,
+            defaultDenom: offers[0].sendingAccountDefaultDenom
+          },
+          offers: offers.map(offer => ({
+            credexID: offer.receivedCredexOfferID,
             type: offer.receivedCredexOfferType,
             denomination: offer.receivedCredexOfferDenomination,
-            amount: offer.receivedCredexOfferInitialAmount,
-            status: offer.receivedCredexOfferQueueStatus
-          },
-          relationships: {
-            issuerID: offer.sendingAccountID
-          }
-        }))
+            initialAmount: offer.receivedCredexOfferInitialAmount,
+            outstandingAmount: offer.receivedCredexOfferOutstandingAmount,
+            defaultedAmount: offer.receivedCredexOfferDefaultedAmount,
+            redeemedAmount: offer.receivedCredexOfferRedeemedAmount,
+            status: offer.receivedCredexOfferQueueStatus,
+            cxxMultiplier: offer.receivedCredexOfferCXXmultiplier,
+            writtenOffAmount: offer.receivedCredexOfferWrittenOffAmount,
+            dueDate: offer.receivedCredexOfferDueDate,
+            createdAt: offer.receivedCredexOfferCreatedAt,
+            sender: {
+              accountID: offer.sendingAccountID,
+              accountHandle: offer.sendingAccountHandle
+            }
+          }))
+        }
       }
-    });
+    };
+
+    res.status(200).json(response);
+
   } catch (error) {
-    logger.error('Error fetching received credex offers', {
-      requestId,
-      accountID,
-      accountHandle,
+    logger.error('Error in getReceivedCredexOffers controller', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+      stack: error instanceof Error ? error.stack : undefined,
+      requestId
     });
-    next(new AdminError('Error fetching received credex offers', 'INTERNAL_ERROR', ErrorCodes.Admin.INTERNAL_ERROR));
+
+    if (error instanceof AdminError) {
+      const statusCode = 
+        error.message.includes("not found") ? 404 :
+        error.message.includes("unauthorized") ? 403 :
+        error.statusCode || 500;
+
+      const errorType = 
+        statusCode === 404 ? AdminActionType.ADMIN_ERROR_NOT_FOUND :
+        statusCode === 403 ? AdminActionType.ADMIN_ERROR_UNAUTHORIZED :
+        statusCode === 500 ? AdminActionType.ADMIN_ERROR_INTERNAL :
+        AdminActionType.ADMIN_ERROR_VALIDATION;
+
+      const response: CredexOffersResponse = {
+        message: error.message,
+        data: {
+          action: {
+            id: accountID || null,
+            type: errorType,
+            timestamp: new Date().toISOString(),
+            actor: 'system',
+            details: {
+              code: statusCode.toString(),
+              reason: error.message
+            }
+          },
+          dashboard: {} as AdminCredexOfferDashboard
+        }
+      };
+
+      res.status(statusCode).json(response);
+      return;
+    }
+
+    next(error);
   }
 }

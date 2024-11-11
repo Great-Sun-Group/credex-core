@@ -79,6 +79,13 @@ export interface AdminCredexDetails {
   createdAt?: string;
 }
 
+export interface AdminCredexOfferDetails {
+  accountID: string;
+  offersCount: number;
+  totalInitialAmount: string;
+  totalOutstandingAmount: string;
+}
+
 export interface AdminAccountDetails {
   accountID: string;
   accountName: string;
@@ -156,6 +163,31 @@ export interface AdminCredexDashboard {
       accountName: string;
     } | null;
   };
+}
+
+export interface AdminCredexOfferDashboard {
+  accountInfo: {
+    accountID: string;
+    defaultDenom: string;
+  };
+  offers: Array<{
+    credexID: string;
+    type: string;
+    denomination: string;
+    initialAmount: string;
+    outstandingAmount: string;
+    defaultedAmount: string;
+    redeemedAmount: string;
+    status: string;
+    cxxMultiplier: number;
+    writtenOffAmount: string;
+    dueDate: string;
+    createdAt: string;
+    sender: {
+      accountID: string;
+      accountHandle: string;
+    };
+  }>;
 }
 
 export interface AdminAccountDashboard {
