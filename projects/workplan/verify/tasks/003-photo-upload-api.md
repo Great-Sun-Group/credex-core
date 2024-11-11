@@ -28,8 +28,11 @@ Implement the Express.js API endpoint for handling photo uploads from WhatsApp, 
 import AWS from 'aws-sdk';
 import sharp from 'sharp';
 import { validateImage } from '../utils/imageValidation';
+import { extractDocumentData } from '../utils/documentProcessing';
+import { v4 as uuidv4 } from 'uuid';
 
 const s3 = new AWS.S3();
+const textract = new AWS.Textract();
 
 export const uploadPhoto = async (req, res) => {
   try {
@@ -43,28 +46,81 @@ export const uploadPhoto = async (req, res) => {
       });
     }
     
-    // Process image
+    // Process image with enhanced quality checks
     const processedImage = await sharp(file.buffer)
       .resize(1024, 1024, { fit: 'inside' })
       .toBuffer();
     
-    // Upload to S3
-    const key = `uploads/${type}s/${Date.now()}-${file.originalname}`;
+    // Enhanced metadata
+    const metadata = {
+      uploadDate: new Date().toISOString(),
+      documentType: sanitizeInput(type),
+      validationResults: JSON.stringify(validationResult),
+      documentHash: await generateDocumentHash(processedImage),
+      auditId: uuidv4()
+    };
+    
+    // For ID documents, extract text data using Textract
+    let extractedData = null;
+    if (type === 'id') {
+      extractedData = await extractDocumentData(processedImage);
+      
+      // Add extracted data to metadata
+      metadata.extractedFields = JSON.stringify(extractedData);
+    }
+    
+    // Add Document Authenticity Checks
+    const authenticityChecks = {
+      hologramDetection: await detectHologram(processedImage),
+      templateMatching: await matchTemplate(processedImage, type),
+      securityFeatures: await checkSecurityFeatures(processedImage),
+      manipulationDetection: await detectManipulation(processedImage)
+    };
+
+    if (!authenticityChecks.isAuthentic) {
+      return {
+        isValid: false,
+        error: 'Document authenticity check failed',
+        details: authenticityChecks.details
+      };
+    }
+    
+    // Upload to S3 with enhanced path structure
+    const key = `uploads/${type}s/${uuidv4()}`;
     await s3.putObject({
       Bucket: process.env.PHOTOS_BUCKET,
       Key: key,
       Body: processedImage,
       ContentType: file.mimetype,
-      Metadata: {
-        originalName: file.originalname,
-        uploadDate: new Date().toISOString()
-      }
+      Metadata: metadata,
+      ServerSideEncryption: 'aws:kms',
+      SSEKMSKeyId: process.env.KMS_KEY_ID,
+      Tagging: 'DataType=PII'
     }).promise();
+    
+    // Add Comprehensive Audit Logging
+    const auditLog = {
+      eventType: 'DOCUMENT_UPLOAD',
+      timestamp: new Date().toISOString(),
+      documentType: type,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      processingResults: {
+        qualityChecks,
+        authenticityChecks,
+        extractedData: extractedData ? maskSensitiveData(extractedData) : null
+      },
+      documentHash: metadata.documentHash
+    };
+
+    await auditLogger.log(auditLog);
     
     return res.json({
       success: true,
       key,
-      message: 'Photo uploaded successfully'
+      message: 'Photo uploaded successfully',
+      validationDetails: validationResult,
+      extractedData: type === 'id' ? extractedData : undefined
     });
   } catch (error) {
     console.error('Upload error:', error);
@@ -79,39 +135,74 @@ export const uploadPhoto = async (req, res) => {
 ```javascript
 // src/api/verification/utils/imageValidation.js
 import sharp from 'sharp';
+import { detectBlur, assessLighting } from './imageQuality';
 
 export const validateImage = async (file) => {
   try {
-    // Check file size (5MB limit)
+    // Basic validation
     if (file.size > 5 * 1024 * 1024) {
       return {
         isValid: false,
-        error: 'File size exceeds 5MB limit'
+        error: 'File size exceeds 5MB limit',
+        details: { size: file.size }
       };
     }
     
-    // Check file type
     if (!['image/jpeg', 'image/png'].includes(file.mimetype)) {
       return {
         isValid: false,
-        error: 'File must be JPG or PNG'
+        error: 'File must be JPG or PNG',
+        details: { type: file.mimetype }
       };
     }
     
-    // Check dimensions
+    // Enhanced image analysis
     const metadata = await sharp(file.buffer).metadata();
-    if (metadata.width < 640 || metadata.height < 480) {
+    const qualityChecks = {
+      dimensions: metadata.width >= 640 && metadata.height >= 480,
+      blur: await detectBlur(file.buffer),
+      lighting: await assessLighting(file.buffer)
+    };
+    
+    if (!qualityChecks.dimensions) {
       return {
         isValid: false,
-        error: 'Image resolution must be at least 640x480'
+        error: 'Image resolution must be at least 640x480',
+        details: { width: metadata.width, height: metadata.height }
       };
     }
     
-    return { isValid: true };
+    if (!qualityChecks.blur.isAcceptable) {
+      return {
+        isValid: false,
+        error: 'Image is too blurry',
+        details: qualityChecks.blur
+      };
+    }
+    
+    if (!qualityChecks.lighting.isAcceptable) {
+      return {
+        isValid: false,
+        error: 'Image lighting is inadequate',
+        details: qualityChecks.lighting
+      };
+    }
+    
+    return { 
+      isValid: true,
+      qualityMetrics: {
+        ...qualityChecks,
+        dimensions: {
+          width: metadata.width,
+          height: metadata.height
+        }
+      }
+    };
   } catch (error) {
     return {
       isValid: false,
-      error: 'Failed to validate image'
+      error: 'Failed to validate image',
+      details: error.message
     };
   }
 };
@@ -168,29 +259,99 @@ export const handleWhatsAppMedia = async (message) => {
 1. Unit Tests
 ```javascript
 describe('Photo Upload', () => {
-  test('validates file size', async () => {
-    // Test implementation
+  // Mock dependencies
+  const mockS3 = {
+    putObject: jest.fn().mockReturnValue({ promise: () => Promise.resolve() })
+  };
+  const mockSharp = jest.fn();
+  
+  beforeEach(() => {
+    // Reset mocks between tests
+    jest.clearAllMocks();
+  });
+
+  test('validates file size and type', async () => {
+    const validFile = {
+      size: 1024 * 1024, // 1MB
+      mimetype: 'image/jpeg',
+      buffer: Buffer.from('test')
+    };
+    
+    const result = await validateImage(validFile);
+    expect(result.isValid).toBe(true);
+    
+    const largeFile = { ...validFile, size: 6 * 1024 * 1024 }; // 6MB
+    const sizeResult = await validateImage(largeFile);
+    expect(sizeResult.isValid).toBe(false);
+    expect(sizeResult.error).toContain('size exceeds');
+    
+    const invalidType = { ...validFile, mimetype: 'image/gif' };
+    const typeResult = await validateImage(invalidType);
+    expect(typeResult.isValid).toBe(false);
+    expect(typeResult.error).toContain('must be JPG or PNG');
   });
   
   test('validates image dimensions', async () => {
-    // Test implementation
+    const mockMetadata = {
+      width: 640,
+      height: 480
+    };
+    mockSharp.mockReturnValue({ metadata: () => mockMetadata });
+    
+    // Test implementation for dimension validation
   });
   
-  test('handles S3 upload', async () => {
-    // Test implementation
-  });
+  // ... other test implementations
 });
 ```
 
 2. Integration Tests
 ```javascript
 describe('Upload API Integration', () => {
+  let app;
+  
+  beforeAll(() => {
+    app = express();
+    app.use('/api', uploadRoutes);
+  });
+
   test('handles WhatsApp upload successfully', async () => {
-    // Test implementation
+    const mockFile = {
+      buffer: Buffer.from('test-image'),
+      originalname: 'test.jpg',
+      mimetype: 'image/jpeg',
+      size: 1024 * 1024
+    };
+
+    const response = await request(app)
+      .post('/api/upload')
+      .attach('photo', mockFile.buffer, {
+        filename: mockFile.originalname,
+        contentType: mockFile.mimetype
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('success', true);
+    expect(response.body).toHaveProperty('key');
   });
   
   test('handles validation errors correctly', async () => {
-    // Test implementation
+    const invalidFile = {
+      buffer: Buffer.from('test-image'),
+      originalname: 'test.txt',
+      mimetype: 'text/plain',
+      size: 1024
+    };
+
+    const response = await request(app)
+      .post('/api/upload')
+      .attach('photo', invalidFile.buffer, {
+        filename: invalidFile.originalname,
+        contentType: invalidFile.mimetype
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty('error');
   });
 });
 ```
