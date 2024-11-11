@@ -1,145 +1,218 @@
+import type { AxiosError } from "axios";
+import { TestData } from "./types";
 import { authRequest } from "../utils/request";
-import { loginMember } from "../utils/auth";
 import { delay, DELAY_MS } from "../utils/delay";
 
-// Get operation and params from environment variables
-const operation = process.env.TEST_OPERATION || '';
-const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
+// Import individual endpoint tests
+import "../endpoints/createcredex.test";
+import "../endpoints/acceptcredex.test";
+import "../endpoints/acceptcredexbulk.test";
+import "../endpoints/cancelcredex.test";
+import "../endpoints/declinecredex.test";
+import "../endpoints/getcredex.test";
 
-type CredexOperation = 
-  | "createCredex"
-  | "acceptCredex"
-  | "acceptCredexBulk"
-  | "declineCredex"
-  | "cancelCredex"
-  | "getCredex";
+describe("Credex Integration Tests", () => {
+  let testData: TestData;
 
-// Operation parameter definitions
-const operationParams: Record<CredexOperation, string[]> = {
-  createCredex: ["phone", "issuerAccountID", "receiverAccountID", "Denomination", "InitialAmount", "credexType", "OFFERSorREQUESTS", "securedCredex"],
-  acceptCredex: ["phone", "credexID"],
-  acceptCredexBulk: ["phone", "credexIDs"],
-  declineCredex: ["phone", "credexID"],
-  cancelCredex: ["phone", "credexID"],
-  getCredex: ["phone", "credexID"]
-};
-
-describe("Credex Endpoint Tests", () => {
-  // Store auth data
-  let jwt = "";
-  let memberID = "";
-
-  // Login before tests if needed
-  beforeAll(async () => {
-    if (!params[0]) {
-      throw new Error("Phone number required");
-    }
-    const auth = await loginMember(params[0]);
-    jwt = auth.jwt;
-    memberID = auth.memberID;
+  beforeAll(() => {
+    testData = (global as any).integrationTestData;
+    expect(testData).toBeTruthy();
   });
 
-  describe(operation, () => {
-    (operation === "createCredex" ? it : it.skip)("createCredex", async () => {
-      const [, issuerAccountID, receiverAccountID, Denomination, InitialAmount, credexType, OFFERSorREQUESTS, securedCredex] = params;
-      if (!issuerAccountID || !receiverAccountID || !Denomination || !InitialAmount || !credexType || !OFFERSorREQUESTS) {
-        throw new Error("Usage: npm test credex createCredex <phone> <issuerAccountID> <receiverAccountID> <Denomination> <InitialAmount> <credexType> <OFFERSorREQUESTS> [securedCredex]");
+  test("Create and accept secured credex", async () => {
+    // Create secured credex from vimbisopay_trust to member1
+    process.env.TEST_PARAMS = `${testData.member1.jwt} ${testData.bennita.accountID} ${testData.member1.accountIDs[0]} USD 11 PURCHASE OFFERS true`;
+    const createResponse = await authRequest(
+      "/createCredex",
+      {
+        issuerAccountID: testData.bennita.accountID,
+        receiverAccountID: testData.member1.accountIDs[0],
+        Denomination: "USD",
+        InitialAmount: 11,
+        credexType: "PURCHASE",
+        OFFERSorREQUESTS: "OFFERS",
+        securedCredex: true
+      },
+      testData.member1.jwt
+    );
+    testData.credexIDs.secured11USD = createResponse.data.credex.credexID;
+    await delay(DELAY_MS * 2);
+
+    // Member1 accepts the credex
+    process.env.TEST_PARAMS = `${testData.member1.jwt} ${testData.credexIDs.secured11USD}`;
+    await authRequest(
+      "/acceptCredex",
+      {
+        credexID: testData.credexIDs.secured11USD
+      },
+      testData.member1.jwt
+    );
+    await delay(DELAY_MS * 2);
+  });
+
+  test("Create and accept $10 credex, fail $0.01 credex (daily limit)", async () => {
+    // Member1 creates $10 credex to member2
+    process.env.TEST_PARAMS = `${testData.member1.jwt} ${testData.member1.accountIDs[0]} ${testData.member2.accountIDs[0]} USD 10 PURCHASE OFFERS true`;
+    const create10Response = await authRequest(
+      "/createCredex",
+      {
+        issuerAccountID: testData.member1.accountIDs[0],
+        receiverAccountID: testData.member2.accountIDs[0],
+        Denomination: "USD",
+        InitialAmount: 10,
+        credexType: "PURCHASE",
+        OFFERSorREQUESTS: "OFFERS",
+        securedCredex: true
+      },
+      testData.member1.jwt
+    );
+    testData.credexIDs.unsecured10USD = create10Response.data.credex.credexID;
+    await delay(DELAY_MS * 2);
+
+    // Member2 accepts the credex
+    process.env.TEST_PARAMS = `${testData.member2.jwt} ${testData.credexIDs.unsecured10USD}`;
+    await authRequest(
+      "/acceptCredex",
+      {
+        credexID: testData.credexIDs.unsecured10USD
+      },
+      testData.member2.jwt
+    );
+    await delay(DELAY_MS * 2);
+
+    // Member1 attempts to create $0.01 credex (should fail due to daily limit)
+    try {
+      process.env.TEST_PARAMS = `${testData.member1.jwt} ${testData.member1.accountIDs[0]} ${testData.member2.accountIDs[0]} USD 0.01 PURCHASE OFFERS true`;
+      await authRequest(
+        "/createCredex",
+        {
+          issuerAccountID: testData.member1.accountIDs[0],
+          receiverAccountID: testData.member2.accountIDs[0],
+          Denomination: "USD",
+          InitialAmount: 0.01,
+          credexType: "PURCHASE",
+          OFFERSorREQUESTS: "OFFERS",
+          securedCredex: true
+        },
+        testData.member1.jwt
+      );
+      fail("Should have thrown error due to daily limit");
+    } catch (err) {
+      const error = err as AxiosError;
+      if (error.response?.status !== 429) { // Ignore rate limit errors
+        expect(error.response?.status).toBe(400);
       }
+    }
+    await delay(DELAY_MS * 2);
+  });
 
-      console.log("\nCreating credex...");
-      const response = await authRequest("/createCredex", {
-        memberID,
-        issuerAccountID,
-        receiverAccountID,
-        Denomination,
-        InitialAmount: Number(InitialAmount),
-        credexType,
-        OFFERSorREQUESTS,
-        securedCredex: securedCredex === "true"
-      }, jwt);
-      console.log("Create credex response:", response.data);
-      expect(response.status).toBe(200);
-      await delay(DELAY_MS);
-    });
+  test("Create multiple credex and test cancel", async () => {
+    // Member2 creates $5 credex to member3
+    process.env.TEST_PARAMS = `${testData.member2.jwt} ${testData.member2.accountIDs[0]} ${testData.member3.accountIDs[0]} USD 5 PURCHASE OFFERS true`;
+    const create5Response = await authRequest(
+      "/createCredex",
+      {
+        issuerAccountID: testData.member2.accountIDs[0],
+        receiverAccountID: testData.member3.accountIDs[0],
+        Denomination: "USD",
+        InitialAmount: 5,
+        credexType: "PURCHASE",
+        OFFERSorREQUESTS: "OFFERS",
+        securedCredex: true
+      },
+      testData.member2.jwt
+    );
+    testData.credexIDs.unsecured5USD = create5Response.data.credex.credexID;
+    await delay(DELAY_MS * 2);
 
-    (operation === "acceptCredex" ? it : it.skip)("acceptCredex", async () => {
-      const [, credexID] = params;
-      if (!credexID) {
-        throw new Error("Usage: npm test credex acceptCredex <phone> <credexID>");
+    // Member2 creates $2 credex to member3
+    process.env.TEST_PARAMS = `${testData.member2.jwt} ${testData.member2.accountIDs[0]} ${testData.member3.accountIDs[0]} USD 2 PURCHASE OFFERS true`;
+    const create2Response = await authRequest(
+      "/createCredex",
+      {
+        issuerAccountID: testData.member2.accountIDs[0],
+        receiverAccountID: testData.member3.accountIDs[0],
+        Denomination: "USD",
+        InitialAmount: 2,
+        credexType: "PURCHASE",
+        OFFERSorREQUESTS: "OFFERS",
+        securedCredex: true
+      },
+      testData.member2.jwt
+    );
+    testData.credexIDs.unsecured2USD = create2Response.data.credex.credexID;
+    await delay(DELAY_MS * 2);
+
+    // Member2 creates $1 credex to member3
+    process.env.TEST_PARAMS = `${testData.member2.jwt} ${testData.member2.accountIDs[0]} ${testData.member3.accountIDs[0]} USD 1 PURCHASE OFFERS true`;
+    const create1Response = await authRequest(
+      "/createCredex",
+      {
+        issuerAccountID: testData.member2.accountIDs[0],
+        receiverAccountID: testData.member3.accountIDs[0],
+        Denomination: "USD",
+        InitialAmount: 1,
+        credexType: "PURCHASE",
+        OFFERSorREQUESTS: "OFFERS",
+        securedCredex: true
+      },
+      testData.member2.jwt
+    );
+    testData.credexIDs.unsecured1USD = create1Response.data.credex.credexID;
+    await delay(DELAY_MS * 2);
+
+    // Member3 accepts credexes in bulk
+    process.env.TEST_PARAMS = `${testData.member3.jwt} ${testData.credexIDs.unsecured5USD} ${testData.credexIDs.unsecured2USD}`;
+    await authRequest(
+      "/acceptCredexBulk",
+      {
+        credexIDs: [testData.credexIDs.unsecured5USD, testData.credexIDs.unsecured2USD]
+      },
+      testData.member3.jwt
+    );
+    await delay(DELAY_MS * 2);
+
+    // Member2 cancels the $1 credex
+    process.env.TEST_PARAMS = `${testData.member2.jwt} ${testData.credexIDs.unsecured1USD}`;
+    await authRequest(
+      "/cancelCredex",
+      {
+        credexID: testData.credexIDs.unsecured1USD
+      },
+      testData.member2.jwt
+    );
+    await delay(DELAY_MS * 2);
+  });
+
+  test("Create credex and test balance limits", async () => {
+    // Member3 creates $7 credex to member1 (should fail due to insufficient balance)
+    try {
+      process.env.TEST_PARAMS = `${testData.member3.jwt} ${testData.member3.accountIDs[0]} ${testData.member1.accountIDs[0]} USD 7 PURCHASE OFFERS true`;
+      await authRequest(
+        "/createCredex",
+        {
+          issuerAccountID: testData.member3.accountIDs[0],
+          receiverAccountID: testData.member1.accountIDs[0],
+          Denomination: "USD",
+          InitialAmount: 7,
+          credexType: "PURCHASE",
+          OFFERSorREQUESTS: "OFFERS",
+          securedCredex: true
+        },
+        testData.member3.jwt
+      );
+      fail("Should have thrown error due to insufficient balance");
+    } catch (err) {
+      const error = err as AxiosError;
+      if (error.response?.status !== 429) { // Ignore rate limit errors
+        expect(error.response?.status).toBe(400);
       }
+    }
+    await delay(DELAY_MS * 2);
+  });
 
-      console.log("\nAccepting credex...");
-      const response = await authRequest("/acceptCredex", {
-        credexID: credexID,
-        signerID: memberID
-      }, jwt);
-      console.log("Accept credex response:", response.data);
-      expect(response.status).toBe(200);
-      await delay(DELAY_MS);
-    });
-
-    (operation === "acceptCredexBulk" ? it : it.skip)("acceptCredexBulk", async () => {
-      const [, credexIDsStr] = params;
-      if (!credexIDsStr) {
-        throw new Error("Usage: npm test credex acceptCredexBulk <phone> <credexIDs> (comma-separated list)");
-      }
-
-      console.log("\nAccepting credexes in bulk...");
-      const credexIDs = credexIDsStr.split(",");
-      const response = await authRequest("/acceptCredexBulk", {
-        credexIDs,
-        signerID: memberID
-      }, jwt);
-      console.log("Accept bulk response:", response.data);
-      expect(response.status).toBe(200);
-      await delay(DELAY_MS);
-    });
-
-    (operation === "declineCredex" ? it : it.skip)("declineCredex", async () => {
-      const [, credexID] = params;
-      if (!credexID) {
-        throw new Error("Usage: npm test credex declineCredex <phone> <credexID>");
-      }
-
-      console.log("\nDeclining credex...");
-      const response = await authRequest("/declineCredex", {
-        credexID: credexID,
-        signerID: memberID
-      }, jwt);
-      console.log("Decline credex response:", response.data);
-      expect(response.status).toBe(200);
-      await delay(DELAY_MS);
-    });
-
-    (operation === "cancelCredex" ? it : it.skip)("cancelCredex", async () => {
-      const [, credexID] = params;
-      if (!credexID) {
-        throw new Error("Usage: npm test credex cancelCredex <phone> <credexID>");
-      }
-
-      console.log("\nCancelling credex...");
-      const response = await authRequest("/cancelCredex", {
-        credexID: credexID,
-        signerID: memberID
-      }, jwt);
-      console.log("Cancel credex response:", response.data);
-      expect(response.status).toBe(200);
-      await delay(DELAY_MS);
-    });
-
-    (operation === "getCredex" ? it : it.skip)("getCredex", async () => {
-      const [, credexID] = params;
-      if (!credexID) {
-        throw new Error("Usage: npm test credex getCredex <phone> <credexID>");
-      }
-
-      console.log("\nGetting credex...");
-      const response = await authRequest("/getCredex", {
-        credexID: credexID
-      }, jwt);
-      console.log("Credex data:", response.data);
-      expect(response.status).toBe(200);
-      await delay(DELAY_MS);
-    });
+  // Update global test data
+  afterAll(() => {
+    (global as any).integrationTestData = testData;
   });
 });

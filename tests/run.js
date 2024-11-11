@@ -35,9 +35,9 @@ async function runTest() {
     let jestCommand;
     let testParams = remainingArgs;
 
-    if (command === 'basic') {
-      // Handle basic integration tests
-      jestCommand = `jest --testPathPattern=tests/api/basic ${envFlags[env]}`;
+    if (command === 'basic' || command === 'integration') {
+      // Handle integration tests
+      jestCommand = `jest --testPathPattern=tests/api/integration/index.test.ts ${envFlags[env]}`;
     } else if (devAdminCommands.includes(command?.toLowerCase())) {
       // Handle devadmin operations
       const testPath = path.join('tests', 'api', 'endpoints', 'devadmin', `${command.toLowerCase()}.test.ts`);
