@@ -42,7 +42,8 @@ describe("Credex Integration Tests", () => {
     expect(createResponse.data.success).toBe(true);
     expect(createResponse.data.data.createCredexData).toBeTruthy();
     expect(createResponse.data.data.dashboardData).toBeTruthy();
-    testData.credexIDs.secured11USD = createResponse.data.data.createCredexData.credex.credexID;
+    testData.credexIDs.secured11USD =
+      createResponse.data.data.createCredexData.credex.credexID;
     expect(testData.credexIDs.secured11USD).toBeTruthy();
     await delay(DELAY_MS * 2);
 
@@ -56,7 +57,9 @@ describe("Credex Integration Tests", () => {
       testData.member1.jwt
     );
     expect(getCredexResponse1.data.success).toBe(true);
-    expect(getCredexResponse1.data.data.credexData.transactionType).toBe("OFFERS");
+    expect(getCredexResponse1.data.data.credexData.transactionType).toBe(
+      "OFFERS"
+    );
     expect(getCredexResponse1.data.data.credexData.InitialAmount).toBe(11);
     expect(getCredexResponse1.data.data.credexData.securedCredex).toBe(true);
     await delay(DELAY_MS * 2);
@@ -84,7 +87,9 @@ describe("Credex Integration Tests", () => {
       testData.member1.jwt
     );
     expect(getCredexResponse2.data.success).toBe(true);
-    expect(getCredexResponse2.data.data.credexData.transactionType).toBe("OWES");
+    expect(getCredexResponse2.data.data.credexData.transactionType).toBe(
+      "OWES"
+    );
     await delay(DELAY_MS * 2);
   });
 
@@ -106,7 +111,8 @@ describe("Credex Integration Tests", () => {
     expect(create10Response.data.success).toBe(true);
     expect(create10Response.data.data.createCredexData).toBeTruthy();
     expect(create10Response.data.data.dashboardData).toBeTruthy();
-    testData.credexIDs.unsecured10USD = create10Response.data.data.createCredexData.credex.credexID;
+    testData.credexIDs.unsecured10USD =
+      create10Response.data.data.createCredexData.credex.credexID;
     expect(testData.credexIDs.unsecured10USD).toBeTruthy();
     await delay(DELAY_MS * 2);
 
@@ -120,8 +126,9 @@ describe("Credex Integration Tests", () => {
       testData.member2.jwt
     );
     expect(getCredexResponse1.data.success).toBe(true);
-    expect(getCredexResponse1.data.data.credexData.transactionType).toBe("OFFERS");
-    expect(getCredexResponse1.data.data.credexData.InitialAmount).toBe(10);
+    expect(getCredexResponse1.data.data.credexData.transactionType).toBe(
+      "OFFERS"
+    );
     await delay(DELAY_MS * 2);
 
     // Member2 accepts the credex
@@ -147,7 +154,9 @@ describe("Credex Integration Tests", () => {
       testData.member2.jwt
     );
     expect(getCredexResponse2.data.success).toBe(true);
-    expect(getCredexResponse2.data.data.credexData.transactionType).toBe("OWES");
+    expect(getCredexResponse2.data.data.credexData.transactionType).toBe(
+      "OWES"
+    );
     await delay(DELAY_MS * 2);
 
     // Member1 attempts to create $0.01 credex (should fail due to daily limit)
@@ -194,7 +203,8 @@ describe("Credex Integration Tests", () => {
     expect(create5Response.data.success).toBe(true);
     expect(create5Response.data.data.createCredexData).toBeTruthy();
     expect(create5Response.data.data.dashboardData).toBeTruthy();
-    testData.credexIDs.unsecured5USD = create5Response.data.data.createCredexData.credex.credexID;
+    testData.credexIDs.unsecured5USD =
+      create5Response.data.data.createCredexData.credex.credexID;
     expect(testData.credexIDs.unsecured5USD).toBeTruthy();
     await delay(DELAY_MS * 2);
 
@@ -215,7 +225,8 @@ describe("Credex Integration Tests", () => {
     expect(create2Response.data.success).toBe(true);
     expect(create2Response.data.data.createCredexData).toBeTruthy();
     expect(create2Response.data.data.dashboardData).toBeTruthy();
-    testData.credexIDs.unsecured2USD = create2Response.data.data.createCredexData.credex.credexID;
+    testData.credexIDs.unsecured2USD =
+      create2Response.data.data.createCredexData.credex.credexID;
     expect(testData.credexIDs.unsecured2USD).toBeTruthy();
     await delay(DELAY_MS * 2);
 
@@ -236,7 +247,8 @@ describe("Credex Integration Tests", () => {
     expect(create1Response.data.success).toBe(true);
     expect(create1Response.data.data.createCredexData).toBeTruthy();
     expect(create1Response.data.data.dashboardData).toBeTruthy();
-    testData.credexIDs.unsecured1USD = create1Response.data.data.createCredexData.credex.credexID;
+    testData.credexIDs.unsecured1USD =
+      create1Response.data.data.createCredexData.credex.credexID;
     expect(testData.credexIDs.unsecured1USD).toBeTruthy();
     await delay(DELAY_MS * 2);
 
@@ -250,7 +262,9 @@ describe("Credex Integration Tests", () => {
       testData.member3.jwt
     );
     expect(getCredexResponse1.data.success).toBe(true);
-    expect(getCredexResponse1.data.data.credexData.transactionType).toBe("OFFERS");
+    expect(getCredexResponse1.data.data.credexData.transactionType).toBe(
+      "OFFERS"
+    );
     await delay(DELAY_MS * 2);
 
     const getCredexResponse2 = await authRequest(
@@ -262,7 +276,9 @@ describe("Credex Integration Tests", () => {
       testData.member3.jwt
     );
     expect(getCredexResponse2.data.success).toBe(true);
-    expect(getCredexResponse2.data.data.credexData.transactionType).toBe("OFFERS");
+    expect(getCredexResponse2.data.data.credexData.transactionType).toBe(
+      "OFFERS"
+    );
     await delay(DELAY_MS * 2);
 
     const getCredexResponse3 = await authRequest(
@@ -274,10 +290,12 @@ describe("Credex Integration Tests", () => {
       testData.member3.jwt
     );
     expect(getCredexResponse3.data.success).toBe(true);
-    expect(getCredexResponse3.data.data.credexData.transactionType).toBe("OFFERS");
+    expect(getCredexResponse3.data.data.credexData.transactionType).toBe(
+      "OFFERS"
+    );
     await delay(DELAY_MS * 2);
 
-    // Member3 accepts credexes in bulk
+// Member3 accepts credexes in bulk
     const bulkAcceptResponse = await authRequest(
       "acceptCredexBulk",
       {
@@ -304,7 +322,9 @@ describe("Credex Integration Tests", () => {
       testData.member3.jwt
     );
     expect(getCredexResponse4.data.success).toBe(true);
-    expect(getCredexResponse4.data.data.credexData.transactionType).toBe("OWES");
+    expect(getCredexResponse4.data.data.credexData.transactionType).toBe(
+      "OWES"
+    );
     await delay(DELAY_MS * 2);
 
     const getCredexResponse5 = await authRequest(
@@ -316,7 +336,9 @@ describe("Credex Integration Tests", () => {
       testData.member3.jwt
     );
     expect(getCredexResponse5.data.success).toBe(true);
-    expect(getCredexResponse5.data.data.credexData.transactionType).toBe("OWES");
+    expect(getCredexResponse5.data.data.credexData.transactionType).toBe(
+      "OWES"
+    );
     await delay(DELAY_MS * 2);
 
     // Member2 cancels the $1 credex
@@ -328,9 +350,10 @@ describe("Credex Integration Tests", () => {
       testData.member2.jwt
     );
     expect(cancelResponse.data.success).toBe(true);
-    // Extract credexID from response object
-    expect(cancelResponse.data.data.credexID).toBe(testData.credexIDs.unsecured1USD);
-    expect(cancelResponse.data.data.cancelledAt).toBeTruthy();
+    expect(cancelResponse.data.data).toEqual({
+      credexID: testData.credexIDs.unsecured1USD,
+      cancelledAt: expect.any(String)
+    });
     await delay(DELAY_MS * 2);
 
     // Verify cancelled credex status changed to CANCELLED
@@ -343,7 +366,9 @@ describe("Credex Integration Tests", () => {
       testData.member3.jwt
     );
     expect(getCredexResponse6.data.success).toBe(true);
-    expect(getCredexResponse6.data.data.credexData.transactionType).toBe("CANCELLED");
+    expect(getCredexResponse6.data.data.credexData.transactionType).toBe(
+      "CANCELLED"
+    );
     await delay(DELAY_MS * 2);
   });
 

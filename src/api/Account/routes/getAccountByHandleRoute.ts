@@ -36,16 +36,13 @@ export default function getAccountByHandleRoute() {
    *             schema:
    *               type: object
    *               properties:
-   *                 accountData:
-   *                   type: object
-   *                   properties:
-   *                     accountID:
-   *                       type: string
-   *                       format: uuid
-   *                       description: Unique identifier for the account
-   *                     accountName:
-   *                       type: string
-   *                       description: Name of the account
+   *                 accountID:
+   *                   type: string
+   *                   format: uuid
+   *                   description: Unique identifier for the account
+   *                 accountName:
+   *                   type: string
+   *                   description: Name of the account
    *       400:
    *         description: Invalid account handle format
    *         content:

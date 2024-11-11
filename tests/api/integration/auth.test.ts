@@ -43,9 +43,10 @@ describe("Authentication Integration Tests", () => {
       },
       testData.member1.jwt
     );
-    expect(memberResponse.data.memberData).toBeTruthy();
-    expect(memberResponse.data.memberData.memberID).toBe(testData.bennita.memberID);
-    expect(memberResponse.data.memberData.memberName).toBeTruthy();
+    // Updated to expect direct response without nesting
+    expect(memberResponse.data).toBeTruthy();
+    expect(memberResponse.data.memberID).toBe(testData.bennita.memberID);
+    expect(memberResponse.data.memberName).toBeTruthy();
     await delay(DELAY_MS * 2);
 
     // Get account by handle
@@ -56,9 +57,10 @@ describe("Authentication Integration Tests", () => {
       },
       testData.member1.jwt
     );
-    expect(accountResponse.data.accountData).toBeTruthy();
-    expect(accountResponse.data.accountData.accountID).toBe(testData.bennita.accountID);
-    expect(accountResponse.data.accountData.accountName).toBeTruthy();
+    // Updated to expect direct response without nesting
+    expect(accountResponse.data).toBeTruthy();
+    expect(accountResponse.data.accountID).toBe(testData.bennita.accountID);
+    expect(accountResponse.data.accountName).toBeTruthy();
     await delay(DELAY_MS * 2);
   });
 

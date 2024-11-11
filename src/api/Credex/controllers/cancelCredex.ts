@@ -56,11 +56,10 @@ export async function CancelCredexController(
       requestId
     });
 
+    // Pass through service response directly without extra nesting
     return res.status(200).json({
       success: true,
-      data: {
-        credexID: responseData
-      },
+      data: responseData,
       message: "Credex cancelled successfully"
     });
 

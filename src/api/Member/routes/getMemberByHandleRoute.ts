@@ -36,16 +36,13 @@ export default function getMemberByHandleRoute() {
    *             schema:
    *               type: object
    *               properties:
-   *                 memberData:
-   *                   type: object
-   *                   properties:
-   *                     memberID:
-   *                       type: string
-   *                       format: uuid
-   *                       description: Unique identifier for the member
-   *                     memberName:
-   *                       type: string
-   *                       description: Full name of the member
+   *                 memberID:
+   *                   type: string
+   *                   format: uuid
+   *                   description: Unique identifier for the member
+   *                 memberName:
+   *                   type: string
+   *                   description: Full name of the member
    *       400:
    *         description: Invalid member handle format
    *         content:

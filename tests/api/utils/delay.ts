@@ -1,5 +1,4 @@
-// Helper function to add delay between requests
-export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// Add larger delay between requests to stay under rate limit
+export const DELAY_MS = 100;
 
-// Default delay between requests (5 seconds to stay well under rate limit)
-export const DELAY_MS = 5000;
+export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

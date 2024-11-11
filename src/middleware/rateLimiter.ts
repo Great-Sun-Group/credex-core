@@ -45,6 +45,17 @@ export const rateLimiter = (
   });
 
   try {
+    // Check for rate limiter bypass key
+    const skipKey = process.env.SKIP_RATE_LIMITER_KEY;
+    if (skipKey && req.headers["x-skip-rate-limit"] === skipKey) {
+      logger.debug("Rate limiter bypassed with key", {
+        userId: req.user?.id,
+        path: req.path,
+        method: req.method,
+      });
+      return next();
+    }
+
     // Apply standard rate limiting for all requests
     standardLimiter(req, res, (err) => {
       if (err) {

@@ -41,7 +41,8 @@ export const GetAccountByHandleController = async (
         accountID: accountData.accountID,
         requestId,
       });
-      res.status(200).json({ accountData });
+      // Pass through service response directly without extra nesting
+      res.status(200).json(accountData);
     } else {
       logger.warn("Account not found", { accountHandle, requestId });
       res.status(404).json({ message: "Account not found" });

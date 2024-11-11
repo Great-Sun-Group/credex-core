@@ -42,7 +42,8 @@ export const GetMemberByHandleController = async (
         memberID: memberData.memberID,
         requestId,
       });
-      res.status(200).json({ memberData });
+      // Pass through service response directly without extra nesting
+      res.status(200).json(memberData);
     } else {
       logger.info("Member not found", { memberHandle, requestId });
       res.status(404).json({ message: "Member not found" });

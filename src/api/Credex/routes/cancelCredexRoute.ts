@@ -49,6 +49,10 @@ export default function cancelCredexRoute() {
    *                       type: string
    *                       format: uuid
    *                       description: ID of the cancelled Credex
+   *                     cancelledAt:
+   *                       type: string
+   *                       format: date-time
+   *                       description: Timestamp when the Credex was cancelled
    *                 message:
    *                   type: string
    *                   example: Credex cancelled successfully

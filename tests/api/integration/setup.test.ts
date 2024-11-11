@@ -156,11 +156,12 @@ describe("Integration Test Setup", () => {
       // Log full response for debugging
       console.log("Bennita response:", JSON.stringify(bennitaResponse.data, null, 2));
 
-      if (!bennitaResponse.data?.memberData?.memberID) {
+      // Updated to handle flattened response
+      if (!bennitaResponse.data?.memberID) {
         throw new Error("Bennita member response missing required data");
       }
 
-      testData.bennita.memberID = bennitaResponse.data.memberData.memberID;
+      testData.bennita.memberID = bennitaResponse.data.memberID;
       await delay(DELAY_MS * 2);
 
       // Get vimbisopay_trust account data using member1's token
@@ -176,11 +177,12 @@ describe("Integration Test Setup", () => {
       // Log full response for debugging
       console.log("Account response:", JSON.stringify(accountResponse.data, null, 2));
 
-      if (!accountResponse.data?.accountData?.accountID) {
+      // Updated to handle flattened response
+      if (!accountResponse.data?.accountID) {
         throw new Error("Vimbisopay trust account response missing required data");
       }
 
-      testData.bennita.accountID = accountResponse.data.accountData.accountID;
+      testData.bennita.accountID = accountResponse.data.accountID;
       await delay(DELAY_MS * 2);
 
       // Log test data for debugging
