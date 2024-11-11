@@ -102,7 +102,13 @@ export async function establishNewCXXrates(
     (value) => value / USDbaseRates.XAU
   );
 
-  const nextCXXinXAU = DCOinXAU / numberConfirmedParticipants;
+  // Calculate total DCO in XAU by converting each participant's contribution
+  let totalDCOinXAU = 0;
+  for (const participant of confirmedParticipants) {
+    totalDCOinXAU += participant.DCOgiveInDenom / denomsInXAU[participant.DCOdenom];
+  }
+
+  const nextCXXinXAU = totalDCOinXAU / numberConfirmedParticipants;
   const CXXprior_CXXcurrent = DCOinCXX / numberConfirmedParticipants;
 
   logInfo(`Next CXX in XAU: ${nextCXXinXAU}`);
@@ -119,7 +125,7 @@ export async function establishNewCXXrates(
     newCXXrates,
     CXXprior_CXXcurrent,
     DCOinCXX,
-    DCOinXAU,
+    DCOinXAU: totalDCOinXAU, // Use the properly calculated XAU total
     numberConfirmedParticipants,
     confirmedParticipants,
   };

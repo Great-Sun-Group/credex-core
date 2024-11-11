@@ -101,19 +101,21 @@ export async function AcceptCredexService(
           (acceptedCredex:Credex {credexID: $credexID})-[rel2:OFFERS]->
           (acceptor:Account)
         MATCH (signer)
-        OPTIONAL MATCH (member:Member)-[:OWNS]->(acceptor)
-        OPTIONAL MATCH (member)-[:OWNS]->(account:Account)-[:ACTIVE]->(signer:Recurring)
         WHERE (
           // Direct Member authorization
           signer:Member AND
           signer.memberID = $signerID AND
-          (acceptor)<-[:AUTHORIZED_FOR]-(signer)
+          EXISTS((acceptor)<-[:AUTHORIZED_FOR]-(signer))
         ) OR (
-          // Recurring node authorization through account ownership
+          // Recurring node authorization
           signer:Recurring AND
           signer.recurringID = $signerID AND
-          member IS NOT NULL
+          EXISTS {
+            MATCH (m:Member)-[:OWNS]->(acceptor)
+            WHERE EXISTS((m)-[:OWNS]->(:Account)-[:ACTIVE]->(signer))
+          }
         )
+        WITH DISTINCT issuer, acceptedCredex, rel1, rel2, acceptor, signer
         DELETE rel1, rel2
         CREATE (issuer)-[:OWES]->(acceptedCredex)-[:OWES]->(acceptor)
         SET acceptedCredex.acceptedAt = datetime()
@@ -124,6 +126,7 @@ export async function AcceptCredexService(
             WHEN signer:Member THEN signer.memberID
             WHEN signer:Recurring THEN signer.recurringID
           END AS signerID
+        LIMIT 1
       `;
 
       const queryResult = await tx.run(query, { credexID, signerID });

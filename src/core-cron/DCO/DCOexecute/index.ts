@@ -33,13 +33,17 @@ async function findDCOParticipants(session: any): Promise<{
     MATCH (daynode:Daynode {Active: true})
     MATCH (account:Account)-[:ACTIVE]->(template:Recurring {templateType: "DCO_GIVE", status: "ACTIVE"})-[:ACTIVE]->(foundation:Account)
     MATCH (member:Member)-[:OWNS]->(account)
+    WITH 
+      account, member, template, daynode,
+      daynode.XAU / daynode[template.DCOdenom] as denomToXAUrate
     RETURN
       account.accountID AS accountID,
       member.memberID AS DCOmemberID,
       template.DCOgiveInCXX AS DCOgiveInCXX,
       template.DCOgiveInCXX / daynode[template.DCOdenom] AS DCOgiveInDenom,
       template.DCOdenom AS DCOdenom,
-      template.recurringID AS recurringID
+      template.recurringID AS recurringID,
+      denomToXAUrate AS denomToXAUrate
   `);
 
   const declaredParticipants = result.records;
@@ -50,8 +54,15 @@ async function findDCOParticipants(session: any): Promise<{
   const confirmedParticipants: Participant[] = [];
 
   for (const participant of declaredParticipants) {
-    const { accountID, DCOmemberID, DCOdenom, DCOgiveInCXX, DCOgiveInDenom, recurringID } =
-      participant.toObject();
+    const { 
+      accountID, 
+      DCOmemberID, 
+      DCOdenom, 
+      DCOgiveInCXX, 
+      DCOgiveInDenom, 
+      recurringID,
+      denomToXAUrate 
+    } = participant.toObject();
 
     if (
       !validateDenomination(DCOdenom) ||
@@ -81,10 +92,11 @@ async function findDCOParticipants(session: any): Promise<{
         DCOdenom,
         DCOgiveInCXX,
         DCOgiveInDenom,
-        recurringID,  // Include the Recurring node's ID
+        recurringID,
       });
       DCOinCXX += DCOgiveInCXX;
-      DCOinXAU += DCOgiveInDenom;
+      // Convert to XAU using current day's rates
+      DCOinXAU += DCOgiveInDenom * denomToXAUrate;
     }
   }
 
