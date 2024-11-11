@@ -1,10 +1,11 @@
 // Import required modules and dependencies
 import express, { Request, Response, NextFunction } from "express";
 import MemberRoutes from "./api/Member/routes";
-import AccountRoutes from "./api/Account/accountRoutes";
-import CredexRoutes from "./api/Credex/credexRoutes";
-import RecurringRoutes from "./api/Recurring/recurringRoutes";
-import DevAdminRoutes from "./api/DevAdmin/devAdminRoutes";
+import AccountRoutes from "./api/Account/routes";
+import CredexRoutes from "./api/Credex/routes";
+import RecurringRoutes from "./api/Recurring/routes";
+import AdminRoutes from "./api/Admin/routes";
+import DevAdminRoutes from "./api/DevAdmin/routes";
 import logger, {
   addRequestId,
   expressLogger,
@@ -12,7 +13,6 @@ import logger, {
 } from "./utils/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./core-cron/cronJobs";
-import AdminRoutes from "./api/Admin/adminRoutes";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import swaggerUi from "swagger-ui-express";
 import { generateSwaggerSpec } from "../config/swagger";
