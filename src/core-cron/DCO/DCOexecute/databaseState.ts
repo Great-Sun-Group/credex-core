@@ -108,6 +108,7 @@ export async function createNewDaynode(
         nextDaynode.CXXprior_CXXcurrent = $CXXprior_CXXcurrent,
         nextDaynode.Date = date($nextDate),
         nextDaynode.Active = true,
+        nextDaynode.MTQrunningNow = false,
         nextDaynode.DCOrunningNow = true
   `,
     { newCXXrates, nextDate, CXXprior_CXXcurrent }
