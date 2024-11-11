@@ -138,6 +138,7 @@ export async function CreateRecurringService(
         MATCH (target:Account {accountID: $targetAccountID})
         CREATE (recurring:Recurring {
           recurringID: randomUUID(),
+          memberID: $ownerID,
           templateType: $templateType,
           frequency: $frequency,
           startDate: date($startDate),
@@ -152,6 +153,7 @@ export async function CreateRecurringService(
         CREATE (source)-[:${RELATIONSHIP_TYPES.REQUESTED}]->(recurring)-[:${RELATIONSHIP_TYPES.REQUESTED}]->(target)
         RETURN
           recurring.recurringID as recurringID,
+          recurring.memberID as memberID,
           recurring.frequency as frequency,
           recurring.nextPayDate as nextRunDate,
           recurring.templateType as templateType,
@@ -166,6 +168,7 @@ export async function CreateRecurringService(
       return tx.run(query, {
         sourceAccountID,
         targetAccountID,
+        ownerID,
         templateType,
         frequency,
         startDate,
@@ -242,6 +245,7 @@ export async function CreateRecurringService(
 
     logger.info("Recurring transaction created successfully", {
       recurringID,
+      memberID: record.get("memberID"),
       sourceAccountID,
       targetAccountID,
       templateType,

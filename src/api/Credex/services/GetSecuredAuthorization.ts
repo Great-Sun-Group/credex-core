@@ -18,13 +18,18 @@ export async function GetSecuredAuthorizationService(
   issuerAccountID: string,
   Denomination: string
 ) {
-  logDebug(`Entering GetSecuredAuthorizationService`, { issuerAccountID, Denomination });
+  logDebug(`Entering GetSecuredAuthorizationService`, {
+    issuerAccountID,
+    Denomination,
+  });
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
     // Check if issuer is CREDEX_FOUNDATION_AUDITED
-    logDebug(`Checking if issuer is CREDEX_FOUNDATION_AUDITED`, { issuerAccountID });
+    logDebug(`Checking if issuer is CREDEX_FOUNDATION_AUDITED`, {
+      issuerAccountID,
+    });
     const isFoundationAuditedQuery = await ledgerSpaceSession.run(
       `
         OPTIONAL MATCH
@@ -41,7 +46,10 @@ export async function GetSecuredAuthorizationService(
 
     // If the issuer is CREDEX_FOUNDATION_AUDITED, authorize for unlimited secured credex issuance
     if (isAudited) {
-      logInfo(`Issuer is CREDEX_FOUNDATION_AUDITED, authorizing unlimited secured credex issuance`, { issuerAccountID });
+      logInfo(
+        `Issuer is CREDEX_FOUNDATION_AUDITED, authorizing unlimited secured credex issuance`,
+        { issuerAccountID }
+      );
       return {
         securerID: issuerAccountID,
         securableAmountInDenom: Infinity,
@@ -49,7 +57,10 @@ export async function GetSecuredAuthorizationService(
     }
 
     // If issuer is not CREDEX_FOUNDATION_AUDITED, verify the available secured balance in denom
-    logDebug(`Verifying available secured balance for non-CREDEX_FOUNDATION_AUDITED issuer`, { issuerAccountID, Denomination });
+    logDebug(
+      `Verifying available secured balance for non-CREDEX_FOUNDATION_AUDITED issuer`,
+      { issuerAccountID, Denomination }
+    );
     const getSecurableDataQuery = await ledgerSpaceSession.run(
       `
         MATCH (account:Account {accountID: $accountID})
@@ -75,7 +86,10 @@ export async function GetSecuredAuthorizationService(
 
     const securableRecord = getSecurableDataQuery.records[0];
     if (!securableRecord || securableRecord.length === 0) {
-      logWarning(`No securable balance found for issuer`, { issuerAccountID, Denomination });
+      logWarning(`No securable balance found for issuer`, {
+        issuerAccountID,
+        Denomination,
+      });
       return {
         securerID: null,
         securableAmountInDenom: 0,
@@ -87,13 +101,23 @@ export async function GetSecuredAuthorizationService(
       securableAmountInDenom: securableRecord.get("netSecurableInDenom"),
     };
 
-    logInfo(`Successfully retrieved secured authorization data`, { issuerAccountID, Denomination, ...result });
+    logInfo(`Successfully retrieved secured authorization data`, {
+      issuerAccountID,
+      Denomination,
+      ...result,
+    });
     return result;
   } catch (error) {
-    logError(`Error in GetSecuredAuthorizationService:`, error as Error, { issuerAccountID, Denomination });
+    logError(`Error in GetSecuredAuthorizationService:`, error as Error, {
+      issuerAccountID,
+      Denomination,
+    });
     throw error;
   } finally {
     await ledgerSpaceSession.close();
-    logDebug(`Exiting GetSecuredAuthorizationService`, { issuerAccountID, Denomination });
+    logDebug(`Exiting GetSecuredAuthorizationService`, {
+      issuerAccountID,
+      Denomination,
+    });
   }
 }

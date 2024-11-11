@@ -6,7 +6,7 @@ export const DCO_CONSTANTS = {
   // Recurring template (avatar) settings
   RECURRING: {
     FREQUENCY: "DAILY",
-    DEFAULT_DENOMINATION: "CXX",
+    DEFAULT_DENOMINATION: "CAD", // Changed to CAD to match initial credex denomination
     SECURED_CREDEX: true,
     AUTH_TYPE: "RECURRING_TEMPLATE" as const,
     STATUS: {

@@ -38,7 +38,8 @@ async function findDCOParticipants(session: any): Promise<{
       member.memberID AS DCOmemberID,
       template.DCOgiveInCXX AS DCOgiveInCXX,
       template.DCOgiveInCXX / daynode[template.DCOdenom] AS DCOgiveInDenom,
-      template.DCOdenom AS DCOdenom
+      template.DCOdenom AS DCOdenom,
+      template.recurringID AS recurringID
   `);
 
   const declaredParticipants = result.records;
@@ -49,7 +50,7 @@ async function findDCOParticipants(session: any): Promise<{
   const confirmedParticipants: Participant[] = [];
 
   for (const participant of declaredParticipants) {
-    const { accountID, DCOmemberID, DCOdenom, DCOgiveInCXX, DCOgiveInDenom } =
+    const { accountID, DCOmemberID, DCOdenom, DCOgiveInCXX, DCOgiveInDenom, recurringID } =
       participant.toObject();
 
     if (
@@ -63,6 +64,7 @@ async function findDCOParticipants(session: any): Promise<{
         DCOdenom,
         DCOgiveInCXX,
         DCOgiveInDenom,
+        recurringID,
       });
       continue;
     }
@@ -79,6 +81,7 @@ async function findDCOParticipants(session: any): Promise<{
         DCOdenom,
         DCOgiveInCXX,
         DCOgiveInDenom,
+        recurringID,  // Include the Recurring node's ID
       });
       DCOinCXX += DCOgiveInCXX;
       DCOinXAU += DCOgiveInDenom;

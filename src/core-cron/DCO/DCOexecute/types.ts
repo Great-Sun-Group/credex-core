@@ -8,6 +8,7 @@ export interface Participant {
   DCOgiveInCXX: number;
   DCOgiveInDenom: number;
   DCOdenom: string;
+  recurringID: string;
 }
 
 export interface ParticipantData {

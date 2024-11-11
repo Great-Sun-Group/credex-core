@@ -31,7 +31,7 @@ export async function createInitialCredex(
   logger.info("Creating initial Credex for DBinitialization", { requestId });
 
   const credexData = {
-    memberID,
+    signerID: memberID,
     issuerAccountID,
     receiverAccountID,
     Denomination: "CAD",
@@ -59,7 +59,7 @@ export async function createInitialCredex(
   logger.debug("Accepting initial Credex", {
     requestId,
     credexID,
-    memberID,
+    signerID: memberID,
   });
 
   try {

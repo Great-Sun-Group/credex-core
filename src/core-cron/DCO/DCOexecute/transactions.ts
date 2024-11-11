@@ -101,7 +101,7 @@ async function processDCOGiveTransaction(
 
   const requestId = uuidv4();
   const dataForDCOgive = {
-    memberID: participant.DCOmemberID,
+    signerID: participant.recurringID,  // Use Recurring node's ID for signing
     issuerAccountID: participant.accountID,
     receiverAccountID: foundationID,
     Denomination: participant.DCOdenom,
@@ -129,7 +129,8 @@ async function processDCOGiveTransaction(
   logInfo("DCO give credex offer created", {
     requestId,
     credexID: DCOgiveCredex.credex.credexID,
-    participantID: participant.DCOmemberID,
+    signerID: participant.recurringID,  // Log Recurring node's ID
+    memberID: participant.DCOmemberID,  // Also log member ID for reference
     action: "OFFER_CREDEX",
     credexData: {
       issuerAccountID: dataForDCOgive.issuerAccountID,
@@ -142,16 +143,17 @@ async function processDCOGiveTransaction(
 
   await AcceptCredexService(
     DCOgiveCredex.credex.credexID,
-    foundationXOid,
+    participant.recurringID,  // Use Recurring node's ID for accepting
     requestId
   );
 
   logInfo("DCO give credex accepted", {
     requestId,
     credexID: DCOgiveCredex.credex.credexID,
-    participantID: participant.DCOmemberID,
+    signerID: participant.recurringID,  // Log Recurring node's ID
+    memberID: participant.DCOmemberID,  // Also log member ID for reference
     action: "ACCEPT_CREDEX",
-    acceptedBy: foundationXOid
+    acceptedBy: participant.recurringID  // Log Recurring node as acceptor
   });
 }
 
@@ -175,11 +177,11 @@ async function processDCOReceiveTransaction(
 
   const requestId = uuidv4();
   const dataForDCOreceive = {
-    memberID: foundationXOid,
+    signerID: participant.recurringID,  // Use same Recurring node as DCO_GIVE for signing
     issuerAccountID: foundationID,
     receiverAccountID: participant.accountID,
-    Denomination: DCO_CONSTANTS.RECURRING.DEFAULT_DENOMINATION,
-    InitialAmount: receiveAmount,
+    Denomination: "CXX",
+    InitialAmount: 1.000,
     credexType: DCO_CONSTANTS.TRANSACTION_TYPES.RECEIVE,
     OFFERSorREQUESTS: "OFFERS" as const,
     securedCredex: DCO_CONSTANTS.RECURRING.SECURED_CREDEX,
@@ -203,29 +205,31 @@ async function processDCOReceiveTransaction(
   logInfo("DCO receive credex offer created", {
     requestId,
     credexID: DCOreceiveCredex.credex.credexID,
-    participantID: participant.DCOmemberID,
+    signerID: participant.recurringID,  // Log Recurring node's ID
+    memberID: participant.DCOmemberID,  // Also log member ID for reference
     action: "OFFER_CREDEX",
     credexData: {
       issuerAccountID: dataForDCOreceive.issuerAccountID,
       receiverAccountID: dataForDCOreceive.receiverAccountID,
-      amount: dataForDCOreceive.InitialAmount,
-      denomination: dataForDCOreceive.Denomination,
+      amount: 1.000,
+      denomination: "CXX",
       authorizationTemplateID: templateID
     }
   });
 
   await AcceptCredexService(
     DCOreceiveCredex.credex.credexID,
-    foundationXOid,
+    participant.recurringID,  // Use same Recurring node for accepting
     requestId
   );
 
   logInfo("DCO receive credex accepted", {
     requestId,
     credexID: DCOreceiveCredex.credex.credexID,
-    participantID: participant.DCOmemberID,
+    signerID: participant.recurringID, // Log Recurring node's ID
+    memberID: participant.DCOmemberID, // Also log member ID for reference
     action: "ACCEPT_CREDEX",
-    acceptedBy: foundationXOid
+    acceptedBy: participant.recurringID // Log Recurring node as acceptor
   });
 }
 

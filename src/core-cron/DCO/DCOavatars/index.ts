@@ -2,7 +2,7 @@ import { Session } from "neo4j-driver";
 import { v4 as uuidv4 } from "uuid";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import logger from "../../../utils/logger";
-import { AvatarData } from "./types";
+import { AvatarData, Avatar } from "./types";
 import { 
   getActiveRecurringAvatars, 
   getActiveDCOGiveTemplates,
@@ -15,6 +15,53 @@ import {
 } from "./credexOperations";
 
 /**
+ * Validates avatar data structure
+ */
+function validateAvatarData(avatarData: AvatarData, isDCOGive: boolean): void {
+  if (!avatarData) {
+    throw new Error('Avatar data is null or undefined');
+  }
+
+  const { avatar, issuerAccountID, acceptorAccountID } = avatarData;
+
+  if (!avatar) {
+    logger.error('Avatar object is missing', { avatarData });
+    throw new Error('Avatar object is missing');
+  }
+
+  if (!avatar.signerID) {
+    logger.error('Invalid avatar structure - missing signerID', {
+      avatar,
+      isDCOGive
+    });
+    throw new Error('Invalid avatar data: signerID is required');
+  }
+
+  if (!issuerAccountID || !acceptorAccountID) {
+    logger.error('Missing account IDs', {
+      issuerAccountID,
+      acceptorAccountID,
+      avatarId: avatar.signerID
+    });
+    throw new Error('Missing account IDs');
+  }
+
+  // Additional validation for DCO_GIVE templates
+  if (isDCOGive) {
+    if (!avatar.Denomination) {
+      throw new Error('Invalid DCO_GIVE template: missing Denomination');
+    }
+    if (typeof avatar.InitialAmount !== 'number' || isNaN(avatar.InitialAmount)) {
+      logger.error('Invalid InitialAmount in DCO_GIVE template', {
+        initialAmount: avatar.InitialAmount,
+        avatarId: avatar.signerID
+      });
+      throw new Error('Invalid DCO_GIVE template: InitialAmount must be a valid number');
+    }
+  }
+}
+
+/**
  * Processes a single avatar/template
  */
 async function processAvatar(
@@ -22,15 +69,21 @@ async function processAvatar(
   avatarData: AvatarData,
   isDCOGive: boolean = false
 ): Promise<void> {
-  const { avatar, issuerAccountID, acceptorAccountID, date } = avatarData;
-  const requestId = uuidv4();
-  logger.debug(`Processing ${isDCOGive ? 'DCO_GIVE template' : 'avatar'} ${avatar.memberID}`, {
-    requestId,
-    avatarId: avatar.memberID,
-    type: isDCOGive ? 'DCO_GIVE' : 'REGULAR'
-  });
-
   try {
+    // Validate avatar data structure
+    validateAvatarData(avatarData, isDCOGive);
+
+    const { avatar, issuerAccountID, acceptorAccountID, date } = avatarData;
+    const requestId = uuidv4();
+
+    logger.debug(`Processing ${isDCOGive ? 'DCO_GIVE template' : 'avatar'}`, {
+      requestId,
+      avatarId: avatar.signerID,
+      type: isDCOGive ? 'DCO_GIVE' : 'REGULAR',
+      denomination: avatar.Denomination,
+      initialAmount: avatar.InitialAmount
+    });
+
     const offerData = prepareOfferData(
       avatar,
       issuerAccountID,
@@ -38,43 +91,37 @@ async function processAvatar(
       date,
       requestId
     );
+
     const offerResult = await createCredexOffer(offerData);
 
     if (offerResult.credex && typeof offerResult.credex === "object") {
       // For DCO_GIVE templates, the foundation auto-accepts
       await acceptCredexOffer(
         offerResult.credex.credexID,
-        isDCOGive ? acceptorAccountID : avatar.memberID,
+        isDCOGive ? acceptorAccountID : avatar.signerID,
         requestId
       );
       logger.info(
         `Successfully created and accepted credex for ${isDCOGive ? 'DCO_GIVE template' : 'recurring avatar'}`,
         {
           requestId,
-          avatarId: avatar.memberID,
+          avatarId: avatar.signerID,
           type: isDCOGive ? 'DCO_GIVE' : 'REGULAR',
-          remainingPays: avatar.remainingPays,
-          nextPayDate: avatar.nextPayDate,
+          credexId: offerResult.credex.credexID
         }
       );
     } else {
-      throw new Error(`Failed to create offer for ${isDCOGive ? 'DCO_GIVE template' : 'avatar'}: ${avatar.memberID}`);
+      throw new Error(`Failed to create offer for ${isDCOGive ? 'DCO_GIVE template' : 'avatar'}: ${avatar.signerID}`);
     }
 
-    await deleteMarkedAuthorizations(session, requestId, avatar.memberID);
+    await deleteMarkedAuthorizations(session, requestId, avatar.signerID);
   } catch (error) {
     logger.error(`Error processing ${isDCOGive ? 'DCO_GIVE template' : 'avatar'}`, {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      requestId,
-      avatarId: avatar.memberID,
-      type: isDCOGive ? 'DCO_GIVE' : 'REGULAR'
+      avatarData
     });
-    // TODO: Implement member notification about the failure
-    logger.warn(
-      `Placeholder: Notify member about the failure in processing their ${isDCOGive ? 'DCO_GIVE template' : 'recurring avatar'}`,
-      { requestId, avatarId: avatar.memberID }
-    );
+    throw error; // Re-throw to ensure proper error handling up the chain
   }
 }
 

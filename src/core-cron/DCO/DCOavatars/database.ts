@@ -1,6 +1,9 @@
 import { Session } from "neo4j-driver";
+import axios from "axios";
+import _ from "lodash";
 import logger from "../../../utils/logger";
 import { AvatarData } from "./types";
+import { getDenominations } from "../../../core-cron/constants/denominations";
 
 /**
  * Fetches active recurring avatars that are due for processing.
@@ -13,27 +16,41 @@ export async function getActiveRecurringAvatars(
   logger.debug("Fetching active recurring avatars");
 
   const query = `
+    MATCH (daynode:Daynode {Active: true})
     MATCH (avatar:Recurring)
     WHERE avatar.status = 'ACTIVE'
     AND avatar.templateType = 'REGULAR'
-    AND date(avatar.nextPayDate) <= date()
+    AND date(avatar.nextPayDate) <= date(daynode.Date)
     AND (avatar.remainingPays IS NULL OR avatar.remainingPays > 0)
     MATCH (issuer:Account)-[:ACTIVE]->(avatar)-[:ACTIVE]->(acceptor:Account)
     RETURN
       avatar,
       issuer.accountID as issuerAccountID,
       acceptor.accountID as acceptorAccountID,
-      date() as date
+      daynode.Date as date
   `;
 
   try {
     const result = await session.run(query);
-    const avatars: AvatarData[] = result.records.map((record) => ({
-      avatar: record.get("avatar").properties,
-      issuerAccountID: record.get("issuerAccountID"),
-      acceptorAccountID: record.get("acceptorAccountID"),
-      date: record.get("date"),
-    }));
+    const avatars: AvatarData[] = result.records.map((record) => {
+      const avatarProps = record.get("avatar").properties;
+      return {
+        avatar: {
+          signerID: avatarProps.recurringID, // Use recurringID as signerID
+          Denomination: avatarProps.Denomination,
+          InitialAmount: avatarProps.InitialAmount,
+          securedCredex: avatarProps.securedCredex || false,
+          credspan: avatarProps.credspan || "30",
+          remainingPays: avatarProps.remainingPays,
+          nextPayDate: avatarProps.nextPayDate,
+          status: avatarProps.status,
+          templateType: avatarProps.templateType
+        },
+        issuerAccountID: record.get("issuerAccountID"),
+        acceptorAccountID: record.get("acceptorAccountID"),
+        date: record.get("date"),
+      };
+    });
 
     logger.debug(`Found ${avatars.length} active recurring avatars`);
     return avatars;
@@ -61,47 +78,90 @@ export async function getActiveDCOGiveTemplates(
     MATCH (template:Recurring)
     WHERE template.status = 'ACTIVE'
     AND template.templateType = 'DCO_GIVE'
-    AND date(template.nextPayDate) <= date()
+    AND date(template.nextPayDate) <= date(daynode.Date)
     AND (template.remainingPays IS NULL OR template.remainingPays > 0)
-    MATCH (source:Account)-[:ACTIVE]->(template)-[:ACTIVE]->(target:Account)
+    AND template.lastProcessed IS NULL
+    MATCH (issuer:Account)-[:ACTIVE]->(template)-[:ACTIVE]->(target:Account)
     WHERE target.accountType = "CREDEX_FOUNDATION"
-    WITH template, source, target, daynode, date() as currentDate
-    WITH {
-      memberID: template.memberID,
-      Denomination: template.DCOdenom,
-      InitialAmount: template.DCOgiveInCXX / daynode[template.DCOdenom],
-      securedCredex: true,
-      credspan: template.credspan,
-      remainingPays: template.remainingPays,
-      nextPayDate: template.nextPayDate,
-      status: template.status,
-      templateType: template.templateType
-    } as avatar,
-    source.accountID as issuerAccountID,
-    target.accountID as acceptorAccountID,
-    currentDate as date
-    RETURN avatar, issuerAccountID, acceptorAccountID, date
+    WITH DISTINCT template, issuer, target, daynode
+    RETURN
+      template.recurringID as recurringID,
+      template,
+      issuer.accountID as issuerAccountID,
+      target.accountID as acceptorAccountID,
+      daynode.Date as date,
+      daynode
   `;
 
   try {
     const result = await session.run(query);
-    const templates: AvatarData[] = result.records.map((record) => ({
-      avatar: record.get("avatar"),
-      issuerAccountID: record.get("issuerAccountID"),
-      acceptorAccountID: record.get("acceptorAccountID"),
-      date: record.get("date"),
-    }));
+    
+    if (!result.records || result.records.length === 0) {
+      logger.debug("No active DCO_GIVE templates found");
+      return [];
+    }
 
-    logger.debug(`Found ${templates.length} active DCO_GIVE templates`, {
-      templateDetails: templates.map((t) => ({
-        memberID: t.avatar.memberID,
-        nextPayDate: t.avatar.nextPayDate,
-        status: t.avatar.status,
-        templateType: t.avatar.templateType,
-        denomination: t.avatar.Denomination,
-        initialAmount: t.avatar.InitialAmount,
-      })),
+    // Fetch current exchange rates from OpenExchangeRates API
+    const symbols = getDenominations({
+      sourceForRate: "OpenExchangeRates",
+      formatAsList: true,
+    }) as string;
+
+    const nextDate = result.records[0].get("date");
+    const { data: { rates: USDbaseRates } } = await axios.get(
+      `https://openexchangerates.org/api/historical/${nextDate}.json`,
+      { params: { app_id: process.env.OPEN_EXCHANGE_RATES_API, symbols } }
+    );
+
+    // Convert USD rates to XAU-based rates
+    const denomsInXAU = _.mapValues(
+      USDbaseRates,
+      (value) => value / USDbaseRates.XAU
+    );
+
+    const templates: AvatarData[] = result.records.map((record) => {
+      const template = record.get("template").properties;
+      const recurringID = record.get("recurringID");
+      const daynode = record.get("daynode").properties;
+      
+      // Calculate InitialAmount using XAU normalization
+      const DCOgiveInCXX = parseFloat(template.DCOgiveInCXX);
+      const InitialAmount = DCOgiveInCXX / denomsInXAU[template.DCOdenom];
+
+      // Transform template properties to match avatar structure
+      // For DCO_GIVE templates:
+      // - Use recurringID as signerID (Recurring node is the signer)
+      // - Use DCOdenom for denomination
+      const avatar = {
+        signerID: recurringID, // Recurring node's ID for signing
+        Denomination: template.DCOdenom,
+        InitialAmount,
+        securedCredex: true,
+        credspan: template.credspan || "30",
+        remainingPays: template.remainingPays,
+        nextPayDate: template.nextPayDate,
+        status: template.status,
+        templateType: template.templateType
+      };
+
+      logger.debug('Transformed DCO_GIVE template', { 
+        recurringID, // Recurring node's ID used for signing
+        issuerAccountID: record.get("issuerAccountID"), // Account ID used for balance check
+        denomination: avatar.Denomination,
+        initialAmount: avatar.InitialAmount,
+        DCOgiveInCXX,
+        xauBasedRate: denomsInXAU[template.DCOdenom]
+      });
+
+      return {
+        avatar,
+        issuerAccountID: record.get("issuerAccountID"), // Used for balance checking
+        acceptorAccountID: record.get("acceptorAccountID"),
+        date: record.get("date"),
+      };
     });
+
+    logger.debug(`Found ${templates.length} active DCO_GIVE templates`);
     return templates;
   } catch (error) {
     logger.error("Error fetching active DCO_GIVE templates", {
@@ -123,7 +183,7 @@ export async function deleteMarkedAuthorizations(
   logger.debug("Deleting marked authorizations", { requestId, avatarId });
 
   const query = `
-    MATCH (avatar:Recurring {memberID: $avatarId})
+    MATCH (avatar:Recurring {recurringID: $avatarId})
     WHERE avatar.status = 'ACTIVE'
     SET avatar.lastProcessed = datetime()
     WITH avatar

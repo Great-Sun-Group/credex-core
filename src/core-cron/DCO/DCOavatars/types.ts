@@ -4,7 +4,7 @@ export type TemplateType = "DCO_GIVE" | "REGULAR";
 export type TemplateStatus = typeof DCO_CONSTANTS.RECURRING.STATUS[keyof typeof DCO_CONSTANTS.RECURRING.STATUS];
 
 export interface Avatar {
-  memberID: string;
+  signerID: string;  // Changed from memberID to make it clear this can be any valid signer
   Denomination: string;
   InitialAmount: number;
   securedCredex: boolean;

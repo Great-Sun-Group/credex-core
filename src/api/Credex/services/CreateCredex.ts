@@ -18,7 +18,7 @@ interface CreateCredexResult {
 }
 
 interface CreateCredexInput {
-  memberID: string;
+  signerID: string;
   issuerAccountID: string;
   receiverAccountID: string;
   InitialAmount: number;
@@ -56,7 +56,7 @@ export async function CreateCredexService(
   logger.debug("Entering CreateCredexService", { credexData });
 
   const {
-    memberID,
+    signerID,
     issuerAccountID,
     receiverAccountID,
     InitialAmount,
@@ -73,7 +73,7 @@ export async function CreateCredexService(
     OFFERSorREQUESTS === "OFFERS" ? "OFFERED" : "REQUESTED";
 
   try {
-    // Handle secured Credex authorization
+    // Handle secured Credex authorization - use issuerAccountID for balance check
     if (securedCredex) {
       logger.debug("Verifying secured authorization", {
         issuerAccountID,
@@ -82,7 +82,7 @@ export async function CreateCredexService(
       });
 
       const secureableData = await GetSecuredAuthorizationService(
-        issuerAccountID,
+        issuerAccountID, // Use issuerAccountID for balance check
         Denomination
       );
 
@@ -192,7 +192,7 @@ export async function CreateCredexService(
     // Add secured relationships if needed
     if (securedCredex) {
       const secureableData = await GetSecuredAuthorizationService(
-        issuerAccountID,
+        issuerAccountID, // Use issuerAccountID for securing relationship
         Denomination
       );
 
@@ -221,7 +221,7 @@ export async function CreateCredexService(
     // Create digital signature
     logger.debug("Creating digital signature", {
       credexID,
-      memberID,
+      signerID,
       requestId,
     });
 
@@ -241,7 +241,7 @@ export async function CreateCredexService(
 
     await digitallySign(
       ledgerSpaceSession,
-      memberID,
+      signerID,  // Pass signerID to digitallySign
       "Credex",
       credexID,
       "CREATE_CREDEX",
