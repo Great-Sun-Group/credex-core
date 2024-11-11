@@ -2,6 +2,13 @@ import express from "express";
 import { AuthorizeForAccountService } from "../services/AuthorizeForAccount";
 import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
+import { withDashboard } from "../../../utils/dashboardUtils";
+import { 
+  TypedApiResponse, 
+  ApiActionType,
+  AccountActionDetails,
+  ErrorActionDetails
+} from "../../../types/apiResponse";
 
 // Import the UserRequest interface from authentication module
 import type { Request } from "express";
@@ -9,14 +16,8 @@ interface UserRequest extends Request {
   user?: any;
 }
 
-interface AuthorizeResponse {
-  success: boolean;
-  data?: {
-    accountID: string;
-    memberIdAuthorized: string;
-  };
-  message: string;
-}
+type AuthorizeResponse = TypedApiResponse<AccountActionDetails>;
+type AuthorizeErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * AuthorizeForAccountController
@@ -40,10 +41,23 @@ export async function AuthorizeForAccountController(
     const ownerID = req.user?.memberID;
     if (!ownerID) {
       logger.warn("No authenticated user found", { requestId });
-      res.status(401).json({ 
-        success: false,
-        message: "Authentication required" 
-      });
+      const errorResponse: AuthorizeErrorResponse = {
+        message: "Authentication required",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_UNAUTHORIZED,
+            timestamp: new Date().toISOString(),
+            actor: "system",
+            details: {
+              code: "NO_AUTH",
+              reason: "Authentication required"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      res.status(401).json(errorResponse);
       return;
     }
 
@@ -78,7 +92,26 @@ export async function AuthorizeForAccountController(
         requestId
       });
 
-      res.status(statusCode).json(result);
+      const errorResponse: AuthorizeErrorResponse = {
+        message: result.message,
+        data: {
+          action: {
+            id: accountID,
+            type: ApiActionType.ACCOUNT_AUTHORIZATION_FAILED,
+            timestamp: new Date().toISOString(),
+            actor: ownerID,
+            details: {
+              code: statusCode === 403 ? "TIER_REQUIREMENT" : 
+                    statusCode === 400 ? "LIMIT_EXCEEDED" : 
+                    "AUTH_FAILED",
+              reason: result.message
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(statusCode).json(errorResponse);
       return;
     }
 
@@ -89,7 +122,32 @@ export async function AuthorizeForAccountController(
       requestId
     });
 
-    res.status(200).json(result);
+    // Create base response without dashboard
+    const baseResponse = {
+      message: "Member authorized for account successfully",
+      data: {
+        action: {
+          id: accountID,
+          type: ApiActionType.ACCOUNT_AUTHORIZED,
+          timestamp: new Date().toISOString(),
+          actor: ownerID,
+          details: {
+            accountID,
+            memberIdAuthorized: result.data!.memberIdAuthorized
+          }
+        }
+      }
+    };
+
+    // Add dashboard data to response
+    const response = await withDashboard(
+      baseResponse,
+      ownerID,
+      accountID,
+      requestId
+    );
+
+    res.status(200).json(response);
 
   } catch (error) {
     const handledError = handleServiceError(error);
@@ -108,10 +166,29 @@ export async function AuthorizeForAccountController(
         handledError.message.includes("Invalid") ? 400 :
         handledError.statusCode || 500;
 
-      res.status(statusCode).json({
-        success: false,
-        message: handledError.message
-      });
+      const errorType = 
+        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+        statusCode === 400 ? ApiActionType.ERROR_VALIDATION :
+        ApiActionType.ERROR_INTERNAL;
+
+      const errorResponse: AuthorizeErrorResponse = {
+        message: handledError.message,
+        data: {
+          action: {
+            id: req.body.accountID || null,
+            type: errorType,
+            timestamp: new Date().toISOString(),
+            actor: req.user?.memberID || "system",
+            details: {
+              code: String(handledError.code || "UNKNOWN_ERROR"),
+              reason: handledError.message
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(statusCode).json(errorResponse);
       return;
     }
 

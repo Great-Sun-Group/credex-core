@@ -3,14 +3,26 @@ import { AuthForTierSpendLimitService } from "../services/AuthForTierSpendLimit"
 import { MemberError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 
-interface AuthForTierSpendLimitResponse {
-  success: boolean;
-  data?: {
-    isAuthorized: boolean;
-    availableAmount?: string;
-    memberTier?: number;
-  };
+interface AuthResponse {
   message: string;
+  data: {
+    action: {
+      id: string;
+      type: string;
+      timestamp: string;
+      actor: string;
+      details: {
+        isAuthorized: boolean;
+        availableAmount?: string;
+        memberTier?: number;
+        amount: string;
+        denomination: string;
+        securedCredex: boolean;
+        reason?: string;
+      };
+    };
+    dashboard?: any; // Will be populated when dashboard standardization is complete
+  };
 }
 
 /**
@@ -60,7 +72,24 @@ export async function AuthForTierSpendLimitController(
         requestId
       });
 
-      res.status(400).json(result);
+      res.status(400).json({
+        message: result.message,
+        data: {
+          action: {
+            id: issuerAccountID,
+            type: "SPEND_AUTH_FAILED",
+            timestamp: new Date().toISOString(),
+            actor: issuerAccountID,
+            details: {
+              isAuthorized: false,
+              amount: Amount.toString(),
+              denomination: Denomination,
+              securedCredex,
+              reason: "VALIDATION_FAILED"
+            }
+          }
+        }
+      });
       return;
     }
 
@@ -75,7 +104,28 @@ export async function AuthForTierSpendLimitController(
         requestId
       });
 
-      res.status(403).json(result);
+      const response: AuthResponse = {
+        message: result.message,
+        data: {
+          action: {
+            id: issuerAccountID,
+            type: "SPEND_AUTH_DENIED",
+            timestamp: new Date().toISOString(),
+            actor: issuerAccountID,
+            details: {
+              isAuthorized: false,
+              availableAmount: result.data?.availableAmount,
+              memberTier: result.data?.memberTier,
+              amount: Amount.toString(),
+              denomination: Denomination,
+              securedCredex,
+              reason: "TIER_LIMIT_EXCEEDED"
+            }
+          }
+        }
+      };
+
+      res.status(403).json(response);
       return;
     }
 
@@ -87,7 +137,27 @@ export async function AuthForTierSpendLimitController(
       requestId
     });
 
-    res.status(200).json(result);
+    const response: AuthResponse = {
+      message: result.message,
+      data: {
+        action: {
+          id: issuerAccountID,
+          type: "SPEND_AUTHORIZED",
+          timestamp: new Date().toISOString(),
+          actor: issuerAccountID,
+          details: {
+            isAuthorized: true,
+            availableAmount: result.data?.availableAmount,
+            memberTier: result.data?.memberTier,
+            amount: Amount.toString(),
+            denomination: Denomination,
+            securedCredex
+          }
+        }
+      }
+    };
+
+    res.status(200).json(response);
 
   } catch (error) {
     const handledError = handleServiceError(error);
@@ -101,20 +171,30 @@ export async function AuthForTierSpendLimitController(
       requestId
     });
 
-    if (handledError instanceof MemberError) {
-      const statusCode = 
-        handledError.message.includes("not found") ? 404 :
-        handledError.message.includes("Invalid") ? 400 :
-        handledError.statusCode || 500;
+    const statusCode = 
+      handledError.message.includes("not found") ? 404 :
+      handledError.message.includes("Invalid") ? 400 :
+      handledError.statusCode || 500;
 
-      res.status(statusCode).json({
-        success: false,
-        message: handledError.message
-      });
-      return;
-    }
-
-    next(handledError);
+    res.status(statusCode).json({
+      message: handledError.message,
+      data: {
+        action: {
+          id: null,
+          type: "SPEND_AUTH_ERROR",
+          timestamp: new Date().toISOString(),
+          actor: req.body.issuerAccountID,
+          details: {
+            isAuthorized: false,
+            reason: handledError.code,
+            error: handledError.message,
+            amount: req.body.Amount?.toString(),
+            denomination: req.body.Denomination,
+            securedCredex: req.body.securedCredex
+          }
+        }
+      }
+    });
 
   } finally {
     logger.debug("Exiting AuthForTierSpendLimitController", { requestId });

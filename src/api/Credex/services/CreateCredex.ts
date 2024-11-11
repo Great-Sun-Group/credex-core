@@ -4,19 +4,6 @@ import { GetSecuredAuthorizationService } from "./GetSecuredAuthorization";
 import { digitallySign } from "../../../utils/digitalSignature";
 import logger from "../../../utils/logger";
 
-interface CreateCredexResult {
-  credex:
-    | {
-        credexID: string;
-        formattedInitialAmount: string;
-        counterpartyAccountName: string;
-        secured: boolean;
-        dueDate?: string;
-      }
-    | boolean;
-  message: string;
-}
-
 interface CreateCredexInput {
   signerID: string;
   issuerAccountID: string;
@@ -30,25 +17,50 @@ interface CreateCredexInput {
   requestId: string;
 }
 
-class CredexError extends Error {
-  constructor(
-    message: string,
-    public code: string
-  ) {
-    super(message);
-    this.name = "CredexError";
-  }
+interface CreateCredexData {
+  credexID: string;
+  formattedInitialAmount: string;
+  counterpartyAccountName: string;
+  secured: boolean;
+  dueDate?: string;
+  transactionType: string;
+  issuerAccountID: string;
+  receiverAccountID: string;
+  createdAt: string;
+  cxxMultiplier: number;
+}
+
+interface CreateCredexResult {
+  success: boolean;
+  data?: CreateCredexData;
+  message: string;
+  error?: {
+    code: string;
+    details?: string;
+  };
+}
+
+interface DatabaseCreateResult {
+  success: boolean;
+  data?: {
+    credexID: string;
+    counterpartyAccountName: string;
+    issuerAccountID: string;
+    receiverAccountID: string;
+    cxxMultiplier: number;
+    createdAt: string;
+  };
+  error?: string;
 }
 
 /**
  * CreateCredexService
  *
- * This service handles the creation of new Credex offers.
- * It performs necessary validations, creates the Credex, and establishes relationships.
+ * Handles the creation of new Credex offers. Performs necessary validations,
+ * creates the Credex with appropriate relationships, and handles secured/unsecured options.
  *
  * @param credexData - The data required to create a new Credex
- * @returns Object containing the created Credex details or error information
- * @throws CredexError with specific error codes
+ * @returns CreateCredexResult containing the created Credex details or error information
  */
 export async function CreateCredexService(
   credexData: CreateCredexInput
@@ -68,12 +80,23 @@ export async function CreateCredexService(
     requestId,
   } = credexData;
 
+  // Validate required fields
+  if (!signerID || !issuerAccountID || !receiverAccountID || !InitialAmount || !Denomination || !credexType || !OFFERSorREQUESTS) {
+    return {
+      success: false,
+      message: "Missing required parameters",
+      error: {
+        code: "MISSING_PARAMS",
+        details: "All required parameters must be provided"
+      }
+    };
+  }
+
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-  const OFFEREDorREQUESTED =
-    OFFERSorREQUESTS === "OFFERS" ? "OFFERED" : "REQUESTED";
+  const OFFEREDorREQUESTED = OFFERSorREQUESTS === "OFFERS" ? "OFFERED" : "REQUESTED";
 
   try {
-    // Handle secured Credex authorization - use issuerAccountID for balance check
+    // Handle secured Credex authorization
     if (securedCredex) {
       logger.debug("Verifying secured authorization", {
         issuerAccountID,
@@ -82,30 +105,45 @@ export async function CreateCredexService(
       });
 
       const secureableData = await GetSecuredAuthorizationService(
-        issuerAccountID, // Use issuerAccountID for balance check
+        issuerAccountID,
         Denomination
       );
 
-      if (secureableData.securableAmountInDenom < InitialAmount) {
-        const message = `Error: Your secured credex for ${denomFormatter(
+      if (!secureableData.success || !secureableData.data) {
+        return {
+          success: false,
+          message: "Failed to verify secured authorization",
+          error: {
+            code: "SECURED_AUTH_FAILED",
+            details: secureableData.error?.details || "Unable to verify secured authorization"
+          }
+        };
+      }
+
+      if (secureableData.data.securableAmountInDenom < InitialAmount) {
+        const message = `Your secured credex for ${denomFormatter(
           InitialAmount,
           Denomination
         )} ${Denomination} cannot be issued because your maximum securable ${Denomination} balance is ${denomFormatter(
-          secureableData.securableAmountInDenom,
+          secureableData.data.securableAmountInDenom,
           Denomination
         )} ${Denomination}`;
 
         logger.warn("Insufficient securable amount", {
           issuerAccountID,
           InitialAmount,
-          availableAmount: secureableData.securableAmountInDenom,
+          availableAmount: secureableData.data.securableAmountInDenom,
           Denomination,
           requestId,
         });
 
         return {
-          credex: false,
+          success: false,
           message,
+          error: {
+            code: "INSUFFICIENT_SECURED_BALANCE",
+            details: message
+          }
         };
       }
     }
@@ -118,12 +156,12 @@ export async function CreateCredexService(
       requestId,
     });
 
-    const createCredexQuery = await ledgerSpaceSession.executeWrite(
-      async (tx) => {
-        const query = `
-        MATCH (daynode:Daynode {Active: true})
-        MATCH (issuer:Account {accountID: $issuerAccountID})
-        MATCH (receiver:Account {accountID: $receiverAccountID})
+    const result: DatabaseCreateResult = await ledgerSpaceSession.executeWrite(async (tx) => {
+      const query = `
+        MATCH (daynode:Daynode { Active: true })
+        MATCH (issuer:Account { accountID: $issuerAccountID })
+        MATCH (receiver:Account { accountID: $receiverAccountID })
+        WHERE issuer <> receiver
         CREATE (newCredex:Credex)
         SET
           newCredex.credexID = randomUUID(),
@@ -143,92 +181,136 @@ export async function CreateCredexService(
         MERGE (issuer)-[:${OFFEREDorREQUESTED}]->(newCredex)-[:${OFFEREDorREQUESTED}]->(receiver)
         RETURN
           newCredex.credexID AS credexID,
-          receiver.accountName AS receiverAccountName,
+          receiver.accountName AS counterpartyAccountName,
           issuer.accountID AS issuerAccountID,
-          daynode[$Denomination] AS cxxMultiplier
+          receiver.accountID AS receiverAccountID,
+          daynode[$Denomination] AS cxxMultiplier,
+          toString(newCredex.createdAt) AS createdAt
       `;
 
-        return tx.run(query, {
-          issuerAccountID,
-          receiverAccountID,
-          InitialAmount,
-          Denomination,
-          credexType,
-          securedCredex,
-        });
-      }
-    );
+      const queryResult = await tx.run(query, {
+        issuerAccountID,
+        receiverAccountID,
+        InitialAmount,
+        Denomination,
+        credexType,
+        securedCredex,
+      });
 
-    if (createCredexQuery.records.length === 0) {
-      throw new CredexError("Failed to create Credex", "CREATE_FAILED");
+      if (queryResult.records.length === 0) {
+        return {
+          success: false,
+          error: "CREATE_FAILED"
+        };
+      }
+
+      const record = queryResult.records[0];
+      return {
+        success: true,
+        data: {
+          credexID: record.get("credexID"),
+          counterpartyAccountName: record.get("counterpartyAccountName"),
+          issuerAccountID: record.get("issuerAccountID"),
+          receiverAccountID: record.get("receiverAccountID"),
+          cxxMultiplier: record.get("cxxMultiplier"),
+          createdAt: record.get("createdAt")
+        }
+      };
+    });
+
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        message: "Failed to create Credex",
+        error: {
+          code: "CREATE_FAILED",
+          details: "An error occurred while creating the Credex"
+        }
+      };
     }
 
-    const credexID = createCredexQuery.records[0].get("credexID");
-    const cxxMultiplier = createCredexQuery.records[0].get("cxxMultiplier");
+    const credexData = result.data; // Store in variable for type safety
 
     // Add due date for unsecured Credex
-    if (!securedCredex) {
+    if (!securedCredex && dueDate) {
       logger.debug("Adding due date for unsecured Credex", {
-        credexID,
+        credexID: credexData.credexID,
         dueDate,
         requestId,
       });
 
-      const addDueDateQuery = await ledgerSpaceSession.executeWrite(
-        async (tx) => {
-          const query = `
-          MATCH (newCredex:Credex {credexID: $credexID})
+      const addDueDateQuery = await ledgerSpaceSession.executeWrite(async (tx) => {
+        const query = `
+          MATCH (newCredex:Credex { credexID: $credexID })
           SET newCredex.dueDate = date($dueDate)
           RETURN newCredex.dueDate AS dueDate
         `;
 
-          return tx.run(query, { credexID, dueDate });
-        }
-      );
+        return tx.run(query, { 
+          credexID: credexData.credexID, 
+          dueDate 
+        });
+      });
 
       if (addDueDateQuery.records.length === 0) {
-        throw new CredexError("Failed to add due date", "DUE_DATE_ERROR");
+        return {
+          success: false,
+          message: "Failed to add due date to Credex",
+          error: {
+            code: "DUE_DATE_ERROR",
+            details: "Unable to set due date for unsecured Credex"
+          }
+        };
       }
     }
 
     // Add secured relationships if needed
     if (securedCredex) {
       const secureableData = await GetSecuredAuthorizationService(
-        issuerAccountID, // Use issuerAccountID for securing relationship
+        issuerAccountID,
         Denomination
       );
 
-      if (secureableData.securerID) {
+      // Add proper type guard for secureableData.data and securerID
+      if (secureableData.success && secureableData.data && secureableData.data.securerID) {
+        const securerID = secureableData.data.securerID; // Store in variable for type safety
         logger.debug("Adding secured relationship", {
-          credexID,
-          securerID: secureableData.securerID,
+          credexID: credexData.credexID,
+          securerID,
           requestId,
         });
 
         await ledgerSpaceSession.executeWrite(async (tx) => {
           const query = `
-            MATCH (newCredex:Credex {credexID: $credexID})
-            MATCH (securingAccount: Account {accountID: $securingAccountID})
+            MATCH (newCredex:Credex { credexID: $credexID })
+            MATCH (securingAccount:Account { accountID: $securingAccountID })
             MERGE (securingAccount)-[:SECURES]->(newCredex)
           `;
 
           return tx.run(query, {
-            credexID,
-            securingAccountID: secureableData.securerID,
+            credexID: credexData.credexID,
+            securingAccountID: securerID,
           });
+        });
+      } else {
+        logger.warn("No securer found for secured Credex", {
+          credexID: credexData.credexID,
+          issuerAccountID,
+          Denomination,
+          requestId,
         });
       }
     }
 
     // Create digital signature
     logger.debug("Creating digital signature", {
-      credexID,
+      credexID: credexData.credexID,
       signerID,
       requestId,
     });
 
     const inputData = JSON.stringify({
-      credexID,
+      credexID: credexData.credexID,
       issuerAccountID,
       receiverAccountID,
       InitialAmount,
@@ -237,54 +319,58 @@ export async function CreateCredexService(
       OFFERSorREQUESTS,
       securedCredex,
       dueDate,
-      cxxMultiplier,
-      createdAt: new Date().toISOString(),
+      cxxMultiplier: credexData.cxxMultiplier,
+      createdAt: credexData.createdAt,
     });
 
     await digitallySign(
       ledgerSpaceSession,
-      signerID,  // Pass signerID to digitallySign
+      signerID,
       "Credex",
-      credexID,
+      credexData.credexID,
       "CREATE_CREDEX",
       inputData,
       requestId
     );
 
-    const newCredex = {
-      credexID: createCredexQuery.records[0].get("credexID"),
-      formattedInitialAmount: denomFormatter(InitialAmount, Denomination),
-      counterpartyAccountName: createCredexQuery.records[0].get(
-        "receiverAccountName"
-      ),
-      secured: securedCredex,
-      dueDate: dueDate || undefined,
-    };
-
     logger.info("Credex created successfully", {
-      credexID: newCredex.credexID,
+      credexID: credexData.credexID,
       requestId,
     });
 
     return {
-      credex: newCredex,
-      message: `Credex created: ${newCredex.credexID}`,
+      success: true,
+      data: {
+        credexID: credexData.credexID,
+        formattedInitialAmount: denomFormatter(InitialAmount, Denomination),
+        counterpartyAccountName: credexData.counterpartyAccountName,
+        secured: securedCredex,
+        dueDate: dueDate || undefined,
+        transactionType: OFFERSorREQUESTS,
+        issuerAccountID: credexData.issuerAccountID,
+        receiverAccountID: credexData.receiverAccountID,
+        createdAt: credexData.createdAt,
+        cxxMultiplier: credexData.cxxMultiplier
+      },
+      message: `Credex created successfully: ${credexData.credexID}`
     };
-  } catch (error) {
-    if (error instanceof CredexError) {
-      throw error;
-    }
 
+  } catch (error) {
     logger.error("Unexpected error in CreateCredexService", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
       requestId,
     });
 
-    throw new CredexError(
-      `Failed to create Credex: ${error instanceof Error ? error.message : "Unknown error"}`,
-      "INTERNAL_ERROR"
-    );
+    return {
+      success: false,
+      message: "Failed to create Credex",
+      error: {
+        code: "INTERNAL_ERROR",
+        details: error instanceof Error ? error.message : "An unknown error occurred while creating the Credex"
+      }
+    };
+
   } finally {
     await ledgerSpaceSession.close();
     logger.debug("Exiting CreateCredexService", { requestId });

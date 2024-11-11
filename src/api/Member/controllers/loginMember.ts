@@ -3,22 +3,20 @@ import { LoginMemberService } from "../services/LoginMember";
 import { MemberError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 import { validatePhone } from "../../../utils/validators";
+import { 
+  TypedApiResponse, 
+  ApiActionType, 
+  MemberActionDetails,
+  ErrorActionDetails
+} from "../../../types/apiResponse";
 
-interface LoginResponse {
-  message: string;
-  data: {
-    action: {
-      id: string;
-      type: string;
-      timestamp: string;
-      actor: string;
-      details: {
-        token?: string;
-      };
-    };
-    dashboard?: any; // Will be populated when dashboard standardization is complete
-  };
-}
+// Define specific response types for login
+type LoginDetails = MemberActionDetails & {
+  token?: string;
+};
+
+type LoginResponse = TypedApiResponse<LoginDetails>;
+type LoginErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * LoginMemberController
@@ -64,18 +62,24 @@ export async function LoginMemberController(
       requestId
     });
 
+    // Extract data with type safety
+    const { memberID, token } = result.data!;
+
     return {
       message: "Successfully logged in",
       data: {
         action: {
-          id: result.data!.memberID,
-          type: "MEMBER_LOGIN",
+          id: memberID,
+          type: ApiActionType.MEMBER_LOGIN,
           timestamp: new Date().toISOString(),
-          actor: result.data!.memberID,
+          actor: memberID,
           details: {
-            token: result.data!.token
+            memberID,
+            phone,
+            token
           }
-        }
+        },
+        dashboard: {} // Empty dashboard until standardization is complete
       }
     };
 
@@ -111,20 +115,24 @@ export async function loginMemberExpressHandler(
 
     if (!phone) {
       logger.warn("Missing phone number", { requestId });
-      res.status(400).json({
+      const response: LoginErrorResponse = {
         message: "Phone number is required",
         data: {
           action: {
             id: null,
-            type: "MEMBER_LOGIN_FAILED",
+            type: ApiActionType.ERROR_VALIDATION,
             timestamp: new Date().toISOString(),
-            actor: null,
+            actor: "system",
             details: {
-              reason: "MISSING_PHONE"
+              code: "MISSING_PHONE",
+              reason: "Phone number is required",
+              field: "phone"
             }
-          }
+          },
+          dashboard: {}
         }
-      });
+      };
+      res.status(400).json(response);
       return;
     }
 
@@ -145,21 +153,29 @@ export async function loginMemberExpressHandler(
       handledError.message.includes("Invalid") ? 400 :
       handledError.statusCode || 500;
 
-    res.status(statusCode).json({
+    const errorType = 
+      statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+      statusCode === 401 ? ApiActionType.ERROR_UNAUTHORIZED :
+      statusCode === 400 ? ApiActionType.ERROR_VALIDATION :
+      ApiActionType.ERROR_INTERNAL;
+
+    const response: LoginErrorResponse = {
       message: handledError.message,
       data: {
         action: {
           id: null,
-          type: "MEMBER_LOGIN_FAILED",
+          type: errorType,
           timestamp: new Date().toISOString(),
-          actor: null,
+          actor: "system",
           details: {
-            reason: handledError.code,
-            error: handledError.message
+            code: handledError.code || "UNKNOWN_ERROR",
+            reason: handledError.message
           }
-        }
+        },
+        dashboard: {}
       }
-    });
+    };
+    res.status(statusCode).json(response);
   } finally {
     logger.debug("Exiting loginMemberExpressHandler", { requestId });
   }

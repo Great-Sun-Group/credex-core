@@ -2,15 +2,15 @@ import express from "express";
 import { UnauthorizeForAccountService } from "../services/UnauthorizeForAccount";
 import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
+import {
+  TypedApiResponse,
+  ApiActionType,
+  AccountActionDetails,
+  ErrorActionDetails
+} from "../../../types/apiResponse";
 
-interface UnauthorizeResponse {
-  success: boolean;
-  data?: {
-    accountID: string;
-    memberIdUnauthorized: string;
-  };
-  message: string;
-}
+type UnauthorizeResponse = TypedApiResponse<AccountActionDetails>;
+type UnauthorizeErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * UnauthorizeForAccountController
@@ -56,7 +56,24 @@ export async function UnauthorizeForAccountController(
         requestId
       });
 
-      res.status(400).json(result);
+      const errorResponse: UnauthorizeErrorResponse = {
+        message: result.message,
+        data: {
+          action: {
+            id: accountID,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: ownerID,
+            details: {
+              code: "UNAUTHORIZE_FAILED",
+              reason: result.message
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(400).json(errorResponse);
       return;
     }
 
@@ -67,7 +84,27 @@ export async function UnauthorizeForAccountController(
       requestId
     });
 
-    res.status(200).json(result);
+    // Extract the data we have from the service result
+    const { memberIdUnauthorized } = result.data || {};
+
+    const response: UnauthorizeResponse = {
+      message: "Member unauthorized for account successfully",
+      data: {
+        action: {
+          id: accountID,
+          type: ApiActionType.ACCOUNT_UNAUTHORIZED,
+          timestamp: new Date().toISOString(),
+          actor: ownerID,
+          details: {
+            accountID,
+            memberIdUnauthorized: memberIDtoBeUnauthorized
+          }
+        },
+        dashboard: {} // Empty dashboard until service is updated to include it
+      }
+    };
+
+    res.status(200).json(response);
 
   } catch (error) {
     const handledError = handleServiceError(error);
@@ -88,10 +125,30 @@ export async function UnauthorizeForAccountController(
         handledError.message.includes("Invalid") ? 400 :
         handledError.statusCode || 500;
 
-      res.status(statusCode).json({
-        success: false,
-        message: handledError.message
-      });
+      const errorType = 
+        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+        statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
+        statusCode === 400 ? ApiActionType.ERROR_VALIDATION :
+        ApiActionType.ERROR_INTERNAL;
+
+      const errorResponse: UnauthorizeErrorResponse = {
+        message: handledError.message,
+        data: {
+          action: {
+            id: req.body.accountID || null,
+            type: errorType,
+            timestamp: new Date().toISOString(),
+            actor: req.body.ownerID || "system",
+            details: {
+              code: String(handledError.code || "UNKNOWN_ERROR"),
+              reason: handledError.message
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(statusCode).json(errorResponse);
       return;
     }
 

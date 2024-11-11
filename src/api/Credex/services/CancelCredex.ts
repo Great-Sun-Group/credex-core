@@ -2,29 +2,45 @@ import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { digitallySign } from "../../../utils/digitalSignature";
 import logger from "../../../utils/logger";
 
-interface CancelCredexResult {
+interface CancelCredexData {
   credexID: string;
   cancelledAt: string;
+  transactionType: string;
+  issuerAccountID: string;
+  receiverAccountID: string;
 }
 
-class CredexError extends Error {
-  constructor(message: string, public code: string) {
-    super(message);
-    this.name = 'CredexError';
-  }
+interface CancelCredexResult {
+  success: boolean;
+  data?: CancelCredexData;
+  message: string;
+  error?: {
+    code: string;
+    details?: string;
+  };
+}
+
+interface DatabaseCancelResult {
+  success: boolean;
+  data?: {
+    credexID: string;
+    cancelledAt: string;
+    issuerAccountID: string;
+    receiverAccountID: string;
+  };
+  error?: string;
 }
 
 /**
  * CancelCredexService
  * 
- * This service handles the cancellation of Credex offers.
- * It updates the Credex status and creates an audit trail.
+ * Handles the cancellation of a Credex offer. Updates the Credex status from OFFERS to CANCELLED,
+ * creates a digital signature for the cancellation, and returns updated Credex details.
  * 
  * @param credexID - The ID of the Credex to cancel
  * @param signerID - The ID of the member cancelling the Credex
  * @param requestId - The ID of the HTTP request
- * @returns Object containing the cancelled Credex details
- * @throws CredexError with specific error codes
+ * @returns CancelCredexResult containing cancellation details and status
  */
 export async function CancelCredexService(
   credexID: string,
@@ -38,7 +54,14 @@ export async function CancelCredexService(
   });
 
   if (!credexID || !signerID) {
-    throw new CredexError("Missing required parameters", "INVALID_PARAMS");
+    return {
+      success: false,
+      message: "Missing required parameters",
+      error: {
+        code: "MISSING_PARAMS",
+        details: "credexID and signerID are required"
+      }
+    };
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -53,10 +76,10 @@ export async function CancelCredexService(
 
     const checkResult = await ledgerSpaceSession.executeRead(async (tx) => {
       const query = `
-        MATCH (credex:Credex {credexID: $credexID})
+        MATCH (credex:Credex { credexID: $credexID })
         OPTIONAL MATCH (credex)-[r:OFFERS|OWES|CANCELLED]-()
         OPTIONAL MATCH (issuer:Account)-[:OFFERS]->(credex)
-        WHERE exists((issuer)<-[:AUTHORIZED_FOR]-(:Member {memberID: $signerID}))
+        WHERE EXISTS((issuer)<-[:AUTHORIZED_FOR]-(:Member { memberID: $signerID }))
         RETURN 
           credex.credexID AS credexID,
           collect(type(r)) AS relationships,
@@ -66,7 +89,10 @@ export async function CancelCredexService(
       const result = await tx.run(query, { credexID, signerID });
 
       if (result.records.length === 0) {
-        throw new CredexError("Credex not found", "NOT_FOUND");
+        return {
+          success: false,
+          error: "NOT_FOUND"
+        };
       }
 
       const record = result.records[0];
@@ -74,6 +100,7 @@ export async function CancelCredexService(
       const isAuthorized = record.get('isAuthorized');
 
       return {
+        success: true,
         hasOffers: relationships.includes('OFFERS'),
         hasOwes: relationships.includes('OWES'),
         hasCancelled: relationships.includes('CANCELLED'),
@@ -81,18 +108,57 @@ export async function CancelCredexService(
       };
     });
 
+    if (!checkResult.success) {
+      return {
+        success: false,
+        message: "Credex not found",
+        error: {
+          code: "NOT_FOUND",
+          details: "The specified Credex does not exist"
+        }
+      };
+    }
+
     if (!checkResult.isAuthorized) {
-      throw new CredexError("Not authorized to cancel this Credex", "UNAUTHORIZED");
+      return {
+        success: false,
+        message: "Not authorized to cancel this Credex",
+        error: {
+          code: "UNAUTHORIZED",
+          details: "You must be authorized for the issuing account to cancel this Credex"
+        }
+      };
     }
 
     if (!checkResult.hasOffers) {
       if (checkResult.hasOwes) {
-        throw new CredexError("Cannot cancel an accepted Credex", "ALREADY_ACCEPTED");
+        return {
+          success: false,
+          message: "Cannot cancel an accepted Credex",
+          error: {
+            code: "ALREADY_ACCEPTED",
+            details: "This Credex has already been accepted and cannot be cancelled"
+          }
+        };
       }
       if (checkResult.hasCancelled) {
-        throw new CredexError("Credex already cancelled", "ALREADY_CANCELLED");
+        return {
+          success: false,
+          message: "Credex already cancelled",
+          error: {
+            code: "ALREADY_CANCELLED",
+            details: "This Credex has already been cancelled"
+          }
+        };
       }
-      throw new CredexError("Credex in invalid state", "INVALID_STATE");
+      return {
+        success: false,
+        message: "Credex in invalid state",
+        error: {
+          code: "INVALID_STATE",
+          details: "The Credex is in an invalid state for cancellation"
+        }
+      };
     }
 
     // Cancel the Credex
@@ -102,32 +168,54 @@ export async function CancelCredexService(
       requestId
     });
 
-    const result = await ledgerSpaceSession.executeWrite(async (tx) => {
+    const result: DatabaseCancelResult = await ledgerSpaceSession.executeWrite(async (tx) => {
       const query = `
-        MATCH (issuer:Account)-[rel1:OFFERS|REQUESTS]->(credex:Credex {credexID: $credexID})-[rel2:OFFERS|REQUESTS]->(acceptor:Account)
+        MATCH (issuer:Account)-[rel1:OFFERS|REQUESTS]->(credex:Credex { credexID: $credexID })-[rel2:OFFERS|REQUESTS]->(receiver:Account)
         WHERE credex.queueStatus <> "PROCESSED"
         DELETE rel1, rel2
-        CREATE (issuer)-[:CANCELLED]->(credex)-[:CANCELLED]->(acceptor)
+        CREATE (issuer)-[:CANCELLED]->(credex)-[:CANCELLED]->(receiver)
         SET
           credex.cancelledAt = datetime(),
           credex.OutstandingAmount = 0,
           credex.queueStatus = "PROCESSED"
         RETURN 
           credex.credexID AS credexID,
-          toString(credex.cancelledAt) AS cancelledAt
+          toString(credex.cancelledAt) AS cancelledAt,
+          issuer.accountID AS issuerAccountID,
+          receiver.accountID AS receiverAccountID
       `;
 
       const queryResult = await tx.run(query, { credexID });
 
       if (queryResult.records.length === 0) {
-        throw new CredexError("Failed to cancel Credex", "CANCEL_FAILED");
+        return {
+          success: false,
+          error: "CANCEL_FAILED"
+        };
       }
 
+      const record = queryResult.records[0];
       return {
-        credexID: queryResult.records[0].get("credexID"),
-        cancelledAt: queryResult.records[0].get("cancelledAt")
+        success: true,
+        data: {
+          credexID: record.get("credexID"),
+          cancelledAt: record.get("cancelledAt"),
+          issuerAccountID: record.get("issuerAccountID"),
+          receiverAccountID: record.get("receiverAccountID")
+        }
       };
     });
+
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        message: "Failed to cancel Credex",
+        error: {
+          code: "CANCEL_FAILED",
+          details: "An error occurred while attempting to cancel the Credex"
+        }
+      };
+    }
 
     // Create digital signature
     logger.debug("Creating digital signature for cancelled Credex", {
@@ -137,8 +225,10 @@ export async function CancelCredexService(
     });
 
     const inputData = JSON.stringify({
-      credexID: result.credexID,
-      cancelledAt: result.cancelledAt,
+      credexID: result.data.credexID,
+      cancelledAt: result.data.cancelledAt,
+      issuerAccountID: result.data.issuerAccountID,
+      receiverAccountID: result.data.receiverAccountID,
       signerID
     });
 
@@ -146,25 +236,28 @@ export async function CancelCredexService(
       ledgerSpaceSession,
       signerID,
       "Credex",
-      result.credexID,
+      result.data.credexID,
       "CANCEL_CREDEX",
       inputData,
       requestId
     );
 
     logger.info("Credex cancelled successfully", {
-      credexID: result.credexID,
+      credexID: result.data.credexID,
       signerID,
       requestId
     });
 
-    return result;
+    return {
+      success: true,
+      data: {
+        ...result.data,
+        transactionType: "CANCELLED"
+      },
+      message: "Credex cancelled successfully"
+    };
 
   } catch (error) {
-    if (error instanceof CredexError) {
-      throw error;
-    }
-
     logger.error("Unexpected error in CancelCredexService", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
@@ -173,10 +266,14 @@ export async function CancelCredexService(
       requestId
     });
 
-    throw new CredexError(
-      `Failed to cancel Credex: ${error instanceof Error ? error.message : "Unknown error"}`,
-      "INTERNAL_ERROR"
-    );
+    return {
+      success: false,
+      message: "Failed to cancel Credex",
+      error: {
+        code: "INTERNAL_ERROR",
+        details: error instanceof Error ? error.message : "An unknown error occurred while cancelling the Credex"
+      }
+    };
 
   } finally {
     await ledgerSpaceSession.close();

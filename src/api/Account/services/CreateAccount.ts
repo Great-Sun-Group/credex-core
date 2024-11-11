@@ -22,12 +22,17 @@ interface CreateAccountResult {
     accountProperties: AccountProperties;
   };
   message: string;
+  error?: {
+    code: string;
+    details?: string;
+  };
 }
 
 /**
  * CreateAccountService
  *
  * Creates a new account for a member with optional DCO participation settings.
+ * Validates membership tier requirements and account limits.
  *
  * @param ownerID - The ID of the member who will own the account
  * @param accountType - The type of account to create
@@ -60,20 +65,26 @@ export async function CreateAccountService(
 
   // Validate denomination
   if (!getDenominations({ code: defaultDenom }).length) {
-    throw new AccountError(
-      "Invalid default denomination",
-      "INVALID_DENOMINATION",
-      400
-    );
+    return {
+      success: false,
+      message: `Invalid default denomination: ${defaultDenom}`,
+      error: {
+        code: "INVALID_DENOMINATION",
+        details: "The provided denomination is not supported"
+      }
+    };
   }
 
   // Validate DCO denomination if provided
   if (DCOdenom && !getDenominations({ code: DCOdenom }).length) {
-    throw new AccountError(
-      "Invalid DCO denomination",
-      "INVALID_DCO_DENOMINATION",
-      400
-    );
+    return {
+      success: false,
+      message: `Invalid DCO denomination: ${DCOdenom}`,
+      error: {
+        code: "INVALID_DCO_DENOMINATION",
+        details: "The provided DCO denomination is not supported"
+      }
+    };
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -93,7 +104,14 @@ export async function CreateAccountService(
       );
 
       if (result.records.length === 0) {
-        throw new AccountError("Member not found", "MEMBER_NOT_FOUND", 404);
+        return {
+          success: false,
+          message: "Member not found",
+          error: {
+            code: "MEMBER_NOT_FOUND",
+            details: "The specified member does not exist"
+          }
+        };
       }
 
       return {
@@ -102,16 +120,44 @@ export async function CreateAccountService(
       };
     });
 
+    // Handle member not found case
+    if ('success' in tierCheck && !tierCheck.success) {
+      return tierCheck as CreateAccountResult;
+    }
+
     if (tierCheck.memberTier <= 2 && tierCheck.numAccounts >= 1) {
-      throw new AccountError(
-        "Account creation not permitted on current membership tier",
-        "TIER_LIMIT_EXCEEDED",
-        403
-      );
+      return {
+        success: false,
+        message: "Account creation not permitted on current membership tier",
+        error: {
+          code: "TIER_LIMIT_EXCEEDED",
+          details: "Your current membership tier allows only one account. Please upgrade to create additional accounts."
+        }
+      };
     }
 
     // Create the account
     const result = await ledgerSpaceSession.executeWrite(async (tx) => {
+      // First check if handle is already in use
+      const handleCheck = await tx.run(
+        `
+        MATCH (account:Account { accountHandle: $accountHandle })
+        RETURN account.accountHandle
+        `,
+        { accountHandle }
+      );
+
+      if (handleCheck.records.length > 0) {
+        return {
+          success: false,
+          message: `Account handle '${accountHandle}' is already in use`,
+          error: {
+            code: "HANDLE_EXISTS",
+            details: "Please choose a different account handle"
+          }
+        };
+      }
+
       const createResult = await tx.run(
         `
         MATCH (daynode:Daynode { Active: true })
@@ -146,11 +192,14 @@ export async function CreateAccountService(
       );
 
       if (createResult.records.length === 0) {
-        throw new AccountError(
-          "Failed to create account",
-          "CREATE_FAILED",
-          500
-        );
+        return {
+          success: false,
+          message: "Failed to create account",
+          error: {
+            code: "CREATE_FAILED",
+            details: "An error occurred while creating the account"
+          }
+        };
       }
 
       const accountProperties = createResult.records[0].get(
@@ -169,7 +218,7 @@ export async function CreateAccountService(
           accountID: accountProperties.accountID,
           accountProperties,
         },
-        message: "Account created successfully",
+        message: `Account "${accountName}" created successfully with default denomination ${defaultDenom}`
       };
     });
 
@@ -187,6 +236,10 @@ export async function CreateAccountService(
     return {
       success: false,
       message: handledError.message,
+      error: {
+        code: handledError.code || "INTERNAL_ERROR",
+        details: handledError instanceof Error ? handledError.message : "An unknown error occurred"
+      }
     };
   } finally {
     await ledgerSpaceSession.close();

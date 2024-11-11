@@ -12,11 +12,14 @@ interface BalanceData {
   netCredexAssetsInDefaultDenom: string;
 }
 
-class AccountError extends Error {
-  constructor(message: string, public code: string) {
-    super(message);
-    this.name = 'AccountError';
-  }
+interface GetBalancesResult {
+  success: boolean;
+  data?: BalanceData;
+  message: string;
+  error?: {
+    code: string;
+    details?: string;
+  };
 }
 
 /**
@@ -27,17 +30,23 @@ class AccountError extends Error {
  * 
  * @param accountID - The ID of the account to get balances for
  * @param requestId - The ID of the HTTP request
- * @returns Object containing secured and unsecured balance information
- * @throws AccountError with specific error codes
+ * @returns GetBalancesResult containing balance information
  */
 export async function GetBalancesService(
   accountID: string,
   requestId: string
-): Promise<BalanceData> {
+): Promise<GetBalancesResult> {
   logger.debug("Entering GetBalancesService", { accountID, requestId });
 
   if (!accountID) {
-    throw new AccountError("Missing required accountID", "INVALID_PARAMS");
+    return {
+      success: false,
+      message: "Account ID is required",
+      error: {
+        code: "MISSING_ACCOUNT_ID",
+        details: "The account ID parameter must be provided"
+      }
+    };
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -131,7 +140,14 @@ export async function GetBalancesService(
     });
 
     if (getUnsecuredBalancesAndTotalAssetsQuery.records.length === 0) {
-      throw new AccountError("Account not found", "NOT_FOUND");
+      return {
+        success: false,
+        message: "Account not found",
+        error: {
+          code: "ACCOUNT_NOT_FOUND",
+          details: "The specified account does not exist"
+        }
+      };
     }
 
     logger.debug("Processing unsecured balances and total assets", { accountID, requestId });
@@ -139,7 +155,14 @@ export async function GetBalancesService(
     const defaultDenom = unsecuredBalancesAndTotalAssets.get("defaultDenom");
 
     if (!defaultDenom) {
-      throw new AccountError("Account missing default denomination", "INVALID_ACCOUNT_STATE");
+      return {
+        success: false,
+        message: "Account configuration error",
+        error: {
+          code: "MISSING_DEFAULT_DENOM",
+          details: "The account is missing a default denomination setting"
+        }
+      };
     }
 
     const unsecuredBalancesInDefaultDenom = {
@@ -157,7 +180,7 @@ export async function GetBalancesService(
       )} ${defaultDenom}`,
     };
 
-    const result: BalanceData = {
+    const balanceData: BalanceData = {
       securedNetBalancesByDenom,
       unsecuredBalancesInDefaultDenom,
       netCredexAssetsInDefaultDenom: `${denomFormatter(
@@ -167,27 +190,32 @@ export async function GetBalancesService(
     };
 
     logger.info("Balances retrieved successfully", { accountID, requestId });
-    logger.debug("Exiting GetBalancesService", { accountID, requestId });
-    return result;
+    
+    return {
+      success: true,
+      data: balanceData,
+      message: "Account balances retrieved successfully"
+    };
 
   } catch (error) {
-    if (error instanceof AccountError) {
-      throw error;
-    }
-
-    logger.error("Unexpected error in GetBalancesService", {
+    logger.error("Error retrieving account balances", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
       accountID,
       requestId
     });
 
-    throw new AccountError(
-      `Failed to retrieve balances: ${error instanceof Error ? error.message : "Unknown error"}`,
-      "INTERNAL_ERROR"
-    );
+    return {
+      success: false,
+      message: "Failed to retrieve account balances",
+      error: {
+        code: "DATABASE_ERROR",
+        details: error instanceof Error ? error.message : "An unknown error occurred while retrieving balances"
+      }
+    };
 
   } finally {
     await ledgerSpaceSession.close();
+    logger.debug("Exiting GetBalancesService", { accountID, requestId });
   }
 }

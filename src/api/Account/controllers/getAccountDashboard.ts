@@ -3,31 +3,15 @@ import { GetAccountDashboardService } from "../services/GetAccountDashboard";
 import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 import { validateUUID } from "../../../utils/validators";
+import {
+  TypedApiResponse,
+  ApiActionType,
+  AccountActionDetails,
+  ErrorActionDetails
+} from "../../../types/apiResponse";
 
-interface DashboardResponse {
-  success: boolean;
-  data?: {
-    accountID: string;
-    accountName: string;
-    accountHandle: string;
-    defaultDenom: string;
-    isOwnedAccount: boolean;
-    sendOffersTo?: {
-      memberID: string;
-      firstname: string;
-      lastname: string;
-    };
-    authFor: Array<{
-      memberID: string;
-      firstname: string;
-      lastname: string;
-    }>;
-    balanceData: any; // Will be typed when balances are standardized
-    pendingInData: any; // Will be typed when Credex standardization is complete
-    pendingOutData: any; // Will be typed when Credex standardization is complete
-  };
-  message: string;
-}
+type AccountDashboardResponse = TypedApiResponse<AccountActionDetails>;
+type AccountDashboardErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * GetAccountDashboardController
@@ -89,7 +73,28 @@ export async function GetAccountDashboardController(
         requestId
       });
 
-      res.status(statusCode).json(result);
+      const errorResponse: AccountDashboardErrorResponse = {
+        message: result.message,
+        data: {
+          action: {
+            id: accountID,
+            type: statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+                  statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
+                  ApiActionType.ERROR_INTERNAL,
+            timestamp: new Date().toISOString(),
+            actor: memberID,
+            details: {
+              code: statusCode === 404 ? "ACCOUNT_NOT_FOUND" :
+                    statusCode === 403 ? "ACCESS_DENIED" :
+                    "DASHBOARD_ERROR",
+              reason: result.message
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(statusCode).json(errorResponse);
       return;
     }
 
@@ -100,7 +105,40 @@ export async function GetAccountDashboardController(
       requestId
     });
 
-    res.status(200).json(result);
+    const response: AccountDashboardResponse = {
+      message: "Account dashboard retrieved successfully",
+      data: {
+        action: {
+          id: accountID,
+          type: ApiActionType.DASHBOARD_RETRIEVED,
+          timestamp: new Date().toISOString(),
+          actor: memberID,
+          details: {
+            accountID,
+            accountName: result.data?.accountName,
+            accountHandle: result.data?.accountHandle,
+            defaultDenom: result.data?.defaultDenom,
+            sendOffersTo: result.data?.sendOffersTo,
+            authFor: result.data?.authFor
+          }
+        },
+        // Include the full dashboard state in the response
+        dashboard: {
+          accountID: result.data?.accountID,
+          accountName: result.data?.accountName,
+          accountHandle: result.data?.accountHandle,
+          defaultDenom: result.data?.defaultDenom,
+          isOwnedAccount: result.data?.isOwnedAccount,
+          sendOffersTo: result.data?.sendOffersTo,
+          authFor: result.data?.authFor,
+          balanceData: result.data?.balanceData,
+          pendingInData: result.data?.pendingInData,
+          pendingOutData: result.data?.pendingOutData
+        }
+      }
+    };
+
+    res.status(200).json(response);
 
   } catch (error) {
     const handledError = handleServiceError(error);
@@ -114,10 +152,25 @@ export async function GetAccountDashboardController(
     });
 
     if (handledError instanceof AccountError) {
-      res.status(handledError.statusCode).json({
-        success: false,
-        message: handledError.message
-      });
+      const statusCode = handledError.statusCode || 500;
+      const errorResponse: AccountDashboardErrorResponse = {
+        message: handledError.message,
+        data: {
+          action: {
+            id: req.body.accountID || null,
+            type: ApiActionType.ERROR_INTERNAL,
+            timestamp: new Date().toISOString(),
+            actor: req.body.memberID || "system",
+            details: {
+              code: String(handledError.code || "UNKNOWN_ERROR"),
+              reason: handledError.message
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(statusCode).json(errorResponse);
       return;
     }
 

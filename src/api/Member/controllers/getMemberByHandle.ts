@@ -3,6 +3,23 @@ import { GetMemberByHandleService } from "../services/GetMemberByHandle";
 import logger from "../../../utils/logger";
 import { validateHandle } from "../../../utils/validators";
 
+interface MemberResponse {
+  message: string;
+  data: {
+    action: {
+      id: string;
+      type: string;
+      timestamp: string;
+      actor: string;
+      details: {
+        memberID: string;
+        memberName: string;
+        memberHandle: string;
+      };
+    };
+  };
+}
+
 export const GetMemberByHandleController = async (
   req: express.Request,
   res: express.Response,
@@ -17,18 +34,25 @@ export const GetMemberByHandleController = async (
   });
 
   try {
-    if (!validateHandle(memberHandle).isValid) {
+    const handleValidation = validateHandle(memberHandle);
+    if (!handleValidation.isValid) {
       logger.warn("Invalid member handle", { memberHandle, requestId });
-      res
-        .status(400)
-        .json({
-          message:
-            "Invalid member handle. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters.",
-        });
-      logger.debug(
-        "Exiting GetMemberByHandleController with invalid member handle",
-        { requestId }
-      );
+      res.status(400).json({
+        message: "Invalid member handle. Only lowercase letters, numbers, periods, and underscores are allowed. Length must be between 3 and 30 characters.",
+        data: {
+          action: {
+            id: null,
+            type: "MEMBER_LOOKUP_FAILED",
+            timestamp: new Date().toISOString(),
+            actor: null,
+            details: {
+              reason: "INVALID_HANDLE",
+              memberHandle,
+              validationError: handleValidation.message
+            }
+          }
+        }
+      });
       return;
     }
 
@@ -42,11 +66,42 @@ export const GetMemberByHandleController = async (
         memberID: memberData.memberID,
         requestId,
       });
-      // Pass through service response directly without extra nesting
-      res.status(200).json(memberData);
+
+      const response: MemberResponse = {
+        message: `Found member: ${memberData.memberName}`,
+        data: {
+          action: {
+            id: memberData.memberID,
+            type: "MEMBER_FOUND",
+            timestamp: new Date().toISOString(),
+            actor: memberData.memberID,
+            details: {
+              memberID: memberData.memberID,
+              memberName: memberData.memberName,
+              memberHandle
+            }
+          }
+        }
+      };
+
+      res.status(200).json(response);
     } else {
       logger.info("Member not found", { memberHandle, requestId });
-      res.status(404).json({ message: "Member not found" });
+      res.status(404).json({
+        message: "Member not found",
+        data: {
+          action: {
+            id: null,
+            type: "MEMBER_LOOKUP_FAILED",
+            timestamp: new Date().toISOString(),
+            actor: null,
+            details: {
+              reason: "NOT_FOUND",
+              memberHandle
+            }
+          }
+        }
+      });
     }
 
     logger.debug("Exiting GetMemberByHandleController successfully", {
@@ -59,9 +114,26 @@ export const GetMemberByHandleController = async (
       memberHandle,
       requestId,
     });
+
+    res.status(500).json({
+      message: "Internal server error",
+      data: {
+        action: {
+          id: null,
+          type: "MEMBER_LOOKUP_FAILED",
+          timestamp: new Date().toISOString(),
+          actor: null,
+          details: {
+            reason: "INTERNAL_ERROR",
+            error: error instanceof Error ? error.message : "Unknown error",
+            memberHandle
+          }
+        }
+      }
+    });
+
     logger.debug("Exiting GetMemberByHandleController with error", {
       requestId,
     });
-    next(error);
   }
 };

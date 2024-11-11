@@ -3,20 +3,15 @@ import { GetBalancesService } from "../services/GetBalances";
 import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 import { validateUUID } from "../../../utils/validators";
+import {
+  TypedApiResponse,
+  ApiActionType,
+  AccountActionDetails,
+  ErrorActionDetails
+} from "../../../types/apiResponse";
 
-interface BalanceResponse {
-  success: boolean;
-  data?: {
-    securedNetBalancesByDenom: string[];
-    unsecuredBalancesInDefaultDenom: {
-      totalPayables: string;
-      totalReceivables: string;
-      netPayRec: string;
-    };
-    netCredexAssetsInDefaultDenom: string;
-  };
-  message: string;
-}
+type BalanceResponse = TypedApiResponse<AccountActionDetails>;
+type BalanceErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * GetBalancesController
@@ -41,11 +36,26 @@ export async function GetBalancesController(
 
     // Validate accountID
     if (!validateUUID(accountID)) {
-      throw new AccountError(
-        "Invalid account ID format",
-        "INVALID_ACCOUNT_ID",
-        400
-      );
+      const errorResponse: BalanceErrorResponse = {
+        message: "Invalid account ID format",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: "system",
+            details: {
+              code: "INVALID_ACCOUNT_ID",
+              reason: "Invalid account ID format",
+              field: "accountID"
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(400).json(errorResponse);
+      return;
     }
 
     logger.info("Retrieving account balances", {
@@ -53,17 +63,73 @@ export async function GetBalancesController(
       requestId
     });
 
-    const balanceData = await GetBalancesService(accountID, requestId);
+    const result = await GetBalancesService(accountID, requestId);
+
+    if (!result.success || !result.data) {
+      logger.warn("Failed to retrieve account balances", {
+        accountID,
+        error: result.error,
+        requestId
+      });
+
+      const statusCode = 
+        result.error?.code === "ACCOUNT_NOT_FOUND" ? 404 :
+        result.error?.code === "MISSING_DEFAULT_DENOM" ? 400 :
+        500;
+
+      const errorResponse: BalanceErrorResponse = {
+        message: result.message,
+        data: {
+          action: {
+            id: accountID,
+            type: statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+                  statusCode === 400 ? ApiActionType.ERROR_VALIDATION :
+                  ApiActionType.ERROR_INTERNAL,
+            timestamp: new Date().toISOString(),
+            actor: "system",
+            details: {
+              code: result.error?.code || "UNKNOWN_ERROR",
+              reason: result.message,
+              suggestion: result.error?.details
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(statusCode).json(errorResponse);
+      return;
+    }
 
     logger.info("Account balances retrieved successfully", {
       accountID,
       requestId
     });
 
+    // At this point we know result.data exists because we checked above
+    const balanceData = result.data;
+
     const response: BalanceResponse = {
-      success: true,
-      data: balanceData,
-      message: "Account balances retrieved successfully"
+      message: result.message,
+      data: {
+        action: {
+          id: accountID,
+          type: ApiActionType.BALANCES_RETRIEVED,
+          timestamp: new Date().toISOString(),
+          actor: "system",
+          details: {
+            accountID,
+            balances: {
+              securedNetBalancesByDenom: balanceData.securedNetBalancesByDenom,
+              unsecuredBalancesInDefaultDenom: balanceData.unsecuredBalancesInDefaultDenom,
+              netCredexAssetsInDefaultDenom: balanceData.netCredexAssetsInDefaultDenom
+            }
+          }
+        },
+        dashboard: {
+          balanceData: balanceData
+        }
+      }
     };
 
     res.status(200).json(response);
@@ -78,21 +144,25 @@ export async function GetBalancesController(
       requestId
     });
 
-    if (handledError instanceof AccountError) {
-      const statusCode = 
-        handledError.message.includes("not found") ? 404 :
-        handledError.message.includes("missing default denomination") ? 400 :
-        handledError.statusCode || 500;
+    const errorResponse: BalanceErrorResponse = {
+      message: "Internal server error while retrieving balances",
+      data: {
+        action: {
+          id: req.body.accountID || null,
+          type: ApiActionType.ERROR_INTERNAL,
+          timestamp: new Date().toISOString(),
+          actor: "system",
+          details: {
+            code: String(handledError.code || "UNKNOWN_ERROR"),
+            reason: handledError.message
+          }
+        },
+        dashboard: {}
+      }
+    };
 
-      res.status(statusCode).json({
-        success: false,
-        message: handledError.message
-      });
-      return;
-    }
-
+    res.status(500).json(errorResponse);
     next(handledError);
-
   } finally {
     logger.debug("Exiting GetBalancesController", { requestId });
   }

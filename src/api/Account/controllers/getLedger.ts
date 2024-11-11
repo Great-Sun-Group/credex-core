@@ -2,11 +2,30 @@ import express from "express";
 import { GetLedgerService } from "../services/GetLedger";
 import { validateUUID, validatePositiveInteger } from "../../../utils/validators";
 import logger from "../../../utils/logger";
+import {
+  TypedApiResponse,
+  ApiActionType,
+  AccountActionDetails,
+  ErrorActionDetails
+} from "../../../types/apiResponse";
 
 interface UserRequest extends express.Request {
   user?: any;
 }
 
+type LedgerResponse = TypedApiResponse<AccountActionDetails>;
+type LedgerErrorResponse = TypedApiResponse<ErrorActionDetails>;
+
+/**
+ * GetLedgerController
+ * 
+ * Handles retrieving paginated ledger entries for an account.
+ * Validates access permissions and pagination parameters.
+ * 
+ * @param req - Express request object with user information
+ * @param res - Express response object
+ * @param next - Express next function
+ */
 export const GetLedgerController = async (
   req: UserRequest,
   res: express.Response,
@@ -26,7 +45,25 @@ export const GetLedgerController = async (
   const memberID = req.user?.memberID;
   if (!memberID) {
     logger.warn("No authenticated user found", { requestId });
-    res.status(401).json({ message: "Authentication required" });
+    
+    const errorResponse: LedgerErrorResponse = {
+      message: "Authentication required",
+      data: {
+        action: {
+          id: null,
+          type: ApiActionType.ERROR_UNAUTHORIZED,
+          timestamp: new Date().toISOString(),
+          actor: "system",
+          details: {
+            code: "NO_AUTH",
+            reason: "Authentication required"
+          }
+        },
+        dashboard: {}
+      }
+    };
+
+    res.status(401).json(errorResponse);
     logger.debug("Exiting GetLedgerController - no auth", { requestId });
     return;
   }
@@ -34,9 +71,26 @@ export const GetLedgerController = async (
   try {
     if (!validateUUID(accountID)) {
       logger.warn("Invalid accountID", { accountID, requestId });
-      res.status(400).json({
-        message: "Invalid accountID",
-      });
+      
+      const errorResponse: LedgerErrorResponse = {
+        message: "Invalid accountID format",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: memberID,
+            details: {
+              code: "INVALID_ACCOUNT_ID",
+              reason: "Invalid accountID format",
+              field: "accountID"
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(400).json(errorResponse);
       logger.debug("Exiting GetLedgerController with invalid accountID", { requestId });
       return;
     }
@@ -46,18 +100,52 @@ export const GetLedgerController = async (
 
     if (!validatePositiveInteger(parsedNumRows)) {
       logger.warn("Invalid numRows", { numRows, requestId });
-      res.status(400).json({
+      
+      const errorResponse: LedgerErrorResponse = {
         message: "Invalid numRows. Must be a positive integer.",
-      });
+        data: {
+          action: {
+            id: accountID,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: memberID,
+            details: {
+              code: "INVALID_NUM_ROWS",
+              reason: "Number of rows must be a positive integer",
+              field: "numRows"
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(400).json(errorResponse);
       logger.debug("Exiting GetLedgerController with invalid numRows", { requestId });
       return;
     }
 
     if (!Number.isInteger(parsedStartRow) || parsedStartRow < 0) {
       logger.warn("Invalid startRow", { startRow, requestId });
-      res.status(400).json({
+      
+      const errorResponse: LedgerErrorResponse = {
         message: "Invalid startRow. Must be a non-negative integer.",
-      });
+        data: {
+          action: {
+            id: accountID,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: memberID,
+            details: {
+              code: "INVALID_START_ROW",
+              reason: "Start row must be a non-negative integer",
+              field: "startRow"
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(400).json(errorResponse);
       logger.debug("Exiting GetLedgerController with invalid startRow", { requestId });
       return;
     }
@@ -70,46 +158,76 @@ export const GetLedgerController = async (
       requestId 
     });
 
-    const entries = await GetLedgerService(
+    const result = await GetLedgerService(
       accountID,
       memberID,
       parsedNumRows,
       parsedStartRow
     );
 
-    if (entries) {
-      logger.info("Ledger retrieved successfully", {
+    if (!result.success) {
+      logger.warn("Failed to retrieve ledger", {
+        error: result.error,
         memberID,
         accountID,
-        numRows: parsedNumRows,
-        startRow: parsedStartRow,
-        requestId,
+        requestId
       });
-      // Return entries array directly in data field
-      res.status(200).json({
-        success: true,
-        data: entries,
-        message: "Ledger retrieved successfully"
-      });
-    } else {
-      logger.warn("Ledger not found", { accountID, requestId });
-      res.status(404).json({ 
-        success: false,
-        message: "Ledger not found" 
-      });
-    }
 
-    logger.debug("Exiting GetLedgerController successfully", { requestId });
-  } catch (error) {
-    if (error instanceof Error && error.message === "Unauthorized access to account") {
-      logger.warn("Unauthorized access attempt", { memberID, accountID, requestId });
-      res.status(403).json({
-        success: false,
-        message: "Unauthorized access to account"
-      });
+      const statusCode = result.error?.code === "UNAUTHORIZED_ACCESS" ? 403 : 500;
+
+      const errorResponse: LedgerErrorResponse = {
+        message: result.message,
+        data: {
+          action: {
+            id: accountID,
+            type: statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED : ApiActionType.ERROR_INTERNAL,
+            timestamp: new Date().toISOString(),
+            actor: memberID,
+            details: {
+              code: result.error?.code || "UNKNOWN_ERROR",
+              reason: result.message,
+              suggestion: result.error?.details
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(statusCode).json(errorResponse);
       return;
     }
 
+    logger.info("Ledger retrieved successfully", {
+      memberID,
+      accountID,
+      entriesCount: result.data?.entries.length,
+      requestId,
+    });
+
+    const response: LedgerResponse = {
+      message: result.message,
+      data: {
+        action: {
+          id: accountID,
+          type: ApiActionType.LEDGER_RETRIEVED,
+          timestamp: new Date().toISOString(),
+          actor: memberID,
+          details: {
+            accountID,
+            ledger: result.data!.entries
+          }
+        },
+        dashboard: {
+          ledger: result.data!.entries,
+          pagination: result.data!.pagination
+        }
+      }
+    };
+
+    res.status(200).json(response);
+    logger.debug("Exiting GetLedgerController successfully", { requestId });
+
+  } catch (error) {
     logger.error("Error in GetLedgerController", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
@@ -117,6 +235,25 @@ export const GetLedgerController = async (
       accountID,
       requestId,
     });
+
+    const errorResponse: LedgerErrorResponse = {
+      message: "Internal server error while retrieving ledger",
+      data: {
+        action: {
+          id: accountID,
+          type: ApiActionType.ERROR_INTERNAL,
+          timestamp: new Date().toISOString(),
+          actor: memberID,
+          details: {
+            code: "INTERNAL_ERROR",
+            reason: error instanceof Error ? error.message : "Unknown error"
+          }
+        },
+        dashboard: {}
+      }
+    };
+
+    res.status(500).json(errorResponse);
     logger.debug("Exiting GetLedgerController with error", { requestId });
     next(error);
   }

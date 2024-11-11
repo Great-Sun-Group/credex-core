@@ -11,22 +11,16 @@ import {
   validateAmount,
 } from "../../../utils/validators";
 import { UserRequest } from "../../../middleware/authMiddleware";
+import { withDashboard } from "../../../utils/dashboardUtils";
+import {
+  TypedApiResponse,
+  ApiActionType,
+  AccountActionDetails,
+  ErrorActionDetails
+} from "../../../types/apiResponse";
 
-interface CreateAccountResponse {
-  success: boolean;
-  data?: {
-    accountID: string;
-    accountProperties: {
-      accountType: string;
-      accountName: string;
-      accountHandle: string;
-      defaultDenom: string;
-      DCOgiveInCXX: number | null;
-      DCOdenom: string | null;
-    };
-  };
-  message: string;
-}
+type CreateAccountResponse = TypedApiResponse<AccountActionDetails>;
+type CreateAccountErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * CreateAccountController
@@ -62,59 +56,161 @@ export async function CreateAccountController(
 
     // Validate all inputs
     if (!validateUUID(ownerID)) {
-      throw new AccountError(
-        "Invalid owner ID format",
-        "INVALID_OWNER_ID",
-        400
-      );
+      const errorResponse: CreateAccountErrorResponse = {
+        message: "Invalid owner ID format",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: ownerID,
+            details: {
+              code: "INVALID_OWNER_ID",
+              reason: "Invalid owner ID format",
+              field: "ownerID"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      res.status(400).json(errorResponse);
+      return;
     }
 
     if (!checkPermittedAccountType(accountType)) {
-      throw new AccountError(
-        "Invalid account type",
-        "INVALID_ACCOUNT_TYPE",
-        400
-      );
+      const errorResponse: CreateAccountErrorResponse = {
+        message: "Invalid account type",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: ownerID,
+            details: {
+              code: "INVALID_ACCOUNT_TYPE",
+              reason: "The specified account type is not permitted",
+              field: "accountType"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      res.status(400).json(errorResponse);
+      return;
     }
 
     const accountNameValidation = validateAccountName(accountName);
     if (!accountNameValidation.isValid) {
-      throw new AccountError(
-        accountNameValidation.message || "Invalid account name",
-        "INVALID_ACCOUNT_NAME",
-        400
-      );
+      const errorResponse: CreateAccountErrorResponse = {
+        message: accountNameValidation.message || "Invalid account name",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: ownerID,
+            details: {
+              code: "INVALID_ACCOUNT_NAME",
+              reason: accountNameValidation.message || "Invalid account name format",
+              field: "accountName"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      res.status(400).json(errorResponse);
+      return;
     }
 
     const accountHandleValidation = validateHandle(accountHandle);
     if (!accountHandleValidation.isValid) {
-      throw new AccountError(
-        accountHandleValidation.message || "Invalid account handle",
-        "INVALID_ACCOUNT_HANDLE",
-        400
-      );
+      const errorResponse: CreateAccountErrorResponse = {
+        message: accountHandleValidation.message || "Invalid account handle",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: ownerID,
+            details: {
+              code: "INVALID_ACCOUNT_HANDLE",
+              reason: accountHandleValidation.message || "Invalid account handle format",
+              field: "accountHandle"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      res.status(400).json(errorResponse);
+      return;
     }
 
     const denomValidation = validateDenomination(defaultDenom);
     if (!denomValidation.isValid) {
-      throw new AccountError(
-        denomValidation.message || "Invalid denomination",
-        "INVALID_DENOMINATION",
-        400
-      );
+      const errorResponse: CreateAccountErrorResponse = {
+        message: denomValidation.message || "Invalid denomination",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: ownerID,
+            details: {
+              code: "INVALID_DENOMINATION",
+              reason: denomValidation.message || "Invalid denomination format",
+              field: "defaultDenom"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      res.status(400).json(errorResponse);
+      return;
     }
 
     // Validate optional DCO parameters if provided
     if (DCOgiveInCXX !== undefined && !validateAmount(DCOgiveInCXX)) {
-      throw new AccountError("Invalid DCO give rate", "INVALID_DCO_RATE", 400);
+      const errorResponse: CreateAccountErrorResponse = {
+        message: "Invalid DCO give rate",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: ownerID,
+            details: {
+              code: "INVALID_DCO_RATE",
+              reason: "DCO give rate must be a valid amount",
+              field: "DCOgiveInCXX"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      res.status(400).json(errorResponse);
+      return;
     }
 
     if (DCOdenom && !validateDenomination(DCOdenom)) {
-      throw new AccountError(
-        "Invalid DCO denomination",
-        "INVALID_DCO_DENOMINATION",
-        400
-      );
+      const errorResponse: CreateAccountErrorResponse = {
+        message: "Invalid DCO denomination",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: ownerID,
+            details: {
+              code: "INVALID_DCO_DENOMINATION",
+              reason: "Invalid DCO denomination format",
+              field: "DCOdenom"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      res.status(400).json(errorResponse);
+      return;
     }
 
     logger.info("Creating new account", {
@@ -136,22 +232,41 @@ export async function CreateAccountController(
     );
 
     if (!result.success) {
-      const statusCode = result.message.includes("not found")
-        ? 404
-        : result.message.includes("permitted")
-          ? 403
-          : result.message.includes("already in use")
-            ? 409
-            : 400;
+      const statusCode = result.error?.code === "MEMBER_NOT_FOUND" ? 404 :
+                        result.error?.code === "TIER_LIMIT_EXCEEDED" ? 403 :
+                        result.error?.code === "HANDLE_EXISTS" ? 409 :
+                        400;
 
       logger.warn("Failed to create account", {
         message: result.message,
+        error: result.error,
         ownerID,
         accountType,
         requestId,
       });
 
-      res.status(statusCode).json(result);
+      const errorResponse: CreateAccountErrorResponse = {
+        message: result.message,
+        data: {
+          action: {
+            id: null,
+            type: statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+                  statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
+                  statusCode === 409 ? ApiActionType.ERROR_VALIDATION :
+                  ApiActionType.ERROR_INTERNAL,
+            timestamp: new Date().toISOString(),
+            actor: ownerID,
+            details: {
+              code: result.error?.code || "CREATE_FAILED",
+              reason: result.message,
+              suggestion: result.error?.details
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(statusCode).json(errorResponse);
       return;
     }
 
@@ -162,7 +277,35 @@ export async function CreateAccountController(
       requestId,
     });
 
-    res.status(201).json(result);
+    // Create base response without dashboard
+    const baseResponse = {
+      message: result.message,
+      data: {
+        action: {
+          id: result.data!.accountID,
+          type: ApiActionType.ACCOUNT_CREATED,
+          timestamp: new Date().toISOString(),
+          actor: ownerID,
+          details: {
+            accountID: result.data!.accountID,
+            accountName: result.data!.accountProperties.accountName,
+            accountHandle: result.data!.accountProperties.accountHandle,
+            defaultDenom: result.data!.accountProperties.defaultDenom,
+            ownerID
+          }
+        }
+      }
+    };
+
+    // Add dashboard data to response
+    const response = await withDashboard(
+      baseResponse,
+      ownerID,
+      result.data!.accountID,
+      requestId
+    );
+
+    res.status(201).json(response);
   } catch (error) {
     const handledError = handleServiceError(error);
     logger.error("Error in CreateAccountController", {
@@ -172,14 +315,24 @@ export async function CreateAccountController(
       requestId,
     });
 
-    if (handledError instanceof AccountError) {
-      res.status(handledError.statusCode).json({
-        success: false,
-        message: handledError.message,
-      });
-      return;
-    }
+    const errorResponse: CreateAccountErrorResponse = {
+      message: handledError.message,
+      data: {
+        action: {
+          id: null,
+          type: ApiActionType.ERROR_INTERNAL,
+          timestamp: new Date().toISOString(),
+          actor: req.user?.memberID || "system",
+          details: {
+            code: String(handledError.code || "UNKNOWN_ERROR"),
+            reason: handledError.message
+          }
+        },
+        dashboard: {}
+      }
+    };
 
+    res.status(500).json(errorResponse);
     next(handledError);
   } finally {
     logger.debug("Exiting CreateAccountController", { requestId });
