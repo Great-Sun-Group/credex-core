@@ -5,12 +5,19 @@ import logger from "../../../utils/logger";
 import { validatePhone } from "../../../utils/validators";
 
 interface LoginResponse {
-  success: boolean;
-  data?: {
-    token: string;
-    memberID: string;
-  };
   message: string;
+  data: {
+    action: {
+      id: string;
+      type: string;
+      timestamp: string;
+      actor: string;
+      details: {
+        token?: string;
+      };
+    };
+    dashboard?: any; // Will be populated when dashboard standardization is complete
+  };
 }
 
 /**
@@ -48,15 +55,29 @@ export async function LoginMemberController(
         message: result.message,
         requestId
       });
-    } else {
-      logger.info("Login successful", {
-        phone,
-        memberID: result.data?.memberID,
-        requestId
-      });
+      throw new MemberError(result.message, "LOGIN_FAILED", 401);
     }
 
-    return result;
+    logger.info("Login successful", {
+      phone,
+      memberID: result.data?.memberID,
+      requestId
+    });
+
+    return {
+      message: "Successfully logged in",
+      data: {
+        action: {
+          id: result.data!.memberID,
+          type: "MEMBER_LOGIN",
+          timestamp: new Date().toISOString(),
+          actor: result.data!.memberID,
+          details: {
+            token: result.data!.token
+          }
+        }
+      }
+    };
 
   } catch (error) {
     const handledError = handleServiceError(error);
@@ -67,10 +88,7 @@ export async function LoginMemberController(
       requestId
     });
     
-    return {
-      success: false,
-      message: handledError.message
-    };
+    throw handledError;
   }
 }
 
@@ -94,20 +112,24 @@ export async function loginMemberExpressHandler(
     if (!phone) {
       logger.warn("Missing phone number", { requestId });
       res.status(400).json({
-        success: false,
-        message: "Phone number is required"
+        message: "Phone number is required",
+        data: {
+          action: {
+            id: null,
+            type: "MEMBER_LOGIN_FAILED",
+            timestamp: new Date().toISOString(),
+            actor: null,
+            details: {
+              reason: "MISSING_PHONE"
+            }
+          }
+        }
       });
       return;
     }
 
     const result = await LoginMemberController(phone, requestId);
-
-    if (!result.success) {
-      const statusCode = result.message.includes("not found") ? 404 : 400;
-      res.status(statusCode).json(result);
-    } else {
-      res.status(200).json(result);
-    }
+    res.status(200).json(result);
 
   } catch (error) {
     const handledError = handleServiceError(error);
@@ -118,7 +140,26 @@ export async function loginMemberExpressHandler(
       requestId
     });
     
-    next(handledError);
+    const statusCode = 
+      handledError.message.includes("not found") ? 404 :
+      handledError.message.includes("Invalid") ? 400 :
+      handledError.statusCode || 500;
+
+    res.status(statusCode).json({
+      message: handledError.message,
+      data: {
+        action: {
+          id: null,
+          type: "MEMBER_LOGIN_FAILED",
+          timestamp: new Date().toISOString(),
+          actor: null,
+          details: {
+            reason: handledError.code,
+            error: handledError.message
+          }
+        }
+      }
+    });
   } finally {
     logger.debug("Exiting loginMemberExpressHandler", { requestId });
   }

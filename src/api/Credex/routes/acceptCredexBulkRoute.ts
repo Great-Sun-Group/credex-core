@@ -48,6 +48,12 @@ export default function acceptCredexBulkRoute() {
    *                 data:
    *                   type: object
    *                   properties:
+   *                     acceptedCredexIDs:
+   *                       type: array
+   *                       description: Successfully accepted Credex IDs
+   *                       items:
+   *                         type: string
+   *                         format: uuid
    *                     summary:
    *                       type: object
    *                       properties:
@@ -74,16 +80,7 @@ export default function acceptCredexBulkRoute() {
    *                                 format: uuid
    *                               error:
    *                                 type: string
-   *                     acceptCredexData:
-   *                       type: array
-   *                       description: Details of successfully accepted Credex transactions
-   *                       items:
-   *                         type: object
-   *                         properties:
-   *                           acceptorAccountID:
-   *                             type: string
-   *                             format: uuid
-   *                     dashboardData:
+   *                     dashboard:
    *                       type: object
    *                       description: Updated dashboard information
    *                       nullable: true

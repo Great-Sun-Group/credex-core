@@ -36,13 +36,13 @@ export async function AcceptCredexController(
       requestId
     });
 
-    const acceptCredexData = await AcceptCredexService(
+    const acceptCredexResult = await AcceptCredexService(
       credexID,
       signerID,
       requestId
     );
     
-    if (!acceptCredexData) {
+    if (!acceptCredexResult) {
       logger.warn("Failed to accept Credex - service returned null", { 
         credexID, 
         signerID, 
@@ -56,26 +56,26 @@ export async function AcceptCredexController(
 
     logger.debug("Fetching updated dashboard data", {
       signerID,
-      acceptorAccountID: acceptCredexData.acceptorAccountID,
+      acceptorAccountID: acceptCredexResult.acceptorAccountID,
       requestId,
     });
 
-    const dashboardData = await GetAccountDashboardService(
+    const dashboard = await GetAccountDashboardService(
       signerID,
-      acceptCredexData.acceptorAccountID
+      acceptCredexResult.acceptorAccountID
     );
 
-    if (!dashboardData) {
+    if (!dashboard) {
       logger.warn("Failed to fetch dashboard data after successful acceptance", {
         signerID,
-        acceptorAccountID: acceptCredexData.acceptorAccountID,
+        acceptorAccountID: acceptCredexResult.acceptorAccountID,
         requestId,
       });
       return res.status(200).json({
         success: true,
         data: {
-          acceptCredexData,
-          dashboardData: null
+          ...acceptCredexResult,
+          dashboard: null
         },
         message: "Credex accepted successfully but failed to fetch updated dashboard"
       });
@@ -90,8 +90,8 @@ export async function AcceptCredexController(
     return res.status(200).json({
       success: true,
       data: {
-        acceptCredexData,
-        dashboardData
+        ...acceptCredexResult,
+        dashboard
       },
       message: "Credex accepted successfully"
     });

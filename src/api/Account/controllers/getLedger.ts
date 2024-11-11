@@ -70,14 +70,14 @@ export const GetLedgerController = async (
       requestId 
     });
 
-    const responseData = await GetLedgerService(
+    const entries = await GetLedgerService(
       accountID,
       memberID,
       parsedNumRows,
       parsedStartRow
     );
 
-    if (responseData) {
+    if (entries) {
       logger.info("Ledger retrieved successfully", {
         memberID,
         accountID,
@@ -85,9 +85,10 @@ export const GetLedgerController = async (
         startRow: parsedStartRow,
         requestId,
       });
+      // Return entries array directly in data field
       res.status(200).json({
         success: true,
-        data: responseData,
+        data: entries,
         message: "Ledger retrieved successfully"
       });
     } else {

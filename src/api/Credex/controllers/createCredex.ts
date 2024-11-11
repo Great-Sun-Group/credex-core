@@ -135,7 +135,7 @@ export async function CreateCredexController(
       requestId,
     });
 
-    const createCredexData = await CreateCredexService({
+    const createCredexResult = await CreateCredexService({
       signerID,
       issuerAccountID,
       receiverAccountID,
@@ -148,14 +148,14 @@ export async function CreateCredexController(
       requestId,
     });
 
-    if (!createCredexData || typeof createCredexData.credex === "boolean") {
+    if (!createCredexResult || typeof createCredexResult.credex === "boolean") {
       logger.warn("Failed to create Credex", {
-        error: createCredexData.message,
+        error: createCredexResult.message,
         requestId,
       });
       return res.status(400).json({
         success: false,
-        error: createCredexData.message || "Failed to create Credex",
+        error: createCredexResult.message || "Failed to create Credex",
       });
     }
 
@@ -166,12 +166,12 @@ export async function CreateCredexController(
       requestId,
     });
 
-    const dashboardData = await GetAccountDashboardService(
+    const dashboard = await GetAccountDashboardService(
       signerID,
       issuerAccountID
     );
 
-    if (!dashboardData) {
+    if (!dashboard) {
       logger.warn("Failed to fetch dashboard data after successful creation", {
         signerID,
         issuerAccountID,
@@ -180,8 +180,8 @@ export async function CreateCredexController(
       return res.status(200).json({
         success: true,
         data: {
-          createCredexData,
-          dashboardData: null,
+          ...createCredexResult.credex,
+          dashboard: null,
         },
         message:
           "Credex created successfully but failed to fetch updated dashboard",
@@ -189,18 +189,19 @@ export async function CreateCredexController(
     }
 
     logger.info("Credex created successfully", {
-      credexID: createCredexData.credex.credexID,
+      credexID: createCredexResult.credex.credexID,
       signerID,
       issuerAccountID,
       receiverAccountID,
       requestId,
     });
 
+    // Return flattened response
     return res.status(200).json({
       success: true,
       data: {
-        createCredexData,
-        dashboardData,
+        ...createCredexResult.credex,
+        dashboard,
       },
       message: "Credex created successfully",
     });

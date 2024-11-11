@@ -66,13 +66,13 @@ describe("Integration Test Setup", () => {
 
       if (!member1Response.data?.success || 
           !member1Response.data?.data?.token || 
-          !member1Response.data?.data?.memberDashboard?.data?.memberID ||
+          !member1Response.data?.data?.memberID ||
           !member1Response.data?.data?.defaultAccountID) {
         throw new Error("Member1 onboarding response missing required data");
       }
 
       testData.member1.jwt = member1Response.data.data.token;
-      testData.member1.memberID = member1Response.data.data.memberDashboard.data.memberID;
+      testData.member1.memberID = member1Response.data.data.memberID;
       testData.member1.accountIDs = [member1Response.data.data.defaultAccountID];
       await delay(DELAY_MS * 2);
 
@@ -97,13 +97,13 @@ describe("Integration Test Setup", () => {
 
       if (!member2Response.data?.success || 
           !member2Response.data?.data?.token || 
-          !member2Response.data?.data?.memberDashboard?.data?.memberID ||
+          !member2Response.data?.data?.memberID ||
           !member2Response.data?.data?.defaultAccountID) {
         throw new Error("Member2 onboarding response missing required data");
       }
 
       testData.member2.jwt = member2Response.data.data.token;
-      testData.member2.memberID = member2Response.data.data.memberDashboard.data.memberID;
+      testData.member2.memberID = member2Response.data.data.memberID;
       testData.member2.accountIDs = [member2Response.data.data.defaultAccountID];
       await delay(DELAY_MS * 2);
 
@@ -128,13 +128,13 @@ describe("Integration Test Setup", () => {
 
       if (!member3Response.data?.success || 
           !member3Response.data?.data?.token || 
-          !member3Response.data?.data?.memberDashboard?.data?.memberID ||
+          !member3Response.data?.data?.memberID ||
           !member3Response.data?.data?.defaultAccountID) {
         throw new Error("Member3 onboarding response missing required data");
       }
 
       testData.member3.jwt = member3Response.data.data.token;
-      testData.member3.memberID = member3Response.data.data.memberDashboard.data.memberID;
+      testData.member3.memberID = member3Response.data.data.memberID;
       testData.member3.accountIDs = [member3Response.data.data.defaultAccountID];
       await delay(DELAY_MS * 2);
 
@@ -156,7 +156,6 @@ describe("Integration Test Setup", () => {
       // Log full response for debugging
       console.log("Bennita response:", JSON.stringify(bennitaResponse.data, null, 2));
 
-      // Updated to handle flattened response
       if (!bennitaResponse.data?.memberID) {
         throw new Error("Bennita member response missing required data");
       }
@@ -177,7 +176,6 @@ describe("Integration Test Setup", () => {
       // Log full response for debugging
       console.log("Account response:", JSON.stringify(accountResponse.data, null, 2));
 
-      // Updated to handle flattened response
       if (!accountResponse.data?.accountID) {
         throw new Error("Vimbisopay trust account response missing required data");
       }

@@ -67,11 +67,12 @@ export async function GetCredexController(
       requestId
     });
 
+    // Return flattened response
     return res.status(200).json({
       success: true,
       data: {
-        credexData: responseData.credexData,
-        clearedAgainstData: responseData.clearedAgainstData
+        ...responseData.credexData,
+        clearedAgainst: responseData.clearedAgainstData
       },
       message: "Credex details retrieved successfully"
     });

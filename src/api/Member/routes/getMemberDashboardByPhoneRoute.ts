@@ -41,64 +41,36 @@ export default function getMemberDashboardByPhoneRoute() {
    *                   example: true
    *                 data:
    *                   type: object
+   *                   description: Member dashboard data
    *                   properties:
-   *                     memberDashboard:
-   *                       type: object
-   *                       description: Member dashboard with success/data/message wrapper
-   *                       properties:
-   *                         success:
-   *                           type: boolean
-   *                           example: true
-   *                           description: Whether the dashboard was retrieved successfully
-   *                         data:
-   *                           type: object
-   *                           description: The actual member dashboard data
-   *                           properties:
-   *                             memberID:
-   *                               type: string
-   *                               format: uuid
-   *                               description: Unique identifier for the member
-   *                             firstname:
-   *                               type: string
-   *                               description: Member's first name
-   *                             lastname:
-   *                               type: string
-   *                               description: Member's last name
-   *                             memberHandle:
-   *                               type: string
-   *                               description: Member's unique handle
-   *                             defaultDenom:
-   *                               type: string
-   *                               enum: [CXX, CAD, USD, XAU, ZWG]
-   *                               description: Member's default denomination
-   *                             memberTier:
-   *                               type: object
-   *                               description: Member's tier level
-   *                               properties:
-   *                                 low:
-   *                                   type: integer
-   *                                   minimum: 1
-   *                                   description: Lower 32 bits of tier number
-   *                                 high:
-   *                                   type: integer
-   *                                   minimum: 0
-   *                                   description: Upper 32 bits of tier number
-   *                             remainingAvailableUSD:
-   *                               type: number
-   *                               nullable: true
-   *                               description: Remaining available USD for transactions
-   *                             accountIDS:
-   *                               type: array
-   *                               description: List of account IDs associated with member
-   *                               items:
-   *                                 type: string
-   *                                 format: uuid
-   *                         message:
-   *                           type: string
-   *                           example: Dashboard retrieved successfully
-   *                           description: Status message for the dashboard retrieval
-   *                     accountDashboards:
+   *                     memberID:
+   *                       type: string
+   *                       format: uuid
+   *                       description: Unique identifier for the member
+   *                     firstname:
+   *                       type: string
+   *                       description: Member's first name
+   *                     lastname:
+   *                       type: string
+   *                       description: Member's last name
+   *                     memberHandle:
+   *                       type: string
+   *                       description: Member's unique handle
+   *                     defaultDenom:
+   *                       type: string
+   *                       enum: [CXX, CAD, USD, XAU, ZWG]
+   *                       description: Member's default denomination
+   *                     memberTier:
+   *                       type: integer
+   *                       minimum: 1
+   *                       description: Member's tier level
+   *                     remainingAvailableUSD:
+   *                       type: number
+   *                       nullable: true
+   *                       description: Remaining available USD for transactions
+   *                     accounts:
    *                       type: array
+   *                       description: List of account dashboards
    *                       items:
    *                         type: object
    *                         description: Account dashboard data

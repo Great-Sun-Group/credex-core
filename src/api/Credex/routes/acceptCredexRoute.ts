@@ -45,15 +45,11 @@ export default function acceptCredexRoute() {
    *                 data:
    *                   type: object
    *                   properties:
-   *                     acceptCredexData:
-   *                       type: object
-   *                       description: Details of the accepted Credex
-   *                       properties:
-   *                         acceptorAccountID:
-   *                           type: string
-   *                           format: uuid
-   *                           description: ID of the accepting account
-   *                     dashboardData:
+   *                     acceptorAccountID:
+   *                       type: string
+   *                       format: uuid
+   *                       description: ID of the accepting account
+   *                     dashboard:
    *                       type: object
    *                       description: Updated dashboard information
    *                       nullable: true

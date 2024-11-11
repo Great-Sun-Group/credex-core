@@ -30,10 +30,9 @@ describe("Dashboard Integration Tests", () => {
       testData.member1.jwt
     );
     expect(createResponse.data.success).toBe(true);
-    expect(createResponse.data.data.createCredexData).toBeTruthy();
-    expect(createResponse.data.data.dashboardData).toBeTruthy();
-    testData.credexIDs.secured11USD =
-      createResponse.data.data.createCredexData.credex.credexID;
+    expect(createResponse.data.data.credexID).toBeTruthy();
+    expect(createResponse.data.data.dashboard).toBeTruthy();
+    testData.credexIDs.secured11USD = createResponse.data.data.credexID;
     await delay(DELAY_MS * 2);
 
     // Get member1's dashboard
@@ -45,11 +44,9 @@ describe("Dashboard Integration Tests", () => {
       testData.member1.jwt
     );
     expect(dashboardResponse.data.success).toBe(true);
-    expect(dashboardResponse.data.data.memberDashboard).toBeTruthy();
-    expect(dashboardResponse.data.data.accountDashboards).toBeTruthy();
-    expect(
-      dashboardResponse.data.data.accountDashboards.length
-    ).toBeGreaterThan(0);
+    expect(dashboardResponse.data.data.memberID).toBeTruthy();
+    expect(dashboardResponse.data.data.accounts).toBeTruthy();
+    expect(dashboardResponse.data.data.accounts.length).toBeGreaterThan(0);
     await delay(DELAY_MS * 2);
 
     // Member1 declines the credex
@@ -61,7 +58,6 @@ describe("Dashboard Integration Tests", () => {
       testData.member1.jwt
     );
     expect(declineResponse.data.success).toBe(true);
-    // Update assertion to match API response format
     expect(declineResponse.data.data).toEqual({
       credexID: testData.credexIDs.secured11USD,
       declinedAt: expect.any(String),
@@ -85,10 +81,9 @@ describe("Dashboard Integration Tests", () => {
       testData.member3.jwt
     );
     expect(create6Response.data.success).toBe(true);
-    expect(create6Response.data.data.createCredexData).toBeTruthy();
-    expect(create6Response.data.data.dashboardData).toBeTruthy();
-    testData.credexIDs.unsecured6USD =
-      create6Response.data.data.createCredexData.credex.credexID;
+    expect(create6Response.data.data.credexID).toBeTruthy();
+    expect(create6Response.data.data.dashboard).toBeTruthy();
+    testData.credexIDs.unsecured6USD = create6Response.data.data.credexID;
     await delay(DELAY_MS * 2);
 
     // Member1 gets credex details
@@ -101,8 +96,7 @@ describe("Dashboard Integration Tests", () => {
       testData.member1.jwt
     );
     expect(getCredexResponse.data.success).toBe(true);
-    expect(getCredexResponse.data.data.credexData).toBeTruthy();
-    expect(getCredexResponse.data.data.credexData.credexID).toBe(
+    expect(getCredexResponse.data.data.credexID).toBe(
       testData.credexIDs.unsecured6USD
     );
     await delay(DELAY_MS * 2);
@@ -116,11 +110,9 @@ describe("Dashboard Integration Tests", () => {
       testData.member1.jwt
     );
     expect(ledgerResponse.data.success).toBe(true);
-    expect(ledgerResponse.data.data).toBeTruthy();
-    // Ledger data may be an object with entries property
-    expect(
-      ledgerResponse.data.data.entries || ledgerResponse.data.data
-    ).toBeTruthy();
+    // Ledger entries array directly in data
+    expect(Array.isArray(ledgerResponse.data.data)).toBe(true);
+    expect(ledgerResponse.data.data.length).toBeGreaterThanOrEqual(0);
     await delay(DELAY_MS * 2);
   });
 

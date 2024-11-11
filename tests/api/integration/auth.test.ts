@@ -43,7 +43,7 @@ describe("Authentication Integration Tests", () => {
       },
       testData.member1.jwt
     );
-    // Updated to expect direct response without nesting
+    // Using flattened response structure
     expect(memberResponse.data).toBeTruthy();
     expect(memberResponse.data.memberID).toBe(testData.bennita.memberID);
     expect(memberResponse.data.memberName).toBeTruthy();
@@ -57,7 +57,7 @@ describe("Authentication Integration Tests", () => {
       },
       testData.member1.jwt
     );
-    // Updated to expect direct response without nesting
+    // Using flattened response structure
     expect(accountResponse.data).toBeTruthy();
     expect(accountResponse.data.accountID).toBe(testData.bennita.accountID);
     expect(accountResponse.data.accountName).toBeTruthy();

@@ -80,18 +80,42 @@ export default function createCredexRoute() {
    *                 data:
    *                   type: object
    *                   properties:
-   *                     createCredexData:
-   *                       type: object
-   *                       description: Details of the created Credex
-   *                       properties:
-   *                         credex:
-   *                           type: object
-   *                           description: The created Credex
-   *                           properties:
-   *                             credexID:
-   *                               type: string
-   *                               format: uuid
-   *                     dashboardData:
+   *                     credexID:
+   *                       type: string
+   *                       format: uuid
+   *                       description: ID of the created Credex
+   *                     issuerAccountID:
+   *                       type: string
+   *                       format: uuid
+   *                       description: ID of the issuing account
+   *                     receiverAccountID:
+   *                       type: string
+   *                       format: uuid
+   *                       description: ID of the receiving account
+   *                     Denomination:
+   *                       type: string
+   *                       enum: [CXX, CAD, USD, XAU, ZWG]
+   *                       description: Denomination of the transaction
+   *                     InitialAmount:
+   *                       type: number
+   *                       description: Amount of the transaction
+   *                     credexType:
+   *                       type: string
+   *                       enum: [PURCHASE, GIFT, DCO_GIVE, DCO_RECEIVE]
+   *                       description: Type of Credex transaction
+   *                     OFFERSorREQUESTS:
+   *                       type: string
+   *                       enum: [OFFERS, REQUESTS]
+   *                       description: Whether this is an offer or request
+   *                     securedCredex:
+   *                       type: boolean
+   *                       description: Whether this Credex is secured
+   *                     dueDate:
+   *                       type: string
+   *                       format: date
+   *                       nullable: true
+   *                       description: Due date for unsecured Credex
+   *                     dashboard:
    *                       type: object
    *                       description: Updated dashboard information
    *                       nullable: true

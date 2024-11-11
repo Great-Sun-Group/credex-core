@@ -54,6 +54,7 @@ export default function getLedgerRoute() {
    *                   example: true
    *                 data:
    *                   type: array
+   *                   description: Array of ledger entries
    *                   items:
    *                     type: object
    *                     properties:
@@ -61,12 +62,20 @@ export default function getLedgerRoute() {
    *                         type: string
    *                         format: uuid
    *                         description: ID of the credex transaction
+   *                       transactionType:
+   *                         type: string
+   *                         enum: [OWES, CLEARED, REQUESTS, OFFERS, DECLINED, CANCELLED]
+   *                         description: Type of transaction
    *                       formattedInitialAmount:
    *                         type: string
    *                         description: Formatted amount with denomination (e.g. "100.00 USD")
    *                       counterpartyAccountName:
    *                         type: string
    *                         description: Name of the counterparty account
+   *                       createdAt:
+   *                         type: string
+   *                         format: date-time
+   *                         description: When the transaction was created
    *                 message:
    *                   type: string
    *                   example: Ledger retrieved successfully

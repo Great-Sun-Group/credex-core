@@ -90,7 +90,7 @@ export async function AcceptCredexBulkController(
     });
 
     const results = await Promise.all(
-      credexIDs.map(async (credexID: string, index: number) => {
+      credexIDs.map(async (credexID: string) => {
         logger.debug("Processing individual Credex", { requestId, credexID });
         
         try {
@@ -172,7 +172,7 @@ export async function AcceptCredexBulkController(
         acceptorAccountID,
       });
 
-      const dashboardData = acceptorAccountID ? 
+      const dashboard = acceptorAccountID ? 
         await GetAccountDashboardService(signerID, acceptorAccountID) :
         null;
 
@@ -183,16 +183,17 @@ export async function AcceptCredexBulkController(
         requestId
       });
 
+      // Return flattened response
       return res.json({
         success: true,
         data: {
+          acceptedCredexIDs: acceptedCredex.map(r => r.credexID),
           summary: {
             accepted: acceptedCredex.map(r => r.credexID),
             alreadyAccepted: alreadyAccepted.map(r => r.credexID),
             failed: failed.map(r => ({ credexID: r.credexID, error: r.error }))
           },
-          acceptCredexData: acceptedCredex.map(r => r.data),
-          dashboardData
+          dashboard
         },
         message: "Bulk accept operation completed"
       });

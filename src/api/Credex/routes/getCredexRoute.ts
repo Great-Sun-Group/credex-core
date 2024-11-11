@@ -49,67 +49,64 @@ export default function getCredexRoute() {
    *                 data:
    *                   type: object
    *                   properties:
-   *                     credexData:
+   *                     credexID:
+   *                       type: string
+   *                       format: uuid
+   *                     issuerAccountID:
+   *                       type: string
+   *                       format: uuid
+   *                     receiverAccountID:
+   *                       type: string
+   *                       format: uuid
+   *                     Denomination:
+   *                       type: string
+   *                       enum: [CXX, CAD, USD, XAU, ZWG]
+   *                     InitialAmount:
+   *                       type: number
+   *                     OutstandingAmount:
+   *                       type: number
+   *                     credexType:
+   *                       type: string
+   *                       enum: [PURCHASE, GIFT, DCO_GIVE, DCO_RECEIVE]
+   *                     transactionType:
+   *                       type: string
+   *                       enum: [OWES, CLEARED, REQUESTS, OFFERS, DECLINED, CANCELLED]
+   *                     securedCredex:
+   *                       type: boolean
+   *                     dueDate:
+   *                       type: string
+   *                       format: date
+   *                       nullable: true
+   *                     createdAt:
+   *                       type: string
+   *                       format: date-time
+   *                     acceptedAt:
+   *                       type: string
+   *                       format: date-time
+   *                       nullable: true
+   *                     declinedAt:
+   *                       type: string
+   *                       format: date-time
+   *                       nullable: true
+   *                     cancelledAt:
+   *                       type: string
+   *                       format: date-time
+   *                       nullable: true
+   *                     issuerAccount:
    *                       type: object
    *                       properties:
-   *                         credexID:
+   *                         accountName:
    *                           type: string
-   *                           format: uuid
-   *                         issuerAccountID:
+   *                         accountHandle:
    *                           type: string
-   *                           format: uuid
-   *                         receiverAccountID:
+   *                     receiverAccount:
+   *                       type: object
+   *                       properties:
+   *                         accountName:
    *                           type: string
-   *                           format: uuid
-   *                         Denomination:
+   *                         accountHandle:
    *                           type: string
-   *                           enum: [CXX, CAD, USD, XAU, ZWG]
-   *                         InitialAmount:
-   *                           type: number
-   *                         OutstandingAmount:
-   *                           type: number
-   *                         credexType:
-   *                           type: string
-   *                           enum: [PURCHASE, GIFT, DCO_GIVE, DCO_RECEIVE]
-   *                         transactionType:
-   *                           type: string
-   *                           enum: [OWES, CLEARED, REQUESTS, OFFERS, DECLINED, CANCELLED]
-   *                         securedCredex:
-   *                           type: boolean
-   *                         dueDate:
-   *                           type: string
-   *                           format: date
-   *                           nullable: true
-   *                         createdAt:
-   *                           type: string
-   *                           format: date-time
-   *                         acceptedAt:
-   *                           type: string
-   *                           format: date-time
-   *                           nullable: true
-   *                         declinedAt:
-   *                           type: string
-   *                           format: date-time
-   *                           nullable: true
-   *                         cancelledAt:
-   *                           type: string
-   *                           format: date-time
-   *                           nullable: true
-   *                         issuerAccount:
-   *                           type: object
-   *                           properties:
-   *                             accountName:
-   *                               type: string
-   *                             accountHandle:
-   *                               type: string
-   *                         receiverAccount:
-   *                           type: object
-   *                           properties:
-   *                             accountName:
-   *                               type: string
-   *                             accountHandle:
-   *                               type: string
-   *                     clearedAgainstData:
+   *                     clearedAgainst:
    *                       type: object
    *                       nullable: true
    *                 message:

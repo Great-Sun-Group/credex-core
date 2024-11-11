@@ -6,21 +6,27 @@ import logger from "../../../utils/logger";
 import { validatePhone } from "../../../utils/validators";
 
 interface DashboardResponse {
-  success: boolean;
-  data?: {
-    memberDashboard: {
-      memberID: string;
-      firstname: string;
-      lastname: string;
-      memberHandle: string;
-      defaultDenom: string;
+  message: string;
+  data: {
+    action: {
+      id: string;
+      type: string;
+      timestamp: string;
+      actor: string;
+      details: {
+        memberID: string;
+        firstname: string;
+        lastname: string;
+        memberHandle: string;
+        defaultDenom: string;
+      };
+    };
+    dashboard: {
       memberTier: number;
       remainingAvailableUSD: number;
-      accountIDS: string[];
+      accounts: any[]; // Type will be refined when AccountDashboard is standardized
     };
-    accountDashboards: any[]; // Type will be refined when AccountDashboard is standardized
   };
-  message: string;
 }
 
 /**
@@ -68,29 +74,45 @@ export async function GetMemberDashboardByPhoneController(
         requestId
       });
 
-      res.status(statusCode).json(memberDashboardResult);
+      res.status(statusCode).json({
+        message: memberDashboardResult.message,
+        data: {
+          action: {
+            id: null,
+            type: "DASHBOARD_RETRIEVAL_FAILED",
+            timestamp: new Date().toISOString(),
+            actor: null,
+            details: {
+              reason: statusCode === 404 ? "MEMBER_NOT_FOUND" : "RETRIEVAL_ERROR",
+              phone
+            }
+          }
+        }
+      });
       return;
     }
 
+    const dashboardData = memberDashboardResult.data; // Assign to variable to satisfy TypeScript
+
     // Get associated account dashboards
     logger.debug("Retrieving account dashboards", {
-      memberID: memberDashboardResult.data.memberID,
-      accountCount: memberDashboardResult.data.accountIDS.length,
+      memberID: dashboardData.memberID,
+      accountCount: dashboardData.accountIDS.length,
       requestId,
     });
 
     const accountDashboards = await Promise.all(
-      memberDashboardResult.data.accountIDS.map(async (accountId: string) => {
+      dashboardData.accountIDS.map(async (accountId: string) => {
         try {
           return await GetAccountDashboardService(
-            memberDashboardResult.data!.memberID,
+            dashboardData.memberID,
             accountId
           );
         } catch (error) {
           logger.error("Error fetching account dashboard", {
             error: error instanceof Error ? error.message : "Unknown error",
             accountId,
-            memberID: memberDashboardResult.data!.memberID,
+            memberID: dashboardData.memberID,
             requestId
           });
           return null;
@@ -104,18 +126,34 @@ export async function GetMemberDashboardByPhoneController(
     );
 
     logger.info("Dashboard data retrieved successfully", {
-      memberID: memberDashboardResult.data.memberID,
+      memberID: dashboardData.memberID,
       accountCount: validAccountDashboards.length,
       requestId,
     });
 
+    // Return standardized response
     const response: DashboardResponse = {
-      success: true,
+      message: "Dashboard retrieved successfully",
       data: {
-        memberDashboard: memberDashboardResult.data,
-        accountDashboards: validAccountDashboards
-      },
-      message: "Dashboard retrieved successfully"
+        action: {
+          id: dashboardData.memberID,
+          type: "DASHBOARD_RETRIEVED",
+          timestamp: new Date().toISOString(),
+          actor: dashboardData.memberID,
+          details: {
+            memberID: dashboardData.memberID,
+            firstname: dashboardData.firstname,
+            lastname: dashboardData.lastname,
+            memberHandle: dashboardData.memberHandle,
+            defaultDenom: dashboardData.defaultDenom
+          }
+        },
+        dashboard: {
+          memberTier: dashboardData.memberTier,
+          remainingAvailableUSD: dashboardData.remainingAvailableUSD,
+          accounts: validAccountDashboards
+        }
+      }
     };
 
     res.status(200).json(response);
@@ -130,15 +168,24 @@ export async function GetMemberDashboardByPhoneController(
       requestId,
     });
 
-    if (handledError instanceof MemberError) {
-      res.status(handledError.statusCode).json({
-        success: false,
-        message: handledError.message
-      });
-      return;
-    }
+    const statusCode = handledError.statusCode || 500;
 
-    next(handledError);
+    res.status(statusCode).json({
+      message: handledError.message,
+      data: {
+        action: {
+          id: null,
+          type: "DASHBOARD_RETRIEVAL_FAILED",
+          timestamp: new Date().toISOString(),
+          actor: null,
+          details: {
+            reason: handledError.code,
+            error: handledError.message
+          }
+        }
+      }
+    });
+
   } finally {
     logger.debug("Exiting GetMemberDashboardByPhoneController", { requestId });
   }
