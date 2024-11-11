@@ -10,7 +10,7 @@ export default function getMemberByHandleRoute() {
 
   /**
    * @swagger
-   * /api/member/getMemberByHandle:
+   * /getMemberByHandle:
    *   post:
    *     tags: [Members]
    *     summary: Get member by handle
@@ -42,16 +42,40 @@ export default function getMemberByHandleRoute() {
    *                     memberID:
    *                       type: string
    *                       format: uuid
-   *                       description: Unique member identifier
+   *                       description: Unique identifier for the member
    *                     memberName:
    *                       type: string
    *                       description: Full name of the member
    *       400:
    *         description: Invalid member handle format
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   description: Error message explaining the validation failure
    *       404:
    *         description: Member not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Member not found
    *       500:
    *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   description: Error message
    */
   router.post(
     `/getMemberByHandle`,

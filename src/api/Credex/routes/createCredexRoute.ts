@@ -10,11 +10,11 @@ export default function createCredexRoute() {
 
   /**
    * @swagger
-   * /api/credex/createCredex:
+   * /createCredex:
    *   post:
    *     tags: [Credex]
    *     summary: Create a new Credex transaction
-   *     description: Creates a new Credex transaction between two accounts with optional security and due date
+   *     description: Creates a new Credex transaction between two accounts with optional security and due date. Requires authentication. The authenticated member's ID is used as the signer.
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -24,7 +24,6 @@ export default function createCredexRoute() {
    *           schema:
    *             type: object
    *             required:
-   *               - memberID
    *               - issuerAccountID
    *               - receiverAccountID
    *               - Denomination
@@ -33,10 +32,6 @@ export default function createCredexRoute() {
    *               - OFFERSorREQUESTS
    *               - securedCredex
    *             properties:
-   *               memberID:
-   *                 type: string
-   *                 format: uuid
-   *                 description: ID of the member creating the Credex
    *               issuerAccountID:
    *                 type: string
    *                 format: uuid
@@ -69,9 +64,9 @@ export default function createCredexRoute() {
    *                 type: string
    *                 format: date
    *                 pattern: ^\d{4}-\d{2}-\d{2}$
-   *                 description: Optional due date for the Credex
+   *                 description: Optional due date for unsecured Credex
    *     responses:
-   *       201:
+   *       200:
    *         description: Credex created successfully
    *         content:
    *           application/json:
@@ -81,44 +76,35 @@ export default function createCredexRoute() {
    *                 success:
    *                   type: boolean
    *                   example: true
+   *                   description: Whether the operation was successful
    *                 data:
    *                   type: object
    *                   properties:
-   *                     credexID:
-   *                       type: string
-   *                       format: uuid
-   *                       description: ID of the created Credex
-   *                     issuerAccountID:
-   *                       type: string
-   *                       format: uuid
-   *                     receiverAccountID:
-   *                       type: string
-   *                       format: uuid
-   *                     Denomination:
-   *                       type: string
-   *                       enum: [CXX, CAD, USD, XAU, ZWG]
-   *                     InitialAmount:
-   *                       type: number
-   *                     OutstandingAmount:
-   *                       type: number
-   *                     credexType:
-   *                       type: string
-   *                       enum: [PURCHASE, GIFT, DCO_GIVE, DCO_RECEIVE]
-   *                     status:
-   *                       type: string
-   *                       enum: [PENDING, ACCEPTED, DECLINED, CANCELLED]
-   *                     createdAt:
-   *                       type: string
-   *                       format: date-time
+   *                     createCredexData:
+   *                       type: object
+   *                       description: Details of the created Credex
+   *                       properties:
+   *                         credex:
+   *                           type: object
+   *                           description: The created Credex
+   *                           properties:
+   *                             credexID:
+   *                               type: string
+   *                               format: uuid
+   *                     dashboardData:
+   *                       type: object
+   *                       description: Updated dashboard information
+   *                       nullable: true
    *                 message:
    *                   type: string
    *                   example: Credex created successfully
+   *                   description: Status message
    *       400:
    *         description: Invalid input data or validation error
    *       401:
    *         description: Authentication required
    *       403:
-   *         description: Not authorized to create Credex for this account
+   *         description: Not authorized to create Credex for this account or insufficient tier level
    *       404:
    *         description: Account not found
    *       500:

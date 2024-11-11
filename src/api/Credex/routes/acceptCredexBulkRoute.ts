@@ -2,7 +2,7 @@ import express from "express";
 import { AcceptCredexBulkController } from "../controllers/acceptCredexBulk";
 import { validateRequest } from "../../../middleware/validateRequest";
 import { authenticatedHandler } from "../../../middleware/authMiddleware";
-import { acceptCredexBulkSchema, acceptCredexSchema } from "../credexValidationSchemas";
+import { acceptCredexBulkSchema } from "../credexValidationSchemas";
 import logger from "../../../utils/logger";
 
 export default function acceptCredexBulkRoute() {
@@ -10,11 +10,11 @@ export default function acceptCredexBulkRoute() {
 
   /**
    * @swagger
-   * /api/credex/acceptCredexBulk:
+   * /acceptCredexBulk:
    *   post:
    *     tags: [Credex]
    *     summary: Accept multiple Credex transactions
-   *     description: Accepts multiple pending Credex transactions in a single request
+   *     description: Accepts multiple pending Credex transactions in a single request. Requires authentication.
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -28,11 +28,11 @@ export default function acceptCredexBulkRoute() {
    *             properties:
    *               credexIDs:
    *                 type: array
+   *                 description: Array of Credex IDs to accept
+   *                 minItems: 1
    *                 items:
    *                   type: string
    *                   format: uuid
-   *                 description: Array of Credex IDs to accept
-   *                 minItems: 1
    *     responses:
    *       200:
    *         description: Bulk accept operation completed
@@ -44,37 +44,53 @@ export default function acceptCredexBulkRoute() {
    *                 success:
    *                   type: boolean
    *                   example: true
+   *                   description: Whether the operation was successful
    *                 data:
    *                   type: object
    *                   properties:
-   *                     accepted:
+   *                     summary:
+   *                       type: object
+   *                       properties:
+   *                         accepted:
+   *                           type: array
+   *                           description: Successfully accepted Credex IDs
+   *                           items:
+   *                             type: string
+   *                             format: uuid
+   *                         alreadyAccepted:
+   *                           type: array
+   *                           description: Credex IDs that were already accepted
+   *                           items:
+   *                             type: string
+   *                             format: uuid
+   *                         failed:
+   *                           type: array
+   *                           description: Failed acceptance attempts
+   *                           items:
+   *                             type: object
+   *                             properties:
+   *                               credexID:
+   *                                 type: string
+   *                                 format: uuid
+   *                               error:
+   *                                 type: string
+   *                     acceptCredexData:
    *                       type: array
+   *                       description: Details of successfully accepted Credex transactions
    *                       items:
    *                         type: object
    *                         properties:
-   *                           credexID:
+   *                           acceptorAccountID:
    *                             type: string
    *                             format: uuid
-   *                           status:
-   *                             type: string
-   *                             enum: [ACCEPTED]
-   *                           acceptedAt:
-   *                             type: string
-   *                             format: date-time
-   *                     failed:
-   *                       type: array
-   *                       items:
-   *                         type: object
-   *                         properties:
-   *                           credexID:
-   *                             type: string
-   *                             format: uuid
-   *                           error:
-   *                             type: string
-   *                             description: Reason for failure
+   *                     dashboardData:
+   *                       type: object
+   *                       description: Updated dashboard information
+   *                       nullable: true
    *                 message:
    *                   type: string
    *                   example: Bulk accept operation completed
+   *                   description: Status message
    *       400:
    *         description: Invalid input data or no valid Credex IDs provided
    *       401:

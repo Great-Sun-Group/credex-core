@@ -10,7 +10,7 @@ export default function authForTierSpendLimitRoute() {
 
   /**
    * @swagger
-   * /api/member/authForTierSpendLimit:
+   * /authForTierSpendLimit:
    *   post:
    *     tags: [Members]
    *     summary: Authorize tier spend limit

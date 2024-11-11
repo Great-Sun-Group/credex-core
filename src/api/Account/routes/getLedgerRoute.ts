@@ -11,7 +11,7 @@ export default function getLedgerRoute() {
 
   /**
    * @swagger
-   * /api/account/getLedger:
+   * /getLedger:
    *   post:
    *     tags: [Accounts]
    *     summary: Get account ledger

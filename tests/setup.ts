@@ -16,8 +16,8 @@ const API_BASE_URL = getBaseUrl();
 const instance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    "Content-Type": "application/json",
+  },
 });
 
 // Add request interceptor to handle auth token

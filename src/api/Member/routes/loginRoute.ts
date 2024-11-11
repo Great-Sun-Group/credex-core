@@ -10,7 +10,7 @@ export default function loginRoute() {
 
   /**
    * @swagger
-   * /api/member/login:
+   * /login:
    *   post:
    *     tags: [Members]
    *     summary: Login a member

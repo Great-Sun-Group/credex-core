@@ -10,11 +10,11 @@ export default function acceptCredexRoute() {
 
   /**
    * @swagger
-   * /api/credex/acceptCredex:
+   * /acceptCredex:
    *   post:
    *     tags: [Credex]
    *     summary: Accept a Credex transaction
-   *     description: Accepts a pending Credex transaction, finalizing the agreement between parties
+   *     description: Accepts a pending Credex transaction, finalizing the agreement between parties. Requires authentication.
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -25,16 +25,11 @@ export default function acceptCredexRoute() {
    *             type: object
    *             required:
    *               - credexID
-   *               - signerID
    *             properties:
    *               credexID:
    *                 type: string
    *                 format: uuid
    *                 description: ID of the Credex to accept
-   *               signerID:
-   *                 type: string
-   *                 format: uuid
-   *                 description: ID of the member accepting the Credex
    *     responses:
    *       200:
    *         description: Credex accepted successfully
@@ -46,26 +41,26 @@ export default function acceptCredexRoute() {
    *                 success:
    *                   type: boolean
    *                   example: true
+   *                   description: Whether the operation was successful
    *                 data:
    *                   type: object
    *                   properties:
-   *                     credexID:
-   *                       type: string
-   *                       format: uuid
-   *                       description: ID of the accepted Credex
-   *                     status:
-   *                       type: string
-   *                       enum: [ACCEPTED]
-   *                     acceptedAt:
-   *                       type: string
-   *                       format: date-time
-   *                     acceptedBy:
-   *                       type: string
-   *                       format: uuid
-   *                       description: ID of the member who accepted
+   *                     acceptCredexData:
+   *                       type: object
+   *                       description: Details of the accepted Credex
+   *                       properties:
+   *                         acceptorAccountID:
+   *                           type: string
+   *                           format: uuid
+   *                           description: ID of the accepting account
+   *                     dashboardData:
+   *                       type: object
+   *                       description: Updated dashboard information
+   *                       nullable: true
    *                 message:
    *                   type: string
    *                   example: Credex accepted successfully
+   *                   description: Status message
    *       400:
    *         description: Invalid input data or Credex not in acceptable state
    *       401:
@@ -74,6 +69,8 @@ export default function acceptCredexRoute() {
    *         description: Not authorized to accept this Credex
    *       404:
    *         description: Credex not found
+   *       409:
+   *         description: Credex has already been accepted
    *       500:
    *         description: Internal server error
    */

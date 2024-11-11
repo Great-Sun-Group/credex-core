@@ -11,7 +11,7 @@ export default function getBalancesRoute() {
 
   /**
    * @swagger
-   * /api/account/getBalances:
+   * /getBalances:
    *   post:
    *     tags: [Accounts]
    *     summary: Get account balances

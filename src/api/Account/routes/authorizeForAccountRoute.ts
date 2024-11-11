@@ -11,7 +11,7 @@ export default function authorizeForAccountRoute() {
 
   /**
    * @swagger
-   * /api/account/authorizeForAccount:
+   * /authorizeForAccount:
    *   post:
    *     tags: [Accounts]
    *     summary: Authorize member for account

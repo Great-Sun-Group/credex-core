@@ -11,7 +11,7 @@ export default function updateAccountRoute() {
 
   /**
    * @swagger
-   * /api/account/updateAccount:
+   * /updateAccount:
    *   post:
    *     tags: [Accounts]
    *     summary: Update account details
@@ -61,9 +61,9 @@ export default function updateAccountRoute() {
    *             schema:
    *               type: object
    *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Account updated successfully
+   *                 success:
+   *                   type: boolean
+   *                   example: true
    *                 data:
    *                   type: object
    *                   properties:
@@ -71,6 +71,9 @@ export default function updateAccountRoute() {
    *                       type: string
    *                       format: uuid
    *                       description: ID of the updated account
+   *                 message:
+   *                   type: string
+   *                   example: Account updated successfully
    *       400:
    *         description: Invalid input data or no fields to update
    *       401:

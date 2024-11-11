@@ -10,7 +10,7 @@ export default function declineCredexRoute() {
 
   /**
    * @swagger
-   * /api/credex/declineCredex:
+   * /declineCredex:
    *   post:
    *     tags: [Credex]
    *     summary: Decline a Credex transaction
@@ -25,16 +25,11 @@ export default function declineCredexRoute() {
    *             type: object
    *             required:
    *               - credexID
-   *               - signerID
    *             properties:
    *               credexID:
    *                 type: string
    *                 format: uuid
    *                 description: ID of the Credex to decline
-   *               signerID:
-   *                 type: string
-   *                 format: uuid
-   *                 description: ID of the member declining the Credex
    *     responses:
    *       200:
    *         description: Credex declined successfully
@@ -53,16 +48,10 @@ export default function declineCredexRoute() {
    *                       type: string
    *                       format: uuid
    *                       description: ID of the declined Credex
-   *                     status:
-   *                       type: string
-   *                       enum: [DECLINED]
    *                     declinedAt:
    *                       type: string
    *                       format: date-time
-   *                     declinedBy:
-   *                       type: string
-   *                       format: uuid
-   *                       description: ID of the member who declined
+   *                       description: Timestamp when the Credex was declined
    *                 message:
    *                   type: string
    *                   example: Credex declined successfully

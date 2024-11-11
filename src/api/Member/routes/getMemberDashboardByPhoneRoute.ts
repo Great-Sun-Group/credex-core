@@ -10,7 +10,7 @@ export default function getMemberDashboardByPhoneRoute() {
 
   /**
    * @swagger
-   * /api/member/getMemberDashboardByPhone:
+   * /getMemberDashboardByPhone:
    *   post:
    *     tags: [Members]
    *     summary: Get member dashboard by phone
@@ -44,29 +44,59 @@ export default function getMemberDashboardByPhoneRoute() {
    *                   properties:
    *                     memberDashboard:
    *                       type: object
+   *                       description: Member dashboard with success/data/message wrapper
    *                       properties:
-   *                         memberID:
+   *                         success:
+   *                           type: boolean
+   *                           example: true
+   *                           description: Whether the dashboard was retrieved successfully
+   *                         data:
+   *                           type: object
+   *                           description: The actual member dashboard data
+   *                           properties:
+   *                             memberID:
+   *                               type: string
+   *                               format: uuid
+   *                               description: Unique identifier for the member
+   *                             firstname:
+   *                               type: string
+   *                               description: Member's first name
+   *                             lastname:
+   *                               type: string
+   *                               description: Member's last name
+   *                             memberHandle:
+   *                               type: string
+   *                               description: Member's unique handle
+   *                             defaultDenom:
+   *                               type: string
+   *                               enum: [CXX, CAD, USD, XAU, ZWG]
+   *                               description: Member's default denomination
+   *                             memberTier:
+   *                               type: object
+   *                               description: Member's tier level
+   *                               properties:
+   *                                 low:
+   *                                   type: integer
+   *                                   minimum: 1
+   *                                   description: Lower 32 bits of tier number
+   *                                 high:
+   *                                   type: integer
+   *                                   minimum: 0
+   *                                   description: Upper 32 bits of tier number
+   *                             remainingAvailableUSD:
+   *                               type: number
+   *                               nullable: true
+   *                               description: Remaining available USD for transactions
+   *                             accountIDS:
+   *                               type: array
+   *                               description: List of account IDs associated with member
+   *                               items:
+   *                                 type: string
+   *                                 format: uuid
+   *                         message:
    *                           type: string
-   *                           format: uuid
-   *                         firstname:
-   *                           type: string
-   *                         lastname:
-   *                           type: string
-   *                         memberHandle:
-   *                           type: string
-   *                         defaultDenom:
-   *                           type: string
-   *                           enum: [CXX, CAD, USD, XAU, ZWG]
-   *                         memberTier:
-   *                           type: integer
-   *                           minimum: 1
-   *                         remainingAvailableUSD:
-   *                           type: number
-   *                         accountIDS:
-   *                           type: array
-   *                           items:
-   *                             type: string
-   *                             format: uuid
+   *                           example: Dashboard retrieved successfully
+   *                           description: Status message for the dashboard retrieval
    *                     accountDashboards:
    *                       type: array
    *                       items:

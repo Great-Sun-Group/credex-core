@@ -11,6 +11,11 @@ interface CredexData {
   securerID?: string;
   securerName?: string;
   Denomination: string;
+  InitialAmount: number;
+  OutstandingAmount: number;
+  RedeemedAmount: number;
+  DefaultedAmount: number;
+  WrittenOffAmount: number;
   acceptedAt?: string;
   declinedAt?: string;
   cancelledAt?: string;
@@ -20,6 +25,7 @@ interface CredexData {
   formattedRedeemedAmount: string;
   formattedDefaultedAmount: string;
   formattedWrittenOffAmount: string;
+  securedCredex: boolean;
 }
 
 interface ClearedAgainstData {
@@ -96,6 +102,7 @@ export async function GetCredexService(
           credex.declinedAt AS declinedAt,
           credex.cancelledAt AS cancelledAt,
           credex.dueDate AS dueDate,
+          credex.securedCredex AS securedCredex,
           clearedAgainstCredex.credexID AS clearedAgainstCredexID,
           credloopRel.AmountRedeemed / credloopRel.CXXmultiplier AS clearedAmount,
           clearedAgainstCredex.InitialAmount / clearedAgainstCredex.CXXmultiplier AS clearedAgainstCredexInitialAmount,
@@ -136,6 +143,11 @@ export async function GetCredexService(
       securerID: record.get("securerID"),
       securerName: record.get("securerName"),
       Denomination,
+      InitialAmount: amounts.InitialAmount,
+      OutstandingAmount: amounts.OutstandingAmount,
+      RedeemedAmount: amounts.RedeemedAmount,
+      DefaultedAmount: amounts.DefaultedAmount,
+      WrittenOffAmount: amounts.WrittenOffAmount,
       acceptedAt: formatDate(record.get("acceptedAt")),
       declinedAt: formatDate(record.get("declinedAt")),
       cancelledAt: formatDate(record.get("cancelledAt")),
@@ -145,6 +157,7 @@ export async function GetCredexService(
       formattedRedeemedAmount: `${denomFormatter(amounts.RedeemedAmount, Denomination)} ${Denomination}`,
       formattedDefaultedAmount: `${denomFormatter(amounts.DefaultedAmount, Denomination)} ${Denomination}`,
       formattedWrittenOffAmount: `${denomFormatter(amounts.WrittenOffAmount, Denomination)} ${Denomination}`,
+      securedCredex: record.get("securedCredex") || false,
     };
 
     // Process cleared against data

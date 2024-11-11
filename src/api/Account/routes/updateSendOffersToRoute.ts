@@ -11,7 +11,7 @@ export default function updateSendOffersToRoute() {
 
   /**
    * @swagger
-   * /api/account/updateSendOffersTo:
+   * /updateSendOffersTo:
    *   post:
    *     tags: [Accounts]
    *     summary: Update send offers settings

@@ -11,7 +11,7 @@ export default function createAccountRoute() {
 
   /**
    * @swagger
-   * /api/account/createAccount:
+   * /createAccount:
    *   post:
    *     tags: [Accounts]
    *     summary: Create a new account

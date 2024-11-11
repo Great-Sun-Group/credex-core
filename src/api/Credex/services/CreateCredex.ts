@@ -136,7 +136,8 @@ export async function CreateCredexService(
           newCredex.WrittenOffAmount = 0,
           newCredex.credexType = $credexType,
           newCredex.createdAt = datetime(),
-          newCredex.queueStatus = "PENDING_CREDEX"
+          newCredex.queueStatus = "PENDING_CREDEX",
+          newCredex.securedCredex = $securedCredex
         MERGE (newCredex)-[:CREATED_ON]->(daynode)
         MERGE (issuer)-[:${OFFERSorREQUESTS}]->(newCredex)-[:${OFFERSorREQUESTS}]->(receiver)
         MERGE (issuer)-[:${OFFEREDorREQUESTED}]->(newCredex)-[:${OFFEREDorREQUESTED}]->(receiver)
@@ -153,6 +154,7 @@ export async function CreateCredexService(
           InitialAmount,
           Denomination,
           credexType,
+          securedCredex,
         });
       }
     );

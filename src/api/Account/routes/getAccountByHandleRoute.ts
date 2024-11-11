@@ -10,7 +10,7 @@ export default function getAccountByHandleRoute() {
 
   /**
    * @swagger
-   * /api/account/getAccountByHandle:
+   * /getAccountByHandle:
    *   post:
    *     tags: [Accounts]
    *     summary: Get account by handle
@@ -48,10 +48,34 @@ export default function getAccountByHandleRoute() {
    *                       description: Name of the account
    *       400:
    *         description: Invalid account handle format
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   description: Error message explaining the validation failure
    *       404:
    *         description: Account not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Account not found
    *       500:
    *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   description: Error message
    */
   router.post(
     `/getAccountByHandle`,

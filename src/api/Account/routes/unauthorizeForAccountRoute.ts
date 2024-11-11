@@ -11,7 +11,7 @@ export default function unauthorizeForAccountRoute() {
 
   /**
    * @swagger
-   * /api/account/unauthorizeForAccount:
+   * /unauthorizeForAccount:
    *   post:
    *     tags: [Accounts]
    *     summary: Remove member authorization

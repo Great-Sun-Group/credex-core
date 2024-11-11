@@ -10,11 +10,11 @@ export default function cancelCredexRoute() {
 
   /**
    * @swagger
-   * /api/credex/cancelCredex:
+   * /cancelCredex:
    *   post:
    *     tags: [Credex]
    *     summary: Cancel a Credex transaction
-   *     description: Cancels a pending Credex transaction. Only the issuer can cancel their own pending Credex.
+   *     description: Cancels a pending Credex transaction. Only the issuer can cancel their own pending Credex. Requires authentication.
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -25,16 +25,11 @@ export default function cancelCredexRoute() {
    *             type: object
    *             required:
    *               - credexID
-   *               - signerID
    *             properties:
    *               credexID:
    *                 type: string
    *                 format: uuid
    *                 description: ID of the Credex to cancel
-   *               signerID:
-   *                 type: string
-   *                 format: uuid
-   *                 description: ID of the member cancelling the Credex (must be issuer)
    *     responses:
    *       200:
    *         description: Credex cancelled successfully
@@ -46,6 +41,7 @@ export default function cancelCredexRoute() {
    *                 success:
    *                   type: boolean
    *                   example: true
+   *                   description: Whether the operation was successful
    *                 data:
    *                   type: object
    *                   properties:
@@ -53,19 +49,10 @@ export default function cancelCredexRoute() {
    *                       type: string
    *                       format: uuid
    *                       description: ID of the cancelled Credex
-   *                     status:
-   *                       type: string
-   *                       enum: [CANCELLED]
-   *                     cancelledAt:
-   *                       type: string
-   *                       format: date-time
-   *                     cancelledBy:
-   *                       type: string
-   *                       format: uuid
-   *                       description: ID of the member who cancelled (issuer)
    *                 message:
    *                   type: string
    *                   example: Credex cancelled successfully
+   *                   description: Status message
    *       400:
    *         description: Invalid input data or Credex not in cancellable state
    *       401:
@@ -74,6 +61,8 @@ export default function cancelCredexRoute() {
    *         description: Not authorized to cancel this Credex (must be issuer)
    *       404:
    *         description: Credex not found
+   *       409:
+   *         description: Credex has already been processed
    *       500:
    *         description: Internal server error
    */

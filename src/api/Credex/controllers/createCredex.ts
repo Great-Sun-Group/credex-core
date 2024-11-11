@@ -43,7 +43,8 @@ export async function CreateCredexController(
       dueDate,
     } = req.body;
 
-    const memberID = req.user.memberID;
+    // Get memberID from auth token to use as signerID
+    const signerID = req.user.memberID;
 
     // Basic validation is handled by validateRequest middleware
     logger.debug("Validating business rules", {
@@ -127,7 +128,7 @@ export async function CreateCredexController(
 
     // Create the Credex
     logger.info("Creating new Credex", {
-      memberID,
+      signerID,
       issuerAccountID,
       receiverAccountID,
       credexType,
@@ -135,7 +136,7 @@ export async function CreateCredexController(
     });
 
     const createCredexData = await CreateCredexService({
-      memberID,
+      signerID,
       issuerAccountID,
       receiverAccountID,
       Denomination,
@@ -160,19 +161,19 @@ export async function CreateCredexController(
 
     // Fetch updated dashboard data
     logger.debug("Fetching updated dashboard data", {
-      memberID,
+      signerID,
       issuerAccountID,
       requestId,
     });
 
     const dashboardData = await GetAccountDashboardService(
-      memberID,
+      signerID,
       issuerAccountID
     );
 
     if (!dashboardData) {
       logger.warn("Failed to fetch dashboard data after successful creation", {
-        memberID,
+        signerID,
         issuerAccountID,
         requestId,
       });
@@ -189,7 +190,7 @@ export async function CreateCredexController(
 
     logger.info("Credex created successfully", {
       credexID: createCredexData.credex.credexID,
-      memberID,
+      signerID,
       issuerAccountID,
       receiverAccountID,
       requestId,
