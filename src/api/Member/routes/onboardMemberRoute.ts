@@ -56,7 +56,7 @@ export default function onboardMemberRoute() {
    *                 message:
    *                   type: string
    *                   description: Human-friendly success message
-   *                   example: John Doe: Personal account created with a default denomination of USD.
+   *                   example: "Personal account created with default denomination USD"
    *                 data:
    *                   type: object
    *                   properties:
@@ -185,7 +185,7 @@ export default function onboardMemberRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: Phone number already in use
+   *                   example: "Phone number already in use"
    *                 data:
    *                   type: object
    *                   properties:

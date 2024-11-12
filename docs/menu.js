@@ -124,6 +124,10 @@ const menuData = {
       ],
       "Development Guides": [
         {
+          text: "API Reference",
+          link: "develop/api_reference.html",
+        },
+        {
           text: "API Standards",
           link: "develop/api_standards.html",
         },
