@@ -2,6 +2,7 @@ import express from "express";
 import { clearDevDBsRoute } from "./clearDevDBsRoute";
 import { forceDCORoute } from "./forceDCORoute";
 import { errorHandler } from "../../../middleware/errorHandler";
+import { verifyDevAdminKey } from "../../../middleware/devAdminAuth";
 import logger from "../../../utils/logger";
 
 /**
@@ -9,15 +10,15 @@ import logger from "../../../utils/logger";
  * tags:
  *   name: DevAdmin
  *   description: Development and administration operations. IMPORTANT - These routes are for development purposes only and are not published in production deployment.
- * 
+ *
  * components:
  *   securitySchemes:
  *     devAdminAuth:
  *       type: apiKey
  *       in: header
- *       name: X-Dev-Admin-Key
+ *       name: x-dev-admin-key
  *       description: Development admin API key for authentication
- * 
+ *
  *   schemas:
  *     DevAdminAction:
  *       type: object
@@ -45,7 +46,7 @@ import logger from "../../../utils/logger";
  *         details:
  *           type: object
  *           description: Action-specific details
- * 
+ *
  *     DevAdminResponse:
  *       type: object
  *       required:
@@ -66,7 +67,7 @@ import logger from "../../../utils/logger";
  *             dashboard:
  *               type: object
  *               description: Current system state
- * 
+ *
  *     DevAdminError:
  *       type: object
  *       required:
@@ -92,6 +93,9 @@ import logger from "../../../utils/logger";
 export function DevRoutes() {
   const router = express.Router();
   logger.info("Initializing Dev routes");
+
+  // Apply dev admin key verification to all dev admin routes
+  router.use('/devadmin', verifyDevAdminKey);
 
   router.post("/devadmin/clearDevDBs", clearDevDBsRoute);
   logger.debug("Route registered: POST /devadmin/clearDevDBs");

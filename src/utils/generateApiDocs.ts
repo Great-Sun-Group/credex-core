@@ -308,20 +308,28 @@ export async function generateApiDocs(): Promise<void> {
       }
 
       function getModuleForPath(path) {
-        const pathLower = path.toLowerCase();
-        // Check DevAdmin first since it's more specific than Admin
-        if (pathLower.includes('devadmin')) {
-          return 'DevAdmin';
-        }
-        if (pathLower.includes('admin')) {
-          return 'Admin';
-        }
-        for (const module of ['Member', 'Account', 'Credex', 'Recurring']) {
-          if (pathLower.includes(module.toLowerCase())) {
-            return module;
-          }
-        }
-        return 'Other';
+        // Use the tags from the swagger spec to determine the module
+        const pathObj = apiSpec.paths[path];
+        if (!pathObj) return 'Other';
+        
+        // Get the first method (e.g. post, get, etc)
+        const method = Object.values(pathObj)[0];
+        if (!method || !method.tags || !method.tags.length) return 'Other';
+        
+        // Get the first tag
+        const tag = method.tags[0];
+        
+        // Map tags to modules
+        const tagToModule = {
+          'Members': 'Member',
+          'Accounts': 'Account',
+          'Credex': 'Credex',
+          'Recurring': 'Recurring',
+          'Admin': 'Admin',
+          'DevAdmin': 'DevAdmin'
+        };
+        
+        return tagToModule[tag] || 'Other';
       }
 
       function generateNavigation() {

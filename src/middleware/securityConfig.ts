@@ -2,6 +2,7 @@ import { Application, Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import cors from "cors";
 import { rateLimiter } from "./rateLimiter";
+import { verifyRateLimiterBypass } from "./rateLimiterBypass";
 import { authMiddleware } from "./authMiddleware";
 import logger from "../utils/logger";
 
@@ -59,8 +60,8 @@ export const applySecurityMiddleware = (app: Application) => {
     // CORS highly permissive for non-prod deployments
     const corsOptions = {
       origin: "*", // Allow all origins
-      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key"],
+      methods: ["POST"],
+      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key", "x-dev-admin-key", "x-skip-rate-limit"],
       credentials: true,
       maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
     };
@@ -100,8 +101,8 @@ export const applySecurityMiddleware = (app: Application) => {
         // Allow all other origins
         callback(null, true);
       },
-      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key"],
+      methods: ["POST"],
+      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key", "x-dev-admin-key", "x-skip-rate-limit"],
       credentials: true,
       maxAge: 86400,
     };
@@ -109,8 +110,15 @@ export const applySecurityMiddleware = (app: Application) => {
     logger.debug("CORS middleware applied (production)");
   }
 
-  // Apply rate limiting
-  app.use(rateLimiter);
+  // Apply rate limiting with bypass check
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    // Check for rate limiter bypass header
+    if (req.headers['x-skip-rate-limit']) {
+      return verifyRateLimiterBypass(req, res, next);
+    }
+    // Apply standard rate limiting
+    rateLimiter(req, res, next);
+  });
   logger.debug("Rate limiter middleware applied");
 
   // Apply client API key verification for keyholes
