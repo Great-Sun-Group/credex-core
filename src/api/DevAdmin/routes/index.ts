@@ -9,6 +9,84 @@ import logger from "../../../utils/logger";
  * tags:
  *   name: DevAdmin
  *   description: Development and administration operations. IMPORTANT - These routes are for development purposes only and are not published in production deployment.
+ * 
+ * components:
+ *   securitySchemes:
+ *     devAdminAuth:
+ *       type: apiKey
+ *       in: header
+ *       name: X-Dev-Admin-Key
+ *       description: Development admin API key for authentication
+ * 
+ *   schemas:
+ *     DevAdminAction:
+ *       type: object
+ *       required:
+ *         - id
+ *         - type
+ *         - timestamp
+ *         - actor
+ *         - details
+ *       properties:
+ *         id:
+ *           type: string
+ *           nullable: true
+ *           description: Resource identifier
+ *         type:
+ *           type: string
+ *           description: Type of action performed
+ *         timestamp:
+ *           type: string
+ *           format: date-time
+ *           description: When the action occurred
+ *         actor:
+ *           type: string
+ *           description: Who performed the action
+ *         details:
+ *           type: object
+ *           description: Action-specific details
+ * 
+ *     DevAdminResponse:
+ *       type: object
+ *       required:
+ *         - message
+ *         - data
+ *       properties:
+ *         message:
+ *           type: string
+ *           description: Human-friendly message
+ *         data:
+ *           type: object
+ *           required:
+ *             - action
+ *             - dashboard
+ *           properties:
+ *             action:
+ *               $ref: '#/components/schemas/DevAdminAction'
+ *             dashboard:
+ *               type: object
+ *               description: Current system state
+ * 
+ *     DevAdminError:
+ *       type: object
+ *       required:
+ *         - message
+ *         - data
+ *       properties:
+ *         message:
+ *           type: string
+ *           description: Human-friendly error message
+ *         data:
+ *           type: object
+ *           required:
+ *             - action
+ *             - dashboard
+ *           properties:
+ *             action:
+ *               $ref: '#/components/schemas/DevAdminAction'
+ *             dashboard:
+ *               type: object
+ *               description: Current system state
  */
 
 export function DevRoutes() {

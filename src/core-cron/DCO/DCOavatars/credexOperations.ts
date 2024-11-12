@@ -2,7 +2,12 @@ import moment from "moment-timezone";
 import logger from "../../../utils/logger";
 import { CreateCredexService } from "../../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../../api/Credex/services/AcceptCredex";
-import { Avatar, CredexOfferResult, isCredexObject } from "./types";
+import { ServiceResult } from "../../../types/apiResponse";
+import { 
+  Avatar, 
+  DCOCreateCredexResult,
+  DCOCredexData
+} from "./types";
 import { DCO_CONSTANTS } from "../constants";
 
 // Match CreateCredexInput interface exactly
@@ -17,6 +22,32 @@ interface OfferData {
   requestId: string;
   securedCredex: boolean;
   dueDate?: string;
+}
+
+interface AcceptCredexData {
+  credexID: string;
+  acceptorAccountID: string;
+  acceptorSignerID: string;
+  acceptedAt: string;
+  transactionType: string;
+  amount: string;
+  denomination: string;
+  secured: boolean;
+}
+
+type AcceptCredexResult = ServiceResult<AcceptCredexData>;
+
+/**
+ * Type guard to check if result has valid credex data
+ */
+function hasValidCredexData(result: DCOCreateCredexResult): result is DCOCreateCredexResult & { data: DCOCredexData } {
+  return (
+    result.success &&
+    result.data !== undefined &&
+    'credexID' in result.data &&
+    'formattedInitialAmount' in result.data &&
+    'counterpartyAccountName' in result.data
+  );
 }
 
 /**
@@ -65,27 +96,47 @@ export function prepareOfferData(
 /**
  * Creates a new credex offer
  */
-export async function createCredexOffer(offerData: OfferData): Promise<CredexOfferResult> {
+export async function createCredexOffer(offerData: OfferData): Promise<DCOCreateCredexResult> {
   logger.debug("Creating new credex offer", {
     requestId: offerData.requestId,
     signerID: offerData.signerID,
     credexType: offerData.credexType,
   });
+
   const offerResult = await CreateCredexService(offerData);
 
-  if (offerResult.credex && isCredexObject(offerResult.credex)) {
+  if (hasValidCredexData(offerResult)) {
     logger.info("Credex offer created", {
       requestId: offerData.requestId,
-      credexID: offerResult.credex.credexID,
+      credexID: offerResult.data.credexID,
       signerID: offerData.signerID,
       credexType: offerData.credexType,
       action: "OFFER_CREDEX",
     });
-    return offerResult;
+    return {
+      success: true,
+      data: offerResult.data,
+      message: offerResult.message
+    };
   } else {
-    throw new Error(
-      `Failed to create credex offer for signer: ${offerData.signerID}`
-    );
+    const errorMessage = offerResult.message || "Unknown error creating credex offer";
+    const errorDetails = offerResult.error?.details;
+
+    logger.error("Failed to create credex offer", {
+      requestId: offerData.requestId,
+      signerID: offerData.signerID,
+      error: errorMessage,
+      details: errorDetails
+    });
+
+    return {
+      success: false,
+      message: errorMessage,
+      error: {
+        code: "CREATE_FAILED",
+        details: errorDetails
+      }
+    };
   }
 }
 
@@ -102,13 +153,14 @@ export async function acceptCredexOffer(
     credexID,
     signerID,
   });
+
   const acceptResult = await AcceptCredexService(
     credexID,
     signerID,
     requestId
   );
 
-  if (acceptResult) {
+  if (acceptResult.success && acceptResult.data) {
     logger.info("Credex accepted", {
       requestId,
       credexID,
@@ -116,6 +168,19 @@ export async function acceptCredexOffer(
       action: "ACCEPT_CREDEX",
     });
   } else {
-    throw new Error(`Failed to accept credex for signer: ${signerID}`);
+    const errorMessage = acceptResult.message || "Unknown error accepting credex";
+    const errorDetails = acceptResult.error?.details;
+
+    logger.error("Failed to accept credex", {
+      requestId,
+      credexID,
+      signerID,
+      error: errorMessage,
+      details: errorDetails
+    });
+
+    throw new Error(
+      `Failed to accept credex for signer: ${signerID} - ${errorMessage}`
+    );
   }
 }

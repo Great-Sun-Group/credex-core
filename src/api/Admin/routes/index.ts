@@ -11,8 +11,8 @@ import logger from "../../../utils/logger";
 /**
  * @swagger
  * tags:
- *   name: DevAdmin
- *   description: Development and administration operations
+ *   name: Admin
+ *   description: Administrative operations for managing members, accounts, and credex transactions
  */
 
 export function AdminRoutes() {
@@ -39,7 +39,7 @@ export function AdminRoutes() {
 
   router.use(errorHandler);
 
-  logger.info("AdminDashboard routes initialized", {
+  logger.info("Admin routes initialized", {
     module: "adminRoutes",
     routesCount: 6,
   });

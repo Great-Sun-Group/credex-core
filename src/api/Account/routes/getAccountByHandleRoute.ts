@@ -30,19 +30,57 @@ export default function getAccountByHandleRoute() {
    *                 description: Unique handle for the account (lowercase letters, numbers, underscores)
    *     responses:
    *       200:
-   *         description: Account found
+   *         description: Account found successfully
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
-   *                 accountID:
+   *                 message:
    *                   type: string
-   *                   format: uuid
-   *                   description: Unique identifier for the account
-   *                 accountName:
-   *                   type: string
-   *                   description: Name of the account
+   *                   example: Account found successfully
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           format: uuid
+   *                           description: The account ID
+   *                         type:
+   *                           type: string
+   *                           enum: [ACCOUNT_FOUND]
+   *                           description: The type of action performed
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                           description: When the action occurred
+   *                         actor:
+   *                           type: string
+   *                           example: system
+   *                           description: System action, no specific actor
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             accountID:
+   *                               type: string
+   *                               format: uuid
+   *                             accountName:
+   *                               type: string
+   *                             accountHandle:
+   *                               type: string
+   *                             accountType:
+   *                               type: string
+   *                             defaultDenom:
+   *                               type: string
+   *                             createdAt:
+   *                               type: string
+   *                               format: date-time
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard since this is just a lookup endpoint
    *       400:
    *         description: Invalid account handle format
    *         content:
@@ -52,7 +90,39 @@ export default function getAccountByHandleRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   description: Error message explaining the validation failure
+   *                   example: Invalid account handle format
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_VALIDATION]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           example: system
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: INVALID_HANDLE
+   *                             reason:
+   *                               type: string
+   *                             field:
+   *                               type: string
+   *                               example: accountHandle
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    *       404:
    *         description: Account not found
    *         content:
@@ -62,7 +132,36 @@ export default function getAccountByHandleRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: Account not found
+   *                   example: No account found with handle
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_NOT_FOUND]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           example: system
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: ACCOUNT_NOT_FOUND
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    *       500:
    *         description: Internal server error
    *         content:
@@ -72,7 +171,36 @@ export default function getAccountByHandleRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   description: Error message
+   *                   example: Internal server error while retrieving account
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_INTERNAL]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           example: system
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: INTERNAL_ERROR
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    */
   router.post(
     `/getAccountByHandle`,

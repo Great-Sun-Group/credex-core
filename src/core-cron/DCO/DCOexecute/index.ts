@@ -17,7 +17,13 @@ import { processDCOTransactions } from "./transactions";
 import { createNeo4jBackup } from "../DBbackup";
 import { validateAmount, validateDenomination } from "../../../utils/validators";
 import { GetSecuredAuthorizationService } from "../../../api/Credex/services/GetSecuredAuthorization";
+import { ServiceResult } from "../../../types/apiResponse";
 import { Participant } from "./types";
+
+interface SecuredAuthorizationData {
+  securerID: string | null;
+  securableAmountInDenom: number;
+}
 
 /**
  * Finds all active DCO participants using recurring templates.
@@ -80,10 +86,22 @@ async function findDCOParticipants(session: any): Promise<{
       continue;
     }
 
-    const { securableAmountInDenom } = await GetSecuredAuthorizationService(
+    const securedAuthResult = await GetSecuredAuthorizationService(
       accountID,
       DCOdenom
     );
+
+    if (!securedAuthResult.success || !securedAuthResult.data) {
+      logInfo("Failed to get secured authorization", {
+        accountID,
+        DCOdenom,
+        error: securedAuthResult.message,
+        details: securedAuthResult.error?.details
+      });
+      continue;
+    }
+
+    const { securableAmountInDenom } = securedAuthResult.data;
 
     if (DCOgiveInDenom <= securableAmountInDenom) {
       confirmedParticipants.push({
@@ -97,6 +115,13 @@ async function findDCOParticipants(session: any): Promise<{
       DCOinCXX += DCOgiveInCXX;
       // Convert to XAU using current day's rates
       DCOinXAU += DCOgiveInDenom * denomToXAUrate;
+    } else {
+      logInfo("Insufficient securable amount", {
+        accountID,
+        DCOdenom,
+        required: DCOgiveInDenom,
+        available: securableAmountInDenom
+      });
     }
   }
 

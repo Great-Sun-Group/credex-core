@@ -8,6 +8,8 @@ import {
 import { GetRecurringService } from "../../../api/Recurring/services/GetRecurring";
 import { CreateCredexService } from "../../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../../api/Credex/services/AcceptCredex";
+import { ServiceResult } from "../../../types/apiResponse";
+import { DCOCreateCredexResult, DCOCredexData } from "../DCOavatars/types";
 import { DCO_CONSTANTS } from "../constants";
 import { Participant, ParticipantData } from "./types";
 
@@ -29,6 +31,29 @@ class DCOError extends Error {
   getContext(): Record<string, unknown> {
     return this.context;
   }
+}
+
+/**
+ * Type guard to check if result has valid credex data
+ */
+function hasValidCredexData(result: DCOCreateCredexResult): result is Required<DCOCreateCredexResult> & { data: DCOCredexData } {
+  return (
+    result.success &&
+    result.data !== undefined &&
+    'credexID' in result.data &&
+    'formattedInitialAmount' in result.data &&
+    'counterpartyAccountName' in result.data
+  );
+}
+
+/**
+ * Helper function to safely get error details from a service result
+ */
+function getErrorDetails(result: ServiceResult<unknown>): { message: string; details?: string } {
+  return {
+    message: result.message || "Unknown error",
+    details: result.error?.details
+  };
 }
 
 /**
@@ -114,21 +139,25 @@ async function processDCOGiveTransaction(
   };
 
   const DCOgiveCredex = await CreateCredexService(dataForDCOgive);
-  if (
-    typeof DCOgiveCredex.credex === "boolean" ||
-    !DCOgiveCredex.credex?.credexID
-  ) {
+  if (!hasValidCredexData(DCOgiveCredex)) {
+    const { message, details } = getErrorDetails(DCOgiveCredex);
     const error = new DCOError(
       "Invalid response from CreateCredexService for DCO give",
-      { participant, templateID }
+      { 
+        participant, 
+        templateID,
+        error: message,
+        details
+      }
     );
     logError(error.message, error);
     throw error;
   }
 
+  const credexID = DCOgiveCredex.data.credexID;
   logInfo("DCO give credex offer created", {
     requestId,
-    credexID: DCOgiveCredex.credex.credexID,
+    credexID,
     signerID: participant.recurringID,  // Log Recurring node's ID
     memberID: participant.DCOmemberID,  // Also log member ID for reference
     action: "OFFER_CREDEX",
@@ -141,15 +170,29 @@ async function processDCOGiveTransaction(
     }
   });
 
-  await AcceptCredexService(
-    DCOgiveCredex.credex.credexID,
+  const acceptResult = await AcceptCredexService(
+    credexID,
     participant.recurringID,  // Use Recurring node's ID for accepting
     requestId
   );
 
+  if (!acceptResult.success || !acceptResult.data) {
+    const { message, details } = getErrorDetails(acceptResult);
+    const error = new DCOError(
+      "Failed to accept DCO give credex",
+      {
+        credexID,
+        error: message,
+        details
+      }
+    );
+    logError(error.message, error);
+    throw error;
+  }
+
   logInfo("DCO give credex accepted", {
     requestId,
-    credexID: DCOgiveCredex.credex.credexID,
+    credexID,
     signerID: participant.recurringID,  // Log Recurring node's ID
     memberID: participant.DCOmemberID,  // Also log member ID for reference
     action: "ACCEPT_CREDEX",
@@ -190,21 +233,26 @@ async function processDCOReceiveTransaction(
   };
 
   const DCOreceiveCredex = await CreateCredexService(dataForDCOreceive);
-  if (
-    typeof DCOreceiveCredex.credex === "boolean" ||
-    !DCOreceiveCredex.credex?.credexID
-  ) {
+  if (!hasValidCredexData(DCOreceiveCredex)) {
+    const { message, details } = getErrorDetails(DCOreceiveCredex);
     const error = new DCOError(
       "Invalid response from CreateCredexService for DCO receive",
-      { participant, templateID, receiveAmount }
+      {
+        participant,
+        templateID,
+        receiveAmount,
+        error: message,
+        details
+      }
     );
     logError(error.message, error);
     throw error;
   }
 
+  const credexID = DCOreceiveCredex.data.credexID;
   logInfo("DCO receive credex offer created", {
     requestId,
-    credexID: DCOreceiveCredex.credex.credexID,
+    credexID,
     signerID: participant.recurringID,  // Log Recurring node's ID
     memberID: participant.DCOmemberID,  // Also log member ID for reference
     action: "OFFER_CREDEX",
@@ -217,15 +265,29 @@ async function processDCOReceiveTransaction(
     }
   });
 
-  await AcceptCredexService(
-    DCOreceiveCredex.credex.credexID,
+  const acceptResult = await AcceptCredexService(
+    credexID,
     participant.recurringID,  // Use same Recurring node for accepting
     requestId
   );
 
+  if (!acceptResult.success || !acceptResult.data) {
+    const { message, details } = getErrorDetails(acceptResult);
+    const error = new DCOError(
+      "Failed to accept DCO receive credex",
+      {
+        credexID,
+        error: message,
+        details
+      }
+    );
+    logError(error.message, error);
+    throw error;
+  }
+
   logInfo("DCO receive credex accepted", {
     requestId,
-    credexID: DCOreceiveCredex.credex.credexID,
+    credexID,
     signerID: participant.recurringID, // Log Recurring node's ID
     memberID: participant.DCOmemberID, // Also log member ID for reference
     action: "ACCEPT_CREDEX",

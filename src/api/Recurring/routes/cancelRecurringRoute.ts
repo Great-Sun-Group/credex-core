@@ -8,10 +8,13 @@ import logger from "../../../utils/logger";
 
 /**
  * @swagger
- * /api/recurring/cancelRecurring:
+ * /cancelRecurring:
  *   post:
  *     tags: [Recurring]
  *     summary: Cancel a recurring transaction
+ *     description: Cancels an active or pending recurring transaction. Only the owner can cancel.
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -20,14 +23,11 @@ import logger from "../../../utils/logger";
  *             type: object
  *             required:
  *               - recurringID
- *               - ownerID
  *             properties:
  *               recurringID:
  *                 type: string
  *                 format: uuid
- *               ownerID:
- *                 type: string
- *                 format: uuid
+ *                 description: ID of the recurring transaction to cancel
  *     responses:
  *       200:
  *         description: Recurring transaction cancelled successfully
@@ -36,48 +36,164 @@ import logger from "../../../utils/logger";
  *             schema:
  *               type: object
  *               properties:
- *                 success:
- *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                   example: "Recurring transaction cancelled successfully"
+ *                   description: Human-friendly message describing the action
  *                 data:
  *                   type: object
  *                   properties:
- *                     requestId:
- *                       type: string
- *                       format: uuid
- *                     ownerID:
- *                       type: string
- *                       format: uuid
- *                     sourceAccountID:
- *                       type: string
- *                       format: uuid
- *                     targetAccountID:
- *                       type: string
- *                       format: uuid
- *                     frequency:
- *                       type: string
- *                       enum: [DAILY, WEEKLY, MONTHLY]
- *                     startDate:
- *                       type: string
- *                       format: date
- *                     duration:
- *                       type: integer
- *                     templateType:
- *                       type: string
- *                       enum: [REGULAR, DCO_GIVE]
- *                     amount:
- *                       type: number
- *                     denomination:
- *                       type: string
- *                       enum: [CXX, CAD, USD, XAU, ZWG]
- *                     securedCredex:
- *                       type: boolean
- *                     DCOgiveInCXX:
- *                       type: number
- *                     DCOdenom:
- *                       type: string
- *                       enum: [CXX, CAD, USD, XAU, ZWG]
+ *                     action:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                           description: The recurringID of the cancelled transaction
+ *                         type:
+ *                           type: string
+ *                           enum: [RECURRING_CANCELLED]
+ *                           description: Business action type
+ *                         timestamp:
+ *                           type: string
+ *                           format: date-time
+ *                           description: When the action occurred
+ *                         actor:
+ *                           type: string
+ *                           format: uuid
+ *                           description: MemberID who performed the action
+ *                         details:
+ *                           type: object
+ *                           properties:
+ *                             recurringID:
+ *                               type: string
+ *                               format: uuid
+ *                             amount:
+ *                               type: string
+ *                               description: Formatted amount with denomination
+ *                             denomination:
+ *                               type: string
+ *                               enum: [CXX, CAD, USD, XAU, ZWG]
+ *                             frequency:
+ *                               type: string
+ *                               enum: [DAILY, WEEKLY, MONTHLY]
+ *                             nextDate:
+ *                               type: string
+ *                               format: date
+ *                             status:
+ *                               type: string
+ *                               enum: [CANCELLED]
+ *                             scheduleInfo:
+ *                               type: object
+ *                               properties:
+ *                                 frequency:
+ *                                   type: string
+ *                                 nextRunDate:
+ *                                   type: string
+ *                                   format: date
+ *                                 amount:
+ *                                   type: string
+ *                                 denomination:
+ *                                   type: string
+ *                                 status:
+ *                                   type: string
+ *                             participants:
+ *                               type: object
+ *                               properties:
+ *                                 sourceAccountID:
+ *                                   type: string
+ *                                   format: uuid
+ *                                 targetAccountID:
+ *                                   type: string
+ *                                   format: uuid
+ *                             execution:
+ *                               type: object
+ *                               properties:
+ *                                 lastRunDate:
+ *                                   type: string
+ *                                   format: date-time
+ *                                 lastRunStatus:
+ *                                   type: string
+ *                                 totalExecutions:
+ *                                   type: integer
+ *                     dashboard:
+ *                       type: object
+ *                       description: Full dashboard state after the action
+ *       400:
+ *         description: Invalid input data or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
  *                 message:
  *                   type: string
+ *                   example: "Invalid recurring transaction ID"
+ *                   description: Human-friendly error message
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     action:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                         type:
+ *                           type: string
+ *                           enum: [ERROR_VALIDATION]
+ *                         timestamp:
+ *                           type: string
+ *                           format: date-time
+ *                         actor:
+ *                           type: string
+ *                           format: uuid
+ *                         details:
+ *                           type: object
+ *                           properties:
+ *                             code:
+ *                               type: string
+ *                               example: "400"
+ *                             reason:
+ *                               type: string
+ *                     dashboard:
+ *                       type: object
+ *                       description: Empty dashboard state
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Authentication required"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     action:
+ *                       type: object
+ *                       properties:
+ *                         type:
+ *                           type: string
+ *                           enum: [ERROR_UNAUTHORIZED]
+ *                         details:
+ *                           type: object
+ *                           properties:
+ *                             code:
+ *                               type: string
+ *                               enum: [UNAUTHORIZED]
+ *                     dashboard:
+ *                       type: object
+ *       403:
+ *         description: Not authorized to cancel this recurring transaction
+ *       404:
+ *         description: Recurring transaction not found
+ *       409:
+ *         description: Recurring transaction already cancelled
+ *       500:
+ *         description: Internal server error
  */
 export const cancelRecurringRoute = [
   validateRequest(cancelRecurringSchema),

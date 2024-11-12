@@ -3,12 +3,21 @@ import { AcceptCredexService } from "../services/AcceptCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { validateUUID } from "../../../utils/validators";
 import logger from "../../../utils/logger";
+import { 
+  ApiActionType, 
+  TypedApiResponse, 
+  CredexBulkActionDetails, 
+  ErrorActionDetails 
+} from "../../../types/apiResponse";
 
 // Import the UserRequest interface from authentication module
 import type { Request } from "express";
 interface UserRequest extends Request {
   user?: any;
 }
+
+type AcceptCredexBulkResponse = TypedApiResponse<CredexBulkActionDetails>;
+type AcceptCredexBulkErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 type AcceptedResult = {
   status: 'accepted';
@@ -57,14 +66,47 @@ export async function AcceptCredexBulkController(
   const signerID = req.user?.memberID;
   if (!signerID) {
     logger.warn("No authenticated user found", { requestId });
-    return res.status(401).json({ message: "Authentication required" });
+    const errorResponse: AcceptCredexBulkErrorResponse = {
+      message: "Authentication required",
+      data: {
+        action: {
+          id: null,
+          type: ApiActionType.ERROR_UNAUTHORIZED,
+          timestamp: new Date().toISOString(),
+          actor: "system",
+          details: {
+            code: "UNAUTHORIZED",
+            reason: "Authentication required"
+          }
+        },
+        dashboard: {}
+      }
+    };
+    return res.status(401).json(errorResponse);
   }
 
   // Validate required fields
   const { credexIDs } = req.body;
   if (!credexIDs) {
     logger.warn("credexIDs is required", { requestId });
-    return res.status(400).json({ message: "credexIDs is required" });
+    const errorResponse: AcceptCredexBulkErrorResponse = {
+      message: "credexIDs is required",
+      data: {
+        action: {
+          id: null,
+          type: ApiActionType.ERROR_VALIDATION,
+          timestamp: new Date().toISOString(),
+          actor: signerID,
+          details: {
+            code: "MISSING_PARAMS",
+            reason: "credexIDs array is required",
+            field: "credexIDs"
+          }
+        },
+        dashboard: {}
+      }
+    };
+    return res.status(400).json(errorResponse);
   }
 
   // Validate credexIDs array
@@ -78,9 +120,24 @@ export async function AcceptCredexBulkController(
       requestId,
       credexIDs,
     });
-    return res.status(400).json({
+    const errorResponse: AcceptCredexBulkErrorResponse = {
       message: "Array of valid credexIDs (UUIDs) to accept is required",
-    });
+      data: {
+        action: {
+          id: null,
+          type: ApiActionType.ERROR_VALIDATION,
+          timestamp: new Date().toISOString(),
+          actor: signerID,
+          details: {
+            code: "INVALID_PARAMS",
+            reason: "All credexIDs must be valid UUIDs",
+            field: "credexIDs"
+          }
+        },
+        dashboard: {}
+      }
+    };
+    return res.status(400).json(errorResponse);
   }
 
   try {
@@ -102,12 +159,12 @@ export async function AcceptCredexBulkController(
             credexIDs // Pass all credexIDs for bulk signature
           );
           
-          if (data) {
+          if (data?.success && data.data) {
             logger.debug("Credex accepted successfully", { requestId, credexID });
             return {
               status: 'accepted' as const,
               credexID,
-              data
+              data: data.data
             };
           }
           
@@ -115,7 +172,7 @@ export async function AcceptCredexBulkController(
           return {
             status: 'failed' as const,
             credexID,
-            error: 'Failed to accept credex'
+            error: data?.message || 'Failed to accept credex'
           };
         } catch (error) {
           const errorMessage = (error as Error).message;
@@ -183,20 +240,30 @@ export async function AcceptCredexBulkController(
         requestId
       });
 
-      // Return flattened response
-      return res.json({
-        success: true,
+      const successResponse: AcceptCredexBulkResponse = {
+        message: `Successfully processed ${acceptedCredex.length + alreadyAccepted.length} out of ${results.length} Credex transactions`,
         data: {
-          acceptedCredexIDs: acceptedCredex.map(r => r.credexID),
-          summary: {
-            accepted: acceptedCredex.map(r => r.credexID),
-            alreadyAccepted: alreadyAccepted.map(r => r.credexID),
-            failed: failed.map(r => ({ credexID: r.credexID, error: r.error }))
+          action: {
+            id: null, // No single ID for bulk operation
+            type: ApiActionType.CREDEX_BULK_ACCEPTED,
+            timestamp: new Date().toISOString(),
+            actor: signerID,
+            details: {
+              summary: {
+                accepted: acceptedCredex.map(r => r.credexID),
+                alreadyAccepted: alreadyAccepted.map(r => r.credexID),
+                failed: failed.map(r => ({ credexID: r.credexID, error: r.error }))
+              },
+              totalProcessed: results.length,
+              successCount: acceptedCredex.length + alreadyAccepted.length,
+              failureCount: failed.length
+            }
           },
-          dashboard
-        },
-        message: "Bulk accept operation completed"
-      });
+          dashboard: dashboard || {}
+        }
+      };
+
+      return res.status(200).json(successResponse);
     } else {
       // If nothing was processed successfully
       logger.warn("No credex were processed successfully", {
@@ -204,11 +271,25 @@ export async function AcceptCredexBulkController(
         failedCount: failed.length,
         errors: failed.map(f => f.error)
       });
-      return res.status(400).json({ 
-        success: false,
-        error: "No credex were processed successfully",
-        details: failed.map(f => ({ credexID: f.credexID, error: f.error }))
-      });
+
+      const errorResponse: AcceptCredexBulkErrorResponse = {
+        message: "No credex were processed successfully",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: signerID,
+            details: {
+              code: "BULK_ACCEPT_FAILED",
+              reason: "All Credex transactions failed to process",
+              suggestion: "Please check individual error details and try again"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      return res.status(400).json(errorResponse);
     }
   } catch (err) {
     logger.error("Error in AcceptCredexBulkController", {
@@ -216,8 +297,27 @@ export async function AcceptCredexBulkController(
       stack: err instanceof Error ? err.stack : undefined,
       requestId,
     });
-    next(err);
+    
+    const errorResponse: AcceptCredexBulkErrorResponse = {
+      message: "An unexpected error occurred during bulk accept operation",
+      data: {
+        action: {
+          id: null,
+          type: ApiActionType.ERROR_INTERNAL,
+          timestamp: new Date().toISOString(),
+          actor: "system",
+          details: {
+            code: "INTERNAL_ERROR",
+            reason: err instanceof Error ? err.message : "Unknown error",
+            suggestion: "Please try again or contact support if the issue persists"
+          }
+        },
+        dashboard: {}
+      }
+    };
+    
+    return res.status(500).json(errorResponse);
+  } finally {
+    logger.debug("Exiting AcceptCredexBulkController", { requestId });
   }
-
-  logger.debug("Exiting AcceptCredexBulkController", { requestId });
 }

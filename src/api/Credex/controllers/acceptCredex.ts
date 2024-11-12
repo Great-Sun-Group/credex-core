@@ -3,6 +3,15 @@ import { AcceptCredexService } from "../services/AcceptCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
+import { 
+  ApiActionType, 
+  TypedApiResponse, 
+  CredexActionDetails, 
+  ErrorActionDetails 
+} from "../../../types/apiResponse";
+
+type AcceptCredexResponse = TypedApiResponse<CredexActionDetails>;
+type AcceptCredexErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * AcceptCredexController
@@ -42,44 +51,63 @@ export async function AcceptCredexController(
       requestId
     );
     
-    if (!acceptCredexResult) {
-      logger.warn("Failed to accept Credex - service returned null", { 
+    if (!acceptCredexResult || !acceptCredexResult.success || !acceptCredexResult.data) {
+      logger.warn("Failed to accept Credex", { 
         credexID, 
         signerID, 
-        requestId 
+        requestId,
+        error: acceptCredexResult?.message
       });
-      return res.status(400).json({
-        success: false,
-        error: "Failed to accept Credex"
-      });
+
+      const errorResponse: AcceptCredexErrorResponse = {
+        message: acceptCredexResult?.message || "Failed to accept Credex",
+        data: {
+          action: {
+            id: credexID,
+            type: ApiActionType.ERROR_INTERNAL,
+            timestamp: new Date().toISOString(),
+            actor: signerID,
+            details: {
+              code: "ACCEPT_FAILED",
+              reason: acceptCredexResult?.message || "Failed to accept Credex",
+              suggestion: "Please try again or contact support if the issue persists"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      return res.status(400).json(errorResponse);
     }
 
     logger.debug("Fetching updated dashboard data", {
       signerID,
-      acceptorAccountID: acceptCredexResult.acceptorAccountID,
+      acceptorAccountID: acceptCredexResult.data.acceptorAccountID,
       requestId,
     });
 
     const dashboard = await GetAccountDashboardService(
       signerID,
-      acceptCredexResult.acceptorAccountID
+      acceptCredexResult.data.acceptorAccountID
     );
 
-    if (!dashboard) {
-      logger.warn("Failed to fetch dashboard data after successful acceptance", {
-        signerID,
-        acceptorAccountID: acceptCredexResult.acceptorAccountID,
-        requestId,
-      });
-      return res.status(200).json({
-        success: true,
-        data: {
-          ...acceptCredexResult,
-          dashboard: null
+    const successResponse: AcceptCredexResponse = {
+      message: `${acceptCredexResult.data.secured ? 'Secured' : 'Unsecured'} credex for ${acceptCredexResult.data.amount} ${acceptCredexResult.data.denomination} accepted successfully`,
+      data: {
+        action: {
+          id: credexID,
+          type: ApiActionType.CREDEX_ACCEPTED,
+          timestamp: acceptCredexResult.data.acceptedAt,
+          actor: signerID,
+          details: {
+            amount: acceptCredexResult.data.amount,
+            denomination: acceptCredexResult.data.denomination,
+            securedCredex: acceptCredexResult.data.secured,
+            acceptorAccountID: acceptCredexResult.data.acceptorAccountID
+          }
         },
-        message: "Credex accepted successfully but failed to fetch updated dashboard"
-      });
-    }
+        dashboard: dashboard || {}
+      }
+    };
 
     logger.info("Credex accepted successfully", {
       credexID,
@@ -87,14 +115,7 @@ export async function AcceptCredexController(
       requestId,
     });
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        ...acceptCredexResult,
-        dashboard
-      },
-      message: "Credex accepted successfully"
-    });
+    return res.status(200).json(successResponse);
 
   } catch (err) {
     // Handle specific error cases with appropriate status codes
@@ -104,10 +125,24 @@ export async function AcceptCredexController(
           error: err.message,
           requestId 
         });
-        return res.status(409).json({
-          success: false,
-          error: "Credex has already been accepted"
-        });
+        const errorResponse: AcceptCredexErrorResponse = {
+          message: "Credex has already been accepted",
+          data: {
+            action: {
+              id: req.body.credexID,
+              type: ApiActionType.ERROR_VALIDATION,
+              timestamp: new Date().toISOString(),
+              actor: req.user.memberID,
+              details: {
+                code: "ALREADY_ACCEPTED",
+                reason: "Credex has already been accepted",
+                field: "credexID"
+              }
+            },
+            dashboard: {}
+          }
+        };
+        return res.status(409).json(errorResponse);
       }
       
       if (err.message === 'Credex not found') {
@@ -115,10 +150,24 @@ export async function AcceptCredexController(
           error: err.message,
           requestId 
         });
-        return res.status(404).json({
-          success: false,
-          error: "Credex not found"
-        });
+        const errorResponse: AcceptCredexErrorResponse = {
+          message: "Credex not found",
+          data: {
+            action: {
+              id: req.body.credexID,
+              type: ApiActionType.ERROR_NOT_FOUND,
+              timestamp: new Date().toISOString(),
+              actor: req.user.memberID,
+              details: {
+                code: "CREDEX_NOT_FOUND",
+                reason: "The specified Credex could not be found",
+                field: "credexID"
+              }
+            },
+            dashboard: {}
+          }
+        };
+        return res.status(404).json(errorResponse);
       }
 
       if (err.message.includes('digital signature')) {
@@ -127,10 +176,24 @@ export async function AcceptCredexController(
           stack: err.stack,
           requestId,
         });
-        return res.status(400).json({
-          success: false,
-          error: "Failed to accept Credex: Digital signature error"
-        });
+        const errorResponse: AcceptCredexErrorResponse = {
+          message: "Failed to accept Credex: Digital signature error",
+          data: {
+            action: {
+              id: req.body.credexID,
+              type: ApiActionType.ERROR_INTERNAL,
+              timestamp: new Date().toISOString(),
+              actor: req.user.memberID,
+              details: {
+                code: "SIGNATURE_ERROR",
+                reason: "Failed to create digital signature",
+                suggestion: "Please try again or contact support if the issue persists"
+              }
+            },
+            dashboard: {}
+          }
+        };
+        return res.status(400).json(errorResponse);
       }
     }
 
@@ -141,7 +204,25 @@ export async function AcceptCredexController(
       requestId,
     });
     
-    next(err);
+    const errorResponse: AcceptCredexErrorResponse = {
+      message: "An unexpected error occurred while accepting the Credex",
+      data: {
+        action: {
+          id: req.body.credexID,
+          type: ApiActionType.ERROR_INTERNAL,
+          timestamp: new Date().toISOString(),
+          actor: "system",
+          details: {
+            code: "INTERNAL_ERROR",
+            reason: err instanceof Error ? err.message : "Unknown error",
+            suggestion: "Please try again or contact support if the issue persists"
+          }
+        },
+        dashboard: {}
+      }
+    };
+    
+    return res.status(500).json(errorResponse);
   } finally {
     logger.debug("Exiting AcceptCredexController", { requestId });
   }

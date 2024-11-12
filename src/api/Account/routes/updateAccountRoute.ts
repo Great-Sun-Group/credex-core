@@ -61,29 +61,291 @@ export default function updateAccountRoute() {
    *             schema:
    *               type: object
    *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
-   *                 data:
-   *                   type: object
-   *                   properties:
-   *                     accountID:
-   *                       type: string
-   *                       format: uuid
-   *                       description: ID of the updated account
    *                 message:
    *                   type: string
    *                   example: Account updated successfully
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           format: uuid
+   *                           description: The account ID
+   *                         type:
+   *                           type: string
+   *                           enum: [ACCOUNT_UPDATED]
+   *                           description: The type of action performed
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                           description: When the action occurred
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                           description: ID of the member who performed the update
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             accountID:
+   *                               type: string
+   *                               format: uuid
+   *                             accountName:
+   *                               type: string
+   *                             accountHandle:
+   *                               type: string
+   *                             defaultDenom:
+   *                               type: string
+   *                             DCOgiveInCXX:
+   *                               type: number
+   *                             DCOdenom:
+   *                               type: string
+   *                             updatedAt:
+   *                               type: string
+   *                               format: date-time
+   *                     dashboard:
+   *                       type: object
+   *                       description: Current state of the account dashboard
    *       400:
    *         description: Invalid input data or no fields to update
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: No fields provided for update
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_VALIDATION]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: NO_UPDATE_DATA
+   *                             reason:
+   *                               type: string
+   *                             details:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    *       401:
    *         description: Authentication required
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Authentication required
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_UNAUTHORIZED]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           example: system
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: NO_AUTH
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    *       403:
    *         description: Not authorized to update this account
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Not authorized to update account
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           format: uuid
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_UNAUTHORIZED]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: UNAUTHORIZED
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    *       404:
    *         description: Account not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Account not found
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_NOT_FOUND]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: ACCOUNT_NOT_FOUND
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
+   *       409:
+   *         description: Account handle already exists
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Account handle is already in use
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           format: uuid
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_VALIDATION]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: HANDLE_EXISTS
+   *                             reason:
+   *                               type: string
+   *                             suggestion:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    *       500:
    *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Internal server error while updating account
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_INTERNAL]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: INTERNAL_ERROR
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    */
   router.post(
     `/updateAccount`,

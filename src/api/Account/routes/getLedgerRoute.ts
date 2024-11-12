@@ -15,7 +15,7 @@ export default function getLedgerRoute() {
    *   post:
    *     tags: [Accounts]
    *     summary: Get account ledger
-   *     description: Retrieves transaction history for an account with pagination support
+   *     description: Retrieves paginated transaction history for an account
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -49,46 +49,244 @@ export default function getLedgerRoute() {
    *             schema:
    *               type: object
    *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
-   *                 data:
-   *                   type: array
-   *                   description: Array of ledger entries
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       credexID:
-   *                         type: string
-   *                         format: uuid
-   *                         description: ID of the credex transaction
-   *                       transactionType:
-   *                         type: string
-   *                         enum: [OWES, CLEARED, REQUESTS, OFFERS, DECLINED, CANCELLED]
-   *                         description: Type of transaction
-   *                       formattedInitialAmount:
-   *                         type: string
-   *                         description: Formatted amount with denomination (e.g. "100.00 USD")
-   *                       counterpartyAccountName:
-   *                         type: string
-   *                         description: Name of the counterparty account
-   *                       createdAt:
-   *                         type: string
-   *                         format: date-time
-   *                         description: When the transaction was created
    *                 message:
    *                   type: string
-   *                   example: Ledger retrieved successfully
+   *                   example: Ledger entries retrieved successfully
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           format: uuid
+   *                           description: The account ID
+   *                         type:
+   *                           type: string
+   *                           enum: [LEDGER_RETRIEVED]
+   *                           description: The type of action performed
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                           description: When the action occurred
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                           description: ID of the member requesting the ledger
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             accountID:
+   *                               type: string
+   *                               format: uuid
+   *                             ledger:
+   *                               type: array
+   *                               items:
+   *                                 type: object
+   *                                 properties:
+   *                                   credexID:
+   *                                     type: string
+   *                                     format: uuid
+   *                                     description: ID of the credex transaction
+   *                                   timestamp:
+   *                                     type: string
+   *                                     format: date-time
+   *                                     description: When the transaction occurred
+   *                                   type:
+   *                                     type: string
+   *                                     description: Type of transaction
+   *                                   amount:
+   *                                     type: string
+   *                                     description: Transaction amount
+   *                                   denomination:
+   *                                     type: string
+   *                                     description: Transaction denomination
+   *                                   description:
+   *                                     type: string
+   *                                     description: Human-readable description
+   *                                   counterpartyAccountName:
+   *                                     type: string
+   *                                     description: Name of the counterparty account
+   *                                   formattedAmount:
+   *                                     type: string
+   *                                     description: Formatted amount with denomination
+   *                     dashboard:
+   *                       type: object
+   *                       properties:
+   *                         ledger:
+   *                           type: array
+   *                           description: Array of ledger entries matching the action details
+   *                         pagination:
+   *                           type: object
+   *                           properties:
+   *                             startRow:
+   *                               type: integer
+   *                               description: Current starting row
+   *                             numRows:
+   *                               type: integer
+   *                               description: Number of rows returned
+   *                             hasMore:
+   *                               type: boolean
+   *                               description: Whether more entries are available
    *       400:
    *         description: Invalid input data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Invalid pagination parameters
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_VALIDATION]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: INVALID_PAGINATION
+   *                             reason:
+   *                               type: string
+   *                             field:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    *       401:
    *         description: Authentication required
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Authentication required
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_UNAUTHORIZED]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           example: system
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: NO_AUTH
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    *       403:
    *         description: Not authorized to view account ledger
-   *       404:
-   *         description: Account not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Unauthorized access to account
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           format: uuid
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_UNAUTHORIZED]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: UNAUTHORIZED_ACCESS
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    *       500:
    *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Internal server error while retrieving ledger
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_INTERNAL]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: INTERNAL_ERROR
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    */
   router.post(
     `/getLedger`,

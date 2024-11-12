@@ -8,6 +8,9 @@ interface AcceptCredexData {
   acceptorSignerID: string;
   acceptedAt: string;
   transactionType: string;
+  amount: string;
+  denomination: string;
+  secured: boolean;
 }
 
 interface AcceptCredexResult {
@@ -182,7 +185,10 @@ export async function AcceptCredexService(
             WHEN signer:Member THEN signer.memberID
             WHEN signer:Recurring THEN signer.recurringID
           END AS signerID,
-          toString(acceptedCredex.acceptedAt) AS acceptedAt
+          toString(acceptedCredex.acceptedAt) AS acceptedAt,
+          acceptedCredex.InitialAmount / acceptedCredex.CXXmultiplier AS amount,
+          acceptedCredex.Denomination AS denomination,
+          acceptedCredex.securedCredex AS secured
       `;
 
       const queryResult = await tx.run(query, { credexID, signerID });
@@ -202,7 +208,10 @@ export async function AcceptCredexService(
           acceptorAccountID: record.get("acceptorAccountID"),
           acceptorSignerID: record.get("signerID"),
           acceptedAt: record.get("acceptedAt"),
-          transactionType: "OWES"
+          transactionType: "OWES",
+          amount: record.get("amount").toString(),
+          denomination: record.get("denomination"),
+          secured: record.get("secured")
         }
       };
     });

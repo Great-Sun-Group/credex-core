@@ -1,23 +1,21 @@
 import { CreateCredexService } from "../../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../../api/Credex/services/AcceptCredex";
+import { ServiceResult } from "../../../types/apiResponse";
+import { DCOCredexData } from "../DCOavatars/types";
 import logger from "../../../utils/logger";
 
-interface CreateCredexResult {
-  credex: {
-    credexID: string;
-    formattedInitialAmount: string;
-    counterpartyAccountName: string;
-    secured: boolean;
-    dueDate?: string;
-  } | boolean;
-  message: string;
-}
-
-interface AcceptCredexResult {
-  acceptedCredexID: string;
+interface AcceptCredexData {
+  credexID: string;
   acceptorAccountID: string;
   acceptorSignerID: string;
+  acceptedAt: string;
+  transactionType: string;
+  amount: string;
+  denomination: string;
+  secured: boolean;
 }
+
+type AcceptCredexResult = ServiceResult<AcceptCredexData>;
 
 /**
  * Creates and accepts an initial Credex.
@@ -43,14 +41,18 @@ export async function createInitialCredex(
   };
 
   logger.debug("Offering initial Credex", { requestId, credexData });
-  const DCOinitializationCreateCredex = await CreateCredexService(credexData);
+  const createResult = await CreateCredexService(credexData);
 
-  if (!DCOinitializationCreateCredex.credex || typeof DCOinitializationCreateCredex.credex === "boolean") {
-    logger.error("Invalid response from CreateCredexService", { requestId });
-    throw new Error("Invalid response from CreateCredexService");
+  if (!createResult.success || !createResult.data) {
+    logger.error("Failed to create initial Credex", { 
+      requestId,
+      error: createResult.message,
+      details: createResult.error?.details
+    });
+    throw new Error(createResult.message);
   }
 
-  const credexID = DCOinitializationCreateCredex.credex.credexID;
+  const credexID = createResult.data.credexID;
   logger.info("Initial Credex offered successfully", {
     requestId,
     credexID,
@@ -69,9 +71,19 @@ export async function createInitialCredex(
       requestId
     );
 
+    if (!acceptResult.success || !acceptResult.data) {
+      logger.error("Failed to accept initial Credex", {
+        requestId,
+        credexID,
+        error: acceptResult.message,
+        details: acceptResult.error?.details
+      });
+      throw new Error(acceptResult.message);
+    }
+
     logger.info("Initial Credex accepted successfully", {
       requestId,
-      credexID: acceptResult.acceptedCredexID,
+      credexID: acceptResult.data.credexID,
     });
 
     logger.info("Initial Credex creation completed", { requestId });

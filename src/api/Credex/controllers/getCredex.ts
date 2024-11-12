@@ -1,6 +1,15 @@
 import express from "express";
 import { GetCredexService } from "../services/GetCredex";
 import logger from "../../../utils/logger";
+import { 
+  ApiActionType, 
+  TypedApiResponse, 
+  CredexActionDetails, 
+  ErrorActionDetails 
+} from "../../../types/apiResponse";
+
+type GetCredexResponse = TypedApiResponse<CredexActionDetails>;
+type GetCredexErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * GetCredexController
@@ -35,31 +44,70 @@ export async function GetCredexController(
       accountID
     );
 
-    if (!responseData) {
+    if (!responseData || !responseData.success || !responseData.data) {
       logger.warn("Credex not found or not accessible", {
         credexID,
         accountID,
-        requestId
+        requestId,
+        error: responseData?.message
       });
-      return res.status(404).json({
-        success: false,
-        error: "Credex not found or not accessible"
-      });
+
+      const errorResponse: GetCredexErrorResponse = {
+        message: responseData?.message || "Credex not found or not accessible",
+        data: {
+          action: {
+            id: credexID,
+            type: ApiActionType.ERROR_NOT_FOUND,
+            timestamp: new Date().toISOString(),
+            actor: accountID,
+            details: {
+              code: responseData?.error?.code || "NOT_FOUND",
+              reason: responseData?.error?.details || "Credex not found or not accessible",
+              field: "credexID"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      return res.status(404).json(errorResponse);
     }
 
-    // Check if the response contains error information
-    if ('error' in responseData) {
-      logger.warn("Error retrieving Credex details", {
-        credexID,
-        accountID,
-        error: responseData.error,
-        requestId
-      });
-      return res.status(400).json({
-        success: false,
-        error: responseData.error
-      });
-    }
+    const { credexData, clearedAgainstData } = responseData.data;
+
+    const successResponse: GetCredexResponse = {
+      message: "Credex details retrieved successfully",
+      data: {
+        action: {
+          id: credexID,
+          type: ApiActionType.CREDEX_RETRIEVED,
+          timestamp: new Date().toISOString(),
+          actor: accountID,
+          details: {
+            amount: credexData.formattedInitialAmount.split(' ')[0],
+            denomination: credexData.Denomination,
+            securedCredex: credexData.securedCredex,
+            receiverAccountName: credexData.counterpartyAccountName,
+            status: {
+              outstandingAmount: credexData.formattedOutstandingAmount,
+              redeemedAmount: credexData.formattedRedeemedAmount,
+              defaultedAmount: credexData.formattedDefaultedAmount,
+              writtenOffAmount: credexData.formattedWrittenOffAmount,
+              acceptedAt: credexData.acceptedAt,
+              declinedAt: credexData.declinedAt,
+              cancelledAt: credexData.cancelledAt,
+              dueDate: credexData.dueDate
+            },
+            clearedAgainst: clearedAgainstData.map(item => ({
+              credexID: item.clearedAgainstCredexID,
+              amount: item.formattedClearedAmount,
+              initialAmount: item.formattedClearedAgainstCredexInitialAmount,
+              counterpartyName: item.clearedAgainstCounterpartyAccountName
+            }))
+          }
+        },
+        dashboard: {} // No dashboard updates for get operations
+      }
+    };
 
     logger.info("Credex details retrieved successfully", {
       credexID,
@@ -67,15 +115,7 @@ export async function GetCredexController(
       requestId
     });
 
-    // Return flattened response
-    return res.status(200).json({
-      success: true,
-      data: {
-        ...responseData.credexData,
-        clearedAgainst: responseData.clearedAgainstData
-      },
-      message: "Credex details retrieved successfully"
-    });
+    return res.status(200).json(successResponse);
 
   } catch (error) {
     if (error instanceof Error) {
@@ -84,10 +124,23 @@ export async function GetCredexController(
           error: error.message,
           requestId
         });
-        return res.status(403).json({
-          success: false,
-          error: "Not authorized to access this Credex"
-        });
+        const errorResponse: GetCredexErrorResponse = {
+          message: "Not authorized to access this Credex",
+          data: {
+            action: {
+              id: req.body.credexID,
+              type: ApiActionType.ERROR_UNAUTHORIZED,
+              timestamp: new Date().toISOString(),
+              actor: req.body.accountID,
+              details: {
+                code: "UNAUTHORIZED",
+                reason: "Not authorized to access this Credex"
+              }
+            },
+            dashboard: {}
+          }
+        };
+        return res.status(403).json(errorResponse);
       }
 
       if (error.message === 'No records found') {
@@ -95,10 +148,24 @@ export async function GetCredexController(
           error: error.message,
           requestId
         });
-        return res.status(404).json({
-          success: false,
-          error: "Credex not found"
-        });
+        const errorResponse: GetCredexErrorResponse = {
+          message: "Credex not found",
+          data: {
+            action: {
+              id: req.body.credexID,
+              type: ApiActionType.ERROR_NOT_FOUND,
+              timestamp: new Date().toISOString(),
+              actor: req.body.accountID,
+              details: {
+                code: "NOT_FOUND",
+                reason: "The specified Credex could not be found",
+                field: "credexID"
+              }
+            },
+            dashboard: {}
+          }
+        };
+        return res.status(404).json(errorResponse);
       }
 
       if (error.message.includes('database error')) {
@@ -107,10 +174,24 @@ export async function GetCredexController(
           stack: error.stack,
           requestId
         });
-        return res.status(500).json({
-          success: false,
-          error: "Failed to retrieve Credex details due to database error"
-        });
+        const errorResponse: GetCredexErrorResponse = {
+          message: "Failed to retrieve Credex details due to database error",
+          data: {
+            action: {
+              id: req.body.credexID,
+              type: ApiActionType.ERROR_INTERNAL,
+              timestamp: new Date().toISOString(),
+              actor: "system",
+              details: {
+                code: "DATABASE_ERROR",
+                reason: "Database error occurred while retrieving Credex details",
+                suggestion: "Please try again or contact support if the issue persists"
+              }
+            },
+            dashboard: {}
+          }
+        };
+        return res.status(500).json(errorResponse);
       }
     }
 
@@ -120,7 +201,25 @@ export async function GetCredexController(
       requestId
     });
     
-    next(error);
+    const errorResponse: GetCredexErrorResponse = {
+      message: "An unexpected error occurred while retrieving the Credex",
+      data: {
+        action: {
+          id: req.body.credexID,
+          type: ApiActionType.ERROR_INTERNAL,
+          timestamp: new Date().toISOString(),
+          actor: "system",
+          details: {
+            code: "INTERNAL_ERROR",
+            reason: error instanceof Error ? error.message : "Unknown error",
+            suggestion: "Please try again or contact support if the issue persists"
+          }
+        },
+        dashboard: {}
+      }
+    };
+    
+    return res.status(500).json(errorResponse);
   } finally {
     logger.debug("Exiting GetCredexController", { requestId });
   }

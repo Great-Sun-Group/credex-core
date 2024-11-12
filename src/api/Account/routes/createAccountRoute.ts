@@ -64,58 +64,248 @@ export default function createAccountRoute() {
    *             schema:
    *               type: object
    *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   example: Account "Business Account" created successfully with default denomination USD
    *                 data:
    *                   type: object
    *                   properties:
-   *                     accountID:
-   *                       type: string
-   *                       format: uuid
-   *                       description: ID of the created account
-   *                     accountProperties:
+   *                     action:
    *                       type: object
    *                       properties:
-   *                         accountID:
+   *                         id:
    *                           type: string
    *                           format: uuid
-   *                         accountType:
+   *                           description: The created account ID
+   *                         type:
    *                           type: string
-   *                           enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
-   *                         accountName:
-   *                           type: string
-   *                         accountHandle:
-   *                           type: string
-   *                         defaultDenom:
-   *                           type: string
-   *                           enum: [CXX, CAD, USD, XAU, ZWG]
-   *                         DCOgiveInCXX:
-   *                           type: number
-   *                           nullable: true
-   *                         DCOdenom:
-   *                           type: string
-   *                           enum: [CXX, CAD, USD, XAU, ZWG]
-   *                           nullable: true
-   *                         createdAt:
+   *                           enum: [ACCOUNT_CREATED]
+   *                           description: The type of action performed
+   *                         timestamp:
    *                           type: string
    *                           format: date-time
-   *                         updatedAt:
+   *                           description: When the action occurred
+   *                         actor:
    *                           type: string
-   *                           format: date-time
-   *                 message:
-   *                   type: string
-   *                   example: Account created successfully
+   *                           format: uuid
+   *                           description: ID of the member who created the account
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             accountID:
+   *                               type: string
+   *                               format: uuid
+   *                             accountName:
+   *                               type: string
+   *                             accountHandle:
+   *                               type: string
+   *                             defaultDenom:
+   *                               type: string
+   *                             ownerID:
+   *                               type: string
+   *                               format: uuid
+   *                     dashboard:
+   *                       type: object
+   *                       description: Current state of the account dashboard
    *       400:
    *         description: Invalid input data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Invalid denomination USD
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_VALIDATION]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: INVALID_DENOMINATION
+   *                             reason:
+   *                               type: string
+   *                             field:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    *       401:
    *         description: Authentication required
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Authentication required
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_UNAUTHORIZED]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           example: system
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: NO_AUTH
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    *       403:
    *         description: Account creation not permitted on current membership tier
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Account creation not permitted on current membership tier
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_UNAUTHORIZED]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: TIER_LIMIT_EXCEEDED
+   *                             reason:
+   *                               type: string
+   *                             suggestion:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    *       404:
    *         description: Member not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Member not found
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_NOT_FOUND]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: MEMBER_NOT_FOUND
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    *       500:
    *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Internal server error while creating account
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_INTERNAL]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: INTERNAL_ERROR
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard object
    */
   router.post(
     `/createAccount`,

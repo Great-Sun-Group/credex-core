@@ -4,10 +4,15 @@ import { GetAccountDashboardService } from "../../Account/services/GetAccountDas
 import { checkDueDate, credspan } from "../../../core-cron/constants/credspan";
 import { AuthForTierSpendLimitService } from "../../Member/services/AuthForTierSpendLimit";
 import logger from "../../../utils/logger";
+import { ApiActionType, TypedApiResponse, CredexActionDetails, ErrorActionDetails } from "../../../types/apiResponse";
+import { denomFormatter } from "../../../utils/denomUtils";
 
 interface UserRequest extends express.Request {
   user?: any;
 }
+
+type CreateCredexResponse = TypedApiResponse<CredexActionDetails>;
+type CreateCredexErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * CreateCredexController
@@ -62,10 +67,24 @@ export async function CreateCredexController(
         receiverAccountID,
         requestId,
       });
-      return res.status(400).json({
-        success: false,
-        error: "Issuer and receiver cannot be the same account",
-      });
+      const errorResponse: CreateCredexErrorResponse = {
+        message: "Issuer and receiver cannot be the same account",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: signerID,
+            details: {
+              code: "INVALID_ACCOUNTS",
+              reason: "Issuer and receiver cannot be the same account",
+              field: "receiverAccountID"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      return res.status(400).json(errorResponse);
     }
 
     // Check membership tier authorization for secured credex
@@ -93,10 +112,24 @@ export async function CreateCredexController(
           requestId,
           message: tierAuth.message,
         });
-        return res.status(403).json({
-          success: false,
-          error: tierAuth.message,
-        });
+        const errorResponse: CreateCredexErrorResponse = {
+          message: tierAuth.message || "Insufficient membership tier for secured credex",
+          data: {
+            action: {
+              id: null,
+              type: ApiActionType.ERROR_UNAUTHORIZED,
+              timestamp: new Date().toISOString(),
+              actor: signerID,
+              details: {
+                code: "INSUFFICIENT_TIER",
+                reason: tierAuth.message || "Insufficient membership tier for secured credex",
+                field: "securedCredex"
+              }
+            },
+            dashboard: {}
+          }
+        };
+        return res.status(403).json(errorResponse);
       }
     }
 
@@ -104,26 +137,68 @@ export async function CreateCredexController(
     if (!securedCredex) {
       if (!dueDate) {
         logger.warn("Missing due date for unsecured credex", { requestId });
-        return res.status(400).json({
-          success: false,
-          error: "Due date is required for unsecured credex",
-        });
+        const errorResponse: CreateCredexErrorResponse = {
+          message: "Due date is required for unsecured credex",
+          data: {
+            action: {
+              id: null,
+              type: ApiActionType.ERROR_VALIDATION,
+              timestamp: new Date().toISOString(),
+              actor: signerID,
+              details: {
+                code: "MISSING_DUE_DATE",
+                reason: "Due date is required for unsecured credex",
+                field: "dueDate"
+              }
+            },
+            dashboard: {}
+          }
+        };
+        return res.status(400).json(errorResponse);
       }
 
       const dueDateOK = await checkDueDate(dueDate);
       if (!dueDateOK) {
         logger.warn("Invalid due date", { dueDate, requestId });
-        return res.status(400).json({
-          success: false,
-          error: `Due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan / 7} weeks from today.`,
-        });
+        const errorResponse: CreateCredexErrorResponse = {
+          message: `Due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan / 7} weeks from today.`,
+          data: {
+            action: {
+              id: null,
+              type: ApiActionType.ERROR_VALIDATION,
+              timestamp: new Date().toISOString(),
+              actor: signerID,
+              details: {
+                code: "INVALID_DUE_DATE",
+                reason: `Due date must be between 1 and ${credspan / 7} weeks from today`,
+                field: "dueDate"
+              }
+            },
+            dashboard: {}
+          }
+        };
+        return res.status(400).json(errorResponse);
       }
     } else if (dueDate) {
       logger.warn("Due date provided for secured credex", { requestId });
-      return res.status(400).json({
-        success: false,
-        error: "Due date is not allowed for secured credex",
-      });
+      const errorResponse: CreateCredexErrorResponse = {
+        message: "Due date is not allowed for secured credex",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: signerID,
+            details: {
+              code: "INVALID_DUE_DATE",
+              reason: "Due date is not allowed for secured credex",
+              field: "dueDate"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      return res.status(400).json(errorResponse);
     }
 
     // Create the Credex
@@ -148,15 +223,29 @@ export async function CreateCredexController(
       requestId,
     });
 
-    if (!createCredexResult || typeof createCredexResult.credex === "boolean") {
+    if (!createCredexResult.success || !createCredexResult.data) {
       logger.warn("Failed to create Credex", {
         error: createCredexResult.message,
         requestId,
       });
-      return res.status(400).json({
-        success: false,
-        error: createCredexResult.message || "Failed to create Credex",
-      });
+      const errorResponse: CreateCredexErrorResponse = {
+        message: createCredexResult.message || "Failed to create Credex",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.CREDEX_CREATE_FAILED,
+            timestamp: new Date().toISOString(),
+            actor: signerID,
+            details: {
+              code: "CREATE_FAILED",
+              reason: createCredexResult.message || "Failed to create Credex",
+              suggestion: "Please try again or contact support if the issue persists"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      return res.status(400).json(errorResponse);
     }
 
     // Fetch updated dashboard data
@@ -171,40 +260,36 @@ export async function CreateCredexController(
       issuerAccountID
     );
 
-    if (!dashboard) {
-      logger.warn("Failed to fetch dashboard data after successful creation", {
-        signerID,
-        issuerAccountID,
-        requestId,
-      });
-      return res.status(200).json({
-        success: true,
-        data: {
-          ...createCredexResult.credex,
-          dashboard: null,
+    const formattedAmount = denomFormatter(InitialAmount, Denomination);
+    const successResponse: CreateCredexResponse = {
+      message: `${securedCredex ? 'Secured' : 'Unsecured'} credex for ${formattedAmount} ${Denomination} ${OFFERSorREQUESTS.toLowerCase()} created successfully`,
+      data: {
+        action: {
+          id: createCredexResult.data.credexID,
+          type: ApiActionType.CREDEX_CREATED,
+          timestamp: new Date().toISOString(),
+          actor: signerID,
+          details: {
+            amount: formattedAmount,
+            denomination: Denomination,
+            securedCredex,
+            receiverAccountID: createCredexResult.data.receiverAccountID,
+            receiverAccountName: createCredexResult.data.counterpartyAccountName
+          }
         },
-        message:
-          "Credex created successfully but failed to fetch updated dashboard",
-      });
-    }
+        dashboard: dashboard || {}
+      }
+    };
 
     logger.info("Credex created successfully", {
-      credexID: createCredexResult.credex.credexID,
+      credexID: createCredexResult.data.credexID,
       signerID,
       issuerAccountID,
       receiverAccountID,
       requestId,
     });
 
-    // Return flattened response
-    return res.status(200).json({
-      success: true,
-      data: {
-        ...createCredexResult.credex,
-        dashboard,
-      },
-      message: "Credex created successfully",
-    });
+    return res.status(200).json(successResponse);
   } catch (error) {
     logger.error("Unexpected error in CreateCredexController", {
       error: error instanceof Error ? error.message : "Unknown error",
@@ -212,7 +297,25 @@ export async function CreateCredexController(
       requestId,
     });
 
-    next(error);
+    const errorResponse: CreateCredexErrorResponse = {
+      message: "An unexpected error occurred while creating the Credex",
+      data: {
+        action: {
+          id: null,
+          type: ApiActionType.ERROR_INTERNAL,
+          timestamp: new Date().toISOString(),
+          actor: "system",
+          details: {
+            code: "INTERNAL_ERROR",
+            reason: error instanceof Error ? error.message : "Unknown error",
+            suggestion: "Please try again or contact support if the issue persists"
+          }
+        },
+        dashboard: {}
+      }
+    };
+
+    return res.status(500).json(errorResponse);
   } finally {
     logger.debug("Exiting CreateCredexController", { requestId });
   }

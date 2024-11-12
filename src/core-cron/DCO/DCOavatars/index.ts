@@ -2,7 +2,7 @@ import { Session } from "neo4j-driver";
 import { v4 as uuidv4 } from "uuid";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import logger from "../../../utils/logger";
-import { AvatarData, Avatar } from "./types";
+import { AvatarData, Avatar, hasValidCredexData } from "./types";
 import { 
   getActiveRecurringAvatars, 
   getActiveDCOGiveTemplates,
@@ -94,10 +94,11 @@ async function processAvatar(
 
     const offerResult = await createCredexOffer(offerData);
 
-    if (offerResult.credex && typeof offerResult.credex === "object") {
+    if (hasValidCredexData(offerResult) && offerResult.data) {
+      const credexData = offerResult.data;
       // For DCO_GIVE templates, the foundation auto-accepts
       await acceptCredexOffer(
-        offerResult.credex.credexID,
+        credexData.credexID,
         isDCOGive ? acceptorAccountID : avatar.signerID,
         requestId
       );
@@ -107,7 +108,7 @@ async function processAvatar(
           requestId,
           avatarId: avatar.signerID,
           type: isDCOGive ? 'DCO_GIVE' : 'REGULAR',
-          credexId: offerResult.credex.credexID
+          credexId: credexData.credexID
         }
       );
     } else {

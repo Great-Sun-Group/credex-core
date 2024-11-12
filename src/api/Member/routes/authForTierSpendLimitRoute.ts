@@ -51,32 +51,121 @@ export default function authForTierSpendLimitRoute() {
    *             schema:
    *               type: object
    *               properties:
-   *                 success:
-   *                   type: boolean
-   *                   example: true
+   *                 message:
+   *                   type: string
+   *                   description: Human-friendly authorization status message
+   *                   example: Authorization granted
    *                 data:
    *                   type: object
    *                   properties:
-   *                     isAuthorized:
-   *                       type: boolean
-   *                       description: Whether the spend is authorized
-   *                     availableAmount:
-   *                       type: string
-   *                       description: Remaining available amount in USD
-   *                     memberTier:
-   *                       type: integer
-   *                       description: Member's current tier level
-   *                 message:
-   *                   type: string
-   *                   description: Authorization status message
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           format: uuid
+   *                           description: Account ID that was checked
+   *                         type:
+   *                           type: string
+   *                           enum: [SPEND_AUTHORIZED, ERROR_UNAUTHORIZED]
+   *                           description: Type of action performed
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                           description: When the action occurred
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                           description: ID of the account that initiated the check
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             memberID:
+   *                               type: string
+   *                               format: uuid
+   *                               description: ID of the member
+   *                             isAuthorized:
+   *                               type: boolean
+   *                               description: Whether the spend is authorized
+   *                             availableAmount:
+   *                               type: string
+   *                               description: Remaining available amount in USD
+   *                             memberTier:
+   *                               type: integer
+   *                               description: Member's current tier level
+   *                             amount:
+   *                               type: string
+   *                               description: Requested spend amount
+   *                             denomination:
+   *                               type: string
+   *                               description: Requested denomination
+   *                             securedCredex:
+   *                               type: boolean
+   *                               description: Whether this was a secured credex request
+   *                             currentSpendUSD:
+   *                               type: number
+   *                               description: Current daily spend in USD
+   *                             tierLimitUSD:
+   *                               type: number
+   *                               description: Daily spend limit in USD for current tier
+   *                     dashboard:
+   *                       type: object
+   *                       description: Empty dashboard since this is just an auth check
    *       400:
    *         description: Invalid input data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   description: Error message explaining the validation failure
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_VALIDATION]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: MISSING_PARAMS
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
    *       403:
    *         description: Spend not authorized by tier limits
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
    *       404:
    *         description: Account not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
    *       500:
    *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
    */
   router.post(
     `/authForTierSpendLimit`,

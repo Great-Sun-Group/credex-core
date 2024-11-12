@@ -26,6 +26,20 @@ export interface ApiResponse<T = unknown, D = unknown> {
 }
 
 /**
+ * Base service result interface
+ * Common structure for all service responses
+ */
+export interface ServiceResult<T = unknown> {
+  success: boolean;
+  data?: T;
+  message: string;
+  error?: {
+    code: string;
+    details?: string;
+  };
+}
+
+/**
  * All possible API action types
  */
 export enum ApiActionType {
@@ -51,9 +65,11 @@ export enum ApiActionType {
   // Credex actions
   CREDEX_CREATED = "CREDEX_CREATED",
   CREDEX_ACCEPTED = "CREDEX_ACCEPTED",
-  CREDEX_REJECTED = "CREDEX_REJECTED",
+  CREDEX_DECLINED = "CREDEX_DECLINED",
   CREDEX_CANCELLED = "CREDEX_CANCELLED",
+  CREDEX_RETRIEVED = "CREDEX_RETRIEVED",
   CREDEX_CREATE_FAILED = "CREDEX_CREATE_FAILED",
+  CREDEX_BULK_ACCEPTED = "CREDEX_BULK_ACCEPTED",
 
   // Recurring actions
   RECURRING_CREATED = "RECURRING_CREATED",
@@ -86,6 +102,37 @@ export interface CredexActionDetails {
   acceptorAccountID?: string;
   reason?: string;
   limit?: string;
+  // Additional fields for Credex retrieval
+  status?: {
+    outstandingAmount: string;
+    redeemedAmount: string;
+    defaultedAmount: string;
+    writtenOffAmount: string;
+    acceptedAt?: string;
+    declinedAt?: string;
+    cancelledAt?: string;
+    dueDate?: string;
+  };
+  clearedAgainst?: Array<{
+    credexID: string;
+    amount: string;
+    initialAmount: string;
+    counterpartyName: string;
+  }>;
+}
+
+export interface CredexBulkActionDetails {
+  summary: {
+    accepted: string[];
+    alreadyAccepted: string[];
+    failed: Array<{
+      credexID: string;
+      error: string;
+    }>;
+  };
+  totalProcessed: number;
+  successCount: number;
+  failureCount: number;
 }
 
 export interface MemberActionDetails {
