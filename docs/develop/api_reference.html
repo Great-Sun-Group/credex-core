@@ -6352,7 +6352,6 @@
                           "properties": {
                             "id": {
                               "type": "string",
-                              "format": "uuid",
                               "nullable": true,
                               "description": "Null for bulk operations"
                             },
@@ -6461,7 +6460,6 @@
                           "properties": {
                             "id": {
                               "type": "string",
-                              "format": "uuid",
                               "nullable": true
                             },
                             "type": {
@@ -6784,9 +6782,13 @@
                             "details": {
                               "type": "object",
                               "properties": {
+                                "credexID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
                                 "amount": {
                                   "type": "string",
-                                  "description": "Formatted amount of the transaction"
+                                  "description": "Formatted amount with denomination"
                                 },
                                 "denomination": {
                                   "type": "string",
@@ -6803,8 +6805,7 @@
                                 },
                                 "acceptorAccountID": {
                                   "type": "string",
-                                  "format": "uuid",
-                                  "description": "ID of the accepting account"
+                                  "format": "uuid"
                                 }
                               }
                             }
@@ -6831,7 +6832,7 @@
                   "properties": {
                     "message": {
                       "type": "string",
-                      "example": "Unable to process credex: insufficient balance.",
+                      "example": "Cannot accept Credex: invalid state",
                       "description": "Human-friendly error message"
                     },
                     "data": {
@@ -7863,15 +7864,15 @@
                             "details": {
                               "type": "object",
                               "properties": {
-                                "issuerAccountID": {
+                                "credexID": {
                                   "type": "string",
                                   "format": "uuid"
                                 },
-                                "receiverAccountID": {
+                                "amount": {
                                   "type": "string",
-                                  "format": "uuid"
+                                  "description": "Formatted amount with denomination"
                                 },
-                                "Denomination": {
+                                "denomination": {
                                   "type": "string",
                                   "enum": [
                                     "CXX",
@@ -7881,28 +7882,15 @@
                                     "ZWG"
                                   ]
                                 },
-                                "InitialAmount": {
-                                  "type": "number"
-                                },
-                                "formattedInitialAmount": {
-                                  "type": "string"
-                                },
-                                "credexType": {
-                                  "type": "string"
-                                },
-                                "OFFERSorREQUESTS": {
-                                  "type": "string"
-                                },
                                 "securedCredex": {
                                   "type": "boolean"
                                 },
-                                "dueDate": {
+                                "receiverAccountID": {
                                   "type": "string",
-                                  "format": "date",
-                                  "nullable": true
+                                  "format": "uuid"
                                 },
-                                "cxxMultiplier": {
-                                  "type": "number"
+                                "receiverAccountName": {
+                                  "type": "string"
                                 }
                               }
                             }
@@ -7929,24 +7917,62 @@
                   "properties": {
                     "message": {
                       "type": "string",
-                      "example": "Invalid input: Issuer and receiver cannot be the same account",
+                      "example": "Your secured credex for 7.00 USD cannot be issued because your maximum securable USD balance is 5.00 USD",
                       "description": "Human-friendly error message"
                     },
-                    "error": {
+                    "data": {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "VALIDATION_ERROR",
-                            "INVALID_AMOUNT",
-                            "INVALID_DATE"
-                          ],
-                          "description": "Machine-readable error code"
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "CREDEX_CREATE_FAILED",
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "INSUFFICIENT_SECURED_BALANCE",
+                                    "INVALID_AMOUNT",
+                                    "INVALID_DATE",
+                                    "VALIDATION_ERROR"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                },
+                                "suggestion": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
                         },
-                        "details": {
-                          "type": "string",
-                          "description": "Detailed error information"
+                        "dashboard": {
+                          "type": "object",
+                          "nullable": true
                         }
                       }
                     }
@@ -7966,17 +7992,51 @@
                       "type": "string",
                       "example": "Authentication required"
                     },
-                    "error": {
+                    "data": {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "UNAUTHORIZED"
-                          ]
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "enum": [
+                                "system"
+                              ]
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "UNAUTHORIZED"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
                         },
-                        "details": {
-                          "type": "string"
+                        "dashboard": {
+                          "type": "object",
+                          "nullable": true
                         }
                       }
                     }
@@ -7996,18 +8056,50 @@
                       "type": "string",
                       "example": "Insufficient membership tier for secured credex"
                     },
-                    "error": {
+                    "data": {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "FORBIDDEN",
-                            "INSUFFICIENT_TIER"
-                          ]
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "FORBIDDEN",
+                                    "INSUFFICIENT_TIER"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
                         },
-                        "details": {
-                          "type": "string"
+                        "dashboard": {
+                          "type": "object",
+                          "nullable": true
                         }
                       }
                     }
@@ -8027,17 +8119,52 @@
                       "type": "string",
                       "example": "Account not found"
                     },
-                    "error": {
+                    "data": {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "NOT_FOUND"
-                          ]
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "NOT_FOUND"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
                         },
-                        "details": {
-                          "type": "string"
+                        "dashboard": {
+                          "type": "object",
+                          "nullable": true
                         }
                       }
                     }
@@ -8057,17 +8184,54 @@
                       "type": "string",
                       "example": "Internal server error"
                     },
-                    "error": {
+                    "data": {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "INTERNAL_ERROR"
-                          ]
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "enum": [
+                                "system"
+                              ]
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "INTERNAL_ERROR"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "suggestion": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
                         },
-                        "details": {
-                          "type": "string"
+                        "dashboard": {
+                          "type": "object",
+                          "nullable": true
                         }
                       }
                     }
@@ -8155,9 +8319,18 @@
                             "details": {
                               "type": "object",
                               "properties": {
+                                "credexID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "declinedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
                                 "amount": {
                                   "type": "string",
-                                  "description": "Amount of the declined transaction (0)"
+                                  "description": "Amount is zeroed on decline",
+                                  "example": "0"
                                 },
                                 "denomination": {
                                   "type": "string",
@@ -8170,7 +8343,9 @@
                                   ]
                                 },
                                 "securedCredex": {
-                                  "type": "boolean"
+                                  "type": "boolean",
+                                  "description": "Not relevant for declined Credex",
+                                  "example": false
                                 },
                                 "receiverAccountID": {
                                   "type": "string",
@@ -8685,105 +8860,17 @@
                                     "CANCELLED"
                                   ]
                                 },
-                                "debit": {
-                                  "type": "boolean",
-                                  "description": "Whether this is a debit transaction for the requesting account"
-                                },
-                                "counterpartyAccountName": {
-                                  "type": "string"
-                                },
-                                "securerID": {
-                                  "type": "string",
-                                  "format": "uuid",
-                                  "nullable": true
-                                },
-                                "securerName": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "Denomination": {
-                                  "type": "string",
-                                  "enum": [
-                                    "CXX",
-                                    "CAD",
-                                    "USD",
-                                    "XAU",
-                                    "ZWG"
-                                  ]
-                                },
                                 "InitialAmount": {
-                                  "type": "number"
-                                },
-                                "OutstandingAmount": {
-                                  "type": "number"
-                                },
-                                "RedeemedAmount": {
-                                  "type": "number"
-                                },
-                                "DefaultedAmount": {
-                                  "type": "number"
-                                },
-                                "WrittenOffAmount": {
-                                  "type": "number"
-                                },
-                                "formattedInitialAmount": {
-                                  "type": "string"
-                                },
-                                "formattedOutstandingAmount": {
-                                  "type": "string"
-                                },
-                                "formattedRedeemedAmount": {
-                                  "type": "string"
-                                },
-                                "formattedDefaultedAmount": {
-                                  "type": "string"
-                                },
-                                "formattedWrittenOffAmount": {
-                                  "type": "string"
-                                },
-                                "acceptedAt": {
-                                  "type": "string",
-                                  "format": "date-time",
-                                  "nullable": true
-                                },
-                                "declinedAt": {
-                                  "type": "string",
-                                  "format": "date-time",
-                                  "nullable": true
-                                },
-                                "cancelledAt": {
-                                  "type": "string",
-                                  "format": "date-time",
-                                  "nullable": true
-                                },
-                                "dueDate": {
-                                  "type": "string",
-                                  "format": "date",
-                                  "nullable": true
+                                  "type": "number",
+                                  "description": "Initial amount of the transaction"
                                 },
                                 "securedCredex": {
-                                  "type": "boolean"
+                                  "type": "boolean",
+                                  "description": "Whether this is a secured Credex"
                                 },
-                                "clearedAgainst": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "object",
-                                    "properties": {
-                                      "clearedAgainstCredexID": {
-                                        "type": "string",
-                                        "format": "uuid"
-                                      },
-                                      "formattedClearedAmount": {
-                                        "type": "string"
-                                      },
-                                      "formattedClearedAgainstCredexInitialAmount": {
-                                        "type": "string"
-                                      },
-                                      "clearedAgainstCounterpartyAccountName": {
-                                        "type": "string"
-                                      }
-                                    }
-                                  }
+                                "counterpartyAccountName": {
+                                  "type": "string",
+                                  "description": "Name of the counterparty account"
                                 }
                               }
                             }
@@ -8813,19 +8900,52 @@
                       "example": "Invalid input parameters",
                       "description": "Human-friendly error message"
                     },
-                    "error": {
+                    "data": {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "VALIDATION_ERROR"
-                          ],
-                          "description": "Machine-readable error code"
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "VALIDATION_ERROR"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
                         },
-                        "details": {
-                          "type": "string",
-                          "description": "Detailed error information"
+                        "dashboard": {
+                          "type": "object",
+                          "nullable": true
                         }
                       }
                     }
@@ -8845,17 +8965,51 @@
                       "type": "string",
                       "example": "Authentication required"
                     },
-                    "error": {
+                    "data": {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "UNAUTHORIZED"
-                          ]
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "enum": [
+                                "system"
+                              ]
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "UNAUTHORIZED"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
                         },
-                        "details": {
-                          "type": "string"
+                        "dashboard": {
+                          "type": "object",
+                          "nullable": true
                         }
                       }
                     }
@@ -8875,17 +9029,49 @@
                       "type": "string",
                       "example": "Not authorized to view this Credex"
                     },
-                    "error": {
+                    "data": {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "FORBIDDEN"
-                          ]
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "FORBIDDEN"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
                         },
-                        "details": {
-                          "type": "string"
+                        "dashboard": {
+                          "type": "object",
+                          "nullable": true
                         }
                       }
                     }
@@ -8905,17 +9091,52 @@
                       "type": "string",
                       "example": "Credex not found"
                     },
-                    "error": {
+                    "data": {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "NOT_FOUND"
-                          ]
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "NOT_FOUND"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
                         },
-                        "details": {
-                          "type": "string"
+                        "dashboard": {
+                          "type": "object",
+                          "nullable": true
                         }
                       }
                     }
@@ -8935,17 +9156,54 @@
                       "type": "string",
                       "example": "Internal server error"
                     },
-                    "error": {
+                    "data": {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "INTERNAL_ERROR"
-                          ]
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "enum": [
+                                "system"
+                              ]
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "INTERNAL_ERROR"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "suggestion": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
                         },
-                        "details": {
-                          "type": "string"
+                        "dashboard": {
+                          "type": "object",
+                          "nullable": true
                         }
                       }
                     }
