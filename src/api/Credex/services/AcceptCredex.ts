@@ -177,7 +177,7 @@ export async function AcceptCredexService(
         CREATE (issuer)-[:OWES]->(acceptedCredex)-[:OWES]->(acceptor)
         SET 
           acceptedCredex.acceptedAt = datetime(),
-          acceptedCredex.queueStatus = "PENDING_ACCEPTANCE"
+          acceptedCredex.queueStatus = "PENDING_CREDEX"
         RETURN
           acceptedCredex.credexID AS credexID,
           acceptor.accountID AS acceptorAccountID,
