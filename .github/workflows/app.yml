@@ -139,6 +139,55 @@ jobs:
           echo "Waiting for service to stabilize..."
           aws ecs wait services-stable --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT 
 
+          # New verification steps
+          echo "Verifying deployment..."
+          
+          # Wait for new tasks to start
+          echo "Waiting for tasks to start..."
+          sleep 30
+          
+          # Get running tasks
+          echo "Checking running tasks..."
+          RUNNING_TASKS=$(aws ecs list-tasks \
+            --cluster credex-cluster-$ENVIRONMENT \
+            --service-name credex-core-service-$ENVIRONMENT \
+            --desired-status RUNNING \
+            --query 'taskArns[]' --output text)
+          
+          if [ -z "$RUNNING_TASKS" ]; then
+            echo "No running tasks found!"
+            exit 1
+          fi
+          
+          # Verify each task is running the new image
+          echo "Verifying task images..."
+          for TASK in $RUNNING_TASKS; do
+            TASK_IMAGE=$(aws ecs describe-tasks \
+              --cluster credex-cluster-$ENVIRONMENT \
+              --tasks $TASK \
+              --query 'tasks[].containers[].image' --output text)
+            
+            echo "Task $TASK is running image: $TASK_IMAGE"
+            if [[ "$TASK_IMAGE" != "$IMAGE" ]]; then
+              echo "ERROR: Task $TASK is not running the new image!"
+              echo "Expected: $IMAGE"
+              echo "Found: $TASK_IMAGE"
+              exit 1
+            fi
+          done
+          
+          # Get container logs for health check
+          echo "Checking container logs for startup health..."
+          for TASK in $RUNNING_TASKS; do
+            echo "Logs for task $TASK:"
+            aws logs get-log-events \
+              --log-group-name "/ecs/credex-core-$ENVIRONMENT" \
+              --log-stream-name "credex-core-$ENVIRONMENT/${TASK##*/}" \
+              --limit 10 \
+              --query 'events[].message' \
+              --output text
+          done
+
           echo "Deployment completed. Checking service status..."
           aws ecs describe-services --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT \
             --query 'services[0].{status: status, runningCount: runningCount, desiredCount: desiredCount, events: events[0].message}'
