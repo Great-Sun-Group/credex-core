@@ -1,5 +1,8 @@
 services:
   server:
+    environment:
+      SKIP_RATE_LIMITER_KEY: ${SKIP_RATE_LIMITER_KEY}
+      DEV_ADMIN_KEY: ${DEV_ADMIN_KEY}
     volumes:
       - .:/app
       - ./logs:/app/logs

@@ -3,10 +3,7 @@ import logger from '../src/utils/logger';
 import jwt from 'jsonwebtoken';
 import { ledgerSpaceDriver } from './neo4j';
 import crypto from 'crypto';
-
-interface UserRequest extends Request {
-  user?: any;
-}
+import { UserRequest } from '../src/types/auth';
 
 // Use the JWT_SECRET from environment variable, or generate a warning if not set
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -16,13 +13,20 @@ if (!JWT_SECRET) {
 
 // Set token expiration to 5 minutes after the last activity
 const TOKEN_EXPIRATION = 5 * 60; // 5 minutes in seconds
+// Set absolute maximum token age to 6 hours
+const MAX_TOKEN_AGE = 6 * 60 * 60; // 6 hours in seconds
 
 const generateToken = (memberID: string): string => {
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not set");
   }
   const now = Math.floor(Date.now() / 1000);
-  return jwt.sign({ memberID, iat: now, lastActivity: now }, JWT_SECRET);
+  return jwt.sign({ 
+    memberID, 
+    iat: now, 
+    lastActivity: now,
+    absoluteExpiry: now + MAX_TOKEN_AGE 
+  }, JWT_SECRET);
 };
 
 const verifyToken = (token: string): any => {
@@ -41,10 +45,17 @@ const refreshToken = (decoded: any): string => {
     throw new Error("JWT_SECRET is not set");
   }
   const now = Math.floor(Date.now() / 1000);
-  return jwt.sign({ memberID: decoded.memberID, iat: decoded.iat, lastActivity: now }, JWT_SECRET);
+  
+  // Maintain the original absolute expiry when refreshing
+  return jwt.sign({ 
+    memberID: decoded.memberID, 
+    iat: decoded.iat, 
+    lastActivity: now,
+    absoluteExpiry: decoded.absoluteExpiry 
+  }, JWT_SECRET);
 };
 
-const authenticate = async (req: UserRequest, res: Response, next: NextFunction) => {
+const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
@@ -60,8 +71,15 @@ const authenticate = async (req: UserRequest, res: Response, next: NextFunction)
   }
 
   const now = Math.floor(Date.now() / 1000);
+  
+  // Check both activity timeout and absolute expiry
   if (now - decoded.lastActivity > TOKEN_EXPIRATION) {
-    logger.warn("Token expired", { path: req.path, method: req.method, ip: req.ip });
+    logger.warn("Token activity timeout", { path: req.path, method: req.method, ip: req.ip });
+    return next(new Error("Token expired"));
+  }
+
+  if (now > decoded.absoluteExpiry) {
+    logger.warn("Token absolute expiry reached", { path: req.path, method: req.method, ip: req.ip });
     return next(new Error("Token expired"));
   }
 
@@ -77,9 +95,12 @@ const authenticate = async (req: UserRequest, res: Response, next: NextFunction)
       return next(new Error("Invalid token"));
     }
 
-    req.user = result.records[0].get('m').properties;
+    (req as UserRequest).user = {
+      ...result.records[0].get('m').properties,
+      memberID: decoded.memberID  // Ensure memberID is set from token
+    };
 
-    // Refresh the token
+    // Refresh the token while maintaining absolute expiry
     const newToken = refreshToken(decoded);
     res.setHeader('Authorization', `Bearer ${newToken}`);
 

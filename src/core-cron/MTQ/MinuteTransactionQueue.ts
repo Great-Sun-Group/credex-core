@@ -275,20 +275,27 @@ async function getQueuedCredexes(session: any): Promise<Credex[]> {
            queuedCredex.dueDate AS dueDate
   `);
 
-  const credexes = result.records.map((record: any) => ({
-    acceptedAt: record.get("acceptedAt"),
-    issuerAccountID: record.get("issuerAccountID"),
-    acceptorAccountID: record.get("acceptorAccountID"),
-    credexID: record.get("credexID"),
-    amount: record.get("amount").toNumber(),
-    denomination: record.get("denomination"),
-    CXXmultiplier: record.get("CXXmultiplier").toNumber(),
-    credexSecuredDenom:
-      record.get("securerID") !== null
-        ? record.get("denomination")
-        : "floating",
-    dueDate: record.get("dueDate"),
-  }));
+  const credexes = result.records.map((record: any) => {
+    // Safely convert amount and CXXmultiplier to numbers
+    const amount = record.get("amount");
+    const CXXmultiplier = record.get("CXXmultiplier");
+    
+    return {
+      acceptedAt: record.get("acceptedAt"),
+      issuerAccountID: record.get("issuerAccountID"),
+      acceptorAccountID: record.get("acceptorAccountID"),
+      credexID: record.get("credexID"),
+      // Convert to number safely, handling both Neo4j Integer and regular number types
+      amount: typeof amount?.toNumber === 'function' ? amount.toNumber() : Number(amount),
+      denomination: record.get("denomination"),
+      CXXmultiplier: typeof CXXmultiplier?.toNumber === 'function' ? CXXmultiplier.toNumber() : Number(CXXmultiplier),
+      credexSecuredDenom:
+        record.get("securerID") !== null
+          ? record.get("denomination")
+          : "floating",
+      dueDate: record.get("dueDate"),
+    };
+  });
   logger.debug(`Retrieved ${credexes.length} queued credexes`);
   return credexes;
 }
