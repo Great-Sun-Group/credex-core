@@ -9,6 +9,11 @@ variable "environment" {
   }
 }
 
+variable "docker_image" {
+  description = "The full Docker image to deploy (including repository and tag)"
+  type        = string
+}
+
 # Neo4j related variables needed by databases module
 variable "neo_4j_ledger_space_bolt_url" {
   description = "The Neo4j Bolt URL for Ledger Space"
