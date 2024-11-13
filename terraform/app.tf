@@ -21,6 +21,7 @@ module "app" {
   alb_listener               = module.connectors.alb_listener
 
   ecr_repository_url         = module.connectors.ecr_repository_url
+  docker_image              = var.docker_image
   ecs_execution_role_arn     = module.connectors.ecs_execution_role_arn
   ecs_task_role_arn          = module.connectors.ecs_task_role_arn
   cloudwatch_log_group_name  = module.connectors.cloudwatch_log_group_name
