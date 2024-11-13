@@ -63,11 +63,11 @@ resource "aws_ecs_task_definition" "credex_core" {
         { name = "PORT", value = tostring(var.app_port) }
       ]
       healthCheck = {
-        command     = ["CMD-SHELL", "curl -f http://localhost:${var.app_port}/health || exit 1"]
-        interval    = 30
-        timeout     = 10  # Increased from 5 to 10
+        command     = ["CMD-SHELL", "node -e 'const http = require(\"http\"); const options = { hostname: \"localhost\", port: process.env.PORT, path: \"/health\", timeout: 2000 }; const req = http.get(options, (res) => process.exit(res.statusCode === 200 ? 0 : 1)); req.on(\"error\", () => process.exit(1));'"]
+        interval    = 60
+        timeout     = 30
         retries     = 3
-        startPeriod = 120  # Increased from 60 to 120
+        startPeriod = 180
       }
       logConfiguration = {
         logDriver = "awslogs"
@@ -78,7 +78,6 @@ resource "aws_ecs_task_definition" "credex_core" {
         }
       }
       essential = true
-      # Add ulimits to ensure proper resource allocation
       ulimits = [
         {
           name      = "nofile"
@@ -86,7 +85,6 @@ resource "aws_ecs_task_definition" "credex_core" {
           hardLimit = 65536
         }
       ]
-      # Add mount points for temporary storage
       mountPoints = []
       volumesFrom = []
     }
@@ -117,11 +115,10 @@ resource "aws_ecs_service" "credex_core" {
     container_port   = var.app_port
   }
 
-  health_check_grace_period_seconds = 300  # Increased from 120 to 300
+  health_check_grace_period_seconds = 300
 
   enable_execute_command = true
 
-  # Add deployment circuit breaker
   deployment_circuit_breaker {
     enable   = true
     rollback = true
