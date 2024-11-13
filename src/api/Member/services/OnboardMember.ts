@@ -57,6 +57,13 @@ export async function OnboardMemberService(
 
   // Validate required parameters
   if (!firstname || !lastname || !phone || !defaultDenom) {
+    logger.error("Missing required parameters", {
+      firstname,
+      lastname,
+      phone,
+      defaultDenom,
+      requestId,
+    });
     return {
       success: false,
       message: "Missing required parameters",
@@ -69,6 +76,10 @@ export async function OnboardMemberService(
 
   // Validate denomination
   if (!getDenominations({ code: defaultDenom }).length) {
+    logger.error("Invalid denomination", {
+      defaultDenom,
+      requestId,
+    });
     return {
       success: false,
       message: `Invalid denomination: ${defaultDenom}`,
@@ -83,6 +94,25 @@ export async function OnboardMemberService(
 
   try {
     logger.debug("Creating new member", { requestId });
+    
+    // First verify daynode exists
+    const daynodeCheck = await ledgerSpaceSession.run(
+      "MATCH (daynode:Daynode { Active: true }) RETURN daynode"
+    );
+    
+    if (daynodeCheck.records.length === 0) {
+      logger.error("No active daynode found", { requestId });
+      return {
+        success: false,
+        message: "No active daynode found",
+        error: {
+          code: "NO_DAYNODE",
+          details: "Cannot create member without an active daynode"
+        }
+      };
+    }
+
+    logger.debug("Found active daynode, proceeding with member creation", { requestId });
     
     const result = await ledgerSpaceSession.executeWrite(async (tx) => {
       const query = `
@@ -100,16 +130,21 @@ export async function OnboardMemberService(
         })-[:CREATED_ON]->(daynode)
         RETURN
           member {
-            .memberID,
-            .firstname,
-            .lastname,
-            .phone,
-            .memberHandle,
-            .defaultDenom,
-            .memberTier,
-            toString(.createdAt) AS createdAt
+            memberID: member.memberID,
+            firstname: member.firstname,
+            lastname: member.lastname,
+            phone: member.phone,
+            memberHandle: member.memberHandle,
+            defaultDenom: member.defaultDenom,
+            memberTier: member.memberTier,
+            createdAt: toString(member.createdAt)
           } as memberData
       `;
+
+      logger.debug("Executing member creation query", {
+        requestId,
+        params: { firstname, lastname, phone, defaultDenom }
+      });
 
       const queryResult = await tx.run(query, {
         firstname,
@@ -119,6 +154,7 @@ export async function OnboardMemberService(
       });
 
       if (queryResult.records.length === 0) {
+        logger.error("Member creation query returned no records", { requestId });
         return {
           success: false,
           error: "CREATE_FAILED"
@@ -126,6 +162,10 @@ export async function OnboardMemberService(
       }
 
       const memberData = queryResult.records[0].get("memberData");
+      logger.debug("Member creation query successful", {
+        requestId,
+        memberData
+      });
       return {
         success: true,
         data: memberData
@@ -133,6 +173,10 @@ export async function OnboardMemberService(
     });
 
     if (!result.success || !result.data) {
+      logger.error("Failed to create member", {
+        requestId,
+        result
+      });
       return {
         success: false,
         message: "Failed to create member",
@@ -156,8 +200,30 @@ export async function OnboardMemberService(
     };
 
   } catch (error: unknown) {
+    // Log the full error details
+    logger.error("Detailed error in OnboardMemberService", {
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      errorDetails: error instanceof Error ? {
+        ...error,
+        stack: error.stack
+      } : error,
+      requestId,
+      context: {
+        firstname,
+        lastname,
+        phone,
+        defaultDenom
+      }
+    });
+
     // Handle Neo4j constraint violations
     if (isNeo4jError(error)) {
+      logger.error("Neo4j error details", {
+        code: error.code,
+        message: error.message,
+        requestId
+      });
+
       if (error.code === "Neo.ClientError.Schema.ConstraintValidationFailed") {
         if (error.message.includes("phone")) {
           return {
@@ -189,16 +255,6 @@ export async function OnboardMemberService(
         };
       }
     }
-
-    logger.error("Unexpected error in OnboardMemberService", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-      firstname,
-      lastname,
-      phone,
-      defaultDenom,
-      requestId,
-    });
 
     return {
       success: false,

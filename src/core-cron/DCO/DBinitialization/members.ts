@@ -28,16 +28,26 @@ export async function createInitialMember(
   lastname: string,
   phone: string,
   defaultDenom: string,
+  DCOparticipant: boolean,
   requestId: string
 ): Promise<InitialMemberResult> {
+  logger.info("Creating initial member", {
+    firstname,
+    lastname,
+    phone,
+    defaultDenom,
+    DCOparticipant,
+    requestId,
+  });
+
   // Create member
-  const memberResult = await OnboardMemberService(
+  const memberResult = (await OnboardMemberService(
     firstname,
     lastname,
     phone,
     defaultDenom,
     requestId
-  ) as ServiceResult<OnboardMemberData>;
+  )) as ServiceResult<OnboardMemberData>;
 
   if (!memberResult.success || !memberResult.data) {
     logger.error("Failed to create initial member", {
@@ -50,15 +60,15 @@ export async function createInitialMember(
   const onboardedMemberID = memberResult.data.memberID;
 
   // Create default account
-  const accountResult = await CreateAccountService(
+  const accountResult = (await CreateAccountService(
     onboardedMemberID,
     "PERSONAL",
     `${firstname} ${lastname} Personal`,
-    phone,
+    `${firstname.toLowerCase()}_${lastname.toLowerCase()}_personal`,
     defaultDenom,
     null,
     null
-  ) as ServiceResult<CreateAccountData>;
+  )) as ServiceResult<CreateAccountData>;
 
   if (!accountResult.success || !accountResult.data) {
     logger.error("Failed to create default account", {

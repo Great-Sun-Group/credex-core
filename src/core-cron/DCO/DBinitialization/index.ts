@@ -17,118 +17,156 @@ export async function DBinitialization(): Promise<void> {
   const requestId = uuidv4();
   logger.info("Starting DBinitialization", { requestId });
 
-  const ledgerSpaceSession = ledgerSpaceDriver.session();
-  const searchSpaceSession = searchSpaceDriver.session();
-
-  const sessions = {
-    ledgerSpace: ledgerSpaceSession,
-    searchSpace: searchSpaceSession
-  };
-
   try {
     // Set up database constraints and initial state
-    await setupDatabaseConstraints(sessions, requestId);
+    const constraintSession = {
+      ledgerSpace: ledgerSpaceDriver.session(),
+      searchSpace: searchSpaceDriver.session()
+    };
+    
+    try {
+      await setupDatabaseConstraints(constraintSession, requestId);
+    } finally {
+      await constraintSession.ledgerSpace.close();
+      await constraintSession.searchSpace.close();
+    }
+
+    // Create initial daynode
     const dayZero = establishDayZero(requestId);
     const dayZeroCXXrates = await fetchAndProcessRates(dayZero, requestId);
-    await createDayZeroDaynode(sessions, dayZero, dayZeroCXXrates, requestId);
+    
+    const daynodeSession = {
+      ledgerSpace: ledgerSpaceDriver.session(),
+      searchSpace: searchSpaceDriver.session()
+    };
+    
+    try {
+      await createDayZeroDaynode(daynodeSession, dayZero, dayZeroCXXrates, requestId);
+      // Verify daynode was created
+      const verifyResult = await daynodeSession.ledgerSpace.run(
+        "MATCH (d:Daynode {Active: true}) RETURN d"
+      );
+      if (verifyResult.records.length === 0) {
+        throw new Error("Failed to verify daynode creation");
+      }
+      logger.info("Day zero daynode verified", { requestId });
+    } finally {
+      await daynodeSession.ledgerSpace.close();
+      await daynodeSession.searchSpace.close();
+    }
 
-    // Create initial members
-    const rdubs = await createInitialMember(
-      "Ryan",
-      "Watson",
-      "263778177125",
-      "USD",
-      requestId
-    );
-    const magicmike = await createInitialMember(
-      "Mike",
-      "Dube",
-      "263787379972",
-      "USD",
-      requestId
-    );
-    const bennita = await createInitialMember(
-      "Bennita",
-      "Muranda",
-      "263788435091",
-      "USD",
-      requestId
-    );
+    // Create initial members with a new session
+    const memberSession = {
+      ledgerSpace: ledgerSpaceDriver.session(),
+      searchSpace: searchSpaceDriver.session()
+    };
 
-    // Create initial accounts
-    const credexFoundationID = await createInitialAccount(
-      rdubs.onboardedMemberID,
-      "CREDEX_FOUNDATION",
-      "Credex Foundation: Daily Credcoin Offering",
-      "credexfoundation.dco",
-      "CXX",
-      requestId
-    );
-    const greatSunTrustID = await createInitialAccount(
-      rdubs.onboardedMemberID,
-      "TRUST",
-      "Great Sun Financial: Trust",
-      "greatsun_trust",
-      "CAD",
-      requestId
-    );
-    const greatSunOpsID = await createInitialAccount(
-      rdubs.onboardedMemberID,
-      "OPERATIONS",
-      "Great Sun Financial: Operations",
-      "greatsun_ops",
-      "CAD",
-      requestId
-    );
-    const vimbisoPayTrustID = await createInitialAccount(
-      bennita.onboardedMemberID,
-      "TRUST",
-      "VimbisoPay: Trust",
-      "vimbisopay_trust",
-      "USD",
-      requestId
-    );
-    const vimbisoPayOpsID = await createInitialAccount(
-      magicmike.onboardedMemberID,
-      "OPERATIONS",
-      "VimbisoPay: Operations",
-      "vimbisopay_ops",
-      "USD",
-      requestId
-    );
+    try {
+      // Create initial members
+      const rdubs = await createInitialMember(
+        "Ryan",
+        "Watson",
+        "263778177125",
+        "USD",
+        true, // DCO participant
+        requestId
+      );
+      const magicmike = await createInitialMember(
+        "Mike",
+        "Dube",
+        "263787379972",
+        "USD",
+        false, // Not a DCO participant
+        requestId
+      );
+      const bennita = await createInitialMember(
+        "Bennita",
+        "Muranda",
+        "263788435091",
+        "USD",
+        false, // Not a DCO participant
+        requestId
+      );
 
-    // Create relationships and initial Credex
-    await createInitialRelationships(
-      sessions,
-      credexFoundationID,
-      greatSunTrustID,
-      vimbisoPayTrustID,
-      vimbisoPayOpsID,
-      rdubs.onboardedMemberID,
-      bennita.onboardedMemberID,
-      requestId
-    );
-    await createInitialCredex(
-      rdubs.onboardedMemberID,
-      greatSunTrustID,
-      rdubs.defaultAccountID,
-      requestId
-    );
+      // Create initial accounts
+      const credexFoundationID = await createInitialAccount(
+        rdubs.onboardedMemberID,
+        "CREDEX_FOUNDATION",
+        "Credex Foundation: Daily Credcoin Offering",
+        "credex_foundation_dco",
+        "CXX",
+        requestId
+      );
+      const greatSunTrustID = await createInitialAccount(
+        rdubs.onboardedMemberID,
+        "TRUST",
+        "Great Sun Financial: Trust",
+        "greatsun_trust",
+        "CAD",
+        requestId
+      );
+      const greatSunOpsID = await createInitialAccount(
+        rdubs.onboardedMemberID,
+        "OPERATIONS",
+        "Great Sun Financial: Operations",
+        "greatsun_ops",
+        "CAD",
+        requestId
+      );
+      const vimbisoPayTrustID = await createInitialAccount(
+        bennita.onboardedMemberID,
+        "TRUST",
+        "VimbisoPay: Trust",
+        "vimbisopay_trust",
+        "USD",
+        requestId
+      );
+      const vimbisoPayOpsID = await createInitialAccount(
+        magicmike.onboardedMemberID,
+        "OPERATIONS",
+        "VimbisoPay: Operations",
+        "vimbisopay_ops",
+        "USD",
+        requestId
+      );
 
-    // Create rdubs' DCO_GIVE template
-    await createDCOrecurringTemplate(
-      rdubs.onboardedMemberID,
-      credexFoundationID,
-      rdubs.defaultAccountID,
-      ledgerSpaceSession,
-      requestId
-    );
+      // Create relationships and initial Credex
+      await createInitialRelationships(
+        memberSession,
+        credexFoundationID,
+        greatSunTrustID,
+        vimbisoPayTrustID,
+        vimbisoPayOpsID,
+        rdubs.onboardedMemberID,
+        bennita.onboardedMemberID,
+        requestId
+      );
+      await createInitialCredex(
+        rdubs.onboardedMemberID,
+        greatSunTrustID,
+        rdubs.defaultAccountID,
+        requestId
+      );
 
-    logger.info("DBinitialization completed successfully", {
-      requestId,
-      foundationID: credexFoundationID,
-      foundationOwner: rdubs.onboardedMemberID
-    });
+      // Create rdubs' DCO_GIVE template
+      await createDCOrecurringTemplate(
+        rdubs.onboardedMemberID,
+        credexFoundationID,
+        rdubs.defaultAccountID,
+        memberSession.ledgerSpace,
+        requestId
+      );
+
+      logger.info("DBinitialization completed successfully", {
+        requestId,
+        foundationID: credexFoundationID,
+        foundationOwner: rdubs.onboardedMemberID
+      });
+
+    } finally {
+      await memberSession.ledgerSpace.close();
+      await memberSession.searchSpace.close();
+    }
 
   } catch (error) {
     logger.error("Error during DBinitialization", {
@@ -137,8 +175,5 @@ export async function DBinitialization(): Promise<void> {
       requestId,
     });
     throw error;
-  } finally {
-    await ledgerSpaceSession.close();
-    await searchSpaceSession.close();
   }
 }
