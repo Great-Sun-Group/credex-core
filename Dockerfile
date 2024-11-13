@@ -33,8 +33,7 @@ RUN npm ci --only=production && \
     echo "Source directory:" && \
     ls -la /app/build/src
 EXPOSE 3000
-ENV NODE_ENV=production
-# Update the command to use the correct path
+# Remove hardcoded NODE_ENV to allow runtime configuration
 CMD ["node", "build/src/index.js"]
 
 # Development stage extends base
@@ -42,7 +41,6 @@ FROM base AS development
 RUN npm install
 RUN npm install -g ts-node-dev
 COPY . .
-ENV NODE_ENV=development
 CMD ["ts-node-dev", "--respawn", "--transpile-only", "src/index.ts"]
 
 # Test stage
