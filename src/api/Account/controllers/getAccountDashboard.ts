@@ -1,81 +1,182 @@
 import express from "express";
 import { GetAccountDashboardService } from "../services/GetAccountDashboard";
+import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 import { validateUUID } from "../../../utils/validators";
+import {
+  TypedApiResponse,
+  ApiActionType,
+  AccountActionDetails,
+  ErrorActionDetails
+} from "../../../types/apiResponse";
 
+type AccountDashboardResponse = TypedApiResponse<AccountActionDetails>;
+type AccountDashboardErrorResponse = TypedApiResponse<ErrorActionDetails>;
+
+/**
+ * GetAccountDashboardController
+ * 
+ * Handles requests for account dashboard information, including
+ * balances, authorized members, and pending offers.
+ * 
+ * @param req - Express request object
+ * @param res - Express response object
+ * @param next - Express next function
+ */
 export async function GetAccountDashboardController(
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
-) {
-  const requestId = req.headers["x-request-id"] || "unknown";
-  const { memberID, accountID } = req.body;
-
-  logger.debug("GetAccountDashboardController entered", {
-    requestId,
-    memberID,
-    accountID,
-  });
+): Promise<void> {
+  const requestId = req.id;
+  logger.debug("Entering GetAccountDashboardController", { requestId });
 
   try {
+    const { memberID, accountID } = req.body;
+
+    // Validate memberID
     if (!validateUUID(memberID)) {
-      logger.warn("Invalid memberID", { requestId, memberID });
-      return res.status(400).json({ message: "Invalid memberID" });
-    }
-    if (!validateUUID(accountID)) {
-      logger.warn("Invalid accountID", { requestId, accountID });
-      return res.status(400).json({ message: "Invalid accountID" });
+      throw new AccountError(
+        "Invalid member ID format",
+        "INVALID_MEMBER_ID",
+        400
+      );
     }
 
-    logger.info("Getting account dashboard", {
-      requestId,
+    // Validate accountID
+    if (!validateUUID(accountID)) {
+      throw new AccountError(
+        "Invalid account ID format",
+        "INVALID_ACCOUNT_ID",
+        400
+      );
+    }
+
+    logger.info("Retrieving account dashboard", {
       memberID,
       accountID,
+      requestId
     });
 
-    const accountDashboard = await GetAccountDashboardService(
-      memberID,
-      accountID
-    );
+    const result = await GetAccountDashboardService(memberID, accountID);
 
-    if (!accountDashboard) {
-      logger.warn("Account dashboard not found", {
-        requestId,
+    if (!result.success) {
+      const statusCode = 
+        result.message.includes("not found") ? 404 :
+        result.message.includes("access denied") ? 403 :
+        400;
+
+      logger.warn("Failed to retrieve account dashboard", {
         memberID,
         accountID,
+        message: result.message,
+        requestId
       });
-      return res.status(404).json({ message: "Account dashboard not found" });
+
+      const errorResponse: AccountDashboardErrorResponse = {
+        message: result.message,
+        data: {
+          action: {
+            id: accountID,
+            type: statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+                  statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
+                  ApiActionType.ERROR_INTERNAL,
+            timestamp: new Date().toISOString(),
+            actor: memberID,
+            details: {
+              code: statusCode === 404 ? "ACCOUNT_NOT_FOUND" :
+                    statusCode === 403 ? "ACCESS_DENIED" :
+                    "DASHBOARD_ERROR",
+              reason: result.message
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(statusCode).json(errorResponse);
+      return;
     }
 
     logger.info("Account dashboard retrieved successfully", {
-      requestId,
       memberID,
       accountID,
+      isOwned: result.data?.isOwnedAccount,
+      requestId
     });
-    logger.debug("GetAccountDashboardController exiting successfully", {
-      requestId,
+
+    const response: AccountDashboardResponse = {
+      message: "Account dashboard retrieved successfully",
+      data: {
+        action: {
+          id: accountID,
+          type: ApiActionType.DASHBOARD_RETRIEVED,
+          timestamp: new Date().toISOString(),
+          actor: memberID,
+          details: {
+            accountID,
+            accountName: result.data?.accountName,
+            accountHandle: result.data?.accountHandle,
+            defaultDenom: result.data?.defaultDenom,
+            sendOffersTo: result.data?.sendOffersTo,
+            authFor: result.data?.authFor
+          }
+        },
+        // Include the full dashboard state in the response
+        dashboard: {
+          accountID: result.data?.accountID,
+          accountName: result.data?.accountName,
+          accountHandle: result.data?.accountHandle,
+          defaultDenom: result.data?.defaultDenom,
+          isOwnedAccount: result.data?.isOwnedAccount,
+          sendOffersTo: result.data?.sendOffersTo,
+          authFor: result.data?.authFor,
+          balanceData: result.data?.balanceData,
+          pendingInData: result.data?.pendingInData,
+          pendingOutData: result.data?.pendingOutData
+        }
+      }
+    };
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    const handledError = handleServiceError(error);
+    logger.error("Error in GetAccountDashboardController", {
+      error: handledError.message,
+      code: handledError.code,
+      stack: handledError instanceof Error ? handledError.stack : undefined,
+      memberID: req.body.memberID,
+      accountID: req.body.accountID,
+      requestId
     });
-    return res.status(200).json(accountDashboard);
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      logger.error("Error in GetAccountDashboardController", {
-        requestId,
-        memberID,
-        accountID,
-        error: error.message,
-        stack: error.stack,
-      });
-    } else {
-      logger.error("Unknown error in GetAccountDashboardController", {
-        requestId,
-        memberID,
-        accountID,
-        error: String(error),
-      });
+
+    if (handledError instanceof AccountError) {
+      const statusCode = handledError.statusCode || 500;
+      const errorResponse: AccountDashboardErrorResponse = {
+        message: handledError.message,
+        data: {
+          action: {
+            id: req.body.accountID || null,
+            type: ApiActionType.ERROR_INTERNAL,
+            timestamp: new Date().toISOString(),
+            actor: req.body.memberID || "system",
+            details: {
+              code: String(handledError.code || "UNKNOWN_ERROR"),
+              reason: handledError.message
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(statusCode).json(errorResponse);
+      return;
     }
-    logger.debug("GetAccountDashboardController exiting with error", {
-      requestId,
-    });
-    next(error);
+
+    next(handledError);
+
+  } finally {
+    logger.debug("Exiting GetAccountDashboardController", { requestId });
   }
 }

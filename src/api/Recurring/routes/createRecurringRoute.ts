@@ -1,0 +1,247 @@
+import { Request, Response, NextFunction } from "express";
+import { validateRequest } from "../../../middleware/validateRequest";
+import { errorHandler } from "../../../middleware/errorHandler";
+import { createRecurringSchema } from "../recurringValidationSchemas";
+import { CreateRecurringController } from "../controllers/createRecurring";
+import { RecurringRequest } from "../types";
+import logger from "../../../utils/logger";
+
+/**
+ * @swagger
+ * /createRecurring:
+ *   post:
+ *     tags: [Recurring]
+ *     summary: Create a new recurring transaction
+ *     description: Creates a new recurring transaction schedule. Supports both regular and DCO_GIVE template types.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sourceAccountID
+ *               - targetAccountID
+ *               - templateType
+ *               - frequency
+ *               - startDate
+ *             properties:
+ *               sourceAccountID:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID of the source account
+ *               targetAccountID:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID of the target account (must be foundation account for DCO_GIVE)
+ *               templateType:
+ *                 type: string
+ *                 enum: [REGULAR, DCO_GIVE]
+ *                 description: Type of recurring template
+ *               frequency:
+ *                 type: string
+ *                 enum: [DAILY, WEEKLY, MONTHLY]
+ *                 description: Frequency of recurring transaction
+ *               startDate:
+ *                 type: string
+ *                 format: date
+ *                 pattern: ^\d{4}-\d{2}-\d{2}$
+ *                 description: Start date for recurring schedule
+ *               duration:
+ *                 type: integer
+ *                 minimum: 1
+ *                 description: Optional duration in days
+ *               amount:
+ *                 type: number
+ *                 minimum: 0
+ *                 exclusiveMinimum: true
+ *                 description: Required if templateType is REGULAR
+ *               denomination:
+ *                 type: string
+ *                 enum: [CXX, CAD, USD, XAU, ZWG]
+ *                 description: Required if templateType is REGULAR
+ *               securedCredex:
+ *                 type: boolean
+ *                 description: Optional for REGULAR templates
+ *               DCOgiveInCXX:
+ *                 type: number
+ *                 minimum: 0
+ *                 exclusiveMinimum: true
+ *                 description: Required if templateType is DCO_GIVE
+ *               DCOdenom:
+ *                 type: string
+ *                 enum: [CXX, CAD, USD, XAU, ZWG]
+ *                 description: Required if templateType is DCO_GIVE
+ *     responses:
+ *       201:
+ *         description: Recurring transaction created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Recurring transaction created successfully"
+ *                   description: Human-friendly message describing the action
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     action:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                           description: The recurringID of the created transaction
+ *                         type:
+ *                           type: string
+ *                           enum: [RECURRING_CREATED]
+ *                           description: Business action type
+ *                         timestamp:
+ *                           type: string
+ *                           format: date-time
+ *                           description: When the action occurred
+ *                         actor:
+ *                           type: string
+ *                           format: uuid
+ *                           description: MemberID who performed the action
+ *                         details:
+ *                           type: object
+ *                           properties:
+ *                             recurringID:
+ *                               type: string
+ *                               format: uuid
+ *                             amount:
+ *                               type: string
+ *                               description: Formatted amount with denomination
+ *                             denomination:
+ *                               type: string
+ *                               enum: [CXX, CAD, USD, XAU, ZWG]
+ *                             frequency:
+ *                               type: string
+ *                               enum: [DAILY, WEEKLY, MONTHLY]
+ *                             nextDate:
+ *                               type: string
+ *                               format: date
+ *                             status:
+ *                               type: string
+ *                               enum: [PENDING, ACTIVE, CANCELLED]
+ *                             scheduleInfo:
+ *                               type: object
+ *                               properties:
+ *                                 frequency:
+ *                                   type: string
+ *                                 nextRunDate:
+ *                                   type: string
+ *                                   format: date
+ *                                 amount:
+ *                                   type: string
+ *                                 denomination:
+ *                                   type: string
+ *                                 status:
+ *                                   type: string
+ *                                 templateType:
+ *                                   type: string
+ *                             participants:
+ *                               type: object
+ *                               properties:
+ *                                 sourceAccountID:
+ *                                   type: string
+ *                                   format: uuid
+ *                                 targetAccountID:
+ *                                   type: string
+ *                                   format: uuid
+ *                             execution:
+ *                               type: object
+ *                               properties:
+ *                                 totalExecutions:
+ *                                   type: integer
+ *                     dashboard:
+ *                       type: object
+ *                       description: Full dashboard state after the action
+ *       400:
+ *         description: Invalid input data or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid template type"
+ *                   description: Human-friendly error message
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     action:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                           format: uuid
+ *                           nullable: true
+ *                         type:
+ *                           type: string
+ *                           enum: [ERROR_VALIDATION]
+ *                         timestamp:
+ *                           type: string
+ *                           format: date-time
+ *                         actor:
+ *                           type: string
+ *                           format: uuid
+ *                         details:
+ *                           type: object
+ *                           properties:
+ *                             code:
+ *                               type: string
+ *                               example: "400"
+ *                             reason:
+ *                               type: string
+ *                             field:
+ *                               type: string
+ *                     dashboard:
+ *                       type: object
+ *                       description: Empty dashboard state
+ *       401:
+ *         description: Authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Authentication required"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     action:
+ *                       type: object
+ *                       properties:
+ *                         type:
+ *                           type: string
+ *                           enum: [ERROR_UNAUTHORIZED]
+ *                         details:
+ *                           type: object
+ *                           properties:
+ *                             code:
+ *                               type: string
+ *                               enum: [UNAUTHORIZED]
+ *                     dashboard:
+ *                       type: object
+ *       403:
+ *         description: Not authorized to create recurring transaction
+ *       404:
+ *         description: Account not found or invalid foundation account for DCO_GIVE
+ *       500:
+ *         description: Internal server error
+ */
+export const createRecurringRoute = [
+  validateRequest(createRecurringSchema),
+  (req: Request, res: Response, next: NextFunction) =>
+    CreateRecurringController(req as RecurringRequest, res, next),
+  errorHandler,
+];

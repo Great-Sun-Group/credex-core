@@ -1,7 +1,49 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { isNeo4jError } from "../../../utils/errorUtils";
+import { getDenominations } from "../../../core-cron/constants/denominations";
+import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 
+interface AccountProperties {
+  accountID: string;
+  accountType: string;
+  accountName: string;
+  accountHandle: string;
+  defaultDenom: string;
+  DCOgiveInCXX: number | null;
+  DCOdenom: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface CreateAccountResult {
+  success: boolean;
+  data?: {
+    accountID: string;
+    accountProperties: AccountProperties;
+  };
+  message: string;
+  error?: {
+    code: string;
+    details?: string;
+  };
+}
+
+/**
+ * CreateAccountService
+ *
+ * Creates a new account for a member with optional DCO participation settings.
+ * Validates membership tier requirements and account limits.
+ *
+ * @param ownerID - The ID of the member who will own the account
+ * @param accountType - The type of account to create
+ * @param accountName - The name of the account
+ * @param accountHandle - The unique handle for the account
+ * @param defaultDenom - The default denomination for the account
+ * @param DCOgiveInCXX - Optional DCO give rate in CXX
+ * @param DCOdenom - Optional DCO denomination
+ * @returns CreateAccountResult containing the created account details
+ * @throws AccountError for validation and business logic errors
+ */
 export async function CreateAccountService(
   ownerID: string,
   accountType: string,
@@ -10,7 +52,7 @@ export async function CreateAccountService(
   defaultDenom: string,
   DCOgiveInCXX: number | null = null,
   DCOdenom: string | null = null
-) {
+): Promise<CreateAccountResult> {
   logger.debug("CreateAccountService called", {
     ownerID,
     accountType,
@@ -20,40 +62,104 @@ export async function CreateAccountService(
     DCOgiveInCXX,
     DCOdenom,
   });
+
+  // Validate denomination
+  if (!getDenominations({ code: defaultDenom }).length) {
+    return {
+      success: false,
+      message: `Invalid default denomination: ${defaultDenom}`,
+      error: {
+        code: "INVALID_DENOMINATION",
+        details: "The provided denomination is not supported"
+      }
+    };
+  }
+
+  // Validate DCO denomination if provided
+  if (DCOdenom && !getDenominations({ code: DCOdenom }).length) {
+    return {
+      success: false,
+      message: `Invalid DCO denomination: ${DCOdenom}`,
+      error: {
+        code: "INVALID_DCO_DENOMINATION",
+        details: "The provided DCO denomination is not supported"
+      }
+    };
+  }
+
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    //check that account creation is permitted on membership tier
-    logger.debug("Checking membership tier for account creation permission");
-    const getMemberTier = await ledgerSpaceSession.run(
-      `
+    // Check membership tier and account limits
+    const tierCheck = await ledgerSpaceSession.executeRead(async (tx) => {
+      const result = await tx.run(
+        `
         MATCH (member:Member{ memberID: $ownerID })
         OPTIONAL MATCH (member)-[:OWNS]->(account:Account)
         RETURN
           member.memberTier AS memberTier,
           COUNT(account) AS numAccounts
-      `,
-      { ownerID }
-    );
+        `,
+        { ownerID }
+      );
 
-    const memberTier = getMemberTier.records[0].get("memberTier");
-    const numAccounts = getMemberTier.records[0].get("numAccounts");
-    if (memberTier <= 2 && numAccounts >= 1) {
-      logger.warn("Account creation not permitted on current membership tier", {
-        ownerID,
-        memberTier,
-        numAccounts,
-      });
+      if (result.records.length === 0) {
+        return {
+          success: false,
+          message: "Member not found",
+          error: {
+            code: "MEMBER_NOT_FOUND",
+            details: "The specified member does not exist"
+          }
+        };
+      }
+
       return {
-        account: false,
-        message:
-          "You cannot create an account on the Open or Verified membership tiers.",
+        memberTier: result.records[0].get("memberTier"),
+        numAccounts: result.records[0].get("numAccounts").toNumber(),
+      };
+    });
+
+    // Handle member not found case
+    if ('success' in tierCheck && !tierCheck.success) {
+      return tierCheck as CreateAccountResult;
+    }
+
+    if (tierCheck.memberTier <= 2 && tierCheck.numAccounts >= 1) {
+      return {
+        success: false,
+        message: "Account creation not permitted on current membership tier",
+        error: {
+          code: "TIER_LIMIT_EXCEEDED",
+          details: "Your current membership tier allows only one account. Please upgrade to create additional accounts."
+        }
       };
     }
 
-    logger.debug("Creating new account in database");
-    const result = await ledgerSpaceSession.run(
-      `
+    // Create the account
+    const result = await ledgerSpaceSession.executeWrite(async (tx) => {
+      // First check if handle is already in use
+      const handleCheck = await tx.run(
+        `
+        MATCH (account:Account { accountHandle: $accountHandle })
+        RETURN account.accountHandle
+        `,
+        { accountHandle }
+      );
+
+      if (handleCheck.records.length > 0) {
+        return {
+          success: false,
+          message: `Account handle '${accountHandle}' is already in use`,
+          error: {
+            code: "HANDLE_EXISTS",
+            details: "Please choose a different account handle"
+          }
+        };
+      }
+
+      const createResult = await tx.run(
+        `
         MATCH (daynode:Daynode { Active: true })
         MATCH (owner:Member { memberID: $ownerID })
         CREATE (owner)-[:OWNS]->(account:Account {
@@ -72,75 +178,71 @@ export async function CreateAccountService(
           (owner)-[:AUTHORIZED_FOR]->
           (account)
           -[:SEND_OFFERS_TO]->(owner)
-        RETURN account.accountID AS accountID
-      `,
-      {
-        ownerID,
-        accountType,
-        accountName,
-        accountHandle,
-        defaultDenom,
-        DCOgiveInCXX,
-        DCOdenom,
+        RETURN account {.*} as accountProperties
+        `,
+        {
+          ownerID,
+          accountType,
+          accountName,
+          accountHandle,
+          defaultDenom,
+          DCOgiveInCXX,
+          DCOdenom,
+        }
+      );
+
+      if (createResult.records.length === 0) {
+        return {
+          success: false,
+          message: "Failed to create account",
+          error: {
+            code: "CREATE_FAILED",
+            details: "An error occurred while creating the account"
+          }
+        };
       }
-    );
 
-    if (!result.records.length) {
-      logger.warn("Failed to create account", {
-        ownerID,
+      const accountProperties = createResult.records[0].get(
+        "accountProperties"
+      ) as AccountProperties;
+
+      logger.info("Account created successfully", {
+        accountID: accountProperties.accountID,
         accountType,
-        accountName,
-        accountHandle,
+        ownerID,
       });
-      return { account: false, message: "could not create account" };
-    }
 
-    const createdAccountID = result.records[0].get("accountID");
-    logger.info("Account created successfully", {
-      accountID: createdAccountID,
-      accountType,
-      ownerID,
+      return {
+        success: true,
+        data: {
+          accountID: accountProperties.accountID,
+          accountProperties,
+        },
+        message: `Account "${accountName}" created successfully with default denomination ${defaultDenom}`
+      };
     });
-    return {
-      accountID: createdAccountID,
-      message: "account created",
-    };
+
+    return result;
   } catch (error) {
-    logger.error("Error creating account", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
+    const handledError = handleServiceError(error);
+    logger.error("Error in CreateAccountService", {
+      error: handledError.message,
+      code: handledError.code,
       ownerID,
       accountType,
       accountName,
-      accountHandle,
     });
 
-    if (
-      isNeo4jError(error) &&
-      error.code === "Neo.ClientError.Schema.ConstraintValidationFailed"
-    ) {
-      if (error.message.includes("phone")) {
-        logger.warn("Phone number already in use", { ownerID });
-        return { account: false, message: "Phone number already in use" };
-      }
-      if (error.message.includes("handle")) {
-        logger.warn("Account handle already in use", { accountHandle });
-        return {
-          account: false,
-          message: "Sorry, that handle is already in use",
-        };
-      }
-      logger.warn("Required unique field not unique", { error: error.message });
-      return { account: false, message: "Required unique field not unique" };
-    }
-
     return {
-      account: false,
-      message:
-        "Error: " + (error instanceof Error ? error.message : "Unknown error"),
+      success: false,
+      message: handledError.message,
+      error: {
+        code: handledError.code || "INTERNAL_ERROR",
+        details: handledError instanceof Error ? handledError.message : "An unknown error occurred"
+      }
     };
   } finally {
-    logger.debug("Closing database session", { ownerID });
     await ledgerSpaceSession.close();
+    logger.debug("Exiting CreateAccountService", { ownerID });
   }
 }

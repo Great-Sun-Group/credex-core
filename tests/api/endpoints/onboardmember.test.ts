@@ -1,4 +1,5 @@
-import { onboardMember } from "../utils/endpoints/member";
+import axios from "../../setup";
+import { delay, DELAY_MS } from "../utils/delay";
 
 describe("onboardMember Endpoint Test", () => {
   it("onboardMember", async () => {
@@ -9,6 +10,19 @@ describe("onboardMember Endpoint Test", () => {
       throw new Error("Usage: npm test onboardmember <firstname> <lastname> <phone> <defaultDenom>");
     }
 
-    await onboardMember(firstname, lastname, phone, defaultDenom);
+    console.log("\nOnboarding member...");
+    const response = await axios.post("/onboardMember", {
+      firstname,
+      lastname,
+      phone,
+      defaultDenom
+    }, {
+      headers: {
+        'x-client-api-key': process.env.CLIENT_API_KEY
+      }
+    });
+    console.log("Onboard member response:", JSON.stringify(response.data, null, 2));
+    expect(response.status).toBe(201);  // Changed from 200 to 201 for resource creation
+    await delay(DELAY_MS);
   });
 });

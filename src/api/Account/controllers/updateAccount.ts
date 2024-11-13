@@ -1,90 +1,173 @@
-import express from "express";
+import { Response, NextFunction } from "express";
 import { UpdateAccountService } from "../services/UpdateAccount";
+import { UserRequest } from "../../../middleware/authMiddleware";
+import { withDashboard } from "../../../utils/dashboardUtils";
 import logger from "../../../utils/logger";
 import {
-  validateUUID,
-  validateAccountName,
-  validateAccountHandle,
-  validateDenomination,
-} from "../../../utils/validators";
+  TypedApiResponse,
+  ApiActionType,
+  AccountActionDetails,
+  ErrorActionDetails
+} from "../../../types/apiResponse";
 
-export async function UpdateAccountController(
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-) {
-  logger.debug("UpdateAccountController called", { body: req.body });
+type UpdateAccountResponse = TypedApiResponse<AccountActionDetails>;
+type UpdateAccountErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
-  const { ownerID, accountID, accountName, accountHandle, defaultDenom } =
-    req.body;
+/**
+ * UpdateAccountController
+ * 
+ * Handles requests to update account properties such as name, handle,
+ * default denomination, and DCO settings.
+ * 
+ * @param req - Express request object with user information
+ * @param res - Express response object
+ * @param next - Express next function
+ */
+export const UpdateAccountController = async (
+  req: UserRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  const requestId = req.id;
+  logger.info("UpdateAccountController called", { path: req.path, requestId });
 
   try {
-    // Validate input
-    if (!validateUUID(ownerID)) {
-      logger.warn("Invalid ownerID provided", { ownerID });
-      return res.status(400).json({ message: "Invalid ownerID" });
-    }
-    if (!validateUUID(accountID)) {
-      logger.warn("Invalid accountID provided", { accountID });
-      return res.status(400).json({ message: "Invalid accountID" });
-    }
-    if (accountName && !validateAccountName(accountName)) {
-      logger.warn("Invalid accountName provided", { accountName });
-      return res.status(400).json({ message: "Invalid accountName" });
-    }
-    if (accountHandle && !validateAccountHandle(accountHandle)) {
-      logger.warn("Invalid accountHandle provided", { accountHandle });
-      return res.status(400).json({ message: "Invalid accountHandle" });
-    }
-    if (defaultDenom && !validateDenomination(defaultDenom)) {
-      logger.warn("Invalid defaultDenom provided", { defaultDenom });
-      return res.status(400).json({ message: "Invalid defaultDenom" });
-    }
+    const {
+      accountID,
+      accountName,
+      accountHandle,
+      defaultDenom,
+      DCOgiveInCXX,
+      DCOdenom,
+    } = req.body;
 
-    logger.info("Updating account", {
+    const ownerID = req.user.memberID;
+
+    logger.debug("Updating account", {
       ownerID,
       accountID,
       accountName,
       accountHandle,
       defaultDenom,
+      DCOgiveInCXX,
+      DCOdenom,
+      requestId
     });
 
-    const updatedAccountID = await UpdateAccountService(
+    const result = await UpdateAccountService(
       ownerID,
       accountID,
       accountName,
       accountHandle,
-      defaultDenom
+      defaultDenom,
+      DCOgiveInCXX,
+      DCOdenom
     );
 
-    if (updatedAccountID) {
-      logger.info("Account updated successfully", {
-        updatedAccountID,
+    if (!result.success) {
+      logger.warn("Failed to update account", {
         ownerID,
         accountID,
+        error: result.error,
+        requestId
       });
-      res
-        .status(200)
-        .json({
-          message: `Account updated successfully`,
-          accountID: updatedAccountID,
-        });
-    } else {
-      logger.warn("Account not found or no update performed", {
-        ownerID,
-        accountID,
-      });
-      res
-        .status(404)
-        .json({ message: "Account not found or no update performed" });
+
+      const statusCode = 
+        result.error?.code === "ACCOUNT_NOT_FOUND" ? 404 :
+        result.error?.code === "UNAUTHORIZED" ? 403 :
+        result.error?.code === "HANDLE_EXISTS" ? 409 :
+        result.error?.code === "NO_UPDATE_DATA" ? 400 :
+        result.error?.code === "INVALID_DENOMINATION" ? 400 :
+        result.error?.code === "INVALID_DCO_DENOMINATION" ? 400 :
+        500;
+
+      const errorType = 
+        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
+        statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
+        statusCode === 409 ? ApiActionType.ERROR_VALIDATION :
+        statusCode === 400 ? ApiActionType.ERROR_VALIDATION :
+        ApiActionType.ERROR_INTERNAL;
+
+      const errorResponse: UpdateAccountErrorResponse = {
+        message: result.message,
+        data: {
+          action: {
+            id: accountID,
+            type: errorType,
+            timestamp: new Date().toISOString(),
+            actor: ownerID,
+            details: {
+              code: result.error?.code || "UPDATE_FAILED",
+              reason: result.message,
+              suggestion: result.error?.details
+            }
+          },
+          dashboard: {}
+        }
+      };
+
+      res.status(statusCode).json(errorResponse);
+      return;
     }
+
+    logger.info("Account updated successfully", {
+      accountID: result.data?.accountID,
+      ownerID,
+      requestId
+    });
+
+    // Create base response without dashboard
+    const baseResponse = {
+      message: result.message,
+      data: {
+        action: {
+          id: result.data!.accountID,
+          type: ApiActionType.ACCOUNT_UPDATED,
+          timestamp: new Date().toISOString(),
+          actor: ownerID,
+          details: {
+            accountID: result.data!.accountID,
+            ...result.data!.accountProperties
+          }
+        }
+      }
+    };
+
+    // Add dashboard data to response
+    const response = await withDashboard(
+      baseResponse,
+      ownerID,
+      result.data!.accountID,
+      requestId
+    );
+
+    res.status(200).json(response);
+
   } catch (error) {
     logger.error("Error in UpdateAccountController", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      ownerID,
-      accountID,
+      requestId
     });
+
+    const errorResponse: UpdateAccountErrorResponse = {
+      message: error instanceof Error ? error.message : "An unknown error occurred while updating account",
+      data: {
+        action: {
+          id: req.body.accountID || null,
+          type: ApiActionType.ERROR_INTERNAL,
+          timestamp: new Date().toISOString(),
+          actor: req.user?.memberID || "system",
+          details: {
+            code: "INTERNAL_ERROR",
+            reason: error instanceof Error ? error.message : "Unknown error"
+          }
+        },
+        dashboard: {}
+      }
+    };
+
+    res.status(500).json(errorResponse);
     next(error);
   }
-}
+};

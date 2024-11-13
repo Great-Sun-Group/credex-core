@@ -1,5 +1,5 @@
-import { cancelCredex } from "../utils/endpoints/credex";
-import { loginMember } from "../utils/auth";
+import { authRequest } from "../utils/request";
+import { delay, DELAY_MS } from "../utils/delay";
 
 describe("cancelCredex Endpoint Test", () => {
   it("cancelCredex", async () => {
@@ -10,8 +10,21 @@ describe("cancelCredex Endpoint Test", () => {
       throw new Error("Usage: npm test cancelcredex <phone> <credexID>");
     }
 
-    // Login first since this endpoint requires authentication
-    const auth = await loginMember(phone);
-    await cancelCredex(credexID, auth.memberID, auth.jwt);
+    console.log("\nCanceling Credex...");
+    try {
+      const response = await authRequest(
+        "/cancelCredex",
+        {
+          credexID
+        },
+        phone
+      );
+      console.log("Cancel Credex response:", JSON.stringify(response.data, null, 2));
+      expect(response.status).toBe(200);
+    } catch (error: any) {
+      console.log("Cancel Credex error:", JSON.stringify(error.response?.data, null, 2));
+      throw error;
+    }
+    await delay(DELAY_MS);
   });
 });

@@ -48,7 +48,7 @@ export async function fetchZwgRate(): Promise<ExchangeRate[]> {
     logger.info("Fetching ZWG rate from RBZ website");
     const { data } = await axios.get(RBZ_URL, {
       httpsAgent,
-      timeout: 10000, // 10 seconds timeout
+      timeout: 120000, // Extended to 2 minutes to handle slow responses from RBZ website
     });
 
     logger.info("Data fetched successfully, attempting to parse with cheerio");
