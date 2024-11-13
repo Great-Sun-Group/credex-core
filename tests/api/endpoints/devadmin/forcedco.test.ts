@@ -9,7 +9,7 @@ describe("forceDCO DevAdmin Operation", () => {
     console.log("\nForcing DCO...");
     const response = await axios.post("/devadmin/forceDCO", {}, {
       headers: {
-        'x-client-api-key': process.env.CLIENT_API_KEY || ''
+        'x-dev-admin-key': process.env.DEV_ADMIN_KEY || ''
       }
     });
     console.log("Force DCO response:", response.data);

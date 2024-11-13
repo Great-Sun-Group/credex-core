@@ -8,7 +8,7 @@ describe("clearForce DevAdmin Operation", () => {
       console.log("\nClearing dev DBs...");
       const clearResponse = await axios.post("/devadmin/clearDevDBs", {}, {
         headers: {
-          'x-client-api-key': process.env.CLIENT_API_KEY || ''
+          'x-dev-admin-key': process.env.DEV_ADMIN_KEY || ''
         }
       });
       console.log("Clear DBs response:", clearResponse.data);
@@ -19,7 +19,7 @@ describe("clearForce DevAdmin Operation", () => {
       console.log("\nForcing DCO...");
       const forceResponse = await axios.post("/devadmin/forceDCO", {}, {
         headers: {
-          'x-client-api-key': process.env.CLIENT_API_KEY || ''
+          'x-dev-admin-key': process.env.DEV_ADMIN_KEY || ''
         }
       });
       console.log("Force DCO response:", forceResponse.data);

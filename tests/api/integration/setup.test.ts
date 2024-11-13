@@ -64,16 +64,17 @@ describe("Integration Test Setup", () => {
       // Log full response for debugging
       console.log("Member1 onboarding response:", JSON.stringify(member1Response.data, null, 2));
 
-      if (!member1Response.data?.success || 
-          !member1Response.data?.data?.token || 
-          !member1Response.data?.data?.memberID ||
-          !member1Response.data?.data?.defaultAccountID) {
+      // Check standardized response format
+      if (!member1Response.data?.message || 
+          !member1Response.data?.data?.action?.details?.token || 
+          !member1Response.data?.data?.action?.details?.memberID ||
+          !member1Response.data?.data?.action?.details?.defaultAccountID) {
         throw new Error("Member1 onboarding response missing required data");
       }
 
-      testData.member1.jwt = member1Response.data.data.token;
-      testData.member1.memberID = member1Response.data.data.memberID;
-      testData.member1.accountIDs = [member1Response.data.data.defaultAccountID];
+      testData.member1.jwt = member1Response.data.data.action.details.token;
+      testData.member1.memberID = member1Response.data.data.action.details.memberID;
+      testData.member1.accountIDs = [member1Response.data.data.action.details.defaultAccountID];
       await delay(DELAY_MS * 2);
 
       console.log("Creating member2...");
@@ -95,16 +96,17 @@ describe("Integration Test Setup", () => {
       // Log full response for debugging
       console.log("Member2 onboarding response:", JSON.stringify(member2Response.data, null, 2));
 
-      if (!member2Response.data?.success || 
-          !member2Response.data?.data?.token || 
-          !member2Response.data?.data?.memberID ||
-          !member2Response.data?.data?.defaultAccountID) {
+      // Check standardized response format
+      if (!member2Response.data?.message || 
+          !member2Response.data?.data?.action?.details?.token || 
+          !member2Response.data?.data?.action?.details?.memberID ||
+          !member2Response.data?.data?.action?.details?.defaultAccountID) {
         throw new Error("Member2 onboarding response missing required data");
       }
 
-      testData.member2.jwt = member2Response.data.data.token;
-      testData.member2.memberID = member2Response.data.data.memberID;
-      testData.member2.accountIDs = [member2Response.data.data.defaultAccountID];
+      testData.member2.jwt = member2Response.data.data.action.details.token;
+      testData.member2.memberID = member2Response.data.data.action.details.memberID;
+      testData.member2.accountIDs = [member2Response.data.data.action.details.defaultAccountID];
       await delay(DELAY_MS * 2);
 
       console.log("Creating member3...");
@@ -126,16 +128,17 @@ describe("Integration Test Setup", () => {
       // Log full response for debugging
       console.log("Member3 onboarding response:", JSON.stringify(member3Response.data, null, 2));
 
-      if (!member3Response.data?.success || 
-          !member3Response.data?.data?.token || 
-          !member3Response.data?.data?.memberID ||
-          !member3Response.data?.data?.defaultAccountID) {
+      // Check standardized response format
+      if (!member3Response.data?.message || 
+          !member3Response.data?.data?.action?.details?.token || 
+          !member3Response.data?.data?.action?.details?.memberID ||
+          !member3Response.data?.data?.action?.details?.defaultAccountID) {
         throw new Error("Member3 onboarding response missing required data");
       }
 
-      testData.member3.jwt = member3Response.data.data.token;
-      testData.member3.memberID = member3Response.data.data.memberID;
-      testData.member3.accountIDs = [member3Response.data.data.defaultAccountID];
+      testData.member3.jwt = member3Response.data.data.action.details.token;
+      testData.member3.memberID = member3Response.data.data.action.details.memberID;
+      testData.member3.accountIDs = [member3Response.data.data.action.details.defaultAccountID];
       await delay(DELAY_MS * 2);
 
       // Verify member1 token before proceeding
@@ -156,11 +159,13 @@ describe("Integration Test Setup", () => {
       // Log full response for debugging
       console.log("Bennita response:", JSON.stringify(bennitaResponse.data, null, 2));
 
-      if (!bennitaResponse.data?.memberID) {
+      // Check standardized response format
+      if (!bennitaResponse.data?.message ||
+          !bennitaResponse.data?.data?.action?.details?.memberID) {
         throw new Error("Bennita member response missing required data");
       }
 
-      testData.bennita.memberID = bennitaResponse.data.memberID;
+      testData.bennita.memberID = bennitaResponse.data.data.action.details.memberID;
       await delay(DELAY_MS * 2);
 
       // Get vimbisopay_trust account data using member1's token
@@ -176,11 +181,13 @@ describe("Integration Test Setup", () => {
       // Log full response for debugging
       console.log("Account response:", JSON.stringify(accountResponse.data, null, 2));
 
-      if (!accountResponse.data?.accountID) {
+      // Check standardized response format
+      if (!accountResponse.data?.message ||
+          !accountResponse.data?.data?.action?.details?.accountID) {
         throw new Error("Vimbisopay trust account response missing required data");
       }
 
-      testData.bennita.accountID = accountResponse.data.accountID;
+      testData.bennita.accountID = accountResponse.data.data.action.details.accountID;
       await delay(DELAY_MS * 2);
 
       // Log test data for debugging

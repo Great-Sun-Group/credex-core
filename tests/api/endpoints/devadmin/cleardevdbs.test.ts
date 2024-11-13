@@ -6,7 +6,7 @@ describe("clearDevDBs DevAdmin Operation", () => {
     console.log("\nClearing dev DBs...");
     const response = await axios.post("/devadmin/clearDevDBs", {}, {
       headers: {
-        'x-client-api-key': process.env.CLIENT_API_KEY || ''
+        'x-dev-admin-key': process.env.DEV_ADMIN_KEY || ''
       }
     });
     console.log("Clear DBs response:", response.data);

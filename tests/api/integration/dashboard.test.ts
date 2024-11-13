@@ -10,8 +10,7 @@ describe("Dashboard Integration Tests", () => {
     testData = (global as any).integrationTestData;
     expect(testData).toBeTruthy();
     // Use same timestamp from setup
-    timestamp =
-      (global as any).testTimestamp || Date.now().toString().slice(-7);
+    timestamp = (global as any).testTimestamp || Date.now().toString().slice(-7);
   });
 
   test("Test dashboard and decline credex", async () => {
@@ -29,10 +28,11 @@ describe("Dashboard Integration Tests", () => {
       },
       testData.member1.jwt
     );
-    expect(createResponse.data.success).toBe(true);
-    expect(createResponse.data.data.credexID).toBeTruthy();
+    expect(createResponse.data.message).toBeTruthy();
+    expect(createResponse.data.data.action.type).toBe("CREDEX_CREATED");
+    expect(createResponse.data.data.action.details.credexID).toBeTruthy();
     expect(createResponse.data.data.dashboard).toBeTruthy();
-    testData.credexIDs.secured11USD = createResponse.data.data.credexID;
+    testData.credexIDs.secured11USD = createResponse.data.data.action.details.credexID;
     await delay(DELAY_MS * 2);
 
     // Get member1's dashboard
@@ -43,10 +43,11 @@ describe("Dashboard Integration Tests", () => {
       },
       testData.member1.jwt
     );
-    expect(dashboardResponse.data.success).toBe(true);
-    expect(dashboardResponse.data.data.memberID).toBeTruthy();
-    expect(dashboardResponse.data.data.accounts).toBeTruthy();
-    expect(dashboardResponse.data.data.accounts.length).toBeGreaterThan(0);
+    expect(dashboardResponse.data.message).toBeTruthy();
+    expect(dashboardResponse.data.data.action.type).toBe("DASHBOARD_RETRIEVED");
+    expect(dashboardResponse.data.data.action.details.memberID).toBeTruthy();
+    expect(dashboardResponse.data.data.action.details.accounts).toBeTruthy();
+    expect(dashboardResponse.data.data.action.details.accounts.length).toBeGreaterThan(0);
     await delay(DELAY_MS * 2);
 
     // Member1 declines the credex
@@ -57,8 +58,9 @@ describe("Dashboard Integration Tests", () => {
       },
       testData.member1.jwt
     );
-    expect(declineResponse.data.success).toBe(true);
-    expect(declineResponse.data.data).toEqual({
+    expect(declineResponse.data.message).toBeTruthy();
+    expect(declineResponse.data.data.action.type).toBe("CREDEX_DECLINED");
+    expect(declineResponse.data.data.action.details).toEqual({
       credexID: testData.credexIDs.secured11USD,
       declinedAt: expect.any(String),
     });
@@ -80,10 +82,11 @@ describe("Dashboard Integration Tests", () => {
       },
       testData.member3.jwt
     );
-    expect(create6Response.data.success).toBe(true);
-    expect(create6Response.data.data.credexID).toBeTruthy();
+    expect(create6Response.data.message).toBeTruthy();
+    expect(create6Response.data.data.action.type).toBe("CREDEX_CREATED");
+    expect(create6Response.data.data.action.details.credexID).toBeTruthy();
     expect(create6Response.data.data.dashboard).toBeTruthy();
-    testData.credexIDs.unsecured6USD = create6Response.data.data.credexID;
+    testData.credexIDs.unsecured6USD = create6Response.data.data.action.details.credexID;
     await delay(DELAY_MS * 2);
 
     // Member1 gets credex details
@@ -95,8 +98,9 @@ describe("Dashboard Integration Tests", () => {
       },
       testData.member1.jwt
     );
-    expect(getCredexResponse.data.success).toBe(true);
-    expect(getCredexResponse.data.data.credexID).toBe(
+    expect(getCredexResponse.data.message).toBeTruthy();
+    expect(getCredexResponse.data.data.action.type).toBe("CREDEX_RETRIEVED");
+    expect(getCredexResponse.data.data.action.details.credexID).toBe(
       testData.credexIDs.unsecured6USD
     );
     await delay(DELAY_MS * 2);
@@ -109,10 +113,11 @@ describe("Dashboard Integration Tests", () => {
       },
       testData.member1.jwt
     );
-    expect(ledgerResponse.data.success).toBe(true);
-    // Ledger entries array directly in data
-    expect(Array.isArray(ledgerResponse.data.data)).toBe(true);
-    expect(ledgerResponse.data.data.length).toBeGreaterThanOrEqual(0);
+    expect(ledgerResponse.data.message).toBeTruthy();
+    expect(ledgerResponse.data.data.action.type).toBe("LEDGER_RETRIEVED");
+    // Ledger entries array in action details
+    expect(Array.isArray(ledgerResponse.data.data.action.details.ledger)).toBe(true);
+    expect(ledgerResponse.data.data.action.details.ledger.length).toBeGreaterThanOrEqual(0);
     await delay(DELAY_MS * 2);
   });
 

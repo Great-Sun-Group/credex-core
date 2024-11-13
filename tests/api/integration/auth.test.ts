@@ -27,10 +27,11 @@ describe("Authentication Integration Tests", () => {
       }
     );
     expect(loginResponse.status).toBe(200);
-    expect(loginResponse.data.success).toBe(true);
-    expect(loginResponse.data.data.token).toBeTruthy();
-    expect(loginResponse.data.data.memberID).toBeTruthy();
-    testData.member1.jwt = loginResponse.data.data.token;
+    expect(loginResponse.data.message).toBeTruthy();
+    expect(loginResponse.data.data.action.type).toBe("MEMBER_LOGIN");
+    expect(loginResponse.data.data.action.details.token).toBeTruthy();
+    expect(loginResponse.data.data.action.details.memberID).toBeTruthy();
+    testData.member1.jwt = loginResponse.data.data.action.details.token;
     await delay(DELAY_MS * 2);
   });
 
@@ -43,10 +44,11 @@ describe("Authentication Integration Tests", () => {
       },
       testData.member1.jwt
     );
-    // Using flattened response structure
-    expect(memberResponse.data).toBeTruthy();
-    expect(memberResponse.data.memberID).toBe(testData.bennita.memberID);
-    expect(memberResponse.data.memberName).toBeTruthy();
+    // Using standardized response structure
+    expect(memberResponse.data.message).toBeTruthy();
+    expect(memberResponse.data.data.action.type).toBe("MEMBER_FOUND");
+    expect(memberResponse.data.data.action.details.memberID).toBe(testData.bennita.memberID);
+    expect(memberResponse.data.data.action.details.memberName).toBeTruthy();
     await delay(DELAY_MS * 2);
 
     // Get account by handle
@@ -57,10 +59,11 @@ describe("Authentication Integration Tests", () => {
       },
       testData.member1.jwt
     );
-    // Using flattened response structure
-    expect(accountResponse.data).toBeTruthy();
-    expect(accountResponse.data.accountID).toBe(testData.bennita.accountID);
-    expect(accountResponse.data.accountName).toBeTruthy();
+    // Using standardized response structure
+    expect(accountResponse.data.message).toBeTruthy();
+    expect(accountResponse.data.data.action.type).toBe("ACCOUNT_FOUND");
+    expect(accountResponse.data.data.action.details.accountID).toBe(testData.bennita.accountID);
+    expect(accountResponse.data.data.action.details.accountName).toBeTruthy();
     await delay(DELAY_MS * 2);
   });
 

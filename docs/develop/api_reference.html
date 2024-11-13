@@ -288,15 +288,15 @@
   },
   "servers": [
     {
-      "url": "http://localhost:3000/v1",
+      "url": "http://localhost:3000",
       "description": "Development server"
     },
     {
-      "url": "https://api.credex.example.com/v1",
+      "url": "https://api.credex.example.com",
       "description": "Production server"
     },
     {
-      "url": "https://staging-api.credex.example.com/v1",
+      "url": "https://staging-api.credex.example.com",
       "description": "Staging server"
     }
   ],
@@ -310,7 +310,7 @@
       "devAdminAuth": {
         "type": "apiKey",
         "in": "header",
-        "name": "X-Dev-Admin-Key",
+        "name": "x-dev-admin-key",
         "description": "Development admin API key for authentication"
       }
     },
