@@ -35,7 +35,7 @@ async function runTest() {
     let jestCommand;
     let testParams = remainingArgs;
 
-    if (command === 'basic' || command === 'integration') {
+    if (command === 'integrate') {
       // Handle integration tests
       jestCommand = `jest --testPathPattern=tests/api/integration/index.test.ts ${envFlags[env]}`;
     } else if (devAdminCommands.includes(command?.toLowerCase())) {

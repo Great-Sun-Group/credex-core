@@ -10,15 +10,15 @@ export const authRequest = async (
   const headers: Record<string, string> = {
     ...(token && { Authorization: `Bearer ${token}` }),
     ...(process.env.SKIP_RATE_LIMITER_KEY && {
-      "x-skip-rate-limit": process.env.SKIP_RATE_LIMITER_KEY
-    })
+      "x-skip-rate-limit": process.env.SKIP_RATE_LIMITER_KEY,
+    }),
   };
 
   const config = { headers };
-  
+
   console.log("Making request to:", endpoint);
   console.log("With data:", data);
   console.log("And config:", config);
-  
+
   return axios.post(endpoint, data, config);
 };

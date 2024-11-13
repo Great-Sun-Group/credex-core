@@ -67,14 +67,23 @@ export default function declineCredexRoute() {
    *                         details:
    *                           type: object
    *                           properties:
+   *                             credexID:
+   *                               type: string
+   *                               format: uuid
+   *                             declinedAt:
+   *                               type: string
+   *                               format: date-time
    *                             amount:
    *                               type: string
-   *                               description: Amount of the declined transaction (0)
+   *                               description: Amount is zeroed on decline
+   *                               example: "0"
    *                             denomination:
    *                               type: string
    *                               enum: [CXX, CAD, USD, XAU, ZWG]
    *                             securedCredex:
    *                               type: boolean
+   *                               description: Not relevant for declined Credex
+   *                               example: false
    *                             receiverAccountID:
    *                               type: string
    *                               format: uuid

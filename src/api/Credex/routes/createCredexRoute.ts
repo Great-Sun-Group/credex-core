@@ -102,31 +102,22 @@ export default function createCredexRoute() {
    *                         details:
    *                           type: object
    *                           properties:
-   *                             issuerAccountID:
+   *                             credexID:
    *                               type: string
    *                               format: uuid
+   *                             amount:
+   *                               type: string
+   *                               description: Formatted amount with denomination
+   *                             denomination:
+   *                               type: string
+   *                               enum: [CXX, CAD, USD, XAU, ZWG]
+   *                             securedCredex:
+   *                               type: boolean
    *                             receiverAccountID:
    *                               type: string
    *                               format: uuid
-   *                             Denomination:
+   *                             receiverAccountName:
    *                               type: string
-   *                               enum: [CXX, CAD, USD, XAU, ZWG]
-   *                             InitialAmount:
-   *                               type: number
-   *                             formattedInitialAmount:
-   *                               type: string
-   *                             credexType:
-   *                               type: string
-   *                             OFFERSorREQUESTS:
-   *                               type: string
-   *                             securedCredex:
-   *                               type: boolean
-   *                             dueDate:
-   *                               type: string
-   *                               format: date
-   *                               nullable: true
-   *                             cxxMultiplier:
-   *                               type: number
    *                     dashboard:
    *                       type: object
    *                       description: Full dashboard state after the action
@@ -140,18 +131,41 @@ export default function createCredexRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: "Invalid input: Issuer and receiver cannot be the same account"
+   *                   example: "Your secured credex for 7.00 USD cannot be issued because your maximum securable USD balance is 5.00 USD"
    *                   description: Human-friendly error message
-   *                 error:
+   *                 data:
    *                   type: object
    *                   properties:
-   *                     code:
-   *                       type: string
-   *                       enum: [VALIDATION_ERROR, INVALID_AMOUNT, INVALID_DATE]
-   *                       description: Machine-readable error code
-   *                     details:
-   *                       type: string
-   *                       description: Detailed error information
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [CREDEX_CREATE_FAILED, ERROR_VALIDATION]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               enum: [INSUFFICIENT_SECURED_BALANCE, INVALID_AMOUNT, INVALID_DATE, VALIDATION_ERROR]
+   *                             reason:
+   *                               type: string
+   *                             field:
+   *                               type: string
+   *                             suggestion:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       nullable: true
    *       401:
    *         description: Authentication required
    *         content:
@@ -162,14 +176,35 @@ export default function createCredexRoute() {
    *                 message:
    *                   type: string
    *                   example: "Authentication required"
-   *                 error:
+   *                 data:
    *                   type: object
    *                   properties:
-   *                     code:
-   *                       type: string
-   *                       enum: [UNAUTHORIZED]
-   *                     details:
-   *                       type: string
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_UNAUTHORIZED]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           enum: [system]
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               enum: [UNAUTHORIZED]
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       nullable: true
    *       403:
    *         description: Not authorized or insufficient tier level
    *         content:
@@ -180,14 +215,35 @@ export default function createCredexRoute() {
    *                 message:
    *                   type: string
    *                   example: "Insufficient membership tier for secured credex"
-   *                 error:
+   *                 data:
    *                   type: object
    *                   properties:
-   *                     code:
-   *                       type: string
-   *                       enum: [FORBIDDEN, INSUFFICIENT_TIER]
-   *                     details:
-   *                       type: string
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           format: uuid
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_UNAUTHORIZED]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               enum: [FORBIDDEN, INSUFFICIENT_TIER]
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       nullable: true
    *       404:
    *         description: Account not found
    *         content:
@@ -198,14 +254,37 @@ export default function createCredexRoute() {
    *                 message:
    *                   type: string
    *                   example: "Account not found"
-   *                 error:
+   *                 data:
    *                   type: object
    *                   properties:
-   *                     code:
-   *                       type: string
-   *                       enum: [NOT_FOUND]
-   *                     details:
-   *                       type: string
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           format: uuid
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_NOT_FOUND]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               enum: [NOT_FOUND]
+   *                             reason:
+   *                               type: string
+   *                             field:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       nullable: true
    *       500:
    *         description: Internal server error
    *         content:
@@ -216,14 +295,37 @@ export default function createCredexRoute() {
    *                 message:
    *                   type: string
    *                   example: "Internal server error"
-   *                 error:
+   *                 data:
    *                   type: object
    *                   properties:
-   *                     code:
-   *                       type: string
-   *                       enum: [INTERNAL_ERROR]
-   *                     details:
-   *                       type: string
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_INTERNAL]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           enum: [system]
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               enum: [INTERNAL_ERROR]
+   *                             reason:
+   *                               type: string
+   *                             suggestion:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       nullable: true
    */
   router.post(
     `/createCredex`,

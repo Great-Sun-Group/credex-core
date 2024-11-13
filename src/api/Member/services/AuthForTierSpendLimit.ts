@@ -3,7 +3,6 @@ import { denomFormatter } from "../../../utils/denomUtils";
 import logger from "../../../utils/logger";
 
 interface TierSpendLimitData {
-  isAuthorized: boolean;
   availableAmount?: string;
   memberTier?: number;
   currentSpendUSD?: number;
@@ -188,10 +187,20 @@ export async function AuthForTierSpendLimitService(
         requestId
       });
 
+      if (!data.isAuthorized) {
+        return {
+          success: false,
+          message: data.message,
+          error: {
+            code: "TIER_LIMIT_EXCEEDED",
+            details: data.message
+          }
+        };
+      }
+
       return {
         success: true,
         data: {
-          isAuthorized: data.isAuthorized,
           memberTier: data.memberTier
         },
         message: data.message
@@ -222,7 +231,6 @@ export async function AuthForTierSpendLimitService(
       return {
         success: true,
         data: {
-          isAuthorized: true,
           availableAmount: `${denomFormatter(amountAvailableUSD, "USD")} USD`,
           memberTier,
           currentSpendUSD: dayTotalUSD,
@@ -240,15 +248,12 @@ export async function AuthForTierSpendLimitService(
     });
 
     return {
-      success: true,
-      data: {
-        isAuthorized: false,
-        availableAmount: `${denomFormatter(amountAvailableUSD, "USD")} USD`,
-        memberTier,
-        currentSpendUSD: dayTotalUSD,
-        tierLimitUSD: tierLimit
-      },
-      message: `You are only able to issue ${denomFormatter(amountAvailableUSD, "USD")} USD until tomorrow. Limits renew at midnight UTC.`
+      success: false,
+      message: `You are only able to issue ${denomFormatter(amountAvailableUSD, "USD")} USD until tomorrow. Limits renew at midnight UTC.`,
+      error: {
+        code: "TIER_LIMIT_EXCEEDED",
+        details: `Daily limit of ${denomFormatter(tierLimit, "USD")} USD exceeded`
+      }
     };
 
   } catch (error) {

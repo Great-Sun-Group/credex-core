@@ -34,8 +34,9 @@ interface DatabaseCancelResult {
 /**
  * CancelCredexService
  * 
- * Handles the cancellation of a Credex offer. Updates the Credex status from OFFERS to CANCELLED,
- * creates a digital signature for the cancellation, and returns updated Credex details.
+ * Handles the cancellation of a Credex transaction. Updates the Credex status from OFFERS/REQUESTS to CANCELLED.
+ * For OFFERS: Only the source member (initiator) can cancel
+ * For REQUESTS: Only the target member (receiver) can cancel
  * 
  * @param credexID - The ID of the Credex to cancel
  * @param signerID - The ID of the member cancelling the Credex
@@ -77,13 +78,20 @@ export async function CancelCredexService(
     const checkResult = await ledgerSpaceSession.executeRead(async (tx) => {
       const query = `
         MATCH (credex:Credex { credexID: $credexID })
-        OPTIONAL MATCH (credex)-[r:OFFERS|OWES|CANCELLED]-()
-        OPTIONAL MATCH (issuer:Account)-[:OFFERS]->(credex)
-        WHERE EXISTS((issuer)<-[:AUTHORIZED_FOR]-(:Member { memberID: $signerID }))
+        OPTIONAL MATCH (credex)-[r:OFFERS|REQUESTS|OWES|CANCELLED]-()
+        WITH credex, collect(type(r)) as relationships
+        OPTIONAL MATCH (source:Account)-[rel:OFFERS|REQUESTS]->(credex)-[rel2:OFFERS|REQUESTS]->(target:Account)
+        WHERE (
+          // For OFFERS: Only source member can cancel
+          (type(rel) = 'OFFERS' AND EXISTS((source)<-[:AUTHORIZED_FOR]-(:Member { memberID: $signerID }))) OR
+          // For REQUESTS: Only target member can cancel
+          (type(rel) = 'REQUESTS' AND EXISTS((target)<-[:AUTHORIZED_FOR]-(:Member { memberID: $signerID })))
+        )
         RETURN 
           credex.credexID AS credexID,
-          collect(type(r)) AS relationships,
-          issuer IS NOT NULL AS isAuthorized
+          relationships,
+          type(rel) as transactionType,
+          source IS NOT NULL AS isAuthorized
       `;
 
       const result = await tx.run(query, { credexID, signerID });
@@ -98,13 +106,16 @@ export async function CancelCredexService(
       const record = result.records[0];
       const relationships = record.get('relationships');
       const isAuthorized = record.get('isAuthorized');
+      const transactionType = record.get('transactionType');
 
       return {
         success: true,
         hasOffers: relationships.includes('OFFERS'),
+        hasRequests: relationships.includes('REQUESTS'),
         hasOwes: relationships.includes('OWES'),
         hasCancelled: relationships.includes('CANCELLED'),
-        isAuthorized
+        isAuthorized,
+        transactionType
       };
     });
 
@@ -120,17 +131,21 @@ export async function CancelCredexService(
     }
 
     if (!checkResult.isAuthorized) {
+      const errorMessage = checkResult.transactionType === 'OFFERS' 
+        ? "Only the issuing member can cancel an offer"
+        : "Only the receiving member can cancel a request";
+
       return {
         success: false,
         message: "Not authorized to cancel this Credex",
         error: {
           code: "UNAUTHORIZED",
-          details: "You must be authorized for the issuing account to cancel this Credex"
+          details: errorMessage
         }
       };
     }
 
-    if (!checkResult.hasOffers) {
+    if (!checkResult.hasOffers && !checkResult.hasRequests) {
       if (checkResult.hasOwes) {
         return {
           success: false,

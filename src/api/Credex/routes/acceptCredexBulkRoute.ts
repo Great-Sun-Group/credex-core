@@ -53,7 +53,6 @@ export default function acceptCredexBulkRoute() {
    *                       properties:
    *                         id:
    *                           type: string
-   *                           format: uuid
    *                           nullable: true
    *                           description: Null for bulk operations
    *                         type:
@@ -129,7 +128,6 @@ export default function acceptCredexBulkRoute() {
    *                       properties:
    *                         id:
    *                           type: string
-   *                           format: uuid
    *                           nullable: true
    *                         type:
    *                           type: string

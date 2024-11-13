@@ -102,6 +102,7 @@ export interface CredexActionDetails {
   acceptorAccountID?: string;
   reason?: string;
   limit?: string;
+  transactionType?: string; // Added for getCredex response
   // Additional fields for Credex retrieval
   status?: {
     outstandingAmount: string;

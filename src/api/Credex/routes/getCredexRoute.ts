@@ -75,73 +75,15 @@ export default function getCredexRoute() {
    *                             transactionType:
    *                               type: string
    *                               enum: [OWES, CLEARED, REQUESTS, OFFERS, DECLINED, CANCELLED]
-   *                             debit:
-   *                               type: boolean
-   *                               description: Whether this is a debit transaction for the requesting account
-   *                             counterpartyAccountName:
-   *                               type: string
-   *                             securerID:
-   *                               type: string
-   *                               format: uuid
-   *                               nullable: true
-   *                             securerName:
-   *                               type: string
-   *                               nullable: true
-   *                             Denomination:
-   *                               type: string
-   *                               enum: [CXX, CAD, USD, XAU, ZWG]
    *                             InitialAmount:
    *                               type: number
-   *                             OutstandingAmount:
-   *                               type: number
-   *                             RedeemedAmount:
-   *                               type: number
-   *                             DefaultedAmount:
-   *                               type: number
-   *                             WrittenOffAmount:
-   *                               type: number
-   *                             formattedInitialAmount:
-   *                               type: string
-   *                             formattedOutstandingAmount:
-   *                               type: string
-   *                             formattedRedeemedAmount:
-   *                               type: string
-   *                             formattedDefaultedAmount:
-   *                               type: string
-   *                             formattedWrittenOffAmount:
-   *                               type: string
-   *                             acceptedAt:
-   *                               type: string
-   *                               format: date-time
-   *                               nullable: true
-   *                             declinedAt:
-   *                               type: string
-   *                               format: date-time
-   *                               nullable: true
-   *                             cancelledAt:
-   *                               type: string
-   *                               format: date-time
-   *                               nullable: true
-   *                             dueDate:
-   *                               type: string
-   *                               format: date
-   *                               nullable: true
+   *                               description: Initial amount of the transaction
    *                             securedCredex:
    *                               type: boolean
-   *                             clearedAgainst:
-   *                               type: array
-   *                               items:
-   *                                 type: object
-   *                                 properties:
-   *                                   clearedAgainstCredexID:
-   *                                     type: string
-   *                                     format: uuid
-   *                                   formattedClearedAmount:
-   *                                     type: string
-   *                                   formattedClearedAgainstCredexInitialAmount:
-   *                                     type: string
-   *                                   clearedAgainstCounterpartyAccountName:
-   *                                     type: string
+   *                               description: Whether this is a secured Credex
+   *                             counterpartyAccountName:
+   *                               type: string
+   *                               description: Name of the counterparty account
    *                     dashboard:
    *                       type: object
    *                       description: Full dashboard state after the action
@@ -157,16 +99,37 @@ export default function getCredexRoute() {
    *                   type: string
    *                   example: "Invalid input parameters"
    *                   description: Human-friendly error message
-   *                 error:
+   *                 data:
    *                   type: object
    *                   properties:
-   *                     code:
-   *                       type: string
-   *                       enum: [VALIDATION_ERROR]
-   *                       description: Machine-readable error code
-   *                     details:
-   *                       type: string
-   *                       description: Detailed error information
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           format: uuid
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_VALIDATION]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               enum: [VALIDATION_ERROR]
+   *                             reason:
+   *                               type: string
+   *                             field:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       nullable: true
    *       401:
    *         description: Authentication required
    *         content:
@@ -177,14 +140,35 @@ export default function getCredexRoute() {
    *                 message:
    *                   type: string
    *                   example: "Authentication required"
-   *                 error:
+   *                 data:
    *                   type: object
    *                   properties:
-   *                     code:
-   *                       type: string
-   *                       enum: [UNAUTHORIZED]
-   *                     details:
-   *                       type: string
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_UNAUTHORIZED]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           enum: [system]
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               enum: [UNAUTHORIZED]
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       nullable: true
    *       403:
    *         description: Not authorized to view this Credex
    *         content:
@@ -195,14 +179,35 @@ export default function getCredexRoute() {
    *                 message:
    *                   type: string
    *                   example: "Not authorized to view this Credex"
-   *                 error:
+   *                 data:
    *                   type: object
    *                   properties:
-   *                     code:
-   *                       type: string
-   *                       enum: [FORBIDDEN]
-   *                     details:
-   *                       type: string
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           format: uuid
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_UNAUTHORIZED]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               enum: [FORBIDDEN]
+   *                             reason:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       nullable: true
    *       404:
    *         description: Credex not found
    *         content:
@@ -213,14 +218,37 @@ export default function getCredexRoute() {
    *                 message:
    *                   type: string
    *                   example: "Credex not found"
-   *                 error:
+   *                 data:
    *                   type: object
    *                   properties:
-   *                     code:
-   *                       type: string
-   *                       enum: [NOT_FOUND]
-   *                     details:
-   *                       type: string
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           format: uuid
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_NOT_FOUND]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               enum: [NOT_FOUND]
+   *                             reason:
+   *                               type: string
+   *                             field:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       nullable: true
    *       500:
    *         description: Internal server error
    *         content:
@@ -231,14 +259,37 @@ export default function getCredexRoute() {
    *                 message:
    *                   type: string
    *                   example: "Internal server error"
-   *                 error:
+   *                 data:
    *                   type: object
    *                   properties:
-   *                     code:
-   *                       type: string
-   *                       enum: [INTERNAL_ERROR]
-   *                     details:
-   *                       type: string
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_INTERNAL]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           enum: [system]
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               enum: [INTERNAL_ERROR]
+   *                             reason:
+   *                               type: string
+   *                             suggestion:
+   *                               type: string
+   *                     dashboard:
+   *                       type: object
+   *                       nullable: true
    */
   router.post(
     `/getCredex`,

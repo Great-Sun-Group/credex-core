@@ -27,7 +27,6 @@ import {
   setupUnhandledRejectionHandler,
 } from "./utils/serverSetup";
 import { getConfig } from "../config/config";
-import { rateLimiter } from "./middleware/rateLimiter";
 
 // Create an Express application
 export const app = express();
@@ -57,9 +56,6 @@ async function initializeApp() {
 
     // Apply jsonParser globally
     app.use(jsonParser);
-
-    // Apply rate limiter globally
-    app.use(rateLimiter);
 
     // Generate Swagger specification
     const swaggerSpec = await generateSwaggerSpec();

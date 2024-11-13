@@ -87,6 +87,7 @@ export async function GetCredexController(
             denomination: credexData.Denomination,
             securedCredex: credexData.securedCredex,
             receiverAccountName: credexData.counterpartyAccountName,
+            transactionType: credexData.transactionType,
             status: {
               outstandingAmount: credexData.formattedOutstandingAmount,
               redeemedAmount: credexData.formattedRedeemedAmount,

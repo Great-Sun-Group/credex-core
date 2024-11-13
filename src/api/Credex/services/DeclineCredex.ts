@@ -34,9 +34,9 @@ interface DatabaseDeclineResult {
 /**
  * DeclineCredexService
  * 
- * Handles the declining of a Credex offer. Updates the Credex status from OFFERS to DECLINED,
- * creates a digital signature for the decline action, and returns updated Credex details.
- * Only the receiver of a Credex offer can decline it.
+ * Handles the declining of a Credex transaction. Updates the Credex status from OFFERS/REQUESTS to DECLINED.
+ * For OFFERS: Only the target member (receiver) can decline
+ * For REQUESTS: Only the source member (initiator) can decline
  * 
  * @param credexID - The ID of the Credex to decline
  * @param signerID - The ID of the member declining the Credex
@@ -78,13 +78,20 @@ export async function DeclineCredexService(
     const checkResult = await ledgerSpaceSession.executeRead(async (tx) => {
       const query = `
         MATCH (credex:Credex { credexID: $credexID })
-        OPTIONAL MATCH (credex)-[r:OFFERS|OWES|DECLINED]-()
-        OPTIONAL MATCH (credex)-[:OFFERS]->(receiver:Account)
-        WHERE EXISTS((receiver)<-[:AUTHORIZED_FOR]-(:Member { memberID: $signerID }))
+        OPTIONAL MATCH (credex)-[r:OFFERS|REQUESTS|OWES|DECLINED]-()
+        WITH credex, collect(type(r)) as relationships
+        OPTIONAL MATCH (source:Account)-[rel:OFFERS|REQUESTS]->(credex)-[rel2:OFFERS|REQUESTS]->(target:Account)
+        WHERE (
+          // For OFFERS: Only target member can decline
+          (type(rel) = 'OFFERS' AND EXISTS((target)<-[:AUTHORIZED_FOR]-(:Member { memberID: $signerID }))) OR
+          // For REQUESTS: Only source member can decline
+          (type(rel) = 'REQUESTS' AND EXISTS((source)<-[:AUTHORIZED_FOR]-(:Member { memberID: $signerID })))
+        )
         RETURN 
           credex.credexID AS credexID,
-          collect(type(r)) AS relationships,
-          receiver IS NOT NULL AS isAuthorized
+          relationships,
+          type(rel) as transactionType,
+          source IS NOT NULL AS isAuthorized
       `;
 
       const result = await tx.run(query, { credexID, signerID });
@@ -99,13 +106,16 @@ export async function DeclineCredexService(
       const record = result.records[0];
       const relationships = record.get('relationships');
       const isAuthorized = record.get('isAuthorized');
+      const transactionType = record.get('transactionType');
 
       return {
         success: true,
         hasOffers: relationships.includes('OFFERS'),
+        hasRequests: relationships.includes('REQUESTS'),
         hasOwes: relationships.includes('OWES'),
         hasDeclined: relationships.includes('DECLINED'),
-        isAuthorized
+        isAuthorized,
+        transactionType
       };
     });
 
@@ -121,17 +131,21 @@ export async function DeclineCredexService(
     }
 
     if (!checkResult.isAuthorized) {
+      const errorMessage = checkResult.transactionType === 'OFFERS' 
+        ? "Only the receiving member can decline an offer"
+        : "Only the requesting member can decline a request";
+
       return {
         success: false,
         message: "Not authorized to decline this Credex",
         error: {
           code: "UNAUTHORIZED",
-          details: "You must be authorized for the receiving account to decline this Credex"
+          details: errorMessage
         }
       };
     }
 
-    if (!checkResult.hasOffers) {
+    if (!checkResult.hasOffers && !checkResult.hasRequests) {
       if (checkResult.hasOwes) {
         return {
           success: false,
@@ -171,10 +185,10 @@ export async function DeclineCredexService(
 
     const result: DatabaseDeclineResult = await ledgerSpaceSession.executeWrite(async (tx) => {
       const query = `
-        MATCH (issuer:Account)-[rel1:OFFERS|REQUESTS]->(credex:Credex { credexID: $credexID })-[rel2:OFFERS|REQUESTS]->(receiver:Account)
+        MATCH (source:Account)-[rel1:OFFERS|REQUESTS]->(credex:Credex { credexID: $credexID })-[rel2:OFFERS|REQUESTS]->(target:Account)
         WHERE credex.queueStatus <> "PROCESSED"
         DELETE rel1, rel2
-        CREATE (issuer)-[:DECLINED]->(credex)-[:DECLINED]->(receiver)
+        CREATE (source)-[:DECLINED]->(credex)-[:DECLINED]->(target)
         SET
           credex.declinedAt = datetime(),
           credex.OutstandingAmount = 0,
@@ -182,8 +196,8 @@ export async function DeclineCredexService(
         RETURN 
           credex.credexID AS credexID,
           toString(credex.declinedAt) AS declinedAt,
-          issuer.accountID AS issuerAccountID,
-          receiver.accountID AS receiverAccountID
+          source.accountID AS issuerAccountID,
+          target.accountID AS receiverAccountID
       `;
 
       const queryResult = await tx.run(query, { credexID });

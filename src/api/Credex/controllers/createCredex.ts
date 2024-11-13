@@ -3,6 +3,7 @@ import { CreateCredexService } from "../services/CreateCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { checkDueDate, credspan } from "../../../core-cron/constants/credspan";
 import { AuthForTierSpendLimitService } from "../../Member/services/AuthForTierSpendLimit";
+import { GetSecuredAuthorizationService } from "../services/GetSecuredAuthorization";
 import logger from "../../../utils/logger";
 import { ApiActionType, TypedApiResponse, CredexActionDetails, ErrorActionDetails } from "../../../types/apiResponse";
 import { denomFormatter } from "../../../utils/denomUtils";
@@ -87,50 +88,117 @@ export async function CreateCredexController(
       return res.status(400).json(errorResponse);
     }
 
-    // Check membership tier authorization for secured credex
+    // Check secured balance first for secured credex
     if (securedCredex) {
-      logger.debug("Checking membership tier authorization", {
+      logger.debug("Checking secured balance", {
         issuerAccountID,
         InitialAmount,
         Denomination,
         requestId,
       });
 
-      const tierAuth = await AuthForTierSpendLimitService(
+      const secureableData = await GetSecuredAuthorizationService(
         issuerAccountID,
-        InitialAmount,
-        Denomination,
-        securedCredex,
-        requestId
+        Denomination
       );
 
-      if (!tierAuth.success || !tierAuth.data?.isAuthorized) {
-        logger.warn("Insufficient membership tier for secured credex", {
-          issuerAccountID,
-          InitialAmount,
-          Denomination,
-          requestId,
-          message: tierAuth.message,
-        });
-        const errorResponse: CreateCredexErrorResponse = {
-          message: tierAuth.message || "Insufficient membership tier for secured credex",
+      if (!secureableData.success || !secureableData.data) {
+        return res.status(400).json({
+          message: "Failed to verify secured authorization",
           data: {
             action: {
               id: null,
-              type: ApiActionType.ERROR_UNAUTHORIZED,
+              type: ApiActionType.CREDEX_CREATE_FAILED,
               timestamp: new Date().toISOString(),
               actor: signerID,
               details: {
-                code: "INSUFFICIENT_TIER",
-                reason: tierAuth.message || "Insufficient membership tier for secured credex",
-                field: "securedCredex"
+                code: "SECURED_AUTH_FAILED",
+                reason: secureableData.error?.details || "Unable to verify secured authorization"
               }
             },
             dashboard: {}
           }
-        };
-        return res.status(403).json(errorResponse);
+        });
       }
+
+      if (secureableData.data.securableAmountInDenom < InitialAmount) {
+        const message = `Your secured credex for ${denomFormatter(
+          InitialAmount,
+          Denomination
+        )} ${Denomination} cannot be issued because your maximum securable ${Denomination} balance is ${denomFormatter(
+          secureableData.data.securableAmountInDenom,
+          Denomination
+        )} ${Denomination}`;
+
+        logger.warn("Insufficient securable amount", {
+          issuerAccountID,
+          InitialAmount,
+          availableAmount: secureableData.data.securableAmountInDenom,
+          Denomination,
+          requestId,
+        });
+
+        return res.status(400).json({
+          message,
+          data: {
+            action: {
+              id: null,
+              type: ApiActionType.CREDEX_CREATE_FAILED,
+              timestamp: new Date().toISOString(),
+              actor: signerID,
+              details: {
+                code: "INSUFFICIENT_SECURED_BALANCE",
+                reason: message
+              }
+            },
+            dashboard: {}
+          }
+        });
+      }
+    }
+
+    // Then check membership tier authorization
+    logger.debug("Checking membership tier authorization", {
+      issuerAccountID,
+      InitialAmount,
+      Denomination,
+      requestId,
+    });
+
+    const tierAuth = await AuthForTierSpendLimitService(
+      issuerAccountID,
+      InitialAmount,
+      Denomination,
+      securedCredex,
+      requestId
+    );
+
+    if (!tierAuth.success) {
+      logger.warn("Tier limit exceeded", {
+        issuerAccountID,
+        InitialAmount,
+        Denomination,
+        requestId,
+        message: tierAuth.message,
+      });
+      const errorResponse: CreateCredexErrorResponse = {
+        message: tierAuth.message,
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_UNAUTHORIZED,
+            timestamp: new Date().toISOString(),
+            actor: signerID,
+            details: {
+              code: "TIER_LIMIT_EXCEEDED",
+              reason: tierAuth.message,
+              field: "securedCredex"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      return res.status(403).json(errorResponse);
     }
 
     // Validate due date for unsecured credex
@@ -237,7 +305,7 @@ export async function CreateCredexController(
             timestamp: new Date().toISOString(),
             actor: signerID,
             details: {
-              code: "CREATE_FAILED",
+              code: createCredexResult.error?.code || "CREATE_FAILED",
               reason: createCredexResult.message || "Failed to create Credex",
               suggestion: "Please try again or contact support if the issue persists"
             }

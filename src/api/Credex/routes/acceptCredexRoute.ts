@@ -67,9 +67,12 @@ export default function acceptCredexRoute() {
    *                         details:
    *                           type: object
    *                           properties:
+   *                             credexID:
+   *                               type: string
+   *                               format: uuid
    *                             amount:
    *                               type: string
-   *                               description: Formatted amount of the transaction
+   *                               description: Formatted amount with denomination
    *                             denomination:
    *                               type: string
    *                               enum: [CXX, CAD, USD, XAU, ZWG]
@@ -78,7 +81,6 @@ export default function acceptCredexRoute() {
    *                             acceptorAccountID:
    *                               type: string
    *                               format: uuid
-   *                               description: ID of the accepting account
    *                     dashboard:
    *                       type: object
    *                       description: Full dashboard state after the action
@@ -92,7 +94,7 @@ export default function acceptCredexRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: "Unable to process credex: insufficient balance."
+   *                   example: "Cannot accept Credex: invalid state"
    *                   description: Human-friendly error message
    *                 data:
    *                   type: object
