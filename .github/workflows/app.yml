@@ -126,61 +126,92 @@ jobs:
           echo "Updating ECS service with new task definition..."
           aws ecs update-service --cluster credex-cluster-$ENVIRONMENT --service credex-core-service-$ENVIRONMENT --task-definition $NEW_TASK_DEF_ARN --force-new-deployment
 
-          echo "Waiting for service to stabilize..."
-          aws ecs wait services-stable --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT 
+          echo "Waiting for deployment to complete..."
+          MAX_ATTEMPTS=40  # 20 minutes total (30 seconds * 40)
+          ATTEMPTS=0
+          DEPLOYMENT_DONE=false
 
-          # New verification steps
-          echo "Verifying deployment..."
-          
-          # Wait for new tasks to start
-          echo "Waiting for tasks to start..."
-          sleep 30
-          
-          # Get running tasks
-          echo "Checking running tasks..."
-          RUNNING_TASKS=$(aws ecs list-tasks \
-            --cluster credex-cluster-$ENVIRONMENT \
-            --service-name credex-core-service-$ENVIRONMENT \
-            --desired-status RUNNING \
-            --query 'taskArns[]' --output text)
-          
-          if [ -z "$RUNNING_TASKS" ]; then
-            echo "No running tasks found!"
-            exit 1
-          fi
-          
-          # Verify each task is running the new image
-          echo "Verifying task images..."
-          for TASK in $RUNNING_TASKS; do
-            TASK_IMAGE=$(aws ecs describe-tasks \
+          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+            # Get service details
+            SERVICE_JSON=$(aws ecs describe-services \
               --cluster credex-cluster-$ENVIRONMENT \
-              --tasks $TASK \
-              --query 'tasks[].containers[].image' --output text)
+              --services credex-core-service-$ENVIRONMENT \
+              --query 'services[0]')
             
-            echo "Task $TASK is running image: $TASK_IMAGE"
-            if [[ "$TASK_IMAGE" != "$IMAGE" ]]; then
-              echo "ERROR: Task $TASK is not running the new image!"
-              echo "Expected: $IMAGE"
-              echo "Found: $TASK_IMAGE"
-              exit 1
+            # Get primary deployment status
+            PRIMARY_DEPLOYMENT=$(echo $SERVICE_JSON | jq -r '.deployments[] | select(.status == "PRIMARY")')
+            RUNNING_COUNT=$(echo $PRIMARY_DEPLOYMENT | jq -r '.runningCount')
+            DESIRED_COUNT=$(echo $PRIMARY_DEPLOYMENT | jq -r '.desiredCount')
+            FAILED_TASKS=$(echo $PRIMARY_DEPLOYMENT | jq -r '.failedTasks')
+            TASK_DEF=$(echo $PRIMARY_DEPLOYMENT | jq -r '.taskDefinition')
+            
+            echo "Deployment Status:"
+            echo "Running Count: $RUNNING_COUNT"
+            echo "Desired Count: $DESIRED_COUNT"
+            echo "Failed Tasks: $FAILED_TASKS"
+            echo "Task Definition: $TASK_DEF"
+            
+            # Check if deployment is using our new task definition
+            if [[ "$TASK_DEF" == "$NEW_TASK_DEF_ARN" ]]; then
+              if [[ "$RUNNING_COUNT" == "$DESIRED_COUNT" && "$DESIRED_COUNT" -gt 0 ]]; then
+                echo "Deployment completed successfully!"
+                DEPLOYMENT_DONE=true
+                break
+              elif [[ "$FAILED_TASKS" -gt 0 ]]; then
+                # Get task details and logs for debugging
+                TASKS=$(aws ecs list-tasks \
+                  --cluster credex-cluster-$ENVIRONMENT \
+                  --service-name credex-core-service-$ENVIRONMENT \
+                  --desired-status STOPPED \
+                  --query 'taskArns[]' --output text)
+                
+                for TASK in $TASKS; do
+                  echo "Failed task details for $TASK:"
+                  aws ecs describe-tasks \
+                    --cluster credex-cluster-$ENVIRONMENT \
+                    --tasks $TASK \
+                    --query 'tasks[].{reason: stoppedReason, exitCode: containers[].exitCode}'
+                  
+                  # Try to get logs even if task failed
+                  echo "Logs for failed task $TASK:"
+                  aws logs get-log-events \
+                    --log-group-name "/ecs/credex-core-$ENVIRONMENT" \
+                    --log-stream-name "credex-core-$ENVIRONMENT/${TASK##*/}" \
+                    --limit 20 \
+                    --query 'events[].message' \
+                    --output text || echo "No logs available"
+                done
+                
+                echo "Deployment failed due to task failures"
+                exit 1
+              fi
+            fi
+            
+            # Get recent service events
+            echo "Recent Events:"
+            echo $SERVICE_JSON | jq -r '.events[0:3][] | .message'
+            
+            ATTEMPTS=$((ATTEMPTS + 1))
+            if [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; then
+              echo "Waiting 30 seconds before next check (Attempt $ATTEMPTS of $MAX_ATTEMPTS)..."
+              sleep 30
             fi
           done
-          
-          # Get container logs for health check
-          echo "Checking container logs for startup health..."
-          for TASK in $RUNNING_TASKS; do
-            echo "Logs for task $TASK:"
-            aws logs get-log-events \
-              --log-group-name "/ecs/credex-core-$ENVIRONMENT" \
-              --log-stream-name "credex-core-$ENVIRONMENT/${TASK##*/}" \
-              --limit 10 \
-              --query 'events[].message' \
-              --output text || true
-          done
 
-          echo "Deployment completed. Checking service status..."
-          aws ecs describe-services --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT \
-            --query 'services[0].{status: status, runningCount: runningCount, desiredCount: desiredCount, events: events[0].message}'
+          if [ "$DEPLOYMENT_DONE" != "true" ]; then
+            echo "Deployment did not complete within expected time"
+            exit 1
+          fi
+
+          # Verify final state
+          echo "Verifying final deployment state..."
+          FINAL_SERVICE=$(aws ecs describe-services \
+            --cluster credex-cluster-$ENVIRONMENT \
+            --services credex-core-service-$ENVIRONMENT \
+            --query 'services[0]')
+          
+          echo "Final Service State:"
+          echo $FINAL_SERVICE | jq '{runningCount: .runningCount, desiredCount: .desiredCount, status: .status, events: .events[0:3]}'
 
       - name: Print Deployment Information
         run: |
