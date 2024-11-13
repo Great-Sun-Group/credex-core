@@ -7,6 +7,11 @@ provider "aws" {
 resource "aws_ecs_cluster" "credex_cluster" {
   name = "credex-cluster-${var.environment}"
   
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
+  
   tags = merge(var.common_tags, {
     Name = "credex-cluster-${var.environment}"
   })
@@ -58,11 +63,11 @@ resource "aws_ecs_task_definition" "credex_core" {
         { name = "PORT", value = tostring(var.app_port) }
       ]
       healthCheck = {
-        command     = ["CMD-SHELL", "curl -f http://localhost:${var.app_port}/health || exit 1"]
-        interval    = 30
-        timeout     = 5
+        command     = ["CMD-SHELL", "node -e 'const http = require(\"http\"); const options = { hostname: \"localhost\", port: process.env.PORT, path: \"/health\", timeout: 2000 }; const req = http.get(options, (res) => process.exit(res.statusCode === 200 ? 0 : 1)); req.on(\"error\", () => process.exit(1));'"]
+        interval    = 60
+        timeout     = 30
         retries     = 3
-        startPeriod = 60
+        startPeriod = 180
       }
       logConfiguration = {
         logDriver = "awslogs"
@@ -73,6 +78,15 @@ resource "aws_ecs_task_definition" "credex_core" {
         }
       }
       essential = true
+      ulimits = [
+        {
+          name      = "nofile"
+          softLimit = 65536
+          hardLimit = 65536
+        }
+      ]
+      mountPoints = []
+      volumesFrom = []
     }
   ])
 
@@ -101,9 +115,14 @@ resource "aws_ecs_service" "credex_core" {
     container_port   = var.app_port
   }
 
-  health_check_grace_period_seconds = 120
+  health_check_grace_period_seconds = 300
 
   enable_execute_command = true
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
 
   tags = merge(var.common_tags, {
     Name = "credex-core-service-${var.environment}"
