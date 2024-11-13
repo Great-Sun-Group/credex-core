@@ -64,7 +64,7 @@ export async function createInitialMember(
     onboardedMemberID,
     "PERSONAL",
     `${firstname} ${lastname} Personal`,
-    `${firstname.toLowerCase()}_${lastname.toLowerCase()}_personal`,
+    phone,  // Phone number as account handle
     defaultDenom,
     null,
     null
