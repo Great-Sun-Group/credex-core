@@ -13,19 +13,20 @@ describe("Dashboard Integration Tests", () => {
     testData = (global as any).integrationTestData;
     expect(testData).toBeTruthy();
     // Use same timestamp from setup
-    timestamp = (global as any).testTimestamp || Date.now().toString().slice(-7);
+    timestamp =
+      (global as any).testTimestamp || Date.now().toString().slice(-7);
 
     try {
       // Login as Bennita first
       const loginResponse = await axios.post(
         "login",
         {
-          phone: "263788435091" // Bennita's phone number
+          phone: "263788435091", // Bennita's phone number
         },
         {
           headers: {
-            "x-client-api-key": process.env.CLIENT_API_KEY || ""
-          }
+            "x-client-api-key": process.env.CLIENT_API_KEY || "",
+          },
         }
       );
       expect(loginResponse.status).toBe(200);
@@ -46,7 +47,7 @@ describe("Dashboard Integration Tests", () => {
     const createResponse = await authRequest(
       "createCredex",
       {
-        issuerAccountID: testData.bennita.accountID,    // Bennita is issuer
+        issuerAccountID: testData.bennita.accountID, // Bennita is issuer
         receiverAccountID: testData.member1.accountIDs[0], // Member1 is receiver
         Denomination: "USD",
         InitialAmount: 11,
@@ -74,7 +75,9 @@ describe("Dashboard Integration Tests", () => {
     );
     expect(getCredexResponse1.data.message).toBeTruthy();
     expect(getCredexResponse1.data.data.action.type).toBe("CREDEX_RETRIEVED");
-    expect(getCredexResponse1.data.data.action.details.transactionType).toBe("OFFERS");
+    expect(getCredexResponse1.data.data.action.details.transactionType).toBe(
+      "OFFERS"
+    );
     await delay(DELAY_MS * 2);
 
     // Get member1's dashboard
@@ -89,7 +92,9 @@ describe("Dashboard Integration Tests", () => {
     expect(dashboardResponse.data.data.action.type).toBe("DASHBOARD_RETRIEVED");
     expect(dashboardResponse.data.data.action.details.memberID).toBeTruthy();
     expect(dashboardResponse.data.data.dashboard.accounts).toBeTruthy();
-    expect(dashboardResponse.data.data.dashboard.accounts.length).toBeGreaterThan(0);
+    expect(
+      dashboardResponse.data.data.dashboard.accounts.length
+    ).toBeGreaterThan(0);
     await delay(DELAY_MS * 2);
 
     // Member1 declines the credex (as the receiver, they can decline the offer)
@@ -116,7 +121,9 @@ describe("Dashboard Integration Tests", () => {
     );
     expect(getCredexResponse2.data.message).toBeTruthy();
     expect(getCredexResponse2.data.data.action.type).toBe("CREDEX_RETRIEVED");
-    expect(getCredexResponse2.data.data.action.details.transactionType).toBe("DECLINED");
+    expect(getCredexResponse2.data.data.action.details.transactionType).toBe(
+      "DECLINED"
+    );
     await delay(DELAY_MS * 2);
   });
 
@@ -141,15 +148,27 @@ describe("Dashboard Integration Tests", () => {
       expect(err.response?.status).toBe(400); // Insufficient balance returns 400
       const errorData = err.response?.data;
       expect(errorData?.data.action.type).toBe("CREDEX_CREATE_FAILED");
-      expect(errorData?.data.action.details.code).toBe("INSUFFICIENT_SECURED_BALANCE");
+      expect(errorData?.data.action.details.code).toBe(
+        "INSUFFICIENT_SECURED_BALANCE"
+      );
     }
     await delay(DELAY_MS * 2);
 
+    // Verify declined credex is still in DECLINED state
+    const getCredexResponse3 = await authRequest(
+      "getCredex",
+      {
+        credexID: declineTestCredexID,
+        accountID: testData.member1.accountIDs[0], // Verify from receiver's perspective
+      },
+      testData.member1.jwt
     );
-    expect(getCredexResponse.data.message).toBeTruthy();
-    expect(getCredexResponse.data.data.action.type).toBe("CREDEX_RETRIEVED");
-    expect(getCredexResponse.data.data.action.id).toBe(declineTestCredexID);
-    expect(getCredexResponse.data.data.action.details.transactionType).toBe("DECLINED");
+    expect(getCredexResponse3.data.message).toBeTruthy();
+    expect(getCredexResponse3.data.data.action.type).toBe("CREDEX_RETRIEVED");
+    expect(getCredexResponse3.data.data.action.id).toBe(declineTestCredexID);
+    expect(getCredexResponse3.data.data.action.details.transactionType).toBe(
+      "DECLINED"
+    );
     await delay(DELAY_MS * 2);
 
     // Get member1's ledger
@@ -163,8 +182,12 @@ describe("Dashboard Integration Tests", () => {
     expect(ledgerResponse.data.message).toBeTruthy();
     expect(ledgerResponse.data.data.action.type).toBe("LEDGER_RETRIEVED");
     // Ledger entries array in action details
-    expect(Array.isArray(ledgerResponse.data.data.action.details.ledger)).toBe(true);
-    expect(ledgerResponse.data.data.action.details.ledger.length).toBeGreaterThanOrEqual(0);
+    expect(Array.isArray(ledgerResponse.data.data.action.details.ledger)).toBe(
+      true
+    );
+    expect(
+      ledgerResponse.data.data.action.details.ledger.length
+    ).toBeGreaterThanOrEqual(0);
     await delay(DELAY_MS * 2);
   });
 

@@ -3,6 +3,7 @@ import { denomFormatter } from "../../../utils/denomUtils";
 import logger from "../../../utils/logger";
 
 interface TierSpendLimitData {
+  isAuthorized?: boolean;
   availableAmount?: string;
   memberTier?: number;
   currentSpendUSD?: number;
@@ -33,13 +34,13 @@ interface DatabaseTierResult {
 
 /**
  * AuthForTierSpendLimitService
- * 
+ *
  * Validates if a member's tier permits the requested spend amount.
  * Different tiers have different daily spend limits and secured/unsecured permissions:
  * - Tier 1: $10 daily limit, secured credex only
  * - Tier 2: $100 daily limit, secured and unsecured credex
  * - Tier 3+: No limits, secured and unsecured credex
- * 
+ *
  * @param issuerAccountID - ID of the account attempting to spend
  * @param amount - Amount of the transaction
  * @param denom - Denomination of the transaction
@@ -59,7 +60,7 @@ export async function AuthForTierSpendLimitService(
     amount,
     denom,
     securedCredex,
-    requestId
+    requestId,
   });
 
   if (!issuerAccountID || amount === undefined || !denom) {
@@ -68,8 +69,8 @@ export async function AuthForTierSpendLimitService(
       message: "Missing required parameters",
       error: {
         code: "MISSING_PARAMS",
-        details: "issuerAccountID, amount, and denom are required"
-      }
+        details: "issuerAccountID, amount, and denom are required",
+      },
     };
   }
 
@@ -80,12 +81,13 @@ export async function AuthForTierSpendLimitService(
       issuerAccountID,
       amount,
       denom,
-      requestId
+      requestId,
     });
 
-    const result: DatabaseTierResult = await ledgerSpaceSession.executeRead(async (tx) => {
-      const queryResult = await tx.run(
-        `
+    const result: DatabaseTierResult = await ledgerSpaceSession.executeRead(
+      async (tx) => {
+        const queryResult = await tx.run(
+          `
         // If memberTier = 1, and securedCredex = false return false immediately as "result"
         MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
         WITH member, member.memberTier AS memberTier
@@ -132,28 +134,30 @@ export async function AuthForTierSpendLimitService(
             memberTier: memberTier
           } AS result
         `,
-        { issuerAccountID, amount, denom, securedCredex }
-      );
+          { issuerAccountID, amount, denom, securedCredex }
+        );
 
-      if (queryResult.records.length === 0) {
+        if (queryResult.records.length === 0) {
+          return {
+            success: false,
+            error: "NOT_FOUND",
+          };
+        }
+
+        const result = queryResult.records[0].get("result");
         return {
-          success: false,
-          error: "NOT_FOUND"
+          success: true,
+          data: {
+            isAuthorized:
+              result.isAuthorized !== undefined ? result.isAuthorized : false,
+            message: result.message,
+            dayTotalUSD: result.dayTotalUSD,
+            credexAmountUSD: result.credexAmountUSD,
+            memberTier: result.memberTier,
+          },
         };
       }
-
-      const result = queryResult.records[0].get("result");
-      return {
-        success: true,
-        data: {
-          isAuthorized: result.isAuthorized !== undefined ? result.isAuthorized : false,
-          message: result.message,
-          dayTotalUSD: result.dayTotalUSD,
-          credexAmountUSD: result.credexAmountUSD,
-          memberTier: result.memberTier
-        }
-      };
-    });
+    );
 
     if (!result.success) {
       return {
@@ -161,8 +165,8 @@ export async function AuthForTierSpendLimitService(
         message: "Account not found",
         error: {
           code: "NOT_FOUND",
-          details: "The specified account does not exist"
-        }
+          details: "The specified account does not exist",
+        },
       };
     }
 
@@ -173,8 +177,8 @@ export async function AuthForTierSpendLimitService(
         message: "Failed to retrieve tier data",
         error: {
           code: "DATA_ERROR",
-          details: "Failed to retrieve tier and spend data"
-        }
+          details: "Failed to retrieve tier and spend data",
+        },
       };
     }
 
@@ -184,7 +188,7 @@ export async function AuthForTierSpendLimitService(
         issuerAccountID,
         isAuthorized: data.isAuthorized,
         message: data.message,
-        requestId
+        requestId,
       });
 
       if (!data.isAuthorized) {
@@ -193,17 +197,18 @@ export async function AuthForTierSpendLimitService(
           message: data.message,
           error: {
             code: "TIER_LIMIT_EXCEEDED",
-            details: data.message
-          }
+            details: data.message,
+          },
         };
       }
 
       return {
         success: true,
         data: {
-          memberTier: data.memberTier
+          isAuthorized: true, // Added this
+          memberTier: data.memberTier,
         },
-        message: data.message
+        message: data.message,
       };
     }
 
@@ -213,8 +218,8 @@ export async function AuthForTierSpendLimitService(
     const credexAmountUSD = data.credexAmountUSD || 0;
 
     const tierLimits = {
-      1: 10,  // Tier 1: $10 daily limit
-      2: 100  // Tier 2: $100 daily limit
+      1: 10, // Tier 1: $10 daily limit
+      2: 100, // Tier 2: $100 daily limit
     };
 
     const tierLimit = tierLimits[memberTier as keyof typeof tierLimits];
@@ -225,18 +230,19 @@ export async function AuthForTierSpendLimitService(
         issuerAccountID,
         memberTier,
         amountAvailableUSD,
-        requestId
+        requestId,
       });
 
       return {
         success: true,
         data: {
+          isAuthorized: true, // Added this
           availableAmount: `${denomFormatter(amountAvailableUSD, "USD")} USD`,
           memberTier,
           currentSpendUSD: dayTotalUSD,
-          tierLimitUSD: tierLimit
+          tierLimitUSD: tierLimit,
         },
-        message: "Authorization granted"
+        message: "Authorization granted",
       };
     }
 
@@ -244,18 +250,24 @@ export async function AuthForTierSpendLimitService(
       issuerAccountID,
       memberTier,
       amountAvailableUSD,
-      requestId
+      requestId,
     });
 
     return {
       success: false,
+      data: {
+        isAuthorized: false, // Added this
+        availableAmount: `${denomFormatter(amountAvailableUSD, "USD")} USD`,
+        memberTier,
+        currentSpendUSD: dayTotalUSD,
+        tierLimitUSD: tierLimit,
+      },
       message: `You are only able to issue ${denomFormatter(amountAvailableUSD, "USD")} USD until tomorrow. Limits renew at midnight UTC.`,
       error: {
         code: "TIER_LIMIT_EXCEEDED",
-        details: `Daily limit of ${denomFormatter(tierLimit, "USD")} USD exceeded`
-      }
+        details: `Daily limit of ${denomFormatter(tierLimit, "USD")} USD exceeded`,
+      },
     };
-
   } catch (error) {
     logger.error("Unexpected error in AuthForTierSpendLimitService", {
       error: error instanceof Error ? error.message : "Unknown error",
@@ -263,7 +275,7 @@ export async function AuthForTierSpendLimitService(
       issuerAccountID,
       amount,
       denom,
-      requestId
+      requestId,
     });
 
     return {
@@ -271,15 +283,17 @@ export async function AuthForTierSpendLimitService(
       message: "Failed to check tier spend limit",
       error: {
         code: "INTERNAL_ERROR",
-        details: error instanceof Error ? error.message : "An unknown error occurred while checking spend limit"
-      }
+        details:
+          error instanceof Error
+            ? error.message
+            : "An unknown error occurred while checking spend limit",
+      },
     };
-
   } finally {
     await ledgerSpaceSession.close();
     logger.debug("Exiting AuthForTierSpendLimitService", {
       issuerAccountID,
-      requestId
+      requestId,
     });
   }
 }
