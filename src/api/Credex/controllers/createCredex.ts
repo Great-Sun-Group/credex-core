@@ -3,7 +3,6 @@ import { CreateCredexService } from "../services/CreateCredex";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { checkDueDate, credspan } from "../../../core-cron/constants/credspan";
 import { AuthForTierSpendLimitService } from "../../Member/services/AuthForTierSpendLimit";
-import { GetSecuredAuthorizationService } from "../services/GetSecuredAuthorization";
 import logger from "../../../utils/logger";
 import { ApiActionType, TypedApiResponse, CredexActionDetails, ErrorActionDetails } from "../../../types/apiResponse";
 import { denomFormatter } from "../../../utils/denomUtils";
@@ -88,76 +87,7 @@ export async function CreateCredexController(
       return res.status(400).json(errorResponse);
     }
 
-    // Check secured balance first for secured credex
-    if (securedCredex) {
-      logger.debug("Checking secured balance", {
-        issuerAccountID,
-        InitialAmount,
-        Denomination,
-        requestId,
-      });
-
-      const secureableData = await GetSecuredAuthorizationService(
-        issuerAccountID,
-        Denomination
-      );
-
-      if (!secureableData.success || !secureableData.data) {
-        return res.status(400).json({
-          message: "Failed to verify secured authorization",
-          data: {
-            action: {
-              id: null,
-              type: ApiActionType.CREDEX_CREATE_FAILED,
-              timestamp: new Date().toISOString(),
-              actor: signerID,
-              details: {
-                code: "SECURED_AUTH_FAILED",
-                reason: secureableData.error?.details || "Unable to verify secured authorization"
-              }
-            },
-            dashboard: {}
-          }
-        });
-      }
-
-      if (secureableData.data.securableAmountInDenom < InitialAmount) {
-        const message = `Your secured credex for ${denomFormatter(
-          InitialAmount,
-          Denomination
-        )} ${Denomination} cannot be issued because your maximum securable ${Denomination} balance is ${denomFormatter(
-          secureableData.data.securableAmountInDenom,
-          Denomination
-        )} ${Denomination}`;
-
-        logger.warn("Insufficient securable amount", {
-          issuerAccountID,
-          InitialAmount,
-          availableAmount: secureableData.data.securableAmountInDenom,
-          Denomination,
-          requestId,
-        });
-
-        return res.status(400).json({
-          message,
-          data: {
-            action: {
-              id: null,
-              type: ApiActionType.CREDEX_CREATE_FAILED,
-              timestamp: new Date().toISOString(),
-              actor: signerID,
-              details: {
-                code: "INSUFFICIENT_SECURED_BALANCE",
-                reason: message
-              }
-            },
-            dashboard: {}
-          }
-        });
-      }
-    }
-
-    // Then check membership tier authorization
+    // Check membership tier authorization
     logger.debug("Checking membership tier authorization", {
       issuerAccountID,
       InitialAmount,

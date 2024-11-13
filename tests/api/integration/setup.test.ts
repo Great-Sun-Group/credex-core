@@ -149,7 +149,7 @@ describe("Integration Test Setup", () => {
       // Get Bennita's data using member1's token
       console.log("Getting Bennita's member data...");
       const bennitaResponse = await authRequest(
-        "/getMemberByHandle",
+        "getMemberByHandle",  // Removed leading slash
         {
           memberHandle: "263788435091",
         },
@@ -171,7 +171,7 @@ describe("Integration Test Setup", () => {
       // Get vimbisopay_trust account data using member1's token
       console.log("Getting vimbisopay_trust account data...");
       const accountResponse = await authRequest(
-        "/getAccountByHandle",
+        "getAccountByHandle",  // Removed leading slash
         {
           accountHandle: "vimbisopay_trust",
         },

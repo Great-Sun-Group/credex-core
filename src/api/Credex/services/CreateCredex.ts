@@ -109,6 +109,13 @@ export async function CreateCredexService(
         Denomination
       );
 
+      logger.debug("Secured authorization result:", {
+        success: secureableData.success,
+        data: secureableData.data,
+        error: secureableData.error,
+        requestId
+      });
+
       if (!secureableData.success || !secureableData.data) {
         return {
           success: false,

@@ -31,67 +31,28 @@ interface DatabaseCancelResult {
   error?: string;
 }
 
-/**
- * CancelCredexService
- * 
- * Handles the cancellation of a Credex transaction. Updates the Credex status from OFFERS/REQUESTS to CANCELLED.
- * For OFFERS: Only the source member (initiator) can cancel
- * For REQUESTS: Only the target member (receiver) can cancel
- * 
- * @param credexID - The ID of the Credex to cancel
- * @param signerID - The ID of the member cancelling the Credex
- * @param requestId - The ID of the HTTP request
- * @returns CancelCredexResult containing cancellation details and status
- */
 export async function CancelCredexService(
   credexID: string,
   signerID: string,
   requestId: string
 ): Promise<CancelCredexResult> {
-  logger.debug("Entering CancelCredexService", {
-    credexID,
-    signerID,
-    requestId
-  });
-
-  if (!credexID || !signerID) {
-    return {
-      success: false,
-      message: "Missing required parameters",
-      error: {
-        code: "MISSING_PARAMS",
-        details: "credexID and signerID are required"
-      }
-    };
-  }
-
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    // Check current Credex state and authorization
-    logger.debug("Checking Credex status and authorization", {
-      credexID,
-      signerID,
-      requestId
-    });
-
+    // Check authorization
     const checkResult = await ledgerSpaceSession.executeRead(async (tx) => {
       const query = `
-        MATCH (credex:Credex { credexID: $credexID })
-        OPTIONAL MATCH (credex)-[r:OFFERS|REQUESTS|OWES|CANCELLED]-()
-        WITH credex, collect(type(r)) as relationships
-        OPTIONAL MATCH (source:Account)-[rel:OFFERS|REQUESTS]->(credex)-[rel2:OFFERS|REQUESTS]->(target:Account)
-        WHERE (
-          // For OFFERS: Only source member can cancel
-          (type(rel) = 'OFFERS' AND EXISTS((source)<-[:AUTHORIZED_FOR]-(:Member { memberID: $signerID }))) OR
-          // For REQUESTS: Only target member can cancel
-          (type(rel) = 'REQUESTS' AND EXISTS((target)<-[:AUTHORIZED_FOR]-(:Member { memberID: $signerID })))
-        )
-        RETURN 
-          credex.credexID AS credexID,
-          relationships,
-          type(rel) as transactionType,
-          source IS NOT NULL AS isAuthorized
+        MATCH (member:Member { memberID: $signerID })
+        -[:AUTHORIZED_FOR]->(account:Account)
+        -[:OFFERS]->(credex:Credex { credexID: $credexID })
+        RETURN account.accountID as issuerAccountID, credex.credexID as credexID
+
+        UNION
+
+        MATCH (member:Member { memberID: $signerID })
+        -[:AUTHORIZED_FOR]->(account:Account)
+        <-[:REQUESTS]-(credex:Credex { credexID: $credexID })
+        RETURN account.accountID as issuerAccountID, credex.credexID as credexID
       `;
 
       const result = await tx.run(query, { credexID, signerID });
@@ -104,91 +65,30 @@ export async function CancelCredexService(
       }
 
       const record = result.records[0];
-      const relationships = record.get('relationships');
-      const isAuthorized = record.get('isAuthorized');
-      const transactionType = record.get('transactionType');
-
       return {
         success: true,
-        hasOffers: relationships.includes('OFFERS'),
-        hasRequests: relationships.includes('REQUESTS'),
-        hasOwes: relationships.includes('OWES'),
-        hasCancelled: relationships.includes('CANCELLED'),
-        isAuthorized,
-        transactionType
+        issuerAccountID: record.get('issuerAccountID')
       };
     });
 
     if (!checkResult.success) {
       return {
         success: false,
-        message: "Credex not found",
+        message: "Credex not found or already processed",
         error: {
           code: "NOT_FOUND",
-          details: "The specified Credex does not exist"
-        }
-      };
-    }
-
-    if (!checkResult.isAuthorized) {
-      const errorMessage = checkResult.transactionType === 'OFFERS' 
-        ? "Only the issuing member can cancel an offer"
-        : "Only the receiving member can cancel a request";
-
-      return {
-        success: false,
-        message: "Not authorized to cancel this Credex",
-        error: {
-          code: "UNAUTHORIZED",
-          details: errorMessage
-        }
-      };
-    }
-
-    if (!checkResult.hasOffers && !checkResult.hasRequests) {
-      if (checkResult.hasOwes) {
-        return {
-          success: false,
-          message: "Cannot cancel an accepted Credex",
-          error: {
-            code: "ALREADY_ACCEPTED",
-            details: "This Credex has already been accepted and cannot be cancelled"
-          }
-        };
-      }
-      if (checkResult.hasCancelled) {
-        return {
-          success: false,
-          message: "Credex already cancelled",
-          error: {
-            code: "ALREADY_CANCELLED",
-            details: "This Credex has already been cancelled"
-          }
-        };
-      }
-      return {
-        success: false,
-        message: "Credex in invalid state",
-        error: {
-          code: "INVALID_STATE",
-          details: "The Credex is in an invalid state for cancellation"
+          details: "The Credex does not exist, is in wrong state, or you are not authorized"
         }
       };
     }
 
     // Cancel the Credex
-    logger.debug("Cancelling Credex in database", {
-      credexID,
-      signerID,
-      requestId
-    });
-
     const result: DatabaseCancelResult = await ledgerSpaceSession.executeWrite(async (tx) => {
       const query = `
-        MATCH (issuer:Account)-[rel1:OFFERS|REQUESTS]->(credex:Credex { credexID: $credexID })-[rel2:OFFERS|REQUESTS]->(receiver:Account)
-        WHERE credex.queueStatus <> "PROCESSED"
+        MATCH (source:Account)-[rel1:OFFERS|REQUESTS]->(credex:Credex { credexID: $credexID })-[rel2:OFFERS|REQUESTS]->(target:Account)
+        WHERE type(rel1) = type(rel2)
         DELETE rel1, rel2
-        CREATE (issuer)-[:CANCELLED]->(credex)-[:CANCELLED]->(receiver)
+        CREATE (source)-[:CANCELLED]->(credex)-[:CANCELLED]->(target)
         SET
           credex.cancelledAt = datetime(),
           credex.OutstandingAmount = 0,
@@ -196,8 +96,8 @@ export async function CancelCredexService(
         RETURN 
           credex.credexID AS credexID,
           toString(credex.cancelledAt) AS cancelledAt,
-          issuer.accountID AS issuerAccountID,
-          receiver.accountID AS receiverAccountID
+          source.accountID AS issuerAccountID,
+          target.accountID AS receiverAccountID
       `;
 
       const queryResult = await tx.run(query, { credexID });
@@ -233,12 +133,6 @@ export async function CancelCredexService(
     }
 
     // Create digital signature
-    logger.debug("Creating digital signature for cancelled Credex", {
-      credexID,
-      signerID,
-      requestId
-    });
-
     const inputData = JSON.stringify({
       credexID: result.data.credexID,
       cancelledAt: result.data.cancelledAt,
@@ -256,12 +150,6 @@ export async function CancelCredexService(
       inputData,
       requestId
     );
-
-    logger.info("Credex cancelled successfully", {
-      credexID: result.data.credexID,
-      signerID,
-      requestId
-    });
 
     return {
       success: true,
@@ -292,10 +180,5 @@ export async function CancelCredexService(
 
   } finally {
     await ledgerSpaceSession.close();
-    logger.debug("Exiting CancelCredexService", {
-      credexID,
-      signerID,
-      requestId
-    });
   }
 }

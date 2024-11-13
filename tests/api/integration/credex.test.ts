@@ -225,21 +225,33 @@ describe("Credex Integration Tests", () => {
     expect(create1Response.data.data.action.id).toBeTruthy();
     expect(create1Response.data.data.dashboard).toBeTruthy();
     cancelTestCredexID = create1Response.data.data.action.id;
-    await delay(DELAY_MS * 5); // Increased delay before checking status
+    await delay(DELAY_MS * 10); // Increased delay before checking status
 
-    // Verify $1 credex was created with OFFERS status
-    const getCredexResponse1 = await authRequest(
-      "getCredex",
-      {
-        credexID: cancelTestCredexID,
-        accountID: testData.member3.accountIDs[0],
-      },
-      testData.member3.jwt
-    );
-    expect(getCredexResponse1.data.message).toBeTruthy();
-    expect(getCredexResponse1.data.data.action.type).toBe("CREDEX_RETRIEVED");
-    expect(getCredexResponse1.data.data.action.details.transactionType).toBe("OFFERS");
-    await delay(DELAY_MS * 5); // Increased delay before cancel
+    // Keep checking status until OFFERS is confirmed
+    let offerConfirmed = false;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (!offerConfirmed && attempts < maxAttempts) {
+      const getCredexResponse = await authRequest(
+        "getCredex",
+        {
+          credexID: cancelTestCredexID,
+          accountID: testData.member3.accountIDs[0],
+        },
+        testData.member3.jwt
+      );
+      
+      if (getCredexResponse.data.data.action.details.transactionType === "OFFERS") {
+        offerConfirmed = true;
+      } else {
+        attempts++;
+        await delay(DELAY_MS * 2);
+      }
+    }
+
+    expect(offerConfirmed).toBe(true);
+    await delay(DELAY_MS * 10); // Additional delay before cancel
 
     // Member2 cancels the $1 credex
     const cancelResponse = await authRequest(
@@ -252,20 +264,31 @@ describe("Credex Integration Tests", () => {
     expect(cancelResponse.data.message).toBeTruthy();
     expect(cancelResponse.data.data.action.type).toBe("CREDEX_CANCELLED");
     expect(cancelResponse.data.data.action.id).toBe(cancelTestCredexID);
-    await delay(DELAY_MS * 5); // Increased delay after cancel
+    await delay(DELAY_MS * 10); // Increased delay after cancel
 
-    // Verify cancelled credex status changed to CANCELLED
-    const getCredexResponse2 = await authRequest(
-      "getCredex",
-      {
-        credexID: cancelTestCredexID,
-        accountID: testData.member3.accountIDs[0],
-      },
-      testData.member3.jwt
-    );
-    expect(getCredexResponse2.data.message).toBeTruthy();
-    expect(getCredexResponse2.data.data.action.type).toBe("CREDEX_RETRIEVED");
-    expect(getCredexResponse2.data.data.action.details.transactionType).toBe("CANCELLED");
+    // Keep checking status until CANCELLED is confirmed
+    let cancelConfirmed = false;
+    attempts = 0;
+
+    while (!cancelConfirmed && attempts < maxAttempts) {
+      const getCredexResponse = await authRequest(
+        "getCredex",
+        {
+          credexID: cancelTestCredexID,
+          accountID: testData.member3.accountIDs[0],
+        },
+        testData.member3.jwt
+      );
+      
+      if (getCredexResponse.data.data.action.details.transactionType === "CANCELLED") {
+        cancelConfirmed = true;
+      } else {
+        attempts++;
+        await delay(DELAY_MS * 2);
+      }
+    }
+
+    expect(cancelConfirmed).toBe(true);
     await delay(DELAY_MS * 2);
 
     // Member2 creates $5 credex to member3

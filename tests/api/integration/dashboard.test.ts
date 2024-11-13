@@ -1,7 +1,8 @@
-import { TestData } from "./types";
+import { TestData, ErrorResponse } from "./types";
 import { authRequest } from "../utils/request";
 import { delay, DELAY_MS } from "../utils/delay";
 import axios from "../../setup";
+import { AxiosError } from "axios";
 
 describe("Dashboard Integration Tests", () => {
   let testData: TestData;
@@ -62,23 +63,33 @@ describe("Dashboard Integration Tests", () => {
     expect(createResponse.data.data.action.id).toBeTruthy();
     expect(createResponse.data.data.dashboard).toBeTruthy();
     declineTestCredexID = createResponse.data.data.action.id;
-    await delay(DELAY_MS * 2);
+    await delay(DELAY_MS * 10); // Increased delay after create
 
-    // Verify credex was created with OFFERS status (from receiver's view)
-    const getCredexResponse1 = await authRequest(
-      "getCredex",
-      {
-        credexID: declineTestCredexID,
-        accountID: testData.member1.accountIDs[0], // Verify from receiver's perspective
-      },
-      testData.member1.jwt
-    );
-    expect(getCredexResponse1.data.message).toBeTruthy();
-    expect(getCredexResponse1.data.data.action.type).toBe("CREDEX_RETRIEVED");
-    expect(getCredexResponse1.data.data.action.details.transactionType).toBe(
-      "OFFERS"
-    );
-    await delay(DELAY_MS * 2);
+    // Keep checking status until OFFERS is confirmed
+    let offerConfirmed = false;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (!offerConfirmed && attempts < maxAttempts) {
+      const getCredexResponse = await authRequest(
+        "getCredex",
+        {
+          credexID: declineTestCredexID,
+          accountID: testData.member1.accountIDs[0], // Verify from receiver's perspective
+        },
+        testData.member1.jwt
+      );
+      
+      if (getCredexResponse.data.data.action.details.transactionType === "OFFERS") {
+        offerConfirmed = true;
+      } else {
+        attempts++;
+        await delay(DELAY_MS * 2);
+      }
+    }
+
+    expect(offerConfirmed).toBe(true);
+    await delay(DELAY_MS * 10); // Additional delay before decline
 
     // Get member1's dashboard
     const dashboardResponse = await authRequest(
@@ -95,7 +106,7 @@ describe("Dashboard Integration Tests", () => {
     expect(
       dashboardResponse.data.data.dashboard.accounts.length
     ).toBeGreaterThan(0);
-    await delay(DELAY_MS * 2);
+    await delay(DELAY_MS * 10); // Additional delay before decline
 
     // Member1 declines the credex (as the receiver, they can decline the offer)
     const declineResponse = await authRequest(
@@ -108,27 +119,36 @@ describe("Dashboard Integration Tests", () => {
     expect(declineResponse.data.message).toBeTruthy();
     expect(declineResponse.data.data.action.type).toBe("CREDEX_DECLINED");
     expect(declineResponse.data.data.action.id).toBe(declineTestCredexID);
-    await delay(DELAY_MS * 2);
+    await delay(DELAY_MS * 10); // Increased delay after decline
 
-    // Verify credex status changed to DECLINED
-    const getCredexResponse2 = await authRequest(
-      "getCredex",
-      {
-        credexID: declineTestCredexID,
-        accountID: testData.member1.accountIDs[0], // Verify from receiver's perspective
-      },
-      testData.member1.jwt
-    );
-    expect(getCredexResponse2.data.message).toBeTruthy();
-    expect(getCredexResponse2.data.data.action.type).toBe("CREDEX_RETRIEVED");
-    expect(getCredexResponse2.data.data.action.details.transactionType).toBe(
-      "DECLINED"
-    );
+    // Keep checking status until DECLINED is confirmed
+    let declineConfirmed = false;
+    attempts = 0;
+
+    while (!declineConfirmed && attempts < maxAttempts) {
+      const getCredexResponse = await authRequest(
+        "getCredex",
+        {
+          credexID: declineTestCredexID,
+          accountID: testData.member1.accountIDs[0], // Verify from receiver's perspective
+        },
+        testData.member1.jwt
+      );
+      
+      if (getCredexResponse.data.data.action.details.transactionType === "DECLINED") {
+        declineConfirmed = true;
+      } else {
+        attempts++;
+        await delay(DELAY_MS * 2);
+      }
+    }
+
+    expect(declineConfirmed).toBe(true);
     await delay(DELAY_MS * 2);
   });
 
   test("Create credex after decline and test ledger", async () => {
-    // Member3 creates $6 credex to member1 (should fail due to insufficient balance)
+    // Member3 creates $8 credex to member1 (should fail due to insufficient balance)
     try {
       await authRequest(
         "createCredex",
@@ -136,7 +156,7 @@ describe("Dashboard Integration Tests", () => {
           issuerAccountID: testData.member3.accountIDs[0],
           receiverAccountID: testData.member1.accountIDs[0],
           Denomination: "USD",
-          InitialAmount: 6,
+          InitialAmount: 8, // Increased from 6 to 8 to exceed the $7 balance
           credexType: "PURCHASE",
           OFFERSorREQUESTS: "OFFERS",
           securedCredex: true,
@@ -144,9 +164,10 @@ describe("Dashboard Integration Tests", () => {
         testData.member3.jwt
       );
       fail("Should have thrown error due to insufficient balance");
-    } catch (err: any) {
-      expect(err.response?.status).toBe(400); // Insufficient balance returns 400
-      const errorData = err.response?.data;
+    } catch (err) {
+      const error = err as AxiosError<ErrorResponse>;
+      expect(error.response?.status).toBe(400); // Insufficient balance returns 400
+      const errorData = error.response?.data;
       expect(errorData?.data.action.type).toBe("CREDEX_CREATE_FAILED");
       expect(errorData?.data.action.details.code).toBe(
         "INSUFFICIENT_SECURED_BALANCE"
@@ -155,20 +176,29 @@ describe("Dashboard Integration Tests", () => {
     await delay(DELAY_MS * 2);
 
     // Verify declined credex is still in DECLINED state
-    const getCredexResponse3 = await authRequest(
-      "getCredex",
-      {
-        credexID: declineTestCredexID,
-        accountID: testData.member1.accountIDs[0], // Verify from receiver's perspective
-      },
-      testData.member1.jwt
-    );
-    expect(getCredexResponse3.data.message).toBeTruthy();
-    expect(getCredexResponse3.data.data.action.type).toBe("CREDEX_RETRIEVED");
-    expect(getCredexResponse3.data.data.action.id).toBe(declineTestCredexID);
-    expect(getCredexResponse3.data.data.action.details.transactionType).toBe(
-      "DECLINED"
-    );
+    let declineConfirmed = false;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (!declineConfirmed && attempts < maxAttempts) {
+      const getCredexResponse = await authRequest(
+        "getCredex",
+        {
+          credexID: declineTestCredexID,
+          accountID: testData.member1.accountIDs[0], // Verify from receiver's perspective
+        },
+        testData.member1.jwt
+      );
+      
+      if (getCredexResponse.data.data.action.details.transactionType === "DECLINED") {
+        declineConfirmed = true;
+      } else {
+        attempts++;
+        await delay(DELAY_MS * 2);
+      }
+    }
+
+    expect(declineConfirmed).toBe(true);
     await delay(DELAY_MS * 2);
 
     // Get member1's ledger

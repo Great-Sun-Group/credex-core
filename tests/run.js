@@ -71,7 +71,7 @@ async function runTest() {
         );
 
         // Extract JWT from login response
-        const tokenMatch = loginOutput.match(/token: '([^']+)'/);
+        const tokenMatch = loginOutput.match(/"token":\s*"([^"]+)"/);
         if (tokenMatch) {
           const jwt = tokenMatch[1];
           // Use JWT and all remaining args except phone

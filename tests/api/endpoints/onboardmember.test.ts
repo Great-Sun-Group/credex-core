@@ -21,7 +21,7 @@ describe("onboardMember Endpoint Test", () => {
         'x-client-api-key': process.env.CLIENT_API_KEY
       }
     });
-    console.log("Onboard member response:", response.data);
+    console.log("Onboard member response:", JSON.stringify(response.data, null, 2));
     expect(response.status).toBe(201);  // Changed from 200 to 201 for resource creation
     await delay(DELAY_MS);
   });

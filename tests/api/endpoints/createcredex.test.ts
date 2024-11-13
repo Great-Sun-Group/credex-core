@@ -5,7 +5,7 @@ describe("createCredex Endpoint Test", () => {
   it("createCredex", async () => {
     const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
     const [
-      jwt,
+      phone,
       issuerAccountID,
       receiverAccountID,
       Denomination,
@@ -16,7 +16,7 @@ describe("createCredex Endpoint Test", () => {
     ] = params;
 
     if (
-      !jwt ||
+      !phone ||
       !issuerAccountID ||
       !receiverAccountID ||
       !Denomination ||
@@ -25,7 +25,7 @@ describe("createCredex Endpoint Test", () => {
       !OFFERSorREQUESTS
     ) {
       throw new Error(
-        "Usage: npm test createcredex <jwt> <issuerAccountID> <receiverAccountID> <Denomination> <InitialAmount> <credexType> <OFFERSorREQUESTS> [securedCredex]"
+        "Usage: npm test createcredex <phone> <issuerAccountID> <receiverAccountID> <Denomination> <InitialAmount> <credexType> <OFFERSorREQUESTS> [securedCredex]"
       );
     }
 
@@ -41,9 +41,9 @@ describe("createCredex Endpoint Test", () => {
         OFFERSorREQUESTS,
         securedCredex: securedCredex === "true",
       },
-      jwt
+      phone
     );
-    console.log("Create Credex response:", response.data);
+    console.log("Create Credex response:", JSON.stringify(response.data, null, 2));
     expect(response.status).toBe(200);
     await delay(DELAY_MS);
   });
