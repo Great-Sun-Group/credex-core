@@ -1,14 +1,18 @@
 // Import required modules and dependencies
 import express, { Request, Response, NextFunction } from "express";
-import MemberRoutes from "./api/Member/memberRoutes";
-import AccountRoutes from "./api/Account/accountRoutes";
-import CredexRoutes from "./api/Credex/credexRoutes";
-import RecurringRoutes from "./api/Avatar/recurringRoutes";
-import DevAdminRoutes from "./api/DevAdmin/devAdminRoutes";
-import logger, { expressLogger, updateLoggerConfig } from "./utils/logger";
+import MemberRoutes from "./api/Member/routes";
+import AccountRoutes from "./api/Account/routes";
+import CredexRoutes from "./api/Credex/routes";
+import RecurringRoutes from "./api/Recurring/routes";
+import AdminRoutes from "./api/Admin/routes";
+import DevAdminRoutes from "./api/DevAdmin/routes";
+import logger, {
+  addRequestId,
+  expressLogger,
+  updateLoggerConfig,
+} from "./utils/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./core-cron/cronJobs";
-import AdminDashboardRoutes from "./api/AdminDashboard/adminDashboardRoutes";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import swaggerUi from "swagger-ui-express";
 import { generateSwaggerSpec } from "../config/swagger";
@@ -23,7 +27,6 @@ import {
   setupUnhandledRejectionHandler,
 } from "./utils/serverSetup";
 import { getConfig } from "../config/config";
-import { rateLimiter } from "./middleware/rateLimiter";
 
 // Create an Express application
 export const app = express();
@@ -45,14 +48,14 @@ async function initializeApp() {
     // Apply security middleware
     applySecurityMiddleware(app);
 
+    // Add request ID middleware
+    app.use(addRequestId);
+
     // Apply custom logging middleware
     app.use(expressLogger);
 
     // Apply jsonParser globally
     app.use(jsonParser);
-
-    // Apply rate limiter globally
-    app.use(rateLimiter);
 
     // Generate Swagger specification
     const swaggerSpec = await generateSwaggerSpec();
@@ -69,23 +72,22 @@ async function initializeApp() {
     startCronJobs();
     logger.info("Cronjobs engaged for DCO and MTQ");
 
+    // Apply authentication middleware before routes
+    applyAuthMiddleware(app);
+
     // Apply Hardened Routes
     // proper format
     app.use(apiVersionOneRoute, MemberRoutes());
     app.use(apiVersionOneRoute, AccountRoutes());
     app.use(apiVersionOneRoute, CredexRoutes());
-    // still to be fixed
-    app.use(apiVersionOneRoute, AdminDashboardRoutes(jsonParser));
-    RecurringRoutes(app);
+    app.use(apiVersionOneRoute, AdminRoutes());
+    app.use(apiVersionOneRoute, RecurringRoutes());
     logger.info("Route handlers applied for hardened modules");
 
     // Apply route handlers for dev-only routes
     if (config.environment !== "production") {
       app.use(apiVersionOneRoute, DevAdminRoutes());
     }
-
-    // Apply authentication middleware after routes are set up
-    applyAuthMiddleware(app);
 
     // Apply error handling middleware
     app.use(notFoundHandler); // Handle 404 errors

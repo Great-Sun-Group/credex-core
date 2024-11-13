@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identity Verification System</title>
+    <link rel="stylesheet" href="../style.css" />
+    <script src="../menu.js"></script>
+</head>
+<body>
+    <div class="header-logo">
+        <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+    <h1>Identity Verification System</h1>
+
+    <p>The Identity Verification System provides automated photo ID verification for Zimbabwe-based WhatsApp users through AWS Rekognition. This document outlines the system architecture and verification workflow.</p>
+
+    <h2>System Architecture</h2>
+    <p>The system consists of several key components working together:</p>
+    <ul>
+        <li><strong>WhatsApp Integration:</strong> Handles photo submissions from users via WhatsApp</li>
+        <li><strong>AWS S3:</strong> Secure storage for ID photos and verification data</li>
+        <li><strong>AWS Rekognition:</strong> AI-powered image analysis and face comparison</li>
+        <li><strong>Verification API:</strong> Orchestrates the verification workflow</li>
+    </ul>
+
+    <h2>Verification Workflow</h2>
+
+    <h3>1. Photo Submission</h3>
+    <ul>
+        <li>User submits photo ID through WhatsApp interface</li>
+        <li>System performs initial validation:
+            <ul>
+                <li>Image format and size checks</li>
+                <li>Resolution requirements</li>
+                <li>Basic quality assessment</li>
+            </ul>
+        </li>
+        <li>Valid photos are securely uploaded to S3 storage</li>
+    </ul>
+
+    <h3>2. Image Quality Analysis</h3>
+    <ul>
+        <li>Advanced quality checks using AWS Rekognition:
+            <ul>
+                <li>Blur detection</li>
+                <li>Lighting assessment</li>
+                <li>Face detection and positioning</li>
+            </ul>
+        </li>
+        <li>Quality metrics are evaluated against defined thresholds</li>
+        <li>Failed images trigger specific feedback to users</li>
+    </ul>
+
+    <h3>3. ID Document Processing</h3>
+    <ul>
+        <li>Document type validation</li>
+        <li>Text extraction from ID using OCR</li>
+        <li>Data validation and standardization</li>
+        <li>Secure storage of extracted information</li>
+    </ul>
+
+    <h3>4. Face Comparison</h3>
+    <ul>
+        <li>Face detection in ID photo</li>
+        <li>Biometric feature extraction</li>
+        <li>Similarity scoring against reference photos</li>
+        <li>Threshold-based verification decisions</li>
+    </ul>
+
+    <h2>Security Measures</h2>
+    <ul>
+        <li><strong>Data Encryption:</strong>
+            <ul>
+                <li>End-to-end encryption for photo transmission</li>
+                <li>Server-side encryption for stored data</li>
+                <li>Encrypted API communications</li>
+            </ul>
+        </li>
+        <li><strong>Access Controls:</strong>
+            <ul>
+                <li>Role-based access management</li>
+                <li>Temporary credentials for AWS services</li>
+                <li>Audit logging of all operations</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>Fraud Prevention</h2>
+    <ul>
+        <li><strong>Real-time Checks:</strong>
+            <ul>
+                <li>Multiple submission detection</li>
+                <li>Known fraud pattern matching</li>
+                <li>Anomaly detection in verification attempts</li>
+            </ul>
+        </li>
+        <li><strong>Risk Management:</strong>
+            <ul>
+                <li>Automated flagging system</li>
+                <li>Risk scoring for verification attempts</li>
+                <li>Blacklist management for known fraudulent documents</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>Error Handling</h2>
+    <ul>
+        <li><strong>User Feedback:</strong>
+            <ul>
+                <li>Clear error messages via WhatsApp</li>
+                <li>Guidance for correcting submission issues</li>
+                <li>Status updates throughout verification</li>
+            </ul>
+        </li>
+        <li><strong>System Recovery:</strong>
+            <ul>
+                <li>Automatic retry mechanisms</li>
+                <li>Graceful degradation options</li>
+                <li>Manual review triggers for edge cases</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>Performance Considerations</h2>
+    <ul>
+        <li><strong>Scalability:</strong>
+            <ul>
+                <li>Parallel processing of verification requests</li>
+                <li>Auto-scaling based on demand</li>
+                <li>Load balancing across services</li>
+            </ul>
+        </li>
+        <li><strong>Optimization:</strong>
+            <ul>
+                <li>Image compression when appropriate</li>
+                <li>Caching of verification results</li>
+                <li>Batch processing for efficiency</li>
+            </ul>
+        </li>
+    </ul>
+
+</body>
+</html>

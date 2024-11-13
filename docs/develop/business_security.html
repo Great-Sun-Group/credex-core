@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Security Features</title>
+    <link rel="stylesheet" href="../style.css" />
+    <script src="../menu.js"></script>
+</head>
+<body>
+    <div class="header-logo">
+      <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+    <h1>Business Security Features</h1>
+
+    <p>This document details the security features specific to business operations, including Credex transactions, secured authorizations, and tier-based limits. For core security infrastructure, please refer to the <a href="auth_security.html">Security and Authentication Overview</a>.</p>
+
+    <h2>Secured Credex Transactions</h2>
+
+    <h3>Authorization System</h3>
+    <ul>
+        <li>Secured transaction requirements:
+            <ul>
+                <li>Issuer must be CREDEX_FOUNDATION_AUDITED or have available secured balance</li>
+                <li>Real-time verification against database</li>
+                <li>Comprehensive authorization checks</li>
+            </ul>
+        </li>
+        <li>Authorization verification:
+            <ul>
+                <li>Member status validation</li>
+                <li>Account balance verification</li>
+                <li>Transaction limit checks</li>
+                <li>Audit status verification</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>Transaction Security</h3>
+    <ul>
+        <li>Transaction validation:
+            <ul>
+                <li>Member authorization checks</li>
+                <li>Account relationship verification</li>
+                <li>Balance and limit validations</li>
+                <li>Transaction state management</li>
+            </ul>
+        </li>
+        <li>Security measures:
+            <ul>
+                <li>Atomic database operations</li>
+                <li>Transaction rollback on failure</li>
+                <li>Comprehensive audit logging</li>
+                <li>State transition validation</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>Recurring Authorization Templates</h2>
+
+    <h3>Template Management</h3>
+    <ul>
+        <li>Template properties:
+            <ul>
+                <li>Unique template ID</li>
+                <li>Authorization type</li>
+                <li>Schedule information</li>
+                <li>Status tracking</li>
+            </ul>
+        </li>
+        <li>Security features:
+            <ul>
+                <li>Template verification on each use</li>
+                <li>Status-based authorization</li>
+                <li>Expiration handling</li>
+                <li>Usage tracking</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>Authorization Process</h3>
+    <ul>
+        <li>Verification steps:
+            <ul>
+                <li>Template existence check</li>
+                <li>Status validation</li>
+                <li>Schedule compliance</li>
+                <li>Authorization limits</li>
+            </ul>
+        </li>
+        <li>Security controls:
+            <ul>
+                <li>Real-time template validation</li>
+                <li>Comprehensive logging</li>
+                <li>Failure handling</li>
+                <li>Audit trail maintenance</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>Tier-based Authorization</h2>
+
+    <h3>Spend Limit System</h3>
+    <ul>
+        <li>Authorization levels:
+            <ul>
+                <li>Dynamic limits based on member tier</li>
+                <li>Real-time balance verification</li>
+                <li>Transaction amount validation</li>
+                <li>Cumulative limit tracking</li>
+            </ul>
+        </li>
+        <li>Security measures:
+            <ul>
+                <li>Pre-transaction validation</li>
+                <li>Continuous monitoring</li>
+                <li>Automatic tier updates</li>
+                <li>Comprehensive audit logging</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>Implementation Details</h3>
+    <ul>
+        <li>Authorization checks:
+            <ul>
+                <li>Member tier validation</li>
+                <li>Available balance verification</li>
+                <li>Transaction history analysis</li>
+                <li>Limit compliance checks</li>
+            </ul>
+        </li>
+        <li>Security features:
+            <ul>
+                <li>Real-time authorization</li>
+                <li>Transaction tracking</li>
+                <li>Audit trail generation</li>
+                <li>Error handling and logging</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>Digital Signature System</h2>
+
+    <h3>Transaction Signatures</h3>
+    <ul>
+        <li>Signature generation:
+            <ul>
+                <li>Transaction data hashing</li>
+                <li>Cryptographic signing</li>
+                <li>Timestamp inclusion</li>
+                <li>Member verification</li>
+            </ul>
+        </li>
+        <li>Verification process:
+            <ul>
+                <li>Signature validation</li>
+                <li>Data integrity checks</li>
+                <li>Timestamp verification</li>
+                <li>Member authorization</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>Implementation Files</h2>
+
+    <h3>Transaction Security</h3>
+    <ul>
+        <li><code>src/api/Credex/services/GetSecuredAuthorization.ts</code>
+            <ul>
+                <li>Secured transaction authorization</li>
+                <li>Balance verification</li>
+                <li>Audit status checks</li>
+            </ul>
+        </li>
+        <li><code>src/api/Credex/services/CreateCredex.ts</code>
+            <ul>
+                <li>Transaction creation security</li>
+                <li>Authorization verification</li>
+                <li>Security validation</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>Authorization Management</h3>
+    <ul>
+        <li><code>src/api/Member/services/AuthForTierSpendLimit.ts</code>
+            <ul>
+                <li>Tier-based authorization</li>
+                <li>Spend limit validation</li>
+                <li>Authorization checks</li>
+            </ul>
+        </li>
+        <li><code>src/core-cron/DCO/transactions.ts</code>
+            <ul>
+                <li>Recurring authorization</li>
+                <li>Template verification</li>
+                <li>Transaction security</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>Security Considerations</h2>
+
+    <ul>
+        <li>Transaction integrity:
+            <ul>
+                <li>All operations are atomic</li>
+                <li>Rollback on any failure</li>
+                <li>Comprehensive validation</li>
+                <li>State consistency checks</li>
+            </ul>
+        </li>
+        <li>Authorization security:
+            <ul>
+                <li>Real-time verification</li>
+                <li>Multiple validation layers</li>
+                <li>Comprehensive logging</li>
+                <li>Audit trail maintenance</li>
+            </ul>
+        </li>
+        <li>Error handling:
+            <ul>
+                <li>Secure error responses</li>
+                <li>Detailed internal logging</li>
+                <li>Transaction rollback</li>
+                <li>Security event tracking</li>
+            </ul>
+        </li>
+    </ul>
+
+</body>
+</html>

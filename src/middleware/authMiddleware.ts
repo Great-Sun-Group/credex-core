@@ -1,13 +1,29 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction, RequestHandler } from "express";
 import { authenticate } from "../../config/authenticate";
+import { UserRequest } from "../types/auth";
 import logger from "../utils/logger";
 
-interface UserRequest extends Request {
-  user?: any;
-}
+// Re-export UserRequest for backward compatibility
+export { UserRequest };
+
+// Helper type for authenticated request handlers
+export type AuthenticatedRequestHandler<P = any, ResBody = any, ReqBody = any> = (
+  req: UserRequest,
+  res: Response<ResBody>,
+  next: NextFunction,
+) => Promise<any>;
+
+// Helper function to wrap authenticated handlers
+export const authenticatedHandler = <P = any, ResBody = any, ReqBody = any>(
+  handler: AuthenticatedRequestHandler<P, ResBody, ReqBody>
+): RequestHandler => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    return handler(req as UserRequest, res, next);
+  };
+};
 
 export const authMiddleware = () => {
-  return async (req: UserRequest, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       await authenticate(req, res, (err: any) => {
         if (err) {
