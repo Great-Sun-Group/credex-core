@@ -49,6 +49,15 @@ h1 {
   font-weight: normal;
 }
 
+.not-as-big-words {
+  text-align: center;
+  color: #fbb016;
+  margin-top: 0;
+  margin-bottom: 30px;
+  font-size: 1.2em;
+  font-weight: normal;
+}
+
 .chapter-title {
   color: #fbb016;
   text-align: left;

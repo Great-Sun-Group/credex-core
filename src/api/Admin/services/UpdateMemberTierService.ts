@@ -1,64 +1,79 @@
-import { ledgerSpaceDriver } from "../../../../config/neo4j"
+import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import * as neo4j from "neo4j-driver";
 import logger from "../../../utils/logger";
-import { validateTier } from "../../../utils/validators";
+import { AdminError, ErrorCodes } from "../../../utils/errorUtils";
 
-export default async function UpdateMemberTierService(memberID: string, newTier: string): Promise<any> {
+interface MemberTierData {
+  memberID: string;
+  memberHandle: string;
+  memberTier: number;
+}
+
+export default async function UpdateMemberTierService(
+  memberID: string,
+  newTier: number
+): Promise<{ data: MemberTierData | null }> {
   logger.debug('UpdateMemberTierService called', { memberID, newTier });
 
-  if(!memberID || !newTier){
-    logger.warn('memberID or newTier not provided');
-    return {
-      message: 'The memberID and memberTier are required'
-    }
+  if (!memberID) {
+    logger.warn('memberID not provided');
+    throw new AdminError('The memberID is required', 'INVALID_ID', ErrorCodes.Admin.INVALID_ID);
   }
 
-  // Validate newTier
-  const newTierInt = parseInt(newTier, 10);
-  if (!validateTier(newTierInt) || newTierInt > 5) {
-    logger.warn('Invalid memberTier provided', { memberID, newTier });
-    return {
-      message: 'Invalid memberTier. It must be an integer between 1 and 5 inclusive.'
-    }
+  if (newTier < 1 || newTier > 5) {
+    logger.warn('Invalid member tier value', { memberID, newTier });
+    throw new AdminError('New member tier must be between 1 and 5', 'INVALID_ID', ErrorCodes.Admin.INVALID_ID);
   }
 
-  const ledgerSpaceSession = ledgerSpaceDriver.session()
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    logger.info('Executing query to update member tier', { memberID, newTier: newTierInt });
-
+    logger.debug('Executing database query to update member tier');
+    
     const result = await ledgerSpaceSession.run(
-      `MATCH (member:Member {memberID: $memberID})
+      `MATCH (member:Member { memberID: $memberID })
        SET member.memberTier = $newTier 
-       RETURN member.memberID AS memberID, member.memberHandle AS memberHandle, member.memberTier AS memberTier`,
-       {memberID, newTier: newTierInt}
-    )
-
-    const member = result.records.map((record) => {
-      return {
-        memberID: record.get("memberID"),
-        memberHandle: record.get("memberHandle"),
-        memberTier: record.get("memberTier")
+       RETURN 
+         member.memberID AS memberID,
+         member.memberHandle AS memberHandle,
+         member.memberTier AS memberTier`,
+      {
+        memberID,
+        newTier: neo4j.int(newTier)
       }
-    })    
+    );
 
-    logger.info('Member tier updated successfully', { memberID, newTier: newTierInt });
-    return {
-      message: 'Member tier updated successfully',
-      data: member
+    if (!result.records.length) {
+      logger.warn('Member not found for tier update', { memberID });
+      return { data: null };
     }
+
+    const updatedMember = {
+      memberID: result.records[0].get("memberID"),
+      memberHandle: result.records[0].get("memberHandle"),
+      memberTier: result.records[0].get("memberTier").toNumber()
+    };
+
+    logger.info('Member tier updated successfully', { memberID, newTier });
+    
+    return {
+      data: updatedMember
+    };
   } catch (error) {
-    logger.error('Error updating member tier', { 
-      memberID, 
-      newTier: newTierInt,
-      error: (error as Error).message,
-      stack: (error as Error).stack
+    logger.error('Error updating member tier', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      memberID,
+      newTier
     });
-    return {
-      message: `Error updating member tier ${memberID}, ${newTier}`,
-      error: error
+    
+    if (error instanceof AdminError) {
+      throw error;
     }
+    
+    throw new AdminError('Error updating member tier', 'INTERNAL_ERROR', ErrorCodes.Admin.INTERNAL_ERROR);
   } finally {
-    await ledgerSpaceSession.close()
-    logger.debug('LedgerSpace session closed');
+    logger.debug('Closing database session', { memberID });
+    await ledgerSpaceSession.close();
   }
 }

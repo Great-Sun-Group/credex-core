@@ -1,17 +1,21 @@
-import { declineCredex } from "../utils/endpoints/credex";
-import { loginMember } from "../utils/auth";
+import { authRequest } from "../utils/request";
+import { delay, DELAY_MS } from "../utils/delay";
 
 describe("declineCredex Endpoint Test", () => {
   it("declineCredex", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
-    const [phone, credexID] = params;
+    const [jwt, credexID] = params;
     
-    if (!phone || !credexID) {
-      throw new Error("Usage: npm test declinecredex <phone> <credexID>");
+    if (!jwt || !credexID) {
+      throw new Error("Usage: npm test declinecredex <jwt> <credexID>");
     }
 
-    // Login first since this endpoint requires authentication
-    const auth = await loginMember(phone);
-    await declineCredex(credexID, auth.memberID, auth.jwt);
+    console.log("\nDeclining Credex...");
+    const response = await authRequest("/declineCredex", {
+      credexID
+    }, jwt);
+    console.log("Decline Credex response:", response.data);
+    expect(response.status).toBe(200);
+    await delay(DELAY_MS);
   });
 });

@@ -1,52 +1,93 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { digitallySign } from "../../../utils/digitalSignature";
-import { logDebug, logInfo, logWarning, logError } from "../../../utils/logger";
+import logger from "../../../utils/logger";
 
-interface AcceptCredexResult {
-  acceptedCredexID: string;
+interface AcceptCredexData {
+  credexID: string;
   acceptorAccountID: string;
   acceptorSignerID: string;
+  acceptedAt: string;
+  transactionType: string;
+  amount: string;
+  denomination: string;
+  secured: boolean;
+}
+
+interface AcceptCredexResult {
+  success: boolean;
+  data?: AcceptCredexData;
+  message: string;
+  error?: {
+    code: string;
+    details?: string;
+  };
+}
+
+interface DatabaseAcceptResult {
+  success: boolean;
+  data?: AcceptCredexData;
+  error?: string;
+}
+
+class CredexError extends Error {
+  constructor(message: string, public code: string) {
+    super(message);
+    this.name = 'CredexError';
+  }
 }
 
 /**
  * AcceptCredexService
  *
- * This service handles the acceptance of a Credex offer.
- * It updates the Credex status from OFFERS to OWES and signs the acceptance.
+ * Handles the acceptance of a Credex offer. Updates the Credex status from OFFERS to OWES,
+ * creates a digital signature for the acceptance, and returns updated Credex details.
  *
  * @param credexID - The ID of the Credex to be accepted
- * @param signerID - The ID of the Member or Avatar signing the acceptance
+ * @param signerID - The ID of the Member or Recurring node signing the acceptance
  * @param requestId - The ID of the HTTP request that initiated this operation
- * @returns An object with the accepted Credex details or null if the operation fails
- * @throws Error if there's an issue with the database operation or digital signature
+ * @param isBulkOperation - Whether this is part of a bulk operation
+ * @param bulkCredexIds - Array of all credex IDs in the bulk operation (only used if isBulkOperation is true)
+ * @returns AcceptCredexResult containing acceptance details and status
+ * @throws CredexError with specific error codes
  */
 export async function AcceptCredexService(
   credexID: string,
   signerID: string,
-  requestId: string
-): Promise<AcceptCredexResult | null> {
-  logDebug(`Entering AcceptCredexService`, { credexID, signerID, requestId });
+  requestId: string,
+  isBulkOperation: boolean = false,
+  bulkCredexIds: string[] = []
+): Promise<AcceptCredexResult> {
+  logger.debug("Entering AcceptCredexService", { 
+    credexID, 
+    signerID, 
+    requestId,
+    isBulkOperation,
+    bulkCredexIds: isBulkOperation ? bulkCredexIds : undefined
+  });
 
   if (!credexID || !signerID || !requestId) {
-    logError("AcceptCredexService: Missing required parameters", new Error("Missing parameters"), { credexID, signerID, requestId });
-    return null;
+    return {
+      success: false,
+      message: "Missing required parameters",
+      error: {
+        code: "MISSING_PARAMS",
+        details: "credexID, signerID, and requestId are required"
+      }
+    };
   }
 
-  let result: AcceptCredexResult | null = null;
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    logDebug(`Checking current Credex status`, { 
+    logger.debug("Checking Credex status", { 
       credexID, 
-      signerID, 
-      requestId,
-      sessionState: ledgerSpaceSession.lastBookmark()
+      requestId 
     });
 
-    // First check if the Credex exists and its current state
+    // Check current Credex state
     const checkResult = await ledgerSpaceSession.executeRead(async (tx) => {
       const checkQuery = `
-        MATCH (credex:Credex {credexID: $credexID})
+        MATCH (credex:Credex { credexID: $credexID })
         OPTIONAL MATCH (credex)-[r:OFFERS|OWES]-()
         RETURN 
           credex.credexID AS credexID,
@@ -56,155 +97,209 @@ export async function AcceptCredexService(
       const result = await tx.run(checkQuery, { credexID });
       
       if (result.records.length === 0) {
-        return { exists: false };
+        return {
+          success: false,
+          error: "NOT_FOUND"
+        };
       }
 
       const relationships = result.records[0].get('relationships');
       return {
-        exists: true,
+        success: true,
         hasOffers: relationships.includes('OFFERS'),
         hasOwes: relationships.includes('OWES')
       };
     });
 
-    if (!checkResult.exists) {
-      logWarning(`Credex not found`, { credexID, signerID, requestId });
-      throw new Error('Credex not found');
+    if (!checkResult.success) {
+      return {
+        success: false,
+        message: "Credex not found",
+        error: {
+          code: "NOT_FOUND",
+          details: "The specified Credex does not exist"
+        }
+      };
     }
 
     if (!checkResult.hasOffers && checkResult.hasOwes) {
-      logWarning(`Credex already accepted`, { credexID, signerID, requestId });
-      throw new Error('Credex already accepted');
+      return {
+        success: false,
+        message: "Credex has already been accepted",
+        error: {
+          code: "ALREADY_ACCEPTED",
+          details: "This Credex has already been accepted and cannot be accepted again"
+        }
+      };
     }
 
     if (!checkResult.hasOffers && !checkResult.hasOwes) {
-      logWarning(`Credex in invalid state - no OFFERS or OWES relationships`, { credexID, signerID, requestId });
-      throw new Error('Credex in invalid state');
+      return {
+        success: false,
+        message: "Credex is in an invalid state",
+        error: {
+          code: "INVALID_STATE",
+          details: "The Credex is neither in OFFERS nor OWES state"
+        }
+      };
     }
 
-    logDebug(`Attempting to accept Credex in database`, { 
+    logger.debug("Accepting Credex in database", { 
       credexID, 
       signerID, 
-      requestId,
-      sessionState: ledgerSpaceSession.lastBookmark() 
+      requestId 
     });
 
-result = await ledgerSpaceSession.executeWrite(async (tx) => {
+    // Accept the Credex with updated authorization check
+    const result: DatabaseAcceptResult = await ledgerSpaceSession.executeWrite(async (tx) => {
       const query = `
         MATCH
           (issuer:Account)-[rel1:OFFERS]->
-          (acceptedCredex:Credex {credexID: $credexID})-[rel2:OFFERS]->
-          (acceptor:Account)<-[:AUTHORIZED_FOR]-
-          (signer:Member|Avatar { memberID: $signerID })
+          (acceptedCredex:Credex { credexID: $credexID })-[rel2:OFFERS]->
+          (acceptor:Account)
+        MATCH (signer)
+        WHERE (
+          // Direct Member authorization
+          signer:Member AND
+          signer.memberID = $signerID AND
+          EXISTS((acceptor)<-[:AUTHORIZED_FOR]-(signer))
+        ) OR (
+          // Recurring node authorization
+          signer:Recurring AND
+          signer.recurringID = $signerID AND
+          EXISTS {
+            MATCH (m:Member)-[:OWNS]->(acceptor)
+            WHERE EXISTS((m)-[:OWNS]->(:Account)-[:ACTIVE]->(signer))
+          }
+        )
+        WITH DISTINCT issuer, acceptedCredex, rel1, rel2, acceptor, signer
         DELETE rel1, rel2
         CREATE (issuer)-[:OWES]->(acceptedCredex)-[:OWES]->(acceptor)
-        SET acceptedCredex.acceptedAt = datetime()
+        SET 
+          acceptedCredex.acceptedAt = datetime(),
+          acceptedCredex.queueStatus = "PENDING_CREDEX"
         RETURN
           acceptedCredex.credexID AS credexID,
           acceptor.accountID AS acceptorAccountID,
-          signer.memberID AS signerID
+          CASE
+            WHEN signer:Member THEN signer.memberID
+            WHEN signer:Recurring THEN signer.recurringID
+          END AS signerID,
+          toString(acceptedCredex.acceptedAt) AS acceptedAt,
+          acceptedCredex.InitialAmount / acceptedCredex.CXXmultiplier AS amount,
+          acceptedCredex.Denomination AS denomination,
+          acceptedCredex.securedCredex AS secured
       `;
 
-      try {
-        const queryResult = await tx.run(query, { credexID, signerID });
-        
-        if (queryResult.records.length === 0) {
-          logWarning(
-            `No matching records found for acceptance pattern. Debugging info:`,
-            { 
-              credexID, 
-              signerID, 
-              requestId,
-              summary: queryResult.summary.counters.updates()
-            }
-          );
-          return null;
-        }
-
-        const record = queryResult.records[0];
+      const queryResult = await tx.run(query, { credexID, signerID });
+      
+      if (queryResult.records.length === 0) {
         return {
-          acceptedCredexID: record.get("credexID"),
+          success: false,
+          error: "UNAUTHORIZED"
+        };
+      }
+
+      const record = queryResult.records[0];
+      return {
+        success: true,
+        data: {
+          credexID: record.get("credexID"),
           acceptorAccountID: record.get("acceptorAccountID"),
           acceptorSignerID: record.get("signerID"),
-        };
-      } catch (txError) {
-        logError(
-          "Transaction error during Credex acceptance", 
-          txError as Error,
-          {
-            credexID,
-            signerID,
-            requestId,
-            errorCode: (txError as any).code,
-            errorMessage: (txError as Error).message
-          }
-        );
-        throw txError;
-      }
+          acceptedAt: record.get("acceptedAt"),
+          transactionType: "OWES",
+          amount: record.get("amount").toString(),
+          denomination: record.get("denomination"),
+          secured: record.get("secured")
+        }
+      };
     });
 
-    if (result) {
-      logInfo(`Offer accepted for credexID: ${result.acceptedCredexID}`, { ...result, requestId });
-      logDebug(`Preparing to create digital signature for accepted Credex`, { ...result, requestId });
-
-      // Create a new session for digital signature
-      const signatureSession = ledgerSpaceDriver.session();
-      try {
-        const inputData = JSON.stringify({
-          acceptedCredexID: result.acceptedCredexID,
-          acceptorAccountID: result.acceptorAccountID,
-          acceptorSignerID: result.acceptorSignerID,
-          acceptedAt: new Date().toISOString()
-        });
-
-        await digitallySign(
-          signatureSession,
-          signerID,
-          "Credex",
-          result.acceptedCredexID,
-          "ACCEPT_CREDEX",
-          inputData,
-          requestId
-        );
-
-        logDebug(`Digital signature created successfully`, { ...result, requestId });
-      } catch (error) {
-        logError(`Digital signature error for credexID ${credexID}`, error as Error, { 
-          credexID, 
-          signerID, 
-          requestId,
-          errorStack: (error as Error).stack
-        });
-        throw new Error(`Digital signature error: ${(error as Error).message}`);
-      } finally {
-        await signatureSession.close();
-      }
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        message: "Failed to accept Credex - authorization check failed",
+        error: {
+          code: "UNAUTHORIZED",
+          details: "You are not authorized to accept this Credex"
+        }
+      };
     }
 
-    return result;
-  } catch (error) {
-    if ((error as Error).message === 'Credex already accepted' ||
-        (error as Error).message === 'Credex not found' ||
-        (error as Error).message === 'Credex in invalid state' ||
-        (error as Error).message.includes('Digital signature error')) {
-      throw error; // Re-throw specific errors to be handled by the controller
-    }
-    
-logError(
-      `Error accepting credex for credexID ${credexID}`, 
-      error as Error, 
-      { 
-        credexID, 
-        signerID, 
+    const acceptedCredexData = result.data;
+    logger.info("Creating digital signature for accepted Credex", {
+      credexID: acceptedCredexData.credexID,
+      signerID,
+      requestId,
+      isBulkOperation
+    });
+
+    // Create digital signature
+    const inputData = JSON.stringify({
+      acceptedCredexID: acceptedCredexData.credexID,
+      acceptorAccountID: acceptedCredexData.acceptorAccountID,
+      acceptorSignerID: acceptedCredexData.acceptorSignerID,
+      acceptedAt: acceptedCredexData.acceptedAt,
+      ...(isBulkOperation && { bulkOperationIds: bulkCredexIds })
+    });
+
+    // Only create signature for non-bulk operations or for the last credex in a bulk operation
+    if (!isBulkOperation || (isBulkOperation && credexID === bulkCredexIds[bulkCredexIds.length - 1])) {
+      const acceptedCredexID = acceptedCredexData.credexID; // Store in variable for type safety
+      await digitallySign(
+        ledgerSpaceSession,
+        signerID,
+        "Credex",
+        acceptedCredexData.credexID,
+        "ACCEPT_CREDEX",
+        inputData,
         requestId,
-        errorStack: (error as Error).stack,
-        errorCode: (error as any).code,
-        errorMessage: (error as Error).message
+        isBulkOperation ? {
+          additionalEntityIds: bulkCredexIds.filter(id => id !== acceptedCredexID)
+        } : undefined
+      );
+    }
+
+    logger.info("Credex accepted successfully", {
+      credexID: acceptedCredexData.credexID,
+      signerID,
+      requestId,
+      isBulkOperation
+    });
+
+    return {
+      success: true,
+      data: acceptedCredexData,
+      message: "Credex accepted successfully"
+    };
+
+  } catch (error) {
+    logger.error("Unexpected error in AcceptCredexService", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      credexID,
+      signerID,
+      requestId,
+      isBulkOperation
+    });
+
+    return {
+      success: false,
+      message: "Failed to accept Credex",
+      error: {
+        code: "INTERNAL_ERROR",
+        details: error instanceof Error ? error.message : "An unknown error occurred while accepting the Credex"
       }
-    );
-    throw new Error(`Failed to accept Credex: ${(error as Error).message}`);
+    };
+
   } finally {
     await ledgerSpaceSession.close();
-    logDebug(`Exiting AcceptCredexService`, { credexID, signerID, requestId });
+    logger.debug("Exiting AcceptCredexService", { 
+      credexID, 
+      signerID, 
+      requestId,
+      isBulkOperation
+    });
   }
 }

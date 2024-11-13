@@ -48,22 +48,14 @@ const menuData = {
   "Developer Guides": {
     title: "How to deploy and develop the credex ecosystem",
     items: {
-      "README References": [
-        { text: "Development README", link: "develop/index.html" },
-        {
-          text: "Credex-core API Developer Reference",
-          link: "develop/developerAPI/index.html",
-        },
-        {
-          text: "Client App Developer Reference",
-          link: "develop/developerClient/index.html",
-        },
+      README: [
+        { text: "README", link: "develop/index.html" },
         {
           text: "Credex-Core Software License",
           link: "develop/license.html",
         },
       ],
-      "Getting Started": [
+      Environments: [
         {
           text: "Development Environment Setup",
           link: "develop/dev_env_setup.html",
@@ -99,53 +91,26 @@ const menuData = {
           link: "develop/deployment/instance_sizing.html",
         },
       ],
-      "Member Modules": [
-        /*
+      Development: [
         {
-          text: "Account",
-          link: "develop/developerClient/module/Account.html",
-        },
-        { text: "Avatar", link: "develop/developerClient/module/Avatar.html" },
-        { text: "Credex", link: "develop/developerClient/module/Credex.html" },
-        { text: "Member", link: "develop/developerClient/module/Member.html" },
-      ],
-      "Admin Modules": [
-        {
-          text: "AdminDashboard",
-          link: "develop/developerClient/module/AdminDashboard.html",
+          text: "API Reference",
+          link: "develop/api_reference.html",
         },
         {
-          text: "DevAdmin",
-          link: "develop/developerClient/module/DevAdmin.html",
-        },
-      */
-      ],
-      "Core Cronjobs": [
-        { text: "Daily Credcoin Offering", link: "due-diligence/DCO.html" },
-        { text: "Minute Transaction Queue", link: "due-diligence/MTQ.html" },
-      ],
-      "Database Schemas": [
-        {
-          text: "ledgerSpace Schema",
-          link: "develop/developerAPI/ledgerSpace_schema.html",
+          text: "API Standards",
+          link: "develop/api_standards.html",
         },
         {
-          text: "searchSpace Schema",
-          link: "develop/developerAPI/searchSpace_schema.html",
-        },
-      ],
-      "Development Guides": [
-        {
-          text: "Endpoint Security and Authorization",
+          text: "Authorization Security",
           link: "develop/auth_security.html",
         },
         {
-          text: "Swagger for AI-assisted client app dev",
-          link: "develop/developerClient/swagger.html",
+          text: "Business Logic Security",
+          link: "develop/business_security.html",
         },
         {
-          text: "Logging Best Practices",
-          link: "develop/developerAPI/logging_best_practices.html",
+          text: "Identity Verification Process",
+          link: "develop/identity_verification.html",
         },
       ],
       Testing: [

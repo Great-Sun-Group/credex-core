@@ -1,69 +1,235 @@
 import express from "express";
 import { DeclineCredexService } from "../services/DeclineCredex";
-import { validateUUID } from "../../../utils/validators";
+import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
+import { 
+  ApiActionType, 
+  TypedApiResponse, 
+  CredexActionDetails, 
+  ErrorActionDetails 
+} from "../../../types/apiResponse";
+
+type DeclineCredexResponse = TypedApiResponse<CredexActionDetails>;
+type DeclineCredexErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * DeclineCredexController
  *
  * This controller handles the declining of Credex offers.
- * It validates the required fields, calls the DeclineCredexService,
- * and returns the result.
+ * It processes the decline request and returns the updated status.
  *
  * @param req - Express request object
  * @param res - Express response object
+ * @param next - Express next function
  */
 export async function DeclineCredexController(
-  req: express.Request,
-  res: express.Response
+  req: UserRequest,
+  res: express.Response,
+  next: express.NextFunction
 ) {
   const requestId = req.id;
   logger.debug("Entering DeclineCredexController", { requestId });
 
   try {
-    const { credexID, signerID } = req.body;
-    logger.debug("Received decline request", { requestId, credexID, signerID });
-
-    if (!validateUUID(credexID)) {
-      logger.warn("Invalid credexID", { credexID, requestId });
-      return res.status(400).json({ error: "Invalid credexID" });
-    }
-
-    if (!validateUUID(signerID)) {
-      logger.warn("Invalid signerID", { signerID, requestId });
-      return res.status(400).json({ error: "Invalid signerID" });
-    }
-
-    logger.debug("Calling DeclineCredexService", {
-      requestId,
+    const { credexID } = req.body;
+    const signerID = req.user.memberID;
+    
+    // Basic validation is handled by validateRequest middleware
+    logger.info("Declining Credex", {
       credexID,
       signerID,
+      requestId
     });
+
     const responseData = await DeclineCredexService(
       credexID,
       signerID,
       requestId
     );
 
-    if (!responseData) {
-      logger.warn("Failed to decline Credex", { credexID, requestId });
-      return res
-        .status(404)
-        .json({ error: "Credex not found or already processed" });
+    if (!responseData || !responseData.success || !responseData.data) {
+      logger.warn("Failed to decline Credex - not found or already processed", {
+        credexID,
+        signerID,
+        requestId
+      });
+      const errorResponse: DeclineCredexErrorResponse = {
+        message: "Credex not found or already processed",
+        data: {
+          action: {
+            id: credexID,
+            type: ApiActionType.ERROR_NOT_FOUND,
+            timestamp: new Date().toISOString(),
+            actor: signerID,
+            details: {
+              code: "NOT_FOUND",
+              reason: "Credex not found or already processed",
+              field: "credexID"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      return res.status(404).json(errorResponse);
     }
 
-    logger.info("Credex declined successfully", { credexID, requestId });
-    logger.debug("Exiting DeclineCredexController with success", { requestId });
-    return res
-      .status(200)
-      .json({ message: "Credex declined successfully", data: responseData });
-  } catch (err) {
-    logger.error("Unhandled error in DeclineCredexController", {
-      error: (err as Error).message,
-      stack: (err as Error).stack,
-      requestId,
+    const successResponse: DeclineCredexResponse = {
+      message: "Credex declined successfully",
+      data: {
+        action: {
+          id: credexID,
+          type: ApiActionType.CREDEX_DECLINED,
+          timestamp: responseData.data.declinedAt,
+          actor: signerID,
+          details: {
+            amount: "0", // Amount is zeroed on decline
+            denomination: "USD", // Default denomination
+            securedCredex: false, // Not relevant for declined Credex
+            receiverAccountID: responseData.data.receiverAccountID,
+            reason: "Declined by receiver"
+          }
+        },
+        dashboard: {} // No dashboard updates for decline
+      }
+    };
+
+    logger.info("Credex declined successfully", {
+      credexID,
+      signerID,
+      requestId
     });
-    logger.debug("Exiting DeclineCredexController with error", { requestId });
-    return res.status(500).json({ error: "Internal server error" });
+
+    return res.status(200).json(successResponse);
+
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message.includes('already processed')) {
+        logger.warn("Attempt to decline already processed Credex", {
+          error: error.message,
+          requestId
+        });
+        const errorResponse: DeclineCredexErrorResponse = {
+          message: "Credex has already been processed",
+          data: {
+            action: {
+              id: req.body.credexID,
+              type: ApiActionType.ERROR_VALIDATION,
+              timestamp: new Date().toISOString(),
+              actor: req.user.memberID,
+              details: {
+                code: "ALREADY_PROCESSED",
+                reason: "This Credex has already been processed",
+                field: "credexID"
+              }
+            },
+            dashboard: {}
+          }
+        };
+        return res.status(409).json(errorResponse);
+      }
+
+      if (error.message.includes('not found')) {
+        logger.warn("Attempt to decline non-existent Credex", {
+          error: error.message,
+          requestId
+        });
+        const errorResponse: DeclineCredexErrorResponse = {
+          message: "Credex not found",
+          data: {
+            action: {
+              id: req.body.credexID,
+              type: ApiActionType.ERROR_NOT_FOUND,
+              timestamp: new Date().toISOString(),
+              actor: req.user.memberID,
+              details: {
+                code: "NOT_FOUND",
+                reason: "The specified Credex could not be found",
+                field: "credexID"
+              }
+            },
+            dashboard: {}
+          }
+        };
+        return res.status(404).json(errorResponse);
+      }
+
+      if (error.message.includes('not authorized')) {
+        logger.warn("Unauthorized attempt to decline Credex", {
+          error: error.message,
+          requestId
+        });
+        const errorResponse: DeclineCredexErrorResponse = {
+          message: "Not authorized to decline this Credex",
+          data: {
+            action: {
+              id: req.body.credexID,
+              type: ApiActionType.ERROR_UNAUTHORIZED,
+              timestamp: new Date().toISOString(),
+              actor: req.user.memberID,
+              details: {
+                code: "UNAUTHORIZED",
+                reason: "You must be authorized for the receiving account to decline this Credex"
+              }
+            },
+            dashboard: {}
+          }
+        };
+        return res.status(403).json(errorResponse);
+      }
+
+      if (error.message.includes('digital signature')) {
+        logger.error("Digital signature error in DeclineCredexController", {
+          error: error.message,
+          stack: error.stack,
+          requestId
+        });
+        const errorResponse: DeclineCredexErrorResponse = {
+          message: "Failed to decline Credex: Digital signature error",
+          data: {
+            action: {
+              id: req.body.credexID,
+              type: ApiActionType.ERROR_INTERNAL,
+              timestamp: new Date().toISOString(),
+              actor: req.user.memberID,
+              details: {
+                code: "SIGNATURE_ERROR",
+                reason: "Failed to create digital signature",
+                suggestion: "Please try again or contact support if the issue persists"
+              }
+            },
+            dashboard: {}
+          }
+        };
+        return res.status(400).json(errorResponse);
+      }
+    }
+
+    logger.error("Unexpected error in DeclineCredexController", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      requestId
+    });
+    
+    const errorResponse: DeclineCredexErrorResponse = {
+      message: "An unexpected error occurred while declining the Credex",
+      data: {
+        action: {
+          id: req.body.credexID,
+          type: ApiActionType.ERROR_INTERNAL,
+          timestamp: new Date().toISOString(),
+          actor: "system",
+          details: {
+            code: "INTERNAL_ERROR",
+            reason: error instanceof Error ? error.message : "Unknown error",
+            suggestion: "Please try again or contact support if the issue persists"
+          }
+        },
+        dashboard: {}
+      }
+    };
+    
+    return res.status(500).json(errorResponse);
+  } finally {
+    logger.debug("Exiting DeclineCredexController", { requestId });
   }
 }

@@ -1,62 +1,264 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Developer Documentation for the credex-core API</title>
-    <link rel="stylesheet" href="../style.css">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Developer README for the credex-core API</title>
+    <link rel="stylesheet" href="../style.css" />
     <script src="../menu.js"></script>
-</head>
-<body>
+  </head>
+  <body>
     <div class="header-logo">
       <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
     </div>
-    <h1>Developer Documentation<br />
-        for the credex-core API</h1>
+    <h1>
+      Developer README</h1>
+      <h1 class="subtitle">for the credex-core API</h2>
+    
 
-    <p>The documentation accessible in the Developer Guides section of the menu covers all the details of developing, testing and deploying the credex-core codebase.</p>
+    <p class="not-as-big-words">
+      The documentation accessible in the Developer Guides section of the menu
+      covers all the details of developing, testing and deploying the
+      credex-core codebase.
+    </p>
 
     <h2>Neo4j Databases</h2>
-    <p>Credex-core runs on two neo4j databases. LedgerSpace is the shared ledger containing the full state of the credex ecosystem. SearchSpace contains only unredeemed credexes, and is optimized to find credloops. On every credloop found and cleared, LedgerSpace is updated accordingly.</p>
+    <p>
+      Credex-core runs on two neo4j databases. LedgerSpace is the shared ledger
+      containing the full state of the credex ecosystem. SearchSpace contains
+      only unredeemed credexes, and is optimized to find credloops. On every
+      credloop found and cleared, LedgerSpace is updated accordingly.
+    </p>
 
     <h2>Express.js Server</h2>
-    <p>The express.js server is initialized in <code>src/index.ts</code>, which provides the cronjobs and endpoints that power the ecosystem and enable members and client apps to interact with its ledger, locking in the security and authorization, as well as parsing, logging, and other middleware.</p>
+    <p>
+      The express.js server is initialized in <code>src/index.ts</code>, which
+      provides the cronjobs and endpoints that power the ecosystem and enable
+      members and client apps to interact with its ledger, locking in the
+      security and authorization, as well as parsing, logging, and other
+      middleware.
+    </p>
 
     <h3>Cronjobs</h3>
     <p>The src/core-cron/ module hosts the cronjobs:</p>
     <ul>
-        <li><a href="../full-audit/DCO.html">DailyCredcoinOffering</a> runs every day at midnight UTC, calculating the value of 1 CXX and updating all ecosystem values accordingly.</li>
-        <li><a href="../full-audit/MTQ.html">MinuteTransactionQueue</a> runs every minute, clearing credloops of value creation across the ecosystem.</li>
+      <li>
+        <a href="../full-audit/DCO.html">DailyCredcoinOffering</a> runs every
+        day at midnight UTC, calculating the value of 1 CXX and updating all
+        ecosystem values accordingly.
+      </li>
+      <li>
+        <a href="../full-audit/MTQ.html">MinuteTransactionQueue</a> runs every
+        minute, clearing credloops of value creation across the ecosystem.
+      </li>
     </ul>
 
     <h3>Endpoints</h3>
-    <p>Endpoints and routes are deployed for the modules: Member, Account, Credex, Avatar, and Admin. Endpoints for the DevAdmin module are included in development and staging deployments, but not in production.</p>
+    <p>
+      The API is organized into modules that follow standardization requirements detailed in the <a href="api_standards.html">API Standards</a> documentation to ensure consistency in endpoint structure, request/response formats, validation,
+      error handling, and security implementation across all modules.
+    </p>
+
+    <p>
+      Key security aspects of the API are covered in the
+      <a href="auth_security.html">Security and Authentication Overview</a>.
+    </p>
+
+      <h2>Development process for working on credex-core</h2>
+      <p>Set your <a href="dev_env_setup.html">environment</a>.</p>
+      <ol>
+        <li>
+          Create a branch from <code>dev</code> or an active project branch.
+        </li>
+        <li>Make and test your changes.</li>
+        <li>
+          Push changes and request merge back to your source branch with a
+          detailed pull request.
+        </li>
+        <li>
+          Expect your remote branch and any codespaces on it with no uncommited
+          changes to be deleted once the merge has been approved and completed.
+        </li>
+      </ol>
+
+      <h2>Development process for working on client apps from a local server</h2>
+      <p>Set your <a href="dev_env_setup.html">environment</a>.</p>
+      <ol>
+        <li>
+          Create a codespace on <code>prod</code> or pull the latest from that
+          branch to your local to run a dev server on the latest stable code.
+        </li>
+        <li>
+          <code>npm run docker:dev</code> fires up a dev server in an isolated
+          Docker environment on your machine/codespace and exposes the API on
+          port 3000.
+        </li>
+        <li>
+          You can now hit the server using localhost:3000 or at the codespace
+          url with the Github Token in the header.
+          <ul>
+            <li>
+              The codespace url is available in the PORT window, and the Github
+              Token can be printed with <code>echo $GITHUB_TOKEN</code> and sent
+              in the request header as <code>X-Github-Token</code>.
+            </li>
+          </ul>
+        </li>
+        <li>
+          Use the codebase you are developing to hit the dev server endpoints
+          and process the results.
+        </li>
+      </ol>
+
+      <h2>Running a local dev server</h2>
+      <p>Options for starting a local server for development:</p>
+
+      <ol>
+        <li>
+          <code>npm run dev</code> fires up a dev server on your local
+          machine/codespace using nodemon. Run directly on your machine, this is
+          the most resource efficient option, with slightly better hot-reload
+          functionality and error messaging, but introduces irregularities vs
+          deployed environments.
+          <em
+            >This environment is likely sufficient for most development work on
+            the credex-core api.</em
+          >
+        </li>
+        <li>
+          <code>npm run docker:dev</code> fires up a dev server in an isolated
+          Docker environment on your machine/codespace. As a virtual machine,
+          this environment is nearly identical to the deployed production
+          environment, with development settings for logging etc.
+          <em
+            >This environment can effectively be used for daily development work
+            on the credex-core api in a production-similar environment, with
+            solid hot reload and error checking.</em
+          >
+        </li>
+        <li>
+          <code>npm run docker:prod</code> starts a dev server in production
+          mode, utilizing a separate build process to maximize the efficiency of
+          the deployed code and setting log setting etc appropriately.
+          <em
+            >This environment is likely only helpful for testing and debugging
+            the process of deploying a production build of the app.</em
+          >
+        </li>
+        <li>
+          <code>npm run docker:test</code> runs the full jest test suite in an isolated docker environment.
+        </li>
+      </ol>
+
+
+      <h2>Database Initialization and Resets</h2>
+
+      <p>
+        These two critical "test" commands can be used to wipe, initialize, and
+        progress your development databases:
+      </p>
+      <ul>
+        <li><code>npm test cleardbs</code> clears the databases</li>
+        <li>
+          <code>npm test forcedco</code> runs the DCO and advances the day
+          state, including new exchange rates.
+          <ul>
+            <li>
+              If the database has been wiped or is new, this will first create
+              initialization nodes and relationship then run the first DCO,
+              bringing the credex ecosystem online.
+            </li>
+          </ul>
+        </li>
+        <li><code>npm test clearforce</code> runs the above in sequence</li>
+      </ul>
 
     <h2>Deployment Process</h2>
-    <p>The credex-core application is deployed using AWS services (including ECS, ECR), Terraform for infrastructure management, and GitHub Actions for CI/CD. The application relies on Neo4j Enterprise Edition for data storage and management. The deployment process runs in three separate workflows:</p>
+    <p>
+      The credex-core application is deployed using AWS services (including ECS,
+      ECR), Terraform for infrastructure management, and GitHub Actions for
+      CI/CD. The application relies on Neo4j Enterprise Edition for data storage
+      and management. The deployment process runs in three separate workflows:
+    </p>
 
     <ul>
-        <li><a href="../develop/deployment/connectors_workflow.html">connectors.yml</a>: Handles the deployment of infrequently changed infrastructure such as clusters and load balancers.</li>
-        <li><a href="../develop/deployment/databases_workflow.html">databases.yml</a>: Sets up and manages Neo4j database resources (ledgerSpace and searchSpace).</li>
-        <li><a href="../develop/deployment/app_workflow.html">app.yml</a>: Deploys the application itself (and these docs).</li>
+      <li>
+        <a href="../develop/deployment/connectors_workflow.html"
+          >connectors.yml</a
+        >: Handles the deployment of infrequently changed infrastructure such as
+        clusters and load balancers.
+      </li>
+      <li>
+        <a href="../develop/deployment/databases_workflow.html">databases.yml</a
+        >: Sets up and manages Neo4j database resources (ledgerSpace and
+        searchSpace).
+      </li>
+      <li>
+        <a href="../develop/deployment/app_workflow.html">app.yml</a>: Deploys
+        the application itself (and these docs).
+      </li>
     </ul>
 
-    <p>This separation allows for granular control over each part of the deployment process and makes it easier to manage and troubleshoot specific aspects of the deployment. Environment is determined at run time by which branch the workflow is run on, enabling same workflow files to manage all environments.</p>
+    <p>
+      This separation allows for granular control over each part of the
+      deployment process and makes it easier to manage and troubleshoot specific
+      aspects of the deployment. Environment is determined at run time by which
+      branch the workflow is run on, enabling same workflow files to manage all
+      environments.
+    </p>
 
     <h2>CI/CD Pipeline Environments</h2>
-    <p>Configuration for all environments is outlined in <a href="environment_setup.html">Environment Setup</a>.</p>
+    <p>
+      Configuration for environments is outlined in
+      <a href="deployed_env_setup.html">Deployed Environment Setup</a>.
+    </p>
 
     <h3>Local</h3>
-    <p>A local environment is supplied by a developer's own machine or a virtual Github Codespaces machine, and linked cloud-deployed instances of neo4j (Neo4j Aura). Testing in this environment ensures that all endpoints return data as expected. The value of the environment variable in this deployment is <code>development</code>, like the first deployed environment below.</p>
+    <p>
+      A local environment is supplied by a developer's own machine or a virtual
+      Github Codespaces machine, and linked cloud-deployed instances of neo4j
+      (Neo4j Aura). Testing in this environment ensures that all endpoints
+      return data as expected. The value of the environment variable in this
+      deployment is <code>development</code>, like the first deployed
+      environment below.
+    </p>
 
     <h3>Development</h3>
-    <p>The <code>development</code> environment and databases are intended to provide initial deployment testing on isolated data in dev DBs by manually-triggered deployment off the <code>dev</code> branch using Github Workflows. This testing includes data integrity checks across larger data sets and mutiple DCO exchange rate updates.</p>
+    <p>
+      The <code>development</code> environment and databases are intended to
+      provide initial deployment testing on isolated data in dev DBs by
+      manually-triggered deployment off the <code>dev</code> branch using Github
+      Workflows. This testing includes data integrity checks across larger data
+      sets and mutiple DCO exchange rate updates.
+    </p>
 
     <h3>Staging</h3>
-    <p>The <code>staging</code> environment and databases are intended to provide production-scale testing in a mock production environment, and are deployed and tested automatically by pushes to the <code>stage</code> branch. When triggered, the deployment of the staging environment includes the full deployment of production-scale infrastructor (connectors, databases, application), automatic performance testing on production-scale data sets, spot checks for data integrity, and full deployment tear-down when tests are passed to satisfaction. Scale tests bypass the HTTPS protocols, running fully internal to the server. This environment can also mimic the update of deployed neo4j infrastructure. (Not yet true, still manually deployed from <code>stage</code> branch and no large scale test, tear-down, or DB deploy/update scripts written.)</p>
+    <p>
+      The <code>staging</code> environment and databases are intended to provide
+      production-scale testing in a mock production environment, and are
+      deployed and tested automatically by pushes to the
+      <code>stage</code> branch. When triggered, the deployment of the staging
+      environment includes the full deployment of production-scale infrastructor
+      (connectors, databases, application), automatic performance testing on
+      production-scale data sets, spot checks for data integrity, and full
+      deployment tear-down when tests are passed to satisfaction. Scale tests
+      bypass the HTTPS protocols, running fully internal to the server. This
+      environment can also mimic the update of deployed neo4j infrastructure.
+      (Not yet true, still manually deployed from <code>stage</code> branch and
+      no large scale test, tear-down, or DB deploy/update scripts written.)
+    </p>
 
     <h3>Production</h3>
-    <p>The <code>production</code> environment enables members to interact with the production databases that host the live ledger of the credex ecosystem. This environment automatically redeploys the app by running the application workflow every day just after midnight UTC at the end of the DCO. (Not yet true, still manually deployed from <code>prod</code> branch). Updates to the underlying database or connectors infrastructure are manually deployed from the <code>prod</code> branch using Github Workflows (behaviour intended to remain).</p>
-
-</body>
+    <p>
+      The <code>production</code> environment enables members to interact with
+      the production databases that host the live ledger of the credex
+      ecosystem. This environment automatically redeploys the app by running the
+      application workflow every day just after midnight UTC at the end of the
+      DCO. (Not yet true, still manually deployed from
+      <code>prod</code> branch). Updates to the underlying database or
+      connectors infrastructure are manually deployed from the
+      <code>prod</code> branch using Github Workflows (behaviour intended to
+      remain).
+    </p>
+  </body>
 </html>
