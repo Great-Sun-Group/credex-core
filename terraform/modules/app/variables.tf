@@ -145,3 +145,8 @@ variable "cloudwatch_log_group_name" {
   description = "The name of the CloudWatch log group"
   type        = string
 }
+
+variable "docker_image" {
+  description = "The full Docker image name including tag to deploy"
+  type        = string
+}
