@@ -4,4 +4,4 @@ The credex ecosystem is a shared ledger that enables the efficient circulation o
 
 The credex-core API deployed at mycredex.app is the portal through which we access our sovereign financial rights on the shared ledger, and sidestep the economic distortions and extortions imposed by obsolete and destructive monetary paradigms.
 
-[mycredex.app](https://docs.mycredex.app/index.html)
+[docs.mycredex.app](https://docs.mycredex.app/index.html)
