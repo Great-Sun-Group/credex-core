@@ -51,16 +51,6 @@ jobs:
         run: |
           echo "Building Docker image with target $BUILD_TARGET..."
           docker build --no-cache --target $BUILD_TARGET \
-            --build-arg NODE_ENV=${{ env.ENVIRONMENT }} \
-            --build-arg NEO_4J_LEDGER_SPACE_USER="${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" \
-            --build-arg NEO_4J_LEDGER_SPACE_PASS="${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" \
-            --build-arg NEO_4J_LEDGER_SPACE_BOLT_URL="${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}" \
-            --build-arg NEO_4J_SEARCH_SPACE_USER="${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" \
-            --build-arg NEO_4J_SEARCH_SPACE_PASS="${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" \
-            --build-arg NEO_4J_SEARCH_SPACE_BOLT_URL="${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}" \
-            --build-arg OPEN_EXCHANGE_RATES_API="${{ secrets.OPEN_EXCHANGE_RATES_API }}" \
-            --build-arg JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-            --build-arg CLIENT_API_KEY="${{ secrets.CLIENT_API_KEY }}" \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           echo "Docker image built successfully."
 
@@ -115,7 +105,7 @@ jobs:
           echo "Current task definition fetched."
 
           echo "Updating task definition with new image and environment variables..."
-          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment += [
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment = [
             {"name": "NODE_ENV", "value": $NODE_ENV},
             {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_USER }}"},
             {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}"},
@@ -185,7 +175,7 @@ jobs:
               --log-stream-name "credex-core-$ENVIRONMENT/${TASK##*/}" \
               --limit 10 \
               --query 'events[].message' \
-              --output text
+              --output text || true
           done
 
           echo "Deployment completed. Checking service status..."
