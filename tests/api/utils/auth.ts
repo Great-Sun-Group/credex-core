@@ -3,13 +3,15 @@ import { authRequest } from "./request";
 import { delay, DELAY_MS } from "./delay";
 
 // Login helper that returns jwt and memberID
-export const loginMember = async (phone: string): Promise<{jwt: string, memberID: string}> => {
+export const loginMember = async (
+  phone: string
+): Promise<{ jwt: string; memberID: string }> => {
   try {
     const loginResponse = await authRequest("/login", { phone });
     if (loginResponse.status !== 200 || !loginResponse.data.token) {
       throw new Error("Login failed");
     }
-    
+
     // Get member dashboard to extract memberID
     const dashboardResponse = await authRequest(
       "/getMemberDashboardByPhone",
@@ -24,7 +26,7 @@ export const loginMember = async (phone: string): Promise<{jwt: string, memberID
 
     return {
       jwt: loginResponse.data.token,
-      memberID: dashboardResponse.data.memberDashboard.memberID
+      memberID: dashboardResponse.data.memberDashboard.memberID,
     };
   } catch (err) {
     const error = err as AxiosError;

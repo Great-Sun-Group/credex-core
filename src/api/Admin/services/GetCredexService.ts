@@ -1,17 +1,65 @@
-import { ledgerSpaceDriver } from "../../../../config/neo4j"
+import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import logger from "../../../utils/logger";
+import { AdminError, ErrorCodes } from "../../../utils/errorUtils";
 
-export default async function GetCredexService(credexID: string): Promise<any> {
+interface CredexData {
+  credexID: string;
+  credexType: string;
+  credexDenomination: string;
+  credexInitialAmount: string;
+  credexOutstandingAmount: string;
+  credexCXXmultiplier: number;
+  credexWrittenOffAmount: string;
+  credexDefaultedAmount: string;
+  credexRedeemedAmount: string;
+  credexQueueStatus: string;
+  credexAcceptedAt: string;
+  credexDeclinedAt: string;
+  credexCancelledAt: string;
+  credexCreatedAt: string;
+  credexDueDate: string;
+  issuerRelationType: string;
+  acceptorRelationType: string;
+  issuerAccountID: string;
+  issuerAccountName: string;
+  issuerAccountHandle: string;
+  issuerAccountType: string;
+  acceptorAccountID: string;
+  acceptorAccountName: string;
+  acceptorAccountHandle: string;
+  acceptorAccountType: string;
+  issuerOwnerID: string;
+  acceptorOwnerID: string;
+  issuerSignerID: string;
+  acceptorSignerID: string;
+  securerAccountID: string;
+  securerAccountName: string;
+}
+
+interface GetCredexResult {
+  success: boolean;
+  data?: CredexData;
+  message: string;
+}
+
+/**
+ * GetCredexService
+ * 
+ * Retrieves detailed information about a credex transaction.
+ * 
+ * @param credexID - The unique identifier of the credex transaction
+ * @returns Object containing credex details and success status
+ * @throws AdminError for various error conditions
+ */
+export default async function GetCredexService(credexID: string): Promise<GetCredexResult> {
   logger.debug('GetCredexService called', { credexID });
 
-  if(!credexID){
+  if (!credexID) {
     logger.warn('CredexID not provided');
-    return {
-      message: 'CredexID is required'
-    }
+    throw new AdminError('CredexID is required', 'INVALID_ID', ErrorCodes.Admin.INVALID_ID);
   }
 
-  const ledgerSpaceSession = ledgerSpaceDriver.session()
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
     logger.info('Executing query to fetch credex details', { credexID });
@@ -62,11 +110,13 @@ export default async function GetCredexService(credexID: string): Promise<any> {
     if (!result.records.length) {
       logger.warn("Credex not found", { credexID });
       return {
-        message: "Credex not found",
+        success: false,
+        message: "Credex not found"
       };
     }
 
-    const credexData = result.records.map((record) => ({
+    const record = result.records[0];
+    const credexData: CredexData = {
       credexID: record.get("credexID"),
       credexType: record.get("credexType"),
       credexDenomination: record.get("credexDenomination"),
@@ -98,23 +148,27 @@ export default async function GetCredexService(credexID: string): Promise<any> {
       acceptorSignerID: record.get("acceptorSignerID"),
       securerAccountID: record.get("securerAccountID"),
       securerAccountName: record.get("securerAccountName")
-    }));
+    };
 
     logger.info("Credex fetched successfully", { credexID });
     return {
-      message: "Credex fetched successfully",
+      success: true,
       data: credexData,
+      message: "Credex details retrieved successfully"
     };
+
   } catch (error) {
     logger.error("Error fetching credex data", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      credexID,
+      credexID
     });
-    return {
-      message: "Error fetching credex",
-      error: error instanceof Error ? error.message : String(error),
-    };
+    
+    if (error instanceof AdminError) {
+      throw error;
+    }
+    
+    throw new AdminError("Error fetching credex", "INTERNAL_ERROR", ErrorCodes.Admin.INTERNAL_ERROR);
   } finally {
     logger.debug("Closing database session", { credexID });
     await ledgerSpaceSession.close();

@@ -1,10 +1,11 @@
 // Import required modules and dependencies
 import express, { Request, Response, NextFunction } from "express";
-import MemberRoutes from "./api/Member/memberRoutes";
-import AccountRoutes from "./api/Account/accountRoutes";
-import CredexRoutes from "./api/Credex/credexRoutes";
-import RecurringRoutes from "./api/Avatar/recurringRoutes";
-import DevAdminRoutes from "./api/DevAdmin/devAdminRoutes";
+import MemberRoutes from "./api/Member/routes";
+import AccountRoutes from "./api/Account/routes";
+import CredexRoutes from "./api/Credex/routes";
+import RecurringRoutes from "./api/Recurring/routes";
+import AdminRoutes from "./api/Admin/routes";
+import DevAdminRoutes from "./api/DevAdmin/routes";
 import logger, {
   addRequestId,
   expressLogger,
@@ -12,7 +13,6 @@ import logger, {
 } from "./utils/logger";
 import bodyParser from "body-parser";
 import startCronJobs from "./core-cron/cronJobs";
-import AdminRoutes from "./api/Admin/adminRoutes";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import swaggerUi from "swagger-ui-express";
 import { generateSwaggerSpec } from "../config/swagger";
@@ -27,7 +27,6 @@ import {
   setupUnhandledRejectionHandler,
 } from "./utils/serverSetup";
 import { getConfig } from "../config/config";
-import { rateLimiter } from "./middleware/rateLimiter";
 
 // Create an Express application
 export const app = express();
@@ -58,9 +57,6 @@ async function initializeApp() {
     // Apply jsonParser globally
     app.use(jsonParser);
 
-    // Apply rate limiter globally
-    app.use(rateLimiter);
-
     // Generate Swagger specification
     const swaggerSpec = await generateSwaggerSpec();
 
@@ -76,6 +72,9 @@ async function initializeApp() {
     startCronJobs();
     logger.info("Cronjobs engaged for DCO and MTQ");
 
+    // Apply authentication middleware before routes
+    applyAuthMiddleware(app);
+
     // Apply Hardened Routes
     // proper format
     app.use(apiVersionOneRoute, MemberRoutes());
@@ -89,9 +88,6 @@ async function initializeApp() {
     if (config.environment !== "production") {
       app.use(apiVersionOneRoute, DevAdminRoutes());
     }
-
-    // Apply authentication middleware after routes are set up
-    applyAuthMiddleware(app);
 
     // Apply error handling middleware
     app.use(notFoundHandler); // Handle 404 errors

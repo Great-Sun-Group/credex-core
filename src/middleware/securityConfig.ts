@@ -2,6 +2,7 @@ import { Application, Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import cors from "cors";
 import { rateLimiter } from "./rateLimiter";
+import { verifyRateLimiterBypass } from "./rateLimiterBypass";
 import { authMiddleware } from "./authMiddleware";
 import logger from "../utils/logger";
 
@@ -59,19 +60,15 @@ export const applySecurityMiddleware = (app: Application) => {
     // CORS highly permissive for non-prod deployments
     const corsOptions = {
       origin: "*", // Allow all origins
-      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key", "x-chatbot-token"],
+      methods: ["POST"],
+      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key", "x-dev-admin-key", "x-skip-rate-limit"],
       credentials: true,
       maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
     };
     app.use(cors(corsOptions));
     logger.debug("CORS middleware applied (non-production)");
   } else {
-    // Strict CORS for production
-    const allowedOrigins = [
-      'https://whatsapp-bot.vimbisopay.co.zw'
-    ];
-
+    // Production CORS configured for third-party access with reasonable limits
     const corsOptions = {
       origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
         // Allow requests with no origin (like mobile apps or curl requests)
@@ -80,15 +77,32 @@ export const applySecurityMiddleware = (app: Application) => {
           return;
         }
 
-        if (allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          logger.warn("Blocked by CORS", { origin });
+        // Block high-risk origins
+        const blockedPatterns = [
+          /^file:/,  // file protocol
+          /^data:/,  // data protocol
+          /^localhost/,  // localhost
+          /\d+\.\d+\.\d+\.\d+/  // IP addresses
+        ];
+
+        if (blockedPatterns.some(pattern => pattern.test(origin))) {
+          logger.warn("Blocked high-risk origin", { origin });
           callback(new Error('Not allowed by CORS'));
+          return;
         }
+
+        // Require HTTPS in production
+        if (!origin.startsWith('https://')) {
+          logger.warn("Blocked non-HTTPS origin", { origin });
+          callback(new Error('HTTPS required'));
+          return;
+        }
+
+        // Allow all other origins
+        callback(null, true);
       },
-      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key", "x-chatbot-token"],
+      methods: ["POST"],
+      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key", "x-dev-admin-key", "x-skip-rate-limit"],
       credentials: true,
       maxAge: 86400,
     };
@@ -96,8 +110,15 @@ export const applySecurityMiddleware = (app: Application) => {
     logger.debug("CORS middleware applied (production)");
   }
 
-  // Apply rate limiting
-  app.use(rateLimiter);
+  // Apply rate limiting with bypass check
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    // Check for rate limiter bypass header
+    if (req.headers['x-skip-rate-limit']) {
+      return verifyRateLimiterBypass(req, res, next);
+    }
+    // Apply standard rate limiting
+    rateLimiter(req, res, next);
+  });
   logger.debug("Rate limiter middleware applied");
 
   // Apply client API key verification for keyholes

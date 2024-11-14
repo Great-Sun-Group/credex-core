@@ -1,5 +1,5 @@
-import { getCredex } from "../utils/endpoints/credex";
-import { loginMember } from "../utils/auth";
+import { authRequest } from "../utils/request";
+import { delay, DELAY_MS } from "../utils/delay";
 
 describe("getCredex Endpoint Test", () => {
   it("getCredex", async () => {
@@ -10,8 +10,13 @@ describe("getCredex Endpoint Test", () => {
       throw new Error("Usage: npm test getcredex <phone> <credexID> <accountID>");
     }
 
-    // Login first since this endpoint requires authentication
-    const auth = await loginMember(phone);
-    await getCredex(credexID, accountID, auth.jwt);
+    console.log("\nGetting Credex...");
+    const response = await authRequest("/getCredex", {
+      credexID,
+      accountID
+    }, phone);
+    console.log("Get Credex response:", JSON.stringify(response.data, null, 2));
+    expect(response.status).toBe(200);
+    await delay(DELAY_MS);
   });
 });

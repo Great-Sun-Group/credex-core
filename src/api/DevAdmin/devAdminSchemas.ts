@@ -10,21 +10,3 @@ export const forceDCOSchema = {
   // No parameters required for forcing DCO
   // Empty schema since this is a development-only operation
 };
-
-export const gimmeSecuredSchema = {
-  accountID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
-  amount: {
-    sanitizer: s.sanitizeNumber,
-    validator: v.validatePositiveNumber,
-    required: true,
-  },
-  denomination: {
-    sanitizer: s.sanitizeString,
-    validator: v.validateDenomination,
-    required: true,
-  },
-};

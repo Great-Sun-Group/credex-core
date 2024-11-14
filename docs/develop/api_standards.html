@@ -73,14 +73,77 @@
 
     <h2>Response Format</h2>
 
+    <h3>HTTP Level</h3>
+    <ul>
+        <li>Protocol-level results are communicated via standard HTTP status codes</li>
+        <li>Examples: 201 Created, 400 Bad Request, 404 Not Found</li>
+        <li>Status code in header provides immediate result without parsing body</li>
+    </ul>
+
+    <h3>Response Body Structure</h3>
     <pre><code>{
-  "status": "success" | "error",
-  "statusCode": number,
-  "data": any,           // Present on success
-  "message": string      // Present on error
+  message: string,       // Human-friendly message
+  data: {
+    action: {
+      id: string,       // Resource ID (e.g., credexID)
+      type: string,     // Business action (e.g., "CREDEX_ACCEPTED")
+      timestamp: string, // When the action occurred
+      actor: string,    // Who performed the action (memberID/accountID)
+      details: {...}    // Action-specific data
+    },
+    dashboard: {...}    // Full dashboard state
+  }
 }</code></pre>
 
+    <h3>Message Examples</h3>
+    <pre><code>// Success messages
+"Secured credex for $2.58 USD offered to Vimbisopay: Trust."
+"Member John Doe onboarded successfully with default denomination USD."
+"Dashboard retrieved successfully"
+
+// Error messages
+"Unable to process credex: insufficient balance."
+"Phone number already in use"
+"Invalid member handle format"</code></pre>
+
     <h2>Validation Requirements</h2>
+
+    <h3>Handle Standardization</h3>
+
+    <p>Handle requirements:</p>
+    <ul>
+        <li>Length: 3-30 characters</li>
+        <li>Allowed characters: lowercase letters (a-z), numbers (0-9), underscores (_)</li>
+        <li>Pattern: /^[a-z0-9_]{3,30}$/</li>
+    </ul>
+
+    <p>While handles must ultimately be lowercase, the API is forgiving of uppercase letters in input. However, all other requirements are strictly enforced.</p>
+
+    <p>Examples:</p>
+    <ul>
+        <li>✅ "john_doe" → accepted as "john_doe"</li>
+        <li>✅ "JOHN_DOE" → accepted as "john_doe"</li>
+        <li>❌ "john-doe" → rejected with error "only lowercase letters, numbers, and underscores are allowed"</li>
+        <li>❌ "john.doe" → rejected with error "only lowercase letters, numbers, and underscores are allowed"</li>
+        <li>❌ "jo" → rejected with error "must be between 3 and 30 characters long"</li>
+    </ul>
+
+    <p>Handle processing:</p>
+    <ol>
+        <li>Sanitization (as data enters API):
+            <ul>
+                <li>Converts to lowercase</li>
+                <li>No other character transformations</li>
+            </ul>
+        </li>
+        <li>Validation:
+            <ul>
+                <li>Verifies length (3-30 characters)</li>
+                <li>Verifies only allowed characters are present</li>
+                <li>Provides specific error messages for different validation failures</li>
+            </ul>
+        </li>
+    </ol>
 
     <h3>Basic Schema Structure</h3>
     <pre><code>import { ValidationSchema } from '../../middleware/types';
@@ -113,8 +176,8 @@ export const getAccountSchema: RequireAtLeastOne<{
     required: false
   },
   accountHandle: {
-    sanitizer: s.sanitizeAccountHandle,
-    validator: v.validateAccountHandle,
+    sanitizer: s.sanitizeHandle,
+    validator: v.validateHandle,
     required: false
   }
 }> = {
@@ -124,8 +187,8 @@ export const getAccountSchema: RequireAtLeastOne<{
     required: false
   },
   accountHandle: {
-    sanitizer: s.sanitizeAccountHandle,
-    validator: v.validateAccountHandle,
+    sanitizer: s.sanitizeHandle,
+    validator: v.validateHandle,
     required: false
   },
   $atLeastOne: ['accountID', 'accountHandle']
@@ -141,17 +204,191 @@ export const getAccountSchema: RequireAtLeastOne<{
   errorHandler
 );</code></pre>
 
-    <h2>Implementation Checklist</h2>
+    <h2>Module-Specific Patterns</h2>
 
-    <p>When implementing or updating an endpoint, ensure:</p>
+    <p>This section documents the patterns identified in existing modules to inform the standardization of new modules.</p>
+
+    <h3>Entity Identification Patterns</h3>
+
+    <h4>Member Module</h4>
     <ul>
-        <li>Uses POST method</li>
-        <li>Follows path format standards (no module prefix except admin/devadmin)</li>
-        <li>Implements proper validation schema with correct types</li>
-        <li>Uses errorHandler middleware</li>
-        <li>Returns standardized response format</li>
-        <li>Follows module structure</li>
+        <li>Phone-based lookup for authentication flows</li>
+        <li>Handle-based lookup for discovery/social features</li>
+        <li>UUID for internal operations</li>
+        <li>Rationale: Different lookup methods serve specific user experience needs</li>
     </ul>
+
+    <h4>Account Module</h4>
+    <ul>
+        <li>Handle-based lookup for discovery</li>
+        <li>UUID for internal operations and relationships</li>
+        <li>Rationale: Balances public discovery with secure operations</li>
+    </ul>
+
+    <h4>Credex Module</h4>
+    <ul>
+        <li>UUID-only for all operations</li>
+        <li>No handle-based lookups needed</li>
+        <li>Rationale: Internal transaction system, no public discovery needed</li>
+    </ul>
+
+    <h4>Recurring Module</h4>
+    <ul>
+        <li>UUID-only for all operations</li>
+        <li>Schedule-based identification</li>
+        <li>Rationale: Internal scheduling system, no public discovery needed</li>
+    </ul>
+
+    <h4>Admin Module</h4>
+    <ul>
+        <li>UUID-based lookups for member and account operations</li>
+        <li>Handle-based lookups as alternative identifiers</li>
+        <li>Rationale: Administrative operations need flexible lookup methods</li>
+    </ul>
+
+    <h4>DevAdmin Module</h4>
+    <ul>
+        <li>No entity identification needed</li>
+        <li>Operation-based endpoints only</li>
+        <li>Rationale: Development and maintenance operations don't require entity lookups</li>
+    </ul>
+
+    <h3>Authorization Patterns</h3>
+
+    <h4>Member Module</h4>
+    <p>Key features:</p>
+    <ul>
+        <li>Tier-based authorization checks</li>
+        <li>Phone verification flows</li>
+        <li>Membership level validations</li>
+    </ul>
+    <pre><code>// Example from AuthForTierSpendLimit
+if (memberTier <= 2 && !securedCredex) {
+  throw new MemberError(
+    "Unsecured credex not permitted on this tier",
+    "TIER_LIMIT",
+    403
+  );
+}</code></pre>
+
+    <h4>Account Module</h4>
+    <p>Key features:</p>
+    <ul>
+        <li>Owner vs authorized user checks</li>
+        <li>Multi-member authorization tracking</li>
+        <li>Authorization limit validations</li>
+    </ul>
+    <pre><code>// Example from AuthorizeForAccount
+const numAuthorized = await getAuthorizationCount(accountID);
+if (numAuthorized >= 5) {
+  throw new AccountError(
+    "Authorization limit reached",
+    "AUTH_LIMIT",
+    400
+  );
+}</code></pre>
+
+    <h4>Credex Module</h4>
+    <p>Key features:</p>
+    <ul>
+        <li>Transaction-based authorization</li>
+        <li>Balance and limit checks</li>
+        <li>Secured vs unsecured validations</li>
+    </ul>
+    <pre><code>// Example from CreateCredex
+if (securedCredex && secureableAmount < amount) {
+  throw new CredexError(
+    "Insufficient securable balance",
+    "INSUFFICIENT_BALANCE",
+    400
+  );
+}</code></pre>
+
+    <h4>Recurring Module</h4>
+    <p>Key features:</p>
+    <ul>
+        <li>Owner-only modification rights</li>
+        <li>Schedule validation checks</li>
+        <li>Active status validations</li>
+    </ul>
+    <pre><code>// Example from CreateRecurring
+if (!isOwner) {
+  throw new RecurringError(
+    "Only account owner can create recurring transactions",
+    "UNAUTHORIZED",
+    403
+  );
+}</code></pre>
+
+    <h4>Admin Module</h4>
+    <p>Key features:</p>
+    <ul>
+        <li>Administrative privilege checks</li>
+        <li>Cross-entity operation validations</li>
+    </ul>
+    <pre><code>// Example from UpdateMemberTier
+if (newTier < 1 || newTier > 5) {
+  throw new AdminError(
+    "Invalid tier value",
+    "INVALID_ID",
+    ErrorCodes.Admin.INVALID_ID
+  );
+}</code></pre>
+
+    <h4>DevAdmin Module</h4>
+    <p>Key features:</p>
+    <ul>
+        <li>Development environment checks</li>
+        <li>Maintenance operation validations</li>
+    </ul>
+    <pre><code>// Example from ClearDevDBs
+if (process.env.NODE_ENV === 'production') {
+  throw new AdminError(
+    "Operation not allowed in production",
+    "UNAUTHORIZED",
+    ErrorCodes.Admin.UNAUTHORIZED
+  );
+}</code></pre>
+
+    <h3>Data Relationship Patterns</h3>
+
+    <h4>Member Module</h4>
+    <pre><code>// Core relationships
+MATCH (member:Member)-[:OWNS]->(account:Account)
+MATCH (member)-[:AUTHORIZED_FOR]->(authorizedAccounts:Account)</code></pre>
+
+    <h4>Account Module</h4>
+    <pre><code>// Core relationships
+MATCH (account:Account)<-[:OWNS]-(owner:Member)
+MATCH (account)<-[:AUTHORIZED_FOR]-(authorizedMembers:Member)</code></pre>
+
+    <h4>Credex Module</h4>
+    <pre><code>// Core relationships
+MATCH (issuer:Account)-[rel:OFFERS|OWES]->(credex:Credex)
+  -[rel2:OFFERS|OWES]->(receiver:Account)
+OPTIONAL MATCH (credex)<-[:SECURES]-(securer:Account)</code></pre>
+
+    <h4>Recurring Module</h4>
+    <pre><code>// Core relationships
+MATCH (sourceAccount:Account)-[:SCHEDULES]->(recurring:Recurring)
+  -[:TARGETS]->(targetAccount:Account)
+MATCH (recurring)-[:ACTIVE]-(targetAccount:Account)
+OPTIONAL MATCH (recurring)-[:LAST_RUN]->(execution:Execution)</code></pre>
+
+    <h4>Admin Module</h4>
+    <pre><code>// Core relationships - Member lookup
+MATCH (member:Member)-[:OWNS]->(account:Account)
+OPTIONAL MATCH (account)-[:OFFERS|OWES]->(credex:Credex)
+
+// Core relationships - Account lookup
+MATCH (account:Account {accountID: $accountID})<-[:OWNS]-(member:Member)
+WITH account, member
+OPTIONAL MATCH (account)-[:OWES]->(owedCredex)-[:OWES]->(owedAccount)</code></pre>
+
+    <h4>DevAdmin Module</h4>
+    <pre><code>// No persistent relationships
+// Operations focus on database maintenance and development tasks
+MATCH (n) DETACH DELETE n  // Example from ClearDevDBs</code></pre>
 
 </body>
 </html>

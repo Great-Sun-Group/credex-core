@@ -3,10 +3,7 @@ import logger from '../src/utils/logger';
 import jwt from 'jsonwebtoken';
 import { ledgerSpaceDriver } from './neo4j';
 import crypto from 'crypto';
-
-interface UserRequest extends Request {
-  user?: any;
-}
+import { UserRequest } from '../src/types/auth';
 
 // Use the JWT_SECRET from environment variable, or generate a warning if not set
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -58,7 +55,7 @@ const refreshToken = (decoded: any): string => {
   }, JWT_SECRET);
 };
 
-const authenticate = async (req: UserRequest, res: Response, next: NextFunction) => {
+const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
@@ -98,7 +95,10 @@ const authenticate = async (req: UserRequest, res: Response, next: NextFunction)
       return next(new Error("Invalid token"));
     }
 
-    req.user = result.records[0].get('m').properties;
+    (req as UserRequest).user = {
+      ...result.records[0].get('m').properties,
+      memberID: decoded.memberID  // Ensure memberID is set from token
+    };
 
     // Refresh the token while maintaining absolute expiry
     const newToken = refreshToken(decoded);

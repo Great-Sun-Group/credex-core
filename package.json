@@ -5,7 +5,7 @@
   "main": "build/src/index.js",
   "scripts": {
     "start": "node build/src/index.js",
-    "build": "tsc",
+    "build": "tsc && node build/src/utils/generateApiDocs.js",
     "watch:build": "tsc --watch",
     "dev": "nodemon build/src/index.js",
     "test": "node tests/run.js",
@@ -13,7 +13,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "docker:prod": "docker-compose up --build",
     "docker:dev": "BUILD_TARGET=development NODE_ENV=development docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build",
-    "docker:test": "docker-compose run --rm --build --target test server npm test"
+    "docker:test": "docker-compose run --rm --build --target test server npm test",
+    "generate:docs": "node build/src/utils/generateApiDocs.js"
   },
   "keywords": [
     "credex",
@@ -49,6 +50,7 @@
     "xss": "^1.0.15"
   },
   "devDependencies": {
+    "@stoplight/elements-core": "^8.1.1",
     "@types/bcrypt": "^5.0.2",
     "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.17",
