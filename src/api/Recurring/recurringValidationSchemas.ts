@@ -16,12 +16,11 @@ const baseFields = {
     validator: v.validateUUID,
     required: true,
   },
-  frequency: {
-    sanitizer: s.sanitizeString,
-    validator: (value: string) => {
-      const validFrequencies = ['DAILY', 'WEEKLY', 'MONTHLY'];
-      if (!validFrequencies.includes(value)) {
-        return { isValid: false, message: "Invalid frequency. Must be DAILY, WEEKLY, or MONTHLY" };
+  payFrequency: {
+    sanitizer: s.sanitizeNumber,
+    validator: (value: number) => {
+      if (!Number.isInteger(value) || value < 1) {
+        return { isValid: false, message: "payFrequency must be a positive integer number of days" };
       }
       return { isValid: true };
     },

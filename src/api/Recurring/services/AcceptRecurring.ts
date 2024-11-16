@@ -15,7 +15,7 @@ interface AcceptRecurringResult {
   success: boolean;
   data?: RecurringActionDetails & {
     scheduleInfo: {
-      frequency: string;
+      payFrequency: number;
       nextRunDate: string;
       amount?: string;
       DCOgiveInCXX?: string;
@@ -132,7 +132,7 @@ export async function AcceptRecurringService(
         CREATE (source)-[:${RELATIONSHIP_TYPES.ACTIVE}]->(recurring)-[:${RELATIONSHIP_TYPES.ACTIVE}]->(target)
         RETURN
           recurring.recurringID as recurringID,
-          recurring.frequency as frequency,
+          recurring.payFrequency as payFrequency,
           recurring.startDate as nextRunDate,
           recurring.templateType as templateType,
           recurring.amount as amount,
@@ -198,7 +198,7 @@ export async function AcceptRecurringService(
 
     // Prepare schedule info based on template type
     const scheduleInfo = {
-      frequency: acceptedRecord.get("frequency"),
+      payFrequency: acceptedRecord.get("payFrequency"),
       nextRunDate: acceptedRecord.get("nextRunDate"),
       status: acceptedRecord.get("status"),
       templateType: acceptedRecord.get("templateType"),
@@ -219,7 +219,7 @@ export async function AcceptRecurringService(
       denomination: templateType === TEMPLATE_TYPES.REGULAR 
         ? acceptedRecord.get("denomination")
         : acceptedRecord.get("DCOdenom"),
-      frequency: acceptedRecord.get("frequency"),
+      payFrequency: acceptedRecord.get("payFrequency"),
       nextDate: acceptedRecord.get("nextRunDate"),
       status: acceptedRecord.get("status"),
       scheduleInfo,

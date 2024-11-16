@@ -29,7 +29,7 @@ export async function CreateRecurringController(
       sourceAccountID,
       targetAccountID,
       templateType,
-      frequency,
+      payFrequency,
       startDate,
       duration,
       // Regular template fields
@@ -62,6 +62,31 @@ export async function CreateRecurringController(
                 code: "400",
                 reason: "Missing required DCO_GIVE fields",
                 field: "DCOgiveInCXX,DCOdenom"
+              }
+            },
+            dashboard: {}
+          }
+        });
+        return;
+      }
+      // Enforce daily frequency for DCO_GIVE templates
+      if (payFrequency !== 1) {
+        logger.warn("Invalid DCO_GIVE template frequency", {
+          requestId,
+          error: "DCO_GIVE templates must have daily frequency"
+        });
+        res.status(400).json({
+          message: "DCO_GIVE templates must have daily frequency (payFrequency = 1)",
+          data: {
+            action: {
+              id: null,
+              type: ApiActionType.ERROR_VALIDATION,
+              timestamp: new Date().toISOString(),
+              actor: ownerID,
+              details: {
+                code: "400",
+                reason: "Invalid frequency for DCO_GIVE template",
+                field: "payFrequency"
               }
             },
             dashboard: {}
@@ -124,7 +149,7 @@ export async function CreateRecurringController(
       sourceAccountID,
       targetAccountID,
       templateType,
-      frequency,
+      payFrequency,
       requestId
     });
 
@@ -134,7 +159,7 @@ export async function CreateRecurringController(
       sourceAccountID,
       targetAccountID,
       templateType,
-      frequency,
+      payFrequency,
       startDate,
       duration,
       requestId

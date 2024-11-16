@@ -10,6 +10,7 @@ import {
   RELATIONSHIP_TYPES,
   RecurringError,
 } from "../types";
+import { DCO_CONSTANTS } from "../../../core-cron/DCO/constants";
 import { RecurringActionDetails } from "../../../types/apiResponse";
 import logger from "../../../utils/logger";
 
@@ -17,7 +18,7 @@ interface CreateRecurringResult {
   success: boolean;
   data?: RecurringActionDetails & {
     scheduleInfo: {
-      frequency: string;
+      payFrequency: number;
       nextRunDate: string;
       amount?: string;
       DCOgiveInCXX?: string;
@@ -44,6 +45,7 @@ interface CreateRecurringResult {
  *
  * Creates a new recurring transaction schedule.
  * Supports both regular and DCO_GIVE template types.
+ * For DCO_GIVE templates, enforces daily frequency (payFrequency = 1)
  * Creates REQUESTS and REQUESTED relationships for acceptance flow.
  *
  * @param params - Parameters for creating recurring transaction
@@ -59,12 +61,20 @@ export async function CreateRecurringService(
     ownerID,
     sourceAccountID,
     targetAccountID,
-    frequency,
+    payFrequency,
     startDate,
     duration,
     templateType,
     requestId,
   } = params;
+
+  // Enforce daily frequency for DCO_GIVE templates
+  if (templateType === TEMPLATE_TYPES.DCO_GIVE && payFrequency !== 1) {
+    throw new RecurringError(
+      "DCO_GIVE templates must have daily frequency (payFrequency = 1)",
+      "INVALID_FREQUENCY"
+    );
+  }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
@@ -145,7 +155,7 @@ export async function CreateRecurringService(
           recurringID: randomUUID(),
           memberID: $ownerID,
           templateType: $templateType,
-          frequency: $frequency,
+          payFrequency: $payFrequency,
           startDate: date($startDate),
           nextPayDate: date($startDate),
           status: $status,
@@ -159,7 +169,7 @@ export async function CreateRecurringService(
         RETURN
           recurring.recurringID as recurringID,
           recurring.memberID as memberID,
-          recurring.frequency as frequency,
+          recurring.payFrequency as payFrequency,
           recurring.nextPayDate as nextRunDate,
           recurring.templateType as templateType,
           ${Object.keys(templateProperties)
@@ -175,7 +185,7 @@ export async function CreateRecurringService(
         targetAccountID,
         ownerID,
         templateType,
-        frequency,
+        payFrequency,
         startDate,
         duration,
         status: TEMPLATE_STATUS.PENDING,
@@ -205,7 +215,7 @@ export async function CreateRecurringService(
       sourceAccountID,
       targetAccountID,
       templateType,
-      frequency,
+      payFrequency,
       startDate,
       duration,
       ...templateProperties,
@@ -232,7 +242,7 @@ export async function CreateRecurringService(
       : record.get("DCOdenom");
 
     const scheduleInfo = {
-      frequency: record.get("frequency"),
+      payFrequency: record.get("payFrequency"),
       nextRunDate: record.get("nextRunDate"),
       status: record.get("status"),
       templateType: record.get("templateType"),
@@ -251,7 +261,7 @@ export async function CreateRecurringService(
       recurringID,
       amount: formattedAmount,
       denomination: formattedDenom,
-      frequency: record.get("frequency"),
+      payFrequency: record.get("payFrequency"),
       nextDate: record.get("nextRunDate"),
       status: record.get("status"),
       scheduleInfo,

@@ -11783,7 +11783,7 @@
                   "sourceAccountID",
                   "targetAccountID",
                   "templateType",
-                  "frequency",
+                  "payFrequency",
                   "startDate"
                 ],
                 "properties": {
@@ -11805,14 +11805,10 @@
                     ],
                     "description": "Type of recurring template"
                   },
-                  "frequency": {
-                    "type": "string",
-                    "enum": [
-                      "DAILY",
-                      "WEEKLY",
-                      "MONTHLY"
-                    ],
-                    "description": "Frequency of recurring transaction"
+                  "payFrequency": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of days between payments"
                   },
                   "startDate": {
                     "type": "string",
@@ -11930,13 +11926,9 @@
                                     "ZWG"
                                   ]
                                 },
-                                "frequency": {
-                                  "type": "string",
-                                  "enum": [
-                                    "DAILY",
-                                    "WEEKLY",
-                                    "MONTHLY"
-                                  ]
+                                "payFrequency": {
+                                  "type": "integer",
+                                  "description": "Number of days between payments"
                                 },
                                 "nextDate": {
                                   "type": "string",
@@ -11953,8 +11945,9 @@
                                 "scheduleInfo": {
                                   "type": "object",
                                   "properties": {
-                                    "frequency": {
-                                      "type": "string"
+                                    "payFrequency": {
+                                      "type": "integer",
+                                      "description": "Number of days between payments"
                                     },
                                     "nextRunDate": {
                                       "type": "string",

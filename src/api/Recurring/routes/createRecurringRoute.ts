@@ -25,7 +25,7 @@ import logger from "../../../utils/logger";
  *               - sourceAccountID
  *               - targetAccountID
  *               - templateType
- *               - frequency
+ *               - payFrequency
  *               - startDate
  *             properties:
  *               sourceAccountID:
@@ -40,10 +40,10 @@ import logger from "../../../utils/logger";
  *                 type: string
  *                 enum: [REGULAR, DCO_GIVE]
  *                 description: Type of recurring template
- *               frequency:
- *                 type: string
- *                 enum: [DAILY, WEEKLY, MONTHLY]
- *                 description: Frequency of recurring transaction
+ *               payFrequency:
+ *                 type: integer
+ *                 minimum: 1
+ *                 description: Number of days between payments
  *               startDate:
  *                 type: string
  *                 format: date
@@ -120,9 +120,9 @@ import logger from "../../../utils/logger";
  *                             denomination:
  *                               type: string
  *                               enum: [CXX, CAD, USD, XAU, ZWG]
- *                             frequency:
- *                               type: string
- *                               enum: [DAILY, WEEKLY, MONTHLY]
+ *                             payFrequency:
+ *                               type: integer
+ *                               description: Number of days between payments
  *                             nextDate:
  *                               type: string
  *                               format: date
@@ -132,8 +132,9 @@ import logger from "../../../utils/logger";
  *                             scheduleInfo:
  *                               type: object
  *                               properties:
- *                                 frequency:
- *                                   type: string
+ *                                 payFrequency:
+ *                                   type: integer
+ *                                   description: Number of days between payments
  *                                 nextRunDate:
  *                                   type: string
  *                                   format: date

@@ -34,7 +34,7 @@ export interface BaseRecurringTemplate {
   ownerID: string;
   sourceAccountID: string;
   targetAccountID: string;
-  frequency: string;
+  payFrequency: number;  // Number of days between payments
   startDate: string;
   duration?: number;
   templateType: keyof typeof TEMPLATE_TYPES;
