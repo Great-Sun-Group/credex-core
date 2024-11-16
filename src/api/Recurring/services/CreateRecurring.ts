@@ -5,6 +5,7 @@ import {
   RecurringTemplate,
   RegularTemplate,
   DCOGiveTemplate,
+  MemberTierSubscriptionTemplate,
   TEMPLATE_TYPES,
   TEMPLATE_STATUS,
   RELATIONSHIP_TYPES,
@@ -26,6 +27,7 @@ interface CreateRecurringResult {
       DCOdenom?: string;
       status: string;
       templateType: string;
+      memberTier?: number;
     };
     participants: {
       sourceAccountID: string;
@@ -44,8 +46,9 @@ interface CreateRecurringResult {
  * CreateRecurringService
  *
  * Creates a new recurring transaction schedule.
- * Supports both regular and DCO_GIVE template types.
+ * Supports regular, DCO_GIVE, and MEMBERTIER_SUBSCRIPTION template types.
  * For DCO_GIVE templates, enforces daily frequency (payFrequency = 1)
+ * For MEMBERTIER_SUBSCRIPTION templates, enforces 28-day frequency and USD secured credex
  * Creates REQUESTS and REQUESTED relationships for acceptance flow.
  *
  * @param params - Parameters for creating recurring transaction
@@ -68,12 +71,31 @@ export async function CreateRecurringService(
     requestId,
   } = params;
 
-  // Enforce daily frequency for DCO_GIVE templates
+  // Template-specific validation
   if (templateType === TEMPLATE_TYPES.DCO_GIVE && payFrequency !== 1) {
     throw new RecurringError(
       "DCO_GIVE templates must have daily frequency (payFrequency = 1)",
       "INVALID_FREQUENCY"
     );
+  } else if (templateType === TEMPLATE_TYPES.MEMBERTIER_SUBSCRIPTION) {
+    if (payFrequency !== 28) {
+      throw new RecurringError(
+        "Member tier subscription must have 28-day frequency",
+        "INVALID_FREQUENCY"
+      );
+    }
+    if ((params as MemberTierSubscriptionTemplate).denomination !== 'USD') {
+      throw new RecurringError(
+        "Member tier subscription must use USD denomination",
+        "INVALID_DENOMINATION"
+      );
+    }
+    if (!(params as MemberTierSubscriptionTemplate).securedCredex) {
+      throw new RecurringError(
+        "Member tier subscription must use secured credex",
+        "INVALID_SECURITY"
+      );
+    }
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -142,10 +164,17 @@ export async function CreateRecurringService(
             denomination: (params as RegularTemplate).denomination,
             securedCredex: (params as RegularTemplate).securedCredex || false,
           }
-        : {
-            DCOgiveInCXX: (params as DCOGiveTemplate).DCOgiveInCXX,
-            DCOdenom: (params as DCOGiveTemplate).DCOdenom,
-          };
+        : templateType === TEMPLATE_TYPES.DCO_GIVE
+          ? {
+              DCOgiveInCXX: (params as DCOGiveTemplate).DCOgiveInCXX,
+              DCOdenom: (params as DCOGiveTemplate).DCOdenom,
+            }
+          : {
+              memberTier: (params as MemberTierSubscriptionTemplate).memberTier,
+              amount: (params as MemberTierSubscriptionTemplate).amount,
+              denomination: (params as MemberTierSubscriptionTemplate).denomination,
+              securedCredex: true,
+            };
 
     const result = await ledgerSpaceSession.executeWrite(async (tx) => {
       const query = `
@@ -233,28 +262,33 @@ export async function CreateRecurringService(
     );
 
     // Prepare response data based on template type
-    const formattedAmount = templateType === TEMPLATE_TYPES.REGULAR
-      ? `${denomFormatter(record.get("amount"), record.get("denomination"))} ${record.get("denomination")}`
-      : `${denomFormatter(record.get("DCOgiveInCXX"), "CXX")} CXX`;
+    const formattedAmount = templateType === TEMPLATE_TYPES.DCO_GIVE
+      ? `${denomFormatter(record.get("DCOgiveInCXX"), "CXX")} CXX`
+      : `${denomFormatter(record.get("amount"), record.get("denomination"))} ${record.get("denomination")}`;
 
-    const formattedDenom = templateType === TEMPLATE_TYPES.REGULAR
-      ? record.get("denomination")
-      : record.get("DCOdenom");
+    const formattedDenom = templateType === TEMPLATE_TYPES.DCO_GIVE
+      ? record.get("DCOdenom")
+      : record.get("denomination");
 
     const scheduleInfo = {
       payFrequency: record.get("payFrequency"),
       nextRunDate: record.get("nextRunDate"),
       status: record.get("status"),
       templateType: record.get("templateType"),
-      ...(templateType === TEMPLATE_TYPES.REGULAR
+      ...(templateType === TEMPLATE_TYPES.DCO_GIVE
         ? {
-            amount: formattedAmount,
-            denomination: formattedDenom,
-          }
-        : {
             DCOgiveInCXX: formattedAmount,
             DCOdenom: formattedDenom,
+          }
+        : {
+            amount: formattedAmount,
+            denomination: formattedDenom,
           }),
+      ...(templateType === TEMPLATE_TYPES.MEMBERTIER_SUBSCRIPTION
+        ? {
+            memberTier: record.get("memberTier"),
+          }
+        : {}),
     };
 
     const responseData = {

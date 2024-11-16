@@ -1,34 +1,302 @@
-# Subscription Payments
-This project will enable members to change their subscription level to the credex ecosystem. Initially there will be two options available, with three others to be published soon:
-1. Open (memberTier 1) is free and automatic on member creation
-2. Verified (memberTier 2) will require completing an identity verification process and will not be available on launch
-3. Hustler (memberTier 3) will require a monthly $1 payment
-4. Entrepreneur (memberTier 4) will require a monthly $5 payment and will not be available on launch
-5. Investor (memberTier 5) will require a monthly $20 payment and will not be available on launch
+# Subscription Payments Implementation Plan
 
-Once the ID verification process is built we will require it as a prereq to higher tiers, but on launch members will be able to switch between 1 and 3 with only a payment prereq.
+## Overview
 
-## Recurring
-Currently there are DCO_GIVE and REGULAR templates for recurring transactions, to which we need to add a MEMBERTIER_SUBSCRIPTION templateType.
+This project enables members to change their subscription level in the credex ecosystem through recurring payments. The implementation will focus on launching with two tiers initially (1-Free and 3-Hustler), with infrastructure to support additional tiers in the future.
 
-The front end of the creation of DCO_GIVE templates by hitting /createRecurring with specific template variables has not yet been tested, and maybe not even created. This project needs to implement that part of the functionaility for DCO_GIVE and MEMBERTIER_SUBSCRIPTION templates.
+## Member Tiers
 
-When /createRecurring is passed DCO_GIVE and valid DCOgiveInCXX and DCOdenom values, the DCO_GIVE Recurring template is created.
+### Initial Launch Tiers
 
-When /createRecurring is passed MEMBERTIER_SUBSCRIPTION and a valid memberTier value, the route needs to change the state of memberTier accordingly. On launch, the only value accepted for memberTier will be 3. In order to switch back to memberTier 1, a member would cancel their recurring credex, which will downgrade their subscription when the current period ends.
+1. Open (memberTier 1)
 
-## First Payment
-When the /createRecurring endpoint is hit for REGULAR or MEMBERTIER_SUBSCRIPTION types, it needs to process an initial credex immediately, and then set the next payment date to the next date on the payment schedule, which in the case of MEMBERTIER_SUBSCRIPTION is going to be every 4 weeks. This 4 week cycle needs to be added as an option called MONTH13 to the frequency enum, and the processing and setting of next payment dates needs to be handled accordingly.
+   - Free and automatic on member creation
+   - Default tier for all new members
 
-## DCOavatars
-Recurring transactions are processed in the DCO avatars secion of the DCO, with special treatment given to DCO_GIVE. We need to add the processing of MEMBERTIER_SUBSCRIPTION templates to this process.
+2. Hustler (memberTier 3)
+   - Monthly $1 payment required
+   - Payments must be in secured USD credex
+   - 28-day payment cycle
+   - Payments to greatsun_ops account (resolved via getAccountByHandle)
+   - Will require identity verification when that functionality is built, but does not require it on launch
 
-A MEMBERTIER_SUBSCRIPTION will be paid by secured credex. Payment from any account owned by a member will be associated with that member's memberTier.
+### Future Tiers (Not Implemented in Initial Launch)
 
-After the MEMBERTIER_SUBSCRIPTION templates have been processed, we need to add a check and update for memberTier on every member.
+2. Verified (memberTier 2)
 
-<pre>
-MATCH (member:Member)-[OWNS]->(account:Account)-[:ACTIVE|INACTIVE]->(subscriptionRec:Recurring { templateType: "MEMBERTIER_SUBSCRIPTION" })-[:SIGNED]->(memberTierPayment:Credex)-[:CREATED_ON]->(daynode:Daynode)
-WHERE daynode.Date = //within the last 28 days
-// sum memberTierPayment.InitialAmount / daynode[USD] as currentPay and if currentPay is greater than or equal to 1 then set member.memberTier = 3 else if less than 1 set memberTier to 1.
-</pre>
+   - Requires identity verification
+   - Implementation deferred until ID verification system is built
+
+3. Entrepreneur (memberTier 4)
+
+   - Monthly $5 payment
+   - Will require identity verification
+
+4. Investor (memberTier 5)
+   - Monthly $20 payment
+   - Will require identity verification
+
+## Technical Implementation
+
+### 1. New Template Type Implementation
+
+#### Progress Update
+- ✅ Added MEMBERTIER_SUBSCRIPTION template type
+- ✅ Implemented subscription-specific validation
+- ✅ Added auto-acceptance for subscription templates
+- ✅ Improved relationship handling:
+  - Using REQUESTS for pending state
+  - Using ACTIVE for accepted state
+  - Removed ambiguous ACTIVE|REQUESTS matching
+  - Added subscription status tracking
+
+#### Implementation Notes
+1. Relationship pattern in code proved better than documentation:
+   - Clear state management through REQUESTS -> ACTIVE transition
+   - Explicit ACTIVE relationships for payment processing
+   - MARKED_FOR_DELETION for cleanup
+2. Auto-acceptance pattern established:
+   - Both DCO_GIVE and MEMBERTIER_SUBSCRIPTION templates are auto-accepted
+   - No digital signature needed for auto-accepted templates
+3. Validation approach:
+   - All validation done in controller
+   - Using common validators from utils/validators.ts
+   - Following project's error handling pattern
+
+#### Add MEMBERTIER_SUBSCRIPTION Type
+
+```typescript
+export const TEMPLATE_TYPES = {
+  DCO_GIVE: "DCO_GIVE",
+  REGULAR: "REGULAR",
+  MEMBERTIER_SUBSCRIPTION: "MEMBERTIER_SUBSCRIPTION",
+} as const;
+
+export interface MemberTierSubscriptionTemplate extends BaseRecurringTemplate {
+  templateType: typeof TEMPLATE_TYPES.MEMBERTIER_SUBSCRIPTION;
+  memberTier: number; // The tier being subscribed to (3 for initial launch)
+  amount: number; // Fixed USD amount based on tier (1.00 for tier 3)
+  denomination: "USD"; // Always USD for member tier subscriptions
+  securedCredex: true; // Always true for member tier subscriptions
+  payFrequency: 28; // Fixed 28-day payment cycle
+}
+```
+
+### 2. Subscription Management Implementation
+
+#### Create Subscription Flow
+
+1. Validate member eligibility:
+
+   ```typescript
+   // Check for existing active subscription
+   MATCH (member:Member {memberID: $memberID})
+   OPTIONAL MATCH (member)-[:OWNS]->(account)-[:ACTIVE]->(subscription:Recurring {
+     templateType: "MEMBERTIER_SUBSCRIPTION",
+     status: "ACTIVE"
+   })
+   RETURN subscription IS NOT NULL as hasActiveSubscription
+   ```
+
+2. Get target account:
+
+   ```typescript
+   const targetAccount = await getAccountByHandle("greatsun_ops");
+   if (!targetAccount) {
+     throw new Error("Target account not found");
+   }
+   ```
+
+3. Create subscription template:
+   - Fixed 28-day frequency
+   - Secured USD credex only
+   - Amount based on tier ($1.00 for tier 3)
+   - Initial credex auto-accepted by greatsun_ops account
+   - Subsequent payments handled by recurring flow
+
+#### Cancel Subscription Flow
+
+1. Mark recurring template as cancelled
+2. Allow current period to complete
+3. Auto-downgrade to tier 1 after period ends
+
+### 3. Payment Processing Enhancement
+
+#### DCO Avatars Integration
+
+```typescript
+// Add to existing DCO avatar processing
+if (template.templateType === TEMPLATE_TYPES.MEMBERTIER_SUBSCRIPTION) {
+  // Validate payment amount matches tier requirement
+  const requiredAmount = template.memberTier === 3 ? 1.0 : 0;
+  if (payment.amount !== requiredAmount || payment.denomination !== "USD") {
+    await handleFailedPayment(template);
+    return;
+  }
+
+  // Process secured USD credex payment
+  // On failure: immediate downgrade to tier 1
+}
+```
+
+### 4. Member Tier Management Module
+
+#### New DCO Module Structure
+
+```
+src/core-cron/DCO/
+├── DCOavatars/        // Existing module
+└── DCOtriggers/       // New module
+    ├── index.ts       // Main module logic
+    ├── database.ts    // Database operations
+    └── types.ts       // Type definitions
+```
+
+#### Member Tier Status Check Implementation
+
+```typescript
+// DCOtriggers/index.ts
+export async function DCOtriggersExecute(): Promise<void> {
+  logger.info("Starting DCOtriggersExecute process");
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
+
+  try {
+    // Update member tiers based on payment status
+    await ledgerSpaceSession.executeWrite(async (tx) => {
+      const query = `
+        MATCH (member:Member)-[OWNS]->(account:Account)
+          -[:ACTIVE|INACTIVE]->(subscriptionRec:Recurring { 
+            templateType: "MEMBERTIER_SUBSCRIPTION" 
+          })-[:SIGNED]->(memberTierPayment:Credex)
+          -[:CREATED_ON]->(daynode:Daynode)
+        WHERE daynode.Date >= date() - duration('P28D')
+        WITH member, sum(memberTierPayment.InitialAmount / daynode.USD) as currentPay
+        SET member.memberTier = CASE
+          WHEN currentPay >= 1 THEN 3
+          ELSE 1
+        END
+      `;
+      return tx.run(query);
+    });
+
+    logger.info("DCOtriggersExecute process completed");
+  } catch (error) {
+    logger.error("Error in DCOtriggersExecute", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error;
+  } finally {
+    await ledgerSpaceSession.close();
+  }
+}
+```
+
+#### DCO Integration
+
+```typescript
+// Update DailyCredcoinOffering.ts to include new module
+export async function DailyCredcoinOffering(): Promise<void> {
+  try {
+    await DCOavatars();
+    await DCOtriggersExecute(); // Run after avatars processing
+    // ... rest of DCO process
+  } catch (error) {
+    // ... error handling
+  }
+}
+```
+
+### 5. Error Handling
+
+#### Validation Errors
+
+- Duplicate subscription attempt
+- Invalid tier selection
+- Payment validation failures
+
+#### Payment Failures
+
+- Immediate tier downgrade
+- Record failure reason
+- Notify member of status change (placeholder call to a noti function that will be built soon)
+
+### 6. Testing Requirements
+
+To be handled separately
+
+### 7. Future Considerations
+
+#### Planned Enhancements
+
+1. Dedicated Subscriptions module
+
+   - Track subscription history
+   - Enhanced reporting capabilities
+   - Tier upgrade/downgrade management
+
+2. ID Verification Integration
+   - Enable tier 2 requirements
+   - Additional tier prerequisites
+
+#### Technical Debt Prevention
+
+1. Flexible template design for future tier additions
+2. Extensible payment validation
+3. Scalable history tracking
+
+## Implementation Phases
+
+### Phase 1: Core Infrastructure
+
+1. Template type implementation
+2. Validation schema updates
+3. Basic subscription management
+4. Initial payment auto-acceptance
+
+### Phase 2: Payment Processing
+
+1. DCO avatars integration
+2. DCOtriggersExecute module implementation
+3. Payment validation
+4. Failure handling
+
+### Phase 3: Testing & Deployment
+
+1. Unit test implementation
+2. Integration test suite
+3. Error handling verification
+4. Performance testing
+
+### Questions to Resolve
+
+Add to existing questions:
+1. Should API standards doc be updated to reflect the improved relationship pattern found in code? YES
+2. Do we need additional monitoring for subscription payment failures? NOT NOW
+3. Should we implement a grace period for failed payments before tier downgrade? NOT NOW
+4. Do we need to track subscription history for future tier upgrades? NOT NOW
+
+## Success Criteria
+
+1. Members can successfully subscribe to tier 3
+2. Payments are processed correctly as secured USD credex
+3. Failed payments trigger immediate tier downgrade
+4. Subscription cancellation properly handles period end
+5. No duplicate active subscriptions possible
+6. System correctly tracks and updates member tiers
+
+## Monitoring & Maintenance
+
+1. Payment processing success rate
+2. Tier status update accuracy
+3. System performance under load
+4. Error rate monitoring
+
+## Security Considerations
+
+1. Secured credex enforcement
+2. Payment validation integrity
+3. Authorization checks
+4. Tier status protection
+
+This implementation plan provides a structured approach to adding subscription capabilities while maintaining system integrity and preparing for future enhancements. The focus is on delivering a robust initial implementation that handles tier 3 subscriptions while laying the groundwork for future tier additions and features.

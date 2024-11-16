@@ -23,6 +23,7 @@ interface AcceptRecurringResult {
       DCOdenom?: string;
       status: string;
       templateType: string;
+      memberTier?: number;
     };
     participants: {
       sourceAccountID: string;
@@ -50,7 +51,7 @@ class RecurringError extends Error {
  * Handles the acceptance of a recurring transaction template.
  * Removes REQUESTS relationships and adds ACTIVE relationships.
  * Keeps REQUESTED relationships for history.
- * Note: DCO_GIVE templates are automatically accepted without signature.
+ * Note: DCO_GIVE and MEMBERTIER_SUBSCRIPTION templates are automatically accepted.
  * 
  * @param params - Parameters for accepting recurring transaction
  * @returns Object containing the accepted recurring transaction details
@@ -75,7 +76,7 @@ export async function AcceptRecurringService(
     const verifyQuery = await ledgerSpaceSession.executeRead(async (tx) => {
       const query = `
         MATCH (recurring:Recurring {recurringID: $recurringID})
-        MATCH (source:Account)-[r1:${RELATIONSHIP_TYPES.REQUESTS}]->(recurring)-[r2:${RELATIONSHIP_TYPES.REQUESTS}]->(target:Account)
+        MATCH (source:Account)-[:REQUESTS]->(recurring)-[:REQUESTS]->(target:Account)
         MATCH (signer:Member {memberID: $signerID})
         RETURN
           recurring,
@@ -103,8 +104,10 @@ export async function AcceptRecurringService(
     const sourceAccountID = record.get("sourceAccountID");
     const targetAccountID = record.get("targetAccountID");
 
-    // Skip authorization check for DCO_GIVE templates
-    if (templateType !== TEMPLATE_TYPES.DCO_GIVE && !isOwner && !isAuthorized) {
+    // Skip authorization check for auto-accepted templates
+    const isAutoAccepted = templateType === TEMPLATE_TYPES.DCO_GIVE || 
+                          templateType === TEMPLATE_TYPES.MEMBERTIER_SUBSCRIPTION;
+    if (!isAutoAccepted && !isOwner && !isAuthorized) {
       throw new RecurringError(
         "Not authorized to accept this recurring transaction",
         "UNAUTHORIZED"
@@ -124,12 +127,12 @@ export async function AcceptRecurringService(
         MATCH (recurring:Recurring {recurringID: $recurringID})
         MATCH (source:Account {accountID: $sourceAccountID})
         MATCH (target:Account {accountID: $targetAccountID})
-        MATCH (source)-[r1:${RELATIONSHIP_TYPES.REQUESTS}]->(recurring)-[r2:${RELATIONSHIP_TYPES.REQUESTS}]->(target)
+        MATCH (source)-[r1:REQUESTS]->(recurring)-[r2:REQUESTS]->(target)
         DELETE r1, r2
         SET
           recurring.status = $status,
           recurring.acceptedAt = datetime()
-        CREATE (source)-[:${RELATIONSHIP_TYPES.ACTIVE}]->(recurring)-[:${RELATIONSHIP_TYPES.ACTIVE}]->(target)
+        CREATE (source)-[:ACTIVE]->(recurring)-[:ACTIVE]->(target)
         RETURN
           recurring.recurringID as recurringID,
           recurring.payFrequency as payFrequency,
@@ -139,6 +142,7 @@ export async function AcceptRecurringService(
           recurring.denomination as denomination,
           recurring.DCOgiveInCXX as DCOgiveInCXX,
           recurring.DCOdenom as DCOdenom,
+          recurring.memberTier as memberTier,
           recurring.status as status,
           recurring.lastRunDate as lastRunDate,
           recurring.lastRunStatus as lastRunStatus,
@@ -164,9 +168,9 @@ export async function AcceptRecurringService(
 
     const acceptedRecord = acceptQuery.records[0];
 
-    // Create digital signature only for regular templates
-    if (templateType !== TEMPLATE_TYPES.DCO_GIVE) {
-      logger.debug("Creating digital signature for regular template", {
+    // Create digital signature for manually accepted templates
+    if (!isAutoAccepted) {
+      logger.debug("Creating digital signature for manual acceptance", {
         recurringID,
         signerID,
         requestId
@@ -190,7 +194,7 @@ export async function AcceptRecurringService(
         requestId
       );
     } else {
-      logger.debug("Skipping digital signature for DCO_GIVE template", {
+      logger.debug(`Skipping digital signature for ${templateType} template`, {
         recurringID,
         requestId
       });
@@ -202,23 +206,30 @@ export async function AcceptRecurringService(
       nextRunDate: acceptedRecord.get("nextRunDate"),
       status: acceptedRecord.get("status"),
       templateType: acceptedRecord.get("templateType"),
-      ...(templateType === TEMPLATE_TYPES.REGULAR ? {
-        amount: `${denomFormatter(acceptedRecord.get("amount"), acceptedRecord.get("denomination"))} ${acceptedRecord.get("denomination")}`,
-        denomination: acceptedRecord.get("denomination")
-      } : {
-        DCOgiveInCXX: `${denomFormatter(acceptedRecord.get("DCOgiveInCXX"), "CXX")} CXX`,
-        DCOdenom: acceptedRecord.get("DCOdenom")
-      })
+      ...(templateType === TEMPLATE_TYPES.DCO_GIVE 
+        ? {
+            DCOgiveInCXX: `${denomFormatter(acceptedRecord.get("DCOgiveInCXX"), "CXX")} CXX`,
+            DCOdenom: acceptedRecord.get("DCOdenom")
+          } 
+        : {
+            amount: `${denomFormatter(acceptedRecord.get("amount"), acceptedRecord.get("denomination"))} ${acceptedRecord.get("denomination")}`,
+            denomination: acceptedRecord.get("denomination")
+          }),
+      ...(templateType === TEMPLATE_TYPES.MEMBERTIER_SUBSCRIPTION
+        ? {
+            memberTier: acceptedRecord.get("memberTier")
+          }
+        : {})
     };
 
     const responseData = {
       recurringID,
-      amount: templateType === TEMPLATE_TYPES.REGULAR 
-        ? `${denomFormatter(acceptedRecord.get("amount"), acceptedRecord.get("denomination"))} ${acceptedRecord.get("denomination")}`
-        : `${denomFormatter(acceptedRecord.get("DCOgiveInCXX"), "CXX")} CXX`,
-      denomination: templateType === TEMPLATE_TYPES.REGULAR 
-        ? acceptedRecord.get("denomination")
-        : acceptedRecord.get("DCOdenom"),
+      amount: templateType === TEMPLATE_TYPES.DCO_GIVE 
+        ? `${denomFormatter(acceptedRecord.get("DCOgiveInCXX"), "CXX")} CXX`
+        : `${denomFormatter(acceptedRecord.get("amount"), acceptedRecord.get("denomination"))} ${acceptedRecord.get("denomination")}`,
+      denomination: templateType === TEMPLATE_TYPES.DCO_GIVE 
+        ? acceptedRecord.get("DCOdenom")
+        : acceptedRecord.get("denomination"),
       payFrequency: acceptedRecord.get("payFrequency"),
       nextDate: acceptedRecord.get("nextRunDate"),
       status: acceptedRecord.get("status"),
