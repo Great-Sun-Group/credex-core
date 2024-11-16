@@ -1,4 +1,4 @@
-import { Session, Transaction, Record as Neo4jRecord } from "neo4j-driver";
+import { Session, ManagedTransaction, Record as Neo4jRecord } from "neo4j-driver";
 import { TriggerContext, MemberTierUpdate } from "./types";
 import logger from "../../../utils/logger";
 
@@ -14,7 +14,7 @@ export async function updateMemberTiers(
   logger.debug("Starting member tier update process", { requestId });
 
   try {
-    const result = await session.executeWrite(async (tx: Transaction) => {
+    const result = await session.executeWrite(async (tx: ManagedTransaction) => {
       const query = `
         MATCH (member:Member)-[OWNS]->(account:Account)
           -[:ACTIVE|INACTIVE]->(subscriptionRec:Recurring { 

@@ -1,6 +1,4 @@
-import { ValidationSchema } from '../../middleware/types';
-import { TEMPLATE_TYPES } from './types';
-import {
+import { 
   sanitizeUUID,
   sanitizeNumber,
   sanitizeDenomination,
@@ -20,11 +18,25 @@ import {
   validatePositiveInteger
 } from '../../utils/validators';
 
+// Custom validator for subscription template requirements
+function validateSubscriptionTemplate(data: any): { isValid: boolean; message: string } {
+  if (data.memberTier !== 3) {
+    return { isValid: false, message: 'Currently only tier 3 is supported' };
+  }
+  if (data.payFrequency !== 28) {
+    return { isValid: false, message: 'Subscription payment frequency must be 28 days' };
+  }
+  if (!data.securedCredex) {
+    return { isValid: false, message: 'Subscription payments must use secured credex' };
+  }
+  return { isValid: true, message: 'Valid subscription template' };
+}
+
 /**
  * Schema for creating recurring transactions
  * Supports regular, DCO_GIVE, and MEMBERTIER_SUBSCRIPTION template types
  */
-export const createRecurringSchema: ValidationSchema = {
+export const createRecurringSchema = {
   sourceAccountID: {
     sanitizer: sanitizeUUID,
     validator: validateUUID,
@@ -85,7 +97,17 @@ export const createRecurringSchema: ValidationSchema = {
   // Member tier subscription fields
   memberTier: {
     sanitizer: sanitizeTier,
-    validator: validateTier,
+    validator: (value: any) => {
+      const baseValidation = validateTier(value);
+      if (!baseValidation.isValid) {
+        return baseValidation;
+      }
+      return validateSubscriptionTemplate({
+        memberTier: value,
+        payFrequency: 28,
+        securedCredex: true
+      });
+    },
     required: false // Required only for MEMBERTIER_SUBSCRIPTION templates
   }
 };
@@ -93,7 +115,7 @@ export const createRecurringSchema: ValidationSchema = {
 /**
  * Schema for accepting recurring transactions
  */
-export const acceptRecurringSchema: ValidationSchema = {
+export const acceptRecurringSchema = {
   recurringID: {
     sanitizer: sanitizeUUID,
     validator: validateUUID,
@@ -104,7 +126,7 @@ export const acceptRecurringSchema: ValidationSchema = {
 /**
  * Schema for cancelling recurring transactions
  */
-export const cancelRecurringSchema: ValidationSchema = {
+export const cancelRecurringSchema = {
   recurringID: {
     sanitizer: sanitizeUUID,
     validator: validateUUID,
@@ -115,7 +137,7 @@ export const cancelRecurringSchema: ValidationSchema = {
 /**
  * Schema for getting recurring transaction details
  */
-export const getRecurringSchema: ValidationSchema = {
+export const getRecurringSchema = {
   recurringID: {
     sanitizer: sanitizeUUID,
     validator: validateUUID,

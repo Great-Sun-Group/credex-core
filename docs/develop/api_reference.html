@@ -11767,7 +11767,7 @@
           "Recurring"
         ],
         "summary": "Create a new recurring transaction",
-        "description": "Creates a new recurring transaction schedule. Supports both regular and DCO_GIVE template types.",
+        "description": "Creates a new recurring transaction schedule. Supports REGULAR, DCO_GIVE, and MEMBERTIER_SUBSCRIPTION template types. For subscriptions, targetAccountID is optional (defaults to greatsun_ops) and auto-acceptance is applied.",
         "security": [
           {
             "bearerAuth": []
@@ -11781,7 +11781,6 @@
                 "type": "object",
                 "required": [
                   "sourceAccountID",
-                  "targetAccountID",
                   "templateType",
                   "payFrequency",
                   "startDate"
@@ -11795,20 +11794,21 @@
                   "targetAccountID": {
                     "type": "string",
                     "format": "uuid",
-                    "description": "ID of the target account (must be foundation account for DCO_GIVE)"
+                    "description": "ID of the target account (required for REGULAR/DCO_GIVE, optional for MEMBERTIER_SUBSCRIPTION)"
                   },
                   "templateType": {
                     "type": "string",
                     "enum": [
                       "REGULAR",
-                      "DCO_GIVE"
+                      "DCO_GIVE",
+                      "MEMBERTIER_SUBSCRIPTION"
                     ],
                     "description": "Type of recurring template"
                   },
                   "payFrequency": {
                     "type": "integer",
                     "minimum": 1,
-                    "description": "Number of days between payments"
+                    "description": "Number of days between payments (28 for subscriptions)"
                   },
                   "startDate": {
                     "type": "string",
@@ -11840,7 +11840,7 @@
                   },
                   "securedCredex": {
                     "type": "boolean",
-                    "description": "Optional for REGULAR templates"
+                    "description": "Optional for REGULAR templates (always true for subscriptions)"
                   },
                   "DCOgiveInCXX": {
                     "type": "number",
@@ -11858,6 +11858,13 @@
                       "ZWG"
                     ],
                     "description": "Required if templateType is DCO_GIVE"
+                  },
+                  "memberTier": {
+                    "type": "integer",
+                    "enum": [
+                      3
+                    ],
+                    "description": "Required if templateType is MEMBERTIER_SUBSCRIPTION (only tier 3 supported)"
                   }
                 }
               }
@@ -11964,6 +11971,10 @@
                                     },
                                     "templateType": {
                                       "type": "string"
+                                    },
+                                    "memberTier": {
+                                      "type": "integer",
+                                      "description": "Present for subscription templates"
                                     }
                                   }
                                 },

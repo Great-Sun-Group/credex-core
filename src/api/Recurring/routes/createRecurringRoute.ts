@@ -12,7 +12,7 @@ import logger from "../../../utils/logger";
  *   post:
  *     tags: [Recurring]
  *     summary: Create a new recurring transaction
- *     description: Creates a new recurring transaction schedule. Supports both regular and DCO_GIVE template types.
+ *     description: Creates a new recurring transaction schedule. Supports REGULAR, DCO_GIVE, and MEMBERTIER_SUBSCRIPTION template types. For subscriptions, targetAccountID is optional (defaults to greatsun_ops) and auto-acceptance is applied.
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -23,7 +23,6 @@ import logger from "../../../utils/logger";
  *             type: object
  *             required:
  *               - sourceAccountID
- *               - targetAccountID
  *               - templateType
  *               - payFrequency
  *               - startDate
@@ -35,15 +34,15 @@ import logger from "../../../utils/logger";
  *               targetAccountID:
  *                 type: string
  *                 format: uuid
- *                 description: ID of the target account (must be foundation account for DCO_GIVE)
+ *                 description: ID of the target account (required for REGULAR/DCO_GIVE, optional for MEMBERTIER_SUBSCRIPTION)
  *               templateType:
  *                 type: string
- *                 enum: [REGULAR, DCO_GIVE]
+ *                 enum: [REGULAR, DCO_GIVE, MEMBERTIER_SUBSCRIPTION]
  *                 description: Type of recurring template
  *               payFrequency:
  *                 type: integer
  *                 minimum: 1
- *                 description: Number of days between payments
+ *                 description: Number of days between payments (28 for subscriptions)
  *               startDate:
  *                 type: string
  *                 format: date
@@ -64,7 +63,7 @@ import logger from "../../../utils/logger";
  *                 description: Required if templateType is REGULAR
  *               securedCredex:
  *                 type: boolean
- *                 description: Optional for REGULAR templates
+ *                 description: Optional for REGULAR templates (always true for subscriptions)
  *               DCOgiveInCXX:
  *                 type: number
  *                 minimum: 0
@@ -74,6 +73,10 @@ import logger from "../../../utils/logger";
  *                 type: string
  *                 enum: [CXX, CAD, USD, XAU, ZWG]
  *                 description: Required if templateType is DCO_GIVE
+ *               memberTier:
+ *                 type: integer
+ *                 enum: [3]
+ *                 description: Required if templateType is MEMBERTIER_SUBSCRIPTION (only tier 3 supported)
  *     responses:
  *       201:
  *         description: Recurring transaction created successfully
@@ -146,6 +149,9 @@ import logger from "../../../utils/logger";
  *                                   type: string
  *                                 templateType:
  *                                   type: string
+ *                                 memberTier:
+ *                                   type: integer
+ *                                   description: Present for subscription templates
  *                             participants:
  *                               type: object
  *                               properties:
