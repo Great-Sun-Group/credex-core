@@ -369,10 +369,20 @@ MATCH (issuer:Account)-[rel:OFFERS|OWES]->(credex:Credex)
 OPTIONAL MATCH (credex)<-[:SECURES]-(securer:Account)</code></pre>
 
     <h4>Recurring Module</h4>
-    <pre><code>// Core relationships
+    <pre><code>// Core relationships - Template Creation
 MATCH (sourceAccount:Account)-[:SCHEDULES]->(recurring:Recurring)
   -[:TARGETS]->(targetAccount:Account)
-MATCH (recurring)-[:ACTIVE]-(targetAccount:Account)
+
+// State Management
+MATCH (recurring)-[:REQUESTS]->(targetAccount:Account)  // Pending state
+MATCH (recurring)-[:ACTIVE]->(targetAccount:Account)    // Accepted state
+
+// Status Tracking
+MATCH (recurring {status: "ACTIVE"})  // Active subscriptions
+MATCH (recurring {status: "PENDING"}) // Pending subscriptions
+MATCH (recurring {status: "CANCELLED"}) // Cancelled subscriptions
+
+// Execution History
 OPTIONAL MATCH (recurring)-[:LAST_RUN]->(execution:Execution)</code></pre>
 
     <h4>Admin Module</h4>
