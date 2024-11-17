@@ -4,9 +4,28 @@ let isMenuOpen = false;
 // Get relative path to docs root
 function getBasePath() {
   const path = window.location.pathname;
-  const parts = path.split("/");
-  const depth = parts.slice(parts.indexOf("docs") + 1).filter(Boolean).length;
-  return "../".repeat(depth - 1);
+  
+  // If we're at /docs/ or /docs/index.html
+  if (path === "/docs/" || path === "/docs/index.html") {
+    return "";
+  }
+  
+  // If we're at root domain
+  if (path === "/" || path === "/index.html") {
+    return "docs/";
+  }
+  
+  // For subdirectories, count path segments after "docs"
+  const segments = path.split("/");
+  const docsIndex = segments.indexOf("docs");
+  if (docsIndex !== -1) {
+    // Filter out empty strings and count segments after "docs"
+    const segmentsAfterDocs = segments.slice(docsIndex + 1).filter(Boolean);
+    return "../".repeat(segmentsAfterDocs.length) + "docs/";
+  }
+  
+  // Fallback for any other case
+  return "docs/";
 }
 
 // Menu data structure
