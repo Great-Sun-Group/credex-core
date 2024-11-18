@@ -129,12 +129,6 @@ This document details the implementation plan for remaining Phase 1 testing work
 - Test environment stability
 - Rate limit handling
 
-## Timeline
-1. Week 1: Recurring payment core flows
-2. Week 2: Administrative operations
-3. Week 3: Extended balance testing
-4. Week 4: Error cases and edge conditions
-
 ## Next Steps
 1. Implement recurring payment tests
 2. Add administrative operation tests
