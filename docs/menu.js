@@ -97,10 +97,6 @@ const menuData = {
           link: "develop/api_reference.html",
         },
         {
-          text: "API Standards",
-          link: "develop/api_standards.html",
-        },
-        {
           text: "Authorization Security",
           link: "develop/auth_security.html",
         },

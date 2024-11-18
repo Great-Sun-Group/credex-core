@@ -30,9 +30,9 @@ info:
   description: API for verifying user identity through photo ID comparison
 
 servers:
-  - url: https://api.example.com/v1
+  - url: https://api.example.com
     description: Production server
-  - url: https://staging-api.example.com/v1
+  - url: https://staging-api.example.com
     description: Staging server
 
 paths:
