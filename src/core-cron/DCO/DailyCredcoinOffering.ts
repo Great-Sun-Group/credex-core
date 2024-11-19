@@ -2,12 +2,13 @@ import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { DBinitialization } from "./DBinitialization/index";
 import { DCOexecute } from "./DCOexecute/index";
 import { DCOavatars } from "./DCOavatars/index";
+import { DCOtriggersExecute } from "./DCOtriggers/index";
 import logger from "../../utils/logger";
 
 /**
  * Executes the Daily Credcoin Offering (DCO) process.
  * This function checks for an active daynode, initializes the database if necessary,
- * and runs the DCO execution and avatar update processes.
+ * and runs the DCO execution, avatar update, and trigger processes.
  *
  * @returns {Promise<{ success: boolean, error?: string }>} Returns an object indicating success and any error message.
  */
@@ -38,6 +39,10 @@ export async function DailyCredcoinOffering(): Promise<{
     logger.debug("Starting DCO avatars update");
     await DCOavatars();
     logger.debug("DCO avatars update completed");
+
+    logger.debug("Starting DCO triggers execution");
+    await DCOtriggersExecute();
+    logger.debug("DCO triggers execution completed");
 
     logger.info("Daily Credcoin Offering process completed successfully");
     return { success: true };

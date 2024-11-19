@@ -16,7 +16,7 @@ describe("Authentication Integration Tests", () => {
 
   test("Login member 1", async () => {
     const loginResponse = await axios.post(
-      "login", // baseURL from setup.ts already includes /v1/
+      "login",
       {
         phone: `+1${timestamp}001`
       },

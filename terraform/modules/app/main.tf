@@ -50,7 +50,7 @@ resource "aws_ecs_task_definition" "credex_core" {
   container_definitions = jsonencode([
     {
       name  = "credex-core"
-      image = "${var.ecr_repository_url}:latest"
+      image = var.docker_image
       portMappings = [
         {
           containerPort = var.app_port
