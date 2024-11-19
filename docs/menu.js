@@ -33,6 +33,7 @@ const menuData = {
   "The Credex Movement": {
     title: "The plausible promise of the credex ecosystem **COMING SOON**",
     items: [
+      /*
       {
         text: "Our Campaign",
         link: "credex-movement/our_campaign.html",
@@ -49,11 +50,13 @@ const menuData = {
         text: "Our Politics",
         link: "credex-movement/our_politics.html",
       },
+    */
     ],
   },
   "Member Guides": {
     title: "How to use the credex ecosystem **COMING SOON**",
     items: [
+      /*
       {
         text: "Using Credcoin",
         link: "member-guides/credcoin.html",
@@ -62,6 +65,7 @@ const menuData = {
         text: "Glossary",
         link: "member-guides/glossary.html",
       },
+    */
     ],
   },
   "Developer Guides": {
@@ -138,6 +142,14 @@ const menuData = {
     items: {
       Backgrounders: [
         {
+          text: "Executive Summary",
+          link: "great-sun/executive_summary.html",
+        },
+        {
+          text: "Credex & Great Sun",
+          link: "great-sun/credex_greatsun.html",
+        },
+        {
           text: "Credex Ecosystem Services",
           link: "great-sun/ecosystem_services.html",
         },
@@ -146,34 +158,34 @@ const menuData = {
           link: "great-sun/base_revenue.html",
         },
         {
-          text: "Software Costs",
-          link: "great-sun/software_costs.html",
+          text: "Expense Structure",
+          link: "great-sun/expense_structure.html",
         },
         {
-          text: "Positioning and Competition",
+          text: "Positioning & Competition",
           link: "great-sun/positioning_competition.html",
         },
         {
-          text: "Compliance",
+          text: "Regulatory Compliance",
           link: "great-sun/compliance.html",
         },
       ],
       "African Heart": [
         {
           text: "African Century",
-          link: "great-sun/african-heart/african_century.html",
+          link: "great-sun/african_century.html",
         },
         {
-          text: "Continental Resource Flows",
-          link: "great-sun/african-heart/resource_flows.html",
+          text: "Resource Flows",
+          link: "great-sun/resource_flows.html",
         },
         {
-          text: "Continental Financing",
-          link: "great-sun/african-heart/financing.html",
+          text: "Financing",
+          link: "great-sun/financing.html",
         },
         {
           text: "Demographics",
-          link: "great-sun/african-heart/demographics.html",
+          link: "great-sun/demographics.html",
         },
       ],
       "Wedge Market": [
@@ -182,12 +194,12 @@ const menuData = {
           link: "great-sun/greatest_need.html",
         },
         {
-          text: "Zimbabwe Heart",
-          link: "great-sun/zimbabwe_heart.html",
+          text: "Zimbabwe in the Lead",
+          link: "great-sun/zimbabwe_lead.html",
         },
         {
-          text: "Mbare Wedge",
-          link: "great-sun/mbare_wedge.html",
+          text: "Mbare Heart",
+          link: "great-sun/mbare_heart.html",
         },
       ],
       "Pan-African Growth": [
@@ -202,6 +214,10 @@ const menuData = {
         {
           text: "Commercial Hubs",
           link: "great-sun/commercial_hubs.html",
+        },
+        {
+          text: "Endgame",
+          link: "great-sun/endgame.html",
         },
       ],
     },
@@ -332,6 +348,24 @@ function createMenuOverlay() {
   closeButton.onclick = toggleMenu;
   menuContent.appendChild(closeButton);
 
+  // Add expand/collapse all buttons
+  const controlButtons = document.createElement("div");
+  controlButtons.className = "menu-controls";
+
+  const expandAllButton = document.createElement("button");
+  expandAllButton.className = "menu-control-button";
+  expandAllButton.onclick = expandAll;
+  expandAllButton.innerHTML = '<span class="icon">▼</span> Expand All';
+
+  const collapseAllButton = document.createElement("button");
+  collapseAllButton.className = "menu-control-button";
+  collapseAllButton.onclick = collapseAll;
+  collapseAllButton.innerHTML = '<span class="icon">▲</span> Collapse All';
+
+  controlButtons.appendChild(expandAllButton);
+  controlButtons.appendChild(collapseAllButton);
+  menuContent.appendChild(controlButtons);
+
   // Create main menu
   const mainMenu = document.createElement("div");
   mainMenu.id = "mainMenu";
@@ -394,6 +428,7 @@ function createMenuOverlay() {
 
         const itemsList = document.createElement("div");
         itemsList.className = "itemsList";
+        itemsList.style.display = "none"; // Initially hidden
 
         items.forEach((item) => {
           const link = document.createElement("a");
@@ -432,12 +467,12 @@ function toggleCategory(categoryDiv) {
 
   if (!isExpanded) {
     submenu.style.display = "block";
-  }
-
-  // For categories with direct items (no subcategories)
-  const itemsList = submenu.querySelector(".itemsList");
-  if (itemsList && !isExpanded) {
-    itemsList.style.display = "block";
+    
+    // For categories with direct items, show the items list
+    const directItemsList = submenu.querySelector(":scope > .itemsList");
+    if (directItemsList) {
+      directItemsList.style.display = "block";
+    }
   }
 }
 
@@ -455,6 +490,28 @@ function toggleSubcategory(subcategoryDiv) {
   if (!isExpanded) {
     itemsList.style.display = "block";
   }
+}
+
+// Expand all categories and subcategories
+function expandAll() {
+  document.querySelectorAll(".submenu").forEach((submenu) => {
+    submenu.style.display = "block";
+  });
+  
+  document.querySelectorAll(".itemsList").forEach((itemsList) => {
+    itemsList.style.display = "block";
+  });
+}
+
+// Collapse all categories and subcategories
+function collapseAll() {
+  document.querySelectorAll(".submenu").forEach((submenu) => {
+    submenu.style.display = "none";
+  });
+  
+  document.querySelectorAll(".itemsList").forEach((itemsList) => {
+    itemsList.style.display = "none";
+  });
 }
 
 // Initialize menu

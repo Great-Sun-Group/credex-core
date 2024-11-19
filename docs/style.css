@@ -114,23 +114,36 @@ ol {
 table {
   border-spacing: 0;
   border-collapse: collapse;
-  margin-top: 0;
-  margin-bottom: 16px;
+  margin: 20px 0;
+  width: 100%;
 }
 
 table th,
 table td {
-  padding: 6px 13px;
+  padding: 12px;
   border: 1px solid #04a0b2;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1.4;
 }
 
 table th {
   font-weight: 600;
   background-color: #000000;
+  color: #fbb016;
 }
 
-table tr:nth-child(2n) {
+table td {
+  background-color: rgba(6, 21, 31, 0.95);
+}
+
+table tr:nth-child(2n) td {
   background-color: rgba(4, 160, 178, 0.1);
+}
+
+/* Special styling for Monthly Price row */
+table tr:nth-child(2) td {
+  color: #fbb016;
 }
 
 blockquote {
@@ -294,6 +307,38 @@ blockquote {
 #closeMenuButton:hover {
   background: #fbb016;
   transform: scale(1.1);
+}
+
+.menu-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 10px 20px;
+  margin-bottom: 10px;
+}
+
+.menu-control-button {
+  background: rgba(4, 160, 178, 0.1);
+  border: 1px solid #04a0b2;
+  border-radius: 5px;
+  color: #fbb016;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.menu-control-button:hover {
+  background: rgba(4, 160, 178, 0.2);
+  border-color: #fbb016;
+  transform: scale(1.05);
+}
+
+.menu-control-button .icon {
+  font-size: 12px;
 }
 
 .menuCategory {
