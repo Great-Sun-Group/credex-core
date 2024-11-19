@@ -28,6 +28,248 @@
 
     <h1 class="chapter-title">Regulatory Compliance</h1>
 
-    <p>Coming soon.</p>
+    <h2>Accounting Framework</h2>
+    <p>
+      The credex ecosystem implements a GAAP-compliant double-entry accounting system where each credex transaction creates matching accounts payable and accounts receivable entries for the counterparties involved. This ensures:
+    </p>
+    <ul>
+      <li>Complete audit trails for all transactions</li>
+      <li>Accurate tracking of income and expenses</li>
+      <li>Proper balance sheet representation</li>
+      <li>Clear documentation of value exchanges</li>
+    </ul>
+
+    <h3>Example Accounting Entries</h3>
+    <p>When a credex is issued and accepted, the following entries are automatically generated:</p>
+    <table>
+      <tr>
+        <th>Account</th>
+        <th>Debit</th>
+        <th>Credit</th>
+      </tr>
+      <tr>
+        <td>Issuer's Accounts Payable</td>
+        <td></td>
+        <td>Transaction Amount</td>
+      </tr>
+      <tr>
+        <td>Issuer's Expense Account</td>
+        <td>Transaction Amount</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Acceptor's Accounts Receivable</td>
+        <td>Transaction Amount</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Acceptor's Revenue Account</td>
+        <td></td>
+        <td>Transaction Amount</td>
+      </tr>
+    </table>
+
+    <p>When a credex is cleared in a credloop, adjusting entries are made:</p>
+    <table>
+      <tr>
+        <th>Account</th>
+        <th>Debit</th>
+        <th>Credit</th>
+      </tr>
+      <tr>
+        <td>Accounts Payable</td>
+        <td>Cleared Amount</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Accounts Receivable</td>
+        <td></td>
+        <td>Cleared Amount</td>
+      </tr>
+    </table>
+
+    <h2>Tax Compliance</h2>
+    <p>
+      The credex ecosystem is designed to ensure full tax compliance across all jurisdictions. Key aspects include:
+    </p>
+
+    <h3>Value Recognition</h3>
+    <ul>
+      <li>All value exchanges are recorded at fair market value</li>
+      <li>Income is recognized when value is provided (accrual basis)</li>
+      <li>Expenses are recognized when value is received</li>
+      <li>Exchange rates are updated daily through the DCO process</li>
+    </ul>
+
+    <h3>Tax Reporting</h3>
+    <ul>
+      <li>Complete transaction histories available for tax reporting</li>
+      <li>Multi-currency support with automatic rate conversions</li>
+      <li>Clear distinction between business and personal transactions</li>
+      <li>Detailed records of all value exchanges for tax assessment</li>
+    </ul>
+
+    <h3>Tax Authority Access</h3>
+    <p>
+      Any entity with authority to audit financial records for tax purposes has equivalent authority to audit credex transactions. The system provides:
+    </p>
+    <ul>
+      <li>Comprehensive audit trails</li>
+      <li>Transaction verification mechanisms</li>
+      <li>Historical exchange rate data</li>
+      <li>Clear documentation of value flows</li>
+    </ul>
+
+    <h2>Secured Credex Compliance</h2>
+    
+    <h3>Asset Backing</h3>
+    <p>
+      Secured credexes are backed by real assets held by authorized and audited institutions:
+    </p>
+    <ul>
+      <li>Daily auditing of trust accounts</li>
+      <li>Verification of 1:1 backing of all secured credexes</li>
+      <li>Segregation of secured assets by denomination</li>
+      <li>Regular compliance checks of securing institutions</li>
+    </ul>
+
+    <h3>Issuance Controls</h3>
+    <p>
+      The system implements strict controls on secured credex issuance:
+    </p>
+    <ul>
+      <li>Only authorized institutions can issue unrestricted secured credexes</li>
+      <li>Other accounts limited to previously received secured balances</li>
+      <li>Automated verification of securing assets</li>
+      <li>Real-time monitoring of secured credex circulation</li>
+    </ul>
+
+    <h3>Clearing Mechanisms</h3>
+    <p>
+      Secured credexes maintain denomination isolation in clearing:
+    </p>
+    <ul>
+      <li>Separate credloop paths for each secured denomination</li>
+      <li>No mixing of secured and unsecured credexes in loops</li>
+      <li>Automated clearing through the MTQ process</li>
+      <li>Full audit trails of all clearing operations</li>
+    </ul>
+
+    <h2>Anti-Money Laundering (AML) Compliance</h2>
+
+    <h3>Know Your Customer (KYC)</h3>
+    <p>
+      The credex ecosystem implements robust KYC procedures:
+    </p>
+    <ul>
+      <li>Government ID verification for all members</li>
+      <li>Facial recognition matching</li>
+      <li>Business registration validation for applicable corporate accounts</li>
+    </ul>
+
+    <h3>Transaction Monitoring</h3>
+    <p>
+      Comprehensive monitoring systems track:
+    </p>
+    <ul>
+      <li>Unusual transaction patterns</li>
+      <li>High-value transactions</li>
+      <li>Cross-border value flows</li>
+    </ul>
+
+    <h3>Reporting Requirements</h3>
+    <p>
+      The system facilitates required regulatory reporting:
+    </p>
+    <ul>
+      <li>Suspicious activity reporting</li>
+      <li>Large transaction reporting</li>
+      <li>Cross-border transaction reporting</li>
+      <li>Regular compliance audits</li>
+    </ul>
+
+    <h2>Data Protection and Privacy</h2>
+
+    <h3>Member Data</h3>
+    <p>
+      The ecosystem implements comprehensive data protection:
+    </p>
+    <ul>
+      <li>Encryption of personal information</li>
+      <li>Secure storage of verification documents</li>
+      <li>Access controls and audit logging</li>
+      <li>Data retention policies</li>
+    </ul>
+
+    <h3>Transaction Privacy</h3>
+    <p>
+      While maintaining regulatory compliance, the system protects transaction privacy:
+    </p>
+    <ul>
+      <li>Members see only their own transactions</li>
+      <li>Credloop paths not visible to participants</li>
+      <li>Selective sharing of credit histories</li>
+      <li>Granular permission controls</li>
+    </ul>
+
+    <h2>Regulatory Framework</h2>
+
+    <h3>Not a Money Service</h3>
+    <p>
+      The credex ecosystem is fundamentally an accounting platform:
+    </p>
+    <ul>
+      <li>Does not handle or transfer currency</li>
+      <li>No custody of member funds</li>
+      <li>Not a payment processor</li>
+      <li>Not a money transmission service</li>
+    </ul>
+
+    <h3>Accounting Service Classification</h3>
+    <p>
+      The platform provides:
+    </p>
+    <ul>
+      <li>Double-entry accounting services</li>
+      <li>Smart contract management</li>
+      <li>Value tracking and clearing</li>
+      <li>Transaction documentation</li>
+    </ul>
+
+    <h2>Compliance Infrastructure</h2>
+
+    <h3>Technical Controls</h3>
+    <p>
+      The system implements comprehensive technical controls:
+    </p>
+    <ul>
+      <li>Secure API infrastructure</li>
+      <li>Cryptographic transaction signing</li>
+      <li>Automated compliance checks</li>
+      <li>Real-time monitoring systems</li>
+    </ul>
+
+    <h3>Operational Controls</h3>
+    <p>
+      Operational procedures ensure ongoing compliance:
+    </p>
+    <ul>
+      <li>Regular compliance audits</li>
+      <li>Staff training programs</li>
+      <li>Documented procedures</li>
+      <li>Incident response protocols</li>
+    </ul>
+
+    <h3>Reporting Systems</h3>
+    <p>
+      Comprehensive reporting capabilities support:
+    </p>
+    <ul>
+      <li>Regulatory reporting requirements</li>
+      <li>Internal compliance monitoring</li>
+      <li>Audit trail generation</li>
+      <li>Performance analytics</li>
+    </ul>
+
   </body>
 </html>
