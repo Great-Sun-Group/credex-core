@@ -154,8 +154,8 @@ const menuData = {
           link: "great-sun/ecosystem_services.html",
         },
         {
-          text: "Base Revenue Model",
-          link: "great-sun/base_revenue.html",
+          text: "Revenue Streams",
+          link: "great-sun/revenue_streams.html",
         },
         {
           text: "Expense Structure",
