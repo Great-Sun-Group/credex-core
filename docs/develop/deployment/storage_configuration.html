@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Storage Configuration Documentation</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <div id="menuButton" onclick="window.location.href='../../menu.html'">
+      <img src="../../images/logo.png" alt="Menu" class="menu-logo">
+      <span class="menu-text">MENU</span>
+    </div>
+
+    <div class="header-logo">
+      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+    <div class="container">
+      <h1>Storage Configuration Documentation</h1>
+
+      <h2>Folder Structure</h2>
+
+      <pre><code>credex-verification-photos-{environment}/
+├── uploads/
+│   ├── id-documents/     # Raw ID document uploads
+│   └── selfies/         # Raw selfie photo uploads
+├── processed/
+│   ├── id-documents/     # Processed and validated ID documents
+│   └── selfies/         # Processed and validated selfies
+├── archived/            # Long-term storage for historical records
+└── temp/               # Temporary storage for processing
+
+credex-verification-logs-{environment}/
+└── access-logs/        # S3 access logs for audit trail
+
+credex-verification-backups-{environment}/
+└── processed/          # Cross-region backup of processed files</code></pre>
+
+      <h2>Lifecycle Policies</h2>
+
+      <h3>Upload Files</h3>
+      <ul>
+        <li>Storage Class: STANDARD → GLACIER</li>
+        <li>Transition: After 90 days</li>
+        <li>Expiration: After 365 days</li>
+        <li>Applies to: All files in uploads/</li>
+      </ul>
+
+      <h3>Processed Files</h3>
+      <ul>
+        <li>Storage Class: STANDARD → STANDARD_IA → GLACIER</li>
+        <li>First Transition: After 30 days to STANDARD_IA</li>
+        <li>Second Transition: After 90 days to GLACIER</li>
+        <li>Applies to: All files in processed/</li>
+      </ul>
+
+      <h3>Temporary Files</h3>
+      <ul>
+        <li>Storage Class: STANDARD</li>
+        <li>Expiration: After 1 day</li>
+        <li>Applies to: All files in temp/</li>
+      </ul>
+
+      <h2>Access Patterns</h2>
+
+      <h3>Write Operations</h3>
+      <ol>
+        <li>
+          Upload Path:
+          <pre><code>uploads/{type}/{timestamp}-{uuid}.{ext}</code></pre>
+          <ul>
+            <li>type: 'id-documents' or 'selfies'</li>
+            <li>timestamp: ISO format</li>
+            <li>uuid: Unique identifier</li>
+            <li>ext: File extension (jpg/png)</li>
+          </ul>
+        </li>
+        <li>
+          Process Path:
+          <pre><code>processed/{type}/{timestamp}-{uuid}.{ext}</code></pre>
+          <ul>
+            <li>Files moved here after successful validation</li>
+          </ul>
+        </li>
+      </ol>
+
+      <h3>Read Operations</h3>
+      <ol>
+        <li>
+          Verification Process:
+          <ul>
+            <li>Read from uploads/ for initial processing</li>
+            <li>Read from processed/ for verification</li>
+            <li>Temporary files in temp/ for processing</li>
+          </ul>
+        </li>
+        <li>
+          Audit & Compliance:
+          <ul>
+            <li>Access logs available in verification-logs bucket</li>
+            <li>Historical data retrievable from archived/</li>
+          </ul>
+        </li>
+      </ol>
+
+      <h2>Backup Strategy</h2>
+
+      <h3>Cross-Region Replication</h3>
+      <ul>
+        <li>Primary Region: af-south-1</li>
+        <li>Backup Region: us-east-1</li>
+        <li>Replication Rules:
+          <ul>
+            <li>Processed files only</li>
+            <li>Storage class: STANDARD_IA in backup region</li>
+            <li>Versioning enabled</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h3>Retention</h3>
+      <ul>
+        <li>Primary bucket: Full versioning enabled</li>
+        <li>Backup bucket: Versioning enabled</li>
+        <li>Access logs: 90 days retention</li>
+      </ul>
+
+      <h2>Security Measures</h2>
+
+      <h3>Encryption</h3>
+      <ul>
+        <li>Server-side encryption (AES-256)</li>
+        <li>Encryption in transit required</li>
+        <li>Backup bucket encrypted</li>
+      </ul>
+
+      <h3>Access Control</h3>
+      <ul>
+        <li>Public access blocked</li>
+        <li>CORS restricted to application domain</li>
+        <li>IAM roles with least privilege</li>
+        <li>Access logging enabled</li>
+      </ul>
+
+      <h3>IAM Policies</h3>
+      <ol>
+        <li>
+          ECS Task Role:
+          <ul>
+            <li>Read/Write to verification photos bucket</li>
+            <li>Read-only to processed files</li>
+            <li>No access to backup bucket</li>
+          </ul>
+        </li>
+        <li>
+          Rekognition Role:
+          <ul>
+            <li>Read-only access to verification photos</li>
+            <li>Collection management permissions</li>
+            <li>No write access to buckets</li>
+          </ul>
+        </li>
+      </ol>
+
+      <h2>Monitoring & Alerts</h2>
+
+      <h3>CloudWatch Metrics</h3>
+      <ul>
+        <li>Storage usage by prefix</li>
+        <li>Access patterns</li>
+        <li>Lifecycle transitions</li>
+        <li>Replication health</li>
+      </ul>
+
+      <h3>Cost Optimization</h3>
+      <ul>
+        <li>Lifecycle policies reduce storage costs</li>
+        <li>Infrequent access for processed files</li>
+        <li>Glacier for long-term storage</li>
+        <li>Temporary file cleanup</li>
+      </ul>
+
+      <h2>Testing Procedures</h2>
+
+      <h3>Storage Operations</h3>
+      <pre><code># Upload test
+aws s3 cp test-image.jpg s3://credex-verification-photos-${ENV}/uploads/id-documents/
+
+# Read test
+aws s3 cp s3://credex-verification-photos-${ENV}/processed/id-documents/test-image.jpg .
+
+# List objects
+aws s3 ls s3://credex-verification-photos-${ENV}/uploads/id-documents/
+
+# Check encryption
+aws s3api head-object --bucket credex-verification-photos-${ENV} --key uploads/id-documents/test-image.jpg</code></pre>
+
+      <h3>Lifecycle Testing</h3>
+      <pre><code># Check lifecycle rules
+aws s3api get-bucket-lifecycle-configuration --bucket credex-verification-photos-${ENV}
+
+# Verify transitions
+aws s3api head-object --bucket credex-verification-photos-${ENV} --key processed/id-documents/test-image.jpg</code></pre>
+
+      <h3>Replication Testing</h3>
+      <pre><code># Check replication status
+aws s3api head-object --bucket credex-verification-backups-${ENV} --key processed/id-documents/test-image.jpg
+
+# Verify backup bucket
+aws s3api get-bucket-versioning --bucket credex-verification-backups-${ENV}</code></pre>
+
+    </div>
+  </body>
+</html>
