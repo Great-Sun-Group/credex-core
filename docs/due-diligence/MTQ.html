@@ -6,7 +6,6 @@
     <title>Minute Transaction Queue (MTQ)</title>
     <link rel="stylesheet" href="../style.css" />
     <script src="../menu.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
   </head>
   <body>
     <div class="header-container">
@@ -26,12 +25,19 @@
     <h1 class="chapter-title">MinuteTransactionQueue (MTQ)</h1>
 
     <p>
-      The Minute Transaction Queue (MTQ) is a central component of the Credexecosystem that runs every minute. It links the main ledgerSpace database (the source of truth and full information) to a searchSpace database (optimized to find credloops). Every minute, first any new accounts are added to the searchSpace, then any new credexes. After each new credex is added, the ecosystem finds and clears all possible loops created by the new credex before moving on to the next.
+      The Minute Transaction Queue (MTQ) is a central component of the
+      Credexecosystem that runs every minute. It links the main ledgerSpace
+      database (the source of truth and full information) to a searchSpace
+      database (optimized to find credloops). Every minute, first any new
+      accounts are added to the searchSpace, then any new credexes. After each
+      new credex is added, the ecosystem finds and clears all possible loops
+      created by the new credex before moving on to the next.
     </p>
 
     <h2>MinuteTransactionQueue Process</h2>
     <p>
-      The MinuteTransactionQueue runs as a cron job every minute, with several safety mechanisms:
+      The MinuteTransactionQueue runs as a cron job every minute, with several
+      safety mechanisms:
     </p>
     <ol>
       <li>
@@ -48,7 +54,9 @@
           <li>14-minute bail timer to prevent infinite processing</li>
           <li>Comprehensive error handling and logging</li>
           <li>Automatic cleanup of running flags</li>
-          <li>Session management for both ledgerSpace and searchSpace databases</li>
+          <li>
+            Session management for both ledgerSpace and searchSpace databases
+          </li>
         </ul>
       </li>
       <li>
@@ -74,7 +82,9 @@
     <h2>LoopFinder Architecture</h2>
 
     <p>
-      The LoopFinder handles both unsecured and secured credexes. It manages the creation, processing, and clearing of credex loops while maintaining data integrity across both the searchSpace and ledgerSpace databases.
+      The LoopFinder handles both unsecured and secured credexes. It manages the
+      creation, processing, and clearing of credex loops while maintaining data
+      integrity across both the searchSpace and ledgerSpace databases.
     </p>
 
     <h3>Core Components</h3>
@@ -121,7 +131,10 @@
       <li>
         <strong>Secured Credexes:</strong>
         <ul>
-          <li>Use denomination-specific relationship types (e.g., "USD_SECURED", "EUR_SECURED")</li>
+          <li>
+            Use denomination-specific relationship types (e.g., "USD_SECURED",
+            "EUR_SECURED")
+          </li>
           <li>Due dates are automatically adjusted to the current day</li>
           <li>Maintain separate loop paths from unsecured credexes</li>
           <li>Require additional validation and security checks</li>
@@ -144,7 +157,8 @@
       <li>
         Credex Nodes:
         <ul>
-          <li>Store essential credex information:
+          <li>
+            Store essential credex information:
             <ul>
               <li>Outstanding amount</li>
               <li>Denomination</li>
@@ -269,7 +283,13 @@
     </ul>
 
     <p>
-      This implementation actualizes the Credex Principle by finding loops where "If I owe you, and you owe them, and they owe me, we're square." It automatically clears these loops, reducing the outstanding  amounts of all involved credexes by the same amount (the minimum amount in the loop). The differentiates between unsecured and secured credexes in every denomination, maintaining separate paths and applying different rules as needed.
+      This implementation actualizes the Credex Principle by finding loops where
+      "If I owe you, and you owe them, and they owe me, we're square." It
+      automatically clears these loops, reducing the outstanding amounts of all
+      involved credexes by the same amount (the minimum amount in the loop). The
+      differentiates between unsecured and secured credexes in every
+      denomination, maintaining separate paths and applying different rules as
+      needed.
     </p>
   </body>
 </html>
