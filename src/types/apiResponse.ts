@@ -184,7 +184,7 @@ export interface RecurringActionDetails {
   recurringID: string;
   amount: string;
   denomination: string;
-  frequency: string;
+  payFrequency: number;
   nextDate: string;
   status: string;
 }

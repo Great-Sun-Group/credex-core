@@ -22,6 +22,7 @@ export async function getActiveRecurringAvatars(
     AND avatar.templateType = 'REGULAR'
     AND date(avatar.nextPayDate) <= date(daynode.Date)
     AND (avatar.remainingPays IS NULL OR avatar.remainingPays > 0)
+    AND avatar.lastProcessed IS NULL
     MATCH (issuer:Account)-[:ACTIVE]->(avatar)-[:ACTIVE]->(acceptor:Account)
     RETURN
       avatar,
@@ -173,19 +174,21 @@ export async function getActiveDCOGiveTemplates(
 }
 
 /**
- * Deletes marked authorizations for a given avatar.
+ * Updates the lastProcessed timestamp and sets the next payment date
+ * based on the template's payFrequency (in days).
  */
 export async function deleteMarkedAuthorizations(
   session: Session,
   requestId: string,
   avatarId: string
 ): Promise<void> {
-  logger.debug("Deleting marked authorizations", { requestId, avatarId });
+  logger.debug("Updating template processing status", { requestId, avatarId });
 
   const query = `
     MATCH (avatar:Recurring {recurringID: $avatarId})
     WHERE avatar.status = 'ACTIVE'
-    SET avatar.lastProcessed = datetime()
+    SET avatar.lastProcessed = datetime(),
+        avatar.nextPayDate = date(datetime()) + duration.inDays(avatar.payFrequency).days
     WITH avatar
     MATCH (avatar)-[r:MARKED_FOR_DELETION]->()
     DELETE r
@@ -195,13 +198,13 @@ export async function deleteMarkedAuthorizations(
   try {
     const result = await session.run(query, { avatarId });
     const deletedCount = result.records[0].get("deletedCount").toNumber();
-    logger.debug(`Deleted ${deletedCount} marked authorizations`, {
+    logger.debug(`Updated template and deleted ${deletedCount} marked authorizations`, {
       requestId,
       avatarId,
       deletedCount,
     });
   } catch (error) {
-    logger.error("Error deleting marked authorizations", {
+    logger.error("Error updating template processing status", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
       requestId,

@@ -14,7 +14,7 @@ interface CancelRecurringResult {
   success: boolean;
   data?: RecurringActionDetails & {
     scheduleInfo: {
-      frequency: string;
+      payFrequency: number;
       nextRunDate: string;
       amount: string;
       denomination: string;
@@ -123,7 +123,7 @@ export async function CancelRecurringService(
         CREATE (source)-[:CANCELLED]->(recurring)-[:CANCELLED]->(target)
         RETURN
           recurring.recurringID as recurringID,
-          recurring.frequency as frequency,
+          recurring.payFrequency as payFrequency,
           recurring.startDate as nextRunDate,
           recurring.amount as amount,
           recurring.denomination as denomination,
@@ -178,11 +178,11 @@ export async function CancelRecurringService(
       recurringID,
       amount: `${denomFormatter(amount, denomination)} ${denomination}`,
       denomination,
-      frequency: cancelledRecord.get("frequency"),
+      payFrequency: cancelledRecord.get("payFrequency"),
       nextDate: cancelledRecord.get("nextRunDate"),
       status: cancelledRecord.get("status"),
       scheduleInfo: {
-        frequency: cancelledRecord.get("frequency"),
+        payFrequency: cancelledRecord.get("payFrequency"),
         nextRunDate: cancelledRecord.get("nextRunDate"),
         amount: `${denomFormatter(amount, denomination)} ${denomination}`,
         denomination,

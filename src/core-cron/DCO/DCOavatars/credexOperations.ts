@@ -1,4 +1,5 @@
 import moment from "moment-timezone";
+import { Session } from "neo4j-driver";
 import logger from "../../../utils/logger";
 import { CreateCredexService } from "../../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../../api/Credex/services/AcceptCredex";
@@ -51,6 +52,54 @@ function hasValidCredexData(result: DCOCreateCredexResult): result is DCOCreateC
 }
 
 /**
+ * Handles a failed payment by scheduling a retry for the next day
+ * Simple approach for initial implementation - just increment nextPayDate
+ */
+export async function handleFailedPayment(
+  session: Session,
+  template: Avatar,
+  reason: string,
+  requestId: string
+): Promise<void> {
+  logger.debug("Handling failed payment", {
+    requestId,
+    templateId: template.signerID,
+    reason
+  });
+
+  try {
+    // Increment nextPayDate by 1 day for retry
+    await session.executeWrite(async (tx) => {
+      const query = `
+        MATCH (recurring:Recurring {recurringID: $templateId})
+        SET recurring.nextPayDate = date(recurring.nextPayDate) + duration('P1D')
+        RETURN recurring
+      `;
+
+      await tx.run(query, {
+        templateId: template.signerID
+      });
+    });
+
+    logger.info("Payment retry scheduled for next day", {
+      requestId,
+      templateId: template.signerID,
+      reason,
+      action: "PAYMENT_RETRY_SCHEDULED"
+    });
+
+  } catch (error) {
+    logger.error("Error scheduling payment retry", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      requestId,
+      templateId: template.signerID
+    });
+    throw error;
+  }
+}
+
+/**
  * Prepares the data needed for creating a credex offer
  */
 export function prepareOfferData(
@@ -72,8 +121,10 @@ export function prepareOfferData(
       : "PURCHASE",
     OFFERSorREQUESTS: "OFFERS",
     requestId,
-    // DCO_GIVE templates must be secured
-    securedCredex: avatar.templateType === "DCO_GIVE" ? true : avatar.securedCredex,
+    // DCO_GIVE and MEMBERTIER_SUBSCRIPTION templates must be secured
+    securedCredex: avatar.templateType === "DCO_GIVE" || avatar.templateType === "MEMBERTIER_SUBSCRIPTION" 
+      ? true 
+      : avatar.securedCredex,
   };
 
   // Only set dueDate for non-secured credexes

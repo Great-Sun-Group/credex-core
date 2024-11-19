@@ -1,10 +1,11 @@
 import { credexTypes } from "../core-cron/constants/credexTypes";
 import { isValidDenomination } from "../core-cron/constants/denominations";
+import { TEMPLATE_TYPES } from "../api/Recurring/types";
 import logger from "../utils/logger";
 
 export function validateUUID(uuid: string): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -16,7 +17,7 @@ export function validateUUID(uuid: string): {
 
 export function validateHandle(handle: string): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
   const handleRegex = /^[a-z0-9_]{3,30}$/;
   const isValid = handleRegex.test(handle);
@@ -44,7 +45,7 @@ export function validateHandle(handle: string): {
 
 export function validateAccountName(name: string): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
   const isValid = name.length >= 3 && name.length <= 50;
   const message = isValid
@@ -56,7 +57,7 @@ export function validateAccountName(name: string): {
 
 export function validateEmail(email: string): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const isValid = emailRegex.test(email);
@@ -69,7 +70,7 @@ export function validateEmail(email: string): {
 
 export function validatePhone(phone: string): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
   const phoneRegex = /^\+?[1-9]\d{1,14}$/;
   const isValid = phoneRegex.test(phone);
@@ -82,7 +83,7 @@ export function validatePhone(phone: string): {
 
 export function validateAmount(amount: number): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
   const isValid = typeof amount === "number" && amount > 0 && isFinite(amount);
   const message = isValid
@@ -94,7 +95,7 @@ export function validateAmount(amount: number): {
 
 export function validateDenomination(denomination: string): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
   const isValid = isValidDenomination(denomination);
   const message = isValid
@@ -106,7 +107,7 @@ export function validateDenomination(denomination: string): {
 
 export function validateCredexType(type: string): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
   const isValid = credexTypes.includes(type);
   const message = isValid
@@ -118,7 +119,7 @@ export function validateCredexType(type: string): {
 
 export function validateName(name: string): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
   const isValid = name.length >= 3 && name.length <= 50;
   const message = isValid
@@ -130,18 +131,18 @@ export function validateName(name: string): {
 
 export function validateTier(tier: number): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
-  const isValid = Number.isInteger(tier) && tier >= 1;
+  const isValid = Number.isInteger(tier) && tier >= 1 && tier <= 5;
   const message = isValid
     ? "Valid tier"
-    : "Invalid tier: must be a positive integer";
+    : "Invalid tier: must be an integer between 1 and 5";
   return { isValid, message };
 }
 
 export function validatePositiveInteger(value: number): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
   const isValid = Number.isInteger(value) && value > 0;
   const message = isValid
@@ -153,20 +154,19 @@ export function validatePositiveInteger(value: number): {
 
 export function validatePositiveNumber(value: number): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
-  if (typeof value !== "number" || isNaN(value) || value <= 0) {
-    return { isValid: false, message: "Must be a positive number" };
-  }
-  return { isValid: true };
+  const isValid = typeof value === "number" && !isNaN(value) && value > 0;
+  const message = isValid ? "Valid number" : "Must be a positive number";
+  return { isValid, message };
 }
 
 export function validateOptionalPositiveNumber(value: any): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
   if (value === null) {
-    return { isValid: true };
+    return { isValid: true, message: "Valid optional number" };
   }
   if (typeof value !== "number" || isNaN(value) || value <= 0) {
     return {
@@ -174,22 +174,22 @@ export function validateOptionalPositiveNumber(value: any): {
       message: "If provided, must be a positive number",
     };
   }
-  return { isValid: true };
+  return { isValid: true, message: "Valid number" };
 }
 
 export function validateOptionalDenomination(value: any): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
   if (value === null) {
-    return { isValid: true };
+    return { isValid: true, message: "Valid optional denomination" };
   }
   return validateDenomination(value);
 }
 
 export function validateBoolean(value: any): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
   const isValid = typeof value === "boolean";
   const message = isValid
@@ -199,10 +199,33 @@ export function validateBoolean(value: any): {
   return { isValid, message };
 }
 
+export function validateDate(value: string): {
+  isValid: boolean;
+  message: string;
+} {
+  const date = new Date(value);
+  const isValid = !isNaN(date.getTime());
+  const message = isValid
+    ? "Valid date"
+    : "Invalid date: must be a valid date string (YYYY-MM-DD)";
+  return { isValid, message };
+}
+
+export function validateTemplateType(type: string): {
+  isValid: boolean;
+  message: string;
+} {
+  const isValid = Object.values(TEMPLATE_TYPES).includes(type as any);
+  const message = isValid
+    ? "Valid template type"
+    : `Invalid template type: must be one of ${Object.values(TEMPLATE_TYPES).join(", ")}`;
+  return { isValid, message };
+}
+
 export const v = {
   validateUUIDArray: (
     uuidArray: any
-  ): { isValid: boolean; message?: string } => {
+  ): { isValid: boolean; message: string } => {
     if (!Array.isArray(uuidArray)) {
       return { isValid: false, message: "Value must be an array" };
     }
@@ -217,7 +240,7 @@ export const v = {
       }
     }
 
-    return { isValid: true };
+    return { isValid: true, message: "Valid UUID array" };
   },
   validateBoolean,
 };
@@ -232,13 +255,11 @@ const VALID_ACCOUNT_TYPES = [
 
 export function validateAccountType(value: any): {
   isValid: boolean;
-  message?: string;
+  message: string;
 } {
-  if (!VALID_ACCOUNT_TYPES.includes(value)) {
-    return {
-      isValid: false,
-      message: `Invalid account type. Must be one of: ${VALID_ACCOUNT_TYPES.join(", ")}`,
-    };
-  }
-  return { isValid: true };
+  const isValid = VALID_ACCOUNT_TYPES.includes(value);
+  const message = isValid
+    ? "Valid account type"
+    : `Invalid account type. Must be one of: ${VALID_ACCOUNT_TYPES.join(", ")}`;
+  return { isValid, message };
 }
