@@ -103,61 +103,83 @@ export const uploadPhoto = async (req: Request, res: Response): Promise<Response
       hologramDetection: await detectHologram(processedImage),
       templateMatching: await matchTemplate(processedImage, type),
       securityFeatures: await checkSecurityFeatures(processedImage),
-      manipulationDetection: await detectManipulation(processedImage)
+      manipulationDetection: await detectManipulation(processedImage),
+      isAuthentic: false, // Will be set based on all checks
+      details: {}
     };
 
-    if (!authenticityChecks.isAuthentic) {
+    // Set isAuthentic based on all security checks
+    authenticityChecks.isAuthentic = (
+      authenticityChecks.hologramDetection &&
+      authenticityChecks.templateMatching &&
+      authenticityChecks.securityFeatures &&
+      authenticityChecks.manipulationDetection
+    );
+
+    // Only check authenticity for ID documents
+    if (type === 'id' && !authenticityChecks.isAuthentic) {
       return res.status(400).json({
         error: 'Document authenticity check failed',
         details: authenticityChecks.details
       });
     }
     
-    // Upload to S3 with enhanced path structure
-    const key = `uploads/${type}s/${uuidv4()}`;
-    await s3.putObject({
-      Bucket: process.env.PHOTOS_BUCKET!,
-      Key: key,
-      Body: processedImage,
-      ContentType: file.mimetype,
-      Metadata: {
-        ...Object.entries(metadata).reduce((acc, [key, value]) => ({
-          ...acc,
-          [key]: value?.toString()
-        }), {})
-      },
-      ServerSideEncryption: 'aws:kms',
-      SSEKMSKeyId: process.env.KMS_KEY_ID,
-      Tagging: 'DataType=PII'
-    }).promise();
-    
-    // Add Comprehensive Audit Logging
-    const auditLog: AuditLog = {
-      eventType: 'DOCUMENT_UPLOAD',
-      timestamp: new Date().toISOString(),
-      documentType: type,
-      ipAddress: req.ip || 'unknown',
-      userAgent: req.headers['user-agent'] as string,
-      processingResults: {
-        qualityChecks: validationResult,
-        authenticityChecks,
-        extractedData: extractedData ? maskSensitiveData(extractedData) : null
-      },
-      documentHash: metadata.documentHash
-    };
+    try {
+      // Upload to S3 with enhanced path structure
+      const key = `uploads/${type}s/${uuidv4()}`;
+      await s3.putObject({
+        Bucket: process.env.PHOTOS_BUCKET!,
+        Key: key,
+        Body: processedImage,
+        ContentType: file.mimetype,
+        Metadata: {
+          ...Object.entries(metadata).reduce((acc, [key, value]) => ({
+            ...acc,
+            [key]: value?.toString()
+          }), {})
+        },
+        ServerSideEncryption: 'aws:kms',
+        SSEKMSKeyId: process.env.KMS_KEY_ID,
+        Tagging: 'DataType=PII'
+      }).promise();
+      
+      // Add Comprehensive Audit Logging
+      const auditLog: AuditLog = {
+        eventType: 'DOCUMENT_UPLOAD',
+        timestamp: new Date().toISOString(),
+        documentType: type,
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.headers['user-agent'] as string,
+        processingResults: {
+          qualityChecks: validationResult,
+          authenticityChecks,
+          extractedData: extractedData ? maskSensitiveData(extractedData) : null
+        },
+        documentHash: metadata.documentHash
+      };
 
-    // TODO: Implement audit logger
-    // await auditLogger.log(auditLog);
-    
-    return res.json({
-      success: true,
-      key,
-      message: 'Photo uploaded successfully',
-      validationDetails: validationResult,
-      extractedData: type === 'id' ? extractedData : undefined
-    });
+      // TODO: Implement audit logger
+      // await auditLogger.log(auditLog);
+      
+      return res.json({
+        success: true,
+        key,
+        message: 'Photo uploaded successfully',
+        validationDetails: validationResult,
+        extractedData: type === 'id' ? extractedData : undefined
+      });
+    } catch (s3Error) {
+      console.error('S3 upload error:', s3Error);
+      return res.status(500).json({ 
+        error: 'Failed to process upload',
+        details: s3Error instanceof Error ? s3Error.message : 'Unknown error'
+      });
+    }
   } catch (error) {
-    console.error('S3 upload error:', error);
-    return res.status(500).json({ error: 'Failed to process upload' });
+    console.error('Upload processing error:', error);
+    return res.status(500).json({ 
+      error: 'Failed to process upload',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 };

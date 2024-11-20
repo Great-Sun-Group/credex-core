@@ -1,9 +1,7 @@
 // Mock AWS SDK before imports
-const mockS3 = {
-  putObject: jest.fn().mockReturnValue({
-    promise: jest.fn().mockResolvedValue({})
-  })
-};
+const mockPutObject = jest.fn().mockReturnValue({
+  promise: jest.fn().mockResolvedValue({})
+});
 
 const mockTextract = {
   detectDocumentText: jest.fn().mockReturnValue({
@@ -11,19 +9,12 @@ const mockTextract = {
   })
 };
 
-jest.mock('aws-sdk', () => {
-  const mockPutObject = jest.fn().mockReturnValue({
-    promise: () => Promise.resolve()
-  });
-
-  return {
-    S3: jest.fn(() => ({
-      putObject: mockPutObject
-    })),
-    Textract: jest.fn(() => mockTextract)
-  };
-});
-
+jest.mock('aws-sdk', () => ({
+  S3: jest.fn(() => ({
+    putObject: mockPutObject
+  })),
+  Textract: jest.fn(() => mockTextract)
+}));
 // Mock other dependencies
 jest.mock('sharp');
 jest.mock('../../../../src/api/verification/utils/imageValidation');
@@ -111,22 +102,18 @@ describe('Photo Upload Endpoint Tests', () => {
     // Reset all mocks before each test
     jest.clearAllMocks();
 
-    // Reset AWS mocks with successful responses
-    mockS3.putObject.mockReturnValue({
-      promise: jest.fn().mockResolvedValue({})
-    });
-    mockTextract.detectDocumentText.mockReturnValue({
-      promise: jest.fn().mockResolvedValue({ Blocks: [] })
-    });
-
     // Mock process.env
     process.env.PHOTOS_BUCKET = 'test-bucket';
   });
 
   it('successfully uploads a valid photo', async () => {
+    mockPutObject.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({})
+    });
+
     await uploadPhoto(mockRequest as Request, mockResponse as Response);
 
-    expect(mockS3.putObject).toHaveBeenCalled();
+    expect(mockPutObject).toHaveBeenCalled();
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: true,
@@ -190,7 +177,7 @@ describe('Photo Upload Endpoint Tests', () => {
   });
 
   it('handles S3 upload failures', async () => {
-    mockS3.putObject.mockReturnValue({
+    mockPutObject.mockReturnValue({
       promise: jest.fn().mockRejectedValue(new Error('S3 Error'))
     });
 
@@ -206,6 +193,9 @@ describe('Photo Upload Endpoint Tests', () => {
 
   it('extracts data for ID documents', async () => {
     mockRequest.body.type = 'id';
+    mockPutObject.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({})
+    });
     
     await uploadPhoto(mockRequest as Request, mockResponse as Response);
 
@@ -219,6 +209,9 @@ describe('Photo Upload Endpoint Tests', () => {
 
   it('does not extract data for selfie documents', async () => {
     mockRequest.body.type = 'selfie';
+    mockPutObject.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({})
+    });
     
     await uploadPhoto(mockRequest as Request, mockResponse as Response);
 
@@ -229,3 +222,4 @@ describe('Photo Upload Endpoint Tests', () => {
     );
   });
 });
+
