@@ -150,8 +150,7 @@ table tr:nth-child(2n) td {
   background-color: rgba(4, 160, 178, 0.1);
 }
 
-/* Special styling for Monthly Price row */
-table tr:nth-child(2) td {
+.highlight-row td {
   color: #fbb016;
 }
 
