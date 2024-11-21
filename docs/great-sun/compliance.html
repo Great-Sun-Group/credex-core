@@ -42,10 +42,10 @@
       If Alice invoices Bob for $10, and Bob invoices Alice for $10, they can agree to cancel these invoices against each other without money changing hands. These are real income and expense entries, so even if they are cancelled against each other the invoices need to be entered into their accounts to track the exchanges appropriately.
     </p>
 
-    <h4>1. Alice invoices Bob</h4>
+    <h4 class="big-words">Alice's Accounting Entries</h4>
     <table>
       <tr>
-        <th>Account</th>
+        <th>Alice Invoices Bob</th>
         <th>CR</th>
         <th>DR</th>
       </tr>
@@ -61,10 +61,9 @@
       </tr>
     </table>
 
-    <h4>2. Bob invoices Alice</h4>
     <table>
       <tr>
-        <th>Account</th>
+        <th>Bob invoices Alice</th>
         <th>CR</th>
         <th>DR</th>
       </tr>
@@ -80,10 +79,9 @@
       </tr>
     </table>
 
-    <h4>3. Entry to clear payable against receivable</h4>
     <table>
       <tr>
-        <th>Account</th>
+        <th>Entry to clear payable against receivable</th>
         <th>CR</th>
         <th>DR</th>
       </tr>
@@ -99,10 +97,9 @@
       </tr>
     </table>
 
-    <h4>4. Resulting account balances</h4>
     <table>
       <tr>
-        <th>Account</th>
+        <th>Resulting account balances</th>
         <th>CR</th>
         <th>DR</th>
       </tr>
@@ -145,33 +142,37 @@
 
     <h3>Multi-Denomination Support</h3>
     <p>
-      The same principle works across denominations. If Alice invoices Bob for $5 USD and Bob invoices Alice for $5 ZIG, they can use the exchange rate on the day they clear the invoices against each other. This will clear one transaction fully, and leave a balance remaining on the other.
+      The same principle works across denominations. If Alice invoices Bob for $5 USD and Bob invoices Alice for $5 CAD, they can use the exchange rate on the day they clear the invoices against each other. This will clear one transaction fully, and leave a balance remaining on the other.
     </p>
 
-    <h2>Regulatory Framework: Authorized Companies</h2>
+    <h2>Regulatory Framework</h2>
 
     <h3>Software Provider Role</h3>
     <p>
-      Using Great Sun Financial as an example: A software provider manages the credex ecosystem and makes it available to members internationally. This provider:
+      Great Sun Financial (and in future the <a href="credex_greatsun.html"></a>Credex Foundation</a>) is a software provider that manages the credex ecosystem and makes it available to members internationally. This provider:
     </p>
     <ul>
       <li>Maintains the accounting platform</li>
-      <li>Provides technical infrastructure</li>
+      <li>Provids technical infrastructure</li>
       <li>Ensures system security and reliability</li>
-      <li>Implements compliance controls</li>
-      <li>Does not handle or transfer currency</li>
+      <li>Implements compliance controls and auditability</li>
+      <li>Audits assets of accounts that can originate secured balances</li>
+    </ul>
+    <p>This provider does not:</p>
+    <ul>
+      <li>Handle or transfer currency</li>
     </ul>
 
-    <h3>Authorized Financial Company Role</h3>
+    <h3>Secured Asset Accounts</h3>
     <p>
-      Using Chenai Holdings as an example: Authorized companies can provide secured credex services by following specific rules:
+      Authorized companies can provide secured credex services by following specific rules and verifiably meeting strict criteria:
     </p>
     <ul>
-      <li>Sell secured credexes only for currency</li>
-      <li>Hold currency exactly equal to secured credex payables</li>
-      <li>Submit to daily audits of currency holdings</li>
-      <li>Maintain strict solvency requirements</li>
-      <li>Use currency only to buy secured credexes from members</li>
+      <li>Sell secured credexes only for currency/gold</li>
+      <li>Hold currency/gold exactly equal to secured credex payables</li>
+      <li>Submit to daily audits of currency/gold holdings</li>
+      <li>Maintain strict solvency requirements with 100% backing and zero "fractionalizing" of reserves</li>
+      <li>Use held currency/gold only to buy secured credexes from members</li>
     </ul>
 
     <h3>Example: Secured Credex Flow</h3>
@@ -185,7 +186,7 @@
         <ul>
           <li>Her secured credex limit drops to $5</li>
           <li>Bob gains ability to issue secured credexes up to $5</li>
-          <li>Bob can exchange his secured credexes for currency through the authorized company</li>
+          <li>Bob can exchange his secured credex balance for currency through the authorized company</li>
         </ul>
       </li>
     </ol>
@@ -218,18 +219,7 @@
 
     <h2>Tax Compliance</h2>
     <p>
-      Taxes apply to value exchanged, regardless of payment method. Whether payment is made in:
-    </p>
-    <ul>
-      <li>ZIG</li>
-      <li>USD</li>
-      <li>CAD</li>
-      <li>Gold coins</li>
-      <li>Chicken eggs</li>
-      <li>Manual labour</li>
-    </ul>
-    <p>
-      The tax obligations remain the same. Any entity with authority to audit financial records has equivalent authority to audit credex transactions. The system's auditability provides more benefit to regulators than to those seeking to evade taxes.
+      Taxes apply to value exchanged, regardless of payment method. Whether payment is made in USD, CAD, ZWG, gold coins, chicken eggs, or manual labour, the tax obligations remain the same. Any entity with authority to audit financial records has equivalent authority to audit credex transactions.
     </p>
 
     <h2>Technical Implementation</h2>
