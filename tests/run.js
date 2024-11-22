@@ -42,6 +42,17 @@ async function runTest() {
       // Handle devadmin operations
       const testPath = path.join('tests', 'api', 'endpoints', 'devadmin', `${command.toLowerCase()}.test.ts`);
       jestCommand = `jest "${testPath}" ${envFlags[env]}`;
+      // Execute with environment variables
+      execSync(jestCommand, {
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          NODE_ENV: env,
+          TEST_PARAMS: testParams.join(' '),
+          API_ENV: env
+        }
+      });
+      return;
     } else if (command === 'admin') {
       // Handle admin tests
       jestCommand = `jest --testPathPattern=tests/api/endpoints/admin/admin\\.test\\.ts ${envFlags[env]}`;
