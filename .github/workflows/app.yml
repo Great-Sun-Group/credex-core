@@ -115,6 +115,7 @@ jobs:
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}"},
             {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
             {"name": "CLIENT_API_KEY", "value": "${{ secrets.CLIENT_API_KEY }}"},
+            {"name": "DEV_ADMIN_KEY", "value": "${{ secrets.DEV_ADMIN_KEY }}"},
             {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"}
           ]' | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "Task definition updated."
