@@ -210,7 +210,7 @@ jobs:
             --cluster credex-cluster-$ENVIRONMENT \
             --services credex-core-service-$ENVIRONMENT \
             --query 'services[0]')
-          
+
           echo "Final Service State:"
           echo $FINAL_SERVICE | jq '{runningCount: .runningCount, desiredCount: .desiredCount, status: .status, events: .events[0:3]}'
 
@@ -220,7 +220,7 @@ jobs:
           echo "Environment: $ENVIRONMENT"
           echo "Image: $IMAGE"
           echo "Build Target: $BUILD_TARGET"
-          
+
           cd terraform
           echo "========================================"
           echo "App Infrastructure Outputs:"
@@ -262,7 +262,7 @@ jobs:
         run: |
           # Get CloudFront distribution ID for docs
           DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?contains(@, 'docs.${DOMAIN}')]].Id" --output text)
-          
+
           if [ -n "$DISTRIBUTION_ID" ]; then
             echo "Creating CloudFront invalidation for distribution $DISTRIBUTION_ID"
             aws cloudfront create-invalidation \
