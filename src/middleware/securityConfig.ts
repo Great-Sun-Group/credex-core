@@ -83,7 +83,7 @@ export const applySecurityMiddleware = (app: Application) => {
         callback(null, true);
       },
       methods: ["POST"],
-      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key", "x-dev-admin-key", "x-skip-rate-limit"],
+      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key"],  // Remove dev headers in production
       credentials: true,
       maxAge: 86400,
     };
@@ -95,6 +95,11 @@ export const applySecurityMiddleware = (app: Application) => {
   app.use((req: Request, res: Response, next: NextFunction) => {
     // Check for rate limiter bypass header
     if (req.headers['x-skip-rate-limit']) {
+      logger.debug("Rate limiter bypass attempt detected", {
+        path: req.path,
+        method: req.method,
+        ip: req.ip
+      });
       return verifyRateLimiterBypass(req, res, next);
     }
     // Apply standard rate limiting
