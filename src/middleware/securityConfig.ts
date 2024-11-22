@@ -4,28 +4,9 @@ import cors from "cors";
 import { rateLimiter } from "./rateLimiter";
 import { verifyRateLimiterBypass } from "./rateLimiterBypass";
 import { authMiddleware } from "./authMiddleware";
+import { verifyDevAdminKey } from "./devAdminAuth";
+import { verifyClientApiKey } from "./clientApiKeyAuth";
 import logger from "../utils/logger";
-
-const verifyClientApiKey = (req: Request, res: Response, next: NextFunction) => {
-  const clientApiKey = req.headers['x-client-api-key'];
-  const validApiKey = process.env.CLIENT_API_KEY;
-
-  if (!validApiKey) {
-    logger.error("CLIENT_API_KEY not set in environment");
-    return res.status(500).json({ message: "Server configuration error" });
-  }
-
-  if (!clientApiKey || clientApiKey !== validApiKey) {
-    logger.warn("Invalid or missing client API key", {
-      path: req.path,
-      method: req.method,
-      ip: req.ip
-    });
-    return res.status(401).json({ message: "Unauthorized client" });
-  }
-
-  next();
-};
 
 export const applySecurityMiddleware = (app: Application) => {
   logger.debug("Applying security middleware");
@@ -126,9 +107,13 @@ export const applySecurityMiddleware = (app: Application) => {
     if (req.path === "/login" || req.path === "/onboardMember") {
       return verifyClientApiKey(req, res, next);
     }
+    // Apply dev admin key verification for devadmin routes
+    if (req.path.includes("/devadmin/")) {
+      return verifyDevAdminKey(req, res, next);
+    }
     next();
   });
-  logger.debug("Client API key verification middleware applied");
+  logger.debug("API key verification middleware applied");
 
   // Add a logging middleware to track requests after security middleware
   app.use((req: Request, res: Response, next: NextFunction) => {
