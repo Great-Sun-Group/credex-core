@@ -5,6 +5,14 @@ export const verifyDevAdminKey = (req: Request, res: Response, next: NextFunctio
     const devAdminKey = req.headers['x-dev-admin-key'];
     const validKey = process.env.DEV_ADMIN_KEY;
 
+    // Add debug logging
+    logger.debug("DevAdmin auth check", {
+        hasDevAdminKey: !!devAdminKey,
+        hasValidKey: !!validKey,
+        envKeys: Object.keys(process.env).filter(key => !key.includes('PASS') && !key.includes('SECRET')), // Log env keys but filter out sensitive ones
+        headerKeys: Object.keys(req.headers)
+    });
+
     if (!validKey) {
         logger.error("DEV_ADMIN_KEY not set in environment");
         return res.status(500).json({ message: "Server configuration error" });
