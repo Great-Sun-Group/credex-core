@@ -47,6 +47,7 @@ jobs:
           # Add dummy values for required variables since they're not used by the databases module
           TF_VAR_jwt_secret: "dummy"
           TF_VAR_client_api_key: "dummy"
+          TF_VAR_dev_admin_key: "dummy"
           TF_VAR_open_exchange_rates_api: "dummy"
         run: |
           cd terraform
@@ -61,6 +62,7 @@ jobs:
           # Add dummy values for required variables since they're not used by the databases module
           TF_VAR_jwt_secret: "dummy"
           TF_VAR_client_api_key: "dummy"
+          TF_VAR_dev_admin_key: "dummy"
           TF_VAR_open_exchange_rates_api: "dummy"
         run: |
           cd terraform
