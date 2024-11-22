@@ -1,5 +1,6 @@
 import { Request } from 'express';
 import { BlurResult, LightingResult } from './utils/imageQuality';
+import { File } from 'multer';
 
 export interface ImageValidationResult {
   isValid: boolean;
@@ -26,16 +27,7 @@ export interface ImageValidationResult {
 // Alias ValidationResult to ImageValidationResult for backward compatibility
 export type ValidationResult = ImageValidationResult;
 
-export interface FileUpload {
-  fieldname: string;
-  originalname: string;
-  encoding: string;
-  mimetype: string;
-  size: number;
-  destination?: string;
-  filename?: string;
-  path?: string;
-  buffer: Buffer;
+export interface FileUpload extends File {
   stream: NodeJS.ReadableStream;
 }
 
@@ -49,11 +41,9 @@ export interface UploadRequestBody {
 }
 
 // Extend Express's Request type
-declare global {
-  namespace Express {
-    interface Request {
-      file?: FileUpload;
-    }
+declare module 'express' {
+  export interface Request {
+    file?: FileUpload;  // Now we only need FileUpload
   }
 }
 

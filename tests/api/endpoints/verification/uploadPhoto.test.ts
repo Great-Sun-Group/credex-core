@@ -37,6 +37,7 @@ import { Readable } from 'stream';
 import { uploadPhoto } from '../../../../src/api/verification/controllers/uploadController';
 import { validateImage } from '../../../../src/api/verification/utils/imageValidation';
 import { extractDocumentData } from '../../../../src/api/verification/utils/documentProcessing';
+import { FileUpload } from '../../../../src/api/verification/types';
 
 describe('Photo Upload Endpoint Tests', () => {
   let mockRequest: Partial<Request>;
@@ -54,13 +55,16 @@ describe('Photo Upload Endpoint Tests', () => {
         originalname: 'test.jpg',
         encoding: '7bit',
         mimetype: 'image/jpeg',
-        size: 1024 * 1024, // 1MB
+        size: 1024 * 1024,
         destination: '/tmp',
         filename: 'test.jpg',
         path: '/tmp/test.jpg',
-        buffer,
-        stream
-      },
+        buffer: buffer,
+        stream: stream,
+        destination: '/tmp',
+        filename: 'test.jpg',
+        path: '/tmp/test.jpg'
+      } as FileUpload,
       body: {
         type: 'id'
       },
