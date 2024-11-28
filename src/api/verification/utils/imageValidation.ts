@@ -32,6 +32,16 @@ export const validateImage = async (file: FileUpload): Promise<ValidationResult>
       };
     }
 
+    // Check resolution first
+    if (metadata.width < 640 || metadata.height < 480) {
+      return {
+        isValid: false,
+        error: 'Image resolution must be at least 640x480',
+        details: { width: metadata.width, height: metadata.height }
+      };
+    }
+
+    // Then check quality metrics
     const blurResult = await detectBlur(file.buffer, 0.5);
     const lightingResult = await assessLighting(file.buffer, {
       minBrightness: 40,
@@ -51,14 +61,6 @@ export const validateImage = async (file: FileUpload): Promise<ValidationResult>
         isValid: false,
         error: 'Image lighting is inadequate',
         details: { lighting: lightingResult }
-      };
-    }
-
-    if (metadata.width < 640 || metadata.height < 480) {
-      return {
-        isValid: false,
-        error: 'Image resolution must be at least 640x480',
-        details: { width: metadata.width, height: metadata.height }
       };
     }
     
