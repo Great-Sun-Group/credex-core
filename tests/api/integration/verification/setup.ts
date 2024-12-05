@@ -58,14 +58,9 @@ export function createTestApp(): Express {
     
     // Create a proper FileUpload object
     const fileUpload: FileUpload = {
-      fieldname: req.file.fieldname,
-      originalname: req.file.originalname,
-      encoding: req.file.encoding,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
-      buffer: req.file.buffer,
+      ...req.file,  // Spread existing Multer.File properties
       stream: Readable.from(req.file.buffer)
-    };
+    } as FileUpload;
     
     // Attach the properly typed file object
     req.file = fileUpload;

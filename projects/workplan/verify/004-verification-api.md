@@ -1,7 +1,7 @@
 # Task: Verification API Implementation
 
 ## Overview
-Implement the Express.js API endpoint for photo verification using AWS Rekognition, including collection initialization, face comparison, and result handling.
+Implement the Express.js API endpoint for photo verification using AWS Rekognition, integrating with existing upload and validation infrastructure.
 
 ## Prerequisites
 - Completed Task 001 (AWS Base Infrastructure)
@@ -13,124 +13,131 @@ Implement the Express.js API endpoint for photo verification using AWS Rekogniti
 1. Express endpoint processes verification requests
 2. AWS Rekognition collection initialized on startup
 3. Face comparison with 90% similarity threshold
-4. Comprehensive error handling
-5. Verification results stored
+4. Reuses existing validation and error handling
+5. Integrates with existing audit logging
 6. Performance metrics tracked
-7. API documentation complete
+7. API documentation following existing patterns
 
 ## Implementation Steps
 
-### 1. Create Collection Service
-```javascript
-// src/api/verification/services/collectionService.js
+### 1. Update Collection Service
+```typescript:src/api/verification/services/collectionService.ts
 import AWS from 'aws-sdk';
-import { logger } from '../utils/logger';
+import { auditLogger } from '../utils/auditLogger';
+import { config } from '../config';
 
-export class CollectionService {
-  constructor() {
-    this.rekognition = new AWS.Rekognition();
-    this.collectionId = `credex-member-faces-${process.env.ENVIRONMENT}`;
-  }
+const rekognition = new AWS.Rekognition();
+const COLLECTION_ID = `${config.appName}-faces-${config.environment}`;
 
-  async initialize() {
-    try {
-      await this.createCollection();
-      logger.info(`Rekognition collection ${this.collectionId} initialized`);
-    } catch (error) {
-      if (error.code !== 'ResourceAlreadyExistsException') {
-        logger.error('Failed to initialize Rekognition collection:', error);
-        throw error;
-      }
-      logger.info(`Rekognition collection ${this.collectionId} already exists`);
+export const initializeCollection = async (): Promise<void> => {
+  try {
+    await createCollection();
+    await auditLogger.log({
+      eventType: 'COLLECTION_INITIALIZED',
+      collectionId: COLLECTION_ID,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    if (error.code !== 'ResourceAlreadyExistsException') {
+      await auditLogger.log({
+        eventType: 'COLLECTION_INITIALIZATION_FAILED',
+        collectionId: COLLECTION_ID,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
     }
   }
+};
 
-  async createCollection() {
-    const params = {
-      CollectionId: this.collectionId
-    };
-    
-    await this.rekognition.createCollection(params).promise();
-  }
+export const createCollection = async (): Promise<void> => {
+  await rekognition.createCollection({
+    CollectionId: COLLECTION_ID
+  }).promise();
+};
 
-  async ensureCollection() {
-    try {
-      await this.rekognition.describeCollection({
-        CollectionId: this.collectionId
-      }).promise();
-    } catch (error) {
-      if (error.code === 'ResourceNotFoundException') {
-        await this.initialize();
-      } else {
-        throw error;
-      }
-    }
-  }
-
-  async deleteCollection() {
-    const params = {
-      CollectionId: this.collectionId
-    };
-    
-    await this.rekognition.deleteCollection(params).promise();
-  }
-}
+export const deleteCollection = async (): Promise<void> => {
+  await rekognition.deleteCollection({
+    CollectionId: COLLECTION_ID
+  }).promise();
+};
 ```
 
-### 2. Create Verification Controller
-```javascript
-// src/api/verification/controllers/verificationController.js
+### 2. Update Verification Controller
+```typescript:src/api/verification/controllers/verificationController.ts
+import { Request, Response } from 'express';
 import AWS from 'aws-sdk';
+import { validateImage } from '../utils/imageValidation'; // Reuse existing validation
 import { storeVerificationResult } from '../services/storageService';
 import { trackMetrics } from '../services/metricsService';
 import { CollectionService } from '../services/collectionService';
+import { auditLogger } from '../utils/auditLogger';
 
-const rekognition = new AWS.Rekognition();
-const collectionService = new CollectionService();
-const SIMILARITY_THRESHOLD = 90;
-
-export const verifyPhotos = async (req, res) => {
+export const verifyPhotos = async (req: Request, res: Response): Promise<Response> => {
   try {
-    // Ensure collection exists
-    await collectionService.ensureCollection();
-
     const { idPhotoKey, selfiePhotoKey } = req.body;
-    
-    // Get images from S3
-    const idPhoto = await getImageFromS3(idPhotoKey);
-    const selfiePhoto = await getImageFromS3(selfiePhotoKey);
-    
-    // Compare faces
+
+    // Reuse existing audit logging pattern
+    const auditLog = {
+      eventType: 'VERIFICATION_REQUEST',
+      timestamp: new Date().toISOString(),
+      idPhotoKey,
+      selfiePhotoKey,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    };
+
+    // Get images using existing S3 service
+    const [idPhoto, selfiePhoto] = await Promise.all([
+      getImageFromS3(idPhotoKey),
+      getImageFromS3(selfiePhotoKey)
+    ]);
+
+    // Reuse existing image validation
+    const [idValidation, selfieValidation] = await Promise.all([
+      validateImage(idPhoto),
+      validateImage(selfiePhoto)
+    ]);
+
+    if (!idValidation.isValid || !selfieValidation.isValid) {
+      return res.status(400).json({
+        error: 'Invalid images provided',
+        details: {
+          idPhoto: idValidation.error,
+          selfiePhoto: selfieValidation.error
+        }
+      });
+    }
+
+    // Compare faces using Rekognition
     const comparisonResult = await rekognition.compareFaces({
-      SourceImage: {
-        Bytes: selfiePhoto
-      },
-      TargetImage: {
-        Bytes: idPhoto
-      },
-      SimilarityThreshold: SIMILARITY_THRESHOLD,
-      CollectionId: collectionService.collectionId
+      SourceImage: { Bytes: selfiePhoto },
+      TargetImage: { Bytes: idPhoto },
+      SimilarityThreshold: SIMILARITY_THRESHOLD
     }).promise();
-    
-    // Process results
+
     const result = processComparisonResult(comparisonResult);
-    
+
+    // Update audit log with results
+    auditLog.processingResults = {
+      similarity: result.similarity,
+      verified: result.verified
+    };
+    await auditLogger.log(auditLog);
+
     // Store result
     await storeVerificationResult({
       idPhotoKey,
       selfiePhotoKey,
       similarity: result.similarity,
       verified: result.verified,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      metadata: {
+        idQuality: idValidation.qualityMetrics,
+        selfieQuality: selfieValidation.qualityMetrics
+      }
     });
-    
-    // Track metrics
-    await trackMetrics({
-      type: 'verification',
-      success: result.verified,
-      similarity: result.similarity
-    });
-    
+
     return res.json({
       success: true,
       verified: result.verified,
@@ -138,49 +145,27 @@ export const verifyPhotos = async (req, res) => {
       message: result.message
     });
   } catch (error) {
+    // Use existing error handling pattern
     console.error('Verification error:', error);
     return res.status(500).json({
-      error: 'Failed to process verification'
+      error: 'Failed to process verification',
+      details: error.message
     });
   }
 };
 ```
 
-### 3. Create Processing Service
-```javascript
-// src/api/verification/services/processingService.js
-export const processComparisonResult = (result) => {
-  if (!result.FaceMatches || result.FaceMatches.length === 0) {
-    return {
-      verified: false,
-      similarity: 0,
-      message: 'No matching faces found'
-    };
-  }
-  
-  const match = result.FaceMatches[0];
-  const similarity = Math.round(match.Similarity * 100) / 100;
-  
-  return {
-    verified: similarity >= SIMILARITY_THRESHOLD,
-    similarity,
-    message: similarity >= SIMILARITY_THRESHOLD
-      ? 'Identity verified successfully'
-      : 'Identity verification failed'
-  };
-};
-```
-
-### 4. Create Storage Service
-```javascript
-// src/api/verification/services/storageService.js
+### 3. Update Storage Service to Use Existing Patterns
+```typescript:src/api/verification/services/storageService.ts
 import { DynamoDB } from 'aws-sdk';
+import { config } from '../config';
+import { VerificationResult } from '../types';
 
-const dynamodb = new DynamoDB.DocumentClient();
-
-export const storeVerificationResult = async (result) => {
+export const storeVerificationResult = async (result: VerificationResult): Promise<void> => {
+  const dynamodb = new DynamoDB.DocumentClient();
+  
   const params = {
-    TableName: process.env.VERIFICATIONS_TABLE,
+    TableName: config.tables.verifications,
     Item: {
       id: `${result.idPhotoKey}-${result.selfiePhotoKey}`,
       ...result,
@@ -192,161 +177,108 @@ export const storeVerificationResult = async (result) => {
 };
 ```
 
-### 5. Create Metrics Service
-```javascript
-// src/api/verification/services/metricsService.js
-import { CloudWatch } from 'aws-sdk';
-
-const cloudwatch = new CloudWatch();
-
-export const trackMetrics = async (metrics) => {
-  const params = {
-    MetricData: [
-      {
-        MetricName: 'VerificationAttempts',
-        Value: 1,
-        Unit: 'Count',
-        Dimensions: [
-          {
-            Name: 'Success',
-            Value: metrics.success.toString()
-          }
-        ]
-      },
-      {
-        MetricName: 'SimilarityScore',
-        Value: metrics.similarity,
-        Unit: 'Percent'
-      }
-    ],
-    Namespace: 'IDVerification'
-  };
-  
-  await cloudwatch.putMetricData(params).promise();
-};
-```
-
-### 6. Create Application Startup
-```javascript
-// src/app.ts
-import express from 'express';
+### 4. Update Application Startup
+```typescript:src/app.ts
 import { CollectionService } from './api/verification/services/collectionService';
+import { auditLogger } from './utils/auditLogger';
 
 export async function startApp() {
   const app = express();
   const collectionService = new CollectionService();
 
-  // Initialize Rekognition collection
-  await collectionService.initialize();
+  try {
+    await collectionService.initialize();
+    await auditLogger.log({
+      eventType: 'APP_STARTUP',
+      message: 'Rekognition collection initialized successfully'
+    });
+  } catch (error) {
+    await auditLogger.log({
+      eventType: 'APP_STARTUP_ERROR',
+      error: error.message
+    });
+    throw error;
+  }
 
-  // Configure middleware
-  app.use(express.json());
-  app.use('/api/verify', verificationRoutes);
-
-  return app;
+  // ... rest of app configuration
 }
 ```
 
-### 7. Create Route Configuration
-```javascript
-// src/api/verification/routes/verificationRoutes.js
-import express from 'express';
-import { verifyPhotos } from '../controllers/verificationController';
-
-const router = express.Router();
-
-router.post('/verify', verifyPhotos);
-
-export default router;
-```
-
 ## Testing Requirements
-1. Unit Tests
-```javascript
-describe('Collection Service', () => {
-  test('initializes collection on startup', async () => {
-    // Test implementation
-  });
-  
-  test('handles existing collection', async () => {
-    // Test implementation
-  });
-  
-  test('handles initialization errors', async () => {
-    // Test implementation
-  });
-});
+Update tests to use existing patterns and mocks:
 
-describe('Verification Processing', () => {
-  test('handles successful match', async () => {
-    // Test implementation
-  });
-  
-  test('handles no match found', async () => {
-    // Test implementation
-  });
-  
-  test('handles threshold comparison', async () => {
-    // Test implementation
-  });
-});
-```
+```typescript:tests/api/integration/verification/verification.integration.test.ts
+import { app } from '../../../../src/app';
+import { request } from 'supertest';
+import { mockS3, mockRekognition } from '../../../mocks/aws';
+import { auditLogger } from '../../../../src/utils/auditLogger';
 
-2. Integration Tests
-```javascript
 describe('Verification API Integration', () => {
-  test('processes verification successfully', async () => {
-    // Test implementation
+  beforeEach(() => {
+    // Reuse existing mock setup patterns
+    mockS3.reset();
+    mockRekognition.reset();
+    jest.spyOn(auditLogger, 'log').mockResolvedValue(undefined);
   });
-  
-  test('handles Rekognition errors', async () => {
-    // Test implementation
-  });
-  
-  test('stores results correctly', async () => {
-    // Test implementation
-  });
-  
-  test('handles missing collection', async () => {
-    // Test implementation
-  });
+
+  // ... test implementations following existing patterns
 });
 ```
 
-## Documentation Requirements
-1. API Documentation
-   - Collection initialization process
-   - Endpoint specifications
-   - Request/response formats
-   - Error codes and messages
-   - Example requests
+## Documentation Updates
+Follow existing documentation patterns:
 
-2. Integration Guide
-   - AWS service setup
-   - Environment variables
-   - Testing procedures
-   - Monitoring setup
+```markdown:docs/api/verification.md
+# Verification API
+
+## POST /v1/verification/verify
+
+Verifies identity by comparing ID photo with selfie using facial recognition.
+
+### Request Body
+\```json
+{
+  "idPhotoKey": "string",
+  "selfiePhotoKey": "string"
+}
+\```
+
+### Response
+\```json
+{
+  "success": true,
+  "verified": boolean,
+  "similarity": number,
+  "message": "string"
+}
+\```
+
+### Error Responses
+Following existing error response patterns...
+```
 
 ## Merge Request Checklist
 - [ ] Code follows project style guide
+- [ ] Reuses existing validation utilities
+- [ ] Integrates with existing audit logging
 - [ ] Unit tests implemented and passing
 - [ ] Integration tests implemented and passing
-- [ ] API documentation complete
-- [ ] Error handling tested
+- [ ] API documentation follows existing patterns
+- [ ] Error handling consistent with existing patterns
 - [ ] Security review completed
 - [ ] Performance tested
 - [ ] Metrics tracking verified
 - [ ] Branch up to date with verify-project
 
 ## Notes
-- Collection initialization happens at application startup
-- Monitor Rekognition API usage and costs
-- Consider implementing result caching
-- Document retry strategies
-- Monitor performance metrics
+- Reuses existing image validation from Task 003
+- Integrates with existing audit logging system
+- Follows established error handling patterns
+- Uses existing configuration management
+- Maintains consistent API response format
 
 ## Estimated Time
-6-8 hours
+5-7 hours (reduced from original estimate due to reuse of existing components)
 
 ## Dependencies
 - Task 001 (AWS Base Infrastructure)

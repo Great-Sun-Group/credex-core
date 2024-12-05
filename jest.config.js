@@ -8,7 +8,9 @@ module.exports = {
     '**/tests/api/endpoints/*.test.ts'
   ],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.tsx?$': ['ts-jest', {
+      // ts-jest config options here
+    }]
   },
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
   moduleNameMapper: {
@@ -16,9 +18,7 @@ module.exports = {
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json',
-    },
+    // Remove any ts-jest config from globals if present
   },
   testTimeout: 30000, // Increase timeout for API calls
   maxConcurrency: 5, // Limit concurrent tests to avoid overwhelming the test API

@@ -76,5 +76,11 @@ beforeAll(() => {
   }
 });
 
+// Add to your test setup
+afterAll(async () => {
+  // Clean up any remaining connections/timers
+  await new Promise(resolve => setTimeout(resolve, 500)); // Allow time for cleanup
+});
+
 // Export the configured axios instance
 export default instance;

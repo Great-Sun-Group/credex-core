@@ -31,6 +31,7 @@ export const detectBlur = async (
     // Implement Laplacian variance for blur detection
     let variance = 0;
     const laplacian = [0, 1, 0, 1, -4, 1, 0, 1, 0];
+    const pixelCount = (info.width - 2) * (info.height - 2); // Count of pixels we'll process
     
     for (let y = 1; y < info.height - 1; y++) {
       for (let x = 1; x < info.width - 1; x++) {
@@ -41,11 +42,12 @@ export const detectBlur = async (
             sum += data[idx] * laplacian[(ky + 1) * 3 + (kx + 1)];
           }
         }
-        variance += sum * sum;
+        variance += Math.abs(sum); // Use absolute value for better sensitivity
       }
     }
     
-    const normalizedVariance = variance / (info.width * info.height);
+    // Normalize variance by pixel count and maximum possible value
+    const normalizedVariance = variance / (pixelCount * 255);
     const isAcceptable = normalizedVariance >= threshold;
 
     return {
@@ -56,8 +58,10 @@ export const detectBlur = async (
   } catch (error) {
     return {
       isAcceptable: false,
+      value: 0,
+      threshold,
       error: error instanceof Error ? error.message : 'Failed to analyze image blur'
-    } as BlurResult;
+    };
   }
 };
 
@@ -90,6 +94,7 @@ export const assessLighting = async (
   } catch (error) {
     return {
       isAcceptable: false,
+      value: 0,
       error: error instanceof Error ? error.message : 'Failed to analyze image lighting'
     } as LightingResult;
   }

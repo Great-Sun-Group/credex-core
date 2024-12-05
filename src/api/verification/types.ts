@@ -11,7 +11,7 @@ export interface ImageValidationResult {
     height?: number;
     blur?: BlurResult;
     lighting?: LightingResult;
-    errorMessage?: string; // Add error message field
+    errorMessage?: string;
   };
   qualityMetrics?: {
     dimensions: {
@@ -23,7 +23,6 @@ export interface ImageValidationResult {
   };
 }
 
-// Alias ValidationResult to ImageValidationResult for backward compatibility
 export type ValidationResult = ImageValidationResult;
 
 export interface FileUpload {
@@ -32,14 +31,13 @@ export interface FileUpload {
   encoding: string;
   mimetype: string;
   size: number;
-  destination?: string;
-  filename?: string;
-  path?: string;
+  destination: string;
+  filename: string;
+  path: string;
   buffer: Buffer;
   stream: NodeJS.ReadableStream;
 }
 
-// Use FileUpload as the consistent type
 export type UploadedFile = FileUpload;
 
 export type DocumentType = 'id' | 'selfie';
@@ -48,12 +46,9 @@ export interface UploadRequestBody {
   type: DocumentType;
 }
 
-// Extend Express's Request type
-declare global {
-  namespace Express {
-    interface Request {
-      file?: FileUpload;
-    }
+declare module 'express' {
+  export interface Request {
+    file?: FileUpload;
   }
 }
 
@@ -76,7 +71,7 @@ export interface ExtractedDocumentData {
 }
 
 export interface UploadMetadata {
-  [key: string]: string | undefined; // Add index signature for AWS S3 Metadata compatibility
+  [key: string]: string | undefined;
   uploadDate: string;
   documentType: string;
   validationResults: string;
@@ -89,7 +84,7 @@ export interface AuditLog {
   eventType: string;
   timestamp: string;
   documentType: string;
-  ipAddress: string | 'unknown'; // Allow 'unknown' as fallback
+  ipAddress: string | 'unknown';
   userAgent: string;
   processingResults: {
     qualityChecks: any;
@@ -104,7 +99,6 @@ export interface MulterError extends Error {
   field?: string;
 }
 
-// WhatsApp related types
 export interface WhatsAppMedia {
   id: string;
   url?: string;
@@ -118,4 +112,51 @@ export interface WhatsAppMessage {
 export interface WhatsAppConfig {
   baseUrl: string;
   apiKey: string;
+}
+
+// New verification-related types
+export interface VerificationResult {
+  success: boolean;
+  verified: boolean;
+  similarity: number;
+  message: string;
+  timestamp: string;
+  idPhotoKey: string;
+  selfiePhotoKey: string;
+  metadata?: {
+    idQuality?: any;
+    selfieQuality?: any;
+  };
+}
+
+export interface VerificationRequest {
+  idPhotoKey: string;
+  selfiePhotoKey: string;
+}
+
+export interface FaceComparisonResult {
+  similarity: number;
+  verified: boolean;
+  boundingBox?: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+  confidence: number;
+}
+
+export interface CollectionServiceConfig {
+  collectionId: string;
+  similarityThreshold: number;
+  environment: string;
+  appName: string;
+}
+
+export interface VerificationMetrics {
+  processingTime: number;
+  similarity: number;
+  verified: boolean;
+  errorType?: string;
+  timestamp: string;
 }

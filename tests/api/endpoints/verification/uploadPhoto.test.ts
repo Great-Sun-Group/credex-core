@@ -1,7 +1,9 @@
-// Mock AWS SDK before imports
-const mockPutObject = jest.fn().mockReturnValue({
-  promise: jest.fn().mockResolvedValue({})
-});
+// Mock AWS SDK first
+const mockS3 = {
+  putObject: jest.fn().mockReturnValue({
+    promise: jest.fn().mockResolvedValue({})
+  })
+};
 
 const mockTextract = {
   detectDocumentText: jest.fn().mockReturnValue({
@@ -10,13 +12,20 @@ const mockTextract = {
 };
 
 jest.mock('aws-sdk', () => ({
-  S3: jest.fn(() => ({
-    putObject: mockPutObject
-  })),
+  S3: jest.fn(() => mockS3),
   Textract: jest.fn(() => mockTextract)
 }));
-// Mock other dependencies
-jest.mock('sharp');
+
+import { Request, Response } from 'express';
+import AWS from 'aws-sdk';
+import sharp from 'sharp';
+import { Readable } from 'stream';
+import { uploadPhoto } from '../../../../src/api/verification/controllers/uploadController';
+import { validateImage } from '../../../../src/api/verification/utils/imageValidation';
+import { extractDocumentData } from '../../../../src/api/verification/utils/documentProcessing';
+import { FileUpload } from '../../../../src/api/verification/types';
+
+// Mock dependencies
 jest.mock('../../../../src/api/verification/utils/imageValidation');
 jest.mock('../../../../src/api/verification/utils/documentProcessing', () => ({
   extractDocumentData: jest.fn().mockResolvedValue({
@@ -30,13 +39,23 @@ jest.mock('../../../../src/api/verification/utils/documentProcessing', () => ({
   detectManipulation: jest.fn().mockResolvedValue(true)
 }));
 
-import { Request, Response } from 'express';
-import AWS from 'aws-sdk';
-import sharp from 'sharp';
-import { Readable } from 'stream';
-import { uploadPhoto } from '../../../../src/api/verification/controllers/uploadController';
-import { validateImage } from '../../../../src/api/verification/utils/imageValidation';
-import { extractDocumentData } from '../../../../src/api/verification/utils/documentProcessing';
+// Mock sharp with proper TypeScript types
+jest.mock('sharp', () => {
+  return jest.fn().mockImplementation(() => ({
+    resize: () => ({
+      toBuffer: () => Promise.resolve(Buffer.from('processed-image'))
+    }),
+    metadata: () => Promise.resolve({ width: 1024, height: 768 }),
+    grayscale: () => ({
+      raw: () => ({
+        toBuffer: () => Promise.resolve({
+          data: Buffer.from([255, 128, 0, 255, 128, 0]),
+          info: { width: 2, height: 1 }
+        })
+      })
+    })
+  }));
+});
 
 describe('Photo Upload Endpoint Tests', () => {
   let mockRequest: Partial<Request>;
@@ -54,13 +73,13 @@ describe('Photo Upload Endpoint Tests', () => {
         originalname: 'test.jpg',
         encoding: '7bit',
         mimetype: 'image/jpeg',
-        size: 1024 * 1024, // 1MB
+        size: 1024 * 1024,
+        buffer: buffer,
+        stream: stream,
         destination: '/tmp',
         filename: 'test.jpg',
-        path: '/tmp/test.jpg',
-        buffer,
-        stream
-      },
+        path: '/tmp/test.jpg'
+      } as FileUpload,
       body: {
         type: 'id'
       },
@@ -74,14 +93,6 @@ describe('Photo Upload Endpoint Tests', () => {
       status: jest.fn().mockReturnThis(),
       json: jest.fn()
     };
-
-    // Mock sharp
-    (sharp as unknown as jest.Mock).mockImplementation(() => ({
-      resize: () => ({
-        toBuffer: () => Promise.resolve(Buffer.from('processed-image'))
-      }),
-      metadata: () => Promise.resolve({ width: 1024, height: 768 })
-    }));
 
     // Mock validateImage
     (validateImage as jest.Mock).mockResolvedValue({
@@ -107,13 +118,13 @@ describe('Photo Upload Endpoint Tests', () => {
   });
 
   it('successfully uploads a valid photo', async () => {
-    mockPutObject.mockReturnValue({
+    mockS3.putObject.mockReturnValue({
       promise: jest.fn().mockResolvedValue({})
     });
 
     await uploadPhoto(mockRequest as Request, mockResponse as Response);
 
-    expect(mockPutObject).toHaveBeenCalled();
+    expect(mockS3.putObject).toHaveBeenCalled();
     expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: true,
@@ -177,7 +188,7 @@ describe('Photo Upload Endpoint Tests', () => {
   });
 
   it('handles S3 upload failures', async () => {
-    mockPutObject.mockReturnValue({
+    mockS3.putObject.mockReturnValue({
       promise: jest.fn().mockRejectedValue(new Error('S3 Error'))
     });
 
@@ -193,7 +204,7 @@ describe('Photo Upload Endpoint Tests', () => {
 
   it('extracts data for ID documents', async () => {
     mockRequest.body.type = 'id';
-    mockPutObject.mockReturnValue({
+    mockS3.putObject.mockReturnValue({
       promise: jest.fn().mockResolvedValue({})
     });
     
@@ -209,7 +220,7 @@ describe('Photo Upload Endpoint Tests', () => {
 
   it('does not extract data for selfie documents', async () => {
     mockRequest.body.type = 'selfie';
-    mockPutObject.mockReturnValue({
+    mockS3.putObject.mockReturnValue({
       promise: jest.fn().mockResolvedValue({})
     });
     
@@ -222,4 +233,3 @@ describe('Photo Upload Endpoint Tests', () => {
     );
   });
 });
-

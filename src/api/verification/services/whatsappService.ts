@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { UploadedFile } from '../types';
+import { FileUpload } from '../types';
+import { Readable } from 'stream';
 
 interface WhatsAppMedia {
   id: string;
@@ -68,7 +69,7 @@ class WhatsAppClient {
   }
 }
 
-export const handleWhatsAppMedia = async (message: WhatsAppMessage): Promise<UploadedFile> => {
+export const handleWhatsAppMedia = async (message: WhatsAppMessage): Promise<FileUpload> => {
   try {
     if (!message.image?.id) {
       throw new Error('No image found in message');
@@ -78,11 +79,22 @@ export const handleWhatsAppMedia = async (message: WhatsAppMessage): Promise<Upl
     const mediaUrl = await whatsapp.getMediaUrl(message.image.id);
     const mediaBuffer = await whatsapp.downloadMedia(mediaUrl);
 
+    const filename = `${message.image.id}.jpg`;
+    const stream = new Readable();
+    stream.push(mediaBuffer);
+    stream.push(null);
+
     return {
-      buffer: mediaBuffer,
-      originalname: `${message.image.id}.jpg`,
+      fieldname: 'photo',
+      originalname: filename,
+      encoding: '7bit',
       mimetype: 'image/jpeg',
-      size: mediaBuffer.length
+      size: mediaBuffer.length,
+      destination: '/tmp',
+      filename: filename,
+      path: `/tmp/${filename}`,
+      buffer: mediaBuffer,
+      stream
     };
   } catch (error) {
     console.error('WhatsApp media handling error:', error);
@@ -91,8 +103,6 @@ export const handleWhatsAppMedia = async (message: WhatsAppMessage): Promise<Upl
 };
 
 export const determinePhotoType = (message: WhatsAppMessage): 'id' | 'selfie' => {
-  // Logic to determine photo type based on message context or metadata
-  // This could be enhanced based on specific WhatsApp integration requirements
   return message.type === 'id_document' ? 'id' : 'selfie';
 };
 
