@@ -6,6 +6,7 @@ import CredexRoutes from "./api/Credex/routes";
 import RecurringRoutes from "./api/Recurring/routes";
 import AdminRoutes from "./api/Admin/routes";
 import DevAdminRoutes from "./api/DevAdmin/routes";
+import VerificationRoutes from "./api/verification/routes";
 import logger, {
   addRequestId,
   expressLogger,
@@ -78,6 +79,7 @@ async function initializeApp() {
     app.use(CredexRoutes());
     app.use(AdminRoutes());
     app.use(RecurringRoutes());
+    app.use(VerificationRoutes());
     logger.info("Route handlers applied for production modules");
 
     // Apply route handlers for dev-only routes
