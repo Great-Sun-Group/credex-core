@@ -21,7 +21,7 @@ export async function createDCOrecurringTemplate(
     ownerID: foundationXOid,
     sourceAccountID: defaultAccountID, // From rdubs
     targetAccountID: foundationID, // To foundation
-    frequency: DCO_CONSTANTS.RECURRING.FREQUENCY,
+    payFrequency: 1, // Daily frequency for DCO_GIVE templates
     startDate: new Date().toISOString().split("T")[0],
     templateType: TEMPLATE_TYPES.DCO_GIVE,
     DCOgiveInCXX: 1,
@@ -33,7 +33,7 @@ export async function createDCOrecurringTemplate(
     ownerID: recurringData.ownerID,
     sourceAccountID: recurringData.sourceAccountID,
     targetAccountID: recurringData.targetAccountID,
-    frequency: recurringData.frequency,
+    payFrequency: recurringData.payFrequency,
     startDate: recurringData.startDate,
     DCOgiveInCXX: recurringData.DCOgiveInCXX,
     DCOdenom: recurringData.DCOdenom,

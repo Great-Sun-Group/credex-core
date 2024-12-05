@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=0.8" />
+    <title>Regulatory Compliance</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <div id="menuButton" onclick="window.location.href='../menu.html'">
+      <img src="../images/logo.png" alt="Menu" class="menu-logo" />
+      <span class="menu-text">MENU</span>
+    </div>
+
+    <div class="header-container">
+      <div class="header-logo">
+        <img
+          src="../images/logo.png"
+          alt="Credex Logo"
+          class="subsection-logo"
+        />
+      </div>
+      <div class="header-text">
+        <h1>Great Sun Financial Inc.</h1>
+        <h3 class="subtitle">Business plans and investment opportunities</h3>
+      </div>
+    </div>
+
+    <h1 class="chapter-title">Regulatory Compliance</h1>
+
+    <p>
+      The credex ecosystem is fundamentally an accounting platform that implements standard double-entry bookkeeping within a modern technical framework. It creates, tracks, and clears accounts payable and accounts receivable entries between counterparties in a GAAP-compliant manner, while providing advanced features for multi-denomination support and automated clearing.
+    </p>
+
+    <h2>Core Accounting Framework</h2>
+    <p>
+      A credex is an accounts payable invoice for one counterparty and a matching accounts receivable invoice for the other. The credex ecosystem is an accounting platform that automatically clears accounts payable invoices against accounts receivable invoices on behalf of its members.
+    </p>
+
+    <h3>Example: Basic Accounting Entries</h3>
+    <p>
+      If Alice invoices Bob for $10, and Bob invoices Alice for $10, they can agree to cancel these invoices against each other without money changing hands. These are real income and expense entries, so even if they are cancelled against each other the invoices need to be entered into their accounts to track the exchanges appropriately.
+    </p>
+
+    <h4 class="big-words">Alice's Accounting Entries</h4>
+    <table>
+      <tr>
+        <th>Alice Invoices Bob</th>
+        <th>CR</th>
+        <th>DR</th>
+      </tr>
+      <tr>
+        <td>Revenue account</td>
+        <td>10.00</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Accounts receivable</td>
+        <td></td>
+        <td>10.00</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <th>Bob invoices Alice</th>
+        <th>CR</th>
+        <th>DR</th>
+      </tr>
+      <tr>
+        <td>Expense account</td>
+        <td></td>
+        <td>10.00</td>
+      </tr>
+      <tr>
+        <td>Accounts payable</td>
+        <td>10.00</td>
+        <td></td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <th>Entry to clear payable against receivable</th>
+        <th>CR</th>
+        <th>DR</th>
+      </tr>
+      <tr>
+        <td>Accounts receivable</td>
+        <td>10.00</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>Accounts payable</td>
+        <td></td>
+        <td>10.00</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <th>Resulting account balances</th>
+        <th>CR</th>
+        <th>DR</th>
+      </tr>
+      <tr>
+        <td>Revenue account</td>
+        <td>10.00</td>
+        <td>0.00</td>
+      </tr>
+      <tr>
+        <td>Expense account</td>
+        <td>0.00</td>
+        <td>10.00</td>
+      </tr>
+      <tr>
+        <td>Accounts payable</td>
+        <td>0.00</td>
+        <td>0.00</td>
+      </tr>
+      <tr>
+        <td>Accounts receivable</td>
+        <td>0.00</td>
+        <td>0.00</td>
+      </tr>
+    </table>
+
+    <h2>Scaling and Multi-Party Transactions</h2>
+    <p>
+      This principle scales to any number of parties. If Alice invoices Bob, Bob invoices Charlie, and Charlie invoices Alice, this loop of payables and receivables can be canceled in the same way. The accounting entries would be the same as above for each party, with a payable being cleared against a receivable for each of them. These loops of payables and receivables are called credloops.
+    </p>
+
+    <h3>Partial Clearing Example</h3>
+    <p>
+      If Alice invoices Bob for $10, and Bob invoices Charlie for $7, and Charlie invoices Alice for $5, they could each clear $5 off the amounts, leaving:
+    </p>
+    <ul>
+      <li>A balance of $5 still owing from Alice to Bob</li>
+      <li>A balance of $2 from Bob to Charlie</li>
+      <li>No balance due from Charlie to Alice</li>
+    </ul>
+
+    <h3>Multi-Denomination Support</h3>
+    <p>
+      The same principle works across denominations. If Alice invoices Bob for $5 USD and Bob invoices Alice for $5 CAD, they can use the exchange rate on the day they clear the invoices against each other. This will clear one transaction fully, and leave a balance remaining on the other.
+    </p>
+
+    <h2>Regulatory Framework</h2>
+
+    <h3>Software Provider Role</h3>
+    <p>
+      Great Sun Financial (and in future the <a href="credex_greatsun.html"></a>Credex Foundation</a>) is a software provider that manages the credex ecosystem and makes it available to members internationally. This provider:
+    </p>
+    <ul>
+      <li>Maintains the accounting platform</li>
+      <li>Provids technical infrastructure</li>
+      <li>Ensures system security and reliability</li>
+      <li>Implements compliance controls and auditability</li>
+      <li>Audits assets of accounts that can originate secured balances</li>
+    </ul>
+    <p>This provider does not:</p>
+    <ul>
+      <li>Handle or transfer currency</li>
+    </ul>
+
+    <h3>Secured Asset Accounts</h3>
+    <p>
+      Authorized companies can provide secured credex services by following specific rules and verifiably meeting strict criteria:
+    </p>
+    <ul>
+      <li>Sell secured credexes only for currency/gold</li>
+      <li>Hold currency/gold exactly equal to secured credex payables</li>
+      <li>Submit to daily audits of currency/gold holdings</li>
+      <li>Maintain strict solvency requirements with 100% backing and zero "fractionalizing" of reserves</li>
+      <li>Use held currency/gold only to buy secured credexes from members</li>
+    </ul>
+
+    <h3>Example: Secured Credex Flow</h3>
+    <p>
+      When Alice buys a $10 secured credex from an authorized company:
+    </p>
+    <ol>
+      <li>Alice receives an accounts receivable from the company</li>
+      <li>Alice can now issue secured credexes up to $10</li>
+      <li>When Alice issues $5 to Bob:
+        <ul>
+          <li>Her secured credex limit drops to $5</li>
+          <li>Bob gains ability to issue secured credexes up to $5</li>
+          <li>Bob can exchange his secured credex balance for currency through the authorized company</li>
+        </ul>
+      </li>
+    </ol>
+
+    <h2>Regulatory Classification</h2>
+
+    <h3>Not a Financial Institution</h3>
+    <p>
+      Authorized companies are not banks because:
+    </p>
+    <ul>
+      <li>They sell a digital product rather than accept deposits</li>
+      <li>They do not loan out the money they receive</li>
+      <li>Currency received belongs to the company, not the credex purchaser</li>
+      <li>They are limited to holding currency in registered bank accounts</li>
+      <li>They can receive bank interest but cannot make other investments</li>
+    </ul>
+
+    <h3>Not Money</h3>
+    <p>
+      A credex is not money because:
+    </p>
+    <ul>
+      <li>It is not fungible or exchangeable</li>
+      <li>It has an intentionally short lifespan</li>
+      <li>It is not scarce or supply-limited</li>
+      <li>It merely tracks outstanding debt until cleared</li>
+      <li>Final payment is in goods, services, or currency</li>
+    </ul>
+
+    <h2>Tax Compliance</h2>
+    <p>
+      Taxes apply to value exchanged, regardless of payment method. Whether payment is made in USD, CAD, ZWG, gold coins, chicken eggs, or manual labour, the tax obligations remain the same. Any entity with authority to audit financial records has equivalent authority to audit credex transactions.
+    </p>
+
+    <h2>Technical Implementation</h2>
+
+    <h3>Audit Trail Implementation</h3>
+    <p>
+      The system maintains comprehensive audit trails through:
+    </p>
+    <ul>
+      <li>Digital signatures on all transactions</li>
+      <li>Immutable transaction records</li>
+      <li>Complete history of all entries</li>
+      <li>Automated reconciliation records</li>
+      <li>Clear documentation of clearing processes</li>
+    </ul>
+
+    <h3>Privacy with Auditability</h3>
+    <p>
+      When a credex is cleared in a credloop:
+    </p>
+    <ul>
+      <li>The entry is tracked and auditable for each party</li>
+      <li>Privacy is fully preserved</li>
+      <li>Members see only their own transactions</li>
+      <li>Members can verify which payables cleared against which receivables</li>
+      <li>Full credloop visibility is not needed for verification</li>
+    </ul>
+
+    <h2>Research Validation Framework</h2>
+    <p>
+      To validate credex's compliance with regulatory frameworks worldwide, research should focus on:
+    </p>
+
+    <h3>1. Legal Classification Analysis</h3>
+    <ul>
+      <li>Review of accounting software regulations</li>
+      <li>Analysis of financial service definitions</li>
+      <li>Study of digital ledger regulations</li>
+      <li>Assessment of smart contract frameworks</li>
+    </ul>
+
+    <h3>2. Technical Compliance Validation</h3>
+    <ul>
+      <li>Audit trail completeness testing</li>
+      <li>Data protection implementation review</li>
+      <li>Security control assessment</li>
+      <li>Performance under regulatory stress tests</li>
+    </ul>
+
+    <h3>3. Operational Compliance Testing</h3>
+    <ul>
+      <li>Cross-border transaction scenarios</li>
+      <li>Multi-jurisdiction reporting capabilities</li>
+      <li>Regulatory reporting accuracy</li>
+      <li>Audit response capabilities</li>
+    </ul>
+
+    <h3>4. Future Research Areas</h3>
+    <ul>
+      <li>Emerging fintech regulations</li>
+      <li>Evolution of accounting standards</li>
+      <li>Changes in data protection laws</li>
+      <li>New financial reporting requirements</li>
+    </ul>
+
+  </body>
+</html>

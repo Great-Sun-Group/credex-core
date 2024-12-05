@@ -1,131 +1,151 @@
-import { v, s } from "../../middleware/validateRequest";
-import { TEMPLATE_TYPES } from "./types";
-import logger from "../../utils/logger";
+import { 
+  sanitizeUUID,
+  sanitizeNumber,
+  sanitizeDenomination,
+  sanitizeBoolean,
+  sanitizeDate,
+  sanitizeTemplateType,
+  sanitizeTier
+} from '../../utils/inputSanitizer';
+import {
+  validateUUID,
+  validateAmount,
+  validateDenomination,
+  validateBoolean,
+  validateDate,
+  validateTemplateType,
+  validateTier,
+  validatePositiveInteger
+} from '../../utils/validators';
 
-logger.debug("Initializing recurring validation schemas");
+// Custom validator for subscription template requirements
+function validateSubscriptionTemplate(data: any): { isValid: boolean; message: string } {
+  if (data.memberTier !== 3) {
+    return { isValid: false, message: 'Currently only tier 3 is supported' };
+  }
+  if (data.payFrequency !== 28) {
+    return { isValid: false, message: 'Subscription payment frequency must be 28 days' };
+  }
+  if (!data.securedCredex) {
+    return { isValid: false, message: 'Subscription payments must use secured credex' };
+  }
+  return { isValid: true, message: 'Valid subscription template' };
+}
 
-// Base fields for all templates
-const baseFields = {
+/**
+ * Schema for creating recurring transactions
+ * Supports regular, DCO_GIVE, and MEMBERTIER_SUBSCRIPTION template types
+ */
+export const createRecurringSchema = {
   sourceAccountID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
+    sanitizer: sanitizeUUID,
+    validator: validateUUID,
+    required: true
   },
   targetAccountID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
-  frequency: {
-    sanitizer: s.sanitizeString,
-    validator: (value: string) => {
-      const validFrequencies = ['DAILY', 'WEEKLY', 'MONTHLY'];
-      if (!validFrequencies.includes(value)) {
-        return { isValid: false, message: "Invalid frequency. Must be DAILY, WEEKLY, or MONTHLY" };
-      }
-      return { isValid: true };
-    },
-    required: true,
-  },
-  startDate: {
-    sanitizer: s.sanitizeString,
-    validator: (value: string) => {
-      if (!value.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        return { isValid: false, message: "Invalid date format. Use YYYY-MM-DD" };
-      }
-      return { isValid: true };
-    },
-    required: true,
-  },
-  duration: {
-    sanitizer: s.sanitizeNumber,
-    validator: v.validatePositiveInteger,
-    required: false,
+    sanitizer: sanitizeUUID,
+    validator: validateUUID,
+    required: false // Optional for MEMBERTIER_SUBSCRIPTION (uses greatsun_ops)
   },
   templateType: {
-    sanitizer: s.sanitizeString,
-    validator: (value: string) => {
-      if (!Object.values(TEMPLATE_TYPES).includes(value as any)) {
-        return { isValid: false, message: `Invalid template type. Must be one of: ${Object.values(TEMPLATE_TYPES).join(', ')}` };
-      }
-      return { isValid: true };
-    },
-    required: true,
-  }
-};
-
-// Regular template fields
-const regularFields = {
+    sanitizer: sanitizeTemplateType,
+    validator: validateTemplateType,
+    required: true
+  },
+  payFrequency: {
+    sanitizer: sanitizeNumber,
+    validator: validatePositiveInteger,
+    required: true
+  },
+  startDate: {
+    sanitizer: sanitizeDate,
+    validator: validateDate,
+    required: true
+  },
+  duration: {
+    sanitizer: sanitizeNumber,
+    validator: validatePositiveInteger,
+    required: false
+  },
+  // Regular template fields
   amount: {
-    sanitizer: s.sanitizeNumber,
-    validator: v.validatePositiveNumber,
-    required: false,
+    sanitizer: sanitizeNumber,
+    validator: validateAmount,
+    required: false // Required only for REGULAR templates
   },
   denomination: {
-    sanitizer: s.sanitizeDenomination,
-    validator: v.validateDenomination,
-    required: false,
+    sanitizer: sanitizeDenomination,
+    validator: validateDenomination,
+    required: false // Required only for REGULAR templates
   },
   securedCredex: {
-    sanitizer: (value: boolean) => value,
-    validator: v.validateBoolean,
-    required: false,
+    sanitizer: sanitizeBoolean,
+    validator: validateBoolean,
+    required: false
   },
-};
-
-// DCO_GIVE template fields
-const dcoGiveFields = {
+  // DCO_GIVE template fields
   DCOgiveInCXX: {
-    sanitizer: s.sanitizeNumber,
-    validator: v.validatePositiveNumber,
-    required: false,
+    sanitizer: sanitizeNumber,
+    validator: validateAmount,
+    required: false // Required only for DCO_GIVE templates
   },
   DCOdenom: {
-    sanitizer: s.sanitizeDenomination,
-    validator: v.validateDenomination,
-    required: false,
+    sanitizer: sanitizeDenomination,
+    validator: validateDenomination,
+    required: false // Required only for DCO_GIVE templates
   },
-};
-
-// Combined schema for create recurring endpoint
-export const createRecurringSchema = {
-  fields: {
-    ...baseFields,
-    ...regularFields,
-    ...dcoGiveFields,
-  },
-  rules: {
-    atLeastOneOf: ['amount', 'DCOgiveInCXX']
+  // Member tier subscription fields
+  memberTier: {
+    sanitizer: sanitizeTier,
+    validator: (value: any) => {
+      const baseValidation = validateTier(value);
+      if (!baseValidation.isValid) {
+        return baseValidation;
+      }
+      return validateSubscriptionTemplate({
+        memberTier: value,
+        payFrequency: 28,
+        securedCredex: true
+      });
+    },
+    required: false // Required only for MEMBERTIER_SUBSCRIPTION templates
   }
 };
 
+/**
+ * Schema for accepting recurring transactions
+ */
 export const acceptRecurringSchema = {
   recurringID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
+    sanitizer: sanitizeUUID,
+    validator: validateUUID,
+    required: true
+  }
 };
 
+/**
+ * Schema for cancelling recurring transactions
+ */
 export const cancelRecurringSchema = {
   recurringID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
+    sanitizer: sanitizeUUID,
+    validator: validateUUID,
+    required: true
+  }
 };
 
+/**
+ * Schema for getting recurring transaction details
+ */
 export const getRecurringSchema = {
   recurringID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
+    sanitizer: sanitizeUUID,
+    validator: validateUUID,
+    required: true
   },
   accountID: {
-    sanitizer: s.sanitizeUUID,
-    validator: v.validateUUID,
-    required: true,
-  },
+    sanitizer: sanitizeUUID,
+    validator: validateUUID,
+    required: true
+  }
 };
-
-logger.debug("All recurring validation schemas initialized");

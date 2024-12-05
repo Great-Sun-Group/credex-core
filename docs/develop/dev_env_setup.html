@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Environment Setup</title>
     <link rel="stylesheet" href="../style.css" />
-    <script src="../menu.js"></script>
   </head>
   <body>
+    <div id="menuButton" onclick="window.location.href='../menu.html'">
+      <img src="../images/logo.png" alt="Menu" class="menu-logo">
+      <span class="menu-text">MENU</span>
+    </div>
+
     <div class="header-logo">
       <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
     </div>
@@ -122,14 +126,6 @@ cd credex-core</code></pre>
         <li>Create your own unique random string</li>
         <li>This key is required for accessing the /login and /onboardMember endpoints</li>
         <li>In production, this is used to ensure only authorized clients (like the WhatsApp chatbot) can create and authenticate members</li>
-        <li>For development, you can create any random string</li>
-    </ul>
-
-    <p><strong>CHATBOT_API_TOKEN</strong></p>
-    <ul>
-        <li>Create your own unique random string</li>
-        <li>This token is used to identify and exempt chatbot traffic from rate limiting</li>
-        <li>Required when testing chatbot integration scenarios</li>
         <li>For development, you can create any random string</li>
     </ul>
 

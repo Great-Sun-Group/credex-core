@@ -59,6 +59,8 @@ const requiredEnvVars = [
   "OPEN_EXCHANGE_RATES_API",
   "JWT_SECRET",
   "CLIENT_API_KEY",
+  "DEV_ADMIN_KEY",
+  "SKIP_RATE_LIMITER_KEY"
 ];
 
 let configPromise: Promise<any>;

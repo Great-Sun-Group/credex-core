@@ -1,6 +1,7 @@
 import xss from "xss";
 import crypto from "crypto";
 import logger from "./logger";
+import { TEMPLATE_TYPES } from "../api/Recurring/types";
 
 // Function to sanitize strings (remove HTML tags and trim)
 export const sanitizeString = (input: string | undefined | null): string => {
@@ -135,4 +136,41 @@ export function sanitizeOptionalDenomination(value: any): string | null {
     return null;
   }
   return typeof value === 'string' ? value.trim().toUpperCase() : String(value).trim().toUpperCase();
+}
+
+// Function to sanitize boolean values
+export function sanitizeBoolean(value: any): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const lowered = value.toLowerCase();
+    return lowered === 'true' || lowered === '1' || lowered === 'yes';
+  }
+  return Boolean(value);
+}
+
+// Function to sanitize dates
+export function sanitizeDate(value: any): string {
+  if (value instanceof Date) {
+    return value.toISOString().split('T')[0];
+  }
+  if (typeof value === 'string') {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  }
+  return '';
+}
+
+// Function to sanitize template types
+export function sanitizeTemplateType(value: any): string {
+  if (typeof value !== 'string') return '';
+  const sanitized = value.trim().toUpperCase();
+  return Object.values(TEMPLATE_TYPES).includes(sanitized as any) ? sanitized : '';
+}
+
+// Function to sanitize member tiers
+export function sanitizeTier(value: any): number {
+  const num = Number(value);
+  return !isNaN(num) && Number.isInteger(num) ? num : 0;
 }

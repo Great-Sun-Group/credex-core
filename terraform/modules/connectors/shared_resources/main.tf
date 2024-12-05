@@ -154,6 +154,15 @@ resource "aws_security_group" "ecs_tasks" {
     from_port       = 3000
     to_port         = 3000
     security_groups = [aws_security_group.alb.id]
+    description     = "Allow inbound traffic from ALB"
+  }
+
+  ingress {
+    protocol    = "tcp"
+    from_port   = 3000
+    to_port     = 3000
+    cidr_blocks = [var.vpc_cidr]
+    description = "Allow health checks from VPC"
   }
 
   egress {
@@ -394,13 +403,13 @@ resource "aws_lb_target_group" "credex_core" {
   target_type = "ip"
 
   health_check {
-    healthy_threshold   = "3"
-    interval            = "30"
+    healthy_threshold   = "2"
+    interval            = "60"
     protocol            = "HTTP"
     matcher             = "200"
-    timeout             = "3"
+    timeout             = "30"
     path                = "/health"
-    unhealthy_threshold = "2"
+    unhealthy_threshold = "5"
   }
 
   tags = var.common_tags
@@ -558,6 +567,33 @@ resource "aws_iam_role" "ecs_task_role" {
   tags = merge(var.common_tags, {
     Name = "ecs-task-role-${var.environment}"
   })
+}
+
+# Add CloudWatch Logs permissions to ECS task role
+resource "aws_iam_role_policy" "ecs_task_role_policy" {
+  name = "ecs-task-role-policy-${var.environment}"
+  role = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = "${aws_cloudwatch_log_group.ecs_logs.arn}:*"
+      }
+    ]
+  })
+}
+
+# Add SSM permissions for debugging
+resource "aws_iam_role_policy_attachment" "ecs_task_role_ssm" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 # CloudWatch log group

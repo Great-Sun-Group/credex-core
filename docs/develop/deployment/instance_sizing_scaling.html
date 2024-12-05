@@ -5,36 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Credex Instance Sizing - Scaling Scenarios</title>
     <link rel="stylesheet" href="../../style.css" />
-    <style>
-      .scenario {
-        background-color: #f8f9fa;
-        border-radius: 4px;
-        padding: 1em;
-        margin: 1em 0;
-      }
-      .metrics {
-        background-color: #f1f8ff;
-        border-left: 4px solid #0366d6;
-        padding: 1em;
-        margin: 1em 0;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 1em 0;
-      }
-      th,
-      td {
-        padding: 8px;
-        border: 1px solid #ddd;
-        text-align: left;
-      }
-      th {
-        background-color: #f6f8fa;
-      }
-    </style>
   </head>
   <body>
+    <div id="menuButton" onclick="window.location.href='../../menu.html'">
+      <img src="../../images/logo.png" alt="Menu" class="menu-logo">
+      <span class="menu-text">MENU</span>
+    </div>
+
     <div class="container">
       <h1>Credex Instance Sizing - Scaling Scenarios</h1>
 
@@ -42,10 +19,10 @@
         <p><a href="instance_sizing.html">← Back to Overview</a></p>
       </nav>
 
-      <section class="scenario">
+      <section>
         <h2>2 Million Member Scenario</h2>
 
-        <div class="metrics">
+        <blockquote>
           <h3>Key Metrics</h3>
           <ul>
             <li>Members: 2,000,000</li>
@@ -53,7 +30,7 @@
             <li>Daily Transactions: 60,000,000</li>
             <li>Database Calls: ~300,000,000 per day</li>
           </ul>
-        </div>
+        </blockquote>
 
         <h3>Infrastructure Requirements</h3>
         <table>
@@ -98,10 +75,10 @@
         </ul>
       </section>
 
-      <section class="scenario">
+      <section>
         <h2>Zimbabwe Economy Analysis</h2>
 
-        <div class="metrics">
+        <blockquote>
           <h3>Demographic Assumptions</h3>
           <ul>
             <li>Total Population: 16 million</li>
@@ -110,7 +87,7 @@
             <li>Total Accounts: 48 million</li>
             <li>Daily Transactions: 4.8 billion</li>
           </ul>
-        </div>
+        </blockquote>
 
         <h3>Infrastructure Requirements</h3>
         <table>
@@ -138,22 +115,10 @@
 
         <h3>Cost Reduction Strategies</h3>
         <ul>
-          <li>
-            <strong>Volume Discounts</strong>: 20-30% reduction ($300,000 -
-            $450,000/month)
-          </li>
-          <li>
-            <strong>Reserved Instances</strong>: Up to 60% reduction on compute
-            ($400,000 - $500,000/month)
-          </li>
-          <li>
-            <strong>Storage Optimization</strong>: 30-40% reduction in storage
-            costs ($20,000 - $30,000/month)
-          </li>
-          <li>
-            <strong>Custom Hardware</strong>: 15-25% reduction ($150,000 -
-            $250,000/month)
-          </li>
+          <li><strong>Volume Discounts</strong>: 20-30% reduction ($300,000 - $450,000/month)</li>
+          <li><strong>Reserved Instances</strong>: Up to 60% reduction on compute ($400,000 - $500,000/month)</li>
+          <li><strong>Storage Optimization</strong>: 30-40% reduction in storage costs ($20,000 - $30,000/month)</li>
+          <li><strong>Custom Hardware</strong>: 15-25% reduction ($150,000 - $250,000/month)</li>
         </ul>
 
         <h3>Technical Optimizations</h3>
@@ -181,26 +146,22 @@
           </li>
         </ul>
 
-        <div class="metrics">
+        <blockquote>
           <h3>Optimized Cost Summary</h3>
           <ul>
             <li>Base Monthly Cost: $1,565,000</li>
             <li>Optimized Monthly Cost: $600,000 - $900,000</li>
             <li>Potential Savings: 40-60%</li>
           </ul>
-        </div>
+        </blockquote>
       </section>
 
       <section>
         <h2>Implementation Considerations</h2>
         <ul>
-          <li>
-            Implement gradual scaling with continuous performance monitoring
-          </li>
+          <li>Implement gradual scaling with continuous performance monitoring</li>
           <li>Use data-driven approach to optimize resource allocation</li>
-          <li>
-            Consider hybrid solutions combining cloud and custom infrastructure
-          </li>
+          <li>Consider hybrid solutions combining cloud and custom infrastructure</li>
           <li>Maintain flexibility for future scaling requirements</li>
           <li>Regular review and optimization of costs and performance</li>
         </ul>

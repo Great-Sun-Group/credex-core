@@ -3,12 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=0.8" />
-    <title>Daily Credcoin Offering (DCO)</title>
+    <title>Minute Transaction Queue (MTQ)</title>
     <link rel="stylesheet" href="../style.css" />
-    <script src="../menu.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
   </head>
   <body>
+    <div id="menuButton" onclick="window.location.href='../menu.html'">
+      <img src="../images/logo.png" alt="Menu" class="menu-logo" />
+      <span class="menu-text">MENU</span>
+    </div>
+
     <div class="header-container">
       <div class="header-logo">
         <img
@@ -26,93 +29,158 @@
     <h1 class="chapter-title">MinuteTransactionQueue (MTQ)</h1>
 
     <p>
-      The Minute Transaction Queue (MTQ) is a crucial component of the Credex
-      ecosystem that runs every minute. It links the main ledgerSpace database
-      (the source of truth and full information) to a searchSpace database
-      (optimized to find credloops). Every minute, first any new accounts are
-      added to the searchSpace, then any new credexes. After each new credex is
-      added, the ecosystem finds and clears all possible loops created by the
-      new credex before moving on to the next.
+      The Minute Transaction Queue (MTQ) is a central component of the
+      Credexecosystem that runs every minute. It links the main ledgerSpace
+      database (the source of truth and full information) to a searchSpace
+      database (optimized to find credloops). Every minute, first any new
+      accounts are added to the searchSpace, then any new credexes. After each
+      new credex is added, the ecosystem finds and clears all possible loops
+      created by the new credex before moving on to the next.
     </p>
 
+    <h2>MinuteTransactionQueue Process</h2>
+    <p>
+      The MinuteTransactionQueue runs as a cron job every minute, with several
+      safety mechanisms:
+    </p>
     <ol>
       <li>
-        Processing new accounts:
+        Status Checks:
         <ul>
+          <li>Verifies no DCO (Daily Credcoin Offering) is in progress</li>
+          <li>Ensures no other MTQ process is currently running</li>
+          <li>Sets an MTQ running flag to prevent concurrent processing</li>
+        </ul>
+      </li>
+      <li>
+        Safety Mechanisms:
+        <ul>
+          <li>14-minute bail timer to prevent infinite processing</li>
+          <li>Comprehensive error handling and logging</li>
+          <li>Automatic cleanup of running flags</li>
           <li>
-            Finds accounts with "PENDING_ACCOUNT" status in the ledger space.
-          </li>
-          <li>Creates corresponding accounts in the search space.</li>
-          <li>
-            Updates the account status to "PROCESSED" in the ledger space.
+            Session management for both ledgerSpace and searchSpace databases
           </li>
         </ul>
       </li>
       <li>
-        Processing new Credexes:
+        Account Processing:
         <ul>
-          <li>
-            Retrieves Credexes with "PENDING_CREDEX" status from the ledger
-            space.
-          </li>
-          <li>Sorts them by acceptance time.</li>
-          <li>For each Credex, calls the LoopFinder function.</li>
+          <li>Identifies accounts with "PENDING_ACCOUNT" status</li>
+          <li>Creates corresponding accounts in searchSpace</li>
+          <li>Updates status to "PROCESSED" in ledgerSpace</li>
+          <li>Handles each account independently to isolate failures</li>
+        </ul>
+      </li>
+      <li>
+        Credex Processing:
+        <ul>
+          <li>Retrieves credexes with "PENDING_CREDEX" status</li>
+          <li>Sorts by acceptance time to maintain transaction order</li>
+          <li>Processes each credex through the LoopFinder</li>
+          <li>Handles secured and unsecured credexes differently</li>
         </ul>
       </li>
     </ol>
 
-    <h2>LoopFinder.ts</h2>
+    <h2>LoopFinder Architecture</h2>
 
     <p>
-      The LoopFinder is a sophisticated component that handles both unsecured
-      and secured credexes. It manages the creation, processing, and clearing of
-      credex loops while maintaining data integrity across both the searchSpace
-      and ledgerSpace databases.
+      The LoopFinder handles both unsecured and secured credexes. It manages the
+      creation, processing, and clearing of credex loops while maintaining data
+      integrity across both the searchSpace and ledgerSpace databases.
     </p>
+
+    <h3>Core Components</h3>
+    <ul>
+      <li>
+        <strong>LoopFinder.ts:</strong> Main orchestrator that:
+        <ul>
+          <li>Manages database sessions for both spaces</li>
+          <li>Coordinates the loop finding and processing workflow</li>
+          <li>Implements comprehensive error handling and logging</li>
+          <li>Ensures proper cleanup of resources</li>
+        </ul>
+      </li>
+      <li>
+        <strong>LoopFinderDB.ts:</strong> Database operations including:
+        <ul>
+          <li>Creating and managing credexes in searchSpace</li>
+          <li>Finding potential credloops using graph traversal</li>
+          <li>Cleaning up searchSpace after loop processing</li>
+          <li>Updating ledgerSpace with loop results</li>
+        </ul>
+      </li>
+      <li>
+        <strong>LoopFinderUtils.ts:</strong> Utility functions for:
+        <ul>
+          <li>Determining search relationship types</li>
+          <li>Adjusting credex due dates for secured credexes</li>
+          <li>Managing type conversions and validations</li>
+        </ul>
+      </li>
+    </ul>
 
     <h3>Secured vs Unsecured Credexes</h3>
     <p>The system handles two types of credexes:</p>
     <ul>
       <li>
-        <strong>Unsecured Credexes:</strong> Standard credexes with due dates
-        that remain as specified.
+        <strong>Unsecured Credexes:</strong>
+        <ul>
+          <li>Use standard "UNSECURED" relationship type</li>
+          <li>Maintain their original due dates</li>
+          <li>Follow normal loop finding paths</li>
+        </ul>
       </li>
       <li>
-        <strong>Secured Credexes:</strong> Special credexes that are secured
-        against specific denominations. These are handled differently:
+        <strong>Secured Credexes:</strong>
         <ul>
           <li>
-            They use a special relationship type in the search space (e.g.,
-            "USD_SECURED", "EUR_SECURED")
+            Use denomination-specific relationship types (e.g., "USD_SECURED",
+            "EUR_SECURED")
           </li>
-          <li>Their due dates are automatically adjusted to the current day</li>
-          <li>They maintain separate loop paths from unsecured credexes</li>
+          <li>Due dates are automatically adjusted to the current day</li>
+          <li>Maintain separate loop paths from unsecured credexes</li>
+          <li>Require additional validation and security checks</li>
         </ul>
       </li>
     </ul>
 
-    <h3>Search Space Management</h3>
-    <p>When a new credex is processed:</p>
+    <h3>Search Space Architecture</h3>
+    <p>The searchSpace is optimized for efficient loop finding:</p>
     <ol>
       <li>
-        The system first checks if the credex already exists in searchSpace (to
-        handle previous errors).
+        Search Anchors:
+        <ul>
+          <li>Act as intermediaries between accounts</li>
+          <li>Maintain the earliest due date among connected credexes</li>
+          <li>Separate paths by relationship type (secured vs unsecured)</li>
+          <li>Automatically created and removed as needed</li>
+        </ul>
       </li>
       <li>
-        If not, it creates:
+        Credex Nodes:
         <ul>
           <li>
-            A new Credex node with properties including outstandingAmount,
-            Denomination, CXXmultiplier, and dueDate
+            Store essential credex information:
+            <ul>
+              <li>Outstanding amount</li>
+              <li>Denomination</li>
+              <li>CXX multiplier</li>
+              <li>Due date</li>
+            </ul>
           </li>
-          <li>
-            Appropriate SEARCH_SECURED relationships linking the credex to its
-            search anchor
-          </li>
-          <li>
-            Search anchors that maintain the earliest due date among their
-            connected credexes
-          </li>
+          <li>Connect to search anchors via SEARCH_SECURED relationships</li>
+          <li>Updated in real-time as loops are cleared</li>
+        </ul>
+      </li>
+      <li>
+        Relationship Management:
+        <ul>
+          <li>Automatic creation of required relationships</li>
+          <li>Dynamic updates of search anchor properties</li>
+          <li>Cleanup of orphaned relationships</li>
+          <li>Maintenance of relationship metadata</li>
         </ul>
       </li>
     </ol>
@@ -146,108 +214,75 @@
          +------------------------USD_SECURED---------------------+
     </pre>
 
-    <p>
-      In the USD_SECURED example above, every outstanding secured USD credex
-      between Account A and Account be is connected to Anchor 1. This optimizes
-      the searchSpace for path traversing with no extraneous paths to match.
-    </p>
-    <ol>
-      <li>
-        When there are no outstanding credexes of a specific type between two
-        accounts, no searchAnchor exists for that type.
-      </li>
-      <li>When a credex of a type is created, the Search Anchor is created.</li>
-      <li>
-        Any subsequent credexes of that type between the accounts are attached
-        to the same Search Anchor.
-      </li>
-      <li>
-        Credexes are deleted when fully redeemed, and Anchors are deleted when
-        all of their credexes are deleted, to be recreated later as needed.
-      </li>
-    </ol>
-
     <h3>Loop Finding Algorithm</h3>
     <ol>
       <li>
         Loop Discovery:
         <ul>
-          <li>
-            Finds all loops starting and ending at the specified account
-            (issuer)
-          </li>
-          <li>
-            Uses type-specific paths (unsecured or denom-specific secured) based
-            on the credex type
-          </li>
-          <li>Identifies the loop with nodes having the earliest due date</li>
-          <li>
-            For each node in the loop, selects the credex with the earliest due
-            date (or largest amount if tied)
-          </li>
+          <li>Uses Cypher path finding to identify potential loops</li>
+          <li>Filters paths based on relationship types</li>
+          <li>Prioritizes loops with earliest due dates</li>
+          <li>Handles ties using amount-based prioritization</li>
+        </ul>
+      </li>
+      <li>
+        Loop Validation:
+        <ul>
+          <li>Verifies all credexes are still valid</li>
+          <li>Checks relationship types match throughout the loop</li>
+          <li>Validates denomination compatibility</li>
+          <li>Ensures proper due date ordering</li>
         </ul>
       </li>
       <li>
         Loop Processing:
         <ul>
-          <li>
-            Identifies the minimum outstanding amount among all credexes in the
-            loop
-          </li>
-          <li>Updates all credexes in the loop by subtracting this amount</li>
-          <li>
-            Tracks which credexes are fully redeemed (outstanding amount reaches
-            zero)
-          </li>
+          <li>Calculates minimum clearable amount</li>
+          <li>Updates all credexes atomically</li>
+          <li>Creates loop documentation in ledgerSpace</li>
+          <li>Manages relationship transitions</li>
         </ul>
       </li>
       <li>
-        Search Space Cleanup:
+        Cleanup Operations:
         <ul>
-          <li>Removes fully redeemed credexes</li>
-          <li>Updates earliest due dates on affected search anchors</li>
-          <li>
-            Removes orphaned search anchors (those with no remaining credexes)
-          </li>
-        </ul>
-      </li>
-      <li>
-        Ledger Space Updates:
-        <ul>
-          <li>Creates a LoopAnchor node to represent the cleared loop</li>
-          <li>
-            Updates outstanding and redeemed amounts on all affected credexes
-          </li>
-          <li>
-            Creates REDEEMED relationships between credexes and the loop anchor
-          </li>
-          <li>
-            Creates CREDLOOP relationships between sequential credexes in the
-            loop
-          </li>
-          <li>
-            For fully redeemed credexes:
-            <ul>
-              <li>Replaces OWES relationships with CLEARED relationships</li>
-              <li>Sets the DateRedeemed timestamp</li>
-            </ul>
-          </li>
+          <li>Removes fully cleared credexes</li>
+          <li>Updates search anchor properties</li>
+          <li>Cleans up orphaned relationships</li>
+          <li>Maintains data consistency</li>
         </ul>
       </li>
     </ol>
 
-    <h3>Error Handling and Logging</h3>
-    <p>The system implements comprehensive error handling and logging:</p>
+    <h3>Error Handling and Recovery</h3>
+    <p>The system implements comprehensive error handling:</p>
     <ul>
-      <li>All major operations are logged with appropriate context</li>
       <li>
-        Errors are caught, logged with full stack traces, and handled gracefully
+        Transaction Management:
+        <ul>
+          <li>All database operations use managed sessions</li>
+          <li>Automatic rollback on failures</li>
+          <li>Proper cleanup of resources</li>
+          <li>Session isolation for concurrent operations</li>
+        </ul>
       </li>
       <li>
-        Database sessions are properly managed and closed in finally blocks
+        Error Logging:
+        <ul>
+          <li>Detailed error messages with context</li>
+          <li>Stack traces for debugging</li>
+          <li>Operation-specific logging</li>
+          <li>Performance metrics tracking</li>
+        </ul>
       </li>
       <li>
-        Failed operations are tracked and can be retried in subsequent runs
+        Recovery Mechanisms:
+        <ul>
+          <li>Failed operations can be retried</li>
+          <li>Automatic cleanup of incomplete states</li>
+          <li>Monitoring of system health</li>
+          <li>Alerts for critical failures</li>
+        </ul>
       </li>
     </ul>
 
@@ -256,8 +291,9 @@
       "If I owe you, and you owe them, and they owe me, we're square." It
       automatically clears these loops, reducing the outstanding amounts of all
       involved credexes by the same amount (the minimum amount in the loop). The
-      system handles both unsecured and secured credexes appropriately,
-      maintaining separate paths and applying different rules as needed.
+      differentiates between unsecured and secured credexes in every
+      denomination, maintaining separate paths and applying different rules as
+      needed.
     </p>
   </body>
 </html>

@@ -51,16 +51,6 @@ jobs:
         run: |
           echo "Building Docker image with target $BUILD_TARGET..."
           docker build --no-cache --target $BUILD_TARGET \
-            --build-arg NODE_ENV=${{ env.ENVIRONMENT }} \
-            --build-arg NEO_4J_LEDGER_SPACE_USER="${{ secrets.NEO_4J_LEDGER_SPACE_USER }}" \
-            --build-arg NEO_4J_LEDGER_SPACE_PASS="${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}" \
-            --build-arg NEO_4J_LEDGER_SPACE_BOLT_URL="${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}" \
-            --build-arg NEO_4J_SEARCH_SPACE_USER="${{ secrets.NEO_4J_SEARCH_SPACE_USER }}" \
-            --build-arg NEO_4J_SEARCH_SPACE_PASS="${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}" \
-            --build-arg NEO_4J_SEARCH_SPACE_BOLT_URL="${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}" \
-            --build-arg OPEN_EXCHANGE_RATES_API="${{ secrets.OPEN_EXCHANGE_RATES_API }}" \
-            --build-arg JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-            --build-arg CLIENT_API_KEY="${{ secrets.CLIENT_API_KEY }}" \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           echo "Docker image built successfully."
 
@@ -115,7 +105,7 @@ jobs:
           echo "Current task definition fetched."
 
           echo "Updating task definition with new image and environment variables..."
-          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment += [
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment = [
             {"name": "NODE_ENV", "value": $NODE_ENV},
             {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_USER }}"},
             {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}"},
@@ -125,6 +115,8 @@ jobs:
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}"},
             {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
             {"name": "CLIENT_API_KEY", "value": "${{ secrets.CLIENT_API_KEY }}"},
+            {"name": "DEV_ADMIN_KEY", "value": "${{ secrets.DEV_ADMIN_KEY }}"},
+            {"name": "SKIP_RATE_LIMITER_KEY", "value": "${{ secrets.SKIP_RATE_LIMITER_KEY }}"},
             {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"}
           ]' | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "Task definition updated."
@@ -136,12 +128,92 @@ jobs:
           echo "Updating ECS service with new task definition..."
           aws ecs update-service --cluster credex-cluster-$ENVIRONMENT --service credex-core-service-$ENVIRONMENT --task-definition $NEW_TASK_DEF_ARN --force-new-deployment
 
-          echo "Waiting for service to stabilize..."
-          aws ecs wait services-stable --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT 
+          echo "Waiting for deployment to complete..."
+          MAX_ATTEMPTS=40  # 20 minutes total (30 seconds * 40)
+          ATTEMPTS=0
+          DEPLOYMENT_DONE=false
 
-          echo "Deployment completed. Checking service status..."
-          aws ecs describe-services --cluster credex-cluster-$ENVIRONMENT --services credex-core-service-$ENVIRONMENT \
-            --query 'services[0].{status: status, runningCount: runningCount, desiredCount: desiredCount, events: events[0].message}'
+          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+            # Get service details
+            SERVICE_JSON=$(aws ecs describe-services \
+              --cluster credex-cluster-$ENVIRONMENT \
+              --services credex-core-service-$ENVIRONMENT \
+              --query 'services[0]')
+            
+            # Get primary deployment status
+            PRIMARY_DEPLOYMENT=$(echo $SERVICE_JSON | jq -r '.deployments[] | select(.status == "PRIMARY")')
+            RUNNING_COUNT=$(echo $PRIMARY_DEPLOYMENT | jq -r '.runningCount')
+            DESIRED_COUNT=$(echo $PRIMARY_DEPLOYMENT | jq -r '.desiredCount')
+            FAILED_TASKS=$(echo $PRIMARY_DEPLOYMENT | jq -r '.failedTasks')
+            TASK_DEF=$(echo $PRIMARY_DEPLOYMENT | jq -r '.taskDefinition')
+            
+            echo "Deployment Status:"
+            echo "Running Count: $RUNNING_COUNT"
+            echo "Desired Count: $DESIRED_COUNT"
+            echo "Failed Tasks: $FAILED_TASKS"
+            echo "Task Definition: $TASK_DEF"
+            
+            # Check if deployment is using our new task definition
+            if [[ "$TASK_DEF" == "$NEW_TASK_DEF_ARN" ]]; then
+              if [[ "$RUNNING_COUNT" == "$DESIRED_COUNT" && "$DESIRED_COUNT" -gt 0 ]]; then
+                echo "Deployment completed successfully!"
+                DEPLOYMENT_DONE=true
+                break
+              elif [[ "$FAILED_TASKS" -gt 0 ]]; then
+                # Get task details and logs for debugging
+                TASKS=$(aws ecs list-tasks \
+                  --cluster credex-cluster-$ENVIRONMENT \
+                  --service-name credex-core-service-$ENVIRONMENT \
+                  --desired-status STOPPED \
+                  --query 'taskArns[]' --output text)
+                
+                for TASK in $TASKS; do
+                  echo "Failed task details for $TASK:"
+                  aws ecs describe-tasks \
+                    --cluster credex-cluster-$ENVIRONMENT \
+                    --tasks $TASK \
+                    --query 'tasks[].{reason: stoppedReason, exitCode: containers[].exitCode}'
+                  
+                  # Try to get logs even if task failed
+                  echo "Logs for failed task $TASK:"
+                  aws logs get-log-events \
+                    --log-group-name "/ecs/credex-core-$ENVIRONMENT" \
+                    --log-stream-name "credex-core-$ENVIRONMENT/${TASK##*/}" \
+                    --limit 20 \
+                    --query 'events[].message' \
+                    --output text || echo "No logs available"
+                done
+                
+                echo "Deployment failed due to task failures"
+                exit 1
+              fi
+            fi
+            
+            # Get recent service events
+            echo "Recent Events:"
+            echo $SERVICE_JSON | jq -r '.events[0:3][] | .message'
+            
+            ATTEMPTS=$((ATTEMPTS + 1))
+            if [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; then
+              echo "Waiting 30 seconds before next check (Attempt $ATTEMPTS of $MAX_ATTEMPTS)..."
+              sleep 30
+            fi
+          done
+
+          if [ "$DEPLOYMENT_DONE" != "true" ]; then
+            echo "Deployment did not complete within expected time"
+            exit 1
+          fi
+
+          # Verify final state
+          echo "Verifying final deployment state..."
+          FINAL_SERVICE=$(aws ecs describe-services \
+            --cluster credex-cluster-$ENVIRONMENT \
+            --services credex-core-service-$ENVIRONMENT \
+            --query 'services[0]')
+
+          echo "Final Service State:"
+          echo $FINAL_SERVICE | jq '{runningCount: .runningCount, desiredCount: .desiredCount, status: .status, events: .events[0:3]}'
 
       - name: Print Deployment Information
         run: |
@@ -149,7 +221,7 @@ jobs:
           echo "Environment: $ENVIRONMENT"
           echo "Image: $IMAGE"
           echo "Build Target: $BUILD_TARGET"
-          
+
           cd terraform
           echo "========================================"
           echo "App Infrastructure Outputs:"
@@ -186,6 +258,22 @@ jobs:
         run: |
           aws s3 sync docs/ s3://docs.${DOMAIN} \
             --delete
+
+      - name: Invalidate CloudFront Cache
+        run: |
+          # Get CloudFront distribution ID for docs
+          DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?contains(@, 'docs.${DOMAIN}')]].Id" --output text)
+
+          if [ -n "$DISTRIBUTION_ID" ]; then
+            echo "Creating CloudFront invalidation for distribution $DISTRIBUTION_ID"
+            aws cloudfront create-invalidation \
+              --distribution-id $DISTRIBUTION_ID \
+              --paths "/*"
+            echo "Cache invalidation initiated"
+          else
+            echo "Error: Could not find CloudFront distribution for docs.${DOMAIN}"
+            exit 1
+          fi
 
       - name: Print Deployment Information
         run: |
