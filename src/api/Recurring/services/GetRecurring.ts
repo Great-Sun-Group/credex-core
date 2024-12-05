@@ -14,7 +14,7 @@ interface GetRecurringResult {
   success: boolean;
   data?: RecurringActionDetails & {
     scheduleInfo: {
-      frequency: string;
+      payFrequency: number;
       nextRunDate: string;
       amount: string;
       denomination: string;
@@ -81,7 +81,7 @@ export async function GetRecurringService(
         WHERE account.accountID IN [source.accountID, target.accountID]
         RETURN
           recurring.recurringID as recurringID,
-          recurring.frequency as frequency,
+          recurring.payFrequency as payFrequency,
           recurring.startDate as nextRunDate,
           recurring.amount as amount,
           recurring.denomination as denomination,
@@ -115,11 +115,11 @@ export async function GetRecurringService(
       recurringID: record.get("recurringID"),
       amount: formattedAmount,
       denomination,
-      frequency: record.get("frequency"),
+      payFrequency: record.get("payFrequency"),
       nextDate: record.get("nextRunDate"),
       status: record.get("status"),
       scheduleInfo: {
-        frequency: record.get("frequency"),
+        payFrequency: record.get("payFrequency"),
         nextRunDate: record.get("nextRunDate"),
         amount: formattedAmount,
         denomination,

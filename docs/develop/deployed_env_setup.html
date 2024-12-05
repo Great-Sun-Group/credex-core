@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Environment Setup</title>
     <link rel="stylesheet" href="../style.css" />
-    <script src="../menu.js"></script>
   </head>
   <body>
+    <div id="menuButton" onclick="window.location.href='../menu.html'">
+      <img src="../images/logo.png" alt="Menu" class="menu-logo">
+      <span class="menu-text">MENU</span>
+    </div>
+
     <div class="header-logo">
       <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
     </div>
@@ -274,6 +278,8 @@
 
     <p><strong>JWT_SECRET</strong><br>
     <strong>CLIENT_API_KEY</strong><br>
+    <strong>DEV_ADMIN_KEY</strong><br>
+    <strong>SKIP_RATE_LIMITER_KEY</strong><br>
     unique random strings</p>
 
     <h3>4. Run the Github Action <code>Deploy App</code></h3>

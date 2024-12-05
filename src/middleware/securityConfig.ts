@@ -4,28 +4,9 @@ import cors from "cors";
 import { rateLimiter } from "./rateLimiter";
 import { verifyRateLimiterBypass } from "./rateLimiterBypass";
 import { authMiddleware } from "./authMiddleware";
+import { verifyDevAdminKey } from "./devAdminAuth";
+import { verifyClientApiKey } from "./clientApiKeyAuth";
 import logger from "../utils/logger";
-
-const verifyClientApiKey = (req: Request, res: Response, next: NextFunction) => {
-  const clientApiKey = req.headers['x-client-api-key'];
-  const validApiKey = process.env.CLIENT_API_KEY;
-
-  if (!validApiKey) {
-    logger.error("CLIENT_API_KEY not set in environment");
-    return res.status(500).json({ message: "Server configuration error" });
-  }
-
-  if (!clientApiKey || clientApiKey !== validApiKey) {
-    logger.warn("Invalid or missing client API key", {
-      path: req.path,
-      method: req.method,
-      ip: req.ip
-    });
-    return res.status(401).json({ message: "Unauthorized client" });
-  }
-
-  next();
-};
 
 export const applySecurityMiddleware = (app: Application) => {
   logger.debug("Applying security middleware");
@@ -102,7 +83,7 @@ export const applySecurityMiddleware = (app: Application) => {
         callback(null, true);
       },
       methods: ["POST"],
-      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key", "x-dev-admin-key", "x-skip-rate-limit"],
+      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key"],  // Remove dev headers in production
       credentials: true,
       maxAge: 86400,
     };
@@ -114,6 +95,11 @@ export const applySecurityMiddleware = (app: Application) => {
   app.use((req: Request, res: Response, next: NextFunction) => {
     // Check for rate limiter bypass header
     if (req.headers['x-skip-rate-limit']) {
+      logger.debug("Rate limiter bypass attempt detected", {
+        path: req.path,
+        method: req.method,
+        ip: req.ip
+      });
       return verifyRateLimiterBypass(req, res, next);
     }
     // Apply standard rate limiting
@@ -123,12 +109,16 @@ export const applySecurityMiddleware = (app: Application) => {
 
   // Apply client API key verification for keyholes
   app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path === "/v1/login" || req.path === "/v1/onboardMember") {
+    if (req.path === "/login" || req.path === "/onboardMember") {
       return verifyClientApiKey(req, res, next);
+    }
+    // Apply dev admin key verification for devadmin routes
+    if (req.path.includes("/devadmin/")) {
+      return verifyDevAdminKey(req, res, next);
     }
     next();
   });
-  logger.debug("Client API key verification middleware applied");
+  logger.debug("API key verification middleware applied");
 
   // Add a logging middleware to track requests after security middleware
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -166,9 +156,9 @@ export const applyAuthMiddleware = (app: Application) => {
   app.use((req, res, next) => {
     if (
       // Keyholes in the auth layer where we don't apply the middleware
-      req.path === "/v1/login" ||
-      req.path === "/v1/onboardMember" ||
-      req.path.includes("/v1/devadmin/") // routes are not published in prod
+      req.path === "/login" ||
+      req.path === "/onboardMember" ||
+      req.path.includes("/devadmin/") // routes are not published in prod
     ) {
       logger.debug("[SC3] Skipping auth middleware for path", {
         path: req.path,

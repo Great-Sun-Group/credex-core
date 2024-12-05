@@ -1,7 +1,8 @@
 import { DCO_CONSTANTS } from "../constants";
 import { ServiceResult } from "../../../types/apiResponse";
+import { TEMPLATE_TYPES } from "../../../api/Recurring/types";
 
-export type TemplateType = "DCO_GIVE" | "REGULAR";
+export type TemplateType = typeof TEMPLATE_TYPES[keyof typeof TEMPLATE_TYPES];
 export type TemplateStatus = typeof DCO_CONSTANTS.RECURRING.STATUS[keyof typeof DCO_CONSTANTS.RECURRING.STATUS];
 
 export interface Avatar {

@@ -6,7 +6,6 @@
     <meta name="description" content="Credex API Reference Documentation" />
     <title>API Reference</title>
     <link rel="stylesheet" href="../style.css" />
-    <script src="../menu.js"></script>
     
     <style>
       :root {
@@ -260,6 +259,11 @@
     </style>
   </head>
   <body>
+    <div id="menuButton" onclick="window.location.href='../menu.html'">
+      <img src="../images/logo.png" alt="Menu" class="menu-logo">
+      <span class="menu-text">MENU</span>
+    </div>
+
     <header class="topbar">
       <div class="topbar-logo">
         <img src="../images/logo.png" alt="Credex Logo" />
@@ -11767,7 +11771,7 @@
           "Recurring"
         ],
         "summary": "Create a new recurring transaction",
-        "description": "Creates a new recurring transaction schedule. Supports both regular and DCO_GIVE template types.",
+        "description": "Creates a new recurring transaction schedule. Supports REGULAR, DCO_GIVE, and MEMBERTIER_SUBSCRIPTION template types. For subscriptions, targetAccountID is optional (defaults to greatsun_ops) and auto-acceptance is applied.",
         "security": [
           {
             "bearerAuth": []
@@ -11781,9 +11785,8 @@
                 "type": "object",
                 "required": [
                   "sourceAccountID",
-                  "targetAccountID",
                   "templateType",
-                  "frequency",
+                  "payFrequency",
                   "startDate"
                 ],
                 "properties": {
@@ -11795,24 +11798,21 @@
                   "targetAccountID": {
                     "type": "string",
                     "format": "uuid",
-                    "description": "ID of the target account (must be foundation account for DCO_GIVE)"
+                    "description": "ID of the target account (required for REGULAR/DCO_GIVE, optional for MEMBERTIER_SUBSCRIPTION)"
                   },
                   "templateType": {
                     "type": "string",
                     "enum": [
                       "REGULAR",
-                      "DCO_GIVE"
+                      "DCO_GIVE",
+                      "MEMBERTIER_SUBSCRIPTION"
                     ],
                     "description": "Type of recurring template"
                   },
-                  "frequency": {
-                    "type": "string",
-                    "enum": [
-                      "DAILY",
-                      "WEEKLY",
-                      "MONTHLY"
-                    ],
-                    "description": "Frequency of recurring transaction"
+                  "payFrequency": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of days between payments (28 for subscriptions)"
                   },
                   "startDate": {
                     "type": "string",
@@ -11844,7 +11844,7 @@
                   },
                   "securedCredex": {
                     "type": "boolean",
-                    "description": "Optional for REGULAR templates"
+                    "description": "Optional for REGULAR templates (always true for subscriptions)"
                   },
                   "DCOgiveInCXX": {
                     "type": "number",
@@ -11862,6 +11862,13 @@
                       "ZWG"
                     ],
                     "description": "Required if templateType is DCO_GIVE"
+                  },
+                  "memberTier": {
+                    "type": "integer",
+                    "enum": [
+                      3
+                    ],
+                    "description": "Required if templateType is MEMBERTIER_SUBSCRIPTION (only tier 3 supported)"
                   }
                 }
               }
@@ -11930,13 +11937,9 @@
                                     "ZWG"
                                   ]
                                 },
-                                "frequency": {
-                                  "type": "string",
-                                  "enum": [
-                                    "DAILY",
-                                    "WEEKLY",
-                                    "MONTHLY"
-                                  ]
+                                "payFrequency": {
+                                  "type": "integer",
+                                  "description": "Number of days between payments"
                                 },
                                 "nextDate": {
                                   "type": "string",
@@ -11953,8 +11956,9 @@
                                 "scheduleInfo": {
                                   "type": "object",
                                   "properties": {
-                                    "frequency": {
-                                      "type": "string"
+                                    "payFrequency": {
+                                      "type": "integer",
+                                      "description": "Number of days between payments"
                                     },
                                     "nextRunDate": {
                                       "type": "string",
@@ -11971,6 +11975,10 @@
                                     },
                                     "templateType": {
                                       "type": "string"
+                                    },
+                                    "memberTier": {
+                                      "type": "integer",
+                                      "description": "Present for subscription templates"
                                     }
                                   }
                                 },

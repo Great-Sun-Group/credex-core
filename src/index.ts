@@ -35,9 +35,6 @@ export const app = express();
 // Create a JSON parser middleware
 const jsonParser = bodyParser.json();
 
-// Define the API version route prefix
-export const apiVersionOneRoute = "/v1";
-
 async function initializeApp() {
   try {
     // Update logger configuration
@@ -77,18 +74,18 @@ async function initializeApp() {
     applyAuthMiddleware(app);
 
     // Apply Hardened Routes
-    // proper format
-    app.use(apiVersionOneRoute, MemberRoutes());
-    app.use(apiVersionOneRoute, AccountRoutes());
-    app.use(apiVersionOneRoute, CredexRoutes());
-    app.use(apiVersionOneRoute, AdminRoutes());
-    app.use(apiVersionOneRoute, RecurringRoutes());
-    app.use(apiVersionOneRoute, VerificationRoutes()); // Add verification routes
-    logger.info("Route handlers applied for hardened modules");
+    app.use(MemberRoutes());
+    app.use(AccountRoutes());
+    app.use(CredexRoutes());
+    app.use(AdminRoutes());
+    app.use(RecurringRoutes());
+    app.use(VerificationRoutes());
+    logger.info("Route handlers applied for production modules");
 
     // Apply route handlers for dev-only routes
     if (config.environment !== "production") {
-      app.use(apiVersionOneRoute, DevAdminRoutes());
+      app.use(DevAdminRoutes());
+      logger.info("Route handlers applied for DevAdmin module");
     }
 
     // Apply error handling middleware

@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Security and Authentication Overview</title>
     <link rel="stylesheet" href="../style.css" />
-    <script src="../menu.js"></script>
   </head>
   <body>
+    <div id="menuButton" onclick="window.location.href='../menu.html'">
+      <img src="../images/logo.png" alt="Menu" class="menu-logo">
+      <span class="menu-text">MENU</span>
+    </div>
+
     <div class="header-logo">
       <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
     </div>
@@ -85,7 +89,7 @@
             <ul>
                 <li>Required header: x-client-api-key</li>
                 <li>Matches against CLIENT_API_KEY environment variable</li>
-                <li>Used for /v1/login and /v1/onboardMember routes</li>
+                <li>Used for /login and /onboardMember routes</li>
             </ul>
         </li>
         <li>Security measures:

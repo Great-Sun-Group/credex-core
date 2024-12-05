@@ -96,10 +96,10 @@ async function processAvatar(
 
     if (hasValidCredexData(offerResult) && offerResult.data) {
       const credexData = offerResult.data;
-      // For DCO_GIVE templates, the foundation auto-accepts
+      // All recurring templates are auto-accepted by the acceptor account
       await acceptCredexOffer(
         credexData.credexID,
-        isDCOGive ? acceptorAccountID : avatar.signerID,
+        acceptorAccountID,  // Always use acceptor's ID for auto-acceptance
         requestId
       );
       logger.info(

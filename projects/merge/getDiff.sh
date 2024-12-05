@@ -17,6 +17,10 @@ fi
 from_branch=$1
 to_branch=$2
 
+# Set output file path to be in same directory as script
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+output_file="$script_dir/diff_output.txt"
+
 # Debug: Print the branch names
 log "From branch: $from_branch"
 log "To branch: $to_branch"
@@ -39,8 +43,7 @@ if [ -z "$diff_output" ]; then
     log "No differences found between $from_branch and $to_branch."
     summary="No changes detected between $from_branch and $to_branch branches."
 else
-    log "Differences found. Here's the diff:"
-    echo "$diff_output"
+    log "Differences found. Writing to $output_file"
     
     # Get the list of changed files
     changed_files=$(git diff --name-only "origin/$to_branch".."origin/$from_branch")
@@ -54,18 +57,27 @@ Diff:
 \`\`\`diff
 $diff_output
 \`\`\`"
+
+    # Write the summary to the output file
+    echo "$summary" > "$output_file"
+    log "Diff has been written to $output_file"
 fi
 
 log "Diff process completed."
 log "CRITICAL REMINDER: AI, you must now create a merge request using the GitHub CLI."
-log "Create a merge summary of the diff above and
+log "Create a merge summary of the diff above and"
 log "use the following command to create the merge request:"
 log "gh pr create --base $to_branch --head $from_branch --title \"Merge $from_branch into $to_branch\" --body \"[summary here]\""
 log "This is not optional. Failure to do so will result in an incomplete task."
 log "After creating and submitting the merge request, provide confirmation that you have done so,"
 log "including the merge request URL."
 
-# Output the summary for easy copying
+# Output a shorter summary to stdout
 echo "--- BEGIN SUMMARY ---"
-echo "$summary"
+echo "Changes detected between $from_branch and $to_branch branches."
+echo ""
+echo "Changed files:"
+echo "$changed_files"
+echo ""
+echo "Full diff has been written to: $output_file"
 echo "--- END SUMMARY ---"
