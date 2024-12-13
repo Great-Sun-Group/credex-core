@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=0.8" />
+    <title>Image Quality Testing - MyCredex.app</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <div class="header-logo">
+      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+
+    <h1>Image Quality Testing</h1>
+    <h3 class="subtitle">Testing the Image Quality Validation Implementation</h3>
+
+    <h2>Overview</h2>
+    <p>
+      This guide covers testing the image quality validation features implemented for ID verification, including face detection, document edge detection, blur detection, and lighting assessment.
+    </p>
+
+    <h2>Test Structure</h2>
+    <p>
+      The test suite is organized into three main components:
+    </p>
+    <ul>
+      <li><code>faceDetection.test.ts</code> - Tests for face detection and validation</li>
+      <li><code>documentDetection.test.ts</code> - Tests for document edge detection and alignment</li>
+      <li><code>imageQuality.test.ts</code> - Tests for blur detection and lighting assessment</li>
+    </ul>
+
+    <h2>Running Tests</h2>
+    <p>
+      Execute the image quality test suite using:
+    </p>
+    <pre><code>npm test tests/api/verification/utils</code></pre>
+
+    <p>
+      Or run specific test files:
+    </p>
+    <pre><code>npm test tests/api/verification/utils/faceDetection.test.ts
+npm test tests/api/verification/utils/documentDetection.test.ts
+npm test tests/api/verification/utils/imageQuality.test.ts</code></pre>
+
+    <h2>Test Requirements</h2>
+    <p>
+      The test suite requires:
+    </p>
+    <ul>
+      <li>Node.js and npm installed</li>
+      <li>Jest test framework (included in project dependencies)</li>
+      <li>Sharp image processing library</li>
+      <li>OpenCV.js for face and document detection</li>
+    </ul>
+
+    <h2>Test Coverage</h2>
+    <h3>Face Detection Tests</h3>
+    <ul>
+      <li>Single face detection in selfies</li>
+      <li>Multiple face rejection</li>
+      <li>Face position validation</li>
+      <li>Confidence scoring</li>
+      <li>Error handling</li>
+    </ul>
+
+    <h3>Document Detection Tests</h3>
+    <ul>
+      <li>Document edge detection</li>
+      <li>Document alignment validation</li>
+      <li>Corner point detection</li>
+      <li>Aspect ratio validation</li>
+      <li>Error handling</li>
+    </ul>
+
+    <h3>Image Quality Tests</h3>
+    <ul>
+      <li>Blur detection</li>
+      <li>Lighting assessment</li>
+      <li>Resolution validation</li>
+      <li>Combined quality checks</li>
+      <li>Error handling</li>
+    </ul>
+
+    <h2>Mock Implementation</h2>
+    <p>
+      The tests use Jest mocks for external dependencies:
+    </p>
+    <pre><code>// Mock Sharp
+jest.mock('sharp', () => ({
+  // Sharp mock implementation
+}));
+
+// Mock OpenCV
+jest.mock('opencv4nodejs', () => ({
+  // OpenCV mock implementation
+}));</code></pre>
+
+    <h2>Test Data</h2>
+    <p>
+      Test images should be placed in <code>tests/fixtures/verification/images/</code> with the following files:
+    </p>
+    <ul>
+      <li><code>valid-selfie.jpg</code> - Clear face photo (1024x768)</li>
+      <li><code>valid-document.jpg</code> - Clear ID document (1024x768)</li>
+      <li><code>blurry-image.jpg</code> - Intentionally blurred image</li>
+      <li><code>dark-image.jpg</code> - Underexposed image</li>
+      <li><code>bright-image.jpg</code> - Overexposed image</li>
+      <li><code>low-res-image.jpg</code> - Low resolution image (320x240)</li>
+    </ul>
+
+    <h2>Performance Testing</h2>
+    <p>
+      Performance tests verify that image processing completes within acceptable timeframes:
+    </p>
+    <pre><code>test('completes validation within 500ms', async () => {
+  const startTime = Date.now();
+  await validateImage(testImageBuffer, 'selfie');
+  const duration = Date.now() - startTime;
+  expect(duration).toBeLessThan(500);
+});</code></pre>
+
+    <h2>Error Handling</h2>
+    <p>
+      Tests verify proper error handling for various scenarios:
+    </p>
+    <ul>
+      <li>Invalid image formats</li>
+      <li>Processing failures</li>
+      <li>Memory constraints</li>
+      <li>Timeout conditions</li>
+    </ul>
+
+    <h2>Audit Logging</h2>
+    <p>
+      Tests verify that appropriate audit events are logged:
+    </p>
+    <pre><code>expect(auditLogger.log).toHaveBeenCalledWith({
+  eventType: 'IMAGE_VALIDATION',
+  timestamp: expect.any(String),
+  data: expect.objectContaining({
+    isValid: expect.any(Boolean),
+    dimensions: expect.any(Object)
+  })
+});</code></pre>
+
+    <h2>Related Documentation</h2>
+    <ul>
+      <li><a href="../identity_verification.html">Identity Verification Process</a></li>
+      <li><a href="testing_guide.html">Testing Guide</a></li>
+      <li><a href="../api_reference.html">API Reference</a></li>
+    </ul>
+  </body>
+</html>

@@ -1,101 +1,350 @@
+import { 
+  RekognitionClient,
+  DetectFacesCommand,
+  DetectLabelsCommand,
+  DetectFacesCommandOutput,
+  QualityFilter,
+  Label,
+  Attribute
+} from "@aws-sdk/client-rekognition";
+import {
+  TextractClient,
+  AnalyzeDocumentCommand,
+  Block,
+  FeatureType
+} from "@aws-sdk/client-textract";
+import { 
+  BlurResult, 
+  LightingResult, 
+  ImageValidationResult,
+  DocumentType,
+  FaceDetectionResult,
+  DocumentDetectionResult,
+  ExtractedDocumentData
+} from '../types';
 import sharp from 'sharp';
 
-export interface BlurResult {
-  isAcceptable: boolean;
-  value: number;
-  threshold: number;
-  error?: string;
-}
+const rekognition = new RekognitionClient({
+  region: process.env.AWS_REGION || 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
+  }
+});
 
-export interface LightingResult {
-  isAcceptable: boolean;
-  value: number;
-  range?: {
+const textract = new TextractClient({
+  region: process.env.AWS_REGION || 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || ''
+  }
+});
+
+export async function validateImageQuality(
+  imageBuffer: Buffer,
+  type: DocumentType,
+  config: {
+    minWidth: number;
+    minHeight: number;
+    blurThreshold: number;
     minBrightness: number;
     maxBrightness: number;
-  };
-  error?: string;
-}
-
-export const detectBlur = async (
-  imageBuffer: Buffer, 
-  threshold: number = 0.5
-): Promise<BlurResult> => {
+    faceConfidenceThreshold: number;
+    documentConfidenceThreshold: number;
+  }
+): Promise<ImageValidationResult> {
   try {
-    // Convert image to grayscale and get pixel data
-    const { data, info } = await sharp(imageBuffer)
-      .grayscale()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-
-    // Implement Laplacian variance for blur detection
-    let variance = 0;
-    const laplacian = [0, 1, 0, 1, -4, 1, 0, 1, 0];
-    const pixelCount = (info.width - 2) * (info.height - 2); // Count of pixels we'll process
+    // Get image metadata
+    const metadata = await sharp(imageBuffer).metadata();
     
-    for (let y = 1; y < info.height - 1; y++) {
-      for (let x = 1; x < info.width - 1; x++) {
-        let sum = 0;
-        for (let ky = -1; ky <= 1; ky++) {
-          for (let kx = -1; kx <= 1; kx++) {
-            const idx = ((y + ky) * info.width + (x + kx));
-            sum += data[idx] * laplacian[(ky + 1) * 3 + (kx + 1)];
+    if (!metadata.width || !metadata.height) {
+      return {
+        isValid: false,
+        error: 'Unable to read image dimensions',
+        details: {
+          errorMessage: 'Invalid image format',
+          size: imageBuffer.length,
+          type: metadata.format || 'unknown',
+          width: 0,
+          height: 0
+        },
+        qualityMetrics: {
+          dimensions: { width: 0, height: 0 },
+          blur: { isAcceptable: false, value: 0, threshold: config.blurThreshold },
+          lighting: {
+            isAcceptable: false,
+            value: 0,
+            range: { minBrightness: config.minBrightness, maxBrightness: config.maxBrightness }
           }
         }
-        variance += Math.abs(sum); // Use absolute value for better sensitivity
-      }
+      };
     }
-    
-    // Normalize variance by pixel count and maximum possible value
-    const normalizedVariance = variance / (pixelCount * 255);
-    const isAcceptable = normalizedVariance >= threshold;
 
-    return {
-      isAcceptable,
-      value: normalizedVariance,
-      threshold
-    };
+    // Resolution check
+    if (metadata.width < config.minWidth || metadata.height < config.minHeight) {
+      return {
+        isValid: false,
+        error: `Image resolution must be at least ${config.minWidth}x${config.minHeight}`,
+        details: {
+          size: imageBuffer.length,
+          type: metadata.format || 'unknown',
+          width: metadata.width,
+          height: metadata.height,
+          errorMessage: `Image resolution too low`
+        }
+      };
+    }
+
+    // Process based on type
+    if (type === 'selfie') {
+      return await validateSelfie(imageBuffer, metadata, config);
+    } else {
+      return await validateDocument(imageBuffer, metadata, config);
+    }
   } catch (error) {
+    console.error('Image Quality Validation Error:', error);
     return {
-      isAcceptable: false,
-      value: 0,
-      threshold,
-      error: error instanceof Error ? error.message : 'Failed to analyze image blur'
+      isValid: false,
+      error: 'Failed to validate image quality',
+      details: {
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        size: imageBuffer.length,
+        type: 'unknown',
+        width: 0,
+        height: 0
+      }
     };
   }
-};
+}
 
-export const assessLighting = async (
+async function validateSelfie(
   imageBuffer: Buffer,
-  options = { minBrightness: 40, maxBrightness: 220 }
-): Promise<LightingResult> => {
+  metadata: sharp.Metadata,
+  config: any
+): Promise<ImageValidationResult> {
   try {
-    const { data, info } = await sharp(imageBuffer)
-      .grayscale()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
+    const response = await rekognition.send(new DetectFacesCommand({
+      Image: { Bytes: imageBuffer },
+      Attributes: [Attribute.DEFAULT]
+    }));
 
-    // Calculate average brightness
-    const sum = data.reduce((acc, val) => acc + val, 0);
-    const averageBrightness = sum / (info.width * info.height);
+    const faceDetails = response.FaceDetails?.[0];
+    const hasFace = !!faceDetails;
 
-    const isAcceptable = 
-      averageBrightness >= options.minBrightness && 
-      averageBrightness <= options.maxBrightness;
+    if (!hasFace) {
+      return {
+        isValid: false,
+        error: 'No face detected in image',
+        details: {
+          size: imageBuffer.length,
+          type: metadata.format,
+          width: metadata.width,
+          height: metadata.height,
+          face: {
+            hasFace: false,
+            confidence: 0
+          }
+        }
+      };
+    }
+
+    const quality = faceDetails.Quality || { Brightness: 50, Sharpness: 50 };
+    const confidence = faceDetails.Confidence || 0;
+
+    const blurResult: BlurResult = {
+      isAcceptable: (quality.Sharpness || 0) >= config.blurThreshold,
+      value: quality.Sharpness || 0,
+      threshold: config.blurThreshold
+    };
+
+    const lightingResult: LightingResult = {
+      isAcceptable: (quality.Brightness || 0) >= config.minBrightness && 
+                    (quality.Brightness || 0) <= config.maxBrightness,
+      value: quality.Brightness || 0,
+      range: {
+        minBrightness: config.minBrightness,
+        maxBrightness: config.maxBrightness
+      }
+    };
+
+    const faceResult: FaceDetectionResult = {
+      hasFace: true,
+      confidence: confidence,
+      faceLocation: faceDetails.BoundingBox ? {
+        x: faceDetails.BoundingBox.Left || 0,
+        y: faceDetails.BoundingBox.Top || 0,
+        width: faceDetails.BoundingBox.Width || 0,
+        height: faceDetails.BoundingBox.Height || 0
+      } : undefined
+    };
+
+    const isValid = confidence >= config.faceConfidenceThreshold &&
+                   blurResult.isAcceptable &&
+                   lightingResult.isAcceptable;
+
+    let error;
+    if (!blurResult.isAcceptable) {
+      error = 'Image too blurry';
+    } else if (!lightingResult.isAcceptable) {
+      error = 'Poor lighting conditions';
+    } else if (confidence < config.faceConfidenceThreshold) {
+      error = 'Face detection confidence too low';
+    }
 
     return {
-      isAcceptable,
-      value: averageBrightness,
-      range: {
-        minBrightness: options.minBrightness,
-        maxBrightness: options.maxBrightness
+      isValid,
+      ...(error && { error }),
+      details: {
+        size: imageBuffer.length,
+        type: metadata.format,
+        width: metadata.width,
+        height: metadata.height,
+        blur: blurResult,
+        lighting: lightingResult,
+        face: faceResult
+      },
+      qualityMetrics: {
+        dimensions: {
+          width: metadata.width || 0,
+          height: metadata.height || 0
+        },
+        blur: blurResult,
+        lighting: lightingResult,
+        face: faceResult
       }
     };
   } catch (error) {
-    return {
-      isAcceptable: false,
-      value: 0,
-      error: error instanceof Error ? error.message : 'Failed to analyze image lighting'
-    } as LightingResult;
+    throw new Error(`Failed to validate selfie: ${error}`);
   }
-};
+}
+
+async function validateDocument(
+  imageBuffer: Buffer,
+  metadata: sharp.Metadata,
+  config: any
+): Promise<ImageValidationResult> {
+  try {
+    // Detect document using Rekognition
+    const labelResponse = await rekognition.send(new DetectLabelsCommand({
+      Image: { Bytes: imageBuffer },
+      MaxLabels: 10
+    }));
+
+    const isDocument = labelResponse.Labels?.some(
+      (label: Label) => 
+        label.Name?.toLowerCase().includes('id') ||
+        label.Name?.toLowerCase().includes('card') ||
+        label.Name?.toLowerCase().includes('document')
+    );
+
+    if (!isDocument) {
+      return {
+        isValid: false,
+        error: 'No valid document detected',
+        details: {
+          size: imageBuffer.length,
+          type: metadata.format,
+          width: metadata.width,
+          height: metadata.height,
+          document: {
+            hasDocument: false,
+            confidence: 0,
+            error: 'No valid document detected'
+          }
+        }
+      };
+    }
+
+    // Analyze document using Textract
+    const textractResponse = await textract.send(new AnalyzeDocumentCommand({
+      Document: { Bytes: imageBuffer },
+      FeatureTypes: [FeatureType.FORMS, FeatureType.TABLES]
+    }));
+
+    // Extract text and form fields
+    const extractedData: ExtractedDocumentData = {
+      fields: {},
+      confidence: 0
+    };
+
+    let totalConfidence = 0;
+    let blockCount = 0;
+
+    textractResponse.Blocks?.forEach((block: Block) => {
+      if (block.BlockType === 'KEY_VALUE_SET' && block.EntityTypes?.includes('KEY')) {
+        const key = block.Relationships?.[0].Ids
+          ?.map(id => textractResponse.Blocks?.find(b => b.Id === id)?.Text)
+          .join(' ');
+        const value = block.Relationships?.[1].Ids
+          ?.map(id => textractResponse.Blocks?.find(b => b.Id === id)?.Text)
+          .join(' ');
+        
+        if (key && value) {
+          extractedData.fields[key] = value;
+        }
+      }
+      if (block.Confidence) {
+        totalConfidence += block.Confidence;
+        blockCount++;
+      }
+    });
+
+    extractedData.confidence = blockCount > 0 ? totalConfidence / blockCount : 0;
+
+    const documentResult: DocumentDetectionResult = {
+      hasDocument: true,
+      confidence: labelResponse.Labels?.[0]?.Confidence || 0
+    };
+
+    const blurResult: BlurResult = {
+      isAcceptable: extractedData.confidence >= config.documentConfidenceThreshold,
+      value: extractedData.confidence,
+      threshold: config.documentConfidenceThreshold
+    };
+
+    const lightingResult: LightingResult = {
+      isAcceptable: true, // Document lighting is assessed through text extraction quality
+      value: 50,
+      range: {
+        minBrightness: config.minBrightness,
+        maxBrightness: config.maxBrightness
+      }
+    };
+
+    const isValid = documentResult.confidence >= config.documentConfidenceThreshold &&
+                   extractedData.confidence >= config.documentConfidenceThreshold;
+
+    let error;
+    if (!blurResult.isAcceptable) {
+      error = 'Image too blurry';
+    } else if (documentResult.confidence < config.documentConfidenceThreshold) {
+      error = 'Document detection confidence too low';
+    }
+
+    return {
+      isValid,
+      ...(error && { error }),
+      details: {
+        size: imageBuffer.length,
+        type: metadata.format,
+        width: metadata.width,
+        height: metadata.height,
+        document: documentResult,
+        blur: blurResult,
+        lighting: lightingResult,
+        errorMessage: JSON.stringify(extractedData)
+      },
+      qualityMetrics: {
+        dimensions: {
+          width: metadata.width || 0,
+          height: metadata.height || 0
+        },
+        blur: blurResult,
+        lighting: lightingResult,
+        document: documentResult
+      }
+    };
+  } catch (error) {
+    throw new Error(`Failed to validate document: ${error}`);
+  }
+}

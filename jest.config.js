@@ -1,25 +1,23 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/src', '<rootDir>/tests'],
+  setupFiles: ['dotenv/config'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   testMatch: [
-    '**/__tests__/**/*.ts',
-    '**/?(*.)+(spec|test).ts',
-    '**/tests/api/endpoints/*.test.ts'
+    '**/__tests__/**/*.[jt]s?(x)',
+    '**/?(*.)+(spec|test).[jt]s?(x)'
   ],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
-      // ts-jest config options here
-    }]
+    '^.+\\.(ts|tsx)$': 'ts-jest'
   },
-  moduleFileExtensions: ['ts', 'js', 'json', 'node'],
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-  },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   globals: {
-    // Remove any ts-jest config from globals if present
+    'ts-jest': {
+      tsconfig: 'tsconfig.json'
+    }
   },
-  testTimeout: 30000, // Increase timeout for API calls
-  maxConcurrency: 5, // Limit concurrent tests to avoid overwhelming the test API
+  testTimeout: 30000, // 30 seconds for AWS calls
+  verbose: true,
+  // Load .env.test for testing
+  setupFiles: ['<rootDir>/tests/env.setup.js']
 };

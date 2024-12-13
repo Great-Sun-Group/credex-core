@@ -24,7 +24,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-rekognition": "^3.699.0",
     "@aws-sdk/client-secrets-manager": "^3.658.1",
+    "@aws-sdk/client-textract": "^3.699.0",
     "@types/adm-zip": "^0.5.5",
     "@types/multer": "^1.4.12",
     "adm-zip": "^0.5.16",
