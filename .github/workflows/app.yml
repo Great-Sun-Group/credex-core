@@ -115,6 +115,8 @@ jobs:
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}"},
             {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
             {"name": "CLIENT_API_KEY", "value": "${{ secrets.CLIENT_API_KEY }}"},
+            {"name": "DEV_ADMIN_KEY", "value": "${{ secrets.DEV_ADMIN_KEY }}"},
+            {"name": "SKIP_RATE_LIMITER_KEY", "value": "${{ secrets.SKIP_RATE_LIMITER_KEY }}"},
             {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"}
           ]' | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "Task definition updated."
@@ -209,7 +211,7 @@ jobs:
             --cluster credex-cluster-$ENVIRONMENT \
             --services credex-core-service-$ENVIRONMENT \
             --query 'services[0]')
-          
+
           echo "Final Service State:"
           echo $FINAL_SERVICE | jq '{runningCount: .runningCount, desiredCount: .desiredCount, status: .status, events: .events[0:3]}'
 
@@ -219,7 +221,7 @@ jobs:
           echo "Environment: $ENVIRONMENT"
           echo "Image: $IMAGE"
           echo "Build Target: $BUILD_TARGET"
-          
+
           cd terraform
           echo "========================================"
           echo "App Infrastructure Outputs:"
@@ -261,7 +263,7 @@ jobs:
         run: |
           # Get CloudFront distribution ID for docs
           DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?contains(@, 'docs.${DOMAIN}')]].Id" --output text)
-          
+
           if [ -n "$DISTRIBUTION_ID" ]; then
             echo "Creating CloudFront invalidation for distribution $DISTRIBUTION_ID"
             aws cloudfront create-invalidation \

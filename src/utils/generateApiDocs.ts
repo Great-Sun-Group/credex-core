@@ -480,10 +480,15 @@ export async function generateApiDocs(): Promise<void> {
       logger.debug(`Created directory: ${docsDir}`);
     }
 
-    // Write to the docs directory
-    const outputPath = path.join(docsDir, 'api_reference.html');
-    await fs.promises.writeFile(outputPath, html);
-    logger.info(`Generated API documentation at: ${outputPath}`);
+    // Write the HTML documentation
+    const htmlOutputPath = path.join(docsDir, 'api_reference.html');
+    await fs.promises.writeFile(htmlOutputPath, html);
+    logger.info(`Generated API documentation at: ${htmlOutputPath}`);
+
+    // Write the raw Swagger specification
+    const swaggerOutputPath = path.join(docsDir, 'swagger.json');
+    await fs.promises.writeFile(swaggerOutputPath, JSON.stringify(swaggerSpec, null, 2));
+    logger.info(`Generated Swagger specification at: ${swaggerOutputPath}`);
   } catch (error) {
     logger.error('Failed to generate API documentation:', error instanceof Error ? error.message : String(error));
     throw error;
