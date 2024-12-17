@@ -9,11 +9,6 @@ variable "environment" {
   }
 }
 
-variable "docker_image" {
-  description = "The full Docker image to deploy (including repository and tag)"
-  type        = string
-}
-
 # Neo4j related variables needed by databases module
 variable "neo_4j_ledger_space_bolt_url" {
   description = "The Neo4j Bolt URL for Ledger Space"
@@ -55,4 +50,11 @@ variable "neo4j_enterprise_license" {
   description = "The Neo4j Enterprise License"
   type        = string
   sensitive   = true
+}
+
+# Optional variables
+variable "docker_image" {
+  description = "The full Docker image to deploy (including repository and tag)"
+  type        = string
+  default     = "dummy" # Make it optional with a dummy default for connectors workflow
 }
