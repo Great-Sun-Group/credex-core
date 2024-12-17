@@ -596,6 +596,12 @@ resource "aws_iam_role_policy_attachment" "ecs_task_role_ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+# Add Textract permissions to ECS task role
+resource "aws_iam_role_policy_attachment" "ecs_task_textract" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonTextractFullAccess"
+}
+
 # CloudWatch log group
 resource "aws_cloudwatch_log_group" "ecs_logs" {
   name              = "/ecs/credex-core-${var.environment}"

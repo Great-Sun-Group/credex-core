@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Textract Development Guide - credex-core API</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <div id="menuButton" onclick="window.location.href='../menu.html'">
+      <img src="../images/logo.png" alt="Menu" class="menu-logo">
+      <span class="menu-text">MENU</span>
+    </div>
+
+    <div class="header-logo">
+      <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+    <h1>Textract Development Guide</h1>
+    <h2 class="subtitle">for the credex-core API</h2>
+
+    <h2>Overview</h2>
+    <p>
+      The credex-core API uses AWS Textract for document analysis in the verification process. This guide covers the development workflow and testing approaches for Textract integration.
+    </p>
+
+    <h2>Local Development Challenges</h2>
+    <p>
+      Developing with AWS Textract presents unique challenges because:
+    </p>
+    <ul>
+      <li>Textract is a cloud service that can't be run locally</li>
+      <li>Permissions are managed by the ECS task role in deployed environments</li>
+      <li>Local development requires AWS credentials with Textract permissions</li>
+    </ul>
+
+    <h2>Development Workflow</h2>
+    
+    <h3>1. Infrastructure Setup</h3>
+    <p>Before starting development:</p>
+    <ul>
+      <li>Textract permissions have been deployed to AWS "development" environment.</li>
+    </ul>
+
+    <h3>2. Local Development Setup</h3>
+    <p>For local development, you need:</p>
+    <ul>
+      <li>AWS credentials with Textract permissions (can use AWS CLI profile)</li>
+      <li>Environment variables:
+        <ul>
+          <li><code>AWS_PROFILE=your-dev-profile</code></li>
+          <li><code>AWS_REGION=af-south-1</code></li>
+          <li><code>VERIFICATION_PHOTOS_BUCKET=credex-verification-photos-development</code></li>
+        </ul>
+      </li>
+    </ul>
+
+    <h2>Testing Approaches</h2>
+
+    <h3>Local Testing with Dev Infrastructure</h3>
+    <p>
+      This approach allows rapid development while using cloud resources:
+    </p>
+    <ul>
+      <li>Run your local app using dev AWS credentials</li>
+      <li>Upload test documents to the dev S3 bucket</li>
+      <li>Your local code can then use Textract through your AWS credentials</li>
+      <li>Good for rapid development and debugging</li>
+    </ul>
+
+    <h3>Full Integration Testing</h3>
+    <p>
+      For complete end-to-end testing:
+    </p>
+    <ul>
+      <li>Deploy both infrastructure and app changes to development</li>
+      <li>Test through the deployed API</li>
+      <li>This tests the complete flow including ECS task role permissions</li>
+    </ul>
+
+    <h2>Development Tips</h2>
+    <ul>
+      <li>Start with the infrastructure deployment to enable Textract access</li>
+      <li>Use real ID document samples (test data) stored in development S3</li>
+      <li>Log Textract responses extensively during development</li>
+      <li>Consider creating test endpoints specifically for Textract testing</li>
+    </ul>
+
+    <h2>Common Development Tasks</h2>
+    <ul>
+      <li>Testing new document types: Upload to dev S3, analyze Textract response</li>
+      <li>Debugging field extraction: Use AWS Console to view raw Textract results</li>
+      <li>Performance testing: Monitor API latency in development environment</li>
+    </ul>
+
+    <p>
+      This hybrid approach (local code + dev infrastructure) lets you develop and test Textract integration effectively while maintaining security of AWS resources.
+    </p>
+
+  </body>
+</html>
