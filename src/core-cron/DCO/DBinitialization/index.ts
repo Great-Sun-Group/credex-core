@@ -3,7 +3,6 @@ import { setupDatabaseConstraints } from "./constraints";
 import { establishDayZero, fetchAndProcessRates, createDayZeroDaynode } from "./dayZero";
 import { createInitialMember } from "./members";
 import { createInitialAccount, createInitialRelationships } from "./accounts";
-import { createInitialCredex } from "./credex";
 import { createDCOrecurringTemplate } from "./recurring";
 import logger from "../../../utils/logger";
 import { v4 as uuidv4 } from "uuid";
@@ -62,29 +61,13 @@ export async function DBinitialization(): Promise<void> {
     };
 
     try {
-      // Create initial members
+      // Create initial member
       const rdubs = await createInitialMember(
         "Ryan",
         "Watson",
         "263778177125",
         "USD",
         true, // DCO participant
-        requestId
-      );
-      const magicmike = await createInitialMember(
-        "Mike",
-        "Dube",
-        "263787379972",
-        "USD",
-        false, // Not a DCO participant
-        requestId
-      );
-      const bennita = await createInitialMember(
-        "Bennita",
-        "Muranda",
-        "263788435091",
-        "USD",
-        false, // Not a DCO participant
         requestId
       );
 
@@ -113,37 +96,13 @@ export async function DBinitialization(): Promise<void> {
         "CAD",
         requestId
       );
-      const vimbisoPayTrustID = await createInitialAccount(
-        bennita.onboardedMemberID,
-        "TRUST",
-        "VimbisoPay: Trust",
-        "vimbisopay_trust",
-        "USD",
-        requestId
-      );
-      const vimbisoPayOpsID = await createInitialAccount(
-        magicmike.onboardedMemberID,
-        "OPERATIONS",
-        "VimbisoPay: Operations",
-        "vimbisopay_ops",
-        "USD",
-        requestId
-      );
 
-      // Create relationships and initial Credex
+      // Create relationships and DCO recurring template
       await createInitialRelationships(
         memberSession,
         credexFoundationID,
         greatSunTrustID,
-        vimbisoPayTrustID,
-        vimbisoPayOpsID,
         rdubs.onboardedMemberID,
-        bennita.onboardedMemberID,
-        requestId
-      );
-      await createInitialCredex(
-        rdubs.onboardedMemberID,
-        greatSunTrustID,
         rdubs.defaultAccountID,
         requestId
       );

@@ -17,17 +17,25 @@ interface LoginResult {
   data?: {
     token: string;
     memberID: string;
+    memberTier: number;
+    remainingAvailableUSD: number;
+    accountIDS: string[];
   };
   message: string;
+  error?: {
+    code: string;
+    details?: string;
+  };
 }
 
 /**
  * LoginMemberService
  * 
- * Authenticates a member using their phone number and generates a new token.
+ * Authenticates a member using their phone number, generates a new token,
+ * and returns member dashboard data.
  * 
  * @param phone - The member's phone number
- * @returns LoginResult containing token if successful
+ * @returns LoginResult containing token and dashboard data if successful
  * @throws MemberError for validation and business logic errors
  */
 export async function LoginMemberService(
@@ -36,53 +44,73 @@ export async function LoginMemberService(
   logger.debug("Entering LoginMemberService", { phone });
 
   if (!phone) {
-    throw new MemberError(
-      "Phone number is required",
-      "MISSING_PHONE",
-      400
-    );
+    return {
+      success: false,
+      message: "Phone number is required",
+      error: {
+        code: "MISSING_PHONE",
+        details: "Phone number parameter must be provided"
+      }
+    };
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
     const result = await ledgerSpaceSession.executeWrite(async (tx) => {
-      // Find the member
+      // Find the member and get dashboard data
       const memberResult = await tx.run(
         `
         MATCH (m:Member {phone: $phone})
-        RETURN m {
-          .memberID,
-          .firstname,
-          .lastname,
-          .phone,
-          .memberHandle,
-          .memberTier
-        } as member
+        OPTIONAL MATCH (m)-[:AUTHORIZED_FOR]->(a:Account)
+        WITH m, collect(a.accountID) as accountIDS
+        MATCH (daynode:Daynode { Active: true })
+        RETURN {
+          memberID: m.memberID,
+          firstname: m.firstname,
+          lastname: m.lastname,
+          phone: m.phone,
+          memberHandle: m.memberHandle,
+          memberTier: m.memberTier,
+          accountIDS: accountIDS,
+          remainingAvailableUSD: 
+            CASE
+              WHEN m.memberTier = 1 THEN 100
+              WHEN m.memberTier = 2 THEN 1000
+              WHEN m.memberTier = 3 THEN 10000
+              ELSE 0
+            END
+        } as memberData
         `,
         { phone }
       );
 
       if (memberResult.records.length === 0) {
-        throw new MemberError(
-          "Member not found",
-          "NOT_FOUND",
-          404
-        );
+        return {
+          success: false,
+          message: "Member not found",
+          error: {
+            code: "NOT_FOUND",
+            details: "No member exists with the provided phone number"
+          }
+        };
       }
 
-      const member = memberResult.records[0].get("member") as MemberProperties;
+      const memberData = memberResult.records[0].get("memberData");
       
       // Validate member data
-      if (!member.memberID) {
-        throw new MemberError(
-          "Invalid member data - missing memberID",
-          "INVALID_DATA",
-          500
-        );
+      if (!memberData.memberID) {
+        return {
+          success: false,
+          message: "Invalid member data - missing memberID",
+          error: {
+            code: "INVALID_DATA",
+            details: "Member data is missing required fields"
+          }
+        };
       }
 
-      const token = generateToken(member.memberID);
+      const token = generateToken(memberData.memberID);
 
       // Update the member's token
       const updateResult = await tx.run(
@@ -93,27 +121,34 @@ export async function LoginMemberService(
           m.lastLoginAt = datetime()
         RETURN m.memberID
         `,
-        { memberID: member.memberID, token }
+        { memberID: memberData.memberID, token }
       );
 
       if (updateResult.records.length === 0) {
-        throw new MemberError(
-          "Failed to update member token",
-          "TOKEN_UPDATE_FAILED",
-          500
-        );
+        return {
+          success: false,
+          message: "Failed to update member token",
+          error: {
+            code: "TOKEN_UPDATE_FAILED",
+            details: "Could not update member's authentication token"
+          }
+        };
       }
 
       logger.info("Member logged in successfully", {
-        memberID: member.memberID,
-        phone: member.phone
+        memberID: memberData.memberID,
+        phone: memberData.phone,
+        accountCount: memberData.accountIDS.length
       });
 
       return {
         success: true,
         data: {
           token,
-          memberID: member.memberID
+          memberID: memberData.memberID,
+          memberTier: memberData.memberTier,
+          remainingAvailableUSD: memberData.remainingAvailableUSD,
+          accountIDS: memberData.accountIDS
         },
         message: "Login successful"
       };
@@ -127,7 +162,11 @@ export async function LoginMemberService(
     
     return {
       success: false,
-      message: handledError.message
+      message: handledError.message,
+      error: {
+        code: handledError.code || "INTERNAL_ERROR",
+        details: handledError.message
+      }
     };
 
   } finally {

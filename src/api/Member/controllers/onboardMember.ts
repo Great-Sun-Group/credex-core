@@ -1,6 +1,6 @@
 import express from "express";
 import { OnboardMemberService } from "../services/OnboardMember";
-import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
+import { LoginMemberService } from "../services/LoginMember";
 import { CreateAccountService } from "../../Account/services/CreateAccount";
 import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { MemberError, handleServiceError } from "../../../utils/errorUtils";
@@ -26,12 +26,6 @@ type OnboardDetails = MemberActionDetails & {
 
 type OnboardResponse = TypedApiResponse<OnboardDetails>;
 type OnboardErrorResponse = TypedApiResponse<ErrorActionDetails>;
-
-interface DashboardData {
-  memberTier: number;
-  remainingAvailableUSD: number;
-  accounts: any[]; // Will be typed when dashboard is standardized
-}
 
 /**
  * OnboardMemberController
@@ -162,35 +156,18 @@ export async function OnboardMemberController(
       return;
     }
 
-    // Generate and store token
-    const token = generateToken(memberData.memberID);
-    const session = searchSpaceDriver.session();
-    
-    try {
-      await session.executeWrite(async (tx) => {
-        return tx.run(
-          "MATCH (m:Member {memberID: $memberID}) SET m.token = $token",
-          { 
-            memberID: memberData.memberID,
-            token 
-          }
-        );
-      });
-    } finally {
-      await session.close();
-    }
-
-    // Get initial dashboard
-    logger.debug("Retrieving initial dashboard", {
+    // Get initial dashboard data using LoginMemberService
+    logger.debug("Retrieving initial dashboard data", {
       phone,
       requestId
     });
 
-    const dashboardResult = await GetMemberDashboardByPhoneService(phone);
+    const dashboardResult = await LoginMemberService(phone);
     
     if (!dashboardResult.success || !dashboardResult.data) {
       logger.error("Failed to retrieve initial dashboard", {
-        error: dashboardResult.error,
+        error: dashboardResult.error?.code,
+        details: dashboardResult.error?.details,
         message: dashboardResult.message,
         memberID: memberData.memberID,
         requestId
@@ -205,8 +182,8 @@ export async function OnboardMemberController(
             timestamp: new Date().toISOString(),
             actor: memberData.memberID,
             details: {
-              code: "DASHBOARD_RETRIEVAL_FAILED",
-              reason: dashboardResult.message || "Failed to retrieve initial dashboard"
+              code: dashboardResult.error?.code || "DASHBOARD_RETRIEVAL_FAILED",
+              reason: dashboardResult.error?.details || dashboardResult.message
             }
           },
           dashboard: {}
@@ -217,43 +194,21 @@ export async function OnboardMemberController(
       return;
     }
 
-    const dashboardData = dashboardResult.data;
-
-    // Get associated account dashboards
-    logger.debug("Retrieving account dashboards", {
-      memberID: dashboardData.memberID,
-      accountCount: dashboardData.accountIDS.length,
-      requestId,
+    // Get account dashboard
+    logger.debug("Retrieving account dashboard", {
+      memberID: memberData.memberID,
+      accountID: accountResult.data.accountID,
+      requestId
     });
 
-    const accountDashboards = await Promise.all(
-      dashboardData.accountIDS.map(async (accountId: string) => {
-        try {
-          return await GetAccountDashboardService(
-            dashboardData.memberID,
-            accountId
-          );
-        } catch (error) {
-          logger.error("Error fetching account dashboard", {
-            error: error instanceof Error ? error.message : "Unknown error",
-            accountId,
-            memberID: dashboardData.memberID,
-            requestId
-          });
-          return null;
-        }
-      })
-    );
-
-    // Filter out any failed account dashboard retrievals
-    const validAccountDashboards = accountDashboards.filter(
-      (dashboard): dashboard is NonNullable<typeof dashboard> => dashboard !== null
+    const accountDashboard = await GetAccountDashboardService(
+      memberData.memberID,
+      accountResult.data.accountID
     );
 
     logger.info("Member onboarded successfully", {
       memberID: memberData.memberID,
       accountID: accountResult.data.accountID,
-      accountCount: validAccountDashboards.length,
       requestId
     });
 
@@ -272,14 +227,14 @@ export async function OnboardMemberController(
             lastname: memberData.lastname,
             memberHandle: memberData.memberHandle,
             defaultDenom: memberData.defaultDenom,
-            token,
+            token: dashboardResult.data.token,
             defaultAccountID: accountResult.data.accountID
           }
         },
         dashboard: {
-          memberTier: dashboardData.memberTier,
-          remainingAvailableUSD: dashboardData.remainingAvailableUSD,
-          accounts: validAccountDashboards
+          memberTier: dashboardResult.data.memberTier,
+          remainingAvailableUSD: dashboardResult.data.remainingAvailableUSD,
+          accounts: accountDashboard ? [accountDashboard] : []
         }
       }
     };
