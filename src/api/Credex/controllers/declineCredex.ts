@@ -1,5 +1,6 @@
 import express from "express";
 import { DeclineCredexService } from "../services/DeclineCredex";
+import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
 import { 
@@ -73,6 +74,18 @@ export async function DeclineCredexController(
       return res.status(404).json(errorResponse);
     }
 
+    // Get updated dashboard data for the receiver's account
+    logger.debug("Fetching updated dashboard data", {
+      signerID,
+      receiverAccountID: responseData.data.receiverAccountID,
+      requestId,
+    });
+
+    const dashboard = await GetAccountDashboardService(
+      signerID,
+      responseData.data.receiverAccountID
+    );
+
     const successResponse: DeclineCredexResponse = {
       message: "Credex declined successfully",
       data: {
@@ -83,13 +96,13 @@ export async function DeclineCredexController(
           actor: signerID,
           details: {
             amount: "0", // Amount is zeroed on decline
-            denomination: "USD", // Default denomination
+            denomination: responseData.data.denomination, // Use denomination from response
             securedCredex: false, // Not relevant for declined Credex
             receiverAccountID: responseData.data.receiverAccountID,
             reason: "Declined by receiver"
           }
         },
-        dashboard: {} // No dashboard updates for decline
+        dashboard: dashboard || {}
       }
     };
 
