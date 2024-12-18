@@ -14,7 +14,7 @@ export default function declineCredexRoute() {
    *   post:
    *     tags: [Credex]
    *     summary: Decline a Credex transaction
-   *     description: Declines a pending Credex transaction, rejecting the proposed agreement. Only the receiver can decline a Credex offer.
+   *     description: Declines a pending Credex transaction, rejecting the proposed agreement. Only the receiver can decline a Credex offer. Returns updated dashboard data.
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -67,12 +67,6 @@ export default function declineCredexRoute() {
    *                         details:
    *                           type: object
    *                           properties:
-   *                             credexID:
-   *                               type: string
-   *                               format: uuid
-   *                             declinedAt:
-   *                               type: string
-   *                               format: date-time
    *                             amount:
    *                               type: string
    *                               description: Amount is zeroed on decline
@@ -80,6 +74,7 @@ export default function declineCredexRoute() {
    *                             denomination:
    *                               type: string
    *                               enum: [CXX, CAD, USD, XAU, ZWG]
+   *                               description: Original denomination of the Credex
    *                             securedCredex:
    *                               type: boolean
    *                               description: Not relevant for declined Credex
@@ -92,8 +87,23 @@ export default function declineCredexRoute() {
    *                               example: "Declined by receiver"
    *                     dashboard:
    *                       type: object
-   *                       description: Full dashboard state after the action
-   *                       nullable: true
+   *                       description: Updated dashboard state for receiver's account
+   *                       properties:
+   *                         accountID:
+   *                           type: string
+   *                           format: uuid
+   *                         accountName:
+   *                           type: string
+   *                         accountType:
+   *                           type: string
+   *                         defaultDenom:
+   *                           type: string
+   *                         balances:
+   *                           type: object
+   *                         pendingOffers:
+   *                           type: object
+   *                         recentActivity:
+   *                           type: array
    *       400:
    *         description: Invalid input data or Credex not in declinable state
    *         content:
@@ -137,7 +147,6 @@ export default function declineCredexRoute() {
    *                               type: string
    *                     dashboard:
    *                       type: object
-   *                       nullable: true
    *       401:
    *         description: Authentication required
    *         content:
@@ -165,7 +174,7 @@ export default function declineCredexRoute() {
    *                           format: date-time
    *                         actor:
    *                           type: string
-   *                           enum: [system]
+   *                           example: system
    *                         details:
    *                           type: object
    *                           properties:
@@ -176,7 +185,6 @@ export default function declineCredexRoute() {
    *                               type: string
    *                     dashboard:
    *                       type: object
-   *                       nullable: true
    *       403:
    *         description: Not authorized to decline this Credex (must be receiver)
    *         content:
@@ -215,7 +223,6 @@ export default function declineCredexRoute() {
    *                               type: string
    *                     dashboard:
    *                       type: object
-   *                       nullable: true
    *       404:
    *         description: Credex not found
    *         content:
@@ -256,7 +263,6 @@ export default function declineCredexRoute() {
    *                               type: string
    *                     dashboard:
    *                       type: object
-   *                       nullable: true
    *       409:
    *         description: Credex has already been processed
    *         content:
@@ -297,7 +303,6 @@ export default function declineCredexRoute() {
    *                               type: string
    *                     dashboard:
    *                       type: object
-   *                       nullable: true
    *       500:
    *         description: Internal server error
    *         content:
@@ -325,7 +330,7 @@ export default function declineCredexRoute() {
    *                           format: date-time
    *                         actor:
    *                           type: string
-   *                           enum: [system]
+   *                           example: system
    *                         details:
    *                           type: object
    *                           properties:
@@ -338,7 +343,6 @@ export default function declineCredexRoute() {
    *                               type: string
    *                     dashboard:
    *                       type: object
-   *                       nullable: true
    */
   router.post(
     `/declineCredex`,
