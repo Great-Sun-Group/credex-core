@@ -8,6 +8,7 @@ interface CancelCredexData {
   transactionType: string;
   issuerAccountID: string;
   receiverAccountID: string;
+  denomination: string;
 }
 
 interface CancelCredexResult {
@@ -27,6 +28,7 @@ interface DatabaseCancelResult {
     cancelledAt: string;
     issuerAccountID: string;
     receiverAccountID: string;
+    denomination: string;
   };
   error?: string;
 }
@@ -97,7 +99,8 @@ export async function CancelCredexService(
           credex.credexID AS credexID,
           toString(credex.cancelledAt) AS cancelledAt,
           source.accountID AS issuerAccountID,
-          target.accountID AS receiverAccountID
+          target.accountID AS receiverAccountID,
+          credex.Denomination AS denomination
       `;
 
       const queryResult = await tx.run(query, { credexID });
@@ -116,7 +119,8 @@ export async function CancelCredexService(
           credexID: record.get("credexID"),
           cancelledAt: record.get("cancelledAt"),
           issuerAccountID: record.get("issuerAccountID"),
-          receiverAccountID: record.get("receiverAccountID")
+          receiverAccountID: record.get("receiverAccountID"),
+          denomination: record.get("denomination")
         }
       };
     });
@@ -138,6 +142,7 @@ export async function CancelCredexService(
       cancelledAt: result.data.cancelledAt,
       issuerAccountID: result.data.issuerAccountID,
       receiverAccountID: result.data.receiverAccountID,
+      denomination: result.data.denomination,
       signerID
     });
 

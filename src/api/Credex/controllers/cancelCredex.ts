@@ -1,5 +1,6 @@
 import express from "express";
 import { CancelCredexService } from "../services/CancelCredex";
+import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
 import { 
@@ -73,6 +74,18 @@ export async function CancelCredexController(
       return res.status(404).json(errorResponse);
     }
 
+    // Get updated dashboard data for the issuer's account
+    logger.debug("Fetching updated dashboard data", {
+      signerID,
+      issuerAccountID: responseData.data.issuerAccountID,
+      requestId,
+    });
+
+    const dashboard = await GetAccountDashboardService(
+      signerID,
+      responseData.data.issuerAccountID
+    );
+
     const successResponse: CancelCredexResponse = {
       message: "Credex cancelled successfully",
       data: {
@@ -83,13 +96,13 @@ export async function CancelCredexController(
           actor: signerID,
           details: {
             amount: "0", // Amount is zeroed on cancellation
-            denomination: "USD", // Default denomination
+            denomination: responseData.data.denomination, // Use denomination from response
             securedCredex: false, // Not relevant for cancelled Credex
             receiverAccountID: responseData.data.receiverAccountID,
             reason: "Cancelled by issuer"
           }
         },
-        dashboard: {} // No dashboard updates for cancellation
+        dashboard: dashboard || {}
       }
     };
 
