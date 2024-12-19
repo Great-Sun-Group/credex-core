@@ -1,6 +1,8 @@
 import express from "express";
 import { LoginMemberService } from "../services/LoginMember";
 import { MemberDashboardService } from "../services/MemberDashboardService";
+import { MemberRepository } from "../repositories/MemberRepository";
+import { SpendLimitService } from "../services/SpendLimitService";
 import { MemberError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 import { validatePhone } from "../../../utils/validators";
@@ -20,11 +22,12 @@ type LoginDetails = MemberActionDetails & {
 type LoginResponse = TypedApiResponse<LoginDetails>;
 type LoginErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
-// Initialize services
+// Initialize repositories and services
+const memberRepository = new MemberRepository();
+const spendLimitService = new SpendLimitService();
 const memberDashboardService = new MemberDashboardService(
-  // TODO: Add proper repository instances
-  null as any,
-  null as any
+  memberRepository,
+  spendLimitService
 );
 
 /**

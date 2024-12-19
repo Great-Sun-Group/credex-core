@@ -1,5 +1,7 @@
 import express from "express";
 import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import { MemberRepository } from "../../Member/repositories/MemberRepository";
+import { SpendLimitService } from "../../Member/services/SpendLimitService";
 import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 import { validateUUID } from "../../../utils/validators";
@@ -12,10 +14,12 @@ import {
 } from "../../../types/apiResponse";
 
 // Initialize services
+// Initialize repositories and services
+const memberRepository = new MemberRepository();
+const spendLimitService = new SpendLimitService();
 const memberDashboardService = new MemberDashboardService(
-  // TODO: Add proper repository instances
-  null as any,
-  null as any
+  memberRepository,
+  spendLimitService
 );
 
 type AccountDashboardResponse = TypedApiResponse<AccountActionDetails>;

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Repository Architecture</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <div id="menuButton" onclick="window.location.href='../menu.html'">
+      <img src="../images/logo.png" alt="Menu" class="menu-logo">
+      <span class="menu-text">MENU</span>
+    </div>
+
+    <div class="header-logo">
+      <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+    <h1>Repository Architecture</h1>
+
+    <p>
+      The credex-core API uses a repository pattern to abstract database operations and optimize 
+      data access. This document outlines the key repositories and their usage patterns.
+    </p>
+
+    <h2>Member Repositories</h2>
+
+    <h3>MemberRepository</h3>
+    <p>
+      Handles member data retrieval with optimizations for dashboard operations:
+    </p>
+    <ul>
+      <li>
+        <strong>Key Methods</strong>
+        <ul>
+          <li>findById: Retrieves member data with tier and preferences</li>
+          <li>findByPhone: Retrieves member data for authentication</li>
+        </ul>
+      </li>
+      <li>
+        <strong>Optimizations</strong>
+        <ul>
+          <li>Result caching with 30-second TTL</li>
+          <li>Single query pattern for all member data</li>
+          <li>Proper indexing on memberID and phone</li>
+        </ul>
+      </li>
+      <li>
+        <strong>Usage Example</strong>
+        <pre>
+const memberRepo = new MemberRepository();
+const memberData = await memberRepo.findById(memberID);
+if (memberData) {
+  // Access member properties
+  const { tier, firstname, lastname, handle, defaultDenom } = memberData;
+}</pre>
+      </li>
+    </ul>
+
+    <h3>SpendLimitRepository</h3>
+    <p>
+      Manages tier-specific spend limit calculations:
+    </p>
+    <ul>
+      <li>
+        <strong>Key Methods</strong>
+        <ul>
+          <li>getRemainingLimit: Calculates available spend based on tier and usage</li>
+          <li>getCurrentMonthUsage: Tracks month-to-date spend</li>
+        </ul>
+      </li>
+      <li>
+        <strong>Optimizations</strong>
+        <ul>
+          <li>Cached calculations with short TTL</li>
+          <li>Efficient date-based queries</li>
+          <li>Proper indexing on transaction dates</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h2>Account Repositories</h2>
+
+    <h3>AccountRepository</h3>
+    <p>
+      Manages account data and access control:
+    </p>
+    <ul>
+      <li>
+        <strong>Key Methods</strong>
+        <ul>
+          <li>findByIdWithAccess: Gets account data with authorization check</li>
+          <li>findAccessibleAccountIds: Lists accounts a member can access</li>
+        </ul>
+      </li>
+      <li>
+        <strong>Optimizations</strong>
+        <ul>
+          <li>Combined authorization and data queries</li>
+          <li>Result caching with member-specific keys</li>
+          <li>Proper indexing on accountID and relationships</li>
+        </ul>
+      </li>
+      <li>
+        <strong>Usage Example</strong>
+        <pre>
+const accountRepo = new AccountRepository();
+const accountData = await accountRepo.findByIdWithAccess(accountID, memberID);
+if (accountData) {
+  // Access account properties
+  const { accountName, accountType, defaultDenom, isOwnedAccount } = accountData;
+}</pre>
+      </li>
+    </ul>
+
+    <h3>BalanceRepository</h3>
+    <p>
+      Handles complex balance calculations across denominations:
+    </p>
+    <ul>
+      <li>
+        <strong>Key Methods</strong>
+        <ul>
+          <li>getBalances: Retrieves comprehensive balance data</li>
+          <li>getSecuredBalances: Gets secured credex balances by denomination</li>
+          <li>getUnsecuredBalances: Gets unsecured credex totals</li>
+        </ul>
+      </li>
+      <li>
+        <strong>Optimizations</strong>
+        <ul>
+          <li>Efficient balance aggregation queries</li>
+          <li>Result caching with account-specific keys</li>
+          <li>Proper indexing on credex relationships</li>
+        </ul>
+      </li>
+      <li>
+        <strong>Usage Example</strong>
+        <pre>
+const balanceRepo = new BalanceRepository();
+const balanceData = await balanceRepo.getBalances(accountID);
+const {
+  securedNetBalancesByDenom,
+  unsecuredBalancesInDefaultDenom,
+  netCredexAssetsInDefaultDenom
+} = balanceData;</pre>
+      </li>
+    </ul>
+
+    <h2>Implementation Notes</h2>
+
+    <h3>Repository Initialization</h3>
+    <p>
+      Repositories should be initialized at the service level and passed to controllers:
+    </p>
+    <pre>
+// Initialize repositories
+const memberRepo = new MemberRepository();
+const spendLimitService = new SpendLimitService();
+
+// Initialize services with repositories
+const memberDashboardService = new MemberDashboardService(
+  memberRepo,
+  spendLimitService
+);</pre>
+
+    <h3>Error Handling</h3>
+    <p>
+      Repositories use standardized error handling:
+    </p>
+    <ul>
+      <li>Database errors are wrapped in domain-specific errors</li>
+      <li>Not found conditions return null rather than throwing</li>
+      <li>Authorization failures are handled at the service level</li>
+    </ul>
+
+    <h3>Caching Strategy</h3>
+    <p>
+      All repositories implement consistent caching:
+    </p>
+    <ul>
+      <li>30-second TTL for standard operations</li>
+      <li>Cache keys include all relevant identifiers</li>
+      <li>Cache clearing methods for both specific and full clear</li>
+      <li>Automatic cache updates on write operations</li>
+    </ul>
+
+    <h3>Query Optimization</h3>
+    <p>
+      Repositories follow these optimization principles:
+    </p>
+    <ul>
+      <li>Single query pattern for related data</li>
+      <li>Proper use of Neo4j indexes</li>
+      <li>Efficient relationship traversal</li>
+      <li>Minimal data transformation in memory</li>
+    </ul>
+
+  </body>
+</html>

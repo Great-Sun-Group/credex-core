@@ -1,15 +1,16 @@
 import express from "express";
 import { AcceptCredexService } from "../services/AcceptCredex";
 import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import { MemberRepository } from "../../Member/repositories/MemberRepository";
+import { SpendLimitService } from "../../Member/services/SpendLimitService";
 import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
 import { getDashboardData } from "../../../utils/dashboardUtils";
 
 // Initialize services
 const memberDashboardService = new MemberDashboardService(
-  // TODO: Add proper repository instances
-  null as any,
-  null as any
+  new MemberRepository(),
+  new SpendLimitService()
 );
 import { 
   ApiActionType, 

@@ -5,6 +5,8 @@ import logger from "../../../utils/logger";
 import { validateUUID } from "../../../utils/validators";
 import { withDashboard } from "../../../utils/dashboardUtils";
 import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import { MemberRepository } from "../../Member/repositories/MemberRepository";
+import { SpendLimitService } from "../../Member/services/SpendLimitService";
 import {
   TypedApiResponse,
   ApiActionType,
@@ -16,10 +18,12 @@ type UpdateSendOffersResponse = TypedApiResponse<AccountActionDetails>;
 type UpdateSendOffersErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 // Initialize services
+// Initialize repositories and services
+const memberRepository = new MemberRepository();
+const spendLimitService = new SpendLimitService();
 const memberDashboardService = new MemberDashboardService(
-  // TODO: Add proper repository instances
-  null as any,
-  null as any
+  memberRepository,
+  spendLimitService
 );
 
 /**

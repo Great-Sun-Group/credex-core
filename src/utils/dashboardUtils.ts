@@ -1,11 +1,18 @@
 import { GetAccountDashboardService } from "../api/Account/services/GetAccountDashboard";
+import { AccountRepository } from "../api/Account/repositories/AccountRepository";
+import { BalanceRepository } from "../api/Account/repositories/BalanceRepository";
 import { MemberDashboardService } from "../api/Member/services/MemberDashboardService";
 import logger from "./logger";
+
+// Initialize repositories and services
+const accountRepo = new AccountRepository();
+const balanceRepo = new BalanceRepository();
+const accountDashboardService = new GetAccountDashboardService(accountRepo, balanceRepo);
 
 // Types for standardized dashboard response
 interface StandardizedDashboardData {
   member: Awaited<ReturnType<typeof MemberDashboardService.prototype.getMemberDashboardData>>;
-  account: NonNullable<Awaited<ReturnType<typeof GetAccountDashboardService>>['data']>;
+  account: NonNullable<Awaited<ReturnType<typeof GetAccountDashboardService.prototype.getDashboard>>['data']>;
 }
 
 /**
@@ -29,7 +36,7 @@ export async function getDashboardData(
 
     const [memberData, accountResult] = await Promise.all([
       memberDashboardService.getMemberDashboardData(memberID),
-      GetAccountDashboardService(memberID, accountID)
+      accountDashboardService.getDashboard(memberID, accountID)
     ]);
 
     if (!accountResult.success || !accountResult.data) {
