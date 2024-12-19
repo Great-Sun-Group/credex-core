@@ -1,4 +1,4 @@
-import { ApiActionType } from './apiResponse';
+import { ApiActionType } from "./apiResponse";
 
 /**
  * Standardized Dashboard Response Template
