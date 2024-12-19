@@ -11,25 +11,7 @@ COPY . .
 # Force rebuild and show TypeScript version and compilation details
 RUN echo $(date) > buildtime && \
     npx tsc --version && \
-    echo "Starting TypeScript compilation..." && \
     npx tsc && \
-    echo "TypeScript compilation completed" && \
-    # Generate API documentation after successful TypeScript compilation
-    echo "Generating API documentation..." && \
-    NODE_ENV=development \
-    NEO_4J_LEDGER_SPACE_USER=docs \
-    NEO_4J_LEDGER_SPACE_PASS=docs \
-    NEO_4J_SEARCH_SPACE_USER=docs \
-    NEO_4J_SEARCH_SPACE_PASS=docs \
-    NEO_4J_LEDGER_SPACE_BOLT_URL=neo4j://localhost \
-    NEO_4J_SEARCH_SPACE_BOLT_URL=neo4j://localhost \
-    OPEN_EXCHANGE_RATES_API=docs \
-    JWT_SECRET=docs \
-    CLIENT_API_KEY=docs \
-    DEV_ADMIN_KEY=docs \
-    SKIP_RATE_LIMITER_KEY=docs \
-    node build/src/utils/generateApiDocs.js && \
-    echo "API documentation generated" && \
     echo "Build output structure:" && \
     ls -la /app/build && \
     echo "Source build:" && \

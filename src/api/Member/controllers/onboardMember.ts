@@ -210,24 +210,34 @@ export async function OnboardMemberController(
       return;
     }
 
-    // Get standardized dashboard data
+    // Get standardized dashboard data for all accounts
     logger.debug("Retrieving dashboard data", {
       memberID: memberData.memberID,
-      accountID: accountResult.data.accountID,
+      accountIDS: dashboardResult.data.accountIDS,
       requestId,
     });
 
-    const dashboard = await getDashboardData(
-      memberData.memberID,
-      accountResult.data.accountID,
-      requestId,
-      memberDashboardService
+    const dashboardPromises = dashboardResult.data.accountIDS.map(accountID => 
+      getDashboardData(
+        memberData.memberID,
+        accountID,
+        requestId,
+        memberDashboardService
+      )
     );
+
+    const dashboards = await Promise.all(dashboardPromises);
+
+    // Combine all account data into a single dashboard
+    const dashboard = {
+      member: dashboards[0].member, // Member data is same for all dashboards
+      accounts: dashboards.flatMap(d => d.accounts || [])
+    };
 
     logger.info("Member onboarded successfully", {
       memberID: memberData.memberID,
       accountID: accountResult.data.accountID,
-      hasDashboard: !!dashboard.member && !!dashboard.account,
+      hasDashboard: !!dashboard.member && !!dashboard.accounts?.[0],
       requestId,
     });
 
