@@ -96,6 +96,19 @@ export default function getBalancesRoute() {
    *                     dashboard:
    *                       type: object
    *                       properties:
+   *                         accountID:
+   *                           type: string
+   *                           format: uuid
+   *                         accountName:
+   *                           type: string
+   *                         accountHandle:
+   *                           type: string
+   *                         accountType:
+   *                           type: string
+   *                           enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
+   *                           description: Type of the account
+   *                         defaultDenom:
+   *                           type: string
    *                         balanceData:
    *                           type: object
    *                           description: Full balance data matching the action details

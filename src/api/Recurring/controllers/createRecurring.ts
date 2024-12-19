@@ -2,12 +2,21 @@ import express from "express";
 import { ManagedTransaction } from "neo4j-driver";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { CreateRecurringService } from "../services/CreateRecurring";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import { MemberRepository, IMemberRepository } from "../../Member/repositories/MemberRepository";
+import { SpendLimitService, ISpendLimitService } from "../../Member/services/SpendLimitService";
 import { GetAccountByHandleService } from "../../Account/services/GetAccountByHandle";
 import { AcceptRecurringService } from "../services/AcceptRecurring";
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
+import { UserRequest } from "../../../middleware/authMiddleware";
+import { getDashboardData } from "../../../utils/dashboardUtils";
 import { TEMPLATE_TYPES } from "../types";
-import { ApiActionType, TypedApiResponse, RecurringActionDetails, ErrorActionDetails } from "../../../types/apiResponse";
+import { 
+  ApiActionType, 
+  TypedApiResponse, 
+  RecurringActionDetails, 
+  ErrorActionDetails 
+} from "../../../types/apiResponse";
 import {
   validateUUID,
   validateAmount,
@@ -18,13 +27,14 @@ import {
 } from "../../../utils/validators";
 import logger from "../../../utils/logger";
 
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  new MemberRepository(),
+  new SpendLimitService()
+);
+
 type CreateRecurringResponse = TypedApiResponse<RecurringActionDetails>;
 type CreateRecurringErrorResponse = TypedApiResponse<ErrorActionDetails>;
-
-interface UserRequest extends express.Request {
-  user: any;
-  id: string;
-}
 
 /**
  * CreateRecurringController
@@ -447,16 +457,18 @@ export async function CreateRecurringController(
       }
     }
 
-    // Get updated dashboard data
+    // Get updated standardized dashboard data
     logger.debug("Fetching updated dashboard data", {
       ownerID,
       sourceAccountID,
       requestId
     });
 
-    const dashboardData = await GetAccountDashboardService(
+    const dashboard = await getDashboardData(
       ownerID,
-      sourceAccountID
+      sourceAccountID,
+      requestId,
+      memberDashboardService
     );
 
     if (!result.data) {
@@ -471,9 +483,16 @@ export async function CreateRecurringController(
           type: ApiActionType.RECURRING_CREATED,
           timestamp: new Date().toISOString(),
           actor: ownerID,
-          details: result.data
+          details: {
+            recurringID: result.data.recurringID,
+            amount: result.data.scheduleInfo.amount || "0",
+            denomination: result.data.scheduleInfo.denomination || "USD",
+            payFrequency: result.data.scheduleInfo.payFrequency || 0,
+            nextDate: result.data.scheduleInfo.nextRunDate || new Date().toISOString(),
+            status: result.data.scheduleInfo.status || "CREATED"
+          }
         },
-        dashboard: dashboardData || {}
+        dashboard
       }
     };
 
@@ -510,7 +529,7 @@ export async function CreateRecurringController(
             reason: handledError.message
           }
         },
-        dashboard: {}
+          dashboard: {}
       }
     };
 

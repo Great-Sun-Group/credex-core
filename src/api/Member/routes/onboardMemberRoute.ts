@@ -108,35 +108,88 @@ export default function onboardMemberRoute() {
    *                               description: ID of the created personal account
    *                     dashboard:
    *                       type: object
+   *                       description: Full dashboard state after onboarding
    *                       properties:
+   *                         memberID:
+   *                           type: string
+   *                           format: uuid
+   *                           description: ID of the authenticated member
    *                         memberTier:
    *                           type: integer
-   *                           description: Member's current tier level (starts at 1)
+   *                           description: Current membership tier level (starts at 1)
    *                         remainingAvailableUSD:
    *                           type: number
    *                           description: Initial available USD for transactions
+   *                         firstname:
+   *                           type: string
+   *                           description: Member's first name
+   *                         lastname:
+   *                           type: string
+   *                           description: Member's last name
+   *                         memberHandle:
+   *                           type: string
+   *                           description: Member's handle
+   *                         defaultDenom:
+   *                           type: string
+   *                           description: Member's default denomination
    *                         accounts:
    *                           type: array
-   *                           description: List of account dashboards
+   *                           description: List of accounts accessible to the member (initially just personal account)
    *                           items:
    *                             type: object
-   *                             description: Account dashboard data
    *                             properties:
    *                               accountID:
    *                                 type: string
    *                                 format: uuid
    *                               accountName:
    *                                 type: string
+   *                               accountHandle:
+   *                                 type: string
    *                               accountType:
    *                                 type: string
+   *                                 enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
+   *                                 description: Type of the account (PERSONAL for new members)
    *                               defaultDenom:
    *                                 type: string
-   *                               balances:
+   *                                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                               isOwnedAccount:
+   *                                 type: boolean
+   *                                 description: Whether the member owns this account (true for personal account)
+   *                               sendOffersTo:
    *                                 type: object
-   *                               pendingOffers:
+   *                                 description: Member configured to receive offers for this account
+   *                                 properties:
+   *                                   memberID:
+   *                                     type: string
+   *                                     format: uuid
+   *                                   firstname:
+   *                                     type: string
+   *                                   lastname:
+   *                                     type: string
+   *                               balanceData:
    *                                 type: object
-   *                               recentActivity:
-   *                                 type: array
+   *                                 description: Account balance information
+   *                                 properties:
+   *                                   securedNetBalancesByDenom:
+   *                                     type: array
+   *                                     items:
+   *                                       type: string
+   *                                       description: Formatted balance with denomination (e.g. "100.00 USD")
+   *                                   unsecuredBalancesInDefaultDenom:
+   *                                     type: object
+   *                                     properties:
+   *                                       totalPayables:
+   *                                         type: string
+   *                                         description: Total payables in account default denomination
+   *                                       totalReceivables:
+   *                                         type: string
+   *                                         description: Total receivables in account default denomination
+   *                                       netPayRec:
+   *                                         type: string
+   *                                         description: Net payables/receivables in account default denomination
+   *                                   netCredexAssetsInDefaultDenom:
+   *                                     type: string
+   *                                     description: Net credex assets in account default denomination
    *       400:
    *         description: Invalid input data
    *         content:
@@ -220,7 +273,43 @@ export default function onboardMemberRoute() {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Internal server error
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_INTERNAL]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           example: system
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               enum: [INTERNAL_ERROR]
+   *                             reason:
+   *                               type: string
+   *                               description: Internal error details
+   *                             suggestion:
+   *                               type: string
+   *                               example: Please try again or contact support
+   *                     dashboard:
+   *                       type: object
    */
   router.post(
     `/onboardMember`,

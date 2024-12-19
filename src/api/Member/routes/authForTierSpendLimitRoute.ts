@@ -153,19 +153,121 @@ export default function authForTierSpendLimitRoute() {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Spend amount exceeds tier limit
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_UNAUTHORIZED]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: TIER_LIMIT_EXCEEDED
+   *                             reason:
+   *                               type: string
+   *                               description: Detailed error message
+   *                     dashboard:
+   *                       type: object
    *       404:
    *         description: Account not found
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Account not found
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_NOT_FOUND]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: NOT_FOUND
+   *                             reason:
+   *                               type: string
+   *                               description: Detailed error message
+   *                     dashboard:
+   *                       type: object
    *       500:
    *         description: Internal server error
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Internal server error
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_INTERNAL]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           example: system
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: INTERNAL_ERROR
+   *                             reason:
+   *                               type: string
+   *                               description: Internal error details
+   *                             suggestion:
+   *                               type: string
+   *                               example: Please try again or contact support
+   *                     dashboard:
+   *                       type: object
    */
   router.post(
     `/authForTierSpendLimit`,

@@ -14,7 +14,7 @@ export default function cancelCredexRoute() {
    *   post:
    *     tags: [Credex]
    *     summary: Cancel a Credex transaction
-   *     description: Cancels a pending Credex transaction. Only the issuer can cancel their own pending Credex. Requires authentication.
+   *     description: Cancels a pending Credex transaction. Only the issuer can cancel their own pending Credex. Returns updated dashboard data.
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -69,12 +69,16 @@ export default function cancelCredexRoute() {
    *                           properties:
    *                             amount:
    *                               type: string
-   *                               description: Amount of the cancelled transaction (0)
+   *                               description: Amount is zeroed on cancellation
+   *                               example: "0"
    *                             denomination:
    *                               type: string
    *                               enum: [CXX, CAD, USD, XAU, ZWG]
+   *                               description: Original denomination of the Credex
    *                             securedCredex:
    *                               type: boolean
+   *                               description: Not relevant for cancelled Credex
+   *                               example: false
    *                             receiverAccountID:
    *                               type: string
    *                               format: uuid
@@ -83,8 +87,23 @@ export default function cancelCredexRoute() {
    *                               example: "Cancelled by issuer"
    *                     dashboard:
    *                       type: object
-   *                       description: Full dashboard state after the action
-   *                       nullable: true
+   *                       description: Updated dashboard state for issuer's account
+   *                       properties:
+   *                         accountID:
+   *                           type: string
+   *                           format: uuid
+   *                         accountName:
+   *                           type: string
+   *                         accountType:
+   *                           type: string
+   *                         defaultDenom:
+   *                           type: string
+   *                         balances:
+   *                           type: object
+   *                         pendingOffers:
+   *                           type: object
+   *                         recentActivity:
+   *                           type: array
    *       400:
    *         description: Invalid input data or Credex not in cancellable state
    *         content:
@@ -128,7 +147,6 @@ export default function cancelCredexRoute() {
    *                               type: string
    *                     dashboard:
    *                       type: object
-   *                       nullable: true
    *       401:
    *         description: Authentication required
    *         content:
@@ -156,7 +174,7 @@ export default function cancelCredexRoute() {
    *                           format: date-time
    *                         actor:
    *                           type: string
-   *                           enum: [system]
+   *                           example: system
    *                         details:
    *                           type: object
    *                           properties:
@@ -167,7 +185,6 @@ export default function cancelCredexRoute() {
    *                               type: string
    *                     dashboard:
    *                       type: object
-   *                       nullable: true
    *       403:
    *         description: Not authorized to cancel this Credex (must be issuer)
    *         content:
@@ -206,7 +223,6 @@ export default function cancelCredexRoute() {
    *                               type: string
    *                     dashboard:
    *                       type: object
-   *                       nullable: true
    *       404:
    *         description: Credex not found
    *         content:
@@ -247,7 +263,6 @@ export default function cancelCredexRoute() {
    *                               type: string
    *                     dashboard:
    *                       type: object
-   *                       nullable: true
    *       409:
    *         description: Credex has already been processed
    *         content:
@@ -288,7 +303,6 @@ export default function cancelCredexRoute() {
    *                               type: string
    *                     dashboard:
    *                       type: object
-   *                       nullable: true
    *       500:
    *         description: Internal server error
    *         content:
@@ -316,7 +330,7 @@ export default function cancelCredexRoute() {
    *                           format: date-time
    *                         actor:
    *                           type: string
-   *                           enum: [system]
+   *                           example: system
    *                         details:
    *                           type: object
    *                           properties:
@@ -329,7 +343,6 @@ export default function cancelCredexRoute() {
    *                               type: string
    *                     dashboard:
    *                       type: object
-   *                       nullable: true
    */
   router.post(
     `/cancelCredex`,
