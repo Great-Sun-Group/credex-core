@@ -17,7 +17,7 @@ const memberDashboardService = new MemberDashboardService(memberRepo, spendLimit
 // Types for standardized dashboard response
 interface StandardizedDashboardData {
   member: Awaited<ReturnType<typeof MemberDashboardService.prototype.getMemberDashboardData>>;
-  account: NonNullable<Awaited<ReturnType<typeof GetAccountDashboardService.prototype.getDashboard>>['data']>;
+  accounts: NonNullable<Awaited<ReturnType<typeof GetAccountDashboardService.prototype.getDashboard>>['data']>[];
 }
 
 /**
@@ -56,7 +56,7 @@ export async function getDashboardData(
 
     return {
       member: memberData,
-      account: accountResult.data
+      accounts: [accountResult.data]
     };
   } catch (error) {
     logger.error("Error fetching dashboard data", {
