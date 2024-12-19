@@ -1,16 +1,15 @@
 # Task: Photo Upload API Implementation
 
 ## Overview
-Implement the Express.js API endpoint for handling photo uploads from WhatsApp, including file validation and S3 storage integration.
+Implement a client-agnostic Express.js API endpoint for handling photo uploads, including file validation and S3 storage integration.
 
 ## Prerequisites
 - Completed Task 001 (AWS Base Infrastructure)
 - Completed Task 002 (Storage Configuration)
 - Node.js/Express.js environment
-- WhatsApp Business API access
 
 ## Acceptance Criteria
-1. Express endpoint receives photos from WhatsApp
+1. Generic Express endpoint for photo uploads
 2. File validation checks implemented:
    - Format (JPG/PNG)
    - Size (≤ 5MB)
@@ -36,7 +35,8 @@ const textract = new AWS.Textract();
 
 export const uploadPhoto = async (req, res) => {
   try {
-    const { type, file } = req.body; // type: 'id' or 'selfie'
+    const { type } = req.body; // type: 'id' or 'selfie'
+    const file = req.file; // Multer provides the file
     
     // Validate file
     const validationResult = await validateImage(file);
@@ -64,8 +64,6 @@ export const uploadPhoto = async (req, res) => {
     let extractedData = null;
     if (type === 'id') {
       extractedData = await extractDocumentData(processedImage);
-      
-      // Add extracted data to metadata
       metadata.extractedFields = JSON.stringify(extractedData);
     }
     
@@ -228,33 +226,6 @@ router.post('/upload', upload.single('photo'), uploadPhoto);
 export default router;
 ```
 
-### 4. WhatsApp Integration
-```javascript
-// src/api/verification/services/whatsappService.js
-import { WhatsAppClient } from '../utils/whatsappClient';
-
-export const handleWhatsAppMedia = async (message) => {
-  try {
-    const mediaId = message.image.id;
-    const mediaUrl = await WhatsAppClient.getMediaUrl(mediaId);
-    const mediaBuffer = await WhatsAppClient.downloadMedia(mediaUrl);
-    
-    // Process upload
-    const uploadResult = await uploadToVerificationAPI(mediaBuffer, {
-      type: determinePhotoType(message),
-      originalname: `${mediaId}.jpg`,
-      mimetype: 'image/jpeg',
-      size: mediaBuffer.length
-    });
-    
-    return uploadResult;
-  } catch (error) {
-    console.error('WhatsApp media handling error:', error);
-    throw error;
-  }
-};
-```
-
 ## Testing Requirements
 1. Unit Tests
 ```javascript
@@ -300,8 +271,6 @@ describe('Photo Upload', () => {
     
     // Test implementation for dimension validation
   });
-  
-  // ... other test implementations
 });
 ```
 
@@ -315,7 +284,7 @@ describe('Upload API Integration', () => {
     app.use('/api', uploadRoutes);
   });
 
-  test('handles WhatsApp upload successfully', async () => {
+  test('handles file upload successfully', async () => {
     const mockFile = {
       buffer: Buffer.from('test-image'),
       originalname: 'test.jpg',
@@ -361,12 +330,12 @@ describe('Upload API Integration', () => {
    - Endpoint specifications
    - Request/response formats
    - Error codes and messages
-   - Example requests
+   - Example requests using curl/postman
 
 2. Integration Guide
-   - WhatsApp setup instructions
    - Environment variables
    - Testing procedures
+   - Client integration examples
 
 ## Merge Request Checklist
 - [ ] Code follows project style guide
@@ -375,15 +344,15 @@ describe('Upload API Integration', () => {
 - [ ] API documentation complete
 - [ ] Error handling tested
 - [ ] Security review completed
-- [ ] WhatsApp integration tested
 - [ ] Performance tested with large files
 - [ ] Branch up to date with verify-project
 
 ## Notes
-- Ensure proper error handling for WhatsApp API failures
 - Consider implementing retry logic for failed uploads
 - Monitor upload performance and adjust as needed
 - Document rate limiting considerations
+- Ensure proper error handling for all edge cases
+- Consider implementing file type detection beyond extension
 
 ## Estimated Time
 5-7 hours

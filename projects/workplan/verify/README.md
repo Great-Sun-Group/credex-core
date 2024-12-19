@@ -1,7 +1,7 @@
 # ID Verification Project Implementation Plan
 
 ## Overview
-This project implements a member photo ID verification system using AWS Rekognition for Zimbabwe-based WhatsApp users. The implementation is broken down into discrete tasks that can be executed independently in sequence.
+This project implements a client-agnostic photo ID verification system using AWS Rekognition. The implementation is broken down into discrete tasks that can be executed independently in sequence.
 
 ## Implementation Status
 
@@ -20,7 +20,7 @@ This project implements a member photo ID verification system using AWS Rekognit
 
 ### Pending Tasks
 3. [ ] [Photo Upload API](003-photo-upload-api.md)
-   - WhatsApp integration
+   - Generic file upload endpoint
    - File validation
    - S3 storage integration
 
@@ -61,7 +61,7 @@ This project implements a member photo ID verification system using AWS Rekognit
 
 11. [ ] [Documentation](011-documentation.md)
     - API documentation
-    - User guides
+    - Integration guides
     - Error catalogs
 
 ## Branch Structure
@@ -98,7 +98,6 @@ Each task is designed to be:
 - Node.js/Express.js environment
 - Terraform installed
 - Testing frameworks configured
-- WhatsApp Business API access
 
 ## Getting Started
 1. Clone the repository
@@ -114,3 +113,6 @@ Each task is designed to be:
 - Each task builds upon previous tasks
 - Documentation is maintained throughout
 - Security is considered at every step
+- API is client-agnostic and can be integrated with any platform
+- Uses standard REST endpoints and multipart/form-data for file uploads
+- Returns consistent JSON responses with standard HTTP status codes
