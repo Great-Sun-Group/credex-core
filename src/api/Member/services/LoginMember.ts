@@ -65,21 +65,23 @@ export async function LoginMemberService(
         OPTIONAL MATCH (m)-[:AUTHORIZED_FOR]->(a:Account)
         WITH m, collect(a.accountID) as accountIDS
         MATCH (daynode:Daynode { Active: true })
+        WITH m, accountIDS, daynode,
+        toInteger(m.memberTier) as memberTier,
+        CASE
+          WHEN m.memberTier = 1 THEN 100
+          WHEN m.memberTier = 2 THEN 1000
+          WHEN m.memberTier = 3 THEN 10000
+          ELSE 0
+        END as remainingAvailableUSD
         RETURN {
           memberID: m.memberID,
           firstname: m.firstname,
           lastname: m.lastname,
           phone: m.phone,
           memberHandle: m.memberHandle,
-          memberTier: m.memberTier,
+          memberTier: memberTier,
           accountIDS: accountIDS,
-          remainingAvailableUSD: 
-            CASE
-              WHEN m.memberTier = 1 THEN 100
-              WHEN m.memberTier = 2 THEN 1000
-              WHEN m.memberTier = 3 THEN 10000
-              ELSE 0
-            END
+          remainingAvailableUSD: remainingAvailableUSD
         } as memberData
         `,
         { phone }

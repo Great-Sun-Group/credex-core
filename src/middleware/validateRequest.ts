@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import * as validators from "../utils/validators";
 import * as sanitizers from "../utils/inputSanitizer";
 import logger from "../utils/logger";
+import { ApiActionType } from "../types/apiResponse";
 
 type ValidatorFunction = (value: any) => {
   isValid: boolean;
@@ -41,7 +42,7 @@ function sanitizeAndValidateObject(
   obj: any,
   schema: ValidationSchema,
   path: string
-): { sanitizedObj: any; error: string | null } {
+): { sanitizedObj: any; error: { message: string; field?: string } | null } {
   const sanitizedObj: any = {};
   const fields = isComplexSchema(schema) ? schema.fields : schema;
 
@@ -51,7 +52,9 @@ function sanitizeAndValidateObject(
     if (!hasAtLeastOne) {
       return { 
         sanitizedObj, 
-        error: `At least one of these fields is required: ${schema.rules.atLeastOneOf.join(', ')}` 
+        error: {
+          message: `At least one of these fields is required: ${schema.rules.atLeastOneOf.join(', ')}`
+        }
       };
     }
   }
@@ -60,7 +63,13 @@ function sanitizeAndValidateObject(
   for (const [key, schemaItem] of Object.entries(fields)) {
     if (obj[key] === undefined) {
       if (schemaItem.required) {
-        return { sanitizedObj, error: `Required field missing: ${key}` };
+        return { 
+          sanitizedObj, 
+          error: {
+            message: `Required field missing: ${key}`,
+            field: key
+          }
+        };
       }
       continue;
     }
@@ -69,7 +78,13 @@ function sanitizeAndValidateObject(
     try {
       sanitizedValue = schemaItem.sanitizer(obj[key]);
     } catch (error) {
-      return { sanitizedObj, error: `Sanitization error for ${key}` };
+      return { 
+        sanitizedObj, 
+        error: {
+          message: `Sanitization error for ${key}`,
+          field: key
+        }
+      };
     }
 
     sanitizedObj[key] = sanitizedValue;
@@ -79,11 +94,20 @@ function sanitizeAndValidateObject(
       if (!validationResult.isValid) {
         return {
           sanitizedObj,
-          error: validationResult.message || `Invalid ${key}`,
+          error: {
+            message: validationResult.message || `Invalid ${key}`,
+            field: key
+          }
         };
       }
     } else if (schemaItem.required) {
-      return { sanitizedObj, error: `Required field is undefined: ${key}` };
+      return { 
+        sanitizedObj, 
+        error: {
+          message: `Required field is undefined: ${key}`,
+          field: key
+        }
+      };
     }
   }
 
@@ -103,7 +127,26 @@ export function validateRequest(
       );
 
       if (error) {
-        return res.status(400).json({ message: error });
+        const response = {
+          message: error.message,
+          data: {
+            action: {
+              id: null,
+              type: ApiActionType.ERROR_VALIDATION,
+              timestamp: new Date().toISOString(),
+              actor: "system",
+              details: {
+                code: error.field === 'phone' ? 
+                  (error.message.includes('missing') ? 'MISSING_PHONE' : 'INVALID_PHONE') :
+                  'VALIDATION_ERROR',
+                field: error.field,
+                reason: error.message
+              }
+            },
+            dashboard: {}
+          }
+        };
+        return res.status(400).json(response);
       }
 
       // Replace the original request data with the sanitized data
@@ -115,9 +158,24 @@ export function validateRequest(
         error: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       });
-      return res
-        .status(500)
-        .json({ message: "Internal server error during request validation" });
+
+      const response = {
+        message: "Internal server error during request validation",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_INTERNAL,
+            timestamp: new Date().toISOString(),
+            actor: "system",
+            details: {
+              code: "INTERNAL_ERROR",
+              reason: "An error occurred during request validation"
+            }
+          },
+          dashboard: {}
+        }
+      };
+      return res.status(500).json(response);
     }
   };
 }
