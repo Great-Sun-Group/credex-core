@@ -28,7 +28,7 @@ RUN echo $(date) > buildtime && \
     CLIENT_API_KEY=docs \
     DEV_ADMIN_KEY=docs \
     SKIP_RATE_LIMITER_KEY=docs \
-    node build/src/utils/generateApiDocs.js && \
+    cd build && node src/utils/generateApiDocs.js && cd .. && \
     echo "API documentation generated" && \
     echo "Build output structure:" && \
     ls -la /app/build && \
