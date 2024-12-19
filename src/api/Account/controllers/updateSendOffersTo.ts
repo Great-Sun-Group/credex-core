@@ -3,6 +3,8 @@ import { UpdateSendOffersToService } from "../services/UpdateSendOffersTo";
 import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
 import { validateUUID } from "../../../utils/validators";
+import { withDashboard } from "../../../utils/dashboardUtils";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
 import {
   TypedApiResponse,
   ApiActionType,
@@ -12,6 +14,13 @@ import {
 
 type UpdateSendOffersResponse = TypedApiResponse<AccountActionDetails>;
 type UpdateSendOffersErrorResponse = TypedApiResponse<ErrorActionDetails>;
+
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  // TODO: Add proper repository instances
+  null as any,
+  null as any
+);
 
 /**
  * UpdateSendOffersToController
@@ -172,7 +181,8 @@ export async function UpdateSendOffersToController(
       requestId
     });
 
-    const response: UpdateSendOffersResponse = {
+    // Create base response without dashboard
+    const baseResponse = {
       message: result.message,
       data: {
         action: {
@@ -184,12 +194,18 @@ export async function UpdateSendOffersToController(
             accountID,
             sendOffersTo: result.data!.sendOffersTo
           }
-        },
-        dashboard: {
-          sendOffersTo: result.data!.sendOffersTo
         }
       }
     };
+
+    // Add dashboard data to response
+    const response = await withDashboard(
+      baseResponse,
+      ownerID,
+      accountID,
+      requestId,
+      memberDashboardService
+    );
 
     res.status(200).json(response);
 

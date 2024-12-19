@@ -1,9 +1,10 @@
 import express from "express";
 import { LoginMemberService } from "../services/LoginMember";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { MemberDashboardService } from "../services/MemberDashboardService";
 import { MemberError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 import { validatePhone } from "../../../utils/validators";
+import { getDashboardData } from "../../../utils/dashboardUtils";
 import { 
   TypedApiResponse, 
   ApiActionType, 
@@ -19,11 +20,12 @@ type LoginDetails = MemberActionDetails & {
 type LoginResponse = TypedApiResponse<LoginDetails>;
 type LoginErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
-interface DashboardData {
-  memberTier: number;
-  remainingAvailableUSD: number;
-  accounts: any[]; // Will be typed when dashboard is standardized
-}
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  // TODO: Add proper repository instances
+  null as any,
+  null as any
+);
 
 /**
  * LoginMemberController
@@ -137,35 +139,17 @@ export async function loginMemberExpressHandler(
       return;
     }
 
-    // Get associated account dashboards
-    logger.debug("Retrieving account dashboards", {
+    // Get standardized dashboard data for primary account
+    logger.debug("Retrieving dashboard data", {
       memberID: result.data.memberID,
-      accountCount: result.data.accountIDS.length,
       requestId,
     });
 
-    const accountDashboards = await Promise.all(
-      result.data.accountIDS.map(async (accountId: string) => {
-        try {
-          return await GetAccountDashboardService(
-            result.data!.memberID,
-            accountId
-          );
-        } catch (error) {
-          logger.error("Error fetching account dashboard", {
-            error: error instanceof Error ? error.message : "Unknown error",
-            accountId,
-            memberID: result.data!.memberID,
-            requestId
-          });
-          return null;
-        }
-      })
-    );
-
-    // Filter out any failed account dashboard retrievals
-    const validAccountDashboards = accountDashboards.filter(
-      (dashboard): dashboard is NonNullable<typeof dashboard> => dashboard !== null
+    const dashboard = await getDashboardData(
+      result.data.memberID,
+      result.data.accountIDS[0], // Use first account as primary
+      requestId,
+      memberDashboardService
     );
 
     const response: LoginResponse = {
@@ -182,18 +166,14 @@ export async function loginMemberExpressHandler(
             token: result.data.token
           }
         },
-        dashboard: {
-          memberTier: result.data.memberTier,
-          remainingAvailableUSD: result.data.remainingAvailableUSD,
-          accounts: validAccountDashboards
-        }
+        dashboard
       }
     };
 
     logger.info("Login successful", {
       memberID: result.data.memberID,
       phone,
-      accountCount: validAccountDashboards.length,
+      hasDashboard: !!dashboard.member && !!dashboard.account,
       requestId
     });
 

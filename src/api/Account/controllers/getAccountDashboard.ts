@@ -1,14 +1,22 @@
 import express from "express";
-import { GetAccountDashboardService } from "../services/GetAccountDashboard";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
 import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 import { validateUUID } from "../../../utils/validators";
+import { getDashboardData } from "../../../utils/dashboardUtils";
 import {
   TypedApiResponse,
   ApiActionType,
   AccountActionDetails,
   ErrorActionDetails
 } from "../../../types/apiResponse";
+
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  // TODO: Add proper repository instances
+  null as any,
+  null as any
+);
 
 type AccountDashboardResponse = TypedApiResponse<AccountActionDetails>;
 type AccountDashboardErrorResponse = TypedApiResponse<ErrorActionDetails>;
@@ -58,23 +66,34 @@ export async function GetAccountDashboardController(
       requestId
     });
 
-    const result = await GetAccountDashboardService(memberID, accountID);
+    const dashboard = await getDashboardData(
+      memberID,
+      accountID,
+      requestId,
+      memberDashboardService
+    );
 
-    if (!result.success) {
+    if (!dashboard.account) {
       const statusCode = 
-        result.message.includes("not found") ? 404 :
-        result.message.includes("access denied") ? 403 :
+        !dashboard.member ? 404 :
+        !dashboard.account ? 403 :
         400;
+
+      const errorMessage = !dashboard.member ? "Member not found" :
+                          !dashboard.account ? "Account not found or access denied" :
+                          "Failed to retrieve dashboard data";
 
       logger.warn("Failed to retrieve account dashboard", {
         memberID,
         accountID,
-        message: result.message,
+        message: errorMessage,
+        hasMember: !!dashboard.member,
+        hasAccount: !!dashboard.account,
         requestId
       });
 
       const errorResponse: AccountDashboardErrorResponse = {
-        message: result.message,
+        message: errorMessage,
         data: {
           action: {
             id: accountID,
@@ -87,7 +106,7 @@ export async function GetAccountDashboardController(
               code: statusCode === 404 ? "ACCOUNT_NOT_FOUND" :
                     statusCode === 403 ? "ACCESS_DENIED" :
                     "DASHBOARD_ERROR",
-              reason: result.message
+              reason: errorMessage
             }
           },
           dashboard: {}
@@ -101,7 +120,8 @@ export async function GetAccountDashboardController(
     logger.info("Account dashboard retrieved successfully", {
       memberID,
       accountID,
-      isOwned: result.data?.isOwnedAccount,
+      isOwned: dashboard.account?.isOwnedAccount,
+      hasMember: !!dashboard.member,
       requestId
     });
 
@@ -115,26 +135,13 @@ export async function GetAccountDashboardController(
           actor: memberID,
           details: {
             accountID,
-            accountName: result.data?.accountName,
-            accountHandle: result.data?.accountHandle,
-            defaultDenom: result.data?.defaultDenom,
-            sendOffersTo: result.data?.sendOffersTo,
-            authFor: result.data?.authFor
+            accountName: dashboard.account?.accountName,
+            accountHandle: dashboard.account?.accountHandle,
+            defaultDenom: dashboard.account?.defaultDenom,
+            sendOffersTo: dashboard.account?.sendOffersTo
           }
         },
-        // Include the full dashboard state in the response
-        dashboard: {
-          accountID: result.data?.accountID,
-          accountName: result.data?.accountName,
-          accountHandle: result.data?.accountHandle,
-          defaultDenom: result.data?.defaultDenom,
-          isOwnedAccount: result.data?.isOwnedAccount,
-          sendOffersTo: result.data?.sendOffersTo,
-          authFor: result.data?.authFor,
-          balanceData: result.data?.balanceData,
-          pendingInData: result.data?.pendingInData,
-          pendingOutData: result.data?.pendingOutData
-        }
+        dashboard
       }
     };
 

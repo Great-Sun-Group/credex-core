@@ -1,13 +1,22 @@
 import express from "express";
 import { CancelCredexService } from "../services/CancelCredex";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import { MemberRepository, IMemberRepository } from "../../Member/repositories/MemberRepository";
+import { SpendLimitService, ISpendLimitService } from "../../Member/services/SpendLimitService";
 import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
-import { 
-  ApiActionType, 
-  TypedApiResponse, 
-  CredexActionDetails, 
-  ErrorActionDetails 
+import { getDashboardData } from "../../../utils/dashboardUtils";
+
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  new MemberRepository(),
+  new SpendLimitService()
+);
+import {
+  ApiActionType,
+  TypedApiResponse,
+  CredexActionDetails,
+  ErrorActionDetails,
 } from "../../../types/apiResponse";
 
 type CancelCredexResponse = TypedApiResponse<CredexActionDetails>;
@@ -39,7 +48,7 @@ export async function CancelCredexController(
     logger.info("Cancelling Credex", {
       credexID,
       signerID,
-      requestId
+      requestId,
     });
 
     const responseData = await CancelCredexService(
@@ -52,7 +61,7 @@ export async function CancelCredexController(
       logger.warn("Failed to cancel Credex - not found or already processed", {
         credexID,
         signerID,
-        requestId
+        requestId,
       });
       const errorResponse: CancelCredexErrorResponse = {
         message: "Credex not found or already processed",
@@ -65,25 +74,27 @@ export async function CancelCredexController(
             details: {
               code: "NOT_FOUND",
               reason: "Credex not found or already processed",
-              field: "credexID"
-            }
+              field: "credexID",
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       };
       return res.status(404).json(errorResponse);
     }
 
-    // Get updated dashboard data for the issuer's account
+    // Get updated standardized dashboard data for the issuer's account
     logger.debug("Fetching updated dashboard data", {
       signerID,
       issuerAccountID: responseData.data.issuerAccountID,
       requestId,
     });
 
-    const dashboard = await GetAccountDashboardService(
+    const dashboard = await getDashboardData(
       signerID,
-      responseData.data.issuerAccountID
+      responseData.data.issuerAccountID,
+      requestId,
+      memberDashboardService
     );
 
     const successResponse: CancelCredexResponse = {
@@ -99,27 +110,26 @@ export async function CancelCredexController(
             denomination: responseData.data.denomination, // Use denomination from response
             securedCredex: false, // Not relevant for cancelled Credex
             receiverAccountID: responseData.data.receiverAccountID,
-            reason: "Cancelled by issuer"
-          }
+            reason: "Cancelled by issuer",
+          },
         },
-        dashboard: dashboard || {}
-      }
+        dashboard,
+      },
     };
 
     logger.info("Credex cancelled successfully", {
       credexID,
       signerID,
-      requestId
+      requestId,
     });
 
     return res.status(200).json(successResponse);
-
   } catch (error) {
     if (error instanceof Error) {
-      if (error.message.includes('already processed')) {
+      if (error.message.includes("already processed")) {
         logger.warn("Attempt to cancel already processed Credex", {
           error: error.message,
-          requestId
+          requestId,
         });
         const errorResponse: CancelCredexErrorResponse = {
           message: "Credex has already been processed",
@@ -132,19 +142,19 @@ export async function CancelCredexController(
               details: {
                 code: "ALREADY_PROCESSED",
                 reason: "This Credex has already been processed",
-                field: "credexID"
-              }
+                field: "credexID",
+              },
             },
-            dashboard: {}
-          }
+            dashboard: {},
+          },
         };
         return res.status(409).json(errorResponse);
       }
 
-      if (error.message.includes('not found')) {
+      if (error.message.includes("not found")) {
         logger.warn("Attempt to cancel non-existent Credex", {
           error: error.message,
-          requestId
+          requestId,
         });
         const errorResponse: CancelCredexErrorResponse = {
           message: "Credex not found",
@@ -157,19 +167,19 @@ export async function CancelCredexController(
               details: {
                 code: "NOT_FOUND",
                 reason: "The specified Credex could not be found",
-                field: "credexID"
-              }
+                field: "credexID",
+              },
             },
-            dashboard: {}
-          }
+            dashboard: {},
+          },
         };
         return res.status(404).json(errorResponse);
       }
 
-      if (error.message.includes('not authorized')) {
+      if (error.message.includes("not authorized")) {
         logger.warn("Unauthorized attempt to cancel Credex", {
           error: error.message,
-          requestId
+          requestId,
         });
         const errorResponse: CancelCredexErrorResponse = {
           message: "Not authorized to cancel this Credex",
@@ -181,20 +191,21 @@ export async function CancelCredexController(
               actor: req.user.memberID,
               details: {
                 code: "UNAUTHORIZED",
-                reason: "You must be authorized for the issuing account to cancel this Credex"
-              }
+                reason:
+                  "You must be authorized for the issuing account to cancel this Credex",
+              },
             },
-            dashboard: {}
-          }
+            dashboard: {},
+          },
         };
         return res.status(403).json(errorResponse);
       }
 
-      if (error.message.includes('digital signature')) {
+      if (error.message.includes("digital signature")) {
         logger.error("Digital signature error in CancelCredexController", {
           error: error.message,
           stack: error.stack,
-          requestId
+          requestId,
         });
         const errorResponse: CancelCredexErrorResponse = {
           message: "Failed to cancel Credex: Digital signature error",
@@ -207,11 +218,12 @@ export async function CancelCredexController(
               details: {
                 code: "SIGNATURE_ERROR",
                 reason: "Failed to create digital signature",
-                suggestion: "Please try again or contact support if the issue persists"
-              }
+                suggestion:
+                  "Please try again or contact support if the issue persists",
+              },
             },
-            dashboard: {}
-          }
+            dashboard: {},
+          },
         };
         return res.status(400).json(errorResponse);
       }
@@ -220,9 +232,9 @@ export async function CancelCredexController(
     logger.error("Unexpected error in CancelCredexController", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      requestId
+      requestId,
     });
-    
+
     const errorResponse: CancelCredexErrorResponse = {
       message: "An unexpected error occurred while cancelling the Credex",
       data: {
@@ -234,13 +246,14 @@ export async function CancelCredexController(
           details: {
             code: "INTERNAL_ERROR",
             reason: error instanceof Error ? error.message : "Unknown error",
-            suggestion: "Please try again or contact support if the issue persists"
-          }
+            suggestion:
+              "Please try again or contact support if the issue persists",
+          },
         },
-        dashboard: {}
-      }
+        dashboard: {},
+      },
     };
-    
+
     return res.status(500).json(errorResponse);
   } finally {
     logger.debug("Exiting CancelCredexController", { requestId });

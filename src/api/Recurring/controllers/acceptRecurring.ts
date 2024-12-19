@@ -1,15 +1,28 @@
 import express from "express";
 import { AcceptRecurringService } from "../services/AcceptRecurring";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import { MemberRepository, IMemberRepository } from "../../Member/repositories/MemberRepository";
+import { SpendLimitService, ISpendLimitService } from "../../Member/services/SpendLimitService";
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
 import { TEMPLATE_TYPES } from "../types";
-import { ApiActionType } from "../../../types/apiResponse";
+import { UserRequest } from "../../../middleware/authMiddleware";
+import { getDashboardData } from "../../../utils/dashboardUtils";
+import { 
+  ApiActionType,
+  TypedApiResponse,
+  RecurringActionDetails,
+  ErrorActionDetails 
+} from "../../../types/apiResponse";
 import logger from "../../../utils/logger";
 
-// Import the UserRequest interface
-interface UserRequest extends express.Request {
-  user: any;
-}
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  new MemberRepository(),
+  new SpendLimitService()
+);
+
+type AcceptRecurringResponse = TypedApiResponse<RecurringActionDetails>;
+type AcceptRecurringErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * AcceptRecurringController
@@ -83,19 +96,21 @@ export async function AcceptRecurringController(
       return;
     }
 
-    // Get updated dashboard data
+    // Get updated standardized dashboard data
     logger.debug("Fetching updated dashboard data", {
       signerID,
       targetAccountID: result.data?.participants.targetAccountID,
       requestId
     });
 
-    const dashboardData = await GetAccountDashboardService(
+    const dashboard = await getDashboardData(
       signerID,
-      result.data!.participants.targetAccountID
+      result.data!.participants.targetAccountID,
+      requestId,
+      memberDashboardService
     );
 
-    if (!dashboardData) {
+    if (!dashboard.account) {
       logger.warn("Failed to fetch dashboard data", {
         signerID,
         targetAccountID: result.data?.participants.targetAccountID,
@@ -137,9 +152,16 @@ export async function AcceptRecurringController(
           type: ApiActionType.RECURRING_ACCEPTED,
           timestamp: new Date().toISOString(),
           actor: signerID,
-          details: result.data
+          details: {
+            recurringID: result.data!.recurringID,
+            amount: result.data!.scheduleInfo.amount,
+            denomination: result.data!.scheduleInfo.denomination,
+            payFrequency: result.data!.scheduleInfo.payFrequency,
+            nextDate: result.data!.scheduleInfo.nextRunDate,
+            status: result.data!.scheduleInfo.status
+          }
         },
-        dashboard: dashboardData
+        dashboard
       }
     });
 

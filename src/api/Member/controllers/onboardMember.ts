@@ -2,10 +2,10 @@ import express from "express";
 import { OnboardMemberService } from "../services/OnboardMember";
 import { LoginMemberService } from "../services/LoginMember";
 import { CreateAccountService } from "../../Account/services/CreateAccount";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { MemberDashboardService } from "../services/MemberDashboardService";
 import { MemberError, handleServiceError } from "../../../utils/errorUtils";
 import { generateToken } from "../../../../config/authenticate";
-import { searchSpaceDriver } from "../../../../config/neo4j";
+import { getDashboardData } from "../../../utils/dashboardUtils";
 import logger from "../../../utils/logger";
 import { 
   TypedApiResponse, 
@@ -13,6 +13,13 @@ import {
   MemberActionDetails,
   ErrorActionDetails
 } from "../../../types/apiResponse";
+
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  // TODO: Add proper repository instances
+  null as any,
+  null as any
+);
 
 type OnboardDetails = MemberActionDetails & {
   memberID: string;
@@ -194,21 +201,24 @@ export async function OnboardMemberController(
       return;
     }
 
-    // Get account dashboard
-    logger.debug("Retrieving account dashboard", {
+    // Get standardized dashboard data
+    logger.debug("Retrieving dashboard data", {
       memberID: memberData.memberID,
       accountID: accountResult.data.accountID,
       requestId
     });
 
-    const accountDashboard = await GetAccountDashboardService(
+    const dashboard = await getDashboardData(
       memberData.memberID,
-      accountResult.data.accountID
+      accountResult.data.accountID,
+      requestId,
+      memberDashboardService
     );
 
     logger.info("Member onboarded successfully", {
       memberID: memberData.memberID,
       accountID: accountResult.data.accountID,
+      hasDashboard: !!dashboard.member && !!dashboard.account,
       requestId
     });
 
@@ -231,11 +241,7 @@ export async function OnboardMemberController(
             defaultAccountID: accountResult.data.accountID
           }
         },
-        dashboard: {
-          memberTier: dashboardResult.data.memberTier,
-          remainingAvailableUSD: dashboardResult.data.remainingAvailableUSD,
-          accounts: accountDashboard ? [accountDashboard] : []
-        }
+        dashboard
       }
     };
 

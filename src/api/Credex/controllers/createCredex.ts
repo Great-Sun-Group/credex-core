@@ -1,9 +1,17 @@
 import express from "express";
 import { CreateCredexService } from "../services/CreateCredex";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
 import { checkDueDate, credspan } from "../../../core-cron/constants/credspan";
 import { AuthForTierSpendLimitService } from "../../Member/services/AuthForTierSpendLimit";
 import logger from "../../../utils/logger";
+import { getDashboardData } from "../../../utils/dashboardUtils";
+
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  // TODO: Add proper repository instances
+  null as any,
+  null as any
+);
 import { ApiActionType, TypedApiResponse, CredexActionDetails, ErrorActionDetails } from "../../../types/apiResponse";
 import { denomFormatter } from "../../../utils/denomUtils";
 
@@ -81,7 +89,7 @@ export async function CreateCredexController(
               field: "receiverAccountID"
             }
           },
-          dashboard: {}
+          dashboard: { member: null, account: null }
         }
       };
       return res.status(400).json(errorResponse);
@@ -246,16 +254,18 @@ export async function CreateCredexController(
       return res.status(400).json(errorResponse);
     }
 
-    // Fetch updated dashboard data
+    // Fetch updated standardized dashboard data
     logger.debug("Fetching updated dashboard data", {
       signerID,
       issuerAccountID,
       requestId,
     });
 
-    const dashboard = await GetAccountDashboardService(
+    const dashboard = await getDashboardData(
       signerID,
-      issuerAccountID
+      issuerAccountID,
+      requestId,
+      memberDashboardService
     );
 
     const formattedAmount = denomFormatter(InitialAmount, Denomination);
@@ -275,7 +285,7 @@ export async function CreateCredexController(
             receiverAccountName: createCredexResult.data.counterpartyAccountName
           }
         },
-        dashboard: dashboard || {}
+        dashboard
       }
     };
 
