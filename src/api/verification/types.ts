@@ -119,21 +119,6 @@ export interface MulterError extends Error {
   field?: string;
 }
 
-export interface WhatsAppMedia {
-  id: string;
-  url?: string;
-}
-
-export interface WhatsAppMessage {
-  image?: WhatsAppMedia;
-  type?: string;
-}
-
-export interface WhatsAppConfig {
-  baseUrl: string;
-  apiKey: string;
-}
-
 export interface VerificationResult {
   success: boolean;
   verified: boolean;
