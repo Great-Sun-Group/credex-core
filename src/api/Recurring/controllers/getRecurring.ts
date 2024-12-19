@@ -1,13 +1,27 @@
 import express from "express";
 import { GetRecurringService } from "../services/GetRecurring";
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
-import { ApiActionType } from "../../../types/apiResponse";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import { MemberRepository, IMemberRepository } from "../../Member/repositories/MemberRepository";
+import { SpendLimitService, ISpendLimitService } from "../../Member/services/SpendLimitService";
+import { UserRequest } from "../../../middleware/authMiddleware";
+import { getDashboardData } from "../../../utils/dashboardUtils";
+import { 
+  ApiActionType,
+  TypedApiResponse,
+  RecurringActionDetails,
+  ErrorActionDetails 
+} from "../../../types/apiResponse";
 import logger from "../../../utils/logger";
 
-// Import the UserRequest interface
-interface UserRequest extends express.Request {
-  user: any;
-}
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  new MemberRepository(),
+  new SpendLimitService()
+);
+
+type GetRecurringResponse = TypedApiResponse<RecurringActionDetails>;
+type GetRecurringErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * GetRecurringController
@@ -46,7 +60,7 @@ export async function GetRecurringController(
       requestId
     });
 
-    if (!result.success) {
+    if (!result.success || !result.data) {
       logger.warn("Failed to retrieve recurring transaction", {
         error: result.message,
         requestId
@@ -62,7 +76,7 @@ export async function GetRecurringController(
         statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
         ApiActionType.ERROR_VALIDATION;
 
-      res.status(statusCode).json({
+      const errorResponse: GetRecurringErrorResponse = {
         message: result.message,
         data: {
           action: {
@@ -77,9 +91,45 @@ export async function GetRecurringController(
           },
           dashboard: {}
         }
-      });
+      };
+      res.status(statusCode).json(errorResponse);
       return;
     }
+
+    // Get standardized dashboard data
+    logger.debug("Fetching dashboard data", {
+      memberID,
+      accountID,
+      requestId
+    });
+
+    const dashboard = await getDashboardData(
+      memberID,
+      accountID,
+      requestId,
+      memberDashboardService
+    );
+
+    const successResponse: GetRecurringResponse = {
+      message: "Recurring transaction details retrieved successfully",
+      data: {
+        action: {
+          id: recurringID,
+          type: ApiActionType.RECURRING_RETRIEVED,
+          timestamp: new Date().toISOString(),
+          actor: memberID,
+          details: {
+            recurringID: result.data!.recurringID,
+            amount: result.data!.scheduleInfo.amount,
+            denomination: result.data!.scheduleInfo.denomination,
+            payFrequency: result.data!.scheduleInfo.payFrequency,
+            nextDate: result.data!.scheduleInfo.nextRunDate,
+            status: result.data!.scheduleInfo.status
+          }
+        },
+        dashboard
+      }
+    };
 
     logger.info("Recurring transaction details retrieved successfully", {
       recurringID,
@@ -88,21 +138,7 @@ export async function GetRecurringController(
       requestId
     });
 
-    res.status(200).json({
-      message: "Recurring transaction details retrieved successfully",
-      data: {
-        action: {
-          id: recurringID,
-          type: ApiActionType.RECURRING_RETRIEVED,
-          timestamp: new Date().toISOString(),
-          actor: memberID,
-          details: result.data
-        },
-        dashboard: {
-          recurringTransactions: [result.data]
-        }
-      }
-    });
+    res.status(200).json(successResponse);
 
   } catch (error) {
     const handledError = handleServiceError(error);
@@ -125,7 +161,7 @@ export async function GetRecurringController(
         statusCode === 500 ? ApiActionType.ERROR_INTERNAL :
         ApiActionType.ERROR_VALIDATION;
 
-      res.status(statusCode).json({
+      const errorResponse: GetRecurringErrorResponse = {
         message: handledError.message,
         data: {
           action: {
@@ -140,7 +176,8 @@ export async function GetRecurringController(
           },
           dashboard: {}
         }
-      });
+      };
+      res.status(statusCode).json(errorResponse);
       return;
     }
 

@@ -1,10 +1,24 @@
 import express from "express";
 import { CreateCredexService } from "../services/CreateCredex";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import { MemberRepository } from "../../Member/repositories/MemberRepository";
+import { SpendLimitService } from "../../Member/services/SpendLimitService";
 import { checkDueDate, credspan } from "../../../core-cron/constants/credspan";
 import { AuthForTierSpendLimitService } from "../../Member/services/AuthForTierSpendLimit";
 import logger from "../../../utils/logger";
-import { ApiActionType, TypedApiResponse, CredexActionDetails, ErrorActionDetails } from "../../../types/apiResponse";
+import { getDashboardData } from "../../../utils/dashboardUtils";
+
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  new MemberRepository(),
+  new SpendLimitService()
+);
+import {
+  ApiActionType,
+  TypedApiResponse,
+  CredexActionDetails,
+  ErrorActionDetails,
+} from "../../../types/apiResponse";
 import { denomFormatter } from "../../../utils/denomUtils";
 
 interface UserRequest extends express.Request {
@@ -78,11 +92,11 @@ export async function CreateCredexController(
             details: {
               code: "INVALID_ACCOUNTS",
               reason: "Issuer and receiver cannot be the same account",
-              field: "receiverAccountID"
-            }
+              field: "receiverAccountID",
+            },
           },
-          dashboard: {}
-        }
+          dashboard: { member: null, account: null },
+        },
       };
       return res.status(400).json(errorResponse);
     }
@@ -122,11 +136,11 @@ export async function CreateCredexController(
             details: {
               code: "TIER_LIMIT_EXCEEDED",
               reason: tierAuth.message,
-              field: "securedCredex"
-            }
+              field: "securedCredex",
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       };
       return res.status(403).json(errorResponse);
     }
@@ -146,11 +160,11 @@ export async function CreateCredexController(
               details: {
                 code: "MISSING_DUE_DATE",
                 reason: "Due date is required for unsecured credex",
-                field: "dueDate"
-              }
+                field: "dueDate",
+              },
             },
-            dashboard: {}
-          }
+            dashboard: {},
+          },
         };
         return res.status(400).json(errorResponse);
       }
@@ -169,11 +183,11 @@ export async function CreateCredexController(
               details: {
                 code: "INVALID_DUE_DATE",
                 reason: `Due date must be between 1 and ${credspan / 7} weeks from today`,
-                field: "dueDate"
-              }
+                field: "dueDate",
+              },
             },
-            dashboard: {}
-          }
+            dashboard: {},
+          },
         };
         return res.status(400).json(errorResponse);
       }
@@ -190,11 +204,11 @@ export async function CreateCredexController(
             details: {
               code: "INVALID_DUE_DATE",
               reason: "Due date is not allowed for secured credex",
-              field: "dueDate"
-            }
+              field: "dueDate",
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       };
       return res.status(400).json(errorResponse);
     }
@@ -237,30 +251,33 @@ export async function CreateCredexController(
             details: {
               code: createCredexResult.error?.code || "CREATE_FAILED",
               reason: createCredexResult.message || "Failed to create Credex",
-              suggestion: "Please try again or contact support if the issue persists"
-            }
+              suggestion:
+                "Please try again or contact support if the issue persists",
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       };
       return res.status(400).json(errorResponse);
     }
 
-    // Fetch updated dashboard data
+    // Fetch updated standardized dashboard data
     logger.debug("Fetching updated dashboard data", {
       signerID,
       issuerAccountID,
       requestId,
     });
 
-    const dashboard = await GetAccountDashboardService(
+    const dashboard = await getDashboardData(
       signerID,
-      issuerAccountID
+      issuerAccountID,
+      requestId,
+      memberDashboardService
     );
 
     const formattedAmount = denomFormatter(InitialAmount, Denomination);
     const successResponse: CreateCredexResponse = {
-      message: `${securedCredex ? 'Secured' : 'Unsecured'} credex for ${formattedAmount} ${Denomination} ${OFFERSorREQUESTS.toLowerCase()} created successfully`,
+      message: `${securedCredex ? "Secured" : "Unsecured"} credex for ${formattedAmount} ${Denomination} ${OFFERSorREQUESTS.toLowerCase()} created successfully`,
       data: {
         action: {
           id: createCredexResult.data.credexID,
@@ -272,11 +289,12 @@ export async function CreateCredexController(
             denomination: Denomination,
             securedCredex,
             receiverAccountID: createCredexResult.data.receiverAccountID,
-            receiverAccountName: createCredexResult.data.counterpartyAccountName
-          }
+            receiverAccountName:
+              createCredexResult.data.counterpartyAccountName,
+          },
         },
-        dashboard: dashboard || {}
-      }
+        dashboard,
+      },
     };
 
     logger.info("Credex created successfully", {
@@ -306,11 +324,12 @@ export async function CreateCredexController(
           details: {
             code: "INTERNAL_ERROR",
             reason: error instanceof Error ? error.message : "Unknown error",
-            suggestion: "Please try again or contact support if the issue persists"
-          }
+            suggestion:
+              "Please try again or contact support if the issue persists",
+          },
         },
-        dashboard: {}
-      }
+        dashboard: {},
+      },
     };
 
     return res.status(500).json(errorResponse);

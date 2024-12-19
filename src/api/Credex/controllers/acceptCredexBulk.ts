@@ -1,8 +1,11 @@
 import express from "express";
 import { AcceptCredexService } from "../services/AcceptCredex";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
 import { validateUUID } from "../../../utils/validators";
 import logger from "../../../utils/logger";
+import { getDashboardData } from "../../../utils/dashboardUtils";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import { MemberRepository } from "../../Member/repositories/MemberRepository";
+import { SpendLimitService } from "../../Member/services/SpendLimitService";
 import { 
   ApiActionType, 
   TypedApiResponse, 
@@ -18,6 +21,12 @@ interface UserRequest extends Request {
 
 type AcceptCredexBulkResponse = TypedApiResponse<CredexBulkActionDetails>;
 type AcceptCredexBulkErrorResponse = TypedApiResponse<ErrorActionDetails>;
+
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  new MemberRepository(),
+  new SpendLimitService()
+);
 
 type AcceptedResult = {
   status: 'accepted';
@@ -230,8 +239,8 @@ export async function AcceptCredexBulkController(
       });
 
       const dashboard = acceptorAccountID ? 
-        await GetAccountDashboardService(signerID, acceptorAccountID) :
-        null;
+        await getDashboardData(signerID, acceptorAccountID, requestId, memberDashboardService) :
+        {};
 
       logger.info("Bulk accept operation completed", {
         accepted: acceptedCredex.length,
@@ -259,7 +268,7 @@ export async function AcceptCredexBulkController(
               failureCount: failed.length
             }
           },
-          dashboard: dashboard || {}
+          dashboard
         }
       };
 

@@ -1,9 +1,18 @@
-import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { GetBalancesService } from "./GetBalances";
 import { GetPendingOffersInService } from "../../Credex/services/GetPendingOffersIn";
 import { GetPendingOffersOutService } from "../../Credex/services/GetPendingOffersOut";
 import { AccountError, handleServiceError } from "../../../utils/errorUtils";
+import { IAccountRepository } from "../repositories/AccountRepository";
+import { IBalanceRepository } from "../repositories/BalanceRepository";
 import logger from "../../../utils/logger";
+
+// Import types from pending offers services
+interface OfferedCredex {
+  credexID: string;
+  formattedInitialAmount: string;
+  counterpartyAccountName: string;
+  dueDate?: string;
+  secured?: boolean;
+}
 
 interface AuthorizedMember {
   memberID: string;
@@ -11,21 +20,30 @@ interface AuthorizedMember {
   lastname: string;
 }
 
+// Types based on dashboardSwaggerTemplate.ts
 interface AccountDashboardData {
   accountID: string;
   accountName: string;
   accountHandle: string;
-  defaultDenom: string;
+  accountType: 'PERSONAL' | 'BUSINESS' | 'CREDEX_FOUNDATION' | 'TRUST' | 'OPERATIONS';
+  defaultDenom: 'CXX' | 'CAD' | 'USD' | 'XAU' | 'ZWG';
   isOwnedAccount: boolean;
   sendOffersTo?: {
     memberID: string;
     firstname: string;
     lastname: string;
   };
-  authFor: AuthorizedMember[];
-  balanceData: any; // Will be typed when balances are standardized
-  pendingInData: any; // Will be typed when Credex standardization is complete
-  pendingOutData: any; // Will be typed when Credex standardization is complete
+  balanceData: {
+    securedNetBalancesByDenom: string[];
+    unsecuredBalancesInDefaultDenom: {
+      totalPayables: string;
+      totalReceivables: string;
+      netPayRec: string;
+    };
+    netCredexAssetsInDefaultDenom: string;
+  };
+  pendingInData: OfferedCredex[];
+  pendingOutData: OfferedCredex[];
 }
 
 interface DashboardResult {
@@ -45,10 +63,22 @@ interface DashboardResult {
  * @returns DashboardResult containing account dashboard data
  * @throws AccountError for validation and business logic errors
  */
-export async function GetAccountDashboardService(
-  memberID: string,
-  accountID: string
-): Promise<DashboardResult> {
+export class GetAccountDashboardService {
+  constructor(
+    private readonly accountRepo: IAccountRepository,
+    private readonly balanceRepo: IBalanceRepository
+  ) {}
+
+  /**
+   * Get complete account dashboard data
+   * @param memberID - UUID of the requesting member
+   * @param accountID - UUID of the account
+   * @returns Dashboard result with standardized data
+   */
+  async getDashboard(
+    memberID: string,
+    accountID: string
+  ): Promise<DashboardResult> {
   const requestId = `acct_dash_${Date.now()}`; // Generate a request ID
   logger.debug("Entering GetAccountDashboardService", { memberID, accountID, requestId });
 
@@ -60,116 +90,98 @@ export async function GetAccountDashboardService(
     );
   }
 
-  const ledgerSpaceSession = ledgerSpaceDriver.session();
-
-  try {
-    // Get basic account information and authorization data
-    const result = await ledgerSpaceSession.executeRead(async (tx) => {
-      const query = `
-        MATCH
-          (account:Account { accountID: $accountID })
-          <-[:AUTHORIZED_FOR]-
-          (member:Member { memberID: $memberID})
-        MATCH
-          (account)<-[:AUTHORIZED_FOR]-(allAuthMembers)
-        OPTIONAL MATCH
-          (account)<-[owns:OWNS]-(member)
-        OPTIONAL MATCH
-          (account)-[:SEND_OFFERS_TO]->(sendOffersTo:Member)
-        RETURN
-          account.accountID AS accountID,
-          account.accountType AS accountType,
-          account.accountName AS accountName,
-          account.accountHandle AS accountHandle,
-          account.defaultDenom AS defaultDenom,
-          sendOffersTo.firstname AS sendOffersToFirstname,
-          sendOffersTo.lastname AS sendOffersToLastname,
-          sendOffersTo.memberID AS sendOffersToMemberID,
-          owns IS NOT NULL AS isOwnedAccount,
-          collect({
-            memberID: allAuthMembers.memberID,
-            firstname: allAuthMembers.firstname,
-            lastname: allAuthMembers.lastname
-          }) AS authorizedMembers
-      `;
-
-      const queryResult = await tx.run(query, { memberID, accountID });
-
-      if (queryResult.records.length === 0) {
-        throw new AccountError(
-          "Account not found or access denied",
-          "NOT_FOUND",
-          404
-        );
+    try {
+      // Get account data from optimized repository
+      const accountData = await this.accountRepo.findByIdWithAccess(accountID, memberID);
+      if (!accountData) {
+        logger.warn("Account not found or access denied", { accountID, memberID });
+        return {
+          success: false,
+          message: "Account not found or access denied"
+        };
       }
 
-      return queryResult.records[0];
-    });
+      // Construct the standardized dashboard data
+      const dashboardData: AccountDashboardData = {
+        accountID: accountData.accountID,
+        accountName: accountData.accountName,
+        accountHandle: accountData.accountHandle,
+        accountType: accountData.accountType,
+        defaultDenom: accountData.defaultDenom,
+        isOwnedAccount: accountData.isOwnedAccount,
+        sendOffersTo: accountData.sendOffersTo,
+        balanceData: {
+          securedNetBalancesByDenom: [],
+          unsecuredBalancesInDefaultDenom: {
+            totalPayables: "0.00",
+            totalReceivables: "0.00",
+            netPayRec: "0.00"
+          },
+          netCredexAssetsInDefaultDenom: "0.00"
+        },
+        pendingInData: [],
+        pendingOutData: [],
+      };
 
-    // Construct the dashboard data
-    const dashboardData: AccountDashboardData = {
-      accountID: result.get("accountID"),
-      accountName: result.get("accountName"),
-      accountHandle: result.get("accountHandle"),
-      defaultDenom: result.get("defaultDenom"),
-      isOwnedAccount: result.get("isOwnedAccount"),
-      authFor: result.get("authorizedMembers"),
-      balanceData: [],
-      pendingInData: [],
-      pendingOutData: [],
-    };
+      // Get balance data from optimized repository
+      try {
+        dashboardData.balanceData = await this.balanceRepo.getBalances(accountID);
+      } catch (error) {
+        logger.error("Failed to retrieve balance data", {
+          error: error instanceof Error ? error.message : "Unknown error",
+          accountID,
+          memberID
+        });
+        // Keep default empty balance data structure
+      }
 
-    // Add send offers to information if available
-    if (result.get("sendOffersToMemberID")) {
-      dashboardData.sendOffersTo = {
-        memberID: result.get("sendOffersToMemberID"),
-        firstname: result.get("sendOffersToFirstname"),
-        lastname: result.get("sendOffersToLastname"),
+      // Get pending offers data
+      try {
+        const [pendingInResult, pendingOutResult] = await Promise.all([
+          GetPendingOffersInService(accountID),
+          GetPendingOffersOutService(accountID),
+        ]);
+
+        if (pendingInResult.success && pendingInResult.data) {
+          dashboardData.pendingInData = pendingInResult.data;
+        }
+        if (pendingOutResult.success && pendingOutResult.data) {
+          dashboardData.pendingOutData = pendingOutResult.data;
+        }
+      } catch (error) {
+        logger.error("Failed to retrieve pending offers", {
+          error: error instanceof Error ? error.message : "Unknown error",
+          accountID,
+          memberID
+        });
+        // Keep default empty arrays
+      }
+
+      logger.info("Account dashboard retrieved successfully", {
+        accountID,
+        memberID,
+        isOwned: dashboardData.isOwnedAccount
+      });
+
+      return {
+        success: true,
+        data: dashboardData,
+        message: "Dashboard retrieved successfully"
+      };
+
+    } catch (error) {
+      const handledError = handleServiceError(error);
+      logger.error("Error in GetAccountDashboardService", {
+        error: handledError.message,
+        code: handledError.code,
+        memberID,
+        accountID
+      });
+
+      return {
+        success: false,
+        message: handledError.message
       };
     }
-
-    // Get additional dashboard components
-    logger.debug("Fetching additional dashboard components", { accountID, requestId });
-
-    const [balanceData, pendingInData, pendingOutData] = await Promise.all([
-      GetBalancesService(accountID, requestId),
-      GetPendingOffersInService(accountID),
-      GetPendingOffersOutService(accountID),
-    ]);
-
-    dashboardData.balanceData = balanceData;
-    dashboardData.pendingInData = pendingInData;
-    dashboardData.pendingOutData = pendingOutData;
-
-    logger.info("Account dashboard retrieved successfully", {
-      accountID,
-      memberID,
-      isOwned: dashboardData.isOwnedAccount,
-      requestId
-    });
-
-    return {
-      success: true,
-      data: dashboardData,
-      message: "Dashboard retrieved successfully"
-    };
-
-  } catch (error) {
-    const handledError = handleServiceError(error);
-    logger.error("Error in GetAccountDashboardService", {
-      error: handledError.message,
-      code: handledError.code,
-      memberID,
-      accountID
-    });
-
-    return {
-      success: false,
-      message: handledError.message
-    };
-
-  } finally {
-    await ledgerSpaceSession.close();
-    logger.debug("Exiting GetAccountDashboardService", { memberID, accountID, requestId });
   }
 }
