@@ -2,12 +2,17 @@ import { GetAccountDashboardService } from "../api/Account/services/GetAccountDa
 import { AccountRepository } from "../api/Account/repositories/AccountRepository";
 import { BalanceRepository } from "../api/Account/repositories/BalanceRepository";
 import { MemberDashboardService } from "../api/Member/services/MemberDashboardService";
+import { MemberRepository } from "../api/Member/repositories/MemberRepository";
+import { SpendLimitService } from "../api/Member/services/SpendLimitService";
 import logger from "./logger";
 
 // Initialize repositories and services
 const accountRepo = new AccountRepository();
 const balanceRepo = new BalanceRepository();
+const memberRepo = new MemberRepository();
+const spendLimitService = new SpendLimitService();
 const accountDashboardService = new GetAccountDashboardService(accountRepo, balanceRepo);
+const memberDashboardService = new MemberDashboardService(memberRepo, spendLimitService);
 
 // Types for standardized dashboard response
 interface StandardizedDashboardData {
@@ -22,20 +27,20 @@ interface StandardizedDashboardData {
  * @param memberID - ID of the member requesting the dashboard
  * @param accountID - ID of the account to get dashboard for
  * @param requestId - Request tracking ID
- * @param memberDashboardService - Instance of MemberDashboardService
+ * @param customMemberDashboardService - Optional custom instance of MemberDashboardService
  * @returns Standardized dashboard data or empty object if fetch fails
  */
 export async function getDashboardData(
   memberID: string,
   accountID: string,
   requestId: string,
-  memberDashboardService: MemberDashboardService
+  customMemberDashboardService?: MemberDashboardService
 ): Promise<Partial<StandardizedDashboardData>> {
   try {
     logger.debug("Fetching dashboard data", { memberID, accountID, requestId });
 
     const [memberData, accountResult] = await Promise.all([
-      memberDashboardService.getMemberDashboardData(memberID),
+      (customMemberDashboardService || memberDashboardService).getMemberDashboardData(memberID),
       accountDashboardService.getDashboard(memberID, accountID)
     ]);
 
@@ -71,7 +76,7 @@ export async function getDashboardData(
  * @param memberID - ID of the member requesting the dashboard
  * @param accountID - ID of the account to get dashboard for
  * @param requestId - Request tracking ID
- * @param memberDashboardService - Instance of MemberDashboardService
+ * @param customMemberDashboardService - Optional custom instance of MemberDashboardService
  * @returns The complete response with standardized dashboard data
  */
 export async function withDashboard<T>(
@@ -90,7 +95,7 @@ export async function withDashboard<T>(
   memberID: string,
   accountID: string,
   requestId: string,
-  memberDashboardService: MemberDashboardService
+  customMemberDashboardService?: MemberDashboardService
 ): Promise<{
   message: string;
   data: {
@@ -108,7 +113,7 @@ export async function withDashboard<T>(
     memberID,
     accountID,
     requestId,
-    memberDashboardService
+    customMemberDashboardService
   );
 
   return {
