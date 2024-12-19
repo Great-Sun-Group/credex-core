@@ -1,18 +1,27 @@
 import express from "express";
 import { OnboardMemberService } from "../services/OnboardMember";
-import { GetMemberDashboardByPhoneService } from "../services/GetMemberDashboardByPhone";
+import { LoginMemberService } from "../services/LoginMember";
 import { CreateAccountService } from "../../Account/services/CreateAccount";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { MemberDashboardService } from "../services/MemberDashboardService";
 import { MemberError, handleServiceError } from "../../../utils/errorUtils";
 import { generateToken } from "../../../../config/authenticate";
-import { searchSpaceDriver } from "../../../../config/neo4j";
+import { getDashboardData } from "../../../utils/dashboardUtils";
 import logger from "../../../utils/logger";
-import { 
-  TypedApiResponse, 
+import {
+  TypedApiResponse,
   ApiActionType,
   MemberActionDetails,
-  ErrorActionDetails
+  ErrorActionDetails,
 } from "../../../types/apiResponse";
+
+import { MemberRepository } from "../repositories/MemberRepository";
+import { SpendLimitService } from "../services/SpendLimitService";
+
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  new MemberRepository(),
+  new SpendLimitService()
+);
 
 type OnboardDetails = MemberActionDetails & {
   memberID: string;
@@ -27,21 +36,15 @@ type OnboardDetails = MemberActionDetails & {
 type OnboardResponse = TypedApiResponse<OnboardDetails>;
 type OnboardErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
-interface DashboardData {
-  memberTier: number;
-  remainingAvailableUSD: number;
-  accounts: any[]; // Will be typed when dashboard is standardized
-}
-
 /**
  * OnboardMemberController
- * 
+ *
  * Handles member onboarding process including:
  * - Creating new member
  * - Creating default account
  * - Generating authentication token
  * - Retrieving initial dashboard
- * 
+ *
  * @param req - Express request object
  * @param res - Express response object
  * @param next - Express next function
@@ -63,7 +66,7 @@ export async function OnboardMemberController(
       lastname,
       phone,
       defaultDenom,
-      requestId
+      requestId,
     });
 
     // Create member
@@ -79,20 +82,26 @@ export async function OnboardMemberController(
       logger.warn("Failed to create member", {
         error: memberResult.error,
         message: memberResult.message,
-        requestId
+        requestId,
       });
 
-      const statusCode = 
-        memberResult.error?.code === "DUPLICATE_PHONE" ? 409 :
-        memberResult.error?.code === "DUPLICATE_HANDLE" ? 409 :
-        memberResult.error?.code === "INVALID_DENOMINATION" ? 400 :
-        memberResult.error?.code === "MISSING_PARAMS" ? 400 :
-        500;
+      const statusCode =
+        memberResult.error?.code === "DUPLICATE_PHONE"
+          ? 409
+          : memberResult.error?.code === "DUPLICATE_HANDLE"
+            ? 409
+            : memberResult.error?.code === "INVALID_DENOMINATION"
+              ? 400
+              : memberResult.error?.code === "MISSING_PARAMS"
+                ? 400
+                : 500;
 
-      const errorType = 
-        statusCode === 409 ? ApiActionType.ERROR_VALIDATION :
-        statusCode === 400 ? ApiActionType.ERROR_VALIDATION :
-        ApiActionType.ERROR_INTERNAL;
+      const errorType =
+        statusCode === 409
+          ? ApiActionType.ERROR_VALIDATION
+          : statusCode === 400
+            ? ApiActionType.ERROR_VALIDATION
+            : ApiActionType.ERROR_INTERNAL;
 
       const errorResponse: OnboardErrorResponse = {
         message: memberResult.message,
@@ -104,11 +113,11 @@ export async function OnboardMemberController(
             actor: "system",
             details: {
               code: memberResult.error?.code || "UNKNOWN_ERROR",
-              reason: memberResult.error?.details || memberResult.message
-            }
+              reason: memberResult.error?.details || memberResult.message,
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       };
 
       res.status(statusCode).json(errorResponse);
@@ -120,7 +129,7 @@ export async function OnboardMemberController(
     // Create default account
     logger.debug("Creating default account", {
       memberID: memberData.memberID,
-      requestId
+      requestId,
     });
 
     const accountResult = await CreateAccountService(
@@ -138,7 +147,7 @@ export async function OnboardMemberController(
         error: accountResult.error,
         message: accountResult.message,
         memberID: memberData.memberID,
-        requestId
+        requestId,
       });
 
       const errorResponse: OnboardErrorResponse = {
@@ -151,49 +160,33 @@ export async function OnboardMemberController(
             actor: memberData.memberID,
             details: {
               code: "ACCOUNT_CREATE_FAILED",
-              reason: accountResult.message || "Failed to create default account"
-            }
+              reason:
+                accountResult.message || "Failed to create default account",
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       };
 
       res.status(500).json(errorResponse);
       return;
     }
 
-    // Generate and store token
-    const token = generateToken(memberData.memberID);
-    const session = searchSpaceDriver.session();
-    
-    try {
-      await session.executeWrite(async (tx) => {
-        return tx.run(
-          "MATCH (m:Member {memberID: $memberID}) SET m.token = $token",
-          { 
-            memberID: memberData.memberID,
-            token 
-          }
-        );
-      });
-    } finally {
-      await session.close();
-    }
-
-    // Get initial dashboard
-    logger.debug("Retrieving initial dashboard", {
+    // Get initial dashboard data using LoginMemberService
+    logger.debug("Retrieving initial dashboard data", {
       phone,
-      requestId
+      requestId,
     });
 
-    const dashboardResult = await GetMemberDashboardByPhoneService(phone);
-    
+    const dashboardResult = await LoginMemberService(phone);
+
     if (!dashboardResult.success || !dashboardResult.data) {
       logger.error("Failed to retrieve initial dashboard", {
-        error: dashboardResult.error,
+        error: dashboardResult.error?.code,
+        details: dashboardResult.error?.details,
         message: dashboardResult.message,
         memberID: memberData.memberID,
-        requestId
+        requestId,
       });
 
       const errorResponse: OnboardErrorResponse = {
@@ -205,56 +198,37 @@ export async function OnboardMemberController(
             timestamp: new Date().toISOString(),
             actor: memberData.memberID,
             details: {
-              code: "DASHBOARD_RETRIEVAL_FAILED",
-              reason: dashboardResult.message || "Failed to retrieve initial dashboard"
-            }
+              code: dashboardResult.error?.code || "DASHBOARD_RETRIEVAL_FAILED",
+              reason: dashboardResult.error?.details || dashboardResult.message,
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       };
 
       res.status(500).json(errorResponse);
       return;
     }
 
-    const dashboardData = dashboardResult.data;
-
-    // Get associated account dashboards
-    logger.debug("Retrieving account dashboards", {
-      memberID: dashboardData.memberID,
-      accountCount: dashboardData.accountIDS.length,
+    // Get standardized dashboard data
+    logger.debug("Retrieving dashboard data", {
+      memberID: memberData.memberID,
+      accountID: accountResult.data.accountID,
       requestId,
     });
 
-    const accountDashboards = await Promise.all(
-      dashboardData.accountIDS.map(async (accountId: string) => {
-        try {
-          return await GetAccountDashboardService(
-            dashboardData.memberID,
-            accountId
-          );
-        } catch (error) {
-          logger.error("Error fetching account dashboard", {
-            error: error instanceof Error ? error.message : "Unknown error",
-            accountId,
-            memberID: dashboardData.memberID,
-            requestId
-          });
-          return null;
-        }
-      })
-    );
-
-    // Filter out any failed account dashboard retrievals
-    const validAccountDashboards = accountDashboards.filter(
-      (dashboard): dashboard is NonNullable<typeof dashboard> => dashboard !== null
+    const dashboard = await getDashboardData(
+      memberData.memberID,
+      accountResult.data.accountID,
+      requestId,
+      memberDashboardService
     );
 
     logger.info("Member onboarded successfully", {
       memberID: memberData.memberID,
       accountID: accountResult.data.accountID,
-      accountCount: validAccountDashboards.length,
-      requestId
+      hasDashboard: !!dashboard.member && !!dashboard.account,
+      requestId,
     });
 
     // Return standardized response
@@ -272,27 +246,22 @@ export async function OnboardMemberController(
             lastname: memberData.lastname,
             memberHandle: memberData.memberHandle,
             defaultDenom: memberData.defaultDenom,
-            token,
-            defaultAccountID: accountResult.data.accountID
-          }
+            token: dashboardResult.data.token,
+            defaultAccountID: accountResult.data.accountID,
+          },
         },
-        dashboard: {
-          memberTier: dashboardData.memberTier,
-          remainingAvailableUSD: dashboardData.remainingAvailableUSD,
-          accounts: validAccountDashboards
-        }
-      }
+        dashboard,
+      },
     };
 
     res.status(201).json(response);
-
   } catch (error) {
     const handledError = handleServiceError(error);
     logger.error("Unexpected error in OnboardMemberController", {
       error: handledError.message,
       code: handledError.code,
       stack: handledError instanceof Error ? handledError.stack : undefined,
-      requestId
+      requestId,
     });
 
     const errorResponse: OnboardErrorResponse = {
@@ -305,16 +274,15 @@ export async function OnboardMemberController(
           actor: "system",
           details: {
             code: handledError.code || "INTERNAL_ERROR",
-            reason: handledError.message
-          }
+            reason: handledError.message,
+          },
         },
-        dashboard: {}
-      }
+        dashboard: {},
+      },
     };
 
     res.status(500).json(errorResponse);
     next(handledError);
-
   } finally {
     logger.debug("Exiting OnboardMemberController", { requestId });
   }

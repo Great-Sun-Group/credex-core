@@ -1,8 +1,17 @@
 import express from "express";
 import { AcceptCredexService } from "../services/AcceptCredex";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import { MemberRepository } from "../../Member/repositories/MemberRepository";
+import { SpendLimitService } from "../../Member/services/SpendLimitService";
 import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
+import { getDashboardData } from "../../../utils/dashboardUtils";
+
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  new MemberRepository(),
+  new SpendLimitService()
+);
 import { 
   ApiActionType, 
   TypedApiResponse, 
@@ -85,9 +94,11 @@ export async function AcceptCredexController(
       requestId,
     });
 
-    const dashboard = await GetAccountDashboardService(
+    const dashboard = await getDashboardData(
       signerID,
-      acceptCredexResult.data.acceptorAccountID
+      acceptCredexResult.data.acceptorAccountID,
+      requestId,
+      memberDashboardService
     );
 
     const successResponse: AcceptCredexResponse = {
@@ -105,7 +116,7 @@ export async function AcceptCredexController(
             acceptorAccountID: acceptCredexResult.data.acceptorAccountID
           }
         },
-        dashboard: dashboard || {}
+        dashboard
       }
     };
 

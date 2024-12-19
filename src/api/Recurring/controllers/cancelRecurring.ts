@@ -1,14 +1,27 @@
 import express from "express";
 import { CancelRecurringService } from "../services/CancelRecurring";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import { MemberRepository, IMemberRepository } from "../../Member/repositories/MemberRepository";
+import { SpendLimitService, ISpendLimitService } from "../../Member/services/SpendLimitService";
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
-import { ApiActionType } from "../../../types/apiResponse";
+import { UserRequest } from "../../../middleware/authMiddleware";
+import { getDashboardData } from "../../../utils/dashboardUtils";
+import { 
+  ApiActionType,
+  TypedApiResponse,
+  RecurringActionDetails,
+  ErrorActionDetails 
+} from "../../../types/apiResponse";
 import logger from "../../../utils/logger";
 
-// Import the UserRequest interface
-interface UserRequest extends express.Request {
-  user: any;
-}
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  new MemberRepository(),
+  new SpendLimitService()
+);
+
+type CancelRecurringResponse = TypedApiResponse<RecurringActionDetails>;
+type CancelRecurringErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * CancelRecurringController
@@ -81,19 +94,21 @@ export async function CancelRecurringController(
       return;
     }
 
-    // Get updated dashboard data
+    // Get updated standardized dashboard data
     logger.debug("Fetching updated dashboard data", {
       ownerID,
       sourceAccountID: result.data?.participants.sourceAccountID,
       requestId
     });
 
-    const dashboardData = await GetAccountDashboardService(
+    const dashboard = await getDashboardData(
       ownerID,
-      result.data!.participants.sourceAccountID
+      result.data!.participants.sourceAccountID,
+      requestId,
+      memberDashboardService
     );
 
-    if (!dashboardData) {
+    if (!dashboard.account) {
       logger.warn("Failed to fetch dashboard data", {
         ownerID,
         sourceAccountID: result.data?.participants.sourceAccountID,
@@ -108,7 +123,14 @@ export async function CancelRecurringController(
             type: ApiActionType.RECURRING_CANCELLED,
             timestamp: new Date().toISOString(),
             actor: ownerID,
-            details: result.data
+            details: {
+            recurringID: result.data!.recurringID,
+            amount: result.data!.scheduleInfo.amount,
+            denomination: result.data!.scheduleInfo.denomination,
+            payFrequency: result.data!.scheduleInfo.payFrequency,
+            nextDate: result.data!.scheduleInfo.nextRunDate,
+            status: result.data!.scheduleInfo.status
+          }
           },
           dashboard: {}
         }
@@ -130,9 +152,16 @@ export async function CancelRecurringController(
           type: ApiActionType.RECURRING_CANCELLED,
           timestamp: new Date().toISOString(),
           actor: ownerID,
-          details: result.data
+          details: {
+            recurringID: result.data!.recurringID,
+            amount: result.data!.scheduleInfo.amount,
+            denomination: result.data!.scheduleInfo.denomination,
+            payFrequency: result.data!.scheduleInfo.payFrequency,
+            nextDate: result.data!.scheduleInfo.nextRunDate,
+            status: result.data!.scheduleInfo.status
+          }
         },
-        dashboard: dashboardData
+        dashboard
       }
     });
 

@@ -107,6 +107,33 @@ export default function createAccountRoute() {
    *                     dashboard:
    *                       type: object
    *                       description: Current state of the account dashboard
+   *                       properties:
+   *                         accountID:
+   *                           type: string
+   *                           format: uuid
+   *                         accountName:
+   *                           type: string
+   *                         accountHandle:
+   *                           type: string
+   *                         accountType:
+   *                           type: string
+   *                           enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
+   *                           description: Type of the account
+   *                         defaultDenom:
+   *                           type: string
+   *                         balanceData:
+   *                           type: object
+   *                           description: Initial balance data for the account
+   *                         pendingInData:
+   *                           type: array
+   *                           description: Pending incoming transactions
+   *                           items:
+   *                             type: object
+   *                         pendingOutData:
+   *                           type: array
+   *                           description: Pending outgoing transactions
+   *                           items:
+   *                             type: object
    *       400:
    *         description: Invalid input data
    *         content:

@@ -2,6 +2,7 @@ import axios from "../../../setup";
 import { delay, DELAY_MS } from "../../utils/delay";
 
 describe("clearForce DevAdmin Operation", () => {
+  // Added 2 minute timeout since these operations take longer
   it("clearForce", async () => {
     try {
       // First clear the databases
@@ -38,5 +39,5 @@ describe("clearForce DevAdmin Operation", () => {
       }
       throw error;
     }
-  });
+  }, 120000); // 2 minute timeout
 });

@@ -2,6 +2,10 @@ import express from "express";
 import { UnauthorizeForAccountService } from "../services/UnauthorizeForAccount";
 import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
+import { withDashboard } from "../../../utils/dashboardUtils";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import { MemberRepository } from "../../Member/repositories/MemberRepository";
+import { SpendLimitService } from "../../Member/services/SpendLimitService";
 import {
   TypedApiResponse,
   ApiActionType,
@@ -11,6 +15,14 @@ import {
 
 type UnauthorizeResponse = TypedApiResponse<AccountActionDetails>;
 type UnauthorizeErrorResponse = TypedApiResponse<ErrorActionDetails>;
+
+// Initialize repositories and services
+const memberRepository = new MemberRepository();
+const spendLimitService = new SpendLimitService();
+const memberDashboardService = new MemberDashboardService(
+  memberRepository,
+  spendLimitService
+);
 
 /**
  * UnauthorizeForAccountController
@@ -87,7 +99,8 @@ export async function UnauthorizeForAccountController(
     // Extract the data we have from the service result
     const { memberIdUnauthorized } = result.data || {};
 
-    const response: UnauthorizeResponse = {
+    // Create base response without dashboard
+    const baseResponse = {
       message: "Member unauthorized for account successfully",
       data: {
         action: {
@@ -99,10 +112,18 @@ export async function UnauthorizeForAccountController(
             accountID,
             memberIdUnauthorized: memberIDtoBeUnauthorized
           }
-        },
-        dashboard: {} // Empty dashboard until service is updated to include it
+        }
       }
     };
+
+    // Add dashboard data to response
+    const response = await withDashboard(
+      baseResponse,
+      ownerID,
+      accountID,
+      requestId,
+      memberDashboardService
+    );
 
     res.status(200).json(response);
 
