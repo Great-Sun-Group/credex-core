@@ -98,11 +98,14 @@ export class BalanceRepository implements IBalanceRepository {
                 collect(DISTINCT owesInCredexAll) AS owesInCredexesAll
             
             OPTIONAL MATCH (account)-[:OWES]->(owesOutCredexAll:Credex)
+            WITH account, daynode, securedBalances, unsecuredCredexesIn, unsecuredCredexesOut,
+                owesInCredexesAll, collect(DISTINCT owesOutCredexAll) AS owesOutCredexesAll
+            
             WITH account, daynode, securedBalances,
                 REDUCE(total = 0, credex IN unsecuredCredexesIn | total + credex.OutstandingAmount) AS receivablesTotalCXX,
                 REDUCE(total = 0, credex IN unsecuredCredexesOut | total + credex.OutstandingAmount) AS payablesTotalCXX,
-                REDUCE(total = 0, credex IN owesInCredexesAll | total + credex.OutstandingAmount)
-                - REDUCE(total = 0, credex IN owesOutCredexAll | total + credex.OutstandingAmount) AS netCredexAssetsCXX
+                REDUCE(total = 0, credex IN owesInCredexesAll | total + credex.OutstandingAmount) -
+                REDUCE(total = 0, credex IN owesOutCredexesAll | total + credex.OutstandingAmount) AS netCredexAssetsCXX
             
             RETURN
                 account.defaultDenom AS defaultDenom,

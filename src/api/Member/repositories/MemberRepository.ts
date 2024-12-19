@@ -24,7 +24,8 @@ export interface IMemberRepository {
  * - Result caching
  */
 export class MemberRepository implements IMemberRepository {
-  private cache: Map<string, { data: MemberData; timestamp: number }> = new Map();
+  private cache: Map<string, { data: MemberData; timestamp: number }> =
+    new Map();
   private readonly CACHE_TTL = 30000; // 30 seconds
 
   /**
@@ -44,30 +45,34 @@ export class MemberRepository implements IMemberRepository {
 
       try {
         // Single optimized query to get all required member data
-        const result = await session.executeRead(async (tx: ManagedTransaction) => {
-          const query = `
+        const result = await session.executeRead(
+          async (tx: ManagedTransaction) => {
+            const query = `
             MATCH (member:Member {memberID: $memberID})
             // Using index on :Member(memberID)
             RETURN
               member.memberID as id,
-              member.tier as tier,
+              member.memberTier as tier,
               member.firstname as firstname,
               member.lastname as lastname,
               member.handle as handle,
               member.defaultDenom as defaultDenom
           `;
 
-          const queryResult = await tx.run(query, { memberID });
-          return queryResult.records[0];
-        });
+            const queryResult = await tx.run(query, { memberID });
+            return queryResult.records[0];
+          }
+        );
 
         if (!result) {
           return null;
         }
 
+        // Convert Neo4j Integer to JavaScript number
+        const tier = result.get("tier");
         const memberData: MemberData = {
           id: result.get("id"),
-          tier: result.get("tier"),
+          tier: tier ? tier.toNumber() : 0,
           firstname: result.get("firstname"),
           lastname: result.get("lastname"),
           handle: result.get("handle"),
@@ -81,7 +86,6 @@ export class MemberRepository implements IMemberRepository {
         });
 
         return memberData;
-
       } finally {
         await session.close();
       }

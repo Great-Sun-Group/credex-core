@@ -51,7 +51,7 @@ export class SpendLimitService implements ISpendLimitService {
             OPTIONAL MATCH (member)-[:OWNS]->(account:Account)
             OPTIONAL MATCH (account)-[:OWES]->(credex:Credex)
             WHERE 
-              credex.createdAt >= datetime().truncate('month') AND
+              date(credex.createdAt) >= date.truncate('month', date()) AND
               credex.status = 'ACTIVE'
             
             // Calculate total USD value using daynode rates
