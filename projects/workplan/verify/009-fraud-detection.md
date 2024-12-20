@@ -1,13 +1,13 @@
 # Task: Fraud Detection System Implementation
 
 ## Overview
-Implement a fraud detection system that monitors verification attempts, tracks patterns, and manages a blacklist of suspicious activities.
+Implement a fraud detection system using AWS services to monitor verification attempts, track patterns, and manage suspicious activities.
 
 ## Prerequisites
 - Completed Task 004 (Verification API)
 - Completed Task 008 (Security Setup)
+- AWS DynamoDB, SNS, and CloudWatch configured
 - Access to metrics/logging systems
-- DynamoDB tables configured
 
 ## Acceptance Criteria
 1. Store and track verification metrics
@@ -20,277 +20,382 @@ Implement a fraud detection system that monitors verification attempts, tracks p
 
 ## Implementation Steps
 
-### 1. Create Fraud Detection Service
-```javascript
-// src/api/verification/services/fraudDetectionService.js
-import { DynamoDB, SNS } from 'aws-sdk';
-import { MetricsService } from './metricsService';
+### 1. Create Fraud Detection Functions
+```typescript
+// src/api/verification/services/fraudDetection.ts
+import { 
+  DynamoDBClient, 
+  PutItemCommand,
+  QueryCommand,
+  GetItemCommand 
+} from "@aws-sdk/client-dynamodb";
+import { 
+  SNSClient, 
+  PublishCommand 
+} from "@aws-sdk/client-sns";
+import { MetricsService } from './metrics';
+import { FraudDetection } from '../types';
 
-export class FraudDetectionService {
-  constructor() {
-    this.dynamodb = new DynamoDB.DocumentClient();
-    this.sns = new SNS();
-    this.metrics = new MetricsService();
+const dynamodb = new DynamoDBClient({ region: process.env.AWS_REGION });
+const sns = new SNSClient({ region: process.env.AWS_REGION });
+
+const THRESHOLDS = {
+  similarityWarning: 90,
+  maxAttempts: 3,
+  timeWindow: 24 * 60 * 60 * 1000, // 24 hours
+  suspiciousTimeStart: 23, // 11 PM
+  suspiciousTimeEnd: 4 // 4 AM
+};
+
+export async function processVerification(
+  params: FraudDetection.VerificationParams
+): Promise<FraudDetection.Result> {
+  try {
+    // Store verification attempt
+    await storeAttempt(params);
+
+    // Check for suspicious patterns
+    const checks = await Promise.all([
+      checkSimilarityScore(params),
+      checkMultipleAttempts(params),
+      checkTimePattern(params),
+      checkBlacklist(params)
+    ]);
+
+    const suspiciousActivity = checks.some(check => check.suspicious);
     
-    this.thresholds = {
-      similarityWarning: 90,
-      maxAttempts: 3,
-      timeWindow: 24 * 60 * 60 * 1000, // 24 hours
-      suspiciousTimeStart: 23, // 11 PM
-      suspiciousTimeEnd: 4 // 4 AM
-    };
-  }
-
-  async processVerification(params) {
-    try {
-      // Store verification attempt
-      await this.storeAttempt(params);
-
-      // Check for suspicious patterns
-      const checks = await Promise.all([
-        this.checkSimilarityScore(params),
-        this.checkMultipleAttempts(params),
-        this.checkTimePattern(params),
-        this.checkBlacklist(params)
-      ]);
-
-      const suspiciousActivity = checks.some(check => check.suspicious);
-      
-      if (suspiciousActivity) {
-        await this.handleSuspiciousActivity(params, checks);
-      }
-
-      return {
-        allowed: !suspiciousActivity,
-        checks,
-        warnings: checks.filter(check => check.suspicious)
-      };
-    } catch (error) {
-      console.error('Fraud detection error:', error);
-      throw new Error('Failed to process fraud detection');
-    }
-  }
-
-  async storeAttempt(params) {
-    const attempt = {
-      id: `${params.userId}_${Date.now()}`,
-      userId: params.userId,
-      idNumber: params.idNumber,
-      similarity: params.similarity,
-      timestamp: new Date().toISOString(),
-      deviceInfo: params.deviceInfo,
-      location: params.location,
-      ttl: Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60) // 90 days retention
-    };
-
-    await this.dynamodb.put({
-      TableName: process.env.VERIFICATION_ATTEMPTS_TABLE,
-      Item: attempt
-    }).promise();
-  }
-
-  async checkSimilarityScore(params) {
-    const suspicious = params.similarity >= 90 && params.similarity < 92;
-    
-    if (suspicious) {
-      await this.metrics.incrementCounter('BorderlineSimilarityScore');
+    if (suspiciousActivity) {
+      await handleSuspiciousActivity(params, checks);
     }
 
     return {
-      type: 'similarity',
-      suspicious,
-      score: params.similarity
+      allowed: !suspiciousActivity,
+      checks,
+      warnings: checks.filter(check => check.suspicious)
     };
+  } catch (error) {
+    console.error('Fraud detection error:', error);
+    throw new Error('Failed to process fraud detection');
   }
+}
 
-  async checkMultipleAttempts(params) {
-    const timeWindow = Date.now() - this.thresholds.timeWindow;
-    
-    const response = await this.dynamodb.query({
-      TableName: process.env.VERIFICATION_ATTEMPTS_TABLE,
-      KeyConditionExpression: 'userId = :userId AND #timestamp >= :timestamp',
-      ExpressionAttributeNames: {
-        '#timestamp': 'timestamp'
-      },
-      ExpressionAttributeValues: {
-        ':userId': params.userId,
-        ':timestamp': new Date(timeWindow).toISOString()
-      }
-    }).promise();
-
-    const suspicious = response.Items.length >= this.thresholds.maxAttempts;
-    
-    if (suspicious) {
-      await this.metrics.incrementCounter('MultipleAttempts');
+async function storeAttempt(
+  params: FraudDetection.VerificationParams
+): Promise<void> {
+  const command = new PutItemCommand({
+    TableName: process.env.VERIFICATION_ATTEMPTS_TABLE,
+    Item: {
+      id: { S: `${params.userId}_${Date.now()}` },
+      userId: { S: params.userId },
+      idNumber: { S: params.idNumber },
+      similarity: { N: params.similarity.toString() },
+      timestamp: { S: new Date().toISOString() },
+      deviceInfo: { S: JSON.stringify(params.deviceInfo) },
+      location: { S: JSON.stringify(params.location) },
+      ttl: { N: (Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60)).toString() }
     }
+  });
 
-    return {
-      type: 'attempts',
-      suspicious,
-      count: response.Items.length
-    };
+  await dynamodb.send(command);
+}
+
+async function checkSimilarityScore(
+  params: FraudDetection.VerificationParams
+): Promise<FraudDetection.Check> {
+  const suspicious = params.similarity >= 90 && params.similarity < 92;
+  
+  if (suspicious) {
+    await MetricsService.incrementCounter('BorderlineSimilarityScore');
   }
 
-  async checkTimePattern(params) {
-    const hour = new Date().getHours();
-    const suspicious = hour >= this.thresholds.suspiciousTimeStart || 
-                      hour <= this.thresholds.suspiciousTimeEnd;
-    
-    if (suspicious) {
-      await this.metrics.incrementCounter('SuspiciousTimeAttempt');
+  return {
+    type: 'similarity',
+    suspicious,
+    score: params.similarity
+  };
+}
+
+async function checkMultipleAttempts(
+  params: FraudDetection.VerificationParams
+): Promise<FraudDetection.Check> {
+  const timeWindow = Date.now() - THRESHOLDS.timeWindow;
+  
+  const command = new QueryCommand({
+    TableName: process.env.VERIFICATION_ATTEMPTS_TABLE,
+    KeyConditionExpression: 'userId = :userId AND #timestamp >= :timestamp',
+    ExpressionAttributeNames: {
+      '#timestamp': 'timestamp'
+    },
+    ExpressionAttributeValues: {
+      ':userId': { S: params.userId },
+      ':timestamp': { S: new Date(timeWindow).toISOString() }
     }
+  });
 
-    return {
-      type: 'time',
-      suspicious,
-      hour
-    };
+  const response = await dynamodb.send(command);
+  const attempts = response.Items?.length || 0;
+  const suspicious = attempts >= THRESHOLDS.maxAttempts;
+  
+  if (suspicious) {
+    await MetricsService.incrementCounter('MultipleAttempts');
   }
 
-  async checkBlacklist(params) {
-    const response = await this.dynamodb.get({
-      TableName: process.env.BLACKLIST_TABLE,
-      Key: {
-        id: params.idNumber
-      }
-    }).promise();
+  return {
+    type: 'attempts',
+    suspicious,
+    count: attempts
+  };
+}
 
-    return {
-      type: 'blacklist',
-      suspicious: !!response.Item,
-      details: response.Item
-    };
+async function checkTimePattern(
+  params: FraudDetection.VerificationParams
+): Promise<FraudDetection.Check> {
+  const hour = new Date().getHours();
+  const suspicious = hour >= THRESHOLDS.suspiciousTimeStart || 
+                    hour <= THRESHOLDS.suspiciousTimeEnd;
+  
+  if (suspicious) {
+    await MetricsService.incrementCounter('SuspiciousTimeAttempt');
   }
 
-  async handleSuspiciousActivity(params, checks) {
-    // Store suspicious activity
-    await this.storeSuspiciousActivity(params, checks);
+  return {
+    type: 'time',
+    suspicious,
+    hour
+  };
+}
 
-    // Send alert
-    await this.sendAlert(params, checks);
+async function checkBlacklist(
+  params: FraudDetection.VerificationParams
+): Promise<FraudDetection.Check> {
+  const command = new GetItemCommand({
+    TableName: process.env.BLACKLIST_TABLE,
+    Key: {
+      id: { S: params.idNumber }
+    }
+  });
 
-    // Update metrics
-    await this.metrics.incrementCounter('SuspiciousActivity');
-  }
+  const response = await dynamodb.send(command);
 
-  async storeSuspiciousActivity(params, checks) {
-    const activity = {
-      id: `${params.userId}_${Date.now()}`,
-      userId: params.userId,
-      idNumber: params.idNumber,
-      timestamp: new Date().toISOString(),
-      checks: checks.filter(check => check.suspicious),
-      deviceInfo: params.deviceInfo,
-      location: params.location,
-      ttl: Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60)
-    };
+  return {
+    type: 'blacklist',
+    suspicious: !!response.Item,
+    details: response.Item
+  };
+}
 
-    await this.dynamodb.put({
-      TableName: process.env.SUSPICIOUS_ACTIVITY_TABLE,
-      Item: activity
-    }).promise();
-  }
+async function handleSuspiciousActivity(
+  params: FraudDetection.VerificationParams,
+  checks: FraudDetection.Check[]
+): Promise<void> {
+  await Promise.all([
+    storeSuspiciousActivity(params, checks),
+    sendAlert(params, checks),
+    MetricsService.incrementCounter('SuspiciousActivity')
+  ]);
+}
 
-  async sendAlert(params, checks) {
-    const message = {
+async function storeSuspiciousActivity(
+  params: FraudDetection.VerificationParams,
+  checks: FraudDetection.Check[]
+): Promise<void> {
+  const command = new PutItemCommand({
+    TableName: process.env.SUSPICIOUS_ACTIVITY_TABLE,
+    Item: {
+      id: { S: `${params.userId}_${Date.now()}` },
+      userId: { S: params.userId },
+      idNumber: { S: params.idNumber },
+      timestamp: { S: new Date().toISOString() },
+      checks: { S: JSON.stringify(checks.filter(check => check.suspicious)) },
+      deviceInfo: { S: JSON.stringify(params.deviceInfo) },
+      location: { S: JSON.stringify(params.location) },
+      ttl: { N: (Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60)).toString() }
+    }
+  });
+
+  await dynamodb.send(command);
+}
+
+async function sendAlert(
+  params: FraudDetection.VerificationParams,
+  checks: FraudDetection.Check[]
+): Promise<void> {
+  const command = new PublishCommand({
+    TopicArn: process.env.FRAUD_ALERT_TOPIC,
+    Message: JSON.stringify({
       userId: params.userId,
       idNumber: params.idNumber,
       timestamp: new Date().toISOString(),
       suspiciousChecks: checks.filter(check => check.suspicious),
       deviceInfo: params.deviceInfo,
       location: params.location
-    };
+    }),
+    Subject: 'Suspicious Verification Activity Detected'
+  });
 
-    await this.sns.publish({
-      TopicArn: process.env.FRAUD_ALERT_TOPIC,
-      Message: JSON.stringify(message),
-      Subject: 'Suspicious Verification Activity Detected'
-    }).promise();
-  }
+  await sns.send(command);
 }
 ```
 
-### 2. Create Pattern Analysis Service
-```javascript
-// src/api/verification/services/patternAnalysisService.js
-export class PatternAnalysisService {
-  constructor(config = {}) {
-    this.timeWindowHours = config.timeWindowHours || 24;
-    this.suspiciousThresholds = {
-      attempts: 3,
-      locations: 2,
-      devices: 2
+### 2. Create Pattern Analysis Functions
+```typescript
+// src/api/verification/utils/patternAnalysis.ts
+import { FraudDetection } from '../types';
+
+const SUSPICIOUS_THRESHOLDS = {
+  attempts: 3,
+  locations: 2,
+  devices: 2
+};
+
+export async function analyzePatterns(
+  attempts: FraudDetection.Attempt[]
+): Promise<FraudDetection.PatternAnalysis> {
+  const patterns = {
+    timeDistribution: analyzeTimeDistribution(attempts),
+    locationPatterns: analyzeLocationPatterns(attempts),
+    devicePatterns: analyzeDevicePatterns(attempts)
+  };
+
+  return {
+    suspicious: evaluatePatterns(patterns),
+    patterns
+  };
+}
+
+function analyzeTimeDistribution(
+  attempts: FraudDetection.Attempt[]
+): FraudDetection.TimeDistribution {
+  const hourCounts = new Array(24).fill(0);
+  attempts.forEach(attempt => {
+    const hour = new Date(attempt.timestamp).getHours();
+    hourCounts[hour]++;
+  });
+
+  return {
+    distribution: hourCounts,
+    suspicious: detectTimeAnomalies(hourCounts)
+  };
+}
+
+function analyzeLocationPatterns(
+  attempts: FraudDetection.Attempt[]
+): FraudDetection.LocationPatterns {
+  const locations = new Set(
+    attempts.map(attempt => attempt.location.country)
+  );
+
+  return {
+    locations: Array.from(locations),
+    suspicious: locations.size >= SUSPICIOUS_THRESHOLDS.locations
+  };
+}
+
+function analyzeDevicePatterns(
+  attempts: FraudDetection.Attempt[]
+): FraudDetection.DevicePatterns {
+  const devices = new Set(
+    attempts.map(attempt => attempt.deviceInfo.deviceId)
+  );
+
+  return {
+    devices: Array.from(devices),
+    suspicious: devices.size >= SUSPICIOUS_THRESHOLDS.devices
+  };
+}
+
+function detectTimeAnomalies(hourCounts: number[]): boolean {
+  const mean = hourCounts.reduce((a, b) => a + b) / hourCounts.length;
+  const stdDev = Math.sqrt(
+    hourCounts.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / hourCounts.length
+  );
+
+  return hourCounts.some(count => Math.abs(count - mean) > 2 * stdDev);
+}
+
+function evaluatePatterns(patterns: FraudDetection.Patterns): boolean {
+  return patterns.timeDistribution.suspicious ||
+         patterns.locationPatterns.suspicious ||
+         patterns.devicePatterns.suspicious;
+}
+```
+
+### 3. Create Types
+```typescript
+// src/api/verification/types/fraudDetection.ts
+export namespace FraudDetection {
+  export interface VerificationParams {
+    userId: string;
+    idNumber: string;
+    similarity: number;
+    deviceInfo: {
+      deviceId: string;
+      [key: string]: any;
+    };
+    location: {
+      country: string;
+      [key: string]: any;
     };
   }
 
-  async analyzePatterns(attempts) {
-    const patterns = {
-      timeDistribution: this.analyzeTimeDistribution(attempts),
-      locationPatterns: this.analyzeLocationPatterns(attempts),
-      devicePatterns: this.analyzeDevicePatterns(attempts)
-    };
-
-    return {
-      suspicious: this.evaluatePatterns(patterns),
-      patterns
-    };
+  export interface Check {
+    type: string;
+    suspicious: boolean;
+    score?: number;
+    count?: number;
+    hour?: number;
+    details?: any;
   }
 
-  analyzeTimeDistribution(attempts) {
-    const hourCounts = new Array(24).fill(0);
-    attempts.forEach(attempt => {
-      const hour = new Date(attempt.timestamp).getHours();
-      hourCounts[hour]++;
-    });
-
-    return {
-      distribution: hourCounts,
-      suspicious: this.detectTimeAnomalies(hourCounts)
-    };
+  export interface Result {
+    allowed: boolean;
+    checks: Check[];
+    warnings: Check[];
   }
 
-  analyzeLocationPatterns(attempts) {
-    const locations = new Set(
-      attempts.map(attempt => attempt.location.country)
-    );
-
-    return {
-      locations: Array.from(locations),
-      suspicious: locations.size >= this.suspiciousThresholds.locations
+  export interface Attempt {
+    timestamp: string;
+    deviceInfo: {
+      deviceId: string;
+      [key: string]: any;
+    };
+    location: {
+      country: string;
+      [key: string]: any;
     };
   }
 
-  analyzeDevicePatterns(attempts) {
-    const devices = new Set(
-      attempts.map(attempt => attempt.deviceInfo.deviceId)
-    );
-
-    return {
-      devices: Array.from(devices),
-      suspicious: devices.size >= this.suspiciousThresholds.devices
-    };
+  export interface TimeDistribution {
+    distribution: number[];
+    suspicious: boolean;
   }
 
-  detectTimeAnomalies(hourCounts) {
-    const mean = hourCounts.reduce((a, b) => a + b) / hourCounts.length;
-    const stdDev = Math.sqrt(
-      hourCounts.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / hourCounts.length
-    );
-
-    return hourCounts.some(count => Math.abs(count - mean) > 2 * stdDev);
+  export interface LocationPatterns {
+    locations: string[];
+    suspicious: boolean;
   }
 
-  evaluatePatterns(patterns) {
-    return patterns.timeDistribution.suspicious ||
-           patterns.locationPatterns.suspicious ||
-           patterns.devicePatterns.suspicious;
+  export interface DevicePatterns {
+    devices: string[];
+    suspicious: boolean;
+  }
+
+  export interface Patterns {
+    timeDistribution: TimeDistribution;
+    locationPatterns: LocationPatterns;
+    devicePatterns: DevicePatterns;
+  }
+
+  export interface PatternAnalysis {
+    suspicious: boolean;
+    patterns: Patterns;
   }
 }
 ```
 
 ## Testing Requirements
 1. Unit Tests
-```javascript
+```typescript
 describe('Fraud Detection', () => {
   test('detects suspicious similarity scores', async () => {
     // Test implementation
@@ -311,7 +416,7 @@ describe('Fraud Detection', () => {
 ```
 
 2. Integration Tests
-```javascript
+```typescript
 describe('Fraud Detection Integration', () => {
   test('processes verification attempts', async () => {
     // Test implementation
@@ -351,13 +456,13 @@ describe('Fraud Detection Integration', () => {
 - [ ] Branch up to date with verify-project
 
 ## Notes
-- Monitor false positive rates
-- Tune thresholds based on data
-- Document investigation procedures
-- Consider machine learning integration
+- Uses AWS services for scalability
+- Implements comprehensive pattern analysis
+- Provides real-time alerting
+- Includes proper error handling
 
 ## Estimated Time
-6-8 hours
+5-7 hours
 
 ## Dependencies
 - Task 004 (Verification API)

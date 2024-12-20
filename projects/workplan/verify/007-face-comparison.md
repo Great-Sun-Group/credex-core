@@ -1,7 +1,7 @@
 # Task: Face Comparison Implementation
 
 ## Overview
-Implement face comparison functionality using AWS Rekognition, including collection access, similarity threshold management, face detection optimization, and result handling.
+Implement face comparison functionality using AWS Rekognition, focusing on accurate face detection, quality assessment, and similarity comparison.
 
 ## Prerequisites
 - Completed Task 004 (Verification API)
@@ -20,224 +20,212 @@ Implement face comparison functionality using AWS Rekognition, including collect
 
 ## Implementation Steps
 
-### 1. Create Face Comparison Service
-```javascript
-// src/api/verification/services/faceComparisonService.js
-import AWS from 'aws-sdk';
-import { validateFaceQuality } from '../utils/faceQuality';
-import { MetricsService } from './metricsService';
-import { CollectionService } from './collectionService';
+### 1. Create Face Comparison Functions
+```typescript
+// src/api/verification/services/faceComparison.ts
+import { 
+  RekognitionClient, 
+  CompareFacesCommand,
+  DetectFacesCommand,
+  QualityFilter,
+  Attribute
+} from "@aws-sdk/client-rekognition";
+import { MetricsService } from './metrics';
+import { FaceComparison } from '../types';
 
-const rekognition = new AWS.Rekognition();
-const metrics = new MetricsService();
-const collectionService = new CollectionService();
+const rekognition = new RekognitionClient({ region: process.env.AWS_REGION });
+const SIMILARITY_THRESHOLD = 90;
+const QUALITY_THRESHOLD = 0.85;
+const MAX_FACES = 1;
 
-export class FaceComparison {
-  constructor(config = {}) {
-    this.similarityThreshold = config.similarityThreshold || 90;
-    this.qualityThreshold = config.qualityThreshold || 0.85;
-    this.maxFaces = config.maxFaces || 1;
-  }
+export async function compareFaces(
+  sourceImage: Buffer,
+  targetImage: Buffer
+): Promise<FaceComparison.Result> {
+  try {
+    // Validate face quality
+    const [sourceQuality, targetQuality] = await Promise.all([
+      validateFaceQuality(sourceImage),
+      validateFaceQuality(targetImage)
+    ]);
 
-  async compareFaces(sourceImage, targetImage) {
-    try {
-      // Ensure collection exists
-      await collectionService.ensureCollection();
-
-      // Validate face quality
-      const sourceQuality = await this.validateFaceQuality(sourceImage);
-      const targetQuality = await this.validateFaceQuality(targetImage);
-
-      if (!sourceQuality.pass || !targetQuality.pass) {
-        return {
-          success: false,
-          error: 'Face quality requirements not met',
-          details: {
-            source: sourceQuality,
-            target: targetQuality
-          }
-        };
-      }
-
-      // Perform comparison
-      const comparisonResult = await this.performComparison(sourceImage, targetImage);
-
-      // Track metrics
-      await this.trackComparisonMetrics(comparisonResult);
-
-      return comparisonResult;
-    } catch (error) {
-      if (error.code === 'ResourceNotFoundException') {
-        // Collection doesn't exist, try to create it
-        await collectionService.initialize();
-        // Retry comparison
-        return this.compareFaces(sourceImage, targetImage);
-      }
-      console.error('Face comparison error:', error);
-      throw new Error('Failed to compare faces');
-    }
-  }
-
-  async validateFaceQuality(image) {
-    const params = {
-      Image: {
-        Bytes: image
-      },
-      Attributes: ['Quality']
-    };
-
-    const response = await rekognition.detectFaces(params).promise();
-
-    if (response.FaceDetails.length === 0) {
-      return {
-        pass: false,
-        error: 'No face detected'
-      };
-    }
-
-    if (response.FaceDetails.length > this.maxFaces) {
-      return {
-        pass: false,
-        error: 'Multiple faces detected'
-      };
-    }
-
-    const face = response.FaceDetails[0];
-    const qualityScore = this.calculateQualityScore(face.Quality);
-
-    return {
-      pass: qualityScore >= this.qualityThreshold,
-      score: qualityScore,
-      details: face.Quality
-    };
-  }
-
-  calculateQualityScore(quality) {
-    const weights = {
-      Brightness: 0.3,
-      Sharpness: 0.4,
-      Confidence: 0.3
-    };
-
-    return Object.entries(weights).reduce((score, [metric, weight]) => {
-      return score + (quality[metric] / 100 * weight);
-    }, 0);
-  }
-
-  async performComparison(sourceImage, targetImage) {
-    const params = {
-      SourceImage: {
-        Bytes: sourceImage
-      },
-      TargetImage: {
-        Bytes: targetImage
-      },
-      SimilarityThreshold: this.similarityThreshold,
-      QualityFilter: 'HIGH',
-      CollectionId: collectionService.collectionId
-    };
-
-    const response = await rekognition.compareFaces(params).promise();
-
-    if (response.FaceMatches.length === 0) {
+    if (!sourceQuality.pass || !targetQuality.pass) {
       return {
         success: false,
-        error: 'No matching faces found',
-        similarity: 0
+        error: 'Face quality requirements not met',
+        details: {
+          source: sourceQuality,
+          target: targetQuality
+        }
       };
     }
 
-    const match = response.FaceMatches[0];
-    const similarity = Math.round(match.Similarity * 100) / 100;
+    // Perform comparison
+    const comparisonResult = await performComparison(sourceImage, targetImage);
 
+    // Track metrics
+    await trackComparisonMetrics(comparisonResult);
+
+    return comparisonResult;
+  } catch (error) {
+    console.error('Face comparison error:', error);
+    throw new Error('Failed to compare faces');
+  }
+}
+
+async function validateFaceQuality(image: Buffer): Promise<FaceComparison.QualityResult> {
+  const command = new DetectFacesCommand({
+    Image: { Bytes: image },
+    Attributes: [Attribute.QUALITY, Attribute.POSE, Attribute.LANDMARKS]
+  });
+
+  const response = await rekognition.send(command);
+
+  if (response.FaceDetails.length === 0) {
     return {
-      success: true,
-      similarity,
-      verified: similarity >= this.similarityThreshold,
-      details: {
-        boundingBox: match.Face.BoundingBox,
-        confidence: match.Face.Confidence,
-        pose: match.Face.Pose
-      }
+      pass: false,
+      error: 'No face detected'
     };
   }
 
-  async trackComparisonMetrics(result) {
-    await metrics.record({
-      metricName: 'FaceComparison',
-      dimensions: {
-        Result: result.verified ? 'Verified' : 'Failed'
-      },
-      value: result.similarity
-    });
-
-    if (result.verified) {
-      await metrics.incrementCounter('SuccessfulVerifications');
-    } else {
-      await metrics.incrementCounter('FailedVerifications');
-    }
+  if (response.FaceDetails.length > MAX_FACES) {
+    return {
+      pass: false,
+      error: 'Multiple faces detected'
+    };
   }
+
+  const face = response.FaceDetails[0];
+  const qualityScore = calculateQualityScore(face.Quality);
+
+  return {
+    pass: qualityScore >= QUALITY_THRESHOLD,
+    score: qualityScore,
+    details: {
+      quality: face.Quality,
+      pose: face.Pose,
+      landmarks: face.Landmarks
+    }
+  };
+}
+
+function calculateQualityScore(quality: any): number {
+  const weights = {
+    Brightness: 0.3,
+    Sharpness: 0.4,
+    Confidence: 0.3
+  };
+
+  return Object.entries(weights).reduce((score, [metric, weight]) => {
+    return score + (quality[metric] / 100 * weight);
+  }, 0);
+}
+
+async function performComparison(
+  sourceImage: Buffer,
+  targetImage: Buffer
+): Promise<FaceComparison.ComparisonResult> {
+  const command = new CompareFacesCommand({
+    SourceImage: { Bytes: sourceImage },
+    TargetImage: { Bytes: targetImage },
+    SimilarityThreshold: SIMILARITY_THRESHOLD,
+    QualityFilter: QualityFilter.HIGH
+  });
+
+  const response = await rekognition.send(command);
+
+  if (response.FaceMatches.length === 0) {
+    return {
+      success: false,
+      error: 'No matching faces found',
+      similarity: 0
+    };
+  }
+
+  const match = response.FaceMatches[0];
+  const similarity = Math.round(match.Similarity * 100) / 100;
+
+  return {
+    success: true,
+    similarity,
+    verified: similarity >= SIMILARITY_THRESHOLD,
+    details: {
+      boundingBox: match.Face.BoundingBox,
+      confidence: match.Face.Confidence,
+      pose: match.Face.Pose
+    }
+  };
+}
+
+async function trackComparisonMetrics(result: FaceComparison.ComparisonResult): Promise<void> {
+  await MetricsService.record({
+    metricName: 'FaceComparison',
+    dimensions: {
+      Result: result.verified ? 'Verified' : 'Failed'
+    },
+    value: result.similarity
+  });
+
+  await MetricsService.incrementCounter(
+    result.verified ? 'SuccessfulVerifications' : 'FailedVerifications'
+  );
 }
 ```
 
-### 2. Create Face Quality Utility
-```javascript
-// src/api/verification/utils/faceQuality.js
-export const validateFaceQuality = async (face) => {
-  const qualityChecks = {
-    pose: validatePose(face.Pose),
-    confidence: validateConfidence(face.Confidence),
-    quality: validateQualityMetrics(face.Quality)
-  };
-
-  return {
-    pass: Object.values(qualityChecks).every(check => check.pass),
-    checks: qualityChecks
-  };
-};
-
-const validatePose = (pose) => {
-  const maxAngle = 15;
-  return {
-    pass: Math.abs(pose.Pitch) < maxAngle && 
-          Math.abs(pose.Roll) < maxAngle && 
-          Math.abs(pose.Yaw) < maxAngle,
-    angles: {
-      pitch: pose.Pitch,
-      roll: pose.Roll,
-      yaw: pose.Yaw
-    }
-  };
-};
-
-const validateConfidence = (confidence) => ({
-  pass: confidence >= 95,
-  value: confidence
-});
-
-const validateQualityMetrics = (quality) => ({
-  pass: quality.Brightness >= 80 && quality.Sharpness >= 80,
-  metrics: {
-    brightness: quality.Brightness,
-    sharpness: quality.Sharpness
+### 2. Create Types
+```typescript
+// src/api/verification/types/faceComparison.ts
+export namespace FaceComparison {
+  export interface QualityResult {
+    pass: boolean;
+    error?: string;
+    score?: number;
+    details?: {
+      quality: any;
+      pose: any;
+      landmarks: any;
+    };
   }
-});
+
+  export interface ComparisonResult {
+    success: boolean;
+    error?: string;
+    similarity: number;
+    verified?: boolean;
+    details?: {
+      boundingBox: any;
+      confidence: number;
+      pose: any;
+    };
+  }
+
+  export type Result = ComparisonResult | {
+    success: false;
+    error: string;
+    details: {
+      source: QualityResult;
+      target: QualityResult;
+    };
+  };
+}
 ```
 
 ### 3. Create Metrics Service
-```javascript
-// src/api/verification/services/metricsService.js
-import { CloudWatch } from 'aws-sdk';
+```typescript
+// src/api/verification/services/metrics.ts
+import { CloudWatchClient, PutMetricDataCommand } from "@aws-sdk/client-cloudwatch";
 
-export class MetricsService {
-  constructor() {
-    this.cloudwatch = new CloudWatch();
-    this.namespace = 'FaceVerification';
-  }
+const cloudwatch = new CloudWatchClient({ region: process.env.AWS_REGION });
+const NAMESPACE = 'FaceVerification';
 
-  async record(params) {
-    await this.cloudwatch.putMetricData({
-      Namespace: this.namespace,
+export const MetricsService = {
+  async record(params: {
+    metricName: string;
+    dimensions: Record<string, string>;
+    value: number;
+  }): Promise<void> {
+    const command = new PutMetricDataCommand({
+      Namespace: NAMESPACE,
       MetricData: [{
         MetricName: params.metricName,
         Value: params.value,
@@ -247,10 +235,12 @@ export class MetricsService {
           Value
         }))
       }]
-    }).promise();
-  }
+    });
 
-  async incrementCounter(metricName) {
+    await cloudwatch.send(command);
+  },
+
+  async incrementCounter(metricName: string): Promise<void> {
     await this.record({
       metricName,
       value: 1,
@@ -259,12 +249,12 @@ export class MetricsService {
       }
     });
   }
-}
+};
 ```
 
 ## Testing Requirements
 1. Unit Tests
-```javascript
+```typescript
 describe('Face Comparison', () => {
   test('validates face quality correctly', async () => {
     // Test implementation
@@ -278,10 +268,6 @@ describe('Face Comparison', () => {
     // Test implementation
   });
   
-  test('handles missing collection', async () => {
-    // Test implementation
-  });
-  
   test('tracks metrics properly', async () => {
     // Test implementation
   });
@@ -289,7 +275,7 @@ describe('Face Comparison', () => {
 ```
 
 2. Integration Tests
-```javascript
+```typescript
 describe('Face Comparison Integration', () => {
   test('processes matching faces successfully', async () => {
     // Test implementation
@@ -302,17 +288,12 @@ describe('Face Comparison Integration', () => {
   test('manages edge cases appropriately', async () => {
     // Test implementation
   });
-  
-  test('recovers from missing collection', async () => {
-    // Test implementation
-  });
 });
 ```
 
 ## Documentation Requirements
 1. Technical Documentation
    - Face comparison process
-   - Collection access handling
    - Quality thresholds
    - Metric tracking
    - Performance optimization
@@ -337,10 +318,10 @@ describe('Face Comparison Integration', () => {
 - Consider caching comparison results
 - Document threshold configurations
 - Monitor false positive/negative rates
-- Handle collection access errors gracefully
+- Handle edge cases gracefully
 
 ## Estimated Time
-5-7 hours
+4-6 hours
 
 ## Dependencies
 - Task 004 (Verification API)

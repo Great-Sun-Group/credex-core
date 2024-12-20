@@ -1,13 +1,13 @@
 # Task: Security Implementation
 
 ## Overview
-Implement comprehensive security measures for the ID verification system, including data encryption, access control, API security, and audit logging.
+Implement comprehensive security measures for the ID verification system, including data encryption, access control, API security, and audit logging using AWS services.
 
 ## Prerequisites
 - Completed Task 001 (AWS Base Infrastructure)
 - AWS KMS access configured
+- AWS CloudWatch configured
 - Security policies defined
-- Access to security testing tools
 
 ## Acceptance Criteria
 1. Data encryption at rest and in transit
@@ -21,14 +21,12 @@ Implement comprehensive security measures for the ID verification system, includ
 ## Implementation Steps
 
 ### 1. Create Security Configuration
-```javascript
-// src/api/verification/config/securityConfig.js
+```typescript
+// src/api/verification/config/security.ts
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { createCipheriv, randomBytes, createDecipheriv } from 'crypto';
 
 export const securityConfig = {
-  // Helmet configuration
   helmet: {
     contentSecurityPolicy: {
       directives: {
@@ -51,14 +49,11 @@ export const securityConfig = {
     xssFilter: true
   },
 
-  // Rate limiting
   rateLimit: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    message: 'Too many requests from this IP, please try again later'
+    max: 100 // limit each IP to 100 requests per windowMs
   },
 
-  // Encryption configuration
   encryption: {
     algorithm: 'aes-256-gcm',
     keySize: 32,
@@ -68,216 +63,260 @@ export const securityConfig = {
   }
 };
 
-// Rate limiter middleware
 export const apiLimiter = rateLimit(securityConfig.rateLimit);
-
-// Helmet middleware
 export const helmetMiddleware = helmet(securityConfig.helmet);
 ```
 
-### 2. Create Encryption Service
-```javascript
-// src/api/verification/services/encryptionService.js
-import { KMS } from 'aws-sdk';
-import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
-import { securityConfig } from '../config/securityConfig';
+### 2. Create Encryption Functions
+```typescript
+// src/api/verification/utils/encryption.ts
+import { 
+  KMSClient, 
+  GenerateDataKeyCommand,
+  DecryptCommand 
+} from "@aws-sdk/client-kms";
+import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
+import { securityConfig } from '../config/security';
 
-export class EncryptionService {
-  constructor() {
-    this.kms = new KMS();
-    this.config = securityConfig.encryption;
-  }
+const kms = new KMSClient({ region: process.env.AWS_REGION });
 
-  async encrypt(data) {
-    try {
-      // Get data key from KMS
-      const { Plaintext, CiphertextBlob } = await this.kms.generateDataKey({
+export async function encrypt(data: string): Promise<EncryptedData> {
+  try {
+    // Get data key from KMS
+    const { Plaintext, CiphertextBlob } = await kms.send(
+      new GenerateDataKeyCommand({
         KeyId: process.env.KMS_KEY_ID,
         KeySpec: 'AES_256'
-      }).promise();
+      })
+    );
 
-      // Generate IV
-      const iv = randomBytes(this.config.ivSize);
-      
-      // Create cipher
-      const cipher = createCipheriv(
-        this.config.algorithm,
-        Plaintext,
-        iv
-      );
+    // Generate IV
+    const iv = randomBytes(securityConfig.encryption.ivSize);
+    
+    // Create cipher
+    const cipher = createCipheriv(
+      securityConfig.encryption.algorithm,
+      Plaintext,
+      iv
+    );
 
-      // Encrypt data
-      const encrypted = Buffer.concat([
-        cipher.update(data, 'utf8'),
-        cipher.final()
-      ]);
+    // Encrypt data
+    const encrypted = Buffer.concat([
+      cipher.update(data, 'utf8'),
+      cipher.final()
+    ]);
 
-      const tag = cipher.getAuthTag();
+    const tag = cipher.getAuthTag();
 
-      // Combine elements
-      return {
-        encrypted: encrypted.toString('base64'),
-        iv: iv.toString('base64'),
-        tag: tag.toString('base64'),
-        key: CiphertextBlob.toString('base64')
-      };
-    } catch (error) {
-      console.error('Encryption error:', error);
-      throw new Error('Failed to encrypt data');
-    }
+    return {
+      encrypted: encrypted.toString('base64'),
+      iv: iv.toString('base64'),
+      tag: tag.toString('base64'),
+      key: CiphertextBlob.toString('base64')
+    };
+  } catch (error) {
+    console.error('Encryption error:', error);
+    throw new Error('Failed to encrypt data');
   }
+}
 
-  async decrypt(encryptedData) {
-    try {
-      // Decode components
-      const encrypted = Buffer.from(encryptedData.encrypted, 'base64');
-      const iv = Buffer.from(encryptedData.iv, 'base64');
-      const tag = Buffer.from(encryptedData.tag, 'base64');
-      const encryptedKey = Buffer.from(encryptedData.key, 'base64');
+export async function decrypt(encryptedData: EncryptedData): Promise<string> {
+  try {
+    const encrypted = Buffer.from(encryptedData.encrypted, 'base64');
+    const iv = Buffer.from(encryptedData.iv, 'base64');
+    const tag = Buffer.from(encryptedData.tag, 'base64');
+    const encryptedKey = Buffer.from(encryptedData.key, 'base64');
 
-      // Decrypt data key
-      const { Plaintext: decryptedKey } = await this.kms.decrypt({
+    // Decrypt data key
+    const { Plaintext: decryptedKey } = await kms.send(
+      new DecryptCommand({
         CiphertextBlob: encryptedKey
-      }).promise();
+      })
+    );
 
-      // Create decipher
-      const decipher = createDecipheriv(
-        this.config.algorithm,
-        decryptedKey,
-        iv
-      );
-      
-      decipher.setAuthTag(tag);
+    // Create decipher
+    const decipher = createDecipheriv(
+      securityConfig.encryption.algorithm,
+      decryptedKey,
+      iv
+    );
+    
+    decipher.setAuthTag(tag);
 
-      // Decrypt data
-      return Buffer.concat([
-        decipher.update(encrypted),
-        decipher.final()
-      ]).toString('utf8');
-    } catch (error) {
-      console.error('Decryption error:', error);
-      throw new Error('Failed to decrypt data');
-    }
+    return Buffer.concat([
+      decipher.update(encrypted),
+      decipher.final()
+    ]).toString('utf8');
+  } catch (error) {
+    console.error('Decryption error:', error);
+    throw new Error('Failed to decrypt data');
   }
 }
 ```
 
-### 3. Create Audit Service
-```javascript
-// src/api/verification/services/auditService.js
-import { DynamoDB, CloudWatchLogs } from 'aws-sdk';
+### 3. Create Audit Functions
+```typescript
+// src/api/verification/utils/audit.ts
+import { 
+  DynamoDBClient, 
+  PutItemCommand 
+} from "@aws-sdk/client-dynamodb";
+import { 
+  CloudWatchLogsClient, 
+  PutLogEventsCommand 
+} from "@aws-sdk/client-cloudwatch-logs";
 
-export class AuditService {
-  constructor() {
-    this.dynamodb = new DynamoDB.DocumentClient();
-    this.cloudwatch = new CloudWatchLogs();
-    this.logGroupName = process.env.AUDIT_LOG_GROUP;
-  }
+const dynamodb = new DynamoDBClient({ region: process.env.AWS_REGION });
+const cloudwatch = new CloudWatchLogsClient({ region: process.env.AWS_REGION });
 
-  async logAction(params) {
-    const timestamp = new Date().toISOString();
-    const auditEntry = {
-      timestamp,
-      ...params,
-      metadata: {
-        ...params.metadata,
-        environment: process.env.NODE_ENV,
-        version: process.env.APP_VERSION
-      }
-    };
+export async function logAction(params: AuditParams): Promise<void> {
+  const timestamp = new Date().toISOString();
+  const auditEntry = {
+    timestamp,
+    ...params,
+    metadata: {
+      ...params.metadata,
+      environment: process.env.NODE_ENV,
+      version: process.env.APP_VERSION
+    }
+  };
 
-    // Store in DynamoDB
-    await this.storeToDynamoDB(auditEntry);
+  await Promise.all([
+    storeToDynamoDB(auditEntry),
+    logToCloudWatch(auditEntry)
+  ]);
+}
 
-    // Log to CloudWatch
-    await this.logToCloudWatch(auditEntry);
-  }
+async function storeToDynamoDB(entry: AuditEntry): Promise<void> {
+  const command = new PutItemCommand({
+    TableName: process.env.AUDIT_TABLE,
+    Item: {
+      id: { S: `${entry.actionType}_${entry.timestamp}` },
+      ...marshall(entry),
+      ttl: { N: String(Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60)) }
+    }
+  });
 
-  async storeToDynamoDB(entry) {
-    const params = {
-      TableName: process.env.AUDIT_TABLE,
-      Item: {
-        id: `${entry.actionType}_${entry.timestamp}`,
-        ...entry,
-        ttl: Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60) // 90 days retention
-      }
-    };
+  await dynamodb.send(command);
+}
 
-    await this.dynamodb.put(params).promise();
-  }
+async function logToCloudWatch(entry: AuditEntry): Promise<void> {
+  const command = new PutLogEventsCommand({
+    logGroupName: process.env.AUDIT_LOG_GROUP,
+    logStreamName: new Date().toISOString().split('T')[0],
+    logEvents: [{
+      timestamp: Date.now(),
+      message: JSON.stringify(entry)
+    }]
+  });
 
-  async logToCloudWatch(entry) {
-    const params = {
-      logGroupName: this.logGroupName,
-      logStreamName: new Date().toISOString().split('T')[0],
-      logEvents: [{
-        timestamp: Date.now(),
-        message: JSON.stringify(entry)
-      }]
-    };
-
-    await this.cloudwatch.putLogEvents(params).promise();
-  }
+  await cloudwatch.send(command);
 }
 ```
 
 ### 4. Create Security Middleware
-```javascript
-// src/api/verification/middleware/securityMiddleware.js
+```typescript
+// src/api/verification/middleware/security.ts
+import { Request, Response, NextFunction } from 'express';
 import { validateToken } from '../utils/auth';
 import { sanitizeInput } from '../utils/sanitization';
-import { AuditService } from '../services/auditService';
+import { logAction } from '../utils/audit';
 
-const auditService = new AuditService();
-
-export const authenticate = async (req, res, next) => {
+export async function authenticate(
+  req: Request, 
+  res: Response, 
+  next: NextFunction
+): Promise<void> {
   try {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
+      res.status(401).json({ error: 'No token provided' });
+      return;
     }
 
     const decoded = await validateToken(token);
     req.user = decoded;
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
+    res.status(401).json({ error: 'Invalid token' });
   }
-};
+}
 
-export const sanitize = (req, res, next) => {
+export function sanitize(
+  req: Request, 
+  res: Response, 
+  next: NextFunction
+): void {
   req.body = sanitizeInput(req.body);
   next();
-};
+}
 
-export const audit = (actionType) => async (req, res, next) => {
-  const originalSend = res.send;
-  res.send = async function (data) {
-    res.send = originalSend;
-    await auditService.logAction({
-      actionType,
-      userId: req.user?.id,
-      requestData: {
-        method: req.method,
-        path: req.path,
-        query: req.query,
-        body: req.body
-      },
-      responseStatus: res.statusCode,
-      metadata: {
-        userAgent: req.headers['user-agent'],
-        ip: req.ip
-      }
-    });
-    return res.send(data);
+export function audit(actionType: string) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const originalSend = res.send;
+    res.send = async function(data) {
+      res.send = originalSend;
+      await logAction({
+        actionType,
+        userId: req.user?.id,
+        requestData: {
+          method: req.method,
+          path: req.path,
+          query: req.query,
+          body: req.body
+        },
+        responseStatus: res.statusCode,
+        metadata: {
+          userAgent: req.headers['user-agent'],
+          ip: req.ip
+        }
+      });
+      return res.send(data);
+    };
+    next();
   };
-  next();
-};
+}
+```
+
+### 5. Create Types
+```typescript
+// src/api/verification/types/security.ts
+export interface EncryptedData {
+  encrypted: string;
+  iv: string;
+  tag: string;
+  key: string;
+}
+
+export interface AuditParams {
+  actionType: string;
+  userId?: string;
+  requestData: {
+    method: string;
+    path: string;
+    query: any;
+    body: any;
+  };
+  responseStatus: number;
+  metadata: {
+    userAgent?: string;
+    ip: string;
+    [key: string]: any;
+  };
+}
+
+export interface AuditEntry extends AuditParams {
+  timestamp: string;
+  metadata: AuditParams['metadata'] & {
+    environment: string;
+    version: string;
+  };
+}
 ```
 
 ## Testing Requirements
 1. Unit Tests
-```javascript
+```typescript
 describe('Security Implementation', () => {
   test('encrypts and decrypts data correctly', async () => {
     // Test implementation
@@ -298,7 +337,7 @@ describe('Security Implementation', () => {
 ```
 
 2. Security Tests
-```javascript
+```typescript
 describe('Security Measures', () => {
   test('prevents XSS attacks', async () => {
     // Test implementation
@@ -338,13 +377,13 @@ describe('Security Measures', () => {
 - [ ] Branch up to date with verify-project
 
 ## Notes
-- Regular security audits required
-- Monitor security logs
-- Update dependencies regularly
-- Document incident response procedures
+- Uses AWS KMS for key management
+- Implements comprehensive audit logging
+- Follows security best practices
+- Includes proper error handling
 
 ## Estimated Time
-6-8 hours
+5-7 hours
 
 ## Dependencies
 - Task 001 (AWS Base Infrastructure)

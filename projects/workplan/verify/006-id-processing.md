@@ -1,272 +1,281 @@
 # Task: ID Document Processing Implementation
 
 ## Overview
-Implement ID document processing functionality including format validation, text extraction, and secure storage of ID information for Zimbabwe-based government IDs.
+Implement a client-agnostic ID document processing functionality using AWS Textract for text extraction and analysis, with support for various ID document formats.
 
 ## Prerequisites
 - Completed Task 005 (Image Quality Validation)
 - AWS Textract access configured
-- OCR capabilities set up
-- ID document templates configured
+- AWS KMS configured for data encryption
 
 ## Acceptance Criteria
-1. ID number format validation
-2. Text extraction from ID documents
-3. ID type verification
-4. Secure storage of ID information
-5. Template matching for document verification
-6. Error handling for invalid documents
-7. Performance optimization
+1. Generic ID document text extraction using Textract
+2. Flexible field mapping for different ID formats
+3. Secure storage of extracted information
+4. Document authenticity verification
+5. Error handling for invalid documents
+6. Performance optimization
+7. Comprehensive logging
 
 ## Implementation Steps
 
-### 1. Create ID Processing Service
-```javascript
-// src/api/verification/services/idProcessingService.js
-import AWS from 'aws-sdk';
-import { validateIdNumber } from '../utils/idValidation';
-import { matchTemplate } from '../utils/templateMatching';
+### 1. Create ID Processing Functions
+```typescript
+// src/api/verification/services/idProcessing.ts
+import { TextractClient, AnalyzeDocumentCommand } from "@aws-sdk/client-textract";
 import { encryptData } from '../utils/encryption';
+import { DocumentProcessor } from '../types';
 
-const textract = new AWS.Textract();
+const textract = new TextractClient({ region: process.env.AWS_REGION });
 
-export class IDProcessor {
-  constructor(config = {}) {
-    this.idTemplates = config.idTemplates || {};
-    this.requiredFields = config.requiredFields || [
-      'idNumber',
-      'firstName',
-      'lastName',
-      'dateOfBirth'
-    ];
-  }
-
-  async processDocument(buffer) {
-    try {
-      // Verify document template
-      const templateMatch = await this.verifyTemplate(buffer);
-      if (!templateMatch.verified) {
-        return {
-          success: false,
-          error: 'Invalid ID document template'
-        };
-      }
-
-      // Extract text
-      const extractedText = await this.extractText(buffer);
-      
-      // Parse and validate fields
-      const fields = this.parseFields(extractedText);
-      const validation = this.validateFields(fields);
-      
-      if (!validation.valid) {
-        return {
-          success: false,
-          error: validation.error
-        };
-      }
-
-      // Encrypt sensitive data
-      const encryptedData = await this.encryptFields(fields);
-
-      return {
-        success: true,
-        data: encryptedData,
-        metadata: {
-          documentType: templateMatch.type,
-          confidence: templateMatch.confidence
-        }
-      };
-    } catch (error) {
-      console.error('ID processing error:', error);
-      throw new Error('Failed to process ID document');
-    }
-  }
-
-  async verifyTemplate(buffer) {
-    const result = await matchTemplate(buffer, this.idTemplates);
-    return {
-      verified: result.confidence > 0.8,
-      type: result.matchedTemplate,
-      confidence: result.confidence
-    };
-  }
-
-  async extractText(buffer) {
-    const params = {
-      Document: {
-        Bytes: buffer
-      },
-      FeatureTypes: ['FORMS', 'TABLES']
-    };
-
-    const response = await textract.analyzeDocument(params).promise();
-    return this.processTextractResponse(response);
-  }
-
-  processTextractResponse(response) {
-    const fields = {};
+export async function processDocument(buffer: Buffer): Promise<DocumentProcessor.Result> {
+  try {
+    // Extract text using Textract
+    const extractedData = await extractText(buffer);
     
-    response.Blocks.forEach(block => {
-      if (block.BlockType === 'KEY_VALUE_SET') {
-        const key = this.findBlockValue(response.Blocks, block.Relationships[0].Ids);
-        const value = this.findBlockValue(response.Blocks, block.Relationships[1].Ids);
-        
-        fields[key.toLowerCase()] = value;
-      }
-    });
-
-    return fields;
-  }
-
-  findBlockValue(blocks, ids) {
-    const textBlocks = ids
-      .map(id => blocks.find(block => block.Id === id))
-      .filter(block => block.BlockType === 'WORD')
-      .map(block => block.Text);
-
-    return textBlocks.join(' ');
-  }
-
-  validateFields(fields) {
-    // Check required fields
-    for (const field of this.requiredFields) {
-      if (!fields[field]) {
-        return {
-          valid: false,
-          error: `Missing required field: ${field}`
-        };
-      }
-    }
-
-    // Validate ID number format
-    if (!validateIdNumber(fields.idNumber)) {
+    // Analyze document structure
+    const documentStructure = await analyzeStructure(extractedData);
+    
+    // Map fields based on document structure
+    const fields = mapFields(documentStructure);
+    
+    // Validate extracted data
+    const validation = validateFields(fields);
+    
+    if (!validation.valid) {
       return {
-        valid: false,
-        error: 'Invalid ID number format'
+        success: false,
+        error: validation.error
       };
     }
 
-    return { valid: true };
-  }
+    // Encrypt sensitive data
+    const encryptedData = await encryptFields(fields);
 
-  async encryptFields(fields) {
-    const sensitiveFields = ['idNumber', 'dateOfBirth'];
-    const encryptedFields = { ...fields };
-
-    for (const field of sensitiveFields) {
-      if (encryptedFields[field]) {
-        encryptedFields[field] = await encryptData(encryptedFields[field]);
+    return {
+      success: true,
+      data: encryptedData,
+      metadata: {
+        documentType: documentStructure.type,
+        confidence: documentStructure.confidence,
+        quality: documentStructure.quality
       }
-    }
-
-    return encryptedFields;
+    };
+  } catch (error) {
+    console.error('ID processing error:', error);
+    throw new Error('Failed to process ID document');
   }
+}
+
+async function extractText(buffer: Buffer) {
+  const command = new AnalyzeDocumentCommand({
+    Document: {
+      Bytes: buffer
+    },
+    FeatureTypes: [
+      'FORMS',
+      'TABLES',
+      'QUERIES'
+    ]
+  });
+
+  return await textract.send(command);
+}
+
+async function analyzeStructure(textractResponse: any) {
+  const blocks = textractResponse.Blocks;
+  const keyValuePairs = new Map<string, string>();
+  const tables = [];
+  
+  for (const block of blocks) {
+    switch (block.BlockType) {
+      case 'KEY_VALUE_SET':
+        if (block.EntityTypes?.includes('KEY')) {
+          const key = getTextFromBlock(blocks, block);
+          const valueBlock = findValueBlock(blocks, block);
+          const value = getTextFromBlock(blocks, valueBlock);
+          keyValuePairs.set(key.toLowerCase(), value);
+        }
+        break;
+        
+      case 'TABLE':
+        tables.push(processTable(blocks, block));
+        break;
+    }
+  }
+
+  return {
+    type: inferDocumentType(keyValuePairs, tables),
+    keyValuePairs,
+    tables,
+    confidence: calculateConfidence(blocks),
+    quality: assessDocumentQuality(blocks)
+  };
+}
+
+function getTextFromBlock(blocks: any[], block: any): string {
+  if (!block.Relationships) return '';
+  
+  return block.Relationships
+    .filter(rel => rel.Type === 'CHILD')
+    .flatMap(rel => rel.Ids)
+    .map(id => blocks.find(b => b.Id === id))
+    .filter(b => b?.BlockType === 'WORD')
+    .map(b => b.Text)
+    .join(' ');
+}
+
+function findValueBlock(blocks: any[], keyBlock: any): any {
+  const valueRelation = keyBlock.Relationships?.find(rel => rel.Type === 'VALUE');
+  if (!valueRelation) return null;
+  
+  return blocks.find(b => valueRelation.Ids.includes(b.Id));
+}
+
+function processTable(blocks: any[], tableBlock: any): any[] {
+  const cells = blocks
+    .filter(b => b.BlockType === 'CELL' && b.Id === tableBlock.Id)
+    .map(cell => ({
+      text: getTextFromBlock(blocks, cell),
+      rowIndex: cell.RowIndex,
+      columnIndex: cell.ColumnIndex
+    }));
+
+  const rows = [];
+  const maxRow = Math.max(...cells.map(c => c.rowIndex));
+  const maxCol = Math.max(...cells.map(c => c.columnIndex));
+
+  for (let i = 1; i <= maxRow; i++) {
+    const row = [];
+    for (let j = 1; j <= maxCol; j++) {
+      const cell = cells.find(c => c.rowIndex === i && c.columnIndex === j);
+      row.push(cell?.text || '');
+    }
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function inferDocumentType(fields: Map<string, string>, tables: any[]): string {
+  // Generic document type inference based on field patterns
+  const fieldKeys = Array.from(fields.keys()).map(k => k.toLowerCase());
+  
+  if (fieldKeys.includes('license') || fieldKeys.includes('driver')) {
+    return 'DRIVERS_LICENSE';
+  }
+  if (fieldKeys.includes('passport')) {
+    return 'PASSPORT';
+  }
+  if (fieldKeys.includes('national') && fieldKeys.includes('identity')) {
+    return 'NATIONAL_ID';
+  }
+  
+  return 'UNKNOWN';
+}
+
+function calculateConfidence(blocks: any[]): number {
+  const confidences = blocks
+    .filter(b => b.Confidence)
+    .map(b => b.Confidence);
+
+  return confidences.length > 0
+    ? confidences.reduce((a, b) => a + b) / confidences.length
+    : 0;
+}
+
+function assessDocumentQuality(blocks: any[]): DocumentQuality {
+  const wordConfidences = blocks
+    .filter(b => b.BlockType === 'WORD')
+    .map(b => b.Confidence);
+
+  const avgWordConfidence = wordConfidences.length > 0
+    ? wordConfidences.reduce((a, b) => a + b) / wordConfidences.length
+    : 0;
+
+  return {
+    textClarity: avgWordConfidence,
+    structureQuality: calculateStructureQuality(blocks),
+    overallQuality: avgWordConfidence * 0.7 + calculateStructureQuality(blocks) * 0.3
+  };
+}
+
+function calculateStructureQuality(blocks: any[]): number {
+  const expectedTypes = ['KEY_VALUE_SET', 'TABLE', 'LINE'];
+  const typePresence = expectedTypes.map(type => 
+    blocks.some(b => b.BlockType === type)
+  );
+  
+  return typePresence.filter(Boolean).length / expectedTypes.length * 100;
+}
+
+async function encryptFields(fields: Record<string, any>): Promise<Record<string, any>> {
+  const sensitiveFields = ['idNumber', 'dateOfBirth', 'address'];
+  const encryptedFields = { ...fields };
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (sensitiveFields.includes(key.toLowerCase())) {
+      encryptedFields[key] = await encryptData(value);
+    }
+  }
+
+  return encryptedFields;
+}
+
+function validateFields(fields: Record<string, any>): ValidationResult {
+  const requiredFields = ['firstName', 'lastName'];
+  const missingFields = requiredFields.filter(field => !fields[field]);
+
+  if (missingFields.length > 0) {
+    return {
+      valid: false,
+      error: `Missing required fields: ${missingFields.join(', ')}`
+    };
+  }
+
+  return { valid: true };
 }
 ```
 
-### 2. Create ID Validation Utilities
-```javascript
-// src/api/verification/utils/idValidation.js
-export const validateIdNumber = (idNumber) => {
-  // Zimbabwe ID format: 99-999999A99
-  const idRegex = /^\d{2}-\d{6}[A-Z]\d{2}$/;
-  
-  if (!idRegex.test(idNumber)) {
-    return false;
-  }
+### 2. Create Types
+```typescript
+// src/api/verification/types/documentProcessor.ts
+export interface DocumentQuality {
+  textClarity: number;
+  structureQuality: number;
+  overallQuality: number;
+}
 
-  // Additional validation logic for Zimbabwe IDs
-  const [prefix, number] = idNumber.split('-');
-  const district = parseInt(prefix, 10);
-  
-  // Validate district code (Zimbabwe has 63 districts)
-  if (district < 1 || district > 63) {
-    return false;
-  }
+export interface ValidationResult {
+  valid: boolean;
+  error?: string;
+}
 
-  return true;
-};
-```
-
-### 3. Create Template Matching Utility
-```javascript
-// src/api/verification/utils/templateMatching.js
-import cv from 'opencv4nodejs';
-
-export const matchTemplate = async (buffer, templates) => {
-  const image = await cv.imdecodeAsync(buffer);
-  let bestMatch = {
-    confidence: 0,
-    matchedTemplate: null
+export interface ProcessingResult {
+  success: boolean;
+  error?: string;
+  data?: Record<string, any>;
+  metadata?: {
+    documentType: string;
+    confidence: number;
+    quality: DocumentQuality;
   };
-
-  for (const [templateName, templateBuffer] of Object.entries(templates)) {
-    const template = await cv.imdecodeAsync(templateBuffer);
-    const result = await image.matchTemplate(template, cv.TM_CCOEFF_NORMED);
-    const { maxVal } = result.minMaxLoc();
-
-    if (maxVal > bestMatch.confidence) {
-      bestMatch = {
-        confidence: maxVal,
-        matchedTemplate: templateName
-      };
-    }
-  }
-
-  return bestMatch;
-};
-```
-
-### 4. Create Encryption Utility
-```javascript
-// src/api/verification/utils/encryption.js
-import crypto from 'crypto';
-
-const algorithm = 'aes-256-gcm';
-const keyLength = 32;
-const ivLength = 16;
-const saltLength = 64;
-
-export const encryptData = async (data) => {
-  const salt = crypto.randomBytes(saltLength);
-  const key = await crypto.scryptSync(
-    process.env.ENCRYPTION_KEY,
-    salt,
-    keyLength
-  );
-  const iv = crypto.randomBytes(ivLength);
-  const cipher = crypto.createCipheriv(algorithm, key, iv);
-  
-  const encrypted = Buffer.concat([
-    cipher.update(data, 'utf8'),
-    cipher.final()
-  ]);
-  
-  const tag = cipher.getAuthTag();
-
-  return Buffer.concat([
-    salt,
-    iv,
-    tag,
-    encrypted
-  ]).toString('base64');
-};
+}
 ```
 
 ## Testing Requirements
 1. Unit Tests
-```javascript
+```typescript
 describe('ID Processing', () => {
-  test('validates Zimbabwe ID format', async () => {
+  test('extracts text from document correctly', async () => {
     // Test implementation
   });
   
-  test('matches ID templates correctly', async () => {
+  test('infers document type accurately', async () => {
     // Test implementation
   });
   
-  test('extracts text accurately', async () => {
+  test('validates required fields', async () => {
     // Test implementation
   });
   
@@ -277,17 +286,17 @@ describe('ID Processing', () => {
 ```
 
 2. Integration Tests
-```javascript
+```typescript
 describe('ID Processing Integration', () => {
-  test('processes valid ID documents', async () => {
+  test('processes valid documents successfully', async () => {
     // Test implementation
   });
   
-  test('rejects invalid documents', async () => {
+  test('handles invalid documents appropriately', async () => {
     // Test implementation
   });
   
-  test('handles various ID formats', async () => {
+  test('works with different document types', async () => {
     // Test implementation
   });
 });
@@ -295,15 +304,15 @@ describe('ID Processing Integration', () => {
 
 ## Documentation Requirements
 1. Technical Documentation
-   - ID format specifications
-   - Template matching process
-   - Encryption methods
-   - Security considerations
+   - Textract integration details
+   - Field extraction process
+   - Document type inference
+   - Security measures
 
 2. User Documentation
-   - Supported ID types
-   - Common rejection reasons
-   - Troubleshooting guide
+   - Supported document types
+   - Document quality requirements
+   - Error handling guide
 
 ## Merge Request Checklist
 - [ ] Code follows project style guide
@@ -316,10 +325,11 @@ describe('ID Processing Integration', () => {
 - [ ] Branch up to date with verify-project
 
 ## Notes
-- Consider regional variations in ID formats
-- Monitor Textract usage and costs
-- Implement caching where appropriate
-- Document security measures
+- Uses AWS Textract for reliable text extraction
+- Implements generic document type inference
+- Handles various ID formats
+- Focuses on security and data protection
+- Provides detailed quality metrics
 
 ## Estimated Time
 5-7 hours
