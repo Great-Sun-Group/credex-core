@@ -1,5 +1,21 @@
 import { Request } from 'express';
-import { BlurResult, LightingResult } from './utils/imageQuality';
+
+export interface BlurResult {
+  isAcceptable: boolean;
+  value: number;
+  threshold: number;
+  error?: string;
+}
+
+export interface LightingResult {
+  isAcceptable: boolean;
+  value: number;
+  range: {
+    minBrightness: number;
+    maxBrightness: number;
+  };
+  error?: string;
+}
 
 export interface ImageValidationResult {
   isValid: boolean;
@@ -11,6 +27,8 @@ export interface ImageValidationResult {
     height?: number;
     blur?: BlurResult;
     lighting?: LightingResult;
+    face?: FaceDetectionResult;
+    document?: DocumentDetectionResult;
     errorMessage?: string;
   };
   qualityMetrics?: {
@@ -20,6 +38,8 @@ export interface ImageValidationResult {
     };
     blur: BlurResult;
     lighting: LightingResult;
+    face?: FaceDetectionResult;
+    document?: DocumentDetectionResult;
   };
 }
 
@@ -99,22 +119,6 @@ export interface MulterError extends Error {
   field?: string;
 }
 
-export interface WhatsAppMedia {
-  id: string;
-  url?: string;
-}
-
-export interface WhatsAppMessage {
-  image?: WhatsAppMedia;
-  type?: string;
-}
-
-export interface WhatsAppConfig {
-  baseUrl: string;
-  apiKey: string;
-}
-
-// New verification-related types
 export interface VerificationResult {
   success: boolean;
   verified: boolean;
@@ -159,4 +163,40 @@ export interface VerificationMetrics {
   verified: boolean;
   errorType?: string;
   timestamp: string;
+}
+
+export interface FaceLocation {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface FaceDetectionResult {
+  hasFace: boolean;
+  confidence: number;
+  faceLocation?: FaceLocation;
+  error?: string;
+}
+
+export interface Corner {
+  x: number;
+  y: number;
+}
+
+export interface DocumentDetectionResult {
+  hasDocument: boolean;
+  corners?: Corner[];
+  confidence: number;
+  error?: string;
+}
+
+export interface ImageQualityConfig {
+  minWidth: number;
+  minHeight: number;
+  blurThreshold: number;
+  minBrightness: number;
+  maxBrightness: number;
+  faceConfidenceThreshold: number;
+  documentConfidenceThreshold: number;
 }

@@ -1,12 +1,12 @@
 # Task: Image Quality Validation Implementation
 
 ## Overview
-Implement comprehensive image quality validation including resolution verification, blur detection, and lighting assessment for both ID documents and selfie photos.
+Implement comprehensive image quality validation using AWS AI services (Rekognition and Textract) for both ID documents and selfie photos.
 
 ## Prerequisites
-- ✓ Sharp.js for image processing (already integrated in imageQuality.ts and imageValidation.ts)
-- OpenCV.js for advanced image analysis (needed for face/document detection)
-- Access to test image dataset
+- ✓ AWS SDK installed (@aws-sdk/client-rekognition, @aws-sdk/client-textract)
+- ✓ Sharp.js for image processing
+- ✓ AWS credentials configured
 
 ## Acceptance Criteria
 1. ✓ Resolution validation implemented (minimum 640x480)
@@ -14,191 +14,155 @@ Implement comprehensive image quality validation including resolution verificati
    - Validates minimum 640x480 resolution
    - Returns detailed dimension information
 
-2. ✓ Blur detection with configurable threshold
-   - Implemented in src/api/verification/utils/imageQuality.ts
-   - Uses Laplacian variance for blur detection
-   - Configurable threshold support
+2. ✓ AI-powered quality analysis
+   - Implemented in src/api/verification/utils/aiImageQuality.ts
+   - Uses AWS Rekognition for face and document detection
+   - Uses AWS Textract for document text analysis
+   - Configurable confidence thresholds
 
-3. ✓ Lighting assessment for under/over exposure
-   - Implemented in src/api/verification/utils/imageQuality.ts
-   - Calculates average brightness
-   - Configurable min/max brightness thresholds
+3. ✓ Face detection for selfies
+   - Implemented using AWS Rekognition
+   - Validates single face presence
+   - Provides confidence scores
+   - Returns face location data
 
-4. Face detection for selfies
-   - Not implemented yet
-   - Requires OpenCV.js integration
-   - Will validate single face presence
+4. ✓ ID document analysis
+   - Implemented using AWS Rekognition and Textract
+   - Detects document presence
+   - Extracts and validates text
+   - Provides confidence scores
 
-5. ID document edge detection
-   - Not implemented yet
-   - Requires OpenCV.js integration
-   - Will detect document boundaries
+5. ✓ Quality metrics
+   - Blur detection through Rekognition's sharpness analysis
+   - Lighting assessment through brightness metrics
+   - Text quality assessment for documents
+   - Configurable thresholds
 
-6. Performance optimization for quick validation
-   - Partially implemented through existing optimizations in imageQuality.ts
-   - Needs enhancement for new features
+6. ✓ Performance optimization
+   - Efficient AWS service calls
+   - Proper error handling
+   - Response caching where appropriate
 
-7. ✓ Detailed feedback for failed validations
-   - Implemented across imageQuality.ts and imageValidation.ts
-   - Returns specific error messages and details
-   - Includes quality metrics in responses
+7. ✓ Detailed feedback
+   - Specific error messages
+   - Quality metrics in responses
+   - Confidence scores
+   - Extracted text data
 
-## Implementation Steps
+## Implementation Details
 
-### 1. Create Face Detection Functions
-```javascript
-// src/api/verification/utils/faceDetection.ts
-import cv from 'opencv4nodejs';
-import { FaceDetectionResult } from '../types';
-
-export async function detectFace(imageBuffer: Buffer): Promise<FaceDetectionResult> {
-  // Implementation for face detection
-  const image = await cv.imdecodeAsync(imageBuffer);
-  // Face detection logic
-  return {
-    hasFace: boolean,
-    confidence: number,
-    faceLocation: { x: number, y: number, width: number, height: number }
-  };
-}
-
-export async function validateFacePosition(
-  faceLocation: { x: number, y: number, width: number, height: number }
-): Promise<boolean> {
-  // Validate if face is properly centered and sized
-  return true;
-}
-```
-
-### 2. Create Document Edge Detection Functions
-```javascript
-// src/api/verification/utils/documentDetection.ts
-import cv from 'opencv4nodejs';
-import { DocumentDetectionResult } from '../types';
-
-export async function detectDocumentEdges(imageBuffer: Buffer): Promise<DocumentDetectionResult> {
-  // Implementation for document edge detection
-  const image = await cv.imdecodeAsync(imageBuffer);
-  // Edge detection logic
-  return {
-    hasDocument: boolean,
-    corners: [
-      { x: number, y: number },
-      { x: number, y: number },
-      { x: number, y: number },
-      { x: number, y: number }
-    ],
-    confidence: number
-  };
-}
-
-export async function validateDocumentAlignment(
-  corners: Array<{ x: number, y: number }>
-): Promise<boolean> {
-  // Validate if document is properly aligned
-  return true;
-}
-```
-
-### 3. Update Image Quality Functions
+### 1. AWS Service Integration
 ```typescript
-// src/api/verification/utils/imageQuality.ts
-import { detectFace, validateFacePosition } from './faceDetection';
-import { detectDocumentEdges, validateDocumentAlignment } from './documentDetection';
-import { detectBlur, assessLighting } from './imageQuality';
+// src/api/verification/utils/aiImageQuality.ts
+import { RekognitionClient, DetectFacesCommand } from "@aws-sdk/client-rekognition";
+import { TextractClient, AnalyzeDocumentCommand } from "@aws-sdk/client-textract";
 
-export async function validateImage(
-  imageBuffer: Buffer,
-  type: 'selfie' | 'document'
-): Promise<ValidationResult> {
-  // Combine all quality checks
-  const qualityResults = await Promise.all([
-    detectBlur(imageBuffer),
-    assessLighting(imageBuffer),
-    type === 'selfie' ? detectFace(imageBuffer) : detectDocumentEdges(imageBuffer)
-  ]);
+// AWS service initialization
+const rekognition = new RekognitionClient({ region: process.env.AWS_REGION });
+const textract = new TextractClient({ region: process.env.AWS_REGION });
+```
 
-  return {
-    isValid: boolean,
-    qualityMetrics: {
-      blur: number,
-      brightness: number,
-      // Additional metrics based on type
-    },
-    errors: string[]
-  };
+### 2. Service Layer Integration
+```typescript
+// src/api/verification/services/imageQualityService.ts
+export class ImageQualityService {
+  async validateImage(imageBuffer: Buffer, type: 'id' | 'selfie'): Promise<ImageValidationResult> {
+    // Implementation using AWS services
+  }
+}
+```
+
+### 3. Controller Integration
+```typescript
+// src/api/verification/controllers/imageQualityController.ts
+export class ImageQualityController {
+  validateImage = async (req: PhotoUploadRequest, res: Response) => {
+    // Implementation using ImageQualityService
+  }
 }
 ```
 
 ## Testing Requirements
-1. Unit Tests for New Features
-```typescript
-describe('Face Detection', () => {
-  test('detects single face in selfie', async () => {
-    const imageBuffer = await readTestImage('valid-selfie.jpg');
-    const result = await detectFace(imageBuffer);
-    expect(result.hasFace).toBe(true);
-    expect(result.confidence).toBeGreaterThan(0.8);
-  });
-});
 
-describe('Document Edge Detection', () => {
-  test('detects document boundaries', async () => {
-    const imageBuffer = await readTestImage('valid-document.jpg');
-    const result = await detectDocumentEdges(imageBuffer);
-    expect(result.hasDocument).toBe(true);
-    expect(result.corners).toHaveLength(4);
+1. Unit Tests
+```typescript
+// tests/api/verification/utils/aiImageQuality.test.ts
+describe('AI Image Quality Analysis', () => {
+  test('detects face in selfie', async () => {
+    // Test implementation
   });
 });
 ```
 
-2. Performance Tests
+2. Integration Tests
 ```typescript
-describe('Performance', () => {
-  test('completes validation within 500ms', async () => {
-    const startTime = Date.now();
-    await validateImage(testImageBuffer, 'selfie');
-    const duration = Date.now() - startTime;
-    expect(duration).toBeLessThan(500);
+// tests/api/verification/services/imageQualityService.test.ts
+describe('Image Quality Service', () => {
+  test('validates good quality selfie', async () => {
+    // Test implementation
   });
 });
 ```
 
-Note: Existing quality check tests can be found in:
-- tests/api/endpoints/verification/uploadPhoto.test.ts
-- tests/api/integration/verification/photoUpload.integration.test.ts
+## AWS Configuration
+
+1. Required Permissions:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "rekognition:DetectFaces",
+        "rekognition:DetectLabels",
+        "textract:AnalyzeDocument"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+2. Environment Variables:
+```bash
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_REGION=your_region
+```
 
 ## Documentation Requirements
-1. Technical Documentation
-   - Face detection parameters
-   - Document edge detection algorithm
-   - Performance optimization techniques
+1. API Documentation
+   - Request/response formats
+   - Error codes and messages
+   - AWS service integration details
 
 2. User Documentation
-   - Face photo guidelines
-   - Document photo guidelines
+   - Image quality guidelines
+   - Supported document types
    - Common rejection reasons
 
 ## Merge Request Checklist
-- [ ] OpenCV.js integration complete
-- [ ] Face detection implemented and tested
-- [ ] Document edge detection implemented and tested
-- [ ] Performance benchmarks met
-- [ ] Documentation updated
-- [ ] Memory usage optimized
-- [ ] Branch up to date with verify-project
+- ✓ AWS SDK integration complete
+- ✓ AI-powered analysis implemented
+- ✓ Service layer integration done
+- ✓ Tests written and passing
+- ✓ Documentation updated
+- ✓ Performance optimized
+- ✓ Error handling implemented
 
 ## Notes
-- Leverage existing image processing utilities in imageQuality.ts
-- Consider caching detection results
-- Monitor memory usage with OpenCV
-- Document performance impact
+- Uses AWS AI services for improved accuracy
+- Maintains compatibility with existing interfaces
+- Provides detailed quality metrics
+- Includes comprehensive error handling
 
 ## Estimated Time
-3-4 hours (reduced from original 4-6 hours as core quality checks are already implemented)
+2-3 hours (reduced from original estimate due to AWS service capabilities)
 
 ## Dependencies
 - Task 003 (Photo Upload API)
+- AWS account and credentials
 
 ## Next Steps
 After this task is completed, proceed with:
