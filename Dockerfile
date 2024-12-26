@@ -11,9 +11,7 @@ COPY . .
 # Force rebuild and show TypeScript version and compilation details
 RUN echo $(date) > buildtime && \
     npx tsc --version && \
-    echo "Starting TypeScript compilation..." && \
     npx tsc && \
-    echo "TypeScript compilation completed" && \
     echo "Build output structure:" && \
     ls -la /app/build && \
     echo "Source build:" && \
@@ -24,6 +22,7 @@ FROM node:18.17.1-alpine AS production
 WORKDIR /app
 # Copy build output and necessary files
 COPY --from=build /app/build ./build
+COPY --from=build /app/docs ./docs
 COPY --from=build /app/package*.json ./
 RUN npm ci --only=production && \
     echo "Production files:" && \

@@ -1,7 +1,6 @@
 import express from "express";
 import loginRoute from "./loginRoute";
 import getMemberByHandleRoute from "./getMemberByHandleRoute";
-import getMemberDashboardByPhoneRoute from "./getMemberDashboardByPhoneRoute";
 import onboardMemberRoute from "./onboardMemberRoute";
 import authForTierSpendLimitRoute from "./authForTierSpendLimitRoute";
 import logger from "../../../utils/logger";
@@ -20,13 +19,12 @@ export default function MemberRoutes() {
   // Mount individual routes
   router.use(loginRoute());
   router.use(getMemberByHandleRoute());
-  router.use(getMemberDashboardByPhoneRoute());
   router.use(onboardMemberRoute());
   router.use(authForTierSpendLimitRoute());
 
   logger.info("Member routes initialized successfully", {
     module: "memberRoutes",
-    routesCount: 5,
+    routesCount: 4,
   });
 
   return router;

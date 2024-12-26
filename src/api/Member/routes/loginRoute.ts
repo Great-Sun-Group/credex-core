@@ -14,7 +14,7 @@ export default function loginRoute() {
    *   post:
    *     tags: [Members]
    *     summary: Login a member
-   *     description: Authenticates a member using their phone number and generates a new token
+   *     description: Authenticates a member using their phone number and returns a token with dashboard data
    *     requestBody:
    *       required: true
    *       content:
@@ -38,7 +38,6 @@ export default function loginRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   description: Human-friendly success message
    *                   example: Successfully logged in
    *                 data:
    *                   type: object
@@ -77,7 +76,88 @@ export default function loginRoute() {
    *                               description: Authentication token
    *                     dashboard:
    *                       type: object
-   *                       description: Empty dashboard until standardization is complete
+   *                       description: Full dashboard state after login
+   *                       properties:
+   *                         memberID:
+   *                           type: string
+   *                           format: uuid
+   *                           description: ID of the authenticated member
+   *                         memberTier:
+   *                           type: integer
+   *                           description: Current membership tier level
+   *                         remainingAvailableUSD:
+   *                           type: number
+   *                           description: Available USD for transactions (optional, n/a for memberTier>=3)
+   *                         firstname:
+   *                           type: string
+   *                           description: Member's first name
+   *                         lastname:
+   *                           type: string
+   *                           description: Member's last name
+   *                         memberHandle:
+   *                           type: string
+   *                           description: Member's handle
+   *                         defaultDenom:
+   *                           type: string
+   *                           description: Member's default denomination
+   *                         accounts:
+   *                           type: array
+   *                           description: List of accounts accessible to the member
+   *                           items:
+   *                             type: object
+   *                             properties:
+   *                               accountID:
+   *                                 type: string
+   *                                 format: uuid
+   *                               accountName:
+   *                                 type: string
+   *                               accountHandle:
+   *                                 type: string
+   *                               accountType:
+   *                                 type: string
+   *                                 enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
+   *                                 description: Type of the account
+   *                               defaultDenom:
+   *                                 type: string
+   *                                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                               isOwnedAccount:
+   *                                 type: boolean
+   *                                 description: Whether the member owns this account
+   *                               sendOffersTo:
+   *                                 type: object
+   *                                 description: Member configured to receive offers for this account
+   *                                 properties:
+   *                                   memberID:
+   *                                     type: string
+   *                                     format: uuid
+   *                                   firstname:
+   *                                     type: string
+   *                                   lastname:
+   *                                     type: string
+   *                               balanceData:
+   *                                 type: object
+   *                                 description: Account balance information
+   *                                 properties:
+   *                                   securedNetBalancesByDenom:
+   *                                     type: array
+   *                                     items:
+   *                                       type: string
+   *                                       description: Formatted balance with denomination (e.g. "100.00 USD")
+   *                                   unsecuredBalancesInDefaultDenom:
+   *                                     type: object
+   *                                     properties:
+   *                                       totalPayables:
+   *                                         type: string
+   *                                         description: Total payables in account default denomination
+   *                                       totalReceivables:
+   *                                         type: string
+   *                                         description: Total receivables in account default denomination
+   *                                       netPayRec:
+   *                                         type: string
+   *                                         description: Net payables/receivables in account default denomination
+   *                                   netCredexAssetsInDefaultDenom:
+   *                                     type: string
+   *                                     description: Net credex assets in account default denomination
    *       400:
    *         description: Invalid phone number format
    *         content:
@@ -111,52 +191,13 @@ export default function loginRoute() {
    *                           properties:
    *                             code:
    *                               type: string
-   *                               example: MISSING_PHONE
+   *                               enum: [INVALID_PHONE, MISSING_PHONE]
    *                             reason:
    *                               type: string
    *                               description: Detailed error message
    *                             field:
    *                               type: string
    *                               example: phone
-   *                     dashboard:
-   *                       type: object
-   *       401:
-   *         description: Login failed
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Login failed
-   *                 data:
-   *                   type: object
-   *                   properties:
-   *                     action:
-   *                       type: object
-   *                       properties:
-   *                         id:
-   *                           type: string
-   *                           nullable: true
-   *                         type:
-   *                           type: string
-   *                           enum: [ERROR_UNAUTHORIZED]
-   *                         timestamp:
-   *                           type: string
-   *                           format: date-time
-   *                         actor:
-   *                           type: string
-   *                           example: system
-   *                         details:
-   *                           type: object
-   *                           properties:
-   *                             code:
-   *                               type: string
-   *                               example: LOGIN_FAILED
-   *                             reason:
-   *                               type: string
-   *                               description: Reason for login failure
    *                     dashboard:
    *                       type: object
    *       404:
@@ -192,7 +233,7 @@ export default function loginRoute() {
    *                           properties:
    *                             code:
    *                               type: string
-   *                               example: NOT_FOUND
+   *                               enum: [NOT_FOUND]
    *                             reason:
    *                               type: string
    *                               example: No member exists with the provided phone number
@@ -203,7 +244,43 @@ export default function loginRoute() {
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Internal server error
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_INTERNAL]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           example: system
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               enum: [INTERNAL_ERROR]
+   *                             reason:
+   *                               type: string
+   *                               description: Internal error details
+   *                             suggestion:
+   *                               type: string
+   *                               example: Please try again or contact support
+   *                     dashboard:
+   *                       type: object
    */
   router.post(
     `/login`,

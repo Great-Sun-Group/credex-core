@@ -1,12 +1,23 @@
 import express from "express";
 import { GetCredexService } from "../services/GetCredex";
 import logger from "../../../utils/logger";
+import { getDashboardData } from "../../../utils/dashboardUtils";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import { MemberRepository, IMemberRepository } from "../../Member/repositories/MemberRepository";
+import { SpendLimitService, ISpendLimitService } from "../../Member/services/SpendLimitService";
+import { UserRequest } from "../../../middleware/authMiddleware";
 import { 
   ApiActionType, 
   TypedApiResponse, 
   CredexActionDetails, 
   ErrorActionDetails 
 } from "../../../types/apiResponse";
+
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  new MemberRepository(),
+  new SpendLimitService()
+);
 
 type GetCredexResponse = TypedApiResponse<CredexActionDetails>;
 type GetCredexErrorResponse = TypedApiResponse<ErrorActionDetails>;
@@ -22,7 +33,7 @@ type GetCredexErrorResponse = TypedApiResponse<ErrorActionDetails>;
  * @param next - Express next function
  */
 export async function GetCredexController(
-  req: express.Request,
+  req: UserRequest,
   res: express.Response,
   next: express.NextFunction
 ) {
@@ -106,7 +117,7 @@ export async function GetCredexController(
             }))
           }
         },
-        dashboard: {} // No dashboard updates for get operations
+        dashboard: await getDashboardData(req.user.memberID, accountID, requestId, memberDashboardService)
       }
     };
 
@@ -216,7 +227,7 @@ export async function GetCredexController(
             suggestion: "Please try again or contact support if the issue persists"
           }
         },
-        dashboard: {}
+            dashboard: {}
       }
     };
     

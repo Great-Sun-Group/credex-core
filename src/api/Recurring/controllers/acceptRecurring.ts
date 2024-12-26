@@ -1,15 +1,34 @@
 import express from "express";
 import { AcceptRecurringService } from "../services/AcceptRecurring";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import {
+  MemberRepository,
+  IMemberRepository,
+} from "../../Member/repositories/MemberRepository";
+import {
+  SpendLimitService,
+  ISpendLimitService,
+} from "../../Member/services/SpendLimitService";
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
 import { TEMPLATE_TYPES } from "../types";
-import { ApiActionType } from "../../../types/apiResponse";
+import { UserRequest } from "../../../middleware/authMiddleware";
+import { getDashboardData } from "../../../utils/dashboardUtils";
+import {
+  ApiActionType,
+  TypedApiResponse,
+  RecurringActionDetails,
+  ErrorActionDetails,
+} from "../../../types/apiResponse";
 import logger from "../../../utils/logger";
 
-// Import the UserRequest interface
-interface UserRequest extends express.Request {
-  user: any;
-}
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  new MemberRepository(),
+  new SpendLimitService()
+);
+
+type AcceptRecurringResponse = TypedApiResponse<RecurringActionDetails>;
+type AcceptRecurringErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * AcceptRecurringController
@@ -38,31 +57,35 @@ export async function AcceptRecurringController(
     logger.info("Accepting recurring transaction", {
       recurringID,
       signerID,
-      requestId
+      requestId,
     });
 
     const result = await AcceptRecurringService({
       recurringID,
       signerID,
-      requestId
+      requestId,
     });
 
     if (!result.success) {
       logger.warn("Failed to accept recurring transaction", {
         error: result.message,
-        requestId
+        requestId,
       });
 
-      const statusCode = 
-        result.message.includes("not found") ? 404 :
-        result.message.includes("unauthorized") ? 403 :
-        result.message.includes("already accepted") ? 409 :
-        400;
+      const statusCode = result.message.includes("not found")
+        ? 404
+        : result.message.includes("unauthorized")
+          ? 403
+          : result.message.includes("already accepted")
+            ? 409
+            : 400;
 
-      const errorType = 
-        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
-        statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
-        ApiActionType.ERROR_VALIDATION;
+      const errorType =
+        statusCode === 404
+          ? ApiActionType.ERROR_NOT_FOUND
+          : statusCode === 403
+            ? ApiActionType.ERROR_UNAUTHORIZED
+            : ApiActionType.ERROR_VALIDATION;
 
       res.status(statusCode).json({
         message: result.message,
@@ -74,46 +97,49 @@ export async function AcceptRecurringController(
             actor: signerID,
             details: {
               code: statusCode.toString(),
-              reason: result.message
-            }
+              reason: result.message,
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       });
       return;
     }
 
-    // Get updated dashboard data
+    // Get updated standardized dashboard data
     logger.debug("Fetching updated dashboard data", {
       signerID,
       targetAccountID: result.data?.participants.targetAccountID,
-      requestId
+      requestId,
     });
 
-    const dashboardData = await GetAccountDashboardService(
+    const dashboard = await getDashboardData(
       signerID,
-      result.data!.participants.targetAccountID
+      result.data!.participants.targetAccountID,
+      requestId,
+      memberDashboardService
     );
 
-    if (!dashboardData) {
+    if (!dashboard.accounts?.[0]) {
       logger.warn("Failed to fetch dashboard data", {
         signerID,
         targetAccountID: result.data?.participants.targetAccountID,
-        requestId
+        requestId,
       });
 
       res.status(200).json({
-        message: "Recurring transaction accepted successfully but failed to fetch updated dashboard",
+        message:
+          "Recurring transaction accepted successfully but failed to fetch updated dashboard",
         data: {
           action: {
             id: recurringID,
             type: ApiActionType.RECURRING_ACCEPTED,
             timestamp: new Date().toISOString(),
             actor: signerID,
-            details: result.data
+            details: result.data,
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       });
       return;
     }
@@ -122,12 +148,13 @@ export async function AcceptRecurringController(
       recurringID,
       signerID,
       templateType: result.data?.scheduleInfo.templateType,
-      requestId
+      requestId,
     });
 
-    const message = result.data?.scheduleInfo.templateType === TEMPLATE_TYPES.DCO_GIVE
-      ? "DCO_GIVE template activated automatically"
-      : "Recurring transaction accepted successfully";
+    const message =
+      result.data?.scheduleInfo.templateType === TEMPLATE_TYPES.DCO_GIVE
+        ? "DCO_GIVE template activated automatically"
+        : "Recurring transaction accepted successfully";
 
     res.status(200).json({
       message,
@@ -137,33 +164,44 @@ export async function AcceptRecurringController(
           type: ApiActionType.RECURRING_ACCEPTED,
           timestamp: new Date().toISOString(),
           actor: signerID,
-          details: result.data
+          details: {
+            recurringID: result.data!.recurringID,
+            amount: result.data!.scheduleInfo.amount,
+            denomination: result.data!.scheduleInfo.denomination,
+            payFrequency: result.data!.scheduleInfo.payFrequency,
+            nextDate: result.data!.scheduleInfo.nextRunDate,
+            status: result.data!.scheduleInfo.status,
+          },
         },
-        dashboard: dashboardData
-      }
+        dashboard,
+      },
     });
-
   } catch (error) {
     const handledError = handleServiceError(error);
     logger.error("Error in AcceptRecurringController", {
       error: handledError.message,
       errorType: handledError.name,
       stack: handledError instanceof Error ? handledError.stack : undefined,
-      requestId
+      requestId,
     });
 
     if (handledError instanceof RecurringError) {
-      const statusCode = 
-        handledError.message.includes("not found") ? 404 :
-        handledError.message.includes("unauthorized") ? 403 :
-        handledError.message.includes("already accepted") ? 409 :
-        handledError.statusCode || 500;
+      const statusCode = handledError.message.includes("not found")
+        ? 404
+        : handledError.message.includes("unauthorized")
+          ? 403
+          : handledError.message.includes("already accepted")
+            ? 409
+            : handledError.statusCode || 500;
 
-      const errorType = 
-        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
-        statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
-        statusCode === 500 ? ApiActionType.ERROR_INTERNAL :
-        ApiActionType.ERROR_VALIDATION;
+      const errorType =
+        statusCode === 404
+          ? ApiActionType.ERROR_NOT_FOUND
+          : statusCode === 403
+            ? ApiActionType.ERROR_UNAUTHORIZED
+            : statusCode === 500
+              ? ApiActionType.ERROR_INTERNAL
+              : ApiActionType.ERROR_VALIDATION;
 
       res.status(statusCode).json({
         message: handledError.message,
@@ -175,17 +213,16 @@ export async function AcceptRecurringController(
             actor: req.user.memberID,
             details: {
               code: statusCode.toString(),
-              reason: handledError.message
-            }
+              reason: handledError.message,
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       });
       return;
     }
 
     next(handledError);
-
   } finally {
     logger.debug("Exiting AcceptRecurringController", { requestId });
   }

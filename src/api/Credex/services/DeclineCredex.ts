@@ -8,6 +8,7 @@ interface DeclineCredexData {
   transactionType: string;
   issuerAccountID: string;
   receiverAccountID: string;
+  denomination: string;
 }
 
 interface DeclineCredexResult {
@@ -27,6 +28,7 @@ interface DatabaseDeclineResult {
     declinedAt: string;
     issuerAccountID: string;
     receiverAccountID: string;
+    denomination: string;
   };
   error?: string;
 }
@@ -97,7 +99,8 @@ export async function DeclineCredexService(
           credex.credexID AS credexID,
           toString(credex.declinedAt) AS declinedAt,
           source.accountID AS issuerAccountID,
-          target.accountID AS receiverAccountID
+          target.accountID AS receiverAccountID,
+          credex.Denomination AS denomination
       `;
 
       const queryResult = await tx.run(query, { credexID });
@@ -116,7 +119,8 @@ export async function DeclineCredexService(
           credexID: record.get("credexID"),
           declinedAt: record.get("declinedAt"),
           issuerAccountID: record.get("issuerAccountID"),
-          receiverAccountID: record.get("receiverAccountID")
+          receiverAccountID: record.get("receiverAccountID"),
+          denomination: record.get("denomination")
         }
       };
     });
@@ -138,6 +142,7 @@ export async function DeclineCredexService(
       declinedAt: result.data.declinedAt,
       issuerAccountID: result.data.issuerAccountID,
       receiverAccountID: result.data.receiverAccountID,
+      denomination: result.data.denomination,
       signerID
     });
 
