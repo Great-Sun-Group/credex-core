@@ -2,6 +2,15 @@ import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { generateToken } from "../../../../config/authenticate";
 import { MemberError, handleServiceError, createErrorDetails } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
+import { MemberDashboardService } from "./MemberDashboardService";
+import { MemberRepository } from "../repositories/MemberRepository";
+import { SpendLimitService } from "./SpendLimitService";
+
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  new MemberRepository(),
+  new SpendLimitService()
+);
 
 interface MemberProperties {
   memberID: string;
@@ -30,17 +39,15 @@ interface LoginResult {
 
 /**
  * LoginMemberService
- * 
+ *
  * Authenticates a member using their phone number, generates a new token,
  * and returns member dashboard data.
- * 
+ *
  * @param phone - The member's phone number
  * @returns LoginResult containing token and dashboard data if successful
  * @throws MemberError for validation and business logic errors
  */
-export async function LoginMemberService(
-  phone: string
-): Promise<LoginResult> {
+export async function LoginMemberService(phone: string): Promise<LoginResult> {
   logger.debug("Entering LoginMemberService", { phone });
 
   if (!phone) {
@@ -49,126 +56,90 @@ export async function LoginMemberService(
       message: "Phone number is required",
       error: {
         code: "MISSING_PHONE",
-        details: "Phone number parameter must be provided"
-      }
+        details: "Phone number parameter must be provided",
+      },
     };
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    const result = await ledgerSpaceSession.executeWrite(async (tx) => {
-      // Find the member and get dashboard data
-      const memberResult = await tx.run(
+    // Find member by phone
+    const memberResult = await ledgerSpaceSession.executeRead(async (tx) => {
+      const result = await tx.run(
         `
         MATCH (m:Member {phone: $phone})
         OPTIONAL MATCH (m)-[:AUTHORIZED_FOR]->(a:Account)
-        WITH m, collect(a.accountID) as accountIDS
-        MATCH (daynode:Daynode { Active: true })
-        RETURN {
-          memberID: m.memberID,
-          firstname: m.firstname,
-          lastname: m.lastname,
-          phone: m.phone,
-          memberHandle: m.memberHandle,
-          memberTier: m.memberTier,
-          accountIDS: accountIDS,
-          remainingAvailableUSD: 
-            CASE
-              WHEN m.memberTier = 1 THEN 100
-              WHEN m.memberTier = 2 THEN 1000
-              WHEN m.memberTier = 3 THEN 10000
-              ELSE 0
-            END
-        } as memberData
+        RETURN m.memberID as memberID, collect(a.accountID) as accountIDS
         `,
         { phone }
       );
+      return result.records[0];
+    });
 
-      if (memberResult.records.length === 0) {
-        return {
-          success: false,
-          message: "Member not found",
-          error: {
-            code: "NOT_FOUND",
-            details: "No member exists with the provided phone number"
-          }
-        };
-      }
+    if (!memberResult) {
+      return {
+        success: false,
+        message: "Member not found",
+        error: {
+          code: "NOT_FOUND",
+          details: "No member exists with the provided phone number",
+        },
+      };
+    }
 
-      const memberData = memberResult.records[0].get("memberData");
-      
-      // Validate member data
-      if (!memberData.memberID) {
-        return {
-          success: false,
-          message: "Invalid member data - missing memberID",
-          error: {
-            code: "INVALID_DATA",
-            details: "Member data is missing required fields"
-          }
-        };
-      }
+    const memberID = memberResult.get("memberID");
+    const accountIDS = memberResult.get("accountIDS");
 
-      const token = generateToken(memberData.memberID);
+    // Get member data using dashboard service
+    const memberData = await memberDashboardService.getMemberDashboardData(memberID);
 
-      // Update the member's token
-      const updateResult = await tx.run(
+    // Generate and update token
+    const token = generateToken(memberID);
+    await ledgerSpaceSession.executeWrite(async (tx) => {
+      await tx.run(
         `
         MATCH (m:Member {memberID: $memberID})
         SET
           m.token = $token,
           m.lastLoginAt = datetime()
-        RETURN m.memberID
         `,
-        { memberID: memberData.memberID, token }
+        { memberID, token }
       );
-
-      if (updateResult.records.length === 0) {
-        return {
-          success: false,
-          message: "Failed to update member token",
-          error: {
-            code: "TOKEN_UPDATE_FAILED",
-            details: "Could not update member's authentication token"
-          }
-        };
-      }
-
-      logger.info("Member logged in successfully", {
-        memberID: memberData.memberID,
-        phone: memberData.phone,
-        accountCount: memberData.accountIDS.length
-      });
-
-      return {
-        success: true,
-        data: {
-          token,
-          memberID: memberData.memberID,
-          memberTier: memberData.memberTier,
-          remainingAvailableUSD: memberData.remainingAvailableUSD,
-          accountIDS: memberData.accountIDS
-        },
-        message: "Login successful"
-      };
     });
 
-    return result;
+    logger.info("Member logged in successfully", {
+      memberID,
+      phone,
+      accountCount: accountIDS.length,
+    });
 
+    return {
+      success: true,
+      data: {
+        token,
+        memberID,
+        memberTier: memberData.memberTier,
+        remainingAvailableUSD: memberData.remainingAvailableUSD || 0,
+        accountIDS,
+      },
+      message: "Login successful",
+    };
   } catch (error) {
     const handledError = handleServiceError(error);
-    logger.error("Error in LoginMemberService", createErrorDetails(handledError, { phone }));
-    
+    logger.error(
+      "Error in LoginMemberService",
+      createErrorDetails(handledError, { phone })
+    );
+
     return {
       success: false,
       message: handledError.message,
       error: {
         code: handledError.code || "INTERNAL_ERROR",
-        details: handledError.message
-      }
+        details: handledError.message,
+      },
     };
-
   } finally {
     await ledgerSpaceSession.close();
     logger.debug("Exiting LoginMemberService", { phone });

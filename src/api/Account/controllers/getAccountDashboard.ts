@@ -1,24 +1,36 @@
 import express from "express";
-import { GetAccountDashboardService } from "../services/GetAccountDashboard";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import { MemberRepository } from "../../Member/repositories/MemberRepository";
+import { SpendLimitService } from "../../Member/services/SpendLimitService";
 import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 import { validateUUID } from "../../../utils/validators";
+import { getDashboardData } from "../../../utils/dashboardUtils";
 import {
   TypedApiResponse,
   ApiActionType,
   AccountActionDetails,
-  ErrorActionDetails
+  ErrorActionDetails,
 } from "../../../types/apiResponse";
+
+// Initialize services
+// Initialize repositories and services
+const memberRepository = new MemberRepository();
+const spendLimitService = new SpendLimitService();
+const memberDashboardService = new MemberDashboardService(
+  memberRepository,
+  spendLimitService
+);
 
 type AccountDashboardResponse = TypedApiResponse<AccountActionDetails>;
 type AccountDashboardErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * GetAccountDashboardController
- * 
+ *
  * Handles requests for account dashboard information, including
  * balances, authorized members, and pending offers.
- * 
+ *
  * @param req - Express request object
  * @param res - Express response object
  * @param next - Express next function
@@ -55,43 +67,59 @@ export async function GetAccountDashboardController(
     logger.info("Retrieving account dashboard", {
       memberID,
       accountID,
-      requestId
+      requestId,
     });
 
-    const result = await GetAccountDashboardService(memberID, accountID);
+    const dashboard = await getDashboardData(
+      memberID,
+      accountID,
+      requestId,
+      memberDashboardService
+    );
 
-    if (!result.success) {
-      const statusCode = 
-        result.message.includes("not found") ? 404 :
-        result.message.includes("access denied") ? 403 :
-        400;
+    if (!dashboard.accounts?.[0]) {
+      const statusCode = !dashboard.member ? 404 
+        : !dashboard.accounts?.[0] ? 403 
+        : 400;
+
+      const errorMessage = !dashboard.member ? "Member not found"
+        : !dashboard.accounts?.[0] ? "Account not found or access denied"
+        : "Failed to retrieve dashboard data";
 
       logger.warn("Failed to retrieve account dashboard", {
         memberID,
         accountID,
-        message: result.message,
-        requestId
+        message: errorMessage,
+        hasMember: !!dashboard.member,
+        hasAccount: !!dashboard.accounts?.[0],
+        requestId,
       });
 
       const errorResponse: AccountDashboardErrorResponse = {
-        message: result.message,
+        message: errorMessage,
         data: {
           action: {
             id: accountID,
-            type: statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
-                  statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
-                  ApiActionType.ERROR_INTERNAL,
+            type:
+              statusCode === 404
+                ? ApiActionType.ERROR_NOT_FOUND
+                : statusCode === 403
+                  ? ApiActionType.ERROR_UNAUTHORIZED
+                  : ApiActionType.ERROR_INTERNAL,
             timestamp: new Date().toISOString(),
             actor: memberID,
             details: {
-              code: statusCode === 404 ? "ACCOUNT_NOT_FOUND" :
-                    statusCode === 403 ? "ACCESS_DENIED" :
-                    "DASHBOARD_ERROR",
-              reason: result.message
-            }
+              code:
+                statusCode === 404
+                  ? "ACCOUNT_NOT_FOUND"
+                  : statusCode === 403
+                    ? "ACCESS_DENIED"
+                    : "DASHBOARD_ERROR",
+              reason: errorMessage,
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       };
 
       res.status(statusCode).json(errorResponse);
@@ -101,8 +129,9 @@ export async function GetAccountDashboardController(
     logger.info("Account dashboard retrieved successfully", {
       memberID,
       accountID,
-      isOwned: result.data?.isOwnedAccount,
-      requestId
+      isOwned: dashboard.accounts?.[0]?.isOwnedAccount,
+      hasMember: !!dashboard.member,
+      requestId,
     });
 
     const response: AccountDashboardResponse = {
@@ -115,31 +144,17 @@ export async function GetAccountDashboardController(
           actor: memberID,
           details: {
             accountID,
-            accountName: result.data?.accountName,
-            accountHandle: result.data?.accountHandle,
-            defaultDenom: result.data?.defaultDenom,
-            sendOffersTo: result.data?.sendOffersTo,
-            authFor: result.data?.authFor
-          }
+            accountName: dashboard.accounts?.[0]?.accountName,
+            accountHandle: dashboard.accounts?.[0]?.accountHandle,
+            defaultDenom: dashboard.accounts?.[0]?.defaultDenom,
+            sendOffersTo: dashboard.accounts?.[0]?.sendOffersTo,
+          },
         },
-        // Include the full dashboard state in the response
-        dashboard: {
-          accountID: result.data?.accountID,
-          accountName: result.data?.accountName,
-          accountHandle: result.data?.accountHandle,
-          defaultDenom: result.data?.defaultDenom,
-          isOwnedAccount: result.data?.isOwnedAccount,
-          sendOffersTo: result.data?.sendOffersTo,
-          authFor: result.data?.authFor,
-          balanceData: result.data?.balanceData,
-          pendingInData: result.data?.pendingInData,
-          pendingOutData: result.data?.pendingOutData
-        }
-      }
+        dashboard,
+      },
     };
 
     res.status(200).json(response);
-
   } catch (error) {
     const handledError = handleServiceError(error);
     logger.error("Error in GetAccountDashboardController", {
@@ -148,7 +163,7 @@ export async function GetAccountDashboardController(
       stack: handledError instanceof Error ? handledError.stack : undefined,
       memberID: req.body.memberID,
       accountID: req.body.accountID,
-      requestId
+      requestId,
     });
 
     if (handledError instanceof AccountError) {
@@ -163,11 +178,11 @@ export async function GetAccountDashboardController(
             actor: req.body.memberID || "system",
             details: {
               code: String(handledError.code || "UNKNOWN_ERROR"),
-              reason: handledError.message
-            }
+              reason: handledError.message,
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       };
 
       res.status(statusCode).json(errorResponse);
@@ -175,7 +190,6 @@ export async function GetAccountDashboardController(
     }
 
     next(handledError);
-
   } finally {
     logger.debug("Exiting GetAccountDashboardController", { requestId });
   }

@@ -1,14 +1,33 @@
 import express from "express";
 import { CancelRecurringService } from "../services/CancelRecurring";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
+import {
+  MemberRepository,
+  IMemberRepository,
+} from "../../Member/repositories/MemberRepository";
+import {
+  SpendLimitService,
+  ISpendLimitService,
+} from "../../Member/services/SpendLimitService";
 import { RecurringError, handleServiceError } from "../../../utils/errorUtils";
-import { ApiActionType } from "../../../types/apiResponse";
+import { UserRequest } from "../../../middleware/authMiddleware";
+import { getDashboardData } from "../../../utils/dashboardUtils";
+import {
+  ApiActionType,
+  TypedApiResponse,
+  RecurringActionDetails,
+  ErrorActionDetails,
+} from "../../../types/apiResponse";
 import logger from "../../../utils/logger";
 
-// Import the UserRequest interface
-interface UserRequest extends express.Request {
-  user: any;
-}
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  new MemberRepository(),
+  new SpendLimitService()
+);
+
+type CancelRecurringResponse = TypedApiResponse<RecurringActionDetails>;
+type CancelRecurringErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
  * CancelRecurringController
@@ -36,31 +55,35 @@ export async function CancelRecurringController(
     logger.info("Cancelling recurring transaction", {
       recurringID,
       ownerID,
-      requestId
+      requestId,
     });
 
     const result = await CancelRecurringService({
       recurringID,
       ownerID,
-      requestId
+      requestId,
     });
 
     if (!result.success) {
       logger.warn("Failed to cancel recurring transaction", {
         error: result.message,
-        requestId
+        requestId,
       });
 
-      const statusCode = 
-        result.message.includes("not found") ? 404 :
-        result.message.includes("unauthorized") ? 403 :
-        result.message.includes("already cancelled") ? 409 :
-        400;
+      const statusCode = result.message.includes("not found")
+        ? 404
+        : result.message.includes("unauthorized")
+          ? 403
+          : result.message.includes("already cancelled")
+            ? 409
+            : 400;
 
-      const errorType = 
-        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
-        statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
-        ApiActionType.ERROR_VALIDATION;
+      const errorType =
+        statusCode === 404
+          ? ApiActionType.ERROR_NOT_FOUND
+          : statusCode === 403
+            ? ApiActionType.ERROR_UNAUTHORIZED
+            : ApiActionType.ERROR_VALIDATION;
 
       res.status(statusCode).json({
         message: result.message,
@@ -72,46 +95,56 @@ export async function CancelRecurringController(
             actor: ownerID,
             details: {
               code: statusCode.toString(),
-              reason: result.message
-            }
+              reason: result.message,
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       });
       return;
     }
 
-    // Get updated dashboard data
+    // Get updated standardized dashboard data
     logger.debug("Fetching updated dashboard data", {
       ownerID,
       sourceAccountID: result.data?.participants.sourceAccountID,
-      requestId
+      requestId,
     });
 
-    const dashboardData = await GetAccountDashboardService(
+    const dashboard = await getDashboardData(
       ownerID,
-      result.data!.participants.sourceAccountID
+      result.data!.participants.sourceAccountID,
+      requestId,
+      memberDashboardService
     );
 
-    if (!dashboardData) {
+    if (!dashboard.accounts?.[0]) {
       logger.warn("Failed to fetch dashboard data", {
         ownerID,
         sourceAccountID: result.data?.participants.sourceAccountID,
-        requestId
+        requestId,
       });
 
       res.status(200).json({
-        message: "Recurring transaction cancelled successfully but failed to fetch updated dashboard",
+        message:
+          "Recurring transaction cancelled successfully but failed to fetch updated dashboard",
         data: {
           action: {
             id: recurringID,
             type: ApiActionType.RECURRING_CANCELLED,
             timestamp: new Date().toISOString(),
             actor: ownerID,
-            details: result.data
+            details: {
+              recurringID: result.data!.recurringID,
+              amount: result.data!.scheduleInfo.amount,
+              denomination: result.data!.scheduleInfo.denomination,
+              payFrequency: result.data!.scheduleInfo.payFrequency,
+              nextDate: result.data!.scheduleInfo.nextRunDate,
+              status: result.data!.scheduleInfo.status,
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       });
       return;
     }
@@ -119,7 +152,7 @@ export async function CancelRecurringController(
     logger.info("Recurring transaction cancelled successfully", {
       recurringID,
       ownerID,
-      requestId
+      requestId,
     });
 
     res.status(200).json({
@@ -130,33 +163,44 @@ export async function CancelRecurringController(
           type: ApiActionType.RECURRING_CANCELLED,
           timestamp: new Date().toISOString(),
           actor: ownerID,
-          details: result.data
+          details: {
+            recurringID: result.data!.recurringID,
+            amount: result.data!.scheduleInfo.amount,
+            denomination: result.data!.scheduleInfo.denomination,
+            payFrequency: result.data!.scheduleInfo.payFrequency,
+            nextDate: result.data!.scheduleInfo.nextRunDate,
+            status: result.data!.scheduleInfo.status,
+          },
         },
-        dashboard: dashboardData
-      }
+        dashboard,
+      },
     });
-
   } catch (error) {
     const handledError = handleServiceError(error);
     logger.error("Error in CancelRecurringController", {
       error: handledError.message,
       errorType: handledError.name,
       stack: handledError instanceof Error ? handledError.stack : undefined,
-      requestId
+      requestId,
     });
 
     if (handledError instanceof RecurringError) {
-      const statusCode = 
-        handledError.message.includes("not found") ? 404 :
-        handledError.message.includes("unauthorized") ? 403 :
-        handledError.message.includes("already cancelled") ? 409 :
-        handledError.statusCode || 500;
+      const statusCode = handledError.message.includes("not found")
+        ? 404
+        : handledError.message.includes("unauthorized")
+          ? 403
+          : handledError.message.includes("already cancelled")
+            ? 409
+            : handledError.statusCode || 500;
 
-      const errorType = 
-        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
-        statusCode === 403 ? ApiActionType.ERROR_UNAUTHORIZED :
-        statusCode === 500 ? ApiActionType.ERROR_INTERNAL :
-        ApiActionType.ERROR_VALIDATION;
+      const errorType =
+        statusCode === 404
+          ? ApiActionType.ERROR_NOT_FOUND
+          : statusCode === 403
+            ? ApiActionType.ERROR_UNAUTHORIZED
+            : statusCode === 500
+              ? ApiActionType.ERROR_INTERNAL
+              : ApiActionType.ERROR_VALIDATION;
 
       res.status(statusCode).json({
         message: handledError.message,
@@ -168,17 +212,16 @@ export async function CancelRecurringController(
             actor: req.user.memberID,
             details: {
               code: statusCode.toString(),
-              reason: handledError.message
-            }
+              reason: handledError.message,
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       });
       return;
     }
 
     next(handledError);
-
   } finally {
     logger.debug("Exiting CancelRecurringController", { requestId });
   }

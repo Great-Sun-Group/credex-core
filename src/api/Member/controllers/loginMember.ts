@@ -1,14 +1,17 @@
 import express from "express";
 import { LoginMemberService } from "../services/LoginMember";
-import { GetAccountDashboardService } from "../../Account/services/GetAccountDashboard";
+import { MemberDashboardService } from "../services/MemberDashboardService";
+import { MemberRepository } from "../repositories/MemberRepository";
+import { SpendLimitService } from "../services/SpendLimitService";
 import { MemberError, handleServiceError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 import { validatePhone } from "../../../utils/validators";
-import { 
-  TypedApiResponse, 
-  ApiActionType, 
+import { getDashboardData } from "../../../utils/dashboardUtils";
+import {
+  TypedApiResponse,
+  ApiActionType,
   MemberActionDetails,
-  ErrorActionDetails
+  ErrorActionDetails,
 } from "../../../types/apiResponse";
 
 // Define specific response types for login
@@ -19,17 +22,19 @@ type LoginDetails = MemberActionDetails & {
 type LoginResponse = TypedApiResponse<LoginDetails>;
 type LoginErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
-interface DashboardData {
-  memberTier: number;
-  remainingAvailableUSD: number;
-  accounts: any[]; // Will be typed when dashboard is standardized
-}
+// Initialize repositories and services
+const memberRepository = new MemberRepository();
+const spendLimitService = new SpendLimitService();
+const memberDashboardService = new MemberDashboardService(
+  memberRepository,
+  spendLimitService
+);
 
 /**
  * LoginMemberController
- * 
+ *
  * Handles member authentication via phone number.
- * 
+ *
  * @param req - Express request object
  * @param res - Express response object
  * @param next - Express next function
@@ -42,7 +47,7 @@ export async function loginMemberExpressHandler(
   const requestId = req.id;
   logger.debug("Entering loginMemberExpressHandler", {
     requestId,
-    body: req.body
+    body: req.body,
   });
 
   try {
@@ -61,11 +66,11 @@ export async function loginMemberExpressHandler(
             details: {
               code: "MISSING_PHONE",
               reason: "Phone number is required",
-              field: "phone"
-            }
+              field: "phone",
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       };
       res.status(400).json(response);
       return;
@@ -85,11 +90,11 @@ export async function loginMemberExpressHandler(
             details: {
               code: "INVALID_PHONE",
               reason: phoneValidation.message || "Invalid phone number format",
-              field: "phone"
-            }
+              field: "phone",
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       };
       res.status(400).json(response);
       return;
@@ -102,18 +107,21 @@ export async function loginMemberExpressHandler(
       logger.warn("Login failed", {
         phone,
         message: result.message,
-        requestId
+        requestId,
       });
 
-      const statusCode = 
-        result.message.includes("not found") ? 404 :
-        result.message.includes("Invalid") ? 400 :
-        401;
+      const statusCode = result.message.includes("not found")
+        ? 404
+        : result.message.includes("Invalid")
+          ? 400
+          : 401;
 
-      const errorType = 
-        statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
-        statusCode === 400 ? ApiActionType.ERROR_VALIDATION :
-        ApiActionType.ERROR_UNAUTHORIZED;
+      const errorType =
+        statusCode === 404
+          ? ApiActionType.ERROR_NOT_FOUND
+          : statusCode === 400
+            ? ApiActionType.ERROR_VALIDATION
+            : ApiActionType.ERROR_UNAUTHORIZED;
 
       const response: LoginErrorResponse = {
         message: result.message,
@@ -124,100 +132,97 @@ export async function loginMemberExpressHandler(
             timestamp: new Date().toISOString(),
             actor: "system",
             details: {
-              code: statusCode === 404 ? "NOT_FOUND" :
-                    statusCode === 400 ? "INVALID_PHONE" :
-                    "LOGIN_FAILED",
-              reason: result.message
-            }
+              code:
+                statusCode === 404
+                  ? "NOT_FOUND"
+                  : statusCode === 400
+                    ? "INVALID_PHONE"
+                    : "LOGIN_FAILED",
+              reason: result.message,
+            },
           },
-          dashboard: {}
-        }
+          dashboard: {},
+        },
       };
       res.status(statusCode).json(response);
       return;
     }
 
-    // Get associated account dashboards
-    logger.debug("Retrieving account dashboards", {
-      memberID: result.data.memberID,
-      accountCount: result.data.accountIDS.length,
+    // Store the validated data
+    const loginData = result.data;
+
+    // Get standardized dashboard data for all accounts
+    logger.debug("Retrieving dashboard data", {
+      memberID: loginData.memberID,
       requestId,
     });
 
-    const accountDashboards = await Promise.all(
-      result.data.accountIDS.map(async (accountId: string) => {
-        try {
-          return await GetAccountDashboardService(
-            result.data!.memberID,
-            accountId
-          );
-        } catch (error) {
-          logger.error("Error fetching account dashboard", {
-            error: error instanceof Error ? error.message : "Unknown error",
-            accountId,
-            memberID: result.data!.memberID,
-            requestId
-          });
-          return null;
-        }
-      })
+    const dashboardPromises = loginData.accountIDS.map(accountID => 
+      getDashboardData(
+        loginData.memberID,
+        accountID,
+        requestId,
+        memberDashboardService
+      )
     );
 
-    // Filter out any failed account dashboard retrievals
-    const validAccountDashboards = accountDashboards.filter(
-      (dashboard): dashboard is NonNullable<typeof dashboard> => dashboard !== null
-    );
+    const dashboards = await Promise.all(dashboardPromises);
+
+    // Combine all account data into a single dashboard
+    const dashboard = {
+      member: dashboards[0].member, // Member data is same for all dashboards
+      accounts: dashboards.flatMap(d => d.accounts || [])
+    };
 
     const response: LoginResponse = {
       message: "Successfully logged in",
       data: {
         action: {
-          id: result.data.memberID,
+          id: loginData.memberID,
           type: ApiActionType.MEMBER_LOGIN,
           timestamp: new Date().toISOString(),
-          actor: result.data.memberID,
+          actor: loginData.memberID,
           details: {
-            memberID: result.data.memberID,
+            memberID: loginData.memberID,
             phone,
-            token: result.data.token
-          }
+            token: loginData.token,
+          },
         },
-        dashboard: {
-          memberTier: result.data.memberTier,
-          remainingAvailableUSD: result.data.remainingAvailableUSD,
-          accounts: validAccountDashboards
-        }
-      }
+        dashboard,
+      },
     };
 
     logger.info("Login successful", {
-      memberID: result.data.memberID,
+      memberID: loginData.memberID,
       phone,
-      accountCount: validAccountDashboards.length,
-      requestId
+      hasDashboard: !!dashboard.member && !!dashboard.accounts?.[0],
+      requestId,
     });
 
     res.status(200).json(response);
-
   } catch (error) {
     const handledError = handleServiceError(error);
     logger.error("Unexpected error in loginMemberExpressHandler", {
       error: handledError.message,
       code: handledError.code,
       stack: handledError instanceof Error ? handledError.stack : undefined,
-      requestId
+      requestId,
     });
-    
-    const statusCode = 
-      handledError.message.includes("not found") ? 404 :
-      handledError.message.includes("Invalid") ? 400 :
-      handledError.statusCode || 500;
 
-    const errorType = 
-      statusCode === 404 ? ApiActionType.ERROR_NOT_FOUND :
-      statusCode === 401 ? ApiActionType.ERROR_UNAUTHORIZED :
-      statusCode === 400 ? ApiActionType.ERROR_VALIDATION :
-      ApiActionType.ERROR_INTERNAL;
+    const statusCode = handledError.message.includes("not found")
+      ? 404
+      : handledError.message.includes("Invalid")
+        ? 400
+        : handledError.statusCode || 500;
+
+    const errorType =
+      statusCode === 404
+        ? ApiActionType.ERROR_NOT_FOUND
+        : statusCode === 401
+          ? ApiActionType.ERROR_UNAUTHORIZED
+          : statusCode === 400
+            ? ApiActionType.ERROR_VALIDATION
+            : ApiActionType.ERROR_INTERNAL;
 
     const response: LoginErrorResponse = {
       message: handledError.message,
@@ -229,11 +234,11 @@ export async function loginMemberExpressHandler(
           actor: "system",
           details: {
             code: handledError.code || "UNKNOWN_ERROR",
-            reason: handledError.message
-          }
+            reason: handledError.message,
+          },
         },
-        dashboard: {}
-      }
+        dashboard: {},
+      },
     };
     res.status(statusCode).json(response);
   } finally {
