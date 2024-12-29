@@ -11092,6 +11092,68 @@
                                         "description": "Net credex assets in account default denomination"
                                       }
                                     }
+                                  },
+                                  "pendingInData": {
+                                    "type": "array",
+                                    "description": "Pending incoming offers for the account",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "credexID": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "description": "Unique identifier for the Credex offer"
+                                        },
+                                        "formattedInitialAmount": {
+                                          "type": "string",
+                                          "description": "Formatted amount with denomination (e.g. \"100.00 USD\")"
+                                        },
+                                        "counterpartyAccountName": {
+                                          "type": "string",
+                                          "description": "Name of the account that sent the offer"
+                                        },
+                                        "dueDate": {
+                                          "type": "string",
+                                          "format": "date",
+                                          "description": "When the Credex is due (optional)"
+                                        },
+                                        "secured": {
+                                          "type": "boolean",
+                                          "description": "Whether the offer is secured (optional)"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "pendingOutData": {
+                                    "type": "array",
+                                    "description": "Pending outgoing offers from the account",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "credexID": {
+                                          "type": "string",
+                                          "format": "uuid",
+                                          "description": "Unique identifier for the Credex offer"
+                                        },
+                                        "formattedInitialAmount": {
+                                          "type": "string",
+                                          "description": "Formatted amount with denomination (negative for outgoing offers)"
+                                        },
+                                        "counterpartyAccountName": {
+                                          "type": "string",
+                                          "description": "Name of the account receiving the offer"
+                                        },
+                                        "dueDate": {
+                                          "type": "string",
+                                          "format": "date",
+                                          "description": "When the Credex is due (optional)"
+                                        },
+                                        "secured": {
+                                          "type": "boolean",
+                                          "description": "Whether the offer is secured (optional)"
+                                        }
+                                      }
+                                    }
                                   }
                                 }
                               }
@@ -11309,7 +11371,7 @@
           "Members"
         ],
         "summary": "Onboard a new member",
-        "description": "Creates a new member account with default tier 1 and associated personal account",
+        "description": "Creates a new member account with default tier 1 and associated personal account.\nThe process includes:\n- Creating member with initial tier 1 status\n- Creating personal account with specified denomination\n- Generating authentication token\n- Retrieving initial dashboard state\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -11337,8 +11399,8 @@
                   },
                   "phone": {
                     "type": "string",
-                    "pattern": "^\\+?[1-9]\\d{1,14}$",
-                    "description": "International phone number format"
+                    "pattern": "^[1-9]\\d{1,14}$",
+                    "description": "International phone number format (digits only, no + prefix)"
                   },
                   "defaultDenom": {
                     "type": "string",
@@ -11367,7 +11429,7 @@
                     "message": {
                       "type": "string",
                       "description": "Human-friendly success message",
-                      "example": "Personal account created with default denomination USD"
+                      "example": "John Smith: Personal account created with a default denomination of USD."
                     },
                     "data": {
                       "type": "object",
@@ -11415,7 +11477,7 @@
                                 },
                                 "memberHandle": {
                                   "type": "string",
-                                  "description": "Member's unique handle"
+                                  "description": "Member's unique handle (initially set to phone number)"
                                 },
                                 "defaultDenom": {
                                   "type": "string",
@@ -11468,7 +11530,7 @@
                             },
                             "memberHandle": {
                               "type": "string",
-                              "description": "Member's handle"
+                              "description": "Member's handle (initially set to phone number)"
                             },
                             "defaultDenom": {
                               "type": "string",
@@ -11578,7 +11640,7 @@
             }
           },
           "400": {
-            "description": "Invalid input data",
+            "description": "Invalid input data or system configuration error",
             "content": {
               "application/json": {
                 "schema": {
@@ -11586,7 +11648,7 @@
                   "properties": {
                     "message": {
                       "type": "string",
-                      "description": "Error message explaining the validation failure"
+                      "description": "Error message explaining the validation or configuration failure"
                     },
                     "data": {
                       "type": "object",
@@ -11617,11 +11679,18 @@
                               "properties": {
                                 "code": {
                                   "type": "string",
-                                  "example": "MISSING_PARAMS"
+                                  "enum": [
+                                    "MISSING_PARAMS",
+                                    "INVALID_DENOMINATION",
+                                    "NO_DAYNODE",
+                                    "INVALID_NAME_FORMAT",
+                                    "INVALID_PHONE"
+                                  ],
+                                  "description": "Specific error code indicating the type of validation failure"
                                 },
                                 "reason": {
                                   "type": "string",
-                                  "description": "Detailed error message"
+                                  "description": "Detailed explanation of what caused the validation failure"
                                 }
                               }
                             }
@@ -11638,7 +11707,7 @@
             }
           },
           "409": {
-            "description": "Phone number or member handle already in use",
+            "description": "Unique constraint violation (duplicate phone or handle)",
             "content": {
               "application/json": {
                 "schema": {
@@ -11677,11 +11746,16 @@
                               "properties": {
                                 "code": {
                                   "type": "string",
-                                  "example": "DUPLICATE_PHONE"
+                                  "enum": [
+                                    "DUPLICATE_PHONE",
+                                    "DUPLICATE_HANDLE",
+                                    "DUPLICATE_FIELD"
+                                  ],
+                                  "description": "Specific error code indicating which unique constraint was violated"
                                 },
                                 "reason": {
                                   "type": "string",
-                                  "description": "Detailed error message"
+                                  "description": "Detailed explanation of which field caused the uniqueness violation"
                                 }
                               }
                             }
@@ -11698,7 +11772,7 @@
             }
           },
           "500": {
-            "description": "Internal server error",
+            "description": "Internal server error during member creation, account creation, or dashboard retrieval",
             "content": {
               "application/json": {
                 "schema": {
@@ -11738,12 +11812,16 @@
                                 "code": {
                                   "type": "string",
                                   "enum": [
-                                    "INTERNAL_ERROR"
-                                  ]
+                                    "INTERNAL_ERROR",
+                                    "CREATE_FAILED",
+                                    "ACCOUNT_CREATE_FAILED",
+                                    "DASHBOARD_RETRIEVAL_FAILED"
+                                  ],
+                                  "description": "Specific error code indicating where the internal error occurred"
                                 },
                                 "reason": {
                                   "type": "string",
-                                  "description": "Internal error details"
+                                  "description": "Technical details about what caused the internal error"
                                 },
                                 "suggestion": {
                                   "type": "string",
