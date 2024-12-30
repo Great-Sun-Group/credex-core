@@ -12,7 +12,9 @@ variable "environment" {
 variable "docker_image" {
   description = "The full Docker image to deploy (including repository and tag)"
   type        = string
+  default     = "dummy-image:latest"  # Default value for connectors workflow
 }
+
 
 # Neo4j related variables needed by databases module
 variable "neo_4j_ledger_space_bolt_url" {
