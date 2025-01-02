@@ -13,7 +13,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "docker:prod": "docker-compose up --build",
     "docker:dev": "BUILD_TARGET=development NODE_ENV=development docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build",
-    "docker:test": "docker-compose run --rm --build --target test server npm test",
+    "docker:test": "BUILD_TARGET=test NODE_ENV=test DOCKER_ENV=true docker-compose run --rm --build server npm test",
     "generate:docs": "node build/src/utils/generateApiDocs.js"
   },
   "keywords": [
