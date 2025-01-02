@@ -56,7 +56,7 @@ export class MemberDashboardService implements IMemberDashboardService {
         remainingAvailableUSD,
         firstname: memberData.firstname,
         lastname: memberData.lastname,
-        memberHandle: memberData.handle,
+        memberHandle: memberData.memberHandle,
         defaultDenom: memberData.defaultDenom
       };
     } catch (error) {
