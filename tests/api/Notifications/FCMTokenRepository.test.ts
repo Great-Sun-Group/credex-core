@@ -1,4 +1,4 @@
-import { fcmTokenRepository } from '../../../src/api/Notifications/repositories/FCMTokenRepository';
+import { FCMTokenRepository, fcmTokenRepository } from '../../../src/api/Notifications/repositories/FCMTokenRepository';
 import { ledgerSpaceDriver } from '../../../config/neo4j';
 import { logInfo, logError, logWarning, logDebug } from '../../../src/utils/logger';
 
@@ -26,8 +26,9 @@ describe('FCMTokenRepository', () => {
   let mockTransaction: any;
 
   beforeEach(() => {
-    // Reset mocks
+    // Reset mocks and singleton
     jest.clearAllMocks();
+    (FCMTokenRepository as any).instance = undefined;
 
     // Setup mock transaction
     mockTransaction = {
@@ -45,9 +46,14 @@ describe('FCMTokenRepository', () => {
     (ledgerSpaceDriver.session as jest.Mock).mockReturnValue(mockSession);
   });
 
+  afterEach(() => {
+    // Reset singleton after each test
+    (FCMTokenRepository as any).instance = undefined;
+  });
+
   describe('initialization', () => {
     it('should log driver configuration on initialization', () => {
-      fcmTokenRepository.getInstance();
+      FCMTokenRepository.getInstance();
       expect(logDebug).toHaveBeenCalledWith('Initializing FCMTokenRepository', {
         driverConfig: {
           maxConnectionPoolSize: 100,
@@ -57,8 +63,8 @@ describe('FCMTokenRepository', () => {
     });
 
     it('should reuse existing instance', () => {
-      const instance1 = fcmTokenRepository.getInstance();
-      const instance2 = fcmTokenRepository.getInstance();
+      const instance1 = FCMTokenRepository.getInstance();
+      const instance2 = FCMTokenRepository.getInstance();
       expect(instance1).toBe(instance2);
       expect(logInfo).toHaveBeenCalledTimes(1);
     });
@@ -125,7 +131,10 @@ describe('FCMTokenRepository', () => {
       await expect(fcmTokenRepository.saveToken(token)).rejects.toThrow('Connection failed');
 
       // Verify error logging
-      expect(logError).toHaveBeenCalledWith('Error saving token', dbError);
+      expect(logError).toHaveBeenCalledWith('Error saving token', dbError, {
+        duration: expect.any(Number),
+        errorType: 'Error'
+      });
       expect(logDebug).toHaveBeenCalledWith('Save token context', {
         userId: token.userId,
         platform: token.platform
@@ -155,7 +164,10 @@ describe('FCMTokenRepository', () => {
 
       expect(result).toBeTruthy();
       expect(result?.token).toBe(mockToken.token);
-      expect(logDebug).toHaveBeenCalledWith('Token found for user', { userId: 'test-user' });
+      expect(logDebug).toHaveBeenCalledWith('Token found for user', { 
+        userId: 'test-user',
+        duration: expect.any(Number)
+      });
       expect(mockSession.close).toHaveBeenCalled();
     });
 
@@ -175,7 +187,10 @@ describe('FCMTokenRepository', () => {
 
       await expect(fcmTokenRepository.getToken('test-user')).rejects.toThrow('Query failed');
 
-      expect(logError).toHaveBeenCalledWith('Error retrieving token', dbError);
+      expect(logError).toHaveBeenCalledWith('Error retrieving token', dbError, {
+        duration: expect.any(Number),
+        errorType: 'Error'
+      });
       expect(logDebug).toHaveBeenCalledWith('Get token context', { userId: 'test-user' });
     });
   });

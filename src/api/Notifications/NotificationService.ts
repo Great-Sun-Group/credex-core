@@ -2,6 +2,7 @@ import * as admin from 'firebase-admin';
 import { NotificationData, FCMToken } from './types';
 import { logInfo, logError, logWarning, logDebug } from '../../utils/logger';
 import { fcmTokenRepository } from './repositories/FCMTokenRepository';
+import { denomFormatter } from '../../utils/denomUtils';
 
 class NotificationService {
   private static instance: NotificationService;
@@ -233,9 +234,14 @@ class NotificationService {
         1000 // base delay in ms
       );
       logInfo('Successfully sent notification', {
+        service: 'credex-core',
         type: notification.type,
         recipientID: notification.recipientID,
-        messageId: response
+        messageId: response,
+        data: {
+          ...notification.data,
+          amount: notification.data.amount ? denomFormatter(parseFloat(notification.data.amount), notification.data.denomination || '') : undefined
+        }
       });
     } catch (error) {
       logError('Error sending notification', error as Error);

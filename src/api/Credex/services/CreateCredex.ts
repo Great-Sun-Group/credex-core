@@ -199,12 +199,12 @@ export async function CreateCredexService(
           receiver.accountID AS receiverAccountID,
           daynode[$Denomination] AS cxxMultiplier,
           toString(newCredex.createdAt) AS createdAt,
-          CASE WHEN exists((receiver)-[:OWNED_BY]->(:Member)) 
-               THEN [(receiver)-[:OWNED_BY]->(m:Member) | m.memberID][0]
+          CASE WHEN exists((receiver)-[:SEND_OFFERS_TO]->(:Member)) 
+               THEN [(receiver)-[:SEND_OFFERS_TO]->(m:Member) | m.memberID][0]
                ELSE null
           END AS receiverMemberID,
-          CASE WHEN exists((issuer)-[:OWNED_BY]->(:Member))
-               THEN [(issuer)-[:OWNED_BY]->(m:Member) | m.memberID][0]
+          CASE WHEN exists((issuer)-[:SEND_OFFERS_TO]->(:Member))
+               THEN [(issuer)-[:SEND_OFFERS_TO]->(m:Member) | m.memberID][0]
                ELSE null
           END AS issuerMemberID
       `;

@@ -109,8 +109,8 @@ export async function DeclineCredexService(
           credex.Denomination AS denomination,
           source.accountName AS issuerAccountName,
           target.accountName AS receiverAccountName,
-          CASE WHEN exists((source)-[:OWNED_BY]->(:Member)) 
-               THEN [(source)-[:OWNED_BY]->(m:Member) | m.memberID][0]
+          CASE WHEN exists((source)-[:SEND_OFFERS_TO]->(:Member)) 
+               THEN [(source)-[:SEND_OFFERS_TO]->(m:Member) | m.memberID][0]
                ELSE null
           END AS issuerMemberID
       `;

@@ -194,8 +194,8 @@ export async function AcceptCredexService(
           acceptedCredex.securedCredex AS secured,
           issuer.accountID AS issuerAccountID,
           issuer.accountName AS issuerAccountName,
-          CASE WHEN exists((issuer)-[:OWNED_BY]->(:Member)) 
-               THEN [(issuer)-[:OWNED_BY]->(m:Member) | m.memberID][0]
+          CASE WHEN exists((issuer)-[:SEND_OFFERS_TO]->(:Member)) 
+               THEN [(issuer)-[:SEND_OFFERS_TO]->(m:Member) | m.memberID][0]
                ELSE null
           END AS issuerMemberID
       `;

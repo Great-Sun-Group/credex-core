@@ -12,6 +12,8 @@ interface CancelCredexData {
   receiverMemberID: string | null;
   issuerMemberID: string | null;
   denomination: string;
+  initialAmount: number;
+  cxxMultiplier: number;
 }
 
 interface CancelCredexResult {
@@ -35,6 +37,8 @@ interface DatabaseCancelResult {
     receiverMemberID: string | null;
     issuerMemberID: string | null;
     denomination: string;
+    initialAmount: number;
+    cxxMultiplier: number;
   };
   error?: string;
 }
@@ -108,12 +112,14 @@ export async function CancelCredexService(
           source.accountName AS issuerAccountName,
           target.accountID AS receiverAccountID,
           credex.Denomination AS denomination,
-          CASE WHEN exists((target)-[:OWNED_BY]->(:Member)) 
-               THEN [(target)-[:OWNED_BY]->(m:Member) | m.memberID][0]
+          credex.InitialAmount AS initialAmount,
+          credex.CXXmultiplier AS cxxMultiplier,
+          CASE WHEN exists((target)-[:SEND_OFFERS_TO]->(:Member)) 
+               THEN [(target)-[:SEND_OFFERS_TO]->(m:Member) | m.memberID][0]
                ELSE null
           END AS receiverMemberID,
-          CASE WHEN exists((source)-[:OWNED_BY]->(:Member))
-               THEN [(source)-[:OWNED_BY]->(m:Member) | m.memberID][0]
+          CASE WHEN exists((source)-[:SEND_OFFERS_TO]->(:Member))
+               THEN [(source)-[:SEND_OFFERS_TO]->(m:Member) | m.memberID][0]
                ELSE null
           END AS issuerMemberID
       `;
@@ -138,7 +144,9 @@ export async function CancelCredexService(
           receiverAccountID: record.get("receiverAccountID"),
           receiverMemberID: record.get("receiverMemberID"),
           issuerMemberID: record.get("issuerMemberID"),
-          denomination: record.get("denomination")
+          denomination: record.get("denomination"),
+          initialAmount: record.get("initialAmount"),
+          cxxMultiplier: record.get("cxxMultiplier")
         }
       };
     });

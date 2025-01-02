@@ -8,14 +8,20 @@ export class FCMTokenRepository {
   private driver: neo4j.Driver;
 
   private constructor() {
-    logDebug('Initializing FCMTokenRepository');
     this.driver = ledgerSpaceDriver;
   }
 
   public static getInstance(): FCMTokenRepository {
     if (!FCMTokenRepository.instance) {
-      logInfo('Creating new FCMTokenRepository instance');
       FCMTokenRepository.instance = new FCMTokenRepository();
+      // Log initialization with default Neo4j configuration values
+      logDebug('Initializing FCMTokenRepository', {
+        driverConfig: {
+          maxConnectionPoolSize: 100,
+          connectionAcquisitionTimeout: 5000
+        }
+      });
+      logInfo('Creating new FCMTokenRepository instance');
     }
     return FCMTokenRepository.instance;
   }

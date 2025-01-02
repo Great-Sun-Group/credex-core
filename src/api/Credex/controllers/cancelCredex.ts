@@ -7,6 +7,7 @@ import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
 import { getDashboardData } from "../../../utils/dashboardUtils";
 import { NotificationService } from "../../Notifications/NotificationService";
+import { denomFormatter } from "../../../utils/denomUtils";
 
 // Initialize notification service
 let notificationService: Awaited<ReturnType<typeof NotificationService.getInstance>>;
@@ -136,17 +137,26 @@ export async function CancelCredexController(
 
     // Send notification to receiver if they have a memberID and notification service is initialized
     if (responseData.data.receiverMemberID && notificationService) {
+      const notificationData = {
+        type: 'OFFER_CANCELLED' as const,
+        recipientID: responseData.data.receiverMemberID,
+        data: {
+          credexID: responseData.data.credexID,
+          amount: denomFormatter(responseData.data.initialAmount / responseData.data.cxxMultiplier, responseData.data.denomination),
+          denomination: responseData.data.denomination,
+          counterpartyName: responseData.data.issuerAccountName
+        }
+      };
+
+      logger.info("Sending cancel notification", {
+        service: "credex-core",
+        type: notificationData.type,
+        recipientID: notificationData.recipientID,
+        data: notificationData.data
+      });
+
       try {
-        await notificationService.sendNotification({
-          type: 'OFFER_CANCELLED',
-          recipientID: responseData.data.receiverMemberID,
-          data: {
-            credexID: responseData.data.credexID,
-            amount: successResponse.data.action.details.amount,
-            denomination: responseData.data.denomination,
-            counterpartyName: responseData.data.issuerAccountName
-          }
-        });
+        await notificationService.sendNotification(notificationData);
       } catch (notificationError) {
         // Log notification error but don't fail the request
         logger.error("Failed to send notification for cancelled Credex", {

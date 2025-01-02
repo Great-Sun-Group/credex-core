@@ -7,6 +7,7 @@ import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
 import { getDashboardData } from "../../../utils/dashboardUtils";
 import { NotificationService } from "../../Notifications/NotificationService";
+import { denomFormatter } from "../../../utils/denomUtils";
 
 // Initialize notification service
 let notificationService: Awaited<ReturnType<typeof NotificationService.getInstance>>;
@@ -139,17 +140,26 @@ export async function AcceptCredexController(
 
     // Send notification to issuer if they have a memberID and notification service is initialized
     if (acceptCredexResult.data.issuerMemberID && notificationService) {
+      const notificationData = {
+        type: 'OFFER_ACCEPTED' as const,
+        recipientID: acceptCredexResult.data.issuerMemberID,
+        data: {
+          credexID: acceptCredexResult.data.credexID,
+          amount: denomFormatter(parseFloat(acceptCredexResult.data.amount), acceptCredexResult.data.denomination),
+          denomination: acceptCredexResult.data.denomination,
+          counterpartyName: acceptCredexResult.data.acceptorAccountID // Using account ID for now since we don't have the name
+        }
+      };
+
+      logger.info("Sending accept notification", {
+        service: "credex-core",
+        type: notificationData.type,
+        recipientID: notificationData.recipientID,
+        data: notificationData.data
+      });
+
       try {
-        await notificationService.sendNotification({
-          type: 'OFFER_ACCEPTED',
-          recipientID: acceptCredexResult.data.issuerMemberID,
-          data: {
-            credexID: acceptCredexResult.data.credexID,
-            amount: acceptCredexResult.data.amount,
-            denomination: acceptCredexResult.data.denomination,
-            counterpartyName: acceptCredexResult.data.acceptorAccountID // Using account ID for now since we don't have the name
-          }
-        });
+        await notificationService.sendNotification(notificationData);
       } catch (notificationError) {
         // Log notification error but don't fail the request
         logger.error("Failed to send notification for accepted Credex", {

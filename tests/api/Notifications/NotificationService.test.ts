@@ -27,12 +27,33 @@ describe('NotificationService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    // Reset the singleton instance
+    (NotificationService as any).instance = undefined;
+    
     // Mock environment variables
     process.env.FIREBASE_PROJECT_ID = 'test-project';
     process.env.FIREBASE_CLIENT_EMAIL = 'test@test.com';
     process.env.FIREBASE_PRIVATE_KEY = 'test-key';
+
+    // Mock credential.cert to return a mock credential
+    (admin.credential.cert as jest.Mock).mockReturnValue({
+      type: 'service_account',
+      projectId: 'test-project'
+    });
+
+    // Mock initializeApp to resolve immediately
+    (admin.initializeApp as jest.Mock).mockImplementation(() => {
+      return Promise.resolve();
+    });
     
     notificationService = await NotificationService.getInstance();
+  });
+
+  afterEach(() => {
+    // Reset environment variables
+    delete process.env.FIREBASE_PROJECT_ID;
+    delete process.env.FIREBASE_CLIENT_EMAIL;
+    delete process.env.FIREBASE_PRIVATE_KEY;
   });
 
   describe('initialization', () => {
@@ -44,6 +65,9 @@ describe('NotificationService', () => {
     });
 
     it('should throw error when Firebase configuration is missing', async () => {
+      // Reset the singleton instance
+      (NotificationService as any).instance = undefined;
+      
       // Clear environment variables
       delete process.env.FIREBASE_PROJECT_ID;
       delete process.env.FIREBASE_CLIENT_EMAIL;
@@ -51,7 +75,7 @@ describe('NotificationService', () => {
 
       await expect(NotificationService.getInstance())
         .rejects
-        .toThrow('Missing required Firebase configuration');
+        .toThrow('Missing required Firebase configuration: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY');
     });
 
     it('should reuse existing instance on subsequent calls', async () => {
