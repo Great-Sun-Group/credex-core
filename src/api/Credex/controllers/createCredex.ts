@@ -20,6 +20,17 @@ import {
   ErrorActionDetails,
 } from "../../../types/apiResponse";
 import { denomFormatter } from "../../../utils/denomUtils";
+import { NotificationService } from "../../Notifications/NotificationService";
+
+// Initialize services
+let notificationService: Awaited<ReturnType<typeof NotificationService.getInstance>>;
+(async () => {
+  try {
+    notificationService = await NotificationService.getInstance();
+  } catch (error) {
+    logger.error("Failed to initialize notification service:", error);
+  }
+})();
 
 interface UserRequest extends express.Request {
   user?: any;
@@ -304,6 +315,39 @@ export async function CreateCredexController(
       receiverAccountID,
       requestId,
     });
+
+    // Send notification to receiver if they have a memberID and notification service is initialized
+    if (createCredexResult.data.receiverMemberID && notificationService) {
+      try {
+        await notificationService.sendNotification({
+          type: 'OFFER_CREATED',
+          recipientID: createCredexResult.data.receiverMemberID,
+          data: {
+            credexID: createCredexResult.data.credexID,
+            amount: formattedAmount,
+            denomination: Denomination,
+            counterpartyName: createCredexResult.data.issuerAccountName,
+          }
+        });
+      } catch (notificationError) {
+        // Log notification error but don't fail the request
+        logger.error("Failed to send notification for new Credex offer", {
+          error: notificationError instanceof Error ? notificationError.message : "Unknown error",
+          credexID: createCredexResult.data.credexID,
+          requestId,
+        });
+      }
+    } else if (!createCredexResult.data.receiverMemberID) {
+      logger.debug("No memberID found for receiver, skipping notification", {
+        receiverAccountID: createCredexResult.data.receiverAccountID,
+        requestId,
+      });
+    } else if (!notificationService) {
+      logger.warn("Notification service not initialized, skipping notification", {
+        credexID: createCredexResult.data.credexID,
+        requestId,
+      });
+    }
 
     return res.status(200).json(successResponse);
   } catch (error) {

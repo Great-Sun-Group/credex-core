@@ -6,8 +6,8 @@ import { getConfig } from "../../config/config";
 
 // Default configuration
 const defaultConfig = {
-  logLevel: 'info',
-  environment: 'development'
+  logLevel: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
+  environment: process.env.NODE_ENV || 'development'
 };
 
 // Configure the base logger with default settings
@@ -22,9 +22,13 @@ const baseLogger = winston.createLogger({
   defaultMeta: { service: "credex-core" },
   transports: [
     new winston.transports.Console({
+      level: defaultConfig.logLevel,
       format: winston.format.combine(
         winston.format.colorize(),
-        winston.format.simple()
+        winston.format.printf(({ level, message, timestamp, ...meta }) => {
+          const metaStr = Object.keys(meta).length ? `\n${JSON.stringify(meta, null, 2)}` : '';
+          return `${timestamp} ${level}: ${message}${metaStr}`;
+        })
       ),
     }),
   ],
@@ -33,7 +37,7 @@ const baseLogger = winston.createLogger({
 // Function to update logger configuration
 export async function updateLoggerConfig() {
   const config = await getConfig();
-  baseLogger.level = config.logLevel;
+  baseLogger.level = process.env.NODE_ENV === 'development' ? 'debug' : config.logLevel;
 
   // Add file transports for production environment
   if (config.environment === "production") {
@@ -57,10 +61,21 @@ export async function updateLoggerConfig() {
       })
     );
   }
+
+  // Log current configuration
+  baseLogger.debug('Logger configuration updated', {
+    level: baseLogger.level,
+    environment: config.environment,
+    transports: baseLogger.transports.map(t => ({
+      type: t instanceof winston.transports.Console ? 'console' :
+            t instanceof DailyRotateFile ? 'file' : 'unknown',
+      level: t.level
+    }))
+  });
 }
 
 function sanitizeData(data: any): any {
-  const sensitiveFields = ["password", "token", "apiKey", "creditCard"];
+  const sensitiveFields = ["password", "token", "apiKey", "creditCard", "privateKey"];
   if (typeof data === "object" && data !== null) {
     return Object.keys(data).reduce(
       (acc: { [key: string]: any }, key: string) => {
@@ -81,12 +96,15 @@ function sanitizeData(data: any): any {
 
 // Standardized logging functions
 export const logInfo = (message: string, meta?: any) => {
-  baseLogger.info(message, { ...meta, timestamp: new Date().toISOString() });
+  baseLogger.info(message, { 
+    ...sanitizeData(meta), 
+    timestamp: new Date().toISOString() 
+  });
 };
 
 export const logError = (message: string, error: Error, meta?: any) => {
   baseLogger.error(message, {
-    ...meta,
+    ...sanitizeData(meta),
     error: {
       message: error.message,
       stack: error.stack,
@@ -96,11 +114,17 @@ export const logError = (message: string, error: Error, meta?: any) => {
 };
 
 export const logWarning = (message: string, meta?: any) => {
-  baseLogger.warn(message, { ...meta, timestamp: new Date().toISOString() });
+  baseLogger.warn(message, { 
+    ...sanitizeData(meta), 
+    timestamp: new Date().toISOString() 
+  });
 };
 
 export const logDebug = (message: string, meta?: any) => {
-  baseLogger.debug(message, { ...meta, timestamp: new Date().toISOString() });
+  baseLogger.debug(message, { 
+    ...sanitizeData(meta), 
+    timestamp: new Date().toISOString() 
+  });
 };
 
 // Extend the Express Request interface
@@ -122,9 +146,19 @@ export const addRequestId = (req: Request, res: Response, next: NextFunction) =>
 // Express request logger middleware
 export const expressLogger = (req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
+  
+  // Log request
+  logDebug('Incoming request', {
+    requestId: req.id,
+    method: req.method,
+    url: req.originalUrl,
+    body: sanitizeData(req.body),
+    headers: sanitizeData(req.headers)
+  });
+
   res.on("finish", () => {
     const duration = Date.now() - start;
-    logInfo("HTTP Request", {
+    logInfo("HTTP Request completed", {
       requestId: req.id,
       method: req.method,
       url: req.originalUrl,
@@ -165,7 +199,6 @@ export const logDCORates = (
 };
 
 export default baseLogger;
-
 // TODO: Implement log aggregation and centralized logging for production environments
 // TODO: Implement log retention policies based on compliance requirements
 // TODO: Add performance monitoring for database queries and external API calls

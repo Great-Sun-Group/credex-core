@@ -6,6 +6,17 @@ import { SpendLimitService, ISpendLimitService } from "../../Member/services/Spe
 import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
 import { getDashboardData } from "../../../utils/dashboardUtils";
+import { NotificationService } from "../../Notifications/NotificationService";
+
+// Initialize notification service
+let notificationService: Awaited<ReturnType<typeof NotificationService.getInstance>>;
+(async () => {
+  try {
+    notificationService = await NotificationService.getInstance();
+  } catch (error) {
+    logger.error("Failed to initialize notification service:", error);
+  }
+})();
 
 // Initialize services
 const memberDashboardService = new MemberDashboardService(
@@ -122,6 +133,39 @@ export async function CancelCredexController(
       signerID,
       requestId,
     });
+
+    // Send notification to receiver if they have a memberID and notification service is initialized
+    if (responseData.data.receiverMemberID && notificationService) {
+      try {
+        await notificationService.sendNotification({
+          type: 'OFFER_CANCELLED',
+          recipientID: responseData.data.receiverMemberID,
+          data: {
+            credexID: responseData.data.credexID,
+            amount: successResponse.data.action.details.amount,
+            denomination: responseData.data.denomination,
+            counterpartyName: responseData.data.issuerAccountName
+          }
+        });
+      } catch (notificationError) {
+        // Log notification error but don't fail the request
+        logger.error("Failed to send notification for cancelled Credex", {
+          error: notificationError instanceof Error ? notificationError.message : "Unknown error",
+          credexID: responseData.data.credexID,
+          requestId,
+        });
+      }
+    } else if (!responseData.data.receiverMemberID) {
+      logger.debug("No memberID found for receiver, skipping notification", {
+        receiverAccountID: responseData.data.receiverAccountID,
+        requestId,
+      });
+    } else if (!notificationService) {
+      logger.warn("Notification service not initialized, skipping notification", {
+        credexID: responseData.data.credexID,
+        requestId,
+      });
+    }
 
     return res.status(200).json(successResponse);
   } catch (error) {

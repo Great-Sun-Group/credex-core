@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Get FCM Token</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
+</head>
+<body>
+    <h1>Firebase Cloud Messaging Token Generator</h1>
+    <div style="margin: 20px 0;">
+        <h3>Setup Instructions:</h3>
+        <ol>
+            <li>Start a local server in the tests/manual directory:
+                <pre style="background: #f5f5f5; padding: 10px;">
+cd tests/manual
+python3 -m http.server 8000</pre>
+            </li>
+            <li>Open <a href="http://localhost:8000/get-fcm-token.html">http://localhost:8000/get-fcm-token.html</a></li>
+            <li>If notifications were previously blocked:
+                <ul>
+                    <li>Click the lock/info icon in the address bar</li>
+                    <li>Find "Notifications" permission</li>
+                    <li>Change from "Block" to "Ask" or "Allow"</li>
+                    <li>Reload the page</li>
+                </ul>
+            </li>
+            <li>Click the "Request Permission & Get Token" button below</li>
+            <li>When prompted, click "Allow" for notifications</li>
+        </ol>
+    </div>
+    <div id="token" style="word-break: break-all; margin: 20px 0; padding: 10px; border: 1px solid #ccc;"></div>
+    <div id="error" style="color: red; margin: 10px 0;"></div>
+    <button onclick="requestPermission()">Request Permission & Get Token</button>
+
+    <script>
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD9jH_pt-1MBFOPtBH3ahAFMRUbG8UQiWY",
+            projectId: "credex-core",
+            messagingSenderId: "113652835497",
+            appId: "1:113652835497:web:86eb258d79a025b72ef5b8"
+        };
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/firebase-messaging-sw.js')
+                .then(registration => {
+                    console.log('Service Worker registered:', registration);
+                })
+                .catch(error => {
+                    console.error('Service Worker registration failed:', error);
+                    document.getElementById('error').innerHTML = `
+                        Error: Service Worker registration failed.<br>
+                        Make sure you're running this page through a local server:<br>
+                        1. Open terminal and navigate to tests/manual directory<br>
+                        2. Run: python3 -m http.server 8000<br>
+                        3. Open <a href="http://localhost:8000/get-fcm-token.html">http://localhost:8000/get-fcm-token.html</a>
+                    `;
+                });
+        }
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const messaging = firebase.messaging();
+
+        async function requestPermission() {
+            try {
+                await Notification.requestPermission();
+                getToken();
+            } catch (error) {
+                console.error('Error requesting permission:', error);
+                const errorDiv = document.getElementById('error');
+                if (error.message.includes('permission-blocked')) {
+                    errorDiv.innerHTML = `
+                        Error: Notifications are blocked. Please:<br>
+                        1. Click the lock/info icon in your browser's address bar<br>
+                        2. Find "Notifications" in the permissions<br>
+                        3. Change it from "Block" to "Ask" or "Allow"<br>
+                        4. Reload this page
+                    `;
+                } else {
+                    errorDiv.innerText = 'Error: ' + error.message;
+                }
+            }
+        }
+
+        async function getToken() {
+            try {
+                const token = await messaging.getToken();
+                document.getElementById('token').innerText = token;
+                console.log('FCM Token:', token);
+            } catch (error) {
+                console.error('Error getting token:', error);
+                const errorDiv = document.getElementById('error');
+                if (error.message.includes('permission-blocked')) {
+                    errorDiv.innerHTML = `
+                        Error: Notifications are blocked. Please:<br>
+                        1. Click the lock/info icon in your browser's address bar<br>
+                        2. Find "Notifications" in the permissions<br>
+                        3. Change it from "Block" to "Ask" or "Allow"<br>
+                        4. Reload this page
+                    `;
+                } else {
+                    errorDiv.innerText = 'Error: ' + error.message;
+                }
+            }
+        }
+    </script>
+</body>
+</html>

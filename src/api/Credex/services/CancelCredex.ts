@@ -7,7 +7,10 @@ interface CancelCredexData {
   cancelledAt: string;
   transactionType: string;
   issuerAccountID: string;
+  issuerAccountName: string;
   receiverAccountID: string;
+  receiverMemberID: string | null;
+  issuerMemberID: string | null;
   denomination: string;
 }
 
@@ -27,7 +30,10 @@ interface DatabaseCancelResult {
     credexID: string;
     cancelledAt: string;
     issuerAccountID: string;
+    issuerAccountName: string;
     receiverAccountID: string;
+    receiverMemberID: string | null;
+    issuerMemberID: string | null;
     denomination: string;
   };
   error?: string;
@@ -99,8 +105,17 @@ export async function CancelCredexService(
           credex.credexID AS credexID,
           toString(credex.cancelledAt) AS cancelledAt,
           source.accountID AS issuerAccountID,
+          source.accountName AS issuerAccountName,
           target.accountID AS receiverAccountID,
-          credex.Denomination AS denomination
+          credex.Denomination AS denomination,
+          CASE WHEN exists((target)-[:OWNED_BY]->(:Member)) 
+               THEN [(target)-[:OWNED_BY]->(m:Member) | m.memberID][0]
+               ELSE null
+          END AS receiverMemberID,
+          CASE WHEN exists((source)-[:OWNED_BY]->(:Member))
+               THEN [(source)-[:OWNED_BY]->(m:Member) | m.memberID][0]
+               ELSE null
+          END AS issuerMemberID
       `;
 
       const queryResult = await tx.run(query, { credexID });
@@ -119,7 +134,10 @@ export async function CancelCredexService(
           credexID: record.get("credexID"),
           cancelledAt: record.get("cancelledAt"),
           issuerAccountID: record.get("issuerAccountID"),
+          issuerAccountName: record.get("issuerAccountName"),
           receiverAccountID: record.get("receiverAccountID"),
+          receiverMemberID: record.get("receiverMemberID"),
+          issuerMemberID: record.get("issuerMemberID"),
           denomination: record.get("denomination")
         }
       };
