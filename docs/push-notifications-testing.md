@@ -23,14 +23,35 @@ This guide helps you test the integration between your client application and th
      - messagingSenderId
      - appId
 
-4. Open tests/manual/get-fcm-token.html in a text editor
-5. Replace the firebaseConfig values with your copied configuration
-6. Open the HTML file in a browser:
-```bash
-open tests/manual/get-fcm-token.html
-```
-7. Click "Request Permission & Get Token"
-8. Copy the generated FCM token
+4. Get your Web Push certificate:
+   - In Firebase Console, go to Project Settings
+   - Under "Cloud Messaging" tab
+   - Find "Web Push certificates"
+   - Generate a new key pair if none exists
+   - Copy the "Key pair" value (this is your VAPID key)
+
+5. Set up the test files:
+   ```bash
+   cd tests/manual
+   cp get-fcm-token.example.html get-fcm-token.html
+   cp firebase-messaging-sw.example.js firebase-messaging-sw.js
+   ```
+
+6. Update both files with your Firebase configuration:
+   - In both files, replace the firebaseConfig values with your copied configuration
+   - In get-fcm-token.html, also update the vapidKey with your Web Push certificate
+
+7. Start a local server:
+   ```bash
+   cd tests/manual
+   python3 -m http.server 8000
+   ```
+
+8. Open http://localhost:8000/get-fcm-token.html in your browser
+
+9. Click "Request Permission & Get Token"
+
+10. Copy the generated FCM token
 
 Note: You'll need to enable notifications in your browser and accept the permission request to receive the token.
 
