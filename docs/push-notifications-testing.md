@@ -65,15 +65,32 @@ cd tests/manual
 npm install axios
 ```
 
-2. Update test configuration in test-push-notifications.js:
-```javascript
-const testFcmToken = 'YOUR_FCM_TOKEN'; // Replace with token from get-fcm-token.html
+2. Get required tokens:
+   - FCM Token: Get this from get-fcm-token.html after setting up Firebase configuration
+   - Auth Token: Get this by logging into the application (you need a valid application token with proper embedded information)
+
+3. Run the test script with both tokens:
+```bash
+FCM_TOKEN="your-fcm-token" AUTH_TOKEN="your-auth-token" node test-push-notifications.js
 ```
 
-3. Run the test script:
-```bash
-node test-push-notifications.js
+Example output of successful tests:
 ```
+Starting Push Notification Integration Tests
+
+1. Testing FCM Token Registration
+✓ Token registration successful: { success: true, message: 'Token registered successfully' }
+
+2. Testing FCM Token Validation
+✓ Token validation successful: { success: true, isValid: true, message: 'Token is valid' }
+
+3. Testing Send Notification
+✓ Test notification sent: { success: true, message: 'Test notification sent successfully' }
+
+Tests completed
+```
+
+Note: The auth token must be obtained from the actual application login process. Manually generated tokens will not work as the server expects specific embedded information in the token.
 
 The script will test:
 - Token registration

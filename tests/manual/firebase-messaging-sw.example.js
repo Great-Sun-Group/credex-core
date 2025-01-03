@@ -4,9 +4,9 @@ importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-comp
 // Firebase configuration
 const firebaseConfig = {
     apiKey: "YOUR_API_KEY",
-    authDomain: "your-project-id.firebaseapp.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project-id.appspot.com",
+    authDomain: "credex-core.firebaseapp.com",
+    projectId: "credex-core",
+    storageBucket: "credex-core.appspot.com",
     messagingSenderId: "YOUR_SENDER_ID",
     appId: "YOUR_APP_ID"
 };
