@@ -1,37 +1,33 @@
-import axios from "../../setup";
-import type { AxiosRequestConfig, RawAxiosRequestHeaders } from "axios";
+import axios, { AxiosRequestConfig } from 'axios';
+
+const API_BASE_URL = process.env.API_ENV === 'dev' 
+  ? 'https://dev.mycredex.dev'
+  : process.env.API_ENV === 'stage'
+    ? 'https://stage.mycredex.dev'
+    : 'http://localhost:3000';
 
 /**
- * Helper function for authenticated requests
- * @param endpoint API endpoint path
- * @param data Request body data
- * @param token Optional JWT token
- * @param config Optional axios config overrides
+ * Make an authenticated request to the API
  */
-export const authRequest = async (
+export async function authRequest(
   endpoint: string,
-  data: any,
-  token?: string,
+  data: any = {},
+  jwt?: string,
   config: AxiosRequestConfig = {}
-) => {
-  // Merge headers
-  const headers: RawAxiosRequestHeaders = {
-    ...(token && { Authorization: `Bearer ${token}` }),
+) {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(jwt && { Authorization: `Bearer ${jwt}` }),
     ...(process.env.SKIP_RATE_LIMITER_KEY && {
-      "x-skip-rate-limit": process.env.SKIP_RATE_LIMITER_KEY,
-    }),
-    ...(config.headers || {})
+      'x-skip-rate-limit': process.env.SKIP_RATE_LIMITER_KEY
+    })
   };
 
-  // Merge config
-  const finalConfig: AxiosRequestConfig = {
-    ...config,
-    headers
-  };
-
-  console.log("Making request to:", endpoint);
-  console.log("With data:", data);
-  console.log("And config:", finalConfig);
-
-  return axios.post(endpoint, data, finalConfig);
-};
+  return axios({
+    method: 'POST',
+    url: `${API_BASE_URL}${endpoint}`,
+    data,
+    headers,
+    ...config
+  });
+}

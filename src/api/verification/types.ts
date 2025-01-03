@@ -191,6 +191,16 @@ export interface DocumentDetectionResult {
   error?: string;
 }
 
+export const QUALITY_CHECK_TYPES = {
+  RESOLUTION: "RESOLUTION",
+  FACE: "FACE",
+  DOCUMENT: "DOCUMENT",
+  BLUR: "BLUR",
+  LIGHTING: "LIGHTING"
+} as const;
+
+export type QualityCheckType = keyof typeof QUALITY_CHECK_TYPES;
+
 export interface ImageQualityConfig {
   minWidth: number;
   minHeight: number;

@@ -20,7 +20,9 @@ import {
   DocumentType,
   FaceDetectionResult,
   DocumentDetectionResult,
-  ExtractedDocumentData
+  ExtractedDocumentData,
+  QUALITY_CHECK_TYPES,
+  QualityCheckType
 } from '../types';
 import sharp from 'sharp';
 
