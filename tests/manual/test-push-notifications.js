@@ -3,9 +3,28 @@
 const axios = require('axios');
 const baseUrl = 'http://localhost:3000'; // Adjust to your server URL
 
-// Test data
-const testFcmToken = 'c5bzITelLECeTVbQk-ra2u:APA91bEgzgEa5MMH4nH_h7evR2r_G7mHt9p5EFKPlhkdTIKacn3V9c2-uCdTkNZJLLYUZs-TGfDxZPO7T9qnXFGdEZCY1fav9OIdP23uVjfUieFCQn12uos'; // Replace with actual FCM token from client
-const authToken = process.env.AUTH_TOKEN; // Add your auth token here
+/**
+ * Test script for push notification client integration
+ * 
+ * Required environment variables:
+ * - FCM_TOKEN: Firebase Cloud Messaging token (get this from get-fcm-token.html)
+ * - AUTH_TOKEN: Authentication token (get this from generate-token.js)
+ * 
+ * Usage:
+ * FCM_TOKEN=your-fcm-token AUTH_TOKEN=your-auth-token node test-push-notifications.js
+ */
+
+// Test configuration
+const testFcmToken = process.env.FCM_TOKEN;
+const authToken = process.env.AUTH_TOKEN;
+
+// Validate required environment variables
+if (!testFcmToken) {
+  throw new Error('FCM_TOKEN environment variable is required');
+}
+if (!authToken) {
+  throw new Error('AUTH_TOKEN environment variable is required');
+}
 
 // Add auth header to all requests
 const axiosInstance = axios.create({

@@ -152,3 +152,6 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+
+# Firebase config with sensitive info
+tests/manual/firebase-config.js

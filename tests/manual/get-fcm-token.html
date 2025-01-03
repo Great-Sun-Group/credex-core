@@ -32,15 +32,8 @@ python3 -m http.server 8000</pre>
     <div id="error" style="color: red; margin: 10px 0;"></div>
     <button onclick="requestPermission()">Request Permission & Get Token</button>
 
+    <script src="firebase-config.js"></script>
     <script>
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyD9jH_pt-1MBFOPtBH3ahAFMRUbG8UQiWY",
-            projectId: "credex-core",
-            messagingSenderId: "113652835497",
-            appId: "1:113652835497:web:86eb258d79a025b72ef5b8"
-        };
-
         // Register service worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/firebase-messaging-sw.js')
