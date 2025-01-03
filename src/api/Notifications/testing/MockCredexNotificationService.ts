@@ -1,7 +1,7 @@
 import { ICredexNotificationService } from '../services/CredexNotificationService';
 import logger from '../../../utils/logger';
 
-type NotificationType = 'OFFER_CREATED' | 'OFFER_ACCEPTED' | 'OFFER_DECLINED';
+type NotificationType = 'OFFER_CREATED' | 'OFFER_ACCEPTED' | 'OFFER_DECLINED' | 'OFFER_CANCELLED';
 
 type NotificationParams = {
   credexID: string;
@@ -10,7 +10,7 @@ type NotificationParams = {
   counterpartyName: string;
   requestId: string;
 } & ({
-  type: 'OFFER_CREATED';
+  type: 'OFFER_CREATED' | 'OFFER_CANCELLED';
   receiverMemberID: string | null;
 } | {
   type: 'OFFER_ACCEPTED' | 'OFFER_DECLINED';
@@ -27,7 +27,7 @@ export class MockCredexNotificationService implements ICredexNotificationService
     }
 
     // Skip notifications if member ID is null
-    if ((type === 'OFFER_CREATED' && !params.receiverMemberID) ||
+    if (((type === 'OFFER_CREATED' || type === 'OFFER_CANCELLED') && !params.receiverMemberID) ||
         ((type === 'OFFER_ACCEPTED' || type === 'OFFER_DECLINED') && !params.issuerMemberID)) {
       logger.debug(`Mock notification service: ${type} skipped - no member ID`, params);
       return;
@@ -98,5 +98,20 @@ export class MockCredexNotificationService implements ICredexNotificationService
 
   getDeclinedNotifications(): NotificationParams[] {
     return this.notifications.filter(n => n.type === 'OFFER_DECLINED');
+  }
+
+  async notifyOfferCancelled(params: {
+    receiverMemberID: string | null;
+    credexID: string;
+    amount: string;
+    denomination: string;
+    counterpartyName: string;
+    requestId: string;
+  }): Promise<void> {
+    await this.handleNotification('OFFER_CANCELLED', params);
+  }
+
+  getCancelledNotifications(): NotificationParams[] {
+    return this.notifications.filter(n => n.type === 'OFFER_CANCELLED');
   }
 }

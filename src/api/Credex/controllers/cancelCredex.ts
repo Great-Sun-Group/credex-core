@@ -6,18 +6,8 @@ import { SpendLimitService, ISpendLimitService } from "../../Member/services/Spe
 import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
 import { getDashboardData } from "../../../utils/dashboardUtils";
-import { NotificationService } from "../../Notifications/NotificationService";
+import { CredexNotificationService } from "../../Notifications/services/CredexNotificationService";
 import { denomFormatter } from "../../../utils/denomUtils";
-
-// Initialize notification service
-let notificationService: Awaited<ReturnType<typeof NotificationService.getInstance>>;
-(async () => {
-  try {
-    notificationService = await NotificationService.getInstance();
-  } catch (error) {
-    logger.error("Failed to initialize notification service:", error);
-  }
-})();
 
 // Initialize services
 const memberDashboardService = new MemberDashboardService(
@@ -135,43 +125,21 @@ export async function CancelCredexController(
       requestId,
     });
 
-    // Send notification to receiver if they have a memberID and notification service is initialized
-    if (responseData.data.receiverMemberID && notificationService) {
-      const notificationData = {
-        type: 'OFFER_CANCELLED' as const,
-        recipientID: responseData.data.receiverMemberID,
-        data: {
-          credexID: responseData.data.credexID,
-          amount: denomFormatter(responseData.data.initialAmount / responseData.data.cxxMultiplier, responseData.data.denomination),
-          denomination: responseData.data.denomination,
-          counterpartyName: responseData.data.issuerAccountName
-        }
-      };
-
-      logger.info("Sending cancel notification", {
-        service: "credex-core",
-        type: notificationData.type,
-        recipientID: notificationData.recipientID,
-        data: notificationData.data
+    // Initialize notification service and send notification
+    try {
+      const notificationService = await CredexNotificationService.getInstance();
+      await notificationService.notifyOfferCancelled({
+        receiverMemberID: responseData.data.receiverMemberID,
+        credexID: responseData.data.credexID,
+        amount: denomFormatter(responseData.data.initialAmount / responseData.data.cxxMultiplier, responseData.data.denomination),
+        denomination: responseData.data.denomination,
+        counterpartyName: responseData.data.issuerAccountName,
+        requestId
       });
-
-      try {
-        await notificationService.sendNotification(notificationData);
-      } catch (notificationError) {
-        // Log notification error but don't fail the request
-        logger.error("Failed to send notification for cancelled Credex", {
-          error: notificationError instanceof Error ? notificationError.message : "Unknown error",
-          credexID: responseData.data.credexID,
-          requestId,
-        });
-      }
-    } else if (!responseData.data.receiverMemberID) {
-      logger.debug("No memberID found for receiver, skipping notification", {
-        receiverAccountID: responseData.data.receiverAccountID,
-        requestId,
-      });
-    } else if (!notificationService) {
-      logger.warn("Notification service not initialized, skipping notification", {
+    } catch (error) {
+      // Log error but don't fail the request
+      logger.error("Failed to send notification for cancelled Credex", {
+        error: error instanceof Error ? error.message : "Unknown error",
         credexID: responseData.data.credexID,
         requestId,
       });

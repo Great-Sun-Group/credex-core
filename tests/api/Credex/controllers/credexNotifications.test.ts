@@ -26,6 +26,7 @@ jest.mock('../../../../src/api/Notifications/services/CredexNotificationService'
 import { CreateCredexController } from '../../../../src/api/Credex/controllers/createCredex';
 import { AcceptCredexController } from '../../../../src/api/Credex/controllers/acceptCredex';
 import { DeclineCredexController } from '../../../../src/api/Credex/controllers/declineCredex';
+import { CancelCredexController } from '../../../../src/api/Credex/controllers/cancelCredex';
 
 // Mock CreateCredexService
 jest.mock('../../../../src/api/Credex/services/CreateCredex', () => ({
@@ -53,6 +54,11 @@ jest.mock('../../../../src/api/Credex/services/AcceptCredex', () => ({
 // Mock DeclineCredexService
 jest.mock('../../../../src/api/Credex/services/DeclineCredex', () => ({
   DeclineCredexService: jest.fn()
+}));
+
+// Mock CancelCredexService
+jest.mock('../../../../src/api/Credex/services/CancelCredex', () => ({
+  CancelCredexService: jest.fn()
 }));
 
 // Mock other required services
@@ -332,6 +338,83 @@ describe('Credex Controller Notifications', () => {
       await DeclineCredexController(mockReq, mockRes, mockNext);
 
       expect(mockNotificationService.getDeclinedNotifications()).toHaveLength(0);
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+    });
+  });
+
+  describe('CancelCredexController', () => {
+    beforeEach(() => {
+      const { CancelCredexService } = require('../../../../src/api/Credex/services/CancelCredex');
+      CancelCredexService.mockResolvedValue({
+        success: true,
+        data: {
+          credexID: 'test-credex',
+          receiverMemberID: 'receiver-member',
+          initialAmount: 100,
+          cxxMultiplier: 1,
+          denomination: 'USD',
+          issuerAccountName: 'Test Issuer',
+          receiverAccountID: 'receiver-account'
+        }
+      });
+    });
+
+    it('should send notification on successful offer cancellation', async () => {
+      mockReq.body = {
+        credexID: 'test-credex'
+      };
+
+      await CancelCredexController(mockReq, mockRes, mockNext);
+
+      const notifications = mockNotificationService.getCancelledNotifications();
+      expect(notifications).toHaveLength(1);
+      expect(notifications[0]).toEqual({
+        type: 'OFFER_CANCELLED',
+        receiverMemberID: 'receiver-member',
+        credexID: 'test-credex',
+        amount: '100.00',
+        denomination: 'USD',
+        counterpartyName: 'Test Issuer',
+        requestId: 'test-request-id'
+      });
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+    });
+
+    it('should handle notification failure gracefully', async () => {
+      mockNotificationService.setFailNextNotification(true);
+
+      mockReq.body = {
+        credexID: 'test-credex'
+      };
+
+      await CancelCredexController(mockReq, mockRes, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalled();
+    });
+
+    it('should skip notification if receiver member ID is not available', async () => {
+      const { CancelCredexService } = require('../../../../src/api/Credex/services/CancelCredex');
+      CancelCredexService.mockResolvedValueOnce({
+        success: true,
+        data: {
+          credexID: 'test-credex',
+          receiverMemberID: null,
+          initialAmount: 100,
+          cxxMultiplier: 1,
+          denomination: 'USD',
+          issuerAccountName: 'Test Issuer',
+          receiverAccountID: 'receiver-account'
+        }
+      });
+
+      mockReq.body = {
+        credexID: 'test-credex'
+      };
+
+      await CancelCredexController(mockReq, mockRes, mockNext);
+
+      expect(mockNotificationService.getCancelledNotifications()).toHaveLength(0);
       expect(mockRes.status).toHaveBeenCalledWith(200);
     });
   });

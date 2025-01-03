@@ -28,6 +28,15 @@ export interface ICredexNotificationService {
     counterpartyName: string;
     requestId: string;
   }): Promise<void>;
+
+  notifyOfferCancelled(params: {
+    receiverMemberID: string | null;
+    credexID: string;
+    amount: string;
+    denomination: string;
+    counterpartyName: string;
+    requestId: string;
+  }): Promise<void>;
 }
 
 export class CredexNotificationService implements ICredexNotificationService {
@@ -181,6 +190,52 @@ export class CredexNotificationService implements ICredexNotificationService {
       }
     } else if (!issuerMemberID) {
       logger.debug("No memberID found for issuer, skipping notification", {
+        requestId,
+      });
+    } else if (!this.notificationService) {
+      logger.warn("Notification service not initialized, skipping notification", {
+        credexID,
+        requestId,
+      });
+    }
+  }
+
+  async notifyOfferCancelled({
+    receiverMemberID,
+    credexID,
+    amount,
+    denomination,
+    counterpartyName,
+    requestId
+  }: {
+    receiverMemberID: string | null;
+    credexID: string;
+    amount: string;
+    denomination: string;
+    counterpartyName: string;
+    requestId: string;
+  }): Promise<void> {
+    if (receiverMemberID && this.notificationService) {
+      try {
+        await this.notificationService.sendNotification({
+          type: 'OFFER_CANCELLED',
+          recipientID: receiverMemberID,
+          data: {
+            credexID,
+            amount,
+            denomination,
+            counterpartyName,
+          }
+        });
+      } catch (error) {
+        logger.error("Failed to send notification for cancelled Credex", {
+          error: error instanceof Error ? error.message : "Unknown error",
+          credexID,
+          requestId,
+        });
+      }
+    } else if (!receiverMemberID) {
+      logger.debug("No memberID found for receiver, skipping notification", {
         requestId,
       });
     } else if (!this.notificationService) {
