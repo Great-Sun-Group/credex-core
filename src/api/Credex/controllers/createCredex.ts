@@ -20,17 +20,7 @@ import {
   ErrorActionDetails,
 } from "../../../types/apiResponse";
 import { denomFormatter } from "../../../utils/denomUtils";
-import { NotificationService } from "../../Notifications/NotificationService";
-
-// Initialize services
-let notificationService: Awaited<ReturnType<typeof NotificationService.getInstance>>;
-(async () => {
-  try {
-    notificationService = await NotificationService.getInstance();
-  } catch (error) {
-    logger.error("Failed to initialize notification service:", error);
-  }
-})();
+import { CredexNotificationService, ICredexNotificationService } from "../../Notifications/services/CredexNotificationService";
 
 interface UserRequest extends express.Request {
   user?: any;
@@ -62,6 +52,9 @@ export async function CreateCredexController(
   });
 
   try {
+    // Initialize notification service
+    const notificationService = await CredexNotificationService.getInstance();
+
     const {
       issuerAccountID,
       receiverAccountID,
@@ -316,36 +309,21 @@ export async function CreateCredexController(
       requestId,
     });
 
-    // Send notification to receiver if they have a memberID and notification service is initialized
-    if (createCredexResult.data.receiverMemberID && notificationService) {
-      try {
-        await notificationService.sendNotification({
-          type: 'OFFER_CREATED',
-          recipientID: createCredexResult.data.receiverMemberID,
-          data: {
-            credexID: createCredexResult.data.credexID,
-            amount: formattedAmount,
-            denomination: Denomination,
-            counterpartyName: createCredexResult.data.issuerAccountName,
-          }
-        });
-      } catch (notificationError) {
-        // Log notification error but don't fail the request
-        logger.error("Failed to send notification for new Credex offer", {
-          error: notificationError instanceof Error ? notificationError.message : "Unknown error",
-          credexID: createCredexResult.data.credexID,
-          requestId,
-        });
-      }
-    } else if (!createCredexResult.data.receiverMemberID) {
-      logger.debug("No memberID found for receiver, skipping notification", {
-        receiverAccountID: createCredexResult.data.receiverAccountID,
-        requestId,
-      });
-    } else if (!notificationService) {
-      logger.warn("Notification service not initialized, skipping notification", {
+    // Send notification for offer creation
+    try {
+      await notificationService.notifyOfferCreated({
+        receiverMemberID: createCredexResult.data.receiverMemberID,
         credexID: createCredexResult.data.credexID,
-        requestId,
+        amount: formattedAmount,
+        denomination: Denomination,
+        counterpartyName: createCredexResult.data.issuerAccountName,
+        requestId
+      });
+    } catch (error) {
+      // Log but don't fail the request
+      logger.error("Failed to send notification", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        requestId
       });
     }
 

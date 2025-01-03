@@ -132,6 +132,40 @@ npm test declinecredex phone credexID
 npm test cancelcredex phone credexID
 npm test getcredex phone credexID</code></pre>
 
+    <h3>Notification Tests</h3>
+
+    <p>
+      The notification system has both automated tests and manual testing capabilities:
+    </p>
+
+    <h4>Automated Tests</h4>
+
+    <p>
+      Run the notification-specific test suite:
+    </p>
+
+    <pre><code># Run all notification tests
+npm test notifications
+
+# Run specific notification test files
+npm test credexNotifications    # Tests credex-related notifications
+npm test notificationService    # Tests notification service functionality</code></pre>
+
+    <p>
+      The automated tests use MockCredexNotificationService to verify:
+    </p>
+    <ul>
+      <li>Notification sending on credex creation</li>
+      <li>Notification sending on credex acceptance</li>
+      <li>Notification sending on credex decline</li>
+      <li>Graceful handling of notification failures</li>
+      <li>Proper skipping of notifications when member IDs are unavailable</li>
+    </ul>
+
+    <p>
+      For manual testing of actual push notifications, refer to the detailed guide in <a href="../../push-notifications-testing.md">push-notifications-testing.md</a>.
+    </p>
+
     <h3>Shared Endpoint Functions</h3>
 
     <p>

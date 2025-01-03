@@ -2,8 +2,8 @@
 <html>
 <head>
     <title>Get FCM Token</title>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 </head>
 <body>
     <h1>Firebase Cloud Messaging Token Generator</h1>
@@ -32,8 +32,16 @@ python3 -m http.server 8000</pre>
     <div id="error" style="color: red; margin: 10px 0;"></div>
     <button onclick="requestPermission()">Request Permission & Get Token</button>
 
-    <script src="firebase-config.js"></script>
     <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD9jH_pt-1MBFOPtBH3ahAFMRUbG8UQiWY",
+            authDomain: "credex-core.firebaseapp.com",
+            projectId: "credex-core",
+            storageBucket: "credex-core.appspot.com",
+            messagingSenderId: "113652835497",
+            appId: "1:113652835497:web:d4bb98e1808e33b82ef5b8"
+        };
         // Register service worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/firebase-messaging-sw.js')
@@ -53,10 +61,16 @@ python3 -m http.server 8000</pre>
         }
 
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const messaging = firebase.messaging();
+        try {
+            firebase.initializeApp(firebaseConfig);
+            console.log('Firebase initialized successfully');
+        } catch (error) {
+            console.error('Firebase initialization error:', error);
+            document.getElementById('error').innerText = 'Firebase initialization error: ' + error.message;
+        }
 
         async function requestPermission() {
+            const messaging = firebase.messaging();
             try {
                 await Notification.requestPermission();
                 getToken();
@@ -79,7 +93,10 @@ python3 -m http.server 8000</pre>
 
         async function getToken() {
             try {
-                const token = await messaging.getToken();
+                const messaging = firebase.messaging();
+                const token = await messaging.getToken({
+                    vapidKey: "BNm7EEZEPHPucKuwCGkgK9ZmgXTVtpDs69Oiab6CbWEYXuVR7GeUDpi5covWu--zD0MguVYTcwT22hR2vGJDAn8"
+                });
                 document.getElementById('token').innerText = token;
                 console.log('FCM Token:', token);
             } catch (error) {

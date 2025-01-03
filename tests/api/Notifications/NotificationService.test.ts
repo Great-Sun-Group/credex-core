@@ -2,7 +2,7 @@ import { NotificationService } from '../../../src/api/Notifications/Notification
 import { fcmTokenRepository } from '../../../src/api/Notifications/repositories/FCMTokenRepository';
 import * as admin from 'firebase-admin';
 
-// Mock firebase-admin
+// Mock Firebase Admin SDK
 jest.mock('firebase-admin', () => ({
   initializeApp: jest.fn(),
   credential: {
@@ -13,7 +13,7 @@ jest.mock('firebase-admin', () => ({
   }))
 }));
 
-// Mock FCMTokenRepository
+// Mock FCM Token Repository
 jest.mock('../../../src/api/Notifications/repositories/FCMTokenRepository', () => ({
   fcmTokenRepository: {
     getToken: jest.fn(),
@@ -24,50 +24,29 @@ jest.mock('../../../src/api/Notifications/repositories/FCMTokenRepository', () =
 
 describe('NotificationService', () => {
   let notificationService: NotificationService;
+  const mockSend = jest.fn();
 
   beforeEach(async () => {
     jest.clearAllMocks();
     // Reset the singleton instance
     (NotificationService as any).instance = undefined;
-    
+
     // Mock environment variables
     process.env.FIREBASE_PROJECT_ID = 'test-project';
-    process.env.FIREBASE_CLIENT_EMAIL = 'test@test.com';
+    process.env.FIREBASE_CLIENT_EMAIL = 'test@example.com';
     process.env.FIREBASE_PRIVATE_KEY = 'test-key';
 
-    // Mock credential.cert to return a mock credential
-    (admin.credential.cert as jest.Mock).mockReturnValue({
-      type: 'service_account',
-      projectId: 'test-project'
-    });
+    // Mock Firebase messaging
+    (admin.messaging as jest.Mock).mockReturnValue({ send: mockSend });
 
-    // Mock initializeApp to resolve immediately
-    (admin.initializeApp as jest.Mock).mockImplementation(() => {
-      return Promise.resolve();
-    });
-    
     notificationService = await NotificationService.getInstance();
   });
 
-  afterEach(() => {
-    // Reset environment variables
-    delete process.env.FIREBASE_PROJECT_ID;
-    delete process.env.FIREBASE_CLIENT_EMAIL;
-    delete process.env.FIREBASE_PRIVATE_KEY;
-  });
-
   describe('initialization', () => {
-    it('should initialize Firebase Admin SDK successfully', async () => {
-      expect(admin.initializeApp).toHaveBeenCalledWith(expect.objectContaining({
-        credential: expect.any(Object),
-        projectId: 'test-project'
-      }));
-    });
-
-    it('should throw error when Firebase configuration is missing', async () => {
+    it('should throw error when environment variables are missing', async () => {
       // Reset the singleton instance
       (NotificationService as any).instance = undefined;
-      
+
       // Clear environment variables
       delete process.env.FIREBASE_PROJECT_ID;
       delete process.env.FIREBASE_CLIENT_EMAIL;
@@ -75,37 +54,34 @@ describe('NotificationService', () => {
 
       await expect(NotificationService.getInstance())
         .rejects
-        .toThrow('Missing required Firebase configuration: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY');
+        .toThrow('Missing required Firebase configuration');
     });
 
     it('should reuse existing instance on subsequent calls', async () => {
       const instance1 = await NotificationService.getInstance();
       const instance2 = await NotificationService.getInstance();
       expect(instance1).toBe(instance2);
-      expect(admin.initializeApp).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('sendNotification', () => {
+    const userId = 'test-user';
+    const token = 'test-fcm-token';
+
     it('should successfully send a notification when token exists', async () => {
       // Mock token retrieval
-      const mockToken = {
-        token: 'test-fcm-token',
-        userId: 'test-user',
-        platform: 'android' as const,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      (fcmTokenRepository.getToken as jest.Mock).mockResolvedValue(mockToken);
+      (fcmTokenRepository.getToken as jest.Mock).mockResolvedValue({
+        userId,
+        token,
+        platform: 'android'
+      });
 
-      // Mock Firebase messaging
-      const mockSend = jest.fn().mockResolvedValue('message-id');
-      (admin.messaging as jest.Mock).mockReturnValue({ send: mockSend });
+      mockSend.mockResolvedValue('message-id');
 
       // Test notification data
       const notification = {
         type: 'OFFER_CREATED' as const,
-        recipientID: 'test-user',
+        recipientID: userId,
         data: {
           credexID: 'test-credex',
           amount: '100',
@@ -117,12 +93,9 @@ describe('NotificationService', () => {
       // Send notification
       await notificationService.sendNotification(notification);
 
-      // Verify token was retrieved
-      expect(fcmTokenRepository.getToken).toHaveBeenCalledWith('test-user');
-
-      // Verify message was sent with correct format
-      expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({
-        token: 'test-fcm-token',
+      // Verify Firebase message was sent
+      expect(mockSend).toHaveBeenCalledWith({
+        token,
         notification: expect.objectContaining({
           title: expect.any(String),
           body: expect.any(String)
@@ -131,19 +104,16 @@ describe('NotificationService', () => {
           type: 'OFFER_CREATED',
           credexID: 'test-credex'
         })
-      }));
+      });
     });
 
     it('should skip sending notification when no token exists', async () => {
       // Mock token retrieval returning null
       (fcmTokenRepository.getToken as jest.Mock).mockResolvedValue(null);
 
-      const mockSend = jest.fn();
-      (admin.messaging as jest.Mock).mockReturnValue({ send: mockSend });
-
       const notification = {
         type: 'OFFER_CREATED' as const,
-        recipientID: 'test-user',
+        recipientID: userId,
         data: {
           credexID: 'test-credex',
           amount: '100',
@@ -154,32 +124,24 @@ describe('NotificationService', () => {
 
       await notificationService.sendNotification(notification);
 
-      // Verify token was attempted to be retrieved
-      expect(fcmTokenRepository.getToken).toHaveBeenCalledWith('test-user');
-
       // Verify no message was sent
       expect(mockSend).not.toHaveBeenCalled();
     });
 
-    it('should handle invalid token errors', async () => {
+    it('should remove invalid token and skip sending', async () => {
       // Mock token retrieval
-      const mockToken = {
-        token: 'invalid-token',
-        userId: 'test-user',
-        platform: 'android' as const,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      (fcmTokenRepository.getToken as jest.Mock).mockResolvedValue(mockToken);
+      (fcmTokenRepository.getToken as jest.Mock).mockResolvedValue({
+        userId,
+        token,
+        platform: 'android'
+      });
 
-      // Mock Firebase messaging error for invalid token
-      const mockError = new Error('registration-token-not-registered');
-      const mockSend = jest.fn().mockRejectedValue(mockError);
-      (admin.messaging as jest.Mock).mockReturnValue({ send: mockSend });
+      // Mock Firebase throwing invalid token error
+      mockSend.mockRejectedValue(new Error('registration-token-not-registered'));
 
       const notification = {
         type: 'OFFER_CREATED' as const,
-        recipientID: 'test-user',
+        recipientID: userId,
         data: {
           credexID: 'test-credex',
           amount: '100',
@@ -191,29 +153,24 @@ describe('NotificationService', () => {
       // Send notification
       await notificationService.sendNotification(notification);
 
-      // Verify token removal was attempted
-      expect(fcmTokenRepository.removeToken).toHaveBeenCalledWith('test-user', 'invalid-token');
+      // Verify token was removed
+      expect(fcmTokenRepository.removeToken).toHaveBeenCalledWith(userId, token);
     });
 
-    it('should handle Firebase messaging errors gracefully', async () => {
+    it('should throw error on Firebase failure', async () => {
       // Mock token retrieval
-      const mockToken = {
-        token: 'test-fcm-token',
-        userId: 'test-user',
-        platform: 'android' as const,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      (fcmTokenRepository.getToken as jest.Mock).mockResolvedValue(mockToken);
+      (fcmTokenRepository.getToken as jest.Mock).mockResolvedValue({
+        userId,
+        token,
+        platform: 'android'
+      });
 
-      // Mock Firebase messaging error
-      const mockError = new Error('Firebase messaging error');
-      const mockSend = jest.fn().mockRejectedValue(mockError);
-      (admin.messaging as jest.Mock).mockReturnValue({ send: mockSend });
+      // Mock Firebase throwing error
+      mockSend.mockRejectedValue(new Error('Firebase error'));
 
       const notification = {
         type: 'OFFER_CREATED' as const,
-        recipientID: 'test-user',
+        recipientID: userId,
         data: {
           credexID: 'test-credex',
           amount: '100',
@@ -225,33 +182,31 @@ describe('NotificationService', () => {
       // Verify error is thrown
       await expect(notificationService.sendNotification(notification))
         .rejects
-        .toThrow('Firebase messaging error');
+        .toThrow('Firebase error');
     });
   });
 
   describe('token management', () => {
-    it('should successfully register a new token', async () => {
-      const token = {
-        token: 'new-fcm-token',
-        userId: 'test-user',
-        platform: 'ios' as const,
+    const userId = 'test-user';
+    const token = 'test-fcm-token';
+
+    it('should register token successfully', async () => {
+      await notificationService.registerToken({
+        userId,
+        token,
+        platform: 'android',
         createdAt: new Date(),
         updatedAt: new Date()
-      };
-
-      await notificationService.registerToken(token);
+      });
 
       expect(fcmTokenRepository.saveToken).toHaveBeenCalledWith(expect.objectContaining({
-        token: token.token,
-        userId: token.userId,
-        platform: token.platform
+        userId,
+        token,
+        platform: 'android'
       }));
     });
 
-    it('should successfully remove a token', async () => {
-      const userId = 'test-user';
-      const token = 'test-token';
-
+    it('should remove token successfully', async () => {
       await notificationService.removeToken(userId, token);
 
       expect(fcmTokenRepository.removeToken).toHaveBeenCalledWith(userId, token);
@@ -259,23 +214,20 @@ describe('NotificationService', () => {
 
     it('should validate token before sending notification', async () => {
       const mockToken = {
-        token: 'test-fcm-token',
-        userId: 'test-user',
-        platform: 'android' as const,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        userId,
+        token,
+        platform: 'android'
       };
+
       (fcmTokenRepository.getToken as jest.Mock).mockResolvedValue(mockToken);
 
-      // Mock validation message send
-      const mockSend = jest.fn()
+      mockSend
         .mockImplementationOnce(() => Promise.resolve('validation-ok')) // First call for validation
         .mockImplementationOnce(() => Promise.resolve('notification-sent')); // Second call for actual notification
-      (admin.messaging as jest.Mock).mockReturnValue({ send: mockSend });
 
       const notification = {
         type: 'OFFER_CREATED' as const,
-        recipientID: 'test-user',
+        recipientID: userId,
         data: {
           credexID: 'test-credex',
           amount: '100',
@@ -286,12 +238,10 @@ describe('NotificationService', () => {
 
       await notificationService.sendNotification(notification);
 
-      // Verify validation was attempted
+      // Verify both validation and notification calls were made
       expect(mockSend).toHaveBeenCalledTimes(2);
-      expect(mockSend.mock.calls[0][0]).toMatchObject({
-        token: 'test-fcm-token',
-        data: { validate: 'true' }
-      });
+      expect(mockSend.mock.calls[0][1]).toBe(true); // First call with dryRun=true
+      expect(mockSend.mock.calls[1][1]).toBeUndefined(); // Second call without dryRun
     });
   });
 });

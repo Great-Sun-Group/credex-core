@@ -6,17 +6,7 @@ import { SpendLimitService } from "../../Member/services/SpendLimitService";
 import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
 import { getDashboardData } from "../../../utils/dashboardUtils";
-import { NotificationService } from "../../Notifications/NotificationService";
-
-// Initialize notification service
-let notificationService: Awaited<ReturnType<typeof NotificationService.getInstance>>;
-(async () => {
-  try {
-    notificationService = await NotificationService.getInstance();
-  } catch (error) {
-    logger.error("Failed to initialize notification service:", error);
-  }
-})();
+import { CredexNotificationService } from "../../Notifications/services/CredexNotificationService";
 
 // Initialize services
 const memberDashboardService = new MemberDashboardService(
@@ -52,6 +42,9 @@ export async function DeclineCredexController(
   logger.debug("Entering DeclineCredexController", { requestId });
 
   try {
+    // Initialize notification service
+    const notificationService = await CredexNotificationService.getInstance();
+
     const { credexID } = req.body;
     const signerID = req.user.memberID;
 
@@ -134,36 +127,21 @@ export async function DeclineCredexController(
       requestId,
     });
 
-    // Send notification to issuer if they have a memberID and notification service is initialized
-    if (responseData.data.issuerMemberID && notificationService) {
-      try {
-        await notificationService.sendNotification({
-          type: 'OFFER_DECLINED',
-          recipientID: responseData.data.issuerMemberID,
-          data: {
-            credexID: responseData.data.credexID,
-            amount: "0", // Amount is zeroed on decline
-            denomination: responseData.data.denomination,
-            counterpartyName: responseData.data.receiverAccountName
-          }
-        });
-      } catch (notificationError) {
-        // Log notification error but don't fail the request
-        logger.error("Failed to send notification for declined Credex", {
-          error: notificationError instanceof Error ? notificationError.message : "Unknown error",
-          credexID: responseData.data.credexID,
-          requestId,
-        });
-      }
-    } else if (!responseData.data.issuerMemberID) {
-      logger.debug("No memberID found for issuer, skipping notification", {
-        issuerAccountID: responseData.data.issuerAccountID,
-        requestId,
-      });
-    } else if (!notificationService) {
-      logger.warn("Notification service not initialized, skipping notification", {
+    // Send notification for offer decline
+    try {
+      await notificationService.notifyOfferDeclined({
+        issuerMemberID: responseData.data.issuerMemberID,
         credexID: responseData.data.credexID,
-        requestId,
+        amount: "0", // Amount is zeroed on decline
+        denomination: responseData.data.denomination,
+        counterpartyName: responseData.data.receiverAccountName,
+        requestId
+      });
+    } catch (error) {
+      // Log but don't fail the request
+      logger.error("Failed to send notification", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        requestId
       });
     }
 
