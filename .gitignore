@@ -155,3 +155,6 @@ terraform.rc
 
 # Firebase config with sensitive info
 tests/manual/firebase-config.js
+
+# Generated diff files
+diff.txt
