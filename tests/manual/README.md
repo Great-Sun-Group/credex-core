@@ -1,21 +1,6 @@
 # Manual Test Utilities
 
-This directory contains utilities for manual testing and development.
-
-## Generate JWT Token
-
-`generate-token.js` - Utility for generating JWT tokens for testing
-
-### Required Environment Variables
-
-- `JWT_SECRET`: Secret key used for signing the JWT
-- `MEMBER_ID`: UUID of the member to generate token for
-
-### Usage
-
-```bash
-JWT_SECRET=your-secret MEMBER_ID=your-member-id node generate-token.js
-```
+This directory contains utilities for testing push notifications.
 
 ## Push Notification Testing
 
@@ -69,15 +54,32 @@ Note: The configured files (get-fcm-token.html and firebase-messaging-sw.js) are
 ### Testing Push Notifications
 After getting your FCM token:
 
-1. Generate an auth token:
-   ```bash
-   JWT_SECRET=your-secret MEMBER_ID=your-member-id node generate-token.js
-   ```
+1. Get a valid auth token by logging into the application
+   - Note: Do not use generate-token.js as manually generated tokens will not work
+   - The server expects specific embedded information in the token that only comes from the actual login process
 
 2. Run the test script with both tokens:
    ```bash
    FCM_TOKEN=your-fcm-token AUTH_TOKEN=your-auth-token node test-push-notifications.js
    ```
+
+You should see output indicating successful tests:
+```
+Starting Push Notification Integration Tests
+
+1. Testing FCM Token Registration
+✓ Token registration successful
+
+2. Testing FCM Token Validation
+✓ Token validation successful
+
+3. Testing Send Notification
+✓ Test notification sent successfully
+
+Tests completed
+```
+
+A test notification should appear in your browser if everything is working correctly.
 
 The script will test:
 - FCM token registration
