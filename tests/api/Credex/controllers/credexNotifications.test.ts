@@ -1,25 +1,36 @@
-import { notificationService } from '../../../../src/api/Notifications/NotificationService';
+// Mock setup
+const mockInstance = { sendNotification: jest.fn() };
+
+// Mock all dependencies
+jest.mock('../../../../src/utils/logger', () => ({
+  logDebug: jest.fn(),
+  logInfo: jest.fn(),
+  logWarn: jest.fn(),
+  logError: jest.fn(),
+  debug: jest.fn(),
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn()
+}));
+
+jest.mock('../../../../src/api/Notifications/NotificationService', () => ({
+  NotificationService: {
+    getInstance: jest.fn().mockResolvedValue(mockInstance)
+  }
+}));
+
+// Import controllers after mocks
 import { CreateCredexController } from '../../../../src/api/Credex/controllers/createCredex';
 import { CancelCredexController } from '../../../../src/api/Credex/controllers/cancelCredex';
 import { AcceptCredexController } from '../../../../src/api/Credex/controllers/acceptCredex';
 import { DeclineCredexController } from '../../../../src/api/Credex/controllers/declineCredex';
-import { MemberDashboardService } from '../../../../src/api/Member/services/MemberDashboardService';
 
-// Mock notification service
-jest.mock('../../../../src/api/Notifications/NotificationService', () => ({
-  notificationService: {
-    sendNotification: jest.fn()
-  }
-}));
-
-// Mock services and dependencies
 jest.mock('../../../../src/api/Member/services/AuthForTierSpendLimit', () => ({
   AuthForTierSpendLimitService: jest.fn().mockImplementation(
-    (issuerAccountID, amount, denomination, securedCredex, requestId) => 
+    (issuerAccountID: string, amount: number, denomination: string, securedCredex: boolean, requestId: string) => 
       Promise.resolve({ success: true, authorized: true })
   )
 }));
-
 
 jest.mock('../../../../config/neo4j', () => ({
   ledgerSpaceDriver: {
@@ -35,12 +46,26 @@ jest.mock('../../../../config/neo4j', () => ({
   }
 }));
 
-jest.mock('../../../../src/utils/logger', () => ({
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn()
+jest.mock('../../../../src/api/Notifications/repositories/FCMTokenRepository', () => ({
+  FCMTokenRepository: {
+    instance: {
+      addToken: jest.fn(),
+      removeToken: jest.fn(),
+      getTokens: jest.fn()
+    },
+    getInstance: jest.fn().mockReturnValue({
+      addToken: jest.fn(),
+      removeToken: jest.fn(),
+      getTokens: jest.fn()
+    })
+  }
 }));
+
+// Get mocked services
+const { CancelCredexService } = jest.requireMock('../../../../src/api/Credex/services/CancelCredex');
+const { AcceptCredexService } = jest.requireMock('../../../../src/api/Credex/services/AcceptCredex');
+const { DeclineCredexService } = jest.requireMock('../../../../src/api/Credex/services/DeclineCredex');
+const { CreateCredexService } = jest.requireMock('../../../../src/api/Credex/services/CreateCredex');
 
 jest.mock('../../../../src/utils/denomUtils', () => ({
   denomFormatter: jest.fn().mockImplementation((amount) => amount.toString())
@@ -62,7 +87,6 @@ jest.mock('../../../../src/utils/dashboardUtils', () => ({
   })
 }));
 
-// Mock all required services
 jest.mock('../../../../src/api/Member/services/SpendLimitService', () => ({
   SpendLimitService: jest.fn().mockImplementation(() => ({
     checkTierSpendLimit: jest.fn().mockResolvedValue({ success: true })
@@ -125,7 +149,6 @@ jest.mock('../../../../src/api/Credex/services/CreateCredex', () => ({
   })
 }));
 
-
 jest.mock('../../../../src/api/Credex/services/CancelCredex', () => ({
   CancelCredexService: jest.fn()
 }));
@@ -142,9 +165,9 @@ jest.mock('../../../../src/api/Member/services/MemberDashboardService');
 
 describe('Credex Controller Notifications', () => {
   beforeAll(() => {
-    // Initialize any global test setup
     jest.clearAllMocks();
   });
+
   let mockReq: any;
   let mockRes: any;
   let mockNext: jest.Mock;
@@ -152,15 +175,15 @@ describe('Credex Controller Notifications', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-      mockReq = {
-        id: 'test-request-id',
-        requestId: 'test-request-id',
-        user: {
-          memberID: 'test-member',
-          accountID: 'test-account'
-        },
-        body: {}
-      };
+    mockReq = {
+      id: 'test-request-id',
+      requestId: 'test-request-id',
+      user: {
+        memberID: 'test-member',
+        accountID: 'test-account'
+      },
+      body: {}
+    };
 
     mockRes = {
       status: jest.fn().mockReturnThis(),
@@ -172,9 +195,6 @@ describe('Credex Controller Notifications', () => {
 
   describe('CreateCredexController', () => {
     it('should send notification on successful offer creation', async () => {
-
-
-
       mockReq.body = {
         issuerAccountID: 'test-account',
         receiverAccountID: 'receiver-account',
@@ -183,12 +203,12 @@ describe('Credex Controller Notifications', () => {
         securedCredex: false,
         credexType: 'PURCHASE',
         OFFERSorREQUESTS: 'OFFERS',
-        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 7 days from now
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       };
 
       await CreateCredexController(mockReq, mockRes, mockNext);
 
-      expect(notificationService.sendNotification).toHaveBeenCalledWith({
+      expect(mockInstance.sendNotification).toHaveBeenCalledWith({
         type: 'OFFER_CREATED',
         recipientID: 'receiver-member',
         data: expect.objectContaining({
@@ -213,7 +233,7 @@ describe('Credex Controller Notifications', () => {
         }
       };
 
-      require('../../../../src/api/Credex/services/CancelCredex').CancelCredexService.mockResolvedValue(mockCredexData);
+      CancelCredexService.mockResolvedValue(mockCredexData);
 
       mockReq.body = {
         credexID: 'test-credex'
@@ -221,7 +241,7 @@ describe('Credex Controller Notifications', () => {
 
       await CancelCredexController(mockReq, mockRes, mockNext);
 
-      expect(notificationService.sendNotification).toHaveBeenCalledWith({
+      expect(mockInstance.sendNotification).toHaveBeenCalledWith({
         type: 'OFFER_CANCELLED',
         recipientID: 'receiver-member',
         data: expect.objectContaining({
@@ -246,7 +266,7 @@ describe('Credex Controller Notifications', () => {
         }
       };
 
-      require('../../../../src/api/Credex/services/AcceptCredex').AcceptCredexService.mockResolvedValue(mockCredexData);
+      AcceptCredexService.mockResolvedValue(mockCredexData);
 
       mockReq.body = {
         credexID: 'test-credex'
@@ -254,7 +274,7 @@ describe('Credex Controller Notifications', () => {
 
       await AcceptCredexController(mockReq, mockRes, mockNext);
 
-      expect(notificationService.sendNotification).toHaveBeenCalledWith({
+      expect(mockInstance.sendNotification).toHaveBeenCalledWith({
         type: 'OFFER_ACCEPTED',
         recipientID: 'issuer-member',
         data: expect.objectContaining({
@@ -279,7 +299,7 @@ describe('Credex Controller Notifications', () => {
         }
       };
 
-      require('../../../../src/api/Credex/services/DeclineCredex').DeclineCredexService.mockResolvedValue(mockCredexData);
+      DeclineCredexService.mockResolvedValue(mockCredexData);
 
       mockReq.body = {
         credexID: 'test-credex'
@@ -287,7 +307,7 @@ describe('Credex Controller Notifications', () => {
 
       await DeclineCredexController(mockReq, mockRes, mockNext);
 
-      expect(notificationService.sendNotification).toHaveBeenCalledWith({
+      expect(mockInstance.sendNotification).toHaveBeenCalledWith({
         type: 'OFFER_DECLINED',
         recipientID: 'issuer-member',
         data: expect.objectContaining({
@@ -311,8 +331,6 @@ describe('Credex Controller Notifications', () => {
 
   describe('Error Handling', () => {
     it('should not fail request if notification sending fails', async () => {
-      // Override CreateCredexService mock for this test
-      const CreateCredexService = require('../../../../src/api/Credex/services/CreateCredex').CreateCredexService;
       CreateCredexService.mockImplementationOnce((params: {
         signerID: string;
         issuerAccountID: string;
@@ -354,7 +372,7 @@ describe('Credex Controller Notifications', () => {
         });
       });
 
-      (notificationService.sendNotification as jest.Mock).mockRejectedValue(new Error('Notification error'));
+      mockInstance.sendNotification.mockRejectedValue(new Error('Notification error'));
 
       mockReq.body = {
         issuerAccountID: 'test-account',
@@ -364,19 +382,16 @@ describe('Credex Controller Notifications', () => {
         securedCredex: false,
         credexType: 'PURCHASE',
         OFFERSorREQUESTS: 'OFFERS',
-        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 7 days from now
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       };
 
       await CreateCredexController(mockReq, mockRes, mockNext);
 
-      // Request should still succeed even if notification fails
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalled();
     });
 
     it('should skip notification if member ID is not available', async () => {
-      // Override CreateCredexService mock for this test
-      const CreateCredexService = require('../../../../src/api/Credex/services/CreateCredex').CreateCredexService;
       CreateCredexService.mockImplementationOnce((params: {
         signerID: string;
         issuerAccountID: string;
@@ -403,7 +418,7 @@ describe('Credex Controller Notifications', () => {
             issuerAccountID: params.issuerAccountID,
             issuerAccountName: 'Test Issuer',
             receiverAccountID: params.receiverAccountID,
-            receiverMemberID: null, // No member ID
+            receiverMemberID: null,
             issuerMemberID: 'issuer-member',
             createdAt: new Date().toISOString(),
             cxxMultiplier: 1,
@@ -418,7 +433,6 @@ describe('Credex Controller Notifications', () => {
         });
       });
 
-
       mockReq.body = {
         signerID: 'test-member',
         issuerAccountID: 'test-account',
@@ -428,12 +442,12 @@ describe('Credex Controller Notifications', () => {
         securedCredex: false,
         credexType: 'PURCHASE',
         OFFERSorREQUESTS: 'OFFERS',
-        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 7 days from now
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       };
 
       await CreateCredexController(mockReq, mockRes, mockNext);
 
-      expect(notificationService.sendNotification).not.toHaveBeenCalled();
+      expect(mockInstance.sendNotification).not.toHaveBeenCalled();
       expect(mockRes.status).toHaveBeenCalledWith(200);
     });
   });

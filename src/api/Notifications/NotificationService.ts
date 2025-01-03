@@ -22,13 +22,6 @@ class NotificationService {
     const initStart = Date.now();
     logInfo('Starting Firebase initialization');
     
-    // Add timeout for Firebase initialization
-    const timeoutPromise: Promise<void> = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error('Firebase initialization timed out after 5s'));
-      }, 5000);
-    });
-
     try {
       if (!this.initialized) {
         const configStart = Date.now();
@@ -59,22 +52,14 @@ class NotificationService {
         const sdkStart = Date.now();
         logDebug('Initializing Firebase Admin SDK');
         
-        const initPromise: Promise<void> = new Promise((resolve) => {
-          admin.initializeApp({
-            credential: admin.credential.cert({
-              projectId,
-              clientEmail,
-              privateKey: privateKey.replace(/\\n/g, '\n'), // Handle escaped newlines in environment variable
-            }),
-            projectId
-          });
-          resolve();
+        admin.initializeApp({
+          credential: admin.credential.cert({
+            projectId,
+            clientEmail,
+            privateKey: privateKey.replace(/\\n/g, '\n'), // Handle escaped newlines in environment variable
+          }),
+          projectId
         });
-
-        await Promise.race([
-          initPromise,
-          timeoutPromise
-        ]);
         
         this.initialized = true;
         const totalDuration = Date.now() - initStart;

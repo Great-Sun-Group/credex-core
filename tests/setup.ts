@@ -1,4 +1,8 @@
 import axios from "axios";
+import dotenv from "dotenv";
+
+// Load environment variables from .env file
+dotenv.config();
 
 const getBaseUrl = () => {
   const apiEnv = process.env.API_ENV;
@@ -15,6 +19,7 @@ const API_BASE_URL = getBaseUrl();
 // Default headers including rate limiter bypass if available
 const defaultHeaders = {
   "Content-Type": "application/json",
+  "x-client-api-key": process.env.CLIENT_API_KEY || "",
   ...(process.env.SKIP_RATE_LIMITER_KEY && {
     "x-skip-rate-limit": process.env.SKIP_RATE_LIMITER_KEY
   })
