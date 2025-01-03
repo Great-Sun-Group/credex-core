@@ -21,23 +21,41 @@ JWT_SECRET=your-secret MEMBER_ID=your-member-id node generate-token.js
 
 ### Files
 - `test-push-notifications.js` - Utility for testing push notifications
-- `get-fcm-token.html` - Web page for getting FCM tokens
-- `get-fcm-token.js` - Client-side script for FCM token retrieval
-- `firebase-messaging-sw.js` - Service worker for FCM
-- `firebase-config.example.js` - Example Firebase configuration file
+- `get-fcm-token.example.html` - Example web page for getting FCM tokens
+- `firebase-messaging-sw.example.js` - Example service worker for FCM
+- `get-fcm-token.html` - Your configured web page (gitignored)
+- `firebase-messaging-sw.js` - Your configured service worker (gitignored)
 
 ### Firebase Setup
-1. Copy `firebase-config.example.js` to `firebase-config.js`
-2. Update `firebase-config.js` with your Firebase project credentials:
+1. Get your Firebase configuration from Firebase Console:
+   - Go to Project Settings (gear icon)
+   - Under "General" tab, find your web app configuration
+   - Under "Cloud Messaging" tab, find your Web Push certificate
+
+2. Copy the example files:
+   ```bash
+   cp get-fcm-token.example.html get-fcm-token.html
+   cp firebase-messaging-sw.example.js firebase-messaging-sw.js
+   ```
+
+3. Update both files with your Firebase configuration:
    ```javascript
-   window.firebaseConfig = {
+   const firebaseConfig = {
        apiKey: "YOUR_API_KEY",
-       projectId: "YOUR_PROJECT_ID",
+       authDomain: "your-project-id.firebaseapp.com",
+       projectId: "your-project-id",
+       storageBucket: "your-project-id.appspot.com",
        messagingSenderId: "YOUR_SENDER_ID",
        appId: "YOUR_APP_ID"
    };
    ```
-   Note: `firebase-config.js` is gitignored to prevent committing sensitive credentials
+
+4. In get-fcm-token.html, also update the VAPID key:
+   ```javascript
+   vapidKey: "YOUR_VAPID_KEY" // From Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+   ```
+
+Note: The configured files (get-fcm-token.html and firebase-messaging-sw.js) are gitignored to prevent committing sensitive credentials
 
 ### Usage
 1. Start a local server in the tests/manual directory:
