@@ -12,7 +12,7 @@ const balanceRepo = new BalanceRepository();
 const memberRepo = new MemberRepository();
 const spendLimitService = new SpendLimitService();
 const accountDashboardService = new GetAccountDashboardService(accountRepo, balanceRepo);
-const memberDashboardService = new MemberDashboardService(memberRepo, spendLimitService);
+export const memberDashboardService = new MemberDashboardService(memberRepo, spendLimitService);
 
 // Types for standardized dashboard response
 interface StandardizedDashboardData {
