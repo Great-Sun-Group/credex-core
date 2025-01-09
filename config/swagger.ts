@@ -44,6 +44,164 @@ export async function generateSwaggerSpec(): Promise<swaggerJsdoc.OAS3Definition
             description: "Development admin API key for authentication"
           }
         },
+        schemas: {
+          Error: {
+            type: "object",
+            properties: {
+              success: {
+                type: "boolean",
+                example: false
+              },
+              message: {
+                type: "string",
+                description: "Error message"
+              },
+              details: {
+                type: "string",
+                description: "Detailed error information"
+              },
+              error: {
+                type: "string",
+                description: "Technical error details"
+              }
+            }
+          },
+          ServiceHealth: {
+            type: "object",
+            properties: {
+              status: {
+                type: "string",
+                enum: ["healthy", "error"],
+                description: "Service health status"
+              },
+              message: {
+                type: "string",
+                description: "Health status message"
+              },
+              details: {
+                type: "string",
+                description: "Additional health status details"
+              }
+            }
+          },
+          FCMToken: {
+            type: "object",
+            required: ["token", "userId", "platform"],
+            properties: {
+              token: {
+                type: "string",
+                description: "Firebase Cloud Messaging token"
+              },
+              userId: {
+                type: "string",
+                description: "User ID associated with the token"
+              },
+              platform: {
+                type: "string",
+                enum: ["ios", "android"],
+                description: "Device platform"
+              },
+              createdAt: {
+                type: "string",
+                format: "date-time",
+                description: "Token creation timestamp"
+              },
+              updatedAt: {
+                type: "string",
+                format: "date-time",
+                description: "Token last update timestamp"
+              }
+            }
+          },
+          NotificationResponse: {
+            type: "object",
+            required: ["success"],
+            properties: {
+              success: {
+                type: "boolean",
+                description: "Operation success status"
+              },
+              message: {
+                type: "string",
+                description: "Response message"
+              },
+              error: {
+                type: "string",
+                description: "Error message if operation failed"
+              },
+              details: {
+                type: "string",
+                description: "Additional error or success details"
+              },
+              isValid: {
+                type: "boolean",
+                description: "Token validation result (for validate-token endpoint)"
+              }
+            }
+          },
+          NotificationType: {
+            type: "string",
+            enum: [
+              "OFFER_CREATED",
+              "OFFER_CANCELLED",
+              "OFFER_ACCEPTED",
+              "OFFER_DECLINED",
+              "CREDLOOP_COMPLETED"
+            ],
+            description: "Type of notification event"
+          },
+          NotificationData: {
+            type: "object",
+            required: ["type", "recipientID", "data"],
+            properties: {
+              type: {
+                $ref: "#/components/schemas/NotificationType"
+              },
+              recipientID: {
+                type: "string",
+                description: "ID of the notification recipient"
+              },
+              data: {
+                type: "object",
+                required: ["credexID"],
+                properties: {
+                  credexID: {
+                    type: "string",
+                    description: "ID of the related Credex transaction"
+                  },
+                  amount: {
+                    type: "string",
+                    description: "Transaction amount"
+                  },
+                  denomination: {
+                    type: "string",
+                    description: "Currency denomination"
+                  },
+                  counterpartyName: {
+                    type: "string",
+                    description: "Name of the counterparty"
+                  },
+                  clearedPayable: {
+                    type: "object",
+                    properties: {
+                      amount: { type: "string" },
+                      denomination: { type: "string" },
+                      owedTo: { type: "string" }
+                    }
+                  },
+                  clearedReceivable: {
+                    type: "object",
+                    properties: {
+                      amount: { type: "string" },
+                      denomination: { type: "string" },
+                      owedFrom: { type: "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
       },
       security: [
         {
@@ -57,6 +215,7 @@ export async function generateSwaggerSpec(): Promise<swaggerJsdoc.OAS3Definition
         { name: "Recurring", description: "Recurring payment operations" },
         { name: "Admin", description: "Administrative operations for managing members, accounts, and credex transactions" },
         { name: "DevAdmin", description: "Development and administration operations" },
+        { name: "Notifications", description: "Push notification management and testing operations" },
       ],
     },
     apis: [

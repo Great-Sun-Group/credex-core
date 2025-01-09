@@ -11,6 +11,9 @@ interface AcceptCredexData {
   amount: string;
   denomination: string;
   secured: boolean;
+  issuerAccountID: string;
+  issuerAccountName: string;
+  issuerMemberID: string | null;
 }
 
 interface AcceptCredexResult {
@@ -188,7 +191,13 @@ export async function AcceptCredexService(
           toString(acceptedCredex.acceptedAt) AS acceptedAt,
           acceptedCredex.InitialAmount / acceptedCredex.CXXmultiplier AS amount,
           acceptedCredex.Denomination AS denomination,
-          acceptedCredex.securedCredex AS secured
+          acceptedCredex.securedCredex AS secured,
+          issuer.accountID AS issuerAccountID,
+          issuer.accountName AS issuerAccountName,
+          CASE WHEN exists((issuer)-[:SEND_OFFERS_TO]->(:Member)) 
+               THEN [(issuer)-[:SEND_OFFERS_TO]->(m:Member) | m.memberID][0]
+               ELSE null
+          END AS issuerMemberID
       `;
 
       const queryResult = await tx.run(query, { credexID, signerID });
@@ -211,7 +220,10 @@ export async function AcceptCredexService(
           transactionType: "OWES",
           amount: record.get("amount").toString(),
           denomination: record.get("denomination"),
-          secured: record.get("secured")
+          secured: record.get("secured"),
+          issuerAccountID: record.get("issuerAccountID"),
+          issuerAccountName: record.get("issuerAccountName"),
+          issuerMemberID: record.get("issuerMemberID")
         }
       };
     });

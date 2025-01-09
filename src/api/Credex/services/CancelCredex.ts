@@ -7,8 +7,13 @@ interface CancelCredexData {
   cancelledAt: string;
   transactionType: string;
   issuerAccountID: string;
+  issuerAccountName: string;
   receiverAccountID: string;
+  receiverMemberID: string | null;
+  issuerMemberID: string | null;
   denomination: string;
+  initialAmount: number;
+  cxxMultiplier: number;
 }
 
 interface CancelCredexResult {
@@ -27,8 +32,13 @@ interface DatabaseCancelResult {
     credexID: string;
     cancelledAt: string;
     issuerAccountID: string;
+    issuerAccountName: string;
     receiverAccountID: string;
+    receiverMemberID: string | null;
+    issuerMemberID: string | null;
     denomination: string;
+    initialAmount: number;
+    cxxMultiplier: number;
   };
   error?: string;
 }
@@ -99,8 +109,19 @@ export async function CancelCredexService(
           credex.credexID AS credexID,
           toString(credex.cancelledAt) AS cancelledAt,
           source.accountID AS issuerAccountID,
+          source.accountName AS issuerAccountName,
           target.accountID AS receiverAccountID,
-          credex.Denomination AS denomination
+          credex.Denomination AS denomination,
+          credex.InitialAmount AS initialAmount,
+          credex.CXXmultiplier AS cxxMultiplier,
+          CASE WHEN exists((target)-[:SEND_OFFERS_TO]->(:Member)) 
+               THEN [(target)-[:SEND_OFFERS_TO]->(m:Member) | m.memberID][0]
+               ELSE null
+          END AS receiverMemberID,
+          CASE WHEN exists((source)-[:SEND_OFFERS_TO]->(:Member))
+               THEN [(source)-[:SEND_OFFERS_TO]->(m:Member) | m.memberID][0]
+               ELSE null
+          END AS issuerMemberID
       `;
 
       const queryResult = await tx.run(query, { credexID });
@@ -119,8 +140,13 @@ export async function CancelCredexService(
           credexID: record.get("credexID"),
           cancelledAt: record.get("cancelledAt"),
           issuerAccountID: record.get("issuerAccountID"),
+          issuerAccountName: record.get("issuerAccountName"),
           receiverAccountID: record.get("receiverAccountID"),
-          denomination: record.get("denomination")
+          receiverMemberID: record.get("receiverMemberID"),
+          issuerMemberID: record.get("issuerMemberID"),
+          denomination: record.get("denomination"),
+          initialAmount: record.get("initialAmount"),
+          cxxMultiplier: record.get("cxxMultiplier")
         }
       };
     });

@@ -7,7 +7,10 @@ interface DeclineCredexData {
   declinedAt: string;
   transactionType: string;
   issuerAccountID: string;
+  issuerAccountName: string;
+  issuerMemberID: string | null;
   receiverAccountID: string;
+  receiverAccountName: string;
   denomination: string;
 }
 
@@ -27,7 +30,10 @@ interface DatabaseDeclineResult {
     credexID: string;
     declinedAt: string;
     issuerAccountID: string;
+    issuerAccountName: string;
+    issuerMemberID: string | null;
     receiverAccountID: string;
+    receiverAccountName: string;
     denomination: string;
   };
   error?: string;
@@ -100,7 +106,13 @@ export async function DeclineCredexService(
           toString(credex.declinedAt) AS declinedAt,
           source.accountID AS issuerAccountID,
           target.accountID AS receiverAccountID,
-          credex.Denomination AS denomination
+          credex.Denomination AS denomination,
+          source.accountName AS issuerAccountName,
+          target.accountName AS receiverAccountName,
+          CASE WHEN exists((source)-[:SEND_OFFERS_TO]->(:Member)) 
+               THEN [(source)-[:SEND_OFFERS_TO]->(m:Member) | m.memberID][0]
+               ELSE null
+          END AS issuerMemberID
       `;
 
       const queryResult = await tx.run(query, { credexID });
@@ -120,7 +132,10 @@ export async function DeclineCredexService(
           declinedAt: record.get("declinedAt"),
           issuerAccountID: record.get("issuerAccountID"),
           receiverAccountID: record.get("receiverAccountID"),
-          denomination: record.get("denomination")
+          denomination: record.get("denomination"),
+          issuerAccountName: record.get("issuerAccountName"),
+          receiverAccountName: record.get("receiverAccountName"),
+          issuerMemberID: record.get("issuerMemberID")
         }
       };
     });

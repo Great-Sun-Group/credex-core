@@ -20,6 +20,7 @@ import {
   ErrorActionDetails,
 } from "../../../types/apiResponse";
 import { denomFormatter } from "../../../utils/denomUtils";
+import { CredexNotificationService, ICredexNotificationService } from "../../Notifications/services/CredexNotificationService";
 
 interface UserRequest extends express.Request {
   user?: any;
@@ -51,6 +52,9 @@ export async function CreateCredexController(
   });
 
   try {
+    // Initialize notification service
+    const notificationService = await CredexNotificationService.getInstance();
+
     const {
       issuerAccountID,
       receiverAccountID,
@@ -304,6 +308,24 @@ export async function CreateCredexController(
       receiverAccountID,
       requestId,
     });
+
+    // Send notification for offer creation
+    try {
+      await notificationService.notifyOfferCreated({
+        receiverMemberID: createCredexResult.data.receiverMemberID,
+        credexID: createCredexResult.data.credexID,
+        amount: formattedAmount,
+        denomination: Denomination,
+        counterpartyName: createCredexResult.data.issuerAccountName,
+        requestId
+      });
+    } catch (error) {
+      // Log but don't fail the request
+      logger.error("Failed to send notification", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        requestId
+      });
+    }
 
     return res.status(200).json(successResponse);
   } catch (error) {
