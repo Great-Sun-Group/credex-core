@@ -77,29 +77,39 @@ export default function loginRoute() {
    *                     dashboard:
    *                       type: object
    *                       description: Full dashboard state after login
-   *                       properties:
-   *                         memberID:
-   *                           type: string
-   *                           format: uuid
-   *                           description: ID of the authenticated member
-   *                         memberTier:
-   *                           type: integer
-   *                           description: Current membership tier level
-   *                         remainingAvailableUSD:
-   *                           type: number
-   *                           description: Available USD for transactions (optional, n/a for memberTier>=3)
-   *                         firstname:
-   *                           type: string
-   *                           description: Member's first name
-   *                         lastname:
-   *                           type: string
-   *                           description: Member's last name
-   *                         memberHandle:
-   *                           type: string
-   *                           description: Member's handle
-   *                         defaultDenom:
-   *                           type: string
-   *                           description: Member's default denomination
+   *                       properties: 
+   *                         member:
+   *                           type: object
+   *                           required:
+   *                             - memberID
+   *                             - memberTier
+   *                             - firstname
+   *                             - lastname
+   *                             - memberHandle
+   *                             - defaultDenom
+   *                           properties:
+   *                             memberID:
+   *                               type: string
+   *                               format: uuid
+   *                               description: ID of the authenticated member
+   *                             memberTier:
+   *                               type: integer
+   *                               description: Current membership tier level
+   *                             remainingAvailableUSD:
+   *                               type: number
+   *                               description: Available USD for transactions (optional, n/a for memberTier>=3)
+   *                             firstname:
+   *                               type: string
+   *                               description: Member's first name
+   *                             lastname:
+   *                               type: string
+   *                               description: Member's last name
+   *                             memberHandle:
+   *                               type: string
+   *                               description: Member's handle
+   *                             defaultDenom:
+   *                               type: string
+   *                               description: Member's default denomination
    *                         accounts:
    *                           type: array
    *                           description: List of accounts accessible to the member
@@ -158,6 +168,52 @@ export default function loginRoute() {
    *                                   netCredexAssetsInDefaultDenom:
    *                                     type: string
    *                                     description: Net credex assets in account default denomination
+   *                               pendingInData:
+   *                                 type: array
+   *                                 description: Pending incoming offers for the account
+   *                                 items:
+   *                                   type: object
+   *                                   properties:
+   *                                     credexID:
+   *                                       type: string
+   *                                       format: uuid
+   *                                       description: Unique identifier for the Credex offer
+   *                                     formattedInitialAmount:
+   *                                       type: string
+   *                                       description: Formatted amount with denomination (e.g. "100.00 USD")
+   *                                     counterpartyAccountName:
+   *                                       type: string
+   *                                       description: Name of the account that sent the offer
+   *                                     dueDate:
+   *                                       type: string
+   *                                       format: date
+   *                                       description: When the Credex is due (optional)
+   *                                     secured:
+   *                                       type: boolean
+   *                                       description: Whether the offer is secured (optional)
+   *                               pendingOutData:
+   *                                 type: array
+   *                                 description: Pending outgoing offers from the account
+   *                                 items:
+   *                                   type: object
+   *                                   properties:
+   *                                     credexID:
+   *                                       type: string
+   *                                       format: uuid
+   *                                       description: Unique identifier for the Credex offer
+   *                                     formattedInitialAmount:
+   *                                       type: string
+   *                                       description: Formatted amount with denomination (negative for outgoing offers)
+   *                                     counterpartyAccountName:
+   *                                       type: string
+   *                                       description: Name of the account receiving the offer
+   *                                     dueDate:
+   *                                       type: string
+   *                                       format: date
+   *                                       description: When the Credex is due (optional)
+   *                                     secured:
+   *                                       type: boolean
+   *                                       description: Whether the offer is secured (optional)
    *       400:
    *         description: Invalid phone number format
    *         content:

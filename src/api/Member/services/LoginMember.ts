@@ -2,15 +2,7 @@ import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { generateToken } from "../../../../config/authenticate";
 import { MemberError, handleServiceError, createErrorDetails } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
-import { MemberDashboardService } from "./MemberDashboardService";
-import { MemberRepository } from "../repositories/MemberRepository";
-import { SpendLimitService } from "./SpendLimitService";
-
-// Initialize services
-const memberDashboardService = new MemberDashboardService(
-  new MemberRepository(),
-  new SpendLimitService()
-);
+import { memberDashboardService } from "../../../utils/dashboardUtils";
 
 interface MemberProperties {
   memberID: string;

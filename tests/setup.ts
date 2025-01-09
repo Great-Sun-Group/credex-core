@@ -11,6 +11,10 @@ const getBaseUrl = () => {
   } else if (apiEnv === "stage") {
     return "https://stage.mycredex.dev";
   }
+  // When running in Docker, use the service name
+  if (process.env.DOCKER_ENV === "true") {
+    return "http://server:3000";
+  }
   return "http://localhost:3000"; // Default to local
 };
 

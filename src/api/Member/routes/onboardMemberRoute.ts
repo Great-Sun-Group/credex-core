@@ -14,7 +14,13 @@ export default function onboardMemberRoute() {
    *   post:
    *     tags: [Members]
    *     summary: Onboard a new member
-   *     description: Creates a new member account with default tier 1 and associated personal account
+   *     description: |
+   *       Creates a new member account with default tier 1 and associated personal account.
+   *       The process includes:
+   *       - Creating member with initial tier 1 status
+   *       - Creating personal account with specified denomination
+   *       - Generating authentication token
+   *       - Retrieving initial dashboard state
    *     requestBody:
    *       required: true
    *       content:
@@ -39,8 +45,8 @@ export default function onboardMemberRoute() {
    *                 description: Member's last name
    *               phone:
    *                 type: string
-   *                 pattern: ^\+?[1-9]\d{1,14}$
-   *                 description: International phone number format
+   *                 pattern: ^[1-9]\d{1,14}$
+   *                 description: International phone number format (digits only, no + prefix)
    *               defaultDenom:
    *                 type: string
    *                 enum: [CXX, CAD, USD, XAU, ZWG]
@@ -56,7 +62,7 @@ export default function onboardMemberRoute() {
    *                 message:
    *                   type: string
    *                   description: Human-friendly success message
-   *                   example: "Personal account created with default denomination USD"
+   *                   example: "John Smith: Personal account created with a default denomination of USD."
    *                 data:
    *                   type: object
    *                   properties:
@@ -94,7 +100,7 @@ export default function onboardMemberRoute() {
    *                               description: Member's last name
    *                             memberHandle:
    *                               type: string
-   *                               description: Member's unique handle
+   *                               description: Member's unique handle (initially set to phone number)
    *                             defaultDenom:
    *                               type: string
    *                               enum: [CXX, CAD, USD, XAU, ZWG]
@@ -128,7 +134,7 @@ export default function onboardMemberRoute() {
    *                           description: Member's last name
    *                         memberHandle:
    *                           type: string
-   *                           description: Member's handle
+   *                           description: Member's handle (initially set to phone number)
    *                         defaultDenom:
    *                           type: string
    *                           description: Member's default denomination
@@ -191,7 +197,7 @@ export default function onboardMemberRoute() {
    *                                     type: string
    *                                     description: Net credex assets in account default denomination
    *       400:
-   *         description: Invalid input data
+   *         description: Invalid input data or system configuration error
    *         content:
    *           application/json:
    *             schema:
@@ -199,7 +205,7 @@ export default function onboardMemberRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   description: Error message explaining the validation failure
+   *                   description: Error message explaining the validation or configuration failure
    *                 data:
    *                   type: object
    *                   properties:
@@ -223,14 +229,15 @@ export default function onboardMemberRoute() {
    *                           properties:
    *                             code:
    *                               type: string
-   *                               example: MISSING_PARAMS
+   *                               enum: [MISSING_PARAMS, INVALID_DENOMINATION, NO_DAYNODE, INVALID_NAME_FORMAT, INVALID_PHONE]
+   *                               description: Specific error code indicating the type of validation failure
    *                             reason:
    *                               type: string
-   *                               description: Detailed error message
+   *                               description: Detailed explanation of what caused the validation failure
    *                     dashboard:
    *                       type: object
    *       409:
-   *         description: Phone number or member handle already in use
+   *         description: Unique constraint violation (duplicate phone or handle)
    *         content:
    *           application/json:
    *             schema:
@@ -262,14 +269,15 @@ export default function onboardMemberRoute() {
    *                           properties:
    *                             code:
    *                               type: string
-   *                               example: DUPLICATE_PHONE
+   *                               enum: [DUPLICATE_PHONE, DUPLICATE_HANDLE, DUPLICATE_FIELD]
+   *                               description: Specific error code indicating which unique constraint was violated
    *                             reason:
    *                               type: string
-   *                               description: Detailed error message
+   *                               description: Detailed explanation of which field caused the uniqueness violation
    *                     dashboard:
    *                       type: object
    *       500:
-   *         description: Internal server error
+   *         description: Internal server error during member creation, account creation, or dashboard retrieval
    *         content:
    *           application/json:
    *             schema:
@@ -301,10 +309,11 @@ export default function onboardMemberRoute() {
    *                           properties:
    *                             code:
    *                               type: string
-   *                               enum: [INTERNAL_ERROR]
+   *                               enum: [INTERNAL_ERROR, CREATE_FAILED, ACCOUNT_CREATE_FAILED, DASHBOARD_RETRIEVAL_FAILED]
+   *                               description: Specific error code indicating where the internal error occurred
    *                             reason:
    *                               type: string
-   *                               description: Internal error details
+   *                               description: Technical details about what caused the internal error
    *                             suggestion:
    *                               type: string
    *                               example: Please try again or contact support
