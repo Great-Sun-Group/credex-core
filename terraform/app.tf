@@ -32,4 +32,9 @@ module "app" {
   neo_4j_search_space_user   = var.neo_4j_search_space_user
   neo_4j_ledger_space_password = var.neo_4j_ledger_space_password
   neo_4j_search_space_password = var.neo_4j_search_space_password
+
+  # Firebase configuration
+  firebase_project_id = var.firebase_project_id
+  firebase_client_email = var.firebase_client_email
+  firebase_private_key = var.firebase_private_key
 }
