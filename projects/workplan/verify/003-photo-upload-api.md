@@ -1,367 +1,164 @@
-# Task: Photo Upload API Implementation
+# 003-Photo Upload API
 
-## Overview
-Implement a client-agnostic Express.js API endpoint for handling photo uploads, including file validation and S3 storage integration.
+This document describes the API for handling photo uploads, focusing on scalability and client-agnostic design.
 
-## Prerequisites
-- Completed Task 001 (AWS Base Infrastructure)
-- Completed Task 002 (Storage Configuration)
-- Node.js/Express.js environment
+## Endpoint: POST /v1/photos/upload
 
-## Acceptance Criteria
-1. Generic Express endpoint for photo uploads
-2. File validation checks implemented:
-   - Format (JPG/PNG)
-   - Size (≤ 5MB)
-   - Resolution (≥ 640x480)
-3. Successful S3 upload with proper path structure
-4. Error handling for all failure cases
-5. Response includes upload confirmation
-6. API documentation complete
+Upload photos for verification. Supports multiple clients, including web, mobile, and IoT devices, by allowing different content types.
 
-## Implementation Steps
+### Request
 
-### 1. Create Upload Controller
-```javascript
-// src/api/verification/controllers/uploadController.js
-import AWS from 'aws-sdk';
-import sharp from 'sharp';
-import { validateImage } from '../utils/imageValidation';
-import { extractDocumentData } from '../utils/documentProcessing';
-import { v4 as uuidv4 } from 'uuid';
+#### Supported Content Types
+- **multipart/form-data**: For traditional web and mobile clients.
+- **application/json**: For clients sending Base64-encoded images.
+- **application/octet-stream**: For binary uploads (e.g., direct streams).
 
-const s3 = new AWS.S3();
-const textract = new AWS.Textract();
+#### Parameters
 
-export const uploadPhoto = async (req, res) => {
-  try {
-    const { type } = req.body; // type: 'id' or 'selfie'
-    const file = req.file; // Multer provides the file
-    
-    // Validate file
-    const validationResult = await validateImage(file);
-    if (!validationResult.isValid) {
-      return res.status(400).json({
-        error: validationResult.error
-      });
-    }
-    
-    // Process image with enhanced quality checks
-    const processedImage = await sharp(file.buffer)
-      .resize(1024, 1024, { fit: 'inside' })
-      .toBuffer();
-    
-    // Enhanced metadata
-    const metadata = {
-      uploadDate: new Date().toISOString(),
-      documentType: sanitizeInput(type),
-      validationResults: JSON.stringify(validationResult),
-      documentHash: await generateDocumentHash(processedImage),
-      auditId: uuidv4()
-    };
-    
-    // For ID documents, extract text data using Textract
-    let extractedData = null;
-    if (type === 'id') {
-      extractedData = await extractDocumentData(processedImage);
-      metadata.extractedFields = JSON.stringify(extractedData);
-    }
-    
-    // Add Document Authenticity Checks
-    const authenticityChecks = {
-      hologramDetection: await detectHologram(processedImage),
-      templateMatching: await matchTemplate(processedImage, type),
-      securityFeatures: await checkSecurityFeatures(processedImage),
-      manipulationDetection: await detectManipulation(processedImage)
-    };
+| Name    | Type   | Required | Description                                               |
+|---------|--------|----------|-----------------------------------------------------------|
+| photo   | File   | Yes      | The photo to upload (JPEG or PNG, max 5MB)                |
+| type    | String | No       | Type of photo: 'id' or 'selfie' (optional, auto-inferred) |
 
-    if (!authenticityChecks.isAuthentic) {
-      return {
-        isValid: false,
-        error: 'Document authenticity check failed',
-        details: authenticityChecks.details
-      };
-    }
-    
-    // Upload to S3 with enhanced path structure
-    const key = `uploads/${type}s/${uuidv4()}`;
-    await s3.putObject({
-      Bucket: process.env.PHOTOS_BUCKET,
-      Key: key,
-      Body: processedImage,
-      ContentType: file.mimetype,
-      Metadata: metadata,
-      ServerSideEncryption: 'aws:kms',
-      SSEKMSKeyId: process.env.KMS_KEY_ID,
-      Tagging: 'DataType=PII'
-    }).promise();
-    
-    // Add Comprehensive Audit Logging
-    const auditLog = {
-      eventType: 'DOCUMENT_UPLOAD',
-      timestamp: new Date().toISOString(),
-      documentType: type,
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-      processingResults: {
-        qualityChecks,
-        authenticityChecks,
-        extractedData: extractedData ? maskSensitiveData(extractedData) : null
+#### Example Requests
+
+##### Using multipart/form-data
+```bash
+curl -X POST \
+  'http://api.example.com/v1/photos/upload' \
+  -H 'Authorization: Bearer <token>' \
+  -F 'photo=@/path/to/photo.jpg' \
+  -F 'type=id'
+```
+
+##### Using application/json
+```bash
+curl -X POST \
+  'http://api.example.com/v1/photos/upload' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "photo": "<Base64-encoded image>",
+    "type": "selfie"
+  }'
+```
+
+##### Using application/octet-stream
+```bash
+curl -X POST \
+  'http://api.example.com/v1/photos/upload' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/octet-stream' \
+  --data-binary @/path/to/photo.jpg
+```
+
+### Response
+
+#### Success Response (200 OK)
+```json
+{
+  "success": true,
+  "key": "uploads/ids/550e8400-e29b-41d4-a716-446655440000",
+  "message": "Photo uploaded successfully",
+  "validationDetails": {
+    "isValid": true,
+    "qualityMetrics": {
+      "dimensions": {
+        "width": 1024,
+        "height": 768
       },
-      documentHash: metadata.documentHash
-    };
-
-    await auditLogger.log(auditLog);
-    
-    return res.json({
-      success: true,
-      key,
-      message: 'Photo uploaded successfully',
-      validationDetails: validationResult,
-      extractedData: type === 'id' ? extractedData : undefined
-    });
-  } catch (error) {
-    console.error('Upload error:', error);
-    return res.status(500).json({
-      error: 'Failed to process upload'
-    });
-  }
-};
-```
-
-### 2. Create Validation Utility
-```javascript
-// src/api/verification/utils/imageValidation.js
-import sharp from 'sharp';
-import { detectBlur, assessLighting } from './imageQuality';
-
-export const validateImage = async (file) => {
-  try {
-    // Basic validation
-    if (file.size > 5 * 1024 * 1024) {
-      return {
-        isValid: false,
-        error: 'File size exceeds 5MB limit',
-        details: { size: file.size }
-      };
-    }
-    
-    if (!['image/jpeg', 'image/png'].includes(file.mimetype)) {
-      return {
-        isValid: false,
-        error: 'File must be JPG or PNG',
-        details: { type: file.mimetype }
-      };
-    }
-    
-    // Enhanced image analysis
-    const metadata = await sharp(file.buffer).metadata();
-    const qualityChecks = {
-      dimensions: metadata.width >= 640 && metadata.height >= 480,
-      blur: await detectBlur(file.buffer),
-      lighting: await assessLighting(file.buffer)
-    };
-    
-    if (!qualityChecks.dimensions) {
-      return {
-        isValid: false,
-        error: 'Image resolution must be at least 640x480',
-        details: { width: metadata.width, height: metadata.height }
-      };
-    }
-    
-    if (!qualityChecks.blur.isAcceptable) {
-      return {
-        isValid: false,
-        error: 'Image is too blurry',
-        details: qualityChecks.blur
-      };
-    }
-    
-    if (!qualityChecks.lighting.isAcceptable) {
-      return {
-        isValid: false,
-        error: 'Image lighting is inadequate',
-        details: qualityChecks.lighting
-      };
-    }
-    
-    return { 
-      isValid: true,
-      qualityMetrics: {
-        ...qualityChecks,
-        dimensions: {
-          width: metadata.width,
-          height: metadata.height
-        }
+      "blur": {
+        "isAcceptable": true,
+        "value": 0.2
+      },
+      "lighting": {
+        "isAcceptable": true,
+        "value": 120
       }
-    };
-  } catch (error) {
-    return {
-      isValid: false,
-      error: 'Failed to validate image',
-      details: error.message
-    };
+    }
+  },
+  "extractedData": {
+    "fields": {
+      "documentNumber": "***4567",
+      "name": "John Doe",
+      "dateOfBirth": "**/**/1990"
+    },
+    "confidence": 0.95
   }
-};
+}
 ```
 
-### 3. Create Route Configuration
-```javascript
-// src/api/verification/routes/uploadRoutes.js
-import express from 'express';
-import multer from 'multer';
-import { uploadPhoto } from '../controllers/uploadController';
+#### Error Responses
 
-const router = express.Router();
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  }
-});
-
-router.post('/upload', upload.single('photo'), uploadPhoto);
-
-export default router;
+##### Standard Error Schema
+```json
+{
+  "error": "Error message",
+  "details": {
+    "field": "Additional information about the error"
+  },
+  "code": 400
+}
 ```
 
-## Testing Requirements
-1. Unit Tests
-```javascript
-describe('Photo Upload', () => {
-  // Mock dependencies
-  const mockS3 = {
-    putObject: jest.fn().mockReturnValue({ promise: () => Promise.resolve() })
-  };
-  const mockSharp = jest.fn();
-  
-  beforeEach(() => {
-    // Reset mocks between tests
-    jest.clearAllMocks();
-  });
+##### Specific Errors
+- **400 Bad Request**: Missing required fields, invalid input.
+- **415 Unsupported Media Type**: Invalid file format.
+- **413 Payload Too Large**: File size exceeds limit.
+- **429 Too Many Requests**: Rate limit exceeded.
+- **500 Internal Server Error**: Processing failed.
 
-  test('validates file size and type', async () => {
-    const validFile = {
-      size: 1024 * 1024, // 1MB
-      mimetype: 'image/jpeg',
-      buffer: Buffer.from('test')
-    };
-    
-    const result = await validateImage(validFile);
-    expect(result.isValid).toBe(true);
-    
-    const largeFile = { ...validFile, size: 6 * 1024 * 1024 }; // 6MB
-    const sizeResult = await validateImage(largeFile);
-    expect(sizeResult.isValid).toBe(false);
-    expect(sizeResult.error).toContain('size exceeds');
-    
-    const invalidType = { ...validFile, mimetype: 'image/gif' };
-    const typeResult = await validateImage(invalidType);
-    expect(typeResult.isValid).toBe(false);
-    expect(typeResult.error).toContain('must be JPG or PNG');
-  });
-  
-  test('validates image dimensions', async () => {
-    const mockMetadata = {
-      width: 640,
-      height: 480
-    };
-    mockSharp.mockReturnValue({ metadata: () => mockMetadata });
-    
-    // Test implementation for dimension validation
-  });
-});
-```
+### Security Features
 
-2. Integration Tests
-```javascript
-describe('Upload API Integration', () => {
-  let app;
-  
-  beforeAll(() => {
-    app = express();
-    app.use('/api', uploadRoutes);
-  });
+1. **Image Validation**
+   - Format verification (JPEG/PNG only).
+   - Size limits (max 5MB).
+   - Resolution requirements (min 640x480).
+   - Quality checks (blur detection, lighting assessment).
 
-  test('handles file upload successfully', async () => {
-    const mockFile = {
-      buffer: Buffer.from('test-image'),
-      originalname: 'test.jpg',
-      mimetype: 'image/jpeg',
-      size: 1024 * 1024
-    };
+2. **Document Authentication**
+   - Hologram detection.
+   - Template matching.
+   - Security feature verification.
+   - Manipulation detection.
 
-    const response = await request(app)
-      .post('/api/upload')
-      .attach('photo', mockFile.buffer, {
-        filename: mockFile.originalname,
-        contentType: mockFile.mimetype
-      });
+3. **Data Protection**
+   - Server-side encryption (AWS KMS).
+   - PII data tagging.
+   - Sensitive data masking.
+   - Secure metadata handling.
 
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('success', true);
-    expect(response.body).toHaveProperty('key');
-  });
-  
-  test('handles validation errors correctly', async () => {
-    const invalidFile = {
-      buffer: Buffer.from('test-image'),
-      originalname: 'test.txt',
-      mimetype: 'text/plain',
-      size: 1024
-    };
+4. **Rate Limiting**
+   - 10 requests per minute per IP address.
+   - 100 requests per hour per user.
 
-    const response = await request(app)
-      .post('/api/upload')
-      .attach('photo', invalidFile.buffer, {
-        filename: invalidFile.originalname,
-        contentType: invalidFile.mimetype
-      });
+5. **Retry Logic**
+   - S3 uploads implement retry logic with exponential backoff to handle transient failures.
 
-    expect(response.status).toBe(400);
-    expect(response.body).toHaveProperty('error');
-  });
-});
-```
+### Metadata Normalization
 
-## Documentation Requirements
-1. API Documentation
-   - Endpoint specifications
-   - Request/response formats
-   - Error codes and messages
-   - Example requests using curl/postman
+Uploaded files include the following metadata:
+- `uploadDate`: Timestamp of the upload.
+- `documentHash`: Hash of the uploaded document for integrity checks.
+- `validationResults`: Results of quality and authenticity checks.
+- `extractedFields`: Extracted fields for ID documents.
+- `geoLocation`: Optional, if provided by the client.
 
-2. Integration Guide
-   - Environment variables
-   - Testing procedures
-   - Client integration examples
+### Audit Logging
 
-## Merge Request Checklist
-- [ ] Code follows project style guide
-- [ ] Unit tests implemented and passing
-- [ ] Integration tests implemented and passing
-- [ ] API documentation complete
-- [ ] Error handling tested
-- [ ] Security review completed
-- [ ] Performance tested with large files
-- [ ] Branch up to date with verify-project
+- Comprehensive event logging.
+- Request and response tracking.
+- Processing results.
+- Error tracking.
 
-## Notes
-- Consider implementing retry logic for failed uploads
-- Monitor upload performance and adjust as needed
-- Document rate limiting considerations
-- Ensure proper error handling for all edge cases
-- Consider implementing file type detection beyond extension
+### Testing Requirements
 
-## Estimated Time
-5-7 hours
+1. Test different content types (`multipart/form-data`, `application/json`, `application/octet-stream`).
+2. Test edge cases (missing fields, invalid formats, large files).
+3. Verify rate limit enforcement.
+4. Validate retry logic for S3 uploads.
+5. Ensure proper handling of various error scenarios.
 
-## Dependencies
-- Task 001 (AWS Base Infrastructure)
-- Task 002 (Storage Configuration)
+---
+This API design ensures scalability, flexibility, and consistency with the broader project requirements.
 
-## Next Steps
-After this task is completed, proceed with:
-1. Verification API (004-verification-api)
-2. Image Quality Validation (005-image-quality)

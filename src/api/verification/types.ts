@@ -60,7 +60,7 @@ export interface FileUpload {
 
 export type UploadedFile = FileUpload;
 
-export type DocumentType = 'id' | 'selfie';
+export type DocumentType = 'DRIVERS_LICENSE' | 'PASSPORT' | 'NATIONAL_ID';
 
 export interface UploadRequestBody {
   type: DocumentType;
@@ -77,12 +77,15 @@ export interface PhotoUploadRequest extends Request {
 }
 
 export interface AuthenticityChecks {
-  hologramDetection: boolean;
-  templateMatching: boolean;
-  securityFeatures: boolean;
-  manipulationDetection: boolean;
-  isAuthentic?: boolean;
-  details?: any;
+  hasHologram: boolean;
+  templateMatch: boolean;
+  hasUVFeatures: boolean;
+  hasMicroprint: boolean;
+  hasWatermark: boolean;
+  validMetadata: boolean;
+  validNoisePatterns: boolean;
+  validEdges: boolean;
+  isAuthentic: boolean;
 }
 
 export interface ExtractedDocumentData {
@@ -209,4 +212,56 @@ export interface ImageQualityConfig {
   maxBrightness: number;
   faceConfidenceThreshold: number;
   documentConfidenceThreshold: number;
+}
+
+export interface DetailedQualityMetrics {
+  blur: {
+    value: number;
+    threshold: number;
+    isAcceptable: boolean;
+    details?: string;
+  };
+  lighting: {
+    value: number;
+    range: { min: number; max: number };
+    isAcceptable: boolean;
+    details?: string;
+  };
+  resolution: {
+    width: number;
+    height: number;
+    isAcceptable: boolean;
+    minimumRequired: { width: number; height: number };
+  };
+  face?: {
+    confidence: number;
+    position: { x: number; y: number, width: number, height: number };
+    quality: {
+      brightness: number;
+      sharpness: number;
+    };
+  };
+  document?: {
+    confidence: number;
+    textQuality: number;
+    corners?: { x: number; y: number }[];
+  };
+}
+
+export interface FieldMapping {
+  required: string[];
+  sensitive: string[];
+  mapping: Record<string, string>;
+}
+
+export interface SecurityFeatures {
+  hologramDetected: boolean;
+  edgesValid: boolean;
+  confidence: number;
+}
+
+export interface AuthenticityResult {
+  isAuthentic: boolean;
+  securityFeatures: SecurityFeatures;
+  verificationDate: string;
 }

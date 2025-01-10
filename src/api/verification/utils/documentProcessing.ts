@@ -1,7 +1,8 @@
 import AWS from 'aws-sdk';
-import { ExtractedDocumentData } from '../types';
+import { ExtractedDocumentData, DocumentDetectionResult, DocumentType } from '../types';
 
 const textract = new AWS.Textract();
+const rekognition = new AWS.Rekognition();
 
 export const extractDocumentData = async (imageBuffer: Buffer): Promise<ExtractedDocumentData> => {
   try {
@@ -90,4 +91,67 @@ export const validateExtractedData = (data: ExtractedDocumentData): boolean => {
   const hasMinimumConfidence = data.confidence >= 90;
 
   return hasRequiredFields && hasMinimumConfidence;
+};
+
+export const analyzeDocument = async (buffer: Buffer): Promise<DocumentDetectionResult> => {
+  try {
+    const params = {
+      Document: { Bytes: buffer },
+      FeatureTypes: ['FORMS', 'TABLES']
+    };
+    
+    const response = await textract.analyzeDocument(params).promise();
+    const blocks = response.Blocks || [];
+    
+    return {
+      hasDocument: blocks.length > 0,
+      confidence: blocks[0]?.Confidence || 0,
+      corners: blocks[0]?.Geometry?.BoundingBox ? [
+        { x: blocks[0].Geometry.BoundingBox.Left || 0, y: blocks[0].Geometry.BoundingBox.Top || 0 },
+        // Add other corners based on BoundingBox
+      ] : undefined
+    };
+  } catch (error) {
+    console.error('Document analysis error:', error);
+    return {
+      hasDocument: false,
+      confidence: 0,
+      error: 'Failed to analyze document'
+    };
+  }
+};
+
+export const inferDocumentType = async (buffer: Buffer): Promise<DocumentType> => {
+  try {
+    // First try text-based inference
+    const textResult = await textract.detectDocumentText({
+      Document: { Bytes: buffer }
+    }).promise();
+
+    const text = textResult.Blocks?.map(b => b.Text?.toLowerCase() || '').join(' ') || '';
+
+    if (text && (text.includes('driver') || text.includes('license'))) {
+      return 'DRIVERS_LICENSE';
+    }
+    if (text && text.includes('passport')) {
+      return 'PASSPORT';
+    }
+
+    // If text analysis is inconclusive, try visual analysis
+    const labels = await rekognition.detectLabels({
+      Image: { Bytes: buffer }
+    }).promise();
+
+    const labelNames = labels.Labels?.map(l => l.Name?.toLowerCase() || '');
+
+    if (labelNames?.includes('id card') || labelNames?.includes('identification')) {
+      return 'NATIONAL_ID';
+    }
+
+    // Default to most common type if detection fails
+    return 'NATIONAL_ID';
+  } catch (error) {
+    console.error('Document type inference error:', error);
+    return 'NATIONAL_ID';
+  }
 };

@@ -20,22 +20,22 @@ Implement face comparison functionality using AWS Rekognition, focusing on accur
 
 ## Implementation Steps
 
-### 1. Create Face Comparison Functions
+### 1. Reuse Image Quality Validation Service
+Instead of duplicating image quality validation logic, import and reuse the shared service created in Task 005:
+
 ```typescript
 // src/api/verification/services/faceComparison.ts
-import { 
-  RekognitionClient, 
+import { validateImageQuality } from './imageQualityService';
+import {
+  RekognitionClient,
   CompareFacesCommand,
-  DetectFacesCommand,
-  QualityFilter,
-  Attribute
+  QualityFilter
 } from "@aws-sdk/client-rekognition";
 import { MetricsService } from './metrics';
 import { FaceComparison } from '../types';
 
 const rekognition = new RekognitionClient({ region: process.env.AWS_REGION });
 const SIMILARITY_THRESHOLD = 90;
-const QUALITY_THRESHOLD = 0.85;
 const MAX_FACES = 1;
 
 export async function compareFaces(
@@ -43,10 +43,10 @@ export async function compareFaces(
   targetImage: Buffer
 ): Promise<FaceComparison.Result> {
   try {
-    // Validate face quality
+    // Reuse quality validation from Task 005
     const [sourceQuality, targetQuality] = await Promise.all([
-      validateFaceQuality(sourceImage),
-      validateFaceQuality(targetImage)
+      validateImageQuality(sourceImage),
+      validateImageQuality(targetImage)
     ]);
 
     if (!sourceQuality.pass || !targetQuality.pass) {
@@ -60,7 +60,7 @@ export async function compareFaces(
       };
     }
 
-    // Perform comparison
+    // Perform face comparison
     const comparisonResult = await performComparison(sourceImage, targetImage);
 
     // Track metrics
@@ -71,54 +71,6 @@ export async function compareFaces(
     console.error('Face comparison error:', error);
     throw new Error('Failed to compare faces');
   }
-}
-
-async function validateFaceQuality(image: Buffer): Promise<FaceComparison.QualityResult> {
-  const command = new DetectFacesCommand({
-    Image: { Bytes: image },
-    Attributes: [Attribute.QUALITY, Attribute.POSE, Attribute.LANDMARKS]
-  });
-
-  const response = await rekognition.send(command);
-
-  if (response.FaceDetails.length === 0) {
-    return {
-      pass: false,
-      error: 'No face detected'
-    };
-  }
-
-  if (response.FaceDetails.length > MAX_FACES) {
-    return {
-      pass: false,
-      error: 'Multiple faces detected'
-    };
-  }
-
-  const face = response.FaceDetails[0];
-  const qualityScore = calculateQualityScore(face.Quality);
-
-  return {
-    pass: qualityScore >= QUALITY_THRESHOLD,
-    score: qualityScore,
-    details: {
-      quality: face.Quality,
-      pose: face.Pose,
-      landmarks: face.Landmarks
-    }
-  };
-}
-
-function calculateQualityScore(quality: any): number {
-  const weights = {
-    Brightness: 0.3,
-    Sharpness: 0.4,
-    Confidence: 0.3
-  };
-
-  return Object.entries(weights).reduce((score, [metric, weight]) => {
-    return score + (quality[metric] / 100 * weight);
-  }, 0);
 }
 
 async function performComparison(
@@ -172,45 +124,9 @@ async function trackComparisonMetrics(result: FaceComparison.ComparisonResult): 
 }
 ```
 
-### 2. Create Types
-```typescript
-// src/api/verification/types/faceComparison.ts
-export namespace FaceComparison {
-  export interface QualityResult {
-    pass: boolean;
-    error?: string;
-    score?: number;
-    details?: {
-      quality: any;
-      pose: any;
-      landmarks: any;
-    };
-  }
+### 2. Update Metrics Service
+Ensure that the metrics service is optimized for handling high API usage.
 
-  export interface ComparisonResult {
-    success: boolean;
-    error?: string;
-    similarity: number;
-    verified?: boolean;
-    details?: {
-      boundingBox: any;
-      confidence: number;
-      pose: any;
-    };
-  }
-
-  export type Result = ComparisonResult | {
-    success: false;
-    error: string;
-    details: {
-      source: QualityResult;
-      target: QualityResult;
-    };
-  };
-}
-```
-
-### 3. Create Metrics Service
 ```typescript
 // src/api/verification/services/metrics.ts
 import { CloudWatchClient, PutMetricDataCommand } from "@aws-sdk/client-cloudwatch";
@@ -252,8 +168,9 @@ export const MetricsService = {
 };
 ```
 
-## Testing Requirements
-1. Unit Tests
+### 3. Testing Requirements
+
+#### Unit Tests
 ```typescript
 describe('Face Comparison', () => {
   test('validates face quality correctly', async () => {
@@ -274,7 +191,7 @@ describe('Face Comparison', () => {
 });
 ```
 
-2. Integration Tests
+#### Integration Tests
 ```typescript
 describe('Face Comparison Integration', () => {
   test('processes matching faces successfully', async () => {
@@ -291,19 +208,19 @@ describe('Face Comparison Integration', () => {
 });
 ```
 
-## Documentation Requirements
-1. Technical Documentation
+### 4. Documentation Requirements
+1. **Technical Documentation**
    - Face comparison process
    - Quality thresholds
    - Metric tracking
    - Performance optimization
 
-2. User Documentation
+2. **User Documentation**
    - Face photo guidelines
    - Common failure reasons
    - Troubleshooting steps
 
-## Merge Request Checklist
+### 5. Merge Request Checklist
 - [ ] Code follows project style guide
 - [ ] Unit tests implemented and passing
 - [ ] Integration tests implemented and passing
@@ -313,15 +230,15 @@ describe('Face Comparison Integration', () => {
 - [ ] Metrics tracking verified
 - [ ] Branch up to date with verify-project
 
-## Notes
+### 6. Notes
 - Monitor Rekognition API usage
-- Consider caching comparison results
+- Reuse image quality validation logic from Task 005
 - Document threshold configurations
 - Monitor false positive/negative rates
 - Handle edge cases gracefully
 
-## Estimated Time
-4-6 hours
+### Estimated Time
+8-12 hours
 
 ## Dependencies
 - Task 004 (Verification API)
@@ -331,3 +248,4 @@ describe('Face Comparison Integration', () => {
 After this task is completed, proceed with:
 1. Security Implementation (008-security-setup)
 2. Fraud Detection System (009-fraud-detection)
+

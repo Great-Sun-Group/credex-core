@@ -1,7 +1,15 @@
 import sharp from 'sharp';
 import { detectBlur, assessLighting } from '../utils/imageQuality';
 
-const DEFAULT_CONFIG = {
+interface QualityConfig {
+  minWidth: number;
+  minHeight: number;
+  blurThreshold: number;
+  minBrightness: number;
+  maxBrightness: number;
+}
+
+const DEFAULT_CONFIG: QualityConfig = {
   minWidth: 640,
   minHeight: 480,
   blurThreshold: 0.3,
@@ -35,11 +43,20 @@ export const validateImageQuality = async (
   }
 };
 
-const checkDimensions = (metadata: sharp.Metadata, config: typeof DEFAULT_CONFIG) => ({
-  isValid: metadata.width >= config.minWidth && metadata.height >= config.minHeight,
-  width: metadata.width,
-  height: metadata.height
-});
+const checkDimensions = (metadata: sharp.Metadata, config: QualityConfig) => {
+  const width = metadata.width || 0;
+  const height = metadata.height || 0;
+
+  return {
+    width,
+    height,
+    isAcceptable: width >= config.minWidth && height >= config.minHeight,
+    minimumRequired: {
+      width: config.minWidth,
+      height: config.minHeight
+    }
+  };
+};
 
 const validateResults = (checks: any) => {
   if (!checks.dimensions.isValid) {

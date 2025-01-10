@@ -156,15 +156,23 @@ The upload endpoint implements several security measures:
 
 #### Error Codes
 
-| Code | Description |
-|------|-------------|
-| 400 | Bad Request - Invalid input parameters |
-| 401 | Unauthorized - Missing or invalid authentication |
-| 403 | Forbidden - Insufficient permissions |
-| 413 | Payload Too Large - File size exceeds limit |
-| 415 | Unsupported Media Type - Invalid file format |
-| 429 | Too Many Requests - Rate limit exceeded |
-| 500 | Internal Server Error - Processing failed |
+| Code | Description | HTTP Status | Details |
+|------|-------------|-------------|---------|
+| ERR_INVALID_FORMAT | Invalid image format | 400 | Supported formats: JPEG, PNG |
+| ERR_LOW_QUALITY | Image quality below threshold | 400 | Includes quality metrics |
+| ERR_NO_FACE | No face detected in selfie | 400 | - |
+| ERR_MULTIPLE_FACES | Multiple faces detected | 400 | Number of faces found |
+| ERR_NO_DOCUMENT | No valid document detected | 400 | - |
+| ERR_LOW_CONFIDENCE | Low confidence in detection | 400 | Actual confidence score |
+| ERR_PROCESSING | Processing error | 500 | Error details |
+
+### Quality Requirements
+
+- Minimum resolution: 640x480 pixels
+- Face confidence threshold: 90%
+- Document confidence threshold: 90%
+- Blur threshold: 0.3
+- Brightness range: 0.2 - 0.8
 
 #### Notes
 

@@ -13,6 +13,7 @@ Implement comprehensive image quality validation using AWS AI services (Rekognit
    - Implemented in src/api/verification/utils/imageValidation.ts
    - Validates minimum 640x480 resolution
    - Returns detailed dimension information
+   - Downscales oversized images to 1024x768 for consistency
 
 2. ✓ AI-powered quality analysis
    - Implemented in src/api/verification/utils/aiImageQuality.ts
@@ -39,8 +40,8 @@ Implement comprehensive image quality validation using AWS AI services (Rekognit
    - Configurable thresholds
 
 6. ✓ Performance optimization
-   - Efficient AWS service calls
-   - Proper error handling
+   - Efficient AWS service calls through parallel execution
+   - Proper error handling with fallback strategies
    - Response caching where appropriate
 
 7. ✓ Detailed feedback
@@ -65,9 +66,43 @@ const textract = new TextractClient({ region: process.env.AWS_REGION });
 ### 2. Service Layer Integration
 ```typescript
 // src/api/verification/services/imageQualityService.ts
+import sharp from 'sharp';
+import { RekognitionClient, DetectFacesCommand } from "@aws-sdk/client-rekognition";
+import { TextractClient, AnalyzeDocumentCommand } from "@aws-sdk/client-textract";
+
 export class ImageQualityService {
+  private rekognition: RekognitionClient;
+  private textract: TextractClient;
+
+  constructor() {
+    this.rekognition = new RekognitionClient({ region: process.env.AWS_REGION });
+    this.textract = new TextractClient({ region: process.env.AWS_REGION });
+  }
+
   async validateImage(imageBuffer: Buffer, type: 'id' | 'selfie'): Promise<ImageValidationResult> {
-    // Implementation using AWS services
+    // Resize image to a standard size for consistency
+    const resizedImage = await sharp(imageBuffer).resize(1024, 768, { fit: 'inside' }).toBuffer();
+
+    // Call Rekognition and Textract in parallel
+    const [rekognitionResult, textractResult] = await Promise.all([
+      this.analyzeWithRekognition(resizedImage, type),
+      this.analyzeWithTextract(resizedImage, type)
+    ]);
+
+    // Process and return the combined result
+    return this.processResults(rekognitionResult, textractResult);
+  }
+
+  private async analyzeWithRekognition(image: Buffer, type: 'id' | 'selfie') {
+    // Implement Rekognition analysis logic
+  }
+
+  private async analyzeWithTextract(image: Buffer, type: 'id' | 'selfie') {
+    // Implement Textract analysis logic
+  }
+
+  private processResults(rekognitionResult: any, textractResult: any): ImageValidationResult {
+    // Combine and process results
   }
 }
 ```
@@ -75,9 +110,25 @@ export class ImageQualityService {
 ### 3. Controller Integration
 ```typescript
 // src/api/verification/controllers/imageQualityController.ts
+import { Request, Response } from 'express';
+import { ImageQualityService } from '../services/imageQualityService';
+
 export class ImageQualityController {
-  validateImage = async (req: PhotoUploadRequest, res: Response) => {
-    // Implementation using ImageQualityService
+  private imageQualityService: ImageQualityService;
+
+  constructor() {
+    this.imageQualityService = new ImageQualityService();
+  }
+
+  validateImage = async (req: Request, res: Response) => {
+    try {
+      const { imageBuffer, type } = req.body;
+      const result = await this.imageQualityService.validateImage(imageBuffer, type);
+      res.json(result);
+    } catch (error) {
+      console.error('Image validation error:', error);
+      res.status(500).json({ error: 'Failed to validate image', details: error.message });
+    }
   }
 }
 ```
@@ -91,6 +142,14 @@ describe('AI Image Quality Analysis', () => {
   test('detects face in selfie', async () => {
     // Test implementation
   });
+
+  test('detects valid ID document', async () => {
+    // Test implementation
+  });
+
+  test('handles oversized images by resizing', async () => {
+    // Test implementation
+  });
 });
 ```
 
@@ -99,6 +158,10 @@ describe('AI Image Quality Analysis', () => {
 // tests/api/verification/services/imageQualityService.test.ts
 describe('Image Quality Service', () => {
   test('validates good quality selfie', async () => {
+    // Test implementation
+  });
+
+  test('validates ID document with sufficient text', async () => {
     // Test implementation
   });
 });
@@ -156,6 +219,7 @@ AWS_REGION=your_region
 - Maintains compatibility with existing interfaces
 - Provides detailed quality metrics
 - Includes comprehensive error handling
+- Implements image resizing for consistency and better performance
 
 ## Estimated Time
 2-3 hours (reduced from original estimate due to AWS service capabilities)
@@ -168,3 +232,4 @@ AWS_REGION=your_region
 After this task is completed, proceed with:
 1. ID Document Processing (006-id-processing)
 2. Face Comparison Implementation (007-face-comparison)
+

@@ -1,3 +1,5 @@
+import './fixtures/verification/check-files';
+
 const path = require('path');
 const dotenv = require('dotenv');
 

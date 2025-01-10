@@ -21,6 +21,14 @@ interface AuditEvent {
   metadata?: Record<string, any>;
 }
 
+export interface SecurityEvent {
+  eventType: string;
+  reason?: string;
+  ipAddress: string;
+  error?: string;
+  path?: string;
+}
+
 // Create a specialized audit logger instance
 const winstonAuditLogger = winston.createLogger({
   level: 'info',
@@ -89,7 +97,7 @@ function sanitizeAuditData(data: any): any {
   return data;
 }
 
-class AuditLogger {
+export class AuditLogger {
   private static instance: AuditLogger;
 
   private constructor() {
@@ -156,6 +164,11 @@ class AuditLogger {
         version: '1.0'
       }
     });
+  }
+
+  async logSecurityEvent(event: SecurityEvent): Promise<void> {
+    // Implementation
+    console.log('Security Event:', event);
   }
 }
 

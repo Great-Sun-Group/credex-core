@@ -61,6 +61,8 @@ export const deleteCollection = async (): Promise<void> => {
     CollectionId: COLLECTION_ID
   }).promise();
 };
+
+// Suggestion 2: Remove deleteCollection from this service if cleanup logic becomes complex, and consider handling it in a dedicated cleanup task or service.
 ```
 
 ### 2. Update Verification Controller
@@ -72,6 +74,8 @@ import { storeVerificationResult } from '../services/storageService';
 import { trackMetrics } from '../services/metricsService';
 import { CollectionService } from '../services/collectionService';
 import { auditLogger } from '../utils/auditLogger';
+
+const SIMILARITY_THRESHOLD = 90;
 
 export const verifyPhotos = async (req: Request, res: Response): Promise<Response> => {
   try {
@@ -153,6 +157,8 @@ export const verifyPhotos = async (req: Request, res: Response): Promise<Respons
     });
   }
 };
+
+// Suggestion 3: Add caching or rate-limiting for Rekognition requests to enhance performance during high request volumes.
 ```
 
 ### 3. Update Storage Service to Use Existing Patterns
@@ -289,3 +295,4 @@ Following existing error response patterns...
 After this task is completed, proceed with:
 1. Image Quality Validation (005-image-quality)
 2. ID Document Processing (006-id-processing)
+

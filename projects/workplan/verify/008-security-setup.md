@@ -17,6 +17,8 @@ Implement comprehensive security measures for the ID verification system, includ
 5. Security headers configuration
 6. Input validation and sanitization
 7. Audit trail implementation
+8. CloudWatch alarms for critical events
+9. Custom error-handling middleware for secure error responses
 
 ## Implementation Steps
 
@@ -70,10 +72,10 @@ export const helmetMiddleware = helmet(securityConfig.helmet);
 ### 2. Create Encryption Functions
 ```typescript
 // src/api/verification/utils/encryption.ts
-import { 
-  KMSClient, 
+import {
+  KMSClient,
   GenerateDataKeyCommand,
-  DecryptCommand 
+  DecryptCommand
 } from "@aws-sdk/client-kms";
 import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 import { securityConfig } from '../config/security';
@@ -157,13 +159,13 @@ export async function decrypt(encryptedData: EncryptedData): Promise<string> {
 ### 3. Create Audit Functions
 ```typescript
 // src/api/verification/utils/audit.ts
-import { 
-  DynamoDBClient, 
-  PutItemCommand 
+import {
+  DynamoDBClient,
+  PutItemCommand
 } from "@aws-sdk/client-dynamodb";
-import { 
-  CloudWatchLogsClient, 
-  PutLogEventsCommand 
+import {
+  CloudWatchLogsClient,
+  PutLogEventsCommand
 } from "@aws-sdk/client-cloudwatch-logs";
 
 const dynamodb = new DynamoDBClient({ region: process.env.AWS_REGION });
@@ -223,8 +225,8 @@ import { sanitizeInput } from '../utils/sanitization';
 import { logAction } from '../utils/audit';
 
 export async function authenticate(
-  req: Request, 
-  res: Response, 
+  req: Request,
+  res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
@@ -243,8 +245,8 @@ export async function authenticate(
 }
 
 export function sanitize(
-  req: Request, 
-  res: Response, 
+  req: Request,
+  res: Response,
   next: NextFunction
 ): void {
   req.body = sanitizeInput(req.body);
@@ -275,6 +277,16 @@ export function audit(actionType: string) {
     };
     next();
   };
+}
+
+export function handleErrors(
+  err: Error,
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  console.error('Error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 }
 ```
 
@@ -350,6 +362,10 @@ describe('Security Measures', () => {
   test('blocks unauthorized access', async () => {
     // Test implementation
   });
+  
+  test('triggers CloudWatch alarms for critical events', async () => {
+    // Test implementation
+  });
 });
 ```
 
@@ -359,6 +375,8 @@ describe('Security Measures', () => {
    - Authentication flow
    - Audit trail format
    - Security headers
+   - CloudWatch alarm configuration
+   - Error-handling middleware
 
 2. Implementation Guide
    - Security configuration
@@ -374,6 +392,8 @@ describe('Security Measures', () => {
 - [ ] Audit logging verified
 - [ ] Rate limiting tested
 - [ ] Token validation tested
+- [ ] CloudWatch alarms configured and tested
+- [ ] Custom error-handling middleware implemented
 - [ ] Branch up to date with verify-project
 
 ## Notes
@@ -381,6 +401,7 @@ describe('Security Measures', () => {
 - Implements comprehensive audit logging
 - Follows security best practices
 - Includes proper error handling
+- CloudWatch alarms set up for critical events
 
 ## Estimated Time
 5-7 hours
@@ -392,3 +413,4 @@ describe('Security Measures', () => {
 After this task is completed, proceed with:
 1. Fraud Detection System (009-fraud-detection)
 2. Testing Suite (010-testing-suite)
+

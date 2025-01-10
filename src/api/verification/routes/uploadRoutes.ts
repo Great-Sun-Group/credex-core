@@ -1,7 +1,10 @@
 import express, { Request, Response, NextFunction } from 'express';
 import multer, { FileFilterCallback } from 'multer';
 import { uploadPhoto } from '../controllers/uploadController';
+import { validateRequest } from '../../../middleware/validateRequest';
+import { validateImageSchema } from '../imageQualityValidationSchemas';
 import { PhotoUploadRequest, DocumentType, MulterError } from '../types';
+import { auditLogger } from '../../../utils/auditLogger';
 
 const router = express.Router();
 
@@ -11,52 +14,48 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png'] as const;
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
+
+// File filter function
+const fileFilter = (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+  if (ALLOWED_MIME_TYPES.includes(file.mimetype as typeof ALLOWED_MIME_TYPES[number])) {
+    cb(null, true);
+  } else {
+    cb(new Error(`Invalid file type. Allowed types: ${ALLOWED_MIME_TYPES.join(', ')}`));
+  }
+};
+
 const upload = multer({
   storage,
   limits: {
     fileSize: MAX_FILE_SIZE,
     files: 1
   },
-  fileFilter: (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
-    if (ALLOWED_MIME_TYPES.includes(file.mimetype as typeof ALLOWED_MIME_TYPES[number])) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only JPEG and PNG files are allowed'));
-    }
-  }
+  fileFilter
 });
 
-// Middleware to validate request body
-const validateRequestBody = (req: Request, res: Response, next: NextFunction): Response | void => {
-  const { type } = req.body;
-  
-  if (!type || !['id', 'selfie'].includes(type)) {
-    return res.status(400).json({
-      error: 'Invalid document type. Must be either "id" or "selfie"'
-    });
-  }
+// Request validation middleware
+const validateUploadRequest = validateRequest(validateImageSchema);
 
-  const uploadRequest = req as PhotoUploadRequest;
-  if (!uploadRequest.file) {
-    return res.status(400).json({
-      error: 'No file uploaded'
-    });
-  }
-
+// Audit logging middleware
+const auditUploadRequest = async (req: Request, _res: Response, next: NextFunction) => {
+  await auditLogger.logVerificationEvent({
+    eventType: 'UPLOAD_REQUEST',
+    documentType: (req.body.type as DocumentType) || 'unknown',
+    ipAddress: req.ip || 'unknown',
+    userAgent: req.headers['user-agent'] as string,
+    processingResults: {
+      qualityChecks: null,
+      authenticityChecks: null,
+      extractedData: null
+    },
+    documentHash: '',
+    requestId: req.id
+  });
   next();
 };
 
-// Define routes
-router.post(
-  '/upload',
-  upload.single('photo'),
-  validateRequestBody,
-  uploadPhoto
-);
-
 // Error handling middleware
-router.use((error: unknown, _req: Request, res: Response, _next: NextFunction): Response => {
-  // Handle Multer errors
+const handleUploadError = (error: unknown, _req: Request, res: Response, _next: NextFunction): Response => {
   if (error instanceof Error && 'code' in error) {
     const multerError = error as MulterError;
     
@@ -72,12 +71,23 @@ router.use((error: unknown, _req: Request, res: Response, _next: NextFunction): 
     });
   }
 
-  // Handle other errors
   console.error('Upload route error:', error);
   return res.status(500).json({
     error: 'Internal server error',
     details: error instanceof Error ? error.message : 'Unknown error'
   });
-});
+};
+
+// Define routes
+router.post(
+  '/upload',
+  auditUploadRequest,
+  upload.single('photo'),
+  validateUploadRequest,
+  uploadPhoto
+);
+
+// Error handler must be last
+router.use(handleUploadError);
 
 export default router;

@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { verifyPhotos } from '../controllers/verificationController';
 import { VerificationRequest } from '../types';
+import rateLimit from 'express-rate-limit';
 
 const router = Router();
 
@@ -27,8 +28,14 @@ const validateVerificationRequest = (req: Request, res: Response, next: NextFunc
   next();
 };
 
+const verificationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+
 router.post(
   '/verify',
+  verificationLimiter,
   validateVerificationRequest,
   verifyPhotos
 );

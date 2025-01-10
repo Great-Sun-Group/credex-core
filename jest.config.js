@@ -19,5 +19,26 @@ module.exports = {
   testTimeout: 30000, // 30 seconds for AWS calls
   verbose: true,
   // Load .env.test for testing
-  setupFiles: ['<rootDir>/tests/env.setup.js']
+  setupFiles: ['<rootDir>/tests/env.setup.js'],
+  collectCoverage: true,
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'html'],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80
+    },
+    './src/api/verification/**/*.ts': {
+      branches: 90,
+      functions: 90,
+      lines: 90,
+      statements: 90
+    }
+  },
+  collectCoverageFrom: [
+    'src/api/verification/**/*.ts',
+    '!src/api/verification/types/**/*.ts'
+  ]
 };

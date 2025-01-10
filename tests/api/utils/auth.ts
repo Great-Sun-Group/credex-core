@@ -13,6 +13,10 @@ export async function loginMember(phone: string): Promise<LoginResponse> {
   console.log("\nLogging in member...");
   const response = await authRequest("/login", {
     phone
+  }, undefined, {
+    headers: {
+      "x-client-api-key": process.env.CLIENT_API_KEY || ""
+    }
   });
 
   console.log("Login response:", response.data);
@@ -22,8 +26,8 @@ export async function loginMember(phone: string): Promise<LoginResponse> {
 
   await delay(DELAY_MS);
   return {
-    jwt: response.data.token,
-    memberId: response.data.memberId
+    jwt: response.data.data.action.details.token,
+    memberId: response.data.data.memberId
   };
 }
 
