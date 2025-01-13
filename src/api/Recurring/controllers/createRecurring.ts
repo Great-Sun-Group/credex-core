@@ -444,7 +444,7 @@ export async function CreateRecurringController(
 
       const acceptResult = await AcceptRecurringService({
         recurringID: result.data.recurringID,
-        signerID: targetId,
+        signerID: ownerID,  // Use the member's ID who created the subscription
         requestId
       });
 
