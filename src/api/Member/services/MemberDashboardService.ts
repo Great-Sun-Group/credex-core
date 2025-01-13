@@ -8,7 +8,7 @@ import logger from '../../../utils/logger';
 interface MemberDashboardData {
   memberID: string;
   memberTier: number;
-  remainingAvailableUSD?: number;
+  remainingAvailableUSD?: number | null;
   firstname: string;
   lastname: string;
   memberHandle: string;
@@ -43,7 +43,7 @@ export class MemberDashboardService implements IMemberDashboardService {
       }
 
       // Get tier-specific spend limit if applicable using optimized service
-      let remainingAvailableUSD: number | undefined;
+      let remainingAvailableUSD: number | null = null;
       if (memberData.tier < 3) {
         logger.debug("Calculating remaining spend limit", { memberID, tier: memberData.tier });
         remainingAvailableUSD = await this.spendLimitService.getRemainingLimit(memberID);
