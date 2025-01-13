@@ -6,6 +6,8 @@ import { SpendLimitService, ISpendLimitService } from "../../Member/services/Spe
 import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
 import { getDashboardData } from "../../../utils/dashboardUtils";
+import { CredexNotificationService } from "../../Notifications/services/CredexNotificationService";
+import { denomFormatter } from "../../../utils/denomUtils";
 
 // Initialize services
 const memberDashboardService = new MemberDashboardService(
@@ -122,6 +124,26 @@ export async function CancelCredexController(
       signerID,
       requestId,
     });
+
+    // Initialize notification service and send notification
+    try {
+      const notificationService = await CredexNotificationService.getInstance();
+      await notificationService.notifyOfferCancelled({
+        receiverMemberID: responseData.data.receiverMemberID,
+        credexID: responseData.data.credexID,
+        amount: denomFormatter(responseData.data.initialAmount / responseData.data.cxxMultiplier, responseData.data.denomination),
+        denomination: responseData.data.denomination,
+        counterpartyName: responseData.data.issuerAccountName,
+        requestId
+      });
+    } catch (error) {
+      // Log error but don't fail the request
+      logger.error("Failed to send notification for cancelled Credex", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        credexID: responseData.data.credexID,
+        requestId,
+      });
+    }
 
     return res.status(200).json(successResponse);
   } catch (error) {

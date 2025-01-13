@@ -223,6 +223,14 @@ export function validateTemplateType(type: string): {
 }
 
 export const v = {
+  isNonEmptyString: (value: any): { isValid: boolean; message: string } => {
+    const isValid = typeof value === 'string' && value.trim().length > 0;
+    return {
+      isValid,
+      message: isValid ? 'Valid string' : 'Value must be a non-empty string'
+    };
+  },
+
   validateUUIDArray: (
     uuidArray: any
   ): { isValid: boolean; message: string } => {

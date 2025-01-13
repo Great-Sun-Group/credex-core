@@ -34,6 +34,192 @@
       }
     },
     "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "details": {
+            "type": "string",
+            "description": "Detailed error information"
+          },
+          "error": {
+            "type": "string",
+            "description": "Technical error details"
+          }
+        }
+      },
+      "ServiceHealth": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "error"
+            ],
+            "description": "Service health status"
+          },
+          "message": {
+            "type": "string",
+            "description": "Health status message"
+          },
+          "details": {
+            "type": "string",
+            "description": "Additional health status details"
+          }
+        }
+      },
+      "FCMToken": {
+        "type": "object",
+        "required": [
+          "token",
+          "userId",
+          "platform"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Firebase Cloud Messaging token"
+          },
+          "userId": {
+            "type": "string",
+            "description": "User ID associated with the token"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ],
+            "description": "Device platform"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Token creation timestamp"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Token last update timestamp"
+          }
+        }
+      },
+      "NotificationResponse": {
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Operation success status"
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message if operation failed"
+          },
+          "details": {
+            "type": "string",
+            "description": "Additional error or success details"
+          },
+          "isValid": {
+            "type": "boolean",
+            "description": "Token validation result (for validate-token endpoint)"
+          }
+        }
+      },
+      "NotificationType": {
+        "type": "string",
+        "enum": [
+          "OFFER_CREATED",
+          "OFFER_CANCELLED",
+          "OFFER_ACCEPTED",
+          "OFFER_DECLINED",
+          "CREDLOOP_COMPLETED"
+        ],
+        "description": "Type of notification event"
+      },
+      "NotificationData": {
+        "type": "object",
+        "required": [
+          "type",
+          "recipientID",
+          "data"
+        ],
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/NotificationType"
+          },
+          "recipientID": {
+            "type": "string",
+            "description": "ID of the notification recipient"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "credexID"
+            ],
+            "properties": {
+              "credexID": {
+                "type": "string",
+                "description": "ID of the related Credex transaction"
+              },
+              "amount": {
+                "type": "string",
+                "description": "Transaction amount"
+              },
+              "denomination": {
+                "type": "string",
+                "description": "Currency denomination"
+              },
+              "counterpartyName": {
+                "type": "string",
+                "description": "Name of the counterparty"
+              },
+              "clearedPayable": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string"
+                  },
+                  "denomination": {
+                    "type": "string"
+                  },
+                  "owedTo": {
+                    "type": "string"
+                  }
+                }
+              },
+              "clearedReceivable": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string"
+                  },
+                  "denomination": {
+                    "type": "string"
+                  },
+                  "owedFrom": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "DevAdminAction": {
         "type": "object",
         "required": [
@@ -157,6 +343,10 @@
     {
       "name": "DevAdmin",
       "description": "Development and administration operations"
+    },
+    {
+      "name": "Notifications",
+      "description": "Push notification management and testing operations"
     }
   ],
   "paths": {
@@ -10973,34 +11163,47 @@
                           "type": "object",
                           "description": "Full dashboard state after login",
                           "properties": {
-                            "memberID": {
-                              "type": "string",
-                              "format": "uuid",
-                              "description": "ID of the authenticated member"
-                            },
-                            "memberTier": {
-                              "type": "integer",
-                              "description": "Current membership tier level"
-                            },
-                            "remainingAvailableUSD": {
-                              "type": "number",
-                              "description": "Available USD for transactions (optional, n/a for memberTier>=3)"
-                            },
-                            "firstname": {
-                              "type": "string",
-                              "description": "Member's first name"
-                            },
-                            "lastname": {
-                              "type": "string",
-                              "description": "Member's last name"
-                            },
-                            "memberHandle": {
-                              "type": "string",
-                              "description": "Member's handle"
-                            },
-                            "defaultDenom": {
-                              "type": "string",
-                              "description": "Member's default denomination"
+                            "member": {
+                              "type": "object",
+                              "required": [
+                                "memberID",
+                                "memberTier",
+                                "firstname",
+                                "lastname",
+                                "memberHandle",
+                                "defaultDenom"
+                              ],
+                              "properties": {
+                                "memberID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the authenticated member"
+                                },
+                                "memberTier": {
+                                  "type": "integer",
+                                  "description": "Current membership tier level"
+                                },
+                                "remainingAvailableUSD": {
+                                  "type": "number",
+                                  "description": "Available USD for transactions (optional, n/a for memberTier>=3)"
+                                },
+                                "firstname": {
+                                  "type": "string",
+                                  "description": "Member's first name"
+                                },
+                                "lastname": {
+                                  "type": "string",
+                                  "description": "Member's last name"
+                                },
+                                "memberHandle": {
+                                  "type": "string",
+                                  "description": "Member's handle"
+                                },
+                                "defaultDenom": {
+                                  "type": "string",
+                                  "description": "Member's default denomination"
+                                }
+                              }
                             },
                             "accounts": {
                               "type": "array",
@@ -11840,6 +12043,248 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/notifications/health": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Check notification service health",
+        "description": "Returns the health status of the notification service",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "healthy"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Notification service initialized and ready"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service is not initialized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Notification service not initialized"
+                    },
+                    "details": {
+                      "type": "string",
+                      "example": "The service failed to initialize. Check logs for details."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/register-token": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Register FCM token for a user",
+        "description": "Register a Firebase Cloud Messaging token for push notifications",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token",
+                  "platform"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "Firebase Cloud Messaging token"
+                  },
+                  "platform": {
+                    "type": "string",
+                    "enum": [
+                      "ios",
+                      "android"
+                    ],
+                    "description": "Device platform"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters"
+          },
+          "401": {
+            "description": "User not authenticated"
+          },
+          "404": {
+            "description": "Member not found"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/api/notifications/validate-token": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Validate FCM token",
+        "description": "Validate a Firebase Cloud Messaging token",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "Firebase Cloud Messaging token to validate"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token validation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "isValid": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "User not authenticated"
+          },
+          "503": {
+            "description": "Service unavailable"
+          }
+        }
+      }
+    },
+    "/api/notifications/test": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Send test notification",
+        "description": "Send a test notification to the authenticated user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "body"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "Notification title"
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "Notification body"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Test notification sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No FCM token registered for user"
+          },
+          "401": {
+            "description": "User not authenticated"
+          },
+          "503": {
+            "description": "Service unavailable"
           }
         }
       }

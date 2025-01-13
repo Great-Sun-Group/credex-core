@@ -25,7 +25,10 @@ interface CreateCredexData {
   dueDate?: string;
   transactionType: string;
   issuerAccountID: string;
+  issuerAccountName: string;
   receiverAccountID: string;
+  receiverMemberID: string | null;
+  issuerMemberID: string | null;
   createdAt: string;
   cxxMultiplier: number;
 }
@@ -46,7 +49,10 @@ interface DatabaseCreateResult {
     credexID: string;
     counterpartyAccountName: string;
     issuerAccountID: string;
+    issuerAccountName: string;
     receiverAccountID: string;
+    receiverMemberID: string | null;
+    issuerMemberID: string | null;
     cxxMultiplier: number;
     createdAt: string;
   };
@@ -189,9 +195,18 @@ export async function CreateCredexService(
           newCredex.credexID AS credexID,
           receiver.accountName AS counterpartyAccountName,
           issuer.accountID AS issuerAccountID,
+          issuer.accountName AS issuerAccountName,
           receiver.accountID AS receiverAccountID,
           daynode[$Denomination] AS cxxMultiplier,
-          toString(newCredex.createdAt) AS createdAt
+          toString(newCredex.createdAt) AS createdAt,
+          CASE WHEN exists((receiver)-[:SEND_OFFERS_TO]->(:Member)) 
+               THEN [(receiver)-[:SEND_OFFERS_TO]->(m:Member) | m.memberID][0]
+               ELSE null
+          END AS receiverMemberID,
+          CASE WHEN exists((issuer)-[:SEND_OFFERS_TO]->(:Member))
+               THEN [(issuer)-[:SEND_OFFERS_TO]->(m:Member) | m.memberID][0]
+               ELSE null
+          END AS issuerMemberID
       `;
 
       const queryResult = await tx.run(query, {
@@ -217,7 +232,10 @@ export async function CreateCredexService(
           credexID: record.get("credexID"),
           counterpartyAccountName: record.get("counterpartyAccountName"),
           issuerAccountID: record.get("issuerAccountID"),
+          issuerAccountName: record.get("issuerAccountName"),
           receiverAccountID: record.get("receiverAccountID"),
+          receiverMemberID: record.get("receiverMemberID"),
+          issuerMemberID: record.get("issuerMemberID"),
           cxxMultiplier: record.get("cxxMultiplier"),
           createdAt: record.get("createdAt")
         }
@@ -354,7 +372,10 @@ export async function CreateCredexService(
         dueDate: dueDate || undefined,
         transactionType: OFFERSorREQUESTS,
         issuerAccountID: credexData.issuerAccountID,
+        issuerAccountName: credexData.issuerAccountName,
         receiverAccountID: credexData.receiverAccountID,
+        receiverMemberID: credexData.receiverMemberID,
+        issuerMemberID: credexData.issuerMemberID,
         createdAt: credexData.createdAt,
         cxxMultiplier: credexData.cxxMultiplier
       },

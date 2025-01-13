@@ -77,29 +77,39 @@ export default function loginRoute() {
    *                     dashboard:
    *                       type: object
    *                       description: Full dashboard state after login
-   *                       properties:
-   *                         memberID:
-   *                           type: string
-   *                           format: uuid
-   *                           description: ID of the authenticated member
-   *                         memberTier:
-   *                           type: integer
-   *                           description: Current membership tier level
-   *                         remainingAvailableUSD:
-   *                           type: number
-   *                           description: Available USD for transactions (optional, n/a for memberTier>=3)
-   *                         firstname:
-   *                           type: string
-   *                           description: Member's first name
-   *                         lastname:
-   *                           type: string
-   *                           description: Member's last name
-   *                         memberHandle:
-   *                           type: string
-   *                           description: Member's handle
-   *                         defaultDenom:
-   *                           type: string
-   *                           description: Member's default denomination
+   *                       properties: 
+   *                         member:
+   *                           type: object
+   *                           required:
+   *                             - memberID
+   *                             - memberTier
+   *                             - firstname
+   *                             - lastname
+   *                             - memberHandle
+   *                             - defaultDenom
+   *                           properties:
+   *                             memberID:
+   *                               type: string
+   *                               format: uuid
+   *                               description: ID of the authenticated member
+   *                             memberTier:
+   *                               type: integer
+   *                               description: Current membership tier level
+   *                             remainingAvailableUSD:
+   *                               type: number
+   *                               description: Available USD for transactions (optional, n/a for memberTier>=3)
+   *                             firstname:
+   *                               type: string
+   *                               description: Member's first name
+   *                             lastname:
+   *                               type: string
+   *                               description: Member's last name
+   *                             memberHandle:
+   *                               type: string
+   *                               description: Member's handle
+   *                             defaultDenom:
+   *                               type: string
+   *                               description: Member's default denomination
    *                         accounts:
    *                           type: array
    *                           description: List of accounts accessible to the member
