@@ -1,4 +1,5 @@
 .PHONY: diff apidoc dev test
+=======
 
 diff:
 	@bash projects/merge/getDiff.sh $(filter-out $@,$(MAKECMDGOALS))
