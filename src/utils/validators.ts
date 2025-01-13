@@ -72,11 +72,11 @@ export function validatePhone(phone: string): {
   isValid: boolean;
   message: string;
 } {
-  const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+  const phoneRegex = /^[1-9]\d{1,14}$/;
   const isValid = phoneRegex.test(phone);
   const message = isValid
     ? "Valid phone number"
-    : "Invalid phone number: must be a valid international phone number";
+    : "Invalid phone number: must be digits only (1-15 digits, starting with non-zero)";
   logger.debug(message, { phone, isValid });
   return { isValid, message };
 }
@@ -223,6 +223,14 @@ export function validateTemplateType(type: string): {
 }
 
 export const v = {
+  isNonEmptyString: (value: any): { isValid: boolean; message: string } => {
+    const isValid = typeof value === 'string' && value.trim().length > 0;
+    return {
+      isValid,
+      message: isValid ? 'Valid string' : 'Value must be a non-empty string'
+    };
+  },
+
   validateUUIDArray: (
     uuidArray: any
   ): { isValid: boolean; message: string } => {

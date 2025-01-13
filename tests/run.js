@@ -1,4 +1,5 @@
-const { execSync } = require("child_process");
+const { execSync, spawn } = require("child_process");
+const net = require('net');
 const path = require("path");
 
 // Get command line arguments
@@ -29,9 +30,48 @@ const envFlags = {
   stage: "--runInBand",
 };
 
+// Check if server is running on port 3000
+function isServerRunning() {
+  return new Promise((resolve) => {
+    const client = new net.Socket();
+    client.connect(3000, '127.0.0.1', () => {
+      client.destroy();
+      resolve(true);
+    }).on('error', () => {
+      resolve(false);
+    });
+  });
+}
+
+// Start server and return the process
+function startServer() {
+  console.log("Building TypeScript...");
+  execSync("npm run build", { stdio: "inherit" });
+  
+  console.log("Starting test server...");
+  const server = spawn("node", ["build/src/index.js"], {
+    env: { ...process.env, NODE_ENV: "test" },
+    stdio: "inherit"
+  });
+
+  // Give the server time to start
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(server), 5000);
+  });
+}
+
 // Build and execute the Jest command
 async function runTest() {
+  let serverStarted = false;
+  let server;
   try {
+    // Only start server if one isn't running
+    if (!(await isServerRunning())) {
+      server = await startServer();
+      serverStarted = true;
+    } else {
+      console.log("Using existing server...");
+    }
     let jestCommand;
     let testParams = remainingArgs;
 
@@ -66,7 +106,7 @@ async function runTest() {
       // Handle individual admin operation tests
       const operation = command.split("/")[1];
       jestCommand = `jest --testPathPattern=tests/api/endpoints/admin/${operation}\\.test\\.ts ${envFlags[env]}`;
-    } else {
+    } else if (command) {
       // Handle endpoint tests
       const pattern = `tests/api/endpoints/${command.toLowerCase()}\\.test\\.ts`;
 
@@ -103,6 +143,9 @@ async function runTest() {
       }
 
       jestCommand = `jest --testPathPattern="${pattern}" ${envFlags[env]}`;
+    } else {
+      // No command provided - run all tests
+      jestCommand = `jest ${envFlags[env]}`;
     }
 
     // Execute the Jest command
@@ -117,6 +160,12 @@ async function runTest() {
     });
   } catch (error) {
     process.exit(1);
+  } finally {
+    // Only kill server if we started it
+    if (serverStarted && server) {
+      console.log("Shutting down test server...");
+      server.kill();
+    }
   }
 }
 

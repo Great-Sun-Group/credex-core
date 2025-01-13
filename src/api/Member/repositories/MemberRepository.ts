@@ -8,7 +8,7 @@ export interface MemberData {
   tier: number;
   firstname: string;
   lastname: string;
-  handle: string;
+  memberHandle: string;
   defaultDenom: string;
 }
 
@@ -55,7 +55,7 @@ export class MemberRepository implements IMemberRepository {
               member.memberTier as tier,
               member.firstname as firstname,
               member.lastname as lastname,
-              member.handle as handle,
+              member.memberHandle as memberHandle,
               member.defaultDenom as defaultDenom
           `;
 
@@ -68,15 +68,31 @@ export class MemberRepository implements IMemberRepository {
           return null;
         }
 
-        // Convert Neo4j Integer to JavaScript number
+        // Get all required fields
+        const id = result.get("id");
         const tier = result.get("tier");
+        const firstname = result.get("firstname");
+        const lastname = result.get("lastname");
+        const memberHandle = result.get("memberHandle");
+        const defaultDenom = result.get("defaultDenom");
+
+        // Validate required fields
+        if (!memberHandle) {
+          logger.error("Member found with null memberHandle", { memberID });
+          throw new MemberError(
+            "Invalid member data: handle is required",
+            "INVALID_MEMBER_DATA",
+            ErrorCodes.Member.INVALID_DATA
+          );
+        }
+
         const memberData: MemberData = {
-          id: result.get("id"),
+          id,
           tier: tier ? tier.toNumber() : 0,
-          firstname: result.get("firstname"),
-          lastname: result.get("lastname"),
-          handle: result.get("handle"),
-          defaultDenom: result.get("defaultDenom"),
+          firstname,
+          lastname,
+          memberHandle,
+          defaultDenom,
         };
 
         // Cache the result

@@ -6,6 +6,8 @@ import { SpendLimitService } from "../../Member/services/SpendLimitService";
 import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
 import { getDashboardData } from "../../../utils/dashboardUtils";
+import { CredexNotificationService } from "../../Notifications/services/CredexNotificationService";
+import { denomFormatter } from "../../../utils/denomUtils";
 
 // Initialize services
 const memberDashboardService = new MemberDashboardService(
@@ -44,6 +46,9 @@ export async function AcceptCredexController(
   });
 
   try {
+    // Initialize notification service
+    const notificationService = await CredexNotificationService.getInstance();
+
     const { credexID } = req.body;
     const signerID = req.user.memberID;
 
@@ -125,6 +130,24 @@ export async function AcceptCredexController(
       signerID,
       requestId,
     });
+
+    // Send notification for offer acceptance
+    try {
+      await notificationService.notifyOfferAccepted({
+        issuerMemberID: acceptCredexResult.data.issuerMemberID,
+        credexID: acceptCredexResult.data.credexID,
+        amount: denomFormatter(parseFloat(acceptCredexResult.data.amount), acceptCredexResult.data.denomination),
+        denomination: acceptCredexResult.data.denomination,
+        counterpartyName: acceptCredexResult.data.acceptorAccountID,
+        requestId
+      });
+    } catch (error) {
+      // Log but don't fail the request
+      logger.error("Failed to send notification", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        requestId
+      });
+    }
 
     return res.status(200).json(successResponse);
 

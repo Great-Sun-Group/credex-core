@@ -6,6 +6,7 @@ import { SpendLimitService } from "../../Member/services/SpendLimitService";
 import { UserRequest } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
 import { getDashboardData } from "../../../utils/dashboardUtils";
+import { CredexNotificationService } from "../../Notifications/services/CredexNotificationService";
 
 // Initialize services
 const memberDashboardService = new MemberDashboardService(
@@ -41,6 +42,9 @@ export async function DeclineCredexController(
   logger.debug("Entering DeclineCredexController", { requestId });
 
   try {
+    // Initialize notification service
+    const notificationService = await CredexNotificationService.getInstance();
+
     const { credexID } = req.body;
     const signerID = req.user.memberID;
 
@@ -122,6 +126,24 @@ export async function DeclineCredexController(
       signerID,
       requestId,
     });
+
+    // Send notification for offer decline
+    try {
+      await notificationService.notifyOfferDeclined({
+        issuerMemberID: responseData.data.issuerMemberID,
+        credexID: responseData.data.credexID,
+        amount: "0", // Amount is zeroed on decline
+        denomination: responseData.data.denomination,
+        counterpartyName: responseData.data.receiverAccountName,
+        requestId
+      });
+    } catch (error) {
+      // Log but don't fail the request
+      logger.error("Failed to send notification", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        requestId
+      });
+    }
 
     return res.status(200).json(successResponse);
   } catch (error) {

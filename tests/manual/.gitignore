@@ -1,0 +1,7 @@
+# Files containing sensitive Firebase configuration
+firebase-messaging-sw.js
+get-fcm-token.html
+
+# Keep example files
+!firebase-messaging-sw.example.js
+!get-fcm-token.example.html

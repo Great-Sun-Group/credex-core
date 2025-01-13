@@ -1,16 +1,16 @@
-import swaggerJsdoc from 'swagger-jsdoc';
-import fs from 'fs';
-import path from 'path';
-import logger from './logger';
+import swaggerJsdoc from "swagger-jsdoc";
+import fs from "fs";
+import path from "path";
+import logger from "./logger";
 
 // Import the same swagger config we use in the API
-import { generateSwaggerSpec } from '../../config/swagger';
+import { generateSwaggerSpec } from "../../config/swagger";
 
 export async function generateApiDocs(): Promise<void> {
   try {
     // Get the full Swagger spec
     const swaggerSpec = await generateSwaggerSpec();
-    
+
     // Create the static HTML with embedded Swagger spec
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -280,7 +280,11 @@ export async function generateApiDocs(): Promise<void> {
       </div>
       <div class="topbar-title">API Reference</div>
       <div class="topbar-menu">
-        <div id="menu"></div>
+        <div id="menuButton" onclick="window.location.href='../menu.html'">
+          <img src="../images/logo.png" alt="Menu" class="menu-logo">
+          <span class="menu-text">MENU</span>
+        </div>
+        </div>
       </div>
     </header>
 
@@ -474,23 +478,29 @@ export async function generateApiDocs(): Promise<void> {
 </html>`;
 
     // Ensure the docs/develop directory exists
-    const docsDir = path.join(process.cwd(), 'docs/develop');
+    const docsDir = path.join(process.cwd(), "docs/develop");
     if (!fs.existsSync(docsDir)) {
       fs.mkdirSync(docsDir, { recursive: true });
       logger.debug(`Created directory: ${docsDir}`);
     }
 
     // Write the HTML documentation
-    const htmlOutputPath = path.join(docsDir, 'api_reference.html');
+    const htmlOutputPath = path.join(docsDir, "api_reference.html");
     await fs.promises.writeFile(htmlOutputPath, html);
     logger.info(`Generated API documentation at: ${htmlOutputPath}`);
 
     // Write the raw Swagger specification
-    const swaggerOutputPath = path.join(docsDir, 'swagger.json');
-    await fs.promises.writeFile(swaggerOutputPath, JSON.stringify(swaggerSpec, null, 2));
+    const swaggerOutputPath = path.join(docsDir, "swagger.json");
+    await fs.promises.writeFile(
+      swaggerOutputPath,
+      JSON.stringify(swaggerSpec, null, 2)
+    );
     logger.info(`Generated Swagger specification at: ${swaggerOutputPath}`);
   } catch (error) {
-    logger.error('Failed to generate API documentation:', error instanceof Error ? error.message : String(error));
+    logger.error(
+      "Failed to generate API documentation:",
+      error instanceof Error ? error.message : String(error)
+    );
     throw error;
   }
 }
@@ -498,7 +508,10 @@ export async function generateApiDocs(): Promise<void> {
 // Allow running directly
 if (require.main === module) {
   generateApiDocs().catch((error) => {
-    logger.error('Documentation generation failed:', error instanceof Error ? error.message : String(error));
+    logger.error(
+      "Documentation generation failed:",
+      error instanceof Error ? error.message : String(error)
+    );
     process.exit(1);
   });
 }

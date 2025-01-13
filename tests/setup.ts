@@ -1,4 +1,8 @@
 import axios from "axios";
+import dotenv from "dotenv";
+
+// Load environment variables from .env file
+dotenv.config();
 
 const getBaseUrl = () => {
   const apiEnv = process.env.API_ENV;
@@ -6,6 +10,10 @@ const getBaseUrl = () => {
     return "https://dev.mycredex.dev";
   } else if (apiEnv === "stage") {
     return "https://stage.mycredex.dev";
+  }
+  // When running in Docker, use the service name
+  if (process.env.DOCKER_ENV === "true") {
+    return "http://server:3000";
   }
   return "http://localhost:3000"; // Default to local
 };
@@ -15,6 +23,7 @@ const API_BASE_URL = getBaseUrl();
 // Default headers including rate limiter bypass if available
 const defaultHeaders = {
   "Content-Type": "application/json",
+  "x-client-api-key": process.env.CLIENT_API_KEY || "",
   ...(process.env.SKIP_RATE_LIMITER_KEY && {
     "x-skip-rate-limit": process.env.SKIP_RATE_LIMITER_KEY
   })

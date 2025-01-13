@@ -12,12 +12,12 @@ const balanceRepo = new BalanceRepository();
 const memberRepo = new MemberRepository();
 const spendLimitService = new SpendLimitService();
 const accountDashboardService = new GetAccountDashboardService(accountRepo, balanceRepo);
-const memberDashboardService = new MemberDashboardService(memberRepo, spendLimitService);
+export const memberDashboardService = new MemberDashboardService(memberRepo, spendLimitService);
 
 // Types for standardized dashboard response
 interface StandardizedDashboardData {
   member: Awaited<ReturnType<typeof MemberDashboardService.prototype.getMemberDashboardData>>;
-  account: NonNullable<Awaited<ReturnType<typeof GetAccountDashboardService.prototype.getDashboard>>['data']>;
+  accounts: NonNullable<Awaited<ReturnType<typeof GetAccountDashboardService.prototype.getDashboard>>['data']>[];
 }
 
 /**
@@ -56,7 +56,7 @@ export async function getDashboardData(
 
     return {
       member: memberData,
-      account: accountResult.data
+      accounts: [accountResult.data]
     };
   } catch (error) {
     logger.error("Error fetching dashboard data", {

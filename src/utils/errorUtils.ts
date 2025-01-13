@@ -94,6 +94,7 @@ export const ErrorCodes = {
   Member: {
     NOT_FOUND: 404,
     INVALID_PHONE: 400,
+    INVALID_DATA: 400,
     TIER_LIMIT: 403,
     DUPLICATE_HANDLE: 409,
     AUTH_FAILED: 401

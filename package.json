@@ -13,7 +13,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "docker:prod": "docker-compose up --build",
     "docker:dev": "BUILD_TARGET=development NODE_ENV=development docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build",
-    "docker:test": "docker-compose run --rm --build --target test server npm test",
+    "docker:test": "BUILD_TARGET=test NODE_ENV=test DOCKER_ENV=true docker-compose run --rm --build server npm test",
     "generate:docs": "node build/src/utils/generateApiDocs.js"
   },
   "keywords": [
@@ -35,6 +35,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-rate-limit": "^7.4.0",
+    "firebase-admin": "^13.0.2",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
@@ -47,7 +48,8 @@
     "uuid": "^10.0.0",
     "winston": "^3.14.2",
     "winston-daily-rotate-file": "^5.0.0",
-    "xss": "^1.0.15"
+    "xss": "^1.0.15",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@stoplight/elements-core": "^8.1.1",
