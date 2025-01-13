@@ -5,21 +5,17 @@ module.exports = {
   testMatch: [
     '**/__tests__/**/*.ts',
     '**/?(*.)+(spec|test).ts',
-    '**/tests/api/endpoints/*.test.ts'
+    '**/tests/api/endpoints/**/*.test.ts',
+    '**/tests/api/services/**/*.test.ts',
+    '**/tests/api/Credex/**/*.test.ts'
   ],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.ts$': ['ts-jest', {
+      tsconfig: 'tsconfig.json'
+    }]
   },
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-  },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json',
-    },
-  },
-  testTimeout: 30000, // Increase timeout for API calls
-  maxConcurrency: 5, // Limit concurrent tests to avoid overwhelming the test API
+  testTimeout: 30000,
+  maxConcurrency: 5
 };
