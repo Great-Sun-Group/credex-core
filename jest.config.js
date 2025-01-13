@@ -1,25 +1,27 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  setupFiles: ['dotenv/config'],
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  setupFiles: [
+    'dotenv/config',
+    '<rootDir>/tests/env.setup.js'
+  ],
+  setupFilesAfterEnv: [
+    '<rootDir>/tests/setup.ts',
+    '<rootDir>/tests/teardown.ts'
+  ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   testMatch: [
     '**/__tests__/**/*.[jt]s?(x)',
     '**/?(*.)+(spec|test).[jt]s?(x)'
   ],
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest'
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
+      tsconfig: 'tsconfig.json',
+      useESM: true
+    }]
   },
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json'
-    }
-  },
-  testTimeout: 30000, // 30 seconds for AWS calls
+  testTimeout: 60000, // Increase timeout for AWS calls
   verbose: true,
-  // Load .env.test for testing
-  setupFiles: ['<rootDir>/tests/env.setup.js'],
   collectCoverage: true,
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'html'],

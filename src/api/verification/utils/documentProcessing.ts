@@ -1,8 +1,9 @@
-import AWS from 'aws-sdk';
+import { TextractClient, AnalyzeDocumentCommand } from "@aws-sdk/client-textract";
+import { RekognitionClient, DetectLabelsCommand } from "@aws-sdk/client-rekognition";
 import { ExtractedDocumentData, DocumentDetectionResult, DocumentType } from '../types';
 
-const textract = new AWS.Textract();
-const rekognition = new AWS.Rekognition();
+const textract = new TextractClient({ region: process.env.AWS_REGION });
+const rekognition = new RekognitionClient({ region: process.env.AWS_REGION });
 
 export const extractDocumentData = async (imageBuffer: Buffer): Promise<ExtractedDocumentData> => {
   try {

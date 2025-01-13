@@ -6,7 +6,7 @@ import { validateAction, validateStatusCode } from "../utils/validation";
 
 describe('Photo Upload API', () => {
   let memberJWT: string;
-  const testImagePath = join(__dirname, '../../test-data/valid-id.jpg');
+  const testImagePath = join(__dirname, '../../fixtures/verification/valid-id.jpg');
   const testImage = readFileSync(testImagePath);
 
   beforeAll(async () => {
@@ -17,7 +17,7 @@ describe('Photo Upload API', () => {
 
   test('multipart/form-data upload', async () => {
     const response = await uploadPhoto({
-      type: 'id',
+      type: 'DRIVERS_LICENSE',
       contentType: 'multipart/form-data',
       photo: testImage
     }, memberJWT);
@@ -49,7 +49,7 @@ describe('Photo Upload API', () => {
 
   test('application/octet-stream upload', async () => {
     const response = await uploadPhoto({
-      type: 'id',
+      type: 'DRIVERS_LICENSE',
       contentType: 'application/octet-stream',
       photo: testImage
     }, memberJWT);
@@ -67,7 +67,7 @@ describe('Photo Upload API', () => {
     const invalidImage = Buffer.from('not an image');
     
     await expect(uploadPhoto({
-      type: 'id',
+      type: 'DRIVERS_LICENSE',
       contentType: 'multipart/form-data', 
       photo: invalidImage
     }, memberJWT)).rejects.toThrow();
@@ -78,20 +78,20 @@ describe('Photo Upload API', () => {
     const largeImage = Buffer.alloc(6 * 1024 * 1024);
     
     await expect(uploadPhoto({
-      type: 'id',
+      type: 'DRIVERS_LICENSE',
       contentType: 'multipart/form-data',
       photo: largeImage
     }, memberJWT)).rejects.toThrow();
   });
 
   test('validation errors - invalid dimensions', async () => {
-    const smallImagePath = join(__dirname, '../../test-data/small-image.jpg');
+    const smallImagePath = join(__dirname, '../../fixtures/verification/low-res.jpg');
     const smallImage = readFileSync(smallImagePath);
     
     await expect(uploadPhoto({
-      type: 'id',
+      type: 'DRIVERS_LICENSE',
       contentType: 'multipart/form-data',
       photo: smallImage
     }, memberJWT)).rejects.toThrow();
   });
-}); 
+});

@@ -1,6 +1,8 @@
-import { CloudWatch } from 'aws-sdk';
+import { CloudWatchClient } from "@aws-sdk/client-cloudwatch";
 
-const cloudwatch = new CloudWatch();
+const cloudwatch = new CloudWatchClient({ 
+  region: process.env.AWS_REGION
+});
 const NAMESPACE = 'FaceVerification';
 
 export const MetricsService = {

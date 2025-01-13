@@ -29,6 +29,20 @@ const fieldMappings: Record<DocumentType, FieldMapping> = {
       'Name': 'fullName',
       'Date of Birth': 'dateOfBirth'
     }
+  },
+  selfie: {
+    required: [],
+    sensitive: [],
+    mapping: {}
+  },
+  id: {
+    required: ['idNumber', 'fullName', 'dateOfBirth'],
+    sensitive: ['idNumber', 'dateOfBirth'],
+    mapping: {
+      'ID Number': 'idNumber',
+      'Name': 'fullName',
+      'Date of Birth': 'dateOfBirth'
+    }
   }
 };
 

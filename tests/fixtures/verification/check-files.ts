@@ -3,14 +3,13 @@ import path from 'path';
 
 const requiredFiles = [
   'valid-id.jpg',
-  'tampered-id.jpg',
   'blurry-id.jpg',
   'blurry-selfie.jpg',
-  'no-face.jpg',
   'valid-selfie.jpg',
-  'drivers-license.jpg',
-  'passport.jpg',
-  'multiple-faces.jpg'
+  'no-face.jpg',
+  'dark-selfie.jpg',
+  'low-res.jpg',
+  'non-document.jpg'
 ] as const;
 
 type FixtureFile = typeof requiredFiles[number];
@@ -27,4 +26,4 @@ const checkFiles = (): void => {
   });
 };
 
-checkFiles(); 
+checkFiles();

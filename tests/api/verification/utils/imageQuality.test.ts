@@ -1,6 +1,8 @@
 import { validateImage } from '../../../../src/api/verification/utils/imageValidation';
 import path from 'path';
 import fs from 'fs/promises';
+import { FileUpload } from '../../../../src/api/verification/types';
+import { Readable } from 'stream';
 
 describe('Image Quality Validation', () => {
   const testImages = {
@@ -26,7 +28,20 @@ describe('Image Quality Validation', () => {
   it('completes validation within 500ms', async () => {
     const imageBuffer = await fs.readFile(testImages.validSelfie);
     const startTime = Date.now();
-    await validateImage({ buffer: imageBuffer, mimetype: 'image/jpeg', size: imageBuffer.length });
+    const createFileUpload = (buffer: Buffer): FileUpload => ({
+      fieldname: 'photo',
+      originalname: 'test.jpg',
+      encoding: '7bit',
+      mimetype: 'image/jpeg',
+      destination: '/tmp',
+      filename: 'test.jpg',
+      path: '/tmp/test.jpg',
+      size: buffer.length,
+      buffer,
+      stream: Readable.from(buffer)
+    });
+    const fileUpload = createFileUpload(imageBuffer);
+    await validateImage(fileUpload);
     const duration = Date.now() - startTime;
     expect(duration).toBeLessThan(500);
   });

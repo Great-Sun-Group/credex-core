@@ -60,7 +60,7 @@ export interface FileUpload {
 
 export type UploadedFile = FileUpload;
 
-export type DocumentType = 'DRIVERS_LICENSE' | 'PASSPORT' | 'NATIONAL_ID';
+export type DocumentType = 'DRIVERS_LICENSE' | 'PASSPORT' | 'NATIONAL_ID' | 'selfie' | 'id';
 
 export interface UploadRequestBody {
   type: DocumentType;

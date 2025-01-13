@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { validateToken } from '../../../tests/api/utils/auth';
+import { validateToken } from '../utils/auth';
 import { securityConfig } from '../config/security';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';

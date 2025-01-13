@@ -1,14 +1,16 @@
 import { Request, Response } from 'express';
-import AWS from 'aws-sdk';
+import { RekognitionClient, DetectLabelsCommand } from "@aws-sdk/client-rekognition";
+import { TextractClient, AnalyzeDocumentCommand } from "@aws-sdk/client-textract";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import { validateImage } from '../utils/imageValidation';
 import { auditLogger } from '../../../utils/auditLogger';
 import { PhotoUploadRequest } from '../types';
 
-const rekognition = new AWS.Rekognition();
-const textract = new AWS.Textract();
-const s3 = new AWS.S3();
+const rekognition = new RekognitionClient({ region: process.env.AWS_REGION });
+const textract = new TextractClient({ region: process.env.AWS_REGION });
+const s3 = new S3Client({ region: process.env.AWS_REGION });
 
 function processTextractResult(result: AWS.Textract.AnalyzeDocumentResponse) {
   const fields: Record<string, string> = {};
@@ -60,7 +62,7 @@ export const uploadPhoto = async (req: PhotoUploadRequest, res: Response) => {
 
     // Upload to S3
     const key = `uploads/${req.body.type}/${uuidv4()}`;
-    await s3.putObject({
+    await s3.send(new PutObjectCommand({
       Bucket: process.env.PHOTOS_BUCKET!,
       Key: key,
       Body: req.file.buffer,
@@ -69,15 +71,15 @@ export const uploadPhoto = async (req: PhotoUploadRequest, res: Response) => {
         uploadDate: new Date().toISOString(),
         documentType: req.body.type
       }
-    }).promise();
+    }));
 
     // For ID documents, analyze with Textract
     let extractedData;
-    if (req.body.type === 'id') {
-      const textractResult = await textract.analyzeDocument({
+    if (req.body.type === 'DRIVERS_LICENSE' || req.body.type === 'PASSPORT' || req.body.type === 'NATIONAL_ID') {
+      const textractResult = await textract.send(new AnalyzeDocumentCommand({
         Document: { Bytes: req.file.buffer },
         FeatureTypes: ['FORMS']
-      }).promise();
+      }));
       extractedData = processTextractResult(textractResult);
     }
 

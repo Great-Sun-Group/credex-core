@@ -2,7 +2,7 @@ import { authRequest } from "../request";
 import { delay, DELAY_MS } from "../delay";
 
 export const uploadPhoto = async (options: {
-  type: 'id' | 'selfie';
+  type: 'DRIVERS_LICENSE' | 'PASSPORT' | 'NATIONAL_ID' | 'selfie' | 'id';
   contentType: string;
   photo: Buffer;
 }, jwt: string) => {
@@ -24,4 +24,4 @@ export const verifyPhotos = async (
   }, jwt);
   await delay(DELAY_MS);
   return response;
-}; 
+};
