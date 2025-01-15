@@ -110,9 +110,9 @@ jobs:
           # Wait up to 5 minutes checking every 30 seconds
           for i in {1..10}; do
             echo "Checking terraform outputs (attempt $i/10)..."
-            # Get instance IDs directly without json parsing
-            LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null || echo "")
-            SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null || echo "")
+            # Get instance IDs and clean them
+            LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n1 || echo "")
+            SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n1 || echo "")
             
             if [ -n "$LEDGER_ID" ] && [ -n "$SEARCH_ID" ]; then
               echo "Found both instance IDs:"
@@ -139,9 +139,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y netcat-openbsd
 
-          # Get instance IDs directly
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null || echo "")
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null || echo "")
+          # Get instance IDs and clean them
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n1 || echo "")
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n1 || echo "")
 
           if [ -z "$LEDGER_ID" ] || [ -z "$SEARCH_ID" ]; then
             echo "Error: Could not get Neo4j instance IDs"
@@ -150,24 +150,35 @@ jobs:
 
           # Function to verify instance
           verify_instance() {
-            local INSTANCE_ID=$1
+            # Clean extraction of instance ID, removing any debug output
+            local INSTANCE_ID=$(echo "$1" | grep -o "i-[a-z0-9]*" | head -n1)
             local SPACE_NAME=$2
+            
+            if [ -z "$INSTANCE_ID" ]; then
+              echo "Error: Could not extract valid instance ID from: $1"
+              exit 1
+            fi
             
             echo "Verifying $SPACE_NAME instance ($INSTANCE_ID)..."
             
             # Wait for instance to be running
             echo "Waiting for instance to be running..."
-            aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+            aws ec2 wait instance-running --instance-ids "$INSTANCE_ID"
             
             # Wait for status checks
             echo "Waiting for status checks to pass..."
-            aws ec2 wait instance-status-ok --instance-ids $INSTANCE_ID
+            aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID"
             
             # Get instance details
             PRIVATE_IP=$(aws ec2 describe-instances \
-              --instance-ids $INSTANCE_ID \
+              --instance-ids "$INSTANCE_ID" \
               --query 'Reservations[0].Instances[0].PrivateIpAddress' \
               --output text)
+            
+            if [ -z "$PRIVATE_IP" ]; then
+              echo "Error: Could not get private IP for instance $INSTANCE_ID"
+              exit 1
+            fi
             
             echo "$SPACE_NAME instance is running:"
             echo "Instance ID: $INSTANCE_ID"
@@ -176,7 +187,7 @@ jobs:
             # Verify instance system status
             echo "Checking instance system status..."
             aws ec2 describe-instance-status \
-              --instance-ids $INSTANCE_ID \
+              --instance-ids "$INSTANCE_ID" \
               --query 'InstanceStatuses[0].{SystemStatus:SystemStatus.Status,InstanceStatus:InstanceStatus.Status}' \
               --output table
 
@@ -188,19 +199,19 @@ jobs:
               HTTPS_READY=false
 
               # Check Bolt port (suppress netcat output)
-              if nc -z $PRIVATE_IP 7687 >/dev/null 2>&1; then
+              if nc -z "$PRIVATE_IP" 7687 >/dev/null 2>&1; then
                 echo "Neo4j is accepting connections on Bolt port (7687)"
                 BOLT_READY=true
               fi
 
               # Check HTTP port (suppress netcat output)
-              if nc -z $PRIVATE_IP 7474 >/dev/null 2>&1; then
+              if nc -z "$PRIVATE_IP" 7474 >/dev/null 2>&1; then
                 echo "Neo4j is accepting connections on HTTP port (7474)"
                 HTTP_READY=true
               fi
 
               # Check HTTPS port (suppress netcat output)
-              if nc -z $PRIVATE_IP 7473 >/dev/null 2>&1; then
+              if nc -z "$PRIVATE_IP" 7473 >/dev/null 2>&1; then
                 echo "Neo4j is accepting connections on HTTPS port (7473)"
                 HTTPS_READY=true
               fi
@@ -219,13 +230,13 @@ jobs:
                 
                 # Get user_data script logs to help diagnose the issue
                 echo "Checking user_data script logs..."
-                aws ec2 get-console-output --instance-id $INSTANCE_ID \
+                aws ec2 get-console-output --instance-id "$INSTANCE_ID" \
                   --query 'Output' --output text | grep -A 50 "user-data"
                 
                 # Check Neo4j service status and logs
                 echo "Checking Neo4j service status and logs..."
                 aws ssm send-command \
-                  --instance-ids $INSTANCE_ID \
+                  --instance-ids "$INSTANCE_ID" \
                   --document-name "AWS-RunShellScript" \
                   --parameters commands=["systemctl status neo4j; echo '=== Neo4j Logs ==='; journalctl -u neo4j -n 50"] \
                   --query "Commands[0].Output" --output text || true
@@ -233,7 +244,7 @@ jobs:
                 # Check Neo4j debug log if available
                 echo "Checking Neo4j debug log..."
                 aws ssm send-command \
-                  --instance-ids $INSTANCE_ID \
+                  --instance-ids "$INSTANCE_ID" \
                   --document-name "AWS-RunShellScript" \
                   --parameters commands=["if [ -f /var/log/neo4j/debug.log ]; then tail -n 50 /var/log/neo4j/debug.log; fi"] \
                   --query "Commands[0].Output" --output text || true
@@ -241,7 +252,7 @@ jobs:
                 # Check Neo4j configuration
                 echo "Checking Neo4j configuration..."
                 aws ssm send-command \
-                  --instance-ids $INSTANCE_ID \
+                  --instance-ids "$INSTANCE_ID" \
                   --document-name "AWS-RunShellScript" \
                   --parameters commands=["echo '=== Neo4j Configuration ==='; cat /etc/neo4j/neo4j.conf | grep -v '^#' | grep -v '^$'"] \
                   --query "Commands[0].Output" --output text || true
@@ -249,7 +260,7 @@ jobs:
                 # Check system resources
                 echo "Checking system resources..."
                 aws ssm send-command \
-                  --instance-ids $INSTANCE_ID \
+                  --instance-ids "$INSTANCE_ID" \
                   --document-name "AWS-RunShellScript" \
                   --parameters commands=["echo '=== Memory Usage ==='; free -h; echo '=== Disk Usage ==='; df -h; echo '=== Top Processes ==='; top -b -n 1 | head -n 20"] \
                   --query "Commands[0].Output" --output text || true
@@ -257,7 +268,7 @@ jobs:
                 # Check Neo4j license status
                 echo "Checking Neo4j license status..."
                 aws ssm send-command \
-                  --instance-ids $INSTANCE_ID \
+                  --instance-ids "$INSTANCE_ID" \
                   --document-name "AWS-RunShellScript" \
                   --parameters commands=["echo '=== Neo4j License ==='; if [ -f /etc/neo4j/neo4j.license ]; then echo 'License file exists'; ls -l /etc/neo4j/neo4j.license; else echo 'License file missing!'; fi; echo '=== Neo4j Version ==='; neo4j --version"] \
                   --query "Commands[0].Output" --output text || true
@@ -265,7 +276,7 @@ jobs:
                 # Check Neo4j directory permissions
                 echo "Checking Neo4j directory permissions..."
                 aws ssm send-command \
-                  --instance-ids $INSTANCE_ID \
+                  --instance-ids "$INSTANCE_ID" \
                   --document-name "AWS-RunShellScript" \
                   --parameters commands=["echo '=== Neo4j Directories ==='; ls -l /var/lib/neo4j/; echo '=== Data Directory ==='; ls -l /var/lib/neo4j/data/; echo '=== Directory Ownership ==='; stat -c '%U:%G' /var/lib/neo4j/"] \
                   --query "Commands[0].Output" --output text || true
@@ -273,7 +284,7 @@ jobs:
                 # Check SELinux status
                 echo "Checking SELinux status..."
                 aws ssm send-command \
-                  --instance-ids $INSTANCE_ID \
+                  --instance-ids "$INSTANCE_ID" \
                   --document-name "AWS-RunShellScript" \
                   --parameters commands=["echo '=== SELinux Status ==='; sestatus; echo '=== SELinux Context ==='; ls -Z /var/lib/neo4j/; echo '=== Port Context ==='; semanage port -l | grep -E '7474|7473|7687' || true"] \
                   --query "Commands[0].Output" --output text || true
@@ -281,7 +292,7 @@ jobs:
                 # Check firewall rules
                 echo "Checking firewall rules..."
                 aws ssm send-command \
-                  --instance-ids $INSTANCE_ID \
+                  --instance-ids "$INSTANCE_ID" \
                   --document-name "AWS-RunShellScript" \
                   --parameters commands=["echo '=== Firewall Status ==='; systemctl status firewalld || true; echo '=== Firewall Rules ==='; firewall-cmd --list-all || true; echo '=== iptables Rules ==='; iptables -L -n || true"] \
                   --query "Commands[0].Output" --output text || true
@@ -310,7 +321,7 @@ jobs:
 
           # Get outputs directly using -raw
           echo "Neo4j LedgerSpace Instance:"
-          echo "  Instance ID: $(terraform output -raw neo4j_ledger_instance_id 2>/dev/null || echo 'Not available')"
+          echo "  Instance ID: $(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n1 || echo 'Not available')"
           echo "  Private IP: $(terraform output -raw neo4j_ledger_private_ip 2>/dev/null || echo 'Not available')"
           echo "  Bolt URL: $(terraform output -raw neo4j_ledger_bolt_endpoint 2>/dev/null || echo 'Not available')"
           LEDGER_IP=$(terraform output -raw neo4j_ledger_private_ip 2>/dev/null || echo 'Not available')
@@ -319,7 +330,7 @@ jobs:
 
           echo ""
           echo "Neo4j SearchSpace Instance:"
-          echo "  Instance ID: $(terraform output -raw neo4j_search_instance_id 2>/dev/null || echo 'Not available')"
+          echo "  Instance ID: $(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n1 || echo 'Not available')"
           echo "  Private IP: $(terraform output -raw neo4j_search_private_ip 2>/dev/null || echo 'Not available')"
           echo "  Bolt URL: $(terraform output -raw neo4j_search_bolt_endpoint 2>/dev/null || echo 'Not available')"
           SEARCH_IP=$(terraform output -raw neo4j_search_private_ip 2>/dev/null || echo 'Not available')
