@@ -155,36 +155,103 @@ jobs:
             
             echo "Verifying $SPACE_NAME instance ($INSTANCE_ID)..."
             
-            # Wait for instance to be running and status checks to pass
+            # Wait for instance to be running
+            echo "Waiting for instance to be running..."
             aws ec2 wait instance-running --instance-ids "$INSTANCE_ID"
+            
+            # Get instance details
+            INSTANCE_INFO=$(aws ec2 describe-instances \
+              --instance-ids "$INSTANCE_ID" \
+              --query 'Reservations[0].Instances[0].{State:State.Name,IP:PrivateIpAddress,Profile:IamInstanceProfile.Arn}' \
+              --output json)
+            
+            INSTANCE_STATE=$(echo $INSTANCE_INFO | jq -r '.State')
+            PRIVATE_IP=$(echo $INSTANCE_INFO | jq -r '.IP')
+            IAM_PROFILE=$(echo $INSTANCE_INFO | jq -r '.Profile')
+            
+            echo "$SPACE_NAME instance ($INSTANCE_ID):"
+            echo "  State: $INSTANCE_STATE"
+            echo "  IP: $PRIVATE_IP"
+            echo "  IAM Profile: $IAM_PROFILE"
+            
+            # Wait for status checks and SSM
+            echo "Waiting for status checks..."
             aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID"
             
-            # Get instance IP
-            PRIVATE_IP=$(aws ec2 describe-instances \
-              --instance-ids "$INSTANCE_ID" \
-              --query 'Reservations[0].Instances[0].PrivateIpAddress' \
-              --output text)
+            echo "Waiting for SSM to be ready..."
+            for i in {1..6}; do
+              if aws ssm describe-instance-information --filters "Key=InstanceIds,Values=$INSTANCE_ID" --query "InstanceInformationList[0].PingStatus" --output text 2>/dev/null | grep -q "Online"; then
+                echo "SSM is ready"
+                break
+              fi
+              if [ $i -eq 6 ]; then
+                echo "Warning: SSM not ready after 30 seconds"
+              fi
+              echo "Waiting for SSM... ($i/6)"
+              sleep 5
+            done
             
-            echo "$SPACE_NAME instance ($INSTANCE_ID) running at $PRIVATE_IP"
-            
-            # Simple verification - just check Bolt port
+            # Monitor Neo4j startup
             echo "Waiting for Neo4j to be ready..."
             for i in {1..12}; do
-              echo "Checking Bolt port (7687)... Attempt $i/12"
-              if timeout 5 nc -z "$PRIVATE_IP" 7687 >/dev/null 2>&1; then
-                echo "Neo4j is accepting connections"
-                return 0
+              echo "Checking Neo4j status (attempt $i/12)..."
+              
+              # Check instance state
+              CURRENT_STATE=$(aws ec2 describe-instances \
+                --instance-ids "$INSTANCE_ID" \
+                --query 'Reservations[0].Instances[0].State.Name' \
+                --output text)
+              
+              if [ "$CURRENT_STATE" != "running" ]; then
+                echo "Error: Instance is no longer running (state: $CURRENT_STATE)"
+                echo "Checking startup logs..."
+                aws ec2 get-console-output --instance-id "$INSTANCE_ID" \
+                  --query 'Output' --output text | grep -A 50 "user-data" || true
+                return 1
               fi
               
-              if [ $i -eq 12 ]; then
-                echo "Error: Neo4j failed to start. Checking logs..."
-                aws ec2 get-console-output --instance-id "$INSTANCE_ID" \
-                  --query 'Output' --output text | grep -A 20 "user-data"
+              # Check Bolt port
+              if timeout 5 nc -z "$PRIVATE_IP" 7687 >/dev/null 2>&1; then
+                echo "Neo4j is accepting connections"
+                
+                # Verify service status via SSM
+                echo "Verifying Neo4j service status..."
                 aws ssm send-command \
                   --instance-ids "$INSTANCE_ID" \
                   --document-name "AWS-RunShellScript" \
-                  --parameters commands=["systemctl status neo4j; journalctl -u neo4j -n 20"] \
-                  --output text || true
+                  --parameters commands=["systemctl status neo4j"] \
+                  --output text || echo "Could not verify service status via SSM"
+                
+                return 0
+              fi
+              
+              # Check service status every 3rd attempt
+              if [ $((i % 3)) -eq 0 ]; then
+                echo "Checking service status..."
+                aws ssm send-command \
+                  --instance-ids "$INSTANCE_ID" \
+                  --document-name "AWS-RunShellScript" \
+                  --parameters commands=["systemctl status neo4j"] \
+                  --output text || echo "Could not check service status via SSM"
+              fi
+              
+              if [ $i -eq 12 ]; then
+                echo "Error: Neo4j failed to start after $(( i * 10 )) seconds"
+                echo "Collecting diagnostics..."
+                
+                # Get startup logs
+                echo "System logs:"
+                aws ec2 get-console-output --instance-id "$INSTANCE_ID" \
+                  --query 'Output' --output text | grep -A 50 "user-data" || true
+                
+                # Get service status and logs if SSM is available
+                echo "Service status and logs:"
+                aws ssm send-command \
+                  --instance-ids "$INSTANCE_ID" \
+                  --document-name "AWS-RunShellScript" \
+                  --parameters commands=["systemctl status neo4j; journalctl -u neo4j -n 50"] \
+                  --output text || echo "Could not collect service logs via SSM"
+                
                 return 1
               fi
               

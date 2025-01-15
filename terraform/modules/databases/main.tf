@@ -137,6 +137,36 @@ locals {
               EOF
 }
 
+# Create IAM role and instance profile for SSM access
+resource "aws_iam_role" "neo4j_ssm_role" {
+  name = "neo4j-ssm-role-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "neo4j_ssm_policy" {
+  role       = aws_iam_role.neo4j_ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "neo4j_instance_profile" {
+  name = "neo4j-instance-profile-${var.environment}"
+  role = aws_iam_role.neo4j_ssm_role.name
+}
+
 # Neo4j instance for ledgerSpace
 resource "aws_instance" "neo4j_ledger" {
   ami                    = data.aws_ami.amazon_linux_2.id
@@ -163,8 +193,11 @@ resource "aws_instance" "neo4j_ledger" {
     Name = "Neo4j-LedgerSpace-${var.environment}"
   })
 
+  # Add IAM instance profile for SSM access
+  iam_instance_profile = aws_iam_instance_profile.neo4j_instance_profile.name
+
   lifecycle {
-    create_before_destroy = true
+    create_before_destroy = false # Prevent instance replacement during verification
   }
 }
 
@@ -194,8 +227,11 @@ resource "aws_instance" "neo4j_search" {
     Name = "Neo4j-SearchSpace-${var.environment}"
   })
 
+  # Add IAM instance profile for SSM access
+  iam_instance_profile = aws_iam_instance_profile.neo4j_instance_profile.name
+
   lifecycle {
-    create_before_destroy = true
+    create_before_destroy = false # Prevent instance replacement during verification
   }
 }
 
