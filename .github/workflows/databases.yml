@@ -137,7 +137,7 @@ jobs:
 
           # Install netcat for port checking
           sudo apt-get update
-          sudo apt-get install -y netcat
+          sudo apt-get install -y netcat-openbsd
 
           # Get instance IDs directly
           LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null || echo "")
