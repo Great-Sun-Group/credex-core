@@ -53,6 +53,17 @@ jobs:
           TF_VAR_dev_admin_key: "dummy"
           TF_VAR_skip_rate_limiter_key: "dummy"
           TF_VAR_open_exchange_rates_api: "dummy"
+          # Add dummy values for Neo4j connection details that will be replaced with real values after deployment
+          TF_VAR_neo_4j_ledger_space_bolt_url: "bolt://dummy-ledger:7687"
+          TF_VAR_neo_4j_search_space_bolt_url: "bolt://dummy-search:7687"
+          TF_VAR_neo_4j_ledger_space_user: "neo4j"
+          TF_VAR_neo_4j_search_space_user: "neo4j"
+          TF_VAR_neo_4j_ledger_space_password: "dummy-password"
+          TF_VAR_neo_4j_search_space_password: "dummy-password"
+          # Add dummy values for Firebase variables since they're not used by the databases module
+          TF_VAR_firebase_project_id: "dummy"
+          TF_VAR_firebase_client_email: "dummy@project.iam.gserviceaccount.com"
+          TF_VAR_firebase_private_key: "dummy-private-key"
         run: |
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
@@ -69,6 +80,17 @@ jobs:
           TF_VAR_dev_admin_key: "dummy"
           TF_VAR_skip_rate_limiter_key: "dummy"
           TF_VAR_open_exchange_rates_api: "dummy"
+          # Add dummy values for Neo4j connection details that will be replaced with real values after deployment
+          TF_VAR_neo_4j_ledger_space_bolt_url: "bolt://dummy-ledger:7687"
+          TF_VAR_neo_4j_search_space_bolt_url: "bolt://dummy-search:7687"
+          TF_VAR_neo_4j_ledger_space_user: "neo4j"
+          TF_VAR_neo_4j_search_space_user: "neo4j"
+          TF_VAR_neo_4j_ledger_space_password: "dummy-password"
+          TF_VAR_neo_4j_search_space_password: "dummy-password"
+          # Add dummy values for Firebase variables since they're not used by the databases module
+          TF_VAR_firebase_project_id: "dummy"
+          TF_VAR_firebase_client_email: "dummy@project.iam.gserviceaccount.com"
+          TF_VAR_firebase_private_key: "dummy-private-key"
         run: |
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
