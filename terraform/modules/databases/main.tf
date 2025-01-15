@@ -102,96 +102,37 @@ locals {
                 exit 1
               }
 
-              # Configure memory settings based on instance size
-              echo "Checking system memory..."
-              free -h
+              # Configure memory settings
               total_mem_kb=$$(grep MemTotal /proc/meminfo | awk '{print $$2}')
               heap_size_mb=$$(($total_mem_kb / 1024 / 4))  # Use 25% of total memory for heap
               page_cache_mb=$$(($total_mem_kb / 1024 / 2))  # Use 50% of total memory for page cache
-
-              echo "Configuring Neo4j memory settings..."
-              echo "Total Memory: $$(($total_mem_kb / 1024)) MB"
-              echo "Heap Size: $${heap_size_mb} MB"
-              echo "Page Cache: $${page_cache_mb} MB"
 
               echo "dbms.memory.heap.initial_size=$${heap_size_mb}m" >> /etc/neo4j/neo4j.conf
               echo "dbms.memory.heap.max_size=$${heap_size_mb}m" >> /etc/neo4j/neo4j.conf
               echo "dbms.memory.pagecache.size=$${page_cache_mb}m" >> /etc/neo4j/neo4j.conf
 
-              echo "Checking Neo4j configuration..."
-              cat /etc/neo4j/neo4j.conf | grep -E 'dbms.memory|dbms.default_listen_address' || true
-
-              # Check system security settings
-              echo "Checking SELinux status..."
-              sestatus || true
-              echo "Checking firewall status..."
-              systemctl status firewalld || true
-              if command -v firewall-cmd >/dev/null 2>&1; then
-                echo "Firewall rules:"
-                firewall-cmd --list-all || true
-              fi
-
-              # Start Neo4j with detailed logging
+              # Start Neo4j
               echo "Starting Neo4j service..."
-              echo "Checking Neo4j service status before start..."
-              systemctl status neo4j || true
-              
-              echo "Enabling Neo4j service..."
-              systemctl enable neo4j || {
-                echo "Failed to enable Neo4j service"
-                journalctl -u neo4j -n 50
-                exit 1
-              }
-              
-              echo "Starting Neo4j service..."
-              systemctl start neo4j || {
-                echo "Failed to start Neo4j service"
-                echo "Checking service status..."
-                systemctl status neo4j
-                echo "Checking service logs..."
-                journalctl -u neo4j -n 50
-                echo "Checking Neo4j debug log..."
-                if [ -f /var/log/neo4j/debug.log ]; then
-                  tail -n 50 /var/log/neo4j/debug.log
-                fi
-                exit 1
-              }
+              systemctl enable neo4j
+              systemctl start neo4j
 
-              # Wait for Neo4j to start and verify it's running
+              # Basic verification - just check if service starts and Bolt port is accessible
               echo "Waiting for Neo4j to start..."
-              for i in {1..30}; do
-                echo "Checking Neo4j status (attempt $i/30)..."
+              for i in {1..12}; do
                 if systemctl is-active neo4j >/dev/null 2>&1; then
-                  echo "Neo4j service is active"
-                  
-                  # Additional verification
-                  echo "Checking Neo4j ports..."
-                  netstat -tulpn | grep -E '7474|7473|7687' || true
-                  
-                  echo "Checking Neo4j process..."
-                  ps aux | grep neo4j
-                  
-                  echo "Checking Neo4j logs..."
-                  journalctl -u neo4j -n 20
-                  
-                  echo "Neo4j started successfully"
-                  exit 0
+                  # Check only the Bolt port
+                  if nc -z localhost 7687; then
+                    echo "Neo4j is running and accepting connections"
+                    exit 0
+                  fi
                 fi
-                
-                echo "Service not active yet. Checking status..."
-                systemctl status neo4j || true
-                echo "Recent logs:"
-                journalctl -u neo4j -n 10
-                
-                echo "Waiting... ($i/30)"
+                echo "Waiting for Neo4j to be ready... ($i/12)"
                 sleep 10
               done
 
-              echo "Failed to confirm Neo4j startup"
-              echo "Final service status:"
-              systemctl status neo4j || true
-              echo "Final logs:"
-              journalctl -u neo4j -n 50
+              # Only collect logs if startup fails
+              echo "Neo4j failed to start properly"
+              systemctl status neo4j
               exit 1
               EOF
 }

@@ -150,216 +150,70 @@ jobs:
 
           # Function to verify instance
           verify_instance() {
-            # Clean extraction of instance ID, removing any debug output
-            local INSTANCE_ID=$(echo "$1" | grep -o "i-[a-z0-9]*" | head -n1)
+            local INSTANCE_ID=$1
             local SPACE_NAME=$2
-            
-            if [ -z "$INSTANCE_ID" ]; then
-              echo "Error: Could not extract valid instance ID from: $1"
-              exit 1
-            fi
             
             echo "Verifying $SPACE_NAME instance ($INSTANCE_ID)..."
             
-            # Wait for instance to be running
-            echo "Waiting for instance to be running..."
+            # Wait for instance to be running and status checks to pass
             aws ec2 wait instance-running --instance-ids "$INSTANCE_ID"
-            
-            # Wait for status checks
-            echo "Waiting for status checks to pass..."
             aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID"
             
-            # Get instance details
+            # Get instance IP
             PRIVATE_IP=$(aws ec2 describe-instances \
               --instance-ids "$INSTANCE_ID" \
               --query 'Reservations[0].Instances[0].PrivateIpAddress' \
               --output text)
             
-            if [ -z "$PRIVATE_IP" ]; then
-              echo "Error: Could not get private IP for instance $INSTANCE_ID"
-              exit 1
-            fi
+            echo "$SPACE_NAME instance ($INSTANCE_ID) running at $PRIVATE_IP"
             
-            echo "$SPACE_NAME instance is running:"
-            echo "Instance ID: $INSTANCE_ID"
-            echo "Private IP: $PRIVATE_IP"
-            
-            # Verify instance system status
-            echo "Checking instance system status..."
-            aws ec2 describe-instance-status \
-              --instance-ids "$INSTANCE_ID" \
-              --query 'InstanceStatuses[0].{SystemStatus:SystemStatus.Status,InstanceStatus:InstanceStatus.Status}' \
-              --output table
-
-              # Wait for Neo4j to be ready
+            # Simple verification - just check Bolt port
             echo "Waiting for Neo4j to be ready..."
-            for i in {1..20}; do
-              echo "Attempt $i/20: $(date)"
-              
-              # Add timeout to netcat checks
-              BOLT_READY=false
-              HTTP_READY=false
-              HTTPS_READY=false
-
-              echo "Checking Bolt port (7687)..."
-              timeout 5 nc -z "$PRIVATE_IP" 7687 >/dev/null 2>&1
-              if [ $? -eq 0 ]; then
-                echo "Neo4j is accepting connections on Bolt port (7687)"
-                BOLT_READY=true
-              else
-                echo "Bolt port check failed"
-              fi
-
-              echo "Checking HTTP port (7474)..."
-              timeout 5 nc -z "$PRIVATE_IP" 7474 >/dev/null 2>&1
-              if [ $? -eq 0 ]; then
-                echo "Neo4j is accepting connections on HTTP port (7474)"
-                HTTP_READY=true
-              else
-                echo "HTTP port check failed"
-              fi
-
-              echo "Checking HTTPS port (7473)..."
-              timeout 5 nc -z "$PRIVATE_IP" 7473 >/dev/null 2>&1
-              if [ $? -eq 0 ]; then
-                echo "Neo4j is accepting connections on HTTPS port (7473)"
-                HTTPS_READY=true
-              else
-                echo "HTTPS port check failed"
-              fi
-
-              # Check Neo4j service status
-              echo "Checking Neo4j service status..."
-              aws ssm send-command \
-                --instance-ids "$INSTANCE_ID" \
-                --document-name "AWS-RunShellScript" \
-                --parameters commands=["systemctl status neo4j"] \
-                --output text || echo "Failed to get Neo4j service status"
-
-              # If all ports are ready, we're good to go
-              if [ "$BOLT_READY" = true ] && [ "$HTTP_READY" = true ] && [ "$HTTPS_READY" = true ]; then
-                echo "Neo4j is fully operational on all ports"
-                break
+            for i in {1..12}; do
+              echo "Checking Bolt port (7687)... Attempt $i/12"
+              if timeout 5 nc -z "$PRIVATE_IP" 7687 >/dev/null 2>&1; then
+                echo "Neo4j is accepting connections"
+                return 0
               fi
               
-              if [ $i -eq 20 ]; then
-                echo "Error: Timed out waiting for Neo4j to be ready"
-                echo "Bolt port ready: $BOLT_READY"
-                echo "HTTP port ready: $HTTP_READY"
-                echo "HTTPS port ready: $HTTPS_READY"
-                
-                # Get user_data script logs to help diagnose the issue
-                echo "Checking user_data script logs..."
+              if [ $i -eq 12 ]; then
+                echo "Error: Neo4j failed to start. Checking logs..."
                 aws ec2 get-console-output --instance-id "$INSTANCE_ID" \
-                  --query 'Output' --output text | grep -A 50 "user-data"
-                
-                # Check Neo4j service status and logs
-                echo "Checking Neo4j service status and logs..."
+                  --query 'Output' --output text | grep -A 20 "user-data"
                 aws ssm send-command \
                   --instance-ids "$INSTANCE_ID" \
                   --document-name "AWS-RunShellScript" \
-                  --parameters commands=["systemctl status neo4j; echo '=== Neo4j Logs ==='; journalctl -u neo4j -n 50"] \
-                  --query "Commands[0].Output" --output text || true
-
-                # Check Neo4j debug log if available
-                echo "Checking Neo4j debug log..."
-                aws ssm send-command \
-                  --instance-ids "$INSTANCE_ID" \
-                  --document-name "AWS-RunShellScript" \
-                  --parameters commands=["if [ -f /var/log/neo4j/debug.log ]; then tail -n 50 /var/log/neo4j/debug.log; fi"] \
-                  --query "Commands[0].Output" --output text || true
-
-                # Check Neo4j configuration
-                echo "Checking Neo4j configuration..."
-                aws ssm send-command \
-                  --instance-ids "$INSTANCE_ID" \
-                  --document-name "AWS-RunShellScript" \
-                  --parameters commands=["echo '=== Neo4j Configuration ==='; cat /etc/neo4j/neo4j.conf | grep -v '^#' | grep -v '^$'"] \
-                  --query "Commands[0].Output" --output text || true
-
-                # Check system resources
-                echo "Checking system resources..."
-                aws ssm send-command \
-                  --instance-ids "$INSTANCE_ID" \
-                  --document-name "AWS-RunShellScript" \
-                  --parameters commands=["echo '=== Memory Usage ==='; free -h; echo '=== Disk Usage ==='; df -h; echo '=== Top Processes ==='; top -b -n 1 | head -n 20"] \
-                  --query "Commands[0].Output" --output text || true
-
-                # Check Neo4j license status
-                echo "Checking Neo4j license status..."
-                aws ssm send-command \
-                  --instance-ids "$INSTANCE_ID" \
-                  --document-name "AWS-RunShellScript" \
-                  --parameters commands=["echo '=== Neo4j License ==='; if [ -f /etc/neo4j/neo4j.license ]; then echo 'License file exists'; ls -l /etc/neo4j/neo4j.license; else echo 'License file missing!'; fi; echo '=== Neo4j Version ==='; neo4j --version"] \
-                  --query "Commands[0].Output" --output text || true
-
-                # Check Neo4j directory permissions
-                echo "Checking Neo4j directory permissions..."
-                aws ssm send-command \
-                  --instance-ids "$INSTANCE_ID" \
-                  --document-name "AWS-RunShellScript" \
-                  --parameters commands=["echo '=== Neo4j Directories ==='; ls -l /var/lib/neo4j/; echo '=== Data Directory ==='; ls -l /var/lib/neo4j/data/; echo '=== Directory Ownership ==='; stat -c '%U:%G' /var/lib/neo4j/"] \
-                  --query "Commands[0].Output" --output text || true
-
-                # Check SELinux status
-                echo "Checking SELinux status..."
-                aws ssm send-command \
-                  --instance-ids "$INSTANCE_ID" \
-                  --document-name "AWS-RunShellScript" \
-                  --parameters commands=["echo '=== SELinux Status ==='; sestatus; echo '=== SELinux Context ==='; ls -Z /var/lib/neo4j/; echo '=== Port Context ==='; semanage port -l | grep -E '7474|7473|7687' || true"] \
-                  --query "Commands[0].Output" --output text || true
-
-                # Check firewall rules
-                echo "Checking firewall rules..."
-                aws ssm send-command \
-                  --instance-ids "$INSTANCE_ID" \
-                  --document-name "AWS-RunShellScript" \
-                  --parameters commands=["echo '=== Firewall Status ==='; systemctl status firewalld || true; echo '=== Firewall Rules ==='; firewall-cmd --list-all || true; echo '=== iptables Rules ==='; iptables -L -n || true"] \
-                  --query "Commands[0].Output" --output text || true
-                
-                exit 1
+                  --parameters commands=["systemctl status neo4j; journalctl -u neo4j -n 20"] \
+                  --output text || true
+                return 1
               fi
               
-              echo "Waiting 30 seconds before next check (attempt $i/20)... Current time: $(date)"
-              # Use timeout to prevent sleep from hanging
-              timeout 31 sleep 30 || echo "Sleep interrupted"
+              echo "Waiting 10 seconds before next check..."
+              sleep 10
             done
           }
 
           # Verify both instances
-          verify_instance "$LEDGER_ID" "LedgerSpace"
-          verify_instance "$SEARCH_ID" "SearchSpace"
+          verify_instance "$LEDGER_ID" "LedgerSpace" || exit 1
+          verify_instance "$SEARCH_ID" "SearchSpace" || exit 1
 
           echo "Both Neo4j instances verified successfully"
 
       - name: Print Database Infrastructure Outputs
         run: |
           cd terraform
-          echo "Retrieving database infrastructure outputs..."
-          echo "========================================"
           echo "Database Infrastructure Outputs:"
           echo "========================================"
-
-          # Get outputs directly using -raw
+          
           echo "Neo4j LedgerSpace Instance:"
-          echo "  Instance ID: $(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n1 || echo 'Not available')"
-          echo "  Private IP: $(terraform output -raw neo4j_ledger_private_ip 2>/dev/null || echo 'Not available')"
+          echo "  Instance ID: $(terraform output -raw neo4j_ledger_instance_id 2>/dev/null || echo 'Not available')"
           echo "  Bolt URL: $(terraform output -raw neo4j_ledger_bolt_endpoint 2>/dev/null || echo 'Not available')"
-          LEDGER_IP=$(terraform output -raw neo4j_ledger_private_ip 2>/dev/null || echo 'Not available')
-          echo "  HTTP URL: http://${LEDGER_IP}:7474"
-          echo "  HTTPS URL: https://${LEDGER_IP}:7473"
-
-          echo ""
+          
           echo "Neo4j SearchSpace Instance:"
-          echo "  Instance ID: $(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n1 || echo 'Not available')"
-          echo "  Private IP: $(terraform output -raw neo4j_search_private_ip 2>/dev/null || echo 'Not available')"
+          echo "  Instance ID: $(terraform output -raw neo4j_search_instance_id 2>/dev/null || echo 'Not available')"
           echo "  Bolt URL: $(terraform output -raw neo4j_search_bolt_endpoint 2>/dev/null || echo 'Not available')"
-          SEARCH_IP=$(terraform output -raw neo4j_search_private_ip 2>/dev/null || echo 'Not available')
-          echo "  HTTP URL: http://${SEARCH_IP}:7474"
-          echo "  HTTPS URL: https://${SEARCH_IP}:7473"
-
+          
           echo "========================================"
-          echo "Please save these values securely. You may need to manually set them as GitHub secrets or use them in your application configuration."
           echo "Remember to set up the following secrets:"
           echo "- NEO_4J_LEDGER_SPACE_BOLT_URL"
           echo "- NEO_4J_SEARCH_SPACE_BOLT_URL"
@@ -367,4 +221,3 @@ jobs:
           echo "- NEO_4J_SEARCH_SPACE_USER"
           echo "- NEO_4J_LEDGER_SPACE_PASS"
           echo "- NEO_4J_SEARCH_SPACE_PASS"
-          echo "========================================"
