@@ -191,30 +191,50 @@ jobs:
               --query 'InstanceStatuses[0].{SystemStatus:SystemStatus.Status,InstanceStatus:InstanceStatus.Status}' \
               --output table
 
-            # Wait for Neo4j to be ready
+              # Wait for Neo4j to be ready
             echo "Waiting for Neo4j to be ready..."
             for i in {1..20}; do
+              echo "Attempt $i/20: $(date)"
+              
+              # Add timeout to netcat checks
               BOLT_READY=false
               HTTP_READY=false
               HTTPS_READY=false
 
-              # Check Bolt port (suppress netcat output)
-              if nc -z "$PRIVATE_IP" 7687 >/dev/null 2>&1; then
+              echo "Checking Bolt port (7687)..."
+              timeout 5 nc -z "$PRIVATE_IP" 7687 >/dev/null 2>&1
+              if [ $? -eq 0 ]; then
                 echo "Neo4j is accepting connections on Bolt port (7687)"
                 BOLT_READY=true
+              else
+                echo "Bolt port check failed"
               fi
 
-              # Check HTTP port (suppress netcat output)
-              if nc -z "$PRIVATE_IP" 7474 >/dev/null 2>&1; then
+              echo "Checking HTTP port (7474)..."
+              timeout 5 nc -z "$PRIVATE_IP" 7474 >/dev/null 2>&1
+              if [ $? -eq 0 ]; then
                 echo "Neo4j is accepting connections on HTTP port (7474)"
                 HTTP_READY=true
+              else
+                echo "HTTP port check failed"
               fi
 
-              # Check HTTPS port (suppress netcat output)
-              if nc -z "$PRIVATE_IP" 7473 >/dev/null 2>&1; then
+              echo "Checking HTTPS port (7473)..."
+              timeout 5 nc -z "$PRIVATE_IP" 7473 >/dev/null 2>&1
+              if [ $? -eq 0 ]; then
                 echo "Neo4j is accepting connections on HTTPS port (7473)"
                 HTTPS_READY=true
+              else
+                echo "HTTPS port check failed"
               fi
+
+              # Check Neo4j service status
+              echo "Checking Neo4j service status..."
+              aws ssm send-command \
+                --instance-ids "$INSTANCE_ID" \
+                --document-name "AWS-RunShellScript" \
+                --parameters commands=["systemctl status neo4j"] \
+                --output text || echo "Failed to get Neo4j service status"
 
               # If all ports are ready, we're good to go
               if [ "$BOLT_READY" = true ] && [ "$HTTP_READY" = true ] && [ "$HTTPS_READY" = true ]; then
@@ -300,8 +320,9 @@ jobs:
                 exit 1
               fi
               
-              echo "Waiting 30 seconds before next check (attempt $i/20)..."
-              sleep 30
+              echo "Waiting 30 seconds before next check (attempt $i/20)... Current time: $(date)"
+              # Use timeout to prevent sleep from hanging
+              timeout 31 sleep 30 || echo "Sleep interrupted"
             done
           }
 
