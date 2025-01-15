@@ -68,7 +68,7 @@ jobs:
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
           echo "Planning Terraform changes..."
-          terraform plan -input=false -out=tfplan -target=module.databases -replace="module.databases"
+          terraform plan -input=false -out=tfplan -target=module.databases -replace="module.databases.aws_instance.neo4j_ledger" -replace="module.databases.aws_instance.neo4j_search"
 
       - name: Terraform Apply
         env:
