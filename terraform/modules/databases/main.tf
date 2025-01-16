@@ -394,84 +394,185 @@ CWCONF
               chown neo4j:neo4j /etc/neo4j/neo4j.conf
               chmod 600 /etc/neo4j/neo4j.conf
               
-              # Start Neo4j with better error handling
+              # Pre-start checks and cleanup
+              echo "Running pre-start checks..."
+              
+              # Clear any existing lock files
+              rm -f /var/lib/neo4j/data/dbms/lock || true
+              
+              # Ensure data directory exists and has correct permissions
+              mkdir -p /var/lib/neo4j/data
+              chown -R neo4j:neo4j /var/lib/neo4j/data
+              
+              # Start Neo4j with enhanced error handling and logging
               echo "Starting Neo4j service..."
+              
+              # First stop any existing instance
+              systemctl stop neo4j || true
+              sleep 5
+              
+              # Enable and start the service
               systemctl enable neo4j || {
                 echo "Failed to enable Neo4j service"
                 journalctl -u neo4j -n 50 >> "$LOG_FILE" 2>&1
                 exit 1
               }
               
-              systemctl start neo4j || {
+              # Start service with detailed logging
+              if ! systemctl start neo4j; then
                 echo "Failed to start Neo4j service"
+                echo "=== Service Status ===" >> "$LOG_FILE"
                 systemctl status neo4j >> "$LOG_FILE" 2>&1
+                echo "=== Journal Logs ===" >> "$LOG_FILE"
                 journalctl -u neo4j -n 50 >> "$LOG_FILE" 2>&1
+                echo "=== Neo4j Logs ===" >> "$LOG_FILE"
+                tail -n 50 /var/log/neo4j/neo4j.log >> "$LOG_FILE" 2>&1
                 exit 1
-              }
-
-              # More comprehensive verification with better logging
+              fi
+              
+              # Enhanced startup verification with better logging and recovery
               echo "Verifying Neo4j startup..."
-              max_attempts=30  # Increased from 12 to 30
+              max_attempts=60  # Increased to 60 attempts (10 minutes total)
               attempt=1
+              verification_delay=10  # Seconds between attempts
+              
+              verify_neo4j() {
+                local check_type=$1
+                case $check_type in
+                  "service")
+                    systemctl is-active neo4j >/dev/null 2>&1
+                    return $?
+                    ;;
+                  "port")
+                    nc -z localhost 7687
+                    return $?
+                    ;;
+                  "query")
+                    cypher-shell -u neo4j -p neo4j --non-interactive "RETURN 1;" >/dev/null 2>&1
+                    return $?
+                    ;;
+                esac
+                return 1
+              }
+              
+              log_status() {
+                echo "=== Status Check at $(date) ===" >> "$LOG_FILE"
+                echo "Memory Usage:" >> "$LOG_FILE"
+                free -m >> "$LOG_FILE"
+                echo "Disk Usage:" >> "$LOG_FILE"
+                df -h >> "$LOG_FILE"
+                echo "Process Status:" >> "$LOG_FILE"
+                ps aux | grep neo4j >> "$LOG_FILE"
+                echo "Service Status:" >> "$LOG_FILE"
+                systemctl status neo4j >> "$LOG_FILE" 2>&1
+                echo "Recent Logs:" >> "$LOG_FILE"
+                tail -n 50 /var/log/neo4j/neo4j.log >> "$LOG_FILE" 2>&1
+              }
               
               while [ $attempt -le $max_attempts ]; do
                 echo "Verification attempt $attempt/$max_attempts..."
                 
-                # Check service status
-                if ! systemctl is-active neo4j >/dev/null 2>&1; then
+                # Progressive verification steps
+                if ! verify_neo4j "service"; then
                   echo "Neo4j service is not active"
-                  systemctl status neo4j
-                  journalctl -u neo4j -n 50
-                  sleep 10
+                  log_status
+                  
+                  # Attempt recovery if service failed
+                  if [ $attempt -gt 10 ]; then
+                    echo "Attempting service recovery..."
+                    systemctl restart neo4j
+                  fi
+                  
+                  sleep $verification_delay
                   attempt=$((attempt + 1))
                   continue
                 fi
                 
-                # Check ports
-                if ! nc -z localhost 7687; then
+                if ! verify_neo4j "port"; then
                   echo "Bolt port 7687 is not accessible"
                   netstat -plnt | grep 7687 || true
-                  sleep 10
+                  log_status
+                  sleep $verification_delay
                   attempt=$((attempt + 1))
                   continue
                 fi
                 
-                # Check if Neo4j is responding to basic queries
-                if cypher-shell -u neo4j -p neo4j --non-interactive "RETURN 1;" >/dev/null 2>&1; then
-                  # Change default password after successful connection
-                  echo "Setting secure password..."
-                  cypher-shell -u neo4j -p neo4j "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'Neo4j@${var.environment}'" || {
-                    echo "Failed to change default password"
-                    exit 1
-                  }
-                  echo "Neo4j is fully operational"
-                  exit 0
+                if verify_neo4j "query"; then
+                  echo "Neo4j is responding to queries, changing default password..."
+                  if cypher-shell -u neo4j -p neo4j "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'Neo4j@${var.environment}'"; then
+                    echo "Password changed successfully"
+                    echo "Neo4j is fully operational"
+                    exit 0
+                  else
+                    echo "Failed to change password"
+                    log_status
+                  fi
                 else
                   echo "Neo4j is not responding to queries"
-                  sleep 10
-                  attempt=$((attempt + 1))
-                  continue
+                  log_status
                 fi
+                
+                sleep $verification_delay
+                attempt=$((attempt + 1))
               done
 
-              # Collect comprehensive diagnostics if startup fails
+              # Enhanced diagnostics collection on failure
               echo "Neo4j failed to start properly after $max_attempts attempts"
               {
-                echo "=== System Status ==="
+                echo "=== Final Diagnostics at $(date) ==="
+                echo "=== System Information ==="
+                uname -a
+                echo "=== Memory Information ==="
                 free -m
+                vmstat 1 5
+                echo "=== Disk Information ==="
                 df -h
-                echo "=== Neo4j Status ==="
+                iostat || true
+                echo "=== Neo4j Process Information ==="
+                ps aux | grep neo4j
+                echo "=== Neo4j Service Status ==="
                 systemctl status neo4j
+                echo "=== Neo4j Configuration ==="
+                grep -v '^#' /etc/neo4j/neo4j.conf || true
                 echo "=== Neo4j Logs ==="
-                journalctl -u neo4j -n 100
+                tail -n 200 /var/log/neo4j/neo4j.log || true
+                echo "=== Journal Logs ==="
+                journalctl -u neo4j -n 200
                 echo "=== Network Status ==="
                 netstat -plnt
+                ss -tulpn | grep neo4j || true
+                echo "=== File Permissions ==="
+                ls -la /var/lib/neo4j/
+                ls -la /var/log/neo4j/
+                echo "=== SELinux Status ==="
+                getenforce || true
+                echo "=== Firewall Status ==="
+                systemctl status firewalld || true
                 echo "=== SSM Agent Status ==="
                 systemctl status amazon-ssm-agent
                 echo "=== SSM Agent Logs ==="
-                tail -n 50 /var/log/amazon/ssm/amazon-ssm-agent.log
+                tail -n 100 /var/log/amazon/ssm/amazon-ssm-agent.log
               } >> "$LOG_FILE" 2>&1
-              exit 1
+              
+              # Attempt emergency recovery
+              echo "Attempting emergency recovery..."
+              systemctl stop neo4j
+              sleep 10
+              rm -f /var/lib/neo4j/data/dbms/lock
+              systemctl start neo4j
+              sleep 30
+              
+              # Final check
+              if systemctl is-active neo4j >/dev/null 2>&1 && \
+                 nc -z localhost 7687 && \
+                 cypher-shell -u neo4j -p neo4j --non-interactive "RETURN 1;" >/dev/null 2>&1; then
+                echo "Emergency recovery successful"
+                cypher-shell -u neo4j -p neo4j "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'Neo4j@${var.environment}'"
+                exit 0
+              else
+                echo "Emergency recovery failed"
+                exit 1
+              fi
               EOF
 }
 
