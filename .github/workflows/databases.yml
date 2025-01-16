@@ -110,9 +110,9 @@ jobs:
           # Wait up to 5 minutes checking every 30 seconds
           for i in {1..10}; do
             echo "Checking terraform outputs (attempt $i/10)..."
-            # Get instance IDs and clean them
-            LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n1 || echo "")
-            SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n1 || echo "")
+            # Extract and validate instance IDs
+            LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}' || echo "")
+            SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}' || echo "")
             
             if [ -n "$LEDGER_ID" ] && [ -n "$SEARCH_ID" ]; then
               echo "Found both instance IDs:"
@@ -135,9 +135,9 @@ jobs:
           cd terraform
           echo "Verifying Neo4j deployments..."
 
-          # Get instance IDs and clean them
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" || echo "")
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" || echo "")
+          # Extract and validate instance IDs
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}' || echo "")
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}' || echo "")
 
           if [ -z "$LEDGER_ID" ] || [ -z "$SEARCH_ID" ]; then
             echo "Error: Could not get Neo4j instance IDs"
@@ -148,15 +148,18 @@ jobs:
           echo "  LedgerSpace: $LEDGER_ID"
           echo "  SearchSpace: $SEARCH_ID"
 
+          # Clean instance IDs and store in array
+          INSTANCE_IDS=("$LEDGER_ID" "$SEARCH_ID")
+
           echo "Waiting for instances to be running..."
-          aws ec2 wait instance-running --instance-ids "$LEDGER_ID" "$SEARCH_ID" || true
+          aws ec2 wait instance-running --instance-ids "${INSTANCE_IDS[@]}" || true
           
           echo "Waiting for instance status checks..."
-          aws ec2 wait instance-status-ok --instance-ids "$LEDGER_ID" "$SEARCH_ID" || true
+          aws ec2 wait instance-status-ok --instance-ids "${INSTANCE_IDS[@]}" || true
           
           echo "Getting instance details..."
           aws ec2 describe-instances \
-            --instance-ids "$LEDGER_ID" "$SEARCH_ID" \
+            --instance-ids "${INSTANCE_IDS[@]}" \
             --query 'Reservations[*].Instances[*].[InstanceId,State.Name,PrivateIpAddress]' \
             --output table || true
 
