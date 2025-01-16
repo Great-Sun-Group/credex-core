@@ -212,44 +212,43 @@ locals {
               heap_size_mb=$(( heap_size_mb > 31744 ? 31744 : heap_size_mb ))
               page_cache_mb=$(( page_cache_mb < 2048 ? 2048 : page_cache_mb ))
 
-              # Configure Neo4j
-              cat > /etc/neo4j/neo4j.conf << NEOCONF
-              # Network configuration
-              dbms.default_listen_address=0.0.0.0
-              dbms.connector.bolt.listen_address=:7687
-              dbms.connector.http.listen_address=:7474
-              dbms.connector.https.listen_address=:7473
+              # Configure Neo4j using printf to avoid heredoc issues
+              printf "# Network configuration
+dbms.default_listen_address=0.0.0.0
+dbms.connector.bolt.listen_address=:7687
+dbms.connector.http.listen_address=:7474
+dbms.connector.https.listen_address=:7473
 
-              # Security settings
-              dbms.security.auth_enabled=true
-              dbms.security.allow_csv_import_from_file_urls=false
+# Security settings
+dbms.security.auth_enabled=true
+dbms.security.allow_csv_import_from_file_urls=false
 
-              # Memory configuration
-              dbms.memory.heap.initial_size=\${heap_size_mb}m
-              dbms.memory.heap.max_size=\${heap_size_mb}m
-              dbms.memory.pagecache.size=\${page_cache_mb}m
+# Memory configuration
+dbms.memory.heap.initial_size=%dm
+dbms.memory.heap.max_size=%dm
+dbms.memory.pagecache.size=%dm
 
-              # Performance settings
-              dbms.jvm.additional=-XX:+UseG1GC
-              dbms.jvm.additional=-XX:G1HeapRegionSize=16m
-              dbms.jvm.additional=-XX:+ParallelRefProcEnabled
-              dbms.jvm.additional=-XX:+UseStringDeduplication
-              dbms.jvm.additional=-XX:+AlwaysPreTouch
-              dbms.jvm.additional=-XX:+DisableExplicitGC
-              dbms.jvm.additional=-XX:MaxGCPauseMillis=500
-              dbms.jvm.additional=-XX:+HeapDumpOnOutOfMemoryError
-              dbms.jvm.additional=-XX:HeapDumpPath=/var/log/neo4j/
+# Performance settings
+dbms.jvm.additional=-XX:+UseG1GC
+dbms.jvm.additional=-XX:G1HeapRegionSize=16m
+dbms.jvm.additional=-XX:+ParallelRefProcEnabled
+dbms.jvm.additional=-XX:+UseStringDeduplication
+dbms.jvm.additional=-XX:+AlwaysPreTouch
+dbms.jvm.additional=-XX:+DisableExplicitGC
+dbms.jvm.additional=-XX:MaxGCPauseMillis=500
+dbms.jvm.additional=-XX:+HeapDumpOnOutOfMemoryError
+dbms.jvm.additional=-XX:HeapDumpPath=/var/log/neo4j/
 
-              # Logging settings
-              dbms.logs.debug.level=INFO
-              dbms.logs.query.enabled=true
-              dbms.logs.query.rotation.keep_number=7
-              dbms.logs.query.rotation.size=20m
+# Logging settings
+dbms.logs.debug.level=INFO
+dbms.logs.query.enabled=true
+dbms.logs.query.rotation.keep_number=7
+dbms.logs.query.rotation.size=20m
 
-              # Transaction settings
-              dbms.transaction.timeout=5m
-              dbms.transaction.concurrent.maximum=100
-              NEOCONF
+# Transaction settings
+dbms.transaction.timeout=5m
+dbms.transaction.concurrent.maximum=100
+" $heap_size_mb $heap_size_mb $page_cache_mb > /etc/neo4j/neo4j.conf
 
               # Verify configuration
               echo "Neo4j configuration:"
