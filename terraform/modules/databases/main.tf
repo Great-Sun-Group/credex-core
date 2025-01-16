@@ -39,6 +39,56 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
+# Additional security group for internal Neo4j communication
+resource "aws_security_group" "neo4j_internal" {
+  name        = "neo4j-internal-${var.environment}"
+  description = "Security group for internal Neo4j communication"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description = "Neo4j Bolt"
+    from_port   = 7687
+    to_port     = 7687
+    protocol    = "tcp"
+    self        = true
+  }
+
+  ingress {
+    description = "Neo4j HTTP"
+    from_port   = 7474
+    to_port     = 7474
+    protocol    = "tcp"
+    self        = true
+  }
+
+  ingress {
+    description = "Neo4j HTTPS"
+    from_port   = 7473
+    to_port     = 7473
+    protocol    = "tcp"
+    self        = true
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(var.common_tags, {
+    Name = "Neo4j Internal Communication - ${var.environment}"
+  })
+}
+
+# CloudWatch Log Group for Neo4j logs
+resource "aws_cloudwatch_log_group" "neo4j_logs" {
+  name              = "/aws/ec2/neo4j/${var.environment}"
+  retention_in_days = 14
+
+  tags = var.common_tags
+}
+
 # Helper to create user data script
 locals {
   neo4j_install_script = <<-EOF
@@ -68,6 +118,73 @@ locals {
                 exit 1
               }
 
+              # Install CloudWatch agent
+              echo "Installing CloudWatch agent..."
+              yum install -y amazon-cloudwatch-agent || {
+                echo "Failed to install CloudWatch agent"
+                exit 1
+              }
+
+              # Create CloudWatch agent configuration
+              echo "Configuring CloudWatch agent..."
+              mkdir -p /opt/aws/amazon-cloudwatch-agent/bin/
+              cat > /opt/aws/amazon-cloudwatch-agent/bin/config.json << CWCONF
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root"
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/neo4j/neo4j.log",
+            "log_group_name": "/aws/ec2/neo4j/${var.environment}",
+            "log_stream_name": "{instance_id}/neo4j",
+            "timestamp_format": "%Y-%m-%d %H:%M:%S"
+          },
+          {
+            "file_path": "/var/log/user-data.log",
+            "log_group_name": "/aws/ec2/neo4j/${var.environment}",
+            "log_stream_name": "{instance_id}/user-data",
+            "timestamp_format": "%Y-%m-%d %H:%M:%S"
+          }
+        ]
+      }
+    }
+  },
+  "metrics": {
+    "metrics_collected": {
+      "mem": {
+        "measurement": ["mem_used_percent"]
+      },
+      "disk": {
+        "measurement": ["disk_used_percent"],
+        "resources": ["/"]
+      }
+    }
+  }
+}
+CWCONF
+
+              # Start CloudWatch agent
+              echo "Starting CloudWatch agent..."
+              /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json || {
+                echo "Failed to configure CloudWatch agent"
+                exit 1
+              }
+              
+              systemctl enable amazon-cloudwatch-agent || {
+                echo "Failed to enable CloudWatch agent"
+                exit 1
+              }
+              
+              systemctl start amazon-cloudwatch-agent || {
+                echo "Failed to start CloudWatch agent"
+                exit 1
+              }
+
               # Add Neo4j repository
               echo "Adding Neo4j repository..."
               rpm --import https://debian.neo4j.com/neotechnology.gpg.key || {
@@ -91,48 +208,153 @@ locals {
 
               # Configure Neo4j
               echo "Configuring Neo4j..."
-              sed -i 's/#dbms.default_listen_address=0.0.0.0/dbms.default_listen_address=0.0.0.0/' /etc/neo4j/neo4j.conf || {
-                echo "Failed to configure Neo4j listen address"
-                exit 1
-              }
-
+              
+              # Basic configuration
+              cat > /etc/neo4j/neo4j.conf << NEOCONF
+              # Network configuration
+              dbms.default_listen_address=0.0.0.0
+              dbms.connector.bolt.listen_address=:7687
+              dbms.connector.http.listen_address=:7474
+              dbms.connector.https.listen_address=:7473
+              
+              # Security settings
+              dbms.security.auth_enabled=true
+              dbms.security.allow_csv_import_from_file_urls=false
+              
+              # Transaction logs configuration
+              dbms.tx_log.rotation.retention_policy=1 days
+              dbms.tx_log.rotation.size=100M
+              
+              # Logging configuration
+              dbms.logs.query.enabled=true
+              dbms.logs.query.rotation.keep_number=7
+              dbms.logs.query.rotation.size=20m
+              
+              # Bolt connection timeout
+              dbms.connector.bolt.thread_pool_min_size=5
+              dbms.connector.bolt.thread_pool_max_size=40
+              dbms.connector.bolt.thread_pool_keep_alive=5m
+              
+              # System resource settings
+              dbms.memory.use_memrec=true
+              dbms.jvm.additional=-XX:+ExitOnOutOfMemoryError
+              dbms.jvm.additional=-XX:+HeapDumpOnOutOfMemoryError
+              dbms.jvm.additional=-XX:HeapDumpPath=/var/log/neo4j/
+              NEOCONF
+              
               # Set Neo4j license
               echo "${var.neo4j_enterprise_license}" > /etc/neo4j/neo4j.license || {
                 echo "Failed to set Neo4j license"
                 exit 1
               }
+              
+              # Create log directory with proper permissions
+              mkdir -p /var/log/neo4j
+              chown -R neo4j:neo4j /var/log/neo4j
+              chmod 755 /var/log/neo4j
 
-              # Configure memory settings
+              # Configure memory settings more conservatively
               total_mem_kb=$$(grep MemTotal /proc/meminfo | awk '{print $$2}')
-              heap_size_mb=$$(($total_mem_kb / 1024 / 4))  # Use 25% of total memory for heap
-              page_cache_mb=$$(($total_mem_kb / 1024 / 2))  # Use 50% of total memory for page cache
+              total_mem_mb=$$(($total_mem_kb / 1024))
+              
+              # More conservative memory allocation:
+              # - 20% for heap (instead of 25%)
+              # - 40% for page cache (instead of 50%)
+              # This leaves more room for OS and other processes
+              heap_size_mb=$$(($total_mem_mb / 5))
+              page_cache_mb=$$(($total_mem_mb * 2 / 5))
+              
+              # Ensure minimum values
+              heap_size_mb=$$(( heap_size_mb < 1024 ? 1024 : heap_size_mb ))
+              page_cache_mb=$$(( page_cache_mb < 2048 ? 2048 : page_cache_mb ))
+              
+              # Add memory settings to neo4j.conf
+              cat << CONF >> /etc/neo4j/neo4j.conf
+              # Memory settings
+              dbms.memory.heap.initial_size=$${heap_size_mb}m
+              dbms.memory.heap.max_size=$${heap_size_mb}m
+              dbms.memory.pagecache.size=$${page_cache_mb}m
+              
+              # Performance tuning
+              dbms.memory.off_heap.max_size=2g
+              dbms.jvm.additional=-XX:+UseG1GC
+              dbms.jvm.additional=-XX:G1HeapRegionSize=16m
+              dbms.jvm.additional=-XX:+UseGCLogFileRotation
+              dbms.jvm.additional=-XX:NumberOfGCLogFiles=5
+              dbms.jvm.additional=-XX:GCLogFileSize=20m
+              CONF
 
-              echo "dbms.memory.heap.initial_size=$${heap_size_mb}m" >> /etc/neo4j/neo4j.conf
-              echo "dbms.memory.heap.max_size=$${heap_size_mb}m" >> /etc/neo4j/neo4j.conf
-              echo "dbms.memory.pagecache.size=$${page_cache_mb}m" >> /etc/neo4j/neo4j.conf
-
-              # Start Neo4j
+              # Start Neo4j with better error handling
               echo "Starting Neo4j service..."
-              systemctl enable neo4j
-              systemctl start neo4j
+              systemctl enable neo4j || {
+                echo "Failed to enable Neo4j service"
+                journalctl -u neo4j -n 50
+                exit 1
+              }
+              
+              systemctl start neo4j || {
+                echo "Failed to start Neo4j service"
+                systemctl status neo4j
+                journalctl -u neo4j -n 50
+                exit 1
+              }
 
-              # Basic verification - just check if service starts and Bolt port is accessible
-              echo "Waiting for Neo4j to start..."
-              for i in {1..12}; do
-                if systemctl is-active neo4j >/dev/null 2>&1; then
-                  # Check only the Bolt port
-                  if nc -z localhost 7687; then
-                    echo "Neo4j is running and accepting connections"
-                    exit 0
-                  fi
+              # More comprehensive verification with better logging
+              echo "Verifying Neo4j startup..."
+              max_attempts=30  # Increased from 12 to 30
+              attempt=1
+              
+              while [ $attempt -le $max_attempts ]; do
+                echo "Verification attempt $attempt/$max_attempts..."
+                
+                # Check service status
+                if ! systemctl is-active neo4j >/dev/null 2>&1; then
+                  echo "Neo4j service is not active"
+                  systemctl status neo4j
+                  journalctl -u neo4j -n 50
+                  sleep 10
+                  attempt=$((attempt + 1))
+                  continue
                 fi
-                echo "Waiting for Neo4j to be ready... ($i/12)"
-                sleep 10
+                
+                # Check ports
+                if ! nc -z localhost 7687; then
+                  echo "Bolt port 7687 is not accessible"
+                  netstat -plnt | grep 7687 || true
+                  sleep 10
+                  attempt=$((attempt + 1))
+                  continue
+                fi
+                
+                # Check if Neo4j is responding to basic queries
+                if cypher-shell -u neo4j -p neo4j --non-interactive "RETURN 1;" >/dev/null 2>&1; then
+                  # Change default password after successful connection
+                  echo "Setting secure password..."
+                  cypher-shell -u neo4j -p neo4j "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'Neo4j@${var.environment}'" || {
+                    echo "Failed to change default password"
+                    exit 1
+                  }
+                  echo "Neo4j is fully operational"
+                  exit 0
+                else
+                  echo "Neo4j is not responding to queries"
+                  sleep 10
+                  attempt=$((attempt + 1))
+                  continue
+                fi
               done
 
-              # Only collect logs if startup fails
-              echo "Neo4j failed to start properly"
+              # Collect comprehensive diagnostics if startup fails
+              echo "Neo4j failed to start properly after $max_attempts attempts"
+              echo "System Status:"
+              free -m
+              df -h
+              echo "Neo4j Status:"
               systemctl status neo4j
+              echo "Neo4j Logs:"
+              journalctl -u neo4j -n 100
+              echo "Network Status:"
+              netstat -plnt
               exit 1
               EOF
 }
@@ -157,6 +379,12 @@ resource "aws_iam_role" "neo4j_ssm_role" {
   tags = var.common_tags
 }
 
+# Add CloudWatch monitoring permissions
+resource "aws_iam_role_policy_attachment" "neo4j_cloudwatch_policy" {
+  role       = aws_iam_role.neo4j_ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
 resource "aws_iam_role_policy_attachment" "neo4j_ssm_policy" {
   role       = aws_iam_role.neo4j_ssm_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
@@ -172,8 +400,9 @@ resource "aws_instance" "neo4j_ledger" {
   ami                    = data.aws_ami.amazon_linux_2.id
   instance_type          = var.neo4j_instance_type
   key_name               = var.key_pair_name
-  vpc_security_group_ids = [var.neo4j_security_group_id]
+  vpc_security_group_ids = [var.neo4j_security_group_id, aws_security_group.neo4j_internal.id]
   subnet_id              = var.subnet_ids[0]
+  monitoring             = true
 
   root_block_device {
     volume_type = "gp3"
@@ -206,8 +435,9 @@ resource "aws_instance" "neo4j_search" {
   ami                    = data.aws_ami.amazon_linux_2.id
   instance_type          = var.neo4j_instance_type
   key_name               = var.key_pair_name
-  vpc_security_group_ids = [var.neo4j_security_group_id]
+  vpc_security_group_ids = [var.neo4j_security_group_id, aws_security_group.neo4j_internal.id]
   subnet_id              = var.subnet_ids[1]
+  monitoring             = true
 
   root_block_device {
     volume_type = "gp3"
