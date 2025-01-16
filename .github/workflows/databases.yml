@@ -104,39 +104,3 @@ jobs:
           fi
 
           echo "Terraform apply completed successfully"
-
-      - name: Wait for Neo4j Instances
-        run: |
-          cd terraform
-          echo "Waiting for Neo4j instances to be ready..."
-
-          # Get instance IDs
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id)
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id)
-
-          echo "Waiting for instances to be ready..."
-          aws ec2 wait instance-status-ok --instance-ids "$LEDGER_ID" "$SEARCH_ID"
-
-          echo "Neo4j instances are ready"
-
-      - name: Print Infrastructure Status
-        run: |
-          cd terraform
-          echo "Database Infrastructure Outputs:"
-          echo "========================================"
-
-          # Get outputs
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id)
-          LEDGER_IP=$(terraform output -raw neo4j_ledger_private_ip)
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id)
-          SEARCH_IP=$(terraform output -raw neo4j_search_private_ip)
-
-          echo "Neo4j LedgerSpace Instance:"
-          echo "  Instance ID: $LEDGER_ID"
-          echo "  Private IP: $LEDGER_IP"
-          echo ""
-          echo "Neo4j SearchSpace Instance:"
-          echo "  Instance ID: $SEARCH_ID"
-          echo "  Private IP: $SEARCH_IP"
-          echo ""
-          echo "Note: Neo4j instances are in private subnets and require VPC access."
