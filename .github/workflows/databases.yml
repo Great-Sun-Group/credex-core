@@ -110,11 +110,19 @@ jobs:
           cd terraform
           echo "Waiting for Neo4j instances to be ready..."
 
-          # Get instance IDs
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id)
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id)
+          # Get instance IDs and clean output
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}')
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}')
 
-          # Wait for instances to be running and pass health checks
+          # Verify IDs are valid
+          if [[ ! "$LEDGER_ID" =~ ^i-[a-z0-9]{17}$ ]] || [[ ! "$SEARCH_ID" =~ ^i-[a-z0-9]{17}$ ]]; then
+            echo "Error: Invalid instance IDs"
+            echo "LEDGER_ID: $LEDGER_ID"
+            echo "SEARCH_ID: $SEARCH_ID"
+            exit 1
+          fi
+
+          echo "Waiting for instances to be ready..."
           aws ec2 wait instance-status-ok --instance-ids "$LEDGER_ID" "$SEARCH_ID"
 
           echo "Neo4j instances are ready"
@@ -124,12 +132,19 @@ jobs:
           cd terraform
           echo "Database Infrastructure Outputs:"
           echo "========================================"
+
+          # Get clean outputs
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}')
+          LEDGER_IP=$(terraform output -raw neo4j_ledger_private_ip | tr -d '\n')
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}')
+          SEARCH_IP=$(terraform output -raw neo4j_search_private_ip | tr -d '\n')
+
           echo "Neo4j LedgerSpace Instance:"
-          echo "  Instance ID: $(terraform output -raw neo4j_ledger_instance_id)"
-          echo "  Private IP: $(terraform output -raw neo4j_ledger_private_ip)"
+          echo "  Instance ID: $LEDGER_ID"
+          echo "  Private IP: $LEDGER_IP"
           echo ""
           echo "Neo4j SearchSpace Instance:"
-          echo "  Instance ID: $(terraform output -raw neo4j_search_instance_id)"
-          echo "  Private IP: $(terraform output -raw neo4j_search_private_ip)"
+          echo "  Instance ID: $SEARCH_ID"
+          echo "  Private IP: $SEARCH_IP"
           echo ""
           echo "Note: Neo4j instances are in private subnets and require VPC access."
