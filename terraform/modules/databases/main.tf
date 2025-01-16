@@ -218,9 +218,10 @@ dbms.default_listen_address=0.0.0.0
 dbms.connector.bolt.listen_address=:7687
 dbms.connector.http.listen_address=:7474
 dbms.connector.https.listen_address=:7473
+dbms.default_advertised_address=localhost
 
 # Security settings
-dbms.security.auth_enabled=true
+dbms.security.auth_enabled=false
 dbms.security.allow_csv_import_from_file_urls=false
 
 # Memory configuration
@@ -267,10 +268,8 @@ dbms.transaction.concurrent.maximum=100
               
               # Wait for Neo4j to be ready
               for i in {1..30}; do
-                if cypher-shell -u neo4j -p neo4j --non-interactive "RETURN 1;" >/dev/null 2>&1; then
-                  echo "Neo4j is ready, changing default password..."
-                  cypher-shell -u neo4j -p neo4j "ALTER CURRENT USER SET PASSWORD FROM 'neo4j' TO 'Neo4j@${var.environment}'"
-                  echo "Neo4j setup complete"
+                if cypher-shell --non-interactive "RETURN 1;" >/dev/null 2>&1; then
+                  echo "Neo4j is ready"
                   exit 0
                 fi
                 echo "Waiting for Neo4j to be ready... ($i/30)"

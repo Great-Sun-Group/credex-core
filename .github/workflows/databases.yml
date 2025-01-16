@@ -105,25 +105,31 @@ jobs:
 
           echo "Terraform apply completed successfully"
 
-      - name: Print Database Infrastructure Outputs
+      - name: Wait for Neo4j Instances
+        run: |
+          cd terraform
+          echo "Waiting for Neo4j instances to be ready..."
+
+          # Get instance IDs
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id)
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id)
+
+          # Wait for instances to be running and pass health checks
+          aws ec2 wait instance-status-ok --instance-ids "$LEDGER_ID" "$SEARCH_ID"
+
+          echo "Neo4j instances are ready"
+
+      - name: Print Infrastructure Status
         run: |
           cd terraform
           echo "Database Infrastructure Outputs:"
           echo "========================================"
-
           echo "Neo4j LedgerSpace Instance:"
           echo "  Instance ID: $(terraform output -raw neo4j_ledger_instance_id)"
-          echo "  Bolt URL: $(terraform output -raw neo4j_ledger_bolt_endpoint)"
-
+          echo "  Private IP: $(terraform output -raw neo4j_ledger_private_ip)"
+          echo ""
           echo "Neo4j SearchSpace Instance:"
           echo "  Instance ID: $(terraform output -raw neo4j_search_instance_id)"
-          echo "  Bolt URL: $(terraform output -raw neo4j_search_bolt_endpoint)"
-
-          echo "========================================"
-          echo "Remember to set up the following secrets:"
-          echo "- NEO_4J_LEDGER_SPACE_BOLT_URL"
-          echo "- NEO_4J_SEARCH_SPACE_BOLT_URL"
-          echo "- NEO_4J_LEDGER_SPACE_USER"
-          echo "- NEO_4J_SEARCH_SPACE_USER"
-          echo "- NEO_4J_LEDGER_SPACE_PASS"
-          echo "- NEO_4J_SEARCH_SPACE_PASS"
+          echo "  Private IP: $(terraform output -raw neo4j_search_private_ip)"
+          echo ""
+          echo "Note: Neo4j instances are in private subnets and require VPC access."
