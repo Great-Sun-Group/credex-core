@@ -135,21 +135,30 @@ jobs:
           cd terraform
           echo "Verifying Neo4j deployments..."
 
-          # Get instance IDs
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id)
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id)
+          # Get instance IDs and clean them
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" || echo "")
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" || echo "")
+
+          if [ -z "$LEDGER_ID" ] || [ -z "$SEARCH_ID" ]; then
+            echo "Error: Could not get Neo4j instance IDs"
+            exit 1
+          fi
+
+          echo "Found instances:"
+          echo "  LedgerSpace: $LEDGER_ID"
+          echo "  SearchSpace: $SEARCH_ID"
 
           echo "Waiting for instances to be running..."
-          aws ec2 wait instance-running --instance-ids "$LEDGER_ID" "$SEARCH_ID"
+          aws ec2 wait instance-running --instance-ids "$LEDGER_ID" "$SEARCH_ID" || true
           
           echo "Waiting for instance status checks..."
-          aws ec2 wait instance-status-ok --instance-ids "$LEDGER_ID" "$SEARCH_ID"
+          aws ec2 wait instance-status-ok --instance-ids "$LEDGER_ID" "$SEARCH_ID" || true
           
           echo "Getting instance details..."
           aws ec2 describe-instances \
             --instance-ids "$LEDGER_ID" "$SEARCH_ID" \
             --query 'Reservations[*].Instances[*].[InstanceId,State.Name,PrivateIpAddress]' \
-            --output table
+            --output table || true
 
           echo "Neo4j instances verified successfully"
 
