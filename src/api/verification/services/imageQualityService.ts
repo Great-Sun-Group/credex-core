@@ -1,9 +1,31 @@
-import { ImageQualityConfig, ImageValidationResult } from '../types';
+import { ImageQualityConfig, ImageValidationResult, ImageQualityService } from '../types';
 import { analyzeImageQuality } from '../utils/aiImageQuality';
 import { createHash } from 'crypto';
 import NodeCache from 'node-cache';
 
+const DEFAULT_CONFIG: ImageQualityConfig = {
+  minWidth: 640,
+  minHeight: 480,
+  blurThreshold: 80,
+  minBrightness: 30,
+  maxBrightness: 70,
+  faceConfidenceThreshold: 90,
+  documentConfidenceThreshold: 90
+};
+
 const cache = new NodeCache({ stdTTL: 3600 });
+
+export const createImageQualityService = (config: Partial<ImageQualityConfig> = {}): ImageQualityService => {
+  const finalConfig: ImageQualityConfig = {
+    ...DEFAULT_CONFIG,
+    ...config
+  };
+
+  return {
+    validateImage: (buffer: Buffer, type: 'id' | 'selfie') => 
+      validateImage(buffer, type, finalConfig)
+  };
+};
 
 const getImageHash = (buffer: Buffer): string => 
   createHash('sha256').update(buffer).digest('hex');

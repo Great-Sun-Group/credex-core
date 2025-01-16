@@ -1,16 +1,21 @@
-import { Rekognition } from 'aws-sdk';
+import { 
+  RekognitionClient, 
+  DetectLabelsCommand,
+  DetectLabelsFeatureName
+} from '@aws-sdk/client-rekognition';
 import { analyzeDocument } from './documentProcessing';
 
-const rekognition = new Rekognition();
+const rekognition = new RekognitionClient({ region: process.env.AWS_REGION });
 
 export const detectHologram = async (buffer: Buffer): Promise<boolean> => {
   try {
     const params = {
       Image: { Bytes: buffer },
-      Features: ['GENERAL_LABELS']
+      Features: [DetectLabelsFeatureName.GENERAL_LABELS]
     };
 
-    const response = await rekognition.detectLabels(params).promise();
+    const command = new DetectLabelsCommand(params);
+    const response = await rekognition.send(command);
     const hologramLabels = response.Labels?.filter(label => 
       label.Name?.toLowerCase().includes('hologram') ||
       label.Name?.toLowerCase().includes('security feature')
@@ -32,4 +37,4 @@ export const checkEdgeConsistency = async (buffer: Buffer): Promise<boolean> => 
     console.error('Edge consistency check error:', error);
     return false;
   }
-}; 
+};

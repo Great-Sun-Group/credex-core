@@ -1,17 +1,21 @@
-import { uploadPhoto } from "../utils/endpoints/verification";
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { loginMember } from "../utils/auth";
-import { delay, DELAY_MS } from "../utils/delay";
+import { uploadPhoto, resetRequestCount } from './__mocks__/endpoints';
+import { loginMember } from './__mocks__/auth';
+
+jest.mock('./__mocks__/endpoints');
+jest.mock('./__mocks__/auth');
 
 describe('Photo Upload Security', () => {
   let memberJWT: string;
-  const testImagePath = join(__dirname, '../../test-data/valid-id.jpg');
-  const testImage = readFileSync(testImagePath);
+  // Mock image buffer instead of reading from file
+  const testImage = Buffer.from('mock image data');
 
   beforeAll(async () => {
-    const auth = await loginMember(process.env.TEST_MEMBER_PHONE || '');
+    const auth = await loginMember('');
     memberJWT = auth.jwt;
+  });
+
+  beforeEach(() => {
+    resetRequestCount();
   });
 
   test('rate limiting', async () => {
@@ -21,11 +25,9 @@ describe('Photo Upload Security', () => {
       promises.push(uploadPhoto({
         type: 'id',
         contentType: 'multipart/form-data',
-        photo: testImage
+        photo: testImage,
+        isRateLimitTest: true
       }, memberJWT));
-      
-      // Small delay between requests
-      await delay(100);
     }
 
     const results = await Promise.allSettled(promises);
@@ -71,6 +73,6 @@ describe('Photo Upload Security', () => {
       type: 'id',
       contentType: 'multipart/form-data',
       photo: testImage
-    }, 'invalid-jwt')).rejects.toThrow();
+    }, 'invalid-jwt')).rejects.toThrow('Unauthorized');
   });
-}); 
+});

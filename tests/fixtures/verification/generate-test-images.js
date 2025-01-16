@@ -1,240 +1,95 @@
 const sharp = require('sharp');
-const fs = require('fs').promises;
-const path = require('path');
 
-async function generateTestImages() {
-  try {
-    const outputDir = path.join(__dirname);
-    console.log('Output directory:', outputDir);
-
-    // Create valid selfie
-    const validSelfiePath = path.join(outputDir, 'valid-selfie.jpg');
-    console.log('Creating valid selfie at:', validSelfiePath);
-    
-    await sharp({
-      create: {
-        width: 800,
-        height: 600,
-        channels: 3,
-        background: { r: 220, g: 190, b: 160 }
-      }
-    })
-    .composite([
-      {
-        input: {
-          create: {
-            width: 50,
-            height: 50,
-            channels: 3,
-            background: { r: 50, g: 50, b: 50 }
-          }
-        },
-        left: 300,
-        top: 250
-      },
-      {
-        input: {
-          create: {
-            width: 50,
-            height: 50,
-            channels: 3,
-            background: { r: 50, g: 50, b: 50 }
-          }
-        },
-        left: 450,
-        top: 250
-      },
-      {
-        input: {
-          create: {
-            width: 100,
-            height: 20,
-            channels: 3,
-            background: { r: 150, g: 50, b: 50 }
-          }
-        },
-        left: 350,
-        top: 350
-      }
-    ])
-    .toColorspace('srgb')
-    .jpeg()
-    .toFile(validSelfiePath);
-
-    console.log('Valid selfie created successfully');
-
-    // Create blurry selfie
-    const blurrySelfiePath = path.join(outputDir, 'blurry-selfie.jpg');
-    console.log('Creating blurry selfie at:', blurrySelfiePath);
-    
-    await sharp({
-      create: {
-        width: 800,
-        height: 600,
-        channels: 3,
-        background: { r: 220, g: 190, b: 160 }
-      }
-    })
-    .toColorspace('srgb')
-    .blur(10)
-    .jpeg()
-    .toFile(blurrySelfiePath);
-
-    console.log('Blurry selfie created successfully');
-
-    // Create dark selfie
-    const darkSelfiePath = path.join(outputDir, 'dark-selfie.jpg');
-    console.log('Creating dark selfie at:', darkSelfiePath);
-    
-    await sharp({
-      create: {
-        width: 800,
-        height: 600,
-        channels: 3,
-        background: { r: 220, g: 190, b: 160 }
-      }
-    })
-    .toColorspace('srgb')
-    .modulate({ brightness: 0.3 })
-    .jpeg()
-    .toFile(darkSelfiePath);
-
-    console.log('Dark selfie created successfully');
-
-    // Create no face image
-    const noFacePath = path.join(outputDir, 'no-face.jpg');
-    console.log('Creating no face image at:', noFacePath);
-    
-    await sharp({
-      create: {
-        width: 800,
-        height: 600,
-        channels: 3,
-        background: { r: 200, g: 200, b: 200 }
-      }
-    })
-    .toColorspace('srgb')
-    .jpeg()
-    .toFile(noFacePath);
-
-    console.log('No face image created successfully');
-
-    // Create valid ID document
-    const validIdPath = path.join(outputDir, 'valid-id.jpg');
-    console.log('Creating valid ID at:', validIdPath);
-    
-    await sharp({
-      create: {
-        width: 1000,
-        height: 650,
-        channels: 3,
-        background: { r: 255, g: 255, b: 255 }
-      }
-    })
-    .composite([
-      {
-        input: {
-          create: {
-            width: 200,
-            height: 250,
-            channels: 3,
-            background: { r: 220, g: 190, b: 160 }
-          }
-        },
-        left: 50,
-        top: 100
-      },
-      {
-        input: {
-          create: {
-            width: 600,
-            height: 30,
-            channels: 3,
-            background: { r: 0, g: 0, b: 0 }
-          }
-        },
-        left: 300,
-        top: 100
-      },
-      {
-        input: {
-          create: {
-            width: 600,
-            height: 30,
-            channels: 3,
-            background: { r: 0, g: 0, b: 0 }
-          }
-        },
-        left: 300,
-        top: 200
-      }
-    ])
-    .toColorspace('srgb')
-    .jpeg()
-    .toFile(validIdPath);
-
-    console.log('Valid ID created successfully');
-
-    // Create blurry ID
-    const blurryIdPath = path.join(outputDir, 'blurry-id.jpg');
-    console.log('Creating blurry ID at:', blurryIdPath);
-    
-    await sharp({
-      create: {
-        width: 1000,
-        height: 650,
-        channels: 3,
-        background: { r: 255, g: 255, b: 255 }
-      }
-    })
-    .toColorspace('srgb')
-    .blur(10)
-    .jpeg()
-    .toFile(blurryIdPath);
-
-    console.log('Blurry ID created successfully');
-
-    // Create non-document image
-    const nonDocPath = path.join(outputDir, 'non-document.jpg');
-    console.log('Creating non-document image at:', nonDocPath);
-    
-    await sharp({
-      create: {
-        width: 800,
-        height: 600,
-        channels: 3,
-        background: { r: 100, g: 150, b: 200 }
-      }
-    })
-    .toColorspace('srgb')
-    .jpeg()
-    .toFile(nonDocPath);
-
-    console.log('Non-document image created successfully');
-
-    // Create low resolution image
-    const lowResPath = path.join(outputDir, 'low-res.jpg');
-    console.log('Creating low resolution image at:', lowResPath);
-    
-    await sharp({
-      create: {
-        width: 320,
-        height: 240,
-        channels: 3,
-        background: { r: 220, g: 190, b: 160 }
-      }
-    })
-    .toColorspace('srgb')
-    .jpeg()
-    .toFile(lowResPath);
-
-    console.log('Low resolution image created successfully');
-    console.log('All test images generated successfully');
-
-  } catch (error) {
-    console.error('Error generating test images:', error);
-    throw error;
+// Create a high-quality selfie test image
+const generateSelfie = async () => {
+  const width = 1280;
+  const height = 960;
+  
+  // Create a checkerboard pattern for better blur detection
+  const background = Buffer.alloc(width * height * 3);
+  const squareSize = 40; // Size of each checkerboard square
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 3;
+      const isWhite = Math.floor(x / squareSize) % 2 === Math.floor(y / squareSize) % 2;
+      const value = isWhite ? 255 : 50;
+      background[i] = value;     // R
+      background[i + 1] = value; // G
+      background[i + 2] = value; // B
+    }
   }
-}
 
-generateTestImages().catch(console.error);
+  await sharp(background, {
+    raw: {
+      width,
+      height,
+      channels: 3
+    }
+  })
+  .jpeg({
+    quality: 90,
+    chromaSubsampling: '4:4:4' // High quality color
+  })
+  .toFile('tests/fixtures/verification/valid-selfie.jpg');
+};
+
+// Create a high-quality ID test image
+const generateId = async () => {
+  const width = 1280;
+  const height = 960;
+  
+  // Create a checkerboard pattern for better blur detection
+  const background = Buffer.alloc(width * height * 3);
+  const squareSize = 40; // Size of each checkerboard square
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 3;
+      const isWhite = Math.floor(x / squareSize) % 2 === Math.floor(y / squareSize) % 2;
+      const value = isWhite ? 255 : 50;
+      background[i] = value;     // R
+      background[i + 1] = value; // G
+      background[i + 2] = value; // B
+    }
+  }
+
+  await sharp(background, {
+    raw: {
+      width,
+      height,
+      channels: 3
+    }
+  })
+  .jpeg({
+    quality: 90,
+    chromaSubsampling: '4:4:4'
+  })
+  .toFile('tests/fixtures/verification/valid-id.jpg');
+};
+
+// Create a low resolution test image
+const generateLowRes = async () => {
+  const width = 300;
+  const height = 200;
+  
+  // Create a gray background
+  const background = Buffer.alloc(width * height * 3, 150);
+
+  await sharp(background, {
+    raw: {
+      width,
+      height,
+      channels: 3
+    }
+  })
+  .jpeg({
+    quality: 90
+  })
+  .toFile('tests/fixtures/verification/low-res.jpg');
+};
+
+// Generate all test images
+Promise.all([generateSelfie(), generateId(), generateLowRes()])
+  .then(() => console.log('Test images generated successfully'))
+  .catch(console.error);

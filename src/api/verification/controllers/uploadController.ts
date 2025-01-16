@@ -12,7 +12,9 @@ const rekognition = new RekognitionClient({ region: process.env.AWS_REGION });
 const textract = new TextractClient({ region: process.env.AWS_REGION });
 const s3 = new S3Client({ region: process.env.AWS_REGION });
 
-function processTextractResult(result: AWS.Textract.AnalyzeDocumentResponse) {
+import { AnalyzeDocumentCommandOutput } from "@aws-sdk/client-textract";
+
+function processTextractResult(result: AnalyzeDocumentCommandOutput) {
   const fields: Record<string, string> = {};
   const blocks = result.Blocks || [];
   
@@ -48,6 +50,18 @@ function processTextractResult(result: AWS.Textract.AnalyzeDocumentResponse) {
 export const uploadPhoto = async (req: PhotoUploadRequest, res: Response) => {
   try {
     if (!req.file) {
+      await auditLogger.logVerificationEvent({
+        eventType: 'DOCUMENT_VALIDATION_FAILED',
+        documentType: req.body.type || 'unknown',
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+        processingResults: {
+          qualityChecks: null,
+          authenticityChecks: null,
+          extractedData: null
+        },
+        documentHash: ''
+      });
       return res.status(400).json({
         success: false,
         error: 'No file uploaded'
@@ -57,6 +71,18 @@ export const uploadPhoto = async (req: PhotoUploadRequest, res: Response) => {
     // Validate image
     const validationResult = await validateImage(req.file);
     if (!validationResult.isValid) {
+      await auditLogger.logVerificationEvent({
+        eventType: 'DOCUMENT_VALIDATION_FAILED',
+        documentType: req.body.type,
+        ipAddress: req.ip || 'unknown',
+        userAgent: req.headers['user-agent'] || 'unknown',
+        processingResults: {
+          qualityChecks: validationResult,
+          authenticityChecks: null,
+          extractedData: null
+        },
+        documentHash: ''
+      });
       return res.status(400).json(validationResult);
     }
 
@@ -83,6 +109,19 @@ export const uploadPhoto = async (req: PhotoUploadRequest, res: Response) => {
       extractedData = processTextractResult(textractResult);
     }
 
+    await auditLogger.logVerificationEvent({
+      eventType: 'DOCUMENT_UPLOAD_SUCCESS',
+      documentType: req.body.type,
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+      processingResults: {
+        qualityChecks: validationResult,
+        authenticityChecks: null,
+        extractedData: extractedData || null
+      },
+      documentHash: key
+    });
+
     return res.json({
       success: true,
       key,
@@ -93,6 +132,18 @@ export const uploadPhoto = async (req: PhotoUploadRequest, res: Response) => {
 
   } catch (error) {
     console.error('Upload error:', error);
+    await auditLogger.logVerificationEvent({
+      eventType: 'DOCUMENT_UPLOAD_FAILED',
+      documentType: req.body.type || 'unknown',
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
+      processingResults: {
+        qualityChecks: null,
+        authenticityChecks: null,
+        extractedData: null
+      },
+      documentHash: ''
+    });
     return res.status(500).json({
       success: false,
       error: 'Failed to process upload'

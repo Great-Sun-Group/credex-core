@@ -43,6 +43,35 @@ export interface ImageValidationResult {
   };
 }
 
+export interface ImageQualityResult {
+  quality: boolean;
+  error?: string;
+  face?: {
+    hasFace: boolean;
+    confidence: number;
+    boundingBox?: {
+      Left?: number;
+      Top?: number;
+      Width?: number;
+      Height?: number;
+    };
+    quality?: {
+      brightness: number;
+      sharpness: number;
+    };
+  };
+  document?: {
+    hasDocument: boolean;
+    confidence: number;
+    boundingBox?: {
+      Left?: number;
+      Top?: number;
+      Width?: number;
+      Height?: number;
+    };
+  };
+}
+
 export type ValidationResult = ImageValidationResult;
 
 export interface FileUpload {
@@ -264,4 +293,8 @@ export interface AuthenticityResult {
   isAuthentic: boolean;
   securityFeatures: SecurityFeatures;
   verificationDate: string;
+}
+
+export interface ImageQualityService {
+  validateImage: (buffer: Buffer, type: 'id' | 'selfie') => Promise<ImageValidationResult>;
 }

@@ -1,10 +1,30 @@
 import { Request, Response } from 'express';
-import AWS from 'aws-sdk';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { Readable } from 'stream';
+import { Blob } from 'buffer';
 import * as collectionService from '../services/collectionService';
 import { auditLogger } from '../../../utils/auditLogger';
 import { VerificationRequest, VerificationResult } from '../types';
 
-const s3 = new AWS.S3();
+async function streamToBuffer(stream: any): Promise<Buffer | undefined> {
+  if (!stream) return undefined;
+  
+  if (stream instanceof Blob) {
+    return Buffer.from(await stream.arrayBuffer());
+  }
+  
+  if (stream instanceof Readable) {
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+  }
+  
+  return undefined;
+}
+
+const s3 = new S3Client({ region: process.env.AWS_REGION });
 
 interface ValidationError {
   code: string;
@@ -48,19 +68,25 @@ export const verifyPhotos = async (req: Request, res: Response): Promise<Respons
 
     try {
       // Get images from S3
-      const [idPhoto, selfiePhoto] = await Promise.all([
-        s3.getObject({ Bucket: process.env.PHOTOS_BUCKET!, Key: idPhotoKey }).promise(),
-        s3.getObject({ Bucket: process.env.PHOTOS_BUCKET!, Key: selfiePhotoKey }).promise()
+      const [idPhotoResponse, selfiePhotoResponse] = await Promise.all([
+        s3.send(new GetObjectCommand({ Bucket: process.env.PHOTOS_BUCKET!, Key: idPhotoKey })),
+        s3.send(new GetObjectCommand({ Bucket: process.env.PHOTOS_BUCKET!, Key: selfiePhotoKey }))
       ]);
 
-      if (!idPhoto.Body || !selfiePhoto.Body) {
+      // Convert streams to buffers
+      const [idPhotoBody, selfiePhotoBody] = await Promise.all([
+        streamToBuffer(idPhotoResponse.Body),
+        streamToBuffer(selfiePhotoResponse.Body)
+      ]);
+
+      if (!idPhotoBody || !selfiePhotoBody) {
         throw new Error('Failed to retrieve photos from storage');
       }
 
       // Compare faces
       const comparisonResult = await collectionService.compareFaces(
-        selfiePhoto.Body as Buffer,
-        idPhoto.Body as Buffer
+        selfiePhotoBody,
+        idPhotoBody
       );
 
       const processingTime = Date.now() - startTime;
@@ -77,8 +103,8 @@ export const verifyPhotos = async (req: Request, res: Response): Promise<Respons
         idPhotoKey,
         selfiePhotoKey,
         metadata: {
-          idQuality: idPhoto.Metadata,
-          selfieQuality: selfiePhoto.Metadata
+          idQuality: idPhotoResponse.Metadata,
+          selfieQuality: selfiePhotoResponse.Metadata
         }
       };
 

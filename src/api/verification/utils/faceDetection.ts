@@ -1,11 +1,17 @@
-// @ts-ignore - OpenCV types not available
-import cv from 'opencv4nodejs';
+import { 
+  RekognitionClient,
+  DetectFacesCommand,
+  QualityFilter,
+  Attribute
+} from "@aws-sdk/client-rekognition";
 import { FaceDetectionResult, FaceLocation } from '../types';
 import { auditLogger } from '../../../utils/auditLogger';
 import { FaceDetectionAuditEvent, ErrorAuditEvent } from '../../../types/audit';
 
-const FACE_CASCADE_PATH = './cascades/haarcascade_frontalface_default.xml';
-const MIN_FACE_SIZE = { width: 100, height: 100 };
+const rekognition = new RekognitionClient({
+  region: process.env.AWS_REGION || 'us-east-1'
+});
+
 const MAX_FACES = 1;
 const CONFIDENCE_THRESHOLD = 0.8;
 
@@ -16,38 +22,29 @@ const CONFIDENCE_THRESHOLD = 0.8;
  */
 export async function detectFace(imageBuffer: Buffer): Promise<FaceDetectionResult> {
   try {
-    // Load the image
-    const image = await cv.imdecodeAsync(imageBuffer);
-    
-    // Convert to grayscale for better detection
-    const grayImage = image.cvtColor(cv.COLOR_BGR2GRAY);
-    
-    // Load face cascade classifier
-    const classifier = new cv.CascadeClassifier(FACE_CASCADE_PATH);
-    
-    // Detect faces
-    const faces = await classifier.detectMultiScaleAsync(grayImage, {
-      scaleFactor: 1.1,
-      minNeighbors: 5,
-      minSize: MIN_FACE_SIZE
-    });
+    const params = {
+      Image: {
+        Bytes: imageBuffer
+      },
+      Attributes: [Attribute.ALL],
+      QualityFilter: QualityFilter.AUTO
+    };
+
+    const command = new DetectFacesCommand(params);
+    const response = await rekognition.send(command);
 
     // Log detection results
     const auditEvent: FaceDetectionAuditEvent = {
       eventType: 'FACE_DETECTION',
       timestamp: new Date().toISOString(),
       data: {
-        facesFound: faces.length,
-        imageSize: {
-          width: image.cols,
-          height: image.rows
-        }
+        facesFound: response.FaceDetails?.length || 0
       }
     };
     await auditLogger.log(auditEvent);
 
     // Validate results
-    if (faces.length === 0) {
+    if (!response.FaceDetails || response.FaceDetails.length === 0) {
       return {
         hasFace: false,
         confidence: 0,
@@ -55,7 +52,7 @@ export async function detectFace(imageBuffer: Buffer): Promise<FaceDetectionResu
       };
     }
 
-    if (faces.length > MAX_FACES) {
+    if (response.FaceDetails.length > MAX_FACES) {
       return {
         hasFace: false,
         confidence: 0,
@@ -64,21 +61,22 @@ export async function detectFace(imageBuffer: Buffer): Promise<FaceDetectionResu
     }
 
     // Get the detected face
-    const face = faces[0];
-    const confidence = calculateConfidence(face, grayImage);
+    const face = response.FaceDetails[0];
+    const confidence = face.Confidence || 0;
+    const boundingBox = face.BoundingBox;
 
     // Convert face rect to our format
-    const faceLocation: FaceLocation = {
-      x: face.x,
-      y: face.y,
-      width: face.width,
-      height: face.height
-    };
+    const faceLocation: FaceLocation | undefined = boundingBox ? {
+      x: boundingBox.Left || 0,
+      y: boundingBox.Top || 0,
+      width: boundingBox.Width || 0,
+      height: boundingBox.Height || 0
+    } : undefined;
 
     return {
       hasFace: confidence >= CONFIDENCE_THRESHOLD,
       confidence,
-      faceLocation: faceLocation,
+      faceLocation,
       error: confidence < CONFIDENCE_THRESHOLD ? 'Face detection confidence too low' : undefined
     };
   } catch (err) {
@@ -151,43 +149,5 @@ export async function validateFacePosition(
     };
     await auditLogger.log(auditEvent);
     return false;
-  }
-}
-
-/**
- * Calculates confidence score for face detection
- * @param face - Detected face rectangle
- * @param grayImage - Grayscale image
- * @returns number between 0 and 1
- */
-function calculateConfidence(face: { x: number; y: number; width: number; height: number }, grayImage: cv.Mat): number {
-  try {
-    // Extract face region
-    const faceRegion = grayImage.getRegion(new cv.Rect(face.x, face.y, face.width, face.height));
-    
-    // Calculate histogram of face region
-    const histogram = cv.calcHist(faceRegion, [0], null, [256], [0, 256]);
-    
-    // Normalize histogram
-    const normalizedHist = histogram.convertTo(cv.CV_32F);
-    cv.normalize(normalizedHist, normalizedHist, 0, 1, cv.NORM_MINMAX);
-    
-    // Calculate entropy as a measure of confidence
-    let entropy = 0;
-    for (let i = 0; i < normalizedHist.rows; i++) {
-      const p = normalizedHist.at(i, 0);
-      if (p > 0) {
-        entropy -= p * Math.log2(p);
-      }
-    }
-    
-    // Convert entropy to confidence score (0-1 range)
-    const maxEntropy = Math.log2(256); // Maximum possible entropy
-    const confidence = 1 - (entropy / maxEntropy);
-    
-    return confidence;
-  } catch (error) {
-    console.error('Error calculating confidence:', error);
-    return 0;
   }
 }

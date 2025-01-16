@@ -1,4 +1,4 @@
-import { CloudWatchClient } from "@aws-sdk/client-cloudwatch";
+import { CloudWatchClient, PutMetricDataCommand } from "@aws-sdk/client-cloudwatch";
 
 const cloudwatch = new CloudWatchClient({ 
   region: process.env.AWS_REGION
@@ -11,7 +11,7 @@ export const MetricsService = {
     dimensions: Record<string, string>;
     value: number;
   }): Promise<void> {
-    await cloudwatch.putMetricData({
+    await cloudwatch.send(new PutMetricDataCommand({
       Namespace: NAMESPACE,
       MetricData: [{
         MetricName: params.metricName,
@@ -22,7 +22,7 @@ export const MetricsService = {
           Value
         }))
       }]
-    }).promise();
+    }));
   },
 
   async incrementCounter(metricName: string, dimensions: Record<string, string> = {}): Promise<void> {
@@ -43,4 +43,4 @@ export const MetricsService = {
       this.incrementCounter(verified ? 'SuccessfulVerifications' : 'FailedVerifications')
     ]);
   }
-}; 
+};

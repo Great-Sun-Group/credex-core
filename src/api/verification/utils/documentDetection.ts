@@ -1,12 +1,27 @@
-// @ts-ignore - OpenCV types not available
-import cv from 'opencv4nodejs';
+import { 
+  RekognitionClient,
+  DetectLabelsCommand,
+  Label
+} from "@aws-sdk/client-rekognition";
+import {
+  TextractClient,
+  AnalyzeDocumentCommand,
+  FeatureType,
+  Block
+} from "@aws-sdk/client-textract";
 import { DocumentDetectionResult, Corner } from '../types';
 import { auditLogger } from '../../../utils/auditLogger';
-import { DocumentDetectionAuditEvent, ErrorAuditEvent } from '../../../types/audit';
+import { DocumentDetectionAuditEvent, ErrorAuditEvent, TypedAuditEvent } from '../../../types/audit';
 
-const MIN_CONTOUR_AREA = 1000; // Minimum area for document contour
+const rekognition = new RekognitionClient({
+  region: process.env.AWS_REGION || 'us-east-1'
+});
+
+const textract = new TextractClient({
+  region: process.env.AWS_REGION || 'us-east-1'
+});
+
 const CONFIDENCE_THRESHOLD = 0.8;
-const EPSILON_FACTOR = 0.02; // Factor for polygon approximation
 
 /**
  * Detects document edges in the provided image
@@ -15,73 +30,123 @@ const EPSILON_FACTOR = 0.02; // Factor for polygon approximation
  */
 export async function detectDocumentEdges(imageBuffer: Buffer): Promise<DocumentDetectionResult> {
   try {
-    // Load and preprocess image
-    const image = await cv.imdecodeAsync(imageBuffer);
-    const processedImage = preprocessImage(image);
-    
-    // Find contours
-    const contours = processedImage.findContours(
-      cv.RETR_EXTERNAL,
-      cv.CHAIN_APPROX_SIMPLE
+    // First use Rekognition to verify it's a document
+    const rekognitionParams = {
+      Image: {
+        Bytes: imageBuffer
+      },
+      MaxLabels: 10
+    };
+
+    const rekognitionResponse = await rekognition.send(
+      new DetectLabelsCommand(rekognitionParams)
     );
 
-    // Find the largest contour (likely the document)
-    const documentContour = findLargestContour(contours);
-    
-    if (!documentContour) {
-      return {
+    const documentLabel = rekognitionResponse.Labels?.find(
+      (label: Label) => 
+        label.Name?.toLowerCase().includes('id') ||
+        label.Name?.toLowerCase().includes('card') ||
+        label.Name?.toLowerCase().includes('document')
+    );
+
+    if (!documentLabel) {
+      const result = {
+        hasDocument: false,
+        confidence: 0,
+        error: 'No document detected'
+      };
+
+      const auditEvent: DocumentDetectionAuditEvent = {
+        eventType: 'DOCUMENT_DETECTION',
+        timestamp: new Date().toISOString(),
+        data: {
+          hasDocument: false,
+          confidence: 0
+        }
+      };
+      await auditLogger.log(auditEvent);
+
+      return result;
+    }
+
+    // Then use Textract to analyze document structure
+    const textractParams = {
+      Document: {
+        Bytes: imageBuffer
+      },
+      FeatureTypes: [FeatureType.FORMS]
+    };
+
+    const textractResponse = await textract.send(
+      new AnalyzeDocumentCommand(textractParams)
+    );
+
+    // Get document boundaries from Textract
+    const documentBoundary = textractResponse.Blocks?.find(
+      (block: Block) => block.BlockType === 'PAGE'
+    );
+
+    if (!documentBoundary || !documentBoundary.Geometry?.BoundingBox) {
+      const result = {
         hasDocument: false,
         confidence: 0,
         error: 'No document boundaries detected'
       };
-    }
 
-    // Approximate the contour to a polygon
-    const epsilon = EPSILON_FACTOR * documentContour.arcLength(true);
-    const approxCurve = documentContour.approxPolyDP(epsilon, true);
-
-    // Validate if we have a quadrilateral
-    if (approxCurve.length !== 4) {
-      return {
-        hasDocument: false,
-        confidence: 0,
-        error: 'Document shape is not rectangular'
+      const auditEvent: DocumentDetectionAuditEvent = {
+        eventType: 'DOCUMENT_DETECTION',
+        timestamp: new Date().toISOString(),
+        data: {
+          hasDocument: false,
+          confidence: 0
+        }
       };
+      await auditLogger.log(auditEvent);
+
+      return result;
     }
 
-    // Convert corners to our format
-    const corners: Corner[] = approxCurve.map((point: { x: number; y: number }) => ({
-      x: point.x,
-      y: point.y
-    }));
+    const box = documentBoundary.Geometry.BoundingBox;
+    const corners: Corner[] = [
+      { x: box.Left || 0, y: box.Top || 0 },  // Top-left
+      { x: (box.Left || 0) + (box.Width || 0), y: box.Top || 0 },  // Top-right
+      { x: (box.Left || 0) + (box.Width || 0), y: (box.Top || 0) + (box.Height || 0) },  // Bottom-right
+      { x: box.Left || 0, y: (box.Top || 0) + (box.Height || 0) }  // Bottom-left
+    ];
 
-    // Calculate confidence based on various factors
-    const confidence = calculateConfidence(documentContour, image.size);
+    // Calculate confidence as average of Rekognition and Textract confidences
+    const rekognitionConfidence = documentLabel.Confidence || 0;
+    const textractConfidence = documentBoundary.Confidence || 0;
+    const confidence = (rekognitionConfidence + textractConfidence) / 2 / 100;
+
+    const result = {
+      hasDocument: confidence >= CONFIDENCE_THRESHOLD,
+      corners,
+      confidence,
+      error: confidence < CONFIDENCE_THRESHOLD ? 'Low confidence in document detection' : undefined
+    };
 
     // Log detection results
     const auditEvent: DocumentDetectionAuditEvent = {
       eventType: 'DOCUMENT_DETECTION',
       timestamp: new Date().toISOString(),
       data: {
-        hasDocument: confidence >= CONFIDENCE_THRESHOLD,
+        hasDocument: result.hasDocument,
         confidence,
-        corners,
-        imageSize: {
-          width: image.cols,
-          height: image.rows
-        }
+        corners
       }
     };
     await auditLogger.log(auditEvent);
 
-    return {
-      hasDocument: confidence >= CONFIDENCE_THRESHOLD,
-      corners: corners,
-      confidence,
-      error: confidence < CONFIDENCE_THRESHOLD ? 'Low confidence in document detection' : undefined
-    };
+    return result;
   } catch (err) {
     const error = err as Error;
+    const result = {
+      hasDocument: false,
+      confidence: 0,
+      error: `Document detection failed: ${error.message}`
+    };
+
     const auditEvent: ErrorAuditEvent = {
       eventType: 'DOCUMENT_DETECTION_ERROR',
       timestamp: new Date().toISOString(),
@@ -91,44 +156,79 @@ export async function detectDocumentEdges(imageBuffer: Buffer): Promise<Document
     };
     await auditLogger.log(auditEvent);
 
-    return {
-      hasDocument: false,
-      confidence: 0,
-      error: `Document detection failed: ${error.message}`
-    };
+    return result;
   }
 }
 
 /**
  * Validates if the detected document is properly aligned
  * @param corners - Array of corner points
- * @returns Promise<boolean>
+ * @returns boolean
  */
-export async function validateDocumentAlignment(corners: Corner[]): Promise<boolean> {
-  try {
-    if (corners.length !== 4) {
-      return false;
-    }
+export function validateDocumentAlignment(corners: Corner[]): boolean {
+  if (!corners || corners.length !== 4) {
+    const auditEvent: TypedAuditEvent = {
+      eventType: 'DOCUMENT_ALIGNMENT_VALIDATION',
+      timestamp: new Date().toISOString(),
+      data: {
+        isValid: false,
+        error: 'Invalid corners array'
+      }
+    };
+    auditLogger.log(auditEvent).catch(console.error);
+    return false;
+  }
 
-    // Sort corners into top-left, top-right, bottom-right, bottom-left
-    const sortedCorners = sortCorners(corners);
-    
-    // Calculate angles between edges
-    const angles = calculateAngles(sortedCorners);
-    
-    // Check if angles are approximately 90 degrees (±10 degrees)
-    const ANGLE_TOLERANCE = 10;
-    const hasRightAngles = angles.every(angle => 
-      Math.abs(angle - 90) <= ANGLE_TOLERANCE
+  try {
+    // Calculate aspect ratio
+    const width = Math.sqrt(
+      Math.pow(corners[1].x - corners[0].x, 2) +
+      Math.pow(corners[1].y - corners[0].y, 2)
+    );
+    const height = Math.sqrt(
+      Math.pow(corners[3].x - corners[0].x, 2) +
+      Math.pow(corners[3].y - corners[0].y, 2)
+    );
+    const aspectRatio = width / height;
+
+    // Common ID document ratios (with tolerance)
+    const VALID_RATIOS = [
+      { ratio: 1.586, tolerance: 0.1 },  // ID-1 format (credit card size)
+      { ratio: 1.414, tolerance: 0.1 },  // A-series format
+      { ratio: 1.5, tolerance: 0.1 }     // Common ID card format
+    ];
+
+    // Check if aspect ratio matches any standard format
+    const isValidRatio = VALID_RATIOS.some(valid =>
+      Math.abs(aspectRatio - valid.ratio) <= valid.tolerance
     );
 
-    // Check if aspect ratio is reasonable (standard document ratios)
-    const aspectRatio = calculateAspectRatio(sortedCorners);
-    const isAspectRatioValid = validateAspectRatio(aspectRatio);
+    // Check if document is skewed (using corner angles)
+    const SKEW_TOLERANCE = 10; // degrees
+    const angles = calculateCornerAngles(corners);
+    const isNotSkewed = angles.every(angle => 
+      Math.abs(angle - 90) <= SKEW_TOLERANCE
+    );
 
-    return hasRightAngles && isAspectRatioValid;
+    const result = isValidRatio && isNotSkewed;
+
+    // Log validation result
+    const auditEvent: TypedAuditEvent = {
+      eventType: 'DOCUMENT_ALIGNMENT_VALIDATION',
+      timestamp: new Date().toISOString(),
+      data: {
+        isValid: result,
+        aspectRatio,
+        angles
+      }
+    };
+    auditLogger.log(auditEvent).catch(console.error);
+
+    return result;
   } catch (err) {
     const error = err as Error;
+    
+    // Log error but don't wait for it
     const auditEvent: ErrorAuditEvent = {
       eventType: 'DOCUMENT_ALIGNMENT_VALIDATION_ERROR',
       timestamp: new Date().toISOString(),
@@ -136,116 +236,18 @@ export async function validateDocumentAlignment(corners: Corner[]): Promise<bool
         errorMessage: error.message
       }
     };
-    await auditLogger.log(auditEvent);
+    auditLogger.log(auditEvent).catch(console.error);
+
     return false;
   }
 }
 
 /**
- * Preprocesses image for document detection
- * @param image - OpenCV image
- * @returns processed image
- */
-function preprocessImage(image: cv.Mat): cv.Mat {
-  // Convert to grayscale
-  const gray = image.cvtColor(cv.COLOR_BGR2GRAY);
-  
-  // Apply Gaussian blur
-  const blurred = gray.gaussianBlur(new cv.Size(5, 5), 0);
-  
-  // Apply Canny edge detection
-  const edges = blurred.canny(50, 150);
-  
-  // Apply dilation to connect edges
-  const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
-  return edges.dilate(kernel);
-}
-
-/**
- * Finds the largest contour in the image
- * @param contours - Array of contours
- * @returns largest contour or null
- */
-function findLargestContour(contours: cv.Contour[]): cv.Contour | null {
-  let maxArea = MIN_CONTOUR_AREA;
-  let largestContour = null;
-
-  for (const contour of contours) {
-    const area = contour.area;
-    if (area > maxArea) {
-      maxArea = area;
-      largestContour = contour;
-    }
-  }
-
-  return largestContour;
-}
-
-/**
- * Calculates confidence score for document detection
- * @param contour - Detected document contour
- * @param imageSize - Size of the original image
- * @returns number between 0 and 1
- */
-function calculateConfidence(contour: cv.Contour, imageSize: cv.Size): number {
-  try {
-    // Factor 1: Area ratio
-    const contourArea = contour.area;
-    const imageArea = imageSize.height * imageSize.width;
-    const areaRatio = contourArea / imageArea;
-    const areaScore = Math.min(areaRatio * 2, 1); // Normalize to 0-1
-
-    // Factor 2: Perimeter regularity
-    const perimeter = contour.arcLength(true);
-    const expectedPerimeter = Math.sqrt(contourArea) * 4;
-    const perimeterScore = 1 - Math.abs(perimeter - expectedPerimeter) / expectedPerimeter;
-
-    // Factor 3: Convexity
-    const hull = contour.convexHull();
-    const convexityScore = contourArea / hull.area;
-
-    // Combine scores with weights
-    const confidence = (
-      areaScore * 0.4 +
-      perimeterScore * 0.3 +
-      convexityScore * 0.3
-    );
-
-    return Math.max(0, Math.min(1, confidence));
-  } catch (error) {
-    console.error('Error calculating confidence:', error);
-    return 0;
-  }
-}
-
-/**
- * Sorts corners in clockwise order starting from top-left
+ * Calculates angles at each corner
  * @param corners - Array of corner points
- * @returns sorted corners
- */
-function sortCorners(corners: Corner[]): Corner[] {
-  // Calculate center point
-  const center = corners.reduce(
-    (acc, corner) => ({ x: acc.x + corner.x, y: acc.y + corner.y }),
-    { x: 0, y: 0 }
-  );
-  center.x /= corners.length;
-  center.y /= corners.length;
-
-  // Sort corners based on their angle from center
-  return corners.sort((a, b) => {
-    const angleA = Math.atan2(a.y - center.y, a.x - center.x);
-    const angleB = Math.atan2(b.y - center.y, b.x - center.x);
-    return angleA - angleB;
-  });
-}
-
-/**
- * Calculates angles between consecutive edges
- * @param corners - Array of sorted corner points
  * @returns array of angles in degrees
  */
-function calculateAngles(corners: Corner[]): number[] {
+function calculateCornerAngles(corners: Corner[]): number[] {
   const angles: number[] = [];
   
   for (let i = 0; i < corners.length; i++) {
@@ -271,39 +273,4 @@ function calculateAngles(corners: Corner[]): number[] {
   }
 
   return angles;
-}
-
-/**
- * Calculates aspect ratio of detected document
- * @param corners - Array of sorted corner points
- * @returns aspect ratio (width/height)
- */
-function calculateAspectRatio(corners: Corner[]): number {
-  const width = Math.sqrt(
-    Math.pow(corners[1].x - corners[0].x, 2) +
-    Math.pow(corners[1].y - corners[0].y, 2)
-  );
-  const height = Math.sqrt(
-    Math.pow(corners[3].x - corners[0].x, 2) +
-    Math.pow(corners[3].y - corners[0].y, 2)
-  );
-  return width / height;
-}
-
-/**
- * Validates if aspect ratio is within acceptable range
- * @param ratio - Calculated aspect ratio
- * @returns boolean indicating if ratio is valid
- */
-function validateAspectRatio(ratio: number): boolean {
-  // Common ID document ratios (with tolerance)
-  const VALID_RATIOS = [
-    { ratio: 1.586, tolerance: 0.1 },  // ID-1 format (credit card size)
-    { ratio: 1.414, tolerance: 0.1 },  // A-series format
-    { ratio: 1.5, tolerance: 0.1 }     // Common ID card format
-  ];
-
-  return VALID_RATIOS.some(valid =>
-    Math.abs(ratio - valid.ratio) <= valid.tolerance
-  );
 }

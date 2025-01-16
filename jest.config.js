@@ -9,6 +9,10 @@ module.exports = {
     '<rootDir>/tests/setup.ts',
     '<rootDir>/tests/teardown.ts'
   ],
+  // Resource management
+  maxWorkers: '50%', // Limit to 50% of CPU cores
+  workerIdleMemoryLimit: '512MB', // Restart workers that exceed memory limit
+  maxConcurrency: 5, // Limit concurrent test files
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   testMatch: [
     '**/__tests__/**/*.[jt]s?(x)',
@@ -20,9 +24,9 @@ module.exports = {
       useESM: true
     }]
   },
-  testTimeout: 60000, // Increase timeout for AWS calls
+  testTimeout: 30000, // Reduce timeout to catch hanging tests
   verbose: true,
-  collectCoverage: true,
+  collectCoverage: false, // Disable coverage by default for performance
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'html'],
   coverageThreshold: {
@@ -42,5 +46,13 @@ module.exports = {
   collectCoverageFrom: [
     'src/api/verification/**/*.ts',
     '!src/api/verification/types/**/*.ts'
-  ]
+  ],
+  moduleNameMapper: {
+    '@aws-sdk/client-s3': '<rootDir>/tests/api/verification/__mocks__/aws-sdk.ts',
+    '@aws-sdk/client-rekognition': '<rootDir>/tests/api/verification/__mocks__/aws-sdk.ts',
+    '@aws-sdk/client-textract': '<rootDir>/tests/api/verification/__mocks__/aws-sdk.ts',
+    '@aws-sdk/client-dynamodb': '<rootDir>/tests/api/verification/__mocks__/aws-sdk.ts',
+    '@aws-sdk/lib-dynamodb': '<rootDir>/tests/api/verification/__mocks__/aws-sdk.ts',
+    '@aws-sdk/client-sns': '<rootDir>/tests/api/verification/__mocks__/aws-sdk.ts'
+  }
 };

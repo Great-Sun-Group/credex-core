@@ -1,17 +1,32 @@
-import { KMS } from 'aws-sdk';
+import { 
+  KMS, 
+  GenerateDataKeyCommand, 
+  DecryptCommand,
+  GenerateDataKeyCommandInput,
+  DecryptCommandInput
+} from '@aws-sdk/client-kms';
 import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 import { EncryptedData } from '../types/security';
 
-const kms = new KMS({ region: process.env.AWS_REGION });
+const kms = new KMS({ 
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
+  }
+});
 const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
 
 export const encryptData = async (data: string): Promise<EncryptedData> => {
   try {
     // Get data key from KMS
-    const { Plaintext, CiphertextBlob } = await kms.generateDataKey({
+    const generateKeyInput: GenerateDataKeyCommandInput = {
       KeyId: process.env.KMS_KEY_ID!,
       KeySpec: 'AES_256'
-    }).promise();
+    };
+    const { Plaintext, CiphertextBlob } = await kms.send(
+      new GenerateDataKeyCommand(generateKeyInput)
+    );
 
     // Generate IV
     const iv = randomBytes(16);
@@ -19,7 +34,7 @@ export const encryptData = async (data: string): Promise<EncryptedData> => {
     // Create cipher
     const cipher = createCipheriv(
       ENCRYPTION_ALGORITHM,
-      Buffer.from(Plaintext as Buffer),
+      Plaintext as Uint8Array,
       iv
     );
     
@@ -35,7 +50,7 @@ export const encryptData = async (data: string): Promise<EncryptedData> => {
       encrypted: encrypted.toString('base64'),
       iv: iv.toString('base64'),
       tag: tag.toString('base64'),
-      key: CiphertextBlob!.toString('base64')
+      key: Buffer.from(CiphertextBlob!).toString('base64')
     };
   } catch (error) {
     console.error('Encryption error:', error);
@@ -51,14 +66,17 @@ export const decryptData = async (encryptedData: EncryptedData): Promise<string>
     const encryptedKey = Buffer.from(encryptedData.key, 'base64');
 
     // Decrypt data key
-    const { Plaintext: decryptedKey } = await kms.decrypt({
+    const decryptInput: DecryptCommandInput = {
       CiphertextBlob: encryptedKey
-    }).promise();
+    };
+    const { Plaintext: decryptedKey } = await kms.send(
+      new DecryptCommand(decryptInput)
+    );
 
     // Create decipher
     const decipher = createDecipheriv(
       ENCRYPTION_ALGORITHM,
-      Buffer.from(decryptedKey as Buffer),
+      decryptedKey as Uint8Array,
       iv
     );
     decipher.setAuthTag(tag);
@@ -71,4 +89,4 @@ export const decryptData = async (encryptedData: EncryptedData): Promise<string>
     console.error('Decryption error:', error);
     throw new Error('Failed to decrypt data');
   }
-}; 
+};

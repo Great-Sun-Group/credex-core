@@ -1,12 +1,12 @@
 import { validateImage } from './imageQualityService';
-import { Rekognition } from 'aws-sdk';
+import { RekognitionClient, CompareFacesCommand } from '@aws-sdk/client-rekognition';
 import { FaceComparisonResult } from '../types';
 import { ImageQualityConfig } from '../types';
 import NodeCache from 'node-cache';
 import { createHash } from 'crypto';
 import { MetricsService } from './metrics';
 
-const rekognition = new Rekognition();
+const rekognition = new RekognitionClient({ region: process.env.AWS_REGION });
 const SIMILARITY_THRESHOLD = 90;
 
 const DEFAULT_CONFIG: ImageQualityConfig = {
@@ -27,7 +27,7 @@ const getCacheKey = (source: Buffer, target: Buffer): string => {
   return `face_comparison:${sourceHash}:${targetHash}`;
 };
 
-const processComparisonResult = (response: Rekognition.CompareFacesResponse): FaceComparisonResult => {
+const processComparisonResult = (response: any): FaceComparisonResult => {
   const match = response.FaceMatches?.[0];
   
   if (!match) {
@@ -51,7 +51,7 @@ const processComparisonResult = (response: Rekognition.CompareFacesResponse): Fa
   };
 };
 
-const validateFaceCount = (response: Rekognition.CompareFacesResponse): void => {
+const validateFaceCount = (response: any): void => {
   const sourceFaces = response.SourceImageFace ? 1 : 0;
   const targetFaces = response.UnmatchedFaces?.length || 0;
   
@@ -107,12 +107,13 @@ export const compareFaces = async (
       throw new Error('Image quality requirements not met');
     }
 
-    const response = await rekognition.compareFaces({
+    const command = new CompareFacesCommand({
       SourceImage: { Bytes: sourceImage },
       TargetImage: { Bytes: targetImage },
       SimilarityThreshold: SIMILARITY_THRESHOLD,
       QualityFilter: 'HIGH'
-    }).promise();
+    });
+    const response = await rekognition.send(command);
 
     validateFaceCount(response);
 
@@ -122,6 +123,15 @@ export const compareFaces = async (
     return result;
   } catch (error) {
     console.error('Face comparison error:', error);
+    if (error instanceof Error) {
+      if (error.message === 'Image quality requirements not met') {
+        throw error;
+      }
+      if (error.message === 'No face detected in source image' || 
+          error.message === 'Multiple faces detected in images') {
+        throw error;
+      }
+    }
     throw new Error('Failed to compare faces');
   }
-}; 
+};

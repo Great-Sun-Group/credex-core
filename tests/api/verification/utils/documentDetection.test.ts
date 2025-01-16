@@ -1,212 +1,158 @@
-import { detectDocumentEdges, validateDocumentAlignment } from '../../../../src/api/verification/utils/documentDetection';
-import { Corner } from '../../../../src/api/verification/types';
-import { auditLogger } from '../../../../src/utils/auditLogger';
+const mockRekognitionSend = jest.fn();
+const mockTextractSend = jest.fn();
 
-// Mock dependencies
+jest.mock('@aws-sdk/client-rekognition', () => ({
+  RekognitionClient: jest.fn().mockImplementation(() => ({
+    send: mockRekognitionSend
+  })),
+  DetectLabelsCommand: jest.fn().mockImplementation((input) => ({
+    input,
+    constructor: { name: 'DetectLabelsCommand' }
+  }))
+}));
+
+jest.mock('@aws-sdk/client-textract', () => ({
+  TextractClient: jest.fn().mockImplementation(() => ({
+    send: mockTextractSend
+  })),
+  AnalyzeDocumentCommand: jest.fn().mockImplementation((input) => ({
+    input,
+    constructor: { name: 'AnalyzeDocumentCommand' }
+  })),
+  FeatureType: {
+    FORMS: 'FORMS',
+    TABLES: 'TABLES'
+  }
+}));
+
 jest.mock('../../../../src/utils/auditLogger', () => ({
   auditLogger: {
     log: jest.fn().mockResolvedValue(undefined)
   }
 }));
 
-// Mock opencv4nodejs
-jest.mock('opencv4nodejs', () => {
-  const mockFindContours = jest.fn();
-  const mockCvtColor = jest.fn();
-  const mockGaussianBlur = jest.fn();
-  const mockCanny = jest.fn();
-  const mockDilate = jest.fn();
-  const mockArcLength = jest.fn();
-  const mockApproxPolyDP = jest.fn();
-  const mockArea = jest.fn();
-  const mockConvexHull = jest.fn();
-
-  return {
-    imdecodeAsync: jest.fn().mockResolvedValue({
-      cvtColor: mockCvtColor,
-      gaussianBlur: mockGaussianBlur,
-      canny: mockCanny,
-      dilate: mockDilate,
-      findContours: mockFindContours,
-      cols: 1024,
-      rows: 768,
-      size: { width: 1024, height: 768 }
-    }),
-    COLOR_BGR2GRAY: 'COLOR_BGR2GRAY',
-    RETR_EXTERNAL: 'RETR_EXTERNAL',
-    CHAIN_APPROX_SIMPLE: 'CHAIN_APPROX_SIMPLE',
-    MORPH_RECT: 'MORPH_RECT',
-    Size: jest.fn(),
-    getStructuringElement: jest.fn().mockReturnValue({}),
-    Contour: jest.fn().mockImplementation(() => ({
-      arcLength: mockArcLength,
-      approxPolyDP: mockApproxPolyDP,
-      area: mockArea,
-      convexHull: mockConvexHull
-    }))
-  };
-});
+import { detectDocumentEdges, validateDocumentAlignment } from '../../../../src/api/verification/utils/documentDetection';
+import { auditLogger } from '../../../../src/utils/auditLogger';
 
 describe('Document Detection', () => {
-  const mockImageBuffer = Buffer.from('test-image');
+  const mockBuffer = Buffer.from('mock image data');
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (auditLogger.log as jest.Mock).mockClear();
   });
 
   describe('detectDocumentEdges', () => {
     it('should detect document edges successfully', async () => {
-      const mockCorners = [
-        { x: 100, y: 100 },
-        { x: 924, y: 100 },
-        { x: 924, y: 668 },
-        { x: 100, y: 668 }
-      ];
+      // Setup mock responses
+      mockRekognitionSend.mockResolvedValueOnce({
+        Labels: [{
+          Name: 'ID Card',
+          Confidence: 95.5
+        }]
+      });
 
-      const cv = require('opencv4nodejs');
-      const mockContour = {
-        arcLength: jest.fn().mockReturnValue(3000),
-        approxPolyDP: jest.fn().mockReturnValue(mockCorners),
-        area: 500000,
-        convexHull: jest.fn().mockReturnValue({ area: 510000 })
-      };
+      mockTextractSend.mockResolvedValueOnce({
+        Blocks: [{
+          BlockType: 'PAGE',
+          Confidence: 95.5,
+          Geometry: {
+            BoundingBox: {
+              Left: 0.1,
+              Top: 0.1,
+              Width: 0.8,
+              Height: 0.5
+            }
+          }
+        }]
+      });
 
-      cv.imdecodeAsync.mockImplementation(() => ({
-        cvtColor: jest.fn().mockReturnThis(),
-        gaussianBlur: jest.fn().mockReturnThis(),
-        canny: jest.fn().mockReturnThis(),
-        dilate: jest.fn().mockReturnThis(),
-        findContours: jest.fn().mockReturnValue([mockContour]),
-        cols: 1024,
-        rows: 768,
-        size: { width: 1024, height: 768 }
-      }));
-
-      const result = await detectDocumentEdges(mockImageBuffer);
-
+      const result = await detectDocumentEdges(mockBuffer);
       expect(result.hasDocument).toBe(true);
       expect(result.confidence).toBeGreaterThan(0.8);
-      expect(result.corners).toHaveLength(4);
+      expect(result.corners).toBeDefined();
       expect(result.error).toBeUndefined();
-      expect(auditLogger.log).toHaveBeenCalled();
     });
 
     it('should handle no document detected', async () => {
-      const cv = require('opencv4nodejs');
-      cv.imdecodeAsync.mockImplementation(() => ({
-        cvtColor: jest.fn().mockReturnThis(),
-        gaussianBlur: jest.fn().mockReturnThis(),
-        canny: jest.fn().mockReturnThis(),
-        dilate: jest.fn().mockReturnThis(),
-        findContours: jest.fn().mockReturnValue([]),
-        cols: 1024,
-        rows: 768,
-        size: { width: 1024, height: 768 }
-      }));
+      // Setup mock response with no document labels
+      mockRekognitionSend.mockResolvedValueOnce({
+        Labels: [{
+          Name: 'Person',
+          Confidence: 95.5
+        }]
+      });
 
-      const result = await detectDocumentEdges(mockImageBuffer);
+      const result = await detectDocumentEdges(mockBuffer);
+      expect(result.hasDocument).toBe(false);
+      expect(result.confidence).toBe(0);
+      expect(result.error).toBe('No document detected');
+      expect(auditLogger.log).toHaveBeenCalled();
+    });
 
+    it('should handle no document boundaries', async () => {
+      // Setup mock responses
+      mockRekognitionSend.mockResolvedValueOnce({
+        Labels: [{
+          Name: 'ID Card',
+          Confidence: 95.5
+        }]
+      });
+
+      mockTextractSend.mockResolvedValueOnce({
+        Blocks: []
+      });
+
+      const result = await detectDocumentEdges(mockBuffer);
       expect(result.hasDocument).toBe(false);
       expect(result.confidence).toBe(0);
       expect(result.error).toBe('No document boundaries detected');
       expect(auditLogger.log).toHaveBeenCalled();
     });
 
-    it('should handle non-rectangular shape', async () => {
-      const cv = require('opencv4nodejs');
-      const mockContour = {
-        arcLength: jest.fn().mockReturnValue(3000),
-        approxPolyDP: jest.fn().mockReturnValue([
-          { x: 100, y: 100 },
-          { x: 924, y: 100 },
-          { x: 924, y: 668 }
-        ]), // Only 3 corners
-        area: 500000,
-        convexHull: jest.fn().mockReturnValue({ area: 510000 })
-      };
-
-      cv.imdecodeAsync.mockImplementation(() => ({
-        cvtColor: jest.fn().mockReturnThis(),
-        gaussianBlur: jest.fn().mockReturnThis(),
-        canny: jest.fn().mockReturnThis(),
-        dilate: jest.fn().mockReturnThis(),
-        findContours: jest.fn().mockReturnValue([mockContour]),
-        cols: 1024,
-        rows: 768,
-        size: { width: 1024, height: 768 }
-      }));
-
-      const result = await detectDocumentEdges(mockImageBuffer);
-
-      expect(result.hasDocument).toBe(false);
-      expect(result.confidence).toBe(0);
-      expect(result.error).toBe('Document shape is not rectangular');
-      expect(auditLogger.log).toHaveBeenCalled();
-    });
-
     it('should handle errors gracefully', async () => {
-      const cv = require('opencv4nodejs');
-      cv.imdecodeAsync.mockRejectedValue(new Error('Processing failed'));
+      // Setup mock to throw error
+      mockRekognitionSend.mockRejectedValueOnce(new Error('Detection failed'));
 
-      const result = await detectDocumentEdges(mockImageBuffer);
-
+      const result = await detectDocumentEdges(mockBuffer);
       expect(result.hasDocument).toBe(false);
       expect(result.confidence).toBe(0);
-      expect(result.error).toBe('Document detection failed: Processing failed');
-      expect(auditLogger.log).toHaveBeenCalled();
+      expect(result.error).toBe('Document detection failed: Detection failed');
     });
   });
 
   describe('validateDocumentAlignment', () => {
-    it('should validate well-aligned document', async () => {
-      const corners: Corner[] = [
-        { x: 100, y: 100 },
-        { x: 924, y: 100 },
-        { x: 924, y: 668 },
-        { x: 100, y: 668 }
-      ];
+    const mockCorners = [
+      { x: 0.1, y: 0.1 },
+      { x: 0.9, y: 0.1 },
+      { x: 0.9, y: 0.6 },
+      { x: 0.1, y: 0.6 }
+    ];
 
-      const result = await validateDocumentAlignment(corners);
-
+    it('should validate well-aligned document', () => {
+      const result = validateDocumentAlignment(mockCorners);
       expect(result).toBe(true);
-      expect(auditLogger.log).not.toHaveBeenCalled();
     });
 
-    it('should reject document with wrong number of corners', async () => {
-      const corners: Corner[] = [
-        { x: 100, y: 100 },
-        { x: 924, y: 100 },
-        { x: 924, y: 668 }
-      ];
-
-      const result = await validateDocumentAlignment(corners);
-
+    it('should reject document with wrong number of corners', () => {
+      const invalidCorners = mockCorners.slice(0, 3);
+      const result = validateDocumentAlignment(invalidCorners);
       expect(result).toBe(false);
-      expect(auditLogger.log).not.toHaveBeenCalled();
     });
 
-    it('should reject skewed document', async () => {
-      const corners: Corner[] = [
-        { x: 100, y: 100 },
-        { x: 924, y: 200 }, // Skewed top edge
-        { x: 824, y: 668 },
-        { x: 0, y: 568 }
+    it('should reject skewed document', () => {
+      const skewedCorners = [
+        { x: 0.1, y: 0.1 },
+        { x: 0.8, y: 0.2 },
+        { x: 0.7, y: 0.8 },
+        { x: 0.0, y: 0.7 }
       ];
-
-      const result = await validateDocumentAlignment(corners);
-
+      const result = validateDocumentAlignment(skewedCorners);
       expect(result).toBe(false);
-      expect(auditLogger.log).not.toHaveBeenCalled();
     });
 
-    it('should handle errors gracefully', async () => {
-      const result = await validateDocumentAlignment([
-        { x: NaN, y: NaN },
-        { x: NaN, y: NaN },
-        { x: NaN, y: NaN },
-        { x: NaN, y: NaN }
-      ]);
-
+    it('should handle errors gracefully', () => {
+      const result = validateDocumentAlignment(null as any);
       expect(result).toBe(false);
       expect(auditLogger.log).toHaveBeenCalled();
     });

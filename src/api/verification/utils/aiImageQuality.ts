@@ -1,24 +1,17 @@
+import sharp from 'sharp';
 import { 
-  RekognitionClient,
+  RekognitionClient, 
   DetectFacesCommand,
   DetectLabelsCommand,
-  DetectFacesCommandOutput,
   QualityFilter,
-  Label
-} from "@aws-sdk/client-rekognition";
+  Attribute
+} from '@aws-sdk/client-rekognition';
 import {
   TextractClient,
   AnalyzeDocumentCommand,
-  GetDocumentAnalysisCommand,
-  DocumentMetadata,
-  Block,
-  BlockType,
-  EntityType,
-  Relationship,
   FeatureType
-} from "@aws-sdk/client-textract";
-import { FaceDetectionResult, DocumentDetectionResult, ImageQualityConfig } from '../types';
-import sharp from 'sharp';
+} from '@aws-sdk/client-textract';
+import { ImageQualityConfig, ImageQualityResult } from '../types';
 
 const rekognition = new RekognitionClient({
   region: process.env.AWS_REGION || 'us-east-1'
@@ -28,33 +21,43 @@ const textract = new TextractClient({
   region: process.env.AWS_REGION || 'us-east-1'
 });
 
-interface DocumentTextResult {
-  text: string;
-  confidence: number;
-  fields?: Record<string, string>;
-}
-
-interface AnalysisResult {
-  quality: boolean;
-  face?: FaceDetectionResult;
-  document?: DocumentDetectionResult;
-  documentText?: DocumentTextResult;
-  error?: string;
-}
-
+/**
+ * Analyzes image quality using AWS services
+ * @param imageBuffer - Buffer containing the image data
+ * @param config - Configuration for quality thresholds
+ * @param type - Type of image ('selfie' or 'id')
+ * @returns Promise<ImageQualityResult>
+ */
 export async function analyzeImageQuality(
   imageBuffer: Buffer,
   config: ImageQualityConfig,
-  type: 'id' | 'selfie'
-): Promise<AnalysisResult> {
+  type: 'selfie' | 'id'
+): Promise<ImageQualityResult> {
   try {
-    // Convert image to proper format if needed
-    const processedBuffer = await ensureJPEGFormat(imageBuffer);
-    
+    // Ensure image is in JPEG format
+    const jpegBuffer = await ensureJPEGFormat(imageBuffer);
+
+    // Validate image dimensions
+    const metadata = await sharp(jpegBuffer).metadata();
+    if (!metadata.width || !metadata.height) {
+      return {
+        quality: false,
+        error: 'Invalid image dimensions'
+      };
+    }
+
+    if (metadata.width < config.minWidth || metadata.height < config.minHeight) {
+      return {
+        quality: false,
+        error: `Image dimensions too small (min: ${config.minWidth}x${config.minHeight})`
+      };
+    }
+
+    // Analyze based on image type
     if (type === 'selfie') {
-      return await analyzeSelfieQuality(processedBuffer, config);
+      return await analyzeSelfieQuality(jpegBuffer, config);
     } else {
-      return await analyzeDocumentQuality(processedBuffer, config);
+      return await analyzeDocumentQuality(jpegBuffer, config);
     }
   } catch (error) {
     console.error('AI Image Quality Analysis Error:', error);
@@ -65,58 +68,54 @@ export async function analyzeImageQuality(
   }
 }
 
+/**
+ * Analyzes selfie image quality
+ */
 async function analyzeSelfieQuality(
   imageBuffer: Buffer,
   config: ImageQualityConfig
-): Promise<AnalysisResult> {
-  const params = {
-    Image: {
-      Bytes: imageBuffer
-    },
-    QualityFilter: QualityFilter.AUTO
-  };
-
+): Promise<ImageQualityResult> {
   try {
-    const response: DetectFacesCommandOutput = await rekognition.send(
-      new DetectFacesCommand(params)
-    );
+    const params = {
+      Image: {
+        Bytes: imageBuffer
+      },
+      QualityFilter: QualityFilter.AUTO,
+      Attributes: [Attribute.ALL]
+    };
 
-    if (!response.FaceDetails || response.FaceDetails.length === 0) {
+    const response = await rekognition.send(new DetectFacesCommand(params));
+    const faceDetails = response.FaceDetails?.[0];
+
+    if (!faceDetails) {
       return {
         quality: false,
-        face: {
-          hasFace: false,
-          confidence: 0,
-          error: 'No face detected'
-        }
+        error: 'No face detected'
       };
     }
 
-    const faceDetail = response.FaceDetails[0];
-    const quality = faceDetail.Quality;
-    const brightness = quality?.Brightness || 0;
-    const sharpness = quality?.Sharpness || 0;
+    const confidence = faceDetails.Confidence || 0;
+    const brightness = faceDetails.Quality?.Brightness || 0;
+    const sharpness = faceDetails.Quality?.Sharpness || 0;
 
-    // Check if face quality meets requirements
-    const isQualityAcceptable = 
+    const isHighQuality = 
+      confidence >= config.faceConfidenceThreshold &&
       brightness >= config.minBrightness &&
       brightness <= config.maxBrightness &&
       sharpness >= config.blurThreshold;
 
-    const boundingBox = faceDetail.BoundingBox;
-    
     return {
-      quality: isQualityAcceptable,
+      quality: isHighQuality,
       face: {
         hasFace: true,
-        confidence: faceDetail.Confidence || 0,
-        faceLocation: boundingBox ? {
-          x: boundingBox.Left || 0,
-          y: boundingBox.Top || 0,
-          width: boundingBox.Width || 0,
-          height: boundingBox.Height || 0
-        } : undefined
-      }
+        confidence,
+        boundingBox: faceDetails.BoundingBox,
+        quality: {
+          brightness,
+          sharpness
+        }
+      },
+      error: isHighQuality ? undefined : 'Image quality below threshold'
     };
   } catch (error) {
     console.error('Selfie Analysis Error:', error);
@@ -127,12 +126,15 @@ async function analyzeSelfieQuality(
   }
 }
 
+/**
+ * Analyzes document image quality
+ */
 async function analyzeDocumentQuality(
   imageBuffer: Buffer,
   config: ImageQualityConfig
-): Promise<AnalysisResult> {
+): Promise<ImageQualityResult> {
   try {
-    // First use Rekognition to verify it's an ID document
+    // First detect if it's a document using Rekognition
     const rekognitionParams = {
       Image: {
         Bytes: imageBuffer
@@ -144,95 +146,53 @@ async function analyzeDocumentQuality(
       new DetectLabelsCommand(rekognitionParams)
     );
 
-    const isDocument = rekognitionResponse.Labels?.some(
-      (label: Label) => 
+    const documentLabel = rekognitionResponse.Labels?.find(
+      label => 
         label.Name?.toLowerCase().includes('id') ||
         label.Name?.toLowerCase().includes('card') ||
         label.Name?.toLowerCase().includes('document')
     );
 
-    if (!isDocument) {
+    if (!documentLabel || (documentLabel.Confidence || 0) < config.documentConfidenceThreshold) {
       return {
         quality: false,
-        document: {
-          hasDocument: false,
-          confidence: 0,
-          error: 'No valid document detected'
-        }
+        error: 'No valid document detected'
       };
     }
 
-    // Then use Textract for detailed document analysis
+    // Then analyze document structure with Textract
     const textractParams = {
       Document: {
         Bytes: imageBuffer
       },
-      FeatureTypes: [FeatureType.FORMS, FeatureType.TABLES]
+      FeatureTypes: [FeatureType.FORMS]
     };
 
     const textractResponse = await textract.send(
       new AnalyzeDocumentCommand(textractParams)
     );
 
-    // Extract text and form fields
-    const extractedText = textractResponse.Blocks
-      ?.filter((block: Block) => block.BlockType === 'LINE')
-      .map((block: Block) => block.Text)
-      .join(' ');
-
-    // Extract key-value pairs from form fields
-    const fields: Record<string, string> = {};
-    const keyMap = new Map<string, string>();
-
-    textractResponse.Blocks?.forEach((block: Block) => {
-      if (block.BlockType === 'KEY_VALUE_SET') {
-        if (block.EntityTypes?.includes('KEY')) {
-          const key = block.Relationships?.[0].Ids
-            ?.map((id: string) => findBlockById(textractResponse.Blocks || [], id))
-            .map((b: Block | undefined) => b?.Text)
-            .join(' ');
-          if (key && block.Id) {
-            keyMap.set(block.Id, key);
-          }
-        } else if (block.EntityTypes?.includes('VALUE')) {
-          const keyId = block.Relationships?.[0].Ids?.[0];
-          const key = keyId ? keyMap.get(keyId) : undefined;
-          const value = block.Relationships?.[1].Ids
-            ?.map((id: string) => findBlockById(textractResponse.Blocks || [], id))
-            .map((b: Block | undefined) => b?.Text)
-            .join(' ');
-          if (key && value) {
-            fields[key] = value;
-          }
-        }
-      }
-    });
-
-    // Calculate average confidence
-    const confidence = textractResponse.Blocks
-      ?.filter((block: Block) => block.Confidence !== undefined)
-      .reduce((sum: number, block: Block) => sum + (block.Confidence || 0), 0) || 0;
-    const avgConfidence = confidence / (textractResponse.Blocks?.length || 1);
-
-    // Get document label confidence from Rekognition
-    const documentLabel = rekognitionResponse.Labels?.find(
-      (label: Label) => 
-        label.Name?.toLowerCase().includes('id') ||
-        label.Name?.toLowerCase().includes('card') ||
-        label.Name?.toLowerCase().includes('document')
+    const documentBlock = textractResponse.Blocks?.find(
+      block => block.BlockType === 'PAGE'
     );
 
+    if (!documentBlock || !documentBlock.Confidence) {
+      return {
+        quality: false,
+        error: 'Document structure analysis failed'
+      };
+    }
+
+    const isHighQuality = documentBlock.Confidence >= config.documentConfidenceThreshold;
+
     return {
-      quality: avgConfidence >= config.documentConfidenceThreshold,
+      quality: isHighQuality,
       document: {
         hasDocument: true,
-        confidence: documentLabel?.Confidence || 0
+        confidence: documentBlock.Confidence,
+        boundingBox: documentBlock.Geometry?.BoundingBox
       },
-      documentText: {
-        text: extractedText || '',
-        confidence: avgConfidence,
-        fields
-      }
+      error: isHighQuality ? undefined : 'Document quality below threshold'
     };
   } catch (error) {
     console.error('Document Analysis Error:', error);
@@ -243,26 +203,19 @@ async function analyzeDocumentQuality(
   }
 }
 
-function findBlockById(blocks: Block[], id: string): Block | undefined {
-  return blocks.find(block => block.Id === id);
-}
-
-async function ensureJPEGFormat(buffer: Buffer): Promise<Buffer> {
+/**
+ * Ensures image is in JPEG format
+ */
+async function ensureJPEGFormat(imageBuffer: Buffer): Promise<Buffer> {
   try {
-    const image = sharp(buffer);
+    const image = sharp(imageBuffer);
     const metadata = await image.metadata();
-    
-    // Convert to JPEG if not already
-    if (metadata.format !== 'jpeg') {
-      return await image
-        .jpeg({
-          quality: 90,
-          chromaSubsampling: '4:4:4'
-        })
-        .toBuffer();
+
+    if (metadata.format === 'jpeg') {
+      return imageBuffer;
     }
-    
-    return buffer;
+
+    return await image.jpeg().toBuffer();
   } catch (error) {
     throw new Error('Failed to process image format');
   }

@@ -1,5 +1,18 @@
-import { TextractClient, AnalyzeDocumentCommand } from "@aws-sdk/client-textract";
-import { RekognitionClient, DetectLabelsCommand } from "@aws-sdk/client-rekognition";
+import { 
+  TextractClient, 
+  AnalyzeDocumentCommand,
+  DetectDocumentTextCommand,
+  Block,
+  BoundingBox,
+  AnalyzeDocumentCommandOutput,
+  DetectDocumentTextCommandOutput,
+  FeatureType
+} from "@aws-sdk/client-textract";
+import { 
+  RekognitionClient, 
+  DetectLabelsCommand,
+  Label
+} from "@aws-sdk/client-rekognition";
 import { ExtractedDocumentData, DocumentDetectionResult, DocumentType } from '../types';
 
 const textract = new TextractClient({ region: process.env.AWS_REGION });
@@ -15,25 +28,26 @@ export const extractDocumentData = async (imageBuffer: Buffer): Promise<Extracte
       Document: {
         Bytes: Buffer.from(imageBase64, 'base64')
       },
-      FeatureTypes: ['FORMS', 'TABLES']
+      FeatureTypes: [FeatureType.FORMS, FeatureType.TABLES]
     };
 
-    const response = await textract.analyzeDocument(params).promise();
+    const command = new AnalyzeDocumentCommand(params);
+    const response = await textract.send(command);
 
     // Process and structure the extracted data
     const extractedFields: Record<string, any> = {};
     let totalConfidence = 0;
     let fieldCount = 0;
 
-    response.Blocks?.forEach(block => {
+    (response.Blocks || []).forEach((block: Block) => {
       if (block.BlockType === 'KEY_VALUE_SET' && block.EntityTypes?.includes('KEY')) {
-        const key = block.Relationships?.find(r => r.Type === 'CHILD')?.Ids
-          ?.map(id => response.Blocks?.find(b => b.Id === id)?.Text)
+        const key = block.Relationships?.find((r: { Type?: string }) => r.Type === 'CHILD')?.Ids
+          ?.map((id: string) => response.Blocks?.find((b: Block) => b.Id === id)?.Text)
           .join(' ');
 
-        const valueBlock = block.Relationships?.find(r => r.Type === 'VALUE');
+        const valueBlock = block.Relationships?.find((r: { Type?: string }) => r.Type === 'VALUE');
         const value = valueBlock?.Ids
-          ?.map(id => response.Blocks?.find(b => b.Id === id)?.Text)
+          ?.map((id: string) => response.Blocks?.find((b: Block) => b.Id === id)?.Text)
           .join(' ');
 
         if (key && value) {
@@ -98,10 +112,11 @@ export const analyzeDocument = async (buffer: Buffer): Promise<DocumentDetection
   try {
     const params = {
       Document: { Bytes: buffer },
-      FeatureTypes: ['FORMS', 'TABLES']
+      FeatureTypes: [FeatureType.FORMS, FeatureType.TABLES]
     };
     
-    const response = await textract.analyzeDocument(params).promise();
+    const command = new AnalyzeDocumentCommand(params);
+    const response = await textract.send(command);
     const blocks = response.Blocks || [];
     
     return {
@@ -125,11 +140,12 @@ export const analyzeDocument = async (buffer: Buffer): Promise<DocumentDetection
 export const inferDocumentType = async (buffer: Buffer): Promise<DocumentType> => {
   try {
     // First try text-based inference
-    const textResult = await textract.detectDocumentText({
+    const textCommand = new DetectDocumentTextCommand({
       Document: { Bytes: buffer }
-    }).promise();
+    });
+    const textResult = await textract.send(textCommand);
 
-    const text = textResult.Blocks?.map(b => b.Text?.toLowerCase() || '').join(' ') || '';
+    const text = (textResult.Blocks || []).map((b: Block) => b.Text?.toLowerCase() || '').join(' ') || '';
 
     if (text && (text.includes('driver') || text.includes('license'))) {
       return 'DRIVERS_LICENSE';
@@ -139,11 +155,12 @@ export const inferDocumentType = async (buffer: Buffer): Promise<DocumentType> =
     }
 
     // If text analysis is inconclusive, try visual analysis
-    const labels = await rekognition.detectLabels({
+    const labelCommand = new DetectLabelsCommand({
       Image: { Bytes: buffer }
-    }).promise();
+    });
+    const labels = await rekognition.send(labelCommand);
 
-    const labelNames = labels.Labels?.map(l => l.Name?.toLowerCase() || '');
+    const labelNames = (labels.Labels || []).map((l: Label) => l.Name?.toLowerCase() || '');
 
     if (labelNames?.includes('id card') || labelNames?.includes('identification')) {
       return 'NATIONAL_ID';
