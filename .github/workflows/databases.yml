@@ -110,17 +110,9 @@ jobs:
           cd terraform
           echo "Waiting for Neo4j instances to be ready..."
 
-          # Get instance IDs and clean output
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}')
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}')
-
-          # Verify IDs are valid
-          if [[ ! "$LEDGER_ID" =~ ^i-[a-z0-9]{17}$ ]] || [[ ! "$SEARCH_ID" =~ ^i-[a-z0-9]{17}$ ]]; then
-            echo "Error: Invalid instance IDs"
-            echo "LEDGER_ID: $LEDGER_ID"
-            echo "SEARCH_ID: $SEARCH_ID"
-            exit 1
-          fi
+          # Get instance IDs
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id)
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id)
 
           echo "Waiting for instances to be ready..."
           aws ec2 wait instance-status-ok --instance-ids "$LEDGER_ID" "$SEARCH_ID"
@@ -133,11 +125,11 @@ jobs:
           echo "Database Infrastructure Outputs:"
           echo "========================================"
 
-          # Get clean outputs
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}')
-          LEDGER_IP=$(terraform output -raw neo4j_ledger_private_ip | tr -d '\n')
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}')
-          SEARCH_IP=$(terraform output -raw neo4j_search_private_ip | tr -d '\n')
+          # Get outputs
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id)
+          LEDGER_IP=$(terraform output -raw neo4j_ledger_private_ip)
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id)
+          SEARCH_IP=$(terraform output -raw neo4j_search_private_ip)
 
           echo "Neo4j LedgerSpace Instance:"
           echo "  Instance ID: $LEDGER_ID"
