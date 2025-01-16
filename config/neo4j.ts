@@ -1,12 +1,12 @@
 import * as neo4j from "neo4j-driver";
-import configUtils from "../src/utils/configUtils";
 import logger from '../src/utils/logger';
+import { getConfig } from './config';
 
-const ledgerSpace = configUtils.get('ledgerSpace');
-const searchSpace = configUtils.get('searchSpace');
+let ledgerSpaceDriver: neo4j.Driver;
+let searchSpaceDriver: neo4j.Driver;
 
-const createDriverWithRetry = (url: string, user: string, password: string) => {
-  const driver = neo4j.driver(url, neo4j.auth.basic(user, password), {
+const createDriverWithRetry = async (url: string) => {
+  const driver = neo4j.driver(url, neo4j.auth.basic("", ""), {
     maxConnectionPoolSize: 50,
     connectionAcquisitionTimeout: 30000,
     maxTransactionRetryTime: 30000,
@@ -23,17 +23,22 @@ const createDriverWithRetry = (url: string, user: string, password: string) => {
   return driver;
 };
 
-export const ledgerSpaceDriver = createDriverWithRetry(
-  ledgerSpace.uri,
-  ledgerSpace.user,
-  ledgerSpace.password
-);
+// Initialize drivers
+const initDrivers = async () => {
+  const config = await getConfig();
+  const { neo4jLedgerSpace, neo4jSearchSpace } = config.database;
+  
+  ledgerSpaceDriver = await createDriverWithRetry(neo4jLedgerSpace.boltUrl);
+  searchSpaceDriver = await createDriverWithRetry(neo4jSearchSpace.boltUrl);
+};
 
-export const searchSpaceDriver = createDriverWithRetry(
-  searchSpace.uri,
-  searchSpace.user,
-  searchSpace.password
-);
+// Initialize on module load
+initDrivers().catch(error => {
+  logger.error("Failed to initialize Neo4j drivers", { error });
+  process.exit(1);
+});
+
+export { ledgerSpaceDriver, searchSpaceDriver };
 
 // Graceful shutdown
 process.on("SIGINT", () => {

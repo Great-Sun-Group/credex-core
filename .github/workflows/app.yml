@@ -113,11 +113,7 @@ jobs:
           echo "Updating task definition with new image and environment variables..."
           NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment = [
             {"name": "NODE_ENV", "value": $NODE_ENV},
-            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_USER }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}"},
             {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_USER }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}"},
             {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}"},
             {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
             {"name": "CLIENT_API_KEY", "value": "${{ secrets.CLIENT_API_KEY }}"},

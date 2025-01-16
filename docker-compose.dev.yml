@@ -3,7 +3,64 @@ services:
     environment:
       SKIP_RATE_LIMITER_KEY: ${SKIP_RATE_LIMITER_KEY}
       DEV_ADMIN_KEY: ${DEV_ADMIN_KEY}
+      # Neo4j bolt URLs for local instances
+      NEO_4J_LEDGER_SPACE_BOLT_URL: bolt://neo4j-ledger:7687
+      NEO_4J_SEARCH_SPACE_BOLT_URL: bolt://neo4j-search:7687
     volumes:
       - .:/app
       - ./logs:/app/logs
       - /app/node_modules
+
+  neo4j-ledger:
+    image: neo4j:5-enterprise
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: none
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
+      # Memory settings from terraform
+      NEO4J_server_memory_heap_initial__size: "1024m"
+      NEO4J_server_memory_heap_max__size: "1024m"
+      NEO4J_server_memory_pagecache_size: "2048m"
+      # Other settings from terraform
+      NEO4J_dbms_security_auth__enabled: "false"
+      NEO4J_dbms_security_allow__csv__import__from__file__urls: "false"
+      NEO4J_db_logs_query_enabled: "INFO"
+      NEO4J_db_transaction_timeout: "5m"
+      NEO4J_db_transaction_concurrent_maximum: "100"
+    volumes:
+      - neo4j-ledger-data:/data
+      - neo4j-ledger-logs:/logs
+    profiles:
+      - dev
+
+  neo4j-search:
+    image: neo4j:5-enterprise
+    ports:
+      - "7475:7474"
+      - "7688:7687"
+    environment:
+      NEO4J_AUTH: none
+      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
+      # Memory settings from terraform
+      NEO4J_server_memory_heap_initial__size: "1024m"
+      NEO4J_server_memory_heap_max__size: "1024m"
+      NEO4J_server_memory_pagecache_size: "2048m"
+      # Other settings from terraform
+      NEO4J_dbms_security_auth__enabled: "false"
+      NEO4J_dbms_security_allow__csv__import__from__file__urls: "false"
+      NEO4J_db_logs_query_enabled: "INFO"
+      NEO4J_db_transaction_timeout: "5m"
+      NEO4J_db_transaction_concurrent_maximum: "100"
+    volumes:
+      - neo4j-search-data:/data
+      - neo4j-search-logs:/logs
+    profiles:
+      - dev
+
+volumes:
+  neo4j-ledger-data:
+  neo4j-ledger-logs:
+  neo4j-search-data:
+  neo4j-search-logs:
