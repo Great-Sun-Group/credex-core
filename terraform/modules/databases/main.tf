@@ -203,8 +203,17 @@ locals {
               systemctl enable amazon-cloudwatch-agent
               systemctl start amazon-cloudwatch-agent
 
+              # Calculate memory settings
+              total_mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+              total_mem_mb=$((total_mem_kb / 1024))
+              heap_size_mb=$((total_mem_mb * 15 / 100))
+              page_cache_mb=$((total_mem_mb * 30 / 100))
+              heap_size_mb=$(( heap_size_mb < 1024 ? 1024 : heap_size_mb ))
+              heap_size_mb=$(( heap_size_mb > 31744 ? 31744 : heap_size_mb ))
+              page_cache_mb=$(( page_cache_mb < 2048 ? 2048 : page_cache_mb ))
+
               # Configure Neo4j
-              cat > /etc/neo4j/neo4j.conf << 'NEOCONF'
+              cat > /etc/neo4j/neo4j.conf << NEOCONF
               # Network configuration
               dbms.default_listen_address=0.0.0.0
               dbms.connector.bolt.listen_address=:7687
@@ -216,17 +225,9 @@ locals {
               dbms.security.allow_csv_import_from_file_urls=false
 
               # Memory configuration
-              total_mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-              total_mem_mb=$((total_mem_kb / 1024))
-              heap_size_mb=$((total_mem_mb * 15 / 100))
-              page_cache_mb=$((total_mem_mb * 30 / 100))
-              heap_size_mb=$(( heap_size_mb < 1024 ? 1024 : heap_size_mb ))
-              heap_size_mb=$(( heap_size_mb > 31744 ? 31744 : heap_size_mb ))
-              page_cache_mb=$(( page_cache_mb < 2048 ? 2048 : page_cache_mb ))
-
-              dbms.memory.heap.initial_size=${heap_size_mb}m
-              dbms.memory.heap.max_size=${heap_size_mb}m
-              dbms.memory.pagecache.size=${page_cache_mb}m
+              dbms.memory.heap.initial_size=\${heap_size_mb}m
+              dbms.memory.heap.max_size=\${heap_size_mb}m
+              dbms.memory.pagecache.size=\${page_cache_mb}m
 
               # Performance settings
               dbms.jvm.additional=-XX:+UseG1GC
@@ -249,6 +250,10 @@ locals {
               dbms.transaction.timeout=5m
               dbms.transaction.concurrent.maximum=100
               NEOCONF
+
+              # Verify configuration
+              echo "Neo4j configuration:"
+              cat /etc/neo4j/neo4j.conf
 
               # Set Neo4j license
               echo "${var.neo4j_enterprise_license}" > /etc/neo4j/neo4j.license
