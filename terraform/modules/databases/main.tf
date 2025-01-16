@@ -39,6 +39,91 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
+# VPC Endpoints for SSM
+resource "aws_vpc_endpoint" "ssm" {
+  vpc_id            = var.vpc_id
+  service_name      = "com.amazonaws.${var.aws_region}.ssm"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = var.subnet_ids
+  security_group_ids = [aws_security_group.ssm_endpoint.id]
+
+  private_dns_enabled = true
+
+  tags = merge(var.common_tags, {
+    Name = "SSM-Endpoint-${var.environment}"
+  })
+}
+
+resource "aws_vpc_endpoint" "ssmmessages" {
+  vpc_id            = var.vpc_id
+  service_name      = "com.amazonaws.${var.aws_region}.ssmmessages"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = var.subnet_ids
+  security_group_ids = [aws_security_group.ssm_endpoint.id]
+
+  private_dns_enabled = true
+
+  tags = merge(var.common_tags, {
+    Name = "SSMMessages-Endpoint-${var.environment}"
+  })
+}
+
+resource "aws_vpc_endpoint" "ec2messages" {
+  vpc_id            = var.vpc_id
+  service_name      = "com.amazonaws.${var.aws_region}.ec2messages"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = var.subnet_ids
+  security_group_ids = [aws_security_group.ssm_endpoint.id]
+
+  private_dns_enabled = true
+
+  tags = merge(var.common_tags, {
+    Name = "EC2Messages-Endpoint-${var.environment}"
+  })
+}
+
+# Security group for SSM VPC endpoints
+resource "aws_security_group" "ssm_endpoint" {
+  name        = "ssm-endpoint-${var.environment}"
+  description = "Security group for SSM VPC endpoints"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description = "HTTPS from Neo4j instances"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    security_groups = [var.neo4j_security_group_id]
+  }
+
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(var.common_tags, {
+    Name = "SSM-Endpoint-SG-${var.environment}"
+  })
+}
+
+# VPC Endpoint for CloudWatch Logs
+resource "aws_vpc_endpoint" "logs" {
+  vpc_id            = var.vpc_id
+  service_name      = "com.amazonaws.${var.aws_region}.logs"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = var.subnet_ids
+  security_group_ids = [aws_security_group.ssm_endpoint.id]
+
+  private_dns_enabled = true
+
+  tags = merge(var.common_tags, {
+    Name = "CloudWatch-Logs-Endpoint-${var.environment}"
+  })
+}
+
 # Additional security group for internal Neo4j communication
 resource "aws_security_group" "neo4j_internal" {
   name        = "neo4j-internal-${var.environment}"
@@ -97,7 +182,25 @@ locals {
               exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
 
               echo "Starting Neo4j installation and configuration..."
+              
+              # Ensure SSM agent is running
+              echo "Verifying SSM agent..."
+              systemctl status amazon-ssm-agent || {
+                echo "SSM agent not running, attempting to start..."
+                systemctl enable amazon-ssm-agent
+                systemctl start amazon-ssm-agent
+                sleep 10
+                if ! systemctl is-active amazon-ssm-agent; then
+                  echo "Failed to start SSM agent"
+                  exit 1
+                fi
+              }
 
+              # Set up direct logging
+              LOG_FILE="/var/log/neo4j-setup.log"
+              exec 1> >(tee -a "$LOG_FILE") 2>&1
+              echo "$(date): Starting Neo4j setup" 
+              
               # Update the system and install required packages
               echo "Updating system packages..."
               yum update -y || {
@@ -284,18 +387,25 @@ CWCONF
               dbms.jvm.additional=-XX:GCLogFileSize=20m
               CONF
 
+              # Ensure proper permissions
+              echo "Setting up permissions..."
+              chown -R neo4j:neo4j /var/lib/neo4j
+              chown -R neo4j:neo4j /var/log/neo4j
+              chown neo4j:neo4j /etc/neo4j/neo4j.conf
+              chmod 600 /etc/neo4j/neo4j.conf
+              
               # Start Neo4j with better error handling
               echo "Starting Neo4j service..."
               systemctl enable neo4j || {
                 echo "Failed to enable Neo4j service"
-                journalctl -u neo4j -n 50
+                journalctl -u neo4j -n 50 >> "$LOG_FILE" 2>&1
                 exit 1
               }
               
               systemctl start neo4j || {
                 echo "Failed to start Neo4j service"
-                systemctl status neo4j
-                journalctl -u neo4j -n 50
+                systemctl status neo4j >> "$LOG_FILE" 2>&1
+                journalctl -u neo4j -n 50 >> "$LOG_FILE" 2>&1
                 exit 1
               }
 
@@ -346,15 +456,21 @@ CWCONF
 
               # Collect comprehensive diagnostics if startup fails
               echo "Neo4j failed to start properly after $max_attempts attempts"
-              echo "System Status:"
-              free -m
-              df -h
-              echo "Neo4j Status:"
-              systemctl status neo4j
-              echo "Neo4j Logs:"
-              journalctl -u neo4j -n 100
-              echo "Network Status:"
-              netstat -plnt
+              {
+                echo "=== System Status ==="
+                free -m
+                df -h
+                echo "=== Neo4j Status ==="
+                systemctl status neo4j
+                echo "=== Neo4j Logs ==="
+                journalctl -u neo4j -n 100
+                echo "=== Network Status ==="
+                netstat -plnt
+                echo "=== SSM Agent Status ==="
+                systemctl status amazon-ssm-agent
+                echo "=== SSM Agent Logs ==="
+                tail -n 50 /var/log/amazon/ssm/amazon-ssm-agent.log
+              } >> "$LOG_FILE" 2>&1
               exit 1
               EOF
 }

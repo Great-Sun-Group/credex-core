@@ -52,4 +52,9 @@ variable "common_tags" {
 variable "aws_region" {
   description = "The AWS region to deploy to"
   type        = string
+
+  validation {
+    condition     = can(regex("^[a-z]{2}-[a-z]+-[0-9]{1}$", var.aws_region))
+    error_message = "AWS region must be a valid region name (e.g., us-east-1, eu-west-1)"
+  }
 }
