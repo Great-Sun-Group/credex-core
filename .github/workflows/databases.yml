@@ -105,99 +105,19 @@ jobs:
 
           echo "Terraform apply completed successfully"
 
-          echo "Waiting for resources to be created..."
-          # EC2 instances take time to initialize
-          # Wait up to 5 minutes checking every 30 seconds
-          for i in {1..10}; do
-            echo "Checking terraform outputs (attempt $i/10)..."
-            # Extract and validate instance IDs
-            LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}' || echo "")
-            SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}' || echo "")
-            
-            if [ -n "$LEDGER_ID" ] && [ -n "$SEARCH_ID" ]; then
-              echo "Found both instance IDs:"
-              printf "  LedgerSpace: %s\n" "$LEDGER_ID"
-              printf "  SearchSpace: %s\n" "$SEARCH_ID"
-              # Verify IDs are clean
-              echo "Verifying instance IDs format..."
-              [[ "$LEDGER_ID" =~ ^i-[a-z0-9]{17}$ ]] && [[ "$SEARCH_ID" =~ ^i-[a-z0-9]{17}$ ]] || {
-                echo "Error: Invalid instance ID format"
-                exit 1
-              }
-              break
-            fi
-            
-            if [ $i -eq 10 ]; then
-              echo "Error: Timed out waiting for terraform outputs"
-              exit 1
-            fi
-            
-            echo "Waiting 30 seconds before next check..."
-            sleep 30
-          done
-
-      - name: Verify Neo4j Deployments
-        run: |
-          cd terraform
-          echo "Verifying Neo4j deployments..."
-
-          # Extract and validate instance IDs
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}' || echo "")
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}' || echo "")
-
-          if [ -z "$LEDGER_ID" ] || [ -z "$SEARCH_ID" ]; then
-            echo "Error: Could not get Neo4j instance IDs"
-            exit 1
-          fi
-
-          echo "Found instances:"
-          printf "  LedgerSpace: %s\n" "$LEDGER_ID"
-          printf "  SearchSpace: %s\n" "$SEARCH_ID"
-          # Verify IDs are clean
-          echo "Verifying instance IDs format..."
-          [[ "$LEDGER_ID" =~ ^i-[a-z0-9]{17}$ ]] && [[ "$SEARCH_ID" =~ ^i-[a-z0-9]{17}$ ]] || {
-            echo "Error: Invalid instance ID format"
-            exit 1
-          }
-
-          # Clean instance IDs and store in array
-          INSTANCE_IDS=("$LEDGER_ID" "$SEARCH_ID")
-
-          echo "Waiting for instances to be running..."
-          aws ec2 wait instance-running --instance-ids "${INSTANCE_IDS[@]}" || true
-          
-          echo "Waiting for instance status checks..."
-          aws ec2 wait instance-status-ok --instance-ids "${INSTANCE_IDS[@]}" || true
-          
-          echo "Getting instance details..."
-          aws ec2 describe-instances \
-            --instance-ids "${INSTANCE_IDS[@]}" \
-            --query 'Reservations[*].Instances[*].[InstanceId,State.Name,PrivateIpAddress]' \
-            --output table || true
-
-          echo "Neo4j instances verified successfully"
-
       - name: Print Database Infrastructure Outputs
         run: |
           cd terraform
           echo "Database Infrastructure Outputs:"
           echo "========================================"
 
-          # Extract and clean instance IDs using the same pattern as before
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}' || echo 'Not available')
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | tr -d '\n' | grep -o 'i-[a-z0-9]\{17\}' || echo 'Not available')
-          
-          # Get bolt URLs
-          LEDGER_BOLT=$(terraform output -raw neo4j_ledger_bolt_endpoint 2>/dev/null | tr -d '\n' || echo 'Not available')
-          SEARCH_BOLT=$(terraform output -raw neo4j_search_bolt_endpoint 2>/dev/null | tr -d '\n' || echo 'Not available')
-
           echo "Neo4j LedgerSpace Instance:"
-          printf "  Instance ID: %s\n" "$LEDGER_ID"
-          printf "  Bolt URL: %s\n" "$LEDGER_BOLT"
+          echo "  Instance ID: $(terraform output -raw neo4j_ledger_instance_id)"
+          echo "  Bolt URL: $(terraform output -raw neo4j_ledger_bolt_endpoint)"
 
           echo "Neo4j SearchSpace Instance:"
-          printf "  Instance ID: %s\n" "$SEARCH_ID"
-          printf "  Bolt URL: %s\n" "$SEARCH_BOLT"
+          echo "  Instance ID: $(terraform output -raw neo4j_search_instance_id)"
+          echo "  Bolt URL: $(terraform output -raw neo4j_search_bolt_endpoint)"
 
           echo "========================================"
           echo "Remember to set up the following secrets:"
