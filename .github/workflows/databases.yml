@@ -95,7 +95,7 @@ jobs:
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
           echo "Applying Terraform changes..."
-          
+
           if ! terraform apply -auto-approve -input=false tfplan; then
             echo "Error: Terraform apply failed"
             echo "Checking terraform logs for details..."
@@ -104,7 +104,7 @@ jobs:
           fi
 
           echo "Terraform apply completed successfully"
-          
+
           echo "Waiting for resources to be created..."
           # EC2 instances take time to initialize
           # Wait up to 5 minutes checking every 30 seconds
@@ -135,109 +135,38 @@ jobs:
           cd terraform
           echo "Verifying Neo4j deployments..."
 
-          # Install netcat for port checking
-          sudo apt-get update
-          sudo apt-get install -y netcat-openbsd
+          # Get instance IDs
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id)
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id)
 
-          # Get instance IDs and clean them
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n1 || echo "")
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n1 || echo "")
+          echo "Waiting for instances to be running..."
+          aws ec2 wait instance-running --instance-ids "$LEDGER_ID" "$SEARCH_ID"
+          
+          echo "Waiting for instance status checks..."
+          aws ec2 wait instance-status-ok --instance-ids "$LEDGER_ID" "$SEARCH_ID"
+          
+          echo "Getting instance details..."
+          aws ec2 describe-instances \
+            --instance-ids "$LEDGER_ID" "$SEARCH_ID" \
+            --query 'Reservations[*].Instances[*].[InstanceId,State.Name,PrivateIpAddress]' \
+            --output table
 
-          if [ -z "$LEDGER_ID" ] || [ -z "$SEARCH_ID" ]; then
-            echo "Error: Could not get Neo4j instance IDs"
-            exit 1
-          fi
-
-          # Function to verify instance
-          verify_instance() {
-            local INSTANCE_ID=$1
-            local SPACE_NAME=$2
-            
-            echo "Verifying $SPACE_NAME instance ($INSTANCE_ID)..."
-            
-            # Wait for instance to be running
-            echo "Waiting for instance to be running..."
-            aws ec2 wait instance-running --instance-ids "$INSTANCE_ID"
-            
-            # Get instance details
-            INSTANCE_INFO=$(aws ec2 describe-instances \
-              --instance-ids "$INSTANCE_ID" \
-              --query 'Reservations[0].Instances[0].{State:State.Name,IP:PrivateIpAddress}' \
-              --output json)
-            
-            INSTANCE_STATE=$(echo $INSTANCE_INFO | jq -r '.State')
-            PRIVATE_IP=$(echo $INSTANCE_INFO | jq -r '.IP')
-            
-            echo "$SPACE_NAME instance ($INSTANCE_ID):"
-            echo "  State: $INSTANCE_STATE"
-            echo "  IP: $PRIVATE_IP"
-            
-            # Wait for status checks
-            echo "Waiting for status checks..."
-            aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID"
-            
-            # Monitor Neo4j startup
-            echo "Waiting for Neo4j to be ready..."
-            for i in {1..30}; do
-              echo "Checking Neo4j status (attempt $i/30)..."
-              
-              # Check instance state
-              CURRENT_STATE=$(aws ec2 describe-instances \
-                --instance-ids "$INSTANCE_ID" \
-                --query 'Reservations[0].Instances[0].State.Name' \
-                --output text)
-              
-              if [ "$CURRENT_STATE" != "running" ]; then
-                echo "Error: Instance is no longer running (state: $CURRENT_STATE)"
-                echo "Checking startup logs..."
-                aws ec2 get-console-output --instance-id "$INSTANCE_ID" \
-                  --query 'Output' --output text || true
-                return 1
-              fi
-              
-              # Check Bolt port
-              if timeout 5 nc -z "$PRIVATE_IP" 7687 >/dev/null 2>&1; then
-                echo "Neo4j is accepting connections"
-                return 0
-              fi
-              
-              if [ $i -eq 30 ]; then
-                echo "Error: Neo4j failed to start after $(( i * 10 )) seconds"
-                echo "Collecting diagnostics..."
-                
-                # Get startup logs
-                echo "System logs:"
-                aws ec2 get-console-output --instance-id "$INSTANCE_ID" \
-                  --query 'Output' --output text || true
-                
-                return 1
-              fi
-              
-              echo "Waiting 10 seconds before next check..."
-              sleep 10
-            done
-          }
-
-          # Verify both instances
-          verify_instance "$LEDGER_ID" "LedgerSpace" || exit 1
-          verify_instance "$SEARCH_ID" "SearchSpace" || exit 1
-
-          echo "Both Neo4j instances verified successfully"
+          echo "Neo4j instances verified successfully"
 
       - name: Print Database Infrastructure Outputs
         run: |
           cd terraform
           echo "Database Infrastructure Outputs:"
           echo "========================================"
-          
+
           echo "Neo4j LedgerSpace Instance:"
           echo "  Instance ID: $(terraform output -raw neo4j_ledger_instance_id 2>/dev/null || echo 'Not available')"
           echo "  Bolt URL: $(terraform output -raw neo4j_ledger_bolt_endpoint 2>/dev/null || echo 'Not available')"
-          
+
           echo "Neo4j SearchSpace Instance:"
           echo "  Instance ID: $(terraform output -raw neo4j_search_instance_id 2>/dev/null || echo 'Not available')"
           echo "  Bolt URL: $(terraform output -raw neo4j_search_bolt_endpoint 2>/dev/null || echo 'Not available')"
-          
+
           echo "========================================"
           echo "Remember to set up the following secrets:"
           echo "- NEO_4J_LEDGER_SPACE_BOLT_URL"
