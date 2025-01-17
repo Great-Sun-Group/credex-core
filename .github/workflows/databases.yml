@@ -1,9 +1,6 @@
 name: Deploy Databases
 
 on:
-  push:
-    branches:
-      - "*deploy*"
   workflow_dispatch:
 
 jobs:
