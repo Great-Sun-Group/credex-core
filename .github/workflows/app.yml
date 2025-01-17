@@ -63,7 +63,7 @@ jobs:
 
           echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
-      - name: Terraform Plan
+      - name: Terraform Plan Connectors
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_docker_image: ${{ env.IMAGE }}
@@ -74,14 +74,17 @@ jobs:
         run: |
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
-          echo "Planning Terraform changes..."
-          terraform plan -input=false -out=tfplan -target=module.app
+          echo "Planning Terraform changes for connectors..."
+          terraform plan -input=false -out=tfplan -target=module.connectors
 
-      - name: Terraform Apply
+      - name: Terraform Apply Connectors
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_docker_image: ${{ env.IMAGE }}
           TF_VAR_neo4j_enterprise_license: "dummy"
+          TF_VAR_firebase_project_id: "${{ secrets.FIREBASE_PROJECT_ID }}"
+          TF_VAR_firebase_client_email: "${{ secrets.FIREBASE_CLIENT_EMAIL }}"
+          TF_VAR_firebase_private_key: "${{ secrets.FIREBASE_PRIVATE_KEY }}"
         run: |
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
