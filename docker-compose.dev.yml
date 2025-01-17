@@ -15,8 +15,27 @@ services:
       - ./logs:/app/logs
       - /app/node_modules
 
+  # Download APOC plugin during startup
+  apoc-setup:
+    image: curlimages/curl:latest
+    user: root
+    command: |
+      sh -c '
+        mkdir -p /plugins &&
+        echo "Downloading APOC plugin..." &&
+        curl -L https://github.com/neo4j/apoc/releases/download/5.26.0/apoc-5.26.0-core.jar -o /plugins/apoc.jar &&
+        echo "Setting permissions..." &&
+        chmod -R 777 /plugins &&
+        echo "APOC plugin downloaded and configured."
+      '
+    volumes:
+      - neo4j-plugins:/plugins
+
   neo4j-ledger:
     image: neo4j:5-enterprise
+    depends_on:
+      apoc-setup:
+        condition: service_completed_successfully
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -33,14 +52,25 @@ services:
       NEO4J_db_logs_query_enabled: "INFO"
       NEO4J_db_transaction_timeout: "5m"
       NEO4J_db_transaction_concurrent_maximum: "100"
+      # Enable APOC procedures
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
+      NEO4J_dbms_security_procedures_allowlist: "apoc.*"
+      # Browser settings
+      NEO4J_browser_remote__content__hostname__whitelist: "*"
+      NEO4J_browser_allow__outgoing__connections: "true"
+      NEO4J_server_default__advertised__address: "localhost"
     volumes:
       - neo4j-ledger-data:/data
       - neo4j-ledger-logs:/logs
+      - neo4j-plugins:/plugins
     profiles:
       - dev
 
   neo4j-search:
     image: neo4j:5-enterprise
+    depends_on:
+      apoc-setup:
+        condition: service_completed_successfully
     ports:
       - "7475:7474"
       - "7688:7687"
@@ -57,9 +87,17 @@ services:
       NEO4J_db_logs_query_enabled: "INFO"
       NEO4J_db_transaction_timeout: "5m"
       NEO4J_db_transaction_concurrent_maximum: "100"
+      # Enable APOC procedures
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
+      NEO4J_dbms_security_procedures_allowlist: "apoc.*"
+      # Browser settings
+      NEO4J_browser_remote__content__hostname__whitelist: "*"
+      NEO4J_browser_allow__outgoing__connections: "true"
+      NEO4J_server_default__advertised__address: "localhost"
     volumes:
       - neo4j-search-data:/data
       - neo4j-search-logs:/logs
+      - neo4j-plugins:/plugins
     profiles:
       - dev
 
@@ -68,3 +106,4 @@ volumes:
   neo4j-ledger-logs:
   neo4j-search-data:
   neo4j-search-logs:
+  neo4j-plugins:

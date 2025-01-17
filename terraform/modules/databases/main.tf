@@ -158,6 +158,16 @@ locals {
               REPO
               
               yum install -y neo4j-enterprise amazon-cloudwatch-agent
+
+              # Download and install APOC Core plugin
+              mkdir -p /var/lib/neo4j/plugins
+              curl -L https://github.com/neo4j/apoc/releases/download/5.26.0/apoc-5.26.0-core.jar -o /var/lib/neo4j/plugins/apoc.jar
+              chown -R neo4j:neo4j /var/lib/neo4j/plugins
+              echo "APOC plugin downloaded and configured."
+
+              # Enable APOC procedures
+              echo "dbms.security.procedures.unrestricted=apoc.*" >> /etc/neo4j/neo4j.conf
+              echo "dbms.security.procedures.allowlist=apoc.*" >> /etc/neo4j/neo4j.conf
               
               # Configure CloudWatch
               cat > /opt/aws/amazon-cloudwatch-agent/config.json << 'EOF2'
