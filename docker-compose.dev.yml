@@ -6,6 +6,10 @@ services:
       # Neo4j bolt URLs for local instances
       NEO_4J_LEDGER_SPACE_BOLT_URL: bolt://neo4j-ledger:7687
       NEO_4J_SEARCH_SPACE_BOLT_URL: bolt://neo4j-search:7687
+      # Firebase configuration
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
     volumes:
       - .:/app
       - ./logs:/app/logs
