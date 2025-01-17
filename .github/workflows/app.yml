@@ -119,8 +119,8 @@ jobs:
               {"name": "FIREBASE_PROJECT_ID", "value": $FID},
               {"name": "FIREBASE_CLIENT_EMAIL", "value": $FEMAIL},
               {"name": "FIREBASE_PRIVATE_KEY", "value": $FKEY}
-            ]' | 
-            del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy))
+            ] | 
+            del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "Task definition updated."
 
           echo "Registering new task definition..."
