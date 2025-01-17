@@ -63,34 +63,6 @@ jobs:
 
           echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
-      - name: Terraform Plan Connectors
-        env:
-          TF_VAR_environment: ${{ env.ENVIRONMENT }}
-          TF_VAR_docker_image: ${{ env.IMAGE }}
-          TF_VAR_neo4j_enterprise_license: "dummy"
-          TF_VAR_firebase_project_id: "${{ secrets.FIREBASE_PROJECT_ID }}"
-          TF_VAR_firebase_client_email: "${{ secrets.FIREBASE_CLIENT_EMAIL }}"
-          TF_VAR_firebase_private_key: "${{ secrets.FIREBASE_PRIVATE_KEY }}"
-        run: |
-          cd terraform
-          echo "Current environment: ${ENVIRONMENT}"
-          echo "Planning Terraform changes for connectors..."
-          terraform plan -input=false -out=tfplan -target=module.connectors
-
-      - name: Terraform Apply Connectors
-        env:
-          TF_VAR_environment: ${{ env.ENVIRONMENT }}
-          TF_VAR_docker_image: ${{ env.IMAGE }}
-          TF_VAR_neo4j_enterprise_license: "dummy"
-          TF_VAR_firebase_project_id: "${{ secrets.FIREBASE_PROJECT_ID }}"
-          TF_VAR_firebase_client_email: "${{ secrets.FIREBASE_CLIENT_EMAIL }}"
-          TF_VAR_firebase_private_key: "${{ secrets.FIREBASE_PRIVATE_KEY }}"
-        run: |
-          cd terraform
-          echo "Current environment: ${ENVIRONMENT}"
-          echo "Applying Terraform changes..."
-          terraform apply -auto-approve -input=false tfplan
-
       - name: Deploy Application
         run: |
           echo "Deploying application to $ENVIRONMENT from branch ${{ github.ref_name }}"
@@ -101,6 +73,10 @@ jobs:
 
           echo "Updating task definition with new image and environment variables..."
           # Update task definition with new image and environment variables
+          # Extract existing Neo4j URLs from current task definition
+          NEO4J_LEDGER_URL=$(echo $TASK_DEFINITION | jq -r '.containerDefinitions[0].environment[] | select(.name == "NEO_4J_LEDGER_SPACE_BOLT_URL") | .value')
+          NEO4J_SEARCH_URL=$(echo $TASK_DEFINITION | jq -r '.containerDefinitions[0].environment[] | select(.name == "NEO_4J_SEARCH_SPACE_BOLT_URL") | .value')
+
           NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" --arg PORT "3000" \
             --arg JWT "${{ secrets.JWT_SECRET }}" \
             --arg API "${{ secrets.CLIENT_API_KEY }}" \
@@ -110,6 +86,8 @@ jobs:
             --arg FID "${{ secrets.FIREBASE_PROJECT_ID }}" \
             --arg FEMAIL "${{ secrets.FIREBASE_CLIENT_EMAIL }}" \
             --arg FKEY "${{ secrets.FIREBASE_PRIVATE_KEY }}" \
+            --arg NEO4J_LEDGER "$NEO4J_LEDGER_URL" \
+            --arg NEO4J_SEARCH "$NEO4J_SEARCH_URL" \
             '.containerDefinitions[0].image = $IMAGE | 
              .containerDefinitions[0].environment = [
               {"name": "NODE_ENV", "value": $NODE_ENV},
@@ -122,7 +100,9 @@ jobs:
               {"name": "FIREBASE_PROJECT_ID", "value": $FID},
               {"name": "FIREBASE_CLIENT_EMAIL", "value": $FEMAIL},
               {"name": "FIREBASE_PRIVATE_KEY", "value": $FKEY},
-              {"name": "AWS_REGION", "value": "af-south-1"}
+              {"name": "AWS_REGION", "value": "af-south-1"},
+              {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": $NEO4J_LEDGER},
+              {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": $NEO4J_SEARCH}
             ] | 
             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "Task definition updated."
