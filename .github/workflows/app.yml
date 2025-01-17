@@ -6,6 +6,7 @@ on:
       - prod
       - stage
       - dev
+      - "*deploy*"
   workflow_dispatch:
 
 jobs:
