@@ -1056,7 +1056,7 @@ resource "aws_vpc_endpoint" "cloudwatch" {
   subnet_ids        = aws_subnet.private[*].id
   security_group_ids = [aws_security_group.vpc_endpoints.id]
 
-  private_dns_enabled = true
+  private_dns_enabled = false
 
   tags = merge(var.common_tags, {
     Name = "cloudwatch-logs-endpoint-${var.environment}"
