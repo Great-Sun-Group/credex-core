@@ -39,7 +39,6 @@ resource "null_resource" "validations" {
 
 # ECS task definition
 resource "aws_ecs_task_definition" "credex_core" {
-  depends_on = [null_resource.validate_log_group]
   family                   = "credex-core-${var.environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
@@ -75,9 +74,9 @@ resource "aws_ecs_task_definition" "credex_core" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          awslogs-group         = var.cloudwatch_log_group_name
+          awslogs-group         = "/ecs/credex-core-${var.environment}"
           awslogs-region        = var.aws_region
-          awslogs-stream-prefix = "ecs"
+          awslogs-stream-prefix = "credex-core-${var.environment}"
         }
       }
       essential = true
@@ -96,19 +95,6 @@ resource "aws_ecs_task_definition" "credex_core" {
   tags = merge(var.common_tags, {
     Name = "credex-core-task-definition-${var.environment}"
   })
-}
-
-# Validate log group exists
-resource "null_resource" "validate_log_group" {
-  triggers = {
-    log_group = var.cloudwatch_log_group_name
-  }
-
-  provisioner "local-exec" {
-    command = <<EOF
-      aws logs describe-log-groups --log-group-name-prefix ${var.cloudwatch_log_group_name} --region ${var.aws_region}
-    EOF
-  }
 }
 
 # ECS service
