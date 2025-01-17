@@ -4,9 +4,8 @@ on:
   push:
     branches:
       - prod
-      - stage
       - dev
-      - deployDBs3
+      - "*deploy*"
   workflow_dispatch:
 
 jobs:
