@@ -97,20 +97,30 @@ jobs:
           echo "Current task definition fetched."
 
           echo "Updating task definition with new image and environment variables..."
-          # Keep existing environment variables but update specific ones
-          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" '
-            .containerDefinitions[0].image = $IMAGE |
-            .containerDefinitions[0].environment += [
-              {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
-              {"name": "CLIENT_API_KEY", "value": "${{ secrets.CLIENT_API_KEY }}"},
-              {"name": "DEV_ADMIN_KEY", "value": "${{ secrets.DEV_ADMIN_KEY }}"},
-              {"name": "SKIP_RATE_LIMITER_KEY", "value": "${{ secrets.SKIP_RATE_LIMITER_KEY }}"},
-              {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"},
-              {"name": "FIREBASE_PROJECT_ID", "value": "${{ secrets.FIREBASE_PROJECT_ID }}"},
-              {"name": "FIREBASE_CLIENT_EMAIL", "value": "${{ secrets.FIREBASE_CLIENT_EMAIL }}"},
-              {"name": "FIREBASE_PRIVATE_KEY", "value": "${{ secrets.FIREBASE_PRIVATE_KEY }}"}
-            ]
-          ]' | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+          # Update task definition with new image and environment variables
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" --arg PORT "3000" \
+            --arg JWT "${{ secrets.JWT_SECRET }}" \
+            --arg API "${{ secrets.CLIENT_API_KEY }}" \
+            --arg ADMIN "${{ secrets.DEV_ADMIN_KEY }}" \
+            --arg SKIP "${{ secrets.SKIP_RATE_LIMITER_KEY }}" \
+            --arg OER "${{ secrets.OPEN_EXCHANGE_RATES_API }}" \
+            --arg FID "${{ secrets.FIREBASE_PROJECT_ID }}" \
+            --arg FEMAIL "${{ secrets.FIREBASE_CLIENT_EMAIL }}" \
+            --arg FKEY "${{ secrets.FIREBASE_PRIVATE_KEY }}" \
+            '.containerDefinitions[0].image = $IMAGE | 
+             .containerDefinitions[0].environment = [
+              {"name": "NODE_ENV", "value": $NODE_ENV},
+              {"name": "PORT", "value": $PORT},
+              {"name": "JWT_SECRET", "value": $JWT},
+              {"name": "CLIENT_API_KEY", "value": $API},
+              {"name": "DEV_ADMIN_KEY", "value": $ADMIN},
+              {"name": "SKIP_RATE_LIMITER_KEY", "value": $SKIP},
+              {"name": "OPEN_EXCHANGE_RATES_API", "value": $OER},
+              {"name": "FIREBASE_PROJECT_ID", "value": $FID},
+              {"name": "FIREBASE_CLIENT_EMAIL", "value": $FEMAIL},
+              {"name": "FIREBASE_PRIVATE_KEY", "value": $FKEY}
+            ]' | 
+            del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy))
           echo "Task definition updated."
 
           echo "Registering new task definition..."
