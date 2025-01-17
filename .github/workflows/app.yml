@@ -67,13 +67,6 @@ jobs:
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_docker_image: ${{ env.IMAGE }}
-          # Dummy values for Neo4j variables since we're only targeting app module
-          TF_VAR_neo_4j_ledger_space_bolt_url: "dummy"
-          TF_VAR_neo_4j_search_space_bolt_url: "dummy"
-          TF_VAR_neo_4j_ledger_space_user: "dummy"
-          TF_VAR_neo_4j_search_space_user: "dummy"
-          TF_VAR_neo_4j_ledger_space_password: "dummy"
-          TF_VAR_neo_4j_search_space_password: "dummy"
           TF_VAR_neo4j_enterprise_license: "dummy"
           TF_VAR_firebase_project_id: "${{ secrets.FIREBASE_PROJECT_ID }}"
           TF_VAR_firebase_client_email: "${{ secrets.FIREBASE_CLIENT_EMAIL }}"
@@ -88,13 +81,6 @@ jobs:
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_docker_image: ${{ env.IMAGE }}
-          # Dummy values for Neo4j variables since we're only targeting app module
-          TF_VAR_neo_4j_ledger_space_bolt_url: "dummy"
-          TF_VAR_neo_4j_search_space_bolt_url: "dummy"
-          TF_VAR_neo_4j_ledger_space_user: "dummy"
-          TF_VAR_neo_4j_search_space_user: "dummy"
-          TF_VAR_neo_4j_ledger_space_password: "dummy"
-          TF_VAR_neo_4j_search_space_password: "dummy"
           TF_VAR_neo4j_enterprise_license: "dummy"
         run: |
           cd terraform
@@ -111,18 +97,19 @@ jobs:
           echo "Current task definition fetched."
 
           echo "Updating task definition with new image and environment variables..."
-          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment = [
-            {"name": "NODE_ENV", "value": $NODE_ENV},
-            {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}"},
-            {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
-            {"name": "CLIENT_API_KEY", "value": "${{ secrets.CLIENT_API_KEY }}"},
-            {"name": "DEV_ADMIN_KEY", "value": "${{ secrets.DEV_ADMIN_KEY }}"},
-            {"name": "SKIP_RATE_LIMITER_KEY", "value": "${{ secrets.SKIP_RATE_LIMITER_KEY }}"},
-            {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"},
-            {"name": "FIREBASE_PROJECT_ID", "value": "${{ secrets.FIREBASE_PROJECT_ID }}"},
-            {"name": "FIREBASE_CLIENT_EMAIL", "value": "${{ secrets.FIREBASE_CLIENT_EMAIL }}"},
-            {"name": "FIREBASE_PRIVATE_KEY", "value": "${{ secrets.FIREBASE_PRIVATE_KEY }}"}
+          # Keep existing environment variables but update specific ones
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" '
+            .containerDefinitions[0].image = $IMAGE |
+            .containerDefinitions[0].environment += [
+              {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
+              {"name": "CLIENT_API_KEY", "value": "${{ secrets.CLIENT_API_KEY }}"},
+              {"name": "DEV_ADMIN_KEY", "value": "${{ secrets.DEV_ADMIN_KEY }}"},
+              {"name": "SKIP_RATE_LIMITER_KEY", "value": "${{ secrets.SKIP_RATE_LIMITER_KEY }}"},
+              {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"},
+              {"name": "FIREBASE_PROJECT_ID", "value": "${{ secrets.FIREBASE_PROJECT_ID }}"},
+              {"name": "FIREBASE_CLIENT_EMAIL", "value": "${{ secrets.FIREBASE_CLIENT_EMAIL }}"},
+              {"name": "FIREBASE_PRIVATE_KEY", "value": "${{ secrets.FIREBASE_PRIVATE_KEY }}"}
+            ]
           ]' | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "Task definition updated."
 

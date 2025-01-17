@@ -62,8 +62,8 @@ resource "aws_ecs_task_definition" "credex_core" {
       environment = [
         { name = "NODE_ENV", value = var.environment },
         { name = "PORT", value = tostring(var.app_port) },
-        { name = "NEO4J_LEDGER_SPACE_BOLT_URL", value = var.neo_4j_ledger_space_bolt_url },
-        { name = "NEO4J_SEARCH_SPACE_BOLT_URL", value = var.neo_4j_search_space_bolt_url }
+        { name = "NEO_4J_LEDGER_SPACE_BOLT_URL", value = var.neo_4j_ledger_space_bolt_url },
+        { name = "NEO_4J_SEARCH_SPACE_BOLT_URL", value = var.neo_4j_search_space_bolt_url }
       ]
       healthCheck = {
         command     = ["CMD-SHELL", "node -e 'const http = require(\"http\"); const options = { hostname: \"localhost\", port: process.env.PORT, path: \"/health\", timeout: 2000 }; const req = http.get(options, (res) => process.exit(res.statusCode === 200 ? 0 : 1)); req.on(\"error\", () => process.exit(1));'"]
