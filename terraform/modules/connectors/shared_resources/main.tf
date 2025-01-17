@@ -542,6 +542,28 @@ resource "aws_iam_role" "ecs_execution_role" {
   })
 }
 
+# Add CloudWatch Logs permissions to ECS execution role
+resource "aws_iam_role_policy" "ecs_execution_role_cloudwatch" {
+  name = "ecs-execution-role-cloudwatch-${var.environment}"
+  role = aws_iam_role.ecs_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   role       = aws_iam_role.ecs_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"

@@ -39,6 +39,7 @@ resource "null_resource" "validations" {
 
 # ECS task definition
 resource "aws_ecs_task_definition" "credex_core" {
+  depends_on = [null_resource.validate_log_group]
   family                   = "credex-core-${var.environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
@@ -60,7 +61,9 @@ resource "aws_ecs_task_definition" "credex_core" {
       ]
       environment = [
         { name = "NODE_ENV", value = var.environment },
-        { name = "PORT", value = tostring(var.app_port) }
+        { name = "PORT", value = tostring(var.app_port) },
+        { name = "NEO4J_LEDGER_SPACE_BOLT_URL", value = var.neo_4j_ledger_space_bolt_url },
+        { name = "NEO4J_SEARCH_SPACE_BOLT_URL", value = var.neo_4j_search_space_bolt_url }
       ]
       healthCheck = {
         command     = ["CMD-SHELL", "node -e 'const http = require(\"http\"); const options = { hostname: \"localhost\", port: process.env.PORT, path: \"/health\", timeout: 2000 }; const req = http.get(options, (res) => process.exit(res.statusCode === 200 ? 0 : 1)); req.on(\"error\", () => process.exit(1));'"]
@@ -93,6 +96,19 @@ resource "aws_ecs_task_definition" "credex_core" {
   tags = merge(var.common_tags, {
     Name = "credex-core-task-definition-${var.environment}"
   })
+}
+
+# Validate log group exists
+resource "null_resource" "validate_log_group" {
+  triggers = {
+    log_group = var.cloudwatch_log_group_name
+  }
+
+  provisioner "local-exec" {
+    command = <<EOF
+      aws logs describe-log-groups --log-group-name-prefix ${var.cloudwatch_log_group_name} --region ${var.aws_region}
+    EOF
+  }
 }
 
 # ECS service
