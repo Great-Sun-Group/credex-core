@@ -191,15 +191,6 @@ resource "aws_security_group" "ecs_tasks" {
     description = "Allow all outbound traffic"
   }
 
-  # Explicit egress rule for VPC endpoints
-  egress {
-    protocol        = "tcp"
-    from_port       = 443
-    to_port         = 443
-    security_groups = [aws_security_group.vpc_endpoints.id]
-    description     = "Allow HTTPS to VPC endpoints"
-  }
-
   tags = merge(var.common_tags, {
     Name = "credex-core-ecs-tasks-sg-${var.environment}"
   })
@@ -637,12 +628,6 @@ resource "aws_iam_role_policy" "ecs_task_role_policy" {
       }
     ]
   })
-}
-
-# Add SSM permissions for debugging
-resource "aws_iam_role_policy_attachment" "ecs_task_role_ssm" {
-  role       = aws_iam_role.ecs_task_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 # CloudWatch log group
