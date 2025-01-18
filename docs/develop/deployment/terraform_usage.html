@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Using Terraform CLI in credex-core</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <div id="menuButton" onclick="window.location.href='../../menu.html'">
+      <img src="../../images/logo.png" alt="Menu" class="menu-logo">
+      <span class="menu-text">MENU</span>
+    </div>
+
+    <div class="header-logo">
+      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+    </div>
+    <h1>Using Terraform CLI in credex-core</h1>
+
+    <h2>Overview</h2>
+    <p>
+      The credex-core infrastructure is managed using Terraform across multiple environments. While infrastructure changes are typically deployed through GitHub Actions workflows, developers can use the Terraform CLI directly for testing, debugging, or making targeted changes.
+    </p>
+
+    <h2>Environment Structure</h2>
+    <p>
+      Each environment (development, staging, production, model_001) has:
+    </p>
+    <ul>
+      <li>A dedicated S3 bucket for terraform state: <code>credex-terraform-state-{environment}</code></li>
+      <li>Environment-specific AWS credentials</li>
+      <li>Configuration defined in <code>terraform/environments/{environment}.json</code></li>
+    </ul>
+
+    <h2>Using the Terraform CLI Helper Script</h2>
+    <p>
+      The <code>terraform/tf.sh</code> script simplifies working with Terraform by:
+    </p>
+    <ul>
+      <li>Setting up environment-specific AWS credentials</li>
+      <li>Initializing the correct backend configuration</li>
+      <li>Loading required variables</li>
+    </ul>
+
+    <h3>Basic Usage</h3>
+    <pre><code>./tf.sh &lt;environment&gt; &lt;command&gt; [-init]</code></pre>
+    <p>Parameters:</p>
+    <ul>
+      <li><code>environment</code>: development (default), staging, production, or model_001</li>
+      <li><code>command</code>: Any terraform command (plan, apply, destroy, etc.)</li>
+      <li><code>-init</code>: Optional flag to force re-initialization</li>
+    </ul>
+
+    <h3>Examples</h3>
+    <pre><code># Plan changes in development environment
+./tf.sh development plan
+
+# Apply changes to staging
+./tf.sh staging apply
+
+# Force reinitialize and plan production
+./tf.sh production plan -init</code></pre>
+
+    <h2>Infrastructure Components</h2>
+    <p>
+      The infrastructure is divided into three main components, each managed by a separate module:
+    </p>
+    <ul>
+      <li><strong>Connectors</strong>: Core infrastructure (VPC, security groups, load balancers)</li>
+      <li><strong>Databases</strong>: Neo4j instances for LedgerSpace and SearchSpace</li>
+      <li><strong>App</strong>: ECS service and task definitions</li>
+    </ul>
+
+    <h3>Targeting Specific Components</h3>
+    <p>
+      Use the <code>-target</code> flag to apply changes to specific components:
+    </p>
+    <pre><code># Update only the app service
+./tf.sh development plan -target=module.app
+
+# Update only the databases
+./tf.sh development plan -target=module.databases
+
+# Update only the connectors
+./tf.sh development plan -target=module.connectors</code></pre>
+
+    <h2>Environment Variables</h2>
+    <p>
+      The following environment variables must be available in your development environment:
+    </p>
+    <ul>
+      <li><code>CREDEXCORE_DEV_AWS_ACCESS_KEY</code>: AWS access key for development</li>
+      <li><code>CREDEXCORE_DEV_AWS_SECRET_ACCESS_KEY</code>: AWS secret key for development</li>
+      <li><code>NEO4J_ENTERPRISE_LICENSE</code>: Neo4j Enterprise license key</li>
+      <li><code>FIREBASE_PROJECT_ID</code>: Firebase project ID</li>
+      <li><code>FIREBASE_CLIENT_EMAIL</code>: Firebase service account email</li>
+      <li><code>FIREBASE_PRIVATE_KEY</code>: Firebase service account private key</li>
+    </ul>
+
+    <h2>Best Practices</h2>
+    <ul>
+      <li>Always run <code>plan</code> before <code>apply</code> to review changes</li>
+      <li>Use <code>-target</code> to limit the scope of changes when possible</li>
+      <li>Check the GitHub Actions workflows to understand how infrastructure changes are typically deployed</li>
+      <li>Be cautious with <code>destroy</code> commands, especially in production environments</li>
+    </ul>
+
+    <h2>Common Tasks</h2>
+
+    <h3>Viewing Infrastructure State</h3>
+    <pre><code># List all resources
+./tf.sh development show
+
+# Show specific outputs
+./tf.sh development output</code></pre>
+
+    <h3>Debugging Deployments</h3>
+    <p>
+      When debugging deployment issues:
+    </p>
+    <ol>
+      <li>Check the terraform state:
+        <pre><code>./tf.sh development show</code></pre>
+      </li>
+      <li>View specific resource details:
+        <pre><code>./tf.sh development state show module.app.aws_ecs_service.credex_core</code></pre>
+      </li>
+      <li>Refresh the state to ensure it matches reality:
+        <pre><code>./tf.sh development refresh</code></pre>
+      </li>
+    </ol>
+
+    <h2>Related Documentation</h2>
+    <ul>
+      <li><a href="app_workflow.html">Application Deployment Workflow</a></li>
+      <li><a href="databases_workflow.html">Database Deployment Workflow</a></li>
+      <li><a href="connectors_workflow.html">Connectors Deployment Workflow</a></li>
+    </ul>
+
+  </body>
+</html>
