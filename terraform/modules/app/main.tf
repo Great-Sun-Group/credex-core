@@ -123,7 +123,7 @@ resource "aws_ecs_service" "credex_core" {
 
   deployment_circuit_breaker {
     enable   = true
-    rollback = true
+    rollback = false
   }
 
   tags = merge(var.common_tags, {
