@@ -150,7 +150,7 @@ locals {
               set -e
 
               # Setup logging
-              exec > >(tee /var/log/neo4j-setup.log) 2>&1
+              exec > /var/log/neo4j-setup.log 2>&1
 
               # Set environment for CloudWatch agent
               export ENVIRONMENT="${var.environment}"
