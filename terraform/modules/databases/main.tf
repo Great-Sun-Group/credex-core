@@ -76,6 +76,14 @@ resource "aws_security_group" "neo4j_internal" {
   }
 
   ingress {
+    description = "Neo4j Bolt Cross-Subnet"
+    from_port   = 7687
+    to_port     = 7687
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]  # Allow Bolt traffic within the VPC
+  }
+
+  ingress {
     description = "Neo4j HTTP"
     from_port   = 7474
     to_port     = 7474
@@ -290,9 +298,12 @@ dbms.logs.query.enabled=true
 dbms.logs.query.rotation.keep_number=7
 dbms.logs.query.rotation.size=20m
 
-# Transaction settings
-dbms.transaction.timeout=5m
-dbms.transaction.concurrent.maximum=100
+# Transaction and operation settings
+dbms.transaction.timeout=15m
+dbms.transaction.concurrent.maximum=500
+dbms.memory.off_heap.max_size=2g
+dbms.memory.pagecache.flush.buffer.enabled=true
+dbms.memory.pagecache.flush.buffer.size_in_pages=100
 " $heap_size_mb $heap_size_mb $page_cache_mb > /etc/neo4j/neo4j.conf
 
               # Verify configuration

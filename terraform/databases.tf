@@ -3,6 +3,7 @@ module "databases" {
 
   environment              = var.environment
   vpc_id                   = module.connectors.vpc_id
+  vpc_cidr                 = local.current_env.vpc_cidr
   subnet_ids               = module.connectors.private_subnet_ids
   neo4j_security_group_id  = module.connectors.neo4j_security_group_id
   key_pair_name            = module.connectors.key_pair_name

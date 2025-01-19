@@ -63,3 +63,8 @@ variable "ecs_tasks_security_group_id" {
   description = "The ID of the ECS tasks security group for CloudWatch logs access"
   type        = string
 }
+
+variable "vpc_cidr" {
+  description = "The CIDR block for the VPC"
+  type        = string
+}
