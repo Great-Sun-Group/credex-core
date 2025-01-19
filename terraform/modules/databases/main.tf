@@ -193,12 +193,19 @@ rpm --import https://debian.neo4j.com/neotechnology.gpg.key
 cat > /etc/yum.repos.d/neo4j.repo << 'REPO'
 [neo4j]
 name=Neo4j RPM Repository
-baseurl=https://yum.neo4j.com/stable
+baseurl=https://yum.neo4j.com/5
 enabled=1
 gpgcheck=1
 REPO
 
-yum install -y neo4j-enterprise amazon-cloudwatch-agent
+# Clean yum cache and install Neo4j
+yum clean all
+yum makecache
+yum install -y neo4j-enterprise-5.13.0 amazon-cloudwatch-agent || {
+    echo "Neo4j installation failed. Checking yum error log..."
+    cat /var/log/yum.log
+    exit 1
+}
 
 # Download and install APOC Core plugin
 mkdir -p /var/lib/neo4j/plugins
@@ -271,7 +278,7 @@ dbms.default_listen_address=0.0.0.0
 dbms.connector.bolt.listen_address=:7687
 dbms.connector.http.listen_address=:7474
 dbms.connector.https.listen_address=:7473
-dbms.default_advertised_address=localhost
+dbms.default_advertised_address=0.0.0.0
 
 # Security settings
 dbms.security.auth_enabled=false
@@ -322,11 +329,19 @@ echo "${var.neo4j_enterprise_license}" > /etc/neo4j/neo4j.license
 chown -R neo4j:neo4j /var/lib/neo4j /var/log/neo4j
 chmod 600 /etc/neo4j/neo4j.conf
 
-# Start Neo4j
+# Start Neo4j and verify it's running
 systemctl enable neo4j
 systemctl start neo4j
+sleep 10  # Give Neo4j time to start
+
+# Check if Neo4j is running and listening
+echo "Checking Neo4j service status..."
+systemctl status neo4j
+echo "Checking Neo4j ports..."
+netstat -tlpn | grep neo4j
 
 # Wait for Neo4j to be ready
+echo "Waiting for Neo4j bolt connection..."
 for i in {1..30}; do
   if cypher-shell --non-interactive "RETURN 1;" >/dev/null 2>&1; then
     echo "Neo4j is ready"
