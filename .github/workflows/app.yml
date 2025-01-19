@@ -91,19 +91,19 @@ jobs:
             --arg NEO4J_SEARCH "$NEO4J_SEARCH_URL" \
             '.containerDefinitions[0].image = $IMAGE | 
              .containerDefinitions[0].environment = [
-              {"name": "NODE_ENV", "value": $NODE_ENV},
-              {"name": "PORT", "value": $PORT},
-              {"name": "JWT_SECRET", "value": $JWT},
-              {"name": "CLIENT_API_KEY", "value": $API},
-              {"name": "DEV_ADMIN_KEY", "value": $ADMIN},
-              {"name": "SKIP_RATE_LIMITER_KEY", "value": $SKIP},
-              {"name": "OPEN_EXCHANGE_RATES_API", "value": $OER},
-              {"name": "FIREBASE_PROJECT_ID", "value": $FID},
-              {"name": "FIREBASE_CLIENT_EMAIL", "value": $FEMAIL},
-              {"name": "FIREBASE_PRIVATE_KEY", "value": $FKEY},
+              {"name": "NODE_ENV", "value": "\($NODE_ENV)"},
+              {"name": "PORT", "value": "\($PORT)"},
+              {"name": "JWT_SECRET", "value": "\($JWT)"},
+              {"name": "CLIENT_API_KEY", "value": "\($API)"},
+              {"name": "DEV_ADMIN_KEY", "value": "\($ADMIN)"},
+              {"name": "SKIP_RATE_LIMITER_KEY", "value": "\($SKIP)"},
+              {"name": "OPEN_EXCHANGE_RATES_API", "value": "\($OER)"},
+              {"name": "FIREBASE_PROJECT_ID", "value": "\($FID)"},
+              {"name": "FIREBASE_CLIENT_EMAIL", "value": "\($FEMAIL)"},
+              {"name": "FIREBASE_PRIVATE_KEY", "value": "\($FKEY)"},
               {"name": "AWS_REGION", "value": "af-south-1"},
-              {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": $NEO4J_LEDGER},
-              {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": $NEO4J_SEARCH}
+              {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "\($NEO4J_LEDGER)"},
+              {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "\($NEO4J_SEARCH)"}
             ] | 
             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "Task definition updated."
