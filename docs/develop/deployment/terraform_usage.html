@@ -19,12 +19,15 @@
 
     <h2>Overview</h2>
     <p>
-      The credex-core infrastructure is managed using Terraform across multiple environments. While infrastructure changes are typically deployed through GitHub Actions workflows, developers can use the Terraform CLI directly for testing, debugging, or making targeted changes.
+      The credex-core infrastructure is managed using Terraform across multiple environments. While infrastructure changes are typically deployed through GitHub Actions workflows (Connectors, Databases, Application), developers can use the Terraform CLI directly for testing, debugging, or making targeted changes.
     </p>
+
+    <h3>IMPORTANT NOTE</h3>
+    <p>The infrastructure is designed to be deployed sequentially in modules that match the workflows, one module at a time. A full teraform deploy destroy the environment's databases and all their data. There probably are not any scenarios in which a full deploy is the solution. Also, it will probably fail.</p>
 
     <h2>Environment Structure</h2>
     <p>
-      Each environment (development, staging, production, model_001) has:
+      Each environment (e.g. development, staging, model_001) has:
     </p>
     <ul>
       <li>A dedicated S3 bucket for terraform state: <code>credex-terraform-state-{environment}</code></li>
@@ -86,21 +89,18 @@
 
     <h2>Environment Variables</h2>
     <p>
-      The following environment variables must be available in your development environment:
+      The full dev environment variables must be available in your development environment, plus AWS secrests in the naming pattern:
     </p>
     <ul>
-      <li><code>CREDEXCORE_DEV_AWS_ACCESS_KEY</code>: AWS access key for development</li>
-      <li><code>CREDEXCORE_DEV_AWS_SECRET_ACCESS_KEY</code>: AWS secret key for development</li>
-      <li><code>NEO4J_ENTERPRISE_LICENSE</code>: Neo4j Enterprise license key</li>
-      <li><code>FIREBASE_PROJECT_ID</code>: Firebase project ID</li>
-      <li><code>FIREBASE_CLIENT_EMAIL</code>: Firebase service account email</li>
-      <li><code>FIREBASE_PRIVATE_KEY</code>: Firebase service account private key</li>
+      <li><code>CREDEXCORE_DEV_AWS_ACCESS_KEY</code>: AWS access key for development environment</li>
+      <li><code>CREDEXCORE_STAGE_AWS_SECRET_ACCESS_KEY</code>: AWS secret key for staging environment</li>
+      <li><code>CREDEXCORE_MODEL_001_AWS_ACCESS_KEY</code>: AWS access key for model_001 environment</li>
     </ul>
 
     <h2>Best Practices</h2>
     <ul>
       <li>Always run <code>plan</code> before <code>apply</code> to review changes</li>
-      <li>Use <code>-target</code> to limit the scope of changes when possible</li>
+      <li><strong>ALWAYS</strong> use <code>-target</code> to limit the scope of changes. </li>
       <li>Check the GitHub Actions workflows to understand how infrastructure changes are typically deployed</li>
       <li>Be cautious with <code>destroy</code> commands, especially in production environments</li>
     </ul>
