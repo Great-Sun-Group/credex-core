@@ -182,7 +182,7 @@ locals {
               echo "dbms.security.procedures.allowlist=apoc.*" >> /etc/neo4j/neo4j.conf
               
               # Configure CloudWatch
-              cat > /opt/aws/amazon-cloudwatch-agent/config.json << 'EOF2'
+              cat > /opt/aws/amazon-cloudwatch-agent/config.json << 'CWCONFIG'
               {
                 "agent": {
                   "metrics_collection_interval": 60
@@ -218,7 +218,7 @@ locals {
                   }
                 }
               }
-              EOF2
+              CWCONFIG
 
               # Start CloudWatch agent
               /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/config.json
