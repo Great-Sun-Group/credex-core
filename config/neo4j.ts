@@ -31,6 +31,7 @@ const createDriverProxy = (url: string): neo4j.Driver => {
             maxConnectionPoolSize: 50,
             connectionAcquisitionTimeout: 30000,
             maxTransactionRetryTime: 30000,
+            encrypted: false // Disable encryption for Neo4j 4.0+ compatibility
           });
 
           await newDriver.verifyConnectivity();
@@ -80,7 +81,15 @@ const createDriverProxy = (url: string): neo4j.Driver => {
           // If no driver yet, create a proxy session that will wait for connection
           return new Proxy(realSession || {} as neo4j.Session, {
             get: (_sessionTarget, sessionProp: string | symbol) => {
-              const validSessionMethods = ['run', 'readTransaction', 'writeTransaction', 'close', 'beginTransaction'];
+              const validSessionMethods = [
+                'run',
+                'readTransaction',
+                'writeTransaction',
+                'close',
+                'beginTransaction',
+                'executeRead',
+                'executeWrite'
+              ];
               
               // Handle session methods
               if (typeof sessionProp === 'string' && validSessionMethods.includes(sessionProp)) {
