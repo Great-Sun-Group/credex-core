@@ -60,11 +60,19 @@ resource "aws_security_group" "neo4j_internal" {
   vpc_id      = var.vpc_id
 
   ingress {
-    description = "Neo4j Bolt"
+    description = "Neo4j Bolt Internal"
     from_port   = 7687
     to_port     = 7687
     protocol    = "tcp"
     self        = true
+  }
+
+  ingress {
+    description     = "Neo4j Bolt from App"
+    from_port       = 7687
+    to_port         = 7687
+    protocol        = "tcp"
+    security_groups = [var.ecs_tasks_security_group_id]  # Allow Bolt from ECS tasks
   }
 
   ingress {
@@ -83,13 +91,21 @@ resource "aws_security_group" "neo4j_internal" {
     self        = true
   }
 
-  # Allow HTTPS from ECS tasks for CloudWatch logs
+  # Allow HTTPS for AWS services (CloudWatch, SSM)
   ingress {
     description     = "HTTPS from ECS tasks"
     from_port       = 443
     to_port         = 443
     protocol        = "tcp"
     security_groups = [var.ecs_tasks_security_group_id]
+  }
+
+  ingress {
+    description = "HTTPS for VPC Endpoints"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    self        = true
   }
 
   egress {
@@ -132,10 +148,15 @@ resource "aws_iam_role" "neo4j_role" {
   tags = var.common_tags
 }
 
-# Add CloudWatch permissions
+# Add required AWS service permissions
 resource "aws_iam_role_policy_attachment" "neo4j_cloudwatch_policy" {
   role       = aws_iam_role.neo4j_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "neo4j_ssm_policy" {
+  role       = aws_iam_role.neo4j_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_iam_instance_profile" "neo4j_instance_profile" {
@@ -235,6 +256,7 @@ locals {
               page_cache_mb=$(( page_cache_mb < 2048 ? 2048 : page_cache_mb ))
 
               # Configure Neo4j using printf to avoid heredoc issues
+              echo "Configuring Neo4j with memory settings: heap=$heap_size_mb MB, page_cache=$page_cache_mb MB"
               printf "# Network configuration
 dbms.default_listen_address=0.0.0.0
 dbms.connector.bolt.listen_address=:7687
