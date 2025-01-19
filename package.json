@@ -24,6 +24,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-cloudwatch-logs": "^3.731.1",
     "@aws-sdk/client-secrets-manager": "^3.658.1",
     "@types/adm-zip": "^0.5.5",
     "adm-zip": "^0.5.16",
