@@ -174,98 +174,99 @@ resource "aws_iam_instance_profile" "neo4j_instance_profile" {
 
 # Helper to create user data script
 locals {
-  neo4j_install_script = <<-EOF
-              #!/bin/bash
-              set -e
+  neo4j_install_script = <<EOF
+#!/bin/bash
+set -e
 
-              # Setup logging
-              exec > /var/log/neo4j-setup.log 2>&1
+# Setup logging
+exec > /var/log/neo4j-setup.log 2>&1
 
-              # Set environment for CloudWatch agent
-              export ENVIRONMENT="${var.environment}"
-              
-              # System setup
-              yum update -y
-              amazon-linux-extras install java-openjdk11 -y
-              
-              # Install Neo4j Enterprise
-              rpm --import https://debian.neo4j.com/neotechnology.gpg.key
-              cat > /etc/yum.repos.d/neo4j.repo << 'REPO'
-              [neo4j]
-              name=Neo4j RPM Repository
-              baseurl=https://yum.neo4j.com/stable
-              enabled=1
-              gpgcheck=1
-              REPO
-              
-              yum install -y neo4j-enterprise amazon-cloudwatch-agent
+# Set environment for CloudWatch agent
+export ENVIRONMENT="${var.environment}"
 
-              # Download and install APOC Core plugin
-              mkdir -p /var/lib/neo4j/plugins
-              curl -L https://github.com/neo4j/apoc/releases/download/5.26.0/apoc-5.26.0-core.jar -o /var/lib/neo4j/plugins/apoc.jar
-              chown -R neo4j:neo4j /var/lib/neo4j/plugins
-              echo "APOC plugin downloaded and configured."
+# System setup
+yum update -y
+amazon-linux-extras install java-openjdk11 -y
 
-              # Enable APOC procedures
-              echo "dbms.security.procedures.unrestricted=apoc.*" >> /etc/neo4j/neo4j.conf
-              echo "dbms.security.procedures.allowlist=apoc.*" >> /etc/neo4j/neo4j.conf
-              
-              # Configure CloudWatch
-              cat > /opt/aws/amazon-cloudwatch-agent/config.json << 'CWCONFIG'
-              {
-                "agent": {
-                  "metrics_collection_interval": 60
-                },
-                "logs": {
-                  "logs_collected": {
-                    "files": {
-                      "collect_list": [
-                        {
-                          "file_path": "/var/log/neo4j/neo4j.log",
-                          "log_group_name": "/aws/ec2/neo4j/$${ENVIRONMENT}",
-                          "log_stream_name": "$${instance_id}",
-                          "timestamp_format": "%Y-%m-%d %H:%M:%S"
-                        }
-                      ]
-                    }
-                  }
-                },
-                "metrics": {
-                  "append_dimensions": {
-                    "InstanceId": "$${aws:InstanceId}"
-                  },
-                  "metrics_collected": {
-                    "mem": {
-                      "measurement": ["mem_used_percent"],
-                      "metrics_collection_interval": 60
-                    },
-                    "disk": {
-                      "measurement": ["disk_used_percent"],
-                      "resources": ["/"],
-                      "metrics_collection_interval": 60
-                    }
-                  }
-                }
-              }
-              CWCONFIG
+# Install Neo4j Enterprise
+rpm --import https://debian.neo4j.com/neotechnology.gpg.key
+cat > /etc/yum.repos.d/neo4j.repo << 'REPO'
+[neo4j]
+name=Neo4j RPM Repository
+baseurl=https://yum.neo4j.com/stable
+enabled=1
+gpgcheck=1
+REPO
 
-              # Start CloudWatch agent
-              /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/config.json
-              systemctl enable amazon-cloudwatch-agent
-              systemctl start amazon-cloudwatch-agent
+yum install -y neo4j-enterprise amazon-cloudwatch-agent
 
-              # Calculate memory settings
-              total_mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-              total_mem_mb=$((total_mem_kb / 1024))
-              heap_size_mb=$((total_mem_mb * 15 / 100))
-              page_cache_mb=$((total_mem_mb * 30 / 100))
-              heap_size_mb=$(( heap_size_mb < 1024 ? 1024 : heap_size_mb ))
-              heap_size_mb=$(( heap_size_mb > 31744 ? 31744 : heap_size_mb ))
-              page_cache_mb=$(( page_cache_mb < 2048 ? 2048 : page_cache_mb ))
+# Download and install APOC Core plugin
+mkdir -p /var/lib/neo4j/plugins
+curl -L https://github.com/neo4j/apoc/releases/download/5.26.0/apoc-5.26.0-core.jar -o /var/lib/neo4j/plugins/apoc.jar
+chown -R neo4j:neo4j /var/lib/neo4j/plugins
+echo "APOC plugin downloaded and configured."
 
-              # Configure Neo4j using printf to avoid heredoc issues
-              echo "Configuring Neo4j with memory settings: heap=$heap_size_mb MB, page_cache=$page_cache_mb MB"
-              printf "# Network configuration
+# Enable APOC procedures
+echo "dbms.security.procedures.unrestricted=apoc.*" >> /etc/neo4j/neo4j.conf
+echo "dbms.security.procedures.allowlist=apoc.*" >> /etc/neo4j/neo4j.conf
+
+# Configure CloudWatch
+cat > /opt/aws/amazon-cloudwatch-agent/config.json << 'CWCONFIG'
+{
+  "agent": {
+    "metrics_collection_interval": 60
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/neo4j/neo4j.log",
+            "log_group_name": "/aws/ec2/neo4j/$${ENVIRONMENT}",
+            "log_stream_name": "$${instance_id}",
+            "timestamp_format": "%Y-%m-%d %H:%M:%S"
+          }
+        ]
+      }
+    }
+  },
+  "metrics": {
+    "append_dimensions": {
+      "InstanceId": "$${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "mem": {
+        "measurement": ["mem_used_percent"],
+        "metrics_collection_interval": 60
+      },
+      "disk": {
+        "measurement": ["disk_used_percent"],
+        "resources": ["/"],
+        "metrics_collection_interval": 60
+      }
+    }
+  }
+}
+CWCONFIG
+
+# Start CloudWatch agent
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/config.json
+systemctl enable amazon-cloudwatch-agent
+systemctl start amazon-cloudwatch-agent
+
+# Calculate memory settings
+total_mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+total_mem_mb=$((total_mem_kb / 1024))
+heap_size_mb=$((total_mem_mb * 15 / 100))
+page_cache_mb=$((total_mem_mb * 30 / 100))
+heap_size_mb=$(( heap_size_mb < 1024 ? 1024 : heap_size_mb ))
+heap_size_mb=$(( heap_size_mb > 31744 ? 31744 : heap_size_mb ))
+page_cache_mb=$(( page_cache_mb < 2048 ? 2048 : page_cache_mb ))
+
+# Configure Neo4j using printf to avoid heredoc issues
+echo "Configuring Neo4j with memory settings: heap=$heap_size_mb MB, page_cache=$page_cache_mb MB"
+cat > /etc/neo4j/neo4j.conf << 'NEOCONFIG'
+# Network configuration
 dbms.default_listen_address=0.0.0.0
 dbms.connector.bolt.listen_address=:7687
 dbms.connector.http.listen_address=:7474
@@ -277,9 +278,9 @@ dbms.security.auth_enabled=false
 dbms.security.allow_csv_import_from_file_urls=false
 
 # Memory configuration
-dbms.memory.heap.initial_size=%dm
-dbms.memory.heap.max_size=%dm
-dbms.memory.pagecache.size=%dm
+dbms.memory.heap.initial_size=$${heap_size_mb}m
+dbms.memory.heap.max_size=$${heap_size_mb}m
+dbms.memory.pagecache.size=$${page_cache_mb}m
 
 # Performance settings
 dbms.jvm.additional=-XX:+UseG1GC
@@ -304,37 +305,41 @@ dbms.transaction.concurrent.maximum=500
 dbms.memory.off_heap.max_size=2g
 dbms.memory.pagecache.flush.buffer.enabled=true
 dbms.memory.pagecache.flush.buffer.size_in_pages=100
-" $heap_size_mb $heap_size_mb $page_cache_mb > /etc/neo4j/neo4j.conf
+NEOCONFIG
 
-              # Verify configuration
-              echo "Neo4j configuration:"
-              cat /etc/neo4j/neo4j.conf
+# Replace placeholders with actual values
+sed -i "s/\$${heap_size_mb}/$heap_size_mb/g" /etc/neo4j/neo4j.conf
+sed -i "s/\$${page_cache_mb}/$page_cache_mb/g" /etc/neo4j/neo4j.conf
 
-              # Set Neo4j license
-              echo "${var.neo4j_enterprise_license}" > /etc/neo4j/neo4j.license
-              
-              # Set permissions
-              chown -R neo4j:neo4j /var/lib/neo4j /var/log/neo4j
-              chmod 600 /etc/neo4j/neo4j.conf
-              
-              # Start Neo4j
-              systemctl enable neo4j
-              systemctl start neo4j
-              
-              # Wait for Neo4j to be ready
-              for i in {1..30}; do
-                if cypher-shell --non-interactive "RETURN 1;" >/dev/null 2>&1; then
-                  echo "Neo4j is ready"
-                  exit 0
-                fi
-                echo "Waiting for Neo4j to be ready... ($i/30)"
-                sleep 10
-              done
-              
-              echo "Neo4j failed to start properly"
-              journalctl -u neo4j -n 100
-              exit 1
-              EOF
+# Verify configuration
+echo "Neo4j configuration:"
+cat /etc/neo4j/neo4j.conf
+
+# Set Neo4j license
+echo "${var.neo4j_enterprise_license}" > /etc/neo4j/neo4j.license
+
+# Set permissions
+chown -R neo4j:neo4j /var/lib/neo4j /var/log/neo4j
+chmod 600 /etc/neo4j/neo4j.conf
+
+# Start Neo4j
+systemctl enable neo4j
+systemctl start neo4j
+
+# Wait for Neo4j to be ready
+for i in {1..30}; do
+  if cypher-shell --non-interactive "RETURN 1;" >/dev/null 2>&1; then
+    echo "Neo4j is ready"
+    exit 0
+  fi
+  echo "Waiting for Neo4j to be ready... ($i/30)"
+  sleep 10
+done
+
+echo "Neo4j failed to start properly"
+journalctl -u neo4j -n 100
+exit 1
+EOF
 }
 
 # Neo4j instance for ledgerSpace
