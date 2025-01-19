@@ -215,7 +215,15 @@ resource "aws_security_group" "neo4j" {
     from_port   = 7687
     to_port     = 7687
     cidr_blocks = [var.vpc_cidr]
-    description = "Allow Neo4j Bolt"
+    description = "Allow Neo4j Bolt from VPC"
+  }
+
+  ingress {
+    protocol        = "tcp"
+    from_port       = 7687
+    to_port         = 7687
+    security_groups = [aws_security_group.ecs_tasks.id]
+    description     = "Allow Neo4j Bolt from ECS tasks"
   }
 
   egress {
