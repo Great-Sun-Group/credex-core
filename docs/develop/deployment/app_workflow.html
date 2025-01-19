@@ -120,15 +120,26 @@
         <li>Pushes to environment-specific ECR repository</li>
       </ul>
 
-      <h3>2. Infrastructure Deployment</h3>
+      <h3>2. Infrastructure and Application Deployment</h3>
       <p>
-        Uses Terraform to manage the application infrastructure:
+        The deployment process uses a combination of Terraform and AWS CLI:
       </p>
       <ul>
-        <li>Initializes with environment-specific backend configuration</li>
-        <li>Targets only the app module</li>
-        <li>Gets Neo4j bolt URLs from Terraform state</li>
-        <li>Applies infrastructure changes if needed</li>
+        <li>Terraform is used only to:
+          <ul>
+            <li>Initialize backend configuration</li>
+            <li>Read infrastructure outputs (Neo4j endpoints, etc.)</li>
+            <li>Note: Terraform apply is NOT used for app deployment</li>
+          </ul>
+        </li>
+        <li>AWS CLI is used to:
+          <ul>
+            <li>Get current ECS task definition</li>
+            <li>Update task definition with new image and environment variables</li>
+            <li>Deploy updated task definition</li>
+            <li>Monitor deployment status and collect logs</li>
+          </ul>
+        </li>
       </ul>
 
       <h3>3. ECS Deployment</h3>

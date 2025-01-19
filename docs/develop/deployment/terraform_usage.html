@@ -76,16 +76,23 @@
 
     <h3>Targeting Specific Components</h3>
     <p>
-      Use the <code>-target</code> flag to apply changes to specific components:
+      Use the <code>-target</code> flag to apply changes to specific infrastructure components:
     </p>
-    <pre><code># Update only the app service
-./tf.sh development plan -target=module.app
-
-# Update only the databases
+    <pre><code># Update databases infrastructure
 ./tf.sh development plan -target=module.databases
 
-# Update only the connectors
+# Update core infrastructure (VPC, security groups, etc)
 ./tf.sh development plan -target=module.connectors</code></pre>
+
+    <h3>Important Note About App Deployment</h3>
+    <p>
+      The app module should NOT be deployed using terraform apply. Instead:
+    </p>
+    <ul>
+      <li>Use terraform only to read infrastructure outputs (Neo4j endpoints, etc)</li>
+      <li>Use AWS CLI directly for app deployment following the process in <a href="app_workflow.html">Application Deployment Workflow</a></li>
+      <li>This ensures proper handling of task definitions, environment variables, and deployment monitoring</li>
+    </ul>
 
     <h2>Environment Variables</h2>
     <p>
@@ -100,8 +107,15 @@
     <h2>Best Practices</h2>
     <ul>
       <li>Always run <code>plan</code> before <code>apply</code> to review changes</li>
-      <li><strong>ALWAYS</strong> use <code>-target</code> to limit the scope of changes. </li>
-      <li>Check the GitHub Actions workflows to understand how infrastructure changes are typically deployed</li>
+      <li><strong>ALWAYS</strong> use <code>-target</code> to limit the scope of changes</li>
+      <li>Never use terraform apply for app deployment - use AWS CLI directly</li>
+      <li>Check the GitHub Actions workflows to understand deployment patterns:
+        <ul>
+          <li>connectors.yml - Uses terraform for core infrastructure</li>
+          <li>databases.yml - Uses terraform for database instances</li>
+          <li>app.yml - Uses AWS CLI for app deployment</li>
+        </ul>
+      </li>
       <li>Be cautious with <code>destroy</code> commands, especially in production environments</li>
     </ul>
 
