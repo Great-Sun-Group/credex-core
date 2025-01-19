@@ -1049,20 +1049,6 @@ resource "aws_iam_role_policy" "ecs_task_s3_verification" {
 }
 
 # VPC Endpoints for ECS tasks in private subnets
-resource "aws_vpc_endpoint" "cloudwatch" {
-  vpc_id            = aws_vpc.main.id
-  service_name      = "com.amazonaws.${data.aws_region.current.name}.logs"
-  vpc_endpoint_type = "Interface"
-  subnet_ids        = aws_subnet.private[*].id
-  security_group_ids = [aws_security_group.vpc_endpoints.id]
-
-  private_dns_enabled = true
-
-  tags = merge(var.common_tags, {
-    Name = "cloudwatch-logs-endpoint-${var.environment}"
-  })
-}
-
 resource "aws_vpc_endpoint" "ecr_api" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.${data.aws_region.current.name}.ecr.api"
