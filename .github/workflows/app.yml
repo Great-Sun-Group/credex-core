@@ -74,8 +74,9 @@ jobs:
           echo "Updating task definition with new image and environment variables..."
           # Get Neo4j URLs from Terraform outputs
           cd terraform
-          NEO4J_LEDGER_URL=$(terraform output -raw neo4j_ledger_bolt_endpoint)
-          NEO4J_SEARCH_URL=$(terraform output -raw neo4j_search_bolt_endpoint)
+          # Get Neo4j URLs and extract just the bolt URLs, filtering out debug output
+          NEO4J_LEDGER_URL=$(terraform output -raw neo4j_ledger_bolt_endpoint | grep -o 'bolt://[0-9.]*:7687')
+          NEO4J_SEARCH_URL=$(terraform output -raw neo4j_search_bolt_endpoint | grep -o 'bolt://[0-9.]*:7687')
           cd ..
 
           NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" --arg PORT "3000" \
