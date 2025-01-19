@@ -83,6 +83,15 @@ resource "aws_security_group" "neo4j_internal" {
     self        = true
   }
 
+  # Allow HTTPS from ECS tasks for CloudWatch logs
+  ingress {
+    description     = "HTTPS from ECS tasks"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [var.ecs_tasks_security_group_id]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0

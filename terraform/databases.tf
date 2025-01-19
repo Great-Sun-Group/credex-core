@@ -12,6 +12,7 @@ module "databases" {
   create_neo4j_instances   = true
   common_tags             = local.common_tags
   aws_region              = local.current_env.aws_region
+  ecs_tasks_security_group_id = module.connectors.ecs_tasks_security_group_id
 }
 
 output "neo4j_ledger_instance_id" {

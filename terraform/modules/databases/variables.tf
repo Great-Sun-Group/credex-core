@@ -58,3 +58,8 @@ variable "aws_region" {
     error_message = "AWS region must be a valid region name (e.g., us-east-1, eu-west-1)"
   }
 }
+
+variable "ecs_tasks_security_group_id" {
+  description = "The ID of the ECS tasks security group for CloudWatch logs access"
+  type        = string
+}
