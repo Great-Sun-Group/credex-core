@@ -151,6 +151,9 @@ locals {
 
               # Setup logging
               exec > >(tee /var/log/neo4j-setup.log) 2>&1
+
+              # Set environment for CloudWatch agent
+              export ENVIRONMENT="${var.environment}"
               
               # System setup
               yum update -y
@@ -190,8 +193,8 @@ locals {
                       "collect_list": [
                         {
                           "file_path": "/var/log/neo4j/neo4j.log",
-                          "log_group_name": "/aws/ec2/neo4j/${var.environment}",
-                          "log_stream_name": "{instance_id}",
+                          "log_group_name": "/aws/ec2/neo4j/$${ENVIRONMENT}",
+                          "log_stream_name": "$${instance_id}",
                           "timestamp_format": "%Y-%m-%d %H:%M:%S"
                         }
                       ]
