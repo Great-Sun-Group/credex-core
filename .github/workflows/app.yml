@@ -72,10 +72,11 @@ jobs:
           echo "Current task definition fetched."
 
           echo "Updating task definition with new image and environment variables..."
-          # Update task definition with new image and environment variables
-          # Extract existing Neo4j URLs from current task definition
-          NEO4J_LEDGER_URL=$(echo $TASK_DEFINITION | jq -r '.containerDefinitions[0].environment[] | select(.name == "NEO_4J_LEDGER_SPACE_BOLT_URL") | .value')
-          NEO4J_SEARCH_URL=$(echo $TASK_DEFINITION | jq -r '.containerDefinitions[0].environment[] | select(.name == "NEO_4J_SEARCH_SPACE_BOLT_URL") | .value')
+          # Get Neo4j URLs from Terraform outputs
+          cd terraform
+          NEO4J_LEDGER_URL=$(terraform output -raw neo4j_ledger_bolt_endpoint)
+          NEO4J_SEARCH_URL=$(terraform output -raw neo4j_search_bolt_endpoint)
+          cd ..
 
           NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" --arg PORT "3000" \
             --arg JWT "${{ secrets.JWT_SECRET }}" \
