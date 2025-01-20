@@ -34,10 +34,10 @@ jobs:
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
           terraform init \
-            -backend-config="bucket=credexcore-deploy-state-${ENVIRONMENT}" \
+            -backend-config="bucket=credexcore-statebucket-${ENVIRONMENT}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=credexcore-deploy-state-lock-${ENVIRONMENT}"
+            -backend-config="dynamodb_table=credexcore-statebucket-lock-${ENVIRONMENT}"
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -262,7 +262,7 @@ jobs:
 
       - name: Deploy to S3
         run: |
-          aws s3 sync docs/ s3://docs.${DOMAIN} \
+          aws s3 sync docs/ s3://docsbucket-${DOMAIN} \
             --delete
 
       - name: Invalidate CloudFront Cache
@@ -285,5 +285,5 @@ jobs:
         run: |
           echo "Documentation deployment completed successfully."
           echo "Environment: $ENVIRONMENT"
-          echo "Bucket: docs.${DOMAIN}"
+          echo "Bucket: docsbucket-${DOMAIN}"
           echo "URL: https://docs.${DOMAIN}"
