@@ -185,10 +185,20 @@ exec > /var/log/neo4j-setup.log 2>&1
 export ENVIRONMENT="${var.environment}"
 
 # System setup
-yum update -y
-amazon-linux-extras install java-openjdk11 -y
+echo "=== System Initialization ==="
+echo "Waiting for initial system updates to complete..."
+until ! pgrep -f "yum" > /dev/null; do
+    echo "System is updating, waiting 30 seconds..."
+    sleep 30
+done
 
-# Install Neo4j Enterprise
+echo "=== Java Installation ==="
+amazon-linux-extras install java-openjdk11 -y || {
+    echo "Failed to install Java"
+    exit 1
+}
+
+echo "=== Neo4j Repository Setup ==="
 rpm --import https://debian.neo4j.com/neotechnology.gpg.key
 cat > /etc/yum.repos.d/neo4j.repo << 'REPO'
 [neo4j]
@@ -198,25 +208,26 @@ enabled=1
 gpgcheck=1
 REPO
 
-# Clean yum cache and install Neo4j
-echo "Cleaning yum cache..."
-yum clean all
-yum makecache
-
-# Wait for any existing yum processes to finish
-while pgrep -f "yum" > /dev/null; do
-    echo "Waiting for other yum processes to finish..."
-    sleep 10
-done
-
+echo "=== Neo4j Installation ==="
 echo "Installing Neo4j Enterprise and CloudWatch agent..."
 yum install -y neo4j-enterprise amazon-cloudwatch-agent || {
-    echo "Neo4j installation failed. Checking yum error log..."
+    echo "Installation failed. Diagnostic information:"
+    echo "=== YUM Log ==="
     cat /var/log/yum.log
-    echo "Checking Neo4j repo configuration..."
+    echo "=== Neo4j Repository ==="
     cat /etc/yum.repos.d/neo4j.repo
+    echo "=== System Memory ==="
+    free -m
+    echo "=== Disk Space ==="
+    df -h
     exit 1
 }
+
+# Verify Neo4j package installation
+if ! rpm -q neo4j-enterprise > /dev/null; then
+    echo "Neo4j package not found after installation"
+    exit 1
+fi
 
 # Create required directories if they don't exist
 echo "Creating Neo4j directories..."
