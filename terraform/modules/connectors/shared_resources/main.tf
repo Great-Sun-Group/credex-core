@@ -348,8 +348,7 @@ resource "aws_cloudfront_distribution" "docs" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  # Temporarily remove alias until DNS propagation completes
-  # aliases             = ["docs.${var.domain}"]
+  aliases             = ["docs.${var.domain}"]
   price_class         = "PriceClass_100"
 
   origin {
