@@ -72,7 +72,6 @@ jobs:
           TF_VAR_client_api_key: "dummy"
           TF_VAR_dev_admin_key: "dummy"
           TF_VAR_skip_rate_limiter_key: "dummy"
-          TF_VAR_open_exchange_rates_api: "dummy"
           # Add dummy values for Neo4j bolt URLs that will be replaced with real values after deployment
           TF_VAR_neo_4j_ledger_space_bolt_url: "bolt://dummy-ledger:7687"
           TF_VAR_neo_4j_search_space_bolt_url: "bolt://dummy-search:7687"
