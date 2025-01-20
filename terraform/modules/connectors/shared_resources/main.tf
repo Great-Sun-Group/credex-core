@@ -795,7 +795,7 @@ resource "aws_s3_bucket_logging" "verification_photos" {
 # Located in us-east-1 for geographic redundancy
 resource "aws_s3_bucket" "verification_backups" {
   provider = aws.us_east_1
-  bucket   = "credex-verification-backups-${var.environment}"
+  bucket   = "credexcore-verify-backups-${var.environment}"
 
   tags = merge(var.common_tags, {
     Name = "verification-backups-${var.environment}"
