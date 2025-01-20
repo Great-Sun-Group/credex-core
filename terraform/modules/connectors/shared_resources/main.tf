@@ -348,7 +348,8 @@ resource "aws_cloudfront_distribution" "docs" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  aliases             = ["docs.${var.domain}"]
+  # Temporarily remove alias until DNS propagation completes
+  # aliases             = ["docs.${var.domain}"]
   price_class         = "PriceClass_100"
 
   origin {
@@ -389,9 +390,11 @@ resource "aws_cloudfront_distribution" "docs" {
   }
 
   viewer_certificate {
-    acm_certificate_arn      = aws_acm_certificate_validation.cloudfront_cert.certificate_arn
-    ssl_support_method       = "sni-only"
-    minimum_protocol_version = "TLSv1.2_2021"
+    cloudfront_default_certificate = true
+    # Temporarily use default cert until DNS propagation completes
+    # acm_certificate_arn      = aws_acm_certificate_validation.cloudfront_cert.certificate_arn
+    # ssl_support_method       = "sni-only"
+    # minimum_protocol_version = "TLSv1.2_2021"
   }
 
   tags = merge(var.common_tags, {
