@@ -348,7 +348,8 @@ resource "aws_cloudfront_distribution" "docs" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  aliases             = ["docs.${var.domain}"]
+  # Temporarily remove alias until old CNAME association clears
+  # aliases             = ["docs.${var.domain}"]
   price_class         = "PriceClass_100"
 
   origin {
@@ -390,10 +391,11 @@ resource "aws_cloudfront_distribution" "docs" {
 
   viewer_certificate {
     cloudfront_default_certificate = true
-    # Temporarily use default cert until DNS propagation completes
-    # acm_certificate_arn      = aws_acm_certificate_validation.cloudfront_cert.certificate_arn
-    # ssl_support_method       = "sni-only"
-    # minimum_protocol_version = "TLSv1.2_2021"
+    # Temporarily use default certificate until CNAME is available
+    # cloudfront_default_certificate = false
+    # acm_certificate_arn           = aws_acm_certificate_validation.cloudfront_cert.certificate_arn
+    # ssl_support_method            = "sni-only"
+    # minimum_protocol_version      = "TLSv1.2_2021"
   }
 
   tags = merge(var.common_tags, {
@@ -877,7 +879,7 @@ resource "aws_iam_role" "verification_replication" {
 resource "aws_iam_role_policy" "verification_replication" {
   name = "verification-replication-policy-${var.environment}"
   role = aws_iam_role.verification_replication.id
-
+  
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
