@@ -167,6 +167,11 @@ resource "aws_iam_role_policy_attachment" "neo4j_ssm_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+resource "aws_iam_role_policy_attachment" "neo4j_ssm_policy_full" {
+  role       = aws_iam_role.neo4j_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
+}
+
 resource "aws_iam_instance_profile" "neo4j_instance_profile" {
   name = "neo4j-instance-profile-${var.environment}"
   role = aws_iam_role.neo4j_role.name
@@ -208,9 +213,9 @@ enabled=1
 gpgcheck=1
 REPO
 
-echo "=== Neo4j Installation ==="
-echo "Installing Neo4j Enterprise and CloudWatch agent..."
-yum install -y neo4j-enterprise amazon-cloudwatch-agent || {
+echo "=== Installing Required Packages ==="
+echo "Installing Neo4j Enterprise, CloudWatch agent, and SSM agent..."
+yum install -y neo4j-enterprise amazon-cloudwatch-agent amazon-ssm-agent || {
     echo "Installation failed. Diagnostic information:"
     echo "=== YUM Log ==="
     cat /var/log/yum.log
@@ -282,10 +287,15 @@ cat > /opt/aws/amazon-cloudwatch-agent/config.json << 'CWCONFIG'
 }
 CWCONFIG
 
-# Start CloudWatch agent
+# Start required agents
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/config.json
-systemctl enable amazon-cloudwatch-agent
-systemctl start amazon-cloudwatch-agent
+systemctl enable amazon-cloudwatch-agent amazon-ssm-agent
+systemctl start amazon-cloudwatch-agent amazon-ssm-agent
+
+# Verify agents are running
+echo "=== Verifying Agent Status ==="
+systemctl status amazon-cloudwatch-agent
+systemctl status amazon-ssm-agent
 
 # Calculate memory settings
 total_mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
@@ -318,6 +328,7 @@ dbms.security.allow_csv_import_from_file_urls=false
 server.memory.heap.initial_size=$${heap_size_mb}m
 server.memory.heap.max_size=$${heap_size_mb}m
 server.memory.pagecache.size=$${page_cache_mb}m
+server.memory.off_heap.max_size=$${off_heap_mb}m
 
 # Performance settings
 server.jvm.additional=-XX:+UseG1GC
@@ -337,14 +348,14 @@ db.logs.query.rotation.size=20m
 # Transaction and operation settings
 db.transaction.timeout=15m
 db.transaction.concurrent.maximum=100
-server.memory.off_heap.transaction_max_size=$${off_heap_mb}m
-db.memory.pagecache.flush.buffer.enabled=true
-db.memory.pagecache.flush.buffer.size_in_pages=100
+server.memory.pagecache.flush.buffer.enabled=true
+server.memory.pagecache.flush.buffer.size_in_pages=100
 NEOCONFIG
 
 # Replace placeholders with actual values
 sed -i "s/\$${heap_size_mb}/$heap_size_mb/g" /etc/neo4j/neo4j.conf
 sed -i "s/\$${page_cache_mb}/$page_cache_mb/g" /etc/neo4j/neo4j.conf
+sed -i "s/\$${off_heap_mb}/$off_heap_mb/g" /etc/neo4j/neo4j.conf
 
 # Verify configuration
 echo "Neo4j configuration:"

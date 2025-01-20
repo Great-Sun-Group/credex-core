@@ -17,6 +17,7 @@ resource "aws_vpc" "main" {
 
 # Fetch AZs in the current region
 data "aws_availability_zones" "available" {}
+data "aws_region" "current" {}
 
 # Create private subnets, each in a different AZ
 resource "aws_subnet" "private" {
@@ -102,32 +103,155 @@ resource "aws_route_table_association" "private" {
   route_table_id = element(aws_route_table.private[*].id, count.index)
 }
 
-# Key Pair
-resource "aws_key_pair" "credex_key_pair" {
-  key_name   = "credex-key-pair-${var.environment}"
-  public_key = var.public_key
+# Security group for VPC endpoints
+resource "aws_security_group" "vpc_endpoints" {
+  name        = "vpc-endpoints-sg-${var.environment}"
+  description = "Security group for VPC endpoints"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
+    security_groups  = [aws_security_group.ecs_tasks.id]
+    description      = "Allow HTTPS from ECS tasks"
+  }
+
+  ingress {
+    from_port        = 443
+    to_port          = 443
+    protocol         = "tcp"
+    cidr_blocks      = [var.vpc_cidr]
+    description      = "Allow HTTPS from VPC CIDR"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
+  tags = merge(var.common_tags, {
+    Name = "vpc-endpoints-sg-${var.environment}"
+  })
 }
 
-# ALB security group
-resource "aws_security_group" "alb" {
-  name        = "credex-alb-sg-${var.environment}"
-  description = "Controls access to the ALB"
+# VPC Endpoints for AWS Services
+resource "aws_vpc_endpoint" "ssm" {
+  vpc_id               = aws_vpc.main.id
+  service_name         = "com.amazonaws.${data.aws_region.current.name}.ssm"
+  vpc_endpoint_type    = "Interface"
+  subnet_ids           = aws_subnet.private[*].id
+  security_group_ids   = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled  = true
+
+  tags = merge(var.common_tags, {
+    Name = "ssm-endpoint-${var.environment}"
+  })
+}
+
+resource "aws_vpc_endpoint" "ssm_messages" {
+  vpc_id               = aws_vpc.main.id
+  service_name         = "com.amazonaws.${data.aws_region.current.name}.ssmmessages"
+  vpc_endpoint_type    = "Interface"
+  subnet_ids           = aws_subnet.private[*].id
+  security_group_ids   = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled  = true
+
+  tags = merge(var.common_tags, {
+    Name = "ssm-messages-endpoint-${var.environment}"
+  })
+}
+
+resource "aws_vpc_endpoint" "ec2_messages" {
+  vpc_id               = aws_vpc.main.id
+  service_name         = "com.amazonaws.${data.aws_region.current.name}.ec2messages"
+  vpc_endpoint_type    = "Interface"
+  subnet_ids           = aws_subnet.private[*].id
+  security_group_ids   = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled  = true
+
+  tags = merge(var.common_tags, {
+    Name = "ec2-messages-endpoint-${var.environment}"
+  })
+}
+
+resource "aws_vpc_endpoint" "ecr_api" {
+  vpc_id               = aws_vpc.main.id
+  service_name         = "com.amazonaws.${data.aws_region.current.name}.ecr.api"
+  vpc_endpoint_type    = "Interface"
+  subnet_ids           = aws_subnet.private[*].id
+  security_group_ids   = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled  = true
+
+  tags = merge(var.common_tags, {
+    Name = "ecr-api-endpoint-${var.environment}"
+  })
+}
+
+resource "aws_vpc_endpoint" "ecr_dkr" {
+  vpc_id               = aws_vpc.main.id
+  service_name         = "com.amazonaws.${data.aws_region.current.name}.ecr.dkr"
+  vpc_endpoint_type    = "Interface"
+  subnet_ids           = aws_subnet.private[*].id
+  security_group_ids   = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled  = true
+
+  tags = merge(var.common_tags, {
+    Name = "ecr-dkr-endpoint-${var.environment}"
+  })
+}
+
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${data.aws_region.current.name}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = aws_route_table.private[*].id
+
+  tags = merge(var.common_tags, {
+    Name = "s3-endpoint-${var.environment}"
+  })
+}
+
+# Neo4j security group
+resource "aws_security_group" "neo4j" {
+  name        = "credex-neo4j-sg-${var.environment}"
+  description = "Security group for Neo4j instances"
   vpc_id      = aws_vpc.main.id
 
   ingress {
     protocol    = "tcp"
-    from_port   = 80
-    to_port     = 80
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow HTTP inbound traffic"
+    from_port   = 7474
+    to_port     = 7474
+    cidr_blocks = [var.vpc_cidr]
+    description = "Allow Neo4j HTTP"
   }
 
   ingress {
     protocol    = "tcp"
-    from_port   = 443
-    to_port     = 443
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow HTTPS inbound traffic"
+    from_port   = 7687
+    to_port     = 7687
+    cidr_blocks = [var.vpc_cidr]
+    description = "Allow Neo4j Bolt from VPC"
+  }
+
+  ingress {
+    protocol        = "tcp"
+    from_port       = 7687
+    to_port         = 7687
+    security_groups = [aws_security_group.ecs_tasks.id]
+    description     = "Allow Neo4j Bolt from ECS tasks"
+  }
+
+  # Allow SSM Session Manager access
+  ingress {
+    protocol        = "tcp"
+    from_port       = 443
+    to_port         = 443
+    security_groups = [aws_security_group.vpc_endpoints.id]
+    description     = "Allow HTTPS from SSM endpoints"
   }
 
   egress {
@@ -139,7 +263,7 @@ resource "aws_security_group" "alb" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "credex-alb-sg-${var.environment}"
+    Name = "credex-neo4j-sg-${var.environment}"
   })
 }
 
@@ -196,34 +320,26 @@ resource "aws_security_group" "ecs_tasks" {
   })
 }
 
-# Neo4j security group
-resource "aws_security_group" "neo4j" {
-  name        = "credex-neo4j-sg-${var.environment}"
-  description = "Security group for Neo4j instances"
+# ALB security group
+resource "aws_security_group" "alb" {
+  name        = "credex-alb-sg-${var.environment}"
+  description = "Controls access to the ALB"
   vpc_id      = aws_vpc.main.id
 
   ingress {
     protocol    = "tcp"
-    from_port   = 7474
-    to_port     = 7474
-    cidr_blocks = [var.vpc_cidr]
-    description = "Allow Neo4j HTTP"
+    from_port   = 80
+    to_port     = 80
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTP inbound traffic"
   }
 
   ingress {
     protocol    = "tcp"
-    from_port   = 7687
-    to_port     = 7687
-    cidr_blocks = [var.vpc_cidr]
-    description = "Allow Neo4j Bolt from VPC"
-  }
-
-  ingress {
-    protocol        = "tcp"
-    from_port       = 7687
-    to_port         = 7687
-    security_groups = [aws_security_group.ecs_tasks.id]
-    description     = "Allow Neo4j Bolt from ECS tasks"
+    from_port   = 443
+    to_port     = 443
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow HTTPS inbound traffic"
   }
 
   egress {
@@ -235,67 +351,14 @@ resource "aws_security_group" "neo4j" {
   }
 
   tags = merge(var.common_tags, {
-    Name = "credex-neo4j-sg-${var.environment}"
+    Name = "credex-alb-sg-${var.environment}"
   })
 }
 
-# S3 bucket for docs
-resource "aws_s3_bucket" "docs" {
-  bucket = "docs.${var.domain}"
-
-  tags = merge(var.common_tags, {
-    Name = "docs-${var.environment}"
-  })
-}
-
-# Add block public access configuration before bucket policy
-resource "aws_s3_bucket_public_access_block" "docs" {
-  bucket = aws_s3_bucket.docs.id
-
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
-}
-
-resource "aws_s3_bucket_website_configuration" "docs" {
-  bucket = aws_s3_bucket.docs.id
-  index_document {
-    suffix = "index.html"
-  }
-}
-
-resource "aws_s3_bucket_policy" "docs" {
-  bucket = aws_s3_bucket.docs.id
-  depends_on = [aws_s3_bucket_public_access_block.docs]
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "PublicReadGetObject"
-        Effect    = "Allow"
-        Principal = "*"
-        Action    = "s3:GetObject"
-        Resource  = "${aws_s3_bucket.docs.arn}/*"
-      },
-    ]
-  })
-}
-
-# ACM Certificate for ALB (in current region)
-resource "aws_acm_certificate" "credex_cert" {
-  domain_name               = var.domain
-  subject_alternative_names = ["*.${var.domain}"]
-  validation_method         = "DNS"
-
-  tags = merge(var.common_tags, {
-    Name = "credex-cert-${var.environment}"
-  })
-
-  lifecycle {
-    create_before_destroy = true
-  }
+# Key Pair
+resource "aws_key_pair" "credex_key_pair" {
+  key_name   = "credex-key-pair-${var.environment}"
+  public_key = var.public_key
 }
 
 # ACM Certificate for CloudFront (in us-east-1)
@@ -1056,7 +1119,46 @@ resource "aws_iam_role_policy" "ecs_task_s3_verification" {
   })
 }
 
-# VPC Endpoints for ECS tasks in private subnets
+# VPC Endpoints for AWS Services
+resource "aws_vpc_endpoint" "ssm" {
+  vpc_id               = aws_vpc.main.id
+  service_name         = "com.amazonaws.${data.aws_region.current.name}.ssm"
+  vpc_endpoint_type    = "Interface"
+  subnet_ids           = aws_subnet.private[*].id
+  security_group_ids   = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled  = true
+
+  tags = merge(var.common_tags, {
+    Name = "ssm-endpoint-${var.environment}"
+  })
+}
+
+resource "aws_vpc_endpoint" "ssm_messages" {
+  vpc_id               = aws_vpc.main.id
+  service_name         = "com.amazonaws.${data.aws_region.current.name}.ssmmessages"
+  vpc_endpoint_type    = "Interface"
+  subnet_ids           = aws_subnet.private[*].id
+  security_group_ids   = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled  = true
+
+  tags = merge(var.common_tags, {
+    Name = "ssm-messages-endpoint-${var.environment}"
+  })
+}
+
+resource "aws_vpc_endpoint" "ec2_messages" {
+  vpc_id               = aws_vpc.main.id
+  service_name         = "com.amazonaws.${data.aws_region.current.name}.ec2messages"
+  vpc_endpoint_type    = "Interface"
+  subnet_ids           = aws_subnet.private[*].id
+  security_group_ids   = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled  = true
+
+  tags = merge(var.common_tags, {
+    Name = "ec2-messages-endpoint-${var.environment}"
+  })
+}
+
 resource "aws_vpc_endpoint" "ecr_api" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.${data.aws_region.current.name}.ecr.api"
