@@ -213,16 +213,35 @@ resource "aws_security_group" "neo4j" {
   })
 }
 
-# S3 bucket for docs
+# S3 bucket for docs - create bucket first without waiting for CloudFront
 resource "aws_s3_bucket" "docs" {
   bucket = "docs.${var.domain}"
 
   tags = merge(var.common_tags, {
     Name = "docs-${var.environment}"
   })
+
+  # Force bucket to be created quickly without waiting for CloudFront
+  lifecycle {
+    ignore_changes = [
+      website,
+      policy,
+      versioning,
+    ]
+  }
 }
 
-# Add block public access configuration before bucket policy
+# Configure bucket for website hosting separately
+resource "aws_s3_bucket_website_configuration" "docs" {
+  bucket = aws_s3_bucket.docs.id
+  index_document {
+    suffix = "index.html"
+  }
+
+  depends_on = [aws_s3_bucket.docs]
+}
+
+# Configure public access block separately
 resource "aws_s3_bucket_public_access_block" "docs" {
   bucket = aws_s3_bucket.docs.id
 
@@ -230,18 +249,13 @@ resource "aws_s3_bucket_public_access_block" "docs" {
   block_public_policy     = false
   ignore_public_acls      = false
   restrict_public_buckets = false
+
+  depends_on = [aws_s3_bucket.docs]
 }
 
-resource "aws_s3_bucket_website_configuration" "docs" {
-  bucket = aws_s3_bucket.docs.id
-  index_document {
-    suffix = "index.html"
-  }
-}
-
+# Add bucket policy separately after public access block is configured
 resource "aws_s3_bucket_policy" "docs" {
   bucket = aws_s3_bucket.docs.id
-  depends_on = [aws_s3_bucket_public_access_block.docs]
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -255,6 +269,8 @@ resource "aws_s3_bucket_policy" "docs" {
       },
     ]
   })
+
+  depends_on = [aws_s3_bucket_public_access_block.docs]
 }
 
 # ACM Certificate for ALB (in current region)
@@ -1013,5 +1029,3 @@ resource "aws_iam_role_policy" "ecs_task_s3_verification" {
     ]
   })
 }
-
-# Rest of infrastructure remains unchanged...
