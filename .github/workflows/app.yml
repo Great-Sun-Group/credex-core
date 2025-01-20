@@ -6,12 +6,12 @@ on:
 jobs:
   deploy_application:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+    environment: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
 
     env:
-      ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
-      BUILD_TARGET: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'production' || 'development' }}
-      DOMAIN: ${{ github.ref == 'refs/heads/prod' && 'mycredex.app' || github.ref == 'refs/heads/stage' && 'stage.mycredex.dev' || 'dev.mycredex.dev' }}
+      ENVIRONMENT: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
+      BUILD_TARGET: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'production') || 'development' }}
+      DOMAIN: ${{ (github.ref == 'refs/heads/prod' && 'mycredex.app') || (github.ref == 'refs/heads/stage' && 'stage.mycredex.dev') || 'dev.mycredex.dev' }}
 
     steps:
       - name: Checkout code
@@ -240,12 +240,12 @@ jobs:
 
   deploy_docs:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+    environment: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
     needs: deploy_application
 
     env:
-      ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
-      DOMAIN: ${{ github.ref == 'refs/heads/prod' && 'mycredex.app' || github.ref == 'refs/heads/stage' && 'stage.mycredex.dev' || 'dev.mycredex.dev' }}
+      ENVIRONMENT: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
+      DOMAIN: ${{ (github.ref == 'refs/heads/prod' && 'mycredex.app') || (github.ref == 'refs/heads/stage' && 'stage.mycredex.dev') || 'dev.mycredex.dev' }}
 
     steps:
       - name: Checkout code
