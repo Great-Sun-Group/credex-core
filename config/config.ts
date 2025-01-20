@@ -50,10 +50,6 @@ function validateEnv(requiredVars: string[]): {
 
 const requiredEnvVars = [
   "NODE_ENV",
-  "NEO_4J_LEDGER_SPACE_USER",
-  "NEO_4J_LEDGER_SPACE_PASS",
-  "NEO_4J_SEARCH_SPACE_USER",
-  "NEO_4J_SEARCH_SPACE_PASS",
   "NEO_4J_LEDGER_SPACE_BOLT_URL",
   "NEO_4J_SEARCH_SPACE_BOLT_URL",
   "OPEN_EXCHANGE_RATES_API",
@@ -81,14 +77,10 @@ async function initConfig() {
     database: {
       neo4jLedgerSpace: {
         boltUrl: envVars.NEO_4J_LEDGER_SPACE_BOLT_URL,
-        user: envVars.NEO_4J_LEDGER_SPACE_USER,
-        password: envVars.NEO_4J_LEDGER_SPACE_PASS,
         connectionTimeout: 60000, // Increase timeout to 60 seconds
       },
       neo4jSearchSpace: {
         boltUrl: envVars.NEO_4J_SEARCH_SPACE_BOLT_URL,
-        user: envVars.NEO_4J_SEARCH_SPACE_USER,
-        password: envVars.NEO_4J_SEARCH_SPACE_PASS,
         connectionTimeout: 60000, // Increase timeout to 60 seconds
       },
     },

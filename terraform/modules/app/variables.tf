@@ -74,7 +74,7 @@ variable "alb_listener" {
   type        = string
 }
 
-# Neo4j variables needed by databases module
+# Neo4j connection URLs from database state
 variable "neo_4j_ledger_space_bolt_url" {
   description = "The Neo4j Bolt URL for Ledger Space"
   type        = string
@@ -83,30 +83,6 @@ variable "neo_4j_ledger_space_bolt_url" {
 
 variable "neo_4j_search_space_bolt_url" {
   description = "The Neo4j Bolt URL for Search Space"
-  type        = string
-  sensitive   = true
-}
-
-variable "neo_4j_ledger_space_user" {
-  description = "The username for the Neo4j Ledger Space"
-  type        = string
-  sensitive   = true
-}
-
-variable "neo_4j_search_space_user" {
-  description = "The username for the Neo4j Search Space"
-  type        = string
-  sensitive   = true
-}
-
-variable "neo_4j_ledger_space_password" {
-  description = "The password for the Neo4j Ledger Space"
-  type        = string
-  sensitive   = true
-}
-
-variable "neo_4j_search_space_password" {
-  description = "The password for the Neo4j Search Space"
   type        = string
   sensitive   = true
 }

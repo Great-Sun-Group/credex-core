@@ -11,13 +11,9 @@ interface Config {
   logLevel: string;
   ledgerSpace: {
     uri: string;
-    user: string;
-    password: string;
   };
   searchSpace: {
     uri: string;
-    user: string;
-    password: string;
   };
   jwtSecret: string;
   rateLimit: {
@@ -39,13 +35,9 @@ class ConfigUtils {
       logLevel: process.env.LOG_LEVEL || "info",
       ledgerSpace: {
         uri: process.env.NEO_4J_LEDGER_SPACE_BOLT_URL || "",
-        user: process.env.NEO_4J_LEDGER_SPACE_USER || "",
-        password: process.env.NEO_4J_LEDGER_SPACE_PASS || "",
       },
       searchSpace: {
         uri: process.env.NEO_4J_SEARCH_SPACE_BOLT_URL || "",
-        user: process.env.NEO_4J_SEARCH_SPACE_USER || "",
-        password: process.env.NEO_4J_SEARCH_SPACE_PASS || "",
       },
       jwtSecret: process.env.JWT_SECRET || "",
       rateLimit: {
@@ -99,18 +91,15 @@ class ConfigUtils {
       }
     }
 
-    // Validate nested objects
-    const validateNestedObject = (obj: any, prefix: string) => {
-      for (const key in obj) {
-        if (obj[key] === "") {
-          logger.error(`Missing required configuration: ${prefix}${key}`);
-          throw new Error(`Missing required configuration: ${prefix}${key}`);
-        }
-      }
-    };
-
-    validateNestedObject(this.config.ledgerSpace, "ledgerSpace.");
-    validateNestedObject(this.config.searchSpace, "searchSpace.");
+    // Validate Neo4j URIs
+    if (!this.config.ledgerSpace.uri) {
+      logger.error("Missing required configuration: ledgerSpace.uri");
+      throw new Error("Missing required configuration: ledgerSpace.uri");
+    }
+    if (!this.config.searchSpace.uri) {
+      logger.error("Missing required configuration: searchSpace.uri");
+      throw new Error("Missing required configuration: searchSpace.uri");
+    }
     logger.info("Configuration validation completed successfully");
   }
 }

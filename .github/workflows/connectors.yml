@@ -20,8 +20,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.CREDEXCORE_DEV_AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.CREDEXCORE_DEV_AWS_SECRET_ACCESS_KEY }}
           aws-region: af-south-1
 
       - name: Setup Terraform
@@ -74,10 +74,6 @@ jobs:
           TF_VAR_open_exchange_rates_api: "dummy"
           TF_VAR_neo_4j_ledger_space_bolt_url: "dummy"
           TF_VAR_neo_4j_search_space_bolt_url: "dummy"
-          TF_VAR_neo_4j_ledger_space_user: "dummy"
-          TF_VAR_neo_4j_search_space_user: "dummy"
-          TF_VAR_neo_4j_ledger_space_password: "dummy"
-          TF_VAR_neo_4j_search_space_password: "dummy"
           TF_VAR_neo4j_enterprise_license: "dummy"
           TF_VAR_firebase_project_id: "dummy"
           TF_VAR_firebase_client_email: "dummy"
@@ -99,10 +95,6 @@ jobs:
           TF_VAR_skip_rate_limiter_key: "dummy"
           TF_VAR_neo_4j_ledger_space_bolt_url: "dummy"
           TF_VAR_neo_4j_search_space_bolt_url: "dummy"
-          TF_VAR_neo_4j_ledger_space_user: "dummy"
-          TF_VAR_neo_4j_search_space_user: "dummy"
-          TF_VAR_neo_4j_ledger_space_password: "dummy"
-          TF_VAR_neo_4j_search_space_password: "dummy"
           TF_VAR_neo4j_enterprise_license: "dummy"
           TF_VAR_firebase_project_id: "dummy"
           TF_VAR_firebase_client_email: "dummy"

@@ -34,11 +34,11 @@
           to create the necessary Terraform state infrastructure.
         </li>
         <li>
-          The databases workflow has been run and the Neo4j connection details are
-          properly set as GitHub secrets.
+          The databases workflow has been run to create the Neo4j instances. The application
+          will automatically use the bolt endpoints from Terraform state (no authentication required).
         </li>
         <li>
-          All required secrets (JWT_SECRET, CLIENT_API_KEY, etc.) are properly
+          All required secrets (JWT_SECRET, CLIENT_API_KEY, Firebase configuration, etc.) are properly
           configured in GitHub.
         </li>
       </ol>
@@ -105,27 +105,41 @@
           Includes build arguments for sensitive information:
           <ul>
             <li>NODE_ENV</li>
-            <li>Neo4j connection details (both LedgerSpace and SearchSpace)</li>
+            <li>Neo4j connection details (both LedgerSpace and SearchSpace bolt URLs)</li>
             <li>JWT_SECRET</li>
             <li>CLIENT_API_KEY</li>
             <li>DEV_ADMIN_KEY</li>
             <li>SKIP_RATE_LIMITER_KEY</li>
             <li>OPEN_EXCHANGE_RATES_API</li>
+            <li>FIREBASE_PROJECT_ID</li>
+            <li>FIREBASE_CLIENT_EMAIL</li>
+            <li>FIREBASE_PRIVATE_KEY</li>
           </ul>
         </li>
         <li>Tags the image with the Git SHA</li>
         <li>Pushes to environment-specific ECR repository</li>
       </ul>
 
-      <h3>2. Infrastructure Deployment</h3>
+      <h3>2. Infrastructure and Application Deployment</h3>
       <p>
-        Uses Terraform to manage the application infrastructure:
+        The deployment process uses a combination of Terraform and AWS CLI:
       </p>
       <ul>
-        <li>Initializes with environment-specific backend configuration</li>
-        <li>Targets only the app module</li>
-        <li>Uses dummy values for Neo4j variables since they're not needed</li>
-        <li>Applies infrastructure changes if needed</li>
+        <li>Terraform is used only to:
+          <ul>
+            <li>Initialize backend configuration</li>
+            <li>Read infrastructure outputs (Neo4j endpoints, etc.)</li>
+            <li>Note: Terraform apply is NOT used for app deployment</li>
+          </ul>
+        </li>
+        <li>AWS CLI is used to:
+          <ul>
+            <li>Get current ECS task definition</li>
+            <li>Update task definition with new image and environment variables</li>
+            <li>Deploy updated task definition</li>
+            <li>Monitor deployment status and collect logs</li>
+          </ul>
+        </li>
       </ul>
 
       <h3>3. ECS Deployment</h3>
@@ -140,57 +154,14 @@
             <li>New Docker image</li>
             <li>Environment variables from GitHub secrets</li>
             <li>Node environment configuration</li>
+            <li>Firebase configuration for push notifications</li>
+            <li>Neo4j bolt URLs from current task definition</li>
           </ul>
         </li>
         <li>Registers new task definition</li>
         <li>Updates ECS service</li>
-        <li>Waits for service to stabilize (up to 40 attempts)</li>
-      </ul>
-
-      <h2>Verification System Infrastructure</h2>
-
-      <h3>1. AWS Resources</h3>
-      <p>
-        The verification system requires the following AWS resources:
-      </p>
-      <ul>
-        <li>
-          <strong>S3 Bucket</strong>:
-          <ul>
-            <li>Name: credex-verification-photos-${environment}</li>
-            <li>Versioning enabled</li>
-            <li>Server-side encryption (AES-256)</li>
-            <li>Public access blocked</li>
-          </ul>
-        </li>
-        <li>
-          <strong>IAM Roles</strong>:
-          <ul>
-            <li>Rekognition service role</li>
-            <li>ECS task role with Rekognition permissions</li>
-          </ul>
-        </li>
-      </ul>
-
-      <h3>2. Rekognition Setup</h3>
-      <p>
-        The Rekognition collection must be created via AWS SDK in the application code:
-      </p>
-      <ul>
-        <li>Collection ID: credex-member-faces-${environment}</li>
-        <li>Created during application initialization</li>
-        <li>Managed through IAM roles and policies</li>
-      </ul>
-
-      <h3>3. Security Configuration</h3>
-      <p>
-        The verification system includes the following security measures:
-      </p>
-      <ul>
-        <li>Encrypted storage for verification photos</li>
-        <li>Least privilege IAM roles</li>
-        <li>Private S3 bucket access</li>
-        <li>Secure API endpoints</li>
+        <li>Waits for service to stabilize (up to 40 attempts, checking every 30 seconds)</li>
+        <li>Logs detailed deployment status and any failed task information</li>
       </ul>
 
       <h2>Documentation Deployment Process</h2>
@@ -205,6 +176,7 @@
         </li>
         <li>Deletes any files in the bucket that don't exist locally</li>
         <li>Makes the documentation available at https://docs.${DOMAIN}</li>
+        <li>Invalidates CloudFront cache to ensure immediate content updates</li>
       </ul>
 
       <h2>State Management</h2>
@@ -247,13 +219,6 @@
             <li>Documentation URL</li>
           </ul>
         </li>
-        <li>
-          <strong>Verification System</strong>:
-          <ul>
-            <li>S3 Bucket Name</li>
-            <li>Rekognition Role ARN</li>
-          </ul>
-        </li>
       </ul>
 
       <h2>Security Considerations</h2>
@@ -265,6 +230,7 @@
             <li>AWS credentials stored as GitHub secrets</li>
             <li>Application secrets passed as build arguments</li>
             <li>Environment variables set in ECS task definition</li>
+            <li>Firebase configuration securely managed through GitHub secrets</li>
           </ul>
         </li>
         <li>
@@ -273,14 +239,6 @@
             <li>Images stored in private ECR repository</li>
             <li>Tagged with Git SHA for traceability</li>
             <li>Built with no-cache option for fresh dependencies</li>
-          </ul>
-        </li>
-        <li>
-          <strong>Verification System Security</strong>:
-          <ul>
-            <li>Encrypted storage for verification photos</li>
-            <li>Private S3 bucket access</li>
-            <li>Least privilege IAM roles</li>
           </ul>
         </li>
       </ol>
@@ -306,6 +264,7 @@
             <li>Service events in AWS console</li>
             <li>Container logs in CloudWatch</li>
             <li>Task definition configuration</li>
+            <li>Failed task logs and reasons</li>
           </ul>
         </li>
         <li>
@@ -313,14 +272,7 @@
           <ul>
             <li>S3 bucket permissions</li>
             <li>CloudFront cache invalidation</li>
-          </ul>
-        </li>
-        <li>
-          <strong>Verification System Issues</strong>:
-          <ul>
-            <li>S3 bucket permissions</li>
-            <li>Rekognition role permissions</li>
-            <li>Collection creation logs</li>
+            <li>CloudFront distribution ID configuration</li>
           </ul>
         </li>
       </ol>
@@ -334,6 +286,7 @@
             <li>Check ECS service status</li>
             <li>Verify application health endpoint</li>
             <li>Monitor application logs</li>
+            <li>Review deployment events and task status</li>
           </ul>
         </li>
         <li>
@@ -341,14 +294,7 @@
           <ul>
             <li>Verify documentation is accessible at https://docs.${DOMAIN}</li>
             <li>Check for any broken links or missing content</li>
-          </ul>
-        </li>
-        <li>
-          <strong>Verification System</strong>:
-          <ul>
-            <li>Verify S3 bucket configuration</li>
-            <li>Test Rekognition collection access</li>
-            <li>Validate IAM role permissions</li>
+            <li>Confirm CloudFront cache invalidation completed</li>
           </ul>
         </li>
       </ol>

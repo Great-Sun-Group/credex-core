@@ -3,6 +3,7 @@ module "databases" {
 
   environment              = var.environment
   vpc_id                   = module.connectors.vpc_id
+  vpc_cidr                 = local.current_env.vpc_cidr
   subnet_ids               = module.connectors.private_subnet_ids
   neo4j_security_group_id  = module.connectors.neo4j_security_group_id
   key_pair_name            = module.connectors.key_pair_name
@@ -12,6 +13,7 @@ module "databases" {
   create_neo4j_instances   = true
   common_tags             = local.common_tags
   aws_region              = local.current_env.aws_region
+  ecs_tasks_security_group_id = module.connectors.ecs_tasks_security_group_id
 }
 
 output "neo4j_ledger_instance_id" {
