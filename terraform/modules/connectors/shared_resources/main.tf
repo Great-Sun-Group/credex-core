@@ -213,24 +213,17 @@ resource "aws_vpc_endpoint" "s3" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowRequiredRepositoryAccess"
+        Sid       = "AllowAllS3Access"
         Effect    = "Allow"
         Principal = "*"
         Action = [
           "s3:GetObject",
-          "s3:ListBucket"
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
         ]
         Resource = [
-          "arn:aws:s3:::yum.neo4j.com/*",
-          "arn:aws:s3:::yum.neo4j.com",
-          "arn:aws:s3:::amazonlinux-2-repos-af-south-1.s3.amazonaws.com/*",
-          "arn:aws:s3:::amazonlinux-2-repos-af-south-1.s3.amazonaws.com",
-          "arn:aws:s3:::amazonlinux.af-south-1.amazonaws.com/*",
-          "arn:aws:s3:::amazonlinux.af-south-1.amazonaws.com",
-          "arn:aws:s3:::aws-ssm-af-south-1/*",
-          "arn:aws:s3:::aws-ssm-af-south-1",
-          "arn:aws:s3:::amazon-ssm-af-south-1/*",
-          "arn:aws:s3:::amazon-ssm-af-south-1"
+          "arn:aws:s3:::*",
+          "arn:aws:s3:::*/*"
         ]
       }
     ]
@@ -707,7 +700,6 @@ resource "aws_ecr_repository" "credex_core" {
 # ECS execution role
 resource "aws_iam_role" "ecs_execution_role" {
   name = "ecs-execution-role-${var.environment}"
-
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -784,7 +776,7 @@ resource "aws_iam_role_policy" "ecs_task_role_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
+        Effect = "Allow",
         Action = [
           "logs:CreateLogStream",
           "logs:PutLogEvents",
