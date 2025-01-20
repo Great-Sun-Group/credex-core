@@ -6,12 +6,12 @@ on:
 jobs:
   deploy_application:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+    environment: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
 
     env:
-      ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
-      BUILD_TARGET: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'production' || 'development' }}
-      DOMAIN: ${{ github.ref == 'refs/heads/prod' && 'mycredex.app' || github.ref == 'refs/heads/stage' && 'stage.mycredex.dev' || 'dev.mycredex.dev' }}
+      ENVIRONMENT: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
+      BUILD_TARGET: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'production') || 'development' }}
+      DOMAIN: ${{ (github.ref == 'refs/heads/prod' && 'mycredex.app') || (github.ref == 'refs/heads/stage' && 'stage.mycredex.dev') || 'dev.mycredex.dev' }}
 
     steps:
       - name: Checkout code
@@ -34,10 +34,10 @@ jobs:
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
           terraform init \
-            -backend-config="bucket=credex-terraform-state-${ENVIRONMENT}" \
+            -backend-config="bucket=credexcore-statebucket-${ENVIRONMENT}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=credex-terraform-state-lock-${ENVIRONMENT}"
+            -backend-config="dynamodb_table=credexcore-statebucket-lock-${ENVIRONMENT}"
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -240,12 +240,12 @@ jobs:
 
   deploy_docs:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+    environment: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
     needs: deploy_application
 
     env:
-      ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
-      DOMAIN: ${{ github.ref == 'refs/heads/prod' && 'mycredex.app' || github.ref == 'refs/heads/stage' && 'stage.mycredex.dev' || 'dev.mycredex.dev' }}
+      ENVIRONMENT: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
+      DOMAIN: ${{ (github.ref == 'refs/heads/prod' && 'mycredex.app') || (github.ref == 'refs/heads/stage' && 'stage.mycredex.dev') || 'dev.mycredex.dev' }}
 
     steps:
       - name: Checkout code
@@ -262,7 +262,7 @@ jobs:
 
       - name: Deploy to S3
         run: |
-          aws s3 sync docs/ s3://docs.${DOMAIN} \
+          aws s3 sync docs/ s3://docsbucket-${DOMAIN} \
             --delete
 
       - name: Invalidate CloudFront Cache
@@ -285,5 +285,5 @@ jobs:
         run: |
           echo "Documentation deployment completed successfully."
           echo "Environment: $ENVIRONMENT"
-          echo "Bucket: docs.${DOMAIN}"
+          echo "Bucket: docsbucket-${DOMAIN}"
           echo "URL: https://docs.${DOMAIN}"

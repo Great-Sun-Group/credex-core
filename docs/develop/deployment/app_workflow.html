@@ -8,12 +8,16 @@
   </head>
   <body>
     <div id="menuButton" onclick="window.location.href='../../menu.html'">
-      <img src="../../images/logo.png" alt="Menu" class="menu-logo">
+      <img src="../../images/logo.png" alt="Menu" class="menu-logo" />
       <span class="menu-text">MENU</span>
     </div>
 
     <div class="header-logo">
-      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
+      <img
+        src="../../images/logo.png"
+        alt="Credex Logo"
+        class="secondary-logo"
+      />
     </div>
     <div class="container">
       <h1>Application Deployment Workflow</h1>
@@ -25,17 +29,15 @@
 
       <h2>Prerequisites</h2>
 
-      <p>
-        Before running this workflow, ensure that:
-      </p>
+      <p>Before running this workflow, ensure that:</p>
       <ol>
         <li>
-          The connectors workflow has been run at least once for the target environment
-          to create the necessary Terraform state infrastructure.
+          The connectors workflow has been run at least once for the target
+          environment to create the necessary Terraform state infrastructure.
         </li>
         <li>
-          The databases workflow has been run and the Neo4j connection details are
-          properly set as GitHub secrets.
+          The databases workflow has been run and the Neo4j connection details
+          are properly set as GitHub secrets.
         </li>
         <li>
           All required secrets (JWT_SECRET, CLIENT_API_KEY, etc.) are properly
@@ -45,25 +47,24 @@
 
       <h2>Workflow Overview</h2>
 
-      <p>
-        The workflow consists of two jobs:
-      </p>
+      <p>The workflow consists of two jobs:</p>
 
       <ol>
         <li>
-          <strong>deploy_application</strong>: Builds and deploys the application
-          to AWS ECS
+          <strong>deploy_application</strong>: Builds and deploys the
+          application to AWS ECS
         </li>
         <li>
-          <strong>deploy_docs</strong>: Deploys the documentation to S3 after the
-          application deployment succeeds
+          <strong>deploy_docs</strong>: Deploys the documentation to S3 after
+          the application deployment succeeds
         </li>
       </ol>
 
       <h2>Environment Configuration</h2>
 
       <p>
-        The workflow determines the environment and related settings based on the Git branch:
+        The workflow determines the environment and related settings based on
+        the Git branch:
       </p>
 
       <table>
@@ -97,7 +98,8 @@
 
       <h3>1. Docker Image Build</h3>
       <p>
-        The workflow builds a Docker image with environment-specific configuration:
+        The workflow builds a Docker image with environment-specific
+        configuration:
       </p>
       <ul>
         <li>Uses multi-stage builds with environment-specific targets</li>
@@ -118,9 +120,7 @@
       </ul>
 
       <h3>2. Infrastructure Deployment</h3>
-      <p>
-        Uses Terraform to manage the application infrastructure:
-      </p>
+      <p>Uses Terraform to manage the application infrastructure:</p>
       <ul>
         <li>Initializes with environment-specific backend configuration</li>
         <li>Targets only the app module</li>
@@ -129,9 +129,7 @@
       </ul>
 
       <h3>3. ECS Deployment</h3>
-      <p>
-        Updates the ECS service with the new application version:
-      </p>
+      <p>Updates the ECS service with the new application version:</p>
       <ul>
         <li>Fetches current task definition</li>
         <li>
@@ -150,14 +148,12 @@
       <h2>Verification System Infrastructure</h2>
 
       <h3>1. AWS Resources</h3>
-      <p>
-        The verification system requires the following AWS resources:
-      </p>
+      <p>The verification system requires the following AWS resources:</p>
       <ul>
         <li>
           <strong>S3 Bucket</strong>:
           <ul>
-            <li>Name: credex-verification-photos-${environment}</li>
+            <li>Name: credexcore-verifybucket-photos-${environment}</li>
             <li>Versioning enabled</li>
             <li>Server-side encryption (AES-256)</li>
             <li>Public access blocked</li>
@@ -174,7 +170,8 @@
 
       <h3>2. Rekognition Setup</h3>
       <p>
-        The Rekognition collection must be created via AWS SDK in the application code:
+        The Rekognition collection must be created via AWS SDK in the
+        application code:
       </p>
       <ul>
         <li>Collection ID: credex-member-faces-${environment}</li>
@@ -183,9 +180,7 @@
       </ul>
 
       <h3>3. Security Configuration</h3>
-      <p>
-        The verification system includes the following security measures:
-      </p>
+      <p>The verification system includes the following security measures:</p>
       <ul>
         <li>Encrypted storage for verification photos</li>
         <li>Least privilege IAM roles</li>
@@ -195,9 +190,7 @@
 
       <h2>Documentation Deployment Process</h2>
 
-      <p>
-        After successful application deployment, the workflow:
-      </p>
+      <p>After successful application deployment, the workflow:</p>
       <ul>
         <li>
           Syncs the docs/ directory to the environment-specific S3 bucket
@@ -210,22 +203,24 @@
       <h2>State Management</h2>
 
       <p>
-        The workflow uses the same state management infrastructure as the connectors
-        workflow:
+        The workflow uses the same state management infrastructure as the
+        connectors workflow:
       </p>
       <ul>
         <li>
-          <strong>S3 Backend</strong>: credex-terraform-state-${ENVIRONMENT}
+          <strong>S3 Backend</strong>: credexcore-statebucket-${ENVIRONMENT}
         </li>
         <li>
-          <strong>DynamoDB Lock Table</strong>: credex-terraform-state-lock-${ENVIRONMENT}
+          <strong>DynamoDB Lock Table</strong>:
+          credexcore-statebucket-lock-${ENVIRONMENT}
         </li>
       </ul>
 
       <h2>Infrastructure Outputs</h2>
 
       <p>
-        The workflow outputs detailed information about the deployed application:
+        The workflow outputs detailed information about the deployed
+        application:
       </p>
 
       <ul>
@@ -287,9 +282,7 @@
 
       <h2>Troubleshooting</h2>
 
-      <p>
-        If deployment fails, check:
-      </p>
+      <p>If deployment fails, check:</p>
 
       <ol>
         <li>
@@ -339,7 +332,9 @@
         <li>
           <strong>Documentation Access</strong>:
           <ul>
-            <li>Verify documentation is accessible at https://docs.${DOMAIN}</li>
+            <li>
+              Verify documentation is accessible at https://docs.${DOMAIN}
+            </li>
             <li>Check for any broken links or missing content</li>
           </ul>
         </li>
@@ -356,14 +351,15 @@
       <h2>Conclusion</h2>
 
       <p>
-        The application deployment workflow provides a comprehensive solution for
-        deploying both the application and its documentation. It ensures consistent
-        deployments across environments through environment-specific configuration
-        and state management. The workflow includes proper security measures,
-        handles sensitive information appropriately, and provides detailed output
-        for monitoring and troubleshooting. The multi-stage deployment process,
-        with separate jobs for application and documentation, ensures that all
-        components are updated together while maintaining proper dependencies.
+        The application deployment workflow provides a comprehensive solution
+        for deploying both the application and its documentation. It ensures
+        consistent deployments across environments through environment-specific
+        configuration and state management. The workflow includes proper
+        security measures, handles sensitive information appropriately, and
+        provides detailed output for monitoring and troubleshooting. The
+        multi-stage deployment process, with separate jobs for application and
+        documentation, ensures that all components are updated together while
+        maintaining proper dependencies.
       </p>
     </div>
   </body>

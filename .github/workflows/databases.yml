@@ -6,10 +6,10 @@ on:
 jobs:
   deploy_neo4j:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+    environment: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
 
     env:
-      ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+      ENVIRONMENT: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
 
     steps:
       - name: Checkout code
@@ -35,10 +35,10 @@ jobs:
           cd terraform
           echo "Initializing Terraform..."
           terraform init \
-            -backend-config="bucket=credex-terraform-state-${ENVIRONMENT}" \
+            -backend-config="bucket=credexcore-statebucket-${ENVIRONMENT}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=credex-terraform-state-lock-${ENVIRONMENT}"
+            -backend-config="dynamodb_table=credexcore-statebucket-lock-${ENVIRONMENT}"
 
       - name: Terraform Plan
         env:

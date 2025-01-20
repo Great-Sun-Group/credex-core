@@ -213,16 +213,35 @@ resource "aws_security_group" "neo4j" {
   })
 }
 
-# S3 bucket for docs
+# S3 bucket for docs - create bucket first without waiting for CloudFront
 resource "aws_s3_bucket" "docs" {
-  bucket = "docs.${var.domain}"
+  bucket = "docsbucket-${var.domain}"
 
   tags = merge(var.common_tags, {
     Name = "docs-${var.environment}"
   })
+
+  # Force bucket to be created quickly without waiting for CloudFront
+  lifecycle {
+    ignore_changes = [
+      website,
+      policy,
+      versioning,
+    ]
+  }
 }
 
-# Add block public access configuration before bucket policy
+# Configure bucket for website hosting separately
+resource "aws_s3_bucket_website_configuration" "docs" {
+  bucket = aws_s3_bucket.docs.id
+  index_document {
+    suffix = "index.html"
+  }
+
+  depends_on = [aws_s3_bucket.docs]
+}
+
+# Configure public access block separately
 resource "aws_s3_bucket_public_access_block" "docs" {
   bucket = aws_s3_bucket.docs.id
 
@@ -230,18 +249,13 @@ resource "aws_s3_bucket_public_access_block" "docs" {
   block_public_policy     = false
   ignore_public_acls      = false
   restrict_public_buckets = false
+
+  depends_on = [aws_s3_bucket.docs]
 }
 
-resource "aws_s3_bucket_website_configuration" "docs" {
-  bucket = aws_s3_bucket.docs.id
-  index_document {
-    suffix = "index.html"
-  }
-}
-
+# Add bucket policy separately after public access block is configured
 resource "aws_s3_bucket_policy" "docs" {
   bucket = aws_s3_bucket.docs.id
-  depends_on = [aws_s3_bucket_public_access_block.docs]
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -255,6 +269,8 @@ resource "aws_s3_bucket_policy" "docs" {
       },
     ]
   })
+
+  depends_on = [aws_s3_bucket_public_access_block.docs]
 }
 
 # ACM Certificate for ALB (in current region)
@@ -332,12 +348,13 @@ resource "aws_cloudfront_distribution" "docs" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  aliases             = ["docs.${var.domain}"]
+  # Temporarily remove alias until old CNAME association clears
+  # aliases             = ["docs.${var.domain}"]
   price_class         = "PriceClass_100"
 
   origin {
     domain_name = aws_s3_bucket_website_configuration.docs.website_endpoint
-    origin_id   = "S3-docs.${var.domain}"
+    origin_id   = "S3-docsbucket-${var.domain}"
     
     custom_origin_config {
       http_port              = 80
@@ -350,7 +367,7 @@ resource "aws_cloudfront_distribution" "docs" {
   default_cache_behavior {
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "S3-docs.${var.domain}"
+    target_origin_id       = "S3-docsbucket-${var.domain}"
     viewer_protocol_policy = "redirect-to-https"
     compress              = true
 
@@ -373,9 +390,12 @@ resource "aws_cloudfront_distribution" "docs" {
   }
 
   viewer_certificate {
-    acm_certificate_arn      = aws_acm_certificate_validation.cloudfront_cert.certificate_arn
-    ssl_support_method       = "sni-only"
-    minimum_protocol_version = "TLSv1.2_2021"
+    cloudfront_default_certificate = true
+    # Temporarily use default certificate until CNAME is available
+    # cloudfront_default_certificate = false
+    # acm_certificate_arn           = aws_acm_certificate_validation.cloudfront_cert.certificate_arn
+    # ssl_support_method            = "sni-only"
+    # minimum_protocol_version      = "TLSv1.2_2021"
   }
 
   tags = merge(var.common_tags, {
@@ -615,7 +635,7 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
 # Security: Encrypted at rest, no public access, versioning enabled
 # Access Pattern: Write to uploads/, process to processed/, archive to archived/
 resource "aws_s3_bucket" "verification_photos" {
-  bucket = "credex-verification-photos-${var.environment}"
+  bucket = "credexcore-verifybucket-photos-${var.environment}"
 
   tags = merge(var.common_tags, {
     Name = "verification-photos-${var.environment}"
@@ -753,7 +773,7 @@ resource "aws_s3_bucket_cors_configuration" "verification_photos" {
 # Access logging bucket for audit trail
 # Purpose: Store access logs for security and compliance
 resource "aws_s3_bucket" "verification_logs" {
-  bucket = "credex-verification-logs-${var.environment}"
+  bucket = "credexcore-verifybucket-logs-${var.environment}"
 
   tags = merge(var.common_tags, {
     Name = "verification-logs-${var.environment}"
@@ -795,7 +815,7 @@ resource "aws_s3_bucket_logging" "verification_photos" {
 # Located in us-east-1 for geographic redundancy
 resource "aws_s3_bucket" "verification_backups" {
   provider = aws.us_east_1
-  bucket   = "credex-verification-backups-${var.environment}"
+  bucket   = "credexcore-verifybucket-backups-${var.environment}"
 
   tags = merge(var.common_tags, {
     Name = "verification-backups-${var.environment}"
@@ -859,7 +879,7 @@ resource "aws_iam_role" "verification_replication" {
 resource "aws_iam_role_policy" "verification_replication" {
   name = "verification-replication-policy-${var.environment}"
   role = aws_iam_role.verification_replication.id
-
+  
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -1013,5 +1033,3 @@ resource "aws_iam_role_policy" "ecs_task_s3_verification" {
     ]
   })
 }
-
-# Rest of infrastructure remains unchanged...
