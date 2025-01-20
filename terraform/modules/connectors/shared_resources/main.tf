@@ -361,6 +361,21 @@ resource "aws_key_pair" "credex_key_pair" {
   public_key = var.public_key
 }
 
+# ACM Certificate for main domain
+resource "aws_acm_certificate" "credex_cert" {
+  domain_name               = var.domain
+  subject_alternative_names = ["*.${var.domain}"]
+  validation_method         = "DNS"
+
+  tags = merge(var.common_tags, {
+    Name = "credex-cert-${var.environment}"
+  })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 # ACM Certificate for CloudFront (in us-east-1)
 resource "aws_acm_certificate" "cloudfront_cert" {
   provider = aws.us_east_1
@@ -375,6 +390,64 @@ resource "aws_acm_certificate" "cloudfront_cert" {
   lifecycle {
     create_before_destroy = true
   }
+}
+
+# S3 bucket for documentation
+resource "aws_s3_bucket" "docs" {
+  bucket = "credex-docs-${var.environment}"
+
+  tags = merge(var.common_tags, {
+    Name = "docs-${var.environment}"
+  })
+}
+
+# Enable website hosting
+resource "aws_s3_bucket_website_configuration" "docs" {
+  bucket = aws_s3_bucket.docs.id
+
+  index_document {
+    suffix = "index.html"
+  }
+
+  error_document {
+    key = "404.html"
+  }
+}
+
+# Block public access
+resource "aws_s3_bucket_public_access_block" "docs" {
+  bucket = aws_s3_bucket.docs.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+# Enable versioning
+resource "aws_s3_bucket_versioning" "docs" {
+  bucket = aws_s3_bucket.docs.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# Bucket policy to allow public read access
+resource "aws_s3_bucket_policy" "docs" {
+  bucket = aws_s3_bucket.docs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.docs.arn}/*"
+      }
+    ]
+  })
 }
 
 # Get the hosted zone for the domain
