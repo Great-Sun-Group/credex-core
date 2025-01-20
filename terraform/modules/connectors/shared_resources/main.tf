@@ -213,7 +213,7 @@ resource "aws_vpc_endpoint" "s3" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowYumRepositoryAccess"
+        Sid       = "AllowRequiredRepositoryAccess"
         Effect    = "Allow"
         Principal = "*"
         Action = [
@@ -222,7 +222,15 @@ resource "aws_vpc_endpoint" "s3" {
         ]
         Resource = [
           "arn:aws:s3:::yum.neo4j.com/*",
-          "arn:aws:s3:::yum.neo4j.com"
+          "arn:aws:s3:::yum.neo4j.com",
+          "arn:aws:s3:::amazonlinux-2-repos-af-south-1.s3.amazonaws.com/*",
+          "arn:aws:s3:::amazonlinux-2-repos-af-south-1.s3.amazonaws.com",
+          "arn:aws:s3:::amazonlinux.af-south-1.amazonaws.com/*",
+          "arn:aws:s3:::amazonlinux.af-south-1.amazonaws.com",
+          "arn:aws:s3:::aws-ssm-af-south-1/*",
+          "arn:aws:s3:::aws-ssm-af-south-1",
+          "arn:aws:s3:::amazon-ssm-af-south-1/*",
+          "arn:aws:s3:::amazon-ssm-af-south-1"
         ]
       }
     ]

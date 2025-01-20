@@ -110,40 +110,6 @@ After investigation, we recommend using the proper deployment workflow rather th
      * Proper terraform state management
      * Consistent deployment process
 
-## Implementation Steps
-
-1. Create a PR with the S3 endpoint policy change:
-   ```hcl
-   # In terraform/modules/connectors/shared_resources/main.tf
-   resource "aws_vpc_endpoint" "s3" {
-     # ... existing configuration ...
-     policy = jsonencode({
-       Version = "2012-10-17"
-       Statement = [
-         {
-           Sid       = "AllowYumRepositoryAccess"
-           Effect    = "Allow"
-           Principal = "*"
-           Action = [
-             "s3:GetObject",
-             "s3:ListBucket"
-           ]
-           Resource = [
-             "arn:aws:s3:::yum.neo4j.com/*",
-             "arn:aws:s3:::yum.neo4j.com"
-           ]
-         }
-       ]
-     })
-   }
-   ```
-
-2. After the PR is merged:
-   1. Run the connectors workflow to apply the S3 endpoint policy
-   2. Run the databases workflow to recreate the Neo4j instances
-
-This approach follows the documented deployment process and ensures proper infrastructure management.
-
 ## Previous Investigation Steps
 
 1. **Review S3 VPC Endpoint Configuration**:
