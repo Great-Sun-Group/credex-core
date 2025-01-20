@@ -189,11 +189,11 @@ yum update -y
 amazon-linux-extras install java-openjdk11 -y
 
 # Install Neo4j Enterprise
-rpm --import https://debian.neo4j.com/neotechnology.gpg.key
+rpm --import https://neo4j.com/developer/rpm-key/neotechnology.gpg.key
 cat > /etc/yum.repos.d/neo4j.repo << 'REPO'
 [neo4j]
 name=Neo4j RPM Repository
-baseurl=https://yum.neo4j.com/5
+baseurl=https://yum.neo4j.org/stable/5
 enabled=1
 gpgcheck=1
 REPO

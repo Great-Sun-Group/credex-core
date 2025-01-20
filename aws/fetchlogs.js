@@ -26,36 +26,55 @@ async function getLatestLogStream() {
 }
 
 async function fetchLogs(startTime) {
-  const logStreamName = await getLatestLogStream();
-  
-  const command = new GetLogEventsCommand({
-    logGroupName: LOG_GROUP_NAME,
-    logStreamName,
-    startTime,
-    startFromHead: true
-  });
+  try {
+    const logStreamName = await getLatestLogStream();
+    const command = new GetLogEventsCommand({
+      logGroupName: LOG_GROUP_NAME,
+      logStreamName,
+      startTime,
+      startFromHead: true
+    });
 
-  const response = await client.send(command);
-  return response.events;
+    const response = await client.send(command);
+    return response.events;
+  } catch (error) {
+    console.error('Error fetching logs:', error.message);
+    throw error;
+  }
 }
 
 async function streamLogs() {
-  console.log('Starting log stream...');
-  let lastTimestamp = Date.now() - 1000; // Start from 1 second ago
+  process.stdout.write('Starting log stream... ');
+  
+  // Start from 5 minutes ago
+  let lastTimestamp = Date.now() - (5 * 60 * 1000);
+  let lastEventTime = lastTimestamp;
+  let dots = 0;
 
   while (true) {
     try {
-      const events = await fetchLogs(lastTimestamp);
+      const events = await fetchLogs(lastEventTime);
+      let hasNewEvents = false;
       
       for (const event of events) {
-        if (event.timestamp > lastTimestamp) {
+        if (event.timestamp > lastEventTime) {
+          if (hasNewEvents === false) {
+            process.stdout.write('\n'); // Clear the dots line when we get new events
+            dots = 0;
+          }
           console.log(event.message);
-          lastTimestamp = event.timestamp;
+          lastEventTime = event.timestamp;
+          hasNewEvents = true;
         }
       }
 
-      // Wait 1 second before next poll
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!hasNewEvents) {
+        // Show a simple spinner to indicate we're still running
+        process.stdout.write('\r' + '.'.repeat(dots++ % 4) + ' '.repeat(4));
+      }
+
+      // Wait 2 seconds before next poll
+      await new Promise(resolve => setTimeout(resolve, 2000));
     } catch (error) {
       console.error('Error fetching logs:', error);
       process.exit(1);
