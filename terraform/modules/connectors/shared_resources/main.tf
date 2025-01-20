@@ -392,29 +392,21 @@ resource "aws_acm_certificate" "cloudfront_cert" {
   }
 }
 
-# S3 bucket for documentation
+# S3 bucket for docs
 resource "aws_s3_bucket" "docs" {
-  bucket = "credex-docs-${var.environment}"
+  bucket = "docs.${var.domain}"
+  force_destroy = false
 
   tags = merge(var.common_tags, {
     Name = "docs-${var.environment}"
   })
-}
 
-# Enable website hosting
-resource "aws_s3_bucket_website_configuration" "docs" {
-  bucket = aws_s3_bucket.docs.id
-
-  index_document {
-    suffix = "index.html"
-  }
-
-  error_document {
-    key = "404.html"
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
-# Block public access
+# Add block public access configuration before bucket policy
 resource "aws_s3_bucket_public_access_block" "docs" {
   bucket = aws_s3_bucket.docs.id
 
@@ -424,17 +416,21 @@ resource "aws_s3_bucket_public_access_block" "docs" {
   restrict_public_buckets = false
 }
 
-# Enable versioning
-resource "aws_s3_bucket_versioning" "docs" {
+resource "aws_s3_bucket_website_configuration" "docs" {
   bucket = aws_s3_bucket.docs.id
-  versioning_configuration {
-    status = "Enabled"
+  
+  index_document {
+    suffix = "index.html"
+  }
+
+  error_document {
+    key = "404.html"
   }
 }
 
-# Bucket policy to allow public read access
 resource "aws_s3_bucket_policy" "docs" {
   bucket = aws_s3_bucket.docs.id
+  depends_on = [aws_s3_bucket_public_access_block.docs]
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -781,413 +777,5 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
 
   tags = merge(var.common_tags, {
     Name = "/ecs/credex-core-${var.environment}"
-  })
-}
-
-#############################
-# Verification System Storage
-#############################
-
-# Main storage bucket for verification photos
-# Purpose: Stores all verification-related photos with proper organization and security
-# Security: Encrypted at rest, no public access, versioning enabled
-# Access Pattern: Write to uploads/, process to processed/, archive to archived/
-resource "aws_s3_bucket" "verification_photos" {
-  bucket = "credex-verification-photos-${var.environment}"
-
-  tags = merge(var.common_tags, {
-    Name = "verification-photos-${var.environment}"
-    Purpose = "ID Verification Storage"
-    DataClassification = "Sensitive"
-  })
-}
-
-# Enable versioning to maintain file history and prevent accidental deletions
-# Required for: Compliance, data protection, and cross-region replication
-resource "aws_s3_bucket_versioning" "verification_photos" {
-  bucket = aws_s3_bucket.verification_photos.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-# Enable server-side encryption for data at rest
-# Security: AES-256 encryption for all objects
-resource "aws_s3_bucket_server_side_encryption_configuration" "verification_photos" {
-  bucket = aws_s3_bucket.verification_photos.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-# Block all public access for security
-# Critical for protecting sensitive verification data
-resource "aws_s3_bucket_public_access_block" "verification_photos" {
-  bucket = aws_s3_bucket.verification_photos.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-# Create organized folder structure for different stages of verification
-# Structure:
-# - uploads/: Raw uploaded files
-# - processed/: Validated and processed files
-# - archived/: Historical records
-# - temp/: Temporary processing files
-resource "aws_s3_object" "verification_folders" {
-  for_each = toset([
-    "uploads/id-documents/",    # Raw ID document uploads
-    "uploads/selfies/",         # Raw selfie photo uploads
-    "processed/id-documents/",  # Processed and validated ID documents
-    "processed/selfies/",       # Processed and validated selfies
-    "archived/",               # Historical records
-    "temp/"                    # Temporary processing files
-  ])
-
-  bucket = aws_s3_bucket.verification_photos.id
-  key    = each.key
-  source = "/dev/null"  # Empty object for folder creation
-}
-
-# Configure lifecycle rules for cost optimization and data management
-# Rules:
-# 1. Archive uploads after 90 days, delete after 1 year
-# 2. Clean temporary files daily
-# 3. Move processed files through storage tiers
-resource "aws_s3_bucket_lifecycle_configuration" "verification_photos" {
-  bucket = aws_s3_bucket.verification_photos.id
-
-  rule {
-    id     = "archive-uploads"
-    status = "Enabled"
-
-    transition {
-      days          = var.verification_photos_retention_days
-      storage_class = "GLACIER"
-    }
-
-    expiration {
-      days = var.verification_photos_expiration_days
-    }
-
-    filter {
-      prefix = "uploads/"
-    }
-  }
-
-  rule {
-    id     = "clean-temp-folder"
-    status = "Enabled"
-    
-    expiration {
-      days = var.verification_temp_retention_days
-    }
-
-    filter {
-      prefix = "temp/"
-    }
-  }
-
-  rule {
-    id     = "archive-processed"
-    status = "Enabled"
-
-    transition {
-      days          = var.verification_processed_transition_days
-      storage_class = "STANDARD_IA"
-    }
-
-    transition {
-      days          = var.verification_processed_archive_days
-      storage_class = "GLACIER"
-    }
-
-    filter {
-      prefix = "processed/"
-    }
-  }
-}
-
-# Configure CORS for secure API access
-# Restricts access to application domain only
-resource "aws_s3_bucket_cors_configuration" "verification_photos" {
-  bucket = aws_s3_bucket.verification_photos.id
-
-  cors_rule {
-    allowed_headers = ["*"]
-    allowed_methods = ["GET", "PUT", "POST"]
-    allowed_origins = ["https://*.${var.domain}"]
-    expose_headers  = ["ETag"]
-    max_age_seconds = 3000
-  }
-}
-
-# Access logging bucket for audit trail
-# Purpose: Store access logs for security and compliance
-resource "aws_s3_bucket" "verification_logs" {
-  bucket = "credex-verification-logs-${var.environment}"
-
-  tags = merge(var.common_tags, {
-    Name = "verification-logs-${var.environment}"
-    Purpose = "Access Logging"
-    DataClassification = "Audit"
-  })
-}
-
-# Block public access for logs bucket
-resource "aws_s3_bucket_public_access_block" "verification_logs" {
-  bucket = aws_s3_bucket.verification_logs.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-# Enable encryption for logs
-resource "aws_s3_bucket_server_side_encryption_configuration" "verification_logs" {
-  bucket = aws_s3_bucket.verification_logs.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-# Enable access logging for main bucket
-resource "aws_s3_bucket_logging" "verification_photos" {
-  bucket = aws_s3_bucket.verification_photos.id
-
-  target_bucket = aws_s3_bucket.verification_logs.id
-  target_prefix = "access-logs/"
-}
-
-# Cross-region backup bucket for disaster recovery
-# Located in us-east-1 for geographic redundancy
-resource "aws_s3_bucket" "verification_backups" {
-  provider = aws.us_east_1
-  bucket   = "credex-verification-backups-${var.environment}"
-
-  tags = merge(var.common_tags, {
-    Name = "verification-backups-${var.environment}"
-    Purpose = "Disaster Recovery"
-    DataClassification = "Backup"
-  })
-}
-
-# Enable versioning for backup bucket
-resource "aws_s3_bucket_versioning" "verification_backups" {
-  provider = aws.us_east_1
-  bucket   = aws_s3_bucket.verification_backups.id
-  
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-# Block public access for backup bucket
-resource "aws_s3_bucket_public_access_block" "verification_backups" {
-  provider = aws.us_east_1
-  bucket   = aws_s3_bucket.verification_backups.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-# Enable encryption for backup bucket
-resource "aws_s3_bucket_server_side_encryption_configuration" "verification_backups" {
-  provider = aws.us_east_1
-  bucket   = aws_s3_bucket.verification_backups.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-# IAM role for S3 replication
-resource "aws_iam_role" "verification_replication" {
-  name = "verification-replication-role-${var.environment}"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "s3.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-# IAM policy for S3 replication permissions
-resource "aws_iam_role_policy" "verification_replication" {
-  name = "verification-replication-policy-${var.environment}"
-  role = aws_iam_role.verification_replication.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "s3:GetReplicationConfiguration",
-          "s3:ListBucket"
-        ]
-        Effect = "Allow"
-        Resource = [
-          aws_s3_bucket.verification_photos.arn
-        ]
-      },
-      {
-        Action = [
-          "s3:GetObjectVersionForReplication",
-          "s3:GetObjectVersionAcl",
-          "s3:GetObjectVersionTagging"
-        ]
-        Effect = "Allow"
-        Resource = [
-          "${aws_s3_bucket.verification_photos.arn}/*"
-        ]
-      },
-      {
-        Action = [
-          "s3:ReplicateObject",
-          "s3:ReplicateDelete",
-          "s3:ReplicateTags"
-        ]
-        Effect = "Allow"
-        Resource = "${aws_s3_bucket.verification_backups.arn}/*"
-      }
-    ]
-  })
-}
-
-# Configure replication rules
-resource "aws_s3_bucket_replication_configuration" "verification_photos" {
-  depends_on = [aws_s3_bucket_versioning.verification_photos]
-
-  role   = aws_iam_role.verification_replication.arn
-  bucket = aws_s3_bucket.verification_photos.id
-
-  rule {
-    id     = "verification-backup"
-    status = "Enabled"
-
-    delete_marker_replication {
-      status = "Enabled"
-    }
-
-    filter {
-      prefix = "processed/"  # Only replicate processed files
-    }
-
-    destination {
-      bucket        = aws_s3_bucket.verification_backups.arn
-      storage_class = "STANDARD_IA"  # Use cheaper storage for backups
-    }
-  }
-}
-
-# IAM role for Rekognition access
-# Required for face detection and comparison
-resource "aws_iam_role" "rekognition_role" {
-  name = "rekognition-role-${var.environment}"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "rekognition.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = merge(var.common_tags, {
-    Name = "rekognition-role-${var.environment}"
-    Purpose = "Face Recognition"
-  })
-}
-
-# IAM policy for Rekognition operations
-resource "aws_iam_role_policy" "rekognition_policy" {
-  name = "rekognition-policy-${var.environment}"
-  role = aws_iam_role.rekognition_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "rekognition:CompareFaces",
-          "rekognition:DetectFaces",
-          "rekognition:SearchFacesByImage",
-          "rekognition:IndexFaces",
-          "rekognition:CreateCollection",
-          "rekognition:DeleteCollection",
-          "rekognition:DescribeCollection",
-          "rekognition:ListCollections"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject"
-        ]
-        Resource = "${aws_s3_bucket.verification_photos.arn}/*"
-      }
-    ]
-  })
-}
-
-# Add Rekognition permissions to ECS task role
-resource "aws_iam_role_policy_attachment" "ecs_task_rekognition" {
-  role       = aws_iam_role.ecs_task_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonRekognitionFullAccess"
-}
-
-# Add S3 permissions to ECS task role
-resource "aws_iam_role_policy" "ecs_task_s3_verification" {
-  name = "ecs-task-s3-verification-${var.environment}"
-  role = aws_iam_role.ecs_task_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:PutObject",
-          "s3:GetObject",
-          "s3:DeleteObject"
-        ]
-        Resource = "${aws_s3_bucket.verification_photos.arn}/*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:ListBucket"
-        ]
-        Resource = aws_s3_bucket.verification_photos.arn
-      }
-    ]
   })
 }
