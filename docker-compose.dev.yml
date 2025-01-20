@@ -1,5 +1,10 @@
 services:
   server:
+    depends_on:
+      neo4j-ledger:
+        condition: service_healthy
+      neo4j-search:
+        condition: service_healthy
     environment:
       SKIP_RATE_LIMITER_KEY: ${SKIP_RATE_LIMITER_KEY}
       DEV_ADMIN_KEY: ${DEV_ADMIN_KEY}
@@ -32,10 +37,16 @@ services:
       - neo4j-plugins:/plugins
 
   neo4j-ledger:
-    image: neo4j:5.26.1-enterprise
+    image: neo4j:5-enterprise
     depends_on:
       apoc-setup:
         condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -43,9 +54,14 @@ services:
       NEO4J_AUTH: none
       NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
       # Memory settings from terraform
-      NEO4J_server_memory_heap_initial__size: "1024m"
-      NEO4J_server_memory_heap_max__size: "1024m"
-      NEO4J_server_memory_pagecache_size: "2048m"
+      NEO4J_server_memory_heap_initial__size: "512m"
+      NEO4J_server_memory_heap_max__size: "512m"
+      NEO4J_server_memory_pagecache_size: "1024m"
+      # Memory management
+      NEO4J_db_memory_pagecache_warmup_enable: "false"
+      NEO4J_server_jvm_additional: "-XX:+UseG1GC -XX:G1HeapRegionSize=4m -XX:+UseStringDeduplication -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
+      NEO4J_server_memory_off__heap_transaction__max__size: "256m"
+      NEO4J_dbms_memory_transaction_total_max: "512m"
       # Other settings from terraform
       NEO4J_dbms_security_auth__enabled: "false"
       NEO4J_dbms_security_allow__csv__import__from__file__urls: "false"
@@ -63,14 +79,28 @@ services:
       - neo4j-ledger-data:/data
       - neo4j-ledger-logs:/logs
       - neo4j-plugins:/plugins
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+      update_config:
+        failure_action: rollback
     profiles:
       - dev
 
   neo4j-search:
-    image: neo4j:5.26.1-enterprise
+    image: neo4j:5-enterprise
     depends_on:
       apoc-setup:
         condition: service_completed_successfully
+      neo4j-ledger:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider localhost:7474 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
     ports:
       - "7475:7474"
       - "7688:7687"
@@ -78,9 +108,14 @@ services:
       NEO4J_AUTH: none
       NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
       # Memory settings from terraform
-      NEO4J_server_memory_heap_initial__size: "1024m"
-      NEO4J_server_memory_heap_max__size: "1024m"
-      NEO4J_server_memory_pagecache_size: "2048m"
+      NEO4J_server_memory_heap_initial__size: "512m"
+      NEO4J_server_memory_heap_max__size: "512m"
+      NEO4J_server_memory_pagecache_size: "1024m"
+      # Memory management
+      NEO4J_db_memory_pagecache_warmup_enable: "false"
+      NEO4J_server_jvm_additional: "-XX:+UseG1GC -XX:G1HeapRegionSize=4m -XX:+UseStringDeduplication -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
+      NEO4J_server_memory_off__heap_transaction__max__size: "256m"
+      NEO4J_dbms_memory_transaction_total_max: "512m"
       # Other settings from terraform
       NEO4J_dbms_security_auth__enabled: "false"
       NEO4J_dbms_security_allow__csv__import__from__file__urls: "false"
@@ -98,6 +133,12 @@ services:
       - neo4j-search-data:/data
       - neo4j-search-logs:/logs
       - neo4j-plugins:/plugins
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+      update_config:
+        failure_action: rollback
     profiles:
       - dev
 

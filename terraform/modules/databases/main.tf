@@ -290,11 +290,15 @@ systemctl start amazon-cloudwatch-agent
 # Calculate memory settings
 total_mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 total_mem_mb=$((total_mem_kb / 1024))
-heap_size_mb=$((total_mem_mb * 15 / 100))
-page_cache_mb=$((total_mem_mb * 30 / 100))
-heap_size_mb=$(( heap_size_mb < 1024 ? 1024 : heap_size_mb ))
-heap_size_mb=$(( heap_size_mb > 31744 ? 31744 : heap_size_mb ))
-page_cache_mb=$(( page_cache_mb < 2048 ? 2048 : page_cache_mb ))
+heap_size_mb=$((total_mem_mb * 10 / 100))  # Reduced from 15% to 10%
+page_cache_mb=$((total_mem_mb * 20 / 100))  # Reduced from 30% to 20%
+off_heap_mb=$((total_mem_mb * 5 / 100))    # Added explicit off-heap calculation at 5%
+
+# Apply minimum and maximum limits
+heap_size_mb=$(( heap_size_mb < 512 ? 512 : heap_size_mb ))      # Reduced min from 1024m to 512m
+heap_size_mb=$(( heap_size_mb > 16384 ? 16384 : heap_size_mb ))  # Reduced max from 31744m to 16384m
+page_cache_mb=$(( page_cache_mb < 1024 ? 1024 : page_cache_mb )) # Reduced min from 2048m to 1024m
+off_heap_mb=$(( off_heap_mb < 256 ? 256 : off_heap_mb ))         # Set min off-heap to 256m
 
 # Configure Neo4j using printf to avoid heredoc issues
 echo "Configuring Neo4j with memory settings: heap=$heap_size_mb MB, page_cache=$page_cache_mb MB"
@@ -311,33 +315,31 @@ dbms.security.auth_enabled=false
 dbms.security.allow_csv_import_from_file_urls=false
 
 # Memory configuration
-dbms.memory.heap.initial_size=$${heap_size_mb}m
-dbms.memory.heap.max_size=$${heap_size_mb}m
-dbms.memory.pagecache.size=$${page_cache_mb}m
+server.memory.heap.initial_size=$${heap_size_mb}m
+server.memory.heap.max_size=$${heap_size_mb}m
+server.memory.pagecache.size=$${page_cache_mb}m
 
 # Performance settings
-dbms.jvm.additional=-XX:+UseG1GC
-dbms.jvm.additional=-XX:G1HeapRegionSize=16m
-dbms.jvm.additional=-XX:+ParallelRefProcEnabled
-dbms.jvm.additional=-XX:+UseStringDeduplication
-dbms.jvm.additional=-XX:+AlwaysPreTouch
-dbms.jvm.additional=-XX:+DisableExplicitGC
-dbms.jvm.additional=-XX:MaxGCPauseMillis=500
-dbms.jvm.additional=-XX:+HeapDumpOnOutOfMemoryError
-dbms.jvm.additional=-XX:HeapDumpPath=/var/log/neo4j/
+server.jvm.additional=-XX:+UseG1GC
+server.jvm.additional=-XX:G1HeapRegionSize=4m
+server.jvm.additional=-XX:+UseStringDeduplication
+server.jvm.additional=-XX:MaxGCPauseMillis=200
+server.jvm.additional=-XX:+ExitOnOutOfMemoryError
+server.jvm.additional=-XX:+HeapDumpOnOutOfMemoryError
+server.jvm.additional=-XX:HeapDumpPath=/var/log/neo4j/
 
 # Logging settings
-dbms.logs.debug.level=INFO
-dbms.logs.query.enabled=true
-dbms.logs.query.rotation.keep_number=7
-dbms.logs.query.rotation.size=20m
+db.logs.debug.level=INFO
+db.logs.query.enabled=true
+db.logs.query.rotation.keep_number=7
+db.logs.query.rotation.size=20m
 
 # Transaction and operation settings
-dbms.transaction.timeout=15m
-dbms.transaction.concurrent.maximum=500
-dbms.memory.off_heap.max_size=2g
-dbms.memory.pagecache.flush.buffer.enabled=true
-dbms.memory.pagecache.flush.buffer.size_in_pages=100
+db.transaction.timeout=15m
+db.transaction.concurrent.maximum=100
+server.memory.off_heap.transaction_max_size=$${off_heap_mb}m
+db.memory.pagecache.flush.buffer.enabled=true
+db.memory.pagecache.flush.buffer.size_in_pages=100
 NEOCONFIG
 
 # Replace placeholders with actual values
