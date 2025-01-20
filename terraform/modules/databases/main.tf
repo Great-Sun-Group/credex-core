@@ -189,23 +189,38 @@ yum update -y
 amazon-linux-extras install java-openjdk11 -y
 
 # Install Neo4j Enterprise
-rpm --import https://neo4j.com/developer/rpm-key/neotechnology.gpg.key
+rpm --import https://debian.neo4j.com/neotechnology.gpg.key
 cat > /etc/yum.repos.d/neo4j.repo << 'REPO'
 [neo4j]
 name=Neo4j RPM Repository
-baseurl=https://yum.neo4j.org/stable/5
+baseurl=https://yum.neo4j.com/stable/5
 enabled=1
 gpgcheck=1
 REPO
 
 # Clean yum cache and install Neo4j
+echo "Cleaning yum cache..."
 yum clean all
 yum makecache
+
+# Wait for any existing yum processes to finish
+while pgrep -f "yum" > /dev/null; do
+    echo "Waiting for other yum processes to finish..."
+    sleep 10
+done
+
+echo "Installing Neo4j Enterprise and CloudWatch agent..."
 yum install -y neo4j-enterprise-5.13.0 amazon-cloudwatch-agent || {
     echo "Neo4j installation failed. Checking yum error log..."
     cat /var/log/yum.log
+    echo "Checking Neo4j repo configuration..."
+    cat /etc/yum.repos.d/neo4j.repo
     exit 1
 }
+
+# Create required directories if they don't exist
+echo "Creating Neo4j directories..."
+mkdir -p /var/lib/neo4j /var/log/neo4j
 
 # Download and install APOC Core plugin
 mkdir -p /var/lib/neo4j/plugins
@@ -330,9 +345,19 @@ chown -R neo4j:neo4j /var/lib/neo4j /var/log/neo4j
 chmod 600 /etc/neo4j/neo4j.conf
 
 # Start Neo4j and verify it's running
+echo "Enabling and starting Neo4j service..."
 systemctl enable neo4j
-systemctl start neo4j
-sleep 10  # Give Neo4j time to start
+systemctl start neo4j || {
+    echo "Failed to start Neo4j service. Checking logs..."
+    journalctl -u neo4j -n 100
+    echo "Checking Neo4j configuration..."
+    cat /etc/neo4j/neo4j.conf
+    exit 1
+}
+
+# Give Neo4j time to initialize
+echo "Waiting for Neo4j to initialize..."
+sleep 30  # Increased from 10 to 30 seconds for better startup chance
 
 # Check if Neo4j is running and listening
 echo "Checking Neo4j service status..."
