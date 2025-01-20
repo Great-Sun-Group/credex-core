@@ -314,11 +314,10 @@ off_heap_mb=$(( off_heap_mb < 256 ? 256 : off_heap_mb ))         # Set min off-h
 echo "Configuring Neo4j with memory settings: heap=$heap_size_mb MB, page_cache=$page_cache_mb MB"
 cat > /etc/neo4j/neo4j.conf << 'NEOCONFIG'
 # Network configuration
-dbms.default_listen_address=0.0.0.0
-dbms.connector.bolt.listen_address=:7687
-dbms.connector.http.listen_address=:7474
-dbms.connector.https.listen_address=:7473
-dbms.default_advertised_address=0.0.0.0
+server.default_listen_address=0.0.0.0
+server.bolt.listen_address=0.0.0.0:7687
+server.http.listen_address=0.0.0.0:7474
+server.https.listen_address=0.0.0.0:7473
 
 # Security settings
 dbms.security.auth_enabled=false
