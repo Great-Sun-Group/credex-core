@@ -23,7 +23,7 @@ services:
       sh -c '
         mkdir -p /plugins &&
         echo "Downloading APOC plugin..." &&
-        curl -L https://github.com/neo4j/apoc/releases/download/5.26.0/apoc-5.26.0-core.jar -o /plugins/apoc.jar &&
+        curl -L https://github.com/neo4j/apoc/releases/download/5.26.1/apoc-5.26.1-core.jar -o /plugins/apoc.jar &&
         echo "Setting permissions..." &&
         chmod -R 777 /plugins &&
         echo "APOC plugin downloaded and configured."
@@ -32,7 +32,7 @@ services:
       - neo4j-plugins:/plugins
 
   neo4j-ledger:
-    image: neo4j:5-enterprise
+    image: neo4j:5.26.1-enterprise
     depends_on:
       apoc-setup:
         condition: service_completed_successfully
@@ -67,7 +67,7 @@ services:
       - dev
 
   neo4j-search:
-    image: neo4j:5-enterprise
+    image: neo4j:5.26.1-enterprise
     depends_on:
       apoc-setup:
         condition: service_completed_successfully

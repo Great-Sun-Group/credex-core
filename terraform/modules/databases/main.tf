@@ -210,7 +210,7 @@ while pgrep -f "yum" > /dev/null; do
 done
 
 echo "Installing Neo4j Enterprise and CloudWatch agent..."
-yum install -y neo4j-enterprise-5.13.0 amazon-cloudwatch-agent || {
+yum install -y neo4j-enterprise amazon-cloudwatch-agent || {
     echo "Neo4j installation failed. Checking yum error log..."
     cat /var/log/yum.log
     echo "Checking Neo4j repo configuration..."
@@ -224,7 +224,7 @@ mkdir -p /var/lib/neo4j /var/log/neo4j
 
 # Download and install APOC Core plugin
 mkdir -p /var/lib/neo4j/plugins
-curl -L https://github.com/neo4j/apoc/releases/download/5.26.0/apoc-5.26.0-core.jar -o /var/lib/neo4j/plugins/apoc.jar
+curl -L https://github.com/neo4j/apoc/releases/download/5.26.1/apoc-5.26.1-core.jar -o /var/lib/neo4j/plugins/apoc.jar
 chown -R neo4j:neo4j /var/lib/neo4j/plugins
 echo "APOC plugin downloaded and configured."
 
