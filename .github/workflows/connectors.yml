@@ -79,6 +79,9 @@ jobs:
           TF_VAR_neo_4j_ledger_space_password: "dummy"
           TF_VAR_neo_4j_search_space_password: "dummy"
           TF_VAR_neo4j_enterprise_license: "dummy"
+          TF_VAR_firebase_project_id: "dummy"
+          TF_VAR_firebase_client_email: "dummy"
+          TF_VAR_firebase_private_key: "dummy"
         run: |
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
@@ -101,6 +104,9 @@ jobs:
           TF_VAR_neo_4j_ledger_space_password: "dummy"
           TF_VAR_neo_4j_search_space_password: "dummy"
           TF_VAR_neo4j_enterprise_license: "dummy"
+          TF_VAR_firebase_project_id: "dummy"
+          TF_VAR_firebase_client_email: "dummy"
+          TF_VAR_firebase_private_key: "dummy"
         run: |
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
