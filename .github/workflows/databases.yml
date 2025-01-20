@@ -1,9 +1,6 @@
 name: Deploy Databases
 
 on:
-  push:
-    branches:
-      - "*deploy*"
   workflow_dispatch:
 
 jobs:
@@ -53,6 +50,9 @@ jobs:
           TF_VAR_dev_admin_key: "dummy"
           TF_VAR_skip_rate_limiter_key: "dummy"
           TF_VAR_open_exchange_rates_api: "dummy"
+          TF_VAR_firebase_project_id: "dummy"
+          TF_VAR_firebase_client_email: "dummy"
+          TF_VAR_firebase_private_key: "dummy"
         run: |
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
@@ -69,6 +69,9 @@ jobs:
           TF_VAR_dev_admin_key: "dummy"
           TF_VAR_skip_rate_limiter_key: "dummy"
           TF_VAR_open_exchange_rates_api: "dummy"
+          TF_VAR_firebase_project_id: "dummy"
+          TF_VAR_firebase_client_email: "dummy"
+          TF_VAR_firebase_private_key: "dummy"
         run: |
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
