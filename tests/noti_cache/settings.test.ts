@@ -1,5 +1,5 @@
 import { getNotificationSettings, updateNotificationSettings } from "../../utils/endpoints/notifications";
-import { loginMember } from "../../utils/auth";
+import { loginMember } from "../api/utils/auth";
 
 describe("Notification Settings Endpoint Tests", () => {
   it("getSettings", async () => {

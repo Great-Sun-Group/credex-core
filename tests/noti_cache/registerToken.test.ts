@@ -1,5 +1,5 @@
-import { registerToken } from "../../utils/endpoints/notifications";
-import { loginMember } from "../../utils/auth";
+import { registerToken } from "notifications";
+import { loginMember } from "../api/utils/auth";
 
 describe("Register FCM Token Endpoint Test", () => {
   it("registerToken", async () => {

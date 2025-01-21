@@ -1,5 +1,5 @@
 import { removeToken } from "../../utils/endpoints/notifications";
-import { loginMember } from "../../utils/auth";
+import { loginMember } from "../api/utils/auth";
 
 describe("Remove FCM Token Endpoint Test", () => {
   it("removeToken", async () => {

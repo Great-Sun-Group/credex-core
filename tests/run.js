@@ -75,40 +75,9 @@ async function runTest() {
     let jestCommand;
     let testParams = remainingArgs;
 
-    if (command === "integrate") {
-      // Handle integration tests
-      jestCommand = `jest --testPathPattern=tests/api/integration/index.test.ts ${envFlags[env]}`;
-    } else if (devAdminCommands.includes(command?.toLowerCase())) {
-      // Handle devadmin operations
-      const testPath = path.join(
-        "tests",
-        "api",
-        "endpoints",
-        "devadmin",
-        `${command.toLowerCase()}.test.ts`
-      );
-      jestCommand = `jest "${testPath}" ${envFlags[env]}`;
-      // Execute with environment variables
-      execSync(jestCommand, {
-        stdio: "inherit",
-        env: {
-          ...process.env,
-          NODE_ENV: env,
-          TEST_PARAMS: testParams.join(" "),
-          API_ENV: env,
-        },
-      });
-      return;
-    } else if (command === "admin") {
-      // Handle admin tests
-      jestCommand = `jest --testPathPattern=tests/api/endpoints/admin/admin\\.test\\.ts ${envFlags[env]}`;
-    } else if (command?.toLowerCase().startsWith("admin/")) {
-      // Handle individual admin operation tests
-      const operation = command.split("/")[1];
-      jestCommand = `jest --testPathPattern=tests/api/endpoints/admin/${operation}\\.test\\.ts ${envFlags[env]}`;
-    } else if (command) {
+    if (command) {
       // Handle endpoint tests
-      const pattern = `tests/api/endpoints/${command.toLowerCase()}\\.test\\.ts`;
+      const pattern = `tests/api/${command.toLowerCase()}\\.test\\.ts`;
 
       // If not a no-JWT test and we have args, handle login
       if (
@@ -118,7 +87,7 @@ async function runTest() {
         const phone = remainingArgs[0];
         // Run login test to get JWT
         const loginOutput = execSync(
-          `jest tests/api/endpoints/login.test.ts --testNamePattern=login ${envFlags[env]}`,
+          `jest tests/api/login.test.ts --testNamePattern=login ${envFlags[env]}`,
           {
             env: {
               ...process.env,

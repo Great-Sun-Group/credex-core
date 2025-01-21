@@ -1,5 +1,5 @@
-import axios from "../../../setup";
-import { delay, DELAY_MS } from "../../utils/delay";
+import axios from "../../setup";
+import { delay, DELAY_MS } from "../utils/delay";
 
 describe("forceDCO DevAdmin Operation", () => {
   it("forceDCO", async () => {

@@ -1,5 +1,5 @@
-import { authRequest } from "../request";
-import { delay, DELAY_MS } from "../delay";
+import { authRequest } from "../api/utils/request";
+import { delay, DELAY_MS } from "../api/utils/delay";
 
 /**
  * Register a new FCM token for push notifications

@@ -1,5 +1,5 @@
-import { authRequest } from "../../utils/request";
-import { delay, DELAY_MS } from "../../utils/delay";
+import { authRequest } from "../utils/request";
+import { delay, DELAY_MS } from "../utils/delay";
 
 describe("Update Member Tier Test", () => {
   it("updateMemberTier", async () => {

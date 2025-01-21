@@ -1,5 +1,5 @@
-import { NotificationService } from '../../../src/api/Notifications/NotificationService';
-import { fcmTokenRepository } from '../../../src/api/Notifications/repositories/FCMTokenRepository';
+import { NotificationService } from '../../src/api/Notifications/NotificationService';
+import { fcmTokenRepository } from '../../src/api/Notifications/repositories/FCMTokenRepository';
 import * as admin from 'firebase-admin';
 
 // Mock Firebase Admin SDK
