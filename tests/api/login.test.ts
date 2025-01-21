@@ -1,6 +1,6 @@
 import axios from "../setup";
 
-describe("login Endpoint Test", () => {
+describe("login Success Test", () => {
   const headers = {
     "x-client-api-key": process.env.CLIENT_API_KEY || "",
   };
@@ -142,106 +142,4 @@ describe("login Endpoint Test", () => {
       }
     }
   });
-
-  it("missing phone number", async () => {
-    const response = await axios.post(
-      "/login",
-      {},
-      {
-        headers,
-        validateStatus: (status) => status === 400,
-      }
-    );
-
-    expect(response.status).toBe(400);
-    expect(response.data).toMatchObject({
-      message: expect.any(String),
-      data: {
-        action: {
-          id: null,
-          type: "ERROR_VALIDATION",
-          timestamp: expect.stringMatching(
-            /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/
-          ),
-          actor: "system",
-          details: {
-            code: "MISSING_PHONE",
-            reason: expect.any(String),
-            field: "phone",
-          },
-        },
-      },
-    });
-    expect(response.data.data).toHaveProperty("dashboard", {});
-  });
-
-  it("invalid phone number format", async () => {
-    const response = await axios.post(
-      "/login",
-      {
-        phone: "invalid-phone",
-      },
-      {
-        headers,
-        validateStatus: (status) => status === 400,
-      }
-    );
-
-    expect(response.status).toBe(400);
-    expect(response.data).toMatchObject({
-      message: expect.any(String),
-      data: {
-        action: {
-          id: null,
-          type: "ERROR_VALIDATION",
-          timestamp: expect.stringMatching(
-            /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/
-          ), // ISO 8601
-          actor: "system",
-          details: {
-            code: expect.stringMatching(/^(INVALID_PHONE|MISSING_PHONE)$/),
-            reason: expect.any(String),
-            field: "phone",
-          },
-        },
-      },
-    });
-    expect(response.data.data).toHaveProperty("dashboard", {});
-  });
-
-  it("member not found", async () => {
-    const response = await axios.post(
-      "/login",
-      {
-        phone: "99999999999", // Non-existent phone number
-      },
-      {
-        headers,
-        validateStatus: (status) => status === 404,
-      }
-    );
-
-    expect(response.status).toBe(404);
-    expect(response.data).toMatchObject({
-      message: "Member not found",
-      data: {
-        action: {
-          id: null,
-          type: "ERROR_NOT_FOUND",
-          timestamp: expect.stringMatching(
-            /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/
-          ), // ISO 8601
-          actor: "system",
-          details: {
-            code: "NOT_FOUND",
-            reason: "Member not found",
-          },
-        },
-      },
-    });
-    expect
-  });
-
-  // Note: 500 error test is optional since it requires simulating internal server errors
-  // which might not be feasible in the test environment
 });

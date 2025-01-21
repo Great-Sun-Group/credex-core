@@ -75,7 +75,71 @@ async function runTest() {
     let jestCommand;
     let testParams = remainingArgs;
 
-    if (command) {
+    if (command === "errors" || command === "error-cases") {
+      console.log("Setting up test accounts for error cases...");
+      
+      // Create first test account with unique timestamp
+      const timestamp1 = Date.now();
+      const account1Output = execSync(
+        `jest tests/api/onboardmember.test.ts --testNamePattern="onboard member" ${envFlags[env]}`,
+        {
+          env: {
+            ...process.env,
+            NODE_ENV: env,
+            TEST_PARAMS: `John Doe ${timestamp1}0 USD`,
+            API_ENV: env,
+          },
+          encoding: "utf8",
+        }
+      );
+
+      // Add delay to ensure unique timestamp
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Create second test account with unique timestamp
+      const timestamp2 = Date.now();
+      const account2Output = execSync(
+        `jest tests/api/onboardmember.test.ts --testNamePattern="onboard member" ${envFlags[env]}`,
+        {
+          env: {
+            ...process.env,
+            NODE_ENV: env,
+            TEST_PARAMS: `Jane Smith ${timestamp2}1 USD`,
+            API_ENV: env,
+          },
+          encoding: "utf8",
+        }
+      );
+
+      // Extract tokens and account IDs
+      const token1Match = account1Output.match(/"token":\s*"([^"]+)"/);
+      const token2Match = account2Output.match(/"token":\s*"([^"]+)"/);
+      const accountId1Match = account1Output.match(/"id":\s*"([^"]+)"/);
+      const accountId2Match = account2Output.match(/"id":\s*"([^"]+)"/);
+
+      if (!token1Match || !token2Match || !accountId1Match || !accountId2Match) {
+        console.error("Failed to extract test credentials");
+        process.exit(1);
+      }
+
+      // Set up test parameters for error cases
+      testParams = [
+        token1Match[1],    // First token
+        accountId1Match[1], // First account ID
+        accountId2Match[1], // Second account ID
+        token2Match[1]     // Second token (for tests requiring different user)
+      ];
+
+      console.log("Test setup complete. Using parameters:", {
+        token1: token1Match[1].substring(0, 10) + "...",
+        accountId1: accountId1Match[1],
+        accountId2: accountId2Match[1],
+        token2: token2Match[1].substring(0, 10) + "..."
+      });
+
+      // Run error test files with test parameters
+      jestCommand = `jest tests/api/error-cases --testMatch="**/*.errors.ts" ${envFlags[env]}`;
+    } else if (command) {
       // Handle endpoint tests
       const pattern = `tests/api/${command.toLowerCase()}\\.test\\.ts`;
 
@@ -113,7 +177,7 @@ async function runTest() {
 
       jestCommand = `jest --testPathPattern="${pattern}" ${envFlags[env]}`;
     } else {
-      // No command provided - run all tests
+      // No command provided - run all tests including error tests
       jestCommand = `jest ${envFlags[env]}`;
     }
 

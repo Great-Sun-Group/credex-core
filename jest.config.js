@@ -7,7 +7,8 @@ module.exports = {
     '**/?(*.)+(spec|test).ts',
     '**/tests/api/endpoints/**/*.test.ts',
     '**/tests/api/services/**/*.test.ts',
-    '**/tests/api/Credex/**/*.test.ts'
+    '**/tests/api/Credex/**/*.test.ts',
+    '**/tests/api/error-cases/**/*.errors.ts'  // Added pattern for error test files
   ],
   transform: {
     '^.+\\.ts$': ['ts-jest', {
