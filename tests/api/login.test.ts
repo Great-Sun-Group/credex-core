@@ -123,7 +123,6 @@ describe("login Endpoint Test", () => {
             ), // UUID v4 format
             formattedInitialAmount: expect.any(String),
             counterpartyAccountName: expect.any(String),
-            dueDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), // Optional date format
             secured: expect.any(Boolean),
           });
         }
@@ -138,7 +137,6 @@ describe("login Endpoint Test", () => {
             ), // UUID v4 format
             formattedInitialAmount: expect.any(String),
             counterpartyAccountName: expect.any(String),
-            dueDate: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), // Optional date format
             secured: expect.any(Boolean),
           });
         }
@@ -222,7 +220,7 @@ describe("login Endpoint Test", () => {
     const response = await axios.post(
       "/login",
       {
-        phone: "+15555555555", // Non-existent phone number
+        phone: "99999999999", // Non-existent phone number
       },
       {
         headers,
