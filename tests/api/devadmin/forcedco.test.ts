@@ -1,5 +1,4 @@
 import axios from "../../setup";
-import { delay, DELAY_MS } from "../utils/delay";
 
 describe("forceDCO DevAdmin Operation", () => {
   it("forceDCO", async () => {
@@ -14,6 +13,5 @@ describe("forceDCO DevAdmin Operation", () => {
     });
     console.log("Force DCO response:", response.data);
     expect(response.status).toBe(200);
-    await delay(DELAY_MS);
   });
 });

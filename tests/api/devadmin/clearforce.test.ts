@@ -1,5 +1,4 @@
-import axios from "../../../setup";
-import { delay, DELAY_MS } from "../../utils/delay";
+import axios from "../../setup";
 
 describe("clearForce DevAdmin Operation", () => {
   // Added 2 minute timeout since these operations take longer
@@ -14,7 +13,6 @@ describe("clearForce DevAdmin Operation", () => {
       });
       console.log("Clear DBs response:", clearResponse.data);
       expect(clearResponse.status).toBe(200);
-      await delay(DELAY_MS);
 
       // Then force DCO
       console.log("\nForcing DCO...");
@@ -25,7 +23,6 @@ describe("clearForce DevAdmin Operation", () => {
       });
       console.log("Force DCO response:", forceResponse.data);
       expect(forceResponse.status).toBe(200);
-      await delay(DELAY_MS);
 
       console.log("\nClear and Force operations completed successfully");
     } catch (error: any) {

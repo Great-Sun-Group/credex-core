@@ -1,6 +1,3 @@
-import { authRequest } from "../../utils/request";
-import { delay, DELAY_MS } from "../../utils/delay";
-
 describe("Get Account Details Test", () => {
   it("getAccountDetails", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
@@ -16,6 +13,5 @@ describe("Get Account Details Test", () => {
     }, jwt);
     console.log("Account details:", response.data);
     expect(response.status).toBe(200);
-    await delay(DELAY_MS);
   });
 });

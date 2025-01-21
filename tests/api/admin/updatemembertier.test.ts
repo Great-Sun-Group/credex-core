@@ -1,6 +1,3 @@
-import { authRequest } from "../utils/request";
-import { delay, DELAY_MS } from "../utils/delay";
-
 describe("Update Member Tier Test", () => {
   it("updateMemberTier", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
@@ -17,6 +14,5 @@ describe("Update Member Tier Test", () => {
     }, jwt);
     console.log("Update tier response:", response.data);
     expect(response.status).toBe(200);
-    await delay(DELAY_MS);
   });
 });

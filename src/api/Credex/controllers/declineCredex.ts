@@ -72,19 +72,18 @@ export async function DeclineCredexController(
         data: {
           action: {
             id: credexID,
-            type: ApiActionType.ERROR_NOT_FOUND,
+            type: ApiActionType.ERROR_INTERNAL,
             timestamp: new Date().toISOString(),
             actor: signerID,
             details: {
-              code: "NOT_FOUND",
+              code: "DECLINE_FAILED",
               reason: "Credex not found or already processed",
-              field: "credexID",
             },
           },
-          dashboard: { member: null, account: null },
+          dashboard: {},
         },
       };
-      return res.status(404).json(errorResponse);
+      return res.status(400).json(errorResponse);
     }
 
     // Get updated standardized dashboard data for the receiver's account
@@ -158,7 +157,7 @@ export async function DeclineCredexController(
           data: {
             action: {
               id: req.body.credexID,
-              type: ApiActionType.ERROR_VALIDATION,
+              type: ApiActionType.ERROR_INTERNAL,
               timestamp: new Date().toISOString(),
               actor: req.user.memberID,
               details: {
@@ -170,7 +169,7 @@ export async function DeclineCredexController(
             dashboard: {},
           },
         };
-        return res.status(409).json(errorResponse);
+        return res.status(400).json(errorResponse);
       }
 
       if (error.message.includes("not found")) {
@@ -183,19 +182,18 @@ export async function DeclineCredexController(
           data: {
             action: {
               id: req.body.credexID,
-              type: ApiActionType.ERROR_NOT_FOUND,
+              type: ApiActionType.ERROR_INTERNAL,
               timestamp: new Date().toISOString(),
               actor: req.user.memberID,
               details: {
-                code: "NOT_FOUND",
+                code: "DECLINE_FAILED",
                 reason: "The specified Credex could not be found",
-                field: "credexID",
               },
             },
             dashboard: {},
           },
         };
-        return res.status(404).json(errorResponse);
+        return res.status(400).json(errorResponse);
       }
 
       if (error.message.includes("not authorized")) {
@@ -208,19 +206,18 @@ export async function DeclineCredexController(
           data: {
             action: {
               id: req.body.credexID,
-              type: ApiActionType.ERROR_UNAUTHORIZED,
+              type: ApiActionType.ERROR_INTERNAL,
               timestamp: new Date().toISOString(),
               actor: req.user.memberID,
               details: {
-                code: "UNAUTHORIZED",
-                reason:
-                  "You must be authorized for the receiving account to decline this Credex",
+                code: "DECLINE_FAILED",
+                reason: "You must be authorized for the receiving account to decline this Credex",
               },
             },
             dashboard: {},
           },
         };
-        return res.status(403).json(errorResponse);
+        return res.status(400).json(errorResponse);
       }
 
       if (error.message.includes("digital signature")) {

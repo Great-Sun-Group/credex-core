@@ -1,5 +1,4 @@
 import axios from "../setup";
-import { delay, DELAY_MS } from "./utils/delay";
 
 describe("onboardMember Endpoint Test", () => {
   const headers = {
@@ -106,8 +105,6 @@ describe("onboardMember Endpoint Test", () => {
       pendingInData: expect.any(Array),
       pendingOutData: expect.any(Array),
     });
-
-    await delay(DELAY_MS);
   });
 
   it("missing required fields", async () => {
@@ -140,8 +137,6 @@ describe("onboardMember Endpoint Test", () => {
         dashboard: {},
       },
     });
-
-    await delay(DELAY_MS);
   });
 
   it("invalid phone number format", async () => {
@@ -180,7 +175,6 @@ describe("onboardMember Endpoint Test", () => {
       },
     });
 
-    await delay(DELAY_MS);
   });
 
   it("invalid denomination", async () => {
@@ -219,7 +213,6 @@ describe("onboardMember Endpoint Test", () => {
       },
     });
 
-    await delay(DELAY_MS);
   });
 
   it("duplicate handle", async () => {
@@ -257,6 +250,5 @@ describe("onboardMember Endpoint Test", () => {
       },
     });
 
-    await delay(DELAY_MS);
   });
 });

@@ -1,6 +1,3 @@
-import { authRequest } from "../api/utils/request";
-import { delay, DELAY_MS } from "../api/utils/delay";
-
 /**
  * Register a new FCM token for push notifications
  */
@@ -13,7 +10,6 @@ export async function registerToken(token: string, userId: string, platform: str
   }, jwt);
   console.log("Response:", response.data);
   expect(response.status).toBe(200);
-  await delay(DELAY_MS);
   return response;
 }
 
@@ -28,7 +24,6 @@ export async function removeToken(userId: string, token: string, jwt: string) {
   }, jwt);
   console.log("Response:", response.data);
   expect(response.status).toBe(200);
-  await delay(DELAY_MS);
   return response;
 }
 
@@ -40,7 +35,6 @@ export async function getNotificationSettings(userId: string, jwt: string) {
   const response = await authRequest(`/notifications/settings/${userId}`, null, jwt, { method: 'GET' });
   console.log("Response:", response.data);
   expect(response.status).toBe(200);
-  await delay(DELAY_MS);
   return response;
 }
 
@@ -52,6 +46,5 @@ export async function updateNotificationSettings(userId: string, settings: any, 
   const response = await authRequest(`/notifications/settings/${userId}`, settings, jwt);
   console.log("Response:", response.data);
   expect(response.status).toBe(200);
-  await delay(DELAY_MS);
   return response;
 }

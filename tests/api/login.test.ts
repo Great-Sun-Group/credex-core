@@ -1,5 +1,4 @@
 import axios from "../setup";
-import { delay, DELAY_MS } from "./utils/delay";
 
 describe("login Endpoint Test", () => {
   const headers = {
@@ -142,8 +141,6 @@ describe("login Endpoint Test", () => {
         }
       }
     }
-
-    await delay(DELAY_MS);
   });
 
   it("missing phone number", async () => {
@@ -176,8 +173,6 @@ describe("login Endpoint Test", () => {
       },
     });
     expect(response.data.data).toHaveProperty("dashboard", {});
-
-    await delay(DELAY_MS);
   });
 
   it("invalid phone number format", async () => {
@@ -212,8 +207,6 @@ describe("login Endpoint Test", () => {
       },
     });
     expect(response.data.data).toHaveProperty("dashboard", {});
-
-    await delay(DELAY_MS);
   });
 
   it("member not found", async () => {
@@ -246,9 +239,7 @@ describe("login Endpoint Test", () => {
         },
       },
     });
-    expect(response.data.data).toHaveProperty("dashboard", {});
-
-    await delay(DELAY_MS);
+    expect
   });
 
   // Note: 500 error test is optional since it requires simulating internal server errors

@@ -1,6 +1,3 @@
-import { authRequest } from "../../utils/request";
-import { delay, DELAY_MS } from "../../utils/delay";
-
 describe("Get Sent Credex Offers Test", () => {
   it("getSentCredexOffers", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
@@ -16,6 +13,5 @@ describe("Get Sent Credex Offers Test", () => {
     }, jwt);
     console.log("Sent offers:", response.data);
     expect(response.status).toBe(200);
-    await delay(DELAY_MS);
   });
 });
