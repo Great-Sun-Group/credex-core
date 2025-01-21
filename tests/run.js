@@ -1,5 +1,5 @@
 const { execSync, spawn } = require("child_process");
-const net = require('net');
+const net = require("net");
 const path = require("path");
 
 // Get command line arguments
@@ -34,12 +34,14 @@ const envFlags = {
 function isServerRunning() {
   return new Promise((resolve) => {
     const client = new net.Socket();
-    client.connect(3000, '127.0.0.1', () => {
-      client.destroy();
-      resolve(true);
-    }).on('error', () => {
-      resolve(false);
-    });
+    client
+      .connect(3000, "127.0.0.1", () => {
+        client.destroy();
+        resolve(true);
+      })
+      .on("error", () => {
+        resolve(false);
+      });
   });
 }
 
@@ -47,11 +49,11 @@ function isServerRunning() {
 function startServer() {
   console.log("Building TypeScript...");
   execSync("npm run build", { stdio: "inherit" });
-  
+
   console.log("Starting test server...");
   const server = spawn("node", ["build/src/index.js"], {
     env: { ...process.env, NODE_ENV: "test" },
-    stdio: "inherit"
+    stdio: "inherit",
   });
 
   // Give the server time to start
@@ -75,9 +77,23 @@ async function runTest() {
     let jestCommand;
     let testParams = remainingArgs;
 
+    // Handle devadmin commands first
+    if (devAdminCommands.includes(command)) {
+      const pattern = `tests/api/devadmin/${command.toLowerCase()}\\.test\\.ts`;
+      execSync(`jest --testPathPattern="${pattern}" ${envFlags[env]}`, {
+        stdio: "inherit",
+        env: {
+          ...process.env,
+          NODE_ENV: env,
+          API_ENV: env,
+        },
+      });
+      return;
+    }
+
     if (command === "errors" || command === "error-cases") {
       console.log("Setting up test accounts for error cases...");
-      
+
       // Create first test account with unique timestamp
       const timestamp1 = Date.now();
       const account1Output = execSync(
@@ -94,8 +110,8 @@ async function runTest() {
       );
 
       // Add delay to ensure unique timestamp
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Create second test account with unique timestamp
       const timestamp2 = Date.now();
       const account2Output = execSync(
@@ -117,24 +133,29 @@ async function runTest() {
       const accountId1Match = account1Output.match(/"id":\s*"([^"]+)"/);
       const accountId2Match = account2Output.match(/"id":\s*"([^"]+)"/);
 
-      if (!token1Match || !token2Match || !accountId1Match || !accountId2Match) {
+      if (
+        !token1Match ||
+        !token2Match ||
+        !accountId1Match ||
+        !accountId2Match
+      ) {
         console.error("Failed to extract test credentials");
         process.exit(1);
       }
 
       // Set up test parameters for error cases
       testParams = [
-        token1Match[1],    // First token
+        token1Match[1], // First token
         accountId1Match[1], // First account ID
         accountId2Match[1], // Second account ID
-        token2Match[1]     // Second token (for tests requiring different user)
+        token2Match[1], // Second token (for tests requiring different user)
       ];
 
       console.log("Test setup complete. Using parameters:", {
         token1: token1Match[1].substring(0, 10) + "...",
         accountId1: accountId1Match[1],
         accountId2: accountId2Match[1],
-        token2: token2Match[1].substring(0, 10) + "..."
+        token2: token2Match[1].substring(0, 10) + "...",
       });
 
       // Run error test files with test parameters
