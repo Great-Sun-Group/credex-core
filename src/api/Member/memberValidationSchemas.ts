@@ -87,4 +87,13 @@ export const loginMemberSchema = {
 };
 logger.debug("loginMemberSchema initialized");
 
+export const hustler10kSchema = {
+  personalAccountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+};
+logger.debug("hustler10kSchema initialized");
+
 logger.debug("All member validation schemas initialized");

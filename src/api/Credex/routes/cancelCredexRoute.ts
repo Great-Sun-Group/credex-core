@@ -124,9 +124,11 @@ export default function cancelCredexRoute() {
    *                         id:
    *                           type: string
    *                           format: uuid
+   *                           description: The attempted credexID for business logic errors, null for validation errors
+   *                           nullable: true
    *                         type:
    *                           type: string
-   *                           enum: [ERROR_VALIDATION]
+   *                           enum: [ERROR_INTERNAL]
    *                         timestamp:
    *                           type: string
    *                           format: date-time
@@ -138,7 +140,7 @@ export default function cancelCredexRoute() {
    *                           properties:
    *                             code:
    *                               type: string
-   *                               enum: [INVALID_STATE, VALIDATION_ERROR]
+   *                               enum: [INVALID_STATE, VALIDATION_ERROR, CANCEL_FAILED]
    *                             reason:
    *                               type: string
    *                             field:
@@ -242,9 +244,10 @@ export default function cancelCredexRoute() {
    *                         id:
    *                           type: string
    *                           format: uuid
+   *                           description: The attempted credexID
    *                         type:
    *                           type: string
-   *                           enum: [ERROR_NOT_FOUND]
+   *                           enum: [ERROR_INTERNAL]
    *                         timestamp:
    *                           type: string
    *                           format: date-time
@@ -282,9 +285,10 @@ export default function cancelCredexRoute() {
    *                         id:
    *                           type: string
    *                           format: uuid
+   *                           description: The attempted credexID
    *                         type:
    *                           type: string
-   *                           enum: [ERROR_VALIDATION]
+   *                           enum: [ERROR_INTERNAL]
    *                         timestamp:
    *                           type: string
    *                           format: date-time

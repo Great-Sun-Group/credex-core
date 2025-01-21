@@ -20,7 +20,10 @@ import {
   ErrorActionDetails,
 } from "../../../types/apiResponse";
 import { denomFormatter } from "../../../utils/denomUtils";
-import { CredexNotificationService, ICredexNotificationService } from "../../Notifications/services/CredexNotificationService";
+import {
+  CredexNotificationService,
+  ICredexNotificationService,
+} from "../../Notifications/services/CredexNotificationService";
 
 interface UserRequest extends express.Request {
   user?: any;
@@ -129,24 +132,45 @@ export async function CreateCredexController(
         requestId,
         message: tierAuth.message,
       });
-      const errorResponse: CreateCredexErrorResponse = {
-        message: tierAuth.message,
-        data: {
-          action: {
-            id: null,
-            type: ApiActionType.ERROR_UNAUTHORIZED,
-            timestamp: new Date().toISOString(),
-            actor: signerID,
-            details: {
-              code: "TIER_LIMIT_EXCEEDED",
-              reason: tierAuth.message,
-              field: "securedCredex",
+      // Handle different error codes from AuthForTierSpendLimitService
+      if (tierAuth.error?.code === "NOT_FOUND") {
+        const errorResponse: CreateCredexErrorResponse = {
+          message: tierAuth.message,
+          data: {
+            action: {
+              id: null,
+              type: ApiActionType.ERROR_UNAUTHORIZED,
+              timestamp: new Date().toISOString(),
+              actor: signerID,
+              details: {
+                code: "FORBIDDEN",
+                reason: tierAuth.message,
+              },
             },
+            dashboard: {},
           },
-          dashboard: {},
-        },
-      };
-      return res.status(403).json(errorResponse);
+        };
+        return res.status(403).json(errorResponse);
+      } else {
+        const errorResponse: CreateCredexErrorResponse = {
+          message: tierAuth.message,
+          data: {
+            action: {
+              id: null,
+              type: ApiActionType.ERROR_UNAUTHORIZED,
+              timestamp: new Date().toISOString(),
+              actor: signerID,
+              details: {
+                code: "TIER_LIMIT_EXCEEDED",
+                reason: tierAuth.message,
+                field: "securedCredex",
+              },
+            },
+            dashboard: {},
+          },
+        };
+        return res.status(403).json(errorResponse);
+      }
     }
 
     // Validate due date for unsecured credex
@@ -242,27 +266,41 @@ export async function CreateCredexController(
     if (!createCredexResult.success || !createCredexResult.data) {
       logger.warn("Failed to create Credex", {
         error: createCredexResult.message,
+        code: createCredexResult.error?.code,
         requestId,
       });
+
       const errorResponse: CreateCredexErrorResponse = {
         message: createCredexResult.message || "Failed to create Credex",
         data: {
           action: {
             id: null,
-            type: ApiActionType.CREDEX_CREATE_FAILED,
             timestamp: new Date().toISOString(),
             actor: signerID,
+            type: ApiActionType.ERROR_UNAUTHORIZED,
             details: {
               code: createCredexResult.error?.code || "CREATE_FAILED",
-              reason: createCredexResult.message || "Failed to create Credex",
-              suggestion:
-                "Please try again or contact support if the issue persists",
+              reason: createCredexResult.message || "Failed to create Credex"
             },
           },
           dashboard: {},
         },
       };
-      return res.status(400).json(errorResponse);
+
+      // Map error codes to appropriate status and action type
+      switch (createCredexResult.error?.code) {
+        case "FORBIDDEN":
+        case "INSUFFICIENT_SECURED_BALANCE":
+          return res.status(403).json(errorResponse);
+        case "DB_ERROR":
+        case "INTERNAL_ERROR":
+          errorResponse.data.action.type = ApiActionType.ERROR_INTERNAL;
+          errorResponse.data.action.details.suggestion = "Please try again or contact support if the issue persists";
+          return res.status(500).json(errorResponse);
+        default:
+          errorResponse.data.action.type = ApiActionType.CREDEX_CREATE_FAILED;
+          return res.status(400).json(errorResponse);
+      }
     }
 
     // Fetch updated standardized dashboard data
@@ -317,13 +355,13 @@ export async function CreateCredexController(
         amount: formattedAmount,
         denomination: Denomination,
         counterpartyName: createCredexResult.data.issuerAccountName,
-        requestId
+        requestId,
       });
     } catch (error) {
       // Log but don't fail the request
       logger.error("Failed to send notification", {
         error: error instanceof Error ? error.message : "Unknown error",
-        requestId
+        requestId,
       });
     }
 
