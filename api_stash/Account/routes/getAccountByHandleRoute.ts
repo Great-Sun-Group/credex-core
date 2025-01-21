@@ -1,23 +1,20 @@
 import express from "express";
-import { GetBalancesController } from "../controllers/getBalances";
+import { GetAccountByHandleController } from "../controllers/getAccountByHandle";
 import { validateRequest } from "../../../middleware/validateRequest";
 import { errorHandler } from "../../../middleware/errorHandler";
-import { getBalancesSchema } from "../accountValidationSchemas";
-import { authenticatedHandler } from "../../../middleware/authMiddleware";
+import { getAccountByHandleSchema } from "../accountValidationSchemas";
 import logger from "../../../utils/logger";
 
-export default function getBalancesRoute() {
+export default function getAccountByHandleRoute() {
   const router = express.Router();
 
   /**
    * @swagger
-   * /getBalances:
+   * /getAccountByHandle:
    *   post:
    *     tags: [Accounts]
-   *     summary: Get account balances
-   *     description: Retrieves secured and unsecured balances for an account across all denominations
-   *     security:
-   *       - bearerAuth: []
+   *     summary: Get account by handle
+   *     description: Retrieves account information using its unique handle
    *     requestBody:
    *       required: true
    *       content:
@@ -25,15 +22,15 @@ export default function getBalancesRoute() {
    *           schema:
    *             type: object
    *             required:
-   *               - accountID
+   *               - accountHandle
    *             properties:
-   *               accountID:
+   *               accountHandle:
    *                 type: string
-   *                 format: uuid
-   *                 description: ID of the account to get balances for
+   *                 pattern: ^[a-z0-9_]{3,30}$
+   *                 description: Unique handle for the account (lowercase letters, numbers, underscores)
    *     responses:
    *       200:
-   *         description: Balances retrieved successfully
+   *         description: Account found successfully
    *         content:
    *           application/json:
    *             schema:
@@ -41,7 +38,7 @@ export default function getBalancesRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: Account balances retrieved successfully
+   *                   example: Account found successfully
    *                 data:
    *                   type: object
    *                   properties:
@@ -54,7 +51,7 @@ export default function getBalancesRoute() {
    *                           description: The account ID
    *                         type:
    *                           type: string
-   *                           enum: [BALANCES_RETRIEVED]
+   *                           enum: [ACCOUNT_FOUND]
    *                           description: The type of action performed
    *                         timestamp:
    *                           type: string
@@ -62,58 +59,30 @@ export default function getBalancesRoute() {
    *                           description: When the action occurred
    *                         actor:
    *                           type: string
-   *                           format: uuid
-   *                           description: ID of the member requesting balances
+   *                           example: system
+   *                           description: System action, no specific actor
    *                         details:
    *                           type: object
    *                           properties:
    *                             accountID:
    *                               type: string
    *                               format: uuid
-   *                             balances:
-   *                               type: object
-   *                               properties:
-   *                                 securedNetBalancesByDenom:
-   *                                   type: array
-   *                                   items:
-   *                                     type: string
-   *                                     description: Formatted balance with denomination (e.g. "100.00 USD")
-   *                                 unsecuredBalancesInDefaultDenom:
-   *                                   type: object
-   *                                   properties:
-   *                                     totalPayables:
-   *                                       type: string
-   *                                       description: Total payables in default denomination
-   *                                     totalReceivables:
-   *                                       type: string
-   *                                       description: Total receivables in default denomination
-   *                                     netPayRec:
-   *                                       type: string
-   *                                       description: Net payables/receivables in default denomination
-   *                                 netCredexAssetsInDefaultDenom:
-   *                                   type: string
-   *                                   description: Net credex assets in default denomination
+   *                             accountName:
+   *                               type: string
+   *                             accountHandle:
+   *                               type: string
+   *                             accountType:
+   *                               type: string
+   *                             defaultDenom:
+   *                               type: string
+   *                             createdAt:
+   *                               type: string
+   *                               format: date-time
    *                     dashboard:
    *                       type: object
-   *                       properties:
-   *                         accountID:
-   *                           type: string
-   *                           format: uuid
-   *                         accountName:
-   *                           type: string
-   *                         accountHandle:
-   *                           type: string
-   *                         accountType:
-   *                           type: string
-   *                           enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
-   *                           description: Type of the account
-   *                         defaultDenom:
-   *                           type: string
-   *                         balanceData:
-   *                           type: object
-   *                           description: Full balance data matching the action details
+   *                       description: Empty dashboard since this is just a lookup endpoint
    *       400:
-   *         description: Invalid input data or missing default denomination
+   *         description: Invalid account handle format
    *         content:
    *           application/json:
    *             schema:
@@ -121,7 +90,7 @@ export default function getBalancesRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: Invalid account ID format
+   *                   example: Invalid account handle format
    *                 data:
    *                   type: object
    *                   properties:
@@ -139,57 +108,18 @@ export default function getBalancesRoute() {
    *                           format: date-time
    *                         actor:
    *                           type: string
-   *                           format: uuid
-   *                         details:
-   *                           type: object
-   *                           properties:
-   *                             code:
-   *                               type: string
-   *                               example: INVALID_ACCOUNT_ID
-   *                             reason:
-   *                               type: string
-   *                             field:
-   *                               type: string
-   *                               example: accountID
-   *                     dashboard:
-   *                       type: object
-   *                       description: Empty dashboard object
-   *       401:
-   *         description: Authentication required
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Authentication required
-   *                 data:
-   *                   type: object
-   *                   properties:
-   *                     action:
-   *                       type: object
-   *                       properties:
-   *                         id:
-   *                           type: string
-   *                           nullable: true
-   *                         type:
-   *                           type: string
-   *                           enum: [ERROR_UNAUTHORIZED]
-   *                         timestamp:
-   *                           type: string
-   *                           format: date-time
-   *                         actor:
-   *                           type: string
    *                           example: system
    *                         details:
    *                           type: object
    *                           properties:
    *                             code:
    *                               type: string
-   *                               example: NO_AUTH
+   *                               example: INVALID_HANDLE
    *                             reason:
    *                               type: string
+   *                             field:
+   *                               type: string
+   *                               example: accountHandle
    *                     dashboard:
    *                       type: object
    *                       description: Empty dashboard object
@@ -202,7 +132,7 @@ export default function getBalancesRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: Account not found
+   *                   example: No account found with handle
    *                 data:
    *                   type: object
    *                   properties:
@@ -220,7 +150,7 @@ export default function getBalancesRoute() {
    *                           format: date-time
    *                         actor:
    *                           type: string
-   *                           format: uuid
+   *                           example: system
    *                         details:
    *                           type: object
    *                           properties:
@@ -241,7 +171,7 @@ export default function getBalancesRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: Internal server error while retrieving balances
+   *                   example: Internal server error while retrieving account
    *                 data:
    *                   type: object
    *                   properties:
@@ -259,7 +189,7 @@ export default function getBalancesRoute() {
    *                           format: date-time
    *                         actor:
    *                           type: string
-   *                           format: uuid
+   *                           example: system
    *                         details:
    *                           type: object
    *                           properties:
@@ -273,12 +203,12 @@ export default function getBalancesRoute() {
    *                       description: Empty dashboard object
    */
   router.post(
-    `/getBalances`,
-    validateRequest(getBalancesSchema),
-    authenticatedHandler(GetBalancesController),
+    `/getAccountByHandle`,
+    validateRequest(getAccountByHandleSchema),
+    GetAccountByHandleController,
     errorHandler
   );
-  logger.debug("Route registered: POST /getBalances");
+  logger.debug("Route registered: POST /getAccountByHandle");
 
   return router;
 }

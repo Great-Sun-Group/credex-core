@@ -72,18 +72,79 @@ export class AccountRepository implements IAccountRepository {
         // Single optimized query to get all required account data
         const result = await session.executeRead(
           async (tx: ManagedTransaction) => {
+            // First find the account and log its existence
+            const accountQuery = await tx.run(
+              `
+              MATCH (account:Account { accountID: $accountID })
+              RETURN account IS NOT NULL as accountExists
+            `,
+              { accountID }
+            );
+
+            const accountExists = accountQuery.records[0]?.get("accountExists");
+            logger.debug("Account check", { accountID, exists: accountExists });
+
+            // Then check authorization paths and log results
+            const authQuery = await tx.run(
+              `
+              MATCH (account:Account { accountID: $accountID })
+              OPTIONAL MATCH (signer:Member|Recurring)
+              WHERE (signer:Member AND signer.memberID = $memberID)
+                 OR (signer:Recurring AND signer.recurringID = $memberID)
+              
+              // Check authorization paths
+              WITH account, signer
+              OPTIONAL MATCH path1 = (signer)-[:AUTHORIZED_FOR]->(account)
+              OPTIONAL MATCH (signer)-[:ACTIVE]-(account)<-[:AUTHORIZED_FOR]-(:Member)-[:SIGNED]->(sig:Signature)-[:SIGNED]->(signer)
+              
+              RETURN
+                account.accountID as accountID,
+                signer:Member as memberExists,
+                signer:Recurring as recurringExists,
+                path1 IS NOT NULL as hasDirectAuth,
+                EXISTS((signer)-[:ACTIVE]->(account)) as hasActiveRelation,
+                sig IS NOT NULL as hasOwnerSigned
+            `,
+              { accountID, memberID }
+            );
+
+            const auth = authQuery.records[0];
+            if (auth) {
+              logger.debug("Authorization check", {
+                memberExists: auth.get("memberExists"),
+                recurringExists: auth.get("recurringExists"),
+                hasDirectAuth: auth.get("hasDirectAuth"),
+                hasActiveRelation: auth.get("hasActiveRelation"),
+                hasOwnerSigned: auth.get("hasOwnerSigned"),
+              });
+            }
+
+            // Now execute the actual query
             const query = `
-            MATCH
-              (account:Account { accountID: $accountID })
-              <-[:AUTHORIZED_FOR]-
-              (member:Member { memberID: $memberID})
-            // Using index on :Account(accountID) and :Member(memberID)
+            // Match signer (Member or Recurring)
+            MATCH (signer:Member|Recurring)
+            WHERE (signer:Member AND signer.memberID = $memberID)
+               OR (signer:Recurring AND signer.recurringID = $memberID)
             
-            // Get all authorized members in one go
+            MATCH (account:Account {accountID: $accountID})
+            
+            // Check authorization paths
+            OPTIONAL MATCH path1 = (signer)-[:AUTHORIZED_FOR]->(account)
+            OPTIONAL MATCH path2 = (signer)-[:ACTIVE]-(account)<-[:AUTHORIZED_FOR]-(:Member)-[:SIGNED]->(:Signature)-[:SIGNED]->(signer)
+            
+            WITH account, signer, 
+                 CASE WHEN path1 IS NOT NULL THEN true  // Direct authorization
+                      WHEN path2 IS NOT NULL THEN true  // Recurring template with member authorization
+                      ELSE false
+                 END as hasAccess
+            WHERE hasAccess = true
+            
+            // Get all authorized members
+            WITH account, signer
             MATCH (account)<-[:AUTHORIZED_FOR]-(allAuthMembers:Member)
             
             // Check ownership
-            OPTIONAL MATCH (account)<-[owns:OWNS]-(member)
+            OPTIONAL MATCH (account)<-[owns:AUTHORIZED_FOR]-(m:Member { memberID: $memberID })
             
             // Get send offers to member if exists
             OPTIONAL MATCH (account)-[:SEND_OFFERS_TO]->(sendOffersTo:Member)
