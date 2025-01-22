@@ -1,3 +1,9 @@
+# Add us-east-1 provider temporarily to clean up orphaned resources
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+}
+
 # VPC
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
@@ -245,7 +251,31 @@ resource "aws_route53_record" "cert_validation" {
   zone_id         = data.aws_route53_zone.domain.zone_id
 }
 
-# Certificate validation for both certificates
+# CloudFront certificate (in us-east-1) - temporary for cleanup
+resource "aws_acm_certificate" "cloudfront_cert" {
+  provider = aws.us_east_1
+  
+  domain_name               = "docs.${var.domain}"
+  validation_method         = "DNS"
+
+  tags = merge(var.common_tags, {
+    Name = "credex-cloudfront-cert-${var.environment}"
+  })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Certificate validation for CloudFront cert - temporary for cleanup
+resource "aws_acm_certificate_validation" "cloudfront_cert" {
+  provider = aws.us_east_1
+  
+  certificate_arn         = aws_acm_certificate.cloudfront_cert.arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+}
+
+# Certificate validation for ALB cert
 resource "aws_acm_certificate_validation" "credex_cert" {
   certificate_arn         = aws_acm_certificate.credex_cert.arn
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
