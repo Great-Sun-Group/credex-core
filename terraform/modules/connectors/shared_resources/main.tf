@@ -1,9 +1,3 @@
-# Add us-east-1 provider for CloudFront certificate
-provider "aws" {
-  alias  = "us_east_1"
-  region = "us-east-1"
-}
-
 # VPC
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
@@ -213,66 +207,6 @@ resource "aws_security_group" "neo4j" {
   })
 }
 
-# S3 bucket for docs - create bucket first without waiting for CloudFront
-resource "aws_s3_bucket" "docs" {
-  bucket = "docsbucket-${var.domain}"
-
-  tags = merge(var.common_tags, {
-    Name = "docs-${var.environment}"
-  })
-
-  # Force bucket to be created quickly without waiting for CloudFront
-  lifecycle {
-    ignore_changes = [
-      website,
-      policy,
-      versioning,
-    ]
-  }
-}
-
-# Configure bucket for website hosting separately
-resource "aws_s3_bucket_website_configuration" "docs" {
-  bucket = aws_s3_bucket.docs.id
-  index_document {
-    suffix = "index.html"
-  }
-
-  depends_on = [aws_s3_bucket.docs]
-}
-
-# Configure public access block separately
-resource "aws_s3_bucket_public_access_block" "docs" {
-  bucket = aws_s3_bucket.docs.id
-
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
-
-  depends_on = [aws_s3_bucket.docs]
-}
-
-# Add bucket policy separately after public access block is configured
-resource "aws_s3_bucket_policy" "docs" {
-  bucket = aws_s3_bucket.docs.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "PublicReadGetObject"
-        Effect    = "Allow"
-        Principal = "*"
-        Action    = "s3:GetObject"
-        Resource  = "${aws_s3_bucket.docs.arn}/*"
-      },
-    ]
-  })
-
-  depends_on = [aws_s3_bucket_public_access_block.docs]
-}
-
 # ACM Certificate for ALB (in current region)
 resource "aws_acm_certificate" "credex_cert" {
   domain_name               = var.domain
@@ -288,34 +222,15 @@ resource "aws_acm_certificate" "credex_cert" {
   }
 }
 
-# ACM Certificate for CloudFront (in us-east-1)
-resource "aws_acm_certificate" "cloudfront_cert" {
-  provider = aws.us_east_1
-  
-  domain_name               = "docs.${var.domain}"
-  validation_method         = "DNS"
-
-  tags = merge(var.common_tags, {
-    Name = "credex-cloudfront-cert-${var.environment}"
-  })
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
 # Get the hosted zone for the domain
 data "aws_route53_zone" "domain" {
   name = var.domain_base
 }
 
-# Create DNS records for certificate validation (for both certificates)
+# Create DNS records for certificate validation
 resource "aws_route53_record" "cert_validation" {
   for_each = {
-    for dvo in concat(
-      [for opt in aws_acm_certificate.credex_cert.domain_validation_options : opt],
-      [for opt in aws_acm_certificate.cloudfront_cert.domain_validation_options : opt]
-    ) : dvo.domain_name => {
+    for dvo in aws_acm_certificate.credex_cert.domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
       type   = dvo.resource_record_type
@@ -334,73 +249,6 @@ resource "aws_route53_record" "cert_validation" {
 resource "aws_acm_certificate_validation" "credex_cert" {
   certificate_arn         = aws_acm_certificate.credex_cert.arn
   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
-}
-
-resource "aws_acm_certificate_validation" "cloudfront_cert" {
-  provider = aws.us_east_1
-  
-  certificate_arn         = aws_acm_certificate.cloudfront_cert.arn
-  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
-}
-
-# CloudFront distribution for docs
-resource "aws_cloudfront_distribution" "docs" {
-  enabled             = true
-  is_ipv6_enabled     = true
-  default_root_object = "index.html"
-  # Temporarily remove alias until old CNAME association clears
-  # aliases             = ["docs.${var.domain}"]
-  price_class         = "PriceClass_100"
-
-  origin {
-    domain_name = aws_s3_bucket_website_configuration.docs.website_endpoint
-    origin_id   = "S3-docsbucket-${var.domain}"
-    
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-    }
-  }
-
-  default_cache_behavior {
-    allowed_methods        = ["GET", "HEAD"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "S3-docsbucket-${var.domain}"
-    viewer_protocol_policy = "redirect-to-https"
-    compress              = true
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-
-    min_ttl     = 0
-    default_ttl = 3600
-    max_ttl     = 86400
-  }
-
-  restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
-  }
-
-  viewer_certificate {
-    cloudfront_default_certificate = true
-    # Temporarily use default certificate until CNAME is available
-    # cloudfront_default_certificate = false
-    # acm_certificate_arn           = aws_acm_certificate_validation.cloudfront_cert.certificate_arn
-    # ssl_support_method            = "sni-only"
-    # minimum_protocol_version      = "TLSv1.2_2021"
-  }
-
-  tags = merge(var.common_tags, {
-    Name = "docs-cloudfront-${var.environment}"
-  })
 }
 
 # Application Load Balancer (ALB)
@@ -448,19 +296,6 @@ resource "aws_route53_record" "alb" {
   }
 }
 
-# Update Route53 record for docs to point to CloudFront
-resource "aws_route53_record" "docs" {
-  zone_id = data.aws_route53_zone.domain.zone_id
-  name    = "docs.${var.domain}"
-  type    = "A"
-
-  alias {
-    name                   = aws_cloudfront_distribution.docs.domain_name
-    zone_id                = aws_cloudfront_distribution.docs.hosted_zone_id
-    evaluate_target_health = false
-  }
-}
-
 # ALB Listener
 resource "aws_lb_listener" "credex_listener" {
   load_balancer_arn = aws_lb.credex_alb.arn
@@ -472,58 +307,6 @@ resource "aws_lb_listener" "credex_listener" {
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.credex_core.arn
-  }
-}
-
-# Rule for docs subdomain requests
-resource "aws_lb_listener_rule" "docs" {
-  listener_arn = aws_lb_listener.credex_listener.arn
-  priority     = 100
-
-  condition {
-    host_header {
-      values = ["docs.${var.domain}"]
-    }
-  }
-
-  action {
-    type = "fixed-response"
-    
-    fixed_response {
-      content_type = "text/plain"
-      message_body = "Please visit the docs at https://docs.${var.domain}"
-      status_code  = "200"
-    }
-  }
-}
-
-# Rule for root path on main domain
-resource "aws_lb_listener_rule" "root_to_docs" {
-  listener_arn = aws_lb_listener.credex_listener.arn
-  priority     = 90  # Higher priority than default but lower than docs subdomain rule
-
-  condition {
-    host_header {
-      values = [var.domain]
-    }
-  }
-
-  condition {
-    path_pattern {
-      values = ["/$"]  # Exact match for root path only
-    }
-  }
-
-  action {
-    type = "redirect"
-
-    redirect {
-      host        = "docs.${var.domain}"
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-      path        = "/"
-    }
   }
 }
 
