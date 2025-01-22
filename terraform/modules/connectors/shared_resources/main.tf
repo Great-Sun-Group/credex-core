@@ -448,7 +448,7 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
 # Security: Encrypted at rest, no public access, versioning enabled
 # Access Pattern: Write to uploads/, process to processed/, archive to archived/
 resource "aws_s3_bucket" "verification_photos" {
-  bucket = "credexcore-verifybucket-photos-${var.environment}"
+  bucket = "credexbuckets-verifybucket-photos-${var.environment}"
 
   tags = merge(var.common_tags, {
     Name = "verification-photos-${var.environment}"
@@ -586,7 +586,7 @@ resource "aws_s3_bucket_cors_configuration" "verification_photos" {
 # Access logging bucket for audit trail
 # Purpose: Store access logs for security and compliance
 resource "aws_s3_bucket" "verification_logs" {
-  bucket = "credexcore-verifybucket-logs-${var.environment}"
+  bucket = "credexbuckets-verifybucket-logs-${var.environment}"
 
   tags = merge(var.common_tags, {
     Name = "verification-logs-${var.environment}"
@@ -626,7 +626,7 @@ resource "aws_s3_bucket_logging" "verification_photos" {
 
 # Backup bucket for disaster recovery
 resource "aws_s3_bucket" "verification_backups" {
-  bucket   = "credexcore-verifybucket-backups-${var.environment}"
+  bucket   = "credexbuckets-verifybucket-backups-${var.environment}"
 
   tags = merge(var.common_tags, {
     Name = "verification-backups-${var.environment}"
