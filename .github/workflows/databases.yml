@@ -35,10 +35,10 @@ jobs:
           cd terraform
           echo "Initializing Terraform..."
           terraform init \
-            -backend-config="bucket=credexcore-statebucket-${ENVIRONMENT}" \
+            -backend-config="bucket=credexbuckets-statebucket-${ENVIRONMENT}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=credexcore-statebucket-lock-${ENVIRONMENT}"
+            -backend-config="dynamodb_table=credexbuckets-statebucket-lock-${ENVIRONMENT}"
 
       - name: Terraform Plan
         env:
