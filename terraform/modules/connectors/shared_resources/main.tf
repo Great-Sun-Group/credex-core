@@ -594,10 +594,8 @@ resource "aws_s3_bucket_logging" "verification_photos" {
   target_prefix = "access-logs/"
 }
 
-# Cross-region backup bucket for disaster recovery
-# Located in us-east-1 for geographic redundancy
+# Backup bucket for disaster recovery
 resource "aws_s3_bucket" "verification_backups" {
-  provider = aws.us_east_1
   bucket   = "credexcore-verifybucket-backups-${var.environment}"
 
   tags = merge(var.common_tags, {
@@ -609,7 +607,6 @@ resource "aws_s3_bucket" "verification_backups" {
 
 # Enable versioning for backup bucket
 resource "aws_s3_bucket_versioning" "verification_backups" {
-  provider = aws.us_east_1
   bucket   = aws_s3_bucket.verification_backups.id
   
   versioning_configuration {
@@ -619,7 +616,6 @@ resource "aws_s3_bucket_versioning" "verification_backups" {
 
 # Block public access for backup bucket
 resource "aws_s3_bucket_public_access_block" "verification_backups" {
-  provider = aws.us_east_1
   bucket   = aws_s3_bucket.verification_backups.id
 
   block_public_acls       = true
@@ -630,7 +626,6 @@ resource "aws_s3_bucket_public_access_block" "verification_backups" {
 
 # Enable encryption for backup bucket
 resource "aws_s3_bucket_server_side_encryption_configuration" "verification_backups" {
-  provider = aws.us_east_1
   bucket   = aws_s3_bucket.verification_backups.id
 
   rule {
