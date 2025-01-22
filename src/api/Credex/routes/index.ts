@@ -1,7 +1,6 @@
 import express from "express";
 import createCredexRoute from "./createCredexRoute";
 import acceptCredexRoute from "./acceptCredexRoute";
-import acceptCredexBulkRoute from "./acceptCredexBulkRoute";
 import declineCredexRoute from "./declineCredexRoute";
 import cancelCredexRoute from "./cancelCredexRoute";
 import getCredexRoute from "./getCredexRoute";
@@ -21,14 +20,13 @@ export default function CredexRoutes() {
   // Mount individual routes
   router.use(createCredexRoute());
   router.use(acceptCredexRoute());
-  router.use(acceptCredexBulkRoute());
   router.use(declineCredexRoute());
   router.use(cancelCredexRoute());
   router.use(getCredexRoute());
 
   logger.info("Credex routes initialized successfully", {
     module: "credexRoutes",
-    routesCount: 6,
+    routesCount: 5,
   });
 
   return router;

@@ -39,20 +39,23 @@ interface AcceptRecurringResult {
 }
 
 class RecurringError extends Error {
-  constructor(message: string, public code: string) {
+  constructor(
+    message: string,
+    public code: string
+  ) {
     super(message);
-    this.name = 'RecurringError';
+    this.name = "RecurringError";
   }
 }
 
 /**
  * AcceptRecurringService
- * 
+ *
  * Handles the acceptance of a recurring transaction template.
  * Removes REQUESTS relationships and adds ACTIVE relationships.
  * Keeps REQUESTED relationships for history.
  * Note: DCO_GIVE and MEMBERTIER_SUBSCRIPTION templates are automatically accepted.
- * 
+ *
  * @param params - Parameters for accepting recurring transaction
  * @returns Object containing the accepted recurring transaction details
  * @throws RecurringError with specific error codes
@@ -70,7 +73,7 @@ export async function AcceptRecurringService(
     logger.debug("Verifying authorization and status", {
       recurringID,
       signerID,
-      requestId
+      requestId,
     });
 
     const verifyQuery = await ledgerSpaceSession.executeRead(async (tx) => {
@@ -105,8 +108,9 @@ export async function AcceptRecurringService(
     const targetAccountID = record.get("targetAccountID");
 
     // Skip authorization check for auto-accepted templates
-    const isAutoAccepted = templateType === TEMPLATE_TYPES.DCO_GIVE || 
-                          templateType === TEMPLATE_TYPES.MEMBERTIER_SUBSCRIPTION;
+    const isAutoAccepted =
+      templateType === TEMPLATE_TYPES.DCO_GIVE ||
+      templateType === TEMPLATE_TYPES.MEMBERTIER_SUBSCRIPTION;
     if (!isAutoAccepted && !isOwner && !isAuthorized) {
       throw new RecurringError(
         "Not authorized to accept this recurring transaction",
@@ -119,7 +123,7 @@ export async function AcceptRecurringService(
       recurringID,
       signerID,
       templateType,
-      requestId
+      requestId,
     });
 
     const acceptQuery = await ledgerSpaceSession.executeWrite(async (tx) => {
@@ -151,11 +155,11 @@ export async function AcceptRecurringService(
           target.accountID as targetAccountID
       `;
 
-      return tx.run(query, { 
+      return tx.run(query, {
         recurringID,
         sourceAccountID,
         targetAccountID,
-        status: TEMPLATE_STATUS.ACTIVE
+        status: TEMPLATE_STATUS.ACTIVE,
       });
     });
 
@@ -173,7 +177,7 @@ export async function AcceptRecurringService(
       logger.debug("Creating digital signature for manual acceptance", {
         recurringID,
         signerID,
-        requestId
+        requestId,
       });
 
       const inputData = JSON.stringify({
@@ -181,7 +185,7 @@ export async function AcceptRecurringService(
         signerID,
         sourceAccountID,
         targetAccountID,
-        acceptedAt: new Date().toISOString()
+        acceptedAt: new Date().toISOString(),
       });
 
       await digitallySign(
@@ -196,7 +200,7 @@ export async function AcceptRecurringService(
     } else {
       logger.debug(`Skipping digital signature for ${templateType} template`, {
         recurringID,
-        requestId
+        requestId,
       });
     }
 
@@ -206,58 +210,59 @@ export async function AcceptRecurringService(
       nextRunDate: acceptedRecord.get("nextRunDate"),
       status: acceptedRecord.get("status"),
       templateType: acceptedRecord.get("templateType"),
-      ...(templateType === TEMPLATE_TYPES.DCO_GIVE 
+      ...(templateType === TEMPLATE_TYPES.DCO_GIVE
         ? {
             DCOgiveInCXX: `${denomFormatter(acceptedRecord.get("DCOgiveInCXX"), "CXX")} CXX`,
-            DCOdenom: acceptedRecord.get("DCOdenom")
-          } 
+            DCOdenom: acceptedRecord.get("DCOdenom"),
+          }
         : {
             amount: `${denomFormatter(acceptedRecord.get("amount"), acceptedRecord.get("denomination"))} ${acceptedRecord.get("denomination")}`,
-            denomination: acceptedRecord.get("denomination")
+            denomination: acceptedRecord.get("denomination"),
           }),
       ...(templateType === TEMPLATE_TYPES.MEMBERTIER_SUBSCRIPTION
         ? {
-            memberTier: acceptedRecord.get("memberTier")
+            memberTier: acceptedRecord.get("memberTier"),
           }
-        : {})
+        : {}),
     };
 
     const responseData = {
       recurringID,
-      amount: templateType === TEMPLATE_TYPES.DCO_GIVE 
-        ? `${denomFormatter(acceptedRecord.get("DCOgiveInCXX"), "CXX")} CXX`
-        : `${denomFormatter(acceptedRecord.get("amount"), acceptedRecord.get("denomination"))} ${acceptedRecord.get("denomination")}`,
-      denomination: templateType === TEMPLATE_TYPES.DCO_GIVE 
-        ? acceptedRecord.get("DCOdenom")
-        : acceptedRecord.get("denomination"),
+      amount:
+        templateType === TEMPLATE_TYPES.DCO_GIVE
+          ? `${denomFormatter(acceptedRecord.get("DCOgiveInCXX"), "CXX")} CXX`
+          : `${denomFormatter(acceptedRecord.get("amount"), acceptedRecord.get("denomination"))} ${acceptedRecord.get("denomination")}`,
+      denomination:
+        templateType === TEMPLATE_TYPES.DCO_GIVE
+          ? acceptedRecord.get("DCOdenom")
+          : acceptedRecord.get("denomination"),
       payFrequency: acceptedRecord.get("payFrequency"),
       nextDate: acceptedRecord.get("nextRunDate"),
       status: acceptedRecord.get("status"),
       scheduleInfo,
       participants: {
         sourceAccountID: acceptedRecord.get("sourceAccountID"),
-        targetAccountID: acceptedRecord.get("targetAccountID")
+        targetAccountID: acceptedRecord.get("targetAccountID"),
       },
       execution: {
         lastRunDate: acceptedRecord.get("lastRunDate"),
         lastRunStatus: acceptedRecord.get("lastRunStatus"),
-        totalExecutions: acceptedRecord.get("totalExecutions") || 0
-      }
+        totalExecutions: acceptedRecord.get("totalExecutions") || 0,
+      },
     };
 
     logger.info("Recurring transaction accepted successfully", {
       recurringID,
       signerID,
       templateType,
-      requestId
+      requestId,
     });
 
     return {
       success: true,
       data: responseData,
-      message: "Recurring transaction accepted successfully"
+      message: "Recurring transaction accepted successfully",
     };
-
   } catch (error) {
     if (error instanceof RecurringError) {
       throw error;
@@ -266,14 +271,13 @@ export async function AcceptRecurringService(
     logger.error("Unexpected error in AcceptRecurringService", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      requestId
+      requestId,
     });
 
     throw new RecurringError(
       `Failed to accept recurring transaction: ${error instanceof Error ? error.message : "Unknown error"}`,
       "INTERNAL_ERROR"
     );
-
   } finally {
     await ledgerSpaceSession.close();
     logger.debug("Exiting AcceptRecurringService", { requestId });
