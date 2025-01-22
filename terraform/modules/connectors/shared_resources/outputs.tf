@@ -55,18 +55,6 @@ output "cloudwatch_log_group_name" {
   value = aws_cloudwatch_log_group.ecs_logs.name
 }
 
-output "docs_bucket_name" {
-  value = aws_s3_bucket.docs.id
-}
-
-output "docs_bucket_website_endpoint" {
-  value = aws_s3_bucket_website_configuration.docs.website_endpoint
-}
-
-output "docs_cloudfront_domain_name" {
-  value = aws_cloudfront_distribution.docs.domain_name
-}
-
 # Verification system outputs
 output "verification_photos_bucket" {
   value = aws_s3_bucket.verification_photos.id
