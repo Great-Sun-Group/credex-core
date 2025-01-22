@@ -20,6 +20,9 @@ if (command === "dev" || command === "stage") {
 // Special commands that map to devadmin operations
 const devAdminCommands = ["cleardevdbs", "forcedco", "clearforce"];
 
+// Special commands that map to integration tests
+const integrationCommands = ["integrate"];
+
 // Tests that don't require JWT
 const noJwtTests = ["onboardmember", "login"];
 
@@ -81,6 +84,20 @@ async function runTest() {
     if (devAdminCommands.includes(command)) {
       const pattern = `tests/api/devadmin/${command.toLowerCase()}\\.test\\.ts`;
       execSync(`jest --testPathPattern="${pattern}" ${envFlags[env]}`, {
+        stdio: "inherit",
+        env: {
+          ...process.env,
+          NODE_ENV: env,
+          API_ENV: env,
+        },
+      });
+      return;
+    }
+
+    // Handle integration tests
+    if (integrationCommands.includes(command)) {
+      const pattern = "tests/integration/index.test.ts";
+      execSync(`jest ${pattern} ${envFlags[env]}`, {
         stdio: "inherit",
         env: {
           ...process.env,
