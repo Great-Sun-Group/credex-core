@@ -61,7 +61,9 @@ export default function onboardMemberRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   description: Human-friendly success message
+   *                   description: |
+   *                     Success message in the format:
+   *                     "{firstname} {lastname}: Personal account created with a default denomination of {defaultDenom}."
    *                   example: "John Smith: Personal account created with a default denomination of USD."
    *                 data:
    *                   type: object
@@ -196,6 +198,52 @@ export default function onboardMemberRoute() {
    *                                   netCredexAssetsInDefaultDenom:
    *                                     type: string
    *                                     description: Net credex assets in account default denomination
+   *                               pendingInData:
+   *                                 type: array
+   *                                 description: List of pending incoming transactions
+   *                                 items:
+   *                                   type: object
+   *                                   properties:
+   *                                     credexID:
+   *                                       type: string
+   *                                       format: uuid
+   *                                       description: Unique identifier for the transaction
+   *                                     formattedInitialAmount:
+   *                                       type: string
+   *                                       description: Formatted amount with denomination
+   *                                     counterpartyAccountName:
+   *                                       type: string
+   *                                       description: Name of the counterparty account
+   *                                     dueDate:
+   *                                       type: string
+   *                                       format: date
+   *                                       description: Due date for the transaction
+   *                                     secured:
+   *                                       type: boolean
+   *                                       description: Whether the transaction is secured
+   *                               pendingOutData:
+   *                                 type: array
+   *                                 description: List of pending outgoing transactions
+   *                                 items:
+   *                                   type: object
+   *                                   properties:
+   *                                     credexID:
+   *                                       type: string
+   *                                       format: uuid
+   *                                       description: Unique identifier for the transaction
+   *                                     formattedInitialAmount:
+   *                                       type: string
+   *                                       description: Formatted amount with denomination
+   *                                     counterpartyAccountName:
+   *                                       type: string
+   *                                       description: Name of the counterparty account
+   *                                     dueDate:
+   *                                       type: string
+   *                                       format: date
+   *                                       description: Due date for the transaction
+   *                                     secured:
+   *                                       type: boolean
+   *                                       description: Whether the transaction is secured
    *       400:
    *         description: Invalid input data or system configuration error
    *         content:
@@ -229,15 +277,18 @@ export default function onboardMemberRoute() {
    *                           properties:
    *                             code:
    *                               type: string
-   *                               enum: [MISSING_PARAMS, INVALID_DENOMINATION, NO_DAYNODE, INVALID_NAME_FORMAT, INVALID_PHONE]
-   *                               description: Specific error code indicating the type of validation failure
+   *                               enum: [VALIDATION_ERROR, INVALID_PHONE]
+   *                               description: Error code indicating the type of validation failure. Most validation errors use VALIDATION_ERROR with a field property, while phone validation has a specific INVALID_PHONE code.
    *                             reason:
    *                               type: string
    *                               description: Detailed explanation of what caused the validation failure
+   *                             field:
+   *                               type: string
+   *                               description: Field that failed validation (present for VALIDATION_ERROR)
    *                     dashboard:
    *                       type: object
    *       409:
-   *         description: Unique constraint violation (duplicate phone or handle)
+   *         description: Member handle uniqueness violation
    *         content:
    *           application/json:
    *             schema:
@@ -245,7 +296,7 @@ export default function onboardMemberRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: "Phone number already in use"
+   *                   example: "Member handle already in use"
    *                 data:
    *                   type: object
    *                   properties:
@@ -269,11 +320,11 @@ export default function onboardMemberRoute() {
    *                           properties:
    *                             code:
    *                               type: string
-   *                               enum: [DUPLICATE_PHONE, DUPLICATE_HANDLE, DUPLICATE_FIELD]
-   *                               description: Specific error code indicating which unique constraint was violated
+   *                               enum: [DUPLICATE_HANDLE]
+   *                               description: Error code indicating member handle uniqueness violation
    *                             reason:
    *                               type: string
-   *                               description: Detailed explanation of which field caused the uniqueness violation
+   *                               description: Message indicating the member handle is already in use
    *                     dashboard:
    *                       type: object
    *       500:

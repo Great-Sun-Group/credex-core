@@ -1,5 +1,5 @@
 const { execSync, spawn } = require("child_process");
-const net = require('net');
+const net = require("net");
 const path = require("path");
 
 // Get command line arguments
@@ -34,12 +34,14 @@ const envFlags = {
 function isServerRunning() {
   return new Promise((resolve) => {
     const client = new net.Socket();
-    client.connect(3000, '127.0.0.1', () => {
-      client.destroy();
-      resolve(true);
-    }).on('error', () => {
-      resolve(false);
-    });
+    client
+      .connect(3000, "127.0.0.1", () => {
+        client.destroy();
+        resolve(true);
+      })
+      .on("error", () => {
+        resolve(false);
+      });
   });
 }
 
@@ -47,11 +49,11 @@ function isServerRunning() {
 function startServer() {
   console.log("Building TypeScript...");
   execSync("npm run build", { stdio: "inherit" });
-  
+
   console.log("Starting test server...");
   const server = spawn("node", ["build/src/index.js"], {
     env: { ...process.env, NODE_ENV: "test" },
-    stdio: "inherit"
+    stdio: "inherit",
   });
 
   // Give the server time to start
@@ -75,40 +77,92 @@ async function runTest() {
     let jestCommand;
     let testParams = remainingArgs;
 
-    if (command === "integrate") {
-      // Handle integration tests
-      jestCommand = `jest --testPathPattern=tests/api/integration/index.test.ts ${envFlags[env]}`;
-    } else if (devAdminCommands.includes(command?.toLowerCase())) {
-      // Handle devadmin operations
-      const testPath = path.join(
-        "tests",
-        "api",
-        "endpoints",
-        "devadmin",
-        `${command.toLowerCase()}.test.ts`
-      );
-      jestCommand = `jest "${testPath}" ${envFlags[env]}`;
-      // Execute with environment variables
-      execSync(jestCommand, {
+    // Handle devadmin commands first
+    if (devAdminCommands.includes(command)) {
+      const pattern = `tests/api/devadmin/${command.toLowerCase()}\\.test\\.ts`;
+      execSync(`jest --testPathPattern="${pattern}" ${envFlags[env]}`, {
         stdio: "inherit",
         env: {
           ...process.env,
           NODE_ENV: env,
-          TEST_PARAMS: testParams.join(" "),
           API_ENV: env,
         },
       });
       return;
-    } else if (command === "admin") {
-      // Handle admin tests
-      jestCommand = `jest --testPathPattern=tests/api/endpoints/admin/admin\\.test\\.ts ${envFlags[env]}`;
-    } else if (command?.toLowerCase().startsWith("admin/")) {
-      // Handle individual admin operation tests
-      const operation = command.split("/")[1];
-      jestCommand = `jest --testPathPattern=tests/api/endpoints/admin/${operation}\\.test\\.ts ${envFlags[env]}`;
+    }
+
+    if (command === "errors" || command === "error-cases") {
+      console.log("Setting up test accounts for error cases...");
+
+      // Create first test account with unique timestamp
+      const timestamp1 = Date.now();
+      const account1Output = execSync(
+        `jest tests/api/onboardmember.test.ts --testNamePattern="onboard member" ${envFlags[env]}`,
+        {
+          env: {
+            ...process.env,
+            NODE_ENV: env,
+            TEST_PARAMS: `John Doe ${timestamp1}0 USD`,
+            API_ENV: env,
+          },
+          encoding: "utf8",
+        }
+      );
+
+      // Add delay to ensure unique timestamp
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Create second test account with unique timestamp
+      const timestamp2 = Date.now();
+      const account2Output = execSync(
+        `jest tests/api/onboardmember.test.ts --testNamePattern="onboard member" ${envFlags[env]}`,
+        {
+          env: {
+            ...process.env,
+            NODE_ENV: env,
+            TEST_PARAMS: `Jane Smith ${timestamp2}1 USD`,
+            API_ENV: env,
+          },
+          encoding: "utf8",
+        }
+      );
+
+      // Extract tokens and account IDs
+      const token1Match = account1Output.match(/"token":\s*"([^"]+)"/);
+      const token2Match = account2Output.match(/"token":\s*"([^"]+)"/);
+      const accountId1Match = account1Output.match(/"id":\s*"([^"]+)"/);
+      const accountId2Match = account2Output.match(/"id":\s*"([^"]+)"/);
+
+      if (
+        !token1Match ||
+        !token2Match ||
+        !accountId1Match ||
+        !accountId2Match
+      ) {
+        console.error("Failed to extract test credentials");
+        process.exit(1);
+      }
+
+      // Set up test parameters for error cases
+      testParams = [
+        token1Match[1], // First token
+        accountId1Match[1], // First account ID
+        accountId2Match[1], // Second account ID
+        token2Match[1], // Second token (for tests requiring different user)
+      ];
+
+      console.log("Test setup complete. Using parameters:", {
+        token1: token1Match[1].substring(0, 10) + "...",
+        accountId1: accountId1Match[1],
+        accountId2: accountId2Match[1],
+        token2: token2Match[1].substring(0, 10) + "...",
+      });
+
+      // Run error test files with test parameters
+      jestCommand = `jest tests/api/error-cases --testMatch="**/*.errors.ts" ${envFlags[env]}`;
     } else if (command) {
       // Handle endpoint tests
-      const pattern = `tests/api/endpoints/${command.toLowerCase()}\\.test\\.ts`;
+      const pattern = `tests/api/${command.toLowerCase()}\\.test\\.ts`;
 
       // If not a no-JWT test and we have args, handle login
       if (
@@ -118,7 +172,7 @@ async function runTest() {
         const phone = remainingArgs[0];
         // Run login test to get JWT
         const loginOutput = execSync(
-          `jest tests/api/endpoints/login.test.ts --testNamePattern=login ${envFlags[env]}`,
+          `jest tests/api/login.test.ts --testNamePattern=login ${envFlags[env]}`,
           {
             env: {
               ...process.env,
@@ -144,7 +198,7 @@ async function runTest() {
 
       jestCommand = `jest --testPathPattern="${pattern}" ${envFlags[env]}`;
     } else {
-      // No command provided - run all tests
+      // No command provided - run all tests including error tests
       jestCommand = `jest ${envFlags[env]}`;
     }
 

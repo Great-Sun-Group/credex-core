@@ -3,6 +3,9 @@ import { denomFormatter } from "../../../utils/denomUtils";
 import { GetSecuredAuthorizationService } from "./GetSecuredAuthorization";
 import { digitallySign } from "../../../utils/digitalSignature";
 import logger from "../../../utils/logger";
+import { AccountRepository } from "../../Account/repositories/AccountRepository";
+
+const accountRepository = new AccountRepository();
 
 interface CreateCredexInput {
   signerID: string;
@@ -87,21 +90,74 @@ export async function CreateCredexService(
   } = credexData;
 
   // Validate required fields
-  if (!signerID || !issuerAccountID || !receiverAccountID || !InitialAmount || !Denomination || !credexType || !OFFERSorREQUESTS) {
+  if (
+    !signerID ||
+    !issuerAccountID ||
+    !receiverAccountID ||
+    !InitialAmount ||
+    !Denomination ||
+    !credexType ||
+    !OFFERSorREQUESTS
+  ) {
     return {
       success: false,
       message: "Missing required parameters",
       error: {
         code: "MISSING_PARAMS",
-        details: "All required parameters must be provided"
-      }
+        details: "All required parameters must be provided",
+      },
     };
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-  const OFFEREDorREQUESTED = OFFERSorREQUESTS === "OFFERS" ? "OFFERED" : "REQUESTED";
+  const OFFEREDorREQUESTED =
+    OFFERSorREQUESTS === "OFFERS" ? "OFFERED" : "REQUESTED";
 
   try {
+    // Verify accounts exist
+    logger.debug("Verifying accounts exist", {
+      issuerAccountID,
+      receiverAccountID,
+      requestId,
+    });
+
+    // Check if issuer has access
+    const issuerAccount = await accountRepository.findByIdWithAccess(issuerAccountID, signerID);
+    if (!issuerAccount) {
+      const message = "Issuer account not found or no access";
+      logger.warn(message, {
+        issuerAccountID,
+        signerID,
+        requestId,
+      });
+      return {
+        success: false,
+        message,
+        error: {
+          code: "FORBIDDEN",
+          details: message
+        }
+      };
+    }
+
+    // Just verify receiver exists
+    const receiverAccount = await accountRepository.findById(receiverAccountID);
+    if (!receiverAccount) {
+      const message = "Receiver account not found";
+      logger.warn(message, {
+        receiverAccountID,
+        requestId,
+      });
+      return {
+        success: false,
+        message,
+        error: {
+          code: "FORBIDDEN",
+          details: message
+        }
+      };
+    }
+
     // Handle secured Credex authorization
     if (securedCredex) {
       logger.debug("Verifying secured authorization", {
@@ -119,7 +175,7 @@ export async function CreateCredexService(
         success: secureableData.success,
         data: secureableData.data,
         error: secureableData.error,
-        requestId
+        requestId,
       });
 
       if (!secureableData.success || !secureableData.data) {
@@ -127,9 +183,9 @@ export async function CreateCredexService(
           success: false,
           message: "Failed to verify secured authorization",
           error: {
-            code: "SECURED_AUTH_FAILED",
-            details: secureableData.error?.details || "Unable to verify secured authorization"
-          }
+            code: secureableData.error?.code === "DATABASE_ERROR" ? "DB_ERROR" : "INTERNAL_ERROR",
+            details: secureableData.error?.details || "Unable to verify secured authorization",
+          },
         };
       }
 
@@ -155,8 +211,8 @@ export async function CreateCredexService(
           message,
           error: {
             code: "INSUFFICIENT_SECURED_BALANCE",
-            details: message
-          }
+            details: message,
+          },
         };
       }
     }
@@ -169,8 +225,9 @@ export async function CreateCredexService(
       requestId,
     });
 
-    const result: DatabaseCreateResult = await ledgerSpaceSession.executeWrite(async (tx) => {
-      const query = `
+    const result: DatabaseCreateResult = await ledgerSpaceSession.executeWrite(
+      async (tx) => {
+        const query = `
         MATCH (daynode:Daynode { Active: true })
         MATCH (issuer:Account { accountID: $issuerAccountID })
         MATCH (receiver:Account { accountID: $receiverAccountID })
@@ -209,46 +266,55 @@ export async function CreateCredexService(
           END AS issuerMemberID
       `;
 
-      const queryResult = await tx.run(query, {
-        issuerAccountID,
-        receiverAccountID,
-        InitialAmount,
-        Denomination,
-        credexType,
-        securedCredex,
-      });
+        const queryResult = await tx.run(query, {
+          issuerAccountID,
+          receiverAccountID,
+          InitialAmount,
+          Denomination,
+          credexType,
+          securedCredex,
+        });
 
-      if (queryResult.records.length === 0) {
+        // At this point we know both accounts exist (checked earlier), 
+        // so if query fails it's due to other issues
+        if (queryResult.records.length === 0) {
+          logger.error("Neo4j query failed to create Credex", {
+            issuerAccountID,
+            receiverAccountID,
+            requestId,
+          });
+          return {
+            success: false,
+            error: "DB_ERROR",
+            details: "Failed to create Credex relationship in database"
+          };
+        }
+
+        const record = queryResult.records[0];
         return {
-          success: false,
-          error: "CREATE_FAILED"
+          success: true,
+          data: {
+            credexID: record.get("credexID"),
+            counterpartyAccountName: record.get("counterpartyAccountName"),
+            issuerAccountID: record.get("issuerAccountID"),
+            issuerAccountName: record.get("issuerAccountName"),
+            receiverAccountID: record.get("receiverAccountID"),
+            receiverMemberID: record.get("receiverMemberID"),
+            issuerMemberID: record.get("issuerMemberID"),
+            cxxMultiplier: record.get("cxxMultiplier"),
+            createdAt: record.get("createdAt"),
+          },
         };
       }
-
-      const record = queryResult.records[0];
-      return {
-        success: true,
-        data: {
-          credexID: record.get("credexID"),
-          counterpartyAccountName: record.get("counterpartyAccountName"),
-          issuerAccountID: record.get("issuerAccountID"),
-          issuerAccountName: record.get("issuerAccountName"),
-          receiverAccountID: record.get("receiverAccountID"),
-          receiverMemberID: record.get("receiverMemberID"),
-          issuerMemberID: record.get("issuerMemberID"),
-          cxxMultiplier: record.get("cxxMultiplier"),
-          createdAt: record.get("createdAt")
-        }
-      };
-    });
+    );
 
     if (!result.success || !result.data) {
       return {
         success: false,
         message: "Failed to create Credex",
         error: {
-          code: "CREATE_FAILED",
-          details: "An error occurred while creating the Credex"
+          code: "DB_ERROR",
+          details: result.error || "An error occurred while creating the Credex"
         }
       };
     }
@@ -263,18 +329,20 @@ export async function CreateCredexService(
         requestId,
       });
 
-      const addDueDateQuery = await ledgerSpaceSession.executeWrite(async (tx) => {
-        const query = `
+      const addDueDateQuery = await ledgerSpaceSession.executeWrite(
+        async (tx) => {
+          const query = `
           MATCH (newCredex:Credex { credexID: $credexID })
           SET newCredex.dueDate = date($dueDate)
           RETURN newCredex.dueDate AS dueDate
         `;
 
-        return tx.run(query, { 
-          credexID: credexData.credexID, 
-          dueDate 
-        });
-      });
+          return tx.run(query, {
+            credexID: credexData.credexID,
+            dueDate,
+          });
+        }
+      );
 
       if (addDueDateQuery.records.length === 0) {
         return {
@@ -282,8 +350,8 @@ export async function CreateCredexService(
           message: "Failed to add due date to Credex",
           error: {
             code: "DUE_DATE_ERROR",
-            details: "Unable to set due date for unsecured Credex"
-          }
+            details: "Unable to set due date for unsecured Credex",
+          },
         };
       }
     }
@@ -296,7 +364,11 @@ export async function CreateCredexService(
       );
 
       // Add proper type guard for secureableData.data and securerID
-      if (secureableData.success && secureableData.data && secureableData.data.securerID) {
+      if (
+        secureableData.success &&
+        secureableData.data &&
+        secureableData.data.securerID
+      ) {
         const securerID = secureableData.data.securerID; // Store in variable for type safety
         logger.debug("Adding secured relationship", {
           credexID: credexData.credexID,
@@ -377,11 +449,10 @@ export async function CreateCredexService(
         receiverMemberID: credexData.receiverMemberID,
         issuerMemberID: credexData.issuerMemberID,
         createdAt: credexData.createdAt,
-        cxxMultiplier: credexData.cxxMultiplier
+        cxxMultiplier: credexData.cxxMultiplier,
       },
-      message: `Credex created successfully: ${credexData.credexID}`
+      message: `Credex created successfully: ${credexData.credexID}`,
     };
-
   } catch (error) {
     logger.error("Unexpected error in CreateCredexService", {
       error: error instanceof Error ? error.message : "Unknown error",
@@ -394,10 +465,12 @@ export async function CreateCredexService(
       message: "Failed to create Credex",
       error: {
         code: "INTERNAL_ERROR",
-        details: error instanceof Error ? error.message : "An unknown error occurred while creating the Credex"
-      }
+        details:
+          error instanceof Error
+            ? error.message
+            : "An unknown error occurred while creating the Credex",
+      },
     };
-
   } finally {
     await ledgerSpaceSession.close();
     logger.debug("Exiting CreateCredexService", { requestId });
