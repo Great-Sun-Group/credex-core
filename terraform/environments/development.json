@@ -1,7 +1,7 @@
 {
   "environment": "development",
+  "domain": "mycredex.dev",
   "subdomain": "dev",
-  "dev_domain_base": "mycredex.dev",
   "aws_region": "af-south-1",
   "app_port": 3000,
   "vpc_cidr": "10.1.0.0/16",
