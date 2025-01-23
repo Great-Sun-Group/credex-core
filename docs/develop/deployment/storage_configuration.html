@@ -24,7 +24,7 @@
 
       <h2>Folder Structure</h2>
 
-      <pre><code>credexcore-verifybucket-photos-{environment}/
+      <pre><code>credexbuckets-verifybucket-photos-{environment}/
 ├── uploads/
 │   ├── id-documents/     # Raw ID document uploads
 │   └── selfies/         # Raw selfie photo uploads
@@ -34,10 +34,10 @@
 ├── archived/            # Long-term storage for historical records
 └── temp/               # Temporary storage for processing
 
-credexcore-verifybucket-logs-{environment}/
+credexbuckets-verifybucket-logs-{environment}/
 └── access-logs/        # S3 access logs for audit trail
 
-credexcore-verifybucket-backups-{environment}/
+credexbuckets-verifybucket-backups-{environment}/
 └── processed/          # Cross-region backup of processed files</code></pre>
 
       <h2>Lifecycle Policies</h2>
@@ -189,30 +189,30 @@ credexcore-verifybucket-backups-{environment}/
 
       <h3>Storage Operations</h3>
       <pre><code># Upload test
-aws s3 cp test-image.jpg s3://credexcore-verifybucket-photos-${ENV}/uploads/id-documents/
+aws s3 cp test-image.jpg s3://credexbuckets-verifybucket-photos-${ENV}/uploads/id-documents/
 
 # Read test
-aws s3 cp s3://credexcore-verifybucket-photos-${ENV}/processed/id-documents/test-image.jpg .
+aws s3 cp s3://credexbuckets-verifybucket-photos-${ENV}/processed/id-documents/test-image.jpg .
 
 # List objects
-aws s3 ls s3://credexcore-verifybucket-photos-${ENV}/uploads/id-documents/
+aws s3 ls s3://credexbuckets-verifybucket-photos-${ENV}/uploads/id-documents/
 
 # Check encryption
-aws s3api head-object --bucket credexcore-verifybucket-photos-${ENV} --key uploads/id-documents/test-image.jpg</code></pre>
+aws s3api head-object --bucket credexbuckets-verifybucket-photos-${ENV} --key uploads/id-documents/test-image.jpg</code></pre>
 
       <h3>Lifecycle Testing</h3>
       <pre><code># Check lifecycle rules
-aws s3api get-bucket-lifecycle-configuration --bucket credexcore-verifybucket-photos-${ENV}
+aws s3api get-bucket-lifecycle-configuration --bucket credexbuckets-verifybucket-photos-${ENV}
 
 # Verify transitions
-aws s3api head-object --bucket credexcore-verifybucket-photos-${ENV} --key processed/id-documents/test-image.jpg</code></pre>
+aws s3api head-object --bucket credexbuckets-verifybucket-photos-${ENV} --key processed/id-documents/test-image.jpg</code></pre>
 
       <h3>Replication Testing</h3>
       <pre><code># Check replication status
-aws s3api head-object --bucket credexcore-verifybucket-backups-${ENV} --key processed/id-documents/test-image.jpg
+aws s3api head-object --bucket credexbuckets-verifybucket-backups-${ENV} --key processed/id-documents/test-image.jpg
 
 # Verify backup bucket
-aws s3api get-bucket-versioning --bucket credexcore-verifybucket-backups-${ENV}</code></pre>
+aws s3api get-bucket-versioning --bucket credexbuckets-verifybucket-backups-${ENV}</code></pre>
     </div>
   </body>
 </html>

@@ -49,6 +49,14 @@ async function initializeApp() {
     // Add request ID middleware
     app.use(addRequestId);
 
+    // Serve static files from docs directory
+    app.use(express.static('docs'));
+
+    // Serve docs/index.html at root
+    app.get('/', (req: Request, res: Response) => {
+      res.sendFile('index.html', { root: './docs' });
+    });
+
     // Apply custom logging middleware
     app.use(expressLogger);
 
