@@ -224,7 +224,7 @@ resource "aws_acm_certificate" "credex_cert" {
 
 # Get the hosted zone for the domain
 data "aws_route53_zone" "domain" {
-  name = "${var.domain_base}."
+  name = var.domain_base
 }
 
 # Create DNS records for certificate validation
