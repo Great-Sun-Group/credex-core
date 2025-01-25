@@ -13,20 +13,15 @@ variable "vpc_cidr" {
   type        = string
 }
 
-variable "production_domain" {
-  description = "The domain for production environment"
+variable "domain" {
+  description = "The base domain for the environment (e.g., mycredex.dev, mycredex.app)"
   type        = string
 }
 
-variable "dev_domain_base" {
-  description = "The base domain for non-production environments"
+variable "subdomain" {
+  description = "The subdomain prefix (e.g., dev, staging). Not required for production"
   type        = string
   default     = null
-}
-
-variable "environment_subdomains" {
-  description = "Map of environment names to their subdomains on mycredex.dev (production not included)"
-  type        = map(string)
 }
 
 variable "common_tags" {
