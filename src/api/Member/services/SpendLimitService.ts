@@ -108,19 +108,21 @@ export class SpendLimitService implements ISpendLimitService {
           return Infinity;
         }
 
-        // Get tier limit
+        // Get tier limit - ensure tier is a number for lookup
         const tierLimit =
-          this.TIER_LIMITS[tier as keyof typeof this.TIER_LIMITS];
+          this.TIER_LIMITS[Number(tier) as keyof typeof this.TIER_LIMITS];
         if (!tierLimit) {
           return Infinity;
         }
 
         const dailyUsageUSD = record.get("dailyUsageUSD");
         // Neo4j returns this as a float already since we used 0.0 in the query
-        const dailyUsageNumber = dailyUsageUSD || 0;
+        // Ensure we're working with regular numbers by using Number()
+        const dailyUsageNumber = Number(dailyUsageUSD || 0);
 
         // Calculate remaining limit
-        const remainingLimit = Math.max(0, tierLimit - dailyUsageNumber);
+        // Ensure all values are regular numbers
+        const remainingLimit = Math.max(0, Number(tierLimit) - dailyUsageNumber);
 
         // Cache the result
         this.cache.set(memberID, {
