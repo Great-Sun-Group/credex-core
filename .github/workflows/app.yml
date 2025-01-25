@@ -1,6 +1,11 @@
 name: Deploy Application
 
 on:
+  push:
+    branches:
+    - prod
+    - dev
+    - "*deploy*"
   workflow_dispatch:
 
 jobs:
