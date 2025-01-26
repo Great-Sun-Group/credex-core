@@ -89,12 +89,17 @@ export async function Hustler10kController(
         requestId
       });
 
+      // Handle insufficient secured balance as a 400 error
+      const statusCode = result.error?.code === "INSUFFICIENT_SECURED_BALANCE" ? 400 : 500;
+      const errorType = result.error?.code === "INSUFFICIENT_SECURED_BALANCE" ? 
+        ApiActionType.ERROR_VALIDATION : ApiActionType.ERROR_INTERNAL;
+
       const errorResponse: Hustler10kErrorResponse = {
         message: result.message,
         data: {
           action: {
             id: null,
-            type: ApiActionType.ERROR_INTERNAL,
+            type: errorType,
             timestamp: new Date().toISOString(),
             actor: memberID,
             details: {
@@ -106,7 +111,7 @@ export async function Hustler10kController(
         }
       };
 
-      res.status(500).json(errorResponse);
+      res.status(statusCode).json(errorResponse);
       return;
     }
 

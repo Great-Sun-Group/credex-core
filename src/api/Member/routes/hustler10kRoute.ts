@@ -75,7 +75,48 @@ export default function hustler10kRoute() {
    *                     dashboard:
    *                       type: object
    *       400:
-   *         description: Invalid input or business rule violation
+   *         description: Invalid input, insufficient balance, or business rule violation
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   description: Error message
+   *                   example: Your secured credex for 1.00 USD cannot be issued because your maximum securable USD balance is 0.50 USD
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           format: uuid
+   *                           nullable: true
+   *                         type:
+   *                           type: string
+   *                           enum: [ERROR_VALIDATION]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               enum: [INSUFFICIENT_SECURED_BALANCE, MISSING_PARAMS]
+   *                               example: INSUFFICIENT_SECURED_BALANCE
+   *                             reason:
+   *                               type: string
+   *                               description: Detailed error message
+   *                               example: Your secured credex for 1.00 USD cannot be issued because your maximum securable USD balance is 0.50 USD
+   *                     dashboard:
+   *                       type: object
    *       401:
    *         description: Unauthorized - invalid or missing token
    *       500:

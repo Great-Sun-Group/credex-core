@@ -57,7 +57,7 @@ export async function Hustler10kService(
     logger.info("Getting greatsun_ops account and member...");
     const [greatsunAccountResult, greatsunSignerResult] = await Promise.all([
       GetAccountByHandleService("greatsun_ops"),
-      GetMemberByHandleService("263778177125")
+      GetMemberByHandleService("263778177125"),
     ]);
 
     if (!greatsunAccountResult.success || !greatsunAccountResult.data) {
@@ -115,6 +115,16 @@ export async function Hustler10kService(
         memberID,
         personalAccountID,
       });
+      // Pass through insufficient secured balance error with its specific message
+      if (credexResult.error?.code === "INSUFFICIENT_SECURED_BALANCE") {
+        return {
+          success: false,
+          message: credexResult.message,
+          error: credexResult.error
+        };
+      }
+      
+      // Handle other credex creation errors
       return {
         success: false,
         message: "Failed to create Credex offer",
@@ -144,7 +154,8 @@ export async function Hustler10kService(
         message: "Failed to accept Credex offer",
         error: {
           code: "CREDEX_ACCEPT_FAILED",
-          details: acceptResult.error?.details || "Failed to accept Credex offer",
+          details:
+            acceptResult.error?.details || "Failed to accept Credex offer",
         },
       };
     }
