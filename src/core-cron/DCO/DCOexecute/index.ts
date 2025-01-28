@@ -2,6 +2,8 @@ import { v4 as uuidv4 } from "uuid";
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../../config/neo4j";
 import { logInfo, logError } from "../../../utils/logger";
 import { calculateSystemChecksum } from "./checksum";
+import { performPreDCOAudit, performPostDCOAudit, generateDailyAuditReport } from "./auditChecks";
+import { recordAuditIncident, restoreFromBackup } from "./auditIncidents";
 import {
   waitForMTQCompletion,
   setDCORunningFlag,
@@ -157,7 +159,25 @@ export async function DCOexecute(): Promise<boolean> {
     const { previousDate, nextDate } =
       await setDCORunningFlag(ledgerSpaceSession);
 
-    const initialChecksum = await calculateSystemChecksum(ledgerSpaceSession);
+    // Perform pre-DCO audit checks and backup
+    await createNeo4jBackup(previousDate, "_pre_audit");
+    const preAuditResult = await performPreDCOAudit(ledgerSpaceSession);
+    if (!preAuditResult.success || !preAuditResult.details.matchStatus) {
+      logError("Pre-DCO audit failed: Trust account balances do not match secured balances", new Error("Pre-DCO Audit Failure"), {
+        dcoProcessId,
+        discrepancies: preAuditResult.details.discrepancies,
+        timestamp: preAuditResult.details.timestamp
+      });
+      // Continue with DCO but record the incident
+      await recordAuditIncident(ledgerSpaceSession, "PRE_DCO_AUDIT_FAILURE", preAuditResult.details);
+    }
+    logInfo("Pre-DCO audit passed", {
+      dcoProcessId,
+      timestamp: preAuditResult.details.timestamp,
+      checksum: preAuditResult.details.checksum
+    });
+
+    const initialChecksum = preAuditResult.details.checksum;
     logInfo(`Initial system checksum: ${initialChecksum}`, {
       dcoProcessId,
       checksum: initialChecksum,
@@ -205,10 +225,76 @@ export async function DCOexecute(): Promise<boolean> {
       participantData
     );
 
+    // Perform post-DCO audit checks with rollback capability
+    const postAuditResult = await performPostDCOAudit(ledgerSpaceSession);
+    if (!postAuditResult.success || !postAuditResult.details.matchStatus) {
+      logError("Post-DCO audit failed: Trust account balances do not match secured balances", new Error("Post-DCO Audit Failure"), {
+        dcoProcessId,
+        discrepancies: postAuditResult.details.discrepancies,
+        timestamp: postAuditResult.details.timestamp
+      });
+
+      // Restore system to pre-DCO state
+      try {
+        await restoreFromBackup(previousDate, "_pre_audit");
+        logInfo("System restored to pre-DCO state due to audit failure", {
+          dcoProcessId,
+          timestamp: new Date().toISOString()
+        });
+      } catch (restoreError) {
+        logError("Failed to restore system to pre-DCO state", restoreError as Error, {
+          dcoProcessId,
+          originalError: "Post-DCO Audit Failure"
+        });
+      }
+
+      // Record the incident and continue
+      await recordAuditIncident(ledgerSpaceSession, "POST_DCO_AUDIT_FAILURE", postAuditResult.details);
+      
+      // Re-run DCO operations
+      const USDbaseRates = await fetchCurrencyRates(nextDate);
+      const {
+        newCXXrates,
+        CXXprior_CXXcurrent,
+      } = await establishNewCXXrates(USDbaseRates, participantData);
+
+      await createNewDaynode(
+        ledgerSpaceSession,
+        newCXXrates,
+        nextDate,
+        CXXprior_CXXcurrent
+      );
+      await updateCredexBalances(
+        ledgerSpaceSession,
+        searchSpaceSession,
+        newCXXrates,
+        CXXprior_CXXcurrent
+      );
+
+      await processDCOTransactions(
+        ledgerSpaceSession,
+        foundationID,
+        foundationXOid,
+        participantData
+      );
+    }
+    logInfo("Post-DCO audit passed", {
+      dcoProcessId,
+      timestamp: postAuditResult.details.timestamp,
+      checksum: postAuditResult.details.checksum
+    });
+
+    // Generate daily audit report
+    const auditReport = await generateDailyAuditReport(ledgerSpaceSession);
+    logInfo("Daily audit report generated", {
+      dcoProcessId,
+      reportLength: auditReport.length
+    });
+
     await createNeo4jBackup(nextDate, "_start");
     logInfo(`Created Neo4j backup for ${nextDate}_start`, { dcoProcessId });
 
-    const finalChecksum = await calculateSystemChecksum(ledgerSpaceSession);
+    const finalChecksum = postAuditResult.details.checksum;
     logInfo(`Final system checksum: ${finalChecksum}`, {
       dcoProcessId,
       checksum: finalChecksum,
