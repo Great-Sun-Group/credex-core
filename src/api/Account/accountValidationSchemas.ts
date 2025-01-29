@@ -35,6 +35,35 @@ export const createAccountSchema = {
     required: false,
   },
 };
+
+export const createTrustAccountSchema = {
+  accountName: {
+    sanitizer: s.sanitizeAccountName,
+    validator: v.validateAccountName,
+    required: true,
+  },
+  accountHandle: {
+    sanitizer: s.sanitizeHandle,
+    validator: v.validateHandle,
+    required: true,
+  },
+  subtype: {
+    sanitizer: s.sanitizeTrustAccountSubtype,
+    validator: v.validateTrustAccountSubtype,
+    required: true,
+  },
+  denomination: {
+    sanitizer: s.sanitizeDenomination,
+    validator: v.validateDenomination,
+    required: true,
+  },
+  // Bank account fields - required if subtype is BANK
+  bankFields: {
+    sanitizer: s.sanitizeBankFields,
+    validator: v.validateBankFields,
+    required: false, // Only required if subtype is BANK
+  },
+};
 logger.debug("createAccountSchema initialized");
 
 export const getAccountByHandleSchema = {

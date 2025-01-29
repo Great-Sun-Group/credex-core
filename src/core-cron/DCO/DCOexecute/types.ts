@@ -27,6 +27,7 @@ export interface AuditDiscrepancy {
   secured: number;
   trust: number;
   difference: number;
+  denomination: string;
 }
 
 export interface AuditDetails {

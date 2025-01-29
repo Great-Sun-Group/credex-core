@@ -44,6 +44,17 @@ interface AccountDashboardData {
   };
   pendingInData: OfferedCredex[];
   pendingOutData: OfferedCredex[];
+  // Trust account specific fields
+  subtype?: 'BANK' | 'VAULT';
+  denomination?: 'CXX' | 'CAD' | 'USD' | 'XAU' | 'ZWG';
+  bankFields?: {
+    jurisdiction: string;
+    accountNumber: string;
+    branchCode?: string;
+    bankCode?: string;
+    routingNumber?: string;
+    transitNumber?: string;
+  };
 }
 
 interface DashboardResult {
@@ -110,6 +121,10 @@ export class GetAccountDashboardService {
         defaultDenom: accountData.defaultDenom,
         isOwnedAccount: accountData.isOwnedAccount,
         sendOffersTo: accountData.sendOffersTo,
+        // Add trust-specific fields if present
+        ...(accountData.subtype && { subtype: accountData.subtype }),
+        ...(accountData.defaultDenom && { denomination: accountData.defaultDenom }),
+        ...(accountData.bankFields && { bankFields: accountData.bankFields }),
         balanceData: {
           securedNetBalancesByDenom: [],
           unsecuredBalancesInDefaultDenom: {
