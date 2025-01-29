@@ -9,11 +9,16 @@ interface TrustAccountProperties {
   accountType: string;
   accountName: string;
   accountHandle: string;
-  subtype: string;
   denomination: string;
   bankFields?: {
     jurisdiction: string;
-    [key: string]: string;
+    trustAccountSubType: string; // BANK or VAULT
+    accountNumber?: string;
+    transitNumber?: string;
+    branchNumber?: string;
+    routingNumber?: string;
+    bankCode?: string;
+    [key: string]: string | undefined;
   };
   createdAt: string;
   updatedAt: string;
@@ -55,7 +60,12 @@ export async function CreateTrustAccountService(
   denomination: string,
   bankFields?: {
     jurisdiction: string;
-    [key: string]: string;
+    accountNumber?: string;
+    transitNumber?: string;
+    branchNumber?: string;
+    routingNumber?: string;
+    bankCode?: string;
+    [key: string]: string | undefined;
   }
 ): Promise<CreateTrustAccountResult> {
   logger.debug("CreateTrustAccountService called", {
@@ -73,8 +83,8 @@ export async function CreateTrustAccountService(
       message: `Invalid denomination: ${denomination}`,
       error: {
         code: "INVALID_DENOMINATION",
-        details: "The provided denomination is not supported"
-      }
+        details: "The provided denomination is not supported",
+      },
     };
   }
 
@@ -85,8 +95,8 @@ export async function CreateTrustAccountService(
       message: "Bank fields are required for BANK subtype",
       error: {
         code: "MISSING_BANK_FIELDS",
-        details: "Bank account details must be provided for BANK subtype"
-      }
+        details: "Bank account details must be provided for BANK subtype",
+      },
     };
   }
 
@@ -116,8 +126,8 @@ export async function CreateTrustAccountService(
         message: "Trust account creation requires membership tier 5",
         error: {
           code: "INSUFFICIENT_TIER",
-          details: "You must be a tier 5 member to create trust accounts"
-        }
+          details: "You must be a tier 5 member to create trust accounts",
+        },
       };
     }
 
@@ -129,14 +139,14 @@ export async function CreateTrustAccountService(
       accountHandle,
       denomination, // defaultDenom
       null, // DCOgiveInCXX
-      null  // DCOdenom
+      null // DCOdenom
     );
 
     if (!baseAccountResult.success) {
       return {
         success: false,
         message: baseAccountResult.message,
-        error: baseAccountResult.error
+        error: baseAccountResult.error,
       };
     }
 
@@ -146,8 +156,8 @@ export async function CreateTrustAccountService(
         message: "Base account creation failed",
         error: {
           code: "CREATE_FAILED",
-          details: "Failed to get account data after creation"
-        }
+          details: "Failed to get account data after creation",
+        },
       };
     }
 
@@ -157,14 +167,17 @@ export async function CreateTrustAccountService(
         `
         MATCH (account:Account { accountID: $accountID })
         SET 
-          account.subtype = $subtype,
           account.bankFields = $bankFields
         RETURN account {.*} as accountProperties
         `,
         {
           accountID: baseAccountResult.data!.accountID,
-          subtype,
-          bankFields: bankFields ? JSON.stringify(bankFields) : null,
+          bankFields: bankFields
+            ? JSON.stringify({
+                ...bankFields,
+                trustAccountSubType: subtype, // Store subtype in bankFields
+              })
+            : null,
         }
       );
 
@@ -174,15 +187,17 @@ export async function CreateTrustAccountService(
           message: "Failed to update trust account fields",
           error: {
             code: "UPDATE_FAILED",
-            details: "An error occurred while setting trust-specific fields"
-          }
+            details: "An error occurred while setting trust-specific fields",
+          },
         };
       }
 
       const rawProperties = updateResult.records[0].get("accountProperties");
       const accountProperties = {
         ...rawProperties,
-        bankFields: rawProperties.bankFields ? JSON.parse(rawProperties.bankFields) : null
+        bankFields: rawProperties.bankFields
+          ? JSON.parse(rawProperties.bankFields)
+          : null,
       } as TrustAccountProperties;
 
       logger.info("Trust account created and updated successfully", {
@@ -197,7 +212,7 @@ export async function CreateTrustAccountService(
           accountID: accountProperties.accountID,
           accountProperties,
         },
-        message: `Trust account "${accountName}" created successfully with denomination ${denomination}`
+        message: `Trust account "${accountName}" created successfully with denomination ${denomination}`,
       };
     });
 
@@ -216,8 +231,11 @@ export async function CreateTrustAccountService(
       message: handledError.message,
       error: {
         code: handledError.code || "INTERNAL_ERROR",
-        details: handledError instanceof Error ? handledError.message : "An unknown error occurred"
-      }
+        details:
+          handledError instanceof Error
+            ? handledError.message
+            : "An unknown error occurred",
+      },
     };
   } finally {
     await ledgerSpaceSession.close();

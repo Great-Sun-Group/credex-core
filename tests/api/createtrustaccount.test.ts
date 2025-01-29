@@ -37,6 +37,7 @@ describe("createTrustAccount Success Test", () => {
         ? {
             jurisdiction,
             accountNumber,
+            trustAccountSubType: subtype,  // Include subtype in bankFields
             // Add jurisdiction-specific fields from additionalFields
             ...(jurisdiction === "US" && {
               routingNumber: additionalFields[0],
@@ -112,12 +113,12 @@ describe("createTrustAccount Success Test", () => {
       accountName: expect.any(String),
       accountHandle: expect.any(String),
       accountType: "TRUST",
-      subtype: expect.stringMatching(/^(BANK|VAULT)$/),
       denomination: expect.stringMatching(/^(CXX|CAD|USD|XAU|ZWG)$/),
       ...(subtype === "BANK" && {
         bankFields: {
           jurisdiction: expect.stringMatching(/^(CA|US|ZW)$/),
           accountNumber: expect.any(String),
+          trustAccountSubType: expect.stringMatching(/^(BANK|VAULT)$/),
           ...(jurisdiction === "US" && { routingNumber: expect.any(String) }),
           ...(jurisdiction === "CA" && {
             transitNumber: expect.any(String),

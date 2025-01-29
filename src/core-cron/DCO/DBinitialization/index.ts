@@ -1,8 +1,16 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../../config/neo4j";
 import { setupDatabaseConstraints } from "./constraints";
-import { establishDayZero, fetchAndProcessRates, createDayZeroDaynode } from "./dayZero";
+import {
+  establishDayZero,
+  fetchAndProcessRates,
+  createDayZeroDaynode,
+} from "./dayZero";
 import { createInitialMember } from "./members";
-import { createInitialAccount, createInitialRelationships } from "./accounts";
+import {
+  createInitialAccount,
+  createInitialTrustAccount,
+  createInitialRelationships,
+} from "./accounts";
 import { createDCOrecurringTemplate } from "./recurring";
 import { CreateCredexService } from "../../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../../api/Credex/services/AcceptCredex";
@@ -22,9 +30,9 @@ export async function DBinitialization(): Promise<void> {
     // Set up database constraints and initial state
     const constraintSession = {
       ledgerSpace: ledgerSpaceDriver.session(),
-      searchSpace: searchSpaceDriver.session()
+      searchSpace: searchSpaceDriver.session(),
     };
-    
+
     try {
       await setupDatabaseConstraints(constraintSession, requestId);
     } finally {
@@ -35,14 +43,19 @@ export async function DBinitialization(): Promise<void> {
     // Create initial daynode
     const dayZero = establishDayZero(requestId);
     const dayZeroCXXrates = await fetchAndProcessRates(dayZero, requestId);
-    
+
     const daynodeSession = {
       ledgerSpace: ledgerSpaceDriver.session(),
-      searchSpace: searchSpaceDriver.session()
+      searchSpace: searchSpaceDriver.session(),
     };
-    
+
     try {
-      await createDayZeroDaynode(daynodeSession, dayZero, dayZeroCXXrates, requestId);
+      await createDayZeroDaynode(
+        daynodeSession,
+        dayZero,
+        dayZeroCXXrates,
+        requestId
+      );
       // Verify daynode was created
       const verifyResult = await daynodeSession.ledgerSpace.run(
         "MATCH (d:Daynode {Active: true}) RETURN d"
@@ -59,7 +72,7 @@ export async function DBinitialization(): Promise<void> {
     // Create initial members with a new session
     const memberSession = {
       ledgerSpace: ledgerSpaceDriver.session(),
-      searchSpace: searchSpaceDriver.session()
+      searchSpace: searchSpaceDriver.session(),
     };
 
     try {
@@ -82,12 +95,19 @@ export async function DBinitialization(): Promise<void> {
         "CXX",
         requestId
       );
-      const greatSunTrustID = await createInitialAccount(
+      const greatSunTrustID = await createInitialTrustAccount(
         rdubs.onboardedMemberID,
         "TRUST",
         "Great Sun Financial: Trust",
         "greatsun_trust",
         "CAD",
+        {
+          jurisdiction: "CA",
+          accountNumber: "5394119",
+          transitNumber: "03353",
+          branchNumber: "003",
+          trustAccountSubType: "BANK", // Store trust account subtype in bankFields
+        },
         requestId
       );
       const greatSunOpsID = await createInitialAccount(
@@ -117,21 +137,21 @@ export async function DBinitialization(): Promise<void> {
         credexType: "PURCHASE",
         OFFERSorREQUESTS: "OFFERS",
         securedCredex: true,
-        requestId
+        requestId,
       });
 
       if (!initialCredexResult.success) {
         logger.error("Failed to create initial secured credex", {
           error: initialCredexResult.message,
           details: initialCredexResult.error,
-          requestId
+          requestId,
         });
         throw new Error("Failed to create initial secured credex");
       }
 
       logger.info("Initial secured credex created successfully", {
         credexID: initialCredexResult.data?.credexID,
-        requestId
+        requestId,
       });
 
       // Accept the secured credex
@@ -145,14 +165,14 @@ export async function DBinitialization(): Promise<void> {
         logger.error("Failed to accept initial secured credex", {
           error: acceptResult.message,
           details: acceptResult.error,
-          requestId
+          requestId,
         });
         throw new Error("Failed to accept initial secured credex");
       }
 
       logger.info("Initial secured credex accepted successfully", {
         credexID: initialCredexResult.data?.credexID,
-        requestId
+        requestId,
       });
 
       // Create rdubs' DCO_GIVE template
@@ -167,14 +187,12 @@ export async function DBinitialization(): Promise<void> {
       logger.info("DBinitialization completed successfully", {
         requestId,
         foundationID: credexFoundationID,
-        foundationOwner: rdubs.onboardedMemberID
+        foundationOwner: rdubs.onboardedMemberID,
       });
-
     } finally {
       await memberSession.ledgerSpace.close();
       await memberSession.searchSpace.close();
     }
-
   } catch (error) {
     logger.error("Error during DBinitialization", {
       error: error instanceof Error ? error.message : "Unknown error",
