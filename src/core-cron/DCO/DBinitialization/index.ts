@@ -97,16 +97,15 @@ export async function DBinitialization(): Promise<void> {
       );
       const greatSunTrustID = await createInitialTrustAccount(
         rdubs.onboardedMemberID,
-        "TRUST",
-        "Great Sun Financial: Trust",
-        "greatsun_trust",
-        "CAD",
+        "Great Sun Financial: Trust", // accountName
+        "greatsun_trust",           // accountHandle
+        "BANK",                     // subtype
+        "CAD",                      // denomination
         {
           jurisdiction: "CA",
           accountNumber: "5394119",
           transitNumber: "03353",
-          branchNumber: "003",
-          trustAccountSubType: "BANK", // Store trust account subtype in bankFields
+          branchNumber: "003"
         },
         requestId
       );
