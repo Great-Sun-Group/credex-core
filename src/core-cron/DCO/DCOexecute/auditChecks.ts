@@ -22,23 +22,27 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
       WHERE SIZE(usedDenoms) = 0 OR 
             (SIZE(usedDenoms) = 1 AND usedDenoms[0] = requiredDenom)
       
-      // Get total amount issued by trust
-      OPTIONAL MATCH (trust)-[:OWES|OFFERS]->(issuedCredex:Credex)
-      WITH trust,
-           trust.defaultDenom as denom,
-           SUM(COALESCE(issuedCredex.OutstandingAmount, 0)) as issuedTotal
-      
-      // Get total amount held in other accounts
-      OPTIONAL MATCH (trust)-[:SECURES]->(securedCredex:Credex)
-      WHERE securedCredex.Denomination = denom
+      // Calculate both secured and net balances in a single pass
+      OPTIONAL MATCH (trust)-[:SECURES]->(credex:Credex)
+      WHERE credex.Denomination = trust.defaultDenom
+      WITH trust, trust.defaultDenom as denom,
+           SUM(CASE 
+             WHEN EXISTS((trust)-[:OWES|OFFERS]->(credex)) THEN COALESCE(credex.OutstandingAmount, 0)
+             ELSE 0 
+           END) as totalSecured,
+           SUM(CASE
+             WHEN EXISTS((:Account)-[:OWES]->(credex)) THEN COALESCE(credex.OutstandingAmount, 0)
+             WHEN EXISTS((:Account)-[:OFFERS]->(credex)) THEN -COALESCE(credex.OutstandingAmount, 0)
+             ELSE 0
+           END) as totalNetBalance
       
       // Return comparison
       RETURN trust.accountID as auditedAccount,
              denom,
-             issuedTotal as securedTotal,
-             SUM(COALESCE(securedCredex.OutstandingAmount, 0)) as netBalance,
-             ABS(issuedTotal - SUM(COALESCE(securedCredex.OutstandingAmount, 0))) <= 0.001 as matches,
-             (issuedTotal - SUM(COALESCE(securedCredex.OutstandingAmount, 0))) as difference
+             ABS(totalSecured) as securedTotal,
+             ABS(totalNetBalance) as netBalance,
+             ABS(ABS(totalSecured) - ABS(totalNetBalance)) <= 0.001 as matches,
+             ABS(totalSecured) - ABS(totalNetBalance) as difference
     `);
 
     const details: AuditDetails = {
@@ -47,7 +51,7 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
       totalSecuredBalances: {},
       totalTrustBalances: {},
       matchStatus: true,
-      discrepancies: {}
+      discrepancies: {},
     };
 
     let allMatch = true;
@@ -61,16 +65,17 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
       const difference = Number(record.get("difference"));
 
       // Store absolute values for reporting
-      details.totalSecuredBalances[denom] = securedTotal;
+      details.totalSecuredBalances[denom] = Math.abs(securedTotal);
       details.totalTrustBalances[denom] = Math.abs(netBalance);
 
-      if (!matches) {
+      const actualDifference = Math.abs(securedTotal) - Math.abs(netBalance);
+      if (Math.abs(actualDifference) > 0.001) {
         allMatch = false;
         details.discrepancies![accountId] = {
-          secured: securedTotal,
+          secured: Math.abs(securedTotal),
           trust: Math.abs(netBalance),
-          difference: difference,
-          denomination: denom
+          difference: actualDifference,
+          denomination: denom,
         };
       }
     });
