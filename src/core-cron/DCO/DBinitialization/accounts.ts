@@ -46,33 +46,24 @@ export async function createInitialRelationships(
   { ledgerSpace }: DatabaseSessions,
   credexFoundationID: string,
   greatSunTrustID: string,
-  rdubsID: string,
-  rdubsDefaultAccountID: string,
   requestId: string
 ): Promise<void> {
   await ledgerSpace.run(
     `
     MATCH (credexFoundation: Account { accountID: $credexFoundationID })
     MATCH (greatSun: Account { accountID: $greatSunTrustID })
-    MATCH (rdubsPersonal: Account { accountID: $rdubsDefaultAccountID })
-    MATCH (rdubs: Member { memberID: $rdubsID })
     CREATE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (credexFoundation)
     CREATE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (greatSun)
-    CREATE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (rdubsPersonal)
   `,
     {
       credexFoundationID,
       greatSunTrustID,
-      rdubsDefaultAccountID,
-      rdubsID,
     }
   );
 
   logger.info("Initial relationships created successfully", {
     credexFoundationID,
     greatSunTrustID,
-    rdubsDefaultAccountID,
-    rdubsID,
     requestId,
   });
 }

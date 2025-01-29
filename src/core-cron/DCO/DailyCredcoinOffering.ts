@@ -3,7 +3,8 @@ import { DBinitialization } from "./DBinitialization/index";
 import { DCOexecute } from "./DCOexecute/index";
 import { DCOavatars } from "./DCOavatars/index";
 import { DCOtriggersExecute } from "./DCOtriggers/index";
-import logger from "../../utils/logger";
+import logger, { configureDCOLogger } from "../../utils/logger";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Executes the Daily Credcoin Offering (DCO) process.
@@ -16,7 +17,9 @@ export async function DailyCredcoinOffering(): Promise<{
   success: boolean;
   error?: string;
 }> {
-  logger.info("Starting Daily Credcoin Offering process");
+  const dcoProcessId = uuidv4();
+  const removeDCOLogger = configureDCOLogger(dcoProcessId);
+  logger.info("Starting Daily Credcoin Offering process", { dcoProcessId });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -58,6 +61,7 @@ export async function DailyCredcoinOffering(): Promise<{
     await resetDCORunningFlag(ledgerSpaceSession);
     await ledgerSpaceSession.close();
     logger.debug("LedgerSpace session closed");
+    removeDCOLogger(); // Clean up DCO logger
   }
 }
 

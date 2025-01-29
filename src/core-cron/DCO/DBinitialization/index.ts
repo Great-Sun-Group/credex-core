@@ -4,6 +4,8 @@ import { establishDayZero, fetchAndProcessRates, createDayZeroDaynode } from "./
 import { createInitialMember } from "./members";
 import { createInitialAccount, createInitialRelationships } from "./accounts";
 import { createDCOrecurringTemplate } from "./recurring";
+import { CreateCredexService } from "../../../api/Credex/services/CreateCredex";
+import { AcceptCredexService } from "../../../api/Credex/services/AcceptCredex";
 import logger from "../../../utils/logger";
 import { v4 as uuidv4 } from "uuid";
 
@@ -97,15 +99,61 @@ export async function DBinitialization(): Promise<void> {
         requestId
       );
 
-      // Create relationships and DCO recurring template
+      // Create relationships between foundation and trust accounts
       await createInitialRelationships(
         memberSession,
         credexFoundationID,
         greatSunTrustID,
-        rdubs.onboardedMemberID,
-        rdubs.defaultAccountID,
         requestId
       );
+
+      // Create initial secured credex from greatSunTrust
+      const initialCredexResult = await CreateCredexService({
+        signerID: rdubs.onboardedMemberID,
+        issuerAccountID: greatSunTrustID,
+        receiverAccountID: rdubs.defaultAccountID,
+        InitialAmount: 28,
+        Denomination: "CAD",
+        credexType: "PURCHASE",
+        OFFERSorREQUESTS: "OFFERS",
+        securedCredex: true,
+        requestId
+      });
+
+      if (!initialCredexResult.success) {
+        logger.error("Failed to create initial secured credex", {
+          error: initialCredexResult.message,
+          details: initialCredexResult.error,
+          requestId
+        });
+        throw new Error("Failed to create initial secured credex");
+      }
+
+      logger.info("Initial secured credex created successfully", {
+        credexID: initialCredexResult.data?.credexID,
+        requestId
+      });
+
+      // Accept the secured credex
+      const acceptResult = await AcceptCredexService(
+        initialCredexResult.data!.credexID,
+        rdubs.onboardedMemberID,
+        requestId
+      );
+
+      if (!acceptResult.success) {
+        logger.error("Failed to accept initial secured credex", {
+          error: acceptResult.message,
+          details: acceptResult.error,
+          requestId
+        });
+        throw new Error("Failed to accept initial secured credex");
+      }
+
+      logger.info("Initial secured credex accepted successfully", {
+        credexID: initialCredexResult.data?.credexID,
+        requestId
+      });
 
       // Create rdubs' DCO_GIVE template
       await createDCOrecurringTemplate(

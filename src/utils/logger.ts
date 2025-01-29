@@ -189,6 +189,19 @@ export const errorLogger = (err: Error, req: Request, res: Response, next: NextF
   next(err);
 };
 
+// Function to configure DCO logging
+export const configureDCOLogger = (processId: string) => {
+  const dcoTransport = new winston.transports.File({
+    filename: `src/core-cron/DCO/DCOsnapshots/dco_${processId}.log`,
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.json()
+    )
+  });
+  baseLogger.add(dcoTransport);
+  return () => baseLogger.remove(dcoTransport);
+};
+
 // Function to log DCO rates
 export const logDCORates = (
   XAUrate: number,
