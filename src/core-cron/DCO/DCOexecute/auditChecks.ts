@@ -10,34 +10,36 @@ import { AuditResult, AuditDetails, AuditDiscrepancy } from "./types";
 async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
   try {
     const result = await session.run(`
-      // Get all audited/trust accounts
-      MATCH
-        (credexFoundation:Account {accountType: "CREDEX_FOUNDATION"})
-        -[:CREDEX_FOUNDATION_AUDITED]->(audited:Account)
+      // Get trust accounts that are audited by Credex Foundation
+      MATCH (credexFoundation:Account {accountType: "CREDEX_FOUNDATION"})
+            -[:CREDEX_FOUNDATION_AUDITED]->(trust:Account {accountType: "TRUST"})
       
-      // For each audited account, get total OWESin and total OWES|OFFERSout
-      OPTIONAL MATCH (audited)-[:OWES|OFFERS]->(securedCredexIssued:Credex)
-      total securedCredexIssued.OutstandingAmount this is what we report on and match against
-
-      OPTIONAL MATCH
-        (audited)-[:SECURES]->(securedCredexSecured:Credex)
-        -[:OWES|OFFERS]-(auditSecuresCredexInThisAccount:Account),
-
-      FOR EACH  auditSecuresCredexInThisAccount
-      OPTIONAL MATCH
-        (theseSecuredCredexSecuredIn)-[:OWES]->(thisAuditSecuresCredexInThisAccount)-[:OWES|OFFERS]->(theseSecuredCredexSecuredOut),
-
-        now get the net balance of each account by
-        theseSecuredCredexSecuredIn - theseSecuredCredexSecuredOut
-
-        the total off all the net balances is being checked to match total securedCredexIssued.OutstandingAmount
-
-        the above only verifies CXX balances, we also need to report on balance in denom and ensure it is correct both before and after DCO
-        this is done with 
-        MATCH (daynode:Daynode { Active: true })
-        and now is avalable at daynode.XXX (denom code for the account)
-
-        `);
+      // Verify trust account only issues in its denomination
+      OPTIONAL MATCH (trust)-[:OWES|OFFERS]->(credex:Credex)
+      WITH trust,
+           COLLECT(DISTINCT credex.Denomination) as usedDenoms,
+           trust.defaultDenom as requiredDenom
+      WHERE SIZE(usedDenoms) = 0 OR 
+            (SIZE(usedDenoms) = 1 AND usedDenoms[0] = requiredDenom)
+      
+      // Get total amount issued by trust
+      OPTIONAL MATCH (trust)-[:OWES|OFFERS]->(issuedCredex:Credex)
+      WITH trust,
+           trust.defaultDenom as denom,
+           SUM(COALESCE(issuedCredex.OutstandingAmount, 0)) as issuedTotal
+      
+      // Get total amount held in other accounts
+      OPTIONAL MATCH (trust)-[:SECURES]->(securedCredex:Credex)
+      WHERE securedCredex.Denomination = denom
+      
+      // Return comparison
+      RETURN trust.accountID as auditedAccount,
+             denom,
+             issuedTotal as securedTotal,
+             SUM(COALESCE(securedCredex.OutstandingAmount, 0)) as netBalance,
+             ABS(issuedTotal - SUM(COALESCE(securedCredex.OutstandingAmount, 0))) <= 0.001 as matches,
+             (issuedTotal - SUM(COALESCE(securedCredex.OutstandingAmount, 0))) as difference
+    `);
 
     const details: AuditDetails = {
       timestamp: new Date().toISOString(),
@@ -53,10 +55,10 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
     result.records.forEach((record) => {
       const accountId = record.get("auditedAccount");
       const denom = record.get("denom");
-      const netBalance = record.get("netBalance").toNumber();
-      const securedTotal = record.get("securedTotal").toNumber();
+      const netBalance = Number(record.get("netBalance"));
+      const securedTotal = Number(record.get("securedTotal"));
       const matches = record.get("matches");
-      const difference = record.get("difference").toNumber();
+      const difference = Number(record.get("difference"));
 
       // Store absolute values for reporting
       details.totalSecuredBalances[denom] = securedTotal;
@@ -222,7 +224,7 @@ ${Object.entries(discrepancies)
     Total Secured Balances Outstanding: ${values.secured}
     Net Trust Account Balance: ${values.trust}
     Balance Discrepancy: ${values.difference}
-    Status: ${values.difference === 0 ? 'BALANCED' : 'MISMATCH'}`
+    Status: ${values.difference === 0 ? "BALANCED" : "MISMATCH"}`
   )
   .join("\n")}`
     : "No Discrepancies Found"
