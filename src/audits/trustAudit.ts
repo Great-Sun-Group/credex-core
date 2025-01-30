@@ -1,14 +1,41 @@
 import { Session } from "neo4j-driver";
-import { logInfo, logError } from "../../../utils/logger";
-import { calculateSystemChecksum } from "./checksum";
+import { logInfo, logError } from "../utils/logger";
+import { calculateSystemChecksum } from "../core-cron/DCO/DCOexecute/checksum";
 
-import {
-  AuditResult,
-  AuditDetails,
-  AuditDiscrepancy,
-  ClaimDetail,
-  TrustAccountAuditDetails,
-} from "./types";
+export interface ClaimDetail {
+  accountID: string;
+  netClaimed: number;
+}
+
+export interface AuditDiscrepancy {
+  trustAccountIssuedTotal: number;
+  totalNetClaimed: number;
+  difference: number;
+  denomination: string;
+  claimDetails: ClaimDetail[];
+  error?: string;
+}
+
+export interface TrustAccountAuditDetails {
+  accountID: string;
+  defaultDenom: string;
+  trustAccountIssuedTotal: number;
+  claimDetails: ClaimDetail[];
+  totalNetClaimed: number;
+}
+
+export interface AuditDetails {
+  timestamp: string;
+  checksum: string;
+  matchStatus: boolean;
+  discrepancies: Record<string, AuditDiscrepancy>;
+  trustAccounts: TrustAccountAuditDetails[];
+}
+
+export interface AuditResult {
+  success: boolean;
+  details: AuditDetails;
+}
 
 /**
  * Verifies that secured balances match trust account balances for each denomination
@@ -98,9 +125,7 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
 
     result.records.forEach((record) => {
       const trust = record.get("trust").properties;
-      const trustAccountIssuedTotal = Number(
-        record.get("trustAccountIssuedTotal")
-      );
+      const trustAccountIssuedTotal = Number(record.get("trustAccountIssuedTotal"));
       const claimingAccountId = record.get("claimingAccount.accountID");
       const netClaimed = Number(record.get("netClaimed"));
 
@@ -150,9 +175,7 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
 
       details.trustAccounts.push(trustAccountDetails);
 
-      if (
-        Math.abs(trustData.trustAccountIssuedTotal - totalNetClaimed) > 0.001
-      ) {
+      if (Math.abs(trustData.trustAccountIssuedTotal - totalNetClaimed) > 0.001) {
         details.matchStatus = false;
         details.discrepancies![trustData.trust.accountID] = {
           trustAccountIssuedTotal: trustData.trustAccountIssuedTotal,
@@ -177,176 +200,78 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
     logError("Error during balance audit", err);
-
     throw error;
   }
 }
 
 /**
- * Records the audit result in the database
+ * Records the audit result in the database using the new data model
  */
 async function recordAuditResult(
   session: Session,
-  auditResult: AuditResult,
-  stage: "PRE_DCO" | "POST_DCO"
+  auditResult: AuditResult
 ): Promise<void> {
   try {
-    await session.run(
-      `
+    // First, get or create DaysAudits node for today
+    const daysAuditsResult = await session.run(`
       MATCH (daynode:Daynode {Active: true})
-      CREATE (audit:DailyAudit {
-        auditID: randomUUID(),
-        timestamp: $timestamp,
-        stage: $stage,
-        checksum: $checksum,
-        matchStatus: $matchStatus,
-        discrepancies: $discrepancies,
-        trustAccounts: $trustAccounts
-      })-[:AUDITS]->(daynode)
-    `,
-      {
-        timestamp: auditResult.details.timestamp,
-        stage,
-        checksum: auditResult.details.checksum,
-        matchStatus: auditResult.details.matchStatus,
-        discrepancies: JSON.stringify(auditResult.details.discrepancies || {}),
-        trustAccounts: JSON.stringify(auditResult.details.trustAccounts),
-      }
-    );
-
-    logInfo("Audit result recorded", {
-      timestamp: auditResult.details.timestamp,
-      stage,
-      matchStatus: auditResult.details.matchStatus,
-    });
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error("Unknown error");
-    logError("Error recording audit result", err, { stage });
-
-    throw error;
-  }
-}
-
-/**
- * Performs pre-DCO audit checks
- */
-export async function performPreDCOAudit(
-  session: Session
-): Promise<AuditResult> {
-  const auditResult = await verifyBalanceMatch(session);
-  await recordAuditResult(session, auditResult, "PRE_DCO");
-  return auditResult;
-}
-
-/**
- * Performs post-DCO audit checks
- */
-export async function performPostDCOAudit(
-  session: Session
-): Promise<AuditResult> {
-  const auditResult = await verifyBalanceMatch(session);
-  await recordAuditResult(session, auditResult, "POST_DCO");
-  return auditResult;
-}
-
-/**
- * Generates a daily audit report for trust accounts
- */
-export async function generateDailyAuditReport(
-  session: Session
-): Promise<string> {
-  try {
-    const result = await session.run(`
-      MATCH (daynode:Daynode {Active: true})<-[:AUDITS]-(audits:DailyAudit)
-      RETURN audits
-      ORDER BY audits.timestamp
-    `);
-
-    const auditRecords = result.records.map(
-      (record) => record.get("audits").properties
-    );
-
-    // Format report content
-    const reportContent = auditRecords
-      .map((audit) => {
-        const trustAccounts = JSON.parse(
-          audit.trustAccounts
-        ) as TrustAccountAuditDetails[];
-        const discrepancies = JSON.parse(audit.discrepancies) as Record<
-          string,
-          AuditDiscrepancy
-        >;
-
-        return `
-Audit Stage: ${audit.stage}
-Timestamp: ${audit.timestamp}
-System Checksum: ${audit.checksum}
-Balance Match Status: ${audit.matchStatus ? "MATCHED" : "DISCREPANCY FOUND"}
-
-Trust Account Details:
-${trustAccounts
-  .map(
-    (account) => `
-  Account ID: ${account.accountID} (${account.defaultDenom})
-  Total Issued: ${account.trustAccountIssuedTotal}
-  Total Net Claimed: ${account.totalNetClaimed}
-  
-  Claim Details:
-  ${account.claimDetails
-    .map((claim) => `    - Account ${claim.accountID}: ${claim.netClaimed}`)
-    .join("\n")}
-`
-  )
-  .join("\n")}
-
-${
-  Object.keys(discrepancies).length > 0
-    ? `
-Discrepancies Found:
-${Object.entries(discrepancies)
-  .map(
-    ([accountId, values]) => `
-  Account ${accountId} (${values.denomination}):
-    Total Issued: ${values.trustAccountIssuedTotal}
-    Total Net Claimed: ${values.totalNetClaimed}
-    Balance Discrepancy: ${values.difference}
-    
-    Claim Details:
-    ${values.claimDetails
-      .map((claim) => `      - Account ${claim.accountID}: ${claim.netClaimed}`)
-      .join("\n")}`
-  )
-  .join("\n")}`
-    : "No Discrepancies Found"
-}
--------------------`;
-      })
-      .join("\n\n");
-
-    // Save report to database
-    const reportID = await session.run(
-      `
-      MATCH (daynode:Daynode {Active: true})
+      MERGE (daysAudits:DaysAudits)-[:CREATED_ON]->(daynode)
+      ON CREATE SET daysAudits.auditID = randomUUID(),
+                    daysAudits.AuditIncident = false
+      WITH daysAudits, daynode
+      
+      // Create audit report with audit data
       CREATE (report:AuditReport {
         reportID: randomUUID(),
         timestamp: datetime(),
-        content: $content
-      })-[:REPORTS_ON]->(daynode)
-      RETURN report.reportID as reportID
-    `,
-      { content: reportContent }
-    );
-
-    logInfo("Daily audit report generated", {
-      reportID: reportID.records[0].get("reportID"),
-      timestamp: new Date().toISOString(),
+        checksum: $checksum,
+        matchStatus: $matchStatus,
+        trustAccounts: $trustAccountsJson,
+        discrepancies: $discrepanciesJson
+      })
+      
+      // Connect report to DaysAudits
+      CREATE (daysAudits)<-[:AUDIT_ROLLUP]-(report)
+      
+      // For each trust account in the audit, create the AUDITED_IN relationship
+      WITH daysAudits, report, daynode
+      
+      UNWIND $trustAccountsJson as trustAccountData
+      MATCH (trust:Account {accountID: trustAccountData.accountID})
+      MERGE (trust)-[:AUDITED_IN]->(daysAudits)
+      
+      // If there are discrepancies, set the incident flag and create relationships
+      WITH daysAudits, report, daynode, $hasDiscrepancies as hasDiscrepancies
+      WHERE hasDiscrepancies
+      SET daysAudits.AuditIncident = true
+      CREATE (daysAudits)-[:UNHANDLED_DISCREPANCY]->(report)
+      
+      RETURN daysAudits.auditID as daysAuditsID
+    `, {
+      checksum: auditResult.details.checksum,
+      matchStatus: auditResult.details.matchStatus,
+      trustAccountsJson: JSON.stringify(auditResult.details.trustAccounts),
+      hasDiscrepancies: !auditResult.details.matchStatus,
+      discrepanciesJson: JSON.stringify(auditResult.details.discrepancies || {}),
     });
 
-    return reportContent;
+    logInfo("Audit result recorded", {
+      timestamp: auditResult.details.timestamp,
+      matchStatus: auditResult.details.matchStatus,
+      daysAuditsID: daysAuditsResult.records[0]?.get("daysAuditsID"),
+    });
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
-    logError("Error generating daily audit report", err);
-
+    logError("Error recording audit result", err);
     throw error;
   }
+}
+
+/**
+ * Performs a trust account audit, verifying balances and recording results
+ */
+export async function performTrustAudit(session: Session): Promise<AuditResult> {
+  const auditResult = await verifyBalanceMatch(session);
+  await recordAuditResult(session, auditResult);
+  return auditResult;
 }

@@ -2,8 +2,6 @@ import { v4 as uuidv4 } from "uuid";
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../../config/neo4j";
 import { logInfo, logError } from "../../../utils/logger";
 import { calculateSystemChecksum } from "./checksum";
-import { performPreDCOAudit, performPostDCOAudit, generateDailyAuditReport } from "./auditChecks";
-import { recordAuditIncident, restoreFromBackup } from "./auditIncidents";
 import {
   waitForMTQCompletion,
   setDCORunningFlag,
@@ -16,8 +14,10 @@ import {
 import { fetchCurrencyRates, establishNewCXXrates } from "./currencyRates";
 import { updateCredexBalances } from "./balanceUpdates";
 import { processDCOTransactions } from "./transactions";
-import { createNeo4jBackup } from "../DBbackup";
-import { validateAmount, validateDenomination } from "../../../utils/validators";
+import {
+  validateAmount,
+  validateDenomination,
+} from "../../../utils/validators";
 import { GetSecuredAuthorizationService } from "../../../api/Credex/services/GetSecuredAuthorization";
 import { ServiceResult } from "../../../types/apiResponse";
 import { Participant } from "./types";
@@ -62,14 +62,14 @@ async function findDCOParticipants(session: any): Promise<{
   const confirmedParticipants: Participant[] = [];
 
   for (const participant of declaredParticipants) {
-    const { 
-      accountID, 
-      DCOmemberID, 
-      DCOdenom, 
-      DCOgiveInCXX, 
-      DCOgiveInDenom, 
+    const {
+      accountID,
+      DCOmemberID,
+      DCOdenom,
+      DCOgiveInCXX,
+      DCOgiveInDenom,
       recurringID,
-      denomToXAUrate 
+      denomToXAUrate,
     } = participant.toObject();
 
     if (
@@ -98,7 +98,7 @@ async function findDCOParticipants(session: any): Promise<{
         accountID,
         DCOdenom,
         error: securedAuthResult.message,
-        details: securedAuthResult.error?.details
+        details: securedAuthResult.error?.details,
       });
       continue;
     }
@@ -122,7 +122,7 @@ async function findDCOParticipants(session: any): Promise<{
         accountID,
         DCOdenom,
         required: DCOgiveInDenom,
-        available: securableAmountInDenom
+        available: securableAmountInDenom,
       });
     }
   }
@@ -134,7 +134,7 @@ async function findDCOParticipants(session: any): Promise<{
     confirmedParticipants,
     DCOinCXX,
     DCOinXAU,
-    numberConfirmedParticipants
+    numberConfirmedParticipants,
   };
 }
 
@@ -159,33 +159,6 @@ export async function DCOexecute(): Promise<boolean> {
     const { previousDate, nextDate } =
       await setDCORunningFlag(ledgerSpaceSession);
 
-    // Perform pre-DCO audit checks and backup
-    await createNeo4jBackup(previousDate, "_pre_audit");
-    const preAuditResult = await performPreDCOAudit(ledgerSpaceSession);
-    if (!preAuditResult.success || !preAuditResult.details.matchStatus) {
-      logError("Pre-DCO audit failed: Trust account balances do not match secured balances", new Error("Pre-DCO Audit Failure"), {
-        dcoProcessId,
-        discrepancies: preAuditResult.details.discrepancies,
-        timestamp: preAuditResult.details.timestamp
-      });
-      // Continue with DCO but record the incident
-      await recordAuditIncident(ledgerSpaceSession, "PRE_DCO_AUDIT_FAILURE", preAuditResult.details);
-    }
-    logInfo("Pre-DCO audit passed", {
-      dcoProcessId,
-      timestamp: preAuditResult.details.timestamp,
-      checksum: preAuditResult.details.checksum
-    });
-
-    const initialChecksum = preAuditResult.details.checksum;
-    logInfo(`Initial system checksum: ${initialChecksum}`, {
-      dcoProcessId,
-      checksum: initialChecksum,
-    });
-
-    await createNeo4jBackup(previousDate, "_end");
-    logInfo(`Created Neo4j backup for ${previousDate}_end`, { dcoProcessId });
-
     await handleDefaultingCredexes(ledgerSpaceSession);
     await expirePendingOffers(ledgerSpaceSession);
 
@@ -194,14 +167,14 @@ export async function DCOexecute(): Promise<boolean> {
     logInfo("DCO participant data", {
       numberParticipants: participantData.numberConfirmedParticipants,
       DCOinCXX: participantData.DCOinCXX,
-      DCOinXAU: participantData.DCOinXAU
+      DCOinXAU: participantData.DCOinXAU,
     });
 
     const USDbaseRates = await fetchCurrencyRates(nextDate);
-    const {
-      newCXXrates,
-      CXXprior_CXXcurrent,
-    } = await establishNewCXXrates(USDbaseRates, participantData);
+    const { newCXXrates, CXXprior_CXXcurrent } = await establishNewCXXrates(
+      USDbaseRates,
+      participantData
+    );
 
     await createNewDaynode(
       ledgerSpaceSession,
@@ -225,76 +198,7 @@ export async function DCOexecute(): Promise<boolean> {
       participantData
     );
 
-    // Perform post-DCO audit checks with rollback capability
-    const postAuditResult = await performPostDCOAudit(ledgerSpaceSession);
-    if (!postAuditResult.success || !postAuditResult.details.matchStatus) {
-      logError("Post-DCO audit failed: Trust account balances do not match secured balances", new Error("Post-DCO Audit Failure"), {
-        dcoProcessId,
-        discrepancies: postAuditResult.details.discrepancies,
-        timestamp: postAuditResult.details.timestamp
-      });
-
-      // Restore system to pre-DCO state
-      try {
-        await restoreFromBackup(previousDate, "_pre_audit");
-        logInfo("System restored to pre-DCO state due to audit failure", {
-          dcoProcessId,
-          timestamp: new Date().toISOString()
-        });
-      } catch (restoreError) {
-        logError("Failed to restore system to pre-DCO state", restoreError as Error, {
-          dcoProcessId,
-          originalError: "Post-DCO Audit Failure"
-        });
-      }
-
-      // Record the incident and continue
-      await recordAuditIncident(ledgerSpaceSession, "POST_DCO_AUDIT_FAILURE", postAuditResult.details);
-      
-      // Re-run DCO operations
-      const USDbaseRates = await fetchCurrencyRates(nextDate);
-      const {
-        newCXXrates,
-        CXXprior_CXXcurrent,
-      } = await establishNewCXXrates(USDbaseRates, participantData);
-
-      await createNewDaynode(
-        ledgerSpaceSession,
-        newCXXrates,
-        nextDate,
-        CXXprior_CXXcurrent
-      );
-      await updateCredexBalances(
-        ledgerSpaceSession,
-        searchSpaceSession,
-        newCXXrates,
-        CXXprior_CXXcurrent
-      );
-
-      await processDCOTransactions(
-        ledgerSpaceSession,
-        foundationID,
-        foundationXOid,
-        participantData
-      );
-    }
-    logInfo("Post-DCO audit passed", {
-      dcoProcessId,
-      timestamp: postAuditResult.details.timestamp,
-      checksum: postAuditResult.details.checksum
-    });
-
-    // Generate daily audit report
-    const auditReport = await generateDailyAuditReport(ledgerSpaceSession);
-    logInfo("Daily audit report generated", {
-      dcoProcessId,
-      reportLength: auditReport.length
-    });
-
-    await createNeo4jBackup(nextDate, "_start");
-    logInfo(`Created Neo4j backup for ${nextDate}_start`, { dcoProcessId });
-
-    const finalChecksum = postAuditResult.details.checksum;
+    const finalChecksum = await calculateSystemChecksum(ledgerSpaceSession);
     logInfo(`Final system checksum: ${finalChecksum}`, {
       dcoProcessId,
       checksum: finalChecksum,

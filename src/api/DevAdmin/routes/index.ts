@@ -1,6 +1,7 @@
 import express from "express";
 import { clearDevDBsRoute } from "./clearDevDBsRoute";
 import { forceDCORoute } from "./forceDCORoute";
+import { runTrustAuditRoute } from "./runTrustAuditRoute";
 import { errorHandler } from "../../../middleware/errorHandler";
 import { verifyDevAdminKey } from "../../../middleware/devAdminAuth";
 import logger from "../../../utils/logger";
@@ -103,11 +104,14 @@ export function DevRoutes() {
   router.post("/devadmin/forceDCO", forceDCORoute);
   logger.debug("Route registered: POST /devadmin/forceDCO");
 
+  router.post("/devadmin/runTrustAudit", runTrustAuditRoute);
+  logger.debug("Route registered: POST /devadmin/runTrustAudit");
+
   router.use(errorHandler);
 
   logger.info("DevAdmin routes initialized successfully", {
     module: "devAdminRoutes",
-    routesCount: 2,
+    routesCount: 3,
   });
 
   return router;
