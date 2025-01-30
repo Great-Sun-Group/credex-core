@@ -18,7 +18,7 @@ if (command === "dev" || command === "stage") {
 }
 
 // Special commands that map to devadmin operations
-const devAdminCommands = ["cleardevdbs", "forcedco", "clearforce"];
+const devAdminCommands = ["cleardevdbs", "forcedco", "clearforce", "trustaudit"];
 
 // Special commands that map to integration tests
 const integrationCommands = ["integrate"];
