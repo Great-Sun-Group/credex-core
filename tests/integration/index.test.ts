@@ -21,7 +21,7 @@ describe("Integration Tests", () => {
     // Extract greatsun trust details
     const greatsunDashboard = greatsunResponse.data.dashboard;
     const greatsunTrustAccount = greatsunDashboard.accounts.find(
-      (acc: any) => acc.accountType === "TRUST"
+      (acc: any) => acc.accountHandle === "greatsun_trust"
     );
 
     if (!greatsunTrustAccount) {
@@ -35,8 +35,8 @@ describe("Integration Tests", () => {
     // Initialize greatsun trust dashboard state
     dashboardStore.initializeState(greatsunTrustMemberID, greatsunDashboard);
 
-    // Onboard 10 test members with unique phone numbers
-    for (let i = 0; i < 10; i++) {
+    // Onboard 3 test members with unique phone numbers
+    for (let i = 0; i < 3; i++) {
       // Add delay to ensure unique timestamps
       await new Promise(resolve => setTimeout(resolve, 100));
       const timestamp = Date.now();
@@ -44,7 +44,7 @@ describe("Integration Tests", () => {
         `TestUser${i}`,
         `LastName${i}`,
         `${timestamp}${i}`,
-        "USD"
+        "CAD"
       );
 
       // Find personal account from accounts array
@@ -73,12 +73,12 @@ describe("Integration Tests", () => {
 
   describe("Smart Contract Features", () => {
     it("should complete full offer-accept flow with correct balances", async () => {
-      // Test $1 USD offer from greatsun_trust to first member
+      // Test $1 CAD offer from greatsun_trust to first member
       const createResponse = await createCredex(
         process.env.ISSUER_TOKEN!,
         greatsunTrustID,
         memberTokens[0].personalAccountID,
-        "USD",
+        "CAD",
         1,
         "PURCHASE",
         "OFFERS",
@@ -98,15 +98,15 @@ describe("Integration Tests", () => {
       dashboardStore.updateAfterState(memberTokens[0].memberID, acceptResponse.data.dashboard);
 
       // Verify balance changes
-      dashboardStore.verifyAndPromote(greatsunTrustMemberID, "1", "USD", true);
-      dashboardStore.verifyAndPromote(memberTokens[0].memberID, "1", "USD", true);
+      dashboardStore.verifyAndPromote(greatsunTrustMemberID, "1", "CAD", true);
+      dashboardStore.verifyAndPromote(memberTokens[0].memberID, "1", "CAD", true);
 
-      // Test $0.50 USD return from first member to greatsun_trust
+      // Test $0.50 CAD return from first member to greatsun_trust
       const returnResponse = await createCredex(
         process.env.RECEIVER_TOKEN!,
         memberTokens[0].personalAccountID,
         greatsunTrustID,
-        "USD",
+        "CAD",
         0.5,
         "PURCHASE",
         "OFFERS",
@@ -126,8 +126,8 @@ describe("Integration Tests", () => {
       dashboardStore.updateAfterState(greatsunTrustMemberID, acceptReturnResponse.data.dashboard);
 
       // Verify balance changes
-      dashboardStore.verifyAndPromote(memberTokens[0].memberID, "0.5", "USD", true);
-      dashboardStore.verifyAndPromote(greatsunTrustMemberID, "0.5", "USD", true);
+      dashboardStore.verifyAndPromote(memberTokens[0].memberID, "0.5", "CAD", true);
+      dashboardStore.verifyAndPromote(greatsunTrustMemberID, "0.5", "CAD", true);
     });
   });
 });

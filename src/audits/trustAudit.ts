@@ -29,7 +29,7 @@ async function performTrustAudit(session: Session): Promise<AuditResult> {
 
       // Create unique report for each trust account with atomic relationships
       WITH DISTINCT trustAccountWithSecured, daynode
-      MERGE (report:TrustAuditReport)-[:CLAIMS_AGAINST]->(trustAccountWithSecured)-[:CREATED_ON]->(daynode)
+      MERGE (daynode)<-[:CREATED_ON]-(report:TrustAuditReport)-[:CLAIMS_AGAINST]->(trustAccountWithSecured)
       ON CREATE
         SET report.created = datetime()
         SET report.reportID = randomUUID()
@@ -113,7 +113,7 @@ async function performPostDCOTrustAudit(
 
       // Create unique DCO report for each trust account with atomic relationships
       WITH DISTINCT trustAccountWithSecured, daynode
-      MERGE (report:TrustAuditReportDCO)-[:CLAIMS_AGAINST]->(trustAccountWithSecured)-[:CREATED_ON]->(daynode)
+      MERGE (daynode)<-[:CREATED_ON]-(report:TrustAuditReportDCO)-[:CLAIMS_AGAINST]->(trustAccountWithSecured)
       ON CREATE
         SET report.created = datetime()
         SET report.reportID = randomUUID()
