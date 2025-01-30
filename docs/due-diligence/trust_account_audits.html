@@ -29,172 +29,140 @@
     <h1 class="chapter-title">Trust Account Audits</h1>
 
     <p>
-      Trust account audits are a critical component of the credex ecosystem's security model. 
-      They ensure that every secured credex in circulation is fully backed by real assets, 
-      providing the foundation of trust that enables the system to function. These audits run 
-      continuously, verifying three key aspects of the system's integrity.
+      Think of a trust account like a community savings club's lockbox, but with three important differences:
     </p>
+    <ol>
+      <li>Instead of one person holding the key, the whole community can verify what's inside</li>
+      <li>Instead of counting cash by hand, computers check the numbers constantly</li>
+      <li>Instead of just trusting the treasurer's word, there are bank statements proving the money exists</li>
+    </ol>
 
     <h2>The Three-Way Match</h2>
     <p>
-      Every trust account undergoes a rigorous three-way verification process:
+      Every trust account must pass three checks, like having three different people count the money and all getting the same answer:
     </p>
     <ol>
       <li>
-        <strong>Balances Issued Into Circulation:</strong>
+        <strong>What the Trust Says It Has:</strong>
         <ul>
-          <li>Track all secured credexes issued by the trust account</li>
-          <li>These are credexes where the trust account both OWES/OFFERS and SECURES</li>
-          <li>Represents the trust account's total liability in its denomination</li>
-          <li>Must match both bank balances and net distribution within the ecosystem</li>
+          <li>Every secured credex the trust has issued</li>
+          <li>Like a detailed list of who the trust owes money to</li>
+          <li>Must match exactly with what's in the bank</li>
         </ul>
       </li>
       <li>
-        <strong>Bank Account Balances:</strong>
+        <strong>What's Actually in the Bank:</strong>
         <ul>
-          <li>External verification of real asset holdings</li>
-          <li>Regular bank statement reconciliation</li>
-          <li>Provides independent confirmation of backing assets</li>
-          <li>Must exactly match what's issued into circulation</li>
+          <li>Real bank statements showing the money is there</li>
+          <li>Updated daily so everyone knows the backing is real</li>
+          <li>Each trust account has specific details for its jurisdiction (like transit numbers for Canadian banks or branch codes for Zimbabwean banks)</li>
         </ul>
       </li>
       <li>
-        <strong>Net Distribution of Balances:</strong>
+        <strong>What People's Accounts Show:</strong>
         <ul>
-          <li>Sum of all account balances for credexes secured by this trust</li>
-          <li>Counts outgoing OWES and OFFERS (since OFFERS can be accepted by counterparty any time)</li>
-          <li>Only counts incoming OWES (since OFFERS can be cancelled by counterpary any time)</li>
-          <li>Must match total issued and bank balances</li>
+          <li>The sum of all balances in the system</li>
+          <li>Like having everyone in the savings club show their passbooks</li>
+          <li>Must match both what the trust claims and what's in the bank</li>
         </ul>
       </li>
     </ol>
 
-    <h2>Audit Process</h2>
+    <h2>When Do We Check?</h2>
     <p>
-      The audit process runs at critical points to ensure system integrity:
+      The system is always watching, but there are three special times when everything gets extra attention:
     </p>
     <ol>
       <li>
-        Pre-DCO Audit:
+        Before Daily Updates:
         <ul>
-          <li>Verifies system state before Daily Credcoin Offering</li>
-          <li>Creates backup point for rollback if needed</li>
-          <li>Must pass before DCO can proceed</li>
+          <li>Like counting the money before opening the shop</li>
+          <li>Makes sure we're starting with correct numbers</li>
+          <li>Creates a backup point we can return to if needed</li>
         </ul>
       </li>
       <li>
-        Post-DCO Audit:
+        After Daily Updates:
         <ul>
-          <li>Verifies system state after all DCO transactions</li>
-          <li>Triggers rollback to pre-DCO state if audit fails</li>
-          <li>Ensures DCO operations maintain system integrity</li>
+          <li>Like counting the till after a busy day</li>
+          <li>Verifies all the day's transactions were proper</li>
+          <li>If anything's wrong, we can roll back to the morning's count</li>
         </ul>
       </li>
       <li>
-        Continuous Bank Statement Reconciliation:
+        During Every Transaction:
         <ul>
-          <li>Regular updates of bank statement data</li>
-          <li>Cross-reference with system balances</li>
-          <li>Alerts on any discrepancies</li>
+          <li>Like having someone watch every time money moves</li>
+          <li>Catches problems before they can grow</li>
+          <li>Stops any transaction that would create an imbalance</li>
         </ul>
       </li>
     </ol>
 
-    <h2>Security Model</h2>
+    <h2>How We Keep Things Safe</h2>
     <p>
-      The trust account audit system provides multiple layers of security:
+      The system has multiple safety features, like a lockbox with several different locks:
     </p>
     <ul>
       <li>
-        <strong>Double-Entry Verification:</strong>
+        <strong>Double-Entry Protection:</strong>
         <ul>
-          <li>What trust accounts issue must match what they secure</li>
-          <li>What's secured must match how it's distributed</li>
-          <li>Both must match external bank statements</li>
+          <li>Every transaction is recorded in two places</li>
+          <li>Like having two separate record books that must match</li>
+          <li>If they don't match, we know something's wrong</li>
         </ul>
       </li>
       <li>
-        <strong>Automatic Enforcement:</strong>
+        <strong>Automatic Safeguards:</strong>
         <ul>
-          <li>Trust accounts can only issue secured credexes they can back</li>
-          <li>System prevents over-issuance through authorization checks</li>
-          <li>Continuous auditing catches any discrepancies immediately</li>
+          <li>Trust accounts can only issue what they can back</li>
+          <li>The system checks bank details are valid for each country</li>
+          <li>Continuous monitoring catches any issues instantly</li>
         </ul>
       </li>
       <li>
-        <strong>Transparent Verification:</strong>
+        <strong>Community Verification:</strong>
         <ul>
-          <li>All secured credexes are publicly auditable</li>
-          <li>Bank statement totals are published daily</li>
-          <li>Anyone can verify the three-way match</li>
+          <li>Anyone can check the total amounts</li>
+          <li>Daily bank statement totals are public</li>
+          <li>Your personal balance stays private, but you can verify the system is sound</li>
         </ul>
       </li>
     </ul>
 
-    <h2>Example Audit Verification</h2>
-    <pre>
-    Trust Account Audit Example
-    -------------------------
-
-    Great Sun Trust Account (CAD):
-    1. Issued Into Circulation:
-       - OWES 28 CAD credex to Ryan Watson
-       - SECURES this same credex
-       Total Issued: 28 CAD
-
-    2. Bank Statement Balance:
-       - Holds exactly 28 CAD in bank account
-       Total Held: 28 CAD
-
-    3. Net Distribution:
-       Ryan Watson's Balance:
-       + 28 CAD (incoming OWES from trust)
-       - 1 CAD (outgoing OWES/OFFERS)
-       = 27 CAD net balance
-       Total Distributed: 28 CAD (27 + 1)
-
-    All three numbers match: 28 CAD
-    Audit Status: PASSED
-    </pre>
-
-    <h2>Recovery Procedures</h2>
+    <h2>If Something Goes Wrong</h2>
     <p>
-      If an audit fails, the system has multiple recovery mechanisms:
+      The system has multiple ways to fix problems, like having spare keys for the lockbox:
     </p>
     <ul>
       <li>
-        <strong>Immediate Detection:</strong>
+        <strong>Quick Detection:</strong>
         <ul>
-          <li>Audits run before and after all major operations</li>
-          <li>Discrepancies are caught before they can compound</li>
-          <li>Detailed logging helps identify root causes</li>
+          <li>Problems are found immediately</li>
+          <li>Like noticing a mistake while counting, not weeks later</li>
+          <li>Detailed records show exactly what happened</li>
         </ul>
       </li>
       <li>
-        <strong>Automated Recovery:</strong>
+        <strong>Automatic Fixes:</strong>
         <ul>
-          <li>Failed DCO operations trigger automatic rollback</li>
-          <li>System restores to last known good state</li>
-          <li>All operations are atomic - either fully complete or fully roll back</li>
+          <li>If daily updates fail, everything rolls back</li>
+          <li>Like being able to undo any mistakes</li>
+          <li>No partial changes - everything works or nothing changes</li>
         </ul>
       </li>
       <li>
-        <strong>Manual Investigation:</strong>
+        <strong>Human Oversight:</strong>
         <ul>
-          <li>Detailed audit reports for manual review</li>
-          <li>Tools for investigating discrepancies</li>
-          <li>Clear procedures for resolving issues</li>
+          <li>Detailed reports for manual review</li>
+          <li>Clear steps for fixing any issues</li>
+          <li>Multiple people can verify the fixes</li>
         </ul>
       </li>
     </ul>
 
     <p>
-      This comprehensive audit system ensures that the credex ecosystem maintains 
-      100% backing for all secured credexes. By continuously verifying the three-way 
-      match between issuance, bank balances, and distribution, we provide mathematical 
-      certainty that every secured credex represents real value. This creates a 
-      foundation of trust that enables the broader credex ecosystem to function 
-      effectively as a tool for financial inclusion and empowerment.
+      This system works like a modern version of the community savings clubs that have served African communities for generations. Instead of relying on one trusted elder, we use technology to make sure everyone can verify their money is safe. Every secured credex is backed by real money in a real bank account, and anyone can check this is true at any time. This creates the foundation of trust that lets the whole credex ecosystem work for everyone's benefit.
     </p>
   </body>
 </html>
