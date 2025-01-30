@@ -18,19 +18,16 @@ export async function RunTrustAuditService(
 
     logInfo("Trust account audit completed", {
       timestamp: auditResult.details.timestamp,
-      matchStatus: auditResult.details.matchStatus,
-      discrepancies: auditResult.details.discrepancies,
+      reportCount: auditResult.details.reportCount
     });
 
     return {
       success: true,
       data: {
-        success: auditResult.success && auditResult.details.matchStatus,
+        success: auditResult.success,
         timestamp: auditResult.details.timestamp,
       },
-      message: auditResult.details.matchStatus
-        ? "Trust account audit completed successfully"
-        : "Trust account audit completed with discrepancies",
+      message: "Trust account audit completed successfully",
     };
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
