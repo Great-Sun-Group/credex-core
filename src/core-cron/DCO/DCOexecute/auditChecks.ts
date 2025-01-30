@@ -25,34 +25,37 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
     `);
 
     if (denomCheck.records.length > 0) {
-      const violations = denomCheck.records.map(record => ({
-        accountID: record.get('accountID'),
-        defaultDenom: record.get('defaultDenom'),
-        wrongDenoms: record.get('wrongDenoms')
+      const violations = denomCheck.records.map((record) => ({
+        accountID: record.get("accountID"),
+        defaultDenom: record.get("defaultDenom"),
+        wrongDenoms: record.get("wrongDenoms"),
       }));
 
       const error = new Error("Trust account denomination violation");
       logError("Trust account denomination violation", error, { violations });
-      
+
       return {
         success: false,
         details: {
           timestamp: new Date().toISOString(),
           checksum: await calculateSystemChecksum(session),
           matchStatus: false,
-          discrepancies: violations.reduce((acc, v) => ({
-            ...acc,
-            [v.accountID]: {
-              trustAccountIssuedTotal: 0,
-              totalNetClaimed: 0,
-              difference: 0,
-              denomination: v.defaultDenom,
-              claimDetails: [],
-              error: `Trust account issuing in wrong denominations: ${v.wrongDenoms.join(', ')}`
-            }
-          }), {}),
-          trustAccounts: []
-        }
+          discrepancies: violations.reduce(
+            (acc, v) => ({
+              ...acc,
+              [v.accountID]: {
+                trustAccountIssuedTotal: 0,
+                totalNetClaimed: 0,
+                difference: 0,
+                denomination: v.defaultDenom,
+                claimDetails: [],
+                error: `Trust account issuing in wrong denominations: ${v.wrongDenoms.join(", ")}`,
+              },
+            }),
+            {}
+          ),
+          trustAccounts: [],
+        },
       };
     }
 
@@ -61,15 +64,15 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
       MATCH (trust:Account {accountType: "TRUST"})
       
       // Get total issued by trust (we know it's all in their defaultDenom)
-      OPTIONAL MATCH (trust)-[r:OWES|OFFERS]->(credex:Credex)<-[:SECURES]-(trust)
+      OPTIONAL MATCH (trust)-[:OWES|OFFERS]->(credex:Credex)<-[:SECURES]-(trust)
       WITH trust, COALESCE(SUM(credex.OutstandingAmount), 0) as trustAccountIssuedTotal
       
       // Get balance claims on the trust account
-      OPTIONAL MATCH (claimingAccount:Account)<-[r:OWES|OFFERS]-(securedIncomingCredex:Credex)<-[:SECURES]-(trust)
+      OPTIONAL MATCH (claimingAccount:Account)<-[:OWES|OFFERS]-(securedIncomingCredex:Credex)<-[:SECURES]-(trust)
       WITH trust, trustAccountIssuedTotal, claimingAccount, COALESCE(SUM(securedIncomingCredex.OutstandingAmount), 0) as grossBalanceClaimed
 
       // All uncleared credex secured by the trust account that emanate from these accounts
-      OPTIONAL MATCH (claimingAccount)-[]->(securedOutgoingCredex:Credex)<-[:SECURES]-(trust)
+      OPTIONAL MATCH (claimingAccount)-[:OWES|OFFERS]->(securedOutgoingCredex:Credex)<-[:SECURES]-(trust)
       WITH trust, trustAccountIssuedTotal, claimingAccount, grossBalanceClaimed, COALESCE(SUM(securedOutgoingCredex.OutstandingAmount), 0) as issuedAgainstClaims
       
       RETURN trust, trustAccountIssuedTotal, claimingAccount.accountID, grossBalanceClaimed - issuedAgainstClaims as netClaimed
@@ -94,7 +97,7 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
     >();
 
     result.records.forEach((record) => {
-      const trust = record.get("trust");
+      const trust = record.get("trust").properties;
       const trustAccountIssuedTotal = Number(
         record.get("trustAccountIssuedTotal")
       );
@@ -111,11 +114,22 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
         trustAccountMap.set(trust.accountID, trustData);
       }
 
-      if (claimingAccountId) {
-        trustData.claims.push({
-          accountID: claimingAccountId,
-          netClaimed,
-        });
+      // Only add non-zero claims
+      if (claimingAccountId && Math.abs(netClaimed) > 0.001) {
+        // Check if we already have a claim for this account
+        const existingClaimIndex = trustData.claims.findIndex(
+          (c) => c.accountID === claimingAccountId
+        );
+        if (existingClaimIndex >= 0) {
+          // Update existing claim
+          trustData.claims[existingClaimIndex].netClaimed += netClaimed;
+        } else {
+          // Add new claim
+          trustData.claims.push({
+            accountID: claimingAccountId,
+            netClaimed,
+          });
+        }
       }
     });
 
@@ -126,8 +140,8 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
         0
       );
 
-      const trustAccountDetails = {
-        accountID: accountId,
+      const trustAccountDetails: TrustAccountAuditDetails = {
+        accountID: trustData.trust.accountID,
         defaultDenom: trustData.trust.defaultDenom,
         trustAccountIssuedTotal: trustData.trustAccountIssuedTotal,
         claimDetails: trustData.claims,
@@ -140,7 +154,7 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
         Math.abs(trustData.trustAccountIssuedTotal - totalNetClaimed) > 0.001
       ) {
         details.matchStatus = false;
-        details.discrepancies![accountId] = {
+        details.discrepancies![trustData.trust.accountID] = {
           trustAccountIssuedTotal: trustData.trustAccountIssuedTotal,
           totalNetClaimed,
           difference: trustData.trustAccountIssuedTotal - totalNetClaimed,
