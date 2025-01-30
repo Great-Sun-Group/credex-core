@@ -42,6 +42,7 @@ export interface AuditDiscrepancy {
   difference: number;
   denomination: string;
   claimDetails: ClaimDetail[];
+  error?: string; // For denomination violations
 }
 
 export interface AuditDetails {

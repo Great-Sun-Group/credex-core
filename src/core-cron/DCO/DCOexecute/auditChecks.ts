@@ -2,23 +2,66 @@ import { Session } from "neo4j-driver";
 import { logInfo, logError } from "../../../utils/logger";
 import { calculateSystemChecksum } from "./checksum";
 
-import { AuditResult, AuditDetails, AuditDiscrepancy, ClaimDetail, TrustAccountAuditDetails } from "./types";
+import {
+  AuditResult,
+  AuditDetails,
+  AuditDiscrepancy,
+  ClaimDetail,
+  TrustAccountAuditDetails,
+} from "./types";
 
 /**
  * Verifies that secured balances match trust account balances for each denomination
  */
 async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
   try {
+    // First check for any trust accounts issuing in wrong denomination
+    const denomCheck = await session.run(`
+      MATCH (trust:Account {accountType: "TRUST"})
+      MATCH (trust)-[r:OWES|OFFERS]->(credex:Credex)<-[:SECURES]-(trust)
+      WHERE credex.Denomination <> trust.defaultDenom
+      RETURN trust.accountID as accountID, trust.defaultDenom as defaultDenom, 
+             collect(credex.Denomination) as wrongDenoms
+    `);
+
+    if (denomCheck.records.length > 0) {
+      const violations = denomCheck.records.map(record => ({
+        accountID: record.get('accountID'),
+        defaultDenom: record.get('defaultDenom'),
+        wrongDenoms: record.get('wrongDenoms')
+      }));
+
+      const error = new Error("Trust account denomination violation");
+      logError("Trust account denomination violation", error, { violations });
+      
+      return {
+        success: false,
+        details: {
+          timestamp: new Date().toISOString(),
+          checksum: await calculateSystemChecksum(session),
+          matchStatus: false,
+          discrepancies: violations.reduce((acc, v) => ({
+            ...acc,
+            [v.accountID]: {
+              trustAccountIssuedTotal: 0,
+              totalNetClaimed: 0,
+              difference: 0,
+              denomination: v.defaultDenom,
+              claimDetails: [],
+              error: `Trust account issuing in wrong denominations: ${v.wrongDenoms.join(', ')}`
+            }
+          }), {}),
+          trustAccounts: []
+        }
+      };
+    }
+
+    // If denomination check passes, proceed with balance verification
     const result = await session.run(`
       MATCH (trust:Account {accountType: "TRUST"})
       
-      // Get total issued by auditedAccount
+      // Get total issued by trust (we know it's all in their defaultDenom)
       OPTIONAL MATCH (trust)-[r:OWES|OFFERS]->(credex:Credex)<-[:SECURES]-(trust)
-
-      // Incident if any credexes issued that are not in trust account's defaultDenom
-      WHERE credex.Denomination = trust.defaultDenom
-      // END
-
       WITH trust, COALESCE(SUM(credex.OutstandingAmount), 0) as trustAccountIssuedTotal
       
       // Get balance claims on the trust account
@@ -29,26 +72,32 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
       OPTIONAL MATCH (claimingAccount)-[]->(securedOutgoingCredex:Credex)<-[:SECURES]-(trust)
       WITH trust, trustAccountIssuedTotal, claimingAccount, grossBalanceClaimed, COALESCE(SUM(securedOutgoingCredex.OutstandingAmount), 0) as issuedAgainstClaims
       
-      RETURN trust, trustAccountIssuedTotal, claimingAccount.accountID, grossBalanceClaimed - issuedAgainstClaims as netClaimed    `);
+      RETURN trust, trustAccountIssuedTotal, claimingAccount.accountID, grossBalanceClaimed - issuedAgainstClaims as netClaimed
+    `);
 
     const details: AuditDetails = {
       timestamp: new Date().toISOString(),
       checksum: await calculateSystemChecksum(session),
       matchStatus: true,
       discrepancies: {},
-      trustAccounts: []
+      trustAccounts: [],
     };
 
     // Group records by trust account to collect all claims
-    const trustAccountMap = new Map<string, {
-      trust: any,
-      trustAccountIssuedTotal: number,
-      claims: ClaimDetail[]
-    }>();
+    const trustAccountMap = new Map<
+      string,
+      {
+        trust: any;
+        trustAccountIssuedTotal: number;
+        claims: ClaimDetail[];
+      }
+    >();
 
     result.records.forEach((record) => {
       const trust = record.get("trust");
-      const trustAccountIssuedTotal = Number(record.get("trustAccountIssuedTotal"));
+      const trustAccountIssuedTotal = Number(
+        record.get("trustAccountIssuedTotal")
+      );
       const claimingAccountId = record.get("claimingAccount.accountID");
       const netClaimed = Number(record.get("netClaimed"));
 
@@ -57,41 +106,46 @@ async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
         trustData = {
           trust,
           trustAccountIssuedTotal,
-          claims: []
+          claims: [],
         };
         trustAccountMap.set(trust.accountID, trustData);
       }
-      
+
       if (claimingAccountId) {
         trustData.claims.push({
           accountID: claimingAccountId,
-          netClaimed
+          netClaimed,
         });
       }
     });
 
     // Process each trust account
     for (const [accountId, trustData] of trustAccountMap) {
-      const totalNetClaimed = trustData.claims.reduce((sum, claim) => sum + claim.netClaimed, 0);
-      
+      const totalNetClaimed = trustData.claims.reduce(
+        (sum, claim) => sum + claim.netClaimed,
+        0
+      );
+
       const trustAccountDetails = {
         accountID: accountId,
         defaultDenom: trustData.trust.defaultDenom,
         trustAccountIssuedTotal: trustData.trustAccountIssuedTotal,
         claimDetails: trustData.claims,
-        totalNetClaimed
+        totalNetClaimed,
       };
 
       details.trustAccounts.push(trustAccountDetails);
 
-      if (Math.abs(trustData.trustAccountIssuedTotal - totalNetClaimed) > 0.001) {
+      if (
+        Math.abs(trustData.trustAccountIssuedTotal - totalNetClaimed) > 0.001
+      ) {
         details.matchStatus = false;
         details.discrepancies![accountId] = {
           trustAccountIssuedTotal: trustData.trustAccountIssuedTotal,
           totalNetClaimed,
           difference: trustData.trustAccountIssuedTotal - totalNetClaimed,
           denomination: trustData.trust.defaultDenom,
-          claimDetails: trustData.claims
+          claimDetails: trustData.claims,
         };
       }
     }
@@ -142,7 +196,7 @@ async function recordAuditResult(
         checksum: auditResult.details.checksum,
         matchStatus: auditResult.details.matchStatus,
         discrepancies: JSON.stringify(auditResult.details.discrepancies || {}),
-        trustAccounts: JSON.stringify(auditResult.details.trustAccounts)
+        trustAccounts: JSON.stringify(auditResult.details.trustAccounts),
       }
     );
 
@@ -201,8 +255,13 @@ export async function generateDailyAuditReport(
     // Format report content
     const reportContent = auditRecords
       .map((audit) => {
-        const trustAccounts = JSON.parse(audit.trustAccounts) as TrustAccountAuditDetails[];
-        const discrepancies = JSON.parse(audit.discrepancies) as Record<string, AuditDiscrepancy>;
+        const trustAccounts = JSON.parse(
+          audit.trustAccounts
+        ) as TrustAccountAuditDetails[];
+        const discrepancies = JSON.parse(audit.discrepancies) as Record<
+          string,
+          AuditDiscrepancy
+        >;
 
         return `
 Audit Stage: ${audit.stage}
@@ -211,32 +270,39 @@ System Checksum: ${audit.checksum}
 Balance Match Status: ${audit.matchStatus ? "MATCHED" : "DISCREPANCY FOUND"}
 
 Trust Account Details:
-${trustAccounts.map(account => `
+${trustAccounts
+  .map(
+    (account) => `
   Account ID: ${account.accountID} (${account.defaultDenom})
   Total Issued: ${account.trustAccountIssuedTotal}
   Total Net Claimed: ${account.totalNetClaimed}
   
   Claim Details:
-  ${account.claimDetails.map(claim => 
-    `    - Account ${claim.accountID}: ${claim.netClaimed}`
-  ).join('\n')}
-`).join('\n')}
+  ${account.claimDetails
+    .map((claim) => `    - Account ${claim.accountID}: ${claim.netClaimed}`)
+    .join("\n")}
+`
+  )
+  .join("\n")}
 
-${Object.keys(discrepancies).length > 0
+${
+  Object.keys(discrepancies).length > 0
     ? `
 Discrepancies Found:
 ${Object.entries(discrepancies)
-  .map(([accountId, values]) => `
+  .map(
+    ([accountId, values]) => `
   Account ${accountId} (${values.denomination}):
     Total Issued: ${values.trustAccountIssuedTotal}
     Total Net Claimed: ${values.totalNetClaimed}
     Balance Discrepancy: ${values.difference}
     
     Claim Details:
-    ${values.claimDetails.map(claim => 
-      `      - Account ${claim.accountID}: ${claim.netClaimed}`
-    ).join('\n')}`
-  ).join('\n')}`
+    ${values.claimDetails
+      .map((claim) => `      - Account ${claim.accountID}: ${claim.netClaimed}`)
+      .join("\n")}`
+  )
+  .join("\n")}`
     : "No Discrepancies Found"
 }
 -------------------`;
