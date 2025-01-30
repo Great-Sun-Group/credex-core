@@ -1,5 +1,6 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { LoopFinder } from "./LoopFinder";
+import { performTrustAudit } from "../../audits/trustAudit";
 import _ from "lodash";
 import logger from "../../utils/logger";
 
@@ -55,6 +56,18 @@ export async function MinuteTransactionQueue(): Promise<boolean> {
     try {
       await processQueuedAccounts(ledgerSpaceSession, searchSpaceSession);
       await processQueuedCredexes(ledgerSpaceSession, searchSpaceSession);
+
+      // Run trust audit after queue processing
+      try {
+        logger.info("Starting trust audit");
+        await performTrustAudit(ledgerSpaceSession);
+        logger.info("Trust audit completed");
+      } catch (error) {
+        logger.error("Error in trust audit", {
+          error: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined
+        });
+      }
 
       if (bailTimerReached) {
         logger.warn("MTQ processing completed after bail timer was reached");
