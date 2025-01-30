@@ -22,8 +22,10 @@ async function performTrustAudit(session: Session): Promise<AuditResult> {
 
       // Create unique report for each trust account
       WITH DISTINCT trustAccountWithSecured, daynode
-      MERGE (report:TrustAuditReport {trustAccountId: trustAccountWithSecured.accountID})
-      ON CREATE SET report.created = datetime()
+      MERGE (report:TrustAuditReport {trustAccountId: trustAccountWithSecured.accountID})-[:CREATED_ON]->(daynode)
+      ON CREATE
+        SET report.created = datetime()
+        SET report.reportID = randomUUID()
       SET report.lastUpdated = datetime()
 
       // First delete all existing claims for cleanup
@@ -52,14 +54,13 @@ async function performTrustAudit(session: Session): Promise<AuditResult> {
              ELSE 0 
            END) as incomingAmount
 
-      // Calculate final net balance
+      // Calculate net balance and create claim
       WITH DISTINCT claimingAccount, report, daynode, trustAccountWithSecured,
            (outgoingAmount - incomingAmount) as netBalance
-      WHERE abs(netBalance) > 0.00001
 
-      // Create claims with correct amounts
       CREATE (claimingAccount)-[:TRUST_AUDIT_CLAIM {
         claimAmountCXX: netBalance,
+        claimDenom: trustAccountWithSecured.defaultDenom,
         claimAmountInDenom: netBalance * daynode[trustAccountWithSecured.defaultDenom],
         timestamp: datetime()
       }]->(report)
