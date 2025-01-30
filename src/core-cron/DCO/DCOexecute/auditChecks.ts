@@ -2,7 +2,7 @@ import { Session } from "neo4j-driver";
 import { logInfo, logError } from "../../../utils/logger";
 import { calculateSystemChecksum } from "./checksum";
 
-import { AuditResult, AuditDetails, AuditDiscrepancy } from "./types";
+import { AuditResult, AuditDetails, AuditDiscrepancy, ClaimDetail, TrustAccountAuditDetails } from "./types";
 
 /**
  * Verifies that secured balances match trust account balances for each denomination
@@ -10,77 +10,91 @@ import { AuditResult, AuditDetails, AuditDiscrepancy } from "./types";
 async function verifyBalanceMatch(session: Session): Promise<AuditResult> {
   try {
     const result = await session.run(`
-      // Get trust accounts that are audited by Credex Foundation
-      MATCH (credexFoundation:Account {accountType: "CREDEX_FOUNDATION"})
-            -[:CREDEX_FOUNDATION_AUDITED]->(trust:Account {accountType: "TRUST"})
+      MATCH (trust:Account {accountType: "TRUST"})
       
-      // Verify trust account only issues in its denomination
-      OPTIONAL MATCH (trust)-[:OWES|OFFERS]->(credex:Credex)
-      WITH trust,
-           COLLECT(DISTINCT credex.Denomination) as usedDenoms,
-           trust.defaultDenom as requiredDenom
-      WHERE SIZE(usedDenoms) = 0 OR 
-            (SIZE(usedDenoms) = 1 AND usedDenoms[0] = requiredDenom)
-      
-      // Calculate both secured and net balances in a single pass
-      OPTIONAL MATCH (trust)-[:SECURES]->(credex:Credex)
+      // Get total issued by auditedAccount
+      OPTIONAL MATCH (trust)-[r:OWES|OFFERS]->(credex:Credex)<-[:SECURES]-(trust)
+
+      // Incident if any credexes issued that are not in trust account's defaultDenom
       WHERE credex.Denomination = trust.defaultDenom
-      WITH trust, trust.defaultDenom as denom,
-           SUM(CASE 
-             WHEN EXISTS((trust)-[:OWES|OFFERS]->(credex)) THEN COALESCE(credex.OutstandingAmount, 0)
-             ELSE 0 
-           END) as totalSecured,
-           SUM(CASE
-             WHEN EXISTS((:Account)-[:OWES]->(credex)) THEN COALESCE(credex.OutstandingAmount, 0)
-             WHEN EXISTS((:Account)-[:OFFERS]->(credex)) THEN -COALESCE(credex.OutstandingAmount, 0)
-             ELSE 0
-           END) as totalNetBalance
+      // END
+
+      WITH trust, COALESCE(SUM(credex.OutstandingAmount), 0) as trustAccountIssuedTotal
       
-      // Return comparison
-      RETURN trust.accountID as auditedAccount,
-             denom,
-             ABS(totalSecured) as securedTotal,
-             ABS(totalNetBalance) as netBalance,
-             ABS(ABS(totalSecured) - ABS(totalNetBalance)) <= 0.001 as matches,
-             ABS(totalSecured) - ABS(totalNetBalance) as difference
-    `);
+      // Get balance claims on the trust account
+      OPTIONAL MATCH (claimingAccount:Account)<-[r:OWES|OFFERS]-(securedIncomingCredex:Credex)<-[:SECURES]-(trust)
+      WITH trust, trustAccountIssuedTotal, claimingAccount, COALESCE(SUM(securedIncomingCredex.OutstandingAmount), 0) as grossBalanceClaimed
+
+      // All uncleared credex secured by the trust account that emanate from these accounts
+      OPTIONAL MATCH (claimingAccount)-[]->(securedOutgoingCredex:Credex)<-[:SECURES]-(trust)
+      WITH trust, trustAccountIssuedTotal, claimingAccount, grossBalanceClaimed, COALESCE(SUM(securedOutgoingCredex.OutstandingAmount), 0) as issuedAgainstClaims
+      
+      RETURN trust, trustAccountIssuedTotal, claimingAccount.accountID, grossBalanceClaimed - issuedAgainstClaims as netClaimed    `);
 
     const details: AuditDetails = {
       timestamp: new Date().toISOString(),
       checksum: await calculateSystemChecksum(session),
-      totalSecuredBalances: {},
-      totalTrustBalances: {},
       matchStatus: true,
       discrepancies: {},
+      trustAccounts: []
     };
 
-    let allMatch = true;
+    // Group records by trust account to collect all claims
+    const trustAccountMap = new Map<string, {
+      trust: any,
+      trustAccountIssuedTotal: number,
+      claims: ClaimDetail[]
+    }>();
 
     result.records.forEach((record) => {
-      const accountId = record.get("auditedAccount");
-      const denom = record.get("denom");
-      const netBalance = Number(record.get("netBalance"));
-      const securedTotal = Number(record.get("securedTotal"));
-      const matches = record.get("matches");
-      const difference = Number(record.get("difference"));
+      const trust = record.get("trust");
+      const trustAccountIssuedTotal = Number(record.get("trustAccountIssuedTotal"));
+      const claimingAccountId = record.get("claimingAccount.accountID");
+      const netClaimed = Number(record.get("netClaimed"));
 
-      // Store absolute values for reporting
-      details.totalSecuredBalances[denom] = Math.abs(securedTotal);
-      details.totalTrustBalances[denom] = Math.abs(netBalance);
-
-      const actualDifference = Math.abs(securedTotal) - Math.abs(netBalance);
-      if (Math.abs(actualDifference) > 0.001) {
-        allMatch = false;
-        details.discrepancies![accountId] = {
-          secured: Math.abs(securedTotal),
-          trust: Math.abs(netBalance),
-          difference: actualDifference,
-          denomination: denom,
+      let trustData = trustAccountMap.get(trust.accountID);
+      if (!trustData) {
+        trustData = {
+          trust,
+          trustAccountIssuedTotal,
+          claims: []
         };
+        trustAccountMap.set(trust.accountID, trustData);
+      }
+      
+      if (claimingAccountId) {
+        trustData.claims.push({
+          accountID: claimingAccountId,
+          netClaimed
+        });
       }
     });
 
-    details.matchStatus = allMatch;
+    // Process each trust account
+    for (const [accountId, trustData] of trustAccountMap) {
+      const totalNetClaimed = trustData.claims.reduce((sum, claim) => sum + claim.netClaimed, 0);
+      
+      const trustAccountDetails = {
+        accountID: accountId,
+        defaultDenom: trustData.trust.defaultDenom,
+        trustAccountIssuedTotal: trustData.trustAccountIssuedTotal,
+        claimDetails: trustData.claims,
+        totalNetClaimed
+      };
+
+      details.trustAccounts.push(trustAccountDetails);
+
+      if (Math.abs(trustData.trustAccountIssuedTotal - totalNetClaimed) > 0.001) {
+        details.matchStatus = false;
+        details.discrepancies![accountId] = {
+          trustAccountIssuedTotal: trustData.trustAccountIssuedTotal,
+          totalNetClaimed,
+          difference: trustData.trustAccountIssuedTotal - totalNetClaimed,
+          denomination: trustData.trust.defaultDenom,
+          claimDetails: trustData.claims
+        };
+      }
+    }
 
     logInfo("Balance audit completed", {
       timestamp: details.timestamp,
@@ -117,22 +131,18 @@ async function recordAuditResult(
         timestamp: $timestamp,
         stage: $stage,
         checksum: $checksum,
-        totalSecuredBalances: $securedBalances,
-        totalTrustBalances: $trustBalances,
         matchStatus: $matchStatus,
-        discrepancies: $discrepancies
+        discrepancies: $discrepancies,
+        trustAccounts: $trustAccounts
       })-[:AUDITS]->(daynode)
     `,
       {
         timestamp: auditResult.details.timestamp,
         stage,
         checksum: auditResult.details.checksum,
-        securedBalances: JSON.stringify(
-          auditResult.details.totalSecuredBalances
-        ),
-        trustBalances: JSON.stringify(auditResult.details.totalTrustBalances),
         matchStatus: auditResult.details.matchStatus,
         discrepancies: JSON.stringify(auditResult.details.discrepancies || {}),
+        trustAccounts: JSON.stringify(auditResult.details.trustAccounts)
       }
     );
 
@@ -191,17 +201,8 @@ export async function generateDailyAuditReport(
     // Format report content
     const reportContent = auditRecords
       .map((audit) => {
-        const securedBalances = JSON.parse(
-          audit.totalSecuredBalances
-        ) as Record<string, number>;
-        const trustBalances = JSON.parse(audit.totalTrustBalances) as Record<
-          string,
-          number
-        >;
-        const discrepancies = JSON.parse(audit.discrepancies) as Record<
-          string,
-          AuditDiscrepancy
-        >;
+        const trustAccounts = JSON.parse(audit.trustAccounts) as TrustAccountAuditDetails[];
+        const discrepancies = JSON.parse(audit.discrepancies) as Record<string, AuditDiscrepancy>;
 
         return `
 Audit Stage: ${audit.stage}
@@ -209,29 +210,33 @@ Timestamp: ${audit.timestamp}
 System Checksum: ${audit.checksum}
 Balance Match Status: ${audit.matchStatus ? "MATCHED" : "DISCREPANCY FOUND"}
 
-Secured Balances:
-${Object.entries(securedBalances)
-  .map(([denom, amount]) => `  ${denom}: ${amount}`)
-  .join("\n")}
+Trust Account Details:
+${trustAccounts.map(account => `
+  Account ID: ${account.accountID} (${account.defaultDenom})
+  Total Issued: ${account.trustAccountIssuedTotal}
+  Total Net Claimed: ${account.totalNetClaimed}
+  
+  Claim Details:
+  ${account.claimDetails.map(claim => 
+    `    - Account ${claim.accountID}: ${claim.netClaimed}`
+  ).join('\n')}
+`).join('\n')}
 
-Trust Account Balances:
-${Object.entries(trustBalances)
-  .map(([denom, amount]) => `  ${denom}: ${amount}`)
-  .join("\n")}
-
-${
-  Object.keys(discrepancies).length > 0
+${Object.keys(discrepancies).length > 0
     ? `
 Discrepancies Found:
 ${Object.entries(discrepancies)
-  .map(
-    ([accountId, values]) => `  Account ${accountId} (${values.denomination}):
-    Total Secured Balances Outstanding: ${values.secured}
-    Net Trust Account Balance: ${values.trust}
+  .map(([accountId, values]) => `
+  Account ${accountId} (${values.denomination}):
+    Total Issued: ${values.trustAccountIssuedTotal}
+    Total Net Claimed: ${values.totalNetClaimed}
     Balance Discrepancy: ${values.difference}
-    Status: ${values.difference === 0 ? "BALANCED" : "MISMATCH"}`
-  )
-  .join("\n")}`
+    
+    Claim Details:
+    ${values.claimDetails.map(claim => 
+      `      - Account ${claim.accountID}: ${claim.netClaimed}`
+    ).join('\n')}`
+  ).join('\n')}`
     : "No Discrepancies Found"
 }
 -------------------`;

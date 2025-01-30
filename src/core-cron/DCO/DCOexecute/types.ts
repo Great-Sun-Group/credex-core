@@ -23,20 +23,33 @@ export interface FoundationData {
   foundationXOid: string;
 }
 
+export interface ClaimDetail {
+  accountID: string;
+  netClaimed: number;
+}
+
+export interface TrustAccountAuditDetails {
+  accountID: string;
+  defaultDenom: string;
+  trustAccountIssuedTotal: number;
+  claimDetails: ClaimDetail[];
+  totalNetClaimed: number;
+}
+
 export interface AuditDiscrepancy {
-  secured: number;
-  trust: number;
+  trustAccountIssuedTotal: number;
+  totalNetClaimed: number;
   difference: number;
   denomination: string;
+  claimDetails: ClaimDetail[];
 }
 
 export interface AuditDetails {
   timestamp: string;
   checksum: string;
-  totalSecuredBalances: Record<string, number>;
-  totalTrustBalances: Record<string, number>;
   matchStatus: boolean;
   discrepancies?: Record<string, AuditDiscrepancy>;
+  trustAccounts: TrustAccountAuditDetails[];
 }
 
 export interface AuditResult {
@@ -49,10 +62,9 @@ export interface DailyAudit {
   timestamp: string;
   stage: 'PRE_DCO' | 'POST_DCO';
   checksum: string;
-  totalSecuredBalances: string; // JSON stringified Record<string, number>
-  totalTrustBalances: string; // JSON stringified Record<string, number>
   matchStatus: boolean;
   discrepancies: string; // JSON stringified Record<string, AuditDiscrepancy>
+  trustAccounts: string; // JSON stringified TrustAccountAuditDetails[]
 }
 
 export interface AuditReport {
@@ -68,9 +80,8 @@ export interface AuditIncident {
   timestamp: string;
   type: AuditIncidentType;
   checksum: string;
-  totalSecuredBalances: string; // JSON stringified Record<string, number>
-  totalTrustBalances: string; // JSON stringified Record<string, number>
   discrepancies: string; // JSON stringified Record<string, AuditDiscrepancy>
+  trustAccounts: string; // JSON stringified TrustAccountAuditDetails[]
   status: 'UNRESOLVED' | 'INVESTIGATING' | 'RESOLVED';
   requiresInvestigation: boolean;
   investigationNotes?: string;
