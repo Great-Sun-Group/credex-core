@@ -36,7 +36,12 @@ export async function DailyCredcoinOffering(): Promise<{
     }
 
     logger.debug("Starting DCO execution");
-    await DCOexecute();
+    const dcoResult = await DCOexecute();
+    if (!dcoResult) {
+      const error = new Error("DCO execution failed");
+      logger.error(error.message);
+      throw error;
+    }
     logger.debug("DCO execution completed");
 
     logger.debug("Starting DCO avatars update");

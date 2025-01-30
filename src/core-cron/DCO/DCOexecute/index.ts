@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../../config/neo4j";
 import { logInfo, logError } from "../../../utils/logger";
 import { calculateSystemChecksum } from "./checksum";
+import { performTrustAudit, performPostDCOTrustAudit } from "../../../audits/trustAudit";
 import {
   waitForMTQCompletion,
   setDCORunningFlag,
@@ -162,6 +163,17 @@ export async function DCOexecute(): Promise<boolean> {
     await handleDefaultingCredexes(ledgerSpaceSession);
     await expirePendingOffers(ledgerSpaceSession);
 
+    // Perform trust audit before DCO
+    logInfo("Starting pre-DCO trust audit");
+    const preDCOAuditResult = await performTrustAudit(ledgerSpaceSession);
+    if (!preDCOAuditResult.success) {
+      logError("Pre-DCO trust audit failed", new Error("Pre-DCO trust audit failed"), {
+        auditDetails: preDCOAuditResult.details
+      });
+      throw new Error("Pre-DCO trust audit failed");
+    }
+    logInfo("Pre-DCO trust audit completed");
+
     // Find participants once at the start
     const participantData = await findDCOParticipants(ledgerSpaceSession);
     logInfo("DCO participant data", {
@@ -197,6 +209,17 @@ export async function DCOexecute(): Promise<boolean> {
       foundationXOid,
       participantData
     );
+
+    // Perform post-DCO trust audit
+    logInfo("Starting post-DCO trust audit");
+    const postDCOAuditResult = await performPostDCOTrustAudit(ledgerSpaceSession);
+    if (!postDCOAuditResult.success) {
+      logError("Post-DCO trust audit found discrepancies", new Error("Post-DCO trust audit found discrepancies"), {
+        auditDetails: postDCOAuditResult.details
+      });
+      throw new Error("Post-DCO trust audit found discrepancies");
+    }
+    logInfo("Post-DCO trust audit completed");
 
     const finalChecksum = await calculateSystemChecksum(ledgerSpaceSession);
     logInfo(`Final system checksum: ${finalChecksum}`, {
