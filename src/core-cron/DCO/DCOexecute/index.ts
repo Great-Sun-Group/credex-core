@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../../config/neo4j";
 import { logInfo, logError } from "../../../utils/logger";
 import { calculateSystemChecksum } from "./checksum";
+import { performTrustAudit, performPostDCOTrustAudit } from "../../../audits/trustAudit";
 import {
   waitForMTQCompletion,
   setDCORunningFlag,
@@ -14,8 +15,10 @@ import {
 import { fetchCurrencyRates, establishNewCXXrates } from "./currencyRates";
 import { updateCredexBalances } from "./balanceUpdates";
 import { processDCOTransactions } from "./transactions";
-import { createNeo4jBackup } from "../DBbackup";
-import { validateAmount, validateDenomination } from "../../../utils/validators";
+import {
+  validateAmount,
+  validateDenomination,
+} from "../../../utils/validators";
 import { GetSecuredAuthorizationService } from "../../../api/Credex/services/GetSecuredAuthorization";
 import { ServiceResult } from "../../../types/apiResponse";
 import { Participant } from "./types";
@@ -60,14 +63,14 @@ async function findDCOParticipants(session: any): Promise<{
   const confirmedParticipants: Participant[] = [];
 
   for (const participant of declaredParticipants) {
-    const { 
-      accountID, 
-      DCOmemberID, 
-      DCOdenom, 
-      DCOgiveInCXX, 
-      DCOgiveInDenom, 
+    const {
+      accountID,
+      DCOmemberID,
+      DCOdenom,
+      DCOgiveInCXX,
+      DCOgiveInDenom,
       recurringID,
-      denomToXAUrate 
+      denomToXAUrate,
     } = participant.toObject();
 
     if (
@@ -96,7 +99,7 @@ async function findDCOParticipants(session: any): Promise<{
         accountID,
         DCOdenom,
         error: securedAuthResult.message,
-        details: securedAuthResult.error?.details
+        details: securedAuthResult.error?.details,
       });
       continue;
     }
@@ -120,7 +123,7 @@ async function findDCOParticipants(session: any): Promise<{
         accountID,
         DCOdenom,
         required: DCOgiveInDenom,
-        available: securableAmountInDenom
+        available: securableAmountInDenom,
       });
     }
   }
@@ -132,7 +135,7 @@ async function findDCOParticipants(session: any): Promise<{
     confirmedParticipants,
     DCOinCXX,
     DCOinXAU,
-    numberConfirmedParticipants
+    numberConfirmedParticipants,
   };
 }
 
@@ -157,31 +160,33 @@ export async function DCOexecute(): Promise<boolean> {
     const { previousDate, nextDate } =
       await setDCORunningFlag(ledgerSpaceSession);
 
-    const initialChecksum = await calculateSystemChecksum(ledgerSpaceSession);
-    logInfo(`Initial system checksum: ${initialChecksum}`, {
-      dcoProcessId,
-      checksum: initialChecksum,
-    });
-
-    await createNeo4jBackup(previousDate, "_end");
-    logInfo(`Created Neo4j backup for ${previousDate}_end`, { dcoProcessId });
-
     await handleDefaultingCredexes(ledgerSpaceSession);
     await expirePendingOffers(ledgerSpaceSession);
+
+    // Perform trust audit before DCO
+    logInfo("Starting pre-DCO trust audit");
+    const preDCOAuditResult = await performTrustAudit(ledgerSpaceSession);
+    if (!preDCOAuditResult.success) {
+      logError("Pre-DCO trust audit failed", new Error("Pre-DCO trust audit failed"), {
+        auditDetails: preDCOAuditResult.details
+      });
+      throw new Error("Pre-DCO trust audit failed");
+    }
+    logInfo("Pre-DCO trust audit completed");
 
     // Find participants once at the start
     const participantData = await findDCOParticipants(ledgerSpaceSession);
     logInfo("DCO participant data", {
       numberParticipants: participantData.numberConfirmedParticipants,
       DCOinCXX: participantData.DCOinCXX,
-      DCOinXAU: participantData.DCOinXAU
+      DCOinXAU: participantData.DCOinXAU,
     });
 
     const USDbaseRates = await fetchCurrencyRates(nextDate);
-    const {
-      newCXXrates,
-      CXXprior_CXXcurrent,
-    } = await establishNewCXXrates(USDbaseRates, participantData);
+    const { newCXXrates, CXXprior_CXXcurrent } = await establishNewCXXrates(
+      USDbaseRates,
+      participantData
+    );
 
     await createNewDaynode(
       ledgerSpaceSession,
@@ -205,8 +210,16 @@ export async function DCOexecute(): Promise<boolean> {
       participantData
     );
 
-    await createNeo4jBackup(nextDate, "_start");
-    logInfo(`Created Neo4j backup for ${nextDate}_start`, { dcoProcessId });
+    // Perform post-DCO trust audit
+    logInfo("Starting post-DCO trust audit");
+    const postDCOAuditResult = await performPostDCOTrustAudit(ledgerSpaceSession);
+    if (!postDCOAuditResult.success) {
+      logError("Post-DCO trust audit found discrepancies", new Error("Post-DCO trust audit found discrepancies"), {
+        auditDetails: postDCOAuditResult.details
+      });
+      throw new Error("Post-DCO trust audit found discrepancies");
+    }
+    logInfo("Post-DCO trust audit completed");
 
     const finalChecksum = await calculateSystemChecksum(ledgerSpaceSession);
     logInfo(`Final system checksum: ${finalChecksum}`, {

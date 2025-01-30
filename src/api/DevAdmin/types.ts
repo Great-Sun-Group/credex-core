@@ -12,6 +12,11 @@ export enum DevAdminActionType {
   DEV_ADMIN_DCO_FORCED = 'DEV_ADMIN_DCO_FORCED',
   DEV_ADMIN_DCO_FORCE_FAILED = 'DEV_ADMIN_DCO_FORCE_FAILED',
   
+  // Audit actions
+  DEV_ADMIN_AUDIT_RUN = 'DEV_ADMIN_AUDIT_RUN',
+  DEV_ADMIN_AUDIT_COMPLETED = 'DEV_ADMIN_AUDIT_COMPLETED',
+  DEV_ADMIN_AUDIT_FAILED = 'DEV_ADMIN_AUDIT_FAILED',
+  
   // Member actions
   DEV_ADMIN_MEMBERS_LISTED = 'DEV_ADMIN_MEMBERS_LISTED',
   
@@ -58,6 +63,23 @@ export interface DevAdminDCODetails {
   status: string;
   timestamp: string;
   affectedAccounts?: number;
+}
+
+export interface DevAdminAuditDetails {
+  success: boolean;
+  timestamp: string;
+  discrepancies?: Record<string, unknown>;
+}
+
+export interface DevAdminAuditDashboard {
+  auditInfo: {
+    success: boolean;
+    timestamp: string;
+  };
+  stats?: {
+    totalTrustAccounts: number;
+    accountsWithDiscrepancies: number;
+  };
 }
 
 export interface DevAdminMemberListDetails {

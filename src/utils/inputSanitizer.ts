@@ -174,3 +174,29 @@ export function sanitizeTier(value: any): number {
   const num = Number(value);
   return !isNaN(num) && Number.isInteger(num) ? num : 0;
 }
+
+export function sanitizeTrustAccountSubtype(value: any): string {
+  if (typeof value !== 'string') return '';
+  return value.trim().toUpperCase();
+}
+
+export function sanitizeBankFields(value: any): any {
+  if (!value || typeof value !== 'object') return {};
+
+  const sanitizedFields: { [key: string]: string } = {};
+  
+  // Sanitize jurisdiction
+  if (value.jurisdiction) {
+    sanitizedFields.jurisdiction = value.jurisdiction.trim().toUpperCase();
+  }
+
+  // Sanitize all other fields - remove any non-alphanumeric characters
+  Object.entries(value).forEach(([key, val]) => {
+    if (key !== 'jurisdiction' && typeof val === 'string') {
+      // Keep only alphanumeric characters for account numbers and other fields
+      sanitizedFields[key] = val.replace(/[^a-zA-Z0-9]/g, '');
+    }
+  });
+
+  return sanitizedFields;
+}

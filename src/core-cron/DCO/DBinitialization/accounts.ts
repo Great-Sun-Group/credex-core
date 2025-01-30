@@ -1,5 +1,6 @@
 import { DatabaseSessions } from "./types";
 import { CreateAccountService } from "../../../api/Account/services/CreateAccount";
+import { CreateTrustAccountService } from "../../../api/Account/services/CreateTrustAccount";
 import logger from "../../../utils/logger";
 
 /**
@@ -40,39 +41,76 @@ export async function createInitialAccount(
 }
 
 /**
+ * Creates an initial trust account with specified parameters.
+ */
+export async function createInitialTrustAccount(
+  memberID: string,
+  accountName: string,
+  accountHandle: string,
+  subtype: string,
+  denomination: string,
+  bankFields: {
+    jurisdiction: string;
+    accountNumber: string;
+    transitNumber?: string;
+    branchNumber?: string;
+    routingNumber?: string;
+    bankCode?: string;
+    trustAccountSubType?: string;
+    [key: string]: string | undefined;
+  },
+  requestId: string
+): Promise<string> {
+  const trustAccount = await CreateTrustAccountService(
+    memberID,
+    accountName,
+    accountHandle,
+    subtype,
+    denomination,
+    bankFields
+  );
+
+  if (!trustAccount.success || !trustAccount.data) {
+    logger.error("Failed to create trust account", {
+      accountHandle,
+      requestId,
+    });
+    throw new Error("Failed to create trust account");
+  }
+
+  logger.info("Trust account created successfully", {
+    accountHandle: accountHandle,
+    accountID: trustAccount.data.accountID,
+    requestId,
+  });
+  return trustAccount.data.accountID;
+}
+
+/**
  * Creates initial relationships between accounts and members.
  */
 export async function createInitialRelationships(
   { ledgerSpace }: DatabaseSessions,
   credexFoundationID: string,
   greatSunTrustID: string,
-  rdubsID: string,
-  rdubsDefaultAccountID: string,
   requestId: string
 ): Promise<void> {
   await ledgerSpace.run(
     `
     MATCH (credexFoundation: Account { accountID: $credexFoundationID })
     MATCH (greatSun: Account { accountID: $greatSunTrustID })
-    MATCH (rdubsPersonal: Account { accountID: $rdubsDefaultAccountID })
-    MATCH (rdubs: Member { memberID: $rdubsID })
     CREATE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (credexFoundation)
     CREATE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (greatSun)
-    CREATE (credexFoundation) - [:CREDEX_FOUNDATION_AUDITED] -> (rdubsPersonal)
   `,
     {
       credexFoundationID,
       greatSunTrustID,
-      rdubsDefaultAccountID,
-      rdubsID,
     }
   );
 
   logger.info("Initial relationships created successfully", {
     credexFoundationID,
     greatSunTrustID,
-    rdubsDefaultAccountID,
-    rdubsID,
     requestId,
   });
 }
