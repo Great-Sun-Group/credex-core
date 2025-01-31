@@ -6,7 +6,11 @@ describe("createTrustAccount Success Test", () => {
   };
 
   it("create trust account successful with dashboard data", async () => {
-    const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
+    const matches = (process.env.TEST_PARAMS || "").match(/(?:[^\s']+|'[^']*')+/g);
+    if (!matches) {
+      throw new Error("No valid parameters provided");
+    }
+
     const [
       token,
       accountName,
@@ -16,7 +20,7 @@ describe("createTrustAccount Success Test", () => {
       jurisdiction,
       accountNumber,
       ...additionalFields
-    ] = params;
+    ] = matches.map(param => param.replace(/^'|'$/g, ''));  // Remove quotes if present
 
     if (
       !token ||
