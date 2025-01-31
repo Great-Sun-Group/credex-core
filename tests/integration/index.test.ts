@@ -15,13 +15,13 @@ describe("Integration Tests", () => {
   const dashboardStore = new DashboardStore();
 
   beforeAll(async () => {
-    // Login as greatsun_trust member
+    // Login as GREATSUN_TRUST member
     const greatsunResponse = await login("263778177125");
-    
+
     // Extract greatsun trust details
     const greatsunDashboard = greatsunResponse.data.dashboard;
     const greatsunTrustAccount = greatsunDashboard.accounts.find(
-      (acc: any) => acc.accountHandle === "greatsun_trust"
+      (acc: any) => acc.accountHandle === "GREATSUN_TRUST"
     );
 
     if (!greatsunTrustAccount) {
@@ -38,7 +38,7 @@ describe("Integration Tests", () => {
     // Onboard 3 test members with unique phone numbers
     for (let i = 0; i < 3; i++) {
       // Add delay to ensure unique timestamps
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       const timestamp = Date.now();
       const response = await onboardMember(
         `TestUser${i}`,
@@ -73,7 +73,7 @@ describe("Integration Tests", () => {
 
   describe("Smart Contract Features", () => {
     it("should complete full offer-accept flow with correct balances", async () => {
-      // Test $1 CAD offer from greatsun_trust to first member
+      // Test $1 CAD offer from GREATSUN_TRUST to first member
       const createResponse = await createCredex(
         process.env.ISSUER_TOKEN!,
         greatsunTrustID,
@@ -86,22 +86,36 @@ describe("Integration Tests", () => {
       );
 
       // Update dashboard states
-      dashboardStore.updateAfterState(greatsunTrustMemberID, createResponse.data.dashboard);
+      dashboardStore.updateAfterState(
+        greatsunTrustMemberID,
+        createResponse.data.dashboard
+      );
 
       // Get credexID from response
       const credexID = createResponse.data.action.id;
 
       // Accept the credex
-      const acceptResponse = await acceptCredex(process.env.RECEIVER_TOKEN!, credexID);
+      const acceptResponse = await acceptCredex(
+        process.env.RECEIVER_TOKEN!,
+        credexID
+      );
 
       // Update dashboard states
-      dashboardStore.updateAfterState(memberTokens[0].memberID, acceptResponse.data.dashboard);
+      dashboardStore.updateAfterState(
+        memberTokens[0].memberID,
+        acceptResponse.data.dashboard
+      );
 
       // Verify balance changes
       dashboardStore.verifyAndPromote(greatsunTrustMemberID, "1", "CAD", true);
-      dashboardStore.verifyAndPromote(memberTokens[0].memberID, "1", "CAD", true);
+      dashboardStore.verifyAndPromote(
+        memberTokens[0].memberID,
+        "1",
+        "CAD",
+        true
+      );
 
-      // Test $0.50 CAD return from first member to greatsun_trust
+      // Test $0.50 CAD return from first member to GREATSUN_TRUST
       const returnResponse = await createCredex(
         process.env.RECEIVER_TOKEN!,
         memberTokens[0].personalAccountID,
@@ -114,20 +128,39 @@ describe("Integration Tests", () => {
       );
 
       // Update dashboard states
-      dashboardStore.updateAfterState(memberTokens[0].memberID, returnResponse.data.dashboard);
+      dashboardStore.updateAfterState(
+        memberTokens[0].memberID,
+        returnResponse.data.dashboard
+      );
 
       // Get credexID from response
       const returnCredexID = returnResponse.data.action.id;
 
       // Accept the return credex
-      const acceptReturnResponse = await acceptCredex(process.env.ISSUER_TOKEN!, returnCredexID);
+      const acceptReturnResponse = await acceptCredex(
+        process.env.ISSUER_TOKEN!,
+        returnCredexID
+      );
 
       // Update dashboard states
-      dashboardStore.updateAfterState(greatsunTrustMemberID, acceptReturnResponse.data.dashboard);
+      dashboardStore.updateAfterState(
+        greatsunTrustMemberID,
+        acceptReturnResponse.data.dashboard
+      );
 
       // Verify balance changes
-      dashboardStore.verifyAndPromote(memberTokens[0].memberID, "0.5", "CAD", true);
-      dashboardStore.verifyAndPromote(greatsunTrustMemberID, "0.5", "CAD", true);
+      dashboardStore.verifyAndPromote(
+        memberTokens[0].memberID,
+        "0.5",
+        "CAD",
+        true
+      );
+      dashboardStore.verifyAndPromote(
+        greatsunTrustMemberID,
+        "0.5",
+        "CAD",
+        true
+      );
     });
   });
 });
