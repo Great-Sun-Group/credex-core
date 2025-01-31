@@ -1,7 +1,6 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { DBinitialization } from "./DBinitialization/index";
 import { DCOexecute } from "./DCOexecute/index";
-import { DCOtriggersExecute } from "./DCOtriggers/index";
 import logger, { configureDCOLogger } from "../../utils/logger";
 import { v4 as uuidv4 } from "uuid";
 
@@ -42,10 +41,6 @@ export async function DailyCredcoinOffering(): Promise<{
       throw error;
     }
     logger.debug("DCO execution completed");
-
-    logger.debug("Starting DCO triggers execution");
-    await DCOtriggersExecute();
-    logger.debug("DCO triggers execution completed");
 
     logger.info("Daily Credcoin Offering process completed successfully");
     return { success: true };
