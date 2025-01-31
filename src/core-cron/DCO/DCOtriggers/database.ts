@@ -21,8 +21,8 @@ export async function updateMemberTiers(
             templateType: "MEMBERTIER_SUBSCRIPTION" 
           })-[:SIGNED]->(memberTierPayment:Credex)
           -[:CREATED_ON]->(daynode:Daynode)
-        WITH daynode, member, member.memberTier as previousTier,
-        WHERE daynode.Date >= date(daynode.Date) - duration('P28D')
+        WHERE daynode.Date >= date() - duration('P28D')
+        WITH member, member.memberTier as previousTier,
              sum(memberTierPayment.InitialAmount / daynode.USD) as currentPay
         WITH member, previousTier,
              CASE WHEN currentPay >= 1 THEN 3 ELSE 1 END as newTier
