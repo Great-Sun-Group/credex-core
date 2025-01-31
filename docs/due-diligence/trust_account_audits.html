@@ -99,7 +99,38 @@
       </li>
     </ol>
 
-    <h2>How We Keep Things Safe</h2>
+      <h2>Trust-Specific Transaction Handling</h2>
+      <p>
+        The system maintains strict separation between different trust accounts' transactions:
+      </p>
+      <ul>
+        <li>
+          <strong>Isolated Transaction Paths:</strong>
+          <ul>
+            <li>Each trust account has its own unique transaction paths in the system</li>
+            <li>Secured credexes can only form loops with other credexes from the same trust account</li>
+            <li>This ensures proper accounting and maintains the direct link between real assets and secured balances</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Trust-Specific Identifiers:</strong>
+          <ul>
+            <li>Each trust account gets a unique identifier in the system</li>
+            <li>All transactions are tagged with this identifier</li>
+            <li>Makes it easy to track and verify all movements within each trust account</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Automated Separation:</strong>
+          <ul>
+            <li>The system automatically keeps different trust accounts' transactions separate</li>
+            <li>Prevents any accidental mixing of secured credexes from different trust accounts</li>
+            <li>Maintains clear audit trails for each trust account</li>
+          </ul>
+        </li>
+      </ul>
+
+      <h2>How We Keep Things Safe</h2>
     <p>
       The system has multiple safety features, like a lockbox with several different locks:
     </p>
