@@ -91,21 +91,21 @@ export async function DBinitialization(): Promise<void> {
         rdubs.onboardedMemberID,
         "CREDEX_FOUNDATION",
         "Credex Foundation: Daily Credcoin Offering",
-        "credex_foundation_dco",
+        "CREDEX_FOUNDATION_DCO",
         "CXX",
         requestId
       );
       const greatSunTrustID = await createInitialTrustAccount(
         rdubs.onboardedMemberID,
         "Great Sun Financial: Trust", // accountName
-        "greatsun_trust",           // accountHandle
-        "BANK",                     // subtype
-        "CAD",                      // denomination
+        "GREATSUN_TRUST", // accountHandle
+        "BANK", // subtype
+        "CAD", // denomination
         {
           jurisdiction: "CA",
           accountNumber: "5394119",
           transitNumber: "03353",
-          branchNumber: "003"
+          branchNumber: "003",
         },
         requestId
       );
@@ -113,7 +113,7 @@ export async function DBinitialization(): Promise<void> {
         rdubs.onboardedMemberID,
         "OPERATIONS",
         "Great Sun Financial: Operations",
-        "greatsun_ops",
+        "GREATSUN_OPS",
         "CAD",
         requestId
       );

@@ -185,10 +185,11 @@ export async function deleteMarkedAuthorizations(
   logger.debug("Updating template processing status", { requestId, avatarId });
 
   const query = `
+    MATCH (daynode:Daynode {Active: true})
     MATCH (avatar:Recurring {recurringID: $avatarId})
     WHERE avatar.status = 'ACTIVE'
     SET avatar.lastProcessed = datetime(),
-        avatar.nextPayDate = date(datetime()) + duration.inDays(avatar.payFrequency).days
+        avatar.nextPayDate = date(daynode.Date) + duration.inDays(avatar.payFrequency).days
     WITH avatar
     MATCH (avatar)-[r:MARKED_FOR_DELETION]->()
     DELETE r
