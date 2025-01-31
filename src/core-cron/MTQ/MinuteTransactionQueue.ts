@@ -19,6 +19,7 @@ interface Credex {
   CXXmultiplier: number;
   credexSecuredDenom: string;
   dueDate: string;
+  trustAccountID?: string;
 }
 
 export async function MinuteTransactionQueue(): Promise<boolean> {
@@ -253,7 +254,8 @@ async function processQueuedCredexes(
         credex.CXXmultiplier,
         credex.credexSecuredDenom,
         credex.dueDate,
-        credex.acceptorAccountID
+        credex.acceptorAccountID,
+        credex.trustAccountID
       );
       logger.debug("Credex processed successfully", {
         credexID: credex.credexID,
@@ -280,7 +282,7 @@ async function getQueuedCredexes(session: any): Promise<Credex[]> {
     RETURN queuedCredex.acceptedAt AS acceptedAt,
            issuerAccount.accountID AS issuerAccountID,
            acceptorAccount.accountID AS acceptorAccountID,
-           securer.accountID AS securerID,
+           securer.accountID AS trustAccountID,
            queuedCredex.credexID AS credexID,
            queuedCredex.InitialAmount AS amount,
            queuedCredex.Denomination AS denomination,
@@ -303,9 +305,10 @@ async function getQueuedCredexes(session: any): Promise<Credex[]> {
       denomination: record.get("denomination"),
       CXXmultiplier: typeof CXXmultiplier?.toNumber === 'function' ? CXXmultiplier.toNumber() : Number(CXXmultiplier),
       credexSecuredDenom:
-        record.get("securerID") !== null
+        record.get("trustAccountID") !== null
           ? record.get("denomination")
-          : "floating",
+          : "UNSECURED",
+      trustAccountID: record.get("trustAccountID"),
       dueDate: record.get("dueDate"),
     };
   });
