@@ -19,7 +19,7 @@ export function validateHandle(handle: string): {
   isValid: boolean;
   message: string;
 } {
-  const handleRegex = /^[A-Z1-9_]{3,30}$/;
+  const handleRegex = /^[A-Z0-9_]{3,30}$/;
   const isValid = handleRegex.test(handle);
 
   if (!isValid) {
@@ -29,14 +29,8 @@ export function validateHandle(handle: string): {
         message: `Invalid handle: must be between 3 and 30 characters long`,
       };
     }
-    if (/[^A-Z1-9_]/.test(handle)) {
-      const invalidChars = handle.match(/[^A-Z1-9_]/g);
-      if (invalidChars?.includes('0')) {
-        return {
-          isValid: false,
-          message: `Invalid handle: zero (0) is not allowed. Only numbers 1-9 are permitted.`,
-        };
-      }
+    if (/[^A-Z0-9_]/.test(handle)) {
+      const invalidChars = handle.match(/[^A-Z0-9_]/g);
       if (invalidChars?.some(c => /[a-z]/.test(c))) {
         return {
           isValid: false,
@@ -45,7 +39,7 @@ export function validateHandle(handle: string): {
       }
       return {
         isValid: false,
-        message: `Invalid handle: only uppercase letters, numbers 1-9, and underscores are allowed. Invalid characters: "${invalidChars?.join(', ')}"`,
+        message: `Invalid handle: only uppercase letters, numbers 0-9, and underscores are allowed. Invalid characters: "${invalidChars?.join(', ')}"`,
       };
     }
   }
