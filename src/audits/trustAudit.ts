@@ -47,7 +47,7 @@ async function performTrustAudit(session: Session): Promise<AuditResult> {
       UNWIND securedCredexes as securedCredex
 
       // Match OWES relationships
-      OPTIONAL MATCH (securedCredex)-[owesRel:OWES]-(claimingAccount:Account)
+      MATCH (securedCredex)-[owesRel:OWES]-(claimingAccount:Account)
       WITH DISTINCT claimingAccount, report, securedCredex, daynode, trustAccountWithSecured, owesRel
 
       // Calculate amounts by direction for each relationship
@@ -126,7 +126,7 @@ async function performPostDCOTrustAudit(
       UNWIND securedCredexes as securedCredex
 
       // Match OWES relationships
-      OPTIONAL MATCH (securedCredex)-[owesRel:OWES]-(claimingAccount:Account)
+      MATCH (securedCredex)-[owesRel:OWES]-(claimingAccount:Account)
       WITH DISTINCT claimingAccount, report, securedCredex, daynode, trustAccountWithSecured, owesRel
 
       // Calculate amounts by direction for each relationship
