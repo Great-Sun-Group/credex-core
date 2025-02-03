@@ -25,6 +25,16 @@ export interface AccountData {
     firstname: string;
     lastname: string;
   }[];
+  // Trust account specific fields
+  subtype?: "BANK" | "VAULT";
+  bankFields?: {
+    jurisdiction: string;
+    accountNumber: string;
+    branchCode?: string;
+    bankCode?: string;
+    routingNumber?: string;
+    transitNumber?: string;
+  };
 }
 
 export interface IAccountRepository {
@@ -155,6 +165,8 @@ export class AccountRepository implements IAccountRepository {
               account.accountName AS accountName,
               account.accountHandle AS accountHandle,
               account.defaultDenom AS defaultDenom,
+              account.subtype AS subtype,
+              account.bankFields AS bankFields,
               owns IS NOT NULL AS isOwnedAccount,
               // Collect authorized members
               collect({
@@ -185,6 +197,8 @@ export class AccountRepository implements IAccountRepository {
           defaultDenom: result.get("defaultDenom"),
           isOwnedAccount: result.get("isOwnedAccount"),
           authorizedMembers: result.get("authorizedMembers"),
+          subtype: result.get("subtype"),
+          bankFields: result.get("bankFields") ? JSON.parse(result.get("bankFields")) : undefined,
         };
 
         // Add send offers to information if available
@@ -313,6 +327,8 @@ export class AccountRepository implements IAccountRepository {
               account.accountName AS accountName,
               account.accountHandle AS accountHandle,
               account.defaultDenom AS defaultDenom,
+              account.subtype AS subtype,
+              account.bankFields AS bankFields,
               false AS isOwnedAccount,
               // Collect authorized members
               collect({
@@ -343,6 +359,8 @@ export class AccountRepository implements IAccountRepository {
           defaultDenom: result.get("defaultDenom"),
           isOwnedAccount: false,
           authorizedMembers: result.get("authorizedMembers"),
+          subtype: result.get("subtype"),
+          bankFields: result.get("bankFields") ? JSON.parse(result.get("bankFields")) : undefined,
         };
 
         // Add send offers to information if available

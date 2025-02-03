@@ -2,13 +2,47 @@ const { execSync, spawn } = require("child_process");
 const net = require("net");
 const path = require("path");
 
+// Parse command line arguments handling quoted strings
+function parseArgs(args) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  let quoteChar = '';
+  
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    // Check if argument starts with a quote
+    if (!inQuotes && (arg.startsWith('"') || arg.startsWith("'"))) {
+      inQuotes = true;
+      quoteChar = arg[0];
+      current = arg.slice(1);
+    }
+    // Check if argument ends with the same quote
+    else if (inQuotes && arg.endsWith(quoteChar)) {
+      current += ' ' + arg.slice(0, -1);
+      result.push(current);
+      current = '';
+      inQuotes = false;
+    }
+    // If we're in quotes, add the argument with a space
+    else if (inQuotes) {
+      current += ' ' + arg;
+    }
+    // Not in quotes, treat as normal argument
+    else {
+      result.push(arg);
+    }
+  }
+  return result;
+}
+
 // Get command line arguments
 const args = process.argv.slice(2);
 
 // Check for environment argument
 let env = "local";
 let command = args[0];
-let remainingArgs = args.slice(1);
+let remainingArgs = parseArgs(args.slice(1));
 
 // Handle environment selection
 if (command === "dev" || command === "stage") {
@@ -18,7 +52,7 @@ if (command === "dev" || command === "stage") {
 }
 
 // Special commands that map to devadmin operations
-const devAdminCommands = ["cleardevdbs", "forcedco", "clearforce"];
+const devAdminCommands = ["cleardevdbs", "forcedco", "clearforce", "trustaudit"];
 
 // Special commands that map to integration tests
 const integrationCommands = ["integrate"];
@@ -225,7 +259,9 @@ async function runTest() {
       env: {
         ...process.env,
         NODE_ENV: env,
-        TEST_PARAMS: testParams.join(" "),
+        TEST_PARAMS: testParams.map(param => 
+          param.includes(" ") ? `'${param}'` : param
+        ).join(" "),
         API_ENV: env,
       },
     });

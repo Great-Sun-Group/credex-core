@@ -60,15 +60,15 @@ export const sanitizeAccountName = (input: string): string => {
   return sanitized;
 };
 
-// Function to sanitize handles (only converts to lowercase, preserves all other characters for validation)
+// Function to sanitize handles (converts to uppercase and spaces to underscores)
 export const sanitizeHandle = (input: string): string => {
   logger.debug("Sanitizing handle", { input, type: typeof input });
   if (typeof input !== 'string') {
     logger.warn("Handle sanitization received non-string input", { input, type: typeof input });
     return '';
   }
-  // Only convert to lowercase, preserve all other characters for validation
-  const sanitized = sanitizeString(input).toLowerCase();
+  // Convert to uppercase and replace spaces with underscores
+  const sanitized = sanitizeString(input).toUpperCase().replace(/\s+/g, '_');
   logger.debug("Handle sanitized", { 
     originalInput: input, 
     sanitized: sanitized 
@@ -173,4 +173,30 @@ export function sanitizeTemplateType(value: any): string {
 export function sanitizeTier(value: any): number {
   const num = Number(value);
   return !isNaN(num) && Number.isInteger(num) ? num : 0;
+}
+
+export function sanitizeTrustAccountSubtype(value: any): string {
+  if (typeof value !== 'string') return '';
+  return value.trim().toUpperCase();
+}
+
+export function sanitizeBankFields(value: any): any {
+  if (!value || typeof value !== 'object') return {};
+
+  const sanitizedFields: { [key: string]: string } = {};
+  
+  // Sanitize jurisdiction
+  if (value.jurisdiction) {
+    sanitizedFields.jurisdiction = value.jurisdiction.trim().toUpperCase();
+  }
+
+  // Sanitize all other fields - remove any non-alphanumeric characters
+  Object.entries(value).forEach(([key, val]) => {
+    if (key !== 'jurisdiction' && typeof val === 'string') {
+      // Keep only alphanumeric characters for account numbers and other fields
+      sanitizedFields[key] = val.replace(/[^a-zA-Z0-9]/g, '');
+    }
+  });
+
+  return sanitizedFields;
 }

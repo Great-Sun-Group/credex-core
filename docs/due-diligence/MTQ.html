@@ -136,8 +136,8 @@
         <strong>Secured Credexes:</strong>
         <ul>
           <li>
-            Use denomination-specific relationship types (e.g., "USD_SECURED",
-            "EUR_SECURED")
+            Use trust account-specific relationship types in format "TRUST_[shortID]_[denomination]"
+            where shortID is first 12 characters of trust account UUID
           </li>
           <li>Due dates are automatically adjusted to the current day</li>
           <li>Maintain separate loop paths from unsecured credexes</li>
@@ -154,7 +154,7 @@
         <ul>
           <li>Act as intermediaries between accounts</li>
           <li>Maintain the earliest due date among connected credexes</li>
-          <li>Separate paths by relationship type (secured vs unsecured)</li>
+          <li>Separate paths by relationship type (unsecured vs trust-specific secured)</li>
           <li>Automatically created and removed as needed</li>
         </ul>
       </li>
@@ -203,15 +203,15 @@
 
     Properties:
     - Search Anchor: Maintains earliestDueDate among connected credexes
-    - Relationship Types: Either UNSECURED or [DENOMINATION]_SECURED
+    - Relationship Types: Either UNSECURED or TRUST_[shortID]_[denomination]
     - Multiple credexes can connect to the same search anchor
     - Search anchors are created per relationship type between accounts
 
     Example Loop:
-    [Account A] --USD_SECURED--> [Anchor 1] --USD_SECURED--> [Account B]
-         ^                                                        |
-         |                                                        |
-         +------------------------USD_SECURED---------------------+
+    [Account A] --TRUST_abc123_USD--> [Anchor 1] --TRUST_abc123_USD--> [Account B]
+         ^                                                                  |
+         |                                                                  |
+         +------------------------TRUST_abc123_USD---------------------------+
     </pre>
 
     <h3>Loop Finding Algorithm</h3>

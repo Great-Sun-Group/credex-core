@@ -1,9 +1,19 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../../config/neo4j";
 import { setupDatabaseConstraints } from "./constraints";
-import { establishDayZero, fetchAndProcessRates, createDayZeroDaynode } from "./dayZero";
+import {
+  establishDayZero,
+  fetchAndProcessRates,
+  createDayZeroDaynode,
+} from "./dayZero";
 import { createInitialMember } from "./members";
-import { createInitialAccount, createInitialRelationships } from "./accounts";
+import {
+  createInitialAccount,
+  createInitialTrustAccount,
+  createInitialRelationships,
+} from "./accounts";
 import { createDCOrecurringTemplate } from "./recurring";
+import { CreateCredexService } from "../../../api/Credex/services/CreateCredex";
+import { AcceptCredexService } from "../../../api/Credex/services/AcceptCredex";
 import logger from "../../../utils/logger";
 import { v4 as uuidv4 } from "uuid";
 
@@ -20,9 +30,9 @@ export async function DBinitialization(): Promise<void> {
     // Set up database constraints and initial state
     const constraintSession = {
       ledgerSpace: ledgerSpaceDriver.session(),
-      searchSpace: searchSpaceDriver.session()
+      searchSpace: searchSpaceDriver.session(),
     };
-    
+
     try {
       await setupDatabaseConstraints(constraintSession, requestId);
     } finally {
@@ -33,14 +43,19 @@ export async function DBinitialization(): Promise<void> {
     // Create initial daynode
     const dayZero = establishDayZero(requestId);
     const dayZeroCXXrates = await fetchAndProcessRates(dayZero, requestId);
-    
+
     const daynodeSession = {
       ledgerSpace: ledgerSpaceDriver.session(),
-      searchSpace: searchSpaceDriver.session()
+      searchSpace: searchSpaceDriver.session(),
     };
-    
+
     try {
-      await createDayZeroDaynode(daynodeSession, dayZero, dayZeroCXXrates, requestId);
+      await createDayZeroDaynode(
+        daynodeSession,
+        dayZero,
+        dayZeroCXXrates,
+        requestId
+      );
       // Verify daynode was created
       const verifyResult = await daynodeSession.ledgerSpace.run(
         "MATCH (d:Daynode {Active: true}) RETURN d"
@@ -57,7 +72,7 @@ export async function DBinitialization(): Promise<void> {
     // Create initial members with a new session
     const memberSession = {
       ledgerSpace: ledgerSpaceDriver.session(),
-      searchSpace: searchSpaceDriver.session()
+      searchSpace: searchSpaceDriver.session(),
     };
 
     try {
@@ -76,36 +91,88 @@ export async function DBinitialization(): Promise<void> {
         rdubs.onboardedMemberID,
         "CREDEX_FOUNDATION",
         "Credex Foundation: Daily Credcoin Offering",
-        "credex_foundation_dco",
+        "CREDEX_FOUNDATION_DCO",
         "CXX",
         requestId
       );
-      const greatSunTrustID = await createInitialAccount(
+      const greatSunTrustID = await createInitialTrustAccount(
         rdubs.onboardedMemberID,
-        "TRUST",
-        "Great Sun Financial: Trust",
-        "greatsun_trust",
-        "CAD",
+        "Great Sun Financial: Trust", // accountName
+        "GREATSUN_TRUST", // accountHandle
+        "BANK", // subtype
+        "CAD", // denomination
+        {
+          jurisdiction: "CA",
+          accountNumber: "5394119",
+          transitNumber: "03353",
+          branchNumber: "003",
+        },
         requestId
       );
       const greatSunOpsID = await createInitialAccount(
         rdubs.onboardedMemberID,
         "OPERATIONS",
         "Great Sun Financial: Operations",
-        "greatsun_ops",
+        "GREATSUN_OPS",
         "CAD",
         requestId
       );
 
-      // Create relationships and DCO recurring template
+      // Create relationships between foundation and trust accounts
       await createInitialRelationships(
         memberSession,
         credexFoundationID,
         greatSunTrustID,
-        rdubs.onboardedMemberID,
-        rdubs.defaultAccountID,
         requestId
       );
+
+      // Create initial secured credex from greatSunTrust
+      const initialCredexResult = await CreateCredexService({
+        signerID: rdubs.onboardedMemberID,
+        issuerAccountID: greatSunTrustID,
+        receiverAccountID: rdubs.defaultAccountID,
+        InitialAmount: 28,
+        Denomination: "CAD",
+        credexType: "PURCHASE",
+        OFFERSorREQUESTS: "OFFERS",
+        securedCredex: true,
+        requestId,
+      });
+
+      if (!initialCredexResult.success) {
+        logger.error("Failed to create initial secured credex", {
+          error: initialCredexResult.message,
+          details: initialCredexResult.error,
+          requestId,
+        });
+        throw new Error("Failed to create initial secured credex");
+      }
+
+      logger.info("Initial secured credex created successfully", {
+        credexID: initialCredexResult.data?.credexID,
+        requestId,
+      });
+
+      // Accept the secured credex
+      const acceptResult = await AcceptCredexService(
+        initialCredexResult.data!.credexID,
+        rdubs.onboardedMemberID,
+        requestId
+      );
+
+      if (!acceptResult.success) {
+        logger.error("Failed to accept initial secured credex", {
+          error: acceptResult.message,
+          details: acceptResult.error,
+          requestId,
+        });
+        throw new Error("Failed to accept initial secured credex");
+      }
+
+      logger.info("Initial secured credex accepted successfully", {
+        credexID: initialCredexResult.data?.credexID,
+        requestId,
+      });
 
       // Create rdubs' DCO_GIVE template
       await createDCOrecurringTemplate(
@@ -119,14 +186,12 @@ export async function DBinitialization(): Promise<void> {
       logger.info("DBinitialization completed successfully", {
         requestId,
         foundationID: credexFoundationID,
-        foundationOwner: rdubs.onboardedMemberID
+        foundationOwner: rdubs.onboardedMemberID,
       });
-
     } finally {
       await memberSession.ledgerSpace.close();
       await memberSession.searchSpace.close();
     }
-
   } catch (error) {
     logger.error("Error during DBinitialization", {
       error: error instanceof Error ? error.message : "Unknown error",

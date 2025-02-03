@@ -53,15 +53,13 @@
         >
           <span class="expand-icon">►</span>
           Member Guides
-          <div class="subtitle">
-            How to use the credex ecosystem **COMING SOON**
-          </div>
+          <div class="subtitle">How to use the credex ecosystem</div>
         </div>
         <div class="submenu">
-          <!--
-                <a href="member-guides/credcoin.html">Using Credcoin</a>
-                <a href="member-guides/glossary.html">Glossary</a>
-                -->
+          <a href="member-guides/trust_secured.html"
+            >How Can I Trust Secured Credex?</a
+          >
+          <!-- <a href="member-guides/glossary.html">Glossary</a> -->
         </div>
       </div>
 
@@ -149,9 +147,15 @@
               Development
             </div>
             <div class="itemsList">
-              <a href="develop/api_reference.html">API Reference (HTML for humans)</a>
-              <a href="develop/swagger.json">API Reference (JSON for machines)</a>
-              <a href="develop/api_response_standards.html">API Response Standards</a>
+              <a href="develop/api_reference.html"
+                >API Reference (HTML for humans)</a
+              >
+              <a href="develop/swagger.json"
+                >API Reference (JSON for machines)</a
+              >
+              <a href="develop/api_response_standards.html"
+                >API Response Standards</a
+              >
               <a href="develop/auth_security.html">Authorization Security</a>
               <a href="develop/business_security.html"
                 >Business Logic Security</a
@@ -277,9 +281,11 @@
             </div>
             <div class="itemsList">
               <a href="great-sun/letters/2024-11-21_shareholders.html">
-                November 21, 2024: Letter to Shareholders</a>
+                November 21, 2024: Letter to Shareholders</a
+              >
               <a href="great-sun/letters/2024-08-13_shareholders.html">
-                August 13, 2024: Letter to Shareholders</a>
+                August 13, 2024: Letter to Shareholders</a
+              >
             </div>
           </div>
         </div>
@@ -337,6 +343,20 @@
               <a href="due-diligence/DCO.html">Daily Credcoin Offering</a>
             </div>
           </div>
+
+          <div class="subcategory">
+            <div
+              class="subcategoryHeader"
+              onclick="this.parentElement.querySelector('.itemsList').style.display = this.parentElement.querySelector('.itemsList').style.display === 'block' ? 'none' : 'block'; this.querySelector('.expand-icon').textContent = this.parentElement.querySelector('.itemsList').style.display === 'block' ? '▼' : '►'"
+            >
+              <span class="expand-icon">►</span>
+              Accounting Audits
+            </div>
+            <div class="itemsList">
+              <a href="due-diligence/trust_account_audits.html">Trust Account Audits</a>
+            </div>
+          </div>
+
         </div>
       </div>
 

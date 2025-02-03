@@ -19,7 +19,8 @@ export async function LoopFinder(
   CXXmultiplier: number,
   credexSecuredDenom: string,
   credexDueDate: string,
-  acceptorAccountID: string
+  acceptorAccountID: string,
+  trustAccountID?: string
 ): Promise<boolean> {
   logger.info("LoopFinder started", {
     issuerAccountID,
@@ -34,7 +35,7 @@ export async function LoopFinder(
   };
 
   try {
-    const searchOwesType = getSearchOwesType(credexSecuredDenom);
+    const searchOwesType = getSearchOwesType(credexSecuredDenom, trustAccountID);
     credexDueDate = await adjustCredexDueDate(
       sessions.ledgerSpaceSession,
       credexSecuredDenom,
