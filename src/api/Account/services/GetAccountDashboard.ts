@@ -25,7 +25,7 @@ interface AccountDashboardData {
   accountID: string;
   accountName: string;
   accountHandle: string;
-  accountType: 'PERSONAL' | 'BUSINESS' | 'CREDEX_FOUNDATION' | 'TRUST' | 'OPERATIONS';
+  accountType: 'PERSONAL' | 'TRUST' | 'OPERATIONS';
   defaultDenom: 'CXX' | 'CAD' | 'USD' | 'XAU' | 'ZWG';
   isOwnedAccount: boolean;
   sendOffersTo?: {

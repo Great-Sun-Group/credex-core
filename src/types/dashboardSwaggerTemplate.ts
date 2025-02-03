@@ -61,8 +61,6 @@ export const dashboardSwaggerTemplate = {
             type: "string",
             enum: [
               "PERSONAL",
-              "BUSINESS",
-              "CREDEX_FOUNDATION",
               "TRUST",
               "OPERATIONS",
             ],

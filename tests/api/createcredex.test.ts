@@ -117,7 +117,7 @@ describe("createCredex Success Test", () => {
       accountName: expect.any(String),
       accountHandle: expect.any(String),
       accountType: expect.stringMatching(
-        /^(PERSONAL|BUSINESS|CREDEX_FOUNDATION|TRUST|OPERATIONS)$/
+        /^(PERSONAL|TRUST|OPERATIONS)$/
       ),
       defaultDenom: expect.stringMatching(/^(CXX|CAD|USD|XAU|ZWG)$/),
       isOwnedAccount: expect.any(Boolean),

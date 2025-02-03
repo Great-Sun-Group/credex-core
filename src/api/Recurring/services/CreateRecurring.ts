@@ -115,7 +115,7 @@ export async function CreateRecurringService(
         MATCH (target:Account {accountID: $targetAccountID})
         ${
           templateType === TEMPLATE_TYPES.DCO_GIVE
-            ? 'WHERE target.accountType = "CREDEX_FOUNDATION"'
+            ? 'WHERE target.isCredexFoundation = true'
             : ""
         }
         RETURN

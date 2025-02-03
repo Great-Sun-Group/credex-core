@@ -9,8 +9,6 @@ export interface AccountData {
   accountHandle: string;
   accountType:
     | "PERSONAL"
-    | "BUSINESS"
-    | "CREDEX_FOUNDATION"
     | "TRUST"
     | "OPERATIONS";
   defaultDenom: "CXX" | "CAD" | "USD" | "XAU" | "ZWG";

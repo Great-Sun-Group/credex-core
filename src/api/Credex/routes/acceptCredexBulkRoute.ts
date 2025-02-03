@@ -148,7 +148,7 @@ export default function acceptCredexBulkRoute() {
    *                               type: string
    *                             accountType:
    *                               type: string
-   *                               enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
+   *                               enum: [PERSONAL, TRUST, OPERATIONS]
    *                               description: Type of the account
    *                             defaultDenom:
    *                               type: string

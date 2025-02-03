@@ -156,7 +156,7 @@ export default function createCredexRoute() {
    *                                 type: string
    *                               accountType:
    *                                 type: string
-   *                                 enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
+   *                                 enum: [PERSONAL, TRUST, OPERATIONS]
    *                               defaultDenom:
    *                                 type: string
    *                                 enum: [CXX, CAD, USD, XAU, ZWG]
