@@ -27,7 +27,7 @@ class CredexError extends Error {
  * GetSecuredAuthorizationService
  * 
  * Retrieves information about an account's secured balance and authorization status.
- * Checks if the account is CREDEX_FOUNDATION_AUDITED or has available secured balance.
+ * Checks if the account is accountType=TRUST or has available secured balance.
  * 
  * @param issuerAccountID - The ID of the account to check secured authorization for
  * @param Denomination - The denomination to check secured balance in
@@ -57,66 +57,51 @@ export async function GetSecuredAuthorizationService(
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    // Check if issuer is CREDEX_FOUNDATION_AUDITED
-    logger.debug("Checking if issuer is CREDEX_FOUNDATION_AUDITED", {
-      issuerAccountID
+    // Check if issuer is accountType=TRUST
+    logger.debug("Checking if issuer is accountType=TRUST", {
+      issuerAccountID,
     });
 
-    const isFoundationAuditedQuery = await ledgerSpaceSession.executeRead(async (tx) => {
+    const isTrustQuery = await ledgerSpaceSession.executeRead(async (tx) => {
       return tx.run(
         `
         MATCH (issuer:Account { accountID: $issuerAccountID })
-        OPTIONAL MATCH
-          (issuer)<-[:CREDEX_FOUNDATION_AUDITED]-
-          (credexFoundation:Account { accountType: "CREDEX_FOUNDATION" })
+        WHERE issuer.accountType = "TRUST"
         RETURN
-          issuer IS NOT NULL AS accountExists,
-          credexFoundation IS NOT NULL AS isAudited
+          issuer IS NOT NULL AS isTrust
         `,
         { issuerAccountID }
       );
     });
 
-    const record = isFoundationAuditedQuery.records[0];
-    if (!record.get("accountExists")) {
-      return {
-        success: false,
-        message: "Account not found",
-        error: {
-          code: "ACCOUNT_NOT_FOUND",
-          details: "The specified account does not exist"
-        }
-      };
-    }
-
-    const isAudited = record.get("isAudited");
-
-    // If the issuer is CREDEX_FOUNDATION_AUDITED, authorize for unlimited secured credex issuance
-    if (isAudited) {
-      logger.info("Issuer is CREDEX_FOUNDATION_AUDITED", {
+    if (isTrustQuery.records[0]) {
+      // If the issuer is isTrust, authorize for unlimited secured credex issuance
+      logger.info("Issuer is Trust Account", {
         issuerAccountID,
-        Denomination
+        Denomination,
       });
 
       return {
         success: true,
         data: {
           securerID: issuerAccountID,
-          securableAmountInDenom: Infinity
+          securableAmountInDenom: Infinity,
         },
-        message: "Account is CREDEX_FOUNDATION_AUDITED with unlimited secured credex authorization"
+        message:
+          "Account is accountType=TRUST with unlimited secured credex authorization",
       };
     }
 
-    // If issuer is not CREDEX_FOUNDATION_AUDITED, verify the available secured balance in denom
-    logger.debug("Checking secured balance for non-CREDEX_FOUNDATION_AUDITED issuer", {
+    // If issuer is not accountType=TRUST, verify the available secured balance in denom
+    logger.debug("Checking secured balance for non-TRUST issuer", {
       issuerAccountID,
-      Denomination
+      Denomination,
     });
 
-    const getSecurableDataQuery = await ledgerSpaceSession.executeRead(async (tx) => {
-      return tx.run(
-        `
+    const getSecurableDataQuery = await ledgerSpaceSession.executeRead(
+      async (tx) => {
+        return tx.run(
+          `
         MATCH (account:Account { accountID: $accountID })
         OPTIONAL MATCH (account)-[transactionType:OWES|OFFERS]-(credex:Credex)<-[:SECURES]-(securer:Account)
         WHERE credex.Denomination = $Denomination
@@ -138,27 +123,28 @@ export async function GetSecuredAuthorizationService(
         ORDER BY netSecurableInDenom DESC
         LIMIT 1
         `,
-        {
-          accountID: issuerAccountID,
-          Denomination
-        }
-      );
-    });
+          {
+            accountID: issuerAccountID,
+            Denomination,
+          }
+        );
+      }
+    );
 
     // If no secured balance found
     if (getSecurableDataQuery.records.length === 0) {
       logger.info("No secured balance found", {
         issuerAccountID,
-        Denomination
+        Denomination,
       });
 
       return {
         success: true,
         data: {
           securerID: null,
-          securableAmountInDenom: 0
+          securableAmountInDenom: 0,
         },
-        message: "No secured balance available"
+        message: "No secured balance available",
       };
     }
 
@@ -170,18 +156,17 @@ export async function GetSecuredAuthorizationService(
       issuerAccountID,
       Denomination,
       securerID,
-      securableAmountInDenom
+      securableAmountInDenom,
     });
 
     return {
       success: true,
       data: {
         securerID,
-        securableAmountInDenom
+        securableAmountInDenom,
       },
-      message: `Available secured balance: ${securableAmountInDenom} ${Denomination}`
+      message: `Available secured balance: ${securableAmountInDenom} ${Denomination}`,
     };
-
   } catch (error) {
     logger.error("Error in GetSecuredAuthorizationService", {
       error: error instanceof Error ? error.message : "Unknown error",

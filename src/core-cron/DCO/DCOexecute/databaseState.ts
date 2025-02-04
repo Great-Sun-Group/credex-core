@@ -122,7 +122,7 @@ export async function getFoundationData(
   session: any
 ): Promise<{ foundationID: string; foundationXOid: string }> {
   const result = await session.run(`
-    MATCH (credexFoundation:Account {accountType: "CREDEX_FOUNDATION"})<-[:OWNS]-(foundationXO:Member)
+    MATCH (credexFoundation:Account {isCredexFoundation: true})<-[:OWNS]-(foundationXO:Member)
     RETURN credexFoundation.accountID AS foundationID, foundationXO.memberID AS foundationXOid
   `);
   return {

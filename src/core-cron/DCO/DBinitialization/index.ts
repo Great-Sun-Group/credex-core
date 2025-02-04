@@ -9,7 +9,7 @@ import { createInitialMember } from "./members";
 import {
   createInitialAccount,
   createInitialTrustAccount,
-  createInitialRelationships,
+  createCredexFoundation,
 } from "./accounts";
 import { createDCOrecurringTemplate } from "./recurring";
 import { CreateCredexService } from "../../../api/Credex/services/CreateCredex";
@@ -89,16 +89,16 @@ export async function DBinitialization(): Promise<void> {
       // Create initial accounts
       const credexFoundationID = await createInitialAccount(
         rdubs.onboardedMemberID,
-        "CREDEX_FOUNDATION",
+        "TRUST",
         "Credex Foundation: Daily Credcoin Offering",
-        "CREDEX_FOUNDATION_DCO",
+        "CREDEX_FOUNDATION_TRUST",
         "CXX",
         requestId
       );
       const greatSunTrustID = await createInitialTrustAccount(
         rdubs.onboardedMemberID,
-        "Great Sun Financial: Trust", // accountName
-        "GREATSUN_TRUST", // accountHandle
+        "Great Sun Financial Trust CAD", // accountName
+        "GREATSUN_TRUST_CAD", // accountHandle
         "BANK", // subtype
         "CAD", // denomination
         {
@@ -119,10 +119,9 @@ export async function DBinitialization(): Promise<void> {
       );
 
       // Create relationships between foundation and trust accounts
-      await createInitialRelationships(
+      await createCredexFoundation(
         memberSession,
         credexFoundationID,
-        greatSunTrustID,
         requestId
       );
 

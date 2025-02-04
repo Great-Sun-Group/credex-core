@@ -56,7 +56,7 @@ export async function Hustler10kService(
     // Get greatsun_ops account and member IDs
     logger.info("Getting greatsun_ops account and member...");
     const [greatsunAccountResult, greatsunSignerResult] = await Promise.all([
-      GetAccountByHandleService("greatsun_ops"),
+      GetAccountByHandleService("GREATSUN_OPS"),
       GetMemberByHandleService("263778177125"),
     ]);
 

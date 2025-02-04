@@ -262,8 +262,6 @@ export const v = {
 
 const VALID_ACCOUNT_TYPES = [
   "PERSONAL",
-  "BUSINESS",
-  "CREDEX_FOUNDATION",
   "TRUST",
   "OPERATIONS",
 ];

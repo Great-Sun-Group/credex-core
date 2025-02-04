@@ -16,16 +16,15 @@ export interface AuditResult {
 }
 
 /**
- * Performs trust account audit for CREDEX_FOUNDATION_AUDITED accounts
+ * Performs trust account audit for accountType=TRUST accounts
  */
 async function performTrustAudit(session: Session): Promise<AuditResult> {
   try {
     const result = await session.run(`
       MATCH (daynode:Daynode { Active: true })
 
-      // Start with CREDEX_FOUNDATION_AUDITED accounts
-      OPTIONAL MATCH (securedCredex:Credex)<-[:SECURES]-(trustAccountWithSecured:Account)
-        <-[:CREDEX_FOUNDATION_AUDITED]-(credexFoundation:Account { accountType: "CREDEX_FOUNDATION"})
+      // Start with accountType=TRUST accounts that are securing an OWES credex
+      OPTIONAL MATCH (:Account)-[:OWES]-(securedCredex:Credex)<-[:SECURES]-(trustAccountWithSecured:Account {accountType: "TRUST"})
 
       // Create unique report for each trust account with atomic relationships
       WITH DISTINCT trustAccountWithSecured, daynode
@@ -68,7 +67,7 @@ async function performTrustAudit(session: Session): Promise<AuditResult> {
       CREATE (claimingAccount)-[:TRUST_AUDIT_CLAIM {
         claimAmountCXX: netBalance,
         claimDenom: trustAccountWithSecured.defaultDenom,
-        claimAmountInDenom: netBalance * daynode[trustAccountWithSecured.defaultDenom],
+        claimAmountInDenom: netBalance / daynode[trustAccountWithSecured.defaultDenom],
         timestamp: datetime()
       }]->(report)
       
@@ -107,9 +106,8 @@ async function performPostDCOTrustAudit(
     const result = await session.run(`
       MATCH (daynode:Daynode { Active: true })
 
-      // Start with CREDEX_FOUNDATION_AUDITED accounts
-      OPTIONAL MATCH (securedCredex:Credex)<-[:SECURES]-(trustAccountWithSecured:Account)
-        <-[:CREDEX_FOUNDATION_AUDITED]-(credexFoundation:Account { accountType: "CREDEX_FOUNDATION"})
+      // Start with accountType=TRUST accounts that are securing an OWES credex
+      OPTIONAL MATCH (:Account)-[:OWES]-(securedCredex:Credex)<-[:SECURES]-(trustAccountWithSecured:Account {accountType: "TRUST"})
 
       // Create unique DCO report for each trust account with atomic relationships
       WITH DISTINCT trustAccountWithSecured, daynode
@@ -147,7 +145,7 @@ async function performPostDCOTrustAudit(
       CREATE (claimingAccount)-[:TRUST_AUDIT_CLAIM {
         claimAmountCXX: netBalance,
         claimDenom: trustAccountWithSecured.defaultDenom,
-        claimAmountInDenom: netBalance * daynode[trustAccountWithSecured.defaultDenom],
+        claimAmountInDenom: netBalance / daynode[trustAccountWithSecured.defaultDenom],
         timestamp: datetime()
       }]->(report)
       

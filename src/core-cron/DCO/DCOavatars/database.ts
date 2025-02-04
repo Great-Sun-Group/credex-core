@@ -83,7 +83,7 @@ export async function getActiveDCOGiveTemplates(
     AND (template.remainingPays IS NULL OR template.remainingPays > 0)
     AND template.lastProcessed IS NULL
     MATCH (issuer:Account)-[:ACTIVE]->(template)-[:ACTIVE]->(target:Account)
-    WHERE target.accountType = "CREDEX_FOUNDATION"
+    WHERE target.isCredexFoundation = true
     WITH DISTINCT template, issuer, target, daynode
     RETURN
       template.recurringID as recurringID,

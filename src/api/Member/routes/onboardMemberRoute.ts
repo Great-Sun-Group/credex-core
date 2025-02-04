@@ -155,7 +155,7 @@ export default function onboardMemberRoute() {
    *                                 type: string
    *                               accountType:
    *                                 type: string
-   *                                 enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
+   *                                 enum: [PERSONAL, TRUST, OPERATIONS]
    *                                 description: Type of the account (PERSONAL for new members)
    *                               defaultDenom:
    *                                 type: string

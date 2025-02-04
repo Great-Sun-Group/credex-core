@@ -58,17 +58,17 @@ export async function GetBalancesService(
         `
         MATCH (account:Account {accountID: $accountID})
 
-        // Get all unique denominations from Credex nodes related to the account
-        OPTIONAL MATCH (account)-[:OWES|OFFERED]-(securedCredex:Credex)<-[:SECURES]-()
+        // Get all unique denominations from secured Credex nodes related to the account
+        OPTIONAL MATCH (account)-[:OWES|OFFERS]-(securedCredex:Credex)<-[:SECURES]-()
         WITH DISTINCT securedCredex.Denomination AS denom, account
 
-        // Aggregate incoming secured amounts for each denomination ensuring uniqueness
+        // Aggregate incoming secured amounts - only count OWES as these are certain
         OPTIONAL MATCH (account)<-[:OWES]-(inSecuredCredex:Credex {Denomination: denom})<-[:SECURES]-()
         WITH denom, account, 
             collect(DISTINCT inSecuredCredex) AS inSecuredCredexes
 
-        // Aggregate outgoing secured amounts for each denomination ensuring uniqueness
-        OPTIONAL MATCH (account)-[:OWES|OFFERED]->(outSecuredCredex:Credex {Denomination: denom})<-[:SECURES]-()
+        // Aggregate outgoing secured amounts - count both OWES and OFFERS to prevent over-commitment
+        OPTIONAL MATCH (account)-[:OWES|OFFERS]->(outSecuredCredex:Credex {Denomination: denom})<-[:SECURES]-()
         WITH denom, 
             reduce(s = 0, n IN inSecuredCredexes | s + n.OutstandingAmount) AS sumSecuredIn, 
             collect(DISTINCT outSecuredCredex) AS outSecuredCredexes

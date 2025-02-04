@@ -32,7 +32,7 @@ export default function createAccountRoute() {
    *             properties:
    *               accountType:
    *                 type: string
-   *                 enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
+   *                 enum: [PERSONAL, TRUST, OPERATIONS]
    *                 description: Type of account to create
    *               accountName:
    *                 type: string
@@ -117,7 +117,7 @@ export default function createAccountRoute() {
    *                           type: string
    *                         accountType:
    *                           type: string
-   *                           enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
+   *                           enum: [PERSONAL, TRUST, OPERATIONS]
    *                           description: Type of the account
    *                         defaultDenom:
    *                           type: string

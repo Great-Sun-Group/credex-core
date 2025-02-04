@@ -8,7 +8,7 @@ import logger from "./logger";
 
 // Initialize repositories and services
 const accountRepo = new AccountRepository();
-const balanceRepo = new BalanceRepository();
+const balanceRepo = BalanceRepository.getInstance();
 const memberRepo = new MemberRepository();
 const spendLimitService = new SpendLimitService();
 const accountDashboardService = new GetAccountDashboardService(accountRepo, balanceRepo);
