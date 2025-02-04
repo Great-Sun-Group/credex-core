@@ -26,7 +26,7 @@ export default function startCronJobs() {
     }
   );
 
-  // Running MinuteTransactionQueue every minute
+  /* Running MinuteTransactionQueue every minute
   cron.schedule("* * * * *", async () => {
     logger.debug("Starting MinuteTransactionQueue job");
     try {
@@ -39,6 +39,6 @@ export default function startCronJobs() {
       });
     }
   });
-
+*/
   logger.debug("Cron jobs started successfully");
 }
