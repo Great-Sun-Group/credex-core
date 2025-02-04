@@ -42,7 +42,7 @@ export async function createSearchSpaceCredex(
         ON CREATE SET searchOwesType.searchAnchorID = randomUUID()
       CREATE (searchOwesType)<-[:SEARCH_SECURED]-(credex:Credex {
           credexID: $credexID,
-          outstandingAmount: $credexAmount,
+          OutstandingAmount: $credexAmount,
           Denomination: $Denomination,
           CXXmultiplier: $CXXmultiplier,
           dueDate: date($credexDueDate)
@@ -128,21 +128,21 @@ export async function findCredloop(
            reduce(minCredex = credexList[0], c IN credexList |
                   CASE
                     WHEN c.dueDate < minCredex.dueDate THEN c
-                    WHEN c.dueDate = minCredex.dueDate AND c.outstandingAmount > minCredex.outstandingAmount THEN c
+                    WHEN c.dueDate = minCredex.dueDate AND c.OutstandingAmount > minCredex.OutstandingAmount THEN c
                     ELSE minCredex
                   END) AS earliestCredex
     WITH collect(earliestCredex) AS finalCredexes, COLLECT(earliestCredex.credexID) AS credexIDs
 
     // Step 6: Identify the minimum outstandingAmount and subtract it from all credexes
     UNWIND finalCredexes AS credexInLoop
-    WITH finalCredexes, min(credexInLoop.outstandingAmount) AS lowestAmount, credexIDs
+    WITH finalCredexes, min(credexInLoop.OutstandingAmount) AS lowestAmount, credexIDs
 
     UNWIND finalCredexes AS credex
-    SET credex.outstandingAmount = credex.outstandingAmount - lowestAmount
+    SET credex.OutstandingAmount = credex.OutstandingAmount - lowestAmount
 
-    // Step 7: Collect all credexes and filter those with outstandingAmount = 0.
+    // Step 7: Collect all credexes and filter those with OutstandingAmount = 0.
     WITH lowestAmount, COLLECT(credex) AS allCredexes, credexIDs
-    WITH lowestAmount, allCredexes, [credex IN allCredexes WHERE credex.outstandingAmount = 0] AS zeroCredexes, credexIDs
+    WITH lowestAmount, allCredexes, [credex IN allCredexes WHERE credex.OutstandingAmount = 0] AS zeroCredexes, credexIDs
 
     //Step 8: collect credexIDs of the zeroCredexes
     UNWIND zeroCredexes as zeroCredex
@@ -152,27 +152,8 @@ export async function findCredloop(
   );
 
   if (result.records.length > 0) {
-    logger.debug("Raw record from Neo4j", {
-      record: result.records[0].toObject(),
-      keys: result.records[0].keys,
-    });
     const lowestAmount = result.records[0].get("lowestAmount");
-    logger.debug("Raw lowestAmount value", {
-      value: lowestAmount,
-      type: typeof lowestAmount,
-      hasToNumber: typeof lowestAmount?.toNumber === "function",
-      constructor: lowestAmount?.constructor?.name,
-    });
-
-    if (lowestAmount == null) {
-      logger.info("No valid amount to clear found");
-      return { valueToClear: 0, credexesInLoop: [], credexesRedeemed: [] };
-    }
-
-    const valueToClear =
-      typeof lowestAmount?.toNumber === "function"
-        ? lowestAmount.toNumber()
-        : Number(lowestAmount);
+    const valueToClear = typeof lowestAmount?.toNumber === 'function' ? lowestAmount.toNumber() : Number(lowestAmount);
     const credexesInLoop = result.records[0].get("credexIDs");
     const credexesRedeemed = result.records[0].get("zeroCredexIDs");
     logger.info("Credloop found", {
