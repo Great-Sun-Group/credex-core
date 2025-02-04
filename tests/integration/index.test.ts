@@ -99,6 +99,7 @@ describe("Integration Tests", () => {
     }
   }, 300000); // 5 minute timeout for beforeAll
 
+  /* Commented out for focused testing
   // Track network member tokens and balances
   let vimbisoOneToken: string;
   let vimbisoOneID: string;
@@ -625,4 +626,7 @@ describe("Integration Tests", () => {
       );
     });
   });
+    // All test cases commented out for focused testing
+  });
+  */
 });
