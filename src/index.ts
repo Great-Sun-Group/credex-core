@@ -91,10 +91,10 @@ async function initializeApp() {
     logger.info("Route handlers applied for production modules");
 
     // Apply route handlers for dev-only routes
-    //if (config.environment !== "production") {
+    if (config.environment !== "production") {
       app.use(DevAdminRoutes());
       logger.info("Route handlers applied for DevAdmin module");
-    //}
+    }
 
     // Apply error handling middleware
     app.use(notFoundHandler); // Handle 404 errors

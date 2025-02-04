@@ -13,7 +13,7 @@ export function establishDayZero(requestId: string): string {
   logger.info("Establishing day zero", { requestId });
   const dayZero =
     process.env.NODE_ENV === "development"
-      ? "2025-01-30"
+      ? "2025-02-03"
       : moment.utc().subtract(1, "days").format("YYYY-MM-DD");
   logger.info("Day zero established", { dayZero, requestId });
   return dayZero;

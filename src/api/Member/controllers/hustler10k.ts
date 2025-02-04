@@ -9,6 +9,16 @@ import {
   MemberActionDetails,
   ErrorActionDetails
 } from "../../../types/apiResponse";
+import { getDashboardData } from "../../../utils/dashboardUtils";
+import { MemberDashboardService } from "../services/MemberDashboardService";
+import { MemberRepository } from "../repositories/MemberRepository";
+import { SpendLimitService } from "../services/SpendLimitService";
+
+// Initialize services
+const memberDashboardService = new MemberDashboardService(
+  new MemberRepository(),
+  new SpendLimitService()
+);
 
 type Hustler10kDetails = MemberActionDetails & {
   credexID: string;
@@ -122,6 +132,14 @@ export async function Hustler10kController(
       requestId
     });
 
+    // Get complete dashboard data
+    const dashboard = await getDashboardData(
+      memberID,
+      personalAccountID,
+      requestId,
+      memberDashboardService
+    );
+
     const response: Hustler10kResponse = {
       message: "Successfully enrolled in Hustler 10k program",
       data: {
@@ -136,7 +154,7 @@ export async function Hustler10kController(
             newTier: result.data.newTier
           }
         },
-        dashboard: {} // Empty dashboard since this is just an enrollment endpoint
+        dashboard
       }
     };
 
