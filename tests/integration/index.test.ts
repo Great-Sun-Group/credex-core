@@ -25,6 +25,7 @@ describe("Integration Tests", () => {
     token: string;
     memberID: string;
     personalAccountID: string;
+    phone?: string;
   }[] = [];
 
   const trustAccountDetails = {
@@ -108,9 +109,11 @@ describe("Integration Tests", () => {
       // Add delay to ensure unique timestamps
       await new Promise((resolve) => setTimeout(resolve, 100));
       const timestamp = Date.now();
+      const firstName = i === 0 ? "Looper" : i === 1 ? "Upgrader" : `TestUser${i}`;
+      const lastName = i === 0 ? "Tester1" : i === 1 ? "Tester2" : `LastName${i}`;
       const response = await onboardMember(
-        `TestUser${i}`,
-        `LastName${i}`,
+        firstName,
+        lastName,
         `${timestamp}${i}`,
         "CAD"
       );
@@ -128,6 +131,7 @@ describe("Integration Tests", () => {
         token: response.data.action.details.token,
         memberID: response.data.action.details.memberID,
         personalAccountID: personalAccount.accountID,
+        phone: `${timestamp}${i}`,
       };
       memberTokens.push(member);
 
@@ -183,7 +187,7 @@ describe("Integration Tests", () => {
         memberTokens[0].personalAccountID,
         1,
         "CAD",
-        "TestUser LastName Personal"
+        "Looper Tester1 Personal"
       );
 
       // Test $0.50 CAD return from first member to GREATSUN_TRUST_CAD
@@ -205,7 +209,7 @@ describe("Integration Tests", () => {
         memberTokens[0].personalAccountID,
         -0.5,
         "CAD",
-        "TestUser LastName Personal"
+        "Looper Tester1 Personal"
       );
 
       // Get credexID from response
@@ -267,7 +271,7 @@ describe("Integration Tests", () => {
         memberTokens[0].personalAccountID,
         1,
         "USD",
-        "TestUser LastName Personal"
+        "Looper Tester1 Personal"
       );
 
       // Test $0.50 USD return from first member to GREATSUN_TRUST_USD
@@ -289,7 +293,7 @@ describe("Integration Tests", () => {
         memberTokens[0].personalAccountID,
         -0.5,
         "USD",
-        "TestUser LastName Personal"
+        "Looper Tester1 Personal"
       );
 
       // Get credexID from response
@@ -310,6 +314,84 @@ describe("Integration Tests", () => {
         "USD",
         "Great Sun Financial Trust USD"
       );
+    });
+
+    it("should handle $90 USD credex and member tier upgrade flow", async () => {
+      // Create $90 USD credex from GREATSUN_TRUST_USD to Upgrader Tester2
+      const createResponse = await createCredex(
+        process.env.ISSUER_TOKEN!,
+        greatsunTrustUsdID,
+        memberTokens[1].personalAccountID,
+        "USD",
+        90,
+        "PURCHASE",
+        "OFFERS",
+        true
+      );
+
+      // Verify trust's balance decreased after creating offer
+      trustUsdBalance = verifyBalanceChange(
+        trustUsdBalance,
+        createResponse.data.dashboard,
+        greatsunTrustUsdID,
+        -90,
+        "USD",
+        "Great Sun Financial Trust USD"
+      );
+
+      // Get credexID from response
+      const credexID = createResponse.data.action.id;
+
+      // Accept the credex as Upgrader Tester2
+      const acceptResponse = await acceptCredex(
+        memberTokens[1].token,
+        credexID
+      );
+
+      // Verify member's balance increased after accepting
+      const upgraderBalance = verifyBalanceChange(
+        0, // Initial balance
+        acceptResponse.data.dashboard,
+        memberTokens[1].personalAccountID,
+        90,
+        "USD",
+        "Upgrader Tester2 Personal"
+      );
+
+      // Enroll in Hustler10k program (creates $1 USD secured credex to greatsun_ops and upgrades to tier 3)
+      const headers = {
+        "x-client-api-key": process.env.CLIENT_API_KEY || "",
+        Authorization: `Bearer ${memberTokens[1].token}`,
+      };
+
+      const hustlerResponse = await axios.post(
+        "/hustler10k",
+        {
+          personalAccountID: memberTokens[1].personalAccountID,
+        },
+        { headers }
+      );
+
+      expect(hustlerResponse.status).toBe(200);
+      expect(hustlerResponse.data.data.action.type).toBe("HUSTLER_10K_ENROLLED");
+      expect(hustlerResponse.data.data.action.details.newTier).toBe(3);
+
+      // Get updated dashboard to verify balance and tier
+      const loginResponse = await login(memberTokens[1].phone!); // Use Upgrader Tester2's phone
+      const dashboard = loginResponse.data.dashboard;
+
+      // Verify $1 USD secured credex was created and sent to greatsun_ops
+      const finalBalance = verifyBalanceChange(
+        upgraderBalance,
+        dashboard,
+        memberTokens[1].personalAccountID,
+        -1,
+        "USD",
+        "Upgrader Tester2 Personal"
+      );
+
+      // Verify member tier was upgraded to 3
+      expect(dashboard.member.memberTier).toBe(3);
     });
   });
 });
