@@ -152,7 +152,27 @@ export async function findCredloop(
   );
 
   if (result.records.length > 0) {
-    const valueToClear = result.records[0].get("lowestAmount").toNumber();
+    logger.debug("Raw record from Neo4j", {
+      record: result.records[0].toObject(),
+      keys: result.records[0].keys,
+    });
+    const lowestAmount = result.records[0].get("lowestAmount");
+    logger.debug("Raw lowestAmount value", {
+      value: lowestAmount,
+      type: typeof lowestAmount,
+      hasToNumber: typeof lowestAmount?.toNumber === "function",
+      constructor: lowestAmount?.constructor?.name,
+    });
+
+    if (lowestAmount == null) {
+      logger.info("No valid amount to clear found");
+      return { valueToClear: 0, credexesInLoop: [], credexesRedeemed: [] };
+    }
+
+    const valueToClear =
+      typeof lowestAmount?.toNumber === "function"
+        ? lowestAmount.toNumber()
+        : Number(lowestAmount);
     const credexesInLoop = result.records[0].get("credexIDs");
     const credexesRedeemed = result.records[0].get("zeroCredexIDs");
     logger.info("Credloop found", {
