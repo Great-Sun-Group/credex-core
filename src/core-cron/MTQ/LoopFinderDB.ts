@@ -39,7 +39,11 @@ export async function createSearchSpaceCredex(
       MATCH (issuer:Account {accountID: $issuerAccountID})
       MATCH (acceptor:Account {accountID: $acceptorAccountID})
       MERGE (issuer)-[:${searchOwesType}]->(searchOwesType:${searchOwesType})-[:${searchOwesType}]->(acceptor)
-        ON CREATE SET searchOwesType.searchAnchorID = randomUUID()
+        ON CREATE SET 
+          searchOwesType.searchAnchorID = randomUUID(),
+          searchOwesType.totalOutstandingCXX = 0,
+          searchOwesType.totalOutstandingInDenom = 0,
+          searchOwesType.denominationCode = $Denomination
       CREATE (searchOwesType)<-[:SEARCH_SECURED]-(credex:Credex {
           credexID: $credexID,
           outstandingAmount: $credexAmount,
@@ -47,6 +51,10 @@ export async function createSearchSpaceCredex(
           CXXmultiplier: $CXXmultiplier,
           dueDate: date($credexDueDate)
       })
+      WITH searchOwesType, credex
+      SET 
+        searchOwesType.totalOutstandingCXX = searchOwesType.totalOutstandingCXX + credex.outstandingAmount,
+        searchOwesType.totalOutstandingInDenom = searchOwesType.totalOutstandingInDenom + (credex.outstandingAmount / credex.CXXmultiplier)
       WITH searchOwesType, credex
       CALL apoc.do.case(
           [
@@ -99,62 +107,59 @@ export async function findCredloop(
   logger.debug("Finding credloop", { issuerAccountID, searchOwesType });
   const result = await session.run(
     `
-    // Step 1: Find all loops starting and ending at the specified account, with the specified searchOwesType
+    // Find all loops starting and ending at the specified account
     MATCH credloops = (issuer:Account {accountID: $issuerAccountID})-[:${searchOwesType}*]->(issuer)
-    
     WITH credloops, nodes(credloops) AS loopNodes
-    UNWIND loopNodes AS node
-    WITH credloops, node
-    WITH credloops, MIN(node.earliestDueDate) AS earliestDueDate
-
-    // Step 3: Filter loops to include only those containing a node with the earliest earliestDueDate
-    WITH credloops, earliestDueDate, nodes(credloops) AS loopNodes
-    UNWIND loopNodes AS node
-    WITH credloops, node
-    WHERE node.earliestDueDate = earliestDueDate
-    WITH credloops, length(credloops) AS loopLength
-
-    // Step 4: Return only the longest loop, breaking ties with rand()
-    ORDER BY loopLength DESC, rand()
-    LIMIT 1
-    WITH nodes(credloops) AS credloopNodes
-
-    // Step 5: Each node returns the credex it is connected to with the earliest dueDate
-    // on tie, credex with largest amount
-    UNWIND credloopNodes AS loopNode
+    
+    // Get credexes in the loop
+    UNWIND loopNodes AS loopNode
     MATCH (loopNode)<-[:SEARCH_SECURED]-(credex:Credex)
-    WITH loopNode, collect(credex) AS credexList
-    WITH 
-           reduce(minCredex = credexList[0], c IN credexList | 
-                  CASE 
-                    WHEN c.dueDate < minCredex.dueDate THEN c
-                    WHEN c.dueDate = minCredex.dueDate AND c.outstandingAmount > minCredex.outstandingAmount THEN c
-                    ELSE minCredex 
-                  END) AS earliestCredex
-    WITH collect(earliestCredex) AS finalCredexes, COLLECT(earliestCredex.credexID) AS credexIDs
-
-    // Step 6: Identify the minimum outstandingAmount and subtract it from all credexes
-    UNWIND finalCredexes AS credexInLoop
-    WITH finalCredexes, min(credexInLoop.outstandingAmount) AS lowestAmount, credexIDs
-
-    UNWIND finalCredexes AS credex
-    SET credex.outstandingAmount = credex.outstandingAmount - lowestAmount
-
-    // Step 7: Collect all credexes and filter those with outstandingAmount = 0.
-    WITH lowestAmount, COLLECT(credex) AS allCredexes, credexIDs
-    WITH lowestAmount, allCredexes, [credex IN allCredexes WHERE credex.outstandingAmount = 0] AS zeroCredexes, credexIDs
-
-    //Step 8: collect credexIDs of the zeroCredexes
-    UNWIND zeroCredexes as zeroCredex
-    RETURN collect(zeroCredex.credexID) AS zeroCredexIDs, lowestAmount, credexIDs
+    WITH collect(credex) AS credexes
+    
+    // Find minimum amount
+    WITH credexes,
+         reduce(min = null, c IN credexes | 
+           CASE
+             WHEN min IS NULL THEN toInteger(c.outstandingAmount)
+             WHEN toInteger(c.outstandingAmount) < min THEN toInteger(c.outstandingAmount)
+             ELSE min
+           END
+         ) AS lowestAmount
+    
+    // Update amounts and identify zeroed credexes
+    UNWIND credexes AS credex
+    WITH credex, lowestAmount, credexes,
+         toInteger(credex.outstandingAmount - lowestAmount) AS newAmount
+    SET credex.outstandingAmount = newAmount
+    
+    WITH lowestAmount,
+         collect(credex.credexID) AS credexIDs,
+         collect(CASE WHEN newAmount = 0 THEN credex.credexID ELSE null END) AS zeroedIds
+    
+    RETURN 
+      [id IN zeroedIds WHERE id IS NOT NULL] AS zeroCredexIDs,
+      lowestAmount,
+      credexIDs
     `,
     { issuerAccountID, searchOwesType }
   );
 
   if (result.records.length > 0) {
-    const valueToClear = result.records[0].get("lowestAmount").toNumber();
-    const credexesInLoop = result.records[0].get("credexIDs");
-    const credexesRedeemed = result.records[0].get("zeroCredexIDs");
+    const record = result.records[0];
+    const lowestAmount = record.get("lowestAmount");
+    // Handle both Neo4j Integer and regular number types
+    const valueToClear = typeof lowestAmount?.toNumber === 'function' 
+      ? lowestAmount.toNumber() 
+      : Number(lowestAmount);
+
+    const credexesInLoop = record.get("credexIDs");
+    const credexesRedeemed = record.get("zeroCredexIDs");
+
+    if (valueToClear === 0 || isNaN(valueToClear)) {
+      logger.info("No valid amount to clear found");
+      return { valueToClear: 0, credexesInLoop: [], credexesRedeemed: [] };
+    }
+
     logger.info("Credloop found", {
       valueToClear,
       credexesInLoopCount: credexesInLoop.length,
@@ -174,36 +179,41 @@ export async function cleanupSearchSpace(
   logger.debug("Cleaning up SearchSpace", {
     credexesRedeemedCount: credexesRedeemed.length,
   });
+
   await session.run(
     `
-    // Step 10: Delete zeroCredexes
+    // Delete zeroed credexes
     UNWIND $credexesRedeemed AS credexRedeemedID
     MATCH (credex:Credex {credexID: credexRedeemedID})-[:SEARCH_SECURED]->(searchAnchor)
+    WHERE credex.outstandingAmount = 0
     DETACH DELETE credex
     WITH DISTINCT searchAnchor
 
-    // Step 11: Handle orphaned searchAnchors
-    OPTIONAL MATCH (searchAnchor)<-[:SEARCH_SECURED]-(otherCredex:Credex)
-    WITH searchAnchor, collect(otherCredex) AS otherCredexes
-    CALL apoc.do.when(
-      size(otherCredexes) = 0,
-      'DETACH DELETE searchAnchor RETURN "searchAnchorDeleted" AS result',
-      'RETURN "noChanges" AS result',
-      {searchAnchor: searchAnchor}
-    ) YIELD value AS deleteValue
-    WITH deleteValue, searchAnchor, otherCredexes
-    WHERE deleteValue <> "searchAnchorDeleted"
+    // Update searchAnchor totals
+    OPTIONAL MATCH (searchAnchor)<-[:SEARCH_SECURED]-(remainingCredex:Credex)
+    WITH searchAnchor,
+         collect(remainingCredex) as remainingCredexes,
+         sum(remainingCredex.outstandingAmount) as totalCXX,
+         sum(remainingCredex.outstandingAmount / remainingCredex.CXXmultiplier) as totalDenom
 
-    // Step 12: Update earliestDueDate on remaining searchAnchors
-    UNWIND otherCredexes AS otherCredex
-    WITH DISTINCT searchAnchor, otherCredex
-    CALL apoc.do.when(
-      (searchAnchor.earliestDueDate IS NULL OR searchAnchor.earliestDueDate > date(otherCredex.dueDate)),
-      'SET searchAnchor.earliestDueDate = date(otherCredex.dueDate) RETURN "searchAnchorEarliestUpdated" AS result',
-      'RETURN "noChanges" AS result',
-      {searchAnchor: searchAnchor, otherCredex: otherCredex}
-    ) YIELD value AS updateValue
-    RETURN searchAnchor
+    // Delete empty anchors or update totals
+    CALL apoc.do.case([
+      size(remainingCredexes) = 0,
+      'DETACH DELETE searchAnchor RETURN "deleted" as result',
+      true,
+      'SET searchAnchor.totalOutstandingCXX = $totalCXX,
+           searchAnchor.totalOutstandingInDenom = $totalDenom
+       RETURN "updated" as result'
+    ],
+    '',
+    {
+      searchAnchor: searchAnchor,
+      remainingCredexes: remainingCredexes,
+      totalCXX: totalCXX,
+      totalDenom: totalDenom
+    }
+    ) YIELD value
+    RETURN value.result
     `,
     { credexesRedeemed }
   );
@@ -224,6 +234,7 @@ export async function updateLedgerSpace(
 
   const result = await session.run(
     `
+    // Create loop anchor
     MATCH (daynode:Daynode {Active: true})
     CREATE (loopAnchor:LoopAnchor {
         loopedAt: DateTime(),
@@ -231,14 +242,14 @@ export async function updateLedgerSpace(
         LoopedAmount: $valueToClear,
         CXXmultiplier: 1,
         Denomination: "CXX"
-    })-[to_daynode:CREATED_ON]->(daynode)
+    })-[:CREATED_ON]->(daynode)
     WITH loopAnchor
 
+    // Update credexes and create REDEEMED relationships
     UNWIND $credexesInLoop AS credexID
     MATCH (thisCredex:Credex {credexID: credexID})
     SET thisCredex.OutstandingAmount = thisCredex.OutstandingAmount - $valueToClear,
         thisCredex.RedeemedAmount = thisCredex.RedeemedAmount + $valueToClear
-    WITH thisCredex, loopAnchor
     CREATE (thisCredex)-[:REDEEMED {
         AmountRedeemed: $valueToClear,
         AmountOutstandingNow: thisCredex.OutstandingAmount,
@@ -247,8 +258,10 @@ export async function updateLedgerSpace(
         createdAt: DateTime(),
         redeemedRelID: randomUUID()
     }]->(loopAnchor)
+    WITH collect(thisCredex) as credexesUpdated, loopAnchor
 
-    WITH thisCredex, loopAnchor
+    // Create CREDLOOP relationships
+    UNWIND credexesUpdated AS thisCredex
     MATCH (loopAnchor)<-[:REDEEMED]-(thisCredex)
       -[:OWES]->(:Account)-[:OWES]->(nextCredex:Credex)
       -[:REDEEMED]->(loopAnchor)
@@ -262,19 +275,19 @@ export async function updateLedgerSpace(
         credloopRelID: randomUUID()
     }]->(nextCredex)
 
+    // Handle zeroed credexes
     WITH DISTINCT loopAnchor
     UNWIND $credexesRedeemed AS redeemedCredexID
     MATCH
       (owesOutAccount:Account)-[owes1:OWES]->
         (thisRedeemedCredex:Credex {credexID: redeemedCredexID})-[owes2:OWES]->
-        (owesInAccount:Account),
-      (thisRedeemedCredex)-[:REDEEMED]->(loopAnchor)
+        (owesInAccount:Account)
+    WHERE thisRedeemedCredex.outstandingAmount = 0
     CREATE
       (owesOutAccount)-[:CLEARED]->(thisRedeemedCredex)-[:CLEARED]->(owesInAccount)
-    SET thisRedeemedCredex.DateRedeemed = DateTime()
     DELETE owes1, owes2
-
-    RETURN DISTINCT loopAnchor.loopID AS loopID
+    
+    RETURN loopAnchor.loopID AS loopID
     `,
     { valueToClear, credexesInLoop, credexesRedeemed }
   );
