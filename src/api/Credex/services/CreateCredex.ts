@@ -4,8 +4,10 @@ import { GetSecuredAuthorizationService } from "./GetSecuredAuthorization";
 import { digitallySign } from "../../../utils/digitalSignature";
 import logger from "../../../utils/logger";
 import { AccountRepository } from "../../Account/repositories/AccountRepository";
+import { BalanceRepository } from "../../Account/repositories/BalanceRepository";
 
 const accountRepository = new AccountRepository();
+const balanceRepository = BalanceRepository.getInstance();
 
 interface CreateCredexInput {
   signerID: string;
@@ -433,6 +435,10 @@ export async function CreateCredexService(
       credexID: credexData.credexID,
       requestId,
     });
+
+    // Clear balance cache for both accounts
+    balanceRepository.clearCache(issuerAccountID);
+    balanceRepository.clearCache(receiverAccountID);
 
     return {
       success: true,

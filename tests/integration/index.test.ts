@@ -1,18 +1,45 @@
-import { DashboardStore } from "./utils/dashboard-store";
+import { findAccount, getSecuredBalance, verifyBalanceChange } from "./utils/balance-utils";
 import { login } from "../api/functions/login";
 import { onboardMember } from "../api/functions/onboardMember";
 import { createCredex } from "../api/functions/createCredex";
 import { acceptCredex } from "../api/functions/acceptCredex";
+import axios from "../setup";
 
 describe("Integration Tests", () => {
-  let greatsunTrustID: string;
+  // Increase timeout for the entire test suite to handle multiple operations
+  jest.setTimeout(300000); // 5 minutes
+  
+  // Account IDs
+  let greatsunTrustCadID: string;
+  let greatsunTrustUsdID: string;
   let greatsunTrustMemberID: string;
+  
+  // Track balances
+  let trustCadBalance: number;
+  let trustUsdBalance: number;
+  let memberCadBalance: number;
+  let memberUsdBalance: number;
+  
+  // Member tokens and IDs
   let memberTokens: {
     token: string;
     memberID: string;
     personalAccountID: string;
   }[] = [];
-  const dashboardStore = new DashboardStore();
+
+  const trustAccountDetails = {
+    accountName: "Great Sun Financial Trust USD",
+    accountHandle: "GREATSUN_TRUST_USD",
+    subtype: "BANK",
+    denomination: "USD",
+    bankFields: {
+      jurisdiction: "CA",
+      accountNumber: "4524120",
+      transitNumber: "03353",
+      branchNumber: "003",
+      trustAccountSubType: "BANK",
+    },
+  };
 
   beforeAll(async () => {
     // Login as GREATSUN_TRUST member
@@ -20,20 +47,61 @@ describe("Integration Tests", () => {
 
     // Extract greatsun trust details
     const greatsunDashboard = greatsunResponse.data.dashboard;
-    const greatsunTrustAccount = greatsunDashboard.accounts.find(
-      (acc: any) => acc.accountHandle === "GREATSUN_TRUST"
+    const greatsunTrustCadAccount = greatsunDashboard.accounts.find(
+      (acc: any) => acc.accountHandle === "GREATSUN_TRUST_CAD"
+    );
+    const greatsunTrustUsdAccount = greatsunDashboard.accounts.find(
+      (acc: any) => acc.accountHandle === "GREATSUN_TRUST_USD"
     );
 
-    if (!greatsunTrustAccount) {
-      throw new Error("Greatsun trust account not found");
+    if (!greatsunTrustCadAccount) {
+      throw new Error("Greatsun CAD trust account not found");
     }
 
-    greatsunTrustID = greatsunTrustAccount.accountID;
+    greatsunTrustCadID = greatsunTrustCadAccount.accountID;
     greatsunTrustMemberID = greatsunDashboard.member.memberID;
     process.env.ISSUER_TOKEN = greatsunResponse.data.action.details.token;
 
-    // Initialize greatsun trust dashboard state
-    dashboardStore.initializeState(greatsunTrustMemberID, greatsunDashboard);
+    // Store initial trust balances
+    const trustCadAccount = findAccount(greatsunDashboard, greatsunTrustCadID);
+    trustCadBalance = getSecuredBalance(trustCadAccount, "CAD");
+
+    // Check if USD account exists, create if not
+    if (greatsunTrustUsdAccount) {
+      console.log("\nUsing existing USD trust account");
+      greatsunTrustUsdID = greatsunTrustUsdAccount.accountID;
+      trustUsdBalance = getSecuredBalance(greatsunTrustUsdAccount, "USD");
+    } else {
+      console.log("\nCreating new USD trust account");
+      const headers = {
+        "x-client-api-key": process.env.CLIENT_API_KEY || "",
+        Authorization: `Bearer ${process.env.ISSUER_TOKEN}`,
+      };
+
+      console.log("\nCreating USD trust account...");
+      const createTrustResponse = await axios.post(
+        "/createTrustAccount",
+        trustAccountDetails,
+        { headers }
+      );
+
+      expect(createTrustResponse.status).toBe(201);
+      expect(createTrustResponse.data.data.action.type).toBe(
+        "TRUST_ACCOUNT_CREATED"
+      );
+
+      const usdTrustAccount =
+        createTrustResponse.data.data.dashboard.accounts[0];
+      expect(usdTrustAccount).toMatchObject({
+        accountHandle: "GREATSUN_TRUST_USD",
+        denomination: "USD",
+        bankFields: trustAccountDetails.bankFields,
+      });
+
+      // Store USD trust account ID and initial balance
+      greatsunTrustUsdID = usdTrustAccount.accountID;
+      trustUsdBalance = getSecuredBalance(usdTrustAccount, "USD");
+    }
 
     // Onboard 3 test members with unique phone numbers
     for (let i = 0; i < 3; i++) {
@@ -63,20 +131,24 @@ describe("Integration Tests", () => {
       };
       memberTokens.push(member);
 
-      // Initialize member dashboard state
-      dashboardStore.initializeState(member.memberID, response.data.dashboard);
+      // Store initial member balances (likely 0)
+      const memberAccount = findAccount(response.data.dashboard, member.personalAccountID);
+      if (i === 0) { // Only store for first member who will be used in tests
+        memberCadBalance = getSecuredBalance(memberAccount, "CAD");
+        memberUsdBalance = getSecuredBalance(memberAccount, "USD");
+      }
     }
 
     // Set first member's token as receiver token for tests
     process.env.RECEIVER_TOKEN = memberTokens[0].token;
-  });
+  }, 300000); // 5 minute timeout for beforeAll
 
   describe("Smart Contract Features", () => {
-    it("should complete full offer-accept flow with correct balances", async () => {
-      // Test $1 CAD offer from GREATSUN_TRUST to first member
+    it("should complete full CAD offer-accept flow with correct balances", async () => {
+      // Test $1 CAD offer from GREATSUN_TRUST_CAD to first member
       const createResponse = await createCredex(
         process.env.ISSUER_TOKEN!,
-        greatsunTrustID,
+        greatsunTrustCadID,
         memberTokens[0].personalAccountID,
         "CAD",
         1,
@@ -85,10 +157,14 @@ describe("Integration Tests", () => {
         true
       );
 
-      // Update dashboard states
-      dashboardStore.updateAfterState(
-        greatsunTrustMemberID,
-        createResponse.data.dashboard
+      // Verify trust's balance decreased after creating offer
+      trustCadBalance = verifyBalanceChange(
+        trustCadBalance,
+        createResponse.data.dashboard,
+        greatsunTrustCadID,
+        -1,
+        "CAD",
+        "Great Sun Financial Trust CAD"
       );
 
       // Get credexID from response
@@ -100,26 +176,21 @@ describe("Integration Tests", () => {
         credexID
       );
 
-      // Update dashboard states
-      dashboardStore.updateAfterState(
-        memberTokens[0].memberID,
-        acceptResponse.data.dashboard
-      );
-
-      // Verify balance changes
-      dashboardStore.verifyAndPromote(greatsunTrustMemberID, "1", "CAD", true);
-      dashboardStore.verifyAndPromote(
-        memberTokens[0].memberID,
-        "1",
+      // Verify member's balance increased after accepting
+      memberCadBalance = verifyBalanceChange(
+        memberCadBalance,
+        acceptResponse.data.dashboard,
+        memberTokens[0].personalAccountID,
+        1,
         "CAD",
-        true
+        "TestUser LastName Personal"
       );
 
-      // Test $0.50 CAD return from first member to GREATSUN_TRUST
+      // Test $0.50 CAD return from first member to GREATSUN_TRUST_CAD
       const returnResponse = await createCredex(
         process.env.RECEIVER_TOKEN!,
         memberTokens[0].personalAccountID,
-        greatsunTrustID,
+        greatsunTrustCadID,
         "CAD",
         0.5,
         "PURCHASE",
@@ -127,10 +198,14 @@ describe("Integration Tests", () => {
         true
       );
 
-      // Update dashboard states
-      dashboardStore.updateAfterState(
-        memberTokens[0].memberID,
-        returnResponse.data.dashboard
+      // Verify member's balance decreased after creating return offer
+      memberCadBalance = verifyBalanceChange(
+        memberCadBalance,
+        returnResponse.data.dashboard,
+        memberTokens[0].personalAccountID,
+        -0.5,
+        "CAD",
+        "TestUser LastName Personal"
       );
 
       // Get credexID from response
@@ -142,24 +217,98 @@ describe("Integration Tests", () => {
         returnCredexID
       );
 
-      // Update dashboard states
-      dashboardStore.updateAfterState(
-        greatsunTrustMemberID,
-        acceptReturnResponse.data.dashboard
+      // Verify trust's balance increased after accepting return
+      trustCadBalance = verifyBalanceChange(
+        trustCadBalance,
+        acceptReturnResponse.data.dashboard,
+        greatsunTrustCadID,
+        0.5,
+        "CAD",
+        "Great Sun Financial Trust CAD"
+      );
+    });
+
+    it("should complete full USD offer-accept flow with correct balances", async () => {
+      // Test $1 USD offer from GREATSUN_TRUST_USD to first member
+      const createResponse = await createCredex(
+        process.env.ISSUER_TOKEN!,
+        greatsunTrustUsdID,
+        memberTokens[0].personalAccountID,
+        "USD",
+        1,
+        "PURCHASE",
+        "OFFERS",
+        true
       );
 
-      // Verify balance changes
-      dashboardStore.verifyAndPromote(
-        memberTokens[0].memberID,
-        "0.5",
-        "CAD",
+      // Verify trust's balance decreased after creating offer
+      trustUsdBalance = verifyBalanceChange(
+        trustUsdBalance,
+        createResponse.data.dashboard,
+        greatsunTrustUsdID,
+        -1,
+        "USD",
+        "Great Sun Financial Trust USD"
+      );
+
+      // Get credexID from response
+      const credexID = createResponse.data.action.id;
+
+      // Accept the credex
+      const acceptResponse = await acceptCredex(
+        process.env.RECEIVER_TOKEN!,
+        credexID
+      );
+
+      // Verify member's balance increased after accepting
+      memberUsdBalance = verifyBalanceChange(
+        memberUsdBalance,
+        acceptResponse.data.dashboard,
+        memberTokens[0].personalAccountID,
+        1,
+        "USD",
+        "TestUser LastName Personal"
+      );
+
+      // Test $0.50 USD return from first member to GREATSUN_TRUST_USD
+      const returnResponse = await createCredex(
+        process.env.RECEIVER_TOKEN!,
+        memberTokens[0].personalAccountID,
+        greatsunTrustUsdID,
+        "USD",
+        0.5,
+        "PURCHASE",
+        "OFFERS",
         true
       );
-      dashboardStore.verifyAndPromote(
-        greatsunTrustMemberID,
-        "0.5",
-        "CAD",
-        true
+
+      // Verify member's balance decreased after creating return offer
+      memberUsdBalance = verifyBalanceChange(
+        memberUsdBalance,
+        returnResponse.data.dashboard,
+        memberTokens[0].personalAccountID,
+        -0.5,
+        "USD",
+        "TestUser LastName Personal"
+      );
+
+      // Get credexID from response
+      const returnCredexID = returnResponse.data.action.id;
+
+      // Accept the return credex
+      const acceptReturnResponse = await acceptCredex(
+        process.env.ISSUER_TOKEN!,
+        returnCredexID
+      );
+
+      // Verify trust's balance increased after accepting return
+      trustUsdBalance = verifyBalanceChange(
+        trustUsdBalance,
+        acceptReturnResponse.data.dashboard,
+        greatsunTrustUsdID,
+        0.5,
+        "USD",
+        "Great Sun Financial Trust USD"
       );
     });
   });

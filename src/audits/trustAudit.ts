@@ -67,7 +67,7 @@ async function performTrustAudit(session: Session): Promise<AuditResult> {
       CREATE (claimingAccount)-[:TRUST_AUDIT_CLAIM {
         claimAmountCXX: netBalance,
         claimDenom: trustAccountWithSecured.defaultDenom,
-        claimAmountInDenom: netBalance * daynode[trustAccountWithSecured.defaultDenom],
+        claimAmountInDenom: netBalance / daynode[trustAccountWithSecured.defaultDenom],
         timestamp: datetime()
       }]->(report)
       
@@ -145,7 +145,7 @@ async function performPostDCOTrustAudit(
       CREATE (claimingAccount)-[:TRUST_AUDIT_CLAIM {
         claimAmountCXX: netBalance,
         claimDenom: trustAccountWithSecured.defaultDenom,
-        claimAmountInDenom: netBalance * daynode[trustAccountWithSecured.defaultDenom],
+        claimAmountInDenom: netBalance / daynode[trustAccountWithSecured.defaultDenom],
         timestamp: datetime()
       }]->(report)
       

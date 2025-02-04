@@ -19,85 +19,76 @@ export class DashboardStore {
     return this.states.get(memberID) || { before: null, after: null };
   }
 
+  // Initialize before state for a member
+  initializeState(memberID: string, dashboard: any) {
+    this.states.set(memberID, {
+      before: dashboard,
+      after: null,
+    });
+  }
+
+  // Helper to get secured balance for a specific denomination
+  private getSecuredBalance(account: any, denomination: string): number {
+    const balance = account.balanceData.securedNetBalancesByDenom
+      .find((b: string) => b.endsWith(` ${denomination}`))
+      ?.split(" ")[0] || "0";
+    return parseFloat(balance);
+  }
+
   // Verify balance changes and promote after to before if successful
-  verifyAndPromote(memberID: string, expectedAmount: string, denomination: string, secured: boolean): void {
+  verifyAndPromote(
+    memberID: string,
+    accountID: string,
+    expectedAmount: string,
+    denomination: string,
+    isSender: boolean
+  ): void {
     const states = this.getStates(memberID);
     if (!states.before || !states.after) {
       throw new Error(`Missing before/after state for member ${memberID}`);
     }
 
-    // Find account balances in both states
-    const findAccountBalances = (dashboard: any, accountID: string) => {
-      const account = dashboard.accounts.find((acc: any) => acc.accountID === accountID);
-      return account ? account.balanceData : null;
-    };
+    const expectedNum = parseFloat(expectedAmount);
 
-    // Compare balances across all accounts
-    states.before.accounts.forEach((beforeAccount: any) => {
-      const afterBalances = findAccountBalances(states.after, beforeAccount.accountID);
-      if (!afterBalances) {
-        throw new Error(`Account ${beforeAccount.accountID} not found in after state`);
-      }
-      const beforeBalances = beforeAccount.balanceData;
+    // Find the account in both states by exact accountID
+    const beforeAccount = states.before.accounts.find(
+      (acc: any) => acc.accountID === accountID
+    );
+    const afterAccount = states.after.accounts.find(
+      (acc: any) => acc.accountID === accountID
+    );
 
-      if (secured) {
-        // Check secured balances in specified denomination
-        const beforeSecured = parseFloat(beforeBalances.securedNetBalancesByDenom
-          .find((b: any) => b.denomination === denomination)?.netBalance || "0");
-        const afterSecured = parseFloat(afterBalances.securedNetBalancesByDenom
-          .find((b: any) => b.denomination === denomination)?.netBalance || "0");
-        const expectedNum = parseFloat(expectedAmount);
+    if (!beforeAccount || !afterAccount) {
+      throw new Error(`Account ${accountID} not found for member ${memberID}`);
+    }
 
-        console.log(`Account ${beforeAccount.accountID} secured balance change:`, {
-          before: beforeSecured,
-          after: afterSecured,
-          expected: expectedNum,
-          change: afterSecured - beforeSecured
-        });
+    const beforeBalance = this.getSecuredBalance(beforeAccount, denomination);
+    const afterBalance = this.getSecuredBalance(afterAccount, denomination);
+    const actualChange = afterBalance - beforeBalance;
 
-        // Verify the change matches the expected amount (either positive or negative)
-        const change = Math.abs(afterSecured - beforeSecured);
-        if (Math.abs(change - expectedNum) > 0.001) { // Use small epsilon for float comparison
-          throw new Error(
-            `Balance change ${change} does not match expected amount ${expectedNum} ` +
-            `for account ${beforeAccount.accountID}`
-          );
-        }
-      } else {
-        // Check unsecured net balances
-        const beforeNet = parseFloat(beforeBalances.unsecuredBalancesInDefaultDenom.netPayRec);
-        const afterNet = parseFloat(afterBalances.unsecuredBalancesInDefaultDenom.netPayRec);
-        const expectedNum = parseFloat(expectedAmount);
+    // Calculate expected change based on whether this is the sender
+    const expectedChange = isSender ? -expectedNum : expectedNum;
 
-        console.log(`Account ${beforeAccount.accountID} unsecured net balance change:`, {
-          before: beforeNet,
-          after: afterNet,
-          expected: expectedNum,
-          change: afterNet - beforeNet
-        });
-
-        // Verify the change matches the expected amount (either positive or negative)
-        const change = Math.abs(afterNet - beforeNet);
-        if (Math.abs(change - expectedNum) > 0.001) { // Use small epsilon for float comparison
-          throw new Error(
-            `Net balance change ${change} does not match expected amount ${expectedNum} ` +
-            `for account ${beforeAccount.accountID}`
-          );
-        }
-      }
+    console.log(`Account ${beforeAccount.accountName} balance change:`, {
+      accountID: beforeAccount.accountID,
+      before: beforeBalance,
+      after: afterBalance,
+      expected: expectedChange,
+      change: actualChange,
+      isSender
     });
+
+    // Verify the change matches the expected amount
+    if (Math.abs(actualChange - expectedChange) > 0.001) {
+      throw new Error(
+        `Balance change ${actualChange} does not match expected amount ${expectedChange} ` +
+        `for account ${beforeAccount.accountName}`
+      );
+    }
 
     // If we get here, verification passed
     // Promote after to before and clear after
     states.before = states.after;
     states.after = null;
-  }
-
-  // Initialize before state for a member
-  initializeState(memberID: string, dashboard: any) {
-    this.states.set(memberID, {
-      before: dashboard,
-      after: null
-    });
   }
 }

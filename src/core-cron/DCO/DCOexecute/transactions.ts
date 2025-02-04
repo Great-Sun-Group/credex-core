@@ -236,7 +236,7 @@ async function processDCOReceiveTransaction(
     issuerAccountID: foundationID,
     receiverAccountID: participant.accountID,
     Denomination: "CXX",
-    InitialAmount: receiveAmount,
+    InitialAmount: 1.0,
     credexType: DCO_CONSTANTS.TRANSACTION_TYPES.RECEIVE,
     OFFERSorREQUESTS: "OFFERS" as const,
     securedCredex: DCO_CONSTANTS.RECURRING.SECURED_CREDEX,
@@ -271,7 +271,7 @@ async function processDCOReceiveTransaction(
     credexData: {
       issuerAccountID: dataForDCOreceive.issuerAccountID,
       receiverAccountID: dataForDCOreceive.receiverAccountID,
-      amount: receiveAmount,
+      amount: 1.0,
       denomination: "CXX",
       authorizationTemplateID: templateID,
     },

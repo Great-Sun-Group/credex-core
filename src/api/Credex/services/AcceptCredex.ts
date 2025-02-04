@@ -1,6 +1,9 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { digitallySign } from "../../../utils/digitalSignature";
 import logger from "../../../utils/logger";
+import { BalanceRepository } from "../../Account/repositories/BalanceRepository";
+
+const balanceRepository = BalanceRepository.getInstance();
 
 interface AcceptCredexData {
   credexID: string;
@@ -292,6 +295,10 @@ export async function AcceptCredexService(
       requestId,
       isBulkOperation,
     });
+
+    // Clear balance cache for both accounts
+    balanceRepository.clearCache(acceptedCredexData.issuerAccountID);
+    balanceRepository.clearCache(acceptedCredexData.acceptorAccountID);
 
     return {
       success: true,

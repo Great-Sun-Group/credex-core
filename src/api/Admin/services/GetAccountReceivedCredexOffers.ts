@@ -24,20 +24,31 @@ export default async function GetAccountReceivedCredexOffers(
   accountHandle: string,
   accountID: string
 ): Promise<{ data: { accountReceivedCredexOffers: ReceivedCredexOffer[] } }> {
-  logger.debug('GetAccountReceivedCredexOffers service called', { accountHandle, accountID });
+  logger.debug("GetAccountReceivedCredexOffers service called", {
+    accountHandle,
+    accountID,
+  });
 
   if (!accountHandle && !accountID) {
-    logger.warn('No accountHandle or accountID provided');
-    throw new AdminError('Either accountHandle or accountID is required', 'INVALID_ID', ErrorCodes.Admin.INVALID_ID);
+    logger.warn("No accountHandle or accountID provided");
+    throw new AdminError(
+      "Either accountHandle or accountID is required",
+      "INVALID_ID",
+      ErrorCodes.Admin.INVALID_ID
+    );
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
-  
-  const accountMatchCondition = accountHandle ? "accountHandle:$accountHandle" : "accountID: $accountID";
+
+  const accountMatchCondition = accountHandle
+    ? "accountHandle:$accountHandle"
+    : "accountID: $accountID";
   const parameters = accountHandle ? { accountHandle } : { accountID };
 
   try {
-    logger.info('Executing query to fetch account received credex offers', { accountMatchCondition });
+    logger.info("Executing query to fetch account received credex offers", {
+      accountMatchCondition,
+    });
 
     const query = `
       MATCH (account:Account {${accountMatchCondition}})<-[:OFFERED]-(receivedCredexOffer)<-[:OFFERED]-(sendingAccount)
@@ -64,47 +75,67 @@ export default async function GetAccountReceivedCredexOffers(
     const accountReceivedCredexOffers = result.records.map((record) => ({
       receivedCredexOfferID: record.get("receivedCredexOfferID"),
       receivedCredexOfferType: record.get("receivedCredexOfferType"),
-      receivedCredexOfferDenomination: record.get("receivedCredexOfferDenomination"),
-      receivedCredexOfferInitialAmount: record.get("receivedCredexOfferInitialAmount"),
-      receivedCredexOfferOutstandingAmount: record.get("receivedCredexOfferOutstandingAmount"),
-      receivedCredexOfferDefaultedAmount: record.get("receivedCredexOfferDefaultedAmount"),
-      receivedCredexOfferRedeemedAmount: record.get("receivedCredexOfferRedeemedAmount"),
-      receivedCredexOfferQueueStatus: record.get("receivedCredexOfferQueueStatus"),
-      receivedCredexOfferCXXmultiplier: record.get("receivedCredexOfferCXXmultiplier"),
-      receivedCredexOfferWrittenOffAmount: record.get("receivedCredexOfferWrittenOffAmount"),
+      receivedCredexOfferDenomination: record.get(
+        "receivedCredexOfferDenomination"
+      ),
+      receivedCredexOfferInitialAmount: record.get(
+        "receivedCredexOfferInitialAmount"
+      ),
+      receivedCredexOfferOutstandingAmount: record.get(
+        "receivedCredexOfferOutstandingAmount"
+      ),
+      receivedCredexOfferDefaultedAmount: record.get(
+        "receivedCredexOfferDefaultedAmount"
+      ),
+      receivedCredexOfferRedeemedAmount: record.get(
+        "receivedCredexOfferRedeemedAmount"
+      ),
+      receivedCredexOfferQueueStatus: record.get(
+        "receivedCredexOfferQueueStatus"
+      ),
+      receivedCredexOfferCXXmultiplier: record.get(
+        "receivedCredexOfferCXXmultiplier"
+      ),
+      receivedCredexOfferWrittenOffAmount: record.get(
+        "receivedCredexOfferWrittenOffAmount"
+      ),
       receivedCredexOfferDueDate: record.get("receivedCredexOfferDueDate"),
       receivedCredexOfferCreatedAt: record.get("receivedCredexOfferCreatedAt"),
       sendingAccountID: record.get("sendingAccountID"),
       sendingAccountDefaultDenom: record.get("sendingAccountDefaultDenom"),
-      sendingAccountHandle: record.get("sendingAccountHandle")
+      sendingAccountHandle: record.get("sendingAccountHandle"),
     }));
 
-    logger.info('Account received credex offers fetched successfully', { 
-      accountHandle, 
-      accountID, 
-      offersCount: accountReceivedCredexOffers.length 
+    logger.info("Account received credex offers fetched successfully", {
+      accountHandle,
+      accountID,
+      offersCount: accountReceivedCredexOffers.length,
     });
 
     return {
       data: {
-        accountReceivedCredexOffers
-      }
+        accountReceivedCredexOffers,
+      },
     };
   } catch (error) {
-    logger.error('Error fetching account received credex offers', { 
-      accountHandle, 
-      accountID, 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+    logger.error("Error fetching account received credex offers", {
+      accountHandle,
+      accountID,
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
     });
-    
+
     if (error instanceof AdminError) {
       throw error;
     }
-    
-    throw new AdminError('Error fetching account received credex offers', 'INTERNAL_ERROR', ErrorCodes.Admin.INTERNAL_ERROR);
+
+    throw new AdminError(
+      "Error fetching account received credex offers",
+      "INTERNAL_ERROR",
+      ErrorCodes.Admin.INTERNAL_ERROR
+    );
   } finally {
     await ledgerSpaceSession.close();
-    logger.debug('LedgerSpace session closed');
+    logger.debug("LedgerSpace session closed");
   }
 }
