@@ -3,11 +3,15 @@ import { GetAccountByHandleService } from "../../Account/services/GetAccountByHa
 import { GetMemberByHandleService } from "./GetMemberByHandle";
 import { CreateCredexService } from "../../Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../Credex/services/AcceptCredex";
+import { BalanceRepository } from "../../Account/repositories/BalanceRepository";
 import logger from "../../../utils/logger";
+
+const balanceRepository = BalanceRepository.getInstance();
 
 interface Hustler10kData {
   credexID: string;
   newTier: number;
+  balances: any;  // Balance data from repository
 }
 
 interface Hustler10kResult {
@@ -120,17 +124,18 @@ export async function Hustler10kService(
         return {
           success: false,
           message: credexResult.message,
-          error: credexResult.error
+          error: credexResult.error,
         };
       }
-      
+
       // Handle other credex creation errors
       return {
         success: false,
         message: "Failed to create Credex offer",
         error: {
           code: "CREDEX_CREATE_FAILED",
-          details: credexResult.error?.details || "Failed to create Credex offer",
+          details:
+            credexResult.error?.details || "Failed to create Credex offer",
         },
       };
     }
@@ -191,11 +196,15 @@ export async function Hustler10kService(
       newTier: updateResult.toNumber(),
     });
 
+    // Get fresh balance data from repository
+    const balances = await balanceRepository.getBalances(personalAccountID);
+    
     return {
       success: true,
       data: {
         credexID: credexResult.data.credexID,
         newTier: updateResult.toNumber(),
+        balances  // Include balance data from repository
       },
       message: "Successfully enrolled in Hustler 10k program",
     };

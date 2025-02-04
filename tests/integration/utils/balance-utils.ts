@@ -3,16 +3,25 @@ export function getSecuredBalance(account: any, denomination: string): number {
   const balances = account.balanceData.securedNetBalancesByDenom;
   console.log(`Getting ${denomination} balance for ${account.accountName}:`, {
     balances,
-    accountID: account.accountID
+    accountID: account.accountID,
   });
-  const balance = balances.find((b: string) => b.endsWith(` ${denomination}`))
-    ?.split(" ")[0] || "0";
+  const balance =
+    balances
+      .find((b: string) => b.endsWith(` ${denomination}`))
+      ?.split(" ")[0] || "0";
   return parseFloat(balance);
 }
 
 // Helper to find account by ID in a dashboard response
 export function findAccount(dashboard: any, accountID: string) {
-  return dashboard.accounts.find((acc: any) => acc.accountID === accountID);
+  if (!dashboard || !dashboard.accounts) {
+    throw new Error(`No dashboard data available for account ${accountID}`);
+  }
+  const account = dashboard.accounts.find((acc: any) => acc.accountID === accountID);
+  if (!account) {
+    throw new Error(`Account ${accountID} not found in dashboard`);
+  }
+  return account;
 }
 
 // Verify balance change between a previous known balance and new dashboard state
@@ -37,13 +46,13 @@ export function verifyBalanceChange(
     before: prevBalance,
     after: newBalance,
     expected: expectedChange,
-    change: actualChange
+    change: actualChange,
   });
 
   if (Math.abs(actualChange - expectedChange) > 0.001) {
     throw new Error(
       `Balance change ${actualChange} does not match expected amount ${expectedChange} ` +
-      `for account ${accountName}`
+        `for account ${accountName}`
     );
   }
 
