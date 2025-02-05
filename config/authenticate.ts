@@ -3,7 +3,7 @@ import logger from '../src/utils/logger';
 import jwt from 'jsonwebtoken';
 import { ledgerSpaceDriver } from './neo4j';
 import crypto from 'crypto';
-import { UserRequest } from '../src/types/auth';
+import { UserRequest } from './types/auth';
 
 // Use the JWT_SECRET from environment variable, or generate a warning if not set
 const JWT_SECRET = process.env.JWT_SECRET;

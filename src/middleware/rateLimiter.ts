@@ -1,17 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
 import logger from "../utils/logger";
-
-// Extend the Express Request interface
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        memberID: string;
-      };
-    }
-  }
-}
+import { Member } from "../types/auth";
 
 const standardLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -19,11 +9,13 @@ const standardLimiter = rateLimit({
   message: "Too many requests, please try again later",
   keyGenerator: (req: Request): string => {
     // Use the authenticated user's memberID as the rate limit key, or fall back to IP address
-    return req.user?.memberID || req.ip || req.socket.remoteAddress || "unknown";
+    const user = req.user as Member | undefined;
+    return user?.memberID || req.ip || req.socket.remoteAddress || "unknown";
   },
   handler: (req: Request, res: Response) => {
+    const user = req.user as Member | undefined;
     logger.warn("Rate limit exceeded", {
-      memberID: req.user?.memberID,
+      memberID: user?.memberID,
       ip: req.ip,
       path: req.path,
       method: req.method,
@@ -37,8 +29,9 @@ export const rateLimiter = (
   res: Response,
   next: NextFunction
 ) => {
+  const user = req.user as Member | undefined;
   logger.debug("Rate limiter middleware called", {
-    memberID: req.user?.memberID,
+    memberID: user?.memberID,
     ip: req.ip,
     path: req.path,
     method: req.method,
@@ -51,7 +44,7 @@ export const rateLimiter = (
         logger.error("Error in rate limiter", {
           error: err.message,
           stack: err.stack,
-          memberID: req.user?.memberID,
+          memberID: user?.memberID,
           ip: req.ip,
           path: req.path,
           method: req.method,
@@ -59,7 +52,7 @@ export const rateLimiter = (
         return next(err);
       }
       logger.debug("Rate limiter passed, calling next middleware", {
-        memberID: req.user?.memberID,
+        memberID: user?.memberID,
         ip: req.ip,
         path: req.path,
         method: req.method,
@@ -70,7 +63,7 @@ export const rateLimiter = (
     logger.error("Unexpected error in rate limiter", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      memberID: req.user?.memberID,
+      memberID: user?.memberID,
       ip: req.ip,
       path: req.path,
       method: req.method,

@@ -1,14 +1,5 @@
 import { Request } from "express";
 
-// Extend Express's Request interface to include user property
-declare global {
-  namespace Express {
-    interface Request {
-      user?: Member & Record<string, any>;
-    }
-  }
-}
-
 export interface TokenPayload {
   memberID: string;
   iat: number;
