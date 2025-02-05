@@ -20,21 +20,22 @@ type LoginResponse = TypedApiResponse<LoginDetails>;
 type LoginErrorResponse = TypedApiResponse<ErrorActionDetails>;
 
 /**
- * LoginMemberController
+ * LoginMemberV2Controller
  *
- * Handles member authentication via phone number.
+ * Handles member authentication via phone number and password.
+ * This is specifically for mobile app authentication.
  *
  * @param req - Express request object
  * @param res - Express response object
  * @param next - Express next function
  */
-export async function loginMemberExpressHandler(
+export async function loginMemberV2ExpressHandler(
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ): Promise<void> {
   const requestId = req.id;
-  logger.debug("Entering loginMemberExpressHandler", {
+  logger.debug("Entering loginMemberV2ExpressHandler", {
     requestId,
     body: req.body,
   });
@@ -56,6 +57,29 @@ export async function loginMemberExpressHandler(
               code: "MISSING_PHONE",
               reason: "Phone number is required",
               field: "phone",
+            },
+          },
+          dashboard: {},
+        },
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    if (!password) {
+      logger.warn("Missing password", { requestId });
+      const response: LoginErrorResponse = {
+        message: "Password is required",
+        data: {
+          action: {
+            id: null,
+            type: ApiActionType.ERROR_VALIDATION,
+            timestamp: new Date().toISOString(),
+            actor: "system",
+            details: {
+              code: "MISSING_PASSWORD",
+              reason: "Password is required",
+              field: "password",
             },
           },
           dashboard: {},
@@ -89,9 +113,8 @@ export async function loginMemberExpressHandler(
       return;
     }
 
-    logger.info("Attempting to login member", { 
-      phone, 
-      hasPassword: !!password,
+    logger.info("Attempting to login member with password", { 
+      phone,
       requestId 
     });
     const result = await LoginMemberService({ phone, password });
@@ -179,6 +202,8 @@ export async function loginMemberExpressHandler(
             memberID: loginData.memberID,
             phone,
             token: loginData.token,
+            version: "v2",
+            authMethod: "password"
           },
         },
         dashboard,
@@ -195,7 +220,7 @@ export async function loginMemberExpressHandler(
     res.status(200).json(response);
   } catch (error) {
     const handledError = handleServiceError(error);
-    logger.error("Unexpected error in loginMemberExpressHandler", {
+    logger.error("Unexpected error in loginMemberV2ExpressHandler", {
       error: handledError.message,
       code: handledError.code,
       stack: handledError instanceof Error ? handledError.stack : undefined,
@@ -235,6 +260,6 @@ export async function loginMemberExpressHandler(
     };
     res.status(statusCode).json(response);
   } finally {
-    logger.debug("Exiting loginMemberExpressHandler", { requestId });
+    logger.debug("Exiting loginMemberV2ExpressHandler", { requestId });
   }
 }

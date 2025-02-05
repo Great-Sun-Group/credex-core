@@ -1,8 +1,48 @@
 import axios from "axios";
 import dotenv from "dotenv";
+import { ledgerSpaceDriver, searchSpaceDriver } from "../config/neo4j";
+import logger from "../src/utils/logger";
 
 // Load environment variables from .env file
 dotenv.config();
+
+// Create a daynode for testing if it doesn't exist
+async function ensureDaynode() {
+  const session = ledgerSpaceDriver.session();
+  try {
+    // First verify connectivity
+    await ledgerSpaceDriver.verifyConnectivity();
+    logger.info("Successfully connected to Neo4j ledger space");
+
+    // Check for existing daynode
+    const result = await session.run(
+      `MATCH (d:Daynode { Active: true }) RETURN d`
+    );
+    
+    if (result.records.length === 0) {
+      logger.info("No active daynode found, creating one...");
+      await session.run(
+        `CREATE (d:Daynode {
+          Active: true,
+          daynodeID: randomUUID(),
+          createdAt: datetime(),
+          updatedAt: datetime()
+        })`
+      );
+      logger.info("Created test daynode");
+    } else {
+      logger.info("Active daynode exists");
+    }
+  } catch (error) {
+    logger.error("Error in ensureDaynode:", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    throw error; // Re-throw to fail tests if we can't ensure daynode exists
+  } finally {
+    await session.close();
+  }
+}
 
 const getBaseUrl = () => {
   const apiEnv = process.env.API_ENV;
@@ -77,11 +117,32 @@ instance.interceptors.response.use(
 );
 
 // Global setup
-beforeAll(() => {
+beforeAll(async () => {
   console.log(`Using API_BASE_URL: ${API_BASE_URL}`);
   // Log if rate limiter bypass is enabled
   if (process.env.SKIP_RATE_LIMITER_KEY) {
     console.log("Rate limiter bypass enabled with key:", process.env.SKIP_RATE_LIMITER_KEY);
+  }
+  
+  // Ensure daynode exists before running any tests
+  try {
+    await ensureDaynode();
+  } catch (error) {
+    console.error("Failed to ensure daynode exists. Tests cannot proceed.", error);
+    process.exit(1);
+  }
+});
+
+// Global teardown
+afterAll(async () => {
+  try {
+    await Promise.all([
+      ledgerSpaceDriver.close(),
+      searchSpaceDriver.close()
+    ]);
+    logger.info("Neo4j drivers closed successfully");
+  } catch (error) {
+    logger.error("Error closing Neo4j drivers:", error);
   }
 });
 

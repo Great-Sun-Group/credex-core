@@ -3,6 +3,8 @@ import { getDenominations } from "../../../core-cron/constants/denominations";
 import { MemberError, handleServiceError, isNeo4jError } from "../../../utils/errorUtils";
 import logger from "../../../utils/logger";
 
+import { passwordService } from './PasswordService';
+
 interface MemberData {
   memberID: string;
   firstname: string;
@@ -12,6 +14,8 @@ interface MemberData {
   defaultDenom: string;
   memberTier: number;
   createdAt: string;
+  passwordHash?: string;
+  passwordLastChanged?: string;
 }
 
 interface OnboardMemberResult {
@@ -45,6 +49,7 @@ export async function OnboardMemberService(
   lastname: string,
   phone: string,
   defaultDenom: string,
+  password: string | undefined,
   requestId: string
 ): Promise<OnboardMemberResult> {
   logger.debug("Entering OnboardMemberService", {
@@ -115,7 +120,33 @@ export async function OnboardMemberService(
     logger.debug("Found active daynode, proceeding with member creation", { requestId });
     
     const result = await ledgerSpaceSession.executeWrite(async (tx) => {
-      const query = `
+      // If password is provided, validate and hash it
+    let passwordHash: string | undefined;
+    let passwordLastChanged: string | undefined;
+
+    if (password) {
+      const validation = passwordService.validatePassword(password);
+      if (!validation.isValid) {
+        logger.error("Invalid password", {
+          errors: validation.errors,
+          requestId,
+        });
+        return {
+          success: false,
+          message: "Invalid password",
+          error: {
+            code: "INVALID_PASSWORD",
+            details: validation.errors?.join(", ") || "Password validation failed"
+          }
+        };
+      }
+
+      const { hash } = await passwordService.hashPassword(password);
+      passwordHash = hash;
+      passwordLastChanged = new Date().toISOString();
+    }
+
+    const query = `
         MATCH (daynode:Daynode { Active: true })
         CREATE (member:Member {
           firstname: $firstname,
@@ -127,6 +158,8 @@ export async function OnboardMemberService(
           memberTier: 1,
           createdAt: datetime(),
           updatedAt: datetime()
+          ${passwordHash ? ', passwordHash: $passwordHash' : ''}
+          ${passwordLastChanged ? ', passwordLastChanged: $passwordLastChanged' : ''}
         })-[:CREATED_ON]->(daynode)
         RETURN
           member {
@@ -137,7 +170,9 @@ export async function OnboardMemberService(
             memberHandle: member.memberHandle,
             defaultDenom: member.defaultDenom,
             memberTier: member.memberTier,
-            createdAt: toString(member.createdAt)
+            createdAt: toString(member.createdAt),
+            passwordHash: member.passwordHash,
+            passwordLastChanged: toString(member.passwordLastChanged)
           } as memberData
       `;
 
@@ -151,6 +186,8 @@ export async function OnboardMemberService(
         lastname,
         defaultDenom,
         phone,
+        ...(passwordHash && { passwordHash }),
+        ...(passwordLastChanged && { passwordLastChanged })
       });
 
       if (queryResult.records.length === 0) {

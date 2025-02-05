@@ -1,6 +1,12 @@
 import axios from "../../setup";
 
-export async function onboardMember(firstname: string, lastname: string, phone: string, defaultDenom: string = "USD") {
+export async function onboardMember(
+  firstname: string, 
+  lastname: string, 
+  phone: string, 
+  defaultDenom: string = "USD",
+  password?: string
+) {
   const headers = {
     "x-client-api-key": process.env.CLIENT_API_KEY || "",
   };
@@ -10,7 +16,8 @@ export async function onboardMember(firstname: string, lastname: string, phone: 
     firstname,
     lastname,
     phone,
-    defaultDenom
+    defaultDenom,
+    ...(password && { password })
   }, { headers });
 
   console.log("Onboard member response:", JSON.stringify(response.data, null, 2));

@@ -1,35 +1,116 @@
 import axios from "../setup";
 
-describe("login Success Test", () => {
+describe("Login Tests", () => {
   const headers = {
     "x-client-api-key": process.env.CLIENT_API_KEY || "",
   };
 
-  it("login successful with dashboard data", async () => {
-    const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
-    const [phone] = params;
+  describe("Legacy Login (Phone Only)", () => {
+    it("login successful with dashboard data for non-password account", async () => {
+      const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
+      const [phone] = params;
 
-    if (!phone) {
-      throw new Error("Usage: npm test login <phone>");
-    }
+      if (!phone) {
+        throw new Error("Usage: npm test login <phone>");
+      }
 
-    console.log("\nLogging in member...");
-    const response = await axios.post(
-      "/login",
-      {
-        phone: phone,
-      },
-      { headers }
-    );
+      console.log("\nLogging in member...");
+      const response = await axios.post(
+        "/login",
+        {
+          phone: phone,
+        },
+        { headers }
+      );
 
-    console.log("Login response:", JSON.stringify(response.data, null, 2));
-    expect(response.status).toBe(200);
-    expect(response.data).toHaveProperty("message", "Successfully logged in");
-    expect(response.data).toHaveProperty("data");
+      console.log("Login response:", JSON.stringify(response.data, null, 2));
+      expect(response.status).toBe(200);
+      expect(response.data).toHaveProperty("message", "Successfully logged in");
+      expect(response.data).toHaveProperty("data");
+      validateLoginResponse(response.data);
+    });
+  });
 
-    // Verify action object structure
-    expect(response.data.data).toHaveProperty("action");
-    expect(response.data.data.action).toMatchObject({
+  describe("Password Authentication", () => {
+    it("login successful with password", async () => {
+      const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
+      const [phone, password] = params;
+
+      if (!phone || !password) {
+        throw new Error("Usage: npm test login <phone> <password>");
+      }
+
+      console.log("\nLogging in member with password...");
+      const response = await axios.post(
+        "/login",
+        {
+          phone: phone,
+          password: password
+        },
+        { headers }
+      );
+
+      console.log("Login response:", JSON.stringify(response.data, null, 2));
+      expect(response.status).toBe(200);
+      expect(response.data).toHaveProperty("message", "Successfully logged in");
+      expect(response.data).toHaveProperty("data");
+      validateLoginResponse(response.data);
+    });
+
+    it("fails with missing password for password-enabled account", async () => {
+      const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
+      const [phone] = params;
+
+      if (!phone) {
+        throw new Error("Usage: npm test login <phone>");
+      }
+
+      try {
+        await axios.post(
+          "/login",
+          {
+            phone: phone,
+          },
+          { headers }
+        );
+        fail("Should have thrown error for missing password");
+      } catch (error: any) {
+        expect(error.response.status).toBe(401);
+        expect(error.response.data).toHaveProperty("error.code", "PASSWORD_REQUIRED");
+      }
+    });
+
+    it("fails with incorrect password", async () => {
+      const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
+      const [phone] = params;
+
+      if (!phone) {
+        throw new Error("Usage: npm test login <phone>");
+      }
+
+      try {
+        await axios.post(
+          "/login",
+          {
+            phone: phone,
+            password: "wrongpassword123!"
+          },
+          { headers }
+        );
+        fail("Should have thrown error for incorrect password");
+      } catch (error: any) {
+        expect(error.response.status).toBe(401);
+        expect(error.response.data).toHaveProperty("error.code", "INVALID_CREDENTIALS");
+      }
+    });
+  });
+});
+
+// Helper function to validate login response structure
+function validateLoginResponse(data: any) {
+  // Verify action object structure
+  expect(data.data).toHaveProperty("action");
+  expect(data.data.action).toMatchObject({
       id: expect.stringMatching(
         /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
       ), // UUID v4 format
@@ -44,15 +125,15 @@ describe("login Success Test", () => {
         memberID: expect.stringMatching(
           /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
         ), // UUID v4 format
-        phone: phone,
+        phone: expect.any(String),
         token: expect.any(String),
       },
     });
 
-    // Verify dashboard object structure
-    expect(response.data.data).toHaveProperty("dashboard");
-    expect(response.data.data.dashboard).toHaveProperty("member");
-    expect(response.data.data.dashboard.member).toMatchObject({
+  // Verify dashboard object structure
+  expect(data.data).toHaveProperty("dashboard");
+  expect(data.data.dashboard).toHaveProperty("member");
+  expect(data.data.dashboard.member).toMatchObject({
       memberID: expect.stringMatching(
         /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
       ), // UUID v4 format
@@ -63,19 +144,19 @@ describe("login Success Test", () => {
       defaultDenom: expect.stringMatching(/^(CXX|CAD|USD|XAU)$/),
     });
 
-    // Verify optional remainingAvailableUSD (only present for memberTier < 3)
-    if (response.data.data.dashboard.member.memberTier < 3) {
-      expect(response.data.data.dashboard.member).toHaveProperty(
+  // Verify optional remainingAvailableUSD (only present for memberTier < 3)
+  if (data.data.dashboard.member.memberTier < 3) {
+    expect(data.data.dashboard.member).toHaveProperty(
         "remainingAvailableUSD",
         expect.any(Number)
       );
     }
 
-    // Verify accounts array
-    expect(response.data.data.dashboard).toHaveProperty("accounts");
-    expect(response.data.data.dashboard.accounts).toBeInstanceOf(Array);
-    if (response.data.data.dashboard.accounts.length > 0) {
-      const account = response.data.data.dashboard.accounts[0];
+  // Verify accounts array
+  expect(data.data.dashboard).toHaveProperty("accounts");
+  expect(data.data.dashboard.accounts).toBeInstanceOf(Array);
+  if (data.data.dashboard.accounts.length > 0) {
+    const account = data.data.dashboard.accounts[0];
       expect(account).toMatchObject({
         accountID: expect.stringMatching(
           /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -139,5 +220,4 @@ describe("login Success Test", () => {
         }
       }
     }
-  });
-});
+}

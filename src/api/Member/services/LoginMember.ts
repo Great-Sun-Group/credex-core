@@ -4,6 +4,8 @@ import { MemberError, handleServiceError, createErrorDetails } from "../../../ut
 import logger from "../../../utils/logger";
 import { memberDashboardService } from "../../../utils/dashboardUtils";
 
+import { passwordService } from "./PasswordService";
+
 interface MemberProperties {
   memberID: string;
   firstname: string;
@@ -11,6 +13,12 @@ interface MemberProperties {
   phone: string;
   memberHandle: string;
   memberTier: number;
+  passwordHash?: string;
+}
+
+interface LoginRequest {
+  phone: string;
+  password?: string;
 }
 
 interface LoginResult {
@@ -39,10 +47,10 @@ interface LoginResult {
  * @returns LoginResult containing token and dashboard data if successful
  * @throws MemberError for validation and business logic errors
  */
-export async function LoginMemberService(phone: string): Promise<LoginResult> {
-  logger.debug("Entering LoginMemberService", { phone });
+export async function LoginMemberService(request: LoginRequest): Promise<LoginResult> {
+  logger.debug("Entering LoginMemberService", { phone: request.phone });
 
-  if (!phone) {
+  if (!request.phone) {
     return {
       success: false,
       message: "Phone number is required",
@@ -56,20 +64,24 @@ export async function LoginMemberService(phone: string): Promise<LoginResult> {
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    // Find member by phone
+    // Find member by phone and get password hash if exists
     const memberResult = await ledgerSpaceSession.executeRead(async (tx) => {
       const result = await tx.run(
         `
         MATCH (m:Member {phone: $phone})
         OPTIONAL MATCH (m)-[:AUTHORIZED_FOR]->(a:Account)
-        RETURN m.memberID as memberID, collect(a.accountID) as accountIDS
+        RETURN 
+          m.memberID as memberID, 
+          m.passwordHash as passwordHash,
+          collect(a.accountID) as accountIDS
         `,
-        { phone }
+        { phone: request.phone }
       );
       return result.records[0];
     });
 
     if (!memberResult) {
+      logger.warn("Login attempt failed - Member not found", { phone: request.phone });
       return {
         success: false,
         message: "Member not found",
@@ -82,12 +94,52 @@ export async function LoginMemberService(phone: string): Promise<LoginResult> {
 
     const memberID = memberResult.get("memberID");
     const accountIDS = memberResult.get("accountIDS");
+    const storedPasswordHash = memberResult.get("passwordHash");
+
+    // Handle password verification
+    if (request.password) {
+      // Password login attempt (v2)
+      if (!storedPasswordHash) {
+        // Password provided but member doesn't have password set
+        logger.warn("Login attempt with password for non-password account", { memberID });
+      } else {
+        const isPasswordValid = await passwordService.verifyPassword(
+          request.password,
+          storedPasswordHash
+        );
+
+        if (!isPasswordValid) {
+          logger.warn("Login attempt failed - Invalid password", { memberID });
+          return {
+            success: false,
+            message: "Invalid credentials",
+            error: {
+              code: "INVALID_CREDENTIALS",
+              details: "Invalid phone number or password",
+            },
+          };
+        }
+      }
+    } else if (process.env.REQUIRE_PASSWORD === 'true' && storedPasswordHash) {
+      // Only enforce password if explicitly configured
+      return {
+        success: false,
+        message: "Password is required for this account",
+        error: {
+          code: "PASSWORD_REQUIRED",
+          details: "This account requires password authentication",
+        },
+      };
+    }
 
     // Get member data using dashboard service
     const memberData = await memberDashboardService.getMemberDashboardData(memberID);
 
-    // Generate and update token
-    const token = generateToken(memberID);
+    // Generate and update token with appropriate version and auth method
+    const token = generateToken(memberID, {
+      version: request.password ? 'v2' : 'v1',
+      authMethod: request.password ? 'password' : 'phone_only'
+    });
     await ledgerSpaceSession.executeWrite(async (tx) => {
       await tx.run(
         `
@@ -102,8 +154,9 @@ export async function LoginMemberService(phone: string): Promise<LoginResult> {
 
     logger.info("Member logged in successfully", {
       memberID,
-      phone,
+      phone: request.phone,
       accountCount: accountIDS.length,
+      hasPassword: !!storedPasswordHash
     });
 
     return {
@@ -121,7 +174,7 @@ export async function LoginMemberService(phone: string): Promise<LoginResult> {
     const handledError = handleServiceError(error);
     logger.error(
       "Error in LoginMemberService",
-      createErrorDetails(handledError, { phone })
+      createErrorDetails(handledError, { phone: request.phone })
     );
 
     return {
@@ -134,6 +187,6 @@ export async function LoginMemberService(phone: string): Promise<LoginResult> {
     };
   } finally {
     await ledgerSpaceSession.close();
-    logger.debug("Exiting LoginMemberService", { phone });
+    logger.debug("Exiting LoginMemberService", { phone: request.phone });
   }
 }

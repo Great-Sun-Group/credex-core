@@ -9,6 +9,7 @@
 
 import { v, s } from "../../middleware/validateRequest";
 import logger from "../../utils/logger";
+import { validatePassword } from "../../utils/validators";
 
 logger.debug("Initializing member validation schemas");
 
@@ -51,6 +52,11 @@ export const onboardMemberSchema = {
     validator: v.validateDenomination,
     required: true,
   },
+  password: {
+    sanitizer: (value: string) => value,
+    validator: validatePassword,
+    required: false,
+  },
 };
 logger.debug("onboardMemberSchema initialized");
 
@@ -84,8 +90,27 @@ export const loginMemberSchema = {
     validator: v.validatePhone,
     required: true,
   },
+  password: {
+    sanitizer: (value: string) => value,
+    validator: validatePassword,
+    required: false,
+  },
 };
 logger.debug("loginMemberSchema initialized");
+
+export const loginMemberV2Schema = {
+  phone: {
+    sanitizer: s.sanitizePhone,
+    validator: v.validatePhone,
+    required: true,
+  },
+  password: {
+    sanitizer: (value: string) => value,
+    validator: validatePassword,
+    required: true,
+  },
+};
+logger.debug("loginMemberV2Schema initialized");
 
 export const hustler10kSchema = {
   personalAccountID: {

@@ -109,7 +109,7 @@ export const applySecurityMiddleware = (app: Application) => {
 
   // Apply client API key verification for keyholes
   app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path === "/login" || req.path === "/onboardMember") {
+    if (req.path === "/login" || req.path === "/v2/login" || req.path.endsWith("/onboardMember")) {
       return verifyClientApiKey(req, res, next);
     }
     // Apply dev admin key verification for devadmin routes
@@ -157,7 +157,8 @@ export const applyAuthMiddleware = (app: Application) => {
     if (
       // Keyholes in the auth layer where we don't apply the middleware
       req.path === "/login" ||
-      req.path === "/onboardMember" ||
+      req.path === "/v2/login" ||
+      req.path.endsWith("/onboardMember") ||
       req.path.includes("/devadmin/") // routes are not published in prod
     ) {
       logger.debug("[SC3] Skipping auth middleware for path", {

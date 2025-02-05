@@ -16,16 +16,25 @@ const TOKEN_EXPIRATION = 5 * 60; // 5 minutes in seconds
 // Set absolute maximum token age to 6 hours
 const MAX_TOKEN_AGE = 6 * 60 * 60; // 6 hours in seconds
 
-const generateToken = (memberID: string): string => {
+interface TokenOptions {
+  version?: 'v1' | 'v2';
+  authMethod?: 'phone_only' | 'password';
+}
+
+const generateToken = (memberID: string, options: TokenOptions = {}): string => {
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not set");
   }
   const now = Math.floor(Date.now() / 1000);
+  const expiry = options.authMethod === 'password' ? MAX_TOKEN_AGE : MAX_TOKEN_AGE / 6; // Shorter expiry for phone-only auth
+  
   return jwt.sign({ 
     memberID, 
     iat: now, 
     lastActivity: now,
-    absoluteExpiry: now + MAX_TOKEN_AGE 
+    absoluteExpiry: now + expiry,
+    version: options.version || 'v1',
+    authMethod: options.authMethod || 'phone_only'
   }, JWT_SECRET);
 };
 
@@ -46,12 +55,14 @@ const refreshToken = (decoded: any): string => {
   }
   const now = Math.floor(Date.now() / 1000);
   
-  // Maintain the original absolute expiry when refreshing
+  // Maintain the original absolute expiry and auth details when refreshing
   return jwt.sign({ 
     memberID: decoded.memberID, 
     iat: decoded.iat, 
     lastActivity: now,
-    absoluteExpiry: decoded.absoluteExpiry 
+    absoluteExpiry: decoded.absoluteExpiry,
+    version: decoded.version || 'v1',
+    authMethod: decoded.authMethod || 'phone_only'
   }, JWT_SECRET);
 };
 
@@ -95,9 +106,18 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
       return next(new Error("Invalid token"));
     }
 
+    const memberProperties = result.records[0].get('m').properties;
     (req as UserRequest).user = {
-      ...result.records[0].get('m').properties,
-      memberID: decoded.memberID  // Ensure memberID is set from token
+      memberID: decoded.memberID,
+      firstname: memberProperties.firstname,
+      lastname: memberProperties.lastname,
+      phone: memberProperties.phone,
+      memberHandle: memberProperties.memberHandle,
+      defaultDenom: memberProperties.defaultDenom,
+      memberTier: memberProperties.memberTier,
+      createdAt: memberProperties.createdAt,
+      passwordHash: memberProperties.passwordHash,
+      passwordLastChanged: memberProperties.passwordLastChanged
     };
 
     // Refresh the token while maintaining absolute expiry

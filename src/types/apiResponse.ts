@@ -47,6 +47,8 @@ export enum ApiActionType {
   MEMBER_LOGIN = "MEMBER_LOGIN",
   MEMBER_ONBOARDED = "MEMBER_ONBOARDED",
   MEMBER_FOUND = "MEMBER_FOUND",
+  MEMBER_UPDATE = "MEMBER_UPDATE",
+  MEMBER_PASSWORD_UPDATED = "MEMBER_PASSWORD_UPDATED",
   DASHBOARD_RETRIEVED = "DASHBOARD_RETRIEVED",
   SPEND_AUTHORIZED = "SPEND_AUTHORIZED",
   HUSTLER_10K_ENROLLED = "HUSTLER_10K_ENROLLED",
@@ -146,6 +148,9 @@ export interface MemberActionDetails {
   phone?: string;
   tier?: string;
   spendLimit?: string;
+  token?: string;
+  version?: 'v1' | 'v2';
+  authMethod?: 'phone_only' | 'password';
 }
 
 export interface AccountActionDetails {

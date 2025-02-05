@@ -46,6 +46,7 @@ export async function createInitialMember(
     lastname,
     phone,
     defaultDenom,
+    undefined, // No password for legacy compatibility
     requestId
   )) as ServiceResult<OnboardMemberData>;
 
