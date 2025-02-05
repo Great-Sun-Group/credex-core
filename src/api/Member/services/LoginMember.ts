@@ -74,7 +74,10 @@ export async function LoginMemberService(request: LoginRequest): Promise<LoginRe
         RETURN 
           m.memberID as memberID, 
           m.passwordHash as passwordHash,
+<<<<<<< HEAD
           m.otpVerified as otpVerified,
+=======
+>>>>>>> 3877d10 (Added password management)
           collect(a.accountID) as accountIDS
         `,
         { phone: request.phone }
@@ -98,6 +101,7 @@ export async function LoginMemberService(request: LoginRequest): Promise<LoginRe
     const accountIDS = memberResult.get("accountIDS");
     const storedPasswordHash = memberResult.get("passwordHash");
 
+<<<<<<< HEAD
     // Handle v2 login attempt
     if (request.password) {
       // Check if this is a v1 user (no password hash)
@@ -138,13 +142,53 @@ export async function LoginMemberService(request: LoginRequest): Promise<LoginRe
         memberID,
         hasPassword: !!storedPasswordHash
       });
+=======
+    // Handle password verification
+    if (request.password) {
+      // Password login attempt (v2)
+      if (!storedPasswordHash) {
+        // Password provided but member doesn't have password set
+        logger.warn("Login attempt with password for non-password account", { memberID });
+      } else {
+        const isPasswordValid = await passwordService.verifyPassword(
+          request.password,
+          storedPasswordHash
+        );
+
+        if (!isPasswordValid) {
+          logger.warn("Login attempt failed - Invalid password", { memberID });
+          return {
+            success: false,
+            message: "Invalid credentials",
+            error: {
+              code: "INVALID_CREDENTIALS",
+              details: "Invalid phone number or password",
+            },
+          };
+        }
+      }
+    } else if (process.env.REQUIRE_PASSWORD === 'true' && storedPasswordHash) {
+      // Only enforce password if explicitly configured
+      return {
+        success: false,
+        message: "Password is required for this account",
+        error: {
+          code: "PASSWORD_REQUIRED",
+          details: "This account requires password authentication",
+        },
+      };
+>>>>>>> 3877d10 (Added password management)
     }
 
     // Get member data using dashboard service
     const memberData = await memberDashboardService.getMemberDashboardData(memberID);
 
     // Generate and update token with appropriate version and auth method
+<<<<<<< HEAD
     const token = await generateToken(memberID, {
+=======
+    const token = generateToken(memberID, {
+>>>>>>> 3877d10 (Added password management)
       version: request.password ? 'v2' : 'v1',
       authMethod: request.password ? 'password' : 'phone_only'
     });

@@ -75,33 +75,13 @@ const refreshToken = async (decoded: any): Promise<string> => {
   }
   const now = Math.floor(Date.now() / 1000);
   
-  // Check current member state for correct version and auth method
-  const ledgerSpaceSession = ledgerSpaceDriver.session();
-  try {
-    const result = await ledgerSpaceSession.run(
-      "MATCH (m:Member {memberID: $memberID}) RETURN m.passwordHash",
-      { memberID: decoded.memberID }
-    );
-
-    // Check member's password status and REQUIRE_PASSWORD setting
-    const hasPassword = result.records.length > 0 && result.records[0].get('m.passwordHash');
-    const requirePassword = process.env.REQUIRE_PASSWORD === 'true';
-
-    // Determine version and auth method based on password status and settings
-    const version = hasPassword && requirePassword ? 'v2' : 'v1';
-    const authMethod = hasPassword && requirePassword ? 'password' : 'phone_only';
-
-    return jwt.sign({ 
-      memberID: decoded.memberID, 
-      iat: decoded.iat, 
-      lastActivity: now,
-      absoluteExpiry: decoded.absoluteExpiry,
-      version,
-      authMethod
-    }, JWT_SECRET);
-  } finally {
-    await ledgerSpaceSession.close();
-  }
+  // Maintain the original absolute expiry when refreshing
+  return jwt.sign({ 
+    memberID: decoded.memberID, 
+    iat: decoded.iat, 
+    lastActivity: now,
+    absoluteExpiry: decoded.absoluteExpiry 
+  }, JWT_SECRET);
 };
 
 const authenticate = async (req: Request, res: Response, next: NextFunction) => {
@@ -256,18 +236,10 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
       logger.info("V1 user accessing without password (allowed)", { memberID: decoded.memberID, path: req.path, method: req.method });
     }
 
+    const memberProperties = result.records[0].get('m').properties;
     (req as UserRequest).user = {
-      memberID: decoded.memberID,
-      firstname: memberProperties.firstname,
-      lastname: memberProperties.lastname,
-      phone: memberProperties.phone,
-      memberHandle: memberProperties.memberHandle,
-      defaultDenom: memberProperties.defaultDenom,
-      memberTier: memberProperties.memberTier,
-      createdAt: memberProperties.createdAt,
-      passwordHash: memberProperties.passwordHash,
-      passwordLastChanged: memberProperties.passwordLastChanged,
-      otpVerified: memberProperties.otpVerified
+      ...result.records[0].get('m').properties,
+      memberID: decoded.memberID  // Ensure memberID is set from token
     };
 
     // Refresh the token while maintaining absolute expiry

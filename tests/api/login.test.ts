@@ -8,6 +8,7 @@ describe("Login Tests", () => {
     "x-client-api-key": process.env.CLIENT_API_KEY || "",
   };
 
+<<<<<<< HEAD
   beforeAll(async () => {
     // Clean up any existing test data
     await TestCleanup.cleanupMembers();
@@ -58,10 +59,54 @@ describe("Login Tests", () => {
         "/login",
         {
           phone: phone,
+=======
+  describe("Legacy Login (Phone Only)", () => {
+    it("login successful with dashboard data for non-password account", async () => {
+      const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
+      const [phone] = params;
+
+      if (!phone) {
+        throw new Error("Usage: npm test login <phone>");
+      }
+
+      console.log("\nLogging in member...");
+      const response = await axios.post(
+        "/login",
+        {
+          phone: phone,
         },
         { headers }
       );
 
+      console.log("Login response:", JSON.stringify(response.data, null, 2));
+      expect(response.status).toBe(200);
+      expect(response.data).toHaveProperty("message", "Successfully logged in");
+      expect(response.data).toHaveProperty("data");
+      validateLoginResponse(response.data);
+    });
+  });
+
+  describe("Password Authentication", () => {
+    it("login successful with password", async () => {
+      const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
+      const [phone, password] = params;
+
+      if (!phone || !password) {
+        throw new Error("Usage: npm test login <phone> <password>");
+      }
+
+      console.log("\nLogging in member with password...");
+      const response = await axios.post(
+        "/login",
+        {
+          phone: phone,
+          password: password
+>>>>>>> 3877d10 (Added password management)
+        },
+        { headers }
+      );
+
+<<<<<<< HEAD
       expect(loginResponse.status).toBe(200);
       expect(loginResponse.data).toHaveProperty("message", "Successfully logged in");
       expect(loginResponse.data).toHaveProperty("data");
@@ -70,11 +115,28 @@ describe("Login Tests", () => {
 
     it("fails with non-existent phone number", async () => {
       const nonExistentPhone = generateRandomPhone();
+=======
+      console.log("Login response:", JSON.stringify(response.data, null, 2));
+      expect(response.status).toBe(200);
+      expect(response.data).toHaveProperty("message", "Successfully logged in");
+      expect(response.data).toHaveProperty("data");
+      validateLoginResponse(response.data);
+    });
+
+    it("fails with missing password for password-enabled account", async () => {
+      const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
+      const [phone] = params;
+
+      if (!phone) {
+        throw new Error("Usage: npm test login <phone>");
+      }
+>>>>>>> 3877d10 (Added password management)
 
       try {
         await axios.post(
           "/login",
           {
+<<<<<<< HEAD
             phone: nonExistentPhone,
           },
           { headers }
@@ -257,6 +319,41 @@ describe("Login Tests", () => {
 
       expect(loginResponse.status).toBe(400);
       expect(loginResponse.data.data.action.details).toHaveProperty("code", "INVALID_CREDENTIALS");
+=======
+            phone: phone,
+          },
+          { headers }
+        );
+        fail("Should have thrown error for missing password");
+      } catch (error: any) {
+        expect(error.response.status).toBe(401);
+        expect(error.response.data).toHaveProperty("error.code", "PASSWORD_REQUIRED");
+      }
+    });
+
+    it("fails with incorrect password", async () => {
+      const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
+      const [phone] = params;
+
+      if (!phone) {
+        throw new Error("Usage: npm test login <phone>");
+      }
+
+      try {
+        await axios.post(
+          "/login",
+          {
+            phone: phone,
+            password: "wrongpassword123!"
+          },
+          { headers }
+        );
+        fail("Should have thrown error for incorrect password");
+      } catch (error: any) {
+        expect(error.response.status).toBe(401);
+        expect(error.response.data).toHaveProperty("error.code", "INVALID_CREDENTIALS");
+      }
+>>>>>>> 3877d10 (Added password management)
     });
   });
 });
