@@ -103,23 +103,27 @@ export async function GetSecuredAuthorizationService(
         return tx.run(
           `
         MATCH (account:Account { accountID: $accountID })
-        OPTIONAL MATCH (account)-[transactionType:OWES|OFFERS]-(credex:Credex)<-[:SECURES]-(securer:Account)
-        WHERE credex.Denomination = $Denomination
-        WITH
-          securer.accountID AS securingAccountID,
-          SUM(CASE 
-            WHEN endNode(transactionType) = account THEN credex.OutstandingAmount 
-            ELSE 0 
-          END) -
-          SUM(CASE 
-            WHEN startNode(transactionType) = account THEN credex.OutstandingAmount 
-            ELSE 0 
-          END) AS netSecurablePerSecurerCXX
+        // First resolve incoming OWES amounts per securer
+        OPTIONAL MATCH (account)<-[incomingType:OWES]-(credex1:Credex)<-[:SECURES]-(securer:Account)
+        WHERE credex1.Denomination = $Denomination
+        WITH account, securer.accountID as securingAccountID,
+             COALESCE(SUM(credex1.OutstandingAmount), 0) as incomingAmount
+        
+        // Then handle outgoing OWES|OFFERS amounts for same securer
+        OPTIONAL MATCH (account)-[outgoingType:OWES|OFFERS]->(credex2:Credex)<-[:SECURES]-(outSecurer:Account)
+        WHERE credex2.Denomination = $Denomination 
+          AND outSecurer.accountID = securingAccountID
+        WITH securingAccountID, incomingAmount,
+             COALESCE(SUM(credex2.OutstandingAmount), 0) as outgoingAmount
+        
+        // Finally calculate net amount
+        WITH securingAccountID,
+             incomingAmount - outgoingAmount AS netSecurablePerSecurerCXX
         WHERE securingAccountID IS NOT NULL
         MATCH (daynode:Daynode { Active: true })
         RETURN
           securingAccountID,
-          netSecurablePerSecurerCXX / daynode[$Denomination] AS netSecurableInDenom
+          ROUND(netSecurablePerSecurerCXX / daynode[$Denomination], 4) AS netSecurableInDenom
         ORDER BY netSecurableInDenom DESC
         LIMIT 1
         `,
