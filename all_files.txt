@@ -1,6 +1,7 @@
 .env.example
 .gitattributes
 PR.md
+all_files.txt
 cleanup-pr.sh
 config/authenticate.ts
 config/tsconfig.json
@@ -8,6 +9,7 @@ config/types/auth.ts
 docs/develop/api_reference.html
 docs/develop/swagger.json
 docs/develop/tests/testing_guide.html
+files_to_reset.txt
 jest.config.js
 package-lock.json
 projects/workplan/password-authentication-implementation.md
