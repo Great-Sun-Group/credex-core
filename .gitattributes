@@ -1,0 +1,12 @@
+# Treat these files with minimal diff algorithm to reduce formatting noise
+*.ts    -diff-algorithm=minimal
+*.js    -diff-algorithm=minimal
+*.json  -diff-algorithm=minimal
+
+# Ignore formatting changes
+*.ts    whitespace=ignore-trailing-space
+*.js    whitespace=ignore-trailing-space
+*.json  whitespace=ignore-trailing-space
+
+# Normalize line endings
+* text=auto

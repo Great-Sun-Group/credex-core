@@ -1,17 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
 import logger from "../utils/logger";
-
-// Extend the Express Request interface
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        memberID: string;
-      };
-    }
-  }
-}
+import { Member } from "../types/auth";
 
 const standardLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
