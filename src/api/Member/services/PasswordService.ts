@@ -53,6 +53,12 @@ export class PasswordService {
    * @returns Promise<PasswordHashResult> containing the hash and salt
    */
   async hashPassword(password: string): Promise<PasswordHashResult> {
+    // Validate password before hashing
+    const validation = this.validatePassword(password);
+    if (!validation.isValid) {
+      throw new Error(validation.errors?.join(', ') || 'Invalid password format');
+    }
+
     try {
       const salt = await bcrypt.genSalt(this.SALT_ROUNDS);
       const hash = await bcrypt.hash(password, salt);
@@ -101,13 +107,7 @@ export class PasswordService {
       throw new Error('Current password is incorrect');
     }
 
-    // Validate the new password
-    const validation = this.validatePassword(newPassword);
-    if (!validation.isValid) {
-      throw new Error(validation.errors?.join(', ') || 'Invalid new password');
-    }
-
-    // Hash the new password
+    // Validate and hash the new password
     return this.hashPassword(newPassword);
   }
 }

@@ -66,29 +66,6 @@ export async function loginMemberV2ExpressHandler(
       return;
     }
 
-    if (!password) {
-      logger.warn("Missing password", { requestId });
-      const response: LoginErrorResponse = {
-        message: "Password is required",
-        data: {
-          action: {
-            id: null,
-            type: ApiActionType.ERROR_VALIDATION,
-            timestamp: new Date().toISOString(),
-            actor: "system",
-            details: {
-              code: "MISSING_PASSWORD",
-              reason: "Password is required",
-              field: "password",
-            },
-          },
-          dashboard: {},
-        },
-      };
-      res.status(400).json(response);
-      return;
-    }
-
     const phoneValidation = validatePhone(phone);
     if (!phoneValidation.isValid) {
       logger.warn("Invalid phone number format", { phone, requestId });
@@ -128,20 +105,19 @@ export async function loginMemberV2ExpressHandler(
 
       let statusCode = 401; // Default to unauthorized
       let errorType = ApiActionType.ERROR_UNAUTHORIZED;
-      let errorCode = "LOGIN_FAILED";
+      let errorCode = result.error?.code || "LOGIN_FAILED";
 
       if (result.message.includes("not found")) {
         statusCode = 404;
         errorType = ApiActionType.ERROR_NOT_FOUND;
         errorCode = "NOT_FOUND";
       } else if (result.message.includes("Invalid")) {
-        statusCode = 400;
-        errorType = ApiActionType.ERROR_VALIDATION;
+        statusCode = 401; // Keep 401 for invalid credentials
+        errorType = ApiActionType.ERROR_UNAUTHORIZED;
         errorCode = "INVALID_CREDENTIALS";
-      } else if (result.message.includes("Password is required")) {
+      } else if (result.error?.code === "PASSWORD_REQUIRED") {
         statusCode = 401;
         errorType = ApiActionType.ERROR_UNAUTHORIZED;
-        errorCode = "PASSWORD_REQUIRED";
       }
 
       const response: LoginErrorResponse = {

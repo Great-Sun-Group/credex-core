@@ -96,31 +96,39 @@ export async function LoginMemberService(request: LoginRequest): Promise<LoginRe
     const accountIDS = memberResult.get("accountIDS");
     const storedPasswordHash = memberResult.get("passwordHash");
 
-    // Handle password verification
+    // Handle v2 login attempt
     if (request.password) {
-      // Password login attempt (v2)
+      // Check if this is a v1 user (no password hash)
       if (!storedPasswordHash) {
-        // Password provided but member doesn't have password set
-        logger.warn("Login attempt with password for non-password account", { memberID });
-      } else {
-        const isPasswordValid = await passwordService.verifyPassword(
-          request.password,
-          storedPasswordHash
-        );
-
-        if (!isPasswordValid) {
-          logger.warn("Login attempt failed - Invalid password", { memberID });
-          return {
-            success: false,
-            message: "Invalid credentials",
-            error: {
-              code: "INVALID_CREDENTIALS",
-              details: "Invalid phone number or password",
-            },
-          };
-        }
+        logger.warn("V2 login attempt for v1 account", { memberID });
+        return {
+          success: false,
+          message: "Password is required for this account",
+          error: {
+            code: "PASSWORD_REQUIRED",
+            details: "This account requires password setup to use v2 API endpoints"
+          }
+        };
       }
-    } else if (process.env.REQUIRE_PASSWORD === 'true' && storedPasswordHash) {
+
+      // This is a v2 user - verify password
+      const isPasswordValid = await passwordService.verifyPassword(
+        request.password,
+        storedPasswordHash
+      );
+
+      if (!isPasswordValid) {
+        logger.warn("Login attempt failed - Invalid password", { memberID });
+        return {
+          success: false,
+          message: "Invalid credentials",
+          error: {
+            code: "INVALID_CREDENTIALS",
+            details: "Invalid phone number or password",
+          },
+        };
+      }
+    } else if (storedPasswordHash) {
       // Only enforce password if explicitly configured
       return {
         success: false,
