@@ -1,11 +1,60 @@
-import axios from "../../../setup";
-import { generateRandomPhone } from "../../../utils/testUtils";
-import { TestCleanup } from "../../../utils/cleanup";
+import axios from "../setup";
+import { generateRandomPhone } from "../utils/testUtils";
+import { TestCleanup } from "../utils/cleanup";
+import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j";
+
+// Helper function to validate response structure
+function validateResponse(data: any) {
+  expect(data.data).toHaveProperty("action");
+  expect(data.data.action).toMatchObject({
+    id: expect.stringMatching(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    ), // UUID v4 format
+    type: "MEMBER_UPDATE",
+    timestamp: expect.stringMatching(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/
+    ), // ISO 8601
+    actor: expect.stringMatching(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    ), // UUID v4 format
+    details: {
+      memberID: expect.stringMatching(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      ), // UUID v4 format
+      phone: expect.any(String),
+      token: expect.any(String),
+      version: "v2",
+      authMethod: "password"
+    },
+  });
+}
+
+const headers = {
+  "x-client-api-key": process.env.CLIENT_API_KEY || "",
+};
 
 describe("Set Initial Password Tests", () => {
-  const headers = {
-    "x-client-api-key": process.env.CLIENT_API_KEY || "",
-  };
+  beforeAll(async () => {
+    // Clean up any existing test data
+    await TestCleanup.cleanupMembers();
+    
+    // Clean up any members that might have been left from previous test runs
+    const ledgerSession = ledgerSpaceDriver.session();
+    const searchSession = searchSpaceDriver.session();
+    try {
+      // Clean up in ledger space
+      await ledgerSession.run('MATCH (m:Member) DETACH DELETE m');
+      // Clean up in search space
+      await searchSession.run('MATCH (m:Member) DETACH DELETE m');
+    } finally {
+      await ledgerSession.close();
+      await searchSession.close();
+    }
+  });
+
+  afterEach(async () => {
+    await TestCleanup.cleanupMembers();
+  });
 
   describe("Setting Initial Password", () => {
     it("successfully sets initial password", async () => {
@@ -86,7 +135,7 @@ describe("Set Initial Password Tests", () => {
         fail("Should have thrown error for existing password");
       } catch (error: any) {
         expect(error.response.status).toBe(400);
-        expect(error.response.data).toHaveProperty("error.code", "PASSWORD_EXISTS");
+        expect(error.response.data.data.action.details.code).toBe("PASSWORD_EXISTS");
       }
     });
 
@@ -120,7 +169,7 @@ describe("Set Initial Password Tests", () => {
         fail("Should have thrown error for invalid password");
       } catch (error: any) {
         expect(error.response.status).toBe(400);
-        expect(error.response.data).toHaveProperty("error.code", "INVALID_PASSWORD");
+        expect(error.response.data.data.action.details.code).toBe("INVALID_PASSWORD");
       }
     });
 
@@ -138,34 +187,8 @@ describe("Set Initial Password Tests", () => {
         fail("Should have thrown error for non-existent phone");
       } catch (error: any) {
         expect(error.response.status).toBe(404);
-        expect(error.response.data).toHaveProperty("error.code", "MEMBER_NOT_FOUND");
+        expect(error.response.data.data.action.details.code).toBe("NOT_FOUND");
       }
     });
   });
 });
-
-// Helper function to validate response structure
-function validateResponse(data: any) {
-  expect(data.data).toHaveProperty("action");
-  expect(data.data.action).toMatchObject({
-    id: expect.stringMatching(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    ), // UUID v4 format
-    type: "MEMBER_UPDATE",
-    timestamp: expect.stringMatching(
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/
-    ), // ISO 8601
-    actor: expect.stringMatching(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    ), // UUID v4 format
-    details: {
-      memberID: expect.stringMatching(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-      ), // UUID v4 format
-      phone: expect.any(String),
-      token: expect.any(String),
-      version: "v2",
-      authMethod: "password"
-    },
-  });
-}

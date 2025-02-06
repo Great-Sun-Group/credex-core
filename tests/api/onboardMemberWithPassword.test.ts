@@ -1,5 +1,7 @@
-import axios from "../../../setup";
-import { generateRandomPhone } from "../../../utils/testUtils";
+import axios from "../setup";
+import { generateRandomPhone } from "../utils/testUtils";
+import { TestCleanup } from "../utils/cleanup";
+import { ledgerSpaceDriver, searchSpaceDriver } from "../../config/neo4j";
 
 // Helper function to validate onboard response structure
 function validateOnboardResponse(data: any) {
@@ -86,6 +88,28 @@ const headers = {
 };
 
 describe("Onboard Member Tests", () => {
+  beforeAll(async () => {
+    // Clean up any existing test data
+    await TestCleanup.cleanupMembers();
+    
+    // Clean up any members that might have been left from previous test runs
+    const ledgerSession = ledgerSpaceDriver.session();
+    const searchSession = searchSpaceDriver.session();
+    try {
+      // Clean up in ledger space
+      await ledgerSession.run('MATCH (m:Member) DETACH DELETE m');
+      // Clean up in search space
+      await searchSession.run('MATCH (m:Member) DETACH DELETE m');
+    } finally {
+      await ledgerSession.close();
+      await searchSession.close();
+    }
+  });
+
+  afterEach(async () => {
+    await TestCleanup.cleanupMembers();
+  });
+
   describe("Password Authentication", () => {
     it("should successfully onboard member with password", async () => {
       const testMember = {
@@ -101,6 +125,8 @@ describe("Onboard Member Tests", () => {
         testMember,
         { headers }
       );
+
+      TestCleanup.trackMember(response.data.data.action.details.memberID, testMember.phone);
 
       expect(response.status).toBe(201);
       expect(response.data.message).toContain("Personal account created");
@@ -136,6 +162,8 @@ describe("Onboard Member Tests", () => {
         memberWithoutPassword,
         { headers }
       );
+
+      TestCleanup.trackMember(response.data.data.action.details.memberID, memberWithoutPassword.phone);
 
       expect(response.status).toBe(201);
       expect(response.data.message).toContain("Personal account created");

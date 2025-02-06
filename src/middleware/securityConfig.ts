@@ -109,7 +109,7 @@ export const applySecurityMiddleware = (app: Application) => {
 
   // Apply client API key verification for keyholes
   app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path === "/login" || req.path === "/v2/login" || req.path.endsWith("/onboardMember")) {
+    if (req.path === "/login" || req.path === "/v2/login" || req.path.endsWith("/onboardMember") || req.path === "/member/set-initial-password") {
       return verifyClientApiKey(req, res, next);
     }
     // Apply dev admin key verification for devadmin routes
@@ -159,6 +159,7 @@ export const applyAuthMiddleware = (app: Application) => {
       req.path === "/login" ||
       req.path === "/v2/login" ||
       req.path.endsWith("/onboardMember") ||
+      req.path === "/member/set-initial-password" ||
       req.path.includes("/devadmin/") // routes are not published in prod
     ) {
       logger.debug("[SC3] Skipping auth middleware for path", {

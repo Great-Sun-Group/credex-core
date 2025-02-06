@@ -1,5 +1,6 @@
 import axios from "../../../../setup";
 import { generateRandomPhone } from "../../../../utils/testUtils";
+import { TestCleanup } from "../../../../utils/cleanup";
 
 // Helper function to validate login response structure
 function validateLoginResponse(data: any) {
@@ -116,6 +117,10 @@ const headers = {
 };
 
 describe("Login V2 Tests", () => {
+  afterEach(async () => {
+    await TestCleanup.cleanupMembers();
+  });
+
   describe("Password Authentication", () => {
     it("login successful with password", async () => {
       // Create a v2 user first
@@ -132,6 +137,8 @@ describe("Login V2 Tests", () => {
         },
         { headers }
       );
+
+      TestCleanup.trackMember(response.data.data.action.details.memberID, phone);
 
       const token = response.data.data.action.details.token;
 
@@ -182,6 +189,8 @@ describe("Login V2 Tests", () => {
         { headers }
       );
 
+      TestCleanup.trackMember(response.data.data.action.details.memberID, phone);
+
       const token = response.data.data.action.details.token;
 
       // Set initial password
@@ -221,7 +230,7 @@ describe("Login V2 Tests", () => {
       const phone = generateRandomPhone();
       const password = "@Testpass123";
 
-      await axios.post(
+      const response = await axios.post(
         "/onboardMember",
         {
           firstname: "Johnny",
@@ -231,6 +240,8 @@ describe("Login V2 Tests", () => {
         },
         { headers }
       );
+
+      TestCleanup.trackMember(response.data.data.action.details.memberID, phone);
 
       // Try to login with v2 endpoint
       try {

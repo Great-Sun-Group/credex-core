@@ -8399,6 +8399,118 @@
         }
       }
     },
+    "/api/v2/login": {
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Login member with password (Mobile App)",
+        "description": "Authenticate a member using phone number and password. This endpoint is specifically for mobile app authentication.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone",
+                  "password"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "description": "Member's phone number"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Member's password"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully logged in"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "example": "MEMBER_LOGIN"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "memberID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "phone": {
+                                  "type": "string"
+                                },
+                                "token": {
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "example": "v2"
+                                },
+                                "authMethod": {
+                                  "type": "string",
+                                  "example": "password"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters"
+          },
+          "401": {
+            "description": "Authentication failed"
+          },
+          "404": {
+            "description": "Member not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/onboardMember": {
       "post": {
         "tags": [
@@ -8919,6 +9031,364 @@
                                 "suggestion": {
                                   "type": "string",
                                   "example": "Please try again or contact support"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/member/set-initial-password": {
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Set initial password for WhatsApp to mobile app transition",
+        "description": "Sets the initial password for a member transitioning from WhatsApp to mobile app. Requires phone-only authentication.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone",
+                  "password"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "description": "Member's phone number"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "New password to set"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password set successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Password set successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "example": "MEMBER_UPDATE"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "memberID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "phone": {
+                                  "type": "string"
+                                },
+                                "token": {
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "example": "v2"
+                                },
+                                "authMethod": {
+                                  "type": "string",
+                                  "example": "password"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters or password already set"
+          },
+          "401": {
+            "description": "Authentication failed"
+          },
+          "404": {
+            "description": "Member not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/updatePassword": {
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Update member password",
+        "description": "Updates a member's password after validating their current password.\nRequires authentication and ensures new password meets complexity requirements.\n",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "currentPassword",
+                  "newPassword"
+                ],
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "description": "Member's current password"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "description": "New password that meets the following requirements:\n- At least 10 characters long\n- Contains at least one uppercase letter\n- Contains at least one lowercase letter\n- Contains at least one number\n- Contains at least one special character\n"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Password updated successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Member ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "MEMBER_PASSWORD_UPDATED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "memberID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "timestamp": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid password format or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "INVALID_NEW_PASSWORD",
+                                    "MISSING_PARAMS"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current password is incorrect or authentication token is invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "INVALID_CURRENT_PASSWORD"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "INTERNAL_ERROR"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
                                 }
                               }
                             }

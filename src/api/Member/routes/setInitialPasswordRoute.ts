@@ -103,7 +103,6 @@ export default function setInitialPasswordRoute() {
   router.post(
     "/member/set-initial-password",
     verifyClientApiKey,
-    authenticate, // Require phone-only auth first
     validateRequest(setInitialPasswordSchema),
     setInitialPasswordExpressHandler
   );
