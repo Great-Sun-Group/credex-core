@@ -8531,6 +8531,10 @@
                   "defaultDenom"
                 ],
                 "properties": {
+                  "password": {
+                    "type": "string",
+                    "description": "Optional password for mobile app authentication. When provided, enables password-based authentication (v2) instead of phone-only authentication (v1). Must meet complexity requirements:\n- At least 10 characters long\n- Contains at least one uppercase letter\n- Contains at least one lowercase letter\n- Contains at least one number\n- Contains at least one special character"
+                  },
                   "firstname": {
                     "type": "string",
                     "minLength": 3,
@@ -8640,10 +8644,30 @@
                                   "type": "string",
                                   "description": "Authentication token for the new member"
                                 },
+                                "version": {
+                                  "type": "string",
+                                  "enum": ["v1", "v2"],
+                                  "description": "Authentication version (v1 for phone-only, v2 for password)"
+                                },
+                                "authMethod": {
+                                  "type": "string",
+                                  "enum": ["phone_only", "password"],
+                                  "description": "Authentication method used"
+                                },
                                 "defaultAccountID": {
                                   "type": "string",
                                   "format": "uuid",
                                   "description": "ID of the created personal account"
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "enum": ["v1", "v2"],
+                                  "description": "Authentication version (v1 for phone-only, v2 for password)"
+                                },
+                                "authMethod": {
+                                  "type": "string",
+                                  "enum": ["phone_only", "password"],
+                                  "description": "Authentication method used"
                                 }
                               }
                             }
@@ -8887,9 +8911,10 @@
                                   "type": "string",
                                   "enum": [
                                     "VALIDATION_ERROR",
-                                    "INVALID_PHONE"
+                                    "INVALID_PHONE",
+                                    "INVALID_PASSWORD"
                                   ],
-                                  "description": "Error code indicating the type of validation failure. Most validation errors use VALIDATION_ERROR with a field property, while phone validation has a specific INVALID_PHONE code."
+                                  "description": "Error code indicating the type of validation failure. Most validation errors use VALIDATION_ERROR with a field property, while phone and password validation have specific codes."
                                 },
                                 "reason": {
                                   "type": "string",
