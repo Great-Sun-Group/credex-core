@@ -22,28 +22,16 @@ const defaultConfig = {
   maxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS || '3', 10)
 };
 
-// Create verification service based on environment
-const createVerificationService = () => {
-  const otpManager = new OTPManager();
-  const provider = process.env.NODE_ENV === 'test' 
-    ? MockWhatsAppProvider.getInstance()
-    : new WhatsAppProvider();
-
-  return new VerificationService({
-    provider,
-    otpManager,
-    config: defaultConfig
-  });
-};
+// Create verification service with default configuration
+const verificationService = new VerificationService({
+  provider: new WhatsAppProvider(),
+  otpManager: new OTPManager(),
+  config: defaultConfig
+});
 
 export const requestOTP = async (req: Request, res: Response) => {
   const { memberID, phone } = req.body;
-  logger.info('Creating verification service for request', {
-    memberID,
-    isTest: process.env.NODE_ENV === 'test'
-  });
-
-  const verificationService = createVerificationService();
+  logger.info('Processing OTP request', { memberID });
 
   try {
     // Check if member uses v2 password auth
@@ -124,12 +112,7 @@ export const requestOTP = async (req: Request, res: Response) => {
 
 export const verifyOTP = async (req: Request, res: Response) => {
   const { memberID, otp } = req.body;
-  logger.info('Creating verification service for verify', {
-    memberID,
-    isTest: process.env.NODE_ENV === 'test'
-  });
-
-  const verificationService = createVerificationService();
+  logger.info('Processing OTP verification', { memberID });
 
   try {
     // Verify OTP

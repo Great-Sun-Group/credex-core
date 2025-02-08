@@ -20,6 +20,7 @@ export interface Member {
   createdAt: string;
   passwordHash?: string;
   passwordLastChanged?: string;
+  otpVerified?: boolean;
 }
 
 // Extend Express's Request type with our custom properties

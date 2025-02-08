@@ -179,7 +179,8 @@ export async function loginMemberV2ExpressHandler(
             phone,
             token: loginData.token,
             version: "v2",
-            authMethod: "password"
+            authMethod: "password",
+            otpVerified: loginData.otpVerified
           },
         },
         dashboard,

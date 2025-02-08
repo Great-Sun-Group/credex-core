@@ -11,28 +11,6 @@ describe("OTP Verification Tests", () => {
   let verificationService: VerificationService;
 
   beforeAll(async () => {
-    // Set up mock WhatsApp provider
-    mockProvider = MockWhatsAppProvider.getInstance();
-    const otpManager = new OTPManager();
-    const config = {
-      otpExpiry: 300,
-      maxDailyRequests: 5,
-      cooldownMinutes: 5,
-      maxAttempts: 3
-    };
-
-    // Create verification service with mock provider
-    verificationService = new VerificationService({
-      provider: mockProvider,
-      otpManager,
-      config
-    });
-
-    console.log('Test setup complete:', {
-      mockProvider: !!mockProvider,
-      mockProviderType: mockProvider.getProviderType()
-    });
-    
     // Clean up any existing test data
     await TestCleanup.cleanupMembers();
     
@@ -43,6 +21,19 @@ describe("OTP Verification Tests", () => {
     } finally {
       await session.close();
     }
+
+    // Set up verification service with mock provider for testing
+    mockProvider = new MockWhatsAppProvider();
+    verificationService = new VerificationService({
+      provider: mockProvider,
+      otpManager: new OTPManager(),
+      config: {
+        otpExpiry: 300,
+        maxDailyRequests: 5,
+        cooldownMinutes: 5,
+        maxAttempts: 3
+      }
+    });
   });
 
   afterAll(async () => {
@@ -95,11 +86,6 @@ describe("OTP Verification Tests", () => {
       expect(sendResult.success).toBe(true);
 
       // Get OTP from mock provider
-      console.log('Checking mock provider state:', {
-        mockProvider: !!mockProvider,
-        mockProviderType: mockProvider.getProviderType(),
-        lastOTP: mockProvider.getLastOTP()
-      });
       
       const otp = mockProvider.getLastOTP();
       if (!otp) {

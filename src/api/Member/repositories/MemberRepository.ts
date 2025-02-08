@@ -10,6 +10,7 @@ export interface MemberData {
   lastname: string;
   memberHandle: string;
   defaultDenom: string;
+  otpVerified: boolean;
 }
 
 export interface IMemberRepository {
@@ -56,7 +57,8 @@ export class MemberRepository implements IMemberRepository {
               member.firstname as firstname,
               member.lastname as lastname,
               member.memberHandle as memberHandle,
-              member.defaultDenom as defaultDenom
+              member.defaultDenom as defaultDenom,
+              member.otpVerified as otpVerified
           `;
 
             const queryResult = await tx.run(query, { memberID });
@@ -93,6 +95,7 @@ export class MemberRepository implements IMemberRepository {
           lastname,
           memberHandle,
           defaultDenom,
+          otpVerified: result.get("otpVerified") || false
         };
 
         // Cache the result

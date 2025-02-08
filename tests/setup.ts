@@ -6,6 +6,24 @@ import logger from "../src/utils/logger";
 // Load environment variables from .env file
 dotenv.config();
 
+// Ensure we're in test environment
+process.env.NODE_ENV = 'test';
+console.log('Setting NODE_ENV:', process.env.NODE_ENV);
+
+// Force test environment
+Object.defineProperty(process.env, 'NODE_ENV', {
+  value: 'test',
+  configurable: true,
+  writable: true
+});
+
+// Set test environment variables
+process.env.OTP_EXPIRY = '300'; // 5 minutes
+process.env.MAX_DAILY_OTP_REQUESTS = '5';
+process.env.OTP_COOLDOWN_MINUTES = '5';
+process.env.OTP_MAX_ATTEMPTS = '3';
+process.env.JWT_SECRET = 'test-secret-key';
+
 // Create a daynode for testing if it doesn't exist
 async function ensureDaynode() {
   const session = ledgerSpaceDriver.session();
@@ -60,13 +78,10 @@ const getBaseUrl = () => {
 
 const API_BASE_URL = getBaseUrl();
 
-// Default headers including rate limiter bypass if available
+// Default headers
 const defaultHeaders = {
   "Content-Type": "application/json",
-  "x-client-api-key": process.env.CLIENT_API_KEY || "",
-  ...(process.env.SKIP_RATE_LIMITER_KEY && {
-    "x-skip-rate-limit": process.env.SKIP_RATE_LIMITER_KEY
-  })
+  "x-client-api-key": process.env.CLIENT_API_KEY || ""
 };
 
 // Set up global axios defaults
@@ -119,6 +134,7 @@ instance.interceptors.response.use(
 // Global setup
 beforeAll(async () => {
   console.log(`Using API_BASE_URL: ${API_BASE_URL}`);
+  console.log('Environment:', process.env.NODE_ENV);
   // Log if rate limiter bypass is enabled
   if (process.env.SKIP_RATE_LIMITER_KEY) {
     console.log("Rate limiter bypass enabled with key:", process.env.SKIP_RATE_LIMITER_KEY);

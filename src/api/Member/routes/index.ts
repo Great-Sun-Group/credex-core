@@ -5,6 +5,7 @@ import onboardMemberRoute from "./onboardMemberRoute";
 import hustler10kRoute from "./hustler10kRoute";
 import updatePasswordRoute from "./updatePasswordRoute";
 import setInitialPasswordRoute from "./setInitialPasswordRoute";
+import verificationRoutes from "./verificationRoutes";
 import logger from "../../../utils/logger";
 
 /**
@@ -25,10 +26,11 @@ export default function MemberRoutes() {
   router.use(hustler10kRoute());
   router.use(updatePasswordRoute());
   router.use(setInitialPasswordRoute());
+  router.use('/verify', verificationRoutes); // Mount verification routes under /verify prefix
 
   logger.info("Member routes initialized successfully", {
     module: "memberRoutes",
-    routesCount: 7,
+    routesCount: 8,
   });
 
   return router;

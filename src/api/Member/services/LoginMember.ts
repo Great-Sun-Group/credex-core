@@ -29,6 +29,7 @@ interface LoginResult {
     memberTier: number;
     remainingAvailableUSD: number;
     accountIDS: string[];
+    otpVerified: boolean;
   };
   message: string;
   error?: {
@@ -73,6 +74,7 @@ export async function LoginMemberService(request: LoginRequest): Promise<LoginRe
         RETURN 
           m.memberID as memberID, 
           m.passwordHash as passwordHash,
+          m.otpVerified as otpVerified,
           collect(a.accountID) as accountIDS
         `,
         { phone: request.phone }
@@ -175,6 +177,7 @@ export async function LoginMemberService(request: LoginRequest): Promise<LoginRe
         memberTier: memberData.memberTier,
         remainingAvailableUSD: memberData.remainingAvailableUSD || 0,
         accountIDS,
+        otpVerified: memberResult.get("otpVerified") || false
       },
       message: "Login successful",
     };

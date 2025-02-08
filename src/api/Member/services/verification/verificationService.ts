@@ -153,9 +153,7 @@ export class VerificationService {
       // Send OTP via provider
       logger.info('About to send OTP via provider', {
         memberID,
-        providerType: this.provider.getProviderType(),
-        isTestMode: process.env.NODE_ENV === 'test',
-        otpToSend: otp
+        providerType: this.provider.getProviderType()
       });
       
       const sendResult = await this.provider.sendOTP(phone, otp) as OTPResponse;
@@ -172,30 +170,7 @@ export class VerificationService {
       }
 
       // Store OTP details in database
-      const isTest = process.env.NODE_ENV === 'test';
-      logger.info('Environment check for OTP storage', {
-        NODE_ENV: process.env.NODE_ENV,
-        isTest,
-        phone,
-        memberID,
-        hasOTP: !!otp,
-        hasHashedOTP: !!hashedOTP,
-        testOTPWillBeStored: isTest,
-        otpValue: otp
-      });
-
-      // Store OTP in database
-      const query = isTest ? `
-        MATCH (m:Member {memberID: $memberID})
-        SET m.hashedOTP = $hashedOTP,
-            m.otpExpiry = $expiry,
-            m.otpAttempts = 0,
-            m.lastOtpRequest = $now,
-            m.otpRequestsToday = COALESCE(m.otpRequestsToday, 0) + 1,
-            m.testOTP = $testOTP
-        WITH m
-        RETURN properties(m) as member
-      ` : `
+      const query = `
         MATCH (m:Member {memberID: $memberID})
         SET m.hashedOTP = $hashedOTP,
             m.otpExpiry = $expiry,
@@ -206,40 +181,19 @@ export class VerificationService {
         RETURN properties(m) as member
       `;
 
-      logger.info('Executing OTP storage query', {
+      const result = await session.run(query, {
         memberID,
-        isTest,
-        hasOTP: !!otp,
-        query,
-        params: {
-          memberID,
-          hashedOTP,
-          testOTP: isTest ? otp : null,
-          expiry: new Date(Date.now() + this.config.otpExpiry * 1000).toISOString(),
-          now: new Date().toISOString()
-        }
+        hashedOTP,
+        expiry: new Date(Date.now() + this.config.otpExpiry * 1000).toISOString(),
+        now: new Date().toISOString()
       });
-
-      const result = await session.run(query,
-        {
-          memberID,
-          hashedOTP,
-          testOTP: isTest ? otp : null,
-          expiry: new Date(Date.now() + this.config.otpExpiry * 1000).toISOString(),
-          now: new Date().toISOString()
-        }
-      );
 
       // Verify OTP was stored
       const record = result.records[0];
       const memberData = record.get('member');
       logger.info('Stored OTP verification', {
         memberID,
-        testOTPStored: isTest ? memberData.testOTP === otp : false,
-        hashedOTPStored: !!memberData.hashedOTP,
-        testOTPValue: memberData.testOTP,
-        storedOTP: otp,
-        allProperties: memberData
+        hashedOTPStored: !!memberData.hashedOTP
       });
 
       return {
@@ -286,7 +240,6 @@ export class VerificationService {
          RETURN m.hashedOTP as hashedOTP,
                 m.otpExpiry as expiry,
                 m.otpAttempts as attempts,
-                m.testOTP as testOTP,
                 m.otpVerified as otpVerified`,
         { memberID }
       );
@@ -294,7 +247,6 @@ export class VerificationService {
       logger.info('Retrieved OTP details', {
         memberID,
         hasHashedOTP: !!result.records[0]?.get('hashedOTP'),
-        hasTestOTP: !!result.records[0]?.get('testOTP'),
         expiry: result.records[0]?.get('expiry'),
         attempts: result.records[0]?.get('attempts'),
         otpVerified: result.records[0]?.get('otpVerified')
@@ -364,7 +316,7 @@ export class VerificationService {
       await session.run(
         `MATCH (m:Member {memberID: $memberID})
          SET m.otpAttempts = m.otpAttempts + 1
-         ${verifyResult.success ? ', m.otpVerified = true, m.hashedOTP = null, m.testOTP = null' : ''}`,
+         ${verifyResult.success ? ', m.otpVerified = true, m.hashedOTP = null' : ''}`,
         { memberID }
       );
 

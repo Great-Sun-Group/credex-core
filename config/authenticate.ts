@@ -71,14 +71,42 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
 
   if (!token) {
     logger.warn("No token provided", { path: req.path, method: req.method, ip: req.ip });
-    return next(new Error("Authentication required"));
+    return res.status(401).json({
+      message: 'Authentication required',
+      data: {
+        action: {
+          id: null,
+          type: 'ERROR_VALIDATION',
+          timestamp: new Date().toISOString(),
+          actor: 'system',
+          details: {
+            code: 'AUTH_REQUIRED',
+            reason: 'No token provided'
+          }
+        }
+      }
+    });
   }
 
   const decoded = verifyToken(token);
 
   if (!decoded) {
     logger.warn("Invalid token", { path: req.path, method: req.method, ip: req.ip });
-    return next(new Error("Invalid token"));
+    return res.status(401).json({
+      message: 'Invalid token',
+      data: {
+        action: {
+          id: null,
+          type: 'ERROR_VALIDATION',
+          timestamp: new Date().toISOString(),
+          actor: 'system',
+          details: {
+            code: 'INVALID_TOKEN',
+            reason: 'Token verification failed'
+          }
+        }
+      }
+    });
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -86,12 +114,40 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
   // Check both activity timeout and absolute expiry
   if (now - decoded.lastActivity > TOKEN_EXPIRATION) {
     logger.warn("Token activity timeout", { path: req.path, method: req.method, ip: req.ip });
-    return next(new Error("Token expired"));
+    return res.status(401).json({
+      message: 'Token expired',
+      data: {
+        action: {
+          id: null,
+          type: 'ERROR_VALIDATION',
+          timestamp: new Date().toISOString(),
+          actor: 'system',
+          details: {
+            code: 'TOKEN_EXPIRED',
+            reason: 'Token activity timeout'
+          }
+        }
+      }
+    });
   }
 
   if (now > decoded.absoluteExpiry) {
     logger.warn("Token absolute expiry reached", { path: req.path, method: req.method, ip: req.ip });
-    return next(new Error("Token expired"));
+    return res.status(401).json({
+      message: 'Token expired',
+      data: {
+        action: {
+          id: null,
+          type: 'ERROR_VALIDATION',
+          timestamp: new Date().toISOString(),
+          actor: 'system',
+          details: {
+            code: 'TOKEN_EXPIRED',
+            reason: 'Token absolute expiry reached'
+          }
+        }
+      }
+    });
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
@@ -103,7 +159,21 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
 
     if (result.records.length === 0) {
       logger.warn("Member not found", { memberID: decoded.memberID, path: req.path, method: req.method, ip: req.ip });
-      return next(new Error("Invalid token"));
+      return res.status(401).json({
+        message: 'Invalid token',
+        data: {
+          action: {
+            id: null,
+            type: 'ERROR_VALIDATION',
+            timestamp: new Date().toISOString(),
+            actor: 'system',
+            details: {
+              code: 'INVALID_TOKEN',
+              reason: 'Member not found'
+            }
+          }
+        }
+      });
     }
 
     const memberProperties = result.records[0].get('m').properties;
@@ -117,7 +187,8 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
       memberTier: memberProperties.memberTier,
       createdAt: memberProperties.createdAt,
       passwordHash: memberProperties.passwordHash,
-      passwordLastChanged: memberProperties.passwordLastChanged
+      passwordLastChanged: memberProperties.passwordLastChanged,
+      otpVerified: memberProperties.otpVerified
     };
 
     // Refresh the token while maintaining absolute expiry
@@ -127,7 +198,21 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
     next();
   } catch (error) {
     logger.error("Error verifying token", { error, path: req.path, method: req.method, ip: req.ip });
-    next(new Error("Internal server error"));
+    return res.status(500).json({
+      message: 'Internal server error',
+      data: {
+        action: {
+          id: null,
+          type: 'ERROR_INTERNAL',
+          timestamp: new Date().toISOString(),
+          actor: 'system',
+          details: {
+            code: 'INTERNAL_ERROR',
+            reason: 'Database error occurred'
+          }
+        }
+      }
+    });
   } finally {
     await ledgerSpaceSession.close();
   }

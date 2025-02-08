@@ -151,6 +151,7 @@ export interface MemberActionDetails {
   token?: string;
   version?: 'v1' | 'v2';
   authMethod?: 'phone_only' | 'password';
+  otpVerified?: boolean;
 }
 
 export interface AccountActionDetails {

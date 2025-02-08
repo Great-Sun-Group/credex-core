@@ -14,6 +14,8 @@ interface MemberData {
   defaultDenom: string;
   memberTier: number;
   createdAt: string;
+  version: string;
+  authMethod: string;
   passwordHash?: string;
   passwordLastChanged?: string;
 }
@@ -157,7 +159,10 @@ export async function OnboardMemberService(
           memberID: randomUUID(),
           memberTier: 1,
           createdAt: datetime(),
-          updatedAt: datetime()
+          updatedAt: datetime(),
+          version: $version,
+          authMethod: $authMethod,
+          otpVerified: false
           ${passwordHash ? ', passwordHash: $passwordHash' : ''}
           ${passwordLastChanged ? ', passwordLastChanged: $passwordLastChanged' : ''}
         })-[:CREATED_ON]->(daynode)
@@ -172,13 +177,15 @@ export async function OnboardMemberService(
             memberTier: member.memberTier,
             createdAt: toString(member.createdAt),
             passwordHash: member.passwordHash,
-            passwordLastChanged: toString(member.passwordLastChanged)
+            passwordLastChanged: toString(member.passwordLastChanged),
+            version: member.version,
+            authMethod: member.authMethod
           } as memberData
       `;
 
       logger.debug("Executing member creation query", {
         requestId,
-        params: { firstname, lastname, phone, defaultDenom }
+        params: { firstname, lastname, phone, defaultDenom, version: password ? 'v2' : 'v1', authMethod: password ? 'password' : 'phone_only' }
       });
 
       const queryResult = await tx.run(query, {
@@ -186,6 +193,8 @@ export async function OnboardMemberService(
         lastname,
         defaultDenom,
         phone,
+        version: password ? 'v2' : 'v1',
+        authMethod: password ? 'password' : 'phone_only',
         ...(passwordHash && { passwordHash }),
         ...(passwordLastChanged && { passwordLastChanged })
       });
