@@ -34,11 +34,11 @@ export const requestOTP = async (req: Request, res: Response) => {
   logger.info('Processing OTP request', { memberID });
 
   try {
-    // Check if member uses v2 password auth
-    const authCheck = await verificationService.checkV2PasswordAuth(memberID);
-    if (!authCheck.success) {
+    // Check if member exists
+    const memberCheck = await verificationService.checkMemberExists(memberID);
+    if (!memberCheck.success) {
       return res.status(400).json({
-        message: authCheck.message,
+        message: memberCheck.message,
         data: {
           action: {
             id: null,
@@ -46,8 +46,8 @@ export const requestOTP = async (req: Request, res: Response) => {
             timestamp: new Date().toISOString(),
             actor: memberID,
             details: {
-              code: authCheck.error?.code,
-              reason: authCheck.error?.details
+              code: memberCheck.error?.code,
+              reason: memberCheck.error?.details
             }
           }
         }

@@ -51,16 +51,16 @@ export class VerificationService {
   }
 
   /**
-   * Check if a member is using v2 password authentication
+   * Check if a member exists in the database
    * @param memberID The member's ID
-   * @returns ServiceResult indicating if member uses v2 password auth
+   * @returns ServiceResult indicating if member exists
    */
-  async checkV2PasswordAuth(memberID: string): Promise<ServiceResult> {
+  async checkMemberExists(memberID: string): Promise<ServiceResult> {
     const session = ledgerSpaceDriver.session();
     try {
       const result = await session.run(
         `MATCH (m:Member {memberID: $memberID})
-         RETURN m.version as version, m.authMethod as authMethod`,
+         RETURN m`,
         { memberID }
       );
 
@@ -75,37 +75,10 @@ export class VerificationService {
         };
       }
 
-      const version = result.records[0].get('version');
-      const authMethod = result.records[0].get('authMethod');
-
-      // Check if user is v1 or not using password auth
-      if (version === 'v1') {
-        return {
-          success: false,
-          message: 'Non-password users cannot request OTP verification',
-          error: {
-            code: VerificationError.NON_PASSWORD_USER,
-            details: 'Only v2 password users can request OTP verification'
-          }
-        };
-      }
-
-      // Check if user is using password auth
-      if (authMethod !== 'password') {
-        return {
-          success: false,
-          message: 'Non-password users cannot request OTP verification',
-          error: {
-            code: VerificationError.NON_PASSWORD_USER,
-            details: 'Only v2 password users can request OTP verification'
-          }
-        };
-      }
-
       return {
         success: true,
-        message: 'Member uses v2 password auth',
-        data: { isV2Password: true }
+        message: 'Member exists',
+        data: { memberExists: true }
       };
     } catch (error) {
       logger.error('Failed to check member auth version', { error, memberID });
@@ -131,10 +104,10 @@ export class VerificationService {
   async sendOTP(memberID: string, phone: string): Promise<ServiceResult> {
     const session = ledgerSpaceDriver.session();
     try {
-      // Check if user is allowed to use OTP
-      const authCheck = await this.checkV2PasswordAuth(memberID);
-      if (!authCheck.success) {
-        return authCheck;
+      // Check if member exists
+      const memberCheck = await this.checkMemberExists(memberID);
+      if (!memberCheck.success) {
+        return memberCheck;
       }
 
       // Check rate limiting

@@ -97,68 +97,6 @@ describe("OTP Verification Tests", () => {
       expect(verifyResult.success).toBe(true);
     });
 
-    it("rejects OTP request for v1 phone_only user", async () => {
-      // Create a v1 phone_only user in the database
-      const session = ledgerSpaceDriver.session();
-      const phone = generateRandomPhone();
-      const memberID = "test-v1-user";
-      
-      try {
-        await session.run(`
-          CREATE (m:Member {
-            memberID: $memberID,
-            phone: $phone,
-            version: 'v1',
-            authMethod: 'phone_only',
-            firstname: 'V1',
-            lastname: 'User'
-          })
-        `, { memberID, phone });
-      } finally {
-        await session.close();
-      }
-
-      TestCleanup.trackMember(memberID, phone);
-
-      // Attempt to send OTP to v1 user
-      const sendResult = await verificationService.sendOTP(memberID, phone);
-      
-      // Should be rejected because v1 users cannot use OTP
-      expect(sendResult.success).toBe(false);
-      expect(sendResult.error?.code).toBe('NON_PASSWORD_USER');
-    });
-
-    it("rejects OTP request for v2 non-password user", async () => {
-      // Create a v2 non-password user in the database
-      const session = ledgerSpaceDriver.session();
-      const phone = generateRandomPhone();
-      const memberID = "test-v2-nonpassword-user";
-      
-      try {
-        await session.run(`
-          CREATE (m:Member {
-            memberID: $memberID,
-            phone: $phone,
-            version: 'v2',
-            authMethod: 'phone_only',
-            firstname: 'V2',
-            lastname: 'NonPassword'
-          })
-        `, { memberID, phone });
-      } finally {
-        await session.close();
-      }
-
-      TestCleanup.trackMember(memberID, phone);
-
-      // Attempt to send OTP to v2 non-password user
-      const sendResult = await verificationService.sendOTP(memberID, phone);
-      
-      // Should be rejected because only v2 password users can use OTP
-      expect(sendResult.success).toBe(false);
-      expect(sendResult.error?.code).toBe('NON_PASSWORD_USER');
-    });
-
     it("enforces rate limiting for OTP requests", async () => {
       // Create a v2 password user in the database
       const session = ledgerSpaceDriver.session();

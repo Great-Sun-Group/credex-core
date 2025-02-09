@@ -21,7 +21,7 @@ const setInitialPasswordSchema = {
 
 /**
  * @swagger
- * /member/set-initial-password:
+ * /setInitialPassword:
  *   post:
  *     tags: [Members]
  *     summary: Set initial password for WhatsApp to mobile app transition
@@ -101,8 +101,9 @@ export default function setInitialPasswordRoute() {
   logger.info("Initializing set initial password route");
 
   router.post(
-    "/set-initial-password",
+    "/setInitialPassword",
     verifyClientApiKey,
+    authenticate,
     validateRequest(setInitialPasswordSchema),
     setInitialPasswordExpressHandler
   );

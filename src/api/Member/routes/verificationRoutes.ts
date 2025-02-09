@@ -39,7 +39,7 @@ const verifyOTPSchema = {
 
 /**
  * @swagger
- * /verify/request-otp:
+ * /verify/requestOtp:
  *   post:
  *     tags: [Members]
  *     summary: Request OTP verification
@@ -140,11 +140,11 @@ const verifyOTPSchema = {
  *                               type: number
  *                               description: Minutes until next attempt allowed (for rate limiting)
  */
-router.post('/request-otp', authenticate, validateRequest(requestOTPSchema), requestOTP);
+router.post('/requestOtp', authenticate, validateRequest(requestOTPSchema), requestOTP);
 
 /**
  * @swagger
- * /verify/verify-otp:
+ * /verify/verifyOtp:
  *   post:
  *     tags: [Members]
  *     summary: Verify OTP
@@ -243,6 +243,6 @@ router.post('/request-otp', authenticate, validateRequest(requestOTPSchema), req
  *                               type: number
  *                               description: Number of attempts remaining before lockout
  */
-router.post('/verify-otp', authenticate, validateRequest(verifyOTPSchema), verifyOTP);
+router.post('/verifyOtp', authenticate, validateRequest(verifyOTPSchema), verifyOTP);
 
 export default router;

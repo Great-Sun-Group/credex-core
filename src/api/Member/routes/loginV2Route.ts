@@ -7,7 +7,7 @@ import logger from "../../../utils/logger";
 
 /**
  * @swagger
- * /api/v2/login:
+ * /v2/login:
  *   post:
  *     tags: [Members]
  *     summary: Login member with password (Mobile App)

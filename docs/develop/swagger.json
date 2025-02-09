@@ -8399,7 +8399,7 @@
         }
       }
     },
-    "/api/v2/login": {
+    "/v2/login": {
       "post": {
         "tags": [
           "Members"

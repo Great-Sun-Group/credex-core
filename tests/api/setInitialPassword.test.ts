@@ -74,16 +74,22 @@ describe("Set Initial Password Tests", () => {
         { headers }
       );
 
+      const token = onboardResponse.data.data.action.details.token;
       TestCleanup.trackMember(onboardResponse.data.data.action.details.memberID, phone);
 
       console.log("\nSetting initial password...");
       const response = await axios.post(
-        "/member/set-initial-password",
+        "/setInitialPassword",
         {
           phone,
           password
         },
-        { headers }
+        { 
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${token}`
+          }
+        }
       );
 
       console.log("Response:", JSON.stringify(response.data, null, 2));
@@ -112,25 +118,39 @@ describe("Set Initial Password Tests", () => {
 
       TestCleanup.trackMember(onboardResponse.data.data.action.details.memberID, phone);
 
+      const token = onboardResponse.data.data.action.details.token;
+
       // Set initial password
       await axios.post(
-        "/member/set-initial-password",
+        "/setInitialPassword",
         {
           phone,
           password
         },
-        { headers }
+        { 
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${token}`
+          }
+        }
       );
 
       // Try to set password again
       try {
+        const token = onboardResponse.data.data.action.details.token;
+
         await axios.post(
-          "/member/set-initial-password",
+          "/setInitialPassword",
           {
             phone,
             password
           },
-          { headers }
+          { 
+            headers: {
+              ...headers,
+              Authorization: `Bearer ${token}`
+            }
+          }
         );
         fail("Should have thrown error for existing password");
       } catch (error: any) {
@@ -158,13 +178,19 @@ describe("Set Initial Password Tests", () => {
       TestCleanup.trackMember(onboardResponse.data.data.action.details.memberID, phone);
 
       try {
+        const token = onboardResponse.data.data.action.details.token;
         await axios.post(
-          "/member/set-initial-password",
+          "/setInitialPassword",
           {
             phone,
             password: "weak"
           },
-          { headers }
+          { 
+            headers: {
+              ...headers,
+              Authorization: `Bearer ${token}`
+            }
+          }
         );
         fail("Should have thrown error for invalid password");
       } catch (error: any) {
@@ -174,15 +200,37 @@ describe("Set Initial Password Tests", () => {
     });
 
     it("fails with non-existent phone", async () => {
+      // Create a v1 user first to get a valid token
+      const phone = generateRandomPhone();
+      const onboardResponse = await axios.post(
+        "/onboardMember",
+        {
+          firstname: "Johnny",
+          lastname: "Doeman",
+          phone,
+          defaultDenom: "USD"
+        },
+        { headers }
+      );
+
+      const token = onboardResponse.data.data.action.details.token;
+      TestCleanup.trackMember(onboardResponse.data.data.action.details.memberID, phone);
+
+      // Try with a different, non-existent phone
       const nonExistentPhone = generateRandomPhone();
       try {
         await axios.post(
-          "/member/set-initial-password",
+          "/setInitialPassword",
           {
             phone: nonExistentPhone,
             password: "@ValidPass123"
           },
-          { headers }
+          { 
+            headers: {
+              ...headers,
+              Authorization: `Bearer ${token}`
+            }
+          }
         );
         fail("Should have thrown error for non-existent phone");
       } catch (error: any) {
