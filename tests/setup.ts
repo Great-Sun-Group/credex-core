@@ -2,6 +2,7 @@ import axios from "axios";
 import dotenv from "dotenv";
 import { ledgerSpaceDriver, searchSpaceDriver } from "../config/neo4j";
 import logger from "../src/utils/logger";
+import initializeApp from "../src";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -23,6 +24,7 @@ process.env.MAX_DAILY_OTP_REQUESTS = '5';
 process.env.OTP_COOLDOWN_MINUTES = '5';
 process.env.OTP_MAX_ATTEMPTS = '3';
 process.env.JWT_SECRET = 'test-secret-key';
+process.env.CLIENT_API_KEY = 'love-achingly';
 
 // Create a daynode for testing if it doesn't exist
 async function ensureDaynode() {
@@ -81,7 +83,7 @@ const API_BASE_URL = getBaseUrl();
 // Default headers
 const defaultHeaders = {
   "Content-Type": "application/json",
-  "x-client-api-key": process.env.CLIENT_API_KEY || ""
+  "x-client-api-key": process.env.CLIENT_API_KEY
 };
 
 // Set up global axios defaults
@@ -140,11 +142,24 @@ beforeAll(async () => {
     console.log("Rate limiter bypass enabled with key:", process.env.SKIP_RATE_LIMITER_KEY);
   }
   
-  // Ensure daynode exists before running any tests
+  // Initialize app and ensure daynode exists before running any tests
   try {
+    const app = await initializeApp();
+    const port = app.get('port') || 3000;
+    instance.defaults.baseURL = `http://localhost:${port}`;
+    console.log(`Setting baseURL to: ${instance.defaults.baseURL}`);
+    
+    // Start the server
+    const server = app.listen(port, () => {
+      console.log(`Test server listening on port ${port}`);
+    });
+    
+    // Store server reference for cleanup
+    (global as any).testServer = server;
+    
     await ensureDaynode();
   } catch (error) {
-    console.error("Failed to ensure daynode exists. Tests cannot proceed.", error);
+    console.error("Failed to initialize app or ensure daynode exists. Tests cannot proceed.", error);
     process.exit(1);
   }
 });
@@ -152,13 +167,24 @@ beforeAll(async () => {
 // Global teardown
 afterAll(async () => {
   try {
+    // Close server if it exists
+    if ((global as any).testServer) {
+      await new Promise<void>((resolve) => {
+        (global as any).testServer.close(() => {
+          console.log('Test server closed');
+          resolve();
+        });
+      });
+    }
+
+    // Close database connections
     await Promise.all([
       ledgerSpaceDriver.close(),
       searchSpaceDriver.close()
     ]);
     logger.info("Neo4j drivers closed successfully");
   } catch (error) {
-    logger.error("Error closing Neo4j drivers:", error);
+    logger.error("Error in test cleanup:", error);
   }
 });
 

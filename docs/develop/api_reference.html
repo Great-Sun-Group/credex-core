@@ -9334,7 +9334,57 @@
         }
       }
     },
-    "/member/setInitialPassword": {
+    "/resetPassword": {
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Reset member password using a reset token",
+        "description": "Resets a member's password using a token obtained through the OTP verification process.\nThe reset token must be valid and not expired.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "resetToken",
+                  "newPassword"
+                ],
+                "properties": {
+                  "resetToken": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Reset token obtained from OTP verification"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 128,
+                    "description": "New password that meets complexity requirements"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset successful"
+          },
+          "400": {
+            "description": "Invalid input or expired token"
+          },
+          "401": {
+            "description": "Invalid client API key"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/setInitialPassword": {
       "post": {
         "tags": [
           "Members"
@@ -9706,19 +9756,26 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "memberID",
-                  "phone"
+                  "phone",
+                  "purpose"
                 ],
                 "properties": {
                   "memberID": {
                     "type": "string",
                     "format": "uuid",
-                    "description": "Member's unique identifier"
+                    "description": "Optional member ID if known"
                   },
                   "phone": {
                     "type": "string",
                     "pattern": "^\\+?[1-9]\\d{1,14}$",
                     "description": "Phone number to receive OTP"
+                  },
+                  "purpose": {
+                    "type": "string",
+                    "enum": [
+                      "PASSWORD_RESET"
+                    ],
+                    "description": "Purpose of OTP verification (must be PASSWORD_RESET)"
                   }
                 }
               }
@@ -9865,14 +9922,26 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "memberID",
-                  "otp"
+                  "otp",
+                  "purpose"
                 ],
                 "properties": {
                   "memberID": {
                     "type": "string",
                     "format": "uuid",
-                    "description": "Member's unique identifier"
+                    "description": "Optional member ID if known"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+?[1-9]\\d{1,14}$",
+                    "description": "Phone number (required if memberID not provided)"
+                  },
+                  "purpose": {
+                    "type": "string",
+                    "enum": [
+                      "PASSWORD_RESET"
+                    ],
+                    "description": "Purpose of OTP verification (must be PASSWORD_RESET)"
                   },
                   "otp": {
                     "type": "string",
@@ -9930,6 +9999,11 @@
                                 "otpVerified": {
                                   "type": "boolean",
                                   "example": true
+                                },
+                                "resetToken": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "Token for password reset (only when purpose is PASSWORD_RESET)"
                                 }
                               }
                             }

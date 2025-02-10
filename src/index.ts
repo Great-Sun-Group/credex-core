@@ -43,7 +43,10 @@ async function initializeApp() {
     const config = await getConfig();
     logger.info("Initializing application");
 
-    // Apply security middleware
+    // Apply jsonParser globally first
+    app.use(jsonParser);
+
+    // Apply security middleware after body parsing
     applySecurityMiddleware(app);
 
     // Add request ID middleware
@@ -59,9 +62,6 @@ async function initializeApp() {
 
     // Apply custom logging middleware
     app.use(expressLogger);
-
-    // Apply jsonParser globally
-    app.use(jsonParser);
 
     // Generate Swagger specification
     const swaggerSpec = await generateSwaggerSpec();

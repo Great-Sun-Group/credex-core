@@ -68,7 +68,8 @@ describe("OTP Verification Tests", () => {
             authMethod: 'password',
             firstname: 'V2',
             lastname: 'Password',
-            passwordHash: $passwordHash
+            passwordHash: $passwordHash,
+            memberHandle: $phone
           })
         `, { 
           memberID, 
@@ -112,7 +113,8 @@ describe("OTP Verification Tests", () => {
             authMethod: 'password',
             firstname: 'V2',
             lastname: 'Password',
-            passwordHash: $passwordHash
+            passwordHash: $passwordHash,
+            memberHandle: $phone
           })
         `, { 
           memberID, 

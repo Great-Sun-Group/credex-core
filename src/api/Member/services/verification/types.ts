@@ -47,7 +47,7 @@ export enum VerificationError {
 }
 
 export interface SecurityEvent {
-  eventType: 'OTP_REQUEST' | 'OTP_VALIDATION' | 'WHATSAPP_VERIFICATION';
+  eventType: 'OTP_REQUEST' | 'OTP_VALIDATION' | 'WHATSAPP_VERIFICATION' | 'PASSWORD_RESET';
   memberID: string;
   version: 'v1' | 'v2';
   authMethod: 'phone_only' | 'password';
@@ -62,6 +62,8 @@ export interface VerificationConfig {
   cooldownMinutes: number;
   maxAttempts: number;
 }
+
+export type VerificationPurpose = 'PASSWORD_RESET' | undefined;
 
 export interface VerificationServiceConfig {
   provider: IVerificationProvider;

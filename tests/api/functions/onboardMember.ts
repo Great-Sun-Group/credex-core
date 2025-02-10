@@ -8,11 +8,11 @@ export async function onboardMember(
   password?: string
 ) {
   const headers = {
-    "x-client-api-key": process.env.CLIENT_API_KEY || "",
+    "x-client-api-key": process.env.CLIENT_API_KEY
   };
 
   console.log("\nOnboarding member...");
-  const response = await axios.post("/onboardMember", {
+  const response = await axios.post("onboardMember", {
     firstname,
     lastname,
     phone,

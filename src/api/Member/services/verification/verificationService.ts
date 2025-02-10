@@ -1,15 +1,18 @@
 import { ServiceResult } from '../../../../types/apiResponse';
+import { generateResetToken } from '../../controllers/passwordResetController';
 import { ledgerSpaceDriver } from '../../../../../config/neo4j';
 import { 
   IVerificationProvider, 
-  VerificationProviderType, 
-  VerificationError, 
+   VerificationError, 
   VerificationConfig,
   VerificationServiceConfig 
 } from './types';
+import { MemberRepository } from '../../repositories/MemberRepository';
 import { WhatsAppProvider } from './whatsappProvider';
 import { OTPManager } from './otpManager';
 import logger from '../../../../utils/logger';
+
+const RESET_TOKEN_EXPIRY = 10 * 60; // 10 minutes in seconds
 
 interface OTPResponseData {
   deliveryId?: string;
@@ -22,11 +25,13 @@ export class VerificationService {
   private readonly provider: IVerificationProvider;
   private readonly otpManager: OTPManager;
   private readonly config: VerificationConfig;
+  private readonly memberRepository: MemberRepository;
 
   constructor(config: VerificationServiceConfig) {
     this.provider = config.provider;
     this.otpManager = config.otpManager;
     this.config = config.config;
+    this.memberRepository = new MemberRepository();
     
     logger.info('Verification service initialized', {
       providerType: this.provider.getProviderType(),
@@ -51,20 +56,53 @@ export class VerificationService {
   }
 
   /**
+   * Find member by phone number
+   * @param phone The phone number to search for
+   * @returns ServiceResult with member ID if found
+   */
+  async findMemberByPhone(phone: string): Promise<ServiceResult> {
+    try {
+      const member = await this.memberRepository.findByPhone(phone);
+      
+      if (!member) {
+        return {
+          success: false,
+          message: 'Member not found',
+          error: {
+            code: 'NOT_FOUND',
+            details: 'No member found with this phone number'
+          }
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Member found',
+        data: { memberID: member.id }
+      };
+    } catch (error) {
+      logger.error('Failed to find member by phone', { error, phone });
+      return {
+        success: false,
+        message: 'Failed to find member',
+        error: {
+          code: 'INTERNAL_ERROR',
+          details: 'Database error occurred'
+        }
+      };
+    }
+  }
+
+  /**
    * Check if a member exists in the database
    * @param memberID The member's ID
    * @returns ServiceResult indicating if member exists
    */
   async checkMemberExists(memberID: string): Promise<ServiceResult> {
-    const session = ledgerSpaceDriver.session();
     try {
-      const result = await session.run(
-        `MATCH (m:Member {memberID: $memberID})
-         RETURN m`,
-        { memberID }
-      );
-
-      if (result.records.length === 0) {
+      const member = await this.memberRepository.findById(memberID);
+      
+      if (!member) {
         return {
           success: false,
           message: 'Member not found',
@@ -81,17 +119,15 @@ export class VerificationService {
         data: { memberExists: true }
       };
     } catch (error) {
-      logger.error('Failed to check member auth version', { error, memberID });
+      logger.error('Failed to check member exists', { error, memberID });
       return {
         success: false,
-        message: 'Failed to check member auth version',
+        message: 'Failed to check member exists',
         error: {
           code: 'INTERNAL_ERROR',
           details: 'Database error occurred'
         }
       };
-    } finally {
-      await session.close();
     }
   }
 
@@ -101,13 +137,25 @@ export class VerificationService {
    * @param phone The phone number to send to
    * @returns ServiceResult with the operation status
    */
-  async sendOTP(memberID: string, phone: string): Promise<ServiceResult> {
+  async sendOTP(memberID: string, phone: string, purpose?: 'PASSWORD_RESET'): Promise<ServiceResult> {
     const session = ledgerSpaceDriver.session();
     try {
-      // Check if member exists
+      // Check if member exists and purpose is valid
       const memberCheck = await this.checkMemberExists(memberID);
       if (!memberCheck.success) {
         return memberCheck;
+      }
+
+      // Validate purpose
+      if (purpose && purpose !== 'PASSWORD_RESET') {
+        return {
+          success: false,
+          message: 'Invalid purpose',
+          error: {
+            code: VerificationError.INVALID_OTP,
+            details: 'Purpose must be PASSWORD_RESET'
+          }
+        };
       }
 
       // Check rate limiting
@@ -198,9 +246,21 @@ export class VerificationService {
    * @param otp The OTP to verify
    * @returns ServiceResult indicating verification status
    */
-  async verifyOTP(memberID: string, otp: string): Promise<ServiceResult> {
+  async verifyOTP(memberID: string, otp: string, purpose?: 'PASSWORD_RESET'): Promise<ServiceResult> {
     const session = ledgerSpaceDriver.session();
     try {
+      // Validate purpose
+      if (purpose && purpose !== 'PASSWORD_RESET') {
+        return {
+          success: false,
+          message: 'Invalid purpose',
+          error: {
+            code: VerificationError.INVALID_OTP,
+            details: 'Purpose must be PASSWORD_RESET'
+          }
+        };
+      }
+
       // Validate OTP format
       const formatCheck = this.otpManager.validateOTPFormat(otp);
       if (!formatCheck.success) {
@@ -292,6 +352,31 @@ export class VerificationService {
          ${verifyResult.success ? ', m.otpVerified = true, m.hashedOTP = null' : ''}`,
         { memberID }
       );
+
+      if (verifyResult.success && purpose === 'PASSWORD_RESET') {
+        try {
+          const resetToken = await generateResetToken(memberID);
+          return {
+            success: true,
+            message: 'OTP verified successfully',
+            data: {
+              resetToken,
+              expiresIn: RESET_TOKEN_EXPIRY,
+              purpose: 'PASSWORD_RESET' as const
+            }
+          };
+        } catch (error) {
+          logger.error('Failed to generate reset token', { error, memberID });
+          return {
+            success: false,
+            message: 'Failed to generate reset token',
+            error: {
+              code: VerificationError.PROVIDER_ERROR,
+              details: 'Internal error occurred'
+            }
+          };
+        }
+      }
 
       return verifyResult;
     } catch (error) {

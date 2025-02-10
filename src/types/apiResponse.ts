@@ -49,6 +49,7 @@ export enum ApiActionType {
   MEMBER_FOUND = "MEMBER_FOUND",
   MEMBER_UPDATE = "MEMBER_UPDATE",
   MEMBER_PASSWORD_UPDATED = "MEMBER_PASSWORD_UPDATED",
+  MEMBER_PASSWORD_RESET = "MEMBER_PASSWORD_RESET",
   DASHBOARD_RETRIEVED = "DASHBOARD_RETRIEVED",
   SPEND_AUTHORIZED = "SPEND_AUTHORIZED",
   HUSTLER_10K_ENROLLED = "HUSTLER_10K_ENROLLED",
@@ -152,6 +153,9 @@ export interface MemberActionDetails {
   version?: 'v1' | 'v2';
   authMethod?: 'phone_only' | 'password';
   otpVerified?: boolean;
+  resetToken?: string;
+  purpose?: 'PASSWORD_RESET';
+  expiresIn?: number;
 }
 
 export interface AccountActionDetails {

@@ -5,6 +5,7 @@ export class MockWhatsAppProvider implements IVerificationProvider {
   private lastOTP: string | null = null;
 
   getLastOTP(): string | null {
+    console.log('Mock provider getLastOTP called, returning:', this.lastOTP);
     return this.lastOTP;
   }
 
@@ -16,6 +17,7 @@ export class MockWhatsAppProvider implements IVerificationProvider {
   async sendOTP(to: string, otp: string): Promise<ServiceResult> {
     // Store OTP for test verification
     this.lastOTP = otp;
+    console.log('Mock provider storing OTP:', { otp, lastOTP: this.lastOTP });
     
     // Always succeed in test environment
     return {
