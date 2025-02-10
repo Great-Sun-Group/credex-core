@@ -144,7 +144,7 @@ export async function setInitialPasswordExpressHandler(
       });
 
       // Generate new token with password auth
-      const token = generateToken(memberID, {
+      const token = await generateToken(memberID, {
         version: 'v2',
         authMethod: 'password'
       });

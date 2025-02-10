@@ -130,23 +130,21 @@ export async function LoginMemberService(request: LoginRequest): Promise<LoginRe
           },
         };
       }
-    } else if (storedPasswordHash) {
-      // Only enforce password if explicitly configured
-      return {
-        success: false,
-        message: "Password is required for this account",
-        error: {
-          code: "PASSWORD_REQUIRED",
-          details: "This account requires password authentication",
-        },
-      };
+    } else {
+      // This is a v1-style login attempt (no password provided)
+      // Allow it regardless of whether they've set a password or not
+      // This maintains backward compatibility during the transition period
+      logger.info("Processing v1-style login", { 
+        memberID,
+        hasPassword: !!storedPasswordHash
+      });
     }
 
     // Get member data using dashboard service
     const memberData = await memberDashboardService.getMemberDashboardData(memberID);
 
     // Generate and update token with appropriate version and auth method
-    const token = generateToken(memberID, {
+    const token = await generateToken(memberID, {
       version: request.password ? 'v2' : 'v1',
       authMethod: request.password ? 'password' : 'phone_only'
     });

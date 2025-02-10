@@ -21,21 +21,41 @@ interface TokenOptions {
   authMethod?: 'phone_only' | 'password';
 }
 
-const generateToken = (memberID: string, options: TokenOptions = {}): string => {
+const generateToken = async (memberID: string, options: TokenOptions = {}): Promise<string> => {
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not set");
   }
+
   const now = Math.floor(Date.now() / 1000);
   const expiry = options.authMethod === 'password' ? MAX_TOKEN_AGE : MAX_TOKEN_AGE / 6; // Shorter expiry for phone-only auth
   
-  return jwt.sign({ 
-    memberID, 
-    iat: now, 
-    lastActivity: now,
-    absoluteExpiry: now + expiry,
-    version: options.version || 'v1',
-    authMethod: options.authMethod || 'phone_only'
-  }, JWT_SECRET);
+  // Check if this is an existing member with a password
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
+  try {
+    const result = await ledgerSpaceSession.run(
+      "MATCH (m:Member {memberID: $memberID}) RETURN m.passwordHash",
+      { memberID }
+    );
+
+    // Check member's password status and REQUIRE_PASSWORD setting
+    const hasPassword = result.records.length > 0 && result.records[0].get('m.passwordHash');
+    const requirePassword = process.env.REQUIRE_PASSWORD === 'true';
+
+    // Determine version and auth method based on password status and settings
+    const version = options.version || (hasPassword && requirePassword ? 'v2' : 'v1');
+    const authMethod = options.authMethod || (hasPassword && requirePassword ? 'password' : 'phone_only');
+
+    return jwt.sign({ 
+      memberID, 
+      iat: now, 
+      lastActivity: now,
+      absoluteExpiry: now + expiry,
+      version,
+      authMethod
+    }, JWT_SECRET);
+  } finally {
+    await ledgerSpaceSession.close();
+  }
 };
 
 const verifyToken = (token: string): any => {
@@ -49,25 +69,44 @@ const verifyToken = (token: string): any => {
   }
 };
 
-const refreshToken = (decoded: any): string => {
+const refreshToken = async (decoded: any): Promise<string> => {
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not set");
   }
   const now = Math.floor(Date.now() / 1000);
   
-  // Maintain the original absolute expiry and auth details when refreshing
-  return jwt.sign({ 
-    memberID: decoded.memberID, 
-    iat: decoded.iat, 
-    lastActivity: now,
-    absoluteExpiry: decoded.absoluteExpiry,
-    version: decoded.version || 'v1',
-    authMethod: decoded.authMethod || 'phone_only'
-  }, JWT_SECRET);
+  // Check current member state for correct version and auth method
+  const ledgerSpaceSession = ledgerSpaceDriver.session();
+  try {
+    const result = await ledgerSpaceSession.run(
+      "MATCH (m:Member {memberID: $memberID}) RETURN m.passwordHash",
+      { memberID: decoded.memberID }
+    );
+
+    // Check member's password status and REQUIRE_PASSWORD setting
+    const hasPassword = result.records.length > 0 && result.records[0].get('m.passwordHash');
+    const requirePassword = process.env.REQUIRE_PASSWORD === 'true';
+
+    // Determine version and auth method based on password status and settings
+    const version = hasPassword && requirePassword ? 'v2' : 'v1';
+    const authMethod = hasPassword && requirePassword ? 'password' : 'phone_only';
+
+    return jwt.sign({ 
+      memberID: decoded.memberID, 
+      iat: decoded.iat, 
+      lastActivity: now,
+      absoluteExpiry: decoded.absoluteExpiry,
+      version,
+      authMethod
+    }, JWT_SECRET);
+  } finally {
+    await ledgerSpaceSession.close();
+  }
 };
 
 const authenticate = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split(' ')[1];
+  const requirePassword = process.env.REQUIRE_PASSWORD === 'true';
 
   if (!token) {
     logger.warn("No token provided", { path: req.path, method: req.method, ip: req.ip });
@@ -177,6 +216,46 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
     }
 
     const memberProperties = result.records[0].get('m').properties;
+    
+    // Check if password is required based on token version and REQUIRE_PASSWORD setting
+    const isV2User = decoded.version === 'v2';
+    const isV1User = decoded.version === 'v1';
+    
+    // Only require password for v2 users when REQUIRE_PASSWORD is true
+    const needsPassword = isV2User && requirePassword;
+
+    if (needsPassword && !memberProperties.passwordHash) {
+      logger.warn("Password required but not set", { 
+        memberID: decoded.memberID,
+        version: decoded.version,
+        requirePassword,
+        path: req.path, 
+        method: req.method, 
+        ip: req.ip 
+      });
+      return res.status(401).json({
+        message: 'Password is required for this account',
+        data: {
+          action: {
+            id: null,
+            type: 'ERROR_UNAUTHORIZED',
+            timestamp: new Date().toISOString(),
+            actor: 'system',
+            details: {
+              code: 'PASSWORD_REQUIRED',
+              reason: 'Password is required for this account'
+            }
+          },
+          dashboard: {}
+        }
+      });
+    }
+
+    // Allow v1 users without password when REQUIRE_PASSWORD is false
+    if (decoded.version === 'v1' && !requirePassword && !memberProperties.passwordHash) {
+      logger.info("V1 user accessing without password (allowed)", { memberID: decoded.memberID, path: req.path, method: req.method });
+    }
+
     (req as UserRequest).user = {
       memberID: decoded.memberID,
       firstname: memberProperties.firstname,
@@ -192,7 +271,7 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
     };
 
     // Refresh the token while maintaining absolute expiry
-    const newToken = refreshToken(decoded);
+    const newToken = await refreshToken(decoded);
     res.setHeader('Authorization', `Bearer ${newToken}`);
 
     next();
