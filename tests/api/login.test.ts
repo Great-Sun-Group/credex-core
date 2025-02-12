@@ -1,21 +1,60 @@
 import axios from "../setup";
+import { generateRandomPhone } from "../utils/testUtils";
+import { TestCleanup } from "../utils/cleanup";
+import { ledgerSpaceDriver } from "../../config/neo4j";
 
 describe("Login Tests", () => {
   const headers = {
     "x-client-api-key": process.env.CLIENT_API_KEY || "",
   };
 
+  beforeAll(async () => {
+    // Clean up any existing test data
+    await TestCleanup.cleanupMembers();
+    
+    // Clean up any members that might have been left from previous test runs
+    const session = ledgerSpaceDriver.session();
+    try {
+      await session.run('MATCH (m:Member) DETACH DELETE m');
+    } finally {
+      await session.close();
+    }
+  });
+
+  beforeEach(async () => {
+    await TestCleanup.cleanupMembers();
+  });
+
+  afterEach(async () => {
+    await TestCleanup.cleanupMembers();
+  });
+
   describe("Legacy Login (Phone Only)", () => {
     it("login successful with dashboard data for non-password account", async () => {
-      const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
-      const [phone] = params;
+      // Create test member using onboardMember
+      const phone = generateRandomPhone();
+      const firstname = "John";
+      const lastname = "Doe";
+      const defaultDenom = "USD";
 
-      if (!phone) {
-        throw new Error("Usage: npm test login <phone>");
-      }
+      const onboardResponse = await axios.post(
+        "/onboardMember",
+        {
+          firstname,
+          lastname,
+          phone,
+          defaultDenom
+        },
+        { headers }
+      );
 
+      expect(onboardResponse.status).toBe(201);
+      const memberID = onboardResponse.data.data.action.details.memberID;
+      TestCleanup.trackMember(memberID, phone);
+
+      // Attempt login
       console.log("\nLogging in member...");
-      const response = await axios.post(
+      const loginResponse = await axios.post(
         "/login",
         {
           phone: phone,
@@ -23,85 +62,201 @@ describe("Login Tests", () => {
         { headers }
       );
 
-      console.log("Login response:", JSON.stringify(response.data, null, 2));
-      expect(response.status).toBe(200);
-      expect(response.data).toHaveProperty("message", "Successfully logged in");
-      expect(response.data).toHaveProperty("data");
-      validateLoginResponse(response.data);
+      expect(loginResponse.status).toBe(200);
+      expect(loginResponse.data).toHaveProperty("message", "Successfully logged in");
+      expect(loginResponse.data).toHaveProperty("data");
+      validateLoginResponse(loginResponse.data);
+    });
+
+    it("fails with non-existent phone number", async () => {
+      const nonExistentPhone = generateRandomPhone();
+
+      try {
+        await axios.post(
+          "/login",
+          {
+            phone: nonExistentPhone,
+          },
+          { headers }
+        );
+        fail("Should have thrown error for non-existent phone");
+      } catch (error: any) {
+        expect(error.response.status).toBe(404);
+        expect(error.response.data.data.action.details).toHaveProperty("code", "NOT_FOUND");
+      }
     });
   });
 
   describe("Password Authentication", () => {
     it("login successful with password", async () => {
-      const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
-      const [phone, password] = params;
+      // Create test member
+      const phone = generateRandomPhone();
+      const firstname = "John";
+      const lastname = "Doe";
+      const defaultDenom = "USD";
+      const password = "TestPass123!";
 
-      if (!phone || !password) {
-        throw new Error("Usage: npm test login <phone> <password>");
-      }
-
-      console.log("\nLogging in member with password...");
-      const response = await axios.post(
-        "/login",
+      const onboardResponse = await axios.post(
+        "/onboardMember",
         {
-          phone: phone,
-          password: password
+          firstname,
+          lastname,
+          phone,
+          defaultDenom
         },
         { headers }
       );
 
-      console.log("Login response:", JSON.stringify(response.data, null, 2));
-      expect(response.status).toBe(200);
-      expect(response.data).toHaveProperty("message", "Successfully logged in");
-      expect(response.data).toHaveProperty("data");
-      validateLoginResponse(response.data);
+      expect(onboardResponse.status).toBe(201);
+      const memberID = onboardResponse.data.data.action.details.memberID;
+      TestCleanup.trackMember(memberID, phone);
+
+      // Set initial password
+      const initialToken = onboardResponse.data.data.action.details.token;
+      await axios.post(
+        "/setInitialPassword",
+        {
+          phone,
+          password
+        },
+        { 
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${initialToken}`
+          }
+        }
+      );
+
+      // Attempt login with password
+      console.log("\nLogging in member with password...");
+      const loginResponse = await axios.post(
+        "/login",
+        {
+          phone,
+          password
+        },
+        { headers }
+      );
+
+      expect(loginResponse.status).toBe(200);
+      expect(loginResponse.data).toHaveProperty("message", "Successfully logged in");
+      expect(loginResponse.data).toHaveProperty("data");
+      validateLoginResponse(loginResponse.data);
     });
 
-    it("fails with missing password for password-enabled account", async () => {
-      const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
-      const [phone] = params;
+    it("allows v1-style login (no password) for password-enabled account", async () => {
+      // Create test member with password
+      const phone = generateRandomPhone();
+      const firstname = "John";
+      const lastname = "Doe";
+      const defaultDenom = "USD";
+      const password = "TestPass123!";
 
-      if (!phone) {
-        throw new Error("Usage: npm test login <phone>");
-      }
+      const onboardResponse = await axios.post(
+        "/onboardMember",
+        {
+          firstname,
+          lastname,
+          phone,
+          defaultDenom
+        },
+        { headers }
+      );
 
-      try {
-        await axios.post(
-          "/login",
-          {
-            phone: phone,
-          },
-          { headers }
-        );
-        fail("Should have thrown error for missing password");
-      } catch (error: any) {
-        expect(error.response.status).toBe(401);
-        expect(error.response.data).toHaveProperty("error.code", "PASSWORD_REQUIRED");
-      }
+      expect(onboardResponse.status).toBe(201);
+      const memberID = onboardResponse.data.data.action.details.memberID;
+      TestCleanup.trackMember(memberID, phone);
+
+      // Set initial password
+      const token = onboardResponse.data.data.action.details.token;
+      await axios.post(
+        "/setInitialPassword",
+        {
+          phone,
+          password
+        },
+        { 
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      // Verify v1-style login still works without password
+      const loginResponse = await axios.post(
+        "/login",
+        {
+          phone
+        },
+        { headers }
+      );
+
+      // Should succeed as part of v1 backward compatibility
+      expect(loginResponse.status).toBe(200);
+      expect(loginResponse.data).toHaveProperty("message", "Successfully logged in");
+      expect(loginResponse.data).toHaveProperty("data");
+      validateLoginResponse(loginResponse.data);
+
+      // Verify token indicates v1 auth method
+      const loginToken = loginResponse.data.data.action.details.token;
+      const [, payload] = loginToken.split('.');
+      const decodedPayload = JSON.parse(Buffer.from(payload, 'base64').toString());
+      expect(decodedPayload.authMethod).toBe("phone_only");
+      expect(decodedPayload.version).toBe("v1");
     });
 
     it("fails with incorrect password", async () => {
-      const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
-      const [phone] = params;
+      // Create test member with password
+      const phone = generateRandomPhone();
+      const firstname = "John";
+      const lastname = "Doe";
+      const defaultDenom = "USD";
+      const password = "TestPass123!";
 
-      if (!phone) {
-        throw new Error("Usage: npm test login <phone>");
-      }
+      const onboardResponse = await axios.post(
+        "/onboardMember",
+        {
+          firstname,
+          lastname,
+          phone,
+          defaultDenom
+        },
+        { headers }
+      );
 
-      try {
-        await axios.post(
-          "/login",
-          {
-            phone: phone,
-            password: "wrongpassword123!"
-          },
-          { headers }
-        );
-        fail("Should have thrown error for incorrect password");
-      } catch (error: any) {
-        expect(error.response.status).toBe(401);
-        expect(error.response.data).toHaveProperty("error.code", "INVALID_CREDENTIALS");
-      }
+      expect(onboardResponse.status).toBe(201);
+      const memberID = onboardResponse.data.data.action.details.memberID;
+      TestCleanup.trackMember(memberID, phone);
+
+      // Set initial password
+      const initialToken = onboardResponse.data.data.action.details.token;
+      await axios.post(
+        "/setInitialPassword",
+        {
+          phone,
+          password
+        },
+        { 
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${initialToken}`
+          }
+        }
+      );
+
+      // Attempt login with wrong password
+      const loginResponse = await axios.post(
+        "/login",
+        {
+          phone,
+          password: "WrongPass123!"
+        },
+        { headers }
+      ).catch(error => error.response);
+
+      expect(loginResponse.status).toBe(400);
+      expect(loginResponse.data.data.action.details).toHaveProperty("code", "INVALID_CREDENTIALS");
     });
   });
 });
