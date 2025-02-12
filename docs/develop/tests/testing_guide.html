@@ -110,8 +110,33 @@ npm test onboardMemberWithPassword    # Tests member onboarding with initial pas
 npm test setInitialPassword          # Tests setting initial password for v1 members
 npm test updatePassword              # Tests password update functionality and validation
 npm test passwordReset               # Tests password reset functionality with OTP verification
+npm test login                       # Tests login functionality including v1 backward compatibility
 npm test getmemberbyhandle phone memberHandle
 npm test getmemberdashboardbyphone phone</code></pre>
+
+    <h4>Login Tests</h4>
+    <p>
+      The login tests verify both legacy (v1) and password-enabled (v2) authentication flows:
+    </p>
+    <ul>
+      <li><strong>Legacy Login (Phone Only)</strong>
+        <ul>
+          <li>Verifies successful login for non-password accounts</li>
+          <li>Validates error handling for non-existent phone numbers</li>
+        </ul>
+      </li>
+      <li><strong>Password Authentication</strong>
+        <ul>
+          <li>Tests successful login with correct password</li>
+          <li>Verifies v1 backward compatibility - allows password-enabled accounts to still login without password</li>
+          <li>Validates error handling for incorrect passwords</li>
+        </ul>
+      </li>
+    </ul>
+
+    <p>
+      Note: For backward compatibility, v1-style login (without password) is allowed for all accounts, even those that have set up passwords. This maintains compatibility during the transition period from v1 to v2 authentication.
+    </p>
 
     <h3>Admin Endpoints</h3>
     <pre><code># Run all admin tests together
