@@ -9,6 +9,7 @@
     "watch:build": "tsc --watch",
     "dev": "nodemon build/src/index.js",
     "test": "node tests/run.js",
+    "test:coverage": "jest --coverage",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "docker:prod": "docker-compose up --build",

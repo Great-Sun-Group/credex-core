@@ -44,6 +44,77 @@
       delay.ts        # Request delay utilities
       request.ts      # HTTP request utilities</code></pre>
 
+    <h2>Code Coverage</h2>
+
+    <p>
+      The project uses Jest's built-in code coverage reporting to track test coverage metrics.
+    </p>
+
+    <h3>Running Tests with Coverage</h3>
+
+    <p>
+      To run tests with coverage reporting:
+    </p>
+
+    <pre><code># Run all tests with coverage
+npm run test:coverage</code></pre>
+
+    <p>
+      This will:
+    </p>
+    <ul>
+      <li>Run all tests in the project</li>
+      <li>Generate a coverage report in the terminal</li>
+      <li>Create detailed HTML reports in the 'coverage' directory</li>
+      <li>Generate coverage files in various formats (lcov, clover)</li>
+    </ul>
+
+    <h3>Understanding Coverage Metrics</h3>
+
+    <p>
+      The coverage report includes four key metrics:
+    </p>
+
+    <ul>
+      <li><strong>Statement Coverage</strong>: Percentage of program statements executed</li>
+      <li><strong>Branch Coverage</strong>: Percentage of control structures (if statements, switches) executed</li>
+      <li><strong>Function Coverage</strong>: Percentage of functions/methods called</li>
+      <li><strong>Line Coverage</strong>: Percentage of executable lines of code run</li>
+    </ul>
+
+    <h3>Coverage Reports</h3>
+
+    <p>
+      After running tests with coverage, you can find:
+    </p>
+
+    <ul>
+      <li>Terminal output showing overall coverage statistics</li>
+      <li>Detailed HTML report at coverage/lcov-report/index.html</li>
+      <li>Machine-readable reports in the coverage directory (lcov.info, clover.xml)</li>
+    </ul>
+
+    <p>
+      The HTML report provides:
+    </p>
+    <ul>
+      <li>File-by-file coverage breakdown</li>
+      <li>Line-by-line coverage highlighting</li>
+      <li>Branch coverage visualization</li>
+      <li>Directory summaries</li>
+    </ul>
+
+    <h3>Coverage Configuration</h3>
+
+    <p>
+      Coverage settings are configured in jest.config.js:
+    </p>
+    <ul>
+      <li>Excludes test files, type definitions, and other non-source files</li>
+      <li>Generates multiple report formats (text, lcov, clover)</li>
+      <li>Collects coverage from all TypeScript files under src/</li>
+    </ul>
+
     <h2>Local Development Testing</h2>
 
     <p>
@@ -60,7 +131,10 @@ npm test member
 npm test onboardmember Test Member1 1234567890 USD
 
 # Reset test environment
-npm test clearforce</code></pre>
+npm test clearforce
+
+# Run tests with coverage reporting
+npm run test:coverage</code></pre>
 
     <h2>Testing Against Deployed Environments</h2>
 
