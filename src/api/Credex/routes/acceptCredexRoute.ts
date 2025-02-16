@@ -76,7 +76,7 @@ export default function acceptCredexRoute() {
    *                               description: Formatted amount with denomination
    *                             denomination:
    *                               type: string
-   *                               enum: [CXX, CAD, USD, XAU, ZWG]
+   *                               enum: [CXX, CAD, USD, XAU]
    *                             securedCredex:
    *                               type: boolean
    *                             acceptorAccountID:
@@ -129,7 +129,7 @@ export default function acceptCredexRoute() {
    *                               description: Type of the account
    *                             defaultDenom:
    *                               type: string
-   *                               enum: [CXX, CAD, USD, XAU, ZWG]
+   *                               enum: [CXX, CAD, USD, XAU]
    *                             isOwnedAccount:
    *                               type: boolean
    *                               description: Whether the member owns this account

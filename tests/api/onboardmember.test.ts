@@ -8,22 +8,32 @@ describe("onboardMember Success Test", () => {
   it("onboard member successful with dashboard data", async () => {
     const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
     const [firstname, lastname, phone, defaultDenom] = params;
-    
+
     if (!firstname || !lastname || !phone || !defaultDenom) {
-      throw new Error("Usage: npm test onboardmember <firstname> <lastname> <phone> <defaultDenom>");
+      throw new Error(
+        "Usage: npm test onboardmember <firstname> <lastname> <phone> <defaultDenom>"
+      );
     }
 
     console.log("\nOnboarding member...");
-    const response = await axios.post("/onboardMember", {
-      firstname,
-      lastname,
-      phone,
-      defaultDenom
-    }, { headers });
+    const response = await axios.post(
+      "/onboardMember",
+      {
+        firstname,
+        lastname,
+        phone,
+        defaultDenom,
+      },
+      { headers }
+    );
 
-    console.log("Onboard member response:", JSON.stringify(response.data, null, 2));
+    console.log(
+      "Onboard member response:",
+      JSON.stringify(response.data, null, 2)
+    );
     expect(response.status).toBe(201);
-    expect(response.data).toHaveProperty("message", 
+    expect(response.data).toHaveProperty(
+      "message",
       `${firstname} ${lastname}: Personal account created with a default denomination of ${defaultDenom}.`
     );
     expect(response.data).toHaveProperty("data");
@@ -67,7 +77,7 @@ describe("onboardMember Success Test", () => {
       firstname,
       lastname,
       memberHandle: expect.any(String),
-      defaultDenom: expect.stringMatching(/^(CXX|CAD|USD|XAU|ZWG)$/),
+      defaultDenom: expect.stringMatching(/^(CXX|CAD|USD|XAU)$/),
       remainingAvailableUSD: expect.any(Number), // Always present for tier 1
     });
 
@@ -75,7 +85,7 @@ describe("onboardMember Success Test", () => {
     expect(response.data.data.dashboard).toHaveProperty("accounts");
     expect(response.data.data.dashboard.accounts).toBeInstanceOf(Array);
     expect(response.data.data.dashboard.accounts.length).toBe(1); // New member has one personal account
-    
+
     const account = response.data.data.dashboard.accounts[0];
     expect(account).toMatchObject({
       accountID: expect.stringMatching(
@@ -84,7 +94,7 @@ describe("onboardMember Success Test", () => {
       accountName: expect.any(String),
       accountHandle: expect.any(String),
       accountType: "PERSONAL",
-      defaultDenom: expect.stringMatching(/^(CXX|CAD|USD|XAU|ZWG)$/),
+      defaultDenom: expect.stringMatching(/^(CXX|CAD|USD|XAU)$/),
       isOwnedAccount: true,
       sendOffersTo: {
         memberID: expect.stringMatching(

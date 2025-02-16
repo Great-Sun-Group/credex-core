@@ -45,7 +45,7 @@ export default function createAccountRoute() {
    *                 description: Unique handle for the account (lowercase letters, numbers, underscores)
    *               defaultDenom:
    *                 type: string
-   *                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                 enum: [CXX, CAD, USD, XAU ]
    *                 description: Default denomination for transactions
    *               DCOgiveInCXX:
    *                 type: number
@@ -54,7 +54,7 @@ export default function createAccountRoute() {
    *                 description: Optional DCO give rate in CXX
    *               DCOdenom:
    *                 type: string
-   *                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                 enum: [CXX, CAD, USD, XAU]
    *                 description: Optional DCO denomination
    *     responses:
    *       201:

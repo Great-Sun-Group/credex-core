@@ -49,7 +49,7 @@ export default function onboardMemberRoute() {
    *                 description: International phone number format (digits only, no + prefix)
    *               defaultDenom:
    *                 type: string
-   *                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                 enum: [CXX, CAD, USD, XAU]
    *                 description: Default denomination for member's transactions
    *     responses:
    *       201:
@@ -105,7 +105,7 @@ export default function onboardMemberRoute() {
    *                               description: Member's unique handle (initially set to phone number)
    *                             defaultDenom:
    *                               type: string
-   *                               enum: [CXX, CAD, USD, XAU, ZWG]
+   *                               enum: [CXX, CAD, USD, XAU]
    *                               description: Member's default denomination
    *                             token:
    *                               type: string
@@ -159,7 +159,7 @@ export default function onboardMemberRoute() {
    *                                 description: Type of the account (PERSONAL for new members)
    *                               defaultDenom:
    *                                 type: string
-   *                                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                                 enum: [CXX, CAD, USD, XAU]
    *                               isOwnedAccount:
    *                                 type: boolean
    *                                 description: Whether the member owns this account (true for personal account)

@@ -42,7 +42,7 @@ export default function createCredexRoute() {
    *                 description: ID of the account receiving the Credex
    *               Denomination:
    *                 type: string
-   *                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                 enum: [CXX, CAD, USD, XAU]
    *                 description: Denomination of the transaction
    *               InitialAmount:
    *                 type: number
@@ -109,7 +109,7 @@ export default function createCredexRoute() {
    *                               description: Amount in decimal format
    *                             denomination:
    *                               type: string
-   *                               enum: [CXX, CAD, USD, XAU, ZWG]
+   *                               enum: [CXX, CAD, USD, XAU]
    *                             securedCredex:
    *                               type: boolean
    *                             receiverAccountID:
@@ -141,7 +141,7 @@ export default function createCredexRoute() {
    *                               type: string
    *                             defaultDenom:
    *                               type: string
-   *                               enum: [CXX, CAD, USD, XAU, ZWG]
+   *                               enum: [CXX, CAD, USD, XAU]
    *                         accounts:
    *                           type: array
    *                           items:
@@ -159,7 +159,7 @@ export default function createCredexRoute() {
    *                                 enum: [PERSONAL, TRUST, OPERATIONS]
    *                               defaultDenom:
    *                                 type: string
-   *                                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                                 enum: [CXX, CAD, USD, XAU]
    *                               isOwnedAccount:
    *                                 type: boolean
    *                               sendOffersTo:

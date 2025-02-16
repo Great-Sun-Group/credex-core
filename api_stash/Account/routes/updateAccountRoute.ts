@@ -42,7 +42,7 @@ export default function updateAccountRoute() {
    *                 description: New handle for the account (lowercase letters, numbers, underscores)
    *               defaultDenom:
    *                 type: string
-   *                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                 enum: [CXX, CAD, USD, XAU]
    *                 description: New default denomination for transactions
    *               DCOgiveInCXX:
    *                 type: number
@@ -51,7 +51,7 @@ export default function updateAccountRoute() {
    *                 description: New DCO give rate in CXX
    *               DCOdenom:
    *                 type: string
-   *                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                 enum: [CXX, CAD, USD, XAU]
    *                 description: New DCO denomination
    *     responses:
    *       200:

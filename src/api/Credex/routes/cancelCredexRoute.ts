@@ -73,7 +73,7 @@ export default function cancelCredexRoute() {
    *                               example: "0"
    *                             denomination:
    *                               type: string
-   *                               enum: [CXX, CAD, USD, XAU, ZWG]
+   *                               enum: [CXX, CAD, USD, XAU]
    *                               description: Original denomination of the Credex
    *                             securedCredex:
    *                               type: boolean

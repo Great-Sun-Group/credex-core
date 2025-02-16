@@ -78,7 +78,7 @@ import logger from "../../../utils/logger";
  *                               description: Formatted amount with denomination
  *                             denomination:
  *                               type: string
- *                               enum: [CXX, CAD, USD, XAU, ZWG]
+ *                               enum: [CXX, CAD, USD, XAU]
  *                             frequency:
  *                               type: string
  *                               enum: [DAILY, WEEKLY, MONTHLY]
