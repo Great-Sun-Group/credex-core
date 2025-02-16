@@ -77,7 +77,7 @@ export default function loginRoute() {
    *                     dashboard:
    *                       type: object
    *                       description: Full dashboard state after login
-   *                       properties: 
+   *                       properties:
    *                         member:
    *                           type: object
    *                           required:
@@ -129,7 +129,7 @@ export default function loginRoute() {
    *                                 description: Type of the account
    *                               defaultDenom:
    *                                 type: string
-   *                                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                                 enum: [CXX, CAD, USD, XAU]
    *                               isOwnedAccount:
    *                                 type: boolean
    *                                 description: Whether the member owns this account

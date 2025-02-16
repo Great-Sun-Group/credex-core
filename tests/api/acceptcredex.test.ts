@@ -50,7 +50,7 @@ describe("acceptCredex Success Test", () => {
       ), // UUID v4 format
       details: {
         amount: expect.any(String),
-        denomination: expect.stringMatching(/^(CXX|CAD|USD|XAU|ZWG)$/),
+        denomination: expect.stringMatching(/^(CXX|CAD|USD|XAU)$/),
         securedCredex: expect.any(Boolean),
         acceptorAccountID: expect.stringMatching(
           /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -69,7 +69,7 @@ describe("acceptCredex Success Test", () => {
       firstname: expect.any(String),
       lastname: expect.any(String),
       memberHandle: expect.any(String),
-      defaultDenom: expect.stringMatching(/^(CXX|CAD|USD|XAU|ZWG)$/),
+      defaultDenom: expect.stringMatching(/^(CXX|CAD|USD|XAU)$/),
     });
 
     // Verify optional remainingAvailableUSD (only present for memberTier < 3)
@@ -91,10 +91,8 @@ describe("acceptCredex Success Test", () => {
         ), // UUID v4 format
         accountName: expect.any(String),
         accountHandle: expect.any(String),
-        accountType: expect.stringMatching(
-          /^(PERSONAL|TRUST|OPERATIONS)$/
-        ),
-        defaultDenom: expect.stringMatching(/^(CXX|CAD|USD|XAU|ZWG)$/),
+        accountType: expect.stringMatching(/^(PERSONAL|TRUST|OPERATIONS)$/),
+        defaultDenom: expect.stringMatching(/^(CXX|CAD|USD|XAU)$/),
         isOwnedAccount: expect.any(Boolean),
         balanceData: {
           securedNetBalancesByDenom: expect.any(Array),

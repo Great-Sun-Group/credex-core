@@ -6,7 +6,9 @@ describe("createTrustAccount Success Test", () => {
   };
 
   it("create trust account successful with dashboard data", async () => {
-    const matches = (process.env.TEST_PARAMS || "").match(/(?:[^\s']+|'[^']*')+/g);
+    const matches = (process.env.TEST_PARAMS || "").match(
+      /(?:[^\s']+|'[^']*')+/g
+    );
     if (!matches) {
       throw new Error("No valid parameters provided");
     }
@@ -20,7 +22,7 @@ describe("createTrustAccount Success Test", () => {
       jurisdiction,
       accountNumber,
       ...additionalFields
-    ] = matches.map(param => param.replace(/^'|'$/g, ''));  // Remove quotes if present
+    ] = matches.map((param) => param.replace(/^'|'$/g, "")); // Remove quotes if present
 
     if (
       !token ||
@@ -41,7 +43,7 @@ describe("createTrustAccount Success Test", () => {
         ? {
             jurisdiction,
             accountNumber,
-            trustAccountSubType: subtype,  // Include subtype in bankFields
+            trustAccountSubType: subtype, // Include subtype in bankFields
             // Add jurisdiction-specific fields from additionalFields
             ...(jurisdiction === "US" && {
               routingNumber: additionalFields[0],
@@ -102,7 +104,7 @@ describe("createTrustAccount Success Test", () => {
         ),
         accountHandle: expect.any(String),
         subtype: expect.stringMatching(/^(BANK|VAULT)$/),
-        denomination: expect.stringMatching(/^(CXX|CAD|USD|XAU|ZWG)$/),
+        denomination: expect.stringMatching(/^(CXX|CAD|USD|XAU)$/),
       },
     });
 
@@ -117,7 +119,7 @@ describe("createTrustAccount Success Test", () => {
       accountName: expect.any(String),
       accountHandle: expect.any(String),
       accountType: "TRUST",
-      denomination: expect.stringMatching(/^(CXX|CAD|USD|XAU|ZWG)$/),
+      denomination: expect.stringMatching(/^(CXX|CAD|USD|XAU)$/),
       ...(subtype === "BANK" && {
         bankFields: {
           jurisdiction: expect.stringMatching(/^(CA|US|ZW)$/),

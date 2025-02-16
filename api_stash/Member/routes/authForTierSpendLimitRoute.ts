@@ -38,7 +38,7 @@ export default function authForTierSpendLimitRoute() {
    *                 description: Amount of the transaction
    *               Denomination:
    *                 type: string
-   *                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                 enum: [CXX, CAD, USD, XAU]
    *                 description: Denomination of the transaction
    *               securedCredex:
    *                 type: boolean

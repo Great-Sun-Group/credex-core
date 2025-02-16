@@ -1,6 +1,5 @@
 import { DatabaseSessions, DayZeroRates } from "./types";
 import { getDenominations } from "../../constants/denominations";
-import { fetchZwgRate, ZwgRateError } from "../fetchZwgRate";
 import axios from "axios";
 import _ from "lodash";
 import moment from "moment-timezone";
@@ -36,26 +35,6 @@ export async function fetchAndProcessRates(
   const {
     data: { rates: USDbaseRates },
   } = await axios.get(baseUrl);
-
-  try {
-    const zigRate = (await fetchZwgRate())[1].avg;
-    USDbaseRates.ZWG = zigRate;
-    logger.info("ZWG rate fetched successfully", { rate: zigRate, requestId });
-  } catch (error) {
-    if (error instanceof ZwgRateError) {
-      logger.warn(
-        "Failed to fetch ZWG rate, excluding ZWG from denominations",
-        { requestId, error: error.message }
-      );
-      delete USDbaseRates.ZWG;
-    } else {
-      logger.error("Unexpected error while fetching ZWG rate", {
-        requestId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
-  }
 
   const OneCXXinCXXdenom = 1;
   const CXXdenom = "CAD";

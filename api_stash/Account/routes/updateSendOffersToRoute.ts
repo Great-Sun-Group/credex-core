@@ -132,7 +132,7 @@ export default function updateSendOffersToRoute() {
    *                               description: Type of the account
    *                             defaultDenom:
    *                               type: string
-   *                               enum: [CXX, CAD, USD, XAU, ZWG]
+   *                               enum: [CXX, CAD, USD, XAU]
    *                             isOwnedAccount:
    *                               type: boolean
    *                               description: Whether the member owns this account

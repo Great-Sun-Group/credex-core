@@ -26,7 +26,7 @@ interface AccountDashboardData {
   accountName: string;
   accountHandle: string;
   accountType: 'PERSONAL' | 'TRUST' | 'OPERATIONS';
-  defaultDenom: 'CXX' | 'CAD' | 'USD' | 'XAU' | 'ZWG';
+  defaultDenom: 'CXX' | 'CAD' | 'USD' | 'XAU';
   isOwnedAccount: boolean;
   sendOffersTo?: {
     memberID: string;
@@ -46,7 +46,7 @@ interface AccountDashboardData {
   pendingOutData: OfferedCredex[];
   // Trust account specific fields
   subtype?: 'BANK' | 'VAULT';
-  denomination?: 'CXX' | 'CAD' | 'USD' | 'XAU' | 'ZWG';
+  denomination?: 'CXX' | 'CAD' | 'USD' | 'XAU';
   bankFields?: {
     jurisdiction: string;
     accountNumber: string;

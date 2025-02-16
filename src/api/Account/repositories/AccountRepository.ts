@@ -11,7 +11,7 @@ export interface AccountData {
     | "PERSONAL"
     | "TRUST"
     | "OPERATIONS";
-  defaultDenom: "CXX" | "CAD" | "USD" | "XAU" | "ZWG";
+  defaultDenom: "CXX" | "CAD" | "USD" | "XAU";
   isOwnedAccount: boolean;
   sendOffersTo?: {
     memberID: string;

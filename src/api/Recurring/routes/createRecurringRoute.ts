@@ -59,7 +59,7 @@ import logger from "../../../utils/logger";
  *                 description: Required if templateType is REGULAR
  *               denomination:
  *                 type: string
- *                 enum: [CXX, CAD, USD, XAU, ZWG]
+ *                 enum: [CXX, CAD, USD, XAU]
  *                 description: Required if templateType is REGULAR
  *               securedCredex:
  *                 type: boolean
@@ -71,7 +71,7 @@ import logger from "../../../utils/logger";
  *                 description: Required if templateType is DCO_GIVE
  *               DCOdenom:
  *                 type: string
- *                 enum: [CXX, CAD, USD, XAU, ZWG]
+ *                 enum: [CXX, CAD, USD, XAU]
  *                 description: Required if templateType is DCO_GIVE
  *               memberTier:
  *                 type: integer
@@ -122,7 +122,7 @@ import logger from "../../../utils/logger";
  *                               description: Formatted amount with denomination
  *                             denomination:
  *                               type: string
- *                               enum: [CXX, CAD, USD, XAU, ZWG]
+ *                               enum: [CXX, CAD, USD, XAU]
  *                             payFrequency:
  *                               type: integer
  *                               description: Number of days between payments
