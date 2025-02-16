@@ -100,7 +100,7 @@ export class BalanceRepository implements IBalanceRepository {
             WITH denom, account, daynode, sumSecuredIn,
                 reduce(s = 0, n IN collect(DISTINCT outSecuredOwesCredex) | s + n.OutstandingAmount) AS sumSecuredOwesOut
 
-            // Outgoing OFFERS - use InitialAmount (to prevent double-offering)
+            // Outgoing OFFERS - use InitialAmount
             OPTIONAL MATCH (account)-[:OFFERS]->(outSecuredOffersCredex:Credex {Denomination: denom})<-[:SECURES]-()
             WHERE NOT (outSecuredOffersCredex)-[:CLEARED]->()
             WITH denom, account, daynode, sumSecuredIn, sumSecuredOwesOut,
