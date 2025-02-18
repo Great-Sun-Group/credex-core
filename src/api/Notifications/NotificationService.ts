@@ -3,6 +3,7 @@ import { NotificationData, FCMToken } from './types';
 import { logInfo, logError, logWarning, logDebug } from '../../utils/logger';
 import { fcmTokenRepository } from './repositories/FCMTokenRepository';
 import { denomFormatter } from '../../utils/denomUtils';
+import { getConfig } from '../../../config/config';
 
 class NotificationService {
   private static instance: NotificationService;
@@ -25,29 +26,16 @@ class NotificationService {
     try {
       if (!this.initialized) {
         const configStart = Date.now();
-        logDebug('Checking Firebase configuration');
-        const projectId = process.env.FIREBASE_PROJECT_ID;
-        const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-        const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+        logDebug('Loading Firebase configuration');
+        const config = await getConfig();
+        const { projectId, clientEmail, privateKey } = config.firebase;
 
-        logDebug('Firebase configuration check completed', {
+        logDebug('Firebase configuration loaded', {
           duration: Date.now() - configStart,
           hasProjectId: !!projectId,
           hasClientEmail: !!clientEmail,
           hasPrivateKey: !!privateKey
         });
-
-        if (!projectId || !clientEmail || !privateKey) {
-          const missingVars = [
-            !projectId && 'FIREBASE_PROJECT_ID',
-            !clientEmail && 'FIREBASE_CLIENT_EMAIL',
-            !privateKey && 'FIREBASE_PRIVATE_KEY'
-          ].filter(Boolean).join(', ');
-          
-          const error = new Error(`Missing required Firebase configuration: ${missingVars}`);
-          logError('Missing Firebase configuration variables', error);
-          throw error;
-        }
 
         const sdkStart = Date.now();
         logDebug('Initializing Firebase Admin SDK');

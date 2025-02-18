@@ -61,11 +61,13 @@ const requiredEnvVars = [
   "CLIENT_API_KEY",
   "DEV_ADMIN_KEY",
   "SKIP_RATE_LIMITER_KEY",
-  // Sensitive auth configuration
   "PASSWORD_PEPPER",
   "CREDEX_CORE_WHATSAPP_API_KEY",
   "CREDEX_CORE_WHATSAPP_BUSINESS_ID",
   "CREDEX_CORE_WHATSAPP_PHONE_ID",
+  "FIREBASE_PROJECT_ID",
+  "FIREBASE_CLIENT_EMAIL",
+  "FIREBASE_PRIVATE_KEY",
 ];
 
 let configPromise: Promise<any>;
@@ -120,6 +122,11 @@ async function initConfig() {
         businessId: envVars.CREDEX_CORE_WHATSAPP_BUSINESS_ID,
         phoneId: envVars.CREDEX_CORE_WHATSAPP_PHONE_ID
       }
+    },
+    firebase: {
+      projectId: envVars.FIREBASE_PROJECT_ID,
+      clientEmail: envVars.FIREBASE_CLIENT_EMAIL,
+      privateKey: envVars.FIREBASE_PRIVATE_KEY
     }
   };
 
