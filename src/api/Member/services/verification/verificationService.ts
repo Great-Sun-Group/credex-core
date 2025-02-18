@@ -3,10 +3,11 @@ import { generateResetToken } from '../../controllers/passwordResetController';
 import { ledgerSpaceDriver } from '../../../../../config/neo4j';
 import { 
   IVerificationProvider, 
-   VerificationError, 
+  VerificationError, 
   VerificationConfig,
   VerificationServiceConfig 
 } from './types';
+import { authConfig } from '../../../../config/auth';
 import { MemberRepository } from '../../repositories/MemberRepository';
 import { WhatsAppProvider } from './whatsappProvider';
 import { OTPManager } from './otpManager';
@@ -46,10 +47,10 @@ export class VerificationService {
     const provider = new WhatsAppProvider();
     const otpManager = new OTPManager();
     const config = {
-      otpExpiry: parseInt(process.env.OTP_EXPIRY || '300', 10), // 5 minutes in seconds
-      maxDailyRequests: parseInt(process.env.MAX_DAILY_OTP_REQUESTS || '5', 10),
-      cooldownMinutes: parseInt(process.env.OTP_COOLDOWN_MINUTES || '5', 10),
-      maxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS || '3', 10)
+      otpExpiry: authConfig.otp.expiry,
+      maxDailyRequests: authConfig.otp.maxDailyRequests,
+      cooldownMinutes: authConfig.otp.cooldownMinutes,
+      maxAttempts: authConfig.otp.maxAttempts
     };
 
     return new VerificationService({ provider, otpManager, config });

@@ -249,8 +249,9 @@ async function runTest() {
 
       jestCommand = `jest --testPathPattern="${pattern}" ${envFlags[env]}`;
     } else {
-      // No command provided - run all tests including error tests
-      jestCommand = `jest ${envFlags[env]}`;
+    // No command provided or running coverage - run all tests
+    const isCoverage = process.env.COVERAGE === 'true';
+    jestCommand = `jest ${envFlags[env]} ${isCoverage ? '--coverage' : ''}`;
     }
 
     // Execute the Jest command

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { ApiActionType, MemberActionDetails, ServiceResult } from '../../../types/apiResponse';
 import { generateResetToken } from './passwordResetController';
+import { authConfig } from '../../../config/auth';
 
 interface MemberLookupData {
   memberID: string;
@@ -21,12 +22,12 @@ interface OTPResponseData {
 
 interface OTPResponse extends ServiceResult<OTPResponseData> {}
 
-// Create default service configuration
+// Create default service configuration from auth config
 const defaultConfig = {
-  otpExpiry: parseInt(process.env.OTP_EXPIRY || '300', 10),
-  maxDailyRequests: parseInt(process.env.MAX_DAILY_OTP_REQUESTS || '5', 10),
-  cooldownMinutes: parseInt(process.env.OTP_COOLDOWN_MINUTES || '5', 10),
-  maxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS || '3', 10)
+  otpExpiry: authConfig.otp.expiry,
+  maxDailyRequests: authConfig.otp.maxDailyRequests,
+  cooldownMinutes: authConfig.otp.cooldownMinutes,
+  maxAttempts: authConfig.otp.maxAttempts
 };
 
 // Create verification service for each request

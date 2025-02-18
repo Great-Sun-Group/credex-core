@@ -60,7 +60,12 @@ const requiredEnvVars = [
   "JWT_SECRET",
   "CLIENT_API_KEY",
   "DEV_ADMIN_KEY",
-  "SKIP_RATE_LIMITER_KEY"
+  "SKIP_RATE_LIMITER_KEY",
+  // Sensitive auth configuration
+  "PASSWORD_PEPPER",
+  "WHATSAPP_API_KEY",
+  "WHATSAPP_BUSINESS_ID",
+  "WHATSAPP_PHONE_ID"
 ];
 
 let configPromise: Promise<any>;
@@ -108,6 +113,14 @@ async function initConfig() {
       dailyCredcoinOffering: "0 0 * * *", // Every day at midnight UTC
       minuteTransactionQueue: "* * * * *", // Every minute
     },
+    auth: {
+      passwordPepper: envVars.PASSWORD_PEPPER,
+      whatsapp: {
+        apiKey: envVars.WHATSAPP_API_KEY,
+        businessId: envVars.WHATSAPP_BUSINESS_ID,
+        phoneId: envVars.WHATSAPP_PHONE_ID
+      }
+    }
   };
 
   logger.info("Configuration initialized", {

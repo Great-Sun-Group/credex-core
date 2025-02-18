@@ -1,15 +1,29 @@
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import logger from '../../../utils/logger';
+import { authConfig } from '../../../config/auth';
+import { getConfig } from '../../../../config/config';
 
-// Password validation schema
+// Password validation schema based on configuration
 const passwordSchema = z.string()
-  .min(10, 'Password must be at least 10 characters long')
-  .max(128, 'Password must not exceed 128 characters')
-  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-  .regex(/[0-9]/, 'Password must contain at least one number')
-  .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character');
+  .min(authConfig.password.validation.minLength, `Password must be at least ${authConfig.password.validation.minLength} characters long`)
+  .max(authConfig.password.validation.maxLength, `Password must not exceed ${authConfig.password.validation.maxLength} characters`)
+  .refine(
+    (password) => !authConfig.password.validation.requireUppercase || /[A-Z]/.test(password),
+    'Password must contain at least one uppercase letter'
+  )
+  .refine(
+    (password) => !authConfig.password.validation.requireLowercase || /[a-z]/.test(password),
+    'Password must contain at least one lowercase letter'
+  )
+  .refine(
+    (password) => !authConfig.password.validation.requireNumber || /[0-9]/.test(password),
+    'Password must contain at least one number'
+  )
+  .refine(
+    (password) => !authConfig.password.validation.requireSpecial || /[^A-Za-z0-9]/.test(password),
+    'Password must contain at least one special character'
+  );
 
 export interface PasswordValidationResult {
   isValid: boolean;
@@ -22,7 +36,7 @@ export interface PasswordHashResult {
 }
 
 export class PasswordService {
-  private readonly SALT_ROUNDS = 12;
+  private readonly SALT_ROUNDS = authConfig.password.bcryptCost;
 
   /**
    * Validates a password against the defined complexity requirements
@@ -61,7 +75,9 @@ export class PasswordService {
 
     try {
       const salt = await bcrypt.genSalt(this.SALT_ROUNDS);
-      const hash = await bcrypt.hash(password, salt);
+      const config = await getConfig();
+      const pepperedPassword = `${password}${config.auth.passwordPepper}`;
+      const hash = await bcrypt.hash(pepperedPassword, salt);
       return { hash, salt };
     } catch (error) {
       logger.error('Error hashing password', {
@@ -79,7 +95,10 @@ export class PasswordService {
    */
   async verifyPassword(password: string, hash: string): Promise<boolean> {
     try {
-      return await bcrypt.compare(password, hash);
+      const config = await getConfig();
+      const pepperedPassword = `${password}${config.auth.passwordPepper}`;
+      const isValid = await bcrypt.compare(pepperedPassword, hash);
+      return isValid;
     } catch (error) {
       logger.error('Error verifying password', {
         error: error instanceof Error ? error.message : 'Unknown error'
