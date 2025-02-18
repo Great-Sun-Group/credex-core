@@ -63,9 +63,9 @@ const requiredEnvVars = [
   "SKIP_RATE_LIMITER_KEY",
   // Sensitive auth configuration
   "PASSWORD_PEPPER",
-  "WHATSAPP_API_KEY",
-  "WHATSAPP_BUSINESS_ID",
-  "WHATSAPP_PHONE_ID"
+  "CREDEX_CORE_WHATSAPP_API_KEY",
+  "CREDEX_CORE_WHATSAPP_BUSINESS_ID",
+  "CREDEX_CORE_WHATSAPP_PHONE_ID",
 ];
 
 let configPromise: Promise<any>;
@@ -116,9 +116,9 @@ async function initConfig() {
     auth: {
       passwordPepper: envVars.PASSWORD_PEPPER,
       whatsapp: {
-        apiKey: envVars.WHATSAPP_API_KEY,
-        businessId: envVars.WHATSAPP_BUSINESS_ID,
-        phoneId: envVars.WHATSAPP_PHONE_ID
+        apiKey: envVars.CREDEX_CORE_WHATSAPP_API_KEY,
+        businessId: envVars.CREDEX_CORE_WHATSAPP_BUSINESS_ID,
+        phoneId: envVars.CREDEX_CORE_WHATSAPP_PHONE_ID
       }
     }
   };
