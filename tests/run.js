@@ -89,13 +89,17 @@ function startServer() {
 
   console.log("Starting test server...");
   const server = spawn("node", ["build/src/index.js"], {
-    env: { ...process.env, NODE_ENV: "test" },
+    env: { 
+      ...process.env, 
+      NODE_ENV: "test",
+      CLIENT_API_KEY: process.env.CLIENT_API_KEY || 'love-achingly'
+    },
     stdio: "inherit",
   });
 
-  // Give the server time to start
+  // Give the server time to start and initialize
   return new Promise((resolve) => {
-    setTimeout(() => resolve(server), 5000);
+    setTimeout(() => resolve(server), 8000);
   });
 }
 
