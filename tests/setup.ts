@@ -6,6 +6,7 @@ import logger from "../src/utils/logger";
 import initializeApp from "../src";
 import net from "net";
 import { promisify } from "util";
+import { TestCleanup } from "./utils/cleanup";
 
 // Function to find an available port
 async function findAvailablePort(startPort: number = 3000): Promise<number> {
@@ -27,7 +28,6 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   }
   return port;
 }
-
 
 // Load environment variables from .env file
 dotenv.config();
@@ -186,6 +186,9 @@ instance.interceptors.response.use(
 // Global setup
 beforeAll(async () => {
   try {
+    // Clean up any leftover test data first
+    await TestCleanup.cleanupMembers();
+
     // Find available port and set up base URL
     serverPort = env.DOCKER_ENV ? 3000 : await findAvailablePort(3000);
     baseURL = env.DOCKER_ENV ? "http://server:3000" : `http://localhost:${serverPort}`;
@@ -259,62 +262,71 @@ beforeAll(async () => {
 // Global teardown
 afterAll(async () => {
   try {
-    // Close server if it exists and wait for all connections to close
+    // Clean up any remaining test data
+    await TestCleanup.cleanupMembers();
+
+    // Close server if it exists
     if ((global as any).testServer) {
+      const server = (global as any).testServer;
+
+      // First destroy any existing connections
+      await new Promise<void>((resolve) => {
+        server.getConnections((err: Error | null, count: number) => {
+          if (err) {
+            logger.error("Error getting connections:", err);
+          } else if (count > 0) {
+            logger.info(`Closing ${count} active connections`);
+            // Destroy each socket individually
+            server._connections?.forEach((socket: any) => {
+              try {
+                socket.destroy();
+              } catch (e) {
+                logger.error("Error destroying socket:", e);
+              }
+            });
+          }
+          resolve();
+        });
+      });
+
+      // Then close the server
       await new Promise<void>((resolve, reject) => {
-        const server = (global as any).testServer;
-        
-        // Set a timeout for server shutdown
-        const shutdownTimeout = setTimeout(() => {
-          // Force destroy all sockets
-          server.getConnections((err: Error | null, count: number) => {
-            if (count > 0) {
-              console.log(`Force destroying ${count} connections`);
-              server._connections.forEach((socket: any) => socket.destroy());
-            }
-          });
-          reject(new Error('Server shutdown timed out'));
+        const closeTimeout = setTimeout(() => {
+          reject(new Error("Server close timed out"));
         }, 5000);
-        
-        // First try graceful shutdown
+
         server.close(() => {
-          clearTimeout(shutdownTimeout);
-          console.log('Test server closed');
+          clearTimeout(closeTimeout);
+          logger.info("Test server closed successfully");
           resolve();
         });
       });
     }
 
-    // Close database connections with timeout
-    await Promise.race([
-      Promise.all([
-        ledgerSpaceDriver.close(),
-        searchSpaceDriver.close()
-      ]),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database connection closure timed out')), 5000)
-      )
-    ]);
+    // Close database connections
+    logger.info("Closing Neo4j drivers...");
+    await Promise.all([
+      ledgerSpaceDriver.close(),
+      searchSpaceDriver.close()
+    ]).catch(error => {
+      logger.error("Error closing Neo4j drivers:", error);
+      throw error;
+    });
     
     logger.info("Neo4j drivers closed successfully");
-
-    // Force exit after cleanup
-    setTimeout(() => {
-      console.log('Forcing exit after cleanup');
-      process.exit(0);
-    }, 1000);
   } catch (error) {
 <<<<<<< HEAD
     logger.error("Error in test cleanup:", error);
-    console.error('Cleanup error:', error);
-    // Force exit even on error
-    process.exit(1);
+    throw error; // Let Jest handle the error
   }
 });
 
 // Add cleanup between tests
 afterEach(async () => {
   try {
+    // Clean up test data after each test
+    await TestCleanup.cleanupMembers();
+
     // Clean up any remaining connections
     if ((global as any).testServer) {
       await new Promise<void>((resolve) => {
