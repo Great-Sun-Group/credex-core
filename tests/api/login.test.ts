@@ -12,14 +12,6 @@ describe("Login Tests", () => {
   beforeAll(async () => {
     // Clean up any existing test data
     await TestCleanup.cleanupMembers();
-    
-    // Clean up any members that might have been left from previous test runs
-    const session = ledgerSpaceDriver.session();
-    try {
-      await session.run('MATCH (m:Member) DETACH DELETE m');
-    } finally {
-      await session.close();
-    }
   });
 
   beforeEach(async () => {

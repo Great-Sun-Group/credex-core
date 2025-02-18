@@ -30,76 +30,111 @@ export class TestCleanup {
   private static async cleanupLedgerSpace() {
     const session = ledgerSpaceDriver.session();
     try {
+      // Safety check - don't proceed if no test data is tracked
+      if (this.createdMemberIDs.length === 0 && 
+          this.createdPhones.length === 0 && 
+          this.createdAccountIDs.length === 0) {
+        logger.info("No test data tracked for cleanup");
+        return;
+      }
+
+      // Protected entities that should never be deleted
+      const PROTECTED_PHONE = "263778177125"; // GREATSUN_TRUST
+      const PROTECTED_ACCOUNTS = ["GREATSUN_TRUST_CAD", "GREATSUN_TRUST_USD"];
+
       // First clean up all relationships and dependent nodes connected to test members
       if (this.createdMemberIDs.length > 0) {
+        logger.info(`Cleaning up ${this.createdMemberIDs.length} tracked test members by ID`);
+        
         // Log counts before cleanup
         const beforeCounts = await session.run(`
           MATCH (m:Member) WHERE m.memberID IN $memberIDs
-          AND NOT m.phone = "263778177125" // Exclude GREATSUN_TRUST
+          AND NOT m.phone = $protectedPhone
           OPTIONAL MATCH (m)-[r]->(n)
           RETURN 
             count(DISTINCT m) as memberCount,
             count(DISTINCT r) as relationshipCount,
             count(DISTINCT n) as connectedNodeCount
-        `, { memberIDs: this.createdMemberIDs });
-        
-        logger.info("Ledger space counts before cleanup:", {
-          ...beforeCounts.records[0].toObject()
+        `, { 
+          memberIDs: this.createdMemberIDs,
+          protectedPhone: PROTECTED_PHONE
         });
+        
+        const counts = beforeCounts.records[0].toObject();
+        logger.info("Ledger space counts before cleanup:", counts);
 
-        // Clean up all connected data except Daynode and GREATSUN_TRUST
-        await session.run(`
-          MATCH (m:Member) WHERE m.memberID IN $memberIDs
-          AND NOT m.phone = "263778177125" // Exclude GREATSUN_TRUST
-          OPTIONAL MATCH (m)-[r1]-(n)
-          WHERE NOT n:Daynode AND NOT n:Member { phone: "263778177125" }
-          OPTIONAL MATCH (n)-[r2]-(x)
-          WHERE NOT x:Daynode AND NOT x:Member { phone: "263778177125" }
-          WITH m, r1, n, r2, x
-          DETACH DELETE x, n, m
-        `, { memberIDs: this.createdMemberIDs });
+        if (counts.memberCount === 0) {
+          logger.info("No matching test members found for cleanup");
+        } else {
+          // Clean up all connected data except protected entities
+          await session.run(`
+            MATCH (m:Member) WHERE m.memberID IN $memberIDs
+            AND NOT m.phone = $protectedPhone
+            OPTIONAL MATCH (m)-[r1]-(n)
+            WHERE NOT n:Daynode AND NOT (n:Member AND n.phone = $protectedPhone)
+            OPTIONAL MATCH (n)-[r2]-(x)
+            WHERE NOT x:Daynode AND NOT (x:Member AND x.phone = $protectedPhone)
+            WITH m, r1, n, r2, x
+            DETACH DELETE x, n, m
+          `, { 
+            memberIDs: this.createdMemberIDs,
+            protectedPhone: PROTECTED_PHONE
+          });
+          logger.info(`Cleaned up members and connected nodes`);
+        }
       }
 
       // Clean up by phone numbers as backup
       if (this.createdPhones.length > 0) {
+        logger.info(`Cleaning up ${this.createdPhones.length} tracked test members by phone`);
         await session.run(`
           MATCH (m:Member) WHERE m.phone IN $phones
-          AND NOT m.phone = "263778177125" // Exclude GREATSUN_TRUST
+          AND NOT m.phone = $protectedPhone
           OPTIONAL MATCH (m)-[r1]-(n)
-          WHERE NOT n:Daynode AND NOT n:Member { phone: "263778177125" }
+          WHERE NOT n:Daynode AND NOT (n:Member AND n.phone = $protectedPhone)
           OPTIONAL MATCH (n)-[r2]-(x)
-          WHERE NOT x:Daynode AND NOT x:Member { phone: "263778177125" }
+          WHERE NOT x:Daynode AND NOT (x:Member AND x.phone = $protectedPhone)
           WITH m, r1, n, r2, x
           DETACH DELETE x, n, m
-        `, { phones: this.createdPhones });
+        `, { 
+          phones: this.createdPhones,
+          protectedPhone: PROTECTED_PHONE
+        });
       }
 
-      // Clean up any orphaned accounts except GREATSUN_TRUST accounts
+      // Clean up any orphaned accounts except protected accounts
       if (this.createdAccountIDs.length > 0) {
+        logger.info(`Cleaning up ${this.createdAccountIDs.length} tracked test accounts`);
         await session.run(`
           MATCH (a:Account) WHERE a.accountID IN $accountIDs
-          AND NOT a.accountHandle IN ["GREATSUN_TRUST_CAD", "GREATSUN_TRUST_USD"]
+          AND NOT a.accountHandle IN $protectedAccounts
           OPTIONAL MATCH (a)-[r]-(n)
-          WHERE NOT n:Daynode AND NOT n:Member { phone: "263778177125" }
+          WHERE NOT n:Daynode AND NOT (n:Member AND n.phone = $protectedPhone)
           DETACH DELETE a, n
-        `, { accountIDs: this.createdAccountIDs });
+        `, { 
+          accountIDs: this.createdAccountIDs,
+          protectedAccounts: PROTECTED_ACCOUNTS,
+          protectedPhone: PROTECTED_PHONE
+        });
       }
 
       // Verify cleanup
       const afterCounts = await session.run(`
         MATCH (m:Member) 
-        WHERE m.memberID IN $memberIDs OR m.phone IN $phones
+        WHERE (m.memberID IN $memberIDs OR m.phone IN $phones)
+        AND NOT m.phone = $protectedPhone
         RETURN count(m) as remainingMembers
       `, { 
         memberIDs: this.createdMemberIDs,
-        phones: this.createdPhones
+        phones: this.createdPhones,
+        protectedPhone: PROTECTED_PHONE
       });
 
       const remaining = afterCounts.records[0].get('remainingMembers').toNumber();
       if (remaining > 0) {
         logger.warn(`Found ${remaining} remaining test members after cleanup`);
       } else {
-        logger.info("Ledger space cleanup successful");
+        logger.info("Ledger space cleanup successful - all test data removed");
       }
 
     } catch (error) {
@@ -116,31 +151,60 @@ export class TestCleanup {
   private static async cleanupSearchSpace() {
     const session = searchSpaceDriver.session();
     try {
+      // Safety check - don't proceed if no test data is tracked
+      if (this.createdMemberIDs.length === 0 && 
+          this.createdPhones.length === 0 && 
+          this.createdAccountIDs.length === 0) {
+        logger.info("No test data tracked for search space cleanup");
+        return;
+      }
+
+      // Protected entities that should never be deleted
+      const PROTECTED_PHONE = "263778177125"; // GREATSUN_TRUST
+      const PROTECTED_ACCOUNTS = ["GREATSUN_TRUST_CAD", "GREATSUN_TRUST_USD"];
+
       // Clean up members and accounts in search space
       if (this.createdMemberIDs.length > 0) {
+        logger.info(`Cleaning up ${this.createdMemberIDs.length} tracked test members by ID in search space`);
         await session.run(`
           MATCH (m:Member) WHERE m.memberID IN $memberIDs
+          AND NOT m.phone = $protectedPhone
           OPTIONAL MATCH (m)-[r]-(n)
+          WHERE NOT (n:Member AND n.phone = $protectedPhone)
           DETACH DELETE m, n
-        `, { memberIDs: this.createdMemberIDs });
+        `, { 
+          memberIDs: this.createdMemberIDs,
+          protectedPhone: PROTECTED_PHONE
+        });
       }
 
       if (this.createdPhones.length > 0) {
+        logger.info(`Cleaning up ${this.createdPhones.length} tracked test members by phone in search space`);
         await session.run(`
           MATCH (m:Member) WHERE m.phone IN $phones
+          AND NOT m.phone = $protectedPhone
           OPTIONAL MATCH (m)-[r]-(n)
+          WHERE NOT (n:Member AND n.phone = $protectedPhone)
           DETACH DELETE m, n
-        `, { phones: this.createdPhones });
+        `, { 
+          phones: this.createdPhones,
+          protectedPhone: PROTECTED_PHONE
+        });
       }
 
       if (this.createdAccountIDs.length > 0) {
+        logger.info(`Cleaning up ${this.createdAccountIDs.length} tracked test accounts in search space`);
         await session.run(`
           MATCH (a:Account) WHERE a.accountID IN $accountIDs
+          AND NOT a.accountHandle IN $protectedAccounts
           DETACH DELETE a
-        `, { accountIDs: this.createdAccountIDs });
+        `, { 
+          accountIDs: this.createdAccountIDs,
+          protectedAccounts: PROTECTED_ACCOUNTS
+        });
       }
 
-      logger.info("Search space cleanup completed");
+      logger.info("Search space cleanup completed successfully");
     } catch (error) {
       logger.error("Error cleaning up search space:", error);
       throw error;

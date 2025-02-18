@@ -37,19 +37,6 @@ describe("Set Initial Password Tests", () => {
   beforeAll(async () => {
     // Clean up any existing test data
     await TestCleanup.cleanupMembers();
-    
-    // Clean up any members that might have been left from previous test runs
-    const ledgerSession = ledgerSpaceDriver.session();
-    const searchSession = searchSpaceDriver.session();
-    try {
-      // Clean up in ledger space
-      await ledgerSession.run('MATCH (m:Member) DETACH DELETE m');
-      // Clean up in search space
-      await searchSession.run('MATCH (m:Member) DETACH DELETE m');
-    } finally {
-      await ledgerSession.close();
-      await searchSession.close();
-    }
   });
 
   afterEach(async () => {

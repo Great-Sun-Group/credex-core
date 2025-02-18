@@ -22,17 +22,8 @@ describe('Password Reset Flow', () => {
     mockProvider = new MockWhatsAppProvider();
     VerificationProviderFactory.setMockProvider(mockProvider);
 
-    // Clean up any existing test member
-    const session = ledgerSpaceDriver.session();
-    try {
-      await session.run(
-        `MATCH (m:Member {phone: $phone}) 
-         DETACH DELETE m`,
-        { phone: testPhone }
-      );
-    } finally {
-      await session.close();
-    }
+    // Clean up any existing test data
+    await TestCleanup.cleanupMembers();
     
     // Create test member with initial password
     const onboardResponse = await onboardMember(

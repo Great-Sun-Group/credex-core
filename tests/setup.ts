@@ -257,7 +257,7 @@ beforeAll(async () => {
 >>>>>>> 3877d10 (Added password management)
     process.exit(1);
   }
-});
+}, 60000);
 
 // Global teardown
 afterAll(async () => {
@@ -276,14 +276,8 @@ afterAll(async () => {
             logger.error("Error getting connections:", err);
           } else if (count > 0) {
             logger.info(`Closing ${count} active connections`);
-            // Destroy each socket individually
-            server._connections?.forEach((socket: any) => {
-              try {
-                socket.destroy();
-              } catch (e) {
-                logger.error("Error destroying socket:", e);
-              }
-            });
+            // Force close all connections
+            server.unref();
           }
           resolve();
         });
@@ -319,7 +313,7 @@ afterAll(async () => {
     logger.error("Error in test cleanup:", error);
     throw error; // Let Jest handle the error
   }
-});
+}, 60000);
 
 // Add cleanup between tests
 afterEach(async () => {
