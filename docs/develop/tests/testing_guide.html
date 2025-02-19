@@ -118,7 +118,36 @@ npm run test:coverage</code></pre>
     <h2>Local Development Testing</h2>
 
     <p>
-      During local development, tests run against your local API server. Basic test commands:
+      During local development, you can run tests either directly on your local machine or within a Docker container. The container approach is recommended when using the dev container environment as it ensures consistent test execution.
+    </p>
+
+    <h3>Running Tests in Docker Container</h3>
+
+    <p>
+      To run tests in the Docker container environment:
+    </p>
+
+    <pre><code># Run all tests in container
+npm run docker:test
+
+# Run specific tests in container
+npm run docker:test login
+npm run docker:test member
+npm run docker:test onboardmember Test Member1 1234567890 USD</code></pre>
+
+    <p>
+      Running tests in a container provides several benefits:
+    </p>
+    <ul>
+      <li>Consistent test environment across all developers</li>
+      <li>Isolation from local system dependencies</li>
+      <li>Matches the dev container environment configuration</li>
+    </ul>
+
+    <h3>Running Tests Locally</h3>
+
+    <p>
+      Alternatively, you can run tests directly on your local machine:
     </p>
 
     <pre><code># Run all integration tests
@@ -139,7 +168,7 @@ npm run test:coverage</code></pre>
     <h2>Testing Against Deployed Environments</h2>
 
     <p>
-      To test against deployed environments, add the environment prefix to any test command:
+      To test against deployed environments, add the environment prefix to any test command (this works for both local and container-based testing):
     </p>
 
     <ul>
