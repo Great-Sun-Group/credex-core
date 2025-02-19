@@ -1,3 +1,5 @@
+import { authRequest } from "../utils/auth";
+
 describe("Get Sent Credex Offers Test", () => {
   it("getSentCredexOffers", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);

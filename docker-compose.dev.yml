@@ -1,9 +1,27 @@
+version: '3.8'
+
 services:
   server:
+    build:
+      context: .
+      target: development
     environment:
+      # Core environment
+      NODE_ENV: ${NODE_ENV:-test}
+      DOCKER_ENV: "true"
+      # Test configuration
+      BUILD_TARGET: ${BUILD_TARGET:-test}
+      TEST_FILTER: ${TEST_FILTER:-""}
+      # API keys and secrets
       SKIP_RATE_LIMITER_KEY: ${SKIP_RATE_LIMITER_KEY}
       DEV_ADMIN_KEY: ${DEV_ADMIN_KEY}
+      # Network configuration
+      NODE_OPTIONS: "--dns-result-order=ipv4first"
+    env_file:
+      - .env
     volumes:
       - .:/app
       - ./logs:/app/logs
       - /app/node_modules
+    ports:
+      - "3000:3000"

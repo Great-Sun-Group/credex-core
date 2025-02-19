@@ -8,7 +8,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "../build/config",
-    "rootDir": ".",
+    "rootDir": "..",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "noUnusedLocals": false,
@@ -18,6 +18,6 @@
     "sourceMap": true,
     "types": ["node", "jest"]
   },
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts", "../src/utils/**/*.ts", "../src/types/**/*.ts"],
   "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts"]
 }

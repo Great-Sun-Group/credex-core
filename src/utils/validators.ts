@@ -229,6 +229,27 @@ export function validateTemplateType(type: string): {
   return { isValid, message };
 }
 
+export function validatePassword(password: string): {
+  isValid: boolean;
+  message: string;
+} {
+  const requirements = [
+    { regex: /.{10,}/, message: "Password must be at least 10 characters long" },
+    { regex: /[A-Z]/, message: "Password must contain at least one uppercase letter" },
+    { regex: /[a-z]/, message: "Password must contain at least one lowercase letter" },
+    { regex: /[0-9]/, message: "Password must contain at least one number" },
+    { regex: /[^A-Za-z0-9]/, message: "Password must contain at least one special character" }
+  ];
+
+  for (const requirement of requirements) {
+    if (!requirement.regex.test(password)) {
+      return { isValid: false, message: requirement.message };
+    }
+  }
+
+  return { isValid: true, message: "Valid password" };
+}
+
 export const v = {
   isNonEmptyString: (value: any): { isValid: boolean; message: string } => {
     const isValid = typeof value === 'string' && value.trim().length > 0;

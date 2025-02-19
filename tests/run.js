@@ -89,13 +89,17 @@ function startServer() {
 
   console.log("Starting test server...");
   const server = spawn("node", ["build/src/index.js"], {
-    env: { ...process.env, NODE_ENV: "test" },
+    env: { 
+      ...process.env, 
+      NODE_ENV: "test",
+      CLIENT_API_KEY: process.env.CLIENT_API_KEY || 'love-achingly'
+    },
     stdio: "inherit",
   });
 
-  // Give the server time to start
+  // Give the server time to start and initialize
   return new Promise((resolve) => {
-    setTimeout(() => resolve(server), 5000);
+    setTimeout(() => resolve(server), 8000);
   });
 }
 
@@ -249,8 +253,9 @@ async function runTest() {
 
       jestCommand = `jest --testPathPattern="${pattern}" ${envFlags[env]}`;
     } else {
-      // No command provided - run all tests including error tests
-      jestCommand = `jest ${envFlags[env]}`;
+    // No command provided or running coverage - run all tests
+    const isCoverage = process.env.COVERAGE === 'true';
+    jestCommand = `jest ${envFlags[env]} ${isCoverage ? '--coverage' : ''}`;
     }
 
     // Execute the Jest command

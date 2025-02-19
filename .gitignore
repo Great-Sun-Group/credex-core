@@ -158,3 +158,6 @@ tests/manual/firebase-config.js
 
 # Generated diff files
 diff.txt
+
+# PR cleanup script
+cleanup-pr.sh

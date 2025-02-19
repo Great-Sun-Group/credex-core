@@ -46,6 +46,7 @@ export async function createInitialMember(
     lastname,
     phone,
     defaultDenom,
+    undefined, // No password for legacy compatibility
     requestId
   )) as ServiceResult<OnboardMemberData>;
 
@@ -93,7 +94,7 @@ export async function createInitialMember(
   }
 
   // Store token
-  const token = generateToken(onboardedMemberID);
+  const token = await generateToken(onboardedMemberID);
   const session = searchSpaceDriver.session();
   try {
     await session.executeWrite(async (tx) => {

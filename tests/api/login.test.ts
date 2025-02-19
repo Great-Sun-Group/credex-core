@@ -1,35 +1,326 @@
 import axios from "../setup";
+import { generateRandomPhone } from "../utils/testUtils";
+import { TestCleanup } from "../utils/cleanup";
+import { ledgerSpaceDriver } from "../../config/neo4j";
 
-describe("login Success Test", () => {
+describe("Login Tests", () => {
   const headers = {
     "x-client-api-key": process.env.CLIENT_API_KEY || "",
   };
 
-  it("login successful with dashboard data", async () => {
-    const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
-    const [phone] = params;
+  beforeAll(async () => {
+    // Clean up any existing test data
+    await TestCleanup.cleanupMembers();
+  });
 
-    if (!phone) {
-      throw new Error("Usage: npm test login <phone>");
-    }
+  beforeEach(async () => {
+    await TestCleanup.cleanupMembers();
+  });
 
-    console.log("\nLogging in member...");
-    const response = await axios.post(
-      "/login",
-      {
-        phone: phone,
-      },
-      { headers }
-    );
+  afterEach(async () => {
+    await TestCleanup.cleanupMembers();
+  });
 
-    console.log("Login response:", JSON.stringify(response.data, null, 2));
-    expect(response.status).toBe(200);
-    expect(response.data).toHaveProperty("message", "Successfully logged in");
-    expect(response.data).toHaveProperty("data");
+  describe("Legacy Login (Phone Only)", () => {
+    it("login successful with dashboard data for non-password account", async () => {
+      // Create test member using onboardMember
+      const phone = generateRandomPhone();
+      const firstname = "John";
+      const lastname = "Doe";
+      const defaultDenom = "USD";
 
-    // Verify action object structure
-    expect(response.data.data).toHaveProperty("action");
-    expect(response.data.data.action).toMatchObject({
+      const onboardResponse = await axios.post(
+        "/onboardMember",
+        {
+          firstname,
+          lastname,
+          phone,
+          defaultDenom
+        },
+        { headers }
+      );
+
+      expect(onboardResponse.status).toBe(201);
+      const memberID = onboardResponse.data.data.action.details.memberID;
+      TestCleanup.trackMember(memberID, phone);
+
+      // Attempt login
+      console.log("\nLogging in member...");
+      const loginResponse = await axios.post(
+        "/login",
+        {
+          phone: phone,
+        },
+        { headers }
+      );
+
+      expect(loginResponse.status).toBe(200);
+      expect(loginResponse.data).toHaveProperty("message", "Successfully logged in");
+      expect(loginResponse.data).toHaveProperty("data");
+      validateLoginResponse(loginResponse.data);
+    });
+
+    it("fails with non-existent phone number", async () => {
+      const nonExistentPhone = generateRandomPhone();
+
+      try {
+        await axios.post(
+          "/login",
+          {
+            phone: nonExistentPhone,
+          },
+          { headers }
+        );
+        fail("Should have thrown error for non-existent phone");
+      } catch (error: any) {
+        expect(error.response.status).toBe(404);
+        expect(error.response.data.data.action.details).toHaveProperty("code", "NOT_FOUND");
+      }
+    });
+  });
+
+  describe("Password Authentication", () => {
+    it("login successful with password", async () => {
+      // Create test member
+      const phone = generateRandomPhone();
+      const firstname = "John";
+      const lastname = "Doe";
+      const defaultDenom = "USD";
+      const password = "TestPass123!";
+
+      const onboardResponse = await axios.post(
+        "/onboardMember",
+        {
+          firstname,
+          lastname,
+          phone,
+          defaultDenom
+        },
+        { headers }
+      );
+
+      expect(onboardResponse.status).toBe(201);
+      const memberID = onboardResponse.data.data.action.details.memberID;
+      TestCleanup.trackMember(memberID, phone);
+
+      // Set initial password
+      const initialToken = onboardResponse.data.data.action.details.token;
+      await axios.post(
+        "/setInitialPassword",
+        {
+          phone,
+          password
+        },
+        { 
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${initialToken}`
+          }
+        }
+      );
+
+      // Attempt login with password
+      console.log("\nLogging in member with password...");
+      const loginResponse = await axios.post(
+        "/login",
+        {
+          phone,
+          password
+        },
+        { headers }
+      );
+
+      expect(loginResponse.status).toBe(200);
+      expect(loginResponse.data).toHaveProperty("message", "Successfully logged in");
+      expect(loginResponse.data).toHaveProperty("data");
+      validateLoginResponse(loginResponse.data);
+    });
+
+    it("allows v1-style login (no password) for password-enabled account", async () => {
+      // Create test member with password
+      const phone = generateRandomPhone();
+      const firstname = "John";
+      const lastname = "Doe";
+      const defaultDenom = "USD";
+      const password = "TestPass123!";
+
+      const onboardResponse = await axios.post(
+        "/onboardMember",
+        {
+          firstname,
+          lastname,
+          phone,
+          defaultDenom
+        },
+        { headers }
+      );
+
+      expect(onboardResponse.status).toBe(201);
+      const memberID = onboardResponse.data.data.action.details.memberID;
+      TestCleanup.trackMember(memberID, phone);
+
+      // Set initial password
+      const token = onboardResponse.data.data.action.details.token;
+      await axios.post(
+        "/setInitialPassword",
+        {
+          phone,
+          password
+        },
+        { 
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      // Verify v1-style login still works without password
+      const loginResponse = await axios.post(
+        "/login",
+        {
+          phone
+        },
+        { headers }
+      );
+
+      // Should succeed as part of v1 backward compatibility
+      expect(loginResponse.status).toBe(200);
+      expect(loginResponse.data).toHaveProperty("message", "Successfully logged in");
+      expect(loginResponse.data).toHaveProperty("data");
+      validateLoginResponse(loginResponse.data);
+
+      // Verify token indicates v1 auth method
+      const loginToken = loginResponse.data.data.action.details.token;
+      const [, payload] = loginToken.split('.');
+      const decodedPayload = JSON.parse(Buffer.from(payload, 'base64').toString());
+      expect(decodedPayload.authMethod).toBe("phone_only");
+      expect(decodedPayload.version).toBe("v1");
+    });
+
+    it("fails with incorrect password", async () => {
+      // Create test member with password
+      const phone = generateRandomPhone();
+      const firstname = "John";
+      const lastname = "Doe";
+      const defaultDenom = "USD";
+      const password = "TestPass123!";
+
+      const onboardResponse = await axios.post(
+        "/onboardMember",
+        {
+          firstname,
+          lastname,
+          phone,
+          defaultDenom
+        },
+        { headers }
+      );
+
+      expect(onboardResponse.status).toBe(201);
+      const memberID = onboardResponse.data.data.action.details.memberID;
+      TestCleanup.trackMember(memberID, phone);
+
+      // Set initial password
+      const initialToken = onboardResponse.data.data.action.details.token;
+      await axios.post(
+        "/setInitialPassword",
+        {
+          phone,
+          password
+        },
+        { 
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${initialToken}`
+          }
+        }
+      );
+
+      // Attempt login with wrong password
+      try {
+        await axios.post(
+          "/login",
+          {
+            phone,
+            password: "WrongPass123!"
+          },
+          { headers }
+        );
+        fail("Should have thrown error for incorrect password");
+      } catch (error: any) {
+        expect(error.response.status).toBe(400);
+        expect(error.response.data.data.action.details).toHaveProperty("code", "INVALID_CREDENTIALS");
+      }
+    });
+
+    it("fails with missing password for password-enabled account", async () => {
+      // Create test member with password
+      const phone = generateRandomPhone();
+      const firstname = "John";
+      const lastname = "Doe";
+      const defaultDenom = "USD";
+      const password = "TestPass123!";
+
+      const onboardResponse = await axios.post(
+        "/onboardMember",
+        {
+          firstname,
+          lastname,
+          phone,
+          defaultDenom
+        },
+        { headers }
+      );
+
+      expect(onboardResponse.status).toBe(201);
+      const memberID = onboardResponse.data.data.action.details.memberID;
+      TestCleanup.trackMember(memberID, phone);
+
+      // Set initial password
+      const initialToken = onboardResponse.data.data.action.details.token;
+      await axios.post(
+        "/setInitialPassword",
+        {
+          phone,
+          password
+        },
+        { 
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${initialToken}`
+          }
+        }
+      );
+
+      // Attempt login without password
+      try {
+        await axios.post(
+          "v2/login",
+          {
+            phone
+          },
+          { headers }
+        );
+        fail("Should have thrown error for missing password");
+      } catch (error: any) {
+        expect(error.response.status).toBe(400);
+        expect(error.response.data.message).toBe("Required field missing: password");
+        expect(error.response.data.data.action.details).toMatchObject({
+          code: "VALIDATION_ERROR",
+          field: "password",
+          reason: "Required field missing: password"
+        });
+      }
+    });
+  });
+});
+
+// Helper function to validate login response structure
+function validateLoginResponse(data: any) {
+  // Verify action object structure
+  expect(data.data).toHaveProperty("action");
+  expect(data.data.action).toMatchObject({
       id: expect.stringMatching(
         /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
       ), // UUID v4 format
@@ -44,15 +335,15 @@ describe("login Success Test", () => {
         memberID: expect.stringMatching(
           /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
         ), // UUID v4 format
-        phone: phone,
+        phone: expect.any(String),
         token: expect.any(String),
       },
     });
 
-    // Verify dashboard object structure
-    expect(response.data.data).toHaveProperty("dashboard");
-    expect(response.data.data.dashboard).toHaveProperty("member");
-    expect(response.data.data.dashboard.member).toMatchObject({
+  // Verify dashboard object structure
+  expect(data.data).toHaveProperty("dashboard");
+  expect(data.data.dashboard).toHaveProperty("member");
+  expect(data.data.dashboard.member).toMatchObject({
       memberID: expect.stringMatching(
         /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
       ), // UUID v4 format
@@ -63,19 +354,19 @@ describe("login Success Test", () => {
       defaultDenom: expect.stringMatching(/^(CXX|CAD|USD|XAU)$/),
     });
 
-    // Verify optional remainingAvailableUSD (only present for memberTier < 3)
-    if (response.data.data.dashboard.member.memberTier < 3) {
-      expect(response.data.data.dashboard.member).toHaveProperty(
+  // Verify optional remainingAvailableUSD (only present for memberTier < 3)
+  if (data.data.dashboard.member.memberTier < 3) {
+    expect(data.data.dashboard.member).toHaveProperty(
         "remainingAvailableUSD",
         expect.any(Number)
       );
     }
 
-    // Verify accounts array
-    expect(response.data.data.dashboard).toHaveProperty("accounts");
-    expect(response.data.data.dashboard.accounts).toBeInstanceOf(Array);
-    if (response.data.data.dashboard.accounts.length > 0) {
-      const account = response.data.data.dashboard.accounts[0];
+  // Verify accounts array
+  expect(data.data.dashboard).toHaveProperty("accounts");
+  expect(data.data.dashboard.accounts).toBeInstanceOf(Array);
+  if (data.data.dashboard.accounts.length > 0) {
+    const account = data.data.dashboard.accounts[0];
       expect(account).toMatchObject({
         accountID: expect.stringMatching(
           /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -139,5 +430,4 @@ describe("login Success Test", () => {
         }
       }
     }
-  });
-});
+}

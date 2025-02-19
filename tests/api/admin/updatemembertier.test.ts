@@ -1,3 +1,5 @@
+import { authRequest } from "../utils/auth";
+
 describe("Update Member Tier Test", () => {
   it("updateMemberTier", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);

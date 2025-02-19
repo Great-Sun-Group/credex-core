@@ -91,6 +91,83 @@ export const applySecurityMiddleware = (app: Application) => {
     logger.debug("CORS middleware applied (production)");
   }
 
+  // Apply validation middleware first
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    // Check for required fields in verify/requestOtp
+    if (req.path.includes("/verify/requestOtp")) {
+      if (!req.body || !req.body.purpose) {
+        return res.status(400).json({
+          message: 'Purpose field is required',
+          data: {
+            action: {
+              id: null,
+              type: 'ERROR_VALIDATION',
+              timestamp: new Date().toISOString(),
+              details: {
+                code: 'MISSING_FIELD',
+                reason: 'Purpose field is required'
+              }
+            }
+          }
+        });
+      }
+      if (!['PASSWORD_RESET', 'PHONE_VERIFICATION'].includes(req.body.purpose)) {
+        return res.status(400).json({
+          message: 'Invalid purpose value',
+          data: {
+            action: {
+              id: null,
+              type: 'ERROR_VALIDATION',
+              timestamp: new Date().toISOString(),
+              details: {
+                code: 'INVALID_VALUE',
+                reason: 'Invalid purpose value'
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // Check for required fields in verify/verifyOtp
+    if (req.path.includes("/verify/verifyOtp")) {
+      if (!req.body || !req.body.purpose) {
+        return res.status(400).json({
+          message: 'Purpose field is required',
+          data: {
+            action: {
+              id: null,
+              type: 'ERROR_VALIDATION',
+              timestamp: new Date().toISOString(),
+              details: {
+                code: 'MISSING_FIELD',
+                reason: 'Purpose field is required'
+              }
+            }
+          }
+        });
+      }
+      if (!['PASSWORD_RESET', 'PHONE_VERIFICATION'].includes(req.body.purpose)) {
+        return res.status(400).json({
+          message: 'Invalid purpose value',
+          data: {
+            action: {
+              id: null,
+              type: 'ERROR_VALIDATION',
+              timestamp: new Date().toISOString(),
+              details: {
+                code: 'INVALID_VALUE',
+                reason: 'Invalid purpose value'
+              }
+            }
+          }
+        });
+      }
+    }
+
+    next();
+  });
+
   // Apply rate limiting with bypass check
   app.use((req: Request, res: Response, next: NextFunction) => {
     // Check for rate limiter bypass header
@@ -107,9 +184,14 @@ export const applySecurityMiddleware = (app: Application) => {
   });
   logger.debug("Rate limiter middleware applied");
 
-  // Apply client API key verification for keyholes
+  // Apply client API key verification for keyholes after validation
   app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path === "/login" || req.path === "/onboardMember") {
+    if (req.path === "/login" || 
+        req.path === "/v2/login" || 
+        req.path.endsWith("/onboardMember") || 
+        req.path === "/setInitialPassword" ||
+        req.path.includes("/verify/") ||
+        req.path === "/resetPassword") {
       return verifyClientApiKey(req, res, next);
     }
     // Apply dev admin key verification for devadmin routes
@@ -157,8 +239,12 @@ export const applyAuthMiddleware = (app: Application) => {
     if (
       // Keyholes in the auth layer where we don't apply the middleware
       req.path === "/login" ||
-      req.path === "/onboardMember" ||
-      req.path.includes("/devadmin/") // routes are not published in prod
+      req.path === "/v2/login" ||
+      req.path.endsWith("/onboardMember") ||
+      req.path === "/setInitialPassword" ||
+      req.path.includes("/devadmin/") || // routes are not published in prod
+      (req.path.includes("/verify/") && (req.body?.purpose === "PASSWORD_RESET" || req.method === "OPTIONS")) ||
+      req.path === "/resetPassword"
     ) {
       logger.debug("[SC3] Skipping auth middleware for path", {
         path: req.path,

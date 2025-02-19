@@ -44,10 +44,110 @@
       delay.ts        # Request delay utilities
       request.ts      # HTTP request utilities</code></pre>
 
+    <h2>Code Coverage</h2>
+
+    <p>
+      The project uses Jest's built-in code coverage reporting to track test coverage metrics.
+    </p>
+
+    <h3>Running Tests with Coverage</h3>
+
+    <p>
+      To run tests with coverage reporting:
+    </p>
+
+    <pre><code># Run all tests with coverage
+npm run test:coverage</code></pre>
+
+    <p>
+      This will:
+    </p>
+    <ul>
+      <li>Run all tests in the project</li>
+      <li>Generate a coverage report in the terminal</li>
+      <li>Create detailed HTML reports in the 'coverage' directory</li>
+      <li>Generate coverage files in various formats (lcov, clover)</li>
+    </ul>
+
+    <h3>Understanding Coverage Metrics</h3>
+
+    <p>
+      The coverage report includes four key metrics:
+    </p>
+
+    <ul>
+      <li><strong>Statement Coverage</strong>: Percentage of program statements executed</li>
+      <li><strong>Branch Coverage</strong>: Percentage of control structures (if statements, switches) executed</li>
+      <li><strong>Function Coverage</strong>: Percentage of functions/methods called</li>
+      <li><strong>Line Coverage</strong>: Percentage of executable lines of code run</li>
+    </ul>
+
+    <h3>Coverage Reports</h3>
+
+    <p>
+      After running tests with coverage, you can find:
+    </p>
+
+    <ul>
+      <li>Terminal output showing overall coverage statistics</li>
+      <li>Detailed HTML report at coverage/lcov-report/index.html</li>
+      <li>Machine-readable reports in the coverage directory (lcov.info, clover.xml)</li>
+    </ul>
+
+    <p>
+      The HTML report provides:
+    </p>
+    <ul>
+      <li>File-by-file coverage breakdown</li>
+      <li>Line-by-line coverage highlighting</li>
+      <li>Branch coverage visualization</li>
+      <li>Directory summaries</li>
+    </ul>
+
+    <h3>Coverage Configuration</h3>
+
+    <p>
+      Coverage settings are configured in jest.config.js:
+    </p>
+    <ul>
+      <li>Excludes test files, type definitions, and other non-source files</li>
+      <li>Generates multiple report formats (text, lcov, clover)</li>
+      <li>Collects coverage from all TypeScript files under src/</li>
+    </ul>
+
     <h2>Local Development Testing</h2>
 
     <p>
-      During local development, tests run against your local API server. Basic test commands:
+      During local development, you can run tests either directly on your local machine or within a Docker container. The container approach is recommended when using the dev container environment as it ensures consistent test execution.
+    </p>
+
+    <h3>Running Tests in Docker Container</h3>
+
+    <p>
+      To run tests in the Docker container environment:
+    </p>
+
+    <pre><code># Run all tests in container
+npm run docker:test
+
+# Run specific tests in container
+npm run docker:test login
+npm run docker:test member
+npm run docker:test onboardmember Test Member1 1234567890 USD</code></pre>
+
+    <p>
+      Running tests in a container provides several benefits:
+    </p>
+    <ul>
+      <li>Consistent test environment across all developers</li>
+      <li>Isolation from local system dependencies</li>
+      <li>Matches the dev container environment configuration</li>
+    </ul>
+
+    <h3>Running Tests Locally</h3>
+
+    <p>
+      Alternatively, you can run tests directly on your local machine:
     </p>
 
     <pre><code># Run all integration tests
@@ -60,12 +160,15 @@ npm test member
 npm test onboardmember Test Member1 1234567890 USD
 
 # Reset test environment
-npm test clearforce</code></pre>
+npm test clearforce
+
+# Run tests with coverage reporting
+npm run test:coverage</code></pre>
 
     <h2>Testing Against Deployed Environments</h2>
 
     <p>
-      To test against deployed environments, add the environment prefix to any test command:
+      To test against deployed environments, add the environment prefix to any test command (this works for both local and container-based testing):
     </p>
 
     <ul>
@@ -106,8 +209,37 @@ npm test clearforce      # Clear DBs and force DCO</code></pre>
 
     <h3>Member Endpoints</h3>
     <pre><code>npm test onboardmember firstname lastname phone defaultDenom
+npm test onboardMemberWithPassword    # Tests member onboarding with initial password
+npm test setInitialPassword          # Tests setting initial password for v1 members
+npm test updatePassword              # Tests password update functionality and validation
+npm test passwordReset               # Tests password reset functionality with OTP verification
+npm test login                       # Tests login functionality including v1 backward compatibility
 npm test getmemberbyhandle phone memberHandle
 npm test getmemberdashboardbyphone phone</code></pre>
+
+    <h4>Login Tests</h4>
+    <p>
+      The login tests verify both legacy (v1) and password-enabled (v2) authentication flows:
+    </p>
+    <ul>
+      <li><strong>Legacy Login (Phone Only)</strong>
+        <ul>
+          <li>Verifies successful login for non-password accounts</li>
+          <li>Validates error handling for non-existent phone numbers</li>
+        </ul>
+      </li>
+      <li><strong>Password Authentication</strong>
+        <ul>
+          <li>Tests successful login with correct password</li>
+          <li>Verifies v1 backward compatibility - allows password-enabled accounts to still login without password</li>
+          <li>Validates error handling for incorrect passwords</li>
+        </ul>
+      </li>
+    </ul>
+
+    <p>
+      Note: For backward compatibility, v1-style login (without password) is allowed for all accounts, even those that have set up passwords. This maintains compatibility during the transition period from v1 to v2 authentication.
+    </p>
 
     <h3>Admin Endpoints</h3>
     <pre><code># Run all admin tests together

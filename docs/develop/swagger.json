@@ -3863,8 +3863,7 @@
                                     "CXX",
                                     "CAD",
                                     "USD",
-                                    "XAU",
-                                    "ZWG"
+                                    "XAU"
                                   ]
                                 },
                                 "isOwnedAccount": {
@@ -4305,8 +4304,7 @@
                                     "CXX",
                                     "CAD",
                                     "USD",
-                                    "XAU",
-                                    "ZWG"
+                                    "XAU"
                                   ]
                                 },
                                 "securedCredex": {
@@ -4388,8 +4386,7 @@
                                     "CXX",
                                     "CAD",
                                     "USD",
-                                    "XAU",
-                                    "ZWG"
+                                    "XAU"
                                   ]
                                 },
                                 "isOwnedAccount": {
@@ -4963,8 +4960,7 @@
                                     "CXX",
                                     "CAD",
                                     "USD",
-                                    "XAU",
-                                    "ZWG"
+                                    "XAU"
                                   ],
                                   "description": "Original denomination of the Credex"
                                 },
@@ -5455,8 +5451,7 @@
                       "CXX",
                       "CAD",
                       "USD",
-                      "XAU",
-                      "ZWG"
+                      "XAU"
                     ],
                     "description": "Denomination of the transaction"
                   },
@@ -5555,8 +5550,7 @@
                                     "CXX",
                                     "CAD",
                                     "USD",
-                                    "XAU",
-                                    "ZWG"
+                                    "XAU"
                                   ]
                                 },
                                 "securedCredex": {
@@ -5607,8 +5601,7 @@
                                     "CXX",
                                     "CAD",
                                     "USD",
-                                    "XAU",
-                                    "ZWG"
+                                    "XAU"
                                   ]
                                 }
                               }
@@ -5642,8 +5635,7 @@
                                       "CXX",
                                       "CAD",
                                       "USD",
-                                      "XAU",
-                                      "ZWG"
+                                      "XAU"
                                     ]
                                   },
                                   "isOwnedAccount": {
@@ -6056,8 +6048,7 @@
                                     "CXX",
                                     "CAD",
                                     "USD",
-                                    "XAU",
-                                    "ZWG"
+                                    "XAU"
                                   ],
                                   "description": "Original denomination of the Credex"
                                 },
@@ -6677,8 +6668,7 @@
                                       "CXX",
                                       "CAD",
                                       "USD",
-                                      "XAU",
-                                      "ZWG"
+                                      "XAU"
                                     ]
                                   },
                                   "isOwnedAccount": {
@@ -8069,8 +8059,7 @@
                                       "CXX",
                                       "CAD",
                                       "USD",
-                                      "XAU",
-                                      "ZWG"
+                                      "XAU"
                                     ]
                                   },
                                   "isOwnedAccount": {
@@ -8399,6 +8388,118 @@
         }
       }
     },
+    "/v2/login": {
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Login member with password (Mobile App)",
+        "description": "Authenticate a member using phone number and password. This endpoint is specifically for mobile app authentication.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone",
+                  "password"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "description": "Member's phone number"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Member's password"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully logged in"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "example": "MEMBER_LOGIN"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "memberID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "phone": {
+                                  "type": "string"
+                                },
+                                "token": {
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "example": "v2"
+                                },
+                                "authMethod": {
+                                  "type": "string",
+                                  "example": "password"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters"
+          },
+          "401": {
+            "description": "Authentication failed"
+          },
+          "404": {
+            "description": "Member not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/onboardMember": {
       "post": {
         "tags": [
@@ -8442,8 +8543,7 @@
                       "CXX",
                       "CAD",
                       "USD",
-                      "XAU",
-                      "ZWG"
+                      "XAU"
                     ],
                     "description": "Default denomination for member's transactions"
                   }
@@ -8519,8 +8619,7 @@
                                     "CXX",
                                     "CAD",
                                     "USD",
-                                    "XAU",
-                                    "ZWG"
+                                    "XAU"
                                   ],
                                   "description": "Member's default denomination"
                                 },
@@ -8601,8 +8700,7 @@
                                       "CXX",
                                       "CAD",
                                       "USD",
-                                      "XAU",
-                                      "ZWG"
+                                      "XAU"
                                     ]
                                   },
                                   "isOwnedAccount": {
@@ -8926,6 +9024,753 @@
                         },
                         "dashboard": {
                           "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resetPassword": {
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Reset member password using a reset token",
+        "description": "Resets a member's password using a token obtained through the OTP verification process.\nThe reset token must be valid and not expired.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "resetToken",
+                  "newPassword"
+                ],
+                "properties": {
+                  "resetToken": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Reset token obtained from OTP verification"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 128,
+                    "description": "New password that meets complexity requirements"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset successful"
+          },
+          "400": {
+            "description": "Invalid input or expired token"
+          },
+          "401": {
+            "description": "Invalid client API key"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/setInitialPassword": {
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Set initial password for WhatsApp to mobile app transition",
+        "description": "Sets the initial password for a member transitioning from WhatsApp to mobile app. Requires phone-only authentication.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone",
+                  "password"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "description": "Member's phone number"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "New password to set"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password set successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Password set successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "example": "MEMBER_UPDATE"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "memberID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "phone": {
+                                  "type": "string"
+                                },
+                                "token": {
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "example": "v2"
+                                },
+                                "authMethod": {
+                                  "type": "string",
+                                  "example": "password"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters or password already set"
+          },
+          "401": {
+            "description": "Authentication failed"
+          },
+          "404": {
+            "description": "Member not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/updatePassword": {
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Update member password",
+        "description": "Updates a member's password after validating their current password.\nRequires authentication and ensures new password meets complexity requirements.\n",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "currentPassword",
+                  "newPassword"
+                ],
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "description": "Member's current password"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "description": "New password that meets the following requirements:\n- At least 10 characters long\n- Contains at least one uppercase letter\n- Contains at least one lowercase letter\n- Contains at least one number\n- Contains at least one special character\n"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Password updated successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Member ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "MEMBER_PASSWORD_UPDATED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "memberID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "timestamp": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid password format or missing required fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "INVALID_NEW_PASSWORD",
+                                    "MISSING_PARAMS"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current password is incorrect or authentication token is invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "INVALID_CURRENT_PASSWORD"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "INTERNAL_ERROR"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/verify/requestOtp": {
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Request OTP verification",
+        "description": "Sends an OTP for v2 password user verification",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone",
+                  "purpose"
+                ],
+                "properties": {
+                  "memberID": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Optional member ID if known"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+?[1-9]\\d{1,14}$",
+                    "description": "Phone number to receive OTP"
+                  },
+                  "purpose": {
+                    "type": "string",
+                    "enum": [
+                      "PASSWORD_RESET"
+                    ],
+                    "description": "Purpose of OTP verification (must be PASSWORD_RESET)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "OTP sent successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "MEMBER_UPDATE"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "memberID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "phone": {
+                                  "type": "string"
+                                },
+                                "expiresIn": {
+                                  "type": "number",
+                                  "description": "OTP expiry in seconds"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "RATE_LIMITED",
+                                    "V1_USER_NOT_SUPPORTED",
+                                    "VALIDATION_ERROR"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "cooldownRemaining": {
+                                  "type": "number",
+                                  "description": "Minutes until next attempt allowed (for rate limiting)"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/verify/verifyOtp": {
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Verify OTP",
+        "description": "Verifies the OTP received by the member",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "otp",
+                  "purpose"
+                ],
+                "properties": {
+                  "memberID": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Optional member ID if known"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+?[1-9]\\d{1,14}$",
+                    "description": "Phone number (required if memberID not provided)"
+                  },
+                  "purpose": {
+                    "type": "string",
+                    "enum": [
+                      "PASSWORD_RESET"
+                    ],
+                    "description": "Purpose of OTP verification (must be PASSWORD_RESET)"
+                  },
+                  "otp": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$",
+                    "description": "6-digit OTP received"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP verified successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "OTP verified successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "MEMBER_UPDATE"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "memberID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "otpVerified": {
+                                  "type": "boolean",
+                                  "example": true
+                                },
+                                "resetToken": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "Token for password reset (only when purpose is PASSWORD_RESET)"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid OTP or verification failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "INVALID_OTP",
+                                    "OTP_EXPIRED",
+                                    "MAX_ATTEMPTS_EXCEEDED"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "remainingAttempts": {
+                                  "type": "number",
+                                  "description": "Number of attempts remaining before lockout"
+                                }
+                              }
+                            }
+                          }
                         }
                       }
                     }
@@ -9269,8 +10114,7 @@
                                     "CXX",
                                     "CAD",
                                     "USD",
-                                    "XAU",
-                                    "ZWG"
+                                    "XAU"
                                   ]
                                 },
                                 "frequency": {
@@ -9570,8 +10414,7 @@
                                     "CXX",
                                     "CAD",
                                     "USD",
-                                    "XAU",
-                                    "ZWG"
+                                    "XAU"
                                   ]
                                 },
                                 "frequency": {
@@ -9850,8 +10693,7 @@
                       "CXX",
                       "CAD",
                       "USD",
-                      "XAU",
-                      "ZWG"
+                      "XAU"
                     ],
                     "description": "Required if templateType is REGULAR"
                   },
@@ -9871,8 +10713,7 @@
                       "CXX",
                       "CAD",
                       "USD",
-                      "XAU",
-                      "ZWG"
+                      "XAU"
                     ],
                     "description": "Required if templateType is DCO_GIVE"
                   },
@@ -9946,8 +10787,7 @@
                                     "CXX",
                                     "CAD",
                                     "USD",
-                                    "XAU",
-                                    "ZWG"
+                                    "XAU"
                                   ]
                                 },
                                 "payFrequency": {
@@ -10250,8 +11090,7 @@
                                     "CXX",
                                     "CAD",
                                     "USD",
-                                    "XAU",
-                                    "ZWG"
+                                    "XAU"
                                   ]
                                 },
                                 "frequency": {
