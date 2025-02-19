@@ -1,3 +1,5 @@
+import { authRequest } from "../../tests/api/utils/auth";
+
 /**
  * Register a new FCM token for push notifications
  */
@@ -32,7 +34,7 @@ export async function removeToken(userId: string, token: string, jwt: string) {
  */
 export async function getNotificationSettings(userId: string, jwt: string) {
   console.log("\nGetting notification settings...");
-  const response = await authRequest(`/notifications/settings/${userId}`, null, jwt, { method: 'GET' });
+  const response = await authRequest(`/notifications/settings/${userId}`, {}, jwt);
   console.log("Response:", response.data);
   expect(response.status).toBe(200);
   return response;

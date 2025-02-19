@@ -39,7 +39,7 @@ describe('UpdatePasswordController', () => {
 
     memberID = result.data.memberID;
     createdMemberIDs.push(memberID);
-    authToken = generateToken(memberID);
+    authToken = await generateToken(memberID);
   });
 
   afterEach(async () => {
@@ -122,7 +122,7 @@ describe('UpdatePasswordController', () => {
 
     const testMemberID = result.data.memberID;
     createdMemberIDs.push(testMemberID);
-    const testAuthToken = generateToken(testMemberID);
+    const testAuthToken = await generateToken(testMemberID);
 
     const response = await request(app)
       .post('/updatePassword')
@@ -155,7 +155,7 @@ describe('UpdatePasswordController', () => {
 
     const testMemberID = result.data.memberID;
     createdMemberIDs.push(testMemberID);
-    const testAuthToken = generateToken(testMemberID);
+    const testAuthToken = await generateToken(testMemberID);
 
     const response = await request(app)
       .post('/updatePassword')
@@ -200,7 +200,7 @@ describe('UpdatePasswordController', () => {
 
     const testMemberID = result.data.memberID;
     createdMemberIDs.push(testMemberID);
-    const testAuthToken = generateToken(testMemberID);
+    const testAuthToken = await generateToken(testMemberID);
 
     const response = await request(app)
       .post('/updatePassword')

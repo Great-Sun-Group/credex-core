@@ -186,16 +186,12 @@ export const applySecurityMiddleware = (app: Application) => {
 
   // Apply client API key verification for keyholes after validation
   app.use((req: Request, res: Response, next: NextFunction) => {
-<<<<<<< HEAD
     if (req.path === "/login" || 
         req.path === "/v2/login" || 
         req.path.endsWith("/onboardMember") || 
-        req.path === "/member/set-initial-password" ||
+        req.path === "/setInitialPassword" ||
         req.path.includes("/verify/") ||
         req.path === "/resetPassword") {
-=======
-    if (req.path === "/login" || req.path === "/v2/login" || req.path.endsWith("/onboardMember")) {
->>>>>>> 3877d10 (Added password management)
       return verifyClientApiKey(req, res, next);
     }
     // Apply dev admin key verification for devadmin routes
@@ -245,14 +241,10 @@ export const applyAuthMiddleware = (app: Application) => {
       req.path === "/login" ||
       req.path === "/v2/login" ||
       req.path.endsWith("/onboardMember") ||
-<<<<<<< HEAD
-      req.path === "/member/set-initial-password" ||
+      req.path === "/setInitialPassword" ||
       req.path.includes("/devadmin/") || // routes are not published in prod
       (req.path.includes("/verify/") && (req.body?.purpose === "PASSWORD_RESET" || req.method === "OPTIONS")) ||
       req.path === "/resetPassword"
-=======
-      req.path.includes("/devadmin/") // routes are not published in prod
->>>>>>> 3877d10 (Added password management)
     ) {
       logger.debug("[SC3] Skipping auth middleware for path", {
         path: req.path,

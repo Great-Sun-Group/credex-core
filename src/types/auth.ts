@@ -1,6 +1,5 @@
 import { Request } from "express";
 
-<<<<<<< HEAD
 // Extend Express's Request interface to include user property
 declare global {
   namespace Express {
@@ -10,8 +9,6 @@ declare global {
   }
 }
 
-=======
->>>>>>> 3877d10 (Added password management)
 export interface TokenPayload {
   memberID: string;
   iat: number;

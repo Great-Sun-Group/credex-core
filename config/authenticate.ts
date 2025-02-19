@@ -236,9 +236,9 @@ const authenticate = async (req: Request, res: Response, next: NextFunction) => 
       logger.info("V1 user accessing without password (allowed)", { memberID: decoded.memberID, path: req.path, method: req.method });
     }
 
-    const memberProperties = result.records[0].get('m').properties;
+    // Set user properties in request
     (req as UserRequest).user = {
-      ...result.records[0].get('m').properties,
+      ...memberProperties,
       memberID: decoded.memberID  // Ensure memberID is set from token
     };
 

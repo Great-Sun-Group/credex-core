@@ -4,13 +4,9 @@ import loginV2Route from "./loginV2Route";
 import onboardMemberRoute from "./onboardMemberRoute";
 import hustler10kRoute from "./hustler10kRoute";
 import updatePasswordRoute from "./updatePasswordRoute";
-<<<<<<< HEAD
 import passwordResetRoute from "./passwordResetRoute";
 import setInitialPasswordRoute from "./setInitialPasswordRoute";
 import verificationRoutes from "./verificationRoutes";
-=======
-import setInitialPasswordRoute from "./setInitialPasswordRoute";
->>>>>>> 3877d10 (Added password management)
 import logger from "../../../utils/logger";
 
 /**
@@ -31,19 +27,12 @@ export default function MemberRoutes() {
   router.use(hustler10kRoute());
   router.use(updatePasswordRoute());
   router.use(setInitialPasswordRoute());
-<<<<<<< HEAD
   router.use(passwordResetRoute());
   router.use('/verify', verificationRoutes()); // Mount verification routes with prefix
 
   logger.info("Member routes initialized successfully", {
     module: "memberRoutes",
     routesCount: 9,
-=======
-
-  logger.info("Member routes initialized successfully", {
-    module: "memberRoutes",
-    routesCount: 7,
->>>>>>> 3877d10 (Added password management)
   });
 
   return router;

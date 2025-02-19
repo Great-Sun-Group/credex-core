@@ -98,7 +98,7 @@ export async function UpdatePasswordController(
 
       const currentHash = result.records[0].get("passwordHash");
 
-      // Update password using PasswordService
+      // Let PasswordService handle all validations
       const { hash: newHash } = await passwordService.updatePassword(
         currentPassword,
         newPassword,
@@ -151,7 +151,28 @@ export async function UpdatePasswordController(
 
     // Handle specific password-related errors
     if (error instanceof Error) {
-      if (error.message.includes("Current password is incorrect")) {
+      if (error.message.includes("Password must") || error.message === "New password must be different from current password") {
+        const errorResponse: UpdatePasswordErrorResponse = {
+          message: error.message,
+          data: {
+            action: {
+              id: memberID || null,
+              type: ApiActionType.ERROR_VALIDATION,
+              timestamp: new Date().toISOString(),
+              actor: memberID || "system",
+              details: {
+                code: "INVALID_NEW_PASSWORD",
+                reason: error.message
+              }
+            },
+            dashboard: {}
+          }
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      if (error.message === "Current password is incorrect") {
         const errorResponse: UpdatePasswordErrorResponse = {
           message: "Current password is incorrect",
           data: {
@@ -169,27 +190,6 @@ export async function UpdatePasswordController(
           }
         };
         res.status(401).json(errorResponse);
-        return;
-      }
-
-      if (error.message.includes("Password must")) {
-        const errorResponse: UpdatePasswordErrorResponse = {
-          message: "Invalid new password",
-          data: {
-            action: {
-              id: memberID || null,
-              type: ApiActionType.ERROR_VALIDATION,
-              timestamp: new Date().toISOString(),
-              actor: memberID || "system",
-              details: {
-                code: "INVALID_NEW_PASSWORD",
-                reason: error.message
-              }
-            },
-            dashboard: {}
-          }
-        };
-        res.status(400).json(errorResponse);
         return;
       }
     }

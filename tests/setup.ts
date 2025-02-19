@@ -2,7 +2,6 @@ import axios from "axios";
 import dotenv from "dotenv";
 import { ledgerSpaceDriver, searchSpaceDriver } from "../config/neo4j";
 import logger from "../src/utils/logger";
-<<<<<<< HEAD
 import initializeApp from "../src";
 import net from "net";
 import { promisify } from "util";
@@ -84,8 +83,6 @@ process.env.OTP_MAX_ATTEMPTS = '3';
 process.env.JWT_SECRET = 'test-secret-key';
 process.env.CLIENT_API_KEY = 'love-achingly';
 
-=======
->>>>>>> 3877d10 (Added password management)
 // Create a daynode for testing if it doesn't exist
 async function ensureDaynode() {
   const session = ledgerSpaceDriver.session();
@@ -248,13 +245,6 @@ beforeAll(async () => {
     await ensureDaynode();
   } catch (error) {
     console.error("Failed to initialize app or ensure daynode exists. Tests cannot proceed.", error);
-=======
-  // Ensure daynode exists before running any tests
-  try {
-    await ensureDaynode();
-  } catch (error) {
-    console.error("Failed to ensure daynode exists. Tests cannot proceed.", error);
->>>>>>> 3877d10 (Added password management)
     process.exit(1);
   }
 }, 60000);
@@ -309,7 +299,6 @@ afterAll(async () => {
     
     logger.info("Neo4j drivers closed successfully");
   } catch (error) {
-<<<<<<< HEAD
     logger.error("Error in test cleanup:", error);
     throw error; // Let Jest handle the error
   }

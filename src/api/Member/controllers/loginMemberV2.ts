@@ -66,8 +66,6 @@ export async function loginMemberV2ExpressHandler(
       return;
     }
 
-<<<<<<< HEAD
-=======
     if (!password) {
       logger.warn("Missing password", { requestId });
       const response: LoginErrorResponse = {
@@ -91,7 +89,6 @@ export async function loginMemberV2ExpressHandler(
       return;
     }
 
->>>>>>> 3877d10 (Added password management)
     const phoneValidation = validatePhone(phone);
     if (!phoneValidation.isValid) {
       logger.warn("Invalid phone number format", { phone, requestId });
@@ -131,33 +128,19 @@ export async function loginMemberV2ExpressHandler(
 
       let statusCode = 401; // Default to unauthorized
       let errorType = ApiActionType.ERROR_UNAUTHORIZED;
-<<<<<<< HEAD
       let errorCode = result.error?.code || "LOGIN_FAILED";
-=======
-      let errorCode = "LOGIN_FAILED";
->>>>>>> 3877d10 (Added password management)
 
       if (result.message.includes("not found")) {
         statusCode = 404;
         errorType = ApiActionType.ERROR_NOT_FOUND;
         errorCode = "NOT_FOUND";
       } else if (result.message.includes("Invalid")) {
-<<<<<<< HEAD
         statusCode = 401; // Keep 401 for invalid credentials
         errorType = ApiActionType.ERROR_UNAUTHORIZED;
         errorCode = "INVALID_CREDENTIALS";
       } else if (result.error?.code === "PASSWORD_REQUIRED") {
         statusCode = 401;
         errorType = ApiActionType.ERROR_UNAUTHORIZED;
-=======
-        statusCode = 400;
-        errorType = ApiActionType.ERROR_VALIDATION;
-        errorCode = "INVALID_CREDENTIALS";
-      } else if (result.message.includes("Password is required")) {
-        statusCode = 401;
-        errorType = ApiActionType.ERROR_UNAUTHORIZED;
-        errorCode = "PASSWORD_REQUIRED";
->>>>>>> 3877d10 (Added password management)
       }
 
       const response: LoginErrorResponse = {
@@ -219,12 +202,8 @@ export async function loginMemberV2ExpressHandler(
             phone,
             token: loginData.token,
             version: "v2",
-<<<<<<< HEAD
             authMethod: "password",
             otpVerified: loginData.otpVerified
-=======
-            authMethod: "password"
->>>>>>> 3877d10 (Added password management)
           },
         },
         dashboard,

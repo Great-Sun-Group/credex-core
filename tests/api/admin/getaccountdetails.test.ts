@@ -1,3 +1,5 @@
+import { authRequest } from "../utils/auth";
+
 describe("Get Account Details Test", () => {
   it("getAccountDetails", async () => {
     const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);

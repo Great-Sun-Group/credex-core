@@ -14,11 +14,8 @@ interface MemberData {
   defaultDenom: string;
   memberTier: number;
   createdAt: string;
-<<<<<<< HEAD
   version: string;
   authMethod: string;
-=======
->>>>>>> 3877d10 (Added password management)
   passwordHash?: string;
   passwordLastChanged?: string;
 }
@@ -162,14 +159,10 @@ export async function OnboardMemberService(
           memberID: randomUUID(),
           memberTier: 1,
           createdAt: datetime(),
-<<<<<<< HEAD
           updatedAt: datetime(),
           version: $version,
           authMethod: $authMethod,
           otpVerified: false
-=======
-          updatedAt: datetime()
->>>>>>> 3877d10 (Added password management)
           ${passwordHash ? ', passwordHash: $passwordHash' : ''}
           ${passwordLastChanged ? ', passwordLastChanged: $passwordLastChanged' : ''}
         })-[:CREATED_ON]->(daynode)
@@ -184,13 +177,9 @@ export async function OnboardMemberService(
             memberTier: member.memberTier,
             createdAt: toString(member.createdAt),
             passwordHash: member.passwordHash,
-<<<<<<< HEAD
             passwordLastChanged: toString(member.passwordLastChanged),
             version: member.version,
             authMethod: member.authMethod
-=======
-            passwordLastChanged: toString(member.passwordLastChanged)
->>>>>>> 3877d10 (Added password management)
           } as memberData
       `;
 
@@ -204,11 +193,8 @@ export async function OnboardMemberService(
         lastname,
         defaultDenom,
         phone,
-<<<<<<< HEAD
         version: password ? 'v2' : 'v1',
         authMethod: password ? 'password' : 'phone_only',
-=======
->>>>>>> 3877d10 (Added password management)
         ...(passwordHash && { passwordHash }),
         ...(passwordLastChanged && { passwordLastChanged })
       });

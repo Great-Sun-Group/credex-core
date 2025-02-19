@@ -1,7 +1,6 @@
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import logger from '../../../utils/logger';
-<<<<<<< HEAD
 import { authConfig } from '../../../config/auth';
 import { getConfig } from '../../../../config/config';
 
@@ -25,17 +24,6 @@ const passwordSchema = z.string()
     (password) => !authConfig.password.validation.requireSpecial || /[^A-Za-z0-9]/.test(password),
     'Password must contain at least one special character'
   );
-=======
-
-// Password validation schema
-const passwordSchema = z.string()
-  .min(10, 'Password must be at least 10 characters long')
-  .max(128, 'Password must not exceed 128 characters')
-  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-  .regex(/[0-9]/, 'Password must contain at least one number')
-  .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character');
->>>>>>> 3877d10 (Added password management)
 
 export interface PasswordValidationResult {
   isValid: boolean;
@@ -48,11 +36,7 @@ export interface PasswordHashResult {
 }
 
 export class PasswordService {
-<<<<<<< HEAD
   private readonly SALT_ROUNDS = authConfig.password.bcryptCost;
-=======
-  private readonly SALT_ROUNDS = 12;
->>>>>>> 3877d10 (Added password management)
 
   /**
    * Validates a password against the defined complexity requirements
@@ -83,7 +67,6 @@ export class PasswordService {
    * @returns Promise<PasswordHashResult> containing the hash and salt
    */
   async hashPassword(password: string): Promise<PasswordHashResult> {
-<<<<<<< HEAD
     // Validate password before hashing
     const validation = this.validatePassword(password);
     if (!validation.isValid) {
@@ -95,11 +78,6 @@ export class PasswordService {
       const config = await getConfig();
       const pepperedPassword = `${password}${config.auth.passwordPepper}`;
       const hash = await bcrypt.hash(pepperedPassword, salt);
-=======
-    try {
-      const salt = await bcrypt.genSalt(this.SALT_ROUNDS);
-      const hash = await bcrypt.hash(password, salt);
->>>>>>> 3877d10 (Added password management)
       return { hash, salt };
     } catch (error) {
       logger.error('Error hashing password', {
@@ -117,14 +95,10 @@ export class PasswordService {
    */
   async verifyPassword(password: string, hash: string): Promise<boolean> {
     try {
-<<<<<<< HEAD
       const config = await getConfig();
       const pepperedPassword = `${password}${config.auth.passwordPepper}`;
       const isValid = await bcrypt.compare(pepperedPassword, hash);
       return isValid;
-=======
-      return await bcrypt.compare(password, hash);
->>>>>>> 3877d10 (Added password management)
     } catch (error) {
       logger.error('Error verifying password', {
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -146,24 +120,36 @@ export class PasswordService {
     newPassword: string,
     storedHash: string
   ): Promise<PasswordHashResult> {
-    // First verify the current password
+    // First validate the new password
+    const validation = this.validatePassword(newPassword);
+    if (!validation.isValid) {
+      throw new Error(validation.errors?.join(', ') || 'Invalid password format');
+    }
+
+    // Then check if new password is same as current
+    if (currentPassword === newPassword) {
+      throw new Error('New password must be different from current password');
+    }
+
+    // Finally verify the current password
     const isValid = await this.verifyPassword(currentPassword, storedHash);
     if (!isValid) {
       throw new Error('Current password is incorrect');
     }
 
-<<<<<<< HEAD
-    // Validate and hash the new password
-=======
-    // Validate the new password
-    const validation = this.validatePassword(newPassword);
-    if (!validation.isValid) {
-      throw new Error(validation.errors?.join(', ') || 'Invalid new password');
-    }
-
     // Hash the new password
->>>>>>> 3877d10 (Added password management)
-    return this.hashPassword(newPassword);
+    try {
+      const salt = await bcrypt.genSalt(this.SALT_ROUNDS);
+      const config = await getConfig();
+      const pepperedPassword = `${newPassword}${config.auth.passwordPepper}`;
+      const hash = await bcrypt.hash(pepperedPassword, salt);
+      return { hash, salt };
+    } catch (error) {
+      logger.error('Error hashing password', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw new Error('Failed to hash password');
+    }
   }
 }
 

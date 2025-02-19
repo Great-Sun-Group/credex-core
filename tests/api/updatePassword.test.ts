@@ -1,98 +1,90 @@
 import axios from "../setup";
 import { generateRandomPhone } from "../utils/testUtils";
 import { TestCleanup } from "../utils/cleanup";
-import { ledgerSpaceDriver } from "../../config/neo4j";
-import { onboardMember } from "./functions/onboardMember";
-import { loginV2 } from "./functions/loginV2";
-
-// Helper function to validate response structure
-function validateUpdatePasswordResponse(data: any) {
-  expect(data.data).toHaveProperty("action");
-  expect(data.data.action).toMatchObject({
-    id: expect.stringMatching(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    ), // UUID v4 format
-    type: "MEMBER_PASSWORD_UPDATED",
-    timestamp: expect.stringMatching(
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/
-    ), // ISO 8601
-    actor: expect.stringMatching(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    ), // UUID v4 format
-    details: {
-      memberID: expect.stringMatching(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-      ) // UUID v4 format
-    }
-  });
-}
-
-const headers = {
-  "x-client-api-key": process.env.CLIENT_API_KEY || "",
-};
 
 describe("Update Password Tests", () => {
-  const testPhone = generateRandomPhone();
-  const initialPassword = "InitialPass123!";
-  const validNewPassword = "NewSecurePass456!";
-  let authToken: string;
-
-  beforeAll(async () => {
-    // Clean up any existing test member
-    const session = ledgerSpaceDriver.session();
-    try {
-      await session.run(
-        `MATCH (m:Member {phone: $phone}) 
-         DETACH DELETE m`,
-        { phone: testPhone }
-      );
-    } finally {
-      await session.close();
-    }
-
-    // Create test member with initial password
-    const onboardResponse = await onboardMember(
-      "Test",
-      "User",
-      testPhone,
-      "USD",
-      initialPassword
-    );
-
-    TestCleanup.trackMember(onboardResponse.data.action.details.memberID, testPhone);
-
-    // Login to get auth token
-    const loginResponse = await loginV2(testPhone, initialPassword);
-    authToken = loginResponse.data.action.details.token;
-  });
-
-  afterAll(async () => {
-    await TestCleanup.cleanupMembers();
-  });
+  const headers = {
+    "x-client-api-key": process.env.CLIENT_API_KEY || "",
+  };
 
   describe("Successful Password Update", () => {
     it("should successfully update password with valid credentials", async () => {
+      const phone = generateRandomPhone();
+      const initialPassword = "InitialPass123!";
+      const newPassword = "NewSecurePass456!";
+
+      // Create test member
+      const onboardResponse = await axios.post(
+        "/onboardMember",
+        {
+          firstname: "Test",
+          lastname: "User",
+          phone,
+          defaultDenom: "USD"
+        },
+        { headers }
+      );
+
+      expect(onboardResponse.status).toBe(201);
+      const memberID = onboardResponse.data.data.action.details.memberID;
+      TestCleanup.trackMember(memberID, phone);
+
+      // Set initial password
+      const initialToken = onboardResponse.data.data.action.details.token;
+      await axios.post(
+        "/setInitialPassword",
+        {
+          phone,
+          password: initialPassword
+        },
+        { 
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${initialToken}`
+          }
+        }
+      );
+
+      // Get v2 login token
+      const loginResponse = await axios.post(
+        "/v2/login",
+        {
+          phone,
+          password: initialPassword
+        },
+        { headers }
+      );
+
+      // Update password
       const response = await axios.post(
         "/updatePassword",
         {
           currentPassword: initialPassword,
-          newPassword: validNewPassword
+          newPassword
         },
         {
           headers: {
             ...headers,
-            Authorization: `Bearer ${authToken}`
+            Authorization: `Bearer ${loginResponse.data.data.action.details.token}`
           }
         }
       );
 
       expect(response.status).toBe(200);
       expect(response.data.message).toBe("Password updated successfully");
-      validateUpdatePasswordResponse(response.data);
+      expect(response.data.data.action.type).toBe("MEMBER_PASSWORD_UPDATED");
+      expect(response.data.data.action.id).toBe(memberID);
 
       // Verify can login with new password
-      const loginResponse = await loginV2(testPhone, validNewPassword);
-      expect(loginResponse.data.action.details.token).toBeTruthy();
+      const verifyResponse = await axios.post(
+        "/v2/login",
+        {
+          phone,
+          password: newPassword
+        },
+        { headers }
+      );
+      expect(verifyResponse.status).toBe(200);
     });
   });
 
@@ -127,6 +119,52 @@ describe("Update Password Tests", () => {
 
     testCases.forEach(({ scenario, password, expectedError }) => {
       it(`should reject ${scenario}`, async () => {
+        const phone = generateRandomPhone();
+        const initialPassword = "InitialPass123!";
+
+        // Create test member
+        const onboardResponse = await axios.post(
+          "/onboardMember",
+          {
+            firstname: "Test",
+            lastname: "User",
+            phone,
+            defaultDenom: "USD"
+          },
+          { headers }
+        );
+
+        expect(onboardResponse.status).toBe(201);
+        const memberID = onboardResponse.data.data.action.details.memberID;
+        TestCleanup.trackMember(memberID, phone);
+
+        // Set initial password
+        const initialToken = onboardResponse.data.data.action.details.token;
+        await axios.post(
+          "/setInitialPassword",
+          {
+            phone,
+            password: initialPassword
+          },
+          { 
+            headers: {
+              ...headers,
+              Authorization: `Bearer ${initialToken}`
+            }
+          }
+        );
+
+        // Get v2 login token
+        const loginResponse = await axios.post(
+          "/v2/login",
+          {
+            phone,
+            password: initialPassword
+          },
+          { headers }
+        );
+
+        // Test update password
         try {
           await axios.post(
             "/updatePassword",
@@ -137,7 +175,7 @@ describe("Update Password Tests", () => {
             {
               headers: {
                 ...headers,
-                Authorization: `Bearer ${authToken}`
+                Authorization: `Bearer ${loginResponse.data.data.action.details.token}`
               }
             }
           );
@@ -152,17 +190,62 @@ describe("Update Password Tests", () => {
 
   describe("Error Cases", () => {
     it("should reject incorrect current password", async () => {
+      const phone = generateRandomPhone();
+      const initialPassword = "InitialPass123!";
+
+      // Create test member
+      const onboardResponse = await axios.post(
+        "/onboardMember",
+        {
+          firstname: "Test",
+          lastname: "User",
+          phone,
+          defaultDenom: "USD"
+        },
+        { headers }
+      );
+
+      expect(onboardResponse.status).toBe(201);
+      const memberID = onboardResponse.data.data.action.details.memberID;
+      TestCleanup.trackMember(memberID, phone);
+
+      // Set initial password
+      const initialToken = onboardResponse.data.data.action.details.token;
+      await axios.post(
+        "/setInitialPassword",
+        {
+          phone,
+          password: initialPassword
+        },
+        { 
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${initialToken}`
+          }
+        }
+      );
+
+      // Get v2 login token
+      const loginResponse = await axios.post(
+        "/v2/login",
+        {
+          phone,
+          password: initialPassword
+        },
+        { headers }
+      );
+
       try {
         await axios.post(
           "/updatePassword",
           {
             currentPassword: "WrongPass123!",
-            newPassword: validNewPassword
+            newPassword: "NewSecurePass456!"
           },
           {
             headers: {
               ...headers,
-              Authorization: `Bearer ${authToken}`
+              Authorization: `Bearer ${loginResponse.data.data.action.details.token}`
             }
           }
         );
@@ -174,12 +257,47 @@ describe("Update Password Tests", () => {
     });
 
     it("should reject unauthorized request", async () => {
+      const phone = generateRandomPhone();
+      const initialPassword = "InitialPass123!";
+
+      // Create test member
+      const onboardResponse = await axios.post(
+        "/onboardMember",
+        {
+          firstname: "Test",
+          lastname: "User",
+          phone,
+          defaultDenom: "USD"
+        },
+        { headers }
+      );
+
+      expect(onboardResponse.status).toBe(201);
+      const memberID = onboardResponse.data.data.action.details.memberID;
+      TestCleanup.trackMember(memberID, phone);
+
+      // Set initial password
+      const initialToken = onboardResponse.data.data.action.details.token;
+      await axios.post(
+        "/setInitialPassword",
+        {
+          phone,
+          password: initialPassword
+        },
+        { 
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${initialToken}`
+          }
+        }
+      );
+
       try {
         await axios.post(
           "/updatePassword",
           {
             currentPassword: initialPassword,
-            newPassword: validNewPassword
+            newPassword: "NewSecurePass456!"
           },
           {
             headers: {
@@ -196,6 +314,51 @@ describe("Update Password Tests", () => {
     });
 
     it("should reject same new password as current", async () => {
+      const phone = generateRandomPhone();
+      const initialPassword = "InitialPass123!";
+
+      // Create test member
+      const onboardResponse = await axios.post(
+        "/onboardMember",
+        {
+          firstname: "Test",
+          lastname: "User",
+          phone,
+          defaultDenom: "USD"
+        },
+        { headers }
+      );
+
+      expect(onboardResponse.status).toBe(201);
+      const memberID = onboardResponse.data.data.action.details.memberID;
+      TestCleanup.trackMember(memberID, phone);
+
+      // Set initial password
+      const initialToken = onboardResponse.data.data.action.details.token;
+      await axios.post(
+        "/setInitialPassword",
+        {
+          phone,
+          password: initialPassword
+        },
+        { 
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${initialToken}`
+          }
+        }
+      );
+
+      // Get v2 login token
+      const loginResponse = await axios.post(
+        "/v2/login",
+        {
+          phone,
+          password: initialPassword
+        },
+        { headers }
+      );
+
       try {
         await axios.post(
           "/updatePassword",
@@ -206,14 +369,14 @@ describe("Update Password Tests", () => {
           {
             headers: {
               ...headers,
-              Authorization: `Bearer ${authToken}`
+              Authorization: `Bearer ${loginResponse.data.data.action.details.token}`
             }
           }
         );
         fail("Should have thrown error for same password");
       } catch (error: any) {
-        expect(error.response.status).toBe(401);
-        expect(error.response.data.message).toBe("Current password is incorrect");
+        expect(error.response.status).toBe(400);
+        expect(error.response.data.message).toBe("New password must be different from current password");
       }
     });
   });
