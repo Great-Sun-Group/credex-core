@@ -7,7 +7,7 @@ services:
       target: development
     environment:
       # Core environment
-      NODE_ENV: ${NODE_ENV:-test}
+      NODE_ENV: ${NODE_ENV:-development}
       DOCKER_ENV: "true"
       # Test configuration
       BUILD_TARGET: ${BUILD_TARGET:-test}

@@ -10,17 +10,14 @@ export class WhatsAppProvider implements IVerificationProvider {
   private readonly apiBaseUrl: string;
 
   constructor() {
-    this.apiKey = process.env.WHATSAPP_API_KEY || '';
-    this.businessId = process.env.WHATSAPP_BUSINESS_ID || '';
-    this.phoneId = process.env.WHATSAPP_PHONE_ID || '';
+    this.apiKey = process.env.CREDEX_CORE_WHATSAPP_API_KEY || '';
+    this.businessId = process.env.CREDEX_CORE_WHATSAPP_BUSINESS_ID || '';
+    this.phoneId = process.env.CREDEX_CORE_WHATSAPP_PHONE_ID || '';
     this.apiBaseUrl = `https://graph.facebook.com/v17.0/${this.phoneId}`;
     
-    // Skip validation in test environment
-    if (process.env.NODE_ENV !== 'test') {
-      if (!this.apiKey || !this.businessId || !this.phoneId) {
-        logger.error('WhatsAppProvider: Missing required environment variables');
-        throw new Error('WHATSAPP_API_KEY, WHATSAPP_BUSINESS_ID, and WHATSAPP_PHONE_ID are required');
-      }
+    if (!this.apiKey || !this.businessId || !this.phoneId) {
+      logger.error('WhatsAppProvider: Missing required environment variables');
+      throw new Error('CREDEX_CORE_WHATSAPP_API_KEY, CREDEX_CORE_WHATSAPP_BUSINESS_ID, and CREDEX_CORE_WHATSAPP_PHONE_ID are required');
     }
 
     logger.info('WhatsAppProvider initialized', {
@@ -80,17 +77,6 @@ export class WhatsAppProvider implements IVerificationProvider {
         template: 'vimbiso_otp',
         url: `${this.apiBaseUrl}/messages`
       });
-
-      // In test environment, return mock success response
-      if (process.env.NODE_ENV === 'test') {
-        return {
-          success: true,
-          message: 'OTP sent successfully (test)',
-          data: {
-            deliveryId: 'test-delivery-id'
-          }
-        };
-      }
 
       // Send message via WhatsApp API
       const response = await axios.post(
@@ -157,11 +143,6 @@ export class WhatsAppProvider implements IVerificationProvider {
    */
   async validateDelivery(deliveryId: string): Promise<boolean> {
     try {
-      // In test environment, always return true
-      if (process.env.NODE_ENV === 'test') {
-        return true;
-      }
-
       const response = await axios.get(
         `${this.apiBaseUrl}/${deliveryId}`,
         {
