@@ -9,7 +9,6 @@ services:
       # Core environment
       NODE_ENV: ${NODE_ENV:-development}
       DOCKER_ENV: "true"
-      USE_MOCK_WHATSAPP: "false"
       # Test configuration
       BUILD_TARGET: ${BUILD_TARGET:-test}
       TEST_FILTER: ${TEST_FILTER:-""}
