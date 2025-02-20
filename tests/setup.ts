@@ -82,6 +82,7 @@ process.env.OTP_COOLDOWN_MINUTES = '5';
 process.env.OTP_MAX_ATTEMPTS = '3';
 process.env.JWT_SECRET = 'test-secret-key';
 process.env.CLIENT_API_KEY = 'love-achingly';
+process.env.USE_MOCK_WHATSAPP = 'true';
 
 // Create a daynode for testing if it doesn't exist
 async function ensureDaynode() {
