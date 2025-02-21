@@ -1,0 +1,27 @@
+.treasurers-section {
+  --content-width: 50%;
+  --background-size: 70% auto;
+  --gradient-left: linear-gradient(
+    to left,
+    var(--dark-blue) 40%,
+    rgba(6, 21, 31, 0.8) 60%,
+    rgba(6, 21, 31, 0) 100%
+  );
+
+  background-image: url("../../images/treasurer_optimized.png");
+  background-size: var(--background-size);
+}
+
+.treasurers-section .content {
+  width: var(--content-width);
+}
+
+.treasurers-section.image-left::before {
+  background: var(--gradient-left);
+}
+
+@media (max-width: 768px) {
+  .treasurers-section .content {
+    width: 100%;
+  }
+}

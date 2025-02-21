@@ -1,0 +1,26 @@
+.intro-section {
+  --content-width: 65%;
+  --gradient-right: linear-gradient(
+    to right,
+    var(--dark-blue) 10%,
+    rgba(6, 21, 31, 0.85) 40%,
+    rgba(6, 21, 31, 0) 100%
+  );
+
+  background-image: url("../../images/market1_optimized.png");
+  background-size: 100% auto;
+}
+
+.intro-section .content {
+  width: var(--content-width);
+}
+
+.intro-section.image-right::before {
+  background: var(--gradient-right);
+}
+
+@media (max-width: 768px) {
+  .intro-section .content {
+    width: 100%;
+  }
+}

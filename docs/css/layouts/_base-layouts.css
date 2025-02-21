@@ -1,0 +1,120 @@
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Full Width Centered */
+.full-width-centered {
+  position: relative;
+  width: 100%;
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  padding: 3rem 0;
+}
+
+.full-width-centered::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+.full-width-centered .content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Content With Image Base */
+.content-with-image {
+  position: relative;
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  background-color: var(--dark-blue);
+  background-repeat: no-repeat;
+  max-width: 2400px;
+  margin: 0 auto;
+}
+
+.content-with-image.image-right::before,
+.content-with-image.image-left::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  z-index: 1;
+}
+
+.content-with-image .content {
+  position: relative;
+  z-index: 2;
+  width: 65%; /* Default size that sections can override */
+  padding: 3rem;
+  max-width: 1000px;
+  font-size: 1rem; /* Default size that sections can override */
+}
+
+.content-with-image.image-right .content {
+  margin-right: auto;
+  padding-left: max(1rem, calc((100% - 1200px) / 2 + 1rem));
+}
+
+.content-with-image.image-left .content {
+  margin-left: auto;
+  padding-right: calc((100% - 1200px) / 2 + 2rem);
+  text-align: right;
+}
+
+.content-with-image.image-left h2::after {
+  right: 0;
+  left: auto;
+}
+
+.content-with-image.image-left ul {
+  padding-left: 2rem;
+  padding-right: 0;
+}
+
+.content-with-image.image-left li {
+  text-align: left;
+}
+
+.content-with-image.image-left li::before {
+  left: -1.5rem;
+  right: auto;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .content-with-image {
+    min-height: auto;
+    padding: 3rem 0;
+  }
+
+  .content-with-image::before {
+    width: 100%;
+    background: var(--dark-blue) !important;
+  }
+
+  .content-with-image .content {
+    width: 100%;
+    padding: 2rem;
+    max-width: 100%;
+  }
+
+  .full-width-centered {
+    padding: 60px 0;
+  }
+}

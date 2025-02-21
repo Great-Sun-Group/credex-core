@@ -1,0 +1,26 @@
+.ziggy-section {
+  --content-width: 50%;
+  --gradient-left: linear-gradient(
+    to left,
+    var(--dark-blue) 10%,
+    rgba(6, 21, 31, 0.7) 30%,
+    rgba(6, 21, 31, 0) 100%
+  );
+
+  background-image: url("../../images/zig_exchange.png");
+  background-size: 100% auto;
+}
+
+.ziggy-section .content {
+  width: var(--content-width);
+}
+
+.ziggy-section.image-left::before {
+  background: var(--gradient-left);
+}
+
+@media (max-width: 768px) {
+  .ziggy-section .content {
+    width: 100%;
+  }
+}

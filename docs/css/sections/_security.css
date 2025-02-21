@@ -1,0 +1,26 @@
+.security-section {
+  --overlay-opacity: 0.75;
+  
+  background-image: url("../../images/membership.png");
+  background-size: cover;
+  background-position: center;
+}
+
+.security-section::before {
+  background: rgba(6, 21, 31, var(--overlay-opacity));
+}
+
+.security-section h2 {
+  color: var(--organic-gold);
+}
+
+.security-section p {
+  text-align: justify;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+  .security-section .content {
+    padding: 0 1rem;
+  }
+}

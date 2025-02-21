@@ -1,0 +1,31 @@
+.transparency-section {
+  --overlay-opacity: 0.75;
+  
+  background-image: url("../../images/membership.png");
+  background-size: cover;
+  background-position: center;
+}
+
+.transparency-section::before {
+  background: rgba(6, 21, 31, var(--overlay-opacity));
+}
+
+.transparency-section h2 {
+  color: var(--organic-gold);
+}
+
+.transparency-section a {
+  color: var(--tech-azure);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.transparency-section a:hover {
+  color: var(--organic-gold);
+}
+
+@media (max-width: 768px) {
+  .transparency-section .content {
+    padding: 0 1rem;
+  }
+}
