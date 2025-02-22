@@ -103,16 +103,41 @@
 
   .content-with-image::before {
     width: 100%;
-    background: var(--dark-blue) !important;
+    background: linear-gradient(
+      to right,
+      rgba(6, 21, 31, 0.85),
+      rgba(6, 21, 31, 0.85)
+    ) !important;
   }
 
   .content-with-image .content {
     width: 100%;
     padding: 2rem;
     max-width: 100%;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .content-with-image.image-left .content,
+  .content-with-image.image-right .content {
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .content-with-image.image-left h2::after {
+    right: 50%;
+    transform: translateX(50%);
   }
 
   .full-width-centered {
     padding: 60px 0;
+  }
+
+  .full-width-centered::before {
+    background: linear-gradient(
+      to right,
+      rgba(6, 21, 31, 0.85),
+      rgba(6, 21, 31, 0.85)
+    );
   }
 }
