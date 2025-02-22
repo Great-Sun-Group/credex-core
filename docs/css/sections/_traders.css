@@ -1,0 +1,26 @@
+.traders-section {
+  --content-width: 65%;
+  --gradient-right: linear-gradient(
+    to right,
+    var(--dark-blue) 10%,
+    rgba(6, 21, 31, 0.85) 40%,
+    rgba(6, 21, 31, 0) 100%
+  );
+
+  background-image: url("../../images/trader_screens_optimized.png");
+  background-size: 100% auto;
+}
+
+.traders-section .content {
+  width: var(--content-width);
+}
+
+.traders-section.image-right::before {
+  background: var(--gradient-right);
+}
+
+@media (max-width: 768px) {
+  .traders-section .content {
+    width: 100%;
+  }
+}

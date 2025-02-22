@@ -1,0 +1,27 @@
+.african-entrepreneurs-section {
+  --content-width: 60%;
+  --background-size: 85% auto;
+  --gradient-left: linear-gradient(
+    to left,
+    var(--dark-blue) 20%,
+    rgba(6, 21, 31, 0.8) 35%,
+    rgba(6, 21, 31, 0) 100%
+  );
+
+  background-image: url("../../images/protected_optimized.png");
+  background-size: var(--background-size);
+}
+
+.african-entrepreneurs-section .content {
+  width: var(--content-width);
+}
+
+.african-entrepreneurs-section.image-left::before {
+  background: var(--gradient-left);
+}
+
+@media (max-width: 768px) {
+  .african-entrepreneurs-section .content {
+    width: 100%;
+  }
+}

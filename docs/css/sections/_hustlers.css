@@ -1,0 +1,26 @@
+.hustlers-section {
+  --content-width: 40%;
+  --gradient-right: linear-gradient(
+    to right,
+    var(--dark-blue) 10%,
+    rgba(6, 21, 31, 0.8) 40%,
+    rgba(6, 21, 31, 0) 100%
+  );
+
+  background-image: url("../../images/hustlers_market_optimized.png");
+  background-size: 100% auto;
+}
+
+.hustlers-section .content {
+  width: var(--content-width);
+}
+
+.hustlers-section.image-right::before {
+  background: var(--gradient-right);
+}
+
+@media (max-width: 768px) {
+  .hustlers-section .content {
+    width: 100%;
+  }
+}

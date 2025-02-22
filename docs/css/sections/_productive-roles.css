@@ -1,0 +1,26 @@
+.productive-roles-section {
+  --content-width: 40%;
+  --gradient-left: linear-gradient(
+    to left,
+    var(--dark-blue) 10%,
+    rgba(6, 21, 31, 0.75) 30%,
+    rgba(6, 21, 31, 0) 100%
+  );
+
+  background-image: url("../../images/productive_roles_optimized.png");
+  background-size: 100% auto;
+}
+
+.productive-roles-section .content {
+  width: var(--content-width);
+}
+
+.productive-roles-section.image-left::before {
+  background: var(--gradient-left);
+}
+
+@media (max-width: 768px) {
+  .productive-roles-section .content {
+    width: 100%;
+  }
+}
