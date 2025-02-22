@@ -53,3 +53,13 @@ li:hover::before {
   transform: scale(1.2);
   transition: all 0.3s ease;
 }
+
+a {
+  color: var(--tech-azure);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--organic-gold);
+}
