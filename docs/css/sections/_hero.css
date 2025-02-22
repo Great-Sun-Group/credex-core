@@ -82,9 +82,24 @@
 @media (max-width: 768px) {
   .hero-section {
     padding: 60px 0;
+    --logo-width: 450px;
   }
 
   .hero-section .hero-content {
-    text-align: left;
+    text-align: center;
+    padding: 0 2rem;
+  }
+
+  .hero-section::after {
+    background: linear-gradient(
+      to right,
+      rgba(6, 21, 31, 0.85),
+      rgba(6, 21, 31, 0.85)
+    );
+  }
+
+  .hero-section .hero-content p {
+    font-size: 1.15rem;
+    margin: 1.5rem auto;
   }
 }
