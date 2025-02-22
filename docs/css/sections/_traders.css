@@ -1,5 +1,5 @@
 .traders-section {
-  --content-width: 70%;
+  --content-width: 65%;
   --gradient-right: linear-gradient(
     to right,
     var(--dark-blue) 10%,
@@ -7,7 +7,7 @@
     rgba(6, 21, 31, 0) 100%
   );
 
-  background-image: url("../../images/traders_screens.png");
+  background-image: url("../../images/trader_screens_optimized.png");
   background-size: 100% auto;
 }
 

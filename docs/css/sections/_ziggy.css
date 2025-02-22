@@ -1,26 +1,38 @@
 .ziggy-section {
-  --content-width: 50%;
-  --gradient-left: linear-gradient(
-    to left,
-    var(--dark-blue) 10%,
-    rgba(6, 21, 31, 0.7) 30%,
-    rgba(6, 21, 31, 0) 100%
-  );
-
-  background-image: url("../../images/zig_exchange.png");
-  background-size: 100% auto;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 4rem 2rem 4rem 2rem;
+  background: var(--dark-blue);
 }
 
 .ziggy-section .content {
-  width: var(--content-width);
+  flex: 0 0 45%;
 }
 
-.ziggy-section.image-left::before {
-  background: var(--gradient-left);
+.ziggy-section .image-container {
+  flex: 0 0 55%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-right: 2rem;
+}
+
+.ziggy-section .image-container img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 @media (max-width: 768px) {
-  .ziggy-section .content {
-    width: 100%;
+  .ziggy-section {
+    flex-direction: column;
+    padding: 2rem 1rem;
+  }
+
+  .ziggy-section .content,
+  .ziggy-section .image-container {
+    flex: 0 0 100%;
   }
 }

@@ -1,9 +1,9 @@
 .security-section {
-  --overlay-opacity: 0.75;
+  --overlay-opacity: 0.7;
   
-  background-image: url("../../images/membership.png");
+  background-image: url("../../images/security_optimized.png");
   background-size: cover;
-  background-position: center;
+  background-position: top;
 }
 
 .security-section::before {

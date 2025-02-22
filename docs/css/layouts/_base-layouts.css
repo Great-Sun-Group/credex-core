@@ -9,10 +9,9 @@
 .full-width-centered {
   position: relative;
   width: 100%;
-  min-height: 60vh;
   display: flex;
   align-items: center;
-  padding: 3rem 0;
+  padding: 6rem 0;
 }
 
 .full-width-centered::before {
@@ -37,14 +36,13 @@
 /* Content With Image Base */
 .content-with-image {
   position: relative;
-  min-height: 60vh;
   display: flex;
   align-items: center;
-  margin: 0;
   background-color: var(--dark-blue);
   background-repeat: no-repeat;
   max-width: 2400px;
   margin: 0 auto;
+  padding: 6rem 0;
 }
 
 .content-with-image.image-right::before,

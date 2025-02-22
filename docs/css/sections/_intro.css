@@ -3,12 +3,13 @@
   --gradient-right: linear-gradient(
     to right,
     var(--dark-blue) 10%,
-    rgba(6, 21, 31, 0.85) 40%,
+    rgba(6, 21, 31, 0.85) 25%,
     rgba(6, 21, 31, 0) 100%
   );
 
   background-image: url("../../images/market1_optimized.png");
-  background-size: 100% auto;
+  background-size: cover;
+  background-position: center;
 }
 
 .intro-section .content {

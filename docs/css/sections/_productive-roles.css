@@ -1,5 +1,5 @@
 .productive-roles-section {
-  --content-width: 55%;
+  --content-width: 40%;
   --gradient-left: linear-gradient(
     to left,
     var(--dark-blue) 10%,
@@ -7,7 +7,7 @@
     rgba(6, 21, 31, 0) 100%
   );
 
-  background-image: url("../../images/productive_roles.png");
+  background-image: url("../../images/productive_roles_optimized.png");
   background-size: 100% auto;
 }
 
