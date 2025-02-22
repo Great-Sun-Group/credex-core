@@ -4,25 +4,7 @@
   --intro-font-small: 1em;
   --whatsapp-font: 1.6em;
   --panel-gap: 40px;
-  position: relative;
-  overflow: hidden;
   text-align: center;
-}
-
-.membership-section .section-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-}
-
-.membership-section .section-background img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
 }
 
 .membership-section::before {

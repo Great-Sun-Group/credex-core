@@ -2,8 +2,10 @@
   display: flex;
   align-items: center;
   gap: 2rem;
-  padding: 4rem 2rem 4rem 2rem;
+  padding: 4rem 2rem;
   background: var(--dark-blue);
+  max-width: 2000px;
+  margin: 0 auto;
 }
 
 .ziggy-section .content {
