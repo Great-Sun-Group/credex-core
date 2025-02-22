@@ -1,23 +1,46 @@
 .african-entrepreneurs-section {
   --content-width: 60%;
-  --background-size: 85% auto;
   --gradient-left: linear-gradient(
     to left,
     var(--dark-blue) 15%,
     rgba(6, 21, 31, 0.8) 30%,
     rgba(6, 21, 31, 0) 100%
   );
+  position: relative;
+  overflow: hidden;
+}
 
-  background-image: url("../../images/protected_optimized.png");
-  background-size: var(--background-size);
+.african-entrepreneurs-section .section-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.african-entrepreneurs-section .section-background img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
 .african-entrepreneurs-section .content {
+  position: relative;
+  z-index: 2;
   width: var(--content-width);
 }
 
 .african-entrepreneurs-section.image-left::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: var(--gradient-left);
+  z-index: 1;
 }
 
 @media (max-width: 768px) {
