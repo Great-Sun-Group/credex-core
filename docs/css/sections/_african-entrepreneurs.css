@@ -3,8 +3,8 @@
   --background-size: 85% auto;
   --gradient-left: linear-gradient(
     to left,
-    var(--dark-blue) 20%,
-    rgba(6, 21, 31, 0.8) 35%,
+    var(--dark-blue) 15%,
+    rgba(6, 21, 31, 0.8) 30%,
     rgba(6, 21, 31, 0) 100%
   );
 
