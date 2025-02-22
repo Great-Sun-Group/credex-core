@@ -46,19 +46,19 @@ async function initializeApp() {
     // Apply jsonParser globally first
     app.use(jsonParser);
 
-    // Apply security middleware after body parsing
-    applySecurityMiddleware(app);
-
-    // Add request ID middleware
-    app.use(addRequestId);
-
-    // Serve static files from docs directory
+    // Serve static files from docs directory first
     app.use(express.static('docs'));
 
     // Serve docs/index.html at root
     app.get('/', (req: Request, res: Response) => {
       res.sendFile('index.html', { root: './docs' });
     });
+
+    // Add request ID middleware
+    app.use(addRequestId);
+
+    // Apply security middleware after static files and body parsing
+    applySecurityMiddleware(app);
 
     // Apply custom logging middleware
     app.use(expressLogger);
