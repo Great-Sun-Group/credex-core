@@ -10,10 +10,22 @@
   overflow: hidden;
   padding: 2rem 0;
   background-color: var(--dark-blue);
-  background-image: url("../../images/harare_golden1.png");
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
+}
+
+.hero-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.hero-background img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
 .hero-section::after {
