@@ -6,24 +6,6 @@
     rgba(6, 21, 31, 0.8) 60%,
     rgba(6, 21, 31, 0) 100%
   );
-  position: relative;
-  overflow: hidden;
-}
-
-.treasurers-section .section-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-}
-
-.treasurers-section .section-background img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
 }
 
 .treasurers-section .content {
