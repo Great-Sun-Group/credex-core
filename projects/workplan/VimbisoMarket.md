@@ -2,159 +2,231 @@
 
 Adding marketplace functionality to the VimbisoPay app by extending the underlying accounting infrastructure and client app capabilities.
 
-## Munya the farmer adds a vendor profile pic
+# Munya the farmer adds a vendor profile pic
 
 ```mermaid
-graph TD
-    %% Styles
-    classDef screen fill:#d4f1f9,stroke:#05a,stroke-width:2px,color:black,rx:10,ry:10
-    classDef endpoint fill:#ffe6cc,stroke:#f90,stroke-width:2px,color:black,shape:hexagon
-    classDef account fill:#e1d5e7,stroke:#9673a6,stroke-width:1px,color:black,shape:circle
-    classDef asset fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:black,shape:circle
-    classDef file fill:#fff4c3,stroke:#d6b656,stroke-width:1px,color:black,shape:document
+flowchart TB
+    %% Main direction top to bottom with User Flow on top
     
-    %% Group screens
-    subgraph UI [User Interface]
-        S1[Edit Member Profile] --> S2[Add Image Flow]
+    subgraph Flow["<b><font size='5' color='black'>User Flow</font></b>"]
+        direction LR
+        subgraph UI["<b><font size='4' color='black'>User Interface</font></b>"]
+            direction LR
+            S1[Edit Member Profile] --- S2[Add Image Flow]
+        end
+
+        subgraph API["<b><font size='4' color='black'>API Endpoints</font></b>"]
+            direction LR
+            E1[/uploadAndOptimizeJpg\] --- E2[/connectAsset\]
+        end
     end
-    
-    %% Group endpoints
-    subgraph API [API Endpoints]
-        S2 --> E1[/uploadAndOptimizeJpg\]
-        S2 --> E2[/connectAsset\]
+
+    subgraph Storage["<b><font size='5' color='black'>Data Storage</font></b>"]
+        direction LR
+        subgraph DB["<b><font size='4' color='black'>Neo4j Database</font></b>"]
+            direction TB
+            %% Add connector node inside Neo4j Database
+            Connector(((" "))):::invisible
+            
+            M1((munyaFarmer<br/>:Member))
+            A2((originalProfilePic<br/>:AssetMarker))
+            A1((onboardedAssets<br/>:Account))
+            A3((digitalAssets<br/>:Account))
+            A4((200profilePic<br/>:AssetMarker))
+            A5((600profilePic<br/>:AssetMarker))
+
+            A1 -->|CR| A2
+            A2 -->|DR| A3
+            A1 -->|CR| A4
+            A4 -->|DR| A3
+            A1 -->|CR| A5
+            A5 -->|DR| A3
+
+            %% USED_IN relationships between original and resized versions
+            A2 -->|USED_IN| A4
+            A2 -->|USED_IN| A5
+
+            M1 -->|PROFILE_PIC_ORIGINAL_JPG| A2
+            M1 -->|PROFILE_PIC_200_JPG| A4
+            M1 -->|PROFILE_PIC_600_JPG| A5
+        end
+
+        subgraph S3["<b><font size='4' color='black'>S3 Bucket</font></b>"]
+            direction TB
+            F1>"original.jpg"]
+            F2>"200px.jpg"]
+            F3>"600px.jpg"]
+            F1 --- F2 --- F3
+        end
     end
+
+    %% Connect UI to API 
+    S2 --> E1
+    S2 --> E2
     
-    %% Graph Relationships - Neo4j Nodes
-    subgraph DB [Neo4j Database]
-        A1((onboarded
-        Assets))
-        A2((original
-        ProfilePic))
-        A3((digitalAssets))
-        A4((200
-        profilePic))
-        A5((600
-        profilePic))
-        M1((munya
-        Farmer))
-        
-        A1 -->|CR| A2
-        A2 -->|DR| A3
-        A1 -->|CR| A4
-        A4 -->|DR| A3
-        A1 -->|CR| A5
-        A5 -->|DR| A3
-        
-        %% USED_IN relationships between original and resized versions
-        A2 -->|USED_IN| A4
-        A2 -->|USED_IN| A5
-        
-        M1 -->|PROFILE_PIC_ORIGINAL_JPG| A2
-        M1 -->|PROFILE_PIC_200_JPG| A4
-        M1 -->|PROFILE_PIC_600_JPG| A5
-    end
-    
-    %% S3 Storage - Actual Files
-    subgraph S3Bucket [S3 Bucket]
-        F1>"original.jpg"]
-        F2>"200px.jpg"]
-        F3>"600px.jpg"]
-    end
-    
-    %% Connect UI to API to Database to S3
-    E1 --> A1
-    E2 --> M1
-    
+    %% Use the connector node to route relationships from API to Database
+    E1 --> A2
+    E2 --> Connector
+    Connector -.-> A2
+    Connector -.-> A4
+    Connector -.-> A5
+    Connector -.-> M1
+
     %% Connect AssetMarkers to S3 files
-    A2 -.-> F1
-    A4 -.-> F2
-    A5 -.-> F3
-    
-    %% Class assignments
-    class S1,S2 screen
-    class E1,E2 endpoint
-    class A1,A3 account
-    class A2,A4,A5 asset
-    class M1 account
-    class F1,F2,F3 file
+    A2 --> F1
+    A4 --> F2
+    A5 --> F3
+
+    %% Style definitions
+    %% Account nodes - darker green with gold text
+    style A1 fill:#006400,stroke:#006400,color:#FBB016
+    style A3 fill:#006400,stroke:#006400,color:#FBB016
+
+    %% Member nodes - black with white text
+    style M1 fill:black,stroke:black,color:white
+
+    %% AssetMarker nodes - #FBB016 with black text
+    style A2 fill:#FBB016,stroke:#FBB016,color:black
+    style A4 fill:#FBB016,stroke:#FBB016,color:black
+    style A5 fill:#FBB016,stroke:#FBB016,color:black
+
+    %% S3 Bucket file nodes - gold with black text
+    style F1 fill:#FBB016,stroke:#FBB016,color:black
+    style F2 fill:#FBB016,stroke:#FBB016,color:black
+    style F3 fill:#FBB016,stroke:#FBB016,color:black
+
+    %% User Flow nodes - white with black text
+    style S1 fill:white,stroke:#FBB016,color:black
+    style S2 fill:white,stroke:#FBB016,color:black
+    style E1 fill:white,stroke:#FBB016,color:black
+    style E2 fill:white,stroke:#FBB016,color:black
+
+    %% Make connector invisible
+    classDef invisible fill:none,stroke:none
+
+    %% Style all relationships with teal color #04A0B2
+    linkStyle default stroke:#04A0B2,stroke-width:2px,color:#04A0B2
+
+    %% Style subgraphs - background colors and text sizes
+    style Flow fill:#036980,font-size:20px,font-weight:bold
+    style Storage fill:#036980,font-size:20px,font-weight:bold
+    style UI fill:#8ECBD6,font-size:16px,font-weight:bold
+    style API fill:#8ECBD6,font-size:16px,font-weight:bold
+    style DB fill:#8ECBD6,font-size:16px,font-weight:bold
+    style S3 fill:#8ECBD6,font-size:16px,font-weight:bold
 ```
 
-## Munya lists tomatoes in the Vimbiso Market
+# Munya lists tomatoes in the Vimbiso Market
 
 ```mermaid
-graph TD
-    %% Styles
-    classDef screen fill:#d4f1f9,stroke:#05a,stroke-width:2px,color:black,rx:10,ry:10
-    classDef endpoint fill:#ffe6cc,stroke:#f90,stroke-width:2px,color:black,shape:hexagon
-    classDef account fill:#e1d5e7,stroke:#9673a6,stroke-width:1px,color:black,shape:circle
-    classDef asset fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:black,shape:circle
-    classDef file fill:#fff4c3,stroke:#d6b656,stroke-width:1px,color:black,shape:document
+flowchart TB
+    %% Main direction top to bottom with User Flow on top
     
-    %% Group screens
-    subgraph UI [User Interface]
-        S1[Edit Member Profile] --> S2[Add Image Flow]
+    subgraph Flow["<b><font size='5' color='black'>User Flow</font></b>"]
+        direction LR
+        subgraph UI["<b><font size='4' color='black'>User Interface</font></b>"]
+            direction LR
+            S1[Edit Member Profile] --- S2[Add Image Flow]
+        end
+
+        subgraph API["<b><font size='4' color='black'>API Endpoints</font></b>"]
+            direction LR
+            E1[/addAccountInternal\] --- E2[/uploadAndOptimizeJpg\] --- E3[/connectAsset\]
+        end
     end
-    
-    %% Group endpoints
-    subgraph API [API Endpoints]
-        S1 --> E1[/addAccountInternal\]
-        S2 --> E2[/uploadAndOptimizeJpg\]
-        S2 --> E3[/connectAsset\]
+
+    subgraph Storage["<b><font size='5' color='black'>Data Storage</font></b>"]
+        direction LR
+        subgraph DB["<b><font size='4' color='black'>Neo4j Database</font></b>"]
+            direction TB
+            %% Add connector node inside Neo4j Database
+            Connector(((" "))):::invisible
+            
+            A3((tomatoes<br/>:Account))
+            A1((onboardedAssets<br/>:Account))
+            A2((originalProfilePic<br/>:AssetMarker))
+            A4((200profilePic<br/>:AssetMarker))
+            A5((600profilePic<br/>:AssetMarker))
+
+            A1 -->|CR| A2
+            A2 -->|DR| A3
+            A1 -->|CR| A4
+            A4 -->|DR| A3
+            A1 -->|CR| A5
+            A5 -->|DR| A3
+
+            %% USED_IN relationships between original and resized versions
+            A2 -->|USED_IN| A4
+            A2 -->|USED_IN| A5
+
+            A3 -->|PROFILE_PIC_ORIGINAL_JPG| A2
+            A3 -->|PROFILE_PIC_200_JPG| A4
+            A3 -->|PROFILE_PIC_600_JPG| A5
+        end
+
+        subgraph S3["<b><font size='4' color='black'>S3 Bucket</font></b>"]
+            direction TB
+            F1>"original.jpg"]
+            F2>"200px.jpg"]
+            F3>"600px.jpg"]
+            F1 --- F2 --- F3
+        end
     end
+
+    %% Connect UI to API 
+    S2 --> E1
+    S2 --> E2
+    S2 --> E3
     
-    %% Graph Relationships - Neo4j Nodes
-    subgraph DB [Neo4j Database]
-        A1((onboarded
-        Assets))
-        A2((original
-        ProfilePic))
-        A3((tomatoes))
-        A4((200
-        profilePic))
-        A5((600
-        profilePic))
-        M1((munya
-        Farmer))
-        
-        A1 -->|CR| A2
-        A2 -->|DR| A3
-        A1 -->|CR| A4
-        A4 -->|DR| A3
-        A1 -->|CR| A5
-        A5 -->|DR| A3
-        
-        %% USED_IN relationships between original and resized versions
-        A2 -->|USED_IN| A4
-        A2 -->|USED_IN| A5
-        
-        M1 -->|PROFILE_PIC_ORIGINAL_JPG| A2
-        M1 -->|PROFILE_PIC_200_JPG| A4
-        M1 -->|PROFILE_PIC_600_JPG| A5
-    end
-    
-    %% S3 Storage - Actual Files
-    subgraph S3Bucket [S3 Bucket]
-        F1>"original.jpg"]
-        F2>"200px.jpg"]
-        F3>"600px.jpg"]
-    end
-    
-    %% Connect UI to API to Database to S3
+    %% Use the connector node to route relationships from API to Database
     E1 --> A3
-    E2 --> M1
-    
+    E2 --> A2
+    E3 --> Connector
+    Connector -.-> A2
+    Connector -.-> A4
+    Connector -.-> A5
+    Connector -.-> A3
+
     %% Connect AssetMarkers to S3 files
-    A2 -.-> F1
-    A4 -.-> F2
-    A5 -.-> F3
-    
-    %% Class assignments
-    class S1,S2 screen
-    class E1,E2,E3 endpoint
-    class A1,A3 account
-    class A2,A4,A5 asset
-    class M1 account
-    class F1,F2,F3 file
+    A2 --> F1
+    A4 --> F2
+    A5 --> F3
+
+    %% Style definitions
+    %% Account nodes - darker green with gold text
+    style A1 fill:#006400,stroke:#006400,color:#FBB016
+    style A3 fill:#006400,stroke:#006400,color:#FBB016
+
+    %% AssetMarker nodes - #FBB016 with black text
+    style A2 fill:#FBB016,stroke:#FBB016,color:black
+    style A4 fill:#FBB016,stroke:#FBB016,color:black
+    style A5 fill:#FBB016,stroke:#FBB016,color:black
+
+    %% S3 Bucket file nodes - gold with black text
+    style F1 fill:#FBB016,stroke:#FBB016,color:black
+    style F2 fill:#FBB016,stroke:#FBB016,color:black
+    style F3 fill:#FBB016,stroke:#FBB016,color:black
+
+    %% User Flow nodes - white with black text
+    style S1 fill:white,stroke:#FBB016,color:black
+    style S2 fill:white,stroke:#FBB016,color:black
+    style E1 fill:white,stroke:#FBB016,color:black
+    style E2 fill:white,stroke:#FBB016,color:black
+    style E3 fill:white,stroke:#FBB016,color:black
+
+    %% Make connector invisible
+    classDef invisible fill:none,stroke:none
+
+    %% Style all relationships with teal color #04A0B2
+    linkStyle default stroke:#04A0B2,stroke-width:2px,color:#04A0B2
+
+    %% Style subgraphs - background colors and text sizes
+    style Flow fill:#036980,font-size:20px,font-weight:bold
+    style Storage fill:#036980,font-size:20px,font-weight:bold
+    style UI fill:#8ECBD6,font-size:16px,font-weight:bold
+    style API fill:#8ECBD6,font-size:16px,font-weight:bold
+    style DB fill:#8ECBD6,font-size:16px,font-weight:bold
+    style S3 fill:#8ECBD6,font-size:16px,font-weight:bold
 ```
 
 ## Munya harvests $100 of tomatoes and tracks with production account (optional step)
@@ -167,42 +239,35 @@ graph TD
     classDef account fill:#e1d5e7,stroke:#9673a6,stroke-width:1px,color:black,shape:circle
     classDef asset fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:black,shape:circle
     classDef property fill:#fff2cc,stroke:#d6b656,stroke-width:1px,color:black,shape:rect
-    
+
     %% Group screens
     subgraph UI [User Interface]
-        S1[Add Account] --> S2[Add Adjusting Entry]
+        S1[Add Account]
+        S2[Add Adjusting Entry]
     end
-    
+
     %% Group endpoints
     subgraph API [API Endpoints]
-        E1[/addAccountInternal\] --> E2[/addAssetMarker\]
+        E1[/addAccountInternal\]
+        E2[/addAssetMarker\]
     end
-    
+
     %% Graph Relationships - Neo4j Nodes
     subgraph DB [Neo4j Database]
-        A1((produceGrown))
+        A1((produceGrown<br>PRODUCTION))
         A2((tomatoesToSell))
         A3((tomatoes))
-        
-        %% Properties
-        P1[PRODUCTION]
-        P2[147.5734]
-        P3[USD]
-        P4[PHYSICAL_ASSET]
-        
-        A1 -->|accountType| P1
+
         A1 -->|CR| A2
-        A2 -->|valueCXX| P2
-        A2 -->|denom| P3
         A2 -->|DR| A3
-        A3 -->|accountType| P4
     end
-    
+
     %% Connect UI to API to Database
-    S2 --> E1
+    S1 --> E1
+    S2 --> E2
+    E2 --> A2
     E1 --> A1
-    E2 --> A1
-    
+
     %% Class assignments
     class S1,S2 screen
     class E1,E2 endpoint
@@ -214,96 +279,174 @@ graph TD
 ## Munya creates an invoice for $20 of tomatoes which are purchased by Farai the merchant
 
 ```mermaid
+flowchart TB
+    %% Main direction top to bottom with User Flows on top
+    
+    subgraph MunyaFlow["<b><font size='5' color='black'>Munya's User Flow</font></b>"]
+        direction LR
+        subgraph MunyaUI["<b><font size='4' color='black'>Munya's Interface</font></b>"]
+            direction LR
+            S1[Vimbiso Store] --- S2[Display QR]
+        end
 
-Screens
-Vimbiso Store
-Display QR
-Create Credex from Invoice
+        subgraph MunyaAPI["<b><font size='4' color='black'>Munya's API Endpoints</font></b>"]
+            direction LR
+            E1[/generateInvoice\]
+        end
+    end
+    
+    subgraph FaraiFlow["<b><font size='5' color='black'>Farai's User Flow</font></b>"]
+        direction LR
+        subgraph FaraiUI["<b><font size='4' color='black'>Farai's Interface</font></b>"]
+            direction LR
+            S3[Create Credex from Invoice]
+        end
 
-Endpoints
-/generateInvoice (Munya)
-/createCredex (Farai)
+        subgraph FaraiAPI["<b><font size='4' color='black'>Farai's API Endpoints</font></b>"]
+            direction LR
+            E2[/createCredex\]
+        end
+    end
 
-Graph
-< data coming soon... >
+    subgraph Storage["<b><font size='5' color='black'>Data Storage</font></b>"]
+        direction LR
+        subgraph DB["<b><font size='4' color='black'>Neo4j Database</font></b>"]
+            direction TB
+            %% Add connector nodes inside Neo4j Database
+            MunyaConnector(((" "))):::invisible
+            FaraiConnector(((" "))):::invisible
+            QRNode(((" "))):::invisible
+            
+            M1((munyaFarmer<br/>:Member))
+            M2((faraiMerchant<br/>:Member))
+            A1((tomatoes<br/>:Account))
+            A2((faraiPersonal<br/>:Account))
+            I1((tomatoInvoice<br/>:Invoice))
+            C1((paymentCredex<br/>:Credex))
+
+            %% Invoice relationships
+            I1 -->|CREDITS_TO| A1
+            I1 -->|DEBITS_TO| A2
+            
+            %% Credex executes Invoice
+            C1 -->|EXECUTES| I1
+            
+            %% Member relationships
+            M1 -->|OWNS| A1
+            M2 -->|OWNS| A2
+            M1 -->|CREATED| I1
+            M2 -->|CREATED| C1
+        end
+    end
+
+    %% Connect Munya's UI to API 
+    S1 --> E1
+    
+    %% Connect Farai's UI to API
+    S3 --> E2
+    
+    %% Connect Munya's API to Database
+    E1 --> I1
+    E1 --> MunyaConnector
+    MunyaConnector -.-> M1
+    MunyaConnector -.-> A1
+    
+    %% Connect Farai's API to Database
+    E2 --> C1
+    E2 --> FaraiConnector
+    FaraiConnector -.-> M2
+    FaraiConnector -.-> A2
+    FaraiConnector -.-> I1
+    
+    %% Connect the two user flows via QR code
+    S2 --> QRNode
+    QRNode -.-> S3
+    QRNode -.-> I1
+
+    %% Style definitions
+    %% Member nodes - black with white text
+    style M1 fill:black,stroke:black,color:white
+    style M2 fill:black,stroke:black,color:white
+
+    %% Account nodes - darker green with gold text
+    style A1 fill:#006400,stroke:#006400,color:#FBB016
+    style A2 fill:#006400,stroke:#006400,color:#FBB016
+
+    %% Invoice node - gold with black text
+    style I1 fill:#FBB016,stroke:#FBB016,color:black
+    
+    %% Credex node - gold with black text
+    style C1 fill:#FBB016,stroke:#FBB016,color:black
+
+    %% User Flow nodes - white with black text
+    style S1 fill:white,stroke:#FBB016,color:black
+    style S2 fill:white,stroke:#FBB016,color:black
+    style S3 fill:white,stroke:#FBB016,color:black
+    style E1 fill:white,stroke:#FBB016,color:black
+    style E2 fill:white,stroke:#FBB016,color:black
+
+    %% Make connector invisible
+    classDef invisible fill:none,stroke:none
+
+    %% Style all relationships with teal color #04A0B2
+    linkStyle default stroke:#04A0B2,stroke-width:2px,color:#04A0B2
+
+    %% Style subgraphs - background colors and text sizes
+    style MunyaFlow fill:#036980,font-size:20px,font-weight:bold
+    style FaraiFlow fill:#036980,font-size:20px,font-weight:bold
+    style Storage fill:#036980,font-size:20px,font-weight:bold
+    style MunyaUI fill:#8ECBD6,font-size:16px,font-weight:bold
+    style MunyaAPI fill:#8ECBD6,font-size:16px,font-weight:bold
+    style FaraiUI fill:#8ECBD6,font-size:16px,font-weight:bold
+    style FaraiAPI fill:#8ECBD6,font-size:16px,font-weight:bold
+    style DB fill:#8ECBD6,font-size:16px,font-weight:bold
 ```
+
+# Data Model Reference
 
 ## Account Types
 
 ### Exchange Accounts (neo4jNode:Account)
 
-- Accounts that exist in searchSpace and can close loops with other accounts.
-- Current assets and current liabilities.
+Exchange accounts exist in searchSpace and can close loops with other accounts. They represent current assets and current liabilities.
 
-#### PERSONAL
-
-- Created with membership, restricted to one per member, one required per member.
-- Intended for purchase and sale transactions of goods and services, and the giving and receiving of gifts.
-
-#### OPERATIONS
-
-- Business accounts, shared accounts, etc.
-- Can be created by Hustlers and above (pre-release, coming soon for all members).
-- Intended for purchase and sale transactions of goods and services, and the giving and receiving of gifts.
-
-#### TRUST
-
-- Audited bank or vault accounts
-- Created and managed by Treasurers
+| Type | Description |
+|------|-------------|
+| **PERSONAL** | • Created with membership (one per member, required)<br>• For purchase/sale transactions and gifts |
+| **OPERATIONS** | • Business accounts, shared accounts<br>• Created by Hustlers and above<br>• For purchase/sale transactions and gifts |
+| **TRUST** | • Audited bank or vault accounts<br>• Created and managed by Treasurers |
 
 ### Internal Accounts (neo4jNode:AccountInternal)
 
-- Arbitrary accounts created and managed by members.
-- Not added to searchSpace and do not close loops with other accounts.
+Internal accounts are created and managed by members but are not added to searchSpace and do not close loops with other accounts.
 
-#### CONSUMPTION (more specific and limited version of Expenses)
-
-Used when an asset's value is consumed by a member, or within an economic process leading to consumption by a member.
-
-#### PRODUCTION (more specific and limited version of Revenue/Income)
-
-Used when value is created or enhanced by a member, or within an economic process directed by members.
-
-#### DIGITAL_ASSET (type of Asset account)
-
-- Real asset who's complete value is stored digitally within the credex ecosystem.
-- Can be duplicated at will without altering the original asset.
-- Value can be derived without altering the original asset.
-- Audit is redundant, data IS the asset.
-
-#### PHYSICAL_ASSET (type of Asset account)
-
-- Identical properties to DIGITAL_ASSET, but what is stored represents underlying real asset that exist in the physical world.
-- Underlying assets (and therefore their digital representations) cannot be duplicated or taken from without altering the original asset.
-- Value can be derived without altering the original asset.
-- Can be audited to confirm that account data matches existing physical asset(s).
+| Type | Description |
+|------|-------------|
+| **CONSUMPTION** | • Used when an asset's value is consumed by a member<br>• Or within an economic process leading to consumption |
+| **PRODUCTION** | • Used when value is created or enhanced by a member<br>• Or within an economic process directed by members |
+| **DIGITAL_ASSET** | • Real asset whose complete value is stored digitally<br>• Can be duplicated without altering the original<br>• Value derived without altering the original<br>• Audit is redundant (data IS the asset) |
+| **PHYSICAL_ASSET** | • Digital representation of physical assets<br>• Cannot be duplicated without altering the original<br>• Value derived without altering the original<br>• Can be audited to confirm data matches physical assets |
 
 ## AssetMarker (neo4jNode:AssetMarker)
 
 An AssetMarker is both an Asset and a General Ledger entry.
 
-### As an asset:
+### Dual Nature of AssetMarkers
 
-If it is a small digital asset or asset marker for a physical asset (up to 2kb?) the asset is stored directly on the node. If it is larger, the node includes a reference to data in an S3 bucket that can only be accessed/decrypted using the data on the AssetMarker node.
+| As an Asset | As a General Ledger Entry |
+|-------------|---------------------------|
+| • Small assets (up to 2kb) stored directly on node<br>• Larger assets reference S3 bucket data<br>• S3 data accessed/decrypted using AssetMarker node data | • Connected to one account with CR (credit) relationship<br>• Connected to another account with DR (debit) relationship |
 
-### As a General Ledger Entry
+### AssetMarker Relationships
 
-Every AssetMarker is connected to one account (:Account|AccountInternal) with a CR (credit) relationship and another account with a DR (debit) relationship.
-
-### USED_IN
-
-An asset is often derived from other assets or processes, indicated by a USED_IN relationship from one AssetMarker to another of from an AccountInternal to an AssetMarker.
-
+**USED_IN Relationship**
 ```
-(:AssetMarker { filename: "profile_pic_original.jpg" })-[:USED_IN]->(AssetMarker { filename: "profile_pic_200.jpg" })
+(:AssetMarker { filename: "profile_pic_original.jpg" })-[:USED_IN]->(:AssetMarker { filename: "profile_pic_200.jpg" })
 ```
 
-### Reference an AssetMarker
-
-Assets can be referenced by custom relationships that will evolve by convention and/or network standard.
-
+**Reference Relationships**
 ```
-(:Member|Account|AccountInternal)-[:PROFILE_PIC_200_JPG]->(AssetMarker)
+(:Member|Account|AccountInternal)-[:PROFILE_PIC_200_JPG]->(:AssetMarker)
 ```
 
 ## Invoice (neo4jNode::Invoice)
@@ -315,178 +458,182 @@ A credex template that directs the creation of the credex and associated account
 (:Invoice)<-[:EXECUTES]-(:Credex)
 ```
 
-## Endpoints
+# API Reference
 
-### Member
+## Member Endpoints
 
-#### /editMember
+### /editMember
+Parameters:
+- `firstname`: string
+- `lastname`: string
+- `memberHandle`: string
+- `profile_picture_200_jpg`: string - ID of node to link with PROFILE_PICTURE_200_JPG relationship
+- `profile_picture_600_jpg`: string - Same as above
+- `profile_picture_original_jpg`: string - Same as above
+- `vendorBio`: string
 
-- firstname: string
-- lastname: string
-- memberHandle: string
-- profile_picture_200_jpg: string // id of node to link with PROFILE_PICTURE_200_JPG relationship
-- profile_picture_600_jpg // like above
-- rofile_picture_original_jpg // like above
-- vendorBio: string
+### /sellInMarket
+Operations:
+- Sets `(:Member { vendor: true|false })`
+- When set to true, creates if not existing:
+  - `(:accountInternal { accountName: "Onboarded Assets", accountType: "PRODUCTION" })`
+  - `(:accountInternal { accountName: "Profile Pictures", accountType: "DIGITAL_ASSET" })`
 
-#### /sellInMarket
+## Account Endpoints
 
-- set (:Member { vendor: true|false })
-- when set to true, creates if not existing:
-  - (:accountInternal { accountName: "Onboarded Assets", accountType: "PRODUCTION" })
-  - (:accountInternal { accountName: "Profile Pictures", accountType: "DIGITAL_ASSET" })
+### /editAccount
+Parameters:
+- `accountName`: string
+- `accountHandle`: string
+- `defaultDenom`: string - Limited to current denoms
 
-### Account
+### /createAccountInternal
+Parameters:
+- `accountName`: string
+- `defaultDenom`: string - Limited to current denoms
+- `accountType`: string - One of CONSUMPTION, PRODUCTION, DIGITAL_ASSET, PHYSICAL_ASSET
 
-#### /editAccount
+### /editAccountInternal
+Parameters:
+- `accountName`: string
+- `defaultDenom`: string - Limited to current denoms
 
-- accountName: string
-- accountHandle: string
-- defaultDenom: string // limited to current denoms
+### /deleteAccountInternal
+Parameters:
+- `accountID`: string
 
-#### /createAccountInternal
+## AssetMarker Endpoints
 
-- accountName: string
-- defaultDenom: string // limited to current denoms
-- accountType: string // one of CONSUMPTION, PRODUCTION, DIGITAL_ASSET, PHYSICAL_ASSET
+### /addAssetMarker
+Parameters:
+- `assetName`: string
+- Arbitrary key/value pairs and/or neo4j-safed objects up to max size of 2kb
+- Optional link/key to access any data stored in S3 bucket
+- `AssetMarkerData`: Object - Data for AssetMarkers created when a connected credex is accepted
 
-#### /editAccountInternal
+### /uploadAndOptimizeJpg
+Parameters:
+- Requires jpg, name, DR accountID, optional CR accountID (default MERGE "Onboarded Assets")
 
-- accountName: string
-- defaultDenom: string // limited to current denoms
-
-#### /deleteAccountInternal
-
-- accountID
-
-### AssetMarker
-
-#### /addAssetMarker
-
-- assetName
-- arbitrary key/value pairs and/or neo4j-safed objects up to max size of 2kb(?)
-- optional link/key to access any data stored in S3 bucket
-- AssetMarkerData: { accountID1: { data for AssetMarker created when a connected credex is accepted, including amount and CR/DR indicator }, accountID2: {data}, ...}
-
-#### /uploadAndOptimizeJpg
-
-- requires jpg, name, DR accountID, optional CR accountID (default MERGE "Onboarded Assets").
-- saves AssetMarker with CR and DR relationships
-- creates 200px and 600px versions of the above, with the same CR and DR relationships, and a USED_IN relationship from the original upload to the resized/optimized images.
+Operations:
+- Saves AssetMarker with CR and DR relationships
+- Creates 200px and 600px versions with the same CR and DR relationships
+- Creates USED_IN relationship from original upload to resized/optimized images
 
 ### /connectAsset
-
-- assetID
-- connectedID: string // ID of node to connect
-- relName: string // currently one of [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
-
-### /disconnectAsset
-
-- assetID
-- connectedID: string // ID of node to disconnect
-- relName: string // currently one of [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
+Parameters:
+- `assetID`: string
+- `connectedID`: string - ID of node to connect
+- `relName`: string - One of [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
 
 ### /disconnectAsset
+Parameters:
+- `assetID`: string
+- `connectedID`: string - ID of node to disconnect
+- `relName`: string - One of [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
 
-- assetID
-- connectedID: string // ID of node to disconnect
-- relName: string // currently one of [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
-
-## Invoice
+## Invoice Endpoints
 
 ### /generateInvoice
+Parameters:
+- `payment accountID`: string - Account
+- `AssetMarkerData`: Object - Data for AssetMarkers created when a connected credex is accepted
 
-- payment accountID: string // Account
-- AssetMarkerData: { accountID1: { data for AssetMarker created when a connected credex is accepted }, accountID2: {data}, ...}
-- returns link based on invoiceID for client to generate invoiceQR
+Returns:
+- Link based on invoiceID for client to generate invoiceQR
 
-## Key Vendor Screens
+# User Interface Specifications
+
+## Vendor Screens
 
 ### Edit Member Profile
-
-- Sell in VimbisoMarket toggle, hits /sellInMarket with true|false. When false, all fields below are read-only.
-- profile picture
-- profile pic add button linking to flow that hits /uploadAndOptimizeJpg then /connectAsset
-- firstname, short text
-- lastname, short text
-- memberHandle, short text
-- vendor bio, long text
-- Save button, hits /editMember with text fields
+- **Sell in VimbisoMarket toggle**
+  - Hits `/sellInMarket` with true|false
+  - When false, all fields below are read-only
+- **Profile Information**
+  - Profile picture
+  - Profile pic add button (triggers `/uploadAndOptimizeJpg` then `/connectAsset`)
+  - First name (short text)
+  - Last name (short text)
+  - Member handle (short text)
+  - Vendor bio (long text)
+- **Save button** - Hits `/editMember` with text fields
 
 ### Vimbiso Store
-
-**Open Store and Broadcast Location** button
-**Create Credex Invoice** title
-Item Amount
-Tomatoes fill box
-Peanut Butter fill box
-Other Account fill box
-Up to 10 accounts total
-Total $total
-
-**Generate Credex Invoice QR** button hits /generateInvoice
-_Manage My Store_ button
+- **Open Store and Broadcast Location** button
+- **Create Credex Invoice** section
+  - Item | Amount table
+    - Tomatoes | fill box
+    - Peanut Butter | fill box
+    - Other Account | fill box
+    - Up to 10 accounts total
+  - Total: $total
+- **Generate Credex Invoice QR** button - Hits `/generateInvoice`
+- **Manage My Store** button
 
 ### Manage My Store
+- **Inventory Accounts** section
+  - Add and edit accounts for items you sell
+  - Can be single items (e.g., "2018 Toyota") or flows of items (e.g., "Fresh Tomatoes")
+- **Controls**
+  - Add Account button
+  - Adjust Balances button
+  - List of Accounts and Balances, totaled at the bottom
+  - Tap an account to view/edit
 
-**Inventory Accounts**<br>
-Add and edit accounts for items you sell. Can be single items (eg "2018 Toyota"), or flows of items (eg "Fresh Tomatoes")
-
-- Add Account button
-- Adjust Balances button
-- List of Accounts and Balances, totalled at the bottom
-- Tap an account to view/edit
-
-### Manage Account (add account is basically the same)
-
-**Account Name** with edit button
-
-- Photos with remove/delete buttons that hit /disconnectAsset
-- Add photo button linking to flow that hits /uploadAndOptimizeJpg then /connectAsset
-- Account/Item Description, long text
-- List of most recent 10 transactions in the account
-- **Save** button
-- _Adjust Balances_ button
+### Manage Account
+- **Account Name** with edit button
+- **Media**
+  - Photos with remove/delete buttons (hit `/disconnectAsset`)
+  - Add photo button (triggers `/uploadAndOptimizeJpg` then `/connectAsset`)
+- **Details**
+  - Account/Item Description (long text)
+  - List of most recent 10 transactions in the account
+- **Controls**
+  - **Save** button
+  - **Adjust Balances** button
 
 ### Adjusting Entry
-
 Use to set starting balances, account for spoilage or loss, or any other change in value of inventory assets held.
 
-Credit Accounts | Amount<br>
-Tomatoes | fill box<br>
-Peanut Butter | fill box<br>
-Total Credits | $total<br>
+| Credit Accounts | Amount |
+|-----------------|--------|
+| Tomatoes | fill box |
+| Peanut Butter | fill box |
+| **Total Credits** | $total |
 
-Debit Accounts | Amount<br>
-Onboarded Assets | fill box<br>
-PRODUCTION accnts | fill box<br>
-CONSUMPTION accnts | fill box<br>
-Total Debits | $total
+| Debit Accounts | Amount |
+|----------------|--------|
+| Onboarded Assets | fill box |
+| PRODUCTION accounts | fill box |
+| CONSUMPTION accounts | fill box |
+| **Total Debits** | $total |
 
-Totals must match
+*Totals must match*
 
-**Adjust Account Values** button hits /addAssetMarker
-_Back to Accounts_ button
+- **Adjust Account Values** button - Hits `/addAssetMarker`
+- **Back to Accounts** button
 
 ## Purchaser Screens
 
 ### Offer Credex
-
-read-only offerCredex screen, with values (including list of accounts and amounts) filled out based on invoice QR scanned
-**Offer Credex** button
+- Read-only offerCredex screen
+- Values (including list of accounts and amounts) filled out based on invoice QR scanned
+- **Offer Credex** button
 
 ### Search Screen
-
 Search near me for items, stores, and vendors:
-
 - Search box
 - Map box with near me and results
-- List of results, clicks to view Item, Store, Vendor pages.
+- List of results (clicks to view Item, Store, Vendor pages)
 
 ### Store (Account) Page
-
-Account name, photo and description
+- Account name
+- Photo
+- Description
 
 ### Vendor (Member) Page
-
-Name, member role, profile photo and vendorBio
+- Name
+- Member role
+- Profile photo
+- Vendor bio
