@@ -10,7 +10,8 @@
         "ms-azuretools.vscode-docker",
         "yzhang.markdown-all-in-one",
         "github.vscode-github-actions",
-        "ritwickdey.LiveServer"
+        "ritwickdey.LiveServer",
+        "bierner.markdown-mermaid"
       ],
       "settings": {
         "editor.formatOnSave": true,
