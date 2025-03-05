@@ -1,16 +1,14 @@
 # The Credex Ecosystem
 
-The credex ecosystem is a shared ledger that enables the efficient circulation of value, accumulation of capital, investment of profits, and giving of gifts. Credex is a tool for financial inclusion, financial empowerment, and financial sovereignty.
+The credex ecosystem is a shared ledger that enables the efficient circulation of value, accumulation of capital, investment of profits, and giving of gifts. Credex is a tool for financial inclusion, financial empowerment, and financial protection.
 
 ## Core Architecture
-The credex-core API codebase deployed and documented at [mycredex.app](https://mycredex.app) is the portal through which we sidestep the economic distortions and extortions imposed by obsolete and destructive monetary paradigms.
-
-The processes of creating an account, logging in, arranging queries for the API endpoints, and processing query results for human-friendly presentation and interaction is managed by client apps such as the [vimbiso-chatserver](https://github.com/Great-Sun-Group/vimbiso-chatserver) provided by [VimbisoPay Zimbabwe](https://www.vimbisopay.co.zw/).
+This credex-core API codebase, which is deployed and documented at [mycredex.app](https://mycredex.app), is the portal through which we connect to the streams of free-flowing value that course oganically across the economic landscape. To access the credex-core portal requires a client app such as the [vimbiso-chatserver](https://github.com/Great-Sun-Group/vimbiso-chatserver) provided by [VimbisoPay Africa](https://www.vimbisopay.co.zw/).
 
 ## Services
-The accounting and data management services provided by the credex ecosystem establish a network protocol for financial sovereignty:
-- **Secured credex services** enable our sovereign members to base their accounting entries on a trustworthy foundation of real assets such as currency or gold.
-- **Unsecured credex services** provide liquidity to meet all needs and fuel strong credit-based economic growth when conditions warrant, as determined by the distributed risk tolerance and risk/reward calculations of economic participants.
-- **Credcoin services** mathematically lock all values in the credex ecosystem to the market values of real natural resource flows, keeping the economy oriented on the most meaningful reference point possible without limiting systemic liquidity, personal choice, or financial innovation.
+The accounting and data management services provided by the credex ecosystem establish a network protocol that provides:
+- **Secured credex services** that enable members to base their accounting entries on a trustworthy foundation of real assets such as currency or gold.
+- **Unsecured credex services** that provide liquidity to meet all needs and fuel strong credit-based economic growth when conditions warrant, as determined by member's distributed risk/reward decisions.
+- **Credcoin services** that mathematically lock all values in the credex ecosystem relative to flows of real natural resources, keeping the economy oriented on the most meaningful mark-to-market reference point possible without limiting systemic liquidity, personal choice, or financial innovation.
 
 **[mycredex.app](https://mycredex.app)**

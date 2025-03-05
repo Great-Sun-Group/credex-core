@@ -8,7 +8,7 @@ import logger from "../../../utils/logger";
 
 /**
  * @swagger
- * /api/account/trust:
+ * /createTrustAccount:
  *   post:
  *     summary: Create a new trust account
  *     description: Creates a new trust account with BANK or VAULT subtype. Only available to tier 5 members.
