@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vimbiso Market - VimbisoPay</title>
+    <link rel="stylesheet" href="../css/base/_reset.css" />
+    <link rel="stylesheet" href="../css/base/_variables.css" />
+    <link rel="stylesheet" href="../css/base/_typography.css" />
+    <link rel="stylesheet" href="../css/layouts/_base-layouts.css" />
+    <link rel="stylesheet" href="css/market.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="market-header">
+      <div class="container">
+        <div class="header-content">
+          <a href="../index.html" class="back-link">← Back to VimbisoPay</a>
+          <h1>Vimbiso Market</h1>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Navigation -->
+    <nav class="market-nav">
+      <div class="container">
+        <ul class="nav-list">
+          <li class="nav-item active"><a href="index.html">Overview</a></li>
+          <li class="nav-item"><a href="user-flows.html">User Flows</a></li>
+          <li class="nav-item"><a href="data-model.html">Data Model</a></li>
+          <li class="nav-item"><a href="api-reference.html">API Reference</a></li>
+          <li class="nav-item"><a href="ui-specs.html">UI Specifications</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="market-content">
+      <div class="container">
+        <section class="overview-section">
+          <h2>Vimbiso Market Workplan</h2>
+          <p class="lead">
+            Adding marketplace functionality to the VimbisoPay app by extending the underlying accounting infrastructure and client app capabilities.
+          </p>
+
+          <div class="feature-cards">
+            <div class="feature-card">
+              <h3>Vendor Profiles</h3>
+              <p>Enable members to create vendor profiles with product listings, images, and descriptions.</p>
+              <a href="user-flows.html#vendor-profiles" class="card-link">View Details →</a>
+            </div>
+            <div class="feature-card">
+              <h3>Product Listings</h3>
+              <p>Allow vendors to list products with images, descriptions, and pricing information.</p>
+              <a href="user-flows.html#product-listings" class="card-link">View Details →</a>
+            </div>
+            <div class="feature-card">
+              <h3>Invoicing</h3>
+              <p>Generate invoices for purchases and facilitate payments through the credex system.</p>
+              <a href="user-flows.html#invoicing" class="card-link">View Details →</a>
+            </div>
+            <div class="feature-card">
+              <h3>Inventory Management</h3>
+              <p>Track inventory levels and manage product availability with accounting integration.</p>
+              <a href="user-flows.html#inventory" class="card-link">View Details →</a>
+            </div>
+          </div>
+
+          <div class="section-divider"></div>
+
+          <h3>Implementation Overview</h3>
+          <p>
+            The Vimbiso Market extends the VimbisoPay platform by adding marketplace functionality. 
+            This allows members to create vendor profiles, list products, and facilitate transactions 
+            through the existing credex accounting infrastructure.
+          </p>
+          <p>
+            The implementation leverages the underlying accounting system to track inventory, 
+            process sales, and manage digital assets like product images. This approach ensures 
+            that all marketplace activities are properly recorded and can be audited.
+          </p>
+
+          <div class="section-divider"></div>
+
+          <h3>Key Components</h3>
+          <div class="component-list">
+            <div class="component-item">
+              <h4>User Flows</h4>
+              <p>Step-by-step processes for vendor and purchaser interactions within the marketplace.</p>
+              <a href="user-flows.html" class="component-link">Explore User Flows →</a>
+            </div>
+            <div class="component-item">
+              <h4>Data Model</h4>
+              <p>Detailed structure of accounts, assets, and relationships in the marketplace system.</p>
+              <a href="data-model.html" class="component-link">View Data Model →</a>
+            </div>
+            <div class="component-item">
+              <h4>API Reference</h4>
+              <p>Comprehensive documentation of endpoints for marketplace functionality.</p>
+              <a href="api-reference.html" class="component-link">Browse API Reference →</a>
+            </div>
+            <div class="component-item">
+              <h4>UI Specifications</h4>
+              <p>Detailed descriptions of user interfaces for the marketplace features.</p>
+              <a href="ui-specs.html" class="component-link">See UI Specifications →</a>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="market-footer">
+      <div class="container">
+        <p>&copy; 2025 VimbisoPay. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // Initialize mermaid
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'dark',
+          securityLevel: 'loose',
+          themeVariables: {
+            primaryColor: '#04a0b2',
+            primaryTextColor: '#ffffff',
+            primaryBorderColor: '#fbb016',
+            lineColor: '#04a0b2',
+            secondaryColor: '#006400',
+            tertiaryColor: '#fbb016'
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

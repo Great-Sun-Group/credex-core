@@ -1,0 +1,121 @@
+flowchart TB
+    %% Main direction top to bottom with User Flows on top
+    
+    subgraph MunyaFlow["<b><font size='5' color='black'>Munya's User Flow</font></b>"]
+        direction LR
+        subgraph MunyaUI["<b><font size='4' color='black'>Munya's Interface</font></b>"]
+            direction LR
+            S1[Vimbiso Store] --- S2[Display QR]
+        end
+
+        subgraph MunyaAPI["<b><font size='4' color='black'>Munya's API Endpoints</font></b>"]
+            direction LR
+            E1[/generateInvoice/]
+        end
+    end
+    
+    subgraph FaraiFlow["<b><font size='5' color='black'>Farai's User Flow</font></b>"]
+        direction LR
+        subgraph FaraiUI["<b><font size='4' color='black'>Farai's Interface</font></b>"]
+            direction LR
+            S3[Create Credex from Invoice]
+        end
+
+        subgraph FaraiAPI["<b><font size='4' color='black'>Farai's API Endpoints</font></b>"]
+            direction LR
+            E2[/createCredex/]
+        end
+    end
+
+    subgraph Storage["<b><font size='5' color='black'>Data Storage</font></b>"]
+        direction LR
+        subgraph DB["<b><font size='4' color='black'>Neo4j Database</font></b>"]
+            direction TB
+            %% Add connector nodes inside Neo4j Database
+            MunyaConnector(((" "))):::invisible
+            FaraiConnector(((" "))):::invisible
+            QRNode(((" "))):::invisible
+            
+            M1((munyaFarmer<br/>:Member))
+            M2((faraiMerchant<br/>:Member))
+            A1((tomatoes<br/>:Account))
+            A2((faraiPersonal<br/>:Account))
+            I1((tomatoInvoice<br/>:Invoice))
+            C1((paymentCredex<br/>:Credex))
+
+            %% Invoice relationships
+            I1 -->|CREDITS_TO| A1
+            I1 -->|DEBITS_TO| A2
+            
+            %% Credex executes Invoice
+            C1 -->|EXECUTES| I1
+            
+            %% Member relationships
+            M1 -->|OWNS| A1
+            M2 -->|OWNS| A2
+            M1 -->|CREATED| I1
+            M2 -->|CREATED| C1
+        end
+    end
+
+    %% Connect Munya's UI to API 
+    S1 --> E1
+    
+    %% Connect Farai's UI to API
+    S3 --> E2
+    
+    %% Connect Munya's API to Database
+    E1 --> I1
+    E1 --> MunyaConnector
+    MunyaConnector -.-> M1
+    MunyaConnector -.-> A1
+    
+    %% Connect Farai's API to Database
+    E2 --> C1
+    E2 --> FaraiConnector
+    FaraiConnector -.-> M2
+    FaraiConnector -.-> A2
+    FaraiConnector -.-> I1
+    
+    %% Connect the two user flows via QR code
+    S2 --> QRNode
+    QRNode -.-> S3
+    QRNode -.-> I1
+
+    %% Style definitions
+    %% Member nodes - black with white text
+    style M1 fill:black,stroke:black,color:white
+    style M2 fill:black,stroke:black,color:white
+
+    %% Account nodes - darker green with gold text
+    style A1 fill:#006400,stroke:#006400,color:#FBB016
+    style A2 fill:#006400,stroke:#006400,color:#FBB016
+
+    %% Invoice node - gold with black text
+    style I1 fill:#FBB016,stroke:#FBB016,color:black
+    
+    %% Credex node - gold with black text
+    style C1 fill:#FBB016,stroke:#FBB016,color:black
+
+    %% User Flow nodes - white with black text
+    style S1 fill:white,stroke:#FBB016,color:black
+    style S2 fill:white,stroke:#FBB016,color:black
+    style S3 fill:white,stroke:#FBB016,color:black
+    style E1 fill:white,stroke:#FBB016,color:black
+    style E2 fill:white,stroke:#FBB016,color:black
+
+    %% Make connector invisible
+    classDef invisible fill:none,stroke:none
+
+    %% Style all relationships with teal color #04A0B2
+    linkStyle default stroke:#04A0B2,stroke-width:2px,color:#04A0B2
+
+    %% Style subgraphs - background colors and text sizes
+    style MunyaFlow fill:#036980,font-size:20px,font-weight:bold
+    style FaraiFlow fill:#036980,font-size:20px,font-weight:bold
+    style Storage fill:#036980,font-size:20px,font-weight:bold
+    style MunyaUI fill:#8ECBD6,font-size:16px,font-weight:bold
+    style MunyaAPI fill:#8ECBD6,font-size:16px,font-weight:bold
+    style FaraiUI fill:#8ECBD6,font-size:16px,font-weight:bold
+    style FaraiAPI fill:#8ECBD6,font-size:16px,font-weight:bold
+    style DB fill:#8ECBD6,font-size:16px,font-weight:bold

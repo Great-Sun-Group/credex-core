@@ -1,0 +1,108 @@
+flowchart TB
+    %% Main direction top to bottom with User Flow on top
+    
+    subgraph Flow["<b><font size='5' color='black'>User Flow</font></b>"]
+        direction LR
+        subgraph UI["<b><font size='4' color='black'>User Interface</font></b>"]
+            direction LR
+            S1[Create Product Listing] --- S2[Add Product Images]
+        end
+
+        subgraph API["<b><font size='4' color='black'>API Endpoints</font></b>"]
+            direction LR
+            E1[/addAccountInternal/] --- E2[/uploadAndOptimizeJpg/] --- E3[/connectAsset/]
+        end
+    end
+
+    subgraph Storage["<b><font size='5' color='black'>Data Storage</font></b>"]
+        direction LR
+        subgraph DB["<b><font size='4' color='black'>Neo4j Database</font></b>"]
+            direction TB
+            %% Add connector node inside Neo4j Database
+            Connector(((" "))):::invisible
+            
+            A3((tomatoes<br/>:Account))
+            A1((onboardedAssets<br/>:Account))
+            A2((originalProductPic<br/>:AssetMarker))
+            A4((200productPic<br/>:AssetMarker))
+            A5((600productPic<br/>:AssetMarker))
+
+            A1 -->|CR| A2
+            A2 -->|DR| A3
+            A1 -->|CR| A4
+            A4 -->|DR| A3
+            A1 -->|CR| A5
+            A5 -->|DR| A3
+
+            %% USED_IN relationships between original and resized versions
+            A2 -->|USED_IN| A4
+            A2 -->|USED_IN| A5
+
+            A3 -->|PRODUCT_PIC_ORIGINAL_JPG| A2
+            A3 -->|PRODUCT_PIC_200_JPG| A4
+            A3 -->|PRODUCT_PIC_600_JPG| A5
+        end
+
+        subgraph S3["<b><font size='4' color='black'>S3 Bucket</font></b>"]
+            direction TB
+            F1["original.jpg"]
+            F2["200px.jpg"]
+            F3["600px.jpg"]
+            F1 --- F2 --- F3
+        end
+    end
+
+    %% Connect UI to API 
+    S1 --> E1
+    S2 --> E2
+    S2 --> E3
+    
+    %% Use the connector node to route relationships from API to Database
+    E1 --> A3
+    E2 --> A2
+    E3 --> Connector
+    Connector -.-> A2
+    Connector -.-> A4
+    Connector -.-> A5
+    Connector -.-> A3
+
+    %% Connect AssetMarkers to S3 files
+    A2 --> F1
+    A4 --> F2
+    A5 --> F3
+
+    %% Style definitions
+    %% Account nodes - darker green with gold text
+    style A1 fill:#006400,stroke:#006400,color:#FBB016
+    style A3 fill:#006400,stroke:#006400,color:#FBB016
+
+    %% AssetMarker nodes - #FBB016 with black text
+    style A2 fill:#FBB016,stroke:#FBB016,color:black
+    style A4 fill:#FBB016,stroke:#FBB016,color:black
+    style A5 fill:#FBB016,stroke:#FBB016,color:black
+
+    %% S3 Bucket file nodes - gold with black text
+    style F1 fill:#FBB016,stroke:#FBB016,color:black
+    style F2 fill:#FBB016,stroke:#FBB016,color:black
+    style F3 fill:#FBB016,stroke:#FBB016,color:black
+
+    %% User Flow nodes - white with black text
+    style S1 fill:white,stroke:#FBB016,color:black
+    style S2 fill:white,stroke:#FBB016,color:black
+    style E1 fill:white,stroke:#FBB016,color:black
+    style E2 fill:white,stroke:#FBB016,color:black
+    style E3 fill:white,stroke:#FBB016,color:black
+
+    %% Make connector invisible
+    classDef invisible fill:none,stroke:none
+
+    %% Style all relationships with teal color #04A0B2
+    linkStyle default stroke:#04A0B2,stroke-width:2px,color:#04A0B2
+
+    %% Style subgraphs - background colors and text sizes
+    style Flow fill:#036980,font-size:20px,font-weight:bold
+    style Storage fill:#036980,font-size:20px,font-weight:bold
+    style UI fill:#8ECBD6,font-size:16px,font-weight:bold
+    style API fill:#8ECBD6,font-size:16px,font-weight:bold
+    style DB fill:#8ECBD6,font-size:16px,font-weight:bold
+    style S3 fill:#8ECBD6,font-size:16px,font-weight:bold
