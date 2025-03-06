@@ -116,10 +116,10 @@
     <p>We deploy to <code>af-south-1</code>, which must be specifically activated in an AWS account before resources can be deployed there.</p>
 
     <h4>Route 53</h4>
-    <p>Route 53 is manually configured with a hosted zone that manages traffic at the highest level of domain and subdomain DNS records.</p>
+    <p>Route 53 is manually configured with a hosted zone that manages traffic at the highest level of domain and subdomain DNS records. Point domain nameservers to the 4 hosted zone NS record values.</p>
 
     <h4>IAM</h4>
-    <p>To manage access to AWS resources for deployment, we have manually created the following IAM setup:</p>
+    <p>To manage access to AWS resources for deployment, manually create the following IAM setup:</p>
 
     <ol>
         <li>IAM Policy (both accounts):
@@ -130,21 +130,21 @@
 
         <li>IAM Group (both accounts):
             <ul>
-                <li><code>credex-core-deployment</code>: Group assigned the above policy to connect it will deployment users below.</li>
+                <li><code>deployment</code>: Group assigned the above policy to connect it with deployment users below.</li>
             </ul>
         </li>
 
         <li>a. IAM Users in <code>production</code> assigned to group above:
             <ul>
-                <li><code>credex-core-production-deployment</code>: User for production deployments</li>
+                <li><code>production</code>: User for production deployments</li>
             </ul>
         </li>
 
         <li>b. IAM Users in <code>development</code> assigned to group above:
             <ul>
-                <li><code>credex-core-development-deployment</code>: User for development deployments</li>
-                <li><code>credex-core-staging-deployment</code>: User for staging deployments</li>
-                <li><code>credex-core-model_01-deployment</code>: User required for each model environment deployment</li>
+                <li><code>development</code>: User for development deployments</li>
+                <li><code>staging</code>: User for staging deployments</li>
+                <li><code>model_01</code>: User required for each model environment deployment</li>
             </ul>
         </li>
     </ol>
@@ -159,6 +159,9 @@
     <p><strong>AWS_ACCESS_KEY</strong><br>
     <strong>AWS_SECRET_ACCESS_KEY</strong><br>
     <strong>NEO4J_ENTERPRISE_LICENSE</strong></p>
+
+    <h3>S3 buckets</h3>
+    S3 bucket names are unique across AWS, so for new deployments, buckets must be renamed in this codesbase with a find/replace on "credexbuckets2-" (current) and increment the integer.
 
     <h2>Infrastructure as Code</h2>
     <p>From this point the credex-core api can be deployed into any environment and made securely available on the public internet at api.mycredex.app or chosen_env_prefix.api.mycredex.dev. The process requires the injection of database and other secrets into the GitHub Environment prior to app deployment.</p>

@@ -3,9 +3,9 @@ name: Deploy Application
 on:
   push:
     branches:
-    - prod
-    - dev
-    - "*deploy*"
+      - prod
+      - dev
+      - "*deploy*"
   workflow_dispatch:
 
 jobs:
@@ -39,10 +39,10 @@ jobs:
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
           terraform init \
-            -backend-config="bucket=credexbuckets1-statebucket-${ENVIRONMENT}" \
+            -backend-config="bucket=credexbuckets2-statebucket-${ENVIRONMENT}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=credexbuckets1-statebucket-lock-${ENVIRONMENT}"
+            -backend-config="dynamodb_table=credexbuckets2-statebucket-lock-${ENVIRONMENT}"
 
       - name: Login to Amazon ECR
         id: login-ecr
