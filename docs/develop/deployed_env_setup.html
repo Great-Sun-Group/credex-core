@@ -100,24 +100,16 @@
         <li>Testing economic theories and scenarios</li>
     </ul>
 
-    <h3>Top Level Authorization</h3>
-    <p>Top level authorization is managed by Ryan Watson. In his personal accounts are:</p>
-    <ul>
-        <li>Domains <code>mycredex.app</code> and <code>mycredex.dev</code> are registered at <a href="https://www.hover.com/">Hover.com</a>, with nameservers pointed to Route 53 at AWS.</li>
-        <li>A master AWS root login has been created under hq@greatsunfinancial.ca, an email address managed by a Google Workspace with primary domain ryanlukewatson.com. 2FA is implemented for the root login, linked to Ryan's phone. Root users have been set for AWS accounts associated with each domain, isolating the production environment to it's own AWS account and domain. Production domain <code>mycredex.app</code> and development/testing/modeling domain <code>mycredex.dev</code> both have a manual Route 53 and IAM configuration as below.</li>
-    </ul>
-
-    <p>In case of Ryan's incapacitation, contact sister Hayley Watson for root access.</p>
 
     <h3>Neo4j License</h3>
     <p>Great Sun Financial Inc. has received a Neo4j Startup License, whose value is required as a secret below. A single value is currently used across all environments, but an environment can be configured under a different license by updating its individual secret.</p>
 
     <h3>AWS Manual Configuration</h3>
-    <p>Within the root account above:</p>
+    <p>Two accounts are required:</p>
     <ul>
-        <li>a <code>production</code> AWS account has been set up to manage the production deployment to <code>mycredex.app</code></li>
-        <li>a <code>development</code> AWS account has been set up with identical configuration to manage the development and modeling deployments to <code>mycredex.dev</code>.</li>
-        <li>Each environment has been manually configured as below by logging into the console as the root of the respective AWS account.</li>
+        <li>a <code>production</code> AWS account to manage the production deployment to <code>mycredex.app</code></li>
+        <li>a <code>development</code> AWS account with identical configuration to manage the development and modeling deployments to <code>mycredex.dev</code>.</li>
+        <li>Each environment must be manually configured as below by logging into the console as the root of the respective AWS account.</li>
     </ul>
 
     <h4>Region</h4>
