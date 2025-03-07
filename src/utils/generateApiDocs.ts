@@ -19,7 +19,7 @@ export async function generateApiDocs(): Promise<void> {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Credex API Reference Documentation" />
     <title>API Reference</title>
-    <link rel="stylesheet" href="../style.css" />
+    <link rel="stylesheet" href="../css/old_style.css" />
     <script src="../menu.js"></script>
     
     <style>
@@ -328,7 +328,7 @@ export async function generateApiDocs(): Promise<void> {
           'Members': 'Member',
           'Accounts': 'Account',
           'Credex': 'Credex',
-          'AccountsInternal': 'AccountInternal',
+          'AccountInternal': 'AccountInternal',
           'AssetMarker': 'AssetMarker',
           'Recurring': 'Recurring',
           'Admin': 'Admin',
