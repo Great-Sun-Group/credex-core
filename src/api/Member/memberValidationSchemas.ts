@@ -121,4 +121,42 @@ export const hustler10kSchema = {
 };
 logger.debug("hustler10kSchema initialized");
 
+export const editMemberSchema = {
+  firstname: {
+    sanitizer: s.sanitizeName,
+    validator: v.validateName,
+    required: false,
+  },
+  lastname: {
+    sanitizer: s.sanitizeName,
+    validator: v.validateName,
+    required: false,
+  },
+  memberHandle: {
+    sanitizer: s.sanitizeHandle,
+    validator: v.validateHandle,
+    required: false,
+  },
+  vendorBio: {
+    sanitizer: s.sanitizeString,
+    validator: (value: string) => {
+      return {
+        isValid: value.length <= 500,
+        message: value.length <= 500 ? "Valid vendor bio" : "Vendor bio must be at most 500 characters",
+      };
+    },
+    required: false,
+  },
+};
+logger.debug("editMemberSchema initialized");
+
+export const sellInMarketSchema = {
+  vendor: {
+    sanitizer: s.sanitizeBoolean,
+    validator: v.validateBoolean,
+    required: true,
+  },
+};
+logger.debug("sellInMarketSchema initialized");
+
 logger.debug("All member validation schemas initialized");

@@ -28,7 +28,7 @@ export default function MemberRoutes() {
   router.use(updatePasswordRoute());
   router.use(setInitialPasswordRoute());
   router.use(passwordResetRoute());
-  router.use('/verify', verificationRoutes()); // Mount verification routes with prefix
+  router.use("/verify", verificationRoutes()); // Mount verification routes with prefix
 
   logger.info("Member routes initialized successfully", {
     module: "memberRoutes",
