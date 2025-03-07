@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   server:
@@ -17,8 +17,8 @@ services:
       DEV_ADMIN_KEY: ${DEV_ADMIN_KEY}
       # Network configuration
       NODE_OPTIONS: "--dns-result-order=ipv4first"
-    env_file:
-      - .env
+    # Environment variables are provided through Codespaces secrets or directly from the shell
+    # No env_file directive to avoid errors when .env doesn't exist
     volumes:
       - .:/app
       - ./logs:/app/logs

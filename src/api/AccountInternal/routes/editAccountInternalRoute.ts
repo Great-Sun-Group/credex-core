@@ -4,6 +4,7 @@ import { errorHandler } from "../../../middleware/errorHandler";
 import { editAccountInternalSchema } from "../accountInternalValidationSchemas";
 import { authenticatedHandler } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
+import { EditAccountInternalController } from "../controllers";
 
 export default function editAccountInternalRoute() {
   const router = express.Router();
@@ -336,7 +337,7 @@ export default function editAccountInternalRoute() {
   router.post(
     `/editAccountInternal`,
     validateRequest(editAccountInternalSchema),
-    authenticatedHandler(/* EditAccountInternalController */),
+    authenticatedHandler(EditAccountInternalController),
     errorHandler
   );
   logger.debug("Route registered: POST /editAccountInternal");

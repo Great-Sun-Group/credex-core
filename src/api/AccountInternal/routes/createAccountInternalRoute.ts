@@ -4,6 +4,7 @@ import { errorHandler } from "../../../middleware/errorHandler";
 import { createAccountInternalSchema } from "../accountInternalValidationSchemas";
 import { authenticatedHandler } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
+import { CreateAccountInternalController } from "../controllers";
 
 export default function createAccountInternalRoute() {
   const router = express.Router();
@@ -303,7 +304,7 @@ export default function createAccountInternalRoute() {
   router.post(
     `/createAccountInternal`,
     validateRequest(createAccountInternalSchema),
-    authenticatedHandler(/* CreateAccountInternalController */),
+    authenticatedHandler(CreateAccountInternalController),
     errorHandler
   );
   logger.debug("Route registered: POST /createAccountInternal");

@@ -276,12 +276,12 @@ export async function generateApiDocs(): Promise<void> {
   <body>
     <header class="topbar">
       <div class="topbar-logo">
-        <img src="../images/logo.png" alt="Credex Logo" />
+        <img src="../images/logo_symbol.png" alt="Credex Logo" />
       </div>
       <div class="topbar-title">API Reference</div>
       <div class="topbar-menu">
         <div id="menuButton" onclick="window.location.href='../menu.html'">
-          <img src="../images/logo.png" alt="Menu" class="menu-logo">
+          <img src="../images/logo_symbol.png" alt="Menu" class="menu-logo">
           <span class="menu-text">MENU</span>
         </div>
         </div>
@@ -300,7 +300,7 @@ export async function generateApiDocs(): Promise<void> {
       const apiSpec = ${JSON.stringify(swaggerSpec, null, 2)};
 
       // Module order
-      const moduleOrder = ['Member', 'Account', 'Credex', 'Recurring', 'Admin', 'DevAdmin'];
+      const moduleOrder = ['Member', 'Account', 'Credex', 'AccountInternal', 'AssetMarker', 'Recurring', 'Admin', 'DevAdmin'];
 
       function escapeHtml(unsafe) {
         return unsafe
@@ -328,6 +328,8 @@ export async function generateApiDocs(): Promise<void> {
           'Members': 'Member',
           'Accounts': 'Account',
           'Credex': 'Credex',
+          'AccountsInternal': 'AccountInternal',
+          'AssetMarker': 'AssetMarker',
           'Recurring': 'Recurring',
           'Admin': 'Admin',
           'DevAdmin': 'DevAdmin'

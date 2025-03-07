@@ -4,6 +4,7 @@ import { errorHandler } from "../../../middleware/errorHandler";
 import { connectAssetSchema } from "../assetMarkerValidationSchemas";
 import { authenticatedHandler } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
+import { ConnectAssetController } from "../controllers";
 
 export default function connectAssetRoute() {
   const router = express.Router();
@@ -327,7 +328,7 @@ export default function connectAssetRoute() {
   router.post(
     `/connectAsset`,
     validateRequest(connectAssetSchema),
-    authenticatedHandler(/* ConnectAssetController */),
+    authenticatedHandler(ConnectAssetController),
     errorHandler
   );
   logger.debug("Route registered: POST /connectAsset");

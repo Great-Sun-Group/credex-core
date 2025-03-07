@@ -4,6 +4,7 @@ import { errorHandler } from "../../../middleware/errorHandler";
 import { disconnectAssetSchema } from "../assetMarkerValidationSchemas";
 import { authenticatedHandler } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
+import { DisconnectAssetController } from "../controllers";
 
 export default function disconnectAssetRoute() {
   const router = express.Router();
@@ -288,7 +289,7 @@ export default function disconnectAssetRoute() {
   router.post(
     `/disconnectAsset`,
     validateRequest(disconnectAssetSchema),
-    authenticatedHandler(/* DisconnectAssetController */),
+    authenticatedHandler(DisconnectAssetController),
     errorHandler
   );
   logger.debug("Route registered: POST /disconnectAsset");

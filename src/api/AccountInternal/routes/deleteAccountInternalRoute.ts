@@ -4,6 +4,7 @@ import { errorHandler } from "../../../middleware/errorHandler";
 import { deleteAccountInternalSchema } from "../accountInternalValidationSchemas";
 import { authenticatedHandler } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
+import { DeleteAccountInternalController } from "../controllers";
 
 export default function deleteAccountInternalRoute() {
   const router = express.Router();
@@ -279,7 +280,7 @@ export default function deleteAccountInternalRoute() {
   router.post(
     `/deleteAccountInternal`,
     validateRequest(deleteAccountInternalSchema),
-    authenticatedHandler(/* DeleteAccountInternalController */),
+    authenticatedHandler(DeleteAccountInternalController),
     errorHandler
   );
   logger.debug("Route registered: POST /deleteAccountInternal");

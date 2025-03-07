@@ -336,13 +336,14 @@ export default function editMemberRoute() {
    *                       type: object
    *                       description: Empty dashboard object
    */
-  router.post(
-    `/editMember`,
-    validateRequest(editMemberSchema),
-    authenticatedHandler(/* EditMemberController */),
-    errorHandler
-  );
-  logger.debug("Route registered: POST /editMember");
-
+  
+  // TODO: EditMemberController needs to be implemented
+  // router.post(
+  //   `/editMember`,
+  //   validateRequest(editMemberSchema),
+  //   authenticatedHandler(EditMemberController),
+  //   errorHandler
+  // );
+  // logger.debug("Route registered: POST /editMember");
   return router;
 }

@@ -4,6 +4,7 @@ import { errorHandler } from "../../../middleware/errorHandler";
 import { addAssetMarkerSchema } from "../assetMarkerValidationSchemas";
 import { authenticatedHandler } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
+import { AddAssetMarkerController } from "../controllers";
 
 export default function addAssetMarkerRoute() {
   const router = express.Router();
@@ -299,7 +300,7 @@ export default function addAssetMarkerRoute() {
   router.post(
     `/addAssetMarker`,
     validateRequest(addAssetMarkerSchema),
-    authenticatedHandler(/* AddAssetMarkerController */),
+    authenticatedHandler(AddAssetMarkerController),
     errorHandler
   );
   logger.debug("Route registered: POST /addAssetMarker");

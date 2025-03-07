@@ -4,6 +4,7 @@ import { errorHandler } from "../../../middleware/errorHandler";
 import { uploadAndOptimizeJpgSchema } from "../assetMarkerValidationSchemas";
 import { authenticatedHandler } from "../../../middleware/authMiddleware";
 import logger from "../../../utils/logger";
+import { UploadAndOptimizeJpgController } from "../controllers";
 
 export default function uploadAndOptimizeJpgRoute() {
   const router = express.Router();
@@ -347,7 +348,7 @@ export default function uploadAndOptimizeJpgRoute() {
   router.post(
     `/uploadAndOptimizeJpg`,
     validateRequest(uploadAndOptimizeJpgSchema),
-    authenticatedHandler(/* UploadAndOptimizeJpgController */),
+    authenticatedHandler(UploadAndOptimizeJpgController),
     errorHandler
   );
   logger.debug("Route registered: POST /uploadAndOptimizeJpg");

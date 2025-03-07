@@ -347,10 +347,18 @@
     {
       "name": "Notifications",
       "description": "Push notification management and testing operations"
+    },
+    {
+      "name": "AccountInternal",
+      "description": "Internal account operations for tracking products, production, consumption, and assets"
+    },
+    {
+      "name": "AssetMarker",
+      "description": "Asset marker operations for managing digital assets and their relationships"
     }
   ],
   "paths": {
-    "/api/account/trust": {
+    "/createTrustAccount": {
       "post": {
         "summary": "Create a new trust account",
         "description": "Creates a new trust account with BANK or VAULT subtype. Only available to tier 5 members.",
@@ -1081,6 +1089,1352 @@
                     "message": {
                       "type": "string",
                       "example": "Internal server error while retrieving ledger"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/createAccountInternal": {
+      "post": {
+        "tags": [
+          "AccountInternal"
+        ],
+        "summary": "Create a new internal account",
+        "description": "Creates a new internal account for tracking products, production, consumption, or assets",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "accountName",
+                  "accountHandle",
+                  "accountType"
+                ],
+                "properties": {
+                  "accountName": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 50,
+                    "description": "Name of the internal account"
+                  },
+                  "accountHandle": {
+                    "type": "string",
+                    "pattern": "^[A-Z0-9_]{3,30}$",
+                    "description": "Unique handle for the internal account (uppercase letters, numbers, underscores)"
+                  },
+                  "accountDescription": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Detailed description of the internal account"
+                  },
+                  "accountType": {
+                    "type": "string",
+                    "enum": [
+                      "CONSUMPTION",
+                      "PRODUCTION",
+                      "DIGITAL_ASSET",
+                      "PHYSICAL_ASSET"
+                    ],
+                    "description": "Type of internal account to create"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Internal account created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal account \"Tomato Production\" created successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The created internal account ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ACCOUNT_INTERNAL_CREATED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who created the account"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "accountID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "accountName": {
+                                  "type": "string"
+                                },
+                                "accountHandle": {
+                                  "type": "string"
+                                },
+                                "accountType": {
+                                  "type": "string"
+                                },
+                                "accountDescription": {
+                                  "type": "string"
+                                },
+                                "ownerID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Current state of the account dashboard"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid account type"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INVALID_ACCOUNT_TYPE"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not authorized to create internal accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Vendor status required to create internal accounts"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "VENDOR_REQUIRED"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "suggestion": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Account handle already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Account handle is already in use"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "HANDLE_EXISTS"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "suggestion": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while creating internal account"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deleteAccountInternal": {
+      "post": {
+        "tags": [
+          "AccountInternal"
+        ],
+        "summary": "Delete an internal account",
+        "description": "Deletes an internal account. Only permitted if the account is not attached to any AssetMarkers.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "accountID"
+                ],
+                "properties": {
+                  "accountID": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the internal account to delete"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Internal account deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal account deleted successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The deleted internal account ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ACCOUNT_INTERNAL_DELETED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who performed the deletion"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "accountID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "accountName": {
+                                  "type": "string"
+                                },
+                                "accountType": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Current state of the member dashboard"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid account ID format"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INVALID_UUID"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not authorized to delete this internal account or account has attached AssetMarkers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Cannot delete account with attached AssetMarkers"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "HAS_ATTACHED_ASSETS"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "assetCount": {
+                                  "type": "number"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Internal account not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal account not found"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "ACCOUNT_NOT_FOUND"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while deleting internal account"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/editAccountInternal": {
+      "post": {
+        "tags": [
+          "AccountInternal"
+        ],
+        "summary": "Update an internal account",
+        "description": "Updates an existing internal account's details",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "accountID"
+                ],
+                "properties": {
+                  "accountID": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the internal account to update"
+                  },
+                  "accountName": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 50,
+                    "description": "New name for the internal account"
+                  },
+                  "accountHandle": {
+                    "type": "string",
+                    "pattern": "^[A-Z0-9_]{3,30}$",
+                    "description": "New handle for the internal account (uppercase letters, numbers, underscores)"
+                  },
+                  "accountDescription": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "New description for the internal account"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Internal account updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal account updated successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The internal account ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ACCOUNT_INTERNAL_UPDATED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who performed the update"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "accountID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "accountName": {
+                                  "type": "string"
+                                },
+                                "accountHandle": {
+                                  "type": "string"
+                                },
+                                "accountDescription": {
+                                  "type": "string"
+                                },
+                                "updatedAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Current state of the account dashboard"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data or no fields to update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "No fields provided for update"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_UPDATE_DATA"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "details": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not authorized to update this internal account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Not authorized to update this internal account"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "UNAUTHORIZED"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Internal account not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal account not found"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "ACCOUNT_NOT_FOUND"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Account handle already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Account handle is already in use"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "HANDLE_EXISTS"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "suggestion": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while updating internal account"
                     },
                     "data": {
                       "type": "object",
@@ -3651,6 +5005,1856 @@
                         },
                         "dashboard": {
                           "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/addAssetMarker": {
+      "post": {
+        "tags": [
+          "AssetMarker"
+        ],
+        "summary": "Create a new asset marker",
+        "description": "Creates a new asset marker in the system with optional metadata and S3 key",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "assetName"
+                ],
+                "properties": {
+                  "assetName": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 100,
+                    "description": "Name of the asset"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Detailed description of the asset"
+                  },
+                  "s3Key": {
+                    "type": "string",
+                    "description": "Key to access data stored in S3 bucket"
+                  },
+                  "AssetMarkerData": {
+                    "type": "object",
+                    "description": "Additional metadata for the asset marker (up to 2kb)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Asset marker created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Asset marker created successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The created asset marker ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ASSET_MARKER_CREATED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who created the asset marker"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "assetID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "assetName": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string"
+                                },
+                                "s3Key": {
+                                  "type": "string"
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Current state of the member dashboard"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid asset name"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INVALID_ASSET_NAME"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not authorized to create asset markers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Vendor status required to create asset markers"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "VENDOR_REQUIRED"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "suggestion": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Asset marker data too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Asset marker data exceeds maximum size of 2kb"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "DATA_TOO_LARGE"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "dataSize": {
+                                  "type": "number"
+                                },
+                                "maxSize": {
+                                  "type": "number"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while creating asset marker"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/connectAsset": {
+      "post": {
+        "tags": [
+          "AssetMarker"
+        ],
+        "summary": "Connect an asset to another node",
+        "description": "Connect an asset marker to another node with a specified relationship",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "assetID",
+                  "connectedID",
+                  "relName"
+                ],
+                "properties": {
+                  "assetID": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the asset marker to connect"
+                  },
+                  "connectedID": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the node to connect to"
+                  },
+                  "relName": {
+                    "type": "string",
+                    "enum": [
+                      "USED_IN",
+                      "PROFILE_PIC_ORIGINAL_JPG",
+                      "PROFILE_PIC_200_JPG",
+                      "PROFILE_PIC_600_JPG"
+                    ],
+                    "description": "Name of the relationship to create"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Asset connected successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Asset connected successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The asset marker ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ASSET_CONNECTED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who performed the connection"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "assetID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "connectedID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "relName": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Current state of the member dashboard"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid relationship name"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INVALID_RELATIONSHIP"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not authorized to connect assets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Not authorized to connect this asset"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "UNAUTHORIZED"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Asset or connected node not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Asset or connected node not found"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NOT_FOUND"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Relationship already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Relationship already exists"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "RELATIONSHIP_EXISTS"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while connecting asset"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/disconnectAsset": {
+      "post": {
+        "tags": [
+          "AssetMarker"
+        ],
+        "summary": "Disconnect an asset from another node",
+        "description": "Remove a relationship between an asset marker and another node",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "assetID",
+                  "connectedID",
+                  "relName"
+                ],
+                "properties": {
+                  "assetID": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the asset marker to disconnect"
+                  },
+                  "connectedID": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the node to disconnect from"
+                  },
+                  "relName": {
+                    "type": "string",
+                    "enum": [
+                      "USED_IN",
+                      "PROFILE_PIC_ORIGINAL_JPG",
+                      "PROFILE_PIC_200_JPG",
+                      "PROFILE_PIC_600_JPG"
+                    ],
+                    "description": "Name of the relationship to remove"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Asset disconnected successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Asset disconnected successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The asset marker ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ASSET_DISCONNECTED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who performed the disconnection"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "assetID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "connectedID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "relName": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Current state of the member dashboard"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid relationship name"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INVALID_RELATIONSHIP"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not authorized to disconnect assets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Not authorized to disconnect this asset"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "UNAUTHORIZED"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Asset, connected node, or relationship not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Relationship not found"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "RELATIONSHIP_NOT_FOUND"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while disconnecting asset"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/uploadAndOptimizeJpg": {
+      "post": {
+        "tags": [
+          "AssetMarker"
+        ],
+        "summary": "Upload and optimize a JPG image",
+        "description": "Uploads a JPG image, optimizes it, and creates the necessary asset markers and relationships",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "jpg",
+                  "name",
+                  "drAccountID"
+                ],
+                "properties": {
+                  "jpg": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "JPG image file to upload"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 100,
+                    "description": "Name for the asset"
+                  },
+                  "drAccountID": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the account to debit (DR)"
+                  },
+                  "crAccountID": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the account to credit (CR). If not provided, defaults to \"Onboarded Assets\" account."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Image uploaded and optimized successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Image uploaded and optimized successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The created original asset marker ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "IMAGE_UPLOADED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who uploaded the image"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "originalAssetID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "asset200ID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "asset600ID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "assetName": {
+                                  "type": "string"
+                                },
+                                "drAccountID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "crAccountID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Current state of the member dashboard"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid image format. Only JPG is supported."
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INVALID_IMAGE_FORMAT"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not authorized to upload images",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Vendor status required to upload images"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "VENDOR_REQUIRED"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "suggestion": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Account not found"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "ACCOUNT_NOT_FOUND"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Image too large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Image exceeds maximum size of 10MB"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "IMAGE_TOO_LARGE"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "imageSize": {
+                                  "type": "number"
+                                },
+                                "maxSize": {
+                                  "type": "number"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while uploading image"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
                         }
                       }
                     }
@@ -7722,6 +10926,500 @@
         }
       }
     },
+    "/editMember": {
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Update member profile with vendor details",
+        "description": "Update a member's profile information including vendor-specific details for the Vimbiso Market.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "firstname": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 50,
+                    "description": "Member's first name"
+                  },
+                  "lastname": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 50,
+                    "description": "Member's last name"
+                  },
+                  "memberHandle": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]{3,30}$",
+                    "description": "Unique handle for the member (lowercase letters, numbers, underscores)"
+                  },
+                  "vendorBio": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Vendor biography and description for marketplace"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Member profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Member profile updated successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The member ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "MEMBER_UPDATED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who performed the action"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "memberID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the updated member"
+                                },
+                                "firstname": {
+                                  "type": "string",
+                                  "description": "Updated first name"
+                                },
+                                "lastname": {
+                                  "type": "string",
+                                  "description": "Updated last name"
+                                },
+                                "memberHandle": {
+                                  "type": "string",
+                                  "description": "Updated member handle"
+                                },
+                                "vendorBio": {
+                                  "type": "string",
+                                  "description": "Updated vendor biography"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Current state of the member dashboard"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid input data"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "VALIDATION_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not authorized to update this member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Not authorized to update this member"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "UNAUTHORIZED"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Member not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Member not found"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "MEMBER_NOT_FOUND"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Member handle already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Member handle is already in use"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "HANDLE_EXISTS"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "suggestion": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while updating member"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/hustler10k": {
       "post": {
         "tags": [
@@ -9081,6 +12779,429 @@
           },
           "500": {
             "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/sellInMarket": {
+      "post": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Enable or disable vendor functionality",
+        "description": "Enable or disable vendor functionality for a member in the Vimbiso Market. When enabled, creates required internal accounts if they don't exist.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "vendor"
+                ],
+                "properties": {
+                  "vendor": {
+                    "type": "boolean",
+                    "description": "Whether to enable (true) or disable (false) vendor functionality"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vendor status updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Vendor status updated successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The member ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "VENDOR_STATUS_UPDATED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who performed the action"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "memberID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the updated member"
+                                },
+                                "vendor": {
+                                  "type": "boolean",
+                                  "description": "New vendor status"
+                                },
+                                "createdAccounts": {
+                                  "type": "array",
+                                  "description": "Internal accounts created when enabling vendor status",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "accountID": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                      },
+                                      "accountName": {
+                                        "type": "string"
+                                      },
+                                      "accountType": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Current state of the member dashboard"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid input data"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "VALIDATION_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not authorized or insufficient membership tier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Insufficient membership tier to enable vendor functionality"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "TIER_REQUIREMENT"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Member not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Member not found"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "MEMBER_NOT_FOUND"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while updating vendor status"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

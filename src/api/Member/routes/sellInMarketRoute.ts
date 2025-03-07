@@ -286,13 +286,14 @@ export default function sellInMarketRoute() {
    *                       type: object
    *                       description: Empty dashboard object
    */
-  router.post(
-    `/sellInMarket`,
-    validateRequest(sellInMarketSchema),
-    authenticatedHandler(/* SellInMarketController */),
-    errorHandler
-  );
-  logger.debug("Route registered: POST /sellInMarket");
-
+  
+  // TODO: SellInMarketController needs to be implemented
+  // router.post(
+  //   `/sellInMarket`,
+  //   validateRequest(sellInMarketSchema),
+  //   authenticatedHandler(SellInMarketController),
+  //   errorHandler
+  // );
+  // logger.debug("Route registered: POST /sellInMarket");
   return router;
 }
