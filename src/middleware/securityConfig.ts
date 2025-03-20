@@ -244,7 +244,18 @@ export const applyAuthMiddleware = (app: Application) => {
       req.path === "/setInitialPassword" ||
       req.path.includes("/devadmin/") || // routes are not published in prod
       (req.path.includes("/verify/") && (req.body?.purpose === "PASSWORD_RESET" || req.method === "OPTIONS")) ||
-      req.path === "/resetPassword"
+      req.path === "/resetPassword" ||
+      // Documentation pages keyholes
+      req.path.startsWith('/develop/') ||
+      req.path.startsWith('/due-diligence/') ||
+      req.path.startsWith('/trust-again/') ||
+      req.path.startsWith('/market/') ||
+      req.path.startsWith('/css/') ||
+      req.path.startsWith('/js/') ||
+      req.path.startsWith('/images/') ||
+      req.path.startsWith('/components/') ||
+      req.path === '/api-docs' ||
+      req.path.startsWith('/api-docs/')
     ) {
       logger.debug("[SC3] Skipping auth middleware for path", {
         path: req.path,
