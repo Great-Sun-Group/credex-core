@@ -2,24 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=0.8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Documentation Site Templating System - MyCredex.app</title>
     <link rel="stylesheet" href="../style.css" />
   </head>
   <body>
     <!-- Header Component -->
-    <div id="header-container"></div>
-    
+    <div id="header-develop"></div>
+
     <!-- Navigation Component -->
     <div id="nav-container"></div>
 
     <!-- Page Content -->
-    <h1>Documentation Site Templating System</h1>
+    <h1 class="chapter-title">Documentation Site Templating System</h1>
     <h3 class="subtitle">How to use and maintain the site templates</h3>
 
     <p>
-      This documentation site uses a client-side templating system to maintain consistent design elements across all pages. 
-      This guide explains how the system works and how to use it.
+      This documentation site uses a client-side templating system to maintain
+      consistent design elements across all pages. This guide explains how the
+      system works and how to use it.
     </p>
 
     <h2>Directory Structure</h2>
@@ -41,16 +45,29 @@
 
     <h2>How It Works</h2>
     <p>
-      The templating system uses JavaScript to load HTML components into designated containers on each page. 
-      This allows for consistent header, navigation, and footer elements across all pages.
+      The templating system uses JavaScript to load HTML components into
+      designated containers on each page. This allows for consistent header,
+      navigation, and footer elements across all pages.
     </p>
 
     <h3>Main Features</h3>
     <ol>
-      <li><strong>Modular CSS</strong>: Styles are organized into separate files for easier maintenance.</li>
-      <li><strong>Component-Based Structure</strong>: Header, navigation, and footer are defined once and reused across all pages.</li>
-      <li><strong>Responsive Design</strong>: Mobile-friendly navigation with hamburger menu and dropdowns.</li>
-      <li><strong>Active State Tracking</strong>: Automatically highlights the current page in the navigation.</li>
+      <li>
+        <strong>Modular CSS</strong>: Styles are organized into separate files
+        for easier maintenance.
+      </li>
+      <li>
+        <strong>Component-Based Structure</strong>: Header, navigation, and
+        footer are defined once and reused across all pages.
+      </li>
+      <li>
+        <strong>Responsive Design</strong>: Mobile-friendly navigation with
+        hamburger menu and dropdowns.
+      </li>
+      <li>
+        <strong>Active State Tracking</strong>: Automatically highlights the
+        current page in the navigation.
+      </li>
     </ol>
 
     <h2>How to Use</h2>
@@ -61,7 +78,7 @@
       <li>
         <p>Add container divs for the components:</p>
         <pre><code>&lt;!-- Header Component --&gt;
-&lt;div id="header-container"&gt;&lt;/div&gt;
+&lt;div id="header-develop"&gt;&lt;/div&gt;
 
 &lt;!-- Navigation Component --&gt;
 &lt;div id="nav-container"&gt;&lt;/div&gt;
@@ -69,42 +86,56 @@
 &lt;!-- Your page content here --&gt;
 
 &lt;!-- Footer Component --&gt;
-&lt;div id="footer-container"&gt;&lt;/div&gt;</code></pre>
+&lt;div id="footer-develop"&gt;&lt;/div&gt;</code></pre>
       </li>
       <li>
         <p>Add the template.js script before the closing body tag:</p>
-        <pre><code>&lt;script src="../js/template.js"&gt;&lt;/script&gt;</code></pre>
+        <pre><code>&lt;script src="../js/template.js"&gt;&lt;/script&gt;
+&lt;script src="../js/dropdown.js"&gt;&lt;/script&gt;</code></pre>
       </li>
       <li>
-        <p>Remove any existing menu button or navigation elements that are being replaced.</p>
+        <p>
+          Remove any existing menu button or navigation elements that are being
+          replaced.
+        </p>
       </li>
     </ol>
 
     <h3>Creating a New Page</h3>
     <p>
-      Use <code>template-index.html</code> as a starting point for new pages. Simply copy the file, 
-      rename it, and replace the content section with your new content.
+      Use <code>template-index.html</code> as a starting point for new pages.
+      Simply copy the file, rename it, and replace the content section with your
+      new content.
     </p>
 
     <h3>Modifying Components</h3>
     <p>To change the design or content of a component:</p>
     <ol>
-      <li>Edit the corresponding HTML file in the <code>components/</code> directory.</li>
-      <li>Edit the corresponding CSS file in the <code>css/</code> directory.</li>
+      <li>
+        Edit the corresponding HTML file in the
+        <code>components/</code> directory.
+      </li>
+      <li>
+        Edit the corresponding CSS file in the <code>css/</code> directory.
+      </li>
     </ol>
     <p>
-      For example, to update the navigation menu, edit <code>components/nav.html</code> and <code>css/navigation.css</code>.
+      For example, to update the navigation menu, edit
+      <code>components/nav.html</code> and <code>css/navigation.css</code>.
     </p>
 
     <h2>Navigation Menu</h2>
     <p>
-      The navigation menu is a horizontal bar with dropdowns for Develop, Due Diligence, and Trust Again sections. 
-      On mobile devices, it collapses into a hamburger menu.
+      The navigation menu is a horizontal bar with dropdowns for Develop, Due
+      Diligence, and Trust Again sections. On mobile devices, it collapses into
+      a hamburger menu.
     </p>
 
     <h3>Adding a New Menu Item</h3>
     <p>
-      To add a new item to the navigation menu, edit <code>components/nav.html</code> and add a new list item to the appropriate section.
+      To add a new item to the navigation menu, edit
+      <code>components/nav.html</code> and add a new list item to the
+      appropriate section.
     </p>
     <p>For a top-level item:</p>
     <pre><code>&lt;li&gt;&lt;a href="/path/to/page.html"&gt;Menu Item&lt;/a&gt;&lt;/li&gt;</code></pre>
@@ -114,17 +145,28 @@
     <h2>CSS Organization</h2>
     <p>The CSS is organized into modular files for easier maintenance:</p>
     <ul>
-      <li><strong>base.css</strong>: Typography, colors, and basic element styles</li>
-      <li><strong>layout.css</strong>: Layout-related styles (tables, images, etc.)</li>
-      <li><strong>components.css</strong>: Styles for specific components (header, footer, etc.)</li>
+      <li>
+        <strong>base.css</strong>: Typography, colors, and basic element styles
+      </li>
+      <li>
+        <strong>layout.css</strong>: Layout-related styles (tables, images,
+        etc.)
+      </li>
+      <li>
+        <strong>components.css</strong>: Styles for specific components (header,
+        footer, etc.)
+      </li>
       <li><strong>navigation.css</strong>: Styles for the navigation menu</li>
       <li><strong>responsive.css</strong>: Mobile-responsive styles</li>
     </ul>
-    <p>To modify styles, edit the appropriate CSS file rather than the main style.css file.</p>
+    <p>
+      To modify styles, edit the appropriate CSS file rather than the main
+      style.css file.
+    </p>
 
     <!-- Footer Component -->
-    <div id="footer-container"></div>
-    
+    <div id="footer-develop"></div>
+
     <!-- Template System JavaScript -->
     <script src="../js/template.js"></script>
     <script src="../js/dropdown.js"></script>

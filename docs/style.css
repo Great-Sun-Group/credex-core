@@ -17,5 +17,8 @@
 /* Import navigation styles */
 @import url('css/navigation.css');
 
+/* Import API documentation styles */
+@import url('css/api.css');
+
 /* Import responsive styles */
 @import url('css/responsive.css');

@@ -2,14 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=0.8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Minute Transaction Queue (MTQ)</title>
     <link rel="stylesheet" href="../style.css" />
   </head>
   <body>
     <!-- Header Component -->
     <div id="header-due-diligence"></div>
-    
+
     <!-- Navigation Component -->
     <div id="nav-container"></div>
 
@@ -123,8 +126,9 @@
         <strong>Secured Credexes:</strong>
         <ul>
           <li>
-            Use trust account-specific relationship types in format "TRUST_[shortID]_[denomination]"
-            where shortID is first 12 characters of trust account UUID
+            Use trust account-specific relationship types in format
+            "TRUST_[shortID]_[denomination]" where shortID is first 12
+            characters of trust account UUID
           </li>
           <li>Due dates are automatically adjusted to the current day</li>
           <li>Maintain separate loop paths from unsecured credexes</li>
@@ -141,7 +145,10 @@
         <ul>
           <li>Act as intermediaries between accounts</li>
           <li>Maintain the earliest due date among connected credexes</li>
-          <li>Separate paths by relationship type (unsecured vs trust-specific secured)</li>
+          <li>
+            Separate paths by relationship type (unsecured vs trust-specific
+            secured)
+          </li>
           <li>Automatically created and removed as needed</li>
         </ul>
       </li>
@@ -284,7 +291,7 @@
     </p>
     <!-- Footer Component -->
     <div id="footer-due-diligence"></div>
-    
+
     <!-- Template System JavaScript -->
     <script src="../js/template.js"></script>
     <script src="../js/dropdown.js"></script>
