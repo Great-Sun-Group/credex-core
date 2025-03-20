@@ -46,13 +46,26 @@ async function initializeApp() {
     // Apply jsonParser globally first
     app.use(jsonParser);
 
-    // Serve static files from docs directory first
-    app.use(express.static('docs'));
-
-    // Serve docs/index.html at root
+    // Serve docs/index.html at root path
     app.get('/', (req: Request, res: Response) => {
       res.sendFile('index.html', { root: './docs' });
     });
+    
+    // Create a router for documentation pages
+    const docsRouter = express.Router();
+    
+    // Serve static files from docs directory
+    docsRouter.use(express.static('docs'));
+    
+    // Mount the docs router at specific documentation paths
+    app.use('/develop', docsRouter);
+    app.use('/due-diligence', docsRouter);
+    app.use('/trust-again', docsRouter);
+    app.use('/market', docsRouter);
+    app.use('/css', docsRouter);
+    app.use('/js', docsRouter);
+    app.use('/images', docsRouter);
+    app.use('/components', docsRouter);
 
     // Add request ID middleware
     app.use(addRequestId);
@@ -87,7 +100,7 @@ async function initializeApp() {
     app.use(CredexRoutes());
     app.use(AdminRoutes());
     app.use(RecurringRoutes());
-    app.use('/api', NotificationRoutes);
+    app.use("/api", NotificationRoutes);
     logger.info("Route handlers applied for production modules");
 
     // Apply route handlers for dev-only routes
