@@ -2,802 +2,460 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VimbisoPay</title>
-    <link rel="stylesheet" href="css/style.css" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=0.8" />
+    <title>MyCredex.app</title>
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <!-- Hero Section -->
-    <section class="hero-section">
-      <picture class="hero-background">
-        <source
-          srcset="
-            images/harare_golden-2000w.webp 2000w,
-            images/harare_golden-1200w.webp 1200w,
-            images/harare_golden-600w.webp   600w
-          "
-          type="image/webp"
-        />
-        <source
-          srcset="
-            images/harare_golden-2000w.jpg 2000w,
-            images/harare_golden-1200w.jpg 1200w,
-            images/harare_golden-600w.jpg   600w
-          "
-          type="image/jpeg"
-        />
-        <img
-          src="images/harare_golden-1200w.jpg"
-          alt="Harare cityscape"
-          width="1200"
-          height="800"
-          fetchpriority="high"
-        />
-      </picture>
-      <div class="container hero-content">
-        <img src="images/logo.png" alt="VimbisoPay Logo" class="logo" />
-        <p>
-          Something new and different is stirring in the market stalls of Mbare,
-          dancing down the kombi routes of Harare, and catching fire across the
-          informal economy of Zimbabwe.
-        </p>
-        <p>
-          Networks of value pulse with new life and growth, secure in
-          crypto-protected channels that connect anyone, anywhere...<br />for
-          free.
-        </p>
-      </div>
-    </section>
+    <div id="menuButton" onclick="window.location.href='menu.html'">
+      <img src="images/logo.png" alt="Menu" class="menu-logo" />
+      <span class="menu-text">MENU</span>
+    </div>
 
-    <!-- Introduction Section -->
-    <section class="content-with-image image-right intro-section">
-      <picture class="section-background">
-        <source
-          srcset="
-            images/market1-2000w.webp 2000w,
-            images/market1-1200w.webp 1200w,
-            images/market1-600w.webp   600w
-          "
-          type="image/webp"
-        />
-        <source
-          srcset="
-            images/market1-2000w.jpg 2000w,
-            images/market1-1200w.jpg 1200w,
-            images/market1-600w.jpg   600w
-          "
-          type="image/jpeg"
-        />
-        <img
-          src="images/market1-1200w.jpg"
-          alt="Market scene"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
-      </picture>
-      <div class="content">
-        <p>
-          VimbisoPay is a revolutionary payment system that serves the
-          hardworking hustlers who produce value across Zimbabwe's vast informal
-          sector.
-        </p>
+    <div class="header-logo">
+      <img src="images/logo.png" alt="Credex Logo" class="main-logo" />
+    </div>
 
-        <p>
-          By offering secure access to the moneyless credex accounting
-          ecosystem, VimbisoPay enables members to sidestep the costs of moving
-          money across Zimbabwe and around the world.
-        </p>
+    <h1>MyCredex.app</h1>
+    <h3 class="subtitle">Our portal to the credex ecosystem</h3>
 
-        <p>
-          VimbisoPay puts the networked credex ledger at your fingertips,
-          connecting you to a dynamic living economic community in which members
-          provide each other with the goods, services, tools, and relationships
-          they need to prosper through the challenges of the moment.
-        </p>
-      </div>
-    </section>
+    <p>
+      The credex ecosystem is a shared ledger that enables the efficient
+      circulation of value, accumulation of capital, investment of profits, and
+      giving of gifts. Credex is a tool for financial inclusion, financial
+      empowerment, and financial sovereignty.
+    </p>
 
-    <!-- Using VimbisoPay Section -->
-    <section class="full-width-centered membership-section">
-      <picture class="section-background">
-        <source
-          srcset="
-            images/membership-2000w.webp 2000w,
-            images/membership-1200w.webp 1200w,
-            images/membership-600w.webp   600w
-          "
-          sizes="100vw"
-          type="image/webp"
-        />
-        <source
-          srcset="
-            images/membership-2000w.jpg 2000w,
-            images/membership-1200w.jpg 1200w,
-            images/membership-600w.jpg   600w
-          "
-          sizes="100vw"
-          type="image/jpeg"
-        />
-        <img
-          src="images/membership-1200w.jpg"
-          alt="VimbisoPay membership background"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
-      </picture>
-      <div class="content">
-        <div class="membership-intro">
-          <p>
-            <span style="font-size: 2em"
-              >Monthly memberships start at $1 USD</span
-            ><br />
-            <span style="font-size: 1.3em"
-              >for unlimited transactions in any denomination.</span
-            >
-          </p>
-          <p>
-            <span style="color: var(--tech-azure)"
-              >Free accounts with daily limits are available.</span
-            >
-          </p>
-          <p>
-            Send "Hi" on WhatsApp to<br />
-            <a href="https://wa.me/263785304448" target="_blank" style="color: var(--tech-azure); font-size: 1.6em; text-decoration: none"
-              >263 785 304 448</a
-            ><br />to become a member.
-          </p>
-        </div>
+    <h2>Core Architecture</h2>
+    <p>
+      The
+      <a href="https://github.com/Great-Sun-Group/credex-core">
+        credex-core API codebase</a
+      >
+      deployed here at mycredex.app is the portal through which we sidestep the
+      economic distortions and extortions imposed by obsolete and destructive
+      monetary paradigms.
+    </p>
+    <p>
+      The processes of creating an account, logging in, arranging queries for
+      the API endpoints, and processing query results for human-friendly
+      presentation and interaction is managed by a client apps client apps such
+      as the
+      <a href="https://github.com/Great-Sun-Group/vimbiso-chatserver"
+        >vimbiso-chatserver</a
+      >
+      provided by <a href="https://vimbisopay.africa">VimbisoPay Africa</a>.
+    </p>
 
-        <div class="service-panels">
-          <div class="service-panel">
-            <h3>Secure<br />Accounts</h3>
-            <p>
-              Free secure WhatsApp chatbot to manage accounts and make free
-              credex payments to anyone, anywhere, in any amount. Android app
-              coming soon.
-            </p>
-          </div>
-          <div class="service-panel">
-            <h3>Cash<br />Services</h3>
-            <p>
-              Free cash in (onramp) and cash out (offramp) services in Zimbabwe,
-              starting in Harare with immediate expansion to Bulawayo and then
-              nationally.
-            </p>
-          </div>
-          <div class="service-panel">
-            <h3>Global<br />Remittances</h3>
-            <p>
-              Free global remittances, starting from members in Canada to
-              members in Zimbabwe (Harare with immediate expansion).
-            </p>
-          </div>
-        </div>
+    <h2>Services</h2>
+    <p>
+      The accounting and data management services provided by the credex
+      ecosystem establish a network protocol for financial sovereignty:
+    </p>
+    <ul>
+      <li>
+        Secured credex services enable our sovereign members to base their
+        accounting entries on the trustworthy foundation of real assets such as
+        currency or gold.
+      </li>
+      <li>
+        Unsecured credex services provide liquidity to meet all needs and fuel
+        strong credit-based economic growth when conditions warrant, as
+        determined by the distributed risk tolerance and risk/reward
+        calculations of economic participants.
+      </li>
+      <li>
+        Credcoin services mathematically lock all values in the credex ecosystem
+        to the market values of real natural resource flows, keeping the economy
+        oriented on the most meaningful reference point possible without
+        limiting systemic liquidity, personal choice, or financial innovation.
+      </li>
+    </ul>
 
-        <div class="membership-intro">
-          <p>
-            <span style="font-size: 1em"
-              >VimbisoPay integrates seamlessly with banks, financial
-              institutions, and the global economy while maintaining
-              mathematical, cryptographic, and financial independence from
-              monetary dynamics like deflation and hyperinflation.</span
-            >
-          </p>
-        </div>
-      </div>
-    </section>
+    <h2>Purpose and Offering</h2>
+    <p>
+      Whereas the purpose of the credex ecosystem is to distribute a political
+      architecture based on the entitlements and responsibilities of universal
+      human sovereignty;
+    </p>
+    <p>
+      And whereas this distributed architecture is designed to open a space for
+      market economies of cooperative wealth creation and value circulation in
+      long-term harmony with our biosphere;
+    </p>
+    <p>
+      Therefore, desiring to help every sovereign human live in freedom,
+      justice, and prosperity;
+    </p>
+    <p>
+      And with the aspiration that we grow into our potential as a
+      multi-planetary, multi-dimensional, and spiritually mature human
+      civilization;
+    </p>
+    <p>We offer the credex ecosystem for the benefit of all beings.</p>
 
-    <!-- Seven Networked Roles Section -->
-    <section class="content-with-image image-left network-roles-section">
-      <picture class="section-background">
-        <source
-          srcset="
-            images/seven_networked-2000w.webp 2000w,
-            images/seven_networked-1200w.webp 1200w,
-            images/seven_networked-600w.webp   600w
-          "
-          sizes="100vw"
-          type="image/webp"
-        />
-        <source
-          srcset="
-            images/seven_networked-2000w.jpg 2000w,
-            images/seven_networked-1200w.jpg 1200w,
-            images/seven_networked-600w.jpg   600w
-          "
-          sizes="100vw"
-          type="image/jpeg"
-        />
-        <img
-          src="images/seven_networked-1200w.jpg"
-          alt="Seven networked roles visualization"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
-      </picture>
-      <div class="content">
-        <h2>Seven Networked Roles</h2>
-        <p>
-          The credex ecosystem is an economic network in which members can move
-          in and out of seven distinct roles: Hustler, Owner, Entrepreneur,
-          Investor, Trader, Treasurer, or Auditor. Members in these roles
-          generate and self-govern the constantly evolving economic
-          relationships through which value pulses, grows, and accumulates. Each
-          of the seven roles has a part to play in a responsive and co-emergent
-          dance that requires no centralized control. The organic economy of the
-          credex ecosystem bursts forth new opportunities for profit, growth,
-          prosperity, and innovation to meet every challenge.
-        </p>
-      </div>
-    </section>
+    <h2>Credex Principle</h2>
+    <h3 class="big-words">
+      If I owe you,<br />
+      and you owe them,<br />
+      and they owe me...<br />
+      we're square.
+    </h3>
 
-    <!-- Hustlers Section -->
-    <section class="content-with-image image-right hustlers-section">
-      <picture class="section-background">
-        <source
-          srcset="
-            images/hustlers_market-2000w.webp 2000w,
-            images/hustlers_market-1200w.webp 1200w,
-            images/hustlers_market-600w.webp   600w
-          "
-          sizes="100vw"
-          type="image/webp"
-        />
-        <source
-          srcset="
-            images/hustlers_market-2000w.jpg 2000w,
-            images/hustlers_market-1200w.jpg 1200w,
-            images/hustlers_market-600w.jpg   600w
-          "
-          sizes="100vw"
-          type="image/jpeg"
-        />
-        <img
-          src="images/hustlers_market-1200w.jpg"
-          alt="Hustlers market scene"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
-      </picture>
-      <div class="content">
-        <h2>Hustlers</h2>
-        <p>
-          Hustlers are the engine of any economy. Economists may call them
-          consumers, but most consumers have to hustle hard to pay the bills.
-          The Zimbabwean nation is fed by Hustlers who are doing whatever it
-          takes to survive in the informal economy, producing the goods and
-          providing the services on which the people depend.
-        </p>
+    <p>
+      The credex ecosystem actualizes the Credex Principle in the Minute
+      Transaction Queue (MTQ), which tracks payable and receivable invoices for
+      members' accounts, finds loops of value creation, and cancels payable and
+      receivable invoices against each other in <em>credloops</em> in which
+      every debt is reduced by an equal value. This is a GAAP-compliant
+      accounting procedure that anyone and any business can benefit from,
+      anywhere in the world.
+    </p>
 
-        <p>
-          Hustlers are also working class people all over the world who are
-          striving to build their wealth and open opportunities for themselves
-          and their families. The greatest financial needs of these members are
-          value exchange and stability. They need to exchange freely with
-          customers, employers and suppliers so that their hustles and efforts
-          can generate a surplus. They need to securely store that surplus as it
-          accumulates, with as little financial risk as possible, so its value
-          remains available for future payments, emergencies and investments.
-        </p>
-      </div>
-    </section>
+    <p>
+      In accounting terms, an outstanding credex is a contingent asset for one
+      party and a contingent liability for the other. These asset/liability
+      pairs are automatically strung together into credloops wherever possible
+      across the credex ecosystem. When a credloop is found and cleared, every
+      account in the loop will have an accounts payable invoice cleared against
+      an equivalent accounts receivable invoice.
+    </p>
 
-    <!-- Treasurers Section -->
-    <section class="content-with-image image-left treasurers-section">
-      <picture class="section-background">
-        <source
-          srcset="
-            images/treasurer-2000w.webp 2000w,
-            images/treasurer-1200w.webp 1200w,
-            images/treasurer-600w.webp   600w
-          "
-          sizes="100vw"
-          type="image/webp"
-        />
-        <source
-          srcset="
-            images/treasurer-2000w.jpg 2000w,
-            images/treasurer-1200w.jpg 1200w,
-            images/treasurer-600w.jpg   600w
-          "
-          sizes="100vw"
-          type="image/jpeg"
-        />
-        <img
-          src="images/treasurer-1200w.jpg"
-          alt="Treasurer role visualization"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
-      </picture>
-      <div class="content">
-        <h2>Treasurers</h2>
-        <p>
-          Treasurers provide trustworthy financial security through the
-          origination of secured credex contracts. A Treasurer opens trust
-          accounts within the ecosystem, and each trust account is linked to an
-          audited bank account, trading account, digital wallet, or physical
-          vault in which the Treasurer stores and protects assets for those who
-          require stability and security. Trust accounts lock stationary assets
-          of real value such as gold, currency, government bonds and
-          cryptocurrency to secured credex balances that flow freely anywhere in
-          the ecosystem.
-        </p>
-      </div>
-    </section>
+    <p>
+      This behaviour enables members to replace the use of third party money or
+      other debt instruments that are issued by an outside sovereign with
+      accounting entries on a shared ledger that are backed
+      <strong>only</strong> by the sovereign credit, assets, and value-producing
+      capacities of the transacting members.
+    </p>
 
-    <!-- Auditors Section -->
-    <section class="content-with-image image-right auditors-section">
-      <picture class="section-background">
-        <source
-          srcset="
-            images/auditor_workspace-2000w.webp 2000w,
-            images/auditor_workspace-1200w.webp 1200w,
-            images/auditor_workspace-600w.webp   600w
-          "
-          sizes="100vw"
-          type="image/webp"
-        />
-        <source
-          srcset="
-            images/auditor_workspace-2000w.jpg 2000w,
-            images/auditor_workspace-1200w.jpg 1200w,
-            images/auditor_workspace-600w.jpg   600w
-          "
-          sizes="100vw"
-          type="image/jpeg"
-        />
-        <img
-          src="images/auditor_workspace-1200w.jpg"
-          alt="Auditor workspace visualization"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
-      </picture>
-      <div class="content">
-        <h2>Auditors</h2>
-        <p>
-          Auditors are elected by Treasurers to enforce their accountability to
-          each other by vigilantly monitoring the balances held in every trust
-          account and vault. Auditors probe security, analyze weaknesses and
-          threats, and provide public reports on the trustworthiness of every
-          Treasurer and the security status of every trust account and vault
-          down to the last dollar and fraction of an ounce.
-        </p>
+    <h3>Credex Services</h3>
+    <p>
+      The credex ecosystem provides the non-sovereign and non-monetary services
+      of:
+    </p>
+    <ul>
+      <li>
+        Verifying the identity of the sovereign human counterparties and their
+        corporations.
+      </li>
+      <li>
+        Managing the technical verification and standardization of the credex
+        invoice and contract between the counterparties by providing templates
+        that include conditions for fulfillment, default, and other states, and
+        actions executed on each condition or state change.
+      </li>
+      <li>
+        Executing these credex smart contract invoices according to the terms
+        agreed by the counterparties, including triggering the agreed follow on
+        actions dependent on the invoice state and outcome.
+      </li>
+    </ul>
 
-        <p>
-          The greatest risk to a Treasurer is that of another Treasurer
-          defaulting and leaving them holding the debts. Rigorous enforcement,
-          aggressive Auditing to exacting standards, and regular debt clearing
-          between Treasurers is in the best interests of all members.
-        </p>
-      </div>
-    </section>
+    <p>
+      These invoice clearing services of the MTQ empower a first layer of
+      distributed financial sovereignty by enabling us to issue our own
+      customizable smart contracts. In so doing, we replace our reliance on the
+      currencies of outside sovereigns and give ourselves options that insulate
+      us from the financial dislocations of inflation and deflation in those
+      currencies.
+    </p>
 
-    <!-- Productive Roles Section -->
-    <section class="content-with-image image-left productive-roles-section">
-      <picture class="section-background">
-        <source
-          srcset="
-            images/productive_roles-2000w.webp 2000w,
-            images/productive_roles-1200w.webp 1200w,
-            images/productive_roles-600w.webp   600w
-          "
-          sizes="100vw"
-          type="image/webp"
-        />
-        <source
-          srcset="
-            images/productive_roles-2000w.jpg 2000w,
-            images/productive_roles-1200w.jpg 1200w,
-            images/productive_roles-600w.jpg   600w
-          "
-          sizes="100vw"
-          type="image/jpeg"
-        />
-        <img
-          src="images/productive_roles-1200w.jpg"
-          alt="Productive roles visualization"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
-      </picture>
-      <div class="content">
-        <h2>Productive Roles</h2>
-        <p>
-          Economic growth is created and managed by members in the productive
-          roles, who pulse value through the network, increasing it with every
-          successful movement.
-        </p>
-        <ul>
-          <li>Hustlers manage accounts and transactions</li>
-          <li>Owners manage companies and balance sheets</li>
-          <li>Entrepreneurs manage portfolios, equities and bonds</li>
-          <li>Investors manage capital and resource flows</li>
-        </ul>
+    <h2>Credcoin Principle</h2>
+    <h3 class="big-words">
+      I am entitled to receive one equal share<br />
+      of the value our economy harvests from nature.<br /><br />
+      I am responsible to pay for the share<br />
+      of natural wealth that I consume.
+    </h3>
 
-        <p>
-          Simply by using VimbisoPay to manage their hustles, members generate a
-          credit history that they can use to secure the investments and loans
-          that they need to grow their businesses.
-        </p>
-      </div>
-    </section>
+    <p>
+      The credex ecosystem actualizes the Credcoin Principle for participating
+      members in the Daily Credcoin Offering (DCO), in a process which anchors
+      relative exchange rates across the ecosystem. Every 24h, the DCO makes
+      this equation true: one credcoin today equals the number of members
+      participating in the DCO today divided by the value of natural wealth
+      entering the organic economy through the DCO today.
+    </p>
 
-    <!-- Credex Section -->
-    <section class="full-width-centered credex-section">
-      <picture class="section-background">
-        <source
-          srcset="
-            images/secured_unsecured-2000w.webp 2000w,
-            images/secured_unsecured-1200w.webp 1200w,
-            images/secured_unsecured-600w.webp   600w
-          "
-          sizes="100vw"
-          type="image/webp"
-        />
-        <source
-          srcset="
-            images/secured_unsecured-2000w.jpg 2000w,
-            images/secured_unsecured-1200w.jpg 1200w,
-            images/secured_unsecured-600w.jpg   600w
-          "
-          sizes="100vw"
-          type="image/jpeg"
-        />
-        <img
-          src="images/secured_unsecured-1200w.jpg"
-          alt="Secured and unsecured credex visualization"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
-      </picture>
-      <div class="content">
-        <div class="credexes">
-          <h2>Secured Credex</h2>
-          <p>
-            Secured balances originating from audited trust accounts are the
-            anchor point for financial security in the credex ecosystem. These
-            effortlessly fractionalizable secured balances are fully backed by
-            real assets and can flow freely anywhere in the ecosystem via
-            secured credex contracts. Hustlers and others who receive these
-            balances can send them free of charge to anyone, anywhere in the
-            ecosystem. Anyone holding a secured balance can claim the underlying
-            assets from the securing trust account at any time by issuing a
-            secured credex contract (occurs within the ecosystem) and accepting
-            delivery of the asset (occurs outside the ecosystem).
-          </p>
+    <p>
+      The DCO is a market where those who consume more natural resources
+      purchase the right to do so fairly from those who consume less:
+    </p>
+    <ol>
+      <li>
+        DCO participants pay in at rates relative to the natural resources they
+        consume.
+      </li>
+      <li>
+        One credcoin (1.000 CXX) is issued daily per DCO participant, each worth
+        one equal share of the total value received.
+      </li>
+      <li>
+        This process establishes the value of 1.000 CXX for the day relative to
+        all other economic values.
+      </li>
+    </ol>
 
-          <p>
-            This audited and cryptographically secured anchor to real assets
-            establishes an organically networked, multi-asset, full-reserve
-            banking system, with the boundary between in-ecosystem and external
-            asset cryptographically locked, vigilantly audited, and constantly
-            monitored and enforced.
-          </p>
-          <h2>Unsecured Credex</h2>
-          <p>
-            The credex ecosystem seamlessly integrates secured balance transfers
-            with a network of unsecured peer-to-peer credit that can be
-            transparently issued by any member in any role.
-          </p>
+    <p>
+      The credex ecosystem uses the flows of value that are created by members
+      participating in the DCO as the anchor point for exchange rates across the
+      ecosystem. These flows, which can be as small as a single member, provide
+      a mathematical peg that anchors financial reality in the credex ecosystem
+      to the reality of underlying natural resource flows.
+    </p>
 
-          <p>
-            Any member can issue an unsecured credex debt backed purely by
-            personal credit to any other member. The credex ecosystem clears
-            these outstanding debts against each other wherever possible and
-            reports defaults when necessary, enabling organic credit expansion
-            and contraction across the network to the ever-changing degree that
-            members trust their counterparty's capacity to repay their debts.
-            The ecosystem provides credit reports so members can demonstrate
-            their creditworthiness by their debt repayment history.
-          </p>
+    <p>
+      The multi-denominational mathematical mechanisms of the DCO manage the
+      dynamic balance between:
+    </p>
+    <ul>
+      <li>
+        <strong>Local truth:</strong> preserving the value of all contracts in
+        their specified denomination.
+      </li>
+      <li>
+        <strong>Global truth:</strong> preserving the value of all contracts
+        relative to every other value.
+      </li>
+      <li>
+        <strong>Past truth:</strong> preserving the value of past contracts
+        relative to today's real resource flow values.
+      </li>
+      <li>
+        <strong>Future truth:</strong> preserving the value of all contracts
+        independent of changing resource flow values.
+      </li>
+    </ul>
 
-          <p>
-            In Zimbabwe's rural areas where money is desperately scarce, the
-            ability to issue small amounts of unsecured zero interest debt to
-            each other is providing life-giving liquidity and market access to
-            those who need it most. Unsecured credexes unlock value by enabling
-            circulation and economic growth even in the absence of currency.
-            VimbisoPay provides access to the credex infrastructure, which
-            empowers communities to pool their existing resources, connect in
-            networks, and grow their wealth.
-          </p>
-        </div>
-      </div>
-    </section>
+    <p>
+      The credex ecosystem stores all values in credcoin (CXX). In order to
+      natively enable multi-denominational accounting, a CXXmultiplier value is
+      stored alongside every CXX value. Both of these values are updated in
+      every DCO so that all accounting and reporting remains universally true
+      both to the face value in the denomination specified, and to all other
+      values stored in the ecosystem. A contract expresses it's CXX value when
+      it needs a reference vs any other value in the ecosystem. A contract
+      expresses it's face value when it needs a reference vs the original
+      intentions of the counterparties. On-the-fly exchange rate calculations
+      performed on CXX values enable any amount to be viewed or totaled in the
+      current or past value of any denomination at any time.
+    </p>
 
-    <!-- Gold and US Dollars -->
-    <section class="full-width-centered security-section">
-      <picture class="section-background">
-        <source
-          srcset="
-            images/security-2000w.webp 2000w,
-            images/security-1200w.webp 1200w,
-            images/security-600w.webp   600w
-          "
-          type="image/webp"
-        />
-        <source
-          srcset="
-            images/security-2000w.jpg 2000w,
-            images/security-1200w.jpg 1200w,
-            images/security-600w.jpg   600w
-          "
-          type="image/jpeg"
-        />
-        <img
-          src="images/security-1200w.jpg"
-          alt="Security assets visualization"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
-      </picture>
-      <div class="content">
-        <h2>Gold and US Dollars</h2>
+    <h3>Credcoin Services</h3>
+    <p>
+      The credex ecosystem provides the non-sovereign and non-monetary services
+      of:
+    </p>
+    <ul>
+      <li>
+        Processing and distributing the daily flows of value that actualize the
+        entitlements and responsibilities of the Credex Principle for
+        participating sovereign members.
+      </li>
+      <li>
+        Setting the relative values of all contracts in all denominations daily
+        by linking global market data to CXX through the real flows of value
+        occuring in the DCO.
+      </li>
+      <li>
+        Establishing CXX as the first formula-based denomination of the credex
+        ecosystem, anchored on the rights and responsibilities of universal
+        human sovereignty.
+      </li>
+      <li>
+        Providing a container for other formulaic denominations and financial
+        innovations designed by for-profit and non-profit corporations for their
+        own purposes and reliably linked to real economic values through the
+        process of the DCO.
+      </li>
+    </ul>
 
-        <p>
-          Transaction values continuously spark across the ecosystem. Some of
-          these sparks are unsecured credit, some are secured, some are
-          algorithmically blended references to sets of underlying assets,
-          market values, and debt instruments. As secured balances flow through
-          the ecosystem and across cash in and cash out points, Treasurers end
-          up holding balances secured by other Treasurers.
-        </p>
+    <p>
+      These credcoin services empower a second layer of distributed financial
+      sovereignty by connecting every member to the underlying resource reality
+      of their financial decisions, and relating every other measure of value
+      across the economy to that underlying reality. In this way we replace our
+      reliance on measures of value that are created and controlled by obsolete
+      monetary paradigms with a measure of value that is structurally locked to
+      the daily flows of real natural resources that sustain us, while still
+      empowering full flexibility for financial innovation and experimentation
+      in the private sector.
+    </p>
 
-        <p>
-          In order to meet cash in and out needs, Treasurers are required to
-          rebalance holdings across the system by calling in the debts due from
-          other Treasurers. Transferring financial assets like USD is a
-          relatively simple and low cost task using existing banking and payment
-          channels, so Treasurers pulse these values through the ecosystem in
-          regular cadence as they clear trust account balances that they hold in
-          digital assets.
-        </p>
+    <h2>Secured Credexes</h2>
+    <p>
+      The credex ecosystem clears debts against each other. A secured credex
+      balance is no different, but can only be created when a member purchases a
+      secured credex from an Trust account. These secured credexes are
+      accounting entrees just like unsecured credexes. Every credex is a debt
+      contract, fulfilled when credlooped. For secured credexes, cash out always
+      triggers a credloop and debt clearing, thus fulfilling their promise of
+      financial security and 100% backing.
+    </p>
 
-        <p>
-          But banks sometimes fail, governments sometimes default, and
-          Zimbabweans know that the value of a currency sometimes evaporates
-          overnight. A paper or digital asset is never 100% real, even the
-          mighty United States Dollar, and especially USD held in banks that
-          sometimes go insolvent. Gold is real, gold is secure, gold stores
-          value like nothing else.
-        </p>
+    <p>
+      The credex ecosystem does not process currency, hold funds, or come into
+      contact with money in any way. Secured credexes are not produced by the
+      credex ecosystem, they are "produced" when real assets get audit-bound
+      into the ecosystem and they are "destroyed" in equal measure when those
+      assets leave those audited accounts into the direct possession of members.
+      Credex is not money, credex is peer-to-peer accounting.
+    </p>
 
-        <p>
-          The cost of moving physical assets like gold (or even physical cash)
-          to clear debts between Treasurers is far greater than the cost of
-          moving digital assets, so the clearing of values held in physical
-          vaults does not pulse through the ecosystem often, but the deepest
-          heartbeat of value is flows of real, physical, gold as they move
-          around the country and across the world between networked and audited
-          Treasurers, providing the ultimate security for transactions in which
-          credit cannot serve the purposes of the counterparties.
-        </p>
-      </div>
-    </section>
+    <h3>Secured Credex Services</h3>
+    <p>
+      The credex ecosystem provides the non-sovereign and non-monetary services
+      of:
+    </p>
+    <ul>
+      <li>
+        Auditing of secured credex Trust accounts so that a secured credex is
+        never fractionalized or abstracted.
+      </li>
+      <li>
+        Only allowing unaudited accounts to issue secured credex in
+        denominations and values that they have previously received into their
+        account balances.
+      </li>
+      <li>
+        Isolating secured credexes of each denomination into their own search
+        substructure so that they only close in loops with other secured
+        credexes of the same denomination, ensuring that the link from real
+        assets to secured balances remains intact and auditable.
+      </li>
+    </ul>
 
-    <!-- Traders -->
-    <section class="content-with-image image-right traders-section">
-      <picture class="section-background">
-        <source
-          srcset="
-            images/trader_screens-2000w.webp 2000w,
-            images/trader_screens-1200w.webp 1200w,
-            images/trader_screens-600w.webp   600w
-          "
-          sizes="100vw"
-          type="image/webp"
-        />
-        <source
-          srcset="
-            images/trader_screens-2000w.jpg 2000w,
-            images/trader_screens-1200w.jpg 1200w,
-            images/trader_screens-600w.jpg   600w
-          "
-          sizes="100vw"
-          type="image/jpeg"
-        />
-        <img
-          src="images/trader_screens-1200w.jpg"
-          alt="Trader screens visualization"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
-      </picture>
-      <div class="content">
-        <h2>Traders</h2>
-        <p>
-          Knitting together secured credex, unsecured credex, and flows of value
-          across the network, Traders create and manage algorithmic
-          denominations. These denominations are tradable contracts,
-          derivatives, futures, options and more, and they provide capital and
-          various kinds of financial risk management to the productive roles
-          that create value in the real economy. Traders establish benchmarks
-          and reference points for economic activity (e.g. stock indexes),
-          arbitrage profit to ensure competitive efficiency across the
-          ecosystem, and provide the containers, securities, and reference
-          points for capital flows at the largest scale.
-        </p>
+    <h1>Our Campaign</h1>
 
-        <p>
-          These financial products provide utility for arbitrage and large scale
-          market activities rather than for day to day payments or financial
-          management. Investors and Entrepreneurs make regular use of their
-          chosen subsets of these products, issued by their chosen Traders, linked to assets held by their chosen Treasurers or to companies, sectors, and markets that they operate in.
-        </p>
-      </div>
-    </section>
+    <h2>Vision</h2>
+    <p>
+      Our multi-planetary, multi-dimensional, and spiritually mature human
+      civilization possesses incredible wealth, with sustainable economic growth
+      projected as far as the eye can see, in harmony with the biosphere of our
+      Earth.
+    </p>
+    <p>
+      Our governance and justice systems represent all equally. These systems
+      form our common social bedrock, and they mostly stay out of our way as we
+      live the lives of free, creative, thriving human beings.
+    </p>
 
-    <!-- ZWG Section
-    <section class="ziggy-section">
-      <div class="content">
-        <h2>Ziggy</h2>
-        <p>
-          The Zimbabwean Gold (ZWG) denomination created by the Reserve Bank of
-          Zimbabwe (RBZ) in 2024 is an innovative example of an algorithmic
-          denomination. However, because the RBZ does not make the ZWG algorithm
-          public, or share audits of the holdings on which the value of the
-          currency is based, and because the Mnangangwa regime jails those
-          caught trading ZWG at market rates, the ZWG denomination does not meet
-          credex ecosystem standards at this time and unfortunately must be
-          excluded until these issues are addressed.
-        </p>
-      </div>
-      <div class="image-container">
-        <picture>
-          <source
-            srcset="
-              images/ziggy-2000w.webp 2000w,
-              images/ziggy-1200w.webp 1200w,
-              images/ziggy-600w.webp 600w"
-            sizes="(max-width: 768px) 100vw, 55vw"
-            type="image/webp"
-          />
-          <source
-            srcset="
-              images/ziggy-2000w.jpg 2000w,
-              images/ziggy-1200w.jpg 1200w,
-              images/ziggy-600w.jpg 600w"
-            sizes="(max-width: 768px) 100vw, 55vw"
-            type="image/jpeg"
-          />
-          <img
-            src="images/ziggy-1200w.jpg"
-            alt="Zimbabwean Gold (ZWG) Denomination"
-            width="1200"
-            height="800"
-            loading="lazy"
-          />
-        </picture>
-      </div>
-    </section>
-  -->
+    <h2>Purpose</h2>
+    <p>
+      Establish, protect and empower a primordially independent power centre
+      that is loyal to the principles of human sovereignty and can exist in
+      long-term harmony with the natural world.
+    </p>
 
-    <!-- Global Connection Section -->
-    <section
-      class="content-with-image image-left african-entrepreneurs-section"
-    >
-      <picture class="section-background">
-        <source
-          srcset="
-            images/protected-2000w.webp 2000w,
-            images/protected-1200w.webp 1200w,
-            images/protected-600w.webp   600w
-          "
-          sizes="100vw"
-          type="image/webp"
-        />
-        <source
-          srcset="
-            images/protected-2000w.jpg 2000w,
-            images/protected-1200w.jpg 1200w,
-            images/protected-600w.jpg   600w
-          "
-          sizes="100vw"
-          type="image/jpeg"
-        />
-        <img
-          src="images/protected-1200w.jpg"
-          alt="African entrepreneurs visualization"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
-      </picture>
-      <div class="content">
-        <h2>Protecting African<br />Entrepreneurs</h2>
-        <p>
-          Relationships between the seven networked roles fully replace
-          dependence on the flawed and brittle financial architecture of modern
-          central banking. With member data cryptographically secured on an
-          audited shared ledger, credex is a shield against financial oppression
-          of all kinds.
-        </p>
+    <h2>Grand Strategy</h2>
+    <p>
+      Act from an ethical and morally powerful centre that energizes us and our
+      allies, magnetizes the uncommitted, and brings potential competitors and
+      adversaries into the circle of our purpose. Overcome challenges and
+      adversaries while respecting every human and taking full moral
+      responsibility for our actions.
+    </p>
+    <p>
+      Operationalize sovereignty into wealth-producing, biosphere-nurturing,
+      freedom-protecting protocols that enable humans to connect in
+      peer-to-peer, counterparty-to-counterparty, citizen-to-citizen,
+      human-to-human relationships.
+    </p>
+    <p>
+      Cultivate personal loyalty to human sovereignty and the protocols that
+      enable it.
+    </p>
 
-        <p>
-          VimbisoPay offers African entrepreneurs the tools they need to
-          effectively protect themselves from colonial dominance and local
-          corruption as we enter the century in which African growth becomes the
-          dynamic heart of the global economy.
-        </p>
-      </div>
-    </section>
+    <h2>Strategic Aim</h2>
+    <p>
+      Shape the pursuit of our purpose so as to amplify our spirit, inspiration,
+      and strength, and protect our moral, mental, and physical cohesion.
+      Isolate and solidify challengers and adversaries into fixed positions that
+      can be understood and integrated, or bypassed, as we build momentum
+      towards our purpose. Maintain fluidity and strategic initiative from a
+      place of ethical and moral strength.
+    </p>
+    <p>
+      Cocreate a global culture of universal sovereignty. Establish patterns
+      that prioritize what matters to humans at a grassroots level, applying
+      systemic moral pressure across a broad front, naturally exposing and
+      undermining adversaries of our purpose, and creating a protected moral
+      space from which to cultivate, enhance, and share our strength.
+    </p>
 
-    <!-- Transparency Section -->
-    <section class="full-width-centered transparency-section">
-      <picture class="section-background">
-        <source
-          srcset="
-            images/membership-2000w.webp 2000w,
-            images/membership-1200w.webp 1200w,
-            images/membership-600w.webp   600w
-          "
-          sizes="100vw"
-          type="image/webp"
-        />
-        <source
-          srcset="
-            images/membership-2000w.jpg 2000w,
-            images/membership-1200w.jpg 1200w,
-            images/membership-600w.jpg   600w
-          "
-          sizes="100vw"
-          type="image/jpeg"
-        />
-        <img
-          src="images/membership-1200w.jpg"
-          alt="VimbisoPay transparency background"
-          width="1200"
-          height="800"
-          loading="lazy"
-        />
-      </picture>
-      <div class="content">
-        <h2>Auditable Transparency</h2>
-        <p>
-          See source code for the
-          <a href="https://github.com/Great-Sun-Group/credex-core"
-            >credex-core API</a
-          >
-          and the
-          <a href="https://github.com/Great-Sun-Group/vimbiso-chatserver"
-            >vimbiso-chatserver client</a
-          >.
-        </p>
-      </div>
-    </section>
+    <h2>Strategy</h2>
+    <p>
+      Demonstrate what is possible. Live it. Share it. Protect it. Nurture it.
+      Celebrate it.
+    </p>
+    <p>
+      Efficient peer-to-peer economic relationships that build mutual wealth
+      independent of outside sovereigns. Entrepreneurial profit. The
+      accumulation, investment, and growth of capital. The gifting of wealth for
+      charity, culture, nature, education, art, sport, passion, beauty, love,
+      friendship, family, and everything that inspires generosity. Mutually
+      beneficial, cooperative, corporate, wealth-generating structures.
+      Innovative democratic protocols that enable equality of voice and
+      cultivate collective wisdom. Freedom, diversity, and self-determination as
+      the birthright of all humans.
+    </p>
 
-    <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const root = document.documentElement;
-        const hero = document.querySelector(".hero-section");
-        const heroHeight = hero.offsetHeight;
+    <h2>Grand Tactics</h2>
+    <p>
+      Orient on the essential, observe, and prepare. Align with reality. Engage
+      specific strategic opportunities with intent to transform and capacity to
+      succeed. Meet apparent attacks with openness and understanding, and
+      respond with clarity and commitment, moving into a position of strength.
+      No matter where we find ourselves, sincerely acting out of loyalty to our
+      purpose attracts allies and moves us towards the high ground.
+    </p>
+    <p>
+      Find resonance with every point of view in order to see deeply into what
+      is. All humans have the sovereign right to question, criticize, oppose,
+      and resist our agenda. Actively expressing this right is cause for
+      respect. We respect ourselves, our tribe, our comrades, our allies, our
+      counterparties, our observers, our critics, our adversaries, our enemies,
+      and those who don't give a shit. Gracious and humble in victory, in
+      defeat, and in ongoing relationship, our respect shows us the landscape of
+      what truly is.
+    </p>
 
-        window.addEventListener("scroll", () => {
-          const scrollPosition = window.scrollY;
-          const maxScroll = heroHeight / 2;
-          const opacity = Math.max(
-            0.85 - (scrollPosition / maxScroll) * 0.85,
-            0
-          );
-          root.style.setProperty("--hero-overlay-opacity", opacity);
-        });
-      });
-    </script>
+    <h2>Tactical Aim</h2>
+    <p>
+      Engage with integrity to initiate patterns that uplift situations towards
+      our purpose. Maintain the tactical initiative from a position of
+      operational strength. Expose and understand challenges.
+    </p>
+    <p>
+      Risk little to gain much. Risk much to gain everything. Know what matters
+      most, and protect it at all costs.
+    </p>
+    <p>
+      Protect sovereign humans. Protect our relationships to each other and to
+      our habitat. Weaponize true moral strength and brush away moralism,
+      greenwashing, and virtue-signalling. Expose, utilize, and distribute real
+      power.
+    </p>
+    <p>
+      Build real wealth for humans. Build sustainable multigenerational
+      prosperity. Support humans to participate in their chosen connections,
+      networks, relationships and structures.
+    </p>
+
+    <h2>Tactics</h2>
+    <p>
+      Establish and strengthen relationships and increase shared information,
+      emotions, and ideas. Understand the surface pain and the layered pain.
+      Demonstrate our ability to address crucial issues and overcome challenges.
+      Move fluidly into opportunities. Take what is offered. Add value with
+      empathy, clarity, commitment, and effectiveness. Be open and be decisive.
+    </p>
+    <p>
+      Establish, protect, and empower a digital ecosystem that enables simple,
+      transparent, secure relationships and lines of communication between
+      sovereign humans. Energize organic structures and processes that support
+      the ecosystem's growth and evolution towards stable symbiotic maturity.
+    </p>
   </body>
 </html>
