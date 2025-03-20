@@ -1,0 +1,107 @@
+/* Responsive Styles */
+
+@media (max-width: 768px) {
+  /* Base responsive adjustments */
+  body {
+    padding: 15px;
+  }
+  
+  h1 {
+    font-size: 2.5em;
+  }
+  
+  /* Layout responsive adjustments */
+  .main-logo {
+    max-width: 300px;
+  }
+
+  .secondary-logo {
+    max-width: 150px;
+  }
+  
+  /* Navigation responsive adjustments */
+  .mobile-menu-toggle {
+    display: flex;
+  }
+
+  .nav-container {
+    flex-wrap: wrap;
+  }
+
+  .nav-items {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    padding: 10px 0;
+  }
+
+  .nav-items.active {
+    display: flex;
+  }
+
+  .nav-items > li {
+    width: 100%;
+  }
+
+  .nav-items > li > a {
+    padding: 12px 15px;
+  }
+
+  .dropdown-menu {
+    position: static;
+    width: 100%;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: rgba(0, 0, 0, 0.2);
+    padding-left: 15px;
+  }
+
+  .dropdown-menu li a {
+    padding: 8px 15px 8px 30px;
+  }
+
+  .dropdown-menu li a:hover,
+  .dropdown-menu li a.active {
+    padding-left: 35px;
+  }
+  
+  /* Legacy menu responsive adjustments */
+  .categoryHeader {
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  .subcategoryHeader {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .itemsList {
+    padding-left: 25px;
+  }
+
+  .itemsList a {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  h1 {
+    font-size: 2em;
+  }
+  
+  .subtitle {
+    font-size: 1.4em;
+  }
+  
+  .main-logo {
+    max-width: 250px;
+  }
+  
+  .secondary-logo {
+    max-width: 120px;
+  }
+}

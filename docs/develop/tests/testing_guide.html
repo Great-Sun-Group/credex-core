@@ -7,14 +7,11 @@
     <link rel="stylesheet" href="../../style.css" />
   </head>
   <body>
-    <div id="menuButton" onclick="window.location.href='../../menu.html'">
-      <img src="../../images/logo.png" alt="Menu" class="menu-logo">
-      <span class="menu-text">MENU</span>
-    </div>
-
-    <div class="header-logo">
-      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
-    </div>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+    
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
     <h1>Credex API Testing Guide</h1>
 
     <h2>Test Architecture</h2>
@@ -441,5 +438,11 @@ describe("newOperation Endpoint Test", () => {
   });
 });</code></pre>
 
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+    
+    <!-- Template System JavaScript -->
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
   </body>
 </html>
