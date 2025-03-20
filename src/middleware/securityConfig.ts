@@ -42,7 +42,13 @@ export const applySecurityMiddleware = (app: Application) => {
     const corsOptions = {
       origin: "*", // Allow all origins
       methods: ["POST"],
-      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key", "x-dev-admin-key", "x-skip-rate-limit"],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "x-client-api-key",
+        "x-dev-admin-key",
+        "x-skip-rate-limit",
+      ],
       credentials: true,
       maxAge: 86400, // Cache preflight request results for 1 day (in seconds)
     };
@@ -51,7 +57,10 @@ export const applySecurityMiddleware = (app: Application) => {
   } else {
     // Production CORS configured for third-party access with reasonable limits
     const corsOptions = {
-      origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
+      origin: (
+        origin: string | undefined,
+        callback: (error: Error | null, allow?: boolean) => void
+      ) => {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) {
           callback(null, true);
@@ -60,22 +69,22 @@ export const applySecurityMiddleware = (app: Application) => {
 
         // Block high-risk origins
         const blockedPatterns = [
-          /^file:/,  // file protocol
-          /^data:/,  // data protocol
-          /^localhost/,  // localhost
-          /\d+\.\d+\.\d+\.\d+/  // IP addresses
+          /^file:/, // file protocol
+          /^data:/, // data protocol
+          /^localhost/, // localhost
+          /\d+\.\d+\.\d+\.\d+/, // IP addresses
         ];
 
-        if (blockedPatterns.some(pattern => pattern.test(origin))) {
+        if (blockedPatterns.some((pattern) => pattern.test(origin))) {
           logger.warn("Blocked high-risk origin", { origin });
-          callback(new Error('Not allowed by CORS'));
+          callback(new Error("Not allowed by CORS"));
           return;
         }
 
         // Require HTTPS in production
-        if (!origin.startsWith('https://')) {
+        if (!origin.startsWith("https://")) {
           logger.warn("Blocked non-HTTPS origin", { origin });
-          callback(new Error('HTTPS required'));
+          callback(new Error("HTTPS required"));
           return;
         }
 
@@ -83,7 +92,7 @@ export const applySecurityMiddleware = (app: Application) => {
         callback(null, true);
       },
       methods: ["POST"],
-      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key"],  // Remove dev headers in production
+      allowedHeaders: ["Content-Type", "Authorization", "x-client-api-key"], // Remove dev headers in production
       credentials: true,
       maxAge: 86400,
     };
@@ -97,34 +106,36 @@ export const applySecurityMiddleware = (app: Application) => {
     if (req.path.includes("/verify/requestOtp")) {
       if (!req.body || !req.body.purpose) {
         return res.status(400).json({
-          message: 'Purpose field is required',
+          message: "Purpose field is required",
           data: {
             action: {
               id: null,
-              type: 'ERROR_VALIDATION',
+              type: "ERROR_VALIDATION",
               timestamp: new Date().toISOString(),
               details: {
-                code: 'MISSING_FIELD',
-                reason: 'Purpose field is required'
-              }
-            }
-          }
+                code: "MISSING_FIELD",
+                reason: "Purpose field is required",
+              },
+            },
+          },
         });
       }
-      if (!['PASSWORD_RESET', 'PHONE_VERIFICATION'].includes(req.body.purpose)) {
+      if (
+        !["PASSWORD_RESET", "PHONE_VERIFICATION"].includes(req.body.purpose)
+      ) {
         return res.status(400).json({
-          message: 'Invalid purpose value',
+          message: "Invalid purpose value",
           data: {
             action: {
               id: null,
-              type: 'ERROR_VALIDATION',
+              type: "ERROR_VALIDATION",
               timestamp: new Date().toISOString(),
               details: {
-                code: 'INVALID_VALUE',
-                reason: 'Invalid purpose value'
-              }
-            }
-          }
+                code: "INVALID_VALUE",
+                reason: "Invalid purpose value",
+              },
+            },
+          },
         });
       }
     }
@@ -133,34 +144,36 @@ export const applySecurityMiddleware = (app: Application) => {
     if (req.path.includes("/verify/verifyOtp")) {
       if (!req.body || !req.body.purpose) {
         return res.status(400).json({
-          message: 'Purpose field is required',
+          message: "Purpose field is required",
           data: {
             action: {
               id: null,
-              type: 'ERROR_VALIDATION',
+              type: "ERROR_VALIDATION",
               timestamp: new Date().toISOString(),
               details: {
-                code: 'MISSING_FIELD',
-                reason: 'Purpose field is required'
-              }
-            }
-          }
+                code: "MISSING_FIELD",
+                reason: "Purpose field is required",
+              },
+            },
+          },
         });
       }
-      if (!['PASSWORD_RESET', 'PHONE_VERIFICATION'].includes(req.body.purpose)) {
+      if (
+        !["PASSWORD_RESET", "PHONE_VERIFICATION"].includes(req.body.purpose)
+      ) {
         return res.status(400).json({
-          message: 'Invalid purpose value',
+          message: "Invalid purpose value",
           data: {
             action: {
               id: null,
-              type: 'ERROR_VALIDATION',
+              type: "ERROR_VALIDATION",
               timestamp: new Date().toISOString(),
               details: {
-                code: 'INVALID_VALUE',
-                reason: 'Invalid purpose value'
-              }
-            }
-          }
+                code: "INVALID_VALUE",
+                reason: "Invalid purpose value",
+              },
+            },
+          },
         });
       }
     }
@@ -171,11 +184,11 @@ export const applySecurityMiddleware = (app: Application) => {
   // Apply rate limiting with bypass check
   app.use((req: Request, res: Response, next: NextFunction) => {
     // Check for rate limiter bypass header
-    if (req.headers['x-skip-rate-limit']) {
+    if (req.headers["x-skip-rate-limit"]) {
       logger.debug("Rate limiter bypass attempt detected", {
         path: req.path,
         method: req.method,
-        ip: req.ip
+        ip: req.ip,
       });
       return verifyRateLimiterBypass(req, res, next);
     }
@@ -186,12 +199,14 @@ export const applySecurityMiddleware = (app: Application) => {
 
   // Apply client API key verification for keyholes after validation
   app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path === "/login" || 
-        req.path === "/v2/login" || 
-        req.path.endsWith("/onboardMember") || 
-        req.path === "/setInitialPassword" ||
-        req.path.includes("/verify/") ||
-        req.path === "/resetPassword") {
+    if (
+      req.path === "/login" ||
+      req.path === "/v2/login" ||
+      req.path.endsWith("/onboardMember") ||
+      req.path === "/setInitialPassword" ||
+      req.path.includes("/verify/") ||
+      req.path === "/resetPassword"
+    ) {
       return verifyClientApiKey(req, res, next);
     }
     // Apply dev admin key verification for devadmin routes
@@ -237,13 +252,17 @@ export const applySecurityMiddleware = (app: Application) => {
 export const applyAuthMiddleware = (app: Application) => {
   app.use((req, res, next) => {
     if (
+      // Skip auth for docs directory
+      req.path === "/" ||
+      req.path.startsWith("/docs") ||
       // Keyholes in the auth layer where we don't apply the middleware
       req.path === "/login" ||
       req.path === "/v2/login" ||
       req.path.endsWith("/onboardMember") ||
       req.path === "/setInitialPassword" ||
       req.path.includes("/devadmin/") || // routes are not published in prod
-      (req.path.includes("/verify/") && (req.body?.purpose === "PASSWORD_RESET" || req.method === "OPTIONS")) ||
+      (req.path.includes("/verify/") &&
+        (req.body?.purpose === "PASSWORD_RESET" || req.method === "OPTIONS")) ||
       req.path === "/resetPassword"
     ) {
       logger.debug("[SC3] Skipping auth middleware for path", {
