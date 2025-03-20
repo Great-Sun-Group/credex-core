@@ -46,8 +46,9 @@ async function initializeApp() {
     // Apply jsonParser globally first
     app.use(jsonParser);
 
-    // Serve static files from docs directory first
+    // Serve static files from docs directory at both / and /docs paths
     app.use(express.static("docs"));
+    app.use("/docs", express.static("docs"));
 
     // Serve docs/index.html at root
     app.get("/", (req: Request, res: Response) => {
