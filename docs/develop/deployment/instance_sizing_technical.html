@@ -2,15 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Credex Instance Sizing - Technical Specifications</title>
     <link rel="stylesheet" href="../../style.css" />
   </head>
   <body>
-    <div id="menuButton" onclick="window.location.href='../../menu.html'">
-      <img src="../../images/logo.png" alt="Menu" class="menu-logo">
-      <span class="menu-text">MENU</span>
-    </div>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">
+      Credex Instance Sizing - Technical Specifications
+    </h1>
 
     <div class="container">
       <h1>Credex Instance Sizing - Technical Specifications</h1>
@@ -208,5 +217,16 @@
         </li>
       </ul>
     </div>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for deployment subdirectory
+      window.templateLevels = 2;
+    </script>
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
   </body>
 </html>

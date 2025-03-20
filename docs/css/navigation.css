@@ -1,0 +1,151 @@
+/* Navigation Styles */
+
+/* Main Navigation */
+.main-nav {
+  position: relative;
+  margin-bottom: 40px;
+  z-index: 1000;
+}
+
+.nav-container {
+  display: flex;
+  align-items: center;
+  background: rgba(6, 21, 31, 0.95);
+  border-radius: 5px;
+  border: 1px solid #04a0b2;
+  padding: 0 15px;
+}
+
+.nav-items {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  justify-content: space-evenly;
+}
+
+.nav-items > li {
+  position: relative;
+  text-align: center;
+  padding: 0 10px;
+}
+
+.nav-items > li > a {
+  display: block;
+  padding: 15px;
+  color: #fbb016;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.nav-items > li > a:hover,
+.nav-items > li > a.active {
+  color: #04a0b2;
+}
+
+/* Dropdown Styles */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-toggle::after {
+  content: "▼";
+  display: inline-block;
+  margin-left: 5px;
+  font-size: 0.7em;
+  transition: transform 0.3s ease;
+}
+
+.dropdown.active .dropdown-toggle::after {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 250px;
+  background: rgba(6, 21, 31, 0.95);
+  border: 1px solid #04a0b2;
+  border-radius: 0 0 5px 5px;
+  padding: 10px 0;
+  margin: 0;
+  list-style: none;
+  display: none;
+  z-index: 1001;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+.dropdown.active .dropdown-menu {
+  display: block;
+}
+
+.dropdown-menu li a {
+  display: block;
+  padding: 8px 15px;
+  color: #04a0b2;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.dropdown-menu li a:hover,
+.dropdown-menu li a.active {
+  color: #fbb016;
+  background: rgba(4, 160, 178, 0.1);
+  padding-left: 20px;
+}
+
+.dropdown-subheader {
+  padding: 8px 15px;
+  margin-top: 10px;
+  color: #fbb016;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(4, 160, 178, 0.3);
+  background-color: rgba(4, 160, 178, 0.1);
+  text-transform: uppercase;
+  font-size: 0.9em;
+  letter-spacing: 0.5px;
+}
+
+/* Add indentation for items under a subheader */
+.dropdown-subheader + li a {
+  padding-left: 25px;
+}
+
+.dropdown-subheader + li a:hover {
+  padding-left: 30px;
+}
+
+/* Mobile Menu Toggle */
+.mobile-menu-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 30px;
+  height: 21px;
+  cursor: pointer;
+  z-index: 1002;
+}
+
+.mobile-menu-toggle span {
+  display: block;
+  height: 3px;
+  width: 100%;
+  background-color: #fbb016;
+  border-radius: 3px;
+  transition: all 0.3s ease;
+}
+
+.mobile-menu-toggle.active span:nth-child(1) {
+  transform: translateY(9px) rotate(45deg);
+}
+
+.mobile-menu-toggle.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.mobile-menu-toggle.active span:nth-child(3) {
+  transform: translateY(-9px) rotate(-45deg);
+}

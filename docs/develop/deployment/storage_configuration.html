@@ -2,23 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Storage Configuration Documentation</title>
     <link rel="stylesheet" href="../../style.css" />
   </head>
   <body>
-    <div id="menuButton" onclick="window.location.href='../../menu.html'">
-      <img src="../../images/logo.png" alt="Menu" class="menu-logo" />
-      <span class="menu-text">MENU</span>
-    </div>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
 
-    <div class="header-logo">
-      <img
-        src="../../images/logo.png"
-        alt="Credex Logo"
-        class="secondary-logo"
-      />
-    </div>
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">Storage Configuration Documentation</h1>
+
     <div class="container">
       <h1>Storage Configuration Documentation</h1>
 
@@ -214,5 +214,16 @@ aws s3api head-object --bucket credexbuckets2-verifybucket-backups-${ENV} --key 
 # Verify backup bucket
 aws s3api get-bucket-versioning --bucket credexbuckets2-verifybucket-backups-${ENV}</code></pre>
     </div>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for deployment subdirectory
+      window.templateLevels = 2;
+    </script>
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
   </body>
 </html>

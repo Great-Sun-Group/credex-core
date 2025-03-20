@@ -1,402 +1,464 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Security and Authentication Overview</title>
     <link rel="stylesheet" href="../style.css" />
   </head>
   <body>
-    <div id="menuButton" onclick="window.location.href='../menu.html'">
-      <img src="../images/logo.png" alt="Menu" class="menu-logo">
-      <span class="menu-text">MENU</span>
-    </div>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
 
-    <div class="header-logo">
-      <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
-    </div>
-    <h1>Security and Authentication Overview</h1>
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
 
-    <p>This document provides a comprehensive overview of the core security infrastructure and mechanisms implemented in our application. For business-specific security features related to Credex transactions, secured authorizations, and tier-based limits, please refer to the <a href="business_security.html">Business Security Features</a>.</p>
+    <!-- Page Content -->
+    <h1 class="chapter-title">Security and Authentication Overview</h1>
+
+    <p>
+      This document provides a comprehensive overview of the core security
+      infrastructure and mechanisms implemented in our application. For
+      business-specific security features related to Credex transactions,
+      secured authorizations, and tier-based limits, please refer to the
+      <a href="business_security.html">Business Security Features</a>.
+    </p>
 
     <h2>Authentication System</h2>
 
     <h3>JWT Authentication</h3>
-    <p>Our application uses JSON Web Tokens (JWT) for authentication, with several security measures to ensure token integrity and proper lifecycle management:</p>
+    <p>
+      Our application uses JSON Web Tokens (JWT) for authentication, with
+      several security measures to ensure token integrity and proper lifecycle
+      management:
+    </p>
 
     <h4>Token Generation and Structure</h4>
     <ul>
-        <li>Tokens contain:
-            <ul>
-                <li>memberID - Unique identifier for the authenticated member</li>
-                <li>iat (Issued At) - Token creation timestamp</li>
-                <li>lastActivity - Timestamp of last valid request</li>
-                <li>absoluteExpiry - Hard expiration timestamp</li>
-            </ul>
-        </li>
-        <li>Tokens are signed using JWT_SECRET environment variable</li>
-        <li>Token verification includes signature and expiration checks</li>
+      <li>
+        Tokens contain:
+        <ul>
+          <li>memberID - Unique identifier for the authenticated member</li>
+          <li>iat (Issued At) - Token creation timestamp</li>
+          <li>lastActivity - Timestamp of last valid request</li>
+          <li>absoluteExpiry - Hard expiration timestamp</li>
+        </ul>
+      </li>
+      <li>Tokens are signed using JWT_SECRET environment variable</li>
+      <li>Token verification includes signature and expiration checks</li>
     </ul>
 
     <h4>Token Lifecycle</h4>
     <ul>
-        <li>Activity-based expiration:
-            <ul>
-                <li>Tokens expire after 5 minutes of inactivity</li>
-                <li>Each valid request refreshes the activity timer</li>
-                <li>Prevents token reuse after periods of inactivity</li>
-            </ul>
-        </li>
-        <li>Absolute expiration:
-            <ul>
-                <li>Maximum token age of 6 hours</li>
-                <li>Not extended by activity or refresh</li>
-                <li>Forces periodic re-authentication</li>
-            </ul>
-        </li>
-        <li>Token refresh:
-            <ul>
-                <li>New token issued with each valid request</li>
-                <li>Maintains original absolute expiry time</li>
-                <li>Returned in Authorization header</li>
-            </ul>
-        </li>
+      <li>
+        Activity-based expiration:
+        <ul>
+          <li>Tokens expire after 5 minutes of inactivity</li>
+          <li>Each valid request refreshes the activity timer</li>
+          <li>Prevents token reuse after periods of inactivity</li>
+        </ul>
+      </li>
+      <li>
+        Absolute expiration:
+        <ul>
+          <li>Maximum token age of 6 hours</li>
+          <li>Not extended by activity or refresh</li>
+          <li>Forces periodic re-authentication</li>
+        </ul>
+      </li>
+      <li>
+        Token refresh:
+        <ul>
+          <li>New token issued with each valid request</li>
+          <li>Maintains original absolute expiry time</li>
+          <li>Returned in Authorization header</li>
+        </ul>
+      </li>
     </ul>
 
     <h4>Member Verification</h4>
     <ul>
-        <li>Database verification on every request:
-            <ul>
-                <li>Confirms member still exists</li>
-                <li>Validates member status</li>
-                <li>Attaches current member properties to request</li>
-            </ul>
-        </li>
-        <li>Failed verification scenarios:
-            <ul>
-                <li>Member not found - Token invalidated</li>
-                <li>Invalid token signature - 401 response</li>
-                <li>Token expired - 401 response with reason</li>
-            </ul>
-        </li>
+      <li>
+        Database verification on every request:
+        <ul>
+          <li>Confirms member still exists</li>
+          <li>Validates member status</li>
+          <li>Attaches current member properties to request</li>
+        </ul>
+      </li>
+      <li>
+        Failed verification scenarios:
+        <ul>
+          <li>Member not found - Token invalidated</li>
+          <li>Invalid token signature - 401 response</li>
+          <li>Token expired - 401 response with reason</li>
+        </ul>
+      </li>
     </ul>
 
     <h3>Client API Key Authentication</h3>
-    <p>Used for keyhole endpoints that need to operate without JWT authentication:</p>
+    <p>
+      Used for keyhole endpoints that need to operate without JWT
+      authentication:
+    </p>
 
     <ul>
-        <li>Implementation:
-            <ul>
-                <li>Required header: x-client-api-key</li>
-                <li>Matches against CLIENT_API_KEY environment variable</li>
-                <li>Used for /login and /onboardMember routes</li>
-            </ul>
-        </li>
-        <li>Security measures:
-            <ul>
-                <li>Key verification on every request</li>
-                <li>500 error if environment variable not set</li>
-                <li>401 response for invalid/missing keys</li>
-                <li>Detailed security logging</li>
-            </ul>
-        </li>
+      <li>
+        Implementation:
+        <ul>
+          <li>Required header: x-client-api-key</li>
+          <li>Matches against CLIENT_API_KEY environment variable</li>
+          <li>Used for /login and /onboardMember routes</li>
+        </ul>
+      </li>
+      <li>
+        Security measures:
+        <ul>
+          <li>Key verification on every request</li>
+          <li>500 error if environment variable not set</li>
+          <li>401 response for invalid/missing keys</li>
+          <li>Detailed security logging</li>
+        </ul>
+      </li>
     </ul>
 
     <h2>Security Middleware Stack</h2>
 
     <h3>Request Processing Pipeline</h3>
     <ol>
-        <li>Helmet Security Headers</li>
-        <li>CORS Configuration</li>
-        <li>Rate Limiting</li>
-        <li>Authentication</li>
-        <li>Request Validation</li>
-        <li>Error Handling</li>
+      <li>Helmet Security Headers</li>
+      <li>CORS Configuration</li>
+      <li>Rate Limiting</li>
+      <li>Authentication</li>
+      <li>Request Validation</li>
+      <li>Error Handling</li>
     </ol>
 
     <h3>Helmet Security Headers</h3>
     <p>Comprehensive HTTP header security through Helmet middleware:</p>
 
     <ul>
-        <li>Content Security Policy (CSP):
-            <ul>
-                <li>defaultSrc: 'self' - Restrict resource loading to same origin</li>
-                <li>scriptSrc: 'self', 'unsafe-inline' - Control script sources</li>
-                <li>styleSrc: 'self', 'unsafe-inline' - Control style sources</li>
-                <li>imgSrc: 'self', data: - Control image sources</li>
-                <li>fontSrc: 'self' - Control font loading</li>
-                <li>frameAncestors: 'self' - Prevent clickjacking</li>
-                <li>formAction: 'self' - Control form submissions</li>
-            </ul>
-        </li>
-        <li>HTTP Strict Transport Security (HSTS):
-            <ul>
-                <li>maxAge: 31536000 (1 year)</li>
-                <li>includeSubDomains: true</li>
-                <li>preload: true</li>
-            </ul>
-        </li>
-        <li>Additional Headers:
-            <ul>
-                <li>Referrer-Policy: strict-origin-when-cross-origin</li>
-                <li>X-Content-Type-Options: nosniff</li>
-                <li>X-Frame-Options: SAMEORIGIN</li>
-                <li>X-XSS-Protection: 1; mode=block</li>
-            </ul>
-        </li>
+      <li>
+        Content Security Policy (CSP):
+        <ul>
+          <li>defaultSrc: 'self' - Restrict resource loading to same origin</li>
+          <li>scriptSrc: 'self', 'unsafe-inline' - Control script sources</li>
+          <li>styleSrc: 'self', 'unsafe-inline' - Control style sources</li>
+          <li>imgSrc: 'self', data: - Control image sources</li>
+          <li>fontSrc: 'self' - Control font loading</li>
+          <li>frameAncestors: 'self' - Prevent clickjacking</li>
+          <li>formAction: 'self' - Control form submissions</li>
+        </ul>
+      </li>
+      <li>
+        HTTP Strict Transport Security (HSTS):
+        <ul>
+          <li>maxAge: 31536000 (1 year)</li>
+          <li>includeSubDomains: true</li>
+          <li>preload: true</li>
+        </ul>
+      </li>
+      <li>
+        Additional Headers:
+        <ul>
+          <li>Referrer-Policy: strict-origin-when-cross-origin</li>
+          <li>X-Content-Type-Options: nosniff</li>
+          <li>X-Frame-Options: SAMEORIGIN</li>
+          <li>X-XSS-Protection: 1; mode=block</li>
+        </ul>
+      </li>
     </ul>
 
     <h3>CORS Configuration</h3>
 
     <h4>Development Environment</h4>
     <ul>
-        <li>Permissive configuration:
-            <ul>
-                <li>origin: '*' - Allow all origins</li>
-                <li>methods: POST only</li>
-                <li>allowedHeaders: Content-Type, Authorization, x-client-api-key, x-dev-admin-key, x-skip-rate-limit</li>
-                <li>credentials: true - Allow credentials</li>
-                <li>maxAge: 86400 - Cache preflight for 1 day</li>
-            </ul>
-        </li>
+      <li>
+        Permissive configuration:
+        <ul>
+          <li>origin: '*' - Allow all origins</li>
+          <li>methods: POST only</li>
+          <li>
+            allowedHeaders: Content-Type, Authorization, x-client-api-key,
+            x-dev-admin-key, x-skip-rate-limit
+          </li>
+          <li>credentials: true - Allow credentials</li>
+          <li>maxAge: 86400 - Cache preflight for 1 day</li>
+        </ul>
+      </li>
     </ul>
 
     <h4>Production Environment</h4>
     <ul>
-        <li>Strict security rules:
-            <ul>
-                <li>HTTPS required for all origins</li>
-                <li>Blocked protocols: file://, data://</li>
-                <li>Blocked sources: localhost, IP addresses</li>
-                <li>Origin validation with security checks</li>
-                <li>Same methods and headers as development</li>
-                <li>Credentials allowed with proper origin checks</li>
-            </ul>
-        </li>
+      <li>
+        Strict security rules:
+        <ul>
+          <li>HTTPS required for all origins</li>
+          <li>Blocked protocols: file://, data://</li>
+          <li>Blocked sources: localhost, IP addresses</li>
+          <li>Origin validation with security checks</li>
+          <li>Same methods and headers as development</li>
+          <li>Credentials allowed with proper origin checks</li>
+        </ul>
+      </li>
     </ul>
 
     <h3>Rate Limiting</h3>
 
     <h4>Standard Rate Limiting</h4>
     <ul>
-        <li>Configuration:
-            <ul>
-                <li>Window: 60 seconds (rolling)</li>
-                <li>Limit: 30 requests per window</li>
-                <li>Unique key: member ID or IP address</li>
-            </ul>
-        </li>
-        <li>Key Generation:
-            <ul>
-                <li>Authenticated requests: Use member ID</li>
-                <li>Unauthenticated requests: Use IP address</li>
-                <li>Fallback: Use socket remote address</li>
-            </ul>
-        </li>
+      <li>
+        Configuration:
+        <ul>
+          <li>Window: 60 seconds (rolling)</li>
+          <li>Limit: 30 requests per window</li>
+          <li>Unique key: member ID or IP address</li>
+        </ul>
+      </li>
+      <li>
+        Key Generation:
+        <ul>
+          <li>Authenticated requests: Use member ID</li>
+          <li>Unauthenticated requests: Use IP address</li>
+          <li>Fallback: Use socket remote address</li>
+        </ul>
+      </li>
     </ul>
 
     <h4>Rate Limit Bypass</h4>
     <ul>
-        <li>Dedicated bypass middleware:
-            <ul>
-                <li>Separate verification logic</li>
-                <li>Consistent error handling</li>
-                <li>Comprehensive logging</li>
-            </ul>
-        </li>
-        <li>Bypass mechanism:
-            <ul>
-                <li>Requires SKIP_RATE_LIMITER_KEY environment variable</li>
-                <li>Request must include x-skip-rate-limit header</li>
-                <li>Header value must match environment variable</li>
-                <li>500 error if environment variable not set</li>
-                <li>401 error for invalid/missing bypass key</li>
-            </ul>
-        </li>
-        <li>Security measures:
-            <ul>
-                <li>All bypass attempts are logged</li>
-                <li>Debug logging for successful bypasses</li>
-                <li>Error logging for failed attempts</li>
-                <li>Request context included in logs</li>
-            </ul>
-        </li>
+      <li>
+        Dedicated bypass middleware:
+        <ul>
+          <li>Separate verification logic</li>
+          <li>Consistent error handling</li>
+          <li>Comprehensive logging</li>
+        </ul>
+      </li>
+      <li>
+        Bypass mechanism:
+        <ul>
+          <li>Requires SKIP_RATE_LIMITER_KEY environment variable</li>
+          <li>Request must include x-skip-rate-limit header</li>
+          <li>Header value must match environment variable</li>
+          <li>500 error if environment variable not set</li>
+          <li>401 error for invalid/missing bypass key</li>
+        </ul>
+      </li>
+      <li>
+        Security measures:
+        <ul>
+          <li>All bypass attempts are logged</li>
+          <li>Debug logging for successful bypasses</li>
+          <li>Error logging for failed attempts</li>
+          <li>Request context included in logs</li>
+        </ul>
+      </li>
     </ul>
 
     <h3>Error Handling</h3>
     <ul>
-        <li>Centralized error handling:
-            <ul>
-                <li>Consistent error response format</li>
-                <li>Security-aware error messages</li>
-                <li>Detailed internal logging</li>
-                <li>Sanitized client responses</li>
-            </ul>
-        </li>
-        <li>Security-related errors:
-            <ul>
-                <li>Authentication failures (401)</li>
-                <li>Authorization failures (403)</li>
-                <li>Rate limit exceeded (429)</li>
-                <li>Validation failures (400)</li>
-                <li>Server errors (500)</li>
-            </ul>
-        </li>
-        <li>Error logging:
-            <ul>
-                <li>Request context (path, method, IP)</li>
-                <li>Error type and message</li>
-                <li>Stack traces (internal only)</li>
-                <li>User/member context when available</li>
-            </ul>
-        </li>
+      <li>
+        Centralized error handling:
+        <ul>
+          <li>Consistent error response format</li>
+          <li>Security-aware error messages</li>
+          <li>Detailed internal logging</li>
+          <li>Sanitized client responses</li>
+        </ul>
+      </li>
+      <li>
+        Security-related errors:
+        <ul>
+          <li>Authentication failures (401)</li>
+          <li>Authorization failures (403)</li>
+          <li>Rate limit exceeded (429)</li>
+          <li>Validation failures (400)</li>
+          <li>Server errors (500)</li>
+        </ul>
+      </li>
+      <li>
+        Error logging:
+        <ul>
+          <li>Request context (path, method, IP)</li>
+          <li>Error type and message</li>
+          <li>Stack traces (internal only)</li>
+          <li>User/member context when available</li>
+        </ul>
+      </li>
     </ul>
 
     <h2>Development Administration</h2>
     <p>Special routes for development environments with additional security:</p>
 
     <ul>
-        <li>Security measures:
-            <ul>
-                <li>Routes not published in production</li>
-                <li>Requires x-dev-admin-key header</li>
-                <li>Separate authentication mechanism</li>
-                <li>Enhanced logging of all operations</li>
-            </ul>
-        </li>
-        <li>Available operations:
-            <ul>
-                <li>Database management</li>
-                <li>System diagnostics</li>
-                <li>Test data operations</li>
-            </ul>
-        </li>
+      <li>
+        Security measures:
+        <ul>
+          <li>Routes not published in production</li>
+          <li>Requires x-dev-admin-key header</li>
+          <li>Separate authentication mechanism</li>
+          <li>Enhanced logging of all operations</li>
+        </ul>
+      </li>
+      <li>
+        Available operations:
+        <ul>
+          <li>Database management</li>
+          <li>System diagnostics</li>
+          <li>Test data operations</li>
+        </ul>
+      </li>
     </ul>
 
     <h2>Implementation Files</h2>
 
     <h3>Core Authentication</h3>
     <ul>
-        <li><code>config/authenticate.ts</code>
-            <ul>
-                <li>JWT token generation and verification</li>
-                <li>Token lifecycle management</li>
-                <li>Member verification logic</li>
-            </ul>
-        </li>
-        <li><code>src/middleware/authMiddleware.ts</code>
-            <ul>
-                <li>Authentication middleware</li>
-                <li>Request handling</li>
-                <li>Error processing</li>
-            </ul>
-        </li>
+      <li>
+        <code>config/authenticate.ts</code>
+        <ul>
+          <li>JWT token generation and verification</li>
+          <li>Token lifecycle management</li>
+          <li>Member verification logic</li>
+        </ul>
+      </li>
+      <li>
+        <code>src/middleware/authMiddleware.ts</code>
+        <ul>
+          <li>Authentication middleware</li>
+          <li>Request handling</li>
+          <li>Error processing</li>
+        </ul>
+      </li>
     </ul>
 
     <h3>Security Middleware</h3>
     <ul>
-        <li><code>src/middleware/securityConfig.ts</code>
-            <ul>
-                <li>Security middleware configuration</li>
-                <li>Helmet setup</li>
-                <li>CORS configuration</li>
-            </ul>
-        </li>
-        <li><code>src/middleware/rateLimiter.ts</code>
-            <ul>
-                <li>Core rate limiting logic</li>
-                <li>Request tracking</li>
-                <li>Limit enforcement</li>
-            </ul>
-        </li>
-        <li><code>src/middleware/rateLimiterBypass.ts</code>
-            <ul>
-                <li>Rate limit bypass verification</li>
-                <li>Error handling</li>
-                <li>Security logging</li>
-            </ul>
-        </li>
-        <li><code>src/middleware/devAdminAuth.ts</code>
-            <ul>
-                <li>Dev admin key verification</li>
-                <li>Error handling</li>
-                <li>Security logging</li>
-            </ul>
-        </li>
-        <li><code>src/middleware/errorHandler.ts</code>
-            <ul>
-                <li>Error handling middleware</li>
-                <li>Error response formatting</li>
-                <li>Security logging</li>
-            </ul>
-        </li>
+      <li>
+        <code>src/middleware/securityConfig.ts</code>
+        <ul>
+          <li>Security middleware configuration</li>
+          <li>Helmet setup</li>
+          <li>CORS configuration</li>
+        </ul>
+      </li>
+      <li>
+        <code>src/middleware/rateLimiter.ts</code>
+        <ul>
+          <li>Core rate limiting logic</li>
+          <li>Request tracking</li>
+          <li>Limit enforcement</li>
+        </ul>
+      </li>
+      <li>
+        <code>src/middleware/rateLimiterBypass.ts</code>
+        <ul>
+          <li>Rate limit bypass verification</li>
+          <li>Error handling</li>
+          <li>Security logging</li>
+        </ul>
+      </li>
+      <li>
+        <code>src/middleware/devAdminAuth.ts</code>
+        <ul>
+          <li>Dev admin key verification</li>
+          <li>Error handling</li>
+          <li>Security logging</li>
+        </ul>
+      </li>
+      <li>
+        <code>src/middleware/errorHandler.ts</code>
+        <ul>
+          <li>Error handling middleware</li>
+          <li>Error response formatting</li>
+          <li>Security logging</li>
+        </ul>
+      </li>
     </ul>
 
     <h3>Authorization</h3>
     <ul>
-        <li><code>src/middleware/adminAuth.ts</code>
-            <ul>
-                <li>Admin level authorization</li>
-                <li>Permission verification</li>
-            </ul>
-        </li>
-        <li><code>src/middleware/clientApiKeyAuth.ts</code>
-            <ul>
-                <li>API key verification</li>
-                <li>Keyhole endpoint security</li>
-            </ul>
-        </li>
+      <li>
+        <code>src/middleware/adminAuth.ts</code>
+        <ul>
+          <li>Admin level authorization</li>
+          <li>Permission verification</li>
+        </ul>
+      </li>
+      <li>
+        <code>src/middleware/clientApiKeyAuth.ts</code>
+        <ul>
+          <li>API key verification</li>
+          <li>Keyhole endpoint security</li>
+        </ul>
+      </li>
     </ul>
 
     <h3>Utilities</h3>
     <ul>
-        <li><code>src/utils/inputSanitizer.ts</code>
-            <ul>
-                <li>Input sanitization</li>
-                <li>XSS prevention</li>
-            </ul>
-        </li>
-        <li><code>src/utils/errorUtils.ts</code>
-            <ul>
-                <li>Error handling utilities</li>
-                <li>Error type definitions</li>
-            </ul>
-        </li>
+      <li>
+        <code>src/utils/inputSanitizer.ts</code>
+        <ul>
+          <li>Input sanitization</li>
+          <li>XSS prevention</li>
+        </ul>
+      </li>
+      <li>
+        <code>src/utils/errorUtils.ts</code>
+        <ul>
+          <li>Error handling utilities</li>
+          <li>Error type definitions</li>
+        </ul>
+      </li>
     </ul>
 
     <h2>Environment Variables</h2>
     <p>Critical security-related environment variables:</p>
 
     <ul>
-        <li><code>JWT_SECRET</code>
-            <ul>
-                <li>Required for JWT signing/verification</li>
-                <li>Must be strong and unique</li>
-                <li>Different value per environment</li>
-            </ul>
-        </li>
-        <li><code>CLIENT_API_KEY</code>
-            <ul>
-                <li>Required for keyhole endpoints</li>
-                <li>Used for client authentication</li>
-                <li>Must be securely distributed</li>
-            </ul>
-        </li>
-        <li><code>SKIP_RATE_LIMITER_KEY</code>
-            <ul>
-                <li>Optional rate limit bypass key</li>
-                <li>Should be used carefully</li>
-                <li>All usage is logged</li>
-            </ul>
-        </li>
-        <li><code>DEV_ADMIN_KEY</code>
-            <ul>
-                <li>Required for dev admin routes</li>
-                <li>Not used in production</li>
-                <li>All usage is logged</li>
-            </ul>
-        </li>
+      <li>
+        <code>JWT_SECRET</code>
+        <ul>
+          <li>Required for JWT signing/verification</li>
+          <li>Must be strong and unique</li>
+          <li>Different value per environment</li>
+        </ul>
+      </li>
+      <li>
+        <code>CLIENT_API_KEY</code>
+        <ul>
+          <li>Required for keyhole endpoints</li>
+          <li>Used for client authentication</li>
+          <li>Must be securely distributed</li>
+        </ul>
+      </li>
+      <li>
+        <code>SKIP_RATE_LIMITER_KEY</code>
+        <ul>
+          <li>Optional rate limit bypass key</li>
+          <li>Should be used carefully</li>
+          <li>All usage is logged</li>
+        </ul>
+      </li>
+      <li>
+        <code>DEV_ADMIN_KEY</code>
+        <ul>
+          <li>Required for dev admin routes</li>
+          <li>Not used in production</li>
+          <li>All usage is logged</li>
+        </ul>
+      </li>
     </ul>
 
-</body>
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script src="../js/template.js"></script>
+    <script src="../js/dropdown.js"></script>
+  </body>
 </html>
