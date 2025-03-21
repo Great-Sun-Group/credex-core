@@ -10,6 +10,8 @@ import DevAdminRoutes from "./api/DevAdmin/routes";
 import NotificationRoutes from "./api/Notifications";
 import InvoiceRoutes from "./api/Invoice/routes";
 import AssetMarkerRoutes from "./api/AssetMarker/routes";
+import appRoutes from "./api/App/routes/appRoutes";
+import appAdminRoutes from "./api/App/routes/appAdminRoutes";
 import logger, {
   addRequestId,
   expressLogger,
@@ -94,9 +96,9 @@ async function initializeApp() {
     app.use(CredexRoutes());
     app.use(AdminRoutes());
     app.use(RecurringRoutes());
-    app.use(InvoiceRoutes());
-    app.use(AssetMarkerRoutes());
-    app.use("/api", NotificationRoutes);
+    app.use('/api', NotificationRoutes);
+    app.use('/api/app', appRoutes());
+    app.use('/api/admin', appAdminRoutes());
     logger.info("Route handlers applied for production modules");
 
     // Apply route handlers for dev-only routes

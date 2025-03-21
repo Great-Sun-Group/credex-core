@@ -8523,6 +8523,484 @@
         }
       }
     },
+    "/api/admin/app-versions": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Create a new app version",
+        "description": "Creates a new app version",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "appId",
+                  "platform",
+                  "version",
+                  "minRequiredVersion",
+                  "updateUrl",
+                  "fileSizeBytes",
+                  "updatePriority",
+                  "updateType"
+                ],
+                "properties": {
+                  "appId": {
+                    "type": "string",
+                    "description": "App ID (e.g., com.vimbisopay.app)"
+                  },
+                  "platform": {
+                    "type": "string",
+                    "enum": [
+                      "android",
+                      "ios"
+                    ],
+                    "description": "Platform (android or ios)"
+                  },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^\\d+\\.\\d+\\.\\d+(\\+\\d+)?$",
+                    "description": "Version (e.g., 1.0.0 or 1.0.0+33)"
+                  },
+                  "minRequiredVersion": {
+                    "type": "string",
+                    "pattern": "^\\d+\\.\\d+\\.\\d+(\\+\\d+)?$",
+                    "description": "Minimum required version (e.g., 1.0.0 or 1.0.0+33)"
+                  },
+                  "updateUrl": {
+                    "type": "string",
+                    "description": "URL to download the update"
+                  },
+                  "fileSizeBytes": {
+                    "type": "number",
+                    "description": "Size of the update file in bytes"
+                  },
+                  "releaseNotes": {
+                    "type": "string",
+                    "description": "Notes about the update"
+                  },
+                  "releaseDate": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Date the update was released (ISO 8601 format)"
+                  },
+                  "updatePriority": {
+                    "type": "string",
+                    "enum": [
+                      "low",
+                      "medium",
+                      "high",
+                      "critical"
+                    ],
+                    "description": "Priority of the update"
+                  },
+                  "updateType": {
+                    "type": "string",
+                    "enum": [
+                      "patch",
+                      "minor",
+                      "major"
+                    ],
+                    "description": "Type of update"
+                  },
+                  "active": {
+                    "type": "boolean",
+                    "description": "Whether the version is active"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "App version created successfully"
+          }
+        }
+      }
+    },
+    "/api/admin/app-versions/{id}": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Get an app version",
+        "description": "Gets an app version by ID",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "App version ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "App version found"
+          },
+          "404": {
+            "description": "App version not found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Update an app version",
+        "description": "Updates an app version",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "App version ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string",
+                    "pattern": "^\\d+\\.\\d+\\.\\d+(\\+\\d+)?$",
+                    "description": "Version (e.g., 1.0.0 or 1.0.0+33)"
+                  },
+                  "minRequiredVersion": {
+                    "type": "string",
+                    "pattern": "^\\d+\\.\\d+\\.\\d+(\\+\\d+)?$",
+                    "description": "Minimum required version (e.g., 1.0.0 or 1.0.0+33)"
+                  },
+                  "updateUrl": {
+                    "type": "string",
+                    "description": "URL to download the update"
+                  },
+                  "fileSizeBytes": {
+                    "type": "number",
+                    "description": "Size of the update file in bytes"
+                  },
+                  "releaseNotes": {
+                    "type": "string",
+                    "description": "Notes about the update"
+                  },
+                  "releaseDate": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Date the update was released (ISO 8601 format)"
+                  },
+                  "updatePriority": {
+                    "type": "string",
+                    "enum": [
+                      "low",
+                      "medium",
+                      "high",
+                      "critical"
+                    ],
+                    "description": "Priority of the update"
+                  },
+                  "updateType": {
+                    "type": "string",
+                    "enum": [
+                      "patch",
+                      "minor",
+                      "major"
+                    ],
+                    "description": "Type of update"
+                  },
+                  "active": {
+                    "type": "boolean",
+                    "description": "Whether the version is active"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "App version updated successfully"
+          },
+          "404": {
+            "description": "App version not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Delete an app version",
+        "description": "Deletes an app version",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "App version ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "App version deleted successfully"
+          },
+          "404": {
+            "description": "App version not found"
+          }
+        }
+      }
+    },
+    "/api/admin/app-versions/app/{appId}": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Get all app versions for an app",
+        "description": "Gets all app versions for an app",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "appId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "App ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "App versions found"
+          }
+        }
+      }
+    },
+    "/api/app/version-check": {
+      "post": {
+        "tags": [
+          "App"
+        ],
+        "summary": "Check for app updates",
+        "description": "Checks if an update is available for the app",
+        "security": [
+          {
+            "clientApiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "app_id",
+                  "current_version"
+                ],
+                "properties": {
+                  "app_id": {
+                    "type": "string",
+                    "description": "App ID (e.g., com.vimbisopay.app)"
+                  },
+                  "current_version": {
+                    "type": "string",
+                    "pattern": "^\\d+\\.\\d+\\.\\d+(\\+\\d+)?$",
+                    "description": "Current app version (e.g., 1.0.0 or 1.0.0+33)"
+                  },
+                  "device_info": {
+                    "type": "object",
+                    "properties": {
+                      "android_version": {
+                        "type": "string"
+                      },
+                      "ios_version": {
+                        "type": "string"
+                      },
+                      "device_model": {
+                        "type": "string"
+                      },
+                      "screen_size": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "user_info": {
+                    "type": "object",
+                    "properties": {
+                      "user_id": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Version check successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "APP_VERSION_CHECK"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "update_available": {
+                                  "type": "boolean"
+                                },
+                                "latest_version": {
+                                  "type": "string"
+                                },
+                                "update_required": {
+                                  "type": "boolean"
+                                },
+                                "update_priority": {
+                                  "type": "string",
+                                  "enum": [
+                                    "low",
+                                    "medium",
+                                    "high",
+                                    "critical"
+                                  ]
+                                },
+                                "update_type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "patch",
+                                    "minor",
+                                    "major"
+                                  ]
+                                },
+                                "update_url": {
+                                  "type": "string"
+                                },
+                                "file_size_bytes": {
+                                  "type": "number"
+                                },
+                                "release_notes": {
+                                  "type": "string"
+                                },
+                                "release_date": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/app/version-check/test": {
+      "post": {
+        "tags": [
+          "App"
+        ],
+        "summary": "Test app update check",
+        "description": "Test endpoint that always returns an update is available",
+        "security": [
+          {
+            "clientApiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "app_id": {
+                    "type": "string"
+                  },
+                  "current_version": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Test update response"
+          }
+        }
+      }
+    },
     "/addAssetMarker": {
       "post": {
         "tags": [
