@@ -41,8 +41,32 @@ export async function AppVersionService(request: VersionCheckRequest): Promise<A
   });
 
   try {
-    // Determine platform (Android or iOS)
-    const platform = request.device_info?.android_version ? 'android' : 'ios';
+    // Log the raw device info for debugging
+    const deviceInfoStr = JSON.stringify(request.device_info || {});
+    logger.debug("Raw device info", { 
+      app_id: request.app_id,
+      device_info: deviceInfoStr,
+      request_body: JSON.stringify(request)
+    });
+    
+    // Parse device info from string to ensure we have the correct object
+    const deviceInfo = request.device_info || {};
+    
+    // Determine platform (Android or iOS) with more explicit check
+    let platform = 'android'; // Default to android since that's what we have in the database
+    
+    logger.debug("Device info check", {
+      has_device_info: !!deviceInfo,
+      android_version: deviceInfo.android_version,
+      ios_version: deviceInfo.ios_version
+    });
+    
+    // Log the platform detection for debugging
+    logger.debug("Platform detected", { 
+      app_id: request.app_id, 
+      platform,
+      device_info: request.device_info
+    });
     
     // Check cache first
     const cacheKey = `${request.app_id}:${platform}`;

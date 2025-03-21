@@ -8548,6 +8548,8 @@
                   "minRequiredVersion",
                   "updateUrl",
                   "fileSizeBytes",
+                  "releaseNotes",
+                  "releaseDate",
                   "updatePriority",
                   "updateType"
                 ],

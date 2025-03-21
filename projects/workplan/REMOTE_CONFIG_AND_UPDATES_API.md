@@ -4,7 +4,7 @@ This document provides specifications for the server-side API endpoints required
 
 ## Base URL
 
-All API endpoints are relative to the base URL: `https://api.vimbisopay.com/v1`
+All API endpoints are relative to the base URL: `https://api.vimbisopay.com`
 
 ## Authentication
 
@@ -20,7 +20,7 @@ Authorization: Bearer <token>
 
 Checks if an update is available for the app.
 
-**Endpoint:** `/api/v1/app/version-check`
+**Endpoint:** `/api/app/version-check`
 
 **Method:** POST
 
@@ -47,15 +47,27 @@ If an update is available:
 
 ```json
 {
-  "update_available": true,
-  "latest_version": "1.1.0",
-  "update_required": false,
-  "update_priority": "medium",
-  "update_type": "patch",
-  "update_url": "https://downloads.vimbisopay.com/app/vimbisopay-1.1.0.apk",
-  "file_size_bytes": 15728640,
-  "release_notes": "Bug fixes and performance improvements",
-  "release_date": "2025-03-15T00:00:00Z"
+  "message": "Update available",
+  "data": {
+    "action": {
+      "id": "com.vimbisopay.app",
+      "type": "APP_VERSION_CHECK",
+      "timestamp": "2025-03-20T18:30:00.000Z",
+      "actor": "system",
+      "details": {
+        "update_available": true,
+        "latest_version": "1.1.0",
+        "update_required": false,
+        "update_priority": "medium",
+        "update_type": "patch",
+        "update_url": "https://downloads.vimbisopay.com/app/vimbisopay-1.1.0.apk",
+        "file_size_bytes": 15728640,
+        "release_notes": "Bug fixes and performance improvements",
+        "release_date": "2025-03-15T00:00:00Z"
+      }
+    },
+    "dashboard": {}
+  }
 }
 ```
 
@@ -63,7 +75,19 @@ If no update is available:
 
 ```json
 {
-  "update_available": false
+  "message": "No updates available",
+  "data": {
+    "action": {
+      "id": "com.vimbisopay.app",
+      "type": "APP_VERSION_CHECK",
+      "timestamp": "2025-03-20T18:30:00.000Z",
+      "actor": "system",
+      "details": {
+        "update_available": false
+      }
+    },
+    "dashboard": {}
+  }
 }
 ```
 
@@ -83,7 +107,7 @@ If no update is available:
 
 Fetches configuration for the app.
 
-**Endpoint:** `/api/v1/app/config`
+**Endpoint:** `/api/app/config`
 
 **Method:** POST
 
@@ -178,9 +202,19 @@ Error responses should have the following format:
 
 ```json
 {
-  "error": {
-    "code": "invalid_request",
-    "message": "Invalid request parameters"
+  "message": "An error occurred while checking for updates",
+  "data": {
+    "action": {
+      "id": null,
+      "type": "ERROR_VALIDATION",
+      "timestamp": "2025-03-20T18:30:00.000Z",
+      "actor": "system",
+      "details": {
+        "code": "INVALID_REQUEST",
+        "reason": "Missing required parameters: app_id or current_version"
+      }
+    },
+    "dashboard": {}
   }
 }
 ```
@@ -202,8 +236,8 @@ The API is versioned using the base URL. The current version is v1. When breakin
 
 For testing purposes, the following test endpoints are available:
 
-- `/api/v1/app/version-check/test`: Always returns an update is available
-- `/api/v1/app/config/test`: Returns a test configuration
+- `/api/app/version-check/test`: Always returns an update is available
+- `/api/app/config/test`: Returns a test configuration
 
 These endpoints do not require authentication and can be used for testing the client implementation.
 

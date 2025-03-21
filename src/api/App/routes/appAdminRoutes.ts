@@ -157,7 +157,9 @@ export default function appAdminRoutes() {
    *   post:
    *     tags: [Admin]
    *     summary: Create a new app version
-   *     description: Creates a new app version
+   *     description: |
+   *       Creates a new app version. When a new version is created with `active: true`, 
+   *       all other versions for the same app and platform are automatically set to inactive.
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -181,45 +183,130 @@ export default function appAdminRoutes() {
    *               appId:
    *                 type: string
    *                 description: App ID (e.g., com.vimbisopay.app)
+   *                 example: "com.vimbisopay.app"
    *               platform:
    *                 type: string
    *                 enum: [android, ios]
    *                 description: Platform (android or ios)
+   *                 example: "android"
    *               version:
    *                 type: string
    *                 pattern: ^\d+\.\d+\.\d+(\+\d+)?$
    *                 description: Version (e.g., 1.0.0 or 1.0.0+33)
+   *                 example: "1.1.0"
    *               minRequiredVersion:
    *                 type: string
    *                 pattern: ^\d+\.\d+\.\d+(\+\d+)?$
    *                 description: Minimum required version (e.g., 1.0.0 or 1.0.0+33)
+   *                 example: "1.0.0"
    *               updateUrl:
    *                 type: string
    *                 description: URL to download the update
+   *                 example: "https://downloads.vimbisopay.com/app/vimbisopay-1.1.0.apk"
    *               fileSizeBytes:
    *                 type: number
    *                 description: Size of the update file in bytes
+   *                 example: 15728640
    *               releaseNotes:
    *                 type: string
    *                 description: Notes about the update
+   *                 example: "Bug fixes and performance improvements"
    *               releaseDate:
    *                 type: string
    *                 format: date-time
    *                 description: Date the update was released (ISO 8601 format)
+   *                 example: "2025-03-15T00:00:00Z"
    *               updatePriority:
    *                 type: string
    *                 enum: [low, medium, high, critical]
    *                 description: Priority of the update
+   *                 example: "medium"
    *               updateType:
    *                 type: string
    *                 enum: [patch, minor, major]
    *                 description: Type of update
+   *                 example: "patch"
    *               active:
    *                 type: boolean
-   *                 description: Whether the version is active
+   *                 description: Whether the version is active (default is true)
+   *                 example: true
    *     responses:
    *       201:
    *         description: App version created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: "App version created successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           example: "123e4567-e89b-12d3-a456-426614174000"
+   *                         type:
+   *                           type: string
+   *                           example: "APP_VERSION_CHECK"
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             id:
+   *                               type: string
+   *                               example: "123e4567-e89b-12d3-a456-426614174000"
+   *                             appId:
+   *                               type: string
+   *                               example: "com.vimbisopay.app"
+   *                             platform:
+   *                               type: string
+   *                               example: "android"
+   *                             version:
+   *                               type: string
+   *                               example: "1.1.0"
+   *                             minRequiredVersion:
+   *                               type: string
+   *                               example: "1.0.0"
+   *                             updateUrl:
+   *                               type: string
+   *                               example: "https://downloads.vimbisopay.com/app/vimbisopay-1.1.0.apk"
+   *                             fileSizeBytes:
+   *                               type: number
+   *                               example: 15728640
+   *                             releaseNotes:
+   *                               type: string
+   *                               example: "Bug fixes and performance improvements"
+   *                             releaseDate:
+   *                               type: string
+   *                               example: "2025-03-15T00:00:00Z"
+   *                             updatePriority:
+   *                               type: string
+   *                               example: "medium"
+   *                             updateType:
+   *                               type: string
+   *                               example: "patch"
+   *                             active:
+   *                               type: boolean
+   *                               example: true
+   *                             createdAt:
+   *                               type: string
+   *                               format: date-time
+   *                             updatedAt:
+   *                               type: string
+   *                               format: date-time
+   *       400:
+   *         description: Bad request - missing required parameters
+   *       500:
+   *         description: Internal server error
    */
   router.post(
     '/app-versions',
@@ -244,11 +331,118 @@ export default function appAdminRoutes() {
    *         schema:
    *           type: string
    *         description: App version ID
+   *         example: "123e4567-e89b-12d3-a456-426614174000"
    *     responses:
    *       200:
    *         description: App version found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: "App version found"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           example: "123e4567-e89b-12d3-a456-426614174000"
+   *                         type:
+   *                           type: string
+   *                           example: "APP_VERSION_CHECK"
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             id:
+   *                               type: string
+   *                               example: "123e4567-e89b-12d3-a456-426614174000"
+   *                             appId:
+   *                               type: string
+   *                               example: "com.vimbisopay.app"
+   *                             platform:
+   *                               type: string
+   *                               example: "android"
+   *                             version:
+   *                               type: string
+   *                               example: "1.1.0"
+   *                             minRequiredVersion:
+   *                               type: string
+   *                               example: "1.0.0"
+   *                             updateUrl:
+   *                               type: string
+   *                               example: "https://downloads.vimbisopay.com/app/vimbisopay-1.1.0.apk"
+   *                             fileSizeBytes:
+   *                               type: number
+   *                               example: 15728640
+   *                             releaseNotes:
+   *                               type: string
+   *                               example: "Bug fixes and performance improvements"
+   *                             releaseDate:
+   *                               type: string
+   *                               example: "2025-03-15T00:00:00Z"
+   *                             updatePriority:
+   *                               type: string
+   *                               example: "medium"
+   *                             updateType:
+   *                               type: string
+   *                               example: "patch"
+   *                             active:
+   *                               type: boolean
+   *                               example: true
+   *                             createdAt:
+   *                               type: string
+   *                               format: date-time
+   *                             updatedAt:
+   *                               type: string
+   *                               format: date-time
    *       404:
    *         description: App version not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: "App version not found"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           example: null
+   *                         type:
+   *                           type: string
+   *                           example: "ERROR_NOT_FOUND"
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: "NOT_FOUND"
+   *                             reason:
+   *                               type: string
+   *                               example: "App version with ID 123e4567-e89b-12d3-a456-426614174000 not found"
+   *       500:
+   *         description: Internal server error
    */
   router.get(
     '/app-versions/:id',
@@ -262,7 +456,7 @@ export default function appAdminRoutes() {
    *   get:
    *     tags: [Admin]
    *     summary: Get all app versions for an app
-   *     description: Gets all app versions for an app
+   *     description: Gets all app versions for an app, ordered by platform and creation date (descending)
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -272,9 +466,87 @@ export default function appAdminRoutes() {
    *         schema:
    *           type: string
    *         description: App ID
+   *         example: "com.vimbisopay.app"
    *     responses:
    *       200:
    *         description: App versions found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: "App versions found"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           example: "com.vimbisopay.app"
+   *                         type:
+   *                           type: string
+   *                           example: "APP_VERSION_CHECK"
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             versions:
+   *                               type: array
+   *                               items:
+   *                                 type: object
+   *                                 properties:
+   *                                   id:
+   *                                     type: string
+   *                                     example: "123e4567-e89b-12d3-a456-426614174000"
+   *                                   appId:
+   *                                     type: string
+   *                                     example: "com.vimbisopay.app"
+   *                                   platform:
+   *                                     type: string
+   *                                     example: "android"
+   *                                   version:
+   *                                     type: string
+   *                                     example: "1.1.0"
+   *                                   minRequiredVersion:
+   *                                     type: string
+   *                                     example: "1.0.0"
+   *                                   updateUrl:
+   *                                     type: string
+   *                                     example: "https://downloads.vimbisopay.com/app/vimbisopay-1.1.0.apk"
+   *                                   fileSizeBytes:
+   *                                     type: number
+   *                                     example: 15728640
+   *                                   releaseNotes:
+   *                                     type: string
+   *                                     example: "Bug fixes and performance improvements"
+   *                                   releaseDate:
+   *                                     type: string
+   *                                     example: "2025-03-15T00:00:00Z"
+   *                                   updatePriority:
+   *                                     type: string
+   *                                     example: "medium"
+   *                                   updateType:
+   *                                     type: string
+   *                                     example: "patch"
+   *                                   active:
+   *                                     type: boolean
+   *                                     example: true
+   *                                   createdAt:
+   *                                     type: string
+   *                                     format: date-time
+   *                                   updatedAt:
+   *                                     type: string
+   *                                     format: date-time
+   *       500:
+   *         description: Internal server error
    */
   router.get(
     '/app-versions/app/:appId',
@@ -288,7 +560,9 @@ export default function appAdminRoutes() {
    *   put:
    *     tags: [Admin]
    *     summary: Update an app version
-   *     description: Updates an app version
+   *     description: |
+   *       Updates an app version. When a version is updated with `active: true`, 
+   *       all other versions for the same app and platform are automatically set to inactive.
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -298,6 +572,7 @@ export default function appAdminRoutes() {
    *         schema:
    *           type: string
    *         description: App version ID
+   *         example: "123e4567-e89b-12d3-a456-426614174000"
    *     requestBody:
    *       required: true
    *       content:
@@ -309,39 +584,154 @@ export default function appAdminRoutes() {
    *                 type: string
    *                 pattern: ^\d+\.\d+\.\d+(\+\d+)?$
    *                 description: Version (e.g., 1.0.0 or 1.0.0+33)
+   *                 example: "1.1.1"
    *               minRequiredVersion:
    *                 type: string
    *                 pattern: ^\d+\.\d+\.\d+(\+\d+)?$
    *                 description: Minimum required version (e.g., 1.0.0 or 1.0.0+33)
+   *                 example: "1.0.0"
    *               updateUrl:
    *                 type: string
    *                 description: URL to download the update
+   *                 example: "https://downloads.vimbisopay.com/app/vimbisopay-1.1.1.apk"
    *               fileSizeBytes:
    *                 type: number
    *                 description: Size of the update file in bytes
+   *                 example: 15728640
    *               releaseNotes:
    *                 type: string
    *                 description: Notes about the update
+   *                 example: "Bug fixes and performance improvements"
    *               releaseDate:
    *                 type: string
    *                 format: date-time
    *                 description: Date the update was released (ISO 8601 format)
+   *                 example: "2025-03-15T00:00:00Z"
    *               updatePriority:
    *                 type: string
    *                 enum: [low, medium, high, critical]
    *                 description: Priority of the update
+   *                 example: "medium"
    *               updateType:
    *                 type: string
    *                 enum: [patch, minor, major]
    *                 description: Type of update
+   *                 example: "patch"
    *               active:
    *                 type: boolean
    *                 description: Whether the version is active
+   *                 example: true
    *     responses:
    *       200:
    *         description: App version updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: "App version updated successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           example: "123e4567-e89b-12d3-a456-426614174000"
+   *                         type:
+   *                           type: string
+   *                           example: "APP_VERSION_CHECK"
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             id:
+   *                               type: string
+   *                               example: "123e4567-e89b-12d3-a456-426614174000"
+   *                             appId:
+   *                               type: string
+   *                               example: "com.vimbisopay.app"
+   *                             platform:
+   *                               type: string
+   *                               example: "android"
+   *                             version:
+   *                               type: string
+   *                               example: "1.1.1"
+   *                             minRequiredVersion:
+   *                               type: string
+   *                               example: "1.0.0"
+   *                             updateUrl:
+   *                               type: string
+   *                               example: "https://downloads.vimbisopay.com/app/vimbisopay-1.1.1.apk"
+   *                             fileSizeBytes:
+   *                               type: number
+   *                               example: 15728640
+   *                             releaseNotes:
+   *                               type: string
+   *                               example: "Bug fixes and performance improvements"
+   *                             releaseDate:
+   *                               type: string
+   *                               example: "2025-03-15T00:00:00Z"
+   *                             updatePriority:
+   *                               type: string
+   *                               example: "medium"
+   *                             updateType:
+   *                               type: string
+   *                               example: "patch"
+   *                             active:
+   *                               type: boolean
+   *                               example: true
+   *                             createdAt:
+   *                               type: string
+   *                               format: date-time
+   *                             updatedAt:
+   *                               type: string
+   *                               format: date-time
    *       404:
    *         description: App version not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: "App version not found"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           example: null
+   *                         type:
+   *                           type: string
+   *                           example: "ERROR_NOT_FOUND"
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: "NOT_FOUND"
+   *                             reason:
+   *                               type: string
+   *                               example: "App version with ID 123e4567-e89b-12d3-a456-426614174000 not found"
+   *       500:
+   *         description: Internal server error
    */
   router.put(
     '/app-versions/:id',
@@ -356,7 +746,7 @@ export default function appAdminRoutes() {
    *   delete:
    *     tags: [Admin]
    *     summary: Delete an app version
-   *     description: Deletes an app version
+   *     description: Deletes an app version by ID
    *     security:
    *       - bearerAuth: []
    *     parameters:
@@ -366,11 +756,79 @@ export default function appAdminRoutes() {
    *         schema:
    *           type: string
    *         description: App version ID
+   *         example: "123e4567-e89b-12d3-a456-426614174000"
    *     responses:
    *       200:
    *         description: App version deleted successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: "App version deleted successfully"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           example: "123e4567-e89b-12d3-a456-426614174000"
+   *                         type:
+   *                           type: string
+   *                           example: "APP_VERSION_CHECK"
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             id:
+   *                               type: string
+   *                               example: "123e4567-e89b-12d3-a456-426614174000"
    *       404:
    *         description: App version not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: "App version not found"
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           example: null
+   *                         type:
+   *                           type: string
+   *                           example: "ERROR_NOT_FOUND"
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             code:
+   *                               type: string
+   *                               example: "NOT_FOUND"
+   *                             reason:
+   *                               type: string
+   *                               example: "App version with ID 123e4567-e89b-12d3-a456-426614174000 not found"
+   *       500:
+   *         description: Internal server error
    */
   router.delete(
     '/app-versions/:id',
