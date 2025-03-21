@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import logger from "../../../utils/logger";
+import { ledgerSpaceDriver } from "../../../../config/neo4j";
 
 /**
  * Controller for handling the editing of internal accounts
@@ -12,34 +13,120 @@ export async function EditAccountInternalController(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const session = ledgerSpaceDriver.session();
+  
   try {
-    // TODO: Implement account internal editing logic
     logger.info("EditAccountInternalController called", {
       controller: "EditAccountInternalController",
       body: req.body,
     });
 
-    // Placeholder response
+    const { accountID, accountName, accountHandle, accountDescription } = req.body;
+    const memberID = req.user?.id;
+    
+    if (!memberID) {
+      throw new Error("User ID not found in request");
+    }
+
+    // Check if the account exists and is owned by the member
+    const accountCheckResult = await session.executeRead(async (tx: any) => {
+      return await tx.run(
+        `MATCH (m:Member {id: $memberID})-[:OWNS]->(a:AccountInternal {id: $accountID})
+         RETURN a`,
+        { memberID, accountID }
+      );
+    });
+
+    if (accountCheckResult.records.length === 0) {
+      throw new Error("Account not found or not owned by the member");
+    }
+
+    // Check if the account handle is already in use by another account
+    if (accountHandle) {
+      const handleCheckResult = await session.executeRead(async (tx: any) => {
+        return await tx.run(
+          `MATCH (a:AccountInternal {accountHandle: $accountHandle})
+           WHERE a.id <> $accountID
+           RETURN a`,
+          { accountHandle, accountID }
+        );
+      });
+
+      if (handleCheckResult.records.length > 0) {
+        throw new Error("Account handle is already in use");
+      }
+    }
+
+    // Build the update query dynamically based on provided fields
+    let setClause = [];
+    const params: Record<string, any> = { accountID };
+
+    if (accountName) {
+      setClause.push("a.accountName = $accountName");
+      params.accountName = accountName;
+    }
+
+    if (accountHandle) {
+      setClause.push("a.accountHandle = $accountHandle");
+      params.accountHandle = accountHandle;
+    }
+
+    if (accountDescription !== undefined) {
+      setClause.push("a.accountDescription = $accountDescription");
+      params.accountDescription = accountDescription;
+    }
+
+    // Execute the update query
+    const result = await session.executeWrite(async (tx: any) => {
+      return await tx.run(
+        `MATCH (a:AccountInternal {id: $accountID})
+         SET ${setClause.join(", ")}
+         RETURN a`,
+        params
+      );
+    });
+
+    if (result.records.length === 0) {
+      throw new Error("Failed to update internal account");
+    }
+
+    const account = result.records[0].get("a").properties;
+
     res.status(200).json({
       message: "Internal account updated successfully",
       data: {
         action: {
-          id: "placeholder-action-id",
+          id: accountID,
           type: "ACCOUNT_INTERNAL_UPDATED",
           timestamp: new Date().toISOString(),
-          actor: req.user?.id || "system",
+          actor: memberID,
           details: {
-            accountID: req.body.accountID,
-            accountName: req.body.accountName || "Unchanged",
-            accountHandle: req.body.accountHandle || "Unchanged",
-            accountDescription: req.body.accountDescription || "Unchanged",
-            updatedAt: new Date().toISOString(),
+            accountID,
+            accountName: account.accountName,
+            accountHandle: account.accountHandle,
+            accountDescription: account.accountDescription,
+            ownerID: memberID,
           },
         },
-        dashboard: {},
+        dashboard: {
+          account: {
+            id: accountID,
+            accountName: account.accountName,
+            accountHandle: account.accountHandle,
+            accountDescription: account.accountDescription,
+            ownerID: memberID,
+          }
+        },
       },
     });
   } catch (error) {
+    logger.error("Error in EditAccountInternalController", {
+      controller: "EditAccountInternalController",
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     next(error);
+  } finally {
+    await session.close();
   }
 }

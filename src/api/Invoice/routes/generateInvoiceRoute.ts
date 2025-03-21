@@ -1,21 +1,21 @@
 import express from "express";
 import { validateRequest } from "../../../middleware/validateRequest";
 import { errorHandler } from "../../../middleware/errorHandler";
-import { sellInMarketSchema } from "../memberValidationSchemas";
+import { generateInvoiceSchema } from "../invoiceValidationSchemas";
 import { authenticatedHandler } from "../../../middleware/authMiddleware";
-import { SellInMarketController } from "../controllers";
 import logger from "../../../utils/logger";
+import { GenerateInvoiceController } from "../controllers";
 
-export default function sellInMarketRoute() {
+export default function generateInvoiceRoute() {
   const router = express.Router();
 
   /**
    * @swagger
-   * /sellInMarket:
+   * /generateInvoice:
    *   post:
-   *     tags: [Members]
-   *     summary: Enable or disable vendor functionality
-   *     description: Enable or disable vendor functionality for a member in the Vimbiso Market. When enabled, creates required internal accounts if they don't exist.
+   *     tags: [Invoice]
+   *     summary: Generate an invoice for a transaction
+   *     description: Generate an invoice for a transaction in the Vimbiso Market
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -25,14 +25,58 @@ export default function sellInMarketRoute() {
    *           schema:
    *             type: object
    *             required:
-   *               - vendor
+   *               - paymentAccountID
+   *               - AssetMarkerData
    *             properties:
-   *               vendor:
-   *                 type: boolean
-   *                 description: Whether to enable (true) or disable (false) vendor functionality
+   *               paymentAccountID:
+   *                 type: string
+   *                 format: uuid
+   *                 description: ID of the account to receive payment
+   *               AssetMarkerData:
+   *                 type: object
+   *                 required:
+   *                   - items
+   *                   - total
+   *                   - currency
+   *                 properties:
+   *                   items:
+   *                     type: array
+   *                     items:
+   *                       type: object
+   *                       required:
+   *                         - name
+   *                         - quantity
+   *                         - unit
+   *                         - price
+   *                         - total
+   *                       properties:
+   *                         name:
+   *                           type: string
+   *                           description: Name of the item
+   *                         quantity:
+   *                           type: number
+   *                           description: Quantity of the item
+   *                         unit:
+   *                           type: string
+   *                           description: Unit of measurement (e.g., kg, each)
+   *                         price:
+   *                           type: number
+   *                           description: Price per unit
+   *                         total:
+   *                           type: number
+   *                           description: Total price for this item (price * quantity)
+   *                   total:
+   *                     type: number
+   *                     description: Total amount for the invoice (sum of all item totals)
+   *                   currency:
+   *                     type: string
+   *                     description: Currency for the invoice (e.g., USD)
+   *                   notes:
+   *                     type: string
+   *                     description: Additional notes for the invoice
    *     responses:
-   *       200:
-   *         description: Vendor status updated successfully
+   *       201:
+   *         description: Invoice generated successfully
    *         content:
    *           application/json:
    *             schema:
@@ -40,7 +84,7 @@ export default function sellInMarketRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: Vendor status updated successfully
+   *                   example: Invoice generated successfully
    *                 data:
    *                   type: object
    *                   properties:
@@ -50,10 +94,10 @@ export default function sellInMarketRoute() {
    *                         id:
    *                           type: string
    *                           format: uuid
-   *                           description: The member ID
+   *                           description: The invoice ID
    *                         type:
    *                           type: string
-   *                           enum: [VENDOR_STATUS_UPDATED]
+   *                           enum: [INVOICE_GENERATED]
    *                           description: The type of action performed
    *                         timestamp:
    *                           type: string
@@ -62,33 +106,54 @@ export default function sellInMarketRoute() {
    *                         actor:
    *                           type: string
    *                           format: uuid
-   *                           description: ID of the member who performed the action
+   *                           description: ID of the member who generated the invoice
    *                         details:
    *                           type: object
    *                           properties:
-   *                             memberID:
+   *                             invoiceID:
    *                               type: string
    *                               format: uuid
-   *                               description: ID of the updated member
-   *                             vendor:
-   *                               type: boolean
-   *                               description: New vendor status
-   *                             createdAccounts:
+   *                             invoiceQRLink:
+   *                               type: string
+   *                               format: uri
+   *                             amount:
+   *                               type: number
+   *                             currency:
+   *                               type: string
+   *                             paymentAccountID:
+   *                               type: string
+   *                               format: uuid
+   *                             items:
    *                               type: array
-   *                               description: Internal accounts created when enabling vendor status
    *                               items:
    *                                 type: object
-   *                                 properties:
-   *                                   accountID:
-   *                                     type: string
-   *                                     format: uuid
-   *                                   accountName:
-   *                                     type: string
-   *                                   accountType:
-   *                                     type: string
+   *                             notes:
+   *                               type: string
    *                     dashboard:
    *                       type: object
-   *                       description: Current state of the member dashboard
+   *                       properties:
+   *                         invoice:
+   *                           type: object
+   *                           properties:
+   *                             id:
+   *                               type: string
+   *                               format: uuid
+   *                             invoiceQRLink:
+   *                               type: string
+   *                               format: uri
+   *                             amount:
+   *                               type: number
+   *                             currency:
+   *                               type: string
+   *                             items:
+   *                               type: array
+   *                               items:
+   *                                 type: object
+   *                             notes:
+   *                               type: string
+   *                             createdAt:
+   *                               type: string
+   *                               format: date-time
    *       400:
    *         description: Invalid input data
    *         content:
@@ -170,7 +235,7 @@ export default function sellInMarketRoute() {
    *                       type: object
    *                       description: Empty dashboard object
    *       403:
-   *         description: Not authorized or insufficient membership tier
+   *         description: Not authorized to generate invoices
    *         content:
    *           application/json:
    *             schema:
@@ -178,7 +243,7 @@ export default function sellInMarketRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: Insufficient membership tier to enable vendor functionality
+   *                   example: Vendor status required to generate invoices
    *                 data:
    *                   type: object
    *                   properties:
@@ -187,7 +252,7 @@ export default function sellInMarketRoute() {
    *                       properties:
    *                         id:
    *                           type: string
-   *                           format: uuid
+   *                           nullable: true
    *                         type:
    *                           type: string
    *                           enum: [ERROR_UNAUTHORIZED]
@@ -202,14 +267,14 @@ export default function sellInMarketRoute() {
    *                           properties:
    *                             code:
    *                               type: string
-   *                               example: TIER_REQUIREMENT
+   *                               example: VENDOR_REQUIRED
    *                             reason:
    *                               type: string
    *                     dashboard:
    *                       type: object
    *                       description: Empty dashboard object
    *       404:
-   *         description: Member not found
+   *         description: Payment account not found
    *         content:
    *           application/json:
    *             schema:
@@ -217,7 +282,7 @@ export default function sellInMarketRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: Member not found
+   *                   example: Payment account not found
    *                 data:
    *                   type: object
    *                   properties:
@@ -241,7 +306,7 @@ export default function sellInMarketRoute() {
    *                           properties:
    *                             code:
    *                               type: string
-   *                               example: MEMBER_NOT_FOUND
+   *                               example: ACCOUNT_NOT_FOUND
    *                             reason:
    *                               type: string
    *                     dashboard:
@@ -256,7 +321,7 @@ export default function sellInMarketRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: Internal server error while updating vendor status
+   *                   example: Internal server error while generating invoice
    *                 data:
    *                   type: object
    *                   properties:
@@ -287,13 +352,13 @@ export default function sellInMarketRoute() {
    *                       type: object
    *                       description: Empty dashboard object
    */
-  
   router.post(
-    `/sellInMarket`,
-    validateRequest(sellInMarketSchema),
-    authenticatedHandler(SellInMarketController),
+    `/generateInvoice`,
+    validateRequest(generateInvoiceSchema),
+    authenticatedHandler(GenerateInvoiceController),
     errorHandler
   );
-  logger.debug("Route registered: POST /sellInMarket");
+  logger.debug("Route registered: POST /generateInvoice");
+
   return router;
 }

@@ -3,6 +3,7 @@ import { validateRequest } from "../../../middleware/validateRequest";
 import { errorHandler } from "../../../middleware/errorHandler";
 import { editMemberSchema } from "../memberValidationSchemas";
 import { authenticatedHandler } from "../../../middleware/authMiddleware";
+import { EditMemberController } from "../controllers";
 import logger from "../../../utils/logger";
 
 export default function editMemberRoute() {
@@ -337,13 +338,12 @@ export default function editMemberRoute() {
    *                       description: Empty dashboard object
    */
   
-  // TODO: EditMemberController needs to be implemented
-  // router.post(
-  //   `/editMember`,
-  //   validateRequest(editMemberSchema),
-  //   authenticatedHandler(EditMemberController),
-  //   errorHandler
-  // );
-  // logger.debug("Route registered: POST /editMember");
+  router.post(
+    `/editMember`,
+    validateRequest(editMemberSchema),
+    authenticatedHandler(EditMemberController),
+    errorHandler
+  );
+  logger.debug("Route registered: POST /editMember");
   return router;
 }

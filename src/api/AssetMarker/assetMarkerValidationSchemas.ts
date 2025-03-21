@@ -45,6 +45,105 @@ export const addAssetMarkerSchema = {
     },
     required: false,
   },
+  crAccounts: {
+    sanitizer: (value: any) => value,
+    validator: (value: any) => {
+      if (!Array.isArray(value)) {
+        return {
+          isValid: false,
+          message: "crAccounts must be an array",
+        };
+      }
+      
+      if (value.length === 0) {
+        return {
+          isValid: false,
+          message: "crAccounts must not be empty",
+        };
+      }
+      
+      for (const account of value) {
+        if (typeof account !== 'object' || account === null) {
+          return {
+            isValid: false,
+            message: "Each crAccount must be an object",
+          };
+        }
+        
+        if (!account.accountID || typeof account.accountID !== 'string') {
+          return {
+            isValid: false,
+            message: "Each crAccount must have an accountID string",
+          };
+        }
+        
+        if (!account.amount || typeof account.amount !== 'number' || account.amount <= 0) {
+          return {
+            isValid: false,
+            message: "Each crAccount must have a positive amount number",
+          };
+        }
+      }
+      
+      return {
+        isValid: true,
+        message: "Valid crAccounts",
+      };
+    },
+    required: true,
+  },
+  drAccounts: {
+    sanitizer: (value: any) => value,
+    validator: (value: any) => {
+      if (!Array.isArray(value)) {
+        return {
+          isValid: false,
+          message: "drAccounts must be an array",
+        };
+      }
+      
+      if (value.length === 0) {
+        return {
+          isValid: false,
+          message: "drAccounts must not be empty",
+        };
+      }
+      
+      for (const account of value) {
+        if (typeof account !== 'object' || account === null) {
+          return {
+            isValid: false,
+            message: "Each drAccount must be an object",
+          };
+        }
+        
+        if (!account.accountID || typeof account.accountID !== 'string') {
+          return {
+            isValid: false,
+            message: "Each drAccount must have an accountID string",
+          };
+        }
+        
+        if (!account.amount || typeof account.amount !== 'number' || account.amount <= 0) {
+          return {
+            isValid: false,
+            message: "Each drAccount must have a positive amount number",
+          };
+        }
+      }
+      
+      return {
+        isValid: true,
+        message: "Valid drAccounts",
+      };
+    },
+    required: true,
+  },
+  denomination: {
+    sanitizer: s.sanitizeDenomination,
+    validator: v.validateDenomination,
+    required: false,
+  },
   AssetMarkerData: {
     sanitizer: (value: any) => value,
     validator: (value: any) => {
