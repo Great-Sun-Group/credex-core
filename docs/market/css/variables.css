@@ -1,0 +1,19 @@
+/* Vimbiso Market Variables */
+
+:root {
+  /* Base colors */
+  --dark-blue: #06151f;
+  --text-white: #ffffff;
+  --tech-azure: #04a0b2;
+  --organic-gold: #fbb016;
+  
+  /* Market-specific variables */
+  --market-card-bg: rgba(6, 21, 31, 0.7);
+  --market-card-border: rgba(4, 160, 178, 0.3);
+  --market-card-hover-border: rgba(251, 176, 22, 0.8);
+  --market-section-bg: rgba(6, 21, 31, 0.5);
+  --market-divider: rgba(4, 160, 178, 0.2);
+  --market-code-bg: rgba(0, 0, 0, 0.3);
+  --market-tab-active-bg: rgba(4, 160, 178, 0.2);
+  --market-tab-hover-bg: rgba(251, 176, 22, 0.1);
+}

@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>API Reference - Vimbiso Market</title>
-    <link rel="stylesheet" href="../css/base/_reset.css" />
-    <link rel="stylesheet" href="../css/base/_variables.css" />
-    <link rel="stylesheet" href="../css/base/_typography.css" />
-    <link rel="stylesheet" href="../css/layouts/_base-layouts.css" />
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/layout.css" />
+    <link rel="stylesheet" href="../css/components.css" />
+    <link rel="stylesheet" href="../css/responsive.css" />
     <link rel="stylesheet" href="css/market.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
@@ -19,7 +19,7 @@
     <header class="market-header">
       <div class="container">
         <div class="header-content">
-          <a href="../index.html" class="back-link">← Back to VimbisoPay</a>
+          <a href="../index.html" class="back-link">← Back to MyCredex.App</a>
           <h1>Vimbiso Market</h1>
         </div>
       </div>
@@ -32,8 +32,15 @@
           <li class="nav-item"><a href="index.html">Overview</a></li>
           <li class="nav-item"><a href="user-flows.html">User Flows</a></li>
           <li class="nav-item"><a href="data-model.html">Data Model</a></li>
-          <li class="nav-item active"><a href="api-reference.html">API Reference</a></li>
-          <li class="nav-item"><a href="ui-specs.html">UI Specifications</a></li>
+          <li class="nav-item active">
+            <a href="api-reference.html">API Reference</a>
+          </li>
+          <li class="nav-item">
+            <a href="ui-specs.html">UI Specifications</a>
+          </li>
+          <li class="nav-item">
+            <a href="workplan.html">Implementation Workplan</a>
+          </li>
         </ul>
       </div>
     </nav>
@@ -44,28 +51,39 @@
         <section>
           <h2>API Reference</h2>
           <p class="lead">
-            Comprehensive documentation of endpoints for Vimbiso Market functionality.
+            Comprehensive documentation of endpoints for Vimbiso Market
+            functionality.
           </p>
 
           <!-- Tabs for API Categories -->
           <div class="tabs">
-            <div class="tab active" data-tab="member-endpoints">Member Endpoints</div>
-            <div class="tab" data-tab="account-endpoints">Account Endpoints</div>
-            <div class="tab" data-tab="asset-endpoints">AssetMarker Endpoints</div>
-            <div class="tab" data-tab="invoice-endpoints">Invoice Endpoints</div>
+            <div class="tab active" data-tab="member-endpoints">
+              Member Endpoints
+            </div>
+            <div class="tab" data-tab="account-endpoints">
+              Account Endpoints
+            </div>
+            <div class="tab" data-tab="asset-endpoints">
+              AssetMarker Endpoints
+            </div>
+            <div class="tab" data-tab="invoice-endpoints">
+              Invoice Endpoints
+            </div>
           </div>
 
           <!-- Member Endpoints Tab Content -->
           <div id="member-endpoints" class="tab-content active">
             <h3>Member Endpoints</h3>
             <p>
-              These endpoints manage member profiles and vendor settings in the Vimbiso Market.
+              These endpoints manage member profiles and vendor settings in the
+              Vimbiso Market.
             </p>
 
             <div class="endpoint-card">
               <h4>/editMember</h4>
               <p class="endpoint-description">
-                Update a member's profile information including vendor-specific details.
+                Update a member's profile information including vendor-specific
+                details.
               </p>
               <div class="endpoint-params">
                 <h5>Parameters:</h5>
@@ -73,9 +91,17 @@
                   <li><code>firstname</code>: string</li>
                   <li><code>lastname</code>: string</li>
                   <li><code>memberHandle</code>: string</li>
-                  <li><code>profile_picture_200_jpg</code>: string - ID of node to link with PROFILE_PICTURE_200_JPG relationship</li>
-                  <li><code>profile_picture_600_jpg</code>: string - Same as above</li>
-                  <li><code>profile_picture_original_jpg</code>: string - Same as above</li>
+                  <li>
+                    <code>profile_picture_200_jpg</code>: string - ID of node to
+                    link with PROFILE_PICTURE_200_JPG relationship
+                  </li>
+                  <li>
+                    <code>profile_picture_600_jpg</code>: string - Same as above
+                  </li>
+                  <li>
+                    <code>profile_picture_original_jpg</code>: string - Same as
+                    above
+                  </li>
                   <li><code>vendorBio</code>: string</li>
                 </ul>
               </div>
@@ -102,10 +128,21 @@
                 <h5>Operations:</h5>
                 <ul>
                   <li>Sets <code>(:Member { vendor: true|false })</code></li>
-                  <li>When set to true, creates if not existing:
+                  <li>
+                    When set to true, creates if not existing:
                     <ul>
-                      <li><code>(:accountInternal { accountName: "Onboarded Assets", accountType: "PRODUCTION" })</code></li>
-                      <li><code>(:accountInternal { accountName: "Profile Pictures", accountType: "DIGITAL_ASSET" })</code></li>
+                      <li>
+                        <code
+                          >(:accountInternal { accountName: "Onboarded Assets",
+                          accountType: "PRODUCTION" })</code
+                        >
+                      </li>
+                      <li>
+                        <code
+                          >(:accountInternal { accountName: "Profile Pictures",
+                          accountType: "DIGITAL_ASSET" })</code
+                        >
+                      </li>
                     </ul>
                   </li>
                 </ul>
@@ -123,7 +160,8 @@
           <div id="account-endpoints" class="tab-content">
             <h3>Account Endpoints</h3>
             <p>
-              These endpoints manage accounts used for tracking products, inventory, and transactions in the Vimbiso Market.
+              These endpoints manage accounts used for tracking products,
+              inventory, and transactions in the Vimbiso Market.
             </p>
 
             <div class="endpoint-card">
@@ -136,7 +174,10 @@
                 <ul>
                   <li><code>accountName</code>: string</li>
                   <li><code>accountHandle</code>: string</li>
-                  <li><code>defaultDenom</code>: string - Limited to current denoms</li>
+                  <li>
+                    <code>defaultDenom</code>: string - Limited to current
+                    denoms
+                  </li>
                 </ul>
               </div>
               <div class="endpoint-example">
@@ -152,14 +193,21 @@
             <div class="endpoint-card">
               <h4>/createAccountInternal</h4>
               <p class="endpoint-description">
-                Create a new internal account for tracking products or production.
+                Create a new internal account for tracking products or
+                production.
               </p>
               <div class="endpoint-params">
                 <h5>Parameters:</h5>
                 <ul>
                   <li><code>accountName</code>: string</li>
-                  <li><code>defaultDenom</code>: string - Limited to current denoms</li>
-                  <li><code>accountType</code>: string - One of CONSUMPTION, PRODUCTION, DIGITAL_ASSET, PHYSICAL_ASSET</li>
+                  <li>
+                    <code>defaultDenom</code>: string - Limited to current
+                    denoms
+                  </li>
+                  <li>
+                    <code>accountType</code>: string - One of CONSUMPTION,
+                    PRODUCTION, DIGITAL_ASSET, PHYSICAL_ASSET
+                  </li>
                 </ul>
               </div>
               <div class="endpoint-example">
@@ -181,7 +229,10 @@
                 <h5>Parameters:</h5>
                 <ul>
                   <li><code>accountName</code>: string</li>
-                  <li><code>defaultDenom</code>: string - Limited to current denoms</li>
+                  <li>
+                    <code>defaultDenom</code>: string - Limited to current
+                    denoms
+                  </li>
                 </ul>
               </div>
               <div class="endpoint-example">
@@ -195,9 +246,7 @@
 
             <div class="endpoint-card">
               <h4>/deleteAccountInternal</h4>
-              <p class="endpoint-description">
-                Delete an internal account.
-              </p>
+              <p class="endpoint-description">Delete an internal account.</p>
               <div class="endpoint-params">
                 <h5>Parameters:</h5>
                 <ul>
@@ -217,7 +266,8 @@
           <div id="asset-endpoints" class="tab-content">
             <h3>AssetMarker Endpoints</h3>
             <p>
-              These endpoints manage digital assets such as product images and their relationships in the system.
+              These endpoints manage digital assets such as product images and
+              their relationships in the system.
             </p>
 
             <div class="endpoint-card">
@@ -229,9 +279,17 @@
                 <h5>Parameters:</h5>
                 <ul>
                   <li><code>assetName</code>: string</li>
-                  <li>Arbitrary key/value pairs and/or neo4j-safed objects up to max size of 2kb</li>
-                  <li>Optional link/key to access any data stored in S3 bucket</li>
-                  <li><code>AssetMarkerData</code>: Object - Data for AssetMarkers created when a connected credex is accepted</li>
+                  <li>
+                    Arbitrary key/value pairs and/or neo4j-safed objects up to
+                    max size of 2kb
+                  </li>
+                  <li>
+                    Optional link/key to access any data stored in S3 bucket
+                  </li>
+                  <li>
+                    <code>AssetMarkerData</code>: Object - Data for AssetMarkers
+                    created when a connected credex is accepted
+                  </li>
                 </ul>
               </div>
               <div class="endpoint-example">
@@ -251,20 +309,30 @@
             <div class="endpoint-card">
               <h4>/uploadAndOptimizeJpg</h4>
               <p class="endpoint-description">
-                Upload a JPG image, optimize it, and create the necessary asset markers and relationships.
+                Upload a JPG image, optimize it, and create the necessary asset
+                markers and relationships.
               </p>
               <div class="endpoint-params">
                 <h5>Parameters:</h5>
                 <ul>
-                  <li>Requires jpg, name, DR accountID, optional CR accountID (default MERGE "Onboarded Assets")</li>
+                  <li>
+                    Requires jpg, name, DR accountID, optional CR accountID
+                    (default MERGE "Onboarded Assets")
+                  </li>
                 </ul>
               </div>
               <div class="endpoint-operations">
                 <h5>Operations:</h5>
                 <ul>
                   <li>Saves AssetMarker with CR and DR relationships</li>
-                  <li>Creates 200px and 600px versions with the same CR and DR relationships</li>
-                  <li>Creates USED_IN relationship from original upload to resized/optimized images</li>
+                  <li>
+                    Creates 200px and 600px versions with the same CR and DR
+                    relationships
+                  </li>
+                  <li>
+                    Creates USED_IN relationship from original upload to
+                    resized/optimized images
+                  </li>
                 </ul>
               </div>
               <div class="endpoint-example">
@@ -281,14 +349,20 @@
             <div class="endpoint-card">
               <h4>/connectAsset</h4>
               <p class="endpoint-description">
-                Connect an asset marker to another node with a specified relationship.
+                Connect an asset marker to another node with a specified
+                relationship.
               </p>
               <div class="endpoint-params">
                 <h5>Parameters:</h5>
                 <ul>
                   <li><code>assetID</code>: string</li>
-                  <li><code>connectedID</code>: string - ID of node to connect</li>
-                  <li><code>relName</code>: string - One of [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]</li>
+                  <li>
+                    <code>connectedID</code>: string - ID of node to connect
+                  </li>
+                  <li>
+                    <code>relName</code>: string - One of
+                    [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
+                  </li>
                 </ul>
               </div>
               <div class="endpoint-example">
@@ -310,8 +384,13 @@
                 <h5>Parameters:</h5>
                 <ul>
                   <li><code>assetID</code>: string</li>
-                  <li><code>connectedID</code>: string - ID of node to disconnect</li>
-                  <li><code>relName</code>: string - One of [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]</li>
+                  <li>
+                    <code>connectedID</code>: string - ID of node to disconnect
+                  </li>
+                  <li>
+                    <code>relName</code>: string - One of
+                    [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
+                  </li>
                 </ul>
               </div>
               <div class="endpoint-example">
@@ -329,7 +408,8 @@
           <div id="invoice-endpoints" class="tab-content">
             <h3>Invoice Endpoints</h3>
             <p>
-              These endpoints manage invoices for transactions in the Vimbiso Market.
+              These endpoints manage invoices for transactions in the Vimbiso
+              Market.
             </p>
 
             <div class="endpoint-card">
@@ -341,13 +421,18 @@
                 <h5>Parameters:</h5>
                 <ul>
                   <li><code>payment accountID</code>: string - Account</li>
-                  <li><code>AssetMarkerData</code>: Object - Data for AssetMarkers created when a connected credex is accepted</li>
+                  <li>
+                    <code>AssetMarkerData</code>: Object - Data for AssetMarkers
+                    created when a connected credex is accepted
+                  </li>
                 </ul>
               </div>
               <div class="endpoint-returns">
                 <h5>Returns:</h5>
                 <ul>
-                  <li>Link based on invoiceID for client to generate invoiceQR</li>
+                  <li>
+                    Link based on invoiceID for client to generate invoiceQR
+                  </li>
                 </ul>
               </div>
               <div class="endpoint-example">
@@ -389,22 +474,22 @@
     </footer>
 
     <script>
-      document.addEventListener('DOMContentLoaded', function() {
+      document.addEventListener("DOMContentLoaded", function () {
         // Tab functionality
-        const tabs = document.querySelectorAll('.tab');
-        const tabContents = document.querySelectorAll('.tab-content');
+        const tabs = document.querySelectorAll(".tab");
+        const tabContents = document.querySelectorAll(".tab-content");
 
-        tabs.forEach(tab => {
-          tab.addEventListener('click', () => {
-            const tabId = tab.getAttribute('data-tab');
-            
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
+            const tabId = tab.getAttribute("data-tab");
+
             // Remove active class from all tabs and contents
-            tabs.forEach(t => t.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
-            
+            tabs.forEach((t) => t.classList.remove("active"));
+            tabContents.forEach((c) => c.classList.remove("active"));
+
             // Add active class to clicked tab and corresponding content
-            tab.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
+            tab.classList.add("active");
+            document.getElementById(tabId).classList.add("active");
           });
         });
 
