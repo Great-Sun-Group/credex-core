@@ -20,7 +20,7 @@
     <header class="market-header">
       <div class="container">
         <div class="header-content">
-          <a href="../index.html" class="back-link">← Back to VimbisoPay</a>
+          <a href="../index.html" class="back-link">← Back to MyCredex.App</a>
           <h1>Vimbiso Market</h1>
         </div>
       </div>
@@ -32,10 +32,18 @@
         <ul class="nav-list">
           <li class="nav-item"><a href="index.html">Overview</a></li>
           <li class="nav-item"><a href="user-flows.html">User Flows</a></li>
-          <li class="nav-item active"><a href="data-model.html">Data Model</a></li>
-          <li class="nav-item"><a href="api-reference.html">API Reference</a></li>
-          <li class="nav-item"><a href="ui-specs.html">UI Specifications</a></li>
-          <li class="nav-item"><a href="workplan.html">Implementation Workplan</a></li>
+          <li class="nav-item active">
+            <a href="data-model.html">Data Model</a>
+          </li>
+          <li class="nav-item">
+            <a href="api-reference.html">API Reference</a>
+          </li>
+          <li class="nav-item">
+            <a href="ui-specs.html">UI Specifications</a>
+          </li>
+          <li class="nav-item">
+            <a href="workplan.html">Implementation Workplan</a>
+          </li>
         </ul>
       </div>
     </nav>
@@ -46,7 +54,8 @@
         <section>
           <h2>Data Model Reference</h2>
           <p class="lead">
-            Detailed structure of accounts, assets, and relationships in the Vimbiso Market system.
+            Detailed structure of accounts, assets, and relationships in the
+            Vimbiso Market system.
           </p>
 
           <!-- Tabs for Data Model -->
@@ -60,14 +69,16 @@
           <div id="account-types" class="tab-content active">
             <h3>Account Types</h3>
             <p>
-              The Vimbiso Market system uses different types of accounts to track various aspects of the marketplace.
-              These accounts are divided into Exchange Accounts and Internal Accounts.
+              The Vimbiso Market system uses different types of accounts to
+              track various aspects of the marketplace. These accounts are
+              divided into Exchange Accounts and Internal Accounts.
             </p>
 
             <h4>Exchange Accounts (neo4jNode:Account)</h4>
             <p>
-              Exchange accounts exist in searchSpace and can close loops with other accounts. 
-              They represent current assets and current liabilities.
+              Exchange accounts exist in searchSpace and can close loops with
+              other accounts. They represent current assets and current
+              liabilities.
             </p>
 
             <table class="data-table">
@@ -81,22 +92,22 @@
                 <tr>
                   <td><strong>PERSONAL</strong></td>
                   <td>
-                    • Created with membership (one per member, required)<br>
+                    • Created with membership (one per member, required)<br />
                     • For purchase/sale transactions and gifts
                   </td>
                 </tr>
                 <tr>
                   <td><strong>OPERATIONS</strong></td>
                   <td>
-                    • Business accounts, shared accounts<br>
-                    • Created by Hustlers and above<br>
+                    • Business accounts, shared accounts<br />
+                    • Created by Hustlers and above<br />
                     • For purchase/sale transactions and gifts
                   </td>
                 </tr>
                 <tr>
                   <td><strong>TRUST</strong></td>
                   <td>
-                    • Audited bank or vault accounts<br>
+                    • Audited bank or vault accounts<br />
                     • Created and managed by Treasurers
                   </td>
                 </tr>
@@ -105,8 +116,8 @@
 
             <h4>Internal Accounts (neo4jNode:AccountInternal)</h4>
             <p>
-              Internal accounts are created and managed by members but are not added to searchSpace 
-              and do not close loops with other accounts.
+              Internal accounts are created and managed by members but are not
+              added to searchSpace and do not close loops with other accounts.
             </p>
 
             <table class="data-table">
@@ -120,32 +131,32 @@
                 <tr>
                   <td><strong>CONSUMPTION</strong></td>
                   <td>
-                    • Used when an asset's value is consumed by a member<br>
+                    • Used when an asset's value is consumed by a member<br />
                     • Or within an economic process leading to consumption
                   </td>
                 </tr>
                 <tr>
                   <td><strong>PRODUCTION</strong></td>
                   <td>
-                    • Used when value is created or enhanced by a member<br>
+                    • Used when value is created or enhanced by a member<br />
                     • Or within an economic process directed by members
                   </td>
                 </tr>
                 <tr>
                   <td><strong>DIGITAL_ASSET</strong></td>
                   <td>
-                    • Real asset whose complete value is stored digitally<br>
-                    • Can be duplicated without altering the original<br>
-                    • Value derived without altering the original<br>
+                    • Real asset whose complete value is stored digitally<br />
+                    • Can be duplicated without altering the original<br />
+                    • Value derived without altering the original<br />
                     • Audit is redundant (data IS the asset)
                   </td>
                 </tr>
                 <tr>
                   <td><strong>PHYSICAL_ASSET</strong></td>
                   <td>
-                    • Digital representation of physical assets<br>
-                    • Cannot be duplicated without altering the original<br>
-                    • Value derived without altering the original<br>
+                    • Digital representation of physical assets<br />
+                    • Cannot be duplicated without altering the original<br />
+                    • Value derived without altering the original<br />
                     • Can be audited to confirm data matches physical assets
                   </td>
                 </tr>
@@ -157,8 +168,9 @@
           <div id="asset-markers" class="tab-content">
             <h3>AssetMarker (neo4jNode:AssetMarker)</h3>
             <p>
-              An AssetMarker is both an Asset and a General Ledger entry. This dual nature allows the system
-              to track both the asset itself and its accounting relationships.
+              An AssetMarker is both an Asset and a General Ledger entry. This
+              dual nature allows the system to track both the asset itself and
+              its accounting relationships.
             </p>
 
             <h4>Dual Nature of AssetMarkers</h4>
@@ -168,15 +180,26 @@
                 <ul>
                   <li>Small assets (up to 2kb) stored directly on node</li>
                   <li>Larger assets reference S3 bucket data</li>
-                  <li>S3 data accessed/decrypted using AssetMarker node data</li>
+                  <li>
+                    S3 data accessed/decrypted using AssetMarker node data
+                  </li>
                 </ul>
               </div>
               <div class="dual-column">
                 <h5>As a General Ledger Entry</h5>
                 <ul>
-                  <li>Connected to one or more accounts with CR (credit) relationships</li>
-                  <li>Connected to one or more accounts with DR (debit) relationships</li>
-                  <li>The sum of all CR relationships must equal the sum of all DR relationships</li>
+                  <li>
+                    Connected to one or more accounts with CR (credit)
+                    relationships
+                  </li>
+                  <li>
+                    Connected to one or more accounts with DR (debit)
+                    relationships
+                  </li>
+                  <li>
+                    The sum of all CR relationships must equal the sum of all DR
+                    relationships
+                  </li>
                 </ul>
               </div>
             </div>
@@ -192,35 +215,19 @@
             <div class="asset-marker-diagram">
               <h4>AssetMarker in the Database</h4>
               <div class="mermaid">
-graph TD
-    AM1((":AssetMarker<br/>filename: 'original.jpg'"))
-    AM2((":AssetMarker<br/>filename: '200px.jpg'"))
-    AM3((":AssetMarker<br/>filename: '600px.jpg'"))
-    A1((":Account<br/>name: 'onboardedAssets'"))
-    A2((":Account<br/>name: 'digitalAssets'"))
-    M1((":Member<br/>name: 'Munya'"))
-    
-    AM1 -->|USED_IN| AM2
-    AM1 -->|USED_IN| AM3
-    
-    A1 -->|CR| AM1
-    AM1 -->|DR| A2
-    A1 -->|CR| AM2
-    AM2 -->|DR| A2
-    A1 -->|CR| AM3
-    AM3 -->|DR| A2
-    
-    M1 -->|PROFILE_PIC_ORIGINAL_JPG| AM1
-    M1 -->|PROFILE_PIC_200_JPG| AM2
-    M1 -->|PROFILE_PIC_600_JPG| AM3
-    
-    classDef assetMarker fill:#FBB016,stroke:#FBB016,color:black
-    classDef account fill:#006400,stroke:#006400,color:#FBB016
-    classDef member fill:black,stroke:black,color:white
-    
-    class AM1,AM2,AM3 assetMarker
-    class A1,A2 account
-    class M1 member
+                graph TD AM1((":AssetMarker<br />filename: 'original.jpg'"))
+                AM2((":AssetMarker<br />filename: '200px.jpg'"))
+                AM3((":AssetMarker<br />filename: '600px.jpg'"))
+                A1((":Account<br />name: 'onboardedAssets'")) A2((":Account<br />name:
+                'digitalAssets'")) M1((":Member<br />name: 'Munya'")) AM1
+                -->|USED_IN| AM2 AM1 -->|USED_IN| AM3 A1 -->|CR| AM1 AM1 -->|DR|
+                A2 A1 -->|CR| AM2 AM2 -->|DR| A2 A1 -->|CR| AM3 AM3 -->|DR| A2
+                M1 -->|PROFILE_PIC_ORIGINAL_JPG| AM1 M1 -->|PROFILE_PIC_200_JPG|
+                AM2 M1 -->|PROFILE_PIC_600_JPG| AM3 classDef assetMarker
+                fill:#FBB016,stroke:#FBB016,color:black classDef account
+                fill:#006400,stroke:#006400,color:#FBB016 classDef member
+                fill:black,stroke:black,color:white class AM1,AM2,AM3
+                assetMarker class A1,A2 account class M1 member
               </div>
             </div>
           </div>
@@ -229,8 +236,10 @@ graph TD
           <div id="invoices" class="tab-content">
             <h3>Invoice (neo4jNode::Invoice)</h3>
             <p>
-              A credex template that directs the creation of the credex and associated accounting entries for the counterparties.
-              Invoices are digitally signed by the creating member to ensure authenticity and non-repudiation.
+              A credex template that directs the creation of the credex and
+              associated accounting entries for the counterparties. Invoices are
+              digitally signed by the creating member to ensure authenticity and
+              non-repudiation.
             </p>
 
             <pre><code>(:Account)&lt;-[:DEBITS_TO]-(:Invoice)-[:CREDITS_TO]->(:AccountInternal),
@@ -239,39 +248,29 @@ graph TD
             <div class="invoice-diagram">
               <h4>Invoice and Credex Relationships</h4>
               <div class="mermaid">
-graph TD
-    I1((":Invoice<br/>amount: 20"))
-    C1((":Credex<br/>amount: 20"))
-    A1((":Account<br/>name: 'tomatoes'"))
-    A2((":Account<br/>name: 'faraiPersonal'"))
-    M1((":Member<br/>name: 'Munya'"))
-    M2((":Member<br/>name: 'Farai'"))
-    
-    I1 -->|CREDITS_TO| A1
-    I1 -->|DEBITS_TO| A2
-    C1 -->|EXECUTES| I1
-    
-    M1 -->|SIGNED| I1
-    M2 -->|CREATED| C1
-    M1 -->|OWNS| A1
-    M2 -->|OWNS| A2
-    
-    classDef invoice fill:#FBB016,stroke:#FBB016,color:black
-    classDef credex fill:#FBB016,stroke:#FBB016,color:black
-    classDef account fill:#006400,stroke:#006400,color:#FBB016
-    classDef member fill:black,stroke:black,color:white
-    
-    class I1 invoice
-    class C1 credex
-    class A1,A2 account
-    class M1,M2 member
+                graph TD I1((":Invoice<br />amount: 20")) C1((":Credex<br />amount:
+                20")) A1((":Account<br />name: 'tomatoes'")) A2((":Account<br />name:
+                'faraiPersonal'")) M1((":Member<br />name: 'Munya'"))
+                M2((":Member<br />name: 'Farai'")) I1 -->|CREDITS_TO| A1 I1
+                -->|DEBITS_TO| A2 C1 -->|EXECUTES| I1 M1 -->|SIGNED| I1 M2
+                -->|CREATED| C1 M1 -->|OWNS| A1 M2 -->|OWNS| A2 classDef invoice
+                fill:#FBB016,stroke:#FBB016,color:black classDef credex
+                fill:#FBB016,stroke:#FBB016,color:black classDef account
+                fill:#006400,stroke:#006400,color:#FBB016 classDef member
+                fill:black,stroke:black,color:white class I1 invoice class C1
+                credex class A1,A2 account class M1,M2 member
               </div>
             </div>
 
             <h4>Invoice Flow</h4>
             <ol>
-              <li>Vendor creates an invoice specifying the product(s) and amount</li>
-              <li>Vendor digitally signs the invoice using the system's signature mechanism</li>
+              <li>
+                Vendor creates an invoice specifying the product(s) and amount
+              </li>
+              <li>
+                Vendor digitally signs the invoice using the system's signature
+                mechanism
+              </li>
               <li>System generates a QR code for the invoice</li>
               <li>Purchaser scans the QR code</li>
               <li>Purchaser creates a credex that executes the invoice</li>
@@ -280,8 +279,10 @@ graph TD
 
             <h4>Digital Signatures</h4>
             <p>
-              Invoices are digitally signed using the system's signature mechanism, which creates a <code>(:Signature)</code> node
-              that links the member to the invoice. This provides a secure, auditable record of invoice creation.
+              Invoices are digitally signed using the system's signature
+              mechanism, which creates a <code>(:Signature)</code> node that
+              links the member to the invoice. This provides a secure, auditable
+              record of invoice creation.
             </p>
             <pre><code>(:Member)-[:SIGNED]->(:Signature {
   signatureID: string,
@@ -295,10 +296,13 @@ graph TD
 
             <h4>Market-Specific Invoice Features</h4>
             <p>
-              In the Vimbiso Market context, invoices include additional features:
+              In the Vimbiso Market context, invoices include additional
+              features:
             </p>
             <ul>
-              <li>Product details including images, descriptions, and quantities</li>
+              <li>
+                Product details including images, descriptions, and quantities
+              </li>
               <li>Vendor information and ratings</li>
               <li>Delivery options and location information</li>
               <li>Transaction history between the vendor and purchaser</li>
@@ -316,37 +320,37 @@ graph TD
     </footer>
 
     <script>
-      document.addEventListener('DOMContentLoaded', function() {
+      document.addEventListener("DOMContentLoaded", function () {
         // Initialize mermaid
         mermaid.initialize({
           startOnLoad: true,
-          theme: 'dark',
-          securityLevel: 'loose',
+          theme: "dark",
+          securityLevel: "loose",
           themeVariables: {
-            primaryColor: '#04a0b2',
-            primaryTextColor: '#ffffff',
-            primaryBorderColor: '#fbb016',
-            lineColor: '#04a0b2',
-            secondaryColor: '#006400',
-            tertiaryColor: '#fbb016'
-          }
+            primaryColor: "#04a0b2",
+            primaryTextColor: "#ffffff",
+            primaryBorderColor: "#fbb016",
+            lineColor: "#04a0b2",
+            secondaryColor: "#006400",
+            tertiaryColor: "#fbb016",
+          },
         });
 
         // Tab functionality
-        const tabs = document.querySelectorAll('.tab');
-        const tabContents = document.querySelectorAll('.tab-content');
+        const tabs = document.querySelectorAll(".tab");
+        const tabContents = document.querySelectorAll(".tab-content");
 
-        tabs.forEach(tab => {
-          tab.addEventListener('click', () => {
-            const tabId = tab.getAttribute('data-tab');
-            
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
+            const tabId = tab.getAttribute("data-tab");
+
             // Remove active class from all tabs and contents
-            tabs.forEach(t => t.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
-            
+            tabs.forEach((t) => t.classList.remove("active"));
+            tabContents.forEach((c) => c.classList.remove("active"));
+
             // Add active class to clicked tab and corresponding content
-            tab.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
+            tab.classList.add("active");
+            document.getElementById(tabId).classList.add("active");
           });
         });
 

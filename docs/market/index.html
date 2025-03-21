@@ -20,7 +20,7 @@
     <header class="market-header">
       <div class="container">
         <div class="header-content">
-          <a href="../index.html" class="back-link">← Back to VimbisoPay</a>
+          <a href="../index.html" class="back-link">← Back to MyCredex.App</a>
           <h1>Vimbiso Market</h1>
         </div>
       </div>
@@ -33,9 +33,15 @@
           <li class="nav-item active"><a href="index.html">Overview</a></li>
           <li class="nav-item"><a href="user-flows.html">User Flows</a></li>
           <li class="nav-item"><a href="data-model.html">Data Model</a></li>
-          <li class="nav-item"><a href="api-reference.html">API Reference</a></li>
-          <li class="nav-item"><a href="ui-specs.html">UI Specifications</a></li>
-          <li class="nav-item"><a href="workplan.html">Implementation Workplan</a></li>
+          <li class="nav-item">
+            <a href="api-reference.html">API Reference</a>
+          </li>
+          <li class="nav-item">
+            <a href="ui-specs.html">UI Specifications</a>
+          </li>
+          <li class="nav-item">
+            <a href="workplan.html">Implementation Workplan</a>
+          </li>
         </ul>
       </div>
     </nav>
@@ -46,29 +52,51 @@
         <section class="overview-section">
           <h2>Vimbiso Market Workplan</h2>
           <p class="lead">
-            Adding marketplace functionality to the VimbisoPay app by extending the underlying accounting infrastructure and client app capabilities.
+            Adding marketplace functionality to the VimbisoPay app by extending
+            the underlying accounting infrastructure and client app
+            capabilities.
           </p>
 
           <div class="feature-cards">
             <div class="feature-card">
               <h3>Vendor Profiles</h3>
-              <p>Enable members to create vendor profiles with product listings, images, and descriptions.</p>
-              <a href="user-flows.html#vendor-profiles" class="card-link">View Details →</a>
+              <p>
+                Enable members to create vendor profiles with product listings,
+                images, and descriptions.
+              </p>
+              <a href="user-flows.html#vendor-profiles" class="card-link"
+                >View Details →</a
+              >
             </div>
             <div class="feature-card">
               <h3>Product Listings</h3>
-              <p>Allow vendors to list products with images, descriptions, and pricing information.</p>
-              <a href="user-flows.html#product-listings" class="card-link">View Details →</a>
+              <p>
+                Allow vendors to list products with images, descriptions, and
+                pricing information.
+              </p>
+              <a href="user-flows.html#product-listings" class="card-link"
+                >View Details →</a
+              >
             </div>
             <div class="feature-card">
               <h3>Invoicing</h3>
-              <p>Generate invoices for purchases and facilitate payments through the credex system.</p>
-              <a href="user-flows.html#invoicing" class="card-link">View Details →</a>
+              <p>
+                Generate invoices for purchases and facilitate payments through
+                the credex system.
+              </p>
+              <a href="user-flows.html#invoicing" class="card-link"
+                >View Details →</a
+              >
             </div>
             <div class="feature-card">
               <h3>Inventory Management</h3>
-              <p>Track inventory levels and manage product availability with accounting integration.</p>
-              <a href="user-flows.html#inventory" class="card-link">View Details →</a>
+              <p>
+                Track inventory levels and manage product availability with
+                accounting integration.
+              </p>
+              <a href="user-flows.html#inventory" class="card-link"
+                >View Details →</a
+              >
             </div>
           </div>
 
@@ -76,19 +104,23 @@
 
           <h3>Implementation Overview</h3>
           <p>
-            The Vimbiso Market extends the VimbisoPay platform by adding marketplace functionality. 
-            This allows members to create vendor profiles, list products, and facilitate transactions 
-            through the existing credex accounting infrastructure.
+            The Vimbiso Market extends the VimbisoPay platform by adding
+            marketplace functionality. This allows members to create vendor
+            profiles, list products, and facilitate transactions through the
+            existing credex accounting infrastructure.
           </p>
           <p>
-            The implementation leverages the underlying accounting system to track inventory, 
-            process sales, and manage digital assets like product images. This approach ensures 
-            that all marketplace activities are properly recorded and can be audited.
+            The implementation leverages the underlying accounting system to
+            track inventory, process sales, and manage digital assets like
+            product images. This approach ensures that all marketplace
+            activities are properly recorded and can be audited.
           </p>
           <p>
-            For a detailed step-by-step implementation plan, see the <a href="workplan.html">Implementation Workplan</a>.
-            This comprehensive guide outlines the technical approach, database relationships, and timeline for building
-            the Vimbiso Market endpoints.
+            For a detailed step-by-step implementation plan, see the
+            <a href="workplan.html">Implementation Workplan</a>. This
+            comprehensive guide outlines the technical approach, database
+            relationships, and timeline for building the Vimbiso Market
+            endpoints.
           </p>
         </section>
       </div>
@@ -102,20 +134,20 @@
     </footer>
 
     <script>
-      document.addEventListener('DOMContentLoaded', function() {
+      document.addEventListener("DOMContentLoaded", function () {
         // Initialize mermaid
         mermaid.initialize({
           startOnLoad: true,
-          theme: 'dark',
-          securityLevel: 'loose',
+          theme: "dark",
+          securityLevel: "loose",
           themeVariables: {
-            primaryColor: '#04a0b2',
-            primaryTextColor: '#ffffff',
-            primaryBorderColor: '#fbb016',
-            lineColor: '#04a0b2',
-            secondaryColor: '#006400',
-            tertiaryColor: '#fbb016'
-          }
+            primaryColor: "#04a0b2",
+            primaryTextColor: "#ffffff",
+            primaryBorderColor: "#fbb016",
+            lineColor: "#04a0b2",
+            secondaryColor: "#006400",
+            tertiaryColor: "#fbb016",
+          },
         });
       });
     </script>

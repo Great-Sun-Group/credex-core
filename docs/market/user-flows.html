@@ -20,7 +20,7 @@
     <header class="market-header">
       <div class="container">
         <div class="header-content">
-          <a href="../index.html" class="back-link">← Back to VimbisoPay</a>
+          <a href="../index.html" class="back-link">← Back to MyCredex.App</a>
           <h1>Vimbiso Market</h1>
         </div>
       </div>
@@ -168,8 +168,8 @@
           <!-- Invoicing Tab Content -->
           <div id="invoicing" class="tab-content">
             <h3>
-              THE BELOW GRAPH IS NOT YET CORRECT: Munya creates an invoice for $20 of tomatoes which are purchased
-              by Farai the merchant
+              THE BELOW GRAPH IS NOT YET CORRECT: Munya creates an invoice for
+              $20 of tomatoes which are purchased by Farai the merchant
             </h3>
             <p>
               This flow illustrates the invoicing and payment process between a
@@ -229,25 +229,25 @@
 
         // Function to load and render a mermaid diagram
         async function loadAndRenderDiagram(container) {
-          if (container.getAttribute('data-loaded') === 'true') {
+          if (container.getAttribute("data-loaded") === "true") {
             return; // Already loaded
           }
-          
+
           try {
             const diagramName = container.getAttribute("data-diagram");
             const response = await fetch(`diagrams/${diagramName}.mmd`);
             const diagramCode = await response.text();
-            
+
             // Create a new div for the mermaid content
-            const mermaidDiv = document.createElement('div');
-            mermaidDiv.className = 'mermaid';
+            const mermaidDiv = document.createElement("div");
+            mermaidDiv.className = "mermaid";
             mermaidDiv.textContent = diagramCode;
-            
+
             // Clear the container and append the mermaid div
-            container.innerHTML = '';
+            container.innerHTML = "";
             container.appendChild(mermaidDiv);
-            container.setAttribute('data-loaded', 'true');
-            
+            container.setAttribute("data-loaded", "true");
+
             // Render this specific diagram
             mermaid.init(undefined, mermaidDiv);
           } catch (error) {
@@ -272,9 +272,10 @@
             tab.classList.add("active");
             const activeContent = document.getElementById(tabId);
             activeContent.classList.add("active");
-            
+
             // Load and render the diagram in the active tab
-            const diagramContainer = activeContent.querySelector('.mermaid-container');
+            const diagramContainer =
+              activeContent.querySelector(".mermaid-container");
             if (diagramContainer) {
               loadAndRenderDiagram(diagramContainer);
             }
@@ -290,9 +291,10 @@
           }
         } else {
           // Load the diagram in the default active tab
-          const activeContent = document.querySelector('.tab-content.active');
+          const activeContent = document.querySelector(".tab-content.active");
           if (activeContent) {
-            const diagramContainer = activeContent.querySelector('.mermaid-container');
+            const diagramContainer =
+              activeContent.querySelector(".mermaid-container");
             if (diagramContainer) {
               loadAndRenderDiagram(diagramContainer);
             }
