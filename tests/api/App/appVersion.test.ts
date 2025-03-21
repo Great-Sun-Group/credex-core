@@ -36,8 +36,8 @@ jest.mock('../../../src/api/App/controllers/appVersionController', () => ({
     // Helper function to compare semantic versions
     const compareVersions = (version1: string, version2: string): number => {
       // Handle version strings with build numbers (e.g., "1.0.0+33")
-      const [semVer1] = version1.split('+');
-      const [semVer2] = version2.split('+');
+      const [semVer1, build1] = version1.split('+');
+      const [semVer2, build2] = version2.split('+');
       
       // Compare semantic versions
       const parts1 = semVer1.split('.').map(Number);
@@ -49,6 +49,19 @@ jest.mock('../../../src/api/App/controllers/appVersionController', () => ({
         
         if (part1 < part2) return -1;
         if (part1 > part2) return 1;
+      }
+      
+      // If semantic versions are equal, compare build numbers
+      if (build1 && build2) {
+        const buildNum1 = parseInt(build1, 10);
+        const buildNum2 = parseInt(build2, 10);
+        
+        if (buildNum1 < buildNum2) return -1;
+        if (buildNum1 > buildNum2) return 1;
+      } else if (build1) {
+        return 1; // version with build number is newer
+      } else if (build2) {
+        return -1; // version without build number is older
       }
       
       return 0; // versions are equal
