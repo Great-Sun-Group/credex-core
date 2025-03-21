@@ -62,7 +62,7 @@
       </li>
       <li>Create a new daynode with the updated CXX rates.</li>
       <li>
-        Update all credex and asset balances across the system to reflect new rates.
+        Update all Credex, LoopAnchor, and AssetMarker nodes, and all CREDLOOP and REDEEMED relationships across the system to reflect new rates.
       </li>
       <li>
         Process DCO transactions:
@@ -144,6 +144,18 @@
         <li>This preserves accounting truth in local currency while maintaining system-wide value relationships</li>
       </ul>
     </p>
+
+    <h4>AssetMarker Updates</h4>
+    <p>
+      AssetMarker nodes are updated using the same principles as Credex nodes:
+      <ul>
+        <li>CXX-denominated AssetMarkers have their GeneralLedgerAmount divided by CXXprior_CXXcurrent</li>
+        <li>Currency-denominated AssetMarkers have their GeneralLedgerAmount recalculated to maintain face value</li>
+        <li>CXXmultiplier is updated to the new exchange rate for the denomination</li>
+        <li>This ensures AssetMarker values remain true across the system</li>
+      </ul>
+    </p>
+    
 
     <h2>Transaction Processing</h2>
 

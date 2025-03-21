@@ -1,21 +1,9 @@
 /* Vimbiso Market CSS */
 
-:root {
-  /* Extend the base variables with market-specific ones */
-  --market-card-bg: rgba(6, 21, 31, 0.7);
-  --market-card-border: rgba(4, 160, 178, 0.3);
-  --market-card-hover-border: rgba(251, 176, 22, 0.8);
-  --market-section-bg: rgba(6, 21, 31, 0.5);
-  --market-divider: rgba(4, 160, 178, 0.2);
-  --market-code-bg: rgba(0, 0, 0, 0.3);
-  --market-tab-active-bg: rgba(4, 160, 178, 0.2);
-  --market-tab-hover-bg: rgba(251, 176, 22, 0.1);
-}
-
 /* Base Layout */
 body {
-  background-color: var(--dark-blue);
-  color: var(--text-white);
+  background-color: #06151f;
+  color: #ffffff;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -30,8 +18,8 @@ body {
 
 /* Header */
 .market-header {
-  background-color: var(--dark-blue);
-  border-bottom: 1px solid var(--market-divider);
+  background-color: #06151f;
+  border-bottom: 1px solid rgba(4, 160, 178, 0.2);
   padding: 1.5rem 0;
 }
 
@@ -42,20 +30,20 @@ body {
 }
 
 .market-header h1 {
-  color: var(--organic-gold);
+  color: #fbb016;
   font-size: 2rem;
   margin: 0;
 }
 
 .back-link {
-  color: var(--tech-azure);
+  color: #04a0b2;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.3s ease;
 }
 
 .back-link:hover {
-  color: var(--organic-gold);
+  color: #fbb016;
 }
 
 /* Navigation */
@@ -87,7 +75,7 @@ body {
 .nav-item a {
   display: block;
   padding: 0.75rem 1rem;
-  color: var(--text-white);
+  color: #ffffff;
   text-decoration: none;
   font-weight: 500;
   border-radius: 4px;
@@ -95,13 +83,13 @@ body {
 }
 
 .nav-item a:hover {
-  background-color: var(--market-tab-hover-bg);
-  color: var(--organic-gold);
+  background-color: rgba(251, 176, 22, 0.1);
+  color: #fbb016;
 }
 
 .nav-item.active a {
-  background-color: var(--market-tab-active-bg);
-  color: var(--organic-gold);
+  background-color: rgba(4, 160, 178, 0.2);
+  color: #fbb016;
 }
 
 /* Main Content */
@@ -113,12 +101,12 @@ body {
 .lead {
   font-size: 1.25rem;
   margin-bottom: 2rem;
-  color: var(--tech-azure);
+  color: #04a0b2;
 }
 
 .section-divider {
   height: 1px;
-  background-color: var(--market-divider);
+  background-color: rgba(4, 160, 178, 0.2);
   margin: 3rem 0;
 }
 
@@ -131,21 +119,21 @@ body {
 }
 
 .feature-card {
-  background-color: var(--market-card-bg);
-  border: 1px solid var(--market-card-border);
+  background-color: rgba(6, 21, 31, 0.7);
+  border: 1px solid rgba(4, 160, 178, 0.3);
   border-radius: 8px;
   padding: 1.5rem;
   transition: all 0.3s ease;
 }
 
 .feature-card:hover {
-  border-color: var(--market-card-hover-border);
+  border-color: rgba(251, 176, 22, 0.8);
   transform: translateY(-5px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 .feature-card h3 {
-  color: var(--organic-gold);
+  color: #fbb016;
   margin-bottom: 1rem;
 }
 
@@ -154,7 +142,7 @@ body {
 }
 
 .card-link {
-  color: var(--tech-azure);
+  color: #04a0b2;
   text-decoration: none;
   font-weight: 500;
   display: inline-block;
@@ -162,7 +150,7 @@ body {
 }
 
 .card-link:hover {
-  color: var(--organic-gold);
+  color: #fbb016;
 }
 
 /* Component List */
@@ -178,7 +166,7 @@ body {
 }
 
 .component-item h4 {
-  color: var(--organic-gold);
+  color: #fbb016;
   margin-bottom: 0.5rem;
   font-size: 1.25rem;
 }
@@ -186,14 +174,14 @@ body {
 .component-link {
   display: inline-block;
   margin-top: 0.5rem;
-  color: var(--tech-azure);
+  color: #04a0b2;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.3s ease;
 }
 
 .component-link:hover {
-  color: var(--organic-gold);
+  color: #fbb016;
 }
 
 /* Footer */
@@ -206,7 +194,7 @@ body {
 
 /* Mermaid Diagrams */
 .mermaid {
-  background-color: var(--market-section-bg);
+  background-color: rgba(6, 21, 31, 0.5);
   padding: 1.5rem;
   border-radius: 8px;
   margin: 2rem 0;
@@ -215,17 +203,17 @@ body {
 
 /* Code Blocks */
 pre {
-  background-color: var(--market-code-bg);
+  background-color: rgba(0, 0, 0, 0.3);
   padding: 1.5rem;
   border-radius: 8px;
   overflow-x: auto;
   margin: 1.5rem 0;
-  border: 1px solid var(--market-divider);
+  border: 1px solid rgba(4, 160, 178, 0.2);
 }
 
 code {
   font-family: "Courier New", Courier, monospace;
-  color: var(--tech-azure);
+  color: #04a0b2;
 }
 
 /* Tables */
@@ -239,11 +227,11 @@ th,
 td {
   padding: 0.75rem 1rem;
   text-align: left;
-  border-bottom: 1px solid var(--market-divider);
+  border-bottom: 1px solid rgba(4, 160, 178, 0.2);
 }
 
 th {
-  color: var(--organic-gold);
+  color: #fbb016;
   font-weight: 600;
   background-color: rgba(0, 0, 0, 0.2);
 }
@@ -255,7 +243,7 @@ tr:hover {
 /* Tabs for User Flows */
 .tabs {
   display: flex;
-  border-bottom: 1px solid var(--market-divider);
+  border-bottom: 1px solid rgba(4, 160, 178, 0.2);
   margin-bottom: 2rem;
   overflow-x: auto;
 }
@@ -268,14 +256,14 @@ tr:hover {
 }
 
 .tab:hover {
-  color: var(--organic-gold);
-  background-color: var(--market-tab-hover-bg);
+  color: #fbb016;
+  background-color: rgba(251, 176, 22, 0.1);
 }
 
 .tab.active {
-  color: var(--organic-gold);
-  border-bottom-color: var(--organic-gold);
-  background-color: var(--market-tab-active-bg);
+  color: #fbb016;
+  border-bottom-color: #fbb016;
+  background-color: rgba(4, 160, 178, 0.2);
 }
 
 .tab-content {
@@ -314,4 +302,153 @@ tr:hover {
   .nav-item {
     flex: 0 0 auto;
   }
+}
+
+/* Data Model Specific Styles */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border: 1px solid rgba(4, 160, 178, 0.3);
+}
+
+.data-table th {
+  background-color: rgba(0, 0, 0, 0.3);
+  color: #fbb016;
+  font-weight: 600;
+}
+
+.dual-nature {
+  display: flex;
+  gap: 2rem;
+  margin: 1.5rem 0;
+}
+
+.dual-column {
+  flex: 1;
+}
+
+.asset-marker-diagram,
+.invoice-diagram {
+  margin: 2rem 0;
+}
+
+/* UI Specs Specific Styles */
+.ui-screen-card {
+  background-color: rgba(6, 21, 31, 0.7);
+  border: 1px solid rgba(4, 160, 178, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.ui-screen-details {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.ui-adjusting-description {
+  flex: 1;
+}
+
+.ui-screen-mockup {
+  flex: 1;
+}
+
+.mockup-placeholder {
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(4, 160, 178, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mockup-content {
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+/* Flow Details */
+.flow-details {
+  background-color: rgba(6, 21, 31, 0.7);
+  border: 1px solid rgba(4, 160, 178, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+}
+
+/* Workplan Specific Styles */
+.phase-container {
+  background-color: rgba(6, 21, 31, 0.7);
+  border: 1px solid rgba(4, 160, 178, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.phase-details {
+  margin-top: 1rem;
+}
+
+.timeline-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+}
+
+.timeline-table th,
+.timeline-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border: 1px solid rgba(4, 160, 178, 0.3);
+}
+
+.timeline-table th {
+  background-color: rgba(0, 0, 0, 0.3);
+  color: #fbb016;
+  font-weight: 600;
+}
+
+/* Endpoint Cards */
+.endpoint-card {
+  background-color: rgba(6, 21, 31, 0.7);
+  border: 1px solid rgba(4, 160, 178, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.endpoint-card h4 {
+  color: #fbb016;
+  margin-bottom: 0.5rem;
+}
+
+.endpoint-description {
+  margin-bottom: 1rem;
+}
+
+.endpoint-params,
+.endpoint-operations,
+.endpoint-example,
+.endpoint-returns {
+  margin-top: 1rem;
+}
+
+.endpoint-params h5,
+.endpoint-operations h5,
+.endpoint-example h5,
+.endpoint-returns h5 {
+  color: #04a0b2;
+  margin-bottom: 0.5rem;
 }

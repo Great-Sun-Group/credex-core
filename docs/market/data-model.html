@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Data Model - Vimbiso Market</title>
-    <link rel="stylesheet" href="../css/base/_reset.css" />
-    <link rel="stylesheet" href="../css/base/_variables.css" />
-    <link rel="stylesheet" href="../css/base/_typography.css" />
-    <link rel="stylesheet" href="../css/layouts/_base-layouts.css" />
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/layout.css" />
+    <link rel="stylesheet" href="../css/components.css" />
+    <link rel="stylesheet" href="../css/responsive.css" />
     <link rel="stylesheet" href="css/market.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
@@ -35,6 +35,7 @@
           <li class="nav-item active"><a href="data-model.html">Data Model</a></li>
           <li class="nav-item"><a href="api-reference.html">API Reference</a></li>
           <li class="nav-item"><a href="ui-specs.html">UI Specifications</a></li>
+          <li class="nav-item"><a href="workplan.html">Implementation Workplan</a></li>
         </ul>
       </div>
     </nav>
@@ -173,8 +174,9 @@
               <div class="dual-column">
                 <h5>As a General Ledger Entry</h5>
                 <ul>
-                  <li>Connected to one account with CR (credit) relationship</li>
-                  <li>Connected to another account with DR (debit) relationship</li>
+                  <li>Connected to one or more accounts with CR (credit) relationships</li>
+                  <li>Connected to one or more accounts with DR (debit) relationships</li>
+                  <li>The sum of all CR relationships must equal the sum of all DR relationships</li>
                 </ul>
               </div>
             </div>
@@ -184,7 +186,8 @@
             <pre><code>(:AssetMarker { filename: "profile_pic_original.jpg" })-[:USED_IN]->(:AssetMarker { filename: "profile_pic_200.jpg" })</code></pre>
 
             <p><strong>Reference Relationships</strong></p>
-            <pre><code>(:Member|Account|AccountInternal)-[:PROFILE_PIC_200_JPG]->(:AssetMarker)</code></pre>
+            <pre><code>(:Member)-[:PROFILE_PIC_200_JPG]->(:AssetMarker)
+(:Account)-[:ACCOUNT_PIC_200_JPG]->(:AssetMarker)</code></pre>
 
             <div class="asset-marker-diagram">
               <h4>AssetMarker in the Database</h4>
@@ -227,6 +230,7 @@ graph TD
             <h3>Invoice (neo4jNode::Invoice)</h3>
             <p>
               A credex template that directs the creation of the credex and associated accounting entries for the counterparties.
+              Invoices are digitally signed by the creating member to ensure authenticity and non-repudiation.
             </p>
 
             <pre><code>(:Account)&lt;-[:DEBITS_TO]-(:Invoice)-[:CREDITS_TO]->(:AccountInternal),
@@ -247,7 +251,7 @@ graph TD
     I1 -->|DEBITS_TO| A2
     C1 -->|EXECUTES| I1
     
-    M1 -->|CREATED| I1
+    M1 -->|SIGNED| I1
     M2 -->|CREATED| C1
     M1 -->|OWNS| A1
     M2 -->|OWNS| A2
@@ -267,11 +271,25 @@ graph TD
             <h4>Invoice Flow</h4>
             <ol>
               <li>Vendor creates an invoice specifying the product(s) and amount</li>
+              <li>Vendor digitally signs the invoice using the system's signature mechanism</li>
               <li>System generates a QR code for the invoice</li>
               <li>Purchaser scans the QR code</li>
               <li>Purchaser creates a credex that executes the invoice</li>
               <li>System updates the accounting entries for both parties</li>
             </ol>
+
+            <h4>Digital Signatures</h4>
+            <p>
+              Invoices are digitally signed using the system's signature mechanism, which creates a <code>(:Signature)</code> node
+              that links the member to the invoice. This provides a secure, auditable record of invoice creation.
+            </p>
+            <pre><code>(:Member)-[:SIGNED]->(:Signature {
+  signatureID: string,
+  createdAt: datetime,
+  actionType: "INVOICE_CREATED",
+  inputData: string, // JSON string of invoice data
+  requestId: string
+})-[:SIGNED]->(:Invoice)</code></pre>
 
             <div class="section-divider"></div>
 

@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Implementation Workplan - Vimbiso Market</title>
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/layout.css" />
+    <link rel="stylesheet" href="../css/components.css" />
+    <link rel="stylesheet" href="../css/responsive.css" />
+    <link rel="stylesheet" href="css/market.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="market-header">
+      <div class="container">
+        <div class="header-content">
+          <a href="../index.html" class="back-link">← Back to VimbisoPay</a>
+          <h1>Vimbiso Market</h1>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Navigation -->
+    <nav class="market-nav">
+      <div class="container">
+        <ul class="nav-list">
+          <li class="nav-item"><a href="index.html">Overview</a></li>
+          <li class="nav-item"><a href="user-flows.html">User Flows</a></li>
+          <li class="nav-item"><a href="data-model.html">Data Model</a></li>
+          <li class="nav-item"><a href="api-reference.html">API Reference</a></li>
+          <li class="nav-item"><a href="ui-specs.html">UI Specifications</a></li>
+          <li class="nav-item active"><a href="workplan.html">Implementation Workplan</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="market-content">
+      <div class="container">
+        <section>
+          <h2>Implementation Workplan</h2>
+          <p class="lead">
+            A comprehensive step-by-step plan for implementing the Vimbiso Market endpoints and functionality.
+          </p>
+
+          <div class="section-divider"></div>
+
+          <h3>Current System Analysis</h3>
+          <p>
+            The current system has the following API modules:
+          </p>
+          <ul>
+            <li><a href="../develop/repository_architecture.html">Member</a> - User management and authentication</li>
+            <li><a href="../develop/repository_architecture.html">Account</a> - Exchange account operations</li>
+            <li><a href="../develop/repository_architecture.html">AccountInternal</a> - Internal account operations</li>
+            <li><a href="../develop/repository_architecture.html">AssetMarker</a> - Digital asset management</li>
+            <li><a href="../develop/repository_architecture.html">Credex</a> - Credit exchange transactions</li>
+            <li>Admin - Administrative functions</li>
+            <li>DevAdmin - Development and testing utilities</li>
+            <li>Notifications - User notification system</li>
+            <li>Recurring - Scheduled operations</li>
+          </ul>
+
+          <p>
+            Each module follows a consistent structure:
+          </p>
+          <ul>
+            <li>Routes define API endpoints and validation</li>
+            <li>Controllers handle request processing</li>
+            <li>Validation schemas ensure data integrity</li>
+          </ul>
+
+          <div class="section-divider"></div>
+
+          <h3>Required Endpoints</h3>
+          <p>
+            Based on the <a href="api-reference.html">API Reference</a>, we need to implement the following endpoints:
+          </p>
+
+          <h4>Member Endpoints</h4>
+          <ol>
+            <li><code>/editMember</code> - Update member profiles with vendor details</li>
+            <li><code>/sellInMarket</code> - Enable/disable vendor functionality</li>
+          </ol>
+
+          <h4>Account Endpoints</h4>
+          <ol start="3">
+            <li><code>/editAccount</code> - Update exchange account details</li>
+            <li><code>/createAccountInternal</code> - Create internal accounts (already exists but needs implementation)</li>
+            <li><code>/editAccountInternal</code> - Update internal accounts (already exists but needs implementation)</li>
+            <li><code>/deleteAccountInternal</code> - Delete internal accounts (already exists but needs implementation)</li>
+          </ol>
+
+          <h4>AssetMarker Endpoints</h4>
+          <ol start="7">
+            <li><code>/addAssetMarker</code> - Create asset markers (already exists but needs updates for multiple CR/DR)</li>
+            <li><code>/uploadAndOptimizeJpg</code> - Upload and optimize images (already exists but may need updates)</li>
+            <li><code>/connectAsset</code> - Connect assets to nodes (already exists but may need updates)</li>
+            <li><code>/disconnectAsset</code> - Remove asset relationships (already exists but may need updates)</li>
+          </ol>
+
+          <h4>Invoice Endpoints (New Module)</h4>
+          <ol start="11">
+            <li><code>/generateInvoice</code> - Generate transaction invoices with digital signatures</li>
+          </ol>
+
+          <div class="section-divider"></div>
+
+          <h3>Implementation Plan</h3>
+
+          <div class="phase-container">
+            <h4>Phase 1: Setup and Preparation</h4>
+            <div class="phase-details">
+              <h5>1. Create Invoice Module Structure</h5>
+              <ul>
+                <li>Create directory structure for Invoice module following <a href="../develop/repository_architecture.html">repository architecture</a></li>
+                <li>Set up routes, controllers, and validation schemas</li>
+                <li>Update main index.ts to include Invoice routes</li>
+              </ul>
+
+              <p>Example directory structure:</p>
+              <pre><code>src/api/Invoice/
+├── controllers/
+│   ├── GenerateInvoiceController.ts
+│   └── index.ts
+├── routes/
+│   ├── generateInvoiceRoute.ts
+│   └── index.ts
+└── invoiceValidationSchemas.ts</code></pre>
+
+              <p>Reference implementation: <a href="https://github.com/your-org/credex-core/blob/main/src/api/AccountInternal">AccountInternal module</a></p>
+
+              <h5>2. Update Existing Module Implementations</h5>
+              <ul>
+                <li>Complete AccountInternal controllers (currently placeholders)</li>
+                <li>Verify AssetMarker implementations match requirements for multiple CR/DR relationships</li>
+                <li>Add vendor-specific fields to Member module</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 2: Member Endpoints Implementation</h4>
+            <div class="phase-details">
+              <h5>3. Implement <code>/editMember</code> Endpoint</h5>
+              <ul>
+                <li>Update Member validation schema to include vendor fields</li>
+                <li>Create controller to handle profile updates</li>
+                <li>Add support for profile picture relationships</li>
+              </ul>
+
+              <p>Key considerations:</p>
+              <ul>
+                <li>Validate vendor-specific fields only when vendor=true</li>
+                <li>Handle profile picture relationships using AssetMarker connections</li>
+                <li>Ensure proper error handling for invalid inputs</li>
+              </ul>
+
+              <p>Reference implementation: <a href="https://github.com/your-org/credex-core/blob/main/src/api/Member">Member module</a></p>
+
+              <h5>4. Implement <code>/sellInMarket</code> Endpoint</h5>
+              <ul>
+                <li>Create validation schema for vendor toggle</li>
+                <li>Implement controller to update member vendor status</li>
+                <li>Add logic to create required internal accounts when enabling vendor status</li>
+              </ul>
+
+              <p>Required internal accounts:</p>
+              <ul>
+                <li><code>(:accountInternal { accountName: "Onboarded Assets", accountType: "PRODUCTION" })</code></li>
+                <li><code>(:accountInternal { accountName: "Profile Pictures", accountType: "DIGITAL_ASSET" })</code></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 3: Account Endpoints Implementation</h4>
+            <div class="phase-details">
+              <h5>5. Implement <code>/editAccount</code> Endpoint</h5>
+              <ul>
+                <li>Create validation schema for account updates</li>
+                <li>Implement controller to update account details</li>
+                <li>Ensure proper validation of account handle uniqueness</li>
+              </ul>
+
+              <p>Reference implementation: <a href="https://github.com/your-org/credex-core/blob/main/src/api/Account">Account module</a></p>
+
+              <h5>6. Complete AccountInternal Endpoints</h5>
+              <ul>
+                <li>Implement controller logic for createAccountInternal</li>
+                <li>Implement controller logic for editAccountInternal</li>
+                <li>Implement controller logic for deleteAccountInternal</li>
+              </ul>
+
+              <p>Reference implementation: <a href="https://github.com/your-org/credex-core/blob/main/src/api/AccountInternal/controllers/CreateAccountInternalController.ts">CreateAccountInternalController.ts</a></p>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 4: AssetMarker Endpoints Verification</h4>
+            <div class="phase-details">
+              <h5>7. Verify and Update AssetMarker Endpoints</h5>
+              <ul>
+                <li>Review existing implementations</li>
+                <li>Update to support multiple CR/DR relationships</li>
+                <li>Ensure proper relationship handling</li>
+              </ul>
+
+              <p>Key updates for multiple CR/DR relationships:</p>
+              <ul>
+                <li>Modify <code>/addAssetMarker</code> to accept arrays of account IDs and amounts for both CR and DR sides</li>
+                <li>Add validation to ensure the sum of CR amounts equals the sum of DR amounts</li>
+                <li>Update database queries to handle multiple relationships</li>
+              </ul>
+
+              <p>Reference implementation: <a href="https://github.com/your-org/credex-core/blob/main/src/api/AssetMarker">AssetMarker module</a></p>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 5: Invoice Module Implementation</h4>
+            <div class="phase-details">
+              <h5>8. Create Invoice Data Model</h5>
+              <ul>
+                <li>Define Invoice node structure</li>
+                <li>Define relationships with Account and Credex nodes</li>
+                <li>Implement digital signature integration</li>
+              </ul>
+
+              <p>Invoice node structure:</p>
+              <pre><code>(:Invoice {
+  invoiceID: string,
+  amount: number,
+  currency: string,
+  timestamp: datetime,
+  notes: string,
+  items: [
+    {
+      name: string,
+      quantity: number,
+      unit: string,
+      price: number,
+      total: number
+    }
+  ]
+})</code></pre>
+
+              <p>Key relationships:</p>
+              <ul>
+                <li><code>(:Invoice)-[:CREDITS_TO]->(:Account|AccountInternal)</code></li>
+                <li><code>(:Account|AccountInternal)&lt;-[:DEBITS_TO]-(:Invoice)</code></li>
+                <li><code>(:Invoice)&lt;-[:EXECUTES]-(:Credex)</code></li>
+                <li><code>(:Member)-[:SIGNED]->(:Signature)-[:SIGNED]->(:Invoice)</code></li>
+              </ul>
+
+              <h5>9. Implement <code>/generateInvoice</code> Endpoint</h5>
+              <ul>
+                <li>Create validation schema for invoice generation</li>
+                <li>Implement controller to create invoice records</li>
+                <li>Add digital signature using the <a href="https://github.com/your-org/credex-core/blob/main/src/utils/digitalSignature.ts">digitallySign</a> utility</li>
+                <li>Add QR code generation functionality</li>
+              </ul>
+
+              <p>Digital signature integration:</p>
+              <pre><code>import { digitallySign } from "../../../utils/digitalSignature";
+
+// In controller
+await digitallySign(
+  session,
+  req.user.id,  // signerID
+  "Invoice",    // entityType
+  invoiceID,    // entityId
+  "INVOICE_CREATED", // actionType
+  JSON.stringify(req.body), // inputData
+  req.id        // requestId
+);</code></pre>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 6: DCO Updates for AssetMarker Support</h4>
+            <div class="phase-details">
+              <h5>10. Update DCO Process for AssetMarker Nodes</h5>
+              <ul>
+                <li>Modify DCO balance update logic to include AssetMarker nodes</li>
+                <li>Add support for updating GeneralLedgerAmount, CXXmultiplier, and Denomination properties</li>
+                <li>Ensure exchange rate calculations are applied consistently</li>
+              </ul>
+
+              <p>Key updates to DCO process:</p>
+              <ul>
+                <li>Add Cypher queries to update AssetMarker nodes in ledgerSpace</li>
+                <li>Apply the same exchange rate logic used for Credex nodes</li>
+                <li>Handle both CXX-denominated and currency-denominated AssetMarkers</li>
+              </ul>
+
+              <p>Example implementation for updating AssetMarker nodes:</p>
+              <pre><code>// Update CXX-denominated AssetMarkers
+MATCH (assetMarker:AssetMarker)
+WHERE assetMarker.Denomination = "CXX"
+SET assetMarker.GeneralLedgerAmount = assetMarker.GeneralLedgerAmount / newDaynode.CXXprior_CXXcurrent
+WITH newDaynode
+
+// Update currency-denominated AssetMarkers
+MATCH (assetMarker:AssetMarker)
+WHERE assetMarker.Denomination <> "CXX"
+SET
+  assetMarker.GeneralLedgerAmount = (assetMarker.GeneralLedgerAmount / assetMarker.CXXmultiplier) * newDaynode[assetMarker.Denomination],
+  assetMarker.CXXmultiplier = newDaynode[assetMarker.Denomination]</code></pre>
+
+              <p>Reference implementation: <a href="../due-diligence/DCO.html">DCO Documentation</a></p>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 7: Integration and Testing</h4>
+            <div class="phase-details">
+              <h5>11. Integration Testing</h5>
+              <ul>
+                <li>Test each endpoint individually</li>
+                <li>Test user flows (vendor profiles, product listings, etc.)</li>
+                <li>Verify database relationships</li>
+              </ul>
+
+              <p>Test cases should cover:</p>
+              <ul>
+                <li>Vendor profile creation and management</li>
+                <li>Product listing creation with images</li>
+                <li>Inventory management with multiple CR/DR relationships</li>
+                <li>Invoice generation and digital signing</li>
+                <li>Error handling and validation</li>
+              </ul>
+
+              <h5>11. Documentation and Swagger Updates</h5>
+              <ul>
+                <li>Update API documentation</li>
+                <li>Add Swagger annotations for new endpoints</li>
+              </ul>
+
+              <p>Reference: <a href="../develop/api_reference.html">API Documentation Standards</a></p>
+            </div>
+          </div>
+
+          <div class="section-divider"></div>
+
+          <h3>Database Relationships</h3>
+          <p>
+            The implementation will need to handle these key relationships:
+          </p>
+
+          <pre><code>// Member to Account relationships
+(:Member {vendor: true|false})-[:OWNS]->(:Account)
+
+// Member to AssetMarker relationships
+(:Member)-[:PROFILE_PIC_ORIGINAL_JPG]->(:AssetMarker)
+(:Member)-[:PROFILE_PIC_200_JPG]->(:AssetMarker)
+(:Member)-[:PROFILE_PIC_600_JPG]->(:AssetMarker)
+
+// Account to AssetMarker relationships
+(:Account)-[:ACCOUNT_PIC_ORIGINAL_JPG]->(:AssetMarker)
+(:Account)-[:ACCOUNT_PIC_200_JPG]->(:AssetMarker)
+(:Account)-[:ACCOUNT_PIC_600_JPG]->(:AssetMarker)
+
+// AssetMarker relationships (corrected)
+(:Account|AccountInternal)-[:CR]->(:AssetMarker {
+  GeneralLedgerAmount: number,
+  CXXmultiplier: number,
+  Denomination: string
+})
+(:AssetMarker {
+  GeneralLedgerAmount: number,
+  CXXmultiplier: number,
+  Denomination: string
+})-[:DR]->(:Account|AccountInternal)
+// Note: Sum of all CR GeneralLedgerAmount values must equal sum of all DR GeneralLedgerAmount values
+
+// AssetMarker to AssetMarker relationships
+(:AssetMarker)-[:USED_IN]->(:AssetMarker)
+
+// Invoice relationships
+(:Invoice)-[:CREDITS_TO]->(:Account|AccountInternal)
+(:Account|AccountInternal)<-[:DEBITS_TO]-(:Invoice)
+(:Invoice)<-[:EXECUTES]-(:Credex)
+
+// Digital signature relationships
+(:Member)-[:SIGNED]->(:Signature)-[:SIGNED]->(:Invoice)</code></pre>
+
+          <p>
+            For more details on the data model, see the <a href="data-model.html">Data Model</a> page.
+          </p>
+
+          <div class="section-divider"></div>
+
+          <div class="section-divider"></div>
+
+          <h3>Key Technical Considerations</h3>
+          <ul>
+            <li><strong>Multiple CR/DR Relationships</strong>: The AssetMarker implementation must support multiple credit and debit relationships, with validation to ensure the sum of credits equals the sum of debits.</li>
+            <li><strong>AssetMarker Properties</strong>: AssetMarker nodes must include GeneralLedgerAmount, CXXmultiplier, and Denomination properties to support proper accounting and exchange rate handling.</li>
+            <li><strong>DCO Integration</strong>: The DCO process must be updated to handle AssetMarker nodes, applying the same exchange rate logic used for Credex nodes and LoopAnchors to maintain consistent value across the system.</li>
+            <li><strong>Digital Signatures</strong>: Invoices must be digitally signed by the creating member using the <code>digitallySign</code> utility.</li>
+            <li><strong>Relationship Naming</strong>: Use <code>ACCOUNT_PIC_*</code> for relationships between accounts and asset markers (these may be displayed as product images on the client side).</li>
+            <li><strong>Error Handling</strong>: Implement comprehensive error handling and validation to ensure data integrity.</li>
+            <li><strong>Performance</strong>: Consider the performance implications of complex queries, especially those involving multiple relationships.</li>
+          </ul>
+        </section>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="market-footer">
+      <div class="container">
+        <p>&copy; 2025 VimbisoPay. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // Initialize mermaid
+        mermaid.initialize({
+          startOnLoad: true,
+          theme: 'dark',
+          securityLevel: 'loose',
+          themeVariables: {
+            primaryColor: '#04a0b2',
+            primaryTextColor: '#ffffff',
+            primaryBorderColor: '#fbb016',
+            lineColor: '#04a0b2',
+            secondaryColor: '#006400',
+            tertiaryColor: '#fbb016'
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
