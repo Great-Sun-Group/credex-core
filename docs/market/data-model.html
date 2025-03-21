@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="../css/layout.css" />
     <link rel="stylesheet" href="../css/components.css" />
     <link rel="stylesheet" href="../css/responsive.css" />
-    <link rel="stylesheet" href="css/variables.css" />
     <link rel="stylesheet" href="css/market.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
@@ -40,16 +39,10 @@
             <a href="api-reference.html">API Reference</a>
           </li>
           <li class="nav-item">
-            <a href="api-workplan.html">API Implementation</a>
+            <a href="ui-specs.html">UI Specifications</a>
           </li>
           <li class="nav-item">
-            <a href="api-testing.html">API Testing</a>
-          </li>
-          <li class="nav-item">
-            <a href="ui-specs-seller.html">UI Specs Seller</a>
-          </li>
-          <li class="nav-item">
-            <a href="ui-specs-purchaser.html">UI Specs Purchaser</a>
+            <a href="workplan.html">Implementation Workplan</a>
           </li>
         </ul>
       </div>
@@ -232,31 +225,24 @@
 (:AssetMarker { filename: "profile_pic_original.jpg" })-[:USED_IN]->(:AssetMarker { filename: "profile_pic_600.jpg" })</code></pre>
 
             <p><strong>Reference Relationships</strong></p>
-            <pre><code>// Both Member and Account use the same relationship types for images
-// Source (Member or Account) to AssetMarker relationships
-(:Source)-[:PROFILE_PIC_ORIGINAL_JPG]->(:AssetMarker)
-(:Source)-[:PROFILE_PIC_THUMBNAIL_JPG]->(:AssetMarker)
-(:Source)-[:PROFILE_PIC_200_JPG]->(:AssetMarker)
-(:Source)-[:PROFILE_PIC_600_JPG]->(:AssetMarker)</code></pre>
+            <pre><code>(:Member)-[:PROFILE_PIC_200_JPG]->(:AssetMarker)
+(:Account)-[:ACCOUNT_PIC_200_JPG]->(:AssetMarker)</code></pre>
 
             <div class="asset-marker-diagram">
               <h4>AssetMarker in the Database</h4>
               <div class="mermaid">
                 graph TD AM1((":AssetMarker<br />filename: 'original.jpg'"))
-                AM4((":AssetMarker<br />filename: 'thumbnail.jpg'"))
                 AM2((":AssetMarker<br />filename: '200px.jpg'"))
                 AM3((":AssetMarker<br />filename: '600px.jpg'"))
                 A1((":Account<br />name: 'onboardedAssets'")) A2((":Account<br />name:
                 'digitalAssets'")) M1((":Member<br />name: 'Munya'")) AM1
-                -->|USED_IN| AM4 AM1 -->|USED_IN| AM2 AM1 -->|USED_IN| AM3 A1
-                -->|CR| AM1 AM1 -->|DR| A2 A1 -->|CR| AM4 AM4 -->|DR| A2 A1
-                -->|CR| AM2 AM2 -->|DR| A2 A1 -->|CR| AM3 AM3 -->|DR| A2 M1
-                -->|PROFILE_PIC_ORIGINAL_JPG| AM1 M1
-                -->|PROFILE_PIC_THUMBNAIL_JPG| AM4 M1 -->|PROFILE_PIC_200_JPG|
+                -->|USED_IN| AM2 AM1 -->|USED_IN| AM3 A1 -->|CR| AM1 AM1 -->|DR|
+                A2 A1 -->|CR| AM2 AM2 -->|DR| A2 A1 -->|CR| AM3 AM3 -->|DR| A2
+                M1 -->|PROFILE_PIC_ORIGINAL_JPG| AM1 M1 -->|PROFILE_PIC_200_JPG|
                 AM2 M1 -->|PROFILE_PIC_600_JPG| AM3 classDef assetMarker
                 fill:#FBB016,stroke:#FBB016,color:black classDef account
                 fill:#006400,stroke:#006400,color:#FBB016 classDef member
-                fill:black,stroke:black,color:white class AM1,AM2,AM3,AM4
+                fill:black,stroke:black,color:white class AM1,AM2,AM3
                 assetMarker class A1,A2 account class M1 member
               </div>
             </div>
@@ -288,23 +274,17 @@
             <div class="invoice-diagram">
               <h4>Invoice and Credex Relationships</h4>
               <div class="mermaid">
-                graph TD I1((":Invoice<br />invoiceID: 'inv-123'<br />Amount:
-                20<br />Denomination: 'USD'")) C1((":Credex<br />GLid:
-                'gl-123'<br />InitialAmount: 20")) A1((":AccountInternal<br />name:
-                'tomatoes'")) A2((":Account<br />name: 'faraiPersonal'"))
-                AM1((":AssetMarker<br />GLid: 'gl-123'")) M1((":Member<br />name:
-                'Munya'")) M2((":Member<br />name: 'Farai'")) S1((":Signature<br />actionType:
-                'INVOICE_CREATED'")) I1 -->|CREDITS_TO| A1 C1 -->|EXECUTES| I1
-                C1 -->|OFFERS| A2 A1 -->|CR| AM1 AM1 -->|DR| A2 M1 -->|SIGNED|
-                S1 S1 -->|SIGNED| I1 M1 -->|OWNS| A1 M2 -->|OWNS| A2 classDef
-                invoice fill:#FBB016,stroke:#FBB016,color:black classDef credex
+                graph TD I1((":Invoice<br />amount: 20")) C1((":Credex<br />amount:
+                20")) A1((":Account<br />name: 'tomatoes'")) A2((":Account<br />name:
+                'faraiPersonal'")) M1((":Member<br />name: 'Munya'"))
+                M2((":Member<br />name: 'Farai'")) I1 -->|CREDITS_TO| A1 I1
+                -->|DEBITS_TO| A2 C1 -->|EXECUTES| I1 M1 -->|SIGNED| I1 M2
+                -->|CREATED| C1 M1 -->|OWNS| A1 M2 -->|OWNS| A2 classDef invoice
+                fill:#FBB016,stroke:#FBB016,color:black classDef credex
                 fill:#FBB016,stroke:#FBB016,color:black classDef account
                 fill:#006400,stroke:#006400,color:#FBB016 classDef member
-                fill:black,stroke:black,color:white classDef assetMarker
-                fill:#FBB016,stroke:#FBB016,color:black classDef signature
-                fill:#006400,stroke:#006400,color:#FBB016 class I1 invoice class
-                C1 credex class A1,A2 account class M1,M2 member class AM1
-                assetMarker class S1 signature
+                fill:black,stroke:black,color:white class I1 invoice class C1
+                credex class A1,A2 account class M1,M2 member
               </div>
             </div>
 

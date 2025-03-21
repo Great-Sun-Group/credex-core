@@ -1,12 +1,12 @@
 /* Market-specific styles */
 
-/* Base Overrides */
+/* Base Layout */
 body {
-  background-color: var(--dark-blue);
-  color: var(--text-white);
-  max-width: none;
-  margin: 0;
-  padding: 0;
+  background-color: #06151f;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .container {
@@ -17,8 +17,8 @@ body {
 
 /* Header */
 .market-header {
-  background-color: #0a2535; /* Darker teal that matches the dark theme */
-  color: white;
+  background-color: #06151f;
+  border-bottom: 1px solid rgba(4, 160, 178, 0.2);
   padding: 1.5rem 0;
   border-bottom: 1px solid #04a0b2; /* Subtle teal border */
 }
@@ -30,22 +30,23 @@ body {
 }
 
 .market-header h1 {
+  color: #fbb016;
+  font-size: 2rem;
   margin: 0;
   font-size: 2rem;
   font-weight: 700;
   color: #fbb016; /* Orange color for the title */
 }
 
-.market-header .back-link {
-  color: #04a0b2; /* Teal color for the back link */
+.back-link {
+  color: #04a0b2;
   text-decoration: none;
   font-weight: 600;
   transition: opacity 0.2s;
 }
 
-.market-header .back-link:hover {
-  opacity: 0.8;
-  color: white;
+.back-link:hover {
+  color: #fbb016;
 }
 
 /* Navigation */
@@ -68,8 +69,15 @@ body {
   white-space: nowrap;
 }
 
-.market-nav .nav-item a {
-  color: #fbb016;
+/* Remove the dots from navigation items */
+.nav-item::before {
+  display: none;
+}
+
+.nav-item a {
+  display: block;
+  padding: 0.75rem 1rem;
+  color: #ffffff;
   text-decoration: none;
   font-weight: 600;
   padding: 0.5rem 0;
@@ -77,13 +85,14 @@ body {
   transition: color 0.2s;
 }
 
-.market-nav .nav-item a:hover {
-  color: white;
+.nav-item a:hover {
+  background-color: rgba(251, 176, 22, 0.1);
+  color: #fbb016;
 }
 
-.market-nav .nav-item.active a {
-  color: white;
-  border-bottom: 2px solid white;
+.nav-item.active a {
+  background-color: rgba(4, 160, 178, 0.2);
+  color: #fbb016;
 }
 
 /* Main Content */
@@ -92,16 +101,90 @@ body {
   min-height: calc(100vh - 200px);
 }
 
-.market-content h2 {
+.lead {
+  font-size: 1.25rem;
+  margin-bottom: 2rem;
   color: #04a0b2;
-  margin-top: 0;
+}
+
+.section-divider {
+  height: 1px;
+  background-color: rgba(4, 160, 178, 0.2);
+  margin: 3rem 0;
+}
+
+/* Feature Cards */
+.feature-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.feature-card {
+  background-color: rgba(6, 21, 31, 0.7);
+  border: 1px solid rgba(4, 160, 178, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+  border-color: rgba(251, 176, 22, 0.8);
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.feature-card h3 {
+  color: #fbb016;
   margin-bottom: 1rem;
 }
 
-.market-content .lead {
-  font-size: 1.2rem;
-  color: var(--text-white);
-  margin-bottom: 2rem;
+.feature-card p {
+  margin-bottom: 1.5rem;
+}
+
+.card-link {
+  color: #04a0b2;
+  text-decoration: none;
+  font-weight: 500;
+  display: inline-block;
+  transition: color 0.3s ease;
+}
+
+.card-link:hover {
+  color: #fbb016;
+}
+
+/* Component List */
+.component-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+.component-item {
+  padding: 1rem 0;
+}
+
+.component-item h4 {
+  color: #fbb016;
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+}
+
+.component-link {
+  display: inline-block;
+  margin-top: 0.5rem;
+  color: #04a0b2;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.component-link:hover {
+  color: #fbb016;
 }
 
 /* Footer */
@@ -112,10 +195,58 @@ body {
   text-align: center;
 }
 
-/* Tabs */
+/* Mermaid Diagrams */
+.mermaid {
+  background-color: rgba(6, 21, 31, 0.5);
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin: 2rem 0;
+  overflow-x: auto;
+}
+
+/* Code Blocks */
+pre {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border: 1px solid rgba(4, 160, 178, 0.2);
+}
+
+code {
+  font-family: "Courier New", Courier, monospace;
+  color: #04a0b2;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+}
+
+th,
+td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(4, 160, 178, 0.2);
+}
+
+th {
+  color: #fbb016;
+  font-weight: 600;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+tr:hover {
+  background-color: rgba(4, 160, 178, 0.05);
+}
+
+/* Tabs for User Flows */
 .tabs {
   display: flex;
-  border-bottom: 1px solid var(--market-divider);
+  border-bottom: 1px solid rgba(4, 160, 178, 0.2);
   margin-bottom: 2rem;
   overflow-x: auto;
 }
@@ -130,12 +261,14 @@ body {
 }
 
 .tab:hover {
-  color: #04a0b2;
+  color: #fbb016;
+  background-color: rgba(251, 176, 22, 0.1);
 }
 
 .tab.active {
-  color: #04a0b2;
-  border-bottom: 3px solid #04a0b2;
+  color: #fbb016;
+  border-bottom-color: #fbb016;
+  background-color: rgba(4, 160, 178, 0.2);
 }
 
 .tab-content {
@@ -368,4 +501,153 @@ body {
     flex-grow: 1;
     text-align: center;
   }
+}
+
+/* Data Model Specific Styles */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border: 1px solid rgba(4, 160, 178, 0.3);
+}
+
+.data-table th {
+  background-color: rgba(0, 0, 0, 0.3);
+  color: #fbb016;
+  font-weight: 600;
+}
+
+.dual-nature {
+  display: flex;
+  gap: 2rem;
+  margin: 1.5rem 0;
+}
+
+.dual-column {
+  flex: 1;
+}
+
+.asset-marker-diagram,
+.invoice-diagram {
+  margin: 2rem 0;
+}
+
+/* UI Specs Specific Styles */
+.ui-screen-card {
+  background-color: rgba(6, 21, 31, 0.7);
+  border: 1px solid rgba(4, 160, 178, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.ui-screen-details {
+  display: flex;
+  gap: 2rem;
+  margin-top: 1rem;
+}
+
+.ui-adjusting-description {
+  flex: 1;
+}
+
+.ui-screen-mockup {
+  flex: 1;
+}
+
+.mockup-placeholder {
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(4, 160, 178, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mockup-content {
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+/* Flow Details */
+.flow-details {
+  background-color: rgba(6, 21, 31, 0.7);
+  border: 1px solid rgba(4, 160, 178, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+}
+
+/* Workplan Specific Styles */
+.phase-container {
+  background-color: rgba(6, 21, 31, 0.7);
+  border: 1px solid rgba(4, 160, 178, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.phase-details {
+  margin-top: 1rem;
+}
+
+.timeline-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+}
+
+.timeline-table th,
+.timeline-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border: 1px solid rgba(4, 160, 178, 0.3);
+}
+
+.timeline-table th {
+  background-color: rgba(0, 0, 0, 0.3);
+  color: #fbb016;
+  font-weight: 600;
+}
+
+/* Endpoint Cards */
+.endpoint-card {
+  background-color: rgba(6, 21, 31, 0.7);
+  border: 1px solid rgba(4, 160, 178, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.endpoint-card h4 {
+  color: #fbb016;
+  margin-bottom: 0.5rem;
+}
+
+.endpoint-description {
+  margin-bottom: 1rem;
+}
+
+.endpoint-params,
+.endpoint-operations,
+.endpoint-example,
+.endpoint-returns {
+  margin-top: 1rem;
+}
+
+.endpoint-params h5,
+.endpoint-operations h5,
+.endpoint-example h5,
+.endpoint-returns h5 {
+  color: #04a0b2;
+  margin-bottom: 0.5rem;
 }
