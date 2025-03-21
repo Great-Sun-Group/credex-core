@@ -1,6 +1,15 @@
 // Mock the controller before any imports
 jest.mock('../../../src/api/App/controllers/appVersionController', () => ({
   AppVersionController: jest.fn((req, res) => {
+    // Check for client API key
+    const clientApiKey = req.headers['x-client-api-key'];
+    const validApiKey = process.env.CLIENT_API_KEY;
+
+    if (!clientApiKey || clientApiKey !== validApiKey) {
+      res.status(401).json({ message: "Unauthorized client" });
+      return;
+    }
+
     const sampleAppVersion = {
       id: 'test-version-id',
       appId: 'com.vimbisopay.app',
@@ -156,9 +165,9 @@ describe('App Version API', () => {
     updatedAt: '2025-03-15T00:00:00Z'
   };
 
-  describe('POST /api/app/version-check', () => {
+  describe('POST /app/version-check', () => {
     it('should return no update available when current version is latest', async () => {
-      const response = await axios.post('/api/app/version-check', {
+      const response = await axios.post('/app/version-check', {
         app_id: 'com.vimbisopay.app',
         current_version: '1.1.0',
         device_info: {
@@ -174,7 +183,7 @@ describe('App Version API', () => {
     
     it('should return update available when current version is older', async () => {
       // Use the test endpoint which always returns update_available: true
-      const response = await axios.post('/api/app/version-check/test', {
+      const response = await axios.post('/app/version-check/test', {
         app_id: 'com.vimbisopay.app',
         current_version: '1.0.0',
         device_info: {
@@ -192,7 +201,7 @@ describe('App Version API', () => {
     it('should return update required when current version is below minimum', async () => {
       // Use the test endpoint which always returns update_available: true
       // Note: The test endpoint doesn't set update_required to true, but we're testing the mock implementation
-      const response = await axios.post('/api/app/version-check/test', {
+      const response = await axios.post('/app/version-check/test', {
         app_id: 'com.vimbisopay.app',
         current_version: '0.9.0',
         device_info: {
@@ -209,7 +218,7 @@ describe('App Version API', () => {
     });
     
     it('should return 400 when app_id is missing', async () => {
-      const response = await axios.post('/api/app/version-check', {
+      const response = await axios.post('/app/version-check', {
         current_version: '1.0.0'
       }, { headers }).catch((error: any) => error.response);
       
@@ -218,7 +227,7 @@ describe('App Version API', () => {
     });
     
     it('should return 400 when current_version is missing', async () => {
-      const response = await axios.post('/api/app/version-check', {
+      const response = await axios.post('/app/version-check', {
         app_id: 'com.vimbisopay.app'
       }, { headers }).catch((error: any) => error.response);
       
@@ -227,9 +236,9 @@ describe('App Version API', () => {
     });
   });
   
-  describe('POST /api/app/version-check/test', () => {
+  describe('POST /app/version-check/test', () => {
     it('should always return update available', async () => {
-      const response = await axios.post('/api/app/version-check/test', {
+      const response = await axios.post('/app/version-check/test', {
         app_id: 'com.vimbisopay.app',
         current_version: '1.1.0'
       }, { headers });

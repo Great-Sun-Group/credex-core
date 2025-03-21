@@ -302,13 +302,13 @@ describe('App Version Admin API', () => {
     };
   });
 
-  describe('POST /api/admin/app-versions', () => {
+  describe('POST /admin/app-versions', () => {
     it('should create a new app version', async () => {
       // Create a test member for this test
       const { authToken } = await createTestMember();
       
       // Make the request - for POST requests, include token in the body
-      const response = await axios.post('/api/admin/app-versions', {
+      const response = await axios.post('/admin/app-versions', {
         ...createAppVersionInput,
         token: authToken
       }, { headers });
@@ -328,7 +328,7 @@ describe('App Version Admin API', () => {
       const { authToken } = await createTestMember();
       
       // Make the request with missing fields - for POST requests, include token in the body
-      const response = await axios.post('/api/admin/app-versions', {
+      const response = await axios.post('/admin/app-versions', {
         appId: 'com.vimbisopay.app',
         token: authToken
       }, { headers }).catch(error => error.response);
@@ -339,13 +339,13 @@ describe('App Version Admin API', () => {
     });
   });
 
-  describe('GET /api/admin/app-versions/:id', () => {
+  describe('GET /admin/app-versions/:id', () => {
     it('should get an app version by ID', async () => {
       // Create a test member for this test
       const { authToken } = await createTestMember();
       
       // Make the request - for GET requests, include token as a query parameter
-      const response = await axios.get(`/api/admin/app-versions/${sampleAppVersion.id}`, {
+      const response = await axios.get(`/admin/app-versions/${sampleAppVersion.id}`, {
         headers,
         params: { token: authToken }
       });
@@ -362,7 +362,7 @@ describe('App Version Admin API', () => {
       const { authToken } = await createTestMember();
       
       // Make the request - for GET requests, include token as a query parameter
-      const response = await axios.get('/api/admin/app-versions/non-existent-id', {
+      const response = await axios.get('/admin/app-versions/non-existent-id', {
         headers,
         params: { token: authToken }
       }).catch(error => error.response);
@@ -373,13 +373,13 @@ describe('App Version Admin API', () => {
     });
   });
 
-  describe('GET /api/admin/app-versions/app/:appId', () => {
+  describe('GET /admin/app-versions/app/:appId', () => {
     it('should get all app versions for an app', async () => {
       // Create a test member for this test
       const { authToken } = await createTestMember();
       
       // Make the request - for GET requests, include token as a query parameter
-      const response = await axios.get(`/api/admin/app-versions/app/${sampleAppVersion.appId}`, {
+      const response = await axios.get(`/admin/app-versions/app/${sampleAppVersion.appId}`, {
         headers,
         params: { token: authToken }
       });
@@ -398,13 +398,13 @@ describe('App Version Admin API', () => {
     });
   });
 
-  describe('PUT /api/admin/app-versions/:id', () => {
+  describe('PUT /admin/app-versions/:id', () => {
     it('should update an app version', async () => {
       // Create a test member for this test
       const { authToken } = await createTestMember();
       
       // Make the request - for PUT requests, include token in the body
-      const response = await axios.put(`/api/admin/app-versions/${sampleAppVersion.id}`, {
+      const response = await axios.put(`/admin/app-versions/${sampleAppVersion.id}`, {
         ...updateAppVersionInput,
         token: authToken
       }, { headers });
@@ -421,7 +421,7 @@ describe('App Version Admin API', () => {
       const { authToken } = await createTestMember();
       
       // Make the request - for PUT requests, include token in the body
-      const response = await axios.put('/api/admin/app-versions/non-existent-id', {
+      const response = await axios.put('/admin/app-versions/non-existent-id', {
         ...updateAppVersionInput,
         token: authToken
       }, { headers }).catch(error => error.response);
@@ -432,13 +432,13 @@ describe('App Version Admin API', () => {
     });
   });
 
-  describe('DELETE /api/admin/app-versions/:id', () => {
+  describe('DELETE /admin/app-versions/:id', () => {
     it('should delete an app version', async () => {
       // Create a test member for this test
       const { authToken } = await createTestMember();
       
       // Make the request - for DELETE requests, include token in the data property
-      const response = await axios.delete(`/api/admin/app-versions/${sampleAppVersion.id}`, {
+      const response = await axios.delete(`/admin/app-versions/${sampleAppVersion.id}`, {
         headers,
         data: { token: authToken }
       });
@@ -453,7 +453,7 @@ describe('App Version Admin API', () => {
       const { authToken } = await createTestMember();
       
       // Make the request - for DELETE requests, include token in the data property
-      const response = await axios.delete('/api/admin/app-versions/non-existent-id', {
+      const response = await axios.delete('/admin/app-versions/non-existent-id', {
         headers,
         data: { token: authToken }
       }).catch(error => error.response);

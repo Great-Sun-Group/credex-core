@@ -97,8 +97,8 @@ async function initializeApp() {
     app.use(AdminRoutes());
     app.use(RecurringRoutes());
     app.use('/api', NotificationRoutes);
-    app.use('/api/app', appRoutes());
-    app.use('/api/admin', appAdminRoutes());
+    app.use('/app', appRoutes());
+    app.use('/admin', appAdminRoutes());
     logger.info("Route handlers applied for production modules");
 
     // Apply route handlers for dev-only routes

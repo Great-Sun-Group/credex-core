@@ -35,7 +35,7 @@ class AppUpdateService {
       
       // Make API request
       final response = await http.post(
-        Uri.parse('$baseUrl/api/app/version-check'),
+        Uri.parse('$baseUrl/app/version-check'),
         headers: {
           'Content-Type': 'application/json',
           'x-client-api-key': clientApiKey

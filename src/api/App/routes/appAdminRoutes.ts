@@ -153,7 +153,7 @@ export default function appAdminRoutes() {
 
   /**
    * @swagger
-   * /api/admin/app-versions:
+   * /admin/app-versions:
    *   post:
    *     tags: [Admin]
    *     summary: Create a new app version
@@ -317,7 +317,7 @@ export default function appAdminRoutes() {
 
   /**
    * @swagger
-   * /api/admin/app-versions/{id}:
+   * /admin/app-versions/{id}:
    *   get:
    *     tags: [Admin]
    *     summary: Get an app version
@@ -452,7 +452,7 @@ export default function appAdminRoutes() {
 
   /**
    * @swagger
-   * /api/admin/app-versions/app/{appId}:
+   * /admin/app-versions/app/{appId}:
    *   get:
    *     tags: [Admin]
    *     summary: Get all app versions for an app
@@ -556,7 +556,7 @@ export default function appAdminRoutes() {
 
   /**
    * @swagger
-   * /api/admin/app-versions/{id}:
+   * /admin/app-versions/{id}:
    *   put:
    *     tags: [Admin]
    *     summary: Update an app version
@@ -742,7 +742,7 @@ export default function appAdminRoutes() {
 
   /**
    * @swagger
-   * /api/admin/app-versions/{id}:
+   * /admin/app-versions/{id}:
    *   delete:
    *     tags: [Admin]
    *     summary: Delete an app version

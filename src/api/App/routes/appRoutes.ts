@@ -32,7 +32,7 @@ export default function appRoutes() {
 
   /**
    * @swagger
-   * /api/app/version-check:
+   * /app/version-check:
    *   post:
    *     tags: [App]
    *     summary: Check for app updates
@@ -252,7 +252,7 @@ export default function appRoutes() {
 
   /**
    * @swagger
-   * /api/app/version-check/test:
+   * /app/version-check/test:
    *   post:
    *     tags: [App]
    *     summary: Test app update check
