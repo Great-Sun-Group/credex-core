@@ -58,7 +58,7 @@ const devAdminCommands = ["cleardevdbs", "forcedco", "clearforce", "trustaudit"]
 const integrationCommands = ["integrate"];
 
 // Tests that don't require JWT
-const noJwtTests = ["onboardmember", "login"];
+const noJwtTests = ["onboardmember", "login", "marketFlow"];
 
 // Add environment-specific flags
 const envFlags = {
