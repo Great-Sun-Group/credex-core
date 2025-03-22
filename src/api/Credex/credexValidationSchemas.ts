@@ -55,6 +55,14 @@ export const createCredexSchema = {
     },
     required: false,
   },
+  invoiceID: {
+    sanitizer: s.sanitizeUUID,
+    validator: (value: string) => {
+      if (!value) return { isValid: true };
+      return v.validateUUID(value);
+    },
+    required: false,
+  },
 };
 logger.debug("createCredexSchema initialized");
 

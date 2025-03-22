@@ -26,12 +26,53 @@ export default function addAssetMarkerRoute() {
    *             type: object
    *             required:
    *               - assetName
+   *               - crAccounts
+   *               - drAccounts
    *             properties:
    *               assetName:
    *                 type: string
    *                 minLength: 3
    *                 maxLength: 100
    *                 description: Name of the asset
+   *               crAccounts:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   required:
+   *                     - accountID
+   *                     - amount
+   *                   properties:
+   *                     accountID:
+   *                       type: string
+   *                       format: uuid
+   *                       description: ID of the account to credit
+   *                     amount:
+   *                       type: number
+   *                       minimum: 0
+   *                       exclusiveMinimum: true
+   *                       description: Amount to credit
+   *               drAccounts:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   required:
+   *                     - accountID
+   *                     - amount
+   *                   properties:
+   *                     accountID:
+   *                       type: string
+   *                       format: uuid
+   *                       description: ID of the account to debit
+   *                     amount:
+   *                       type: number
+   *                       minimum: 0
+   *                       exclusiveMinimum: true
+   *                       description: Amount to debit
+   *               denomination:
+   *                 type: string
+   *                 enum: [CXX, CAD, USD, XAU]
+   *                 default: USD
+   *                 description: Denomination of the asset marker
    *               description:
    *                 type: string
    *                 maxLength: 500
@@ -78,14 +119,22 @@ export default function addAssetMarkerRoute() {
    *                         details:
    *                           type: object
    *                           properties:
-   *                             assetID:
+   *                             assetIDs:
+   *                               type: array
+   *                               items:
+   *                                 type: string
+   *                                 format: uuid
+   *                               description: Array of created asset marker IDs
+   *                             GLid:
    *                               type: string
-   *                               format: uuid
+   *                               description: General Ledger ID shared by all created asset markers
    *                             assetName:
    *                               type: string
    *                             description:
    *                               type: string
    *                             s3Key:
+   *                               type: string
+   *                             denomination:
    *                               type: string
    *                             createdAt:
    *                               type: string

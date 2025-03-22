@@ -135,7 +135,7 @@ export default function generateInvoiceRoute() {
    *                         invoice:
    *                           type: object
    *                           properties:
-   *                             id:
+   *                             invoiceID:
    *                               type: string
    *                               format: uuid
    *                             invoiceQRLink:
@@ -143,12 +143,17 @@ export default function generateInvoiceRoute() {
    *                               format: uri
    *                             amount:
    *                               type: number
-   *                             currency:
+   *                             denomination:
    *                               type: string
-   *                             items:
+   *                             lines:
    *                               type: array
    *                               items:
    *                                 type: object
+   *                                 properties:
+   *                                   accountName:
+   *                                     type: string
+   *                                   amount:
+   *                                     type: number
    *                             notes:
    *                               type: string
    *                             createdAt:

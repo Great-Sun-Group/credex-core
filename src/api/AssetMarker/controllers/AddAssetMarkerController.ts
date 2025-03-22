@@ -68,36 +68,52 @@ export async function AddAssetMarkerController(
       throw new Error(`Accounts not found or not owned by the member: ${missingAccountIDs.join(", ")}`);
     }
 
-    // Create the asset marker with CR and DR relationships
-    const assetID = uuidv4();
+    // Generate a shared GLid for all related AssetMarkers
+    const GLid = uuidv4();
+    
+    // Create separate AssetMarker nodes for each CR/DR pair
+    const assetIDs: string[] = [];
     const result = await session.executeWrite(async (tx: any) => {
-      // Create the asset marker node
-      const createAssetResult = await tx.run(
-        `CREATE (a:AssetMarker {
-          id: $assetID,
-          assetName: $assetName,
-          description: $description,
-          s3Key: $s3Key,
-          GeneralLedgerAmount: $totalAmount,
-          CXXmultiplier: 1,
-          Denomination: $denomination,
-          AssetMarkerData: $AssetMarkerData,
-          createdAt: datetime()
-        })
-        RETURN a`,
-        { 
-          assetID, 
-          assetName, 
-          description: description || "", 
-          s3Key: s3Key || "", 
-          totalAmount: totalCR, 
-          denomination,
-          AssetMarkerData: AssetMarkerData ? JSON.stringify(AssetMarkerData) : "{}"
-        }
-      );
-
-      // Create CR relationships
-      for (const crAccount of crAccounts) {
+      let createAssetResult;
+      
+      // Ensure we have matching CR and DR accounts
+      const maxPairs = Math.min(crAccounts.length, drAccounts.length);
+      
+      // Create a separate AssetMarker for each CR/DR pair
+      for (let i = 0; i < maxPairs; i++) {
+        const crAccount = crAccounts[i];
+        const drAccount = drAccounts[i];
+        const assetID = uuidv4();
+        assetIDs.push(assetID);
+        
+        // Create the asset marker node with GLid
+        createAssetResult = await tx.run(
+          `CREATE (a:AssetMarker {
+            id: $assetID,
+            assetName: $assetName,
+            description: $description,
+            s3Key: $s3Key,
+            GeneralLedgerAmount: $amount,
+            CXXmultiplier: 1,
+            Denomination: $denomination,
+            GLid: $GLid,
+            AssetMarkerData: $AssetMarkerData,
+            createdAt: datetime()
+          })
+          RETURN a`,
+          { 
+            assetID, 
+            assetName, 
+            description: description || "", 
+            s3Key: s3Key || "", 
+            amount: crAccount.amount, 
+            denomination,
+            GLid,
+            AssetMarkerData: AssetMarkerData ? JSON.stringify(AssetMarkerData) : "{}"
+          }
+        );
+        
+        // Create single CR relationship
         await tx.run(
           `MATCH (a:AssetMarker {id: $assetID})
            MATCH (account) WHERE account.id = $accountID AND (account:Account OR account:AccountInternal)
@@ -105,10 +121,8 @@ export async function AddAssetMarkerController(
            RETURN r`,
           { assetID, accountID: crAccount.accountID, amount: crAccount.amount }
         );
-      }
-
-      // Create DR relationships
-      for (const drAccount of drAccounts) {
+        
+        // Create single DR relationship
         await tx.run(
           `MATCH (a:AssetMarker {id: $assetID})
            MATCH (account) WHERE account.id = $accountID AND (account:Account OR account:AccountInternal)
@@ -117,7 +131,93 @@ export async function AddAssetMarkerController(
           { assetID, accountID: drAccount.accountID, amount: drAccount.amount }
         );
       }
-
+      
+      // If there are remaining CR accounts without matching DR accounts
+      for (let i = maxPairs; i < crAccounts.length; i++) {
+        const crAccount = crAccounts[i];
+        const assetID = uuidv4();
+        assetIDs.push(assetID);
+        
+        // Create the asset marker node
+        createAssetResult = await tx.run(
+          `CREATE (a:AssetMarker {
+            id: $assetID,
+            assetName: $assetName,
+            description: $description,
+            s3Key: $s3Key,
+            GeneralLedgerAmount: $amount,
+            CXXmultiplier: 1,
+            Denomination: $denomination,
+            GLid: $GLid,
+            AssetMarkerData: $AssetMarkerData,
+            createdAt: datetime()
+          })
+          RETURN a`,
+          { 
+            assetID, 
+            assetName, 
+            description: description || "", 
+            s3Key: s3Key || "", 
+            amount: crAccount.amount, 
+            denomination,
+            GLid,
+            AssetMarkerData: AssetMarkerData ? JSON.stringify(AssetMarkerData) : "{}"
+          }
+        );
+        
+        // Create single CR relationship
+        await tx.run(
+          `MATCH (a:AssetMarker {id: $assetID})
+           MATCH (account) WHERE account.id = $accountID AND (account:Account OR account:AccountInternal)
+           CREATE (account)-[r:CR {amount: $amount}]->(a)
+           RETURN r`,
+          { assetID, accountID: crAccount.accountID, amount: crAccount.amount }
+        );
+      }
+      
+      // If there are remaining DR accounts without matching CR accounts
+      for (let i = maxPairs; i < drAccounts.length; i++) {
+        const drAccount = drAccounts[i];
+        const assetID = uuidv4();
+        assetIDs.push(assetID);
+        
+        // Create the asset marker node
+        createAssetResult = await tx.run(
+          `CREATE (a:AssetMarker {
+            id: $assetID,
+            assetName: $assetName,
+            description: $description,
+            s3Key: $s3Key,
+            GeneralLedgerAmount: $amount,
+            CXXmultiplier: 1,
+            Denomination: $denomination,
+            GLid: $GLid,
+            AssetMarkerData: $AssetMarkerData,
+            createdAt: datetime()
+          })
+          RETURN a`,
+          { 
+            assetID, 
+            assetName, 
+            description: description || "", 
+            s3Key: s3Key || "", 
+            amount: drAccount.amount, 
+            denomination,
+            GLid,
+            AssetMarkerData: AssetMarkerData ? JSON.stringify(AssetMarkerData) : "{}"
+          }
+        );
+        
+        // Create single DR relationship
+        await tx.run(
+          `MATCH (a:AssetMarker {id: $assetID})
+           MATCH (account) WHERE account.id = $accountID AND (account:Account OR account:AccountInternal)
+           CREATE (a)-[r:DR {amount: $amount}]->(account)
+           RETURN r`,
+          { assetID, accountID: drAccount.accountID, amount: drAccount.amount }
+        );
+      }
+      
       return createAssetResult;
     });
 
@@ -128,15 +228,16 @@ export async function AddAssetMarkerController(
     const asset = result.records[0].get("a").properties;
 
     res.status(201).json({
-      message: "Asset marker created successfully",
+      message: "Asset markers created successfully",
       data: {
         action: {
-          id: assetID,
+          id: assetIDs[0], // Use the first asset ID as the primary ID
           type: "ASSET_MARKER_CREATED",
           timestamp: new Date().toISOString(),
           actor: memberID,
           details: {
-            assetID,
+            assetIDs,
+            GLid,
             assetName,
             description: description || "",
             s3Key: s3Key || "",
@@ -149,13 +250,15 @@ export async function AddAssetMarkerController(
         },
         dashboard: {
           asset: {
-            id: assetID,
+            id: assetIDs[0], // Use the first asset ID as the primary ID
+            GLid,
             assetName,
             description: description || "",
             s3Key: s3Key || "",
             totalAmount: totalCR,
             denomination,
             createdAt: new Date().toISOString(),
+            assetCount: assetIDs.length
           }
         },
       },

@@ -168,8 +168,7 @@
           <!-- Invoicing Tab Content -->
           <div id="invoicing" class="tab-content">
             <h3>
-              THE BELOW GRAPH IS NOT YET CORRECT: Munya creates an invoice for
-              $20 of tomatoes which are purchased by Farai the merchant
+              Munya creates an invoice for $20 of tomatoes which are purchased by Farai the merchant
             </h3>
             <p>
               This flow illustrates the invoicing and payment process between a
@@ -194,8 +193,10 @@
                   Farai is directed to the Create Credex from Invoice screen
                 </li>
                 <li>Farai confirms the payment</li>
-                <li>System calls the createCredex API endpoint</li>
-                <li>System creates the necessary accounting relationships</li>
+                <li>System calls the createCredex API endpoint with the invoiceID</li>
+                <li>System creates the Credex with a GLid field</li>
+                <li>System creates an EXECUTES relationship from the Credex to the Invoice</li>
+                <li>System creates AssetMarker nodes with the same GLid to represent the accounting entries</li>
               </ol>
             </div>
           </div>

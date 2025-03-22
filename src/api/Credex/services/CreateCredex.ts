@@ -19,6 +19,7 @@ interface CreateCredexInput {
   OFFERSorREQUESTS: "OFFERS" | "REQUESTS";
   securedCredex: boolean;
   dueDate?: string;
+  invoiceID?: string;
   requestId: string;
 }
 
@@ -88,6 +89,7 @@ export async function CreateCredexService(
     OFFERSorREQUESTS,
     securedCredex = false,
     dueDate = "",
+    invoiceID,
     requestId,
   } = credexData;
 
@@ -227,8 +229,32 @@ export async function CreateCredexService(
       requestId,
     });
 
+    // Generate a GLid for the Credex
+    const GLid = invoiceID || require('uuid').v4();
+
     const result: DatabaseCreateResult = await ledgerSpaceSession.executeWrite(
       async (tx) => {
+        // Check if invoice exists if invoiceID is provided
+        if (invoiceID) {
+          const invoiceCheck = await tx.run(
+            `MATCH (invoice:Invoice {invoiceID: $invoiceID})
+             RETURN invoice`,
+            { invoiceID }
+          );
+          
+          if (invoiceCheck.records.length === 0) {
+            logger.error("Invoice not found", {
+              invoiceID,
+              requestId,
+            });
+            return {
+              success: false,
+              error: "INVOICE_NOT_FOUND",
+              details: "The specified invoice could not be found"
+            };
+          }
+        }
+        
         const query = `
         MATCH (daynode:Daynode { Active: true })
         MATCH (issuer:Account { accountID: $issuerAccountID })
@@ -237,6 +263,7 @@ export async function CreateCredexService(
         CREATE (newCredex:Credex)
         SET
           newCredex.credexID = randomUUID(),
+          newCredex.GLid = $GLid,
           newCredex.Denomination = $Denomination,
           newCredex.CXXmultiplier = daynode[$Denomination],
           newCredex.InitialAmount = $InitialAmount * daynode[$Denomination],
@@ -250,6 +277,7 @@ export async function CreateCredexService(
         MERGE (newCredex)-[:CREATED_ON]->(daynode)
         MERGE (issuer)-[:${OFFERSorREQUESTS}]->(newCredex)-[:${OFFERSorREQUESTS}]->(receiver)
         MERGE (issuer)-[:${OFFEREDorREQUESTED}]->(newCredex)-[:${OFFEREDorREQUESTED}]->(receiver)
+        ${invoiceID ? 'WITH newCredex MATCH (invoice:Invoice {invoiceID: $invoiceID}) CREATE (newCredex)-[:EXECUTES]->(invoice)' : ''}
         RETURN
           newCredex.credexID AS credexID,
           receiver.accountName AS counterpartyAccountName,
@@ -275,6 +303,8 @@ export async function CreateCredexService(
           Denomination,
           credexType,
           securedCredex,
+          GLid,
+          invoiceID
         });
 
         // At this point we know both accounts exist (checked earlier), 
@@ -313,9 +343,11 @@ export async function CreateCredexService(
     if (!result.success || !result.data) {
       return {
         success: false,
-        message: "Failed to create Credex",
+        message: result.error === "INVOICE_NOT_FOUND" 
+          ? "Failed to create Credex: Invoice not found" 
+          : "Failed to create Credex",
         error: {
-          code: "DB_ERROR",
+          code: result.error === "INVOICE_NOT_FOUND" ? "INVOICE_NOT_FOUND" : "DB_ERROR",
           details: result.error || "An error occurred while creating the Credex"
         }
       };

@@ -69,6 +69,9 @@
             <div class="tab" data-tab="invoice-endpoints">
               Invoice Endpoints
             </div>
+            <div class="tab" data-tab="credex-endpoints">
+              Credex Endpoints
+            </div>
           </div>
 
           <!-- Member Endpoints Tab Content -->
@@ -279,6 +282,9 @@
                 <h5>Parameters:</h5>
                 <ul>
                   <li><code>assetName</code>: string</li>
+                  <li><code>crAccounts</code>: Array of {accountID, amount} objects</li>
+                  <li><code>drAccounts</code>: Array of {accountID, amount} objects</li>
+                  <li><code>denomination</code>: string (optional, defaults to "USD")</li>
                   <li>
                     Arbitrary key/value pairs and/or neo4j-safed objects up to
                     max size of 2kb
@@ -292,12 +298,27 @@
                   </li>
                 </ul>
               </div>
+              <div class="endpoint-operations">
+                <h5>Operations:</h5>
+                <ul>
+                  <li>Creates AssetMarker nodes with a shared GLid</li>
+                  <li>Each AssetMarker has a single CR and DR relationship</li>
+                  <li>The sum of CR amounts must equal the sum of DR amounts</li>
+                </ul>
+              </div>
               <div class="endpoint-example">
                 <h5>Example Request:</h5>
                 <pre><code>{
   "assetName": "Tomato Product Image",
   "description": "Fresh red tomatoes from Munya's farm",
   "s3Key": "products/tomatoes/main.jpg",
+  "crAccounts": [
+    {"accountID": "account-123", "amount": 20.00}
+  ],
+  "drAccounts": [
+    {"accountID": "account-456", "amount": 20.00}
+  ],
+  "denomination": "USD",
   "AssetMarkerData": {
     "productType": "vegetable",
     "harvestDate": "2025-03-01"
@@ -420,11 +441,25 @@
               <div class="endpoint-params">
                 <h5>Parameters:</h5>
                 <ul>
-                  <li><code>payment accountID</code>: string - Account</li>
+                  <li><code>paymentAccountID</code>: string - Account ID to receive payment</li>
                   <li>
-                    <code>AssetMarkerData</code>: Object - Data for AssetMarkers
-                    created when a connected credex is accepted
+                    <code>AssetMarkerData</code>: Object - Data for invoice items
+                    <ul>
+                      <li><code>items</code>: Array of item objects</li>
+                      <li><code>total</code>: number - Total amount</li>
+                      <li><code>currency</code>: string - Currency denomination</li>
+                      <li><code>notes</code>: string (optional) - Additional notes</li>
+                    </ul>
                   </li>
+                </ul>
+              </div>
+              <div class="endpoint-operations">
+                <h5>Operations:</h5>
+                <ul>
+                  <li>Creates an Invoice node with the specified properties</li>
+                  <li>Creates a CREDITS_TO relationship to the payment account</li>
+                  <li>Digitally signs the invoice</li>
+                  <li>Generates a QR code link for the invoice</li>
                 </ul>
               </div>
               <div class="endpoint-returns">
@@ -438,7 +473,7 @@
               <div class="endpoint-example">
                 <h5>Example Request:</h5>
                 <pre><code>{
-  "payment accountID": "tomatoes-account-123",
+  "paymentAccountID": "tomatoes-account-123",
   "AssetMarkerData": {
     "items": [
       {
@@ -456,8 +491,120 @@
 }</code></pre>
                 <h5>Example Response:</h5>
                 <pre><code>{
-  "invoiceID": "invoice-789",
-  "invoiceQRLink": "https://vimbisopay.com/invoice/qr/invoice-789"
+  "message": "Invoice generated successfully",
+  "data": {
+    "action": {
+      "id": "invoice-789",
+      "type": "INVOICE_GENERATED",
+      "timestamp": "2025-03-22T10:15:00.000Z",
+      "actor": "member-123",
+      "details": {
+        "invoiceID": "invoice-789",
+        "invoiceQRLink": "https://vimbisopay.com/invoice/qr/invoice-789",
+        "amount": 20.00,
+        "denomination": "USD",
+        "paymentAccountID": "tomatoes-account-123",
+        "lines": [
+          {
+            "accountName": "Fresh Tomatoes",
+            "amount": 20.00
+          }
+        ],
+        "notes": "Farm fresh tomatoes"
+      }
+    },
+    "dashboard": {
+      "invoice": {
+        "invoiceID": "invoice-789",
+        "invoiceQRLink": "https://vimbisopay.com/invoice/qr/invoice-789",
+        "amount": 20.00,
+        "denomination": "USD",
+        "lines": [
+          {
+            "accountName": "Fresh Tomatoes",
+            "amount": 20.00
+          }
+        ],
+        "notes": "Farm fresh tomatoes",
+        "createdAt": "2025-03-22T10:15:00.000Z"
+      }
+    }
+  }
+}</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Credex Endpoints Tab Content -->
+          <div id="credex-endpoints" class="tab-content">
+            <h3>Credex Endpoints</h3>
+            <p>
+              These endpoints manage credit exchange transactions in the Vimbiso Market.
+            </p>
+
+            <div class="endpoint-card">
+              <h4>/createCredex</h4>
+              <p class="endpoint-description">
+                Create a new credex transaction, optionally executing an invoice.
+              </p>
+              <div class="endpoint-params">
+                <h5>Parameters:</h5>
+                <ul>
+                  <li><code>issuerAccountID</code>: string - Account issuing the credex</li>
+                  <li><code>receiverAccountID</code>: string - Account receiving the credex</li>
+                  <li><code>Denomination</code>: string - Currency denomination</li>
+                  <li><code>InitialAmount</code>: number - Amount of the credex</li>
+                  <li><code>credexType</code>: string - Type of credex</li>
+                  <li><code>OFFERSorREQUESTS</code>: string - "OFFERS" or "REQUESTS"</li>
+                  <li><code>securedCredex</code>: boolean - Whether the credex is secured</li>
+                  <li><code>dueDate</code>: string (optional) - Due date for unsecured credex</li>
+                  <li><code>invoiceID</code>: string (optional) - ID of invoice to execute</li>
+                </ul>
+              </div>
+              <div class="endpoint-operations">
+                <h5>Operations:</h5>
+                <ul>
+                  <li>Creates a Credex node with the specified properties</li>
+                  <li>If invoiceID is provided, creates an EXECUTES relationship to the Invoice</li>
+                  <li>Sets the GLid field on the Credex node</li>
+                  <li>Creates appropriate relationships between accounts and the Credex</li>
+                </ul>
+              </div>
+              <div class="endpoint-example">
+                <h5>Example Request:</h5>
+                <pre><code>{
+  "issuerAccountID": "account-123",
+  "receiverAccountID": "account-456",
+  "Denomination": "USD",
+  "InitialAmount": 20.00,
+  "credexType": "PAYMENT",
+  "OFFERSorREQUESTS": "OFFERS",
+  "securedCredex": false,
+  "dueDate": "2025-04-22",
+  "invoiceID": "invoice-789"
+}</code></pre>
+                <h5>Example Response:</h5>
+                <pre><code>{
+  "message": "Unsecured credex for $20.00 USD offers created successfully",
+  "data": {
+    "action": {
+      "id": "credex-123",
+      "type": "CREDEX_CREATED",
+      "timestamp": "2025-03-22T10:20:00.000Z",
+      "actor": "member-123",
+      "details": {
+        "amount": "$20.00",
+        "denomination": "USD",
+        "securedCredex": false,
+        "receiverAccountID": "account-456",
+        "receiverAccountName": "Farai's Personal Account",
+        "invoiceID": "invoice-789"
+      }
+    },
+    "dashboard": {
+      // Dashboard data
+    }
+  }
 }</code></pre>
               </div>
             </div>

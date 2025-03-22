@@ -65,6 +65,10 @@ export default function createCredexRoute() {
    *                 format: date
    *                 pattern: ^\d{4}-\d{2}-\d{2}$
    *                 description: Optional due date for unsecured Credex
+   *               invoiceID:
+   *                 type: string
+   *                 format: uuid
+   *                 description: Optional ID of an invoice to execute with this Credex
    *     responses:
    *       200:
    *         description: Credex created successfully
@@ -117,6 +121,10 @@ export default function createCredexRoute() {
    *                               format: uuid
    *                             receiverAccountName:
    *                               type: string
+   *                             invoiceID:
+   *                               type: string
+   *                               format: uuid
+   *                               description: ID of the executed invoice (if applicable)
    *                     dashboard:
    *                       type: object
    *                       description: Current state of the account dashboard

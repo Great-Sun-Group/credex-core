@@ -108,47 +108,40 @@
           <ol>
             <li>
               <code>/editMember</code> - Update member profiles with vendor
-              details
+              details ✅
             </li>
             <li>
-              <code>/sellInMarket</code> - Enable/disable vendor functionality
+              <code>/sellInMarket</code> - Enable/disable vendor functionality ✅
             </li>
           </ol>
 
           <h4>Account Endpoints</h4>
           <ol start="3">
-            <li><code>/editAccount</code> - Update exchange account details</li>
+            <li><code>/editAccount</code> - Update exchange account details ✅</li>
             <li>
-              <code>/createAccountInternal</code> - Create internal accounts
-              (already exists but needs implementation)
+              <code>/createAccountInternal</code> - Create internal accounts ✅
             </li>
             <li>
-              <code>/editAccountInternal</code> - Update internal accounts
-              (already exists but needs implementation)
+              <code>/editAccountInternal</code> - Update internal accounts ✅
             </li>
             <li>
-              <code>/deleteAccountInternal</code> - Delete internal accounts
-              (already exists but needs implementation)
+              <code>/deleteAccountInternal</code> - Delete internal accounts ✅
             </li>
           </ol>
 
           <h4>AssetMarker Endpoints</h4>
           <ol start="7">
             <li>
-              <code>/addAssetMarker</code> - Create asset markers (already
-              exists but needs updates for multiple CR/DR)
+              <code>/addAssetMarker</code> - Create asset markers ✅
             </li>
             <li>
-              <code>/uploadAndOptimizeJpg</code> - Upload and optimize images
-              (already exists but may need updates)
+              <code>/uploadAndOptimizeJpg</code> - Upload and optimize images ✅
             </li>
             <li>
-              <code>/connectAsset</code> - Connect assets to nodes (already
-              exists but may need updates)
+              <code>/connectAsset</code> - Connect assets to nodes ✅
             </li>
             <li>
-              <code>/disconnectAsset</code> - Remove asset relationships
-              (already exists but may need updates)
+              <code>/disconnectAsset</code> - Remove asset relationships ✅
             </li>
           </ol>
 
@@ -156,7 +149,7 @@
           <ol start="11">
             <li>
               <code>/generateInvoice</code> - Generate transaction invoices with
-              digital signatures
+              digital signatures ✅
             </li>
           </ol>
 
@@ -255,7 +248,7 @@
               <ul>
                 <li>
                   <code
-                    >(:accountInternal { accountName: "Onboarded Assets",
+                    >(:accountInternal { accountName: "Tomatoes",
                     accountType: "PRODUCTION" })</code
                   >
                 </li>
@@ -305,27 +298,35 @@
           </div>
 
           <div class="phase-container">
-            <h4>Phase 4: AssetMarker Endpoints Verification</h4>
+            <h4>Phase 4: AssetMarker Endpoints Verification ✅</h4>
             <div class="phase-details">
               <h5>7. Verify and Update AssetMarker Endpoints</h5>
               <ul>
-                <li>Review existing implementations</li>
-                <li>Update to support multiple CR/DR relationships</li>
-                <li>Ensure proper relationship handling</li>
+                <li>Review existing implementations ✅</li>
+                <li>
+                  Update to support single CR/DR relationships with GLid ✅
+                </li>
+                <li>Ensure proper relationship handling ✅</li>
               </ul>
 
-              <p>Key updates for multiple CR/DR relationships:</p>
+              <p>Key updates for AssetMarker relationships:</p>
               <ul>
                 <li>
-                  Modify <code>/addAssetMarker</code> to accept arrays of
-                  account IDs and amounts for both CR and DR sides
+                  <strong>Revised Approach:</strong> After review, we've decided
+                  to maintain simpler single CR/DR relationships rather than
+                  implementing multiple CR/DR relationships. 
                 </li>
                 <li>
-                  Add validation to ensure the sum of CR amounts equals the sum
-                  of DR amounts
+                  To maintain the same functionality, we will add a <code>GLid</code> (General Ledger ID) field to
+                  AssetMarker nodes to group related entries (including the credex)
                 </li>
                 <li>
-                  Update database queries to handle multiple relationships
+                  Maintain validation to ensure the sum of CR amounts equals the
+                  sum of DR amounts
+                </li>
+                <li>
+                  Use the GLid for aggregation and balance verification across
+                  related entries
                 </li>
               </ul>
 
@@ -340,32 +341,30 @@
           </div>
 
           <div class="phase-container">
-            <h4>Phase 5: Invoice Module Implementation</h4>
+            <h4>Phase 5: Invoice Module Implementation ✅</h4>
             <div class="phase-details">
               <h5>8. Create Invoice Data Model</h5>
               <ul>
-                <li>Define Invoice node structure</li>
-                <li>Define relationships with Account and Credex nodes</li>
-                <li>Implement digital signature integration</li>
+                <li>Define Invoice node structure ✅</li>
+                <li>Define relationships with Account and Credex nodes ✅</li>
+                <li>Implement digital signature integration ✅</li>
               </ul>
 
-              <p>Invoice node structure:</p>
+              <p>Revised Invoice node structure (as reusable template):</p>
               <pre><code>(:Invoice {
-  invoiceID: string,
-  amount: number,
-  currency: string,
-  timestamp: datetime,
-  notes: string,
-  items: [
-    {
-      name: string,
-      quantity: number,
-      unit: string,
-      price: number,
-      total: number
-    }
-  ]
+  invoiceID: string,                 // Unique Invoice ID
+  Lines: string,      // JSON array of line items (template) <-this needs to be InternalAccount name and amount for each. these represent/are the transactions debiting the seller's payment account and crediting other accounts as above,
+  Amount: number,             // Template amount <- total amount. this represents/is the transaction (credex) debiting (decreasing) the seller's account and crediting the buyer's
+  Denomination: string,           // Currency denomination
+  Notes: string,              // Additional notes
+  createdAt: datetime         // Creation timestamp
 })</code></pre>
+
+              <p>We'll add an optional invoiceID field to the /createCredex route, and add the GLid field onto the Credex node:</p>
+              <pre><code>(:Credex {
+  GLid: string }) -[:EXECUTES]-> (:Invoice)</code></pre>
+
+  <p>the createCredex route is where the instantiation of the template occurs, becoming both payment and reconciling GL entries for the seller, and (for now) just the payment entry for the purchaser.</p>
 
               <p>Key relationships:</p>
               <ul>
@@ -374,32 +373,31 @@
                     >(:Invoice)-[:CREDITS_TO]->(:Account|AccountInternal)</code
                   >
                 </li>
-                <li>
-                  <code
-                    >(:Account|AccountInternal)&lt;-[:DEBITS_TO]-(:Invoice)</code
-                  >
-                </li>
                 <li><code>(:Invoice)&lt;-[:EXECUTES]-(:Credex)</code></li>
                 <li>
                   <code
                     >(:Member)-[:SIGNED]->(:Signature)-[:SIGNED]->(:Invoice)</code
                   >
                 </li>
+                <li>
+                  <code>(:AssetMarker {GLid: "shared-id"})</code> - AssetMarkers
+                  share GLid with the Credex that executes the invoice
+                </li>
               </ul>
 
               <h5>9. Implement <code>/generateInvoice</code> Endpoint</h5>
               <ul>
-                <li>Create validation schema for invoice generation</li>
-                <li>Implement controller to create invoice records</li>
+                <li>Create validation schema for invoice generation ✅</li>
+                <li>Implement controller to create invoice records ✅</li>
                 <li>
                   Add digital signature using the
                   <a
                     href="https://github.com/your-org/credex-core/blob/main/src/utils/digitalSignature.ts"
                     >digitallySign</a
                   >
-                  utility
+                  utility ✅
                 </li>
-                <li>Add QR code generation functionality</li>
+                <li>Add QR code generation functionality ✅</li>
               </ul>
 
               <p>Digital signature integration:</p>
@@ -419,37 +417,37 @@ await digitallySign(
           </div>
 
           <div class="phase-container">
-            <h4>Phase 6: DCO Updates for AssetMarker Support</h4>
+            <h4>Phase 6: DCO Updates for AssetMarker Support ✅</h4>
             <div class="phase-details">
               <h5>10. Update DCO Process for AssetMarker Nodes</h5>
               <ul>
                 <li>
                   Modify DCO balance update logic to include AssetMarker nodes
+                  ✅
                 </li>
                 <li>
                   Add support for updating GeneralLedgerAmount, CXXmultiplier,
-                  and Denomination properties
+                  and Denomination properties ✅
                 </li>
                 <li>
-                  Ensure exchange rate calculations are applied consistently
+                  Ensure exchange rate calculations are applied consistently ✅
                 </li>
               </ul>
 
-              <p>Key updates to DCO process:</p>
+              <p>Implemented approach for DCO updates:</p>
               <ul>
                 <li>
-                  Add Cypher queries to update AssetMarker nodes in ledgerSpace
+                  Use direct node type queries to update all AssetMarker nodes
                 </li>
                 <li>
                   Apply the same exchange rate logic used for Credex nodes
                 </li>
                 <li>
-                  Handle both CXX-denominated and currency-denominated
-                  AssetMarkers
+                  Update both CXX-denominated and currency-denominated AssetMarkers
                 </li>
               </ul>
 
-              <p>Example implementation for updating AssetMarker nodes:</p>
+              <p>Implementation for updating AssetMarker nodes:</p>
               <pre><code>// Update CXX-denominated AssetMarkers
 MATCH (assetMarker:AssetMarker)
 WHERE assetMarker.Denomination = "CXX"
@@ -508,8 +506,29 @@ SET
 
           <div class="section-divider"></div>
 
-          <h3>Database Relationships</h3>
-          <p>The implementation will need to handle these key relationships:</p>
+          <h3>Implementation Progress Summary</h3>
+          <div class="progress-summary">
+            <h4>Completed</h4>
+            <ul>
+              <li>✅ Phase 1: Setup and Preparation</li>
+              <li>✅ Phase 2: Member Endpoints Implementation</li>
+              <li>✅ Phase 3: AccountInternal Endpoints Implementation</li>
+              <li>✅ Phase 4: AssetMarker Endpoints Verification</li>
+              <li>✅ Phase 5: Invoice Module Implementation</li>
+              <li>✅ Phase 6: DCO Updates for AssetMarker Support</li>
+            </ul>
+            
+            <h4>Pending</h4>
+            <ul>
+              <li>❌ Phase 3: <code>/editAccount</code> Endpoint Implementation</li>
+              <li>❌ Phase 7: Integration and Testing</li>
+            </ul>
+          </div>
+
+          <div class="section-divider"></div>
+
+          <h3>Revised Database Relationships</h3>
+          <p>Based on our review and decisions, the implementation will use these key relationships:</p>
 
           <pre><code>// Member to Account relationships
 (:Member {vendor: true|false})-[:OWNS]->(:Account)
@@ -524,29 +543,32 @@ SET
 (:Account)-[:ACCOUNT_PIC_200_JPG]->(:AssetMarker)
 (:Account)-[:ACCOUNT_PIC_600_JPG]->(:AssetMarker)
 
-// AssetMarker relationships (corrected)
-(:Account|AccountInternal)-[:CR]->(:AssetMarker {
+// AssetMarker relationships (simplified with GLid)
+(:Account|AccountInternal)-[:CR {amount: number}]->(:AssetMarker {
+  GLid: string,               // Shared General Ledger ID
   GeneralLedgerAmount: number,
   CXXmultiplier: number,
   Denomination: string
-})
-(:AssetMarker {
-  GeneralLedgerAmount: number,
-  CXXmultiplier: number,
-  Denomination: string
-})-[:DR]->(:Account|AccountInternal)
-// Note: Sum of all CR GeneralLedgerAmount values must equal sum of all DR GeneralLedgerAmount values
+})-[:DR {amount: number}]->(:Account|AccountInternal)
 
 // AssetMarker to AssetMarker relationships
 (:AssetMarker)-[:USED_IN]->(:AssetMarker)
 
-// Invoice relationships
-(:Invoice)-[:CREDITS_TO]->(:Account|AccountInternal)
-(:Account|AccountInternal)<-[:DEBITS_TO]-(:Invoice)
-(:Invoice)<-[:EXECUTES]-(:Credex)
+// Invoice as reusable template
+(:Invoice {
+  templateItems: string,      // JSON array of line items
+  amount: number,             // Template amount
+  currency: string            // Currency denomination
+})-[:CREDITS_TO]->(:Account|AccountInternal)
+
+// Credex executes Invoice
+(:Invoice)<-[:EXECUTES]-(:Credex {
+  GLid: string,               // Same GLid as related AssetMarkers
+  InitialAmount: number
+})
 
 // Digital signature relationships
-(:Member)-[:SIGNED]->(:Signature)-[:SIGNED]->(:Invoice)</code></pre>
+(:Member)-[:SIGNED]->(:Signature)-[:SIGNED]->(:Invoice|:Credex)</code></pre>
 
           <p>
             For more details on the data model, see the
@@ -555,27 +577,31 @@ SET
 
           <div class="section-divider"></div>
 
-          <div class="section-divider"></div>
-
-          <h3>Key Technical Considerations</h3>
+          <h3>Revised Technical Considerations</h3>
           <ul>
             <li>
-              <strong>Multiple CR/DR Relationships</strong>: The AssetMarker
-              implementation must support multiple credit and debit
-              relationships, with validation to ensure the sum of credits equals
-              the sum of debits.
+              <strong>GLid for Related Entities</strong>: Use a shared GLid field to group related 
+              AssetMarkers and Credexes, enabling balance verification and aggregation without complex 
+              relationship structures.
+            </li>
+            <li>
+              <strong>Single CR/DR Relationships</strong>: Maintain simpler single CR/DR relationships 
+              for AssetMarkers, with the GLid providing the grouping mechanism for related entries.
+            </li>
+            <li>
+              <strong>Reusable Invoice Templates</strong>: Design invoices as reusable templates that 
+              can be executed multiple times, with each execution creating a new set of AssetMarkers 
+              and a Credex sharing the same GLid.
             </li>
             <li>
               <strong>AssetMarker Properties</strong>: AssetMarker nodes must
-              include GeneralLedgerAmount, CXXmultiplier, and Denomination
+              include GeneralLedgerAmount, CXXmultiplier, Denomination, and GLid
               properties to support proper accounting and exchange rate
               handling.
             </li>
             <li>
-              <strong>DCO Integration</strong>: The DCO process must be updated
-              to handle AssetMarker nodes, applying the same exchange rate logic
-              used for Credex nodes and LoopAnchors to maintain consistent value
-              across the system.
+              <strong>DCO Integration</strong>: Use direct node type queries to update all AssetMarker nodes
+              during the DCO process, applying the same exchange rate logic used for Credex nodes.
             </li>
             <li>
               <strong>Digital Signatures</strong>: Invoices must be digitally
@@ -611,19 +637,10 @@ SET
 
     <script>
       document.addEventListener("DOMContentLoaded", function () {
-        // Initialize mermaid
+        // Initialize mermaid with minimal configuration
         mermaid.initialize({
           startOnLoad: true,
-          theme: "dark",
-          securityLevel: "loose",
-          themeVariables: {
-            primaryColor: "#04a0b2",
-            primaryTextColor: "#ffffff",
-            primaryBorderColor: "#fbb016",
-            lineColor: "#04a0b2",
-            secondaryColor: "#006400",
-            tertiaryColor: "#fbb016",
-          },
+          securityLevel: "loose"
         });
       });
     </script>

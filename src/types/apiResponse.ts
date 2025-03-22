@@ -110,6 +110,7 @@ export interface CredexActionDetails {
   reason?: string;
   limit?: string;
   transactionType?: string; // Added for getCredex response
+  invoiceID?: string; // Added for invoice-related Credex
   // Additional fields for Credex retrieval
   status?: {
     outstandingAmount: string;

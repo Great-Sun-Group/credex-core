@@ -67,6 +67,7 @@ export async function CreateCredexController(
       OFFERSorREQUESTS,
       securedCredex,
       dueDate,
+      invoiceID,
     } = req.body;
 
     // Get memberID from auth token to use as signerID
@@ -260,6 +261,7 @@ export async function CreateCredexController(
       OFFERSorREQUESTS,
       securedCredex,
       dueDate,
+      invoiceID,
       requestId,
     });
 
@@ -292,6 +294,10 @@ export async function CreateCredexController(
         case "FORBIDDEN":
         case "INSUFFICIENT_SECURED_BALANCE":
           return res.status(403).json(errorResponse);
+        case "INVOICE_NOT_FOUND":
+          errorResponse.data.action.type = ApiActionType.ERROR_NOT_FOUND;
+          errorResponse.data.action.details.reason = "The specified invoice could not be found";
+          return res.status(404).json(errorResponse);
         case "DB_ERROR":
         case "INTERNAL_ERROR":
           errorResponse.data.action.type = ApiActionType.ERROR_INTERNAL;
@@ -331,8 +337,8 @@ export async function CreateCredexController(
             denomination: Denomination,
             securedCredex,
             receiverAccountID: createCredexResult.data.receiverAccountID,
-            receiverAccountName:
-              createCredexResult.data.counterpartyAccountName,
+            receiverAccountName: createCredexResult.data.counterpartyAccountName,
+            invoiceID: invoiceID || undefined,
           },
         },
         dashboard,

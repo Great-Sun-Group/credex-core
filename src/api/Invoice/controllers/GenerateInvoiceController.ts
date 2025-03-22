@@ -61,14 +61,14 @@ export async function GenerateInvoiceController(
     
     // Create the invoice
     const result = await session.executeWrite(async (tx: any) => {
-      // Create the invoice node
+      // Create the invoice node with updated structure
       const createInvoiceResult = await tx.run(
         `CREATE (i:Invoice {
-          id: $invoiceID,
-          amount: $amount,
-          currency: $currency,
-          items: $items,
-          notes: $notes,
+          invoiceID: $invoiceID,
+          Lines: $lines,
+          Amount: $amount,
+          Denomination: $denomination,
+          Notes: $notes,
           createdAt: datetime()
         })
         WITH i
@@ -77,9 +77,12 @@ export async function GenerateInvoiceController(
         RETURN i`,
         { 
           invoiceID, 
+          lines: JSON.stringify(AssetMarkerData.items.map((item: any) => ({
+            accountName: item.name,
+            amount: item.total
+          }))),
           amount: AssetMarkerData.total,
-          currency: AssetMarkerData.currency,
-          items: JSON.stringify(AssetMarkerData.items),
+          denomination: AssetMarkerData.currency,
           notes: AssetMarkerData.notes || "",
           paymentAccountID
         }
@@ -118,19 +121,25 @@ export async function GenerateInvoiceController(
             invoiceID,
             invoiceQRLink,
             amount: AssetMarkerData.total,
-            currency: AssetMarkerData.currency,
+            denomination: AssetMarkerData.currency,
             paymentAccountID,
-            items: AssetMarkerData.items,
+            lines: AssetMarkerData.items.map((item: any) => ({
+              accountName: item.name,
+              amount: item.total
+            })),
             notes: AssetMarkerData.notes || "",
           },
         },
         dashboard: {
           invoice: {
-            id: invoiceID,
+            invoiceID,
             invoiceQRLink,
             amount: AssetMarkerData.total,
-            currency: AssetMarkerData.currency,
-            items: AssetMarkerData.items,
+            denomination: AssetMarkerData.currency,
+            lines: AssetMarkerData.items.map((item: any) => ({
+              accountName: item.name,
+              amount: item.total
+            })),
             notes: AssetMarkerData.notes || "",
             createdAt: new Date().toISOString(),
           }

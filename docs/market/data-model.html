@@ -205,6 +205,15 @@
             </div>
 
             <h4>AssetMarker Relationships</h4>
+            <p><strong>GLid Field</strong></p>
+            <p>AssetMarkers now include a GLid (General Ledger ID) field that groups related entries. This allows for simpler single CR/DR relationships while maintaining the ability to track related entries.</p>
+            <pre><code>(:AssetMarker {
+  GLid: "shared-id",
+  GeneralLedgerAmount: number,
+  CXXmultiplier: number,
+  Denomination: string
+})</code></pre>
+
             <p><strong>USED_IN Relationship</strong></p>
             <pre><code>(:AssetMarker { filename: "profile_pic_original.jpg" })-[:USED_IN]->(:AssetMarker { filename: "profile_pic_200.jpg" })</code></pre>
 
@@ -242,23 +251,51 @@
               non-repudiation.
             </p>
 
-            <pre><code>(:Account)&lt;-[:DEBITS_TO]-(:Invoice)-[:CREDITS_TO]->(:AccountInternal),
-(:Invoice)&lt;-[:EXECUTES]-(:Credex)</code></pre>
+            <pre><code>(:Invoice {
+  invoiceID: string,                 // Unique Invoice ID
+  Lines: string,                     // JSON array of line items (template)
+  Amount: number,                    // Template amount
+  Denomination: string,              // Currency denomination
+  Notes: string,                     // Additional notes
+  createdAt: datetime                // Creation timestamp
+})-[:CREDITS_TO]->(:AccountInternal),
+
+(:Invoice)&lt;-[:EXECUTES]-(:Credex {
+  GLid: string                       // Same GLid as related AssetMarkers
+})</code></pre>
 
             <div class="invoice-diagram">
               <h4>Invoice and Credex Relationships</h4>
               <div class="mermaid">
-                graph TD I1((":Invoice<br />amount: 20")) C1((":Credex<br />amount:
-                20")) A1((":Account<br />name: 'tomatoes'")) A2((":Account<br />name:
-                'faraiPersonal'")) M1((":Member<br />name: 'Munya'"))
-                M2((":Member<br />name: 'Farai'")) I1 -->|CREDITS_TO| A1 I1
-                -->|DEBITS_TO| A2 C1 -->|EXECUTES| I1 M1 -->|SIGNED| I1 M2
-                -->|CREATED| C1 M1 -->|OWNS| A1 M2 -->|OWNS| A2 classDef invoice
-                fill:#FBB016,stroke:#FBB016,color:black classDef credex
-                fill:#FBB016,stroke:#FBB016,color:black classDef account
-                fill:#006400,stroke:#006400,color:#FBB016 classDef member
-                fill:black,stroke:black,color:white class I1 invoice class C1
-                credex class A1,A2 account class M1,M2 member
+                graph TD I1((":Invoice<br />invoiceID: 'inv-123'<br />Amount: 20<br />Denomination: 'USD'")) 
+                C1((":Credex<br />GLid: 'gl-123'<br />InitialAmount: 20")) 
+                A1((":AccountInternal<br />name: 'tomatoes'")) 
+                A2((":Account<br />name: 'faraiPersonal'")) 
+                AM1((":AssetMarker<br />GLid: 'gl-123'"))
+                M1((":Member<br />name: 'Munya'"))
+                M2((":Member<br />name: 'Farai'")) 
+                S1((":Signature<br />actionType: 'INVOICE_CREATED'"))
+                I1 -->|CREDITS_TO| A1 
+                C1 -->|EXECUTES| I1 
+                C1 -->|OFFERS| A2
+                A1 -->|CR| AM1
+                AM1 -->|DR| A2
+                M1 -->|SIGNED| S1
+                S1 -->|SIGNED| I1
+                M1 -->|OWNS| A1 
+                M2 -->|OWNS| A2 
+                classDef invoice fill:#FBB016,stroke:#FBB016,color:black 
+                classDef credex fill:#FBB016,stroke:#FBB016,color:black 
+                classDef account fill:#006400,stroke:#006400,color:#FBB016 
+                classDef member fill:black,stroke:black,color:white
+                classDef assetMarker fill:#FBB016,stroke:#FBB016,color:black
+                classDef signature fill:#006400,stroke:#006400,color:#FBB016
+                class I1 invoice 
+                class C1 credex 
+                class A1,A2 account 
+                class M1,M2 member
+                class AM1 assetMarker
+                class S1 signature
               </div>
             </div>
 
@@ -274,7 +311,12 @@
               <li>System generates a QR code for the invoice</li>
               <li>Purchaser scans the QR code</li>
               <li>Purchaser creates a credex that executes the invoice</li>
-              <li>System updates the accounting entries for both parties</li>
+              <li>
+                System creates AssetMarkers with the same GLid as the Credex to represent the accounting entries
+              </li>
+              <li>
+                The GLid field groups all related entries (Credex and AssetMarkers) for balance verification and aggregation
+              </li>
             </ol>
 
             <h4>Digital Signatures</h4>

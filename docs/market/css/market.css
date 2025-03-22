@@ -2,9 +2,10 @@
 
 /* Header */
 .market-header {
-  background-color: #04a0b2;
+  background-color: #0a2535; /* Darker teal that matches the dark theme */
   color: white;
   padding: 1.5rem 0;
+  border-bottom: 1px solid #04a0b2; /* Subtle teal border */
 }
 
 .market-header .header-content {
@@ -17,10 +18,11 @@
   margin: 0;
   font-size: 2rem;
   font-weight: 700;
+  color: #fbb016; /* Orange color for the title */
 }
 
 .market-header .back-link {
-  color: white;
+  color: #04a0b2; /* Teal color for the back link */
   text-decoration: none;
   font-weight: 600;
   transition: opacity 0.2s;
@@ -28,12 +30,14 @@
 
 .market-header .back-link:hover {
   opacity: 0.8;
+  color: white;
 }
 
 /* Navigation */
 .market-nav {
-  background-color: #006400;
+  background-color: #0a1925; /* Darker green that matches the dark theme */
   padding: 0.5rem 0;
+  border-bottom: 1px solid #04a0b2; /* Subtle teal border */
 }
 
 .market-nav .nav-list {
@@ -284,11 +288,12 @@
 
 /* Phase Container */
 .phase-container {
-  background-color: #f8f8f8;
+  background-color: #0a1925; /* Dark background to match the theme */
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  border: 1px solid #04a0b2; /* Teal border for definition */
 }
 
 .phase-container h4 {
@@ -298,7 +303,7 @@
 }
 
 .phase-details h5 {
-  color: #006400;
+  color: #04a0b2; /* Changed from green to teal to match other headings */
   margin-top: 1.5rem;
   margin-bottom: 0.5rem;
 }
