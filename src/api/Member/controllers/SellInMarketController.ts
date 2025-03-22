@@ -14,7 +14,7 @@ export async function SellInMarketController(
   next: NextFunction
 ): Promise<void> {
   const session = ledgerSpaceDriver.session();
-  
+
   try {
     logger.info("SellInMarketController called", {
       controller: "SellInMarketController",
@@ -22,8 +22,8 @@ export async function SellInMarketController(
     });
 
     const { vendor } = req.body;
-    const memberID = req.user?.id;
-    
+    const memberID = req.user?.memberID;
+
     if (!memberID) {
       throw new Error("User ID not found in request");
     }
@@ -31,7 +31,7 @@ export async function SellInMarketController(
     // Check if the member exists
     const memberCheckResult = await session.executeRead(async (tx: any) => {
       return await tx.run(
-        `MATCH (m:Member {id: $memberID})
+        `MATCH (m:Member {memberID: $memberID})
          RETURN m`,
         { memberID }
       );
@@ -44,7 +44,7 @@ export async function SellInMarketController(
     // Update the member's vendor status
     const updateResult = await session.executeWrite(async (tx: any) => {
       return await tx.run(
-        `MATCH (m:Member {id: $memberID})
+        `MATCH (m:Member {memberID: $memberID})
          SET m.vendor = $vendor
          RETURN m`,
         { memberID, vendor }
@@ -57,28 +57,46 @@ export async function SellInMarketController(
       accountName: string;
       accountType: string;
     }
-    
+
     let createdAccounts: AccountInfo[] = [];
     if (vendor) {
-      const createAccountsResult = await session.executeWrite(async (tx: any) => {
-        // Check if the required accounts already exist
-        const existingAccountsResult = await tx.run(
-          `MATCH (m:Member {id: $memberID})-[:OWNS]->(a:AccountInternal)
+      const createAccountsResult = await session.executeWrite(
+        async (tx: any) => {
+          // Check if the required accounts already exist
+          logger.info("Checking for existing internal accounts", {
+            memberID,
+            accountNames: ["Onboarded Assets", "Profile Pictures"]
+          });
+          
+          const existingAccountsResult = await tx.run(
+            `MATCH (m:Member {memberID: $memberID})-[:OWNS]->(a:AccountInternal)
            WHERE a.accountName IN ["Onboarded Assets", "Profile Pictures"]
            RETURN a.id AS accountID, a.accountName AS accountName, a.accountType AS accountType`,
-          { memberID }
-        );
+            { memberID }
+          );
+          
+          logger.info("Existing accounts query result", {
+            recordCount: existingAccountsResult.records.length
+          });
 
-        const existingAccounts = existingAccountsResult.records.map((record: any) => ({
-          accountID: record.get("accountID"),
-          accountName: record.get("accountName"),
-          accountType: record.get("accountType")
-        }));
+          const existingAccounts = existingAccountsResult.records.map(
+            (record: any) => ({
+              accountID: record.get("accountID"),
+              accountName: record.get("accountName"),
+              accountType: record.get("accountType"),
+            })
+          );
 
-        // Create "Onboarded Assets" account if it doesn't exist
-        if (!existingAccounts.some((a: AccountInfo) => a.accountName === "Onboarded Assets")) {
-          const onboardedAssetsResult = await tx.run(
-            `MATCH (m:Member {id: $memberID})
+          // Create "Onboarded Assets" account if it doesn't exist
+          if (
+            !existingAccounts.some(
+              (a: AccountInfo) => a.accountName === "Onboarded Assets"
+            )
+          ) {
+            logger.info("Creating Onboarded Assets account", { memberID });
+            
+            const onboardedAssetsResult = await tx.run(
+              `MATCH (m:Member {memberID: $memberID})
              CREATE (a:AccountInternal {
                id: apoc.create.uuid(),
                accountName: "Onboarded Assets",
@@ -87,22 +105,34 @@ export async function SellInMarketController(
              })
              CREATE (m)-[:OWNS]->(a)
              RETURN a.id AS accountID, a.accountName AS accountName, a.accountType AS accountType`,
-            { memberID }
-          );
-
-          if (onboardedAssetsResult.records.length > 0) {
-            createdAccounts.push({
-              accountID: onboardedAssetsResult.records[0].get("accountID"),
-              accountName: onboardedAssetsResult.records[0].get("accountName"),
-              accountType: onboardedAssetsResult.records[0].get("accountType")
+              { memberID }
+            );
+            
+            logger.info("Onboarded Assets account creation result", {
+              success: onboardedAssetsResult.records.length > 0
             });
-          }
-        }
 
-        // Create "Profile Pictures" account if it doesn't exist
-        if (!existingAccounts.some((a: AccountInfo) => a.accountName === "Profile Pictures")) {
-          const profilePicturesResult = await tx.run(
-            `MATCH (m:Member {id: $memberID})
+            if (onboardedAssetsResult.records.length > 0) {
+              createdAccounts.push({
+                accountID: onboardedAssetsResult.records[0].get("accountID"),
+                accountName:
+                  onboardedAssetsResult.records[0].get("accountName"),
+                accountType:
+                  onboardedAssetsResult.records[0].get("accountType"),
+              });
+            }
+          }
+
+          // Create "Profile Pictures" account if it doesn't exist
+          if (
+            !existingAccounts.some(
+              (a: AccountInfo) => a.accountName === "Profile Pictures"
+            )
+          ) {
+            logger.info("Creating Profile Pictures account", { memberID });
+            
+            const profilePicturesResult = await tx.run(
+              `MATCH (m:Member {memberID: $memberID})
              CREATE (a:AccountInternal {
                id: apoc.create.uuid(),
                accountName: "Profile Pictures",
@@ -111,26 +141,33 @@ export async function SellInMarketController(
              })
              CREATE (m)-[:OWNS]->(a)
              RETURN a.id AS accountID, a.accountName AS accountName, a.accountType AS accountType`,
-            { memberID }
-          );
-
-          if (profilePicturesResult.records.length > 0) {
-            createdAccounts.push({
-              accountID: profilePicturesResult.records[0].get("accountID"),
-              accountName: profilePicturesResult.records[0].get("accountName"),
-              accountType: profilePicturesResult.records[0].get("accountType")
+              { memberID }
+            );
+            
+            logger.info("Profile Pictures account creation result", {
+              success: profilePicturesResult.records.length > 0
             });
-          }
-        }
 
-        return existingAccounts.concat(createdAccounts);
-      });
+            if (profilePicturesResult.records.length > 0) {
+              createdAccounts.push({
+                accountID: profilePicturesResult.records[0].get("accountID"),
+                accountName:
+                  profilePicturesResult.records[0].get("accountName"),
+                accountType:
+                  profilePicturesResult.records[0].get("accountType"),
+              });
+            }
+          }
+
+          return existingAccounts.concat(createdAccounts);
+        }
+      );
 
       createdAccounts = createAccountsResult as AccountInfo[];
     }
 
     res.status(200).json({
-      message: `Vendor status ${vendor ? 'enabled' : 'disabled'} successfully`,
+      message: `Vendor status ${vendor ? "enabled" : "disabled"} successfully`,
       data: {
         action: {
           id: memberID,
@@ -140,16 +177,16 @@ export async function SellInMarketController(
           details: {
             memberID,
             vendor,
-            createdAccounts
+            createdAccounts,
           },
         },
         dashboard: {
           // Include relevant dashboard data here
           member: {
             id: memberID,
-            vendor
+            vendor,
           },
-          createdAccounts
+          createdAccounts,
         },
       },
     });

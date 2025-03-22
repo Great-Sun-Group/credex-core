@@ -21,17 +21,17 @@ describe("Vimbiso Market Flow", () => {
       `${timestamp}`,
       "USD"
     );
-    
+
     const vendorToken = vendorResponse.data.action.details.token;
     const vendorID = vendorResponse.data.action.details.memberID;
     const vendorAccountID = vendorResponse.data.action.details.defaultAccountID;
-    
+
     console.log("Created test vendor with ID:", vendorID);
-    
+
     // Step 2: Enable vendor functionality
     console.log("\n--- Step 2: Enable vendor functionality ---");
     const sellInMarketResponse = await sellInMarket(vendorToken, true);
-    
+
     // Step 3: Update vendor profile
     console.log("\n--- Step 3: Update vendor profile ---");
     const editMemberResponse = await editMember(
@@ -41,7 +41,7 @@ describe("Vimbiso Market Flow", () => {
       "TESTVENDOR",
       "I sell fresh produce in the Vimbiso Market."
     );
-    
+
     // Step 4: Create product account
     console.log("\n--- Step 4: Create product account ---");
     const productAccountResponse = await createAccountInternal(
@@ -50,9 +50,10 @@ describe("Vimbiso Market Flow", () => {
       "USD",
       "PRODUCTION"
     );
-    
-    const productAccountID = productAccountResponse.data.action.details.accountID;
-    
+
+    const productAccountID =
+      productAccountResponse.data.action.details.accountID;
+
     // Step 5: Create production account
     console.log("\n--- Step 5: Create production account ---");
     const productionAccountResponse = await createAccountInternal(
@@ -61,9 +62,10 @@ describe("Vimbiso Market Flow", () => {
       "USD",
       "PRODUCTION"
     );
-    
-    const productionAccountID = productionAccountResponse.data.action.details.accountID;
-    
+
+    const productionAccountID =
+      productionAccountResponse.data.action.details.accountID;
+
     // Step 6: Add initial inventory
     console.log("\n--- Step 6: Add initial inventory ---");
     const initialInventoryResponse = await addAssetMarker(
@@ -74,16 +76,19 @@ describe("Vimbiso Market Flow", () => {
       "USD",
       {
         description: "Initial inventory of fresh tomatoes",
-        quantity: "100 kg"
+        quantity: "100 kg",
       }
     );
-    
+
     // Step 7: Upload product image (if test image exists)
     let originalAssetID;
     let asset200pxID;
     let asset600pxID;
-    
-    const testImagePath = path.join(__dirname, '../../assets/original-images/market1.png');
+
+    const testImagePath = path.join(
+      __dirname,
+      "../../assets/original-images/market1.png"
+    );
     if (fs.existsSync(testImagePath)) {
       console.log("\n--- Step 7: Upload product image ---");
       const uploadImageResponse = await uploadAndOptimizeJpg(
@@ -92,11 +97,11 @@ describe("Vimbiso Market Flow", () => {
         "tomato_product_image",
         productAccountID
       );
-      
+
       originalAssetID = uploadImageResponse.data.action.details.originalAssetID;
       asset200pxID = uploadImageResponse.data.action.details.asset200pxID;
       asset600pxID = uploadImageResponse.data.action.details.asset600pxID;
-      
+
       // Step 8: Connect product image to account
       console.log("\n--- Step 8: Connect product image to account ---");
       await connectAsset(
@@ -108,7 +113,7 @@ describe("Vimbiso Market Flow", () => {
     } else {
       console.log("\n--- Skipping image upload (test image not found) ---");
     }
-    
+
     // Step 9: Create test customer
     console.log("\n--- Step 9: Create test customer ---");
     const customerResponse = await onboardMember(
@@ -117,13 +122,14 @@ describe("Vimbiso Market Flow", () => {
       `${timestamp + 1}`,
       "USD"
     );
-    
+
     const customerToken = customerResponse.data.action.details.token;
     const customerID = customerResponse.data.action.details.memberID;
-    const customerAccountID = customerResponse.data.action.details.defaultAccountID;
-    
+    const customerAccountID =
+      customerResponse.data.action.details.defaultAccountID;
+
     console.log("Created test customer with ID:", customerID);
-    
+
     // Step 10: Generate invoice
     console.log("\n--- Step 10: Generate invoice ---");
     const invoiceResponse = await generateInvoice(
@@ -134,17 +140,17 @@ describe("Vimbiso Market Flow", () => {
           name: "Fresh Tomatoes",
           quantity: 5,
           unit: "kg",
-          price: 4.00,
-          total: 20.00
-        }
+          price: 4.0,
+          total: 20.0,
+        },
       ],
-      20.00,
+      20.0,
       "USD",
       "Farm fresh tomatoes"
     );
-    
+
     const invoiceID = invoiceResponse.data.action.details.invoiceID;
-    
+
     // Step 11: Create credex that executes the invoice
     console.log("\n--- Step 11: Create credex that executes the invoice ---");
     const credexResponse = await createCredexWithInvoice(
@@ -152,16 +158,16 @@ describe("Vimbiso Market Flow", () => {
       customerAccountID,
       productAccountID,
       "USD",
-      20.00,
+      20.0,
       "PAYMENT",
       "OFFERS",
       true,
       invoiceID
     );
-    
+
     const credexID = credexResponse.data.action.id;
     const GLid = credexResponse.data.action.details.GLid;
-    
+
     // Final verification
     console.log("\n--- Market Flow Test Completed Successfully ---");
     console.log("Vendor ID:", vendorID);
@@ -170,7 +176,7 @@ describe("Vimbiso Market Flow", () => {
     console.log("Invoice ID:", invoiceID);
     console.log("Credex ID:", credexID);
     console.log("GLid:", GLid);
-    
+
     expect(credexResponse.data.action.type).toBe("CREDEX_CREATED");
     expect(credexResponse.data.action.details.invoiceID).toBe(invoiceID);
   }, 60000); // 60 second timeout
