@@ -22,7 +22,7 @@ export async function EditMemberController(
     });
 
     const { firstname, lastname, memberHandle, vendorBio } = req.body;
-    const memberID = req.user?.id;
+    const memberID = req.user?.memberID;
     
     if (!memberID) {
       throw new Error("User ID not found in request");
@@ -52,7 +52,7 @@ export async function EditMemberController(
       const handleCheckResult = await session.executeRead(async (tx: any) => {
         return await tx.run(
           `MATCH (m:Member {memberHandle: $memberHandle})
-           WHERE m.id <> $memberID
+           WHERE m.memberID <> $memberID
            RETURN m`,
           { memberHandle, memberID }
         );
@@ -74,7 +74,7 @@ export async function EditMemberController(
     // Execute the update query
     const result = await session.executeWrite(async (tx: any) => {
       return await tx.run(
-        `MATCH (m:Member {id: $memberID})
+        `MATCH (m:Member {memberID: $memberID})
          SET ${setClause.join(", ")}
          RETURN m`,
         params
@@ -107,7 +107,7 @@ export async function EditMemberController(
         dashboard: {
           // Include relevant dashboard data here
           member: {
-            id: memberID,
+            memberID: memberID,
             firstname: updatedMember.firstname,
             lastname: updatedMember.lastname,
             memberHandle: updatedMember.memberHandle,

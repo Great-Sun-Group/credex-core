@@ -22,35 +22,34 @@ export async function CreateAccountInternalController(
       body: req.body,
     });
 
-    const { accountName, accountHandle, accountType, accountDescription } = req.body;
-    const memberID = req.user?.id;
+    const { accountName, accountType, accountDescription } = req.body;
+    const memberID = req.user?.memberID;
     
     if (!memberID) {
       throw new Error("User ID not found in request");
     }
 
-    // Check if the account handle is already in use
-    const handleCheckResult = await session.executeRead(async (tx: any) => {
+    // Check if the account name is already in use by this member
+    const nameCheckResult = await session.executeRead(async (tx: any) => {
       return await tx.run(
-        `MATCH (a:AccountInternal {accountHandle: $accountHandle})
+        `MATCH (m:Member {memberID: $memberID})-[:OWNS]->(a:AccountInternal {accountName: $accountName})
          RETURN a`,
-        { accountHandle }
+        { memberID, accountName }
       );
     });
 
-    if (handleCheckResult.records.length > 0) {
-      throw new Error("Account handle is already in use");
+    if (nameCheckResult.records.length > 0) {
+      throw new Error("Account name is already in use by this member");
     }
 
     // Create the account
     const accountID = uuidv4();
     const result = await session.executeWrite(async (tx: any) => {
       return await tx.run(
-        `MATCH (m:Member {id: $memberID})
+        `MATCH (m:Member {memberID: $memberID})
          CREATE (a:AccountInternal {
            id: $accountID,
            accountName: $accountName,
-           accountHandle: $accountHandle,
            accountType: $accountType,
            accountDescription: $accountDescription,
            createdAt: datetime()
@@ -61,7 +60,6 @@ export async function CreateAccountInternalController(
           memberID, 
           accountID, 
           accountName, 
-          accountHandle, 
           accountType, 
           accountDescription: accountDescription || "" 
         }
@@ -85,7 +83,6 @@ export async function CreateAccountInternalController(
           details: {
             accountID,
             accountName,
-            accountHandle,
             accountType,
             accountDescription: accountDescription || "",
             ownerID: memberID,
@@ -95,7 +92,6 @@ export async function CreateAccountInternalController(
           account: {
             id: accountID,
             accountName,
-            accountHandle,
             accountType,
             accountDescription: accountDescription || "",
             ownerID: memberID,

@@ -56,6 +56,7 @@ export enum ApiActionType {
 
   // Account actions
   ACCOUNT_CREATED = "ACCOUNT_CREATED",
+  ACCOUNT_INTERNAL_CREATED = "ACCOUNT_INTERNAL_CREATED",
   ACCOUNT_AUTHORIZED = "ACCOUNT_AUTHORIZED",
   ACCOUNT_UNAUTHORIZED = "ACCOUNT_UNAUTHORIZED",
   ACCOUNT_UPDATED = "ACCOUNT_UPDATED",
@@ -162,7 +163,6 @@ export interface MemberActionDetails {
 export interface AccountActionDetails {
   accountID: string;
   accountName?: string;
-  accountHandle?: string;
   defaultDenom?: string;
   ownerID?: string;
   memberIdAuthorized?: string;

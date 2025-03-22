@@ -26,18 +26,13 @@ export default function createAccountInternalRoute() {
    *             type: object
    *             required:
    *               - accountName
-   *               - accountHandle
    *               - accountType
    *             properties:
    *               accountName:
    *                 type: string
    *                 minLength: 3
    *                 maxLength: 50
-   *                 description: Name of the internal account
-   *               accountHandle:
-   *                 type: string
-   *                 pattern: ^[A-Z0-9_]{3,30}$
-   *                 description: Unique handle for the internal account (uppercase letters, numbers, underscores)
+   *                 description: Name of the internal account (must be unique per member)
    *               accountDescription:
    *                 type: string
    *                 maxLength: 500
@@ -86,8 +81,6 @@ export default function createAccountInternalRoute() {
    *                               type: string
    *                               format: uuid
    *                             accountName:
-   *                               type: string
-   *                             accountHandle:
    *                               type: string
    *                             accountType:
    *                               type: string
@@ -221,7 +214,7 @@ export default function createAccountInternalRoute() {
    *                       type: object
    *                       description: Empty dashboard object
    *       409:
-   *         description: Account handle already exists
+   *         description: Account name already exists for this member
    *         content:
    *           application/json:
    *             schema:
@@ -229,7 +222,7 @@ export default function createAccountInternalRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: Account handle is already in use
+   *                   example: Account name is already in use by this member
    *                 data:
    *                   type: object
    *                   properties:
@@ -253,7 +246,7 @@ export default function createAccountInternalRoute() {
    *                           properties:
    *                             code:
    *                               type: string
-   *                               example: HANDLE_EXISTS
+   *                               example: NAME_EXISTS
    *                             reason:
    *                               type: string
    *                             suggestion:
