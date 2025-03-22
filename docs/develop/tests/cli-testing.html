@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CLI-Focused Testing - Credex API Testing Guide</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+    
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+    <h1>CLI-Focused Testing</h1>
+
+    <div class="toc">
+      <h2>Testing Documentation</h2>
+      <ul>
+        <li><a href="index.html">Test Architecture Overview</a></li>
+        <li><a href="code-coverage.html">Code Coverage</a></li>
+        <li><a href="local-development.html">Local Development Testing</a></li>
+        <li><a href="deployed-environments.html">Testing Against Deployed Environments</a></li>
+        <li><a href="command-reference.html">Command Reference</a></li>
+        <li><a href="adding-tests.html">Adding Tests for New Endpoints</a></li>
+        <li><a href="cli-testing.html">CLI-Focused Testing</a></li>
+      </ul>
+    </div>
+
+    <h2>CLI-Focused Testing Approach</h2>
+
+    <p>
+      The Credex testing infrastructure has been optimized for a CLI-focused approach that prioritizes:
+    </p>
+
+    <ul>
+      <li>Simplicity and directness in test execution</li>
+      <li>Minimal output focused on essential information</li>
+      <li>Using existing Docker containers instead of creating new ones</li>
+      <li>Clear separation between test code and server code</li>
+      <li>Efficient testing workflows for developers</li>
+    </ul>
+
+    <h3>Using Existing Docker Containers</h3>
+
+    <p>
+      A key improvement in our testing approach is the ability to use existing Docker containers instead of creating new ones for each test. This provides several benefits:
+    </p>
+
+    <ul>
+      <li>Faster test execution by eliminating container startup time</li>
+      <li>Reduced resource usage on development machines</li>
+      <li>Ability to test against a consistent environment</li>
+      <li>Prevention of port conflicts and other container-related issues</li>
+      <li>More realistic testing against a long-running server</li>
+    </ul>
+
+    <p>
+      To use this approach:
+    </p>
+
+    <pre><code># First, start your development Docker container
+npm run docker:dev
+
+# In another terminal, run tests using the existing container
+npm test onboardmember John Doe 1234567890 USD</code></pre>
+
+    <p>
+      The test runner automatically detects the running Docker container and uses it instead of starting a new one.
+    </p>
+
+    <h3>Minimal Output Mode</h3>
+
+    <p>
+      Tests now support a minimal output mode that focuses on essential information:
+    </p>
+
+    <ul>
+      <li>Shows only the most important test data</li>
+      <li>Eliminates verbose logging from the server</li>
+      <li>Suppresses coverage reports unless explicitly requested</li>
+      <li>Provides clear success/failure indicators</li>
+      <li>Displays the complete API response data for inspection</li>
+    </ul>
+
+    <p>
+      This mode is enabled by default when running tests via the CLI. The output includes:
+    </p>
+
+    <pre><code>Onboarding: John Doe (9876543210) with USD
+{
+  "message": "John Doe: Personal account created with a default denomination of USD."
+  "data": {
+    "action": {
+      "id": "2ffc32a5-1384-4570-895f-301b1c4ee54c"
+      "type": "MEMBER_ONBOARDED"
+      "timestamp": "2025-03-22T16:00:51.401Z"
+      "actor": "2ffc32a5-1384-4570-895f-301b1c4ee54c"
+      "details": {
+        "memberID": "2ffc32a5-1384-4570-895f-301b1c4ee54c"
+        "firstname": "John"
+        "lastname": "Doe"
+        "memberHandle": "9876543210"
+        "defaultDenom": "USD"
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW1iZXJJRCI6IjJmZmMzMmE1LTEzODQtNDU3MC04OTVmLTMwMWIxYzRlZTU0YyIsImlhdCI6MTc0MjY1OTI0OSwibGFzdEFjdGl2aXR5IjoxNzQyNjU5MjQ5LCJhYnNvbHV0ZUV4cGlyeSI6MTc0MjY2Mjg0OSwidmVyc2lvbiI6InYxIiwiYXV0aE1ldGhvZCI6InBob25lX29ubHkifQ.Io5yNtjjr4UmBrrHqrSKLM7goAv47L3u3y0G0lF2J3s"
+        "defaultAccountID": "7ed3a91e-cef1-4454-9e87-d75452ab5479"
+      }
+    }
+    "dashboard": {
+      // Dashboard data...
+    }
+  }
+}</code></pre>
+
+    <h3>Clean Separation of Test and Server Code</h3>
+
+    <p>
+      The updated testing infrastructure maintains a clean separation between test code and server code:
+    </p>
+
+    <ul>
+      <li>Tests do not import server code directly</li>
+      <li>Tests communicate with the server only through the API</li>
+      <li>No shared state between tests and server</li>
+      <li>Tests run in a separate process from the server</li>
+      <li>Server configuration is not modified by tests</li>
+    </ul>
+
+    <p>
+      This separation ensures that tests are testing the actual API as it would be used by clients, not internal implementation details.
+    </p>
+
+    <h3>Implementation Details</h3>
+
+    <h4>Test Runner (tests/run.js)</h4>
+
+    <p>
+      The test runner has been updated to:
+    </p>
+
+    <ul>
+      <li>Set <code>DOCKER_ENV=true</code> to use existing Docker containers</li>
+      <li>Set <code>MINIMAL_LOGS=true</code> to enable minimal output mode</li>
+      <li>Disable coverage reports by default with <code>--no-coverage</code></li>
+      <li>Remove silent mode to show console.log output from tests</li>
+      <li>Set environment variables to disable server logging</li>
+    </ul>
+
+    <h4>Test Setup (tests/setup.ts)</h4>
+
+    <p>
+      The test setup has been simplified to:
+    </p>
+
+    <ul>
+      <li>Remove all server code imports</li>
+      <li>Use a minimal logger for test output</li>
+      <li>Connect to the existing server without starting a new one</li>
+      <li>Set essential environment variables only</li>
+      <li>Remove database cleanup that's not needed with Docker containers</li>
+    </ul>
+
+    <h4>Test Files (tests/api/*.test.ts)</h4>
+
+    <p>
+      Test files have been updated to:
+    </p>
+
+    <ul>
+      <li>Print complete API response data</li>
+      <li>Focus on essential information in logs</li>
+      <li>Maintain compatibility with the existing test runner</li>
+      <li>Support both minimal and verbose output modes</li>
+    </ul>
+
+    <h3>Best Practices for CLI-Focused Testing</h3>
+
+    <ol>
+      <li><strong>Start Docker First</strong>: Always start your Docker container with <code>npm run docker:dev</code> before running tests</li>
+      <li><strong>Use Unique Identifiers</strong>: Use unique phone numbers or identifiers to avoid conflicts</li>
+      <li><strong>Examine Complete Response</strong>: Review the complete API response to understand the data structure</li>
+      <li><strong>Chain Commands</strong>: Use the output from one test as input to the next</li>
+      <li><strong>Keep Docker Running</strong>: Maintain a long-running Docker container for multiple test sessions</li>
+      <li><strong>Reset When Needed</strong>: Use <code>npm test clearforce</code> to reset the environment when needed</li>
+    </ol>
+
+    <h3>Example Workflow</h3>
+
+    <p>
+      A typical workflow using the CLI-focused approach:
+    </p>
+
+    <pre><code># Start Docker container
+npm run docker:dev
+
+# In another terminal, onboard a new member
+npm test onboardmember John Doe 9876543210 USD
+# Copy the token from the output
+
+# Use the token to create an account
+npm test createAccountInternal eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... "Business Account" USD BUSINESS
+# Copy the account ID from the output
+
+# Use the token and account ID for further operations
+npm test addAssetMarker eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... "Test Asset" account-id-1 100 account-id-2 100 USD</code></pre>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+    
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for tests subdirectory
+      window.templateLevels = 2;
+    </script>
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
+  </body>
+</html>

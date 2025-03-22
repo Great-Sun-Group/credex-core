@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Code Coverage - Credex API Testing Guide</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+    
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+    <h1>Code Coverage</h1>
+
+    <div class="toc">
+      <h2>Testing Documentation</h2>
+      <ul>
+        <li><a href="index.html">Test Architecture Overview</a></li>
+        <li><a href="code-coverage.html">Code Coverage</a></li>
+        <li><a href="local-development.html">Local Development Testing</a></li>
+        <li><a href="deployed-environments.html">Testing Against Deployed Environments</a></li>
+        <li><a href="command-reference.html">Command Reference</a></li>
+        <li><a href="adding-tests.html">Adding Tests for New Endpoints</a></li>
+      </ul>
+    </div>
+
+    <h2>Code Coverage Overview</h2>
+
+    <p>
+      The project uses Jest's built-in code coverage reporting to track test coverage metrics.
+      Code coverage helps identify untested code paths and ensures comprehensive test coverage
+      across the codebase.
+    </p>
+
+    <h3>Running Tests with Coverage</h3>
+
+    <p>
+      To run tests with coverage reporting:
+    </p>
+
+    <pre><code># Run all tests with coverage
+npm run test:coverage</code></pre>
+
+    <p>
+      This will:
+    </p>
+    <ul>
+      <li>Run all tests in the project</li>
+      <li>Generate a coverage report in the terminal</li>
+      <li>Create detailed HTML reports in the 'coverage' directory</li>
+      <li>Generate coverage files in various formats (lcov, clover)</li>
+    </ul>
+
+    <h3>Understanding Coverage Metrics</h3>
+
+    <p>
+      The coverage report includes four key metrics:
+    </p>
+
+    <ul>
+      <li><strong>Statement Coverage</strong>: Percentage of program statements executed</li>
+      <li><strong>Branch Coverage</strong>: Percentage of control structures (if statements, switches) executed</li>
+      <li><strong>Function Coverage</strong>: Percentage of functions/methods called</li>
+      <li><strong>Line Coverage</strong>: Percentage of executable lines of code run</li>
+    </ul>
+
+    <p>
+      Example coverage report output:
+    </p>
+
+    <pre><code>--------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+--------------------|---------|----------|---------|---------|-------------------
+All files          |   85.71 |    76.92 |   88.24 |   85.71 |                   
+ src/api/Account   |   92.31 |    83.33 |   90.91 |   92.31 |                   
+  controller.ts    |   92.31 |    83.33 |   90.91 |   92.31 | 45,67             
+ src/api/Member    |   88.46 |    79.17 |   91.67 |   88.46 |                   
+  controller.ts    |   88.46 |    79.17 |   91.67 |   88.46 | 112,145,178,201   
+ src/middleware    |   76.36 |    68.25 |   82.14 |   76.36 |                   
+  authMiddleware.ts|   76.36 |    68.25 |   82.14 |   76.36 | 28-35,89-97       
+--------------------|---------|----------|---------|---------|-------------------</code></pre>
+
+    <h3>Coverage Reports</h3>
+
+    <p>
+      After running tests with coverage, you can find:
+    </p>
+
+    <ul>
+      <li>Terminal output showing overall coverage statistics</li>
+      <li>Detailed HTML report at coverage/lcov-report/index.html</li>
+      <li>Machine-readable reports in the coverage directory (lcov.info, clover.xml)</li>
+    </ul>
+
+    <p>
+      The HTML report provides:
+    </p>
+    <ul>
+      <li>File-by-file coverage breakdown</li>
+      <li>Line-by-line coverage highlighting</li>
+      <li>Branch coverage visualization</li>
+      <li>Directory summaries</li>
+    </ul>
+
+    <div class="image-container">
+      <img src="../../images/coverage-report-example.png" alt="Example of HTML coverage report" style="max-width: 100%;" />
+      <p class="caption">Example of HTML coverage report</p>
+    </div>
+
+    <h3>Coverage Configuration</h3>
+
+    <p>
+      Coverage settings are configured in jest.config.js:
+    </p>
+
+    <pre><code>// jest.config.js
+module.exports = {
+  // ... other Jest configuration
+  collectCoverageFrom: [
+    "src/**/*.{js,ts}",
+    "!src/**/*.d.ts",
+    "!src/types/**",
+    "!src/mocks/**",
+    "!**/node_modules/**"
+  ],
+  coverageReporters: ["text", "lcov", "clover"],
+  coverageDirectory: "coverage"
+};</code></pre>
+
+    <p>
+      This configuration:
+    </p>
+    <ul>
+      <li>Excludes test files, type definitions, and other non-source files</li>
+      <li>Generates multiple report formats (text, lcov, clover)</li>
+      <li>Collects coverage from all JavaScript and TypeScript files under src/</li>
+    </ul>
+
+    <h3>Improving Coverage</h3>
+
+    <p>
+      To improve code coverage:
+    </p>
+
+    <ol>
+      <li>Identify uncovered lines and branches in the coverage report</li>
+      <li>Write additional tests targeting those specific code paths</li>
+      <li>Focus on critical business logic and error handling paths</li>
+      <li>Use Jest's .only and .skip modifiers to focus on specific tests during development</li>
+      <li>Consider setting coverage thresholds in the Jest configuration to enforce minimum coverage levels</li>
+    </ol>
+
+    <h3>Coverage Thresholds</h3>
+
+    <p>
+      You can set coverage thresholds in jest.config.js to enforce minimum coverage levels:
+    </p>
+
+    <pre><code>// jest.config.js
+module.exports = {
+  // ... other Jest configuration
+  coverageThreshold: {
+    global: {
+      statements: 80,
+      branches: 70,
+      functions: 80,
+      lines: 80
+    },
+    "src/api/**/*.ts": {
+      statements: 90,
+      branches: 80,
+      functions: 90,
+      lines: 90
+    }
+  }
+};</code></pre>
+
+    <p>
+      With this configuration, tests will fail if coverage drops below the specified thresholds.
+    </p>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+    
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for tests subdirectory
+      window.templateLevels = 2;
+    </script>
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
+  </body>
+</html>

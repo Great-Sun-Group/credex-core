@@ -2,6 +2,7 @@ import express from "express";
 import getAccountByHandleRoute from "./getAccountByHandleRoute";
 import getLedgerRoute from "./getLedgerRoute";
 import createTrustAccountRoute from "./createTrustAccountRoute";
+import editAccountRoute from "./editAccountRoute";
 import logger from "../../../utils/logger";
 
 /**
@@ -19,10 +20,11 @@ export default function AccountRoutes() {
   router.use(getAccountByHandleRoute());
   router.use(getLedgerRoute());
   router.use(createTrustAccountRoute());
+  router.use(editAccountRoute());
 
   logger.info("Account routes initialized successfully", {
     module: "accountRoutes",
-    routesCount: 3,
+    routesCount: 4,
   });
 
   return router;

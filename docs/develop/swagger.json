@@ -355,6 +355,10 @@
     {
       "name": "AssetMarker",
       "description": "Asset marker operations for managing digital assets and their relationships"
+    },
+    {
+      "name": "Invoice",
+      "description": "Invoice operations for managing transactions in the Vimbiso Market"
     }
   ],
   "paths": {
@@ -430,6 +434,169 @@
           },
           "403": {
             "description": "Forbidden - requires tier 5 membership"
+          }
+        }
+      }
+    },
+    "/api/account/{accountID}": {
+      "put": {
+        "summary": "Update an existing exchange account",
+        "tags": [
+          "Accounts"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the account to update"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "accountName": {
+                    "type": "string",
+                    "description": "New name for the account"
+                  },
+                  "accountHandle": {
+                    "type": "string",
+                    "description": "New handle for the account"
+                  },
+                  "defaultDenom": {
+                    "type": "string",
+                    "enum": [
+                      "CXX",
+                      "USD",
+                      "CAD",
+                      "XAU"
+                    ],
+                    "description": "Default denomination for the account"
+                  }
+                },
+                "example": {
+                  "accountName": "Fresh Tomatoes",
+                  "accountHandle": "freshTomatoes",
+                  "defaultDenom": "USD"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Account updated successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "type": {
+                              "type": "string",
+                              "example": "ACCOUNT_UPDATED"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "accountID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "accountName": {
+                                  "type": "string"
+                                },
+                                "accountHandle": {
+                                  "type": "string"
+                                },
+                                "defaultDenom": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "properties": {
+                            "account": {
+                              "type": "object",
+                              "properties": {
+                                "accountID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "accountName": {
+                                  "type": "string"
+                                },
+                                "accountHandle": {
+                                  "type": "string"
+                                },
+                                "defaultDenom": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - User not authorized for this account"
+          },
+          "404": {
+            "description": "Account not found"
+          },
+          "409": {
+            "description": "Account handle already in use"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         }
       }
@@ -1162,7 +1329,6 @@
                 "type": "object",
                 "required": [
                   "accountName",
-                  "accountHandle",
                   "accountType"
                 ],
                 "properties": {
@@ -1170,12 +1336,7 @@
                     "type": "string",
                     "minLength": 3,
                     "maxLength": 50,
-                    "description": "Name of the internal account"
-                  },
-                  "accountHandle": {
-                    "type": "string",
-                    "pattern": "^[A-Z0-9_]{3,30}$",
-                    "description": "Unique handle for the internal account (uppercase letters, numbers, underscores)"
+                    "description": "Name of the internal account (must be unique per member)"
                   },
                   "accountDescription": {
                     "type": "string",
@@ -1245,9 +1406,6 @@
                                   "format": "uuid"
                                 },
                                 "accountName": {
-                                  "type": "string"
-                                },
-                                "accountHandle": {
                                   "type": "string"
                                 },
                                 "accountType": {
@@ -1462,7 +1620,7 @@
             }
           },
           "409": {
-            "description": "Account handle already exists",
+            "description": "Account name already exists for this member",
             "content": {
               "application/json": {
                 "schema": {
@@ -1470,7 +1628,7 @@
                   "properties": {
                     "message": {
                       "type": "string",
-                      "example": "Account handle is already in use"
+                      "example": "Account name is already in use by this member"
                     },
                     "data": {
                       "type": "object",
@@ -1501,7 +1659,7 @@
                               "properties": {
                                 "code": {
                                   "type": "string",
-                                  "example": "HANDLE_EXISTS"
+                                  "example": "NAME_EXISTS"
                                 },
                                 "reason": {
                                   "type": "string"
@@ -5035,7 +5193,9 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "assetName"
+                  "assetName",
+                  "crAccounts",
+                  "drAccounts"
                 ],
                 "properties": {
                   "assetName": {
@@ -5043,6 +5203,63 @@
                     "minLength": 3,
                     "maxLength": 100,
                     "description": "Name of the asset"
+                  },
+                  "crAccounts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "accountID",
+                        "amount"
+                      ],
+                      "properties": {
+                        "accountID": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the account to credit"
+                        },
+                        "amount": {
+                          "type": "number",
+                          "minimum": 0,
+                          "exclusiveMinimum": true,
+                          "description": "Amount to credit"
+                        }
+                      }
+                    }
+                  },
+                  "drAccounts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "accountID",
+                        "amount"
+                      ],
+                      "properties": {
+                        "accountID": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "ID of the account to debit"
+                        },
+                        "amount": {
+                          "type": "number",
+                          "minimum": 0,
+                          "exclusiveMinimum": true,
+                          "description": "Amount to debit"
+                        }
+                      }
+                    }
+                  },
+                  "denomination": {
+                    "type": "string",
+                    "enum": [
+                      "CXX",
+                      "CAD",
+                      "USD",
+                      "XAU"
+                    ],
+                    "default": "USD",
+                    "description": "Denomination of the asset marker"
                   },
                   "description": {
                     "type": "string",
@@ -5105,9 +5322,17 @@
                             "details": {
                               "type": "object",
                               "properties": {
-                                "assetID": {
+                                "assetIDs": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "description": "Array of created asset marker IDs"
+                                },
+                                "GLid": {
                                   "type": "string",
-                                  "format": "uuid"
+                                  "description": "General Ledger ID shared by all created asset markers"
                                 },
                                 "assetName": {
                                   "type": "string"
@@ -5116,6 +5341,9 @@
                                   "type": "string"
                                 },
                                 "s3Key": {
+                                  "type": "string"
+                                },
+                                "denomination": {
                                   "type": "string"
                                 },
                                 "createdAt": {
@@ -8692,6 +8920,11 @@
                     "format": "date",
                     "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                     "description": "Optional due date for unsecured Credex"
+                  },
+                  "invoiceID": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Optional ID of an invoice to execute with this Credex"
                   }
                 }
               }
@@ -8766,6 +8999,11 @@
                                 },
                                 "receiverAccountName": {
                                   "type": "string"
+                                },
+                                "invoiceID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the executed invoice (if applicable)"
                                 }
                               }
                             }
@@ -10919,6 +11157,528 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DevAdminError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/generateInvoice": {
+      "post": {
+        "tags": [
+          "Invoice"
+        ],
+        "summary": "Generate an invoice for a transaction",
+        "description": "Generate an invoice for a transaction in the Vimbiso Market",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "paymentAccountID",
+                  "AssetMarkerData"
+                ],
+                "properties": {
+                  "paymentAccountID": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the account to receive payment"
+                  },
+                  "AssetMarkerData": {
+                    "type": "object",
+                    "required": [
+                      "items",
+                      "total",
+                      "currency"
+                    ],
+                    "properties": {
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "name",
+                            "quantity",
+                            "unit",
+                            "price",
+                            "total"
+                          ],
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "description": "Name of the item"
+                            },
+                            "quantity": {
+                              "type": "number",
+                              "description": "Quantity of the item"
+                            },
+                            "unit": {
+                              "type": "string",
+                              "description": "Unit of measurement (e.g., kg, each)"
+                            },
+                            "price": {
+                              "type": "number",
+                              "description": "Price per unit"
+                            },
+                            "total": {
+                              "type": "number",
+                              "description": "Total price for this item (price * quantity)"
+                            }
+                          }
+                        }
+                      },
+                      "total": {
+                        "type": "number",
+                        "description": "Total amount for the invoice (sum of all item totals)"
+                      },
+                      "currency": {
+                        "type": "string",
+                        "description": "Currency for the invoice (e.g., USD)"
+                      },
+                      "notes": {
+                        "type": "string",
+                        "description": "Additional notes for the invoice"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invoice generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invoice generated successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The invoice ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "INVOICE_GENERATED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who generated the invoice"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "invoiceID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "invoiceQRLink": {
+                                  "type": "string",
+                                  "format": "uri"
+                                },
+                                "amount": {
+                                  "type": "number"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "paymentAccountID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "items": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object"
+                                  }
+                                },
+                                "notes": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "properties": {
+                            "invoice": {
+                              "type": "object",
+                              "properties": {
+                                "invoiceID": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "invoiceQRLink": {
+                                  "type": "string",
+                                  "format": "uri"
+                                },
+                                "amount": {
+                                  "type": "number"
+                                },
+                                "denomination": {
+                                  "type": "string"
+                                },
+                                "lines": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "accountName": {
+                                        "type": "string"
+                                      },
+                                      "amount": {
+                                        "type": "number"
+                                      }
+                                    }
+                                  }
+                                },
+                                "notes": {
+                                  "type": "string"
+                                },
+                                "createdAt": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid input data"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "VALIDATION_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not authorized to generate invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Vendor status required to generate invoices"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "VENDOR_REQUIRED"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Payment account not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Payment account not found"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "ACCOUNT_NOT_FOUND"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while generating invoice"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }

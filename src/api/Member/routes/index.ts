@@ -7,6 +7,8 @@ import updatePasswordRoute from "./updatePasswordRoute";
 import passwordResetRoute from "./passwordResetRoute";
 import setInitialPasswordRoute from "./setInitialPasswordRoute";
 import verificationRoutes from "./verificationRoutes";
+import editMemberRoute from "./editMemberRoute";
+import sellInMarketRoute from "./sellInMarketRoute";
 import logger from "../../../utils/logger";
 
 /**
@@ -28,11 +30,13 @@ export default function MemberRoutes() {
   router.use(updatePasswordRoute());
   router.use(setInitialPasswordRoute());
   router.use(passwordResetRoute());
+  router.use(editMemberRoute());
+  router.use(sellInMarketRoute());
   router.use("/verify", verificationRoutes()); // Mount verification routes with prefix
 
   logger.info("Member routes initialized successfully", {
     module: "memberRoutes",
-    routesCount: 9,
+    routesCount: 10,
   });
 
   return router;

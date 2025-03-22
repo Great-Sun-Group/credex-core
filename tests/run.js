@@ -1,14 +1,29 @@
-const { execSync, spawn } = require("child_process");
-const net = require("net");
+const { execSync } = require("child_process");
 const path = require("path");
+
+// Force Docker environment to use existing container
+process.env.DOCKER_ENV = "true";
+// Reduce verbosity
+process.env.MINIMAL_LOGS = "true";
+// Set log level to none to disable server logs
+process.env.LOG_LEVEL = "none";
+// Disable logger
+process.env.DISABLE_LOGGER = "true";
+// Disable Winston logger
+process.env.WINSTON_SILENT = "true";
+// Disable console output from the server
+process.env.SILENT = "true";
+
+
+
 
 // Parse command line arguments handling quoted strings
 function parseArgs(args) {
   const result = [];
-  let current = '';
+  let current = "";
   let inQuotes = false;
-  let quoteChar = '';
-  
+  let quoteChar = "";
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     // Check if argument starts with a quote
@@ -19,14 +34,14 @@ function parseArgs(args) {
     }
     // Check if argument ends with the same quote
     else if (inQuotes && arg.endsWith(quoteChar)) {
-      current += ' ' + arg.slice(0, -1);
+      current += " " + arg.slice(0, -1);
       result.push(current);
-      current = '';
+      current = "";
       inQuotes = false;
     }
     // If we're in quotes, add the argument with a space
     else if (inQuotes) {
-      current += ' ' + arg;
+      current += " " + arg;
     }
     // Not in quotes, treat as normal argument
     else {
@@ -52,13 +67,18 @@ if (command === "dev" || command === "stage") {
 }
 
 // Special commands that map to devadmin operations
-const devAdminCommands = ["cleardevdbs", "forcedco", "clearforce", "trustaudit"];
+const devAdminCommands = [
+  "cleardevdbs",
+  "forcedco",
+  "clearforce",
+  "trustaudit",
+];
 
 // Special commands that map to integration tests
 const integrationCommands = ["integrate"];
 
 // Tests that don't require JWT
-const noJwtTests = ["onboardmember", "login"];
+const noJwtTests = ["onboardmember", "login", "marketFlow"];
 
 // Add environment-specific flags
 const envFlags = {
@@ -67,54 +87,20 @@ const envFlags = {
   stage: "--runInBand",
 };
 
-// Check if server is running on port 3000
-function isServerRunning() {
-  return new Promise((resolve) => {
-    const client = new net.Socket();
-    client
-      .connect(3000, "127.0.0.1", () => {
-        client.destroy();
-        resolve(true);
-      })
-      .on("error", () => {
-        resolve(false);
-      });
-  });
-}
-
-// Start server and return the process
-function startServer() {
-  console.log("Building TypeScript...");
-  execSync("npm run build", { stdio: "inherit" });
-
-  console.log("Starting test server...");
-  const server = spawn("node", ["build/src/index.js"], {
-    env: { 
-      ...process.env, 
-      NODE_ENV: "test",
-      CLIENT_API_KEY: process.env.CLIENT_API_KEY || 'love-achingly'
-    },
-    stdio: "inherit",
-  });
-
-  // Give the server time to start and initialize
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(server), 8000);
-  });
-}
-
 // Build and execute the Jest command
 async function runTest() {
-  let serverStarted = false;
-  let server;
   try {
-    // Only start server if one isn't running
-    if (!(await isServerRunning())) {
-      server = await startServer();
-      serverStarted = true;
-    } else {
-      console.log("Using existing server...");
+    // Minimal logging
+    if (!process.env.MINIMAL_LOGS) {
+      console.log("Using existing Docker container started with npm run docker:dev");
     }
+
+    // Force Docker environment to ensure we connect to the existing container
+    process.env.DOCKER_ENV = "true";
+
+    // Set baseURL to Docker container - use localhost since we're running tests from outside Docker
+    process.env.TEST_BASE_URL = "http://localhost:3000";
+
     let jestCommand;
     let testParams = remainingArgs;
 
@@ -224,59 +210,74 @@ async function runTest() {
         !noJwtTests.includes(command.toLowerCase()) &&
         remainingArgs.length > 0
       ) {
-        const phone = remainingArgs[0];
-        // Run login test to get JWT
-        const loginOutput = execSync(
-          `jest tests/api/login.test.ts --testNamePattern=login ${envFlags[env]}`,
-          {
-            env: {
-              ...process.env,
-              NODE_ENV: env,
-              TEST_PARAMS: phone,
-              API_ENV: env,
-            },
-            encoding: "utf8",
-          }
-        );
+        // Check if the first argument looks like a JWT token (has two dots and starts with "ey")
+        const firstArg = remainingArgs[0];
+        const isJwtToken =
+          firstArg.startsWith("ey") && firstArg.split(".").length === 3;
 
-        // Extract JWT from login response
-        const tokenMatch = loginOutput.match(/"token":\s*"([^"]+)"/);
-        if (tokenMatch) {
-          const jwt = tokenMatch[1];
-          // Use JWT and all remaining args except phone
-          testParams = [jwt, ...remainingArgs.slice(1)];
+        if (isJwtToken) {
+          // If it's already a JWT token, use it directly
+          console.log("Using provided JWT token");
+          testParams = remainingArgs;
         } else {
-          console.error("Failed to extract JWT from login response");
-          process.exit(1);
+          // Otherwise, treat it as a phone number and run login
+          const phone = firstArg;
+          console.log(`Running login for phone: ${phone}`);
+          // Run login test to get JWT
+          const loginOutput = execSync(
+            `jest tests/api/login.test.ts --testNamePattern=login ${envFlags[env]}`,
+            {
+              env: {
+                ...process.env,
+                NODE_ENV: env,
+                TEST_PARAMS: phone,
+                API_ENV: env,
+              },
+              encoding: "utf8",
+            }
+          );
+
+          // Extract JWT from login response
+          const tokenMatch = loginOutput.match(/"token":\s*"([^"]+)"/);
+          if (tokenMatch) {
+            const jwt = tokenMatch[1];
+            // Use JWT and all remaining args except phone
+            testParams = [jwt, ...remainingArgs.slice(1)];
+          } else {
+            console.error("Failed to extract JWT from login response");
+            process.exit(1);
+          }
         }
       }
 
       jestCommand = `jest --testPathPattern="${pattern}" ${envFlags[env]}`;
     } else {
-    // No command provided or running coverage - run all tests
-    const isCoverage = process.env.COVERAGE === 'true';
-    jestCommand = `jest ${envFlags[env]} ${isCoverage ? '--coverage' : ''}`;
+      // No command provided or running coverage - run all tests
+      const isCoverage = process.env.COVERAGE === "true";
+      jestCommand = `jest ${envFlags[env]} ${isCoverage ? "--coverage" : ""}`;
     }
 
-    // Execute the Jest command
-    execSync(jestCommand, {
+    // Execute the Jest command with default reporter to see console output
+    // Remove --silent flag to see console.log output
+    execSync(`${jestCommand} --no-coverage`, {
       stdio: "inherit",
       env: {
         ...process.env,
         NODE_ENV: env,
-        TEST_PARAMS: testParams.map(param => 
-          param.includes(" ") ? `'${param}'` : param
-        ).join(" "),
+        TEST_PARAMS: testParams
+          .map((param) => (param.includes(" ") ? `'${param}'` : param))
+          .join(" "),
         API_ENV: env,
+        SILENT_REPORTER_SHOW_WARNINGS: "false",
+        SILENT_REPORTER_SHOW_ERRORS: "true",
       },
     });
   } catch (error) {
     process.exit(1);
   } finally {
-    // Only kill server if we started it
-    if (serverStarted && server) {
-      console.log("Shutting down test server...");
-      server.kill();
+    // Minimal logging
+    if (!process.env.MINIMAL_LOGS) {
+      console.log("Test completed - using existing Docker container, no cleanup needed");
     }
   }
 }

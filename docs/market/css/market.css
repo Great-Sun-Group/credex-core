@@ -1,61 +1,46 @@
-/* Vimbiso Market CSS */
-
-/* Base Layout */
-body {
-  background-color: #06151f;
-  color: #ffffff;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
+/* Market-specific styles */
 
 /* Header */
 .market-header {
-  background-color: #06151f;
-  border-bottom: 1px solid rgba(4, 160, 178, 0.2);
+  background-color: #0a2535; /* Darker teal that matches the dark theme */
+  color: white;
   padding: 1.5rem 0;
+  border-bottom: 1px solid #04a0b2; /* Subtle teal border */
 }
 
-.header-content {
+.market-header .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .market-header h1 {
-  color: #fbb016;
-  font-size: 2rem;
   margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fbb016; /* Orange color for the title */
 }
 
-.back-link {
-  color: #04a0b2;
+.market-header .back-link {
+  color: #04a0b2; /* Teal color for the back link */
   text-decoration: none;
-  font-weight: 500;
-  transition: color 0.3s ease;
+  font-weight: 600;
+  transition: opacity 0.2s;
 }
 
-.back-link:hover {
-  color: #fbb016;
+.market-header .back-link:hover {
+  opacity: 0.8;
+  color: white;
 }
 
 /* Navigation */
 .market-nav {
-  background-color: rgba(4, 160, 178, 0.1);
+  background-color: #0a1925; /* Darker green that matches the dark theme */
   padding: 0.5rem 0;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  border-bottom: 1px solid #04a0b2; /* Subtle teal border */
 }
 
-.nav-list {
+.market-nav .nav-list {
   display: flex;
   list-style: none;
   margin: 0;
@@ -63,187 +48,59 @@ body {
   overflow-x: auto;
 }
 
-.nav-item {
-  margin-right: 1rem;
+.market-nav .nav-item {
+  margin-right: 1.5rem;
+  white-space: nowrap;
 }
 
-/* Remove the dots from navigation items */
-.nav-item::before {
-  display: none;
-}
-
-.nav-item a {
-  display: block;
-  padding: 0.75rem 1rem;
-  color: #ffffff;
+.market-nav .nav-item a {
+  color: #fbb016;
   text-decoration: none;
-  font-weight: 500;
-  border-radius: 4px;
-  transition: background-color 0.3s ease;
+  font-weight: 600;
+  padding: 0.5rem 0;
+  display: block;
+  transition: color 0.2s;
 }
 
-.nav-item a:hover {
-  background-color: rgba(251, 176, 22, 0.1);
-  color: #fbb016;
+.market-nav .nav-item a:hover {
+  color: white;
 }
 
-.nav-item.active a {
-  background-color: rgba(4, 160, 178, 0.2);
-  color: #fbb016;
+.market-nav .nav-item.active a {
+  color: white;
+  border-bottom: 2px solid white;
 }
 
 /* Main Content */
 .market-content {
-  flex: 1;
   padding: 2rem 0;
+  min-height: calc(100vh - 200px);
 }
 
-.lead {
-  font-size: 1.25rem;
-  margin-bottom: 2rem;
+.market-content h2 {
   color: #04a0b2;
-}
-
-.section-divider {
-  height: 1px;
-  background-color: rgba(4, 160, 178, 0.2);
-  margin: 3rem 0;
-}
-
-/* Feature Cards */
-.feature-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin: 2rem 0;
-}
-
-.feature-card {
-  background-color: rgba(6, 21, 31, 0.7);
-  border: 1px solid rgba(4, 160, 178, 0.3);
-  border-radius: 8px;
-  padding: 1.5rem;
-  transition: all 0.3s ease;
-}
-
-.feature-card:hover {
-  border-color: rgba(251, 176, 22, 0.8);
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
-
-.feature-card h3 {
-  color: #fbb016;
+  margin-top: 0;
   margin-bottom: 1rem;
 }
 
-.feature-card p {
-  margin-bottom: 1.5rem;
-}
-
-.card-link {
-  color: #04a0b2;
-  text-decoration: none;
-  font-weight: 500;
-  display: inline-block;
-  transition: color 0.3s ease;
-}
-
-.card-link:hover {
-  color: #fbb016;
-}
-
-/* Component List */
-.component-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 2rem;
-  margin: 2rem 0;
-}
-
-.component-item {
-  padding: 1rem 0;
-}
-
-.component-item h4 {
-  color: #fbb016;
-  margin-bottom: 0.5rem;
-  font-size: 1.25rem;
-}
-
-.component-link {
-  display: inline-block;
-  margin-top: 0.5rem;
-  color: #04a0b2;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.3s ease;
-}
-
-.component-link:hover {
-  color: #fbb016;
+.market-content .lead {
+  font-size: 1.2rem;
+  color: #555;
+  margin-bottom: 2rem;
 }
 
 /* Footer */
 .market-footer {
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: #333;
+  color: #ccc;
   padding: 1.5rem 0;
   text-align: center;
-  margin-top: auto;
 }
 
-/* Mermaid Diagrams */
-.mermaid {
-  background-color: rgba(6, 21, 31, 0.5);
-  padding: 1.5rem;
-  border-radius: 8px;
-  margin: 2rem 0;
-  overflow-x: auto;
-}
-
-/* Code Blocks */
-pre {
-  background-color: rgba(0, 0, 0, 0.3);
-  padding: 1.5rem;
-  border-radius: 8px;
-  overflow-x: auto;
-  margin: 1.5rem 0;
-  border: 1px solid rgba(4, 160, 178, 0.2);
-}
-
-code {
-  font-family: "Courier New", Courier, monospace;
-  color: #04a0b2;
-}
-
-/* Tables */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 2rem 0;
-}
-
-th,
-td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid rgba(4, 160, 178, 0.2);
-}
-
-th {
-  color: #fbb016;
-  font-weight: 600;
-  background-color: rgba(0, 0, 0, 0.2);
-}
-
-tr:hover {
-  background-color: rgba(4, 160, 178, 0.05);
-}
-
-/* Tabs for User Flows */
+/* Tabs */
 .tabs {
   display: flex;
-  border-bottom: 1px solid rgba(4, 160, 178, 0.2);
+  border-bottom: 1px solid #ddd;
   margin-bottom: 2rem;
   overflow-x: auto;
 }
@@ -251,19 +108,19 @@ tr:hover {
 .tab {
   padding: 0.75rem 1.5rem;
   cursor: pointer;
-  border-bottom: 3px solid transparent;
-  transition: all 0.3s ease;
+  font-weight: 600;
+  color: #555;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .tab:hover {
-  color: #fbb016;
-  background-color: rgba(251, 176, 22, 0.1);
+  color: #04a0b2;
 }
 
 .tab.active {
-  color: #fbb016;
-  border-bottom-color: #fbb016;
-  background-color: rgba(4, 160, 178, 0.2);
+  color: #04a0b2;
+  border-bottom: 3px solid #04a0b2;
 }
 
 .tab-content {
@@ -274,84 +131,151 @@ tr:hover {
   display: block;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .feature-cards,
-  .component-list {
-    grid-template-columns: 1fr;
-  }
-
-  .market-header h1 {
-    font-size: 1.5rem;
-  }
-
-  .header-content {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .back-link {
-    margin-bottom: 1rem;
-  }
-
-  .nav-list {
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-  }
-
-  .nav-item {
-    flex: 0 0 auto;
-  }
+/* Feature Cards */
+.feature-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
-/* Data Model Specific Styles */
+.feature-card {
+  background-color: #f8f8f8;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.feature-card h3 {
+  color: #04a0b2;
+  margin-top: 0;
+}
+
+.feature-card .card-link {
+  display: inline-block;
+  margin-top: 1rem;
+  color: #04a0b2;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.feature-card .card-link:hover {
+  text-decoration: underline;
+}
+
+/* Section Divider */
+.section-divider {
+  height: 1px;
+  background-color: #ddd;
+  margin: 2rem 0;
+}
+
+/* Data Tables */
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  margin: 1.5rem 0;
+  margin-bottom: 2rem;
 }
 
 .data-table th,
 .data-table td {
-  padding: 0.75rem 1rem;
+  padding: 0.75rem;
   text-align: left;
-  border: 1px solid rgba(4, 160, 178, 0.3);
+  border-bottom: 1px solid #ddd;
 }
 
 .data-table th {
-  background-color: rgba(0, 0, 0, 0.3);
-  color: #fbb016;
+  background-color: #f5f5f5;
   font-weight: 600;
 }
 
+.data-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+/* Endpoint Cards */
+.endpoint-card {
+  background-color: #f8f8f8;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.endpoint-card h4 {
+  color: #04a0b2;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.endpoint-card .endpoint-description {
+  margin-bottom: 1rem;
+}
+
+.endpoint-card h5 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #555;
+}
+
+.endpoint-card pre {
+  background-color: #f1f1f1;
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.endpoint-card code {
+  font-family: monospace;
+}
+
+/* Dual Nature Display */
 .dual-nature {
   display: flex;
   gap: 2rem;
-  margin: 1.5rem 0;
+  margin-bottom: 2rem;
 }
 
 .dual-column {
   flex: 1;
 }
 
-.asset-marker-diagram,
-.invoice-diagram {
-  margin: 2rem 0;
+.dual-column h5 {
+  color: #04a0b2;
 }
 
-/* UI Specs Specific Styles */
+/* Mermaid Diagrams */
+.mermaid-container {
+  margin: 2rem 0;
+  padding: 1rem;
+  background-color: #f8f8f8;
+  border-radius: 8px;
+}
+
+/* UI Screen Cards */
 .ui-screen-card {
-  background-color: rgba(6, 21, 31, 0.7);
-  border: 1px solid rgba(4, 160, 178, 0.3);
+  background-color: #f8f8f8;
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.ui-screen-card h4 {
+  color: #04a0b2;
+  margin-top: 0;
+  margin-bottom: 1rem;
 }
 
 .ui-screen-details {
   display: flex;
   gap: 2rem;
-  margin-top: 1rem;
 }
 
 .ui-adjusting-description {
@@ -362,93 +286,54 @@ tr:hover {
   flex: 1;
 }
 
-.mockup-placeholder {
-  background-color: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(4, 160, 178, 0.3);
+/* Phase Container */
+.phase-container {
+  background-color: #0a1925; /* Dark background to match the theme */
   border-radius: 8px;
-  padding: 1rem;
-  min-height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  border: 1px solid #04a0b2; /* Teal border for definition */
 }
 
-.mockup-content {
-  width: 100%;
-  max-width: 300px;
-  margin: 0 auto;
+.phase-container h4 {
+  color: #04a0b2;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.phase-details h5 {
+  color: #04a0b2; /* Changed from green to teal to match other headings */
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 /* Flow Details */
 .flow-details {
-  background-color: rgba(6, 21, 31, 0.7);
-  border: 1px solid rgba(4, 160, 178, 0.3);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin: 2rem 0;
+  margin-top: 2rem;
 }
 
-/* Workplan Specific Styles */
-.phase-container {
-  background-color: rgba(6, 21, 31, 0.7);
-  border: 1px solid rgba(4, 160, 178, 0.3);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.phase-details {
-  margin-top: 1rem;
-}
-
-.timeline-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 2rem 0;
-}
-
-.timeline-table th,
-.timeline-table td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border: 1px solid rgba(4, 160, 178, 0.3);
-}
-
-.timeline-table th {
-  background-color: rgba(0, 0, 0, 0.3);
-  color: #fbb016;
-  font-weight: 600;
-}
-
-/* Endpoint Cards */
-.endpoint-card {
-  background-color: rgba(6, 21, 31, 0.7);
-  border: 1px solid rgba(4, 160, 178, 0.3);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.endpoint-card h4 {
-  color: #fbb016;
-  margin-bottom: 0.5rem;
-}
-
-.endpoint-description {
+.flow-details h4 {
+  color: #04a0b2;
   margin-bottom: 1rem;
 }
 
-.endpoint-params,
-.endpoint-operations,
-.endpoint-example,
-.endpoint-returns {
-  margin-top: 1rem;
-}
-
-.endpoint-params h5,
-.endpoint-operations h5,
-.endpoint-example h5,
-.endpoint-returns h5 {
-  color: #04a0b2;
-  margin-bottom: 0.5rem;
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .dual-nature {
+    flex-direction: column;
+  }
+  
+  .ui-screen-details {
+    flex-direction: column;
+  }
+  
+  .tabs {
+    flex-wrap: wrap;
+  }
+  
+  .tab {
+    flex-grow: 1;
+    text-align: center;
+  }
 }

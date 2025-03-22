@@ -15,7 +15,9 @@ describe("onboardMember Success Test", () => {
       );
     }
 
-    console.log("\nOnboarding member...");
+    // Always log minimal information
+    console.log(`Onboarding: ${firstname} ${lastname} (${phone}) with ${defaultDenom}`);
+
     const response = await axios.post(
       "/onboardMember",
       {
@@ -27,10 +29,8 @@ describe("onboardMember Success Test", () => {
       { headers }
     );
 
-    console.log(
-      "Onboard member response:",
-      JSON.stringify(response.data, null, 2)
-    );
+    // Always print the entire response data
+    console.log(JSON.stringify(response.data, null, 2));
     expect(response.status).toBe(201);
     expect(response.data).toHaveProperty(
       "message",

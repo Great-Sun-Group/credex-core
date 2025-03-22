@@ -3,6 +3,7 @@ import { validateRequest } from "../../../middleware/validateRequest";
 import { errorHandler } from "../../../middleware/errorHandler";
 import { sellInMarketSchema } from "../memberValidationSchemas";
 import { authenticatedHandler } from "../../../middleware/authMiddleware";
+import { SellInMarketController } from "../controllers";
 import logger from "../../../utils/logger";
 
 export default function sellInMarketRoute() {
@@ -287,13 +288,12 @@ export default function sellInMarketRoute() {
    *                       description: Empty dashboard object
    */
   
-  // TODO: SellInMarketController needs to be implemented
-  // router.post(
-  //   `/sellInMarket`,
-  //   validateRequest(sellInMarketSchema),
-  //   authenticatedHandler(SellInMarketController),
-  //   errorHandler
-  // );
-  // logger.debug("Route registered: POST /sellInMarket");
+  router.post(
+    `/sellInMarket`,
+    validateRequest(sellInMarketSchema),
+    authenticatedHandler(SellInMarketController),
+    errorHandler
+  );
+  logger.debug("Route registered: POST /sellInMarket");
   return router;
 }

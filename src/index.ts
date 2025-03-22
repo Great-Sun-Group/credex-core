@@ -2,11 +2,13 @@
 import express, { Request, Response, NextFunction } from "express";
 import MemberRoutes from "./api/Member/routes";
 import AccountRoutes from "./api/Account/routes";
+import AccountInternalRoutes from "./api/AccountInternal/routes";
 import CredexRoutes from "./api/Credex/routes";
 import RecurringRoutes from "./api/Recurring/routes";
 import AdminRoutes from "./api/Admin/routes";
 import DevAdminRoutes from "./api/DevAdmin/routes";
 import NotificationRoutes from "./api/Notifications";
+import InvoiceRoutes from "./api/Invoice/routes";
 import logger, {
   addRequestId,
   expressLogger,
@@ -85,9 +87,11 @@ async function initializeApp() {
     // Apply Hardened Routes
     app.use(MemberRoutes());
     app.use(AccountRoutes());
+    app.use(AccountInternalRoutes());
     app.use(CredexRoutes());
     app.use(AdminRoutes());
     app.use(RecurringRoutes());
+    app.use(InvoiceRoutes());
     app.use("/api", NotificationRoutes);
     logger.info("Route handlers applied for production modules");
 

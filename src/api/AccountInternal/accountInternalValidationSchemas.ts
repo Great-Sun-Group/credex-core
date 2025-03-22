@@ -18,17 +18,15 @@ export const createAccountInternalSchema = {
     validator: v.validateAccountName,
     required: true,
   },
-  accountHandle: {
-    sanitizer: s.sanitizeHandle,
-    validator: v.validateHandle,
-    required: true,
-  },
   accountDescription: {
     sanitizer: s.sanitizeString,
     validator: (value: string) => {
       return {
         isValid: value.length <= 500,
-        message: value.length <= 500 ? "Valid account description" : "Account description must be at most 500 characters",
+        message:
+          value.length <= 500
+            ? "Valid account description"
+            : "Account description must be at most 500 characters",
       };
     },
     required: false,
@@ -36,11 +34,16 @@ export const createAccountInternalSchema = {
   accountType: {
     sanitizer: (value: string) => value.toUpperCase(),
     validator: (value: string) => {
-      const validTypes = ["CONSUMPTION", "PRODUCTION", "DIGITAL_ASSET", "PHYSICAL_ASSET"];
+      const validTypes = [
+        "CONSUMPTION",
+        "PRODUCTION",
+        "DIGITAL_ASSET",
+        "PHYSICAL_ASSET",
+      ];
       return {
         isValid: validTypes.includes(value),
-        message: validTypes.includes(value) 
-          ? "Valid account type" 
+        message: validTypes.includes(value)
+          ? "Valid account type"
           : `Invalid account type. Must be one of: ${validTypes.join(", ")}`,
       };
     },
@@ -70,7 +73,10 @@ export const editAccountInternalSchema = {
     validator: (value: string) => {
       return {
         isValid: value.length <= 500,
-        message: value.length <= 500 ? "Valid account description" : "Account description must be at most 500 characters",
+        message:
+          value.length <= 500
+            ? "Valid account description"
+            : "Account description must be at most 500 characters",
       };
     },
     required: false,

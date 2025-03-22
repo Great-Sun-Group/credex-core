@@ -38,22 +38,29 @@ flowchart TB
             
             M1((munyaFarmer<br/>:Member))
             M2((faraiMerchant<br/>:Member))
-            A1((tomatoes<br/>:Account))
+            A1((tomatoes<br/>:AccountInternal))
             A2((faraiPersonal<br/>:Account))
-            I1((tomatoInvoice<br/>:Invoice))
-            C1((paymentCredex<br/>:Credex))
+            I1((tomatoInvoice<br/>:Invoice<br/>invoiceID: 'inv-123'<br/>Amount: 20<br/>Denomination: 'USD'))
+            C1((paymentCredex<br/>:Credex<br/>GLid: 'gl-123'))
+            AM1((assetMarker<br/>:AssetMarker<br/>GLid: 'gl-123'))
+            S1((signature<br/>:Signature<br/>actionType: 'INVOICE_CREATED'))
 
             %% Invoice relationships
             I1 -->|CREDITS_TO| A1
-            I1 -->|DEBITS_TO| A2
             
             %% Credex executes Invoice
             C1 -->|EXECUTES| I1
+            C1 -->|OFFERS| A2
+            
+            %% AssetMarker relationships
+            A1 -->|CR| AM1
+            AM1 -->|DR| A2
             
             %% Member relationships
             M1 -->|OWNS| A1
             M2 -->|OWNS| A2
-            M1 -->|CREATED| I1
+            M1 -->|SIGNED| S1
+            S1 -->|SIGNED| I1
             M2 -->|CREATED| C1
         end
     end
@@ -69,6 +76,7 @@ flowchart TB
     E1 --> MunyaConnector
     MunyaConnector -.-> M1
     MunyaConnector -.-> A1
+    MunyaConnector -.-> S1
     
     %% Connect Farai's API to Database
     E2 --> C1
@@ -76,6 +84,7 @@ flowchart TB
     FaraiConnector -.-> M2
     FaraiConnector -.-> A2
     FaraiConnector -.-> I1
+    FaraiConnector -.-> AM1
     
     %% Connect the two user flows via QR code
     S2 --> QRNode
@@ -96,6 +105,12 @@ flowchart TB
     
     %% Credex node - gold with black text
     style C1 fill:#FBB016,stroke:#FBB016,color:black
+    
+    %% AssetMarker node - gold with black text
+    style AM1 fill:#FBB016,stroke:#FBB016,color:black
+    
+    %% Signature node - darker green with gold text
+    style S1 fill:#006400,stroke:#006400,color:#FBB016
 
     %% User Flow nodes - white with black text
     style S1 fill:white,stroke:#FBB016,color:black

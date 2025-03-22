@@ -2,7 +2,7 @@ import { logInfo } from "../../../utils/logger";
 import { Rates } from "./types";
 
 /**
- * Updates credex and asset balances across both ledger and search spaces
+ * Updates credex, asset marker, and loop anchor balances, including credexe balances in searchSpace
  */
 export async function updateCredexBalances(
   ledgerSession: any,
@@ -10,7 +10,7 @@ export async function updateCredexBalances(
   newCXXrates: Rates,
   CXXprior_CXXcurrent: number
 ): Promise<void> {
-  logInfo("Updating credex and asset balances", {
+  logInfo("Updating credex, asset marker, and loop anchor balances", {
     CXXprior_CXXcurrent,
     newCXXrates,
   });
@@ -40,6 +40,20 @@ export async function updateCredexBalances(
       currencyCredex.DefaultedAmount = (currencyCredex.DefaultedAmount / currencyCredex.CXXmultiplier) * newDaynode[currencyCredex.Denomination],
       currencyCredex.WrittenOffAmount = (currencyCredex.WrittenOffAmount / currencyCredex.CXXmultiplier) * newDaynode[currencyCredex.Denomination],
       currencyCredex.CXXmultiplier = newDaynode[currencyCredex.Denomination]
+    WITH newDaynode
+
+    // Update CXX-denominated AssetMarkers
+    MATCH (assetMarker:AssetMarker)
+    WHERE assetMarker.Denomination = "CXX"
+    SET assetMarker.GeneralLedgerAmount = assetMarker.GeneralLedgerAmount / newDaynode.CXXprior_CXXcurrent
+    WITH newDaynode
+
+    // Update currency-denominated AssetMarkers
+    MATCH (assetMarker:AssetMarker)
+    WHERE assetMarker.Denomination <> "CXX"
+    SET
+      assetMarker.GeneralLedgerAmount = (assetMarker.GeneralLedgerAmount / assetMarker.CXXmultiplier) * newDaynode[assetMarker.Denomination],
+      assetMarker.CXXmultiplier = newDaynode[assetMarker.Denomination]
     WITH newDaynode
 
     // Update CXX :REDEEMED relationships
