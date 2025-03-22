@@ -23,7 +23,12 @@
         <li><a href="deployed-environments.html">Testing Against Deployed Environments</a></li>
         <li><a href="command-reference.html">Command Reference</a></li>
         <li><a href="adding-tests.html">Adding Tests for New Endpoints</a></li>
+        <li><a href="cli-testing.html">CLI-Focused Testing</a></li>
       </ul>
+    </div>
+
+    <div class="alert alert-info">
+      <strong>Testing infrastructure currently uses a CLI-focused approach connecting to existing Docker containers. See the <a href="cli-testing.html">CLI-Focused Testing</a> page for details on this approach.
     </div>
 
     <h2>Local Development Testing</h2>
@@ -95,6 +100,10 @@ npm test clearforce
 npm run test:coverage</code></pre>
 
     <h3>Test Server Management</h3>
+
+    <div class="alert alert-warning">
+      <strong>Note:</strong> The automatic server management described below has been replaced for now by a CLI-focused approach that uses existing Docker containers. The test runner no longer starts a new server but connects to an existing one. See the <a href="cli-testing.html">CLI-Focused Testing</a> page for details.
+    </div>
 
     <p>
       The test runner automatically manages the test server:
@@ -188,6 +197,10 @@ PASS tests/api/onboardmember.test.ts
 
     <h3>Test Environment</h3>
 
+    <div class="alert alert-warning">
+      <strong>Note:</strong> The test environment setup has been simplified in the CLI-focused approach. The test setup no longer manages database connections directly or initializes server components. See the <a href="cli-testing.html">CLI-Focused Testing</a> page for details on the current implementation.
+    </div>
+
     <p>
       The test environment is configured in <code>tests/setup.ts</code>:
     </p>
@@ -205,10 +218,10 @@ PASS tests/api/onboardmember.test.ts
     </p>
     <ul>
       <li><code>NODE_ENV=test</code>: Forces test environment</li>
-      <li><code>OTP_EXPIRY=300</code>: Sets OTP expiry to 5 minutes</li>
-      <li><code>MAX_DAILY_OTP_REQUESTS=5</code>: Limits OTP requests</li>
+      <li><code>DOCKER_ENV=true</code>: Uses existing Docker container</li>
       <li><code>JWT_SECRET=test-secret-key</code>: Uses test JWT secret</li>
       <li><code>CLIENT_API_KEY=love-achingly</code>: Sets test API key</li>
+      <li><code>MINIMAL_LOGS=true</code>: Enables minimal logging mode</li>
     </ul>
 
     <!-- Footer Component -->

@@ -23,7 +23,12 @@
         <li><a href="deployed-environments.html">Testing Against Deployed Environments</a></li>
         <li><a href="command-reference.html">Command Reference</a></li>
         <li><a href="adding-tests.html">Adding Tests for New Endpoints</a></li>
+        <li><a href="cli-testing.html">CLI-Focused Testing</a></li>
       </ul>
+    </div>
+
+    <div class="alert alert-info">
+      <strong>Testing infrastructure currently uses a CLI-focused approach connecting to existing Docker containers. See the <a href="cli-testing.html">CLI-Focused Testing</a> page for details on this approach.
     </div>
 
     <h2>Adding Tests for New Endpoints</h2>
@@ -34,6 +39,10 @@
     </p>
 
     <h3>Test Structure Overview</h3>
+
+    <div class="alert alert-warning">
+      <strong>Note:</strong> The CLI-focused approach currently uses a simplified test structure that focuses on direct API calls in test files. The function file approach described below is not yet fully implemented in the current testing infrastructure but represents the target architecture. See the <a href="cli-testing.html">CLI-Focused Testing</a> page for details on the current implementation.
+    </div>
 
     <p>
       The Credex testing architecture follows a two-file approach for each endpoint:
