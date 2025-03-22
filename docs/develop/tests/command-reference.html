@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Command Reference - Credex API Testing Guide</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+    
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+    <h1>Command Reference</h1>
+
+    <div class="toc">
+      <h2>Testing Documentation</h2>
+      <ul>
+        <li><a href="index.html">Test Architecture Overview</a></li>
+        <li><a href="code-coverage.html">Code Coverage</a></li>
+        <li><a href="local-development.html">Local Development Testing</a></li>
+        <li><a href="deployed-environments.html">Testing Against Deployed Environments</a></li>
+        <li><a href="command-reference.html">Command Reference</a></li>
+        <li><a href="adding-tests.html">Adding Tests for New Endpoints</a></li>
+      </ul>
+    </div>
+
+    <h2>Command Reference</h2>
+
+    <p>
+      This page provides a comprehensive reference for all test commands. All commands below can be run against any environment by adding the environment prefix (dev/stage).
+    </p>
+
+    <h3>DevAdmin Operations</h3>
+    <pre><code>npm test cleardevdbs     # Clear test databases
+npm test forcedco        # Force Daily Credcoin Offering
+npm test clearforce      # Clear DBs and force DCO
+npm test trustaudit      # Run trust account audit</code></pre>
+
+    <h3>Member Endpoints</h3>
+    <pre><code># Onboarding and Authentication
+npm test onboardmember firstname lastname phone defaultDenom
+npm test onboardMemberWithPassword firstname lastname phone defaultDenom password
+npm test setInitialPassword phone password                # Set initial password for v1 members
+npm test updatePassword phone oldPassword newPassword     # Update existing password
+npm test passwordReset phone                              # Test password reset with OTP
+npm test login phone [password]                           # Test login (with optional password)
+
+# Member Information
+npm test getmemberbyhandle phone memberHandle
+npm test getmemberdashboardbyphone phone
+npm test editMember token [firstname] [lastname] [memberHandle] [vendorBio]</code></pre>
+
+    <h3>Market Endpoints</h3>
+    <pre><code># Enable vendor functionality
+npm test sellInMarket token
+
+# Account management
+npm test createAccountInternal token accountName [defaultDenom] [accountType]
+npm test editAccountInternal token accountID accountName [defaultDenom]
+npm test deleteAccountInternal token accountID
+
+# Asset management
+npm test addAssetMarker token assetName crAccountID crAmount drAccountID drAmount [denomination] [additionalParams]
+npm test uploadAndOptimizeJpg token imagePath name drAccountID [crAccountID]
+npm test connectAsset token assetID connectedID relName
+npm test disconnectAsset token assetID connectedID relName
+
+# Invoice and payment
+npm test generateInvoice token paymentAccountID itemName quantity unit price [currency] [notes]
+npm test createCredexWithInvoice token issuerAccountID receiverAccountID denomination initialAmount credexType offersOrRequests secured invoiceID [dueDate]
+
+# Complete market flow
+npm test marketFlow</code></pre>
+
+    <h3>Admin Endpoints</h3>
+    <pre><code># Run all admin tests together
+npm test admin
+
+# Individual admin endpoints
+npm test admin getmemberdetails phone memberID
+npm test admin getaccountdetails phone accountID
+npm test admin updatemembertier phone memberID tier
+npm test admin getreceivedcredexoffers phone accountID
+npm test admin getsentcredexoffers phone accountID</code></pre>
+
+    <h3>Account Endpoints</h3>
+    <pre><code>npm test getaccountbyhandle phone accountHandle
+npm test getledger phone accountID</code></pre>
+
+    <h3>Credex Endpoints</h3>
+    <pre><code>npm test createcredex phone amount denom receiverHandle
+npm test acceptcredex phone credexID
+npm test acceptcredexbulk phone credexIDs
+npm test declinecredex phone credexID
+npm test cancelcredex phone credexID
+npm test getcredex phone credexID</code></pre>
+
+    <h3>Notification Tests</h3>
+    <pre><code># Run all notification tests
+npm test notifications
+
+# Run specific notification test files
+npm test credexNotifications    # Tests credex-related notifications
+npm test notificationService    # Tests notification service functionality</code></pre>
+
+    <h3>Error Case Tests</h3>
+    <pre><code># Run all error case tests
+npm test errors
+
+# This will:
+# 1. Create two test accounts
+# 2. Run all error case tests with the test accounts
+# 3. Clean up test data</code></pre>
+
+    <h3>Integration Tests</h3>
+    <pre><code># Run all integration tests
+npm test integrate</code></pre>
+
+    <h2>Command Parameters</h2>
+
+    <h3>Member Endpoints</h3>
+
+    <h4>onboardmember</h4>
+    <ul>
+      <li><code>firstname</code>: First name of the member</li>
+      <li><code>lastname</code>: Last name of the member</li>
+      <li><code>phone</code>: Phone number (unique identifier)</li>
+      <li><code>defaultDenom</code>: Default denomination (e.g., USD)</li>
+    </ul>
+
+    <h4>login</h4>
+    <ul>
+      <li><code>phone</code>: Phone number of the member</li>
+      <li><code>password</code>: (Optional) Password for authentication</li>
+    </ul>
+
+    <h3>Market Endpoints</h3>
+
+    <h4>sellInMarket</h4>
+    <ul>
+      <li><code>token</code>: JWT token for authentication</li>
+    </ul>
+
+    <h4>createAccountInternal</h4>
+    <ul>
+      <li><code>token</code>: JWT token for authentication</li>
+      <li><code>accountName</code>: Name of the account to create</li>
+      <li><code>defaultDenom</code>: (Optional) Default denomination (e.g., USD)</li>
+      <li><code>accountType</code>: (Optional) Account type (e.g., PRODUCTION)</li>
+    </ul>
+
+    <h4>addAssetMarker</h4>
+    <ul>
+      <li><code>token</code>: JWT token for authentication</li>
+      <li><code>assetName</code>: Name of the asset</li>
+      <li><code>crAccountID</code>: Credit account ID</li>
+      <li><code>crAmount</code>: Credit amount</li>
+      <li><code>drAccountID</code>: Debit account ID</li>
+      <li><code>drAmount</code>: Debit amount</li>
+      <li><code>denomination</code>: (Optional) Denomination (e.g., USD)</li>
+      <li><code>additionalParams</code>: (Optional) Additional parameters as key-value pairs or JSON</li>
+    </ul>
+
+    <h4>generateInvoice</h4>
+    <ul>
+      <li><code>token</code>: JWT token for authentication</li>
+      <li><code>paymentAccountID</code>: Account ID to receive payment</li>
+      <li><code>itemName</code>: Name of the item</li>
+      <li><code>quantity</code>: Quantity of the item</li>
+      <li><code>unit</code>: Unit of measurement (e.g., kg, each)</li>
+      <li><code>price</code>: Price per unit</li>
+      <li><code>currency</code>: (Optional) Currency (e.g., USD)</li>
+      <li><code>notes</code>: (Optional) Additional notes</li>
+    </ul>
+
+    <h3>Credex Endpoints</h3>
+
+    <h4>createcredex</h4>
+    <ul>
+      <li><code>phone</code>: Phone number for authentication</li>
+      <li><code>amount</code>: Amount of the credex</li>
+      <li><code>denom</code>: Denomination (e.g., USD)</li>
+      <li><code>receiverHandle</code>: Handle of the receiver</li>
+    </ul>
+
+    <h4>acceptcredex</h4>
+    <ul>
+      <li><code>phone</code>: Phone number for authentication</li>
+      <li><code>credexID</code>: ID of the credex to accept</li>
+    </ul>
+
+    <h2>Environment Prefixes</h2>
+
+    <p>
+      All commands can be run against different environments by adding the environment prefix:
+    </p>
+
+    <pre><code># Local environment (default)
+npm test command [params]
+
+# Development environment
+npm test dev command [params]
+
+# Staging environment
+npm test stage command [params]</code></pre>
+
+    <h2>Docker Container Commands</h2>
+
+    <p>
+      All commands can also be run in a Docker container:
+    </p>
+
+    <pre><code># Local environment
+npm run docker:test command [params]
+
+# Development environment
+npm run docker:test dev command [params]
+
+# Staging environment
+npm run docker:test stage command [params]</code></pre>
+
+    <h2>Coverage Commands</h2>
+
+    <pre><code># Run all tests with coverage
+npm run test:coverage
+
+# Run specific tests with coverage
+COVERAGE=true npm test command [params]</code></pre>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+    
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for tests subdirectory
+      window.templateLevels = 2;
+    </script>
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
+  </body>
+</html>

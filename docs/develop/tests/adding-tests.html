@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Adding Tests for New Endpoints - Credex API Testing Guide</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+    
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+    <h1>Adding Tests for New Endpoints</h1>
+
+    <div class="toc">
+      <h2>Testing Documentation</h2>
+      <ul>
+        <li><a href="index.html">Test Architecture Overview</a></li>
+        <li><a href="code-coverage.html">Code Coverage</a></li>
+        <li><a href="local-development.html">Local Development Testing</a></li>
+        <li><a href="deployed-environments.html">Testing Against Deployed Environments</a></li>
+        <li><a href="command-reference.html">Command Reference</a></li>
+        <li><a href="adding-tests.html">Adding Tests for New Endpoints</a></li>
+      </ul>
+    </div>
+
+    <h2>Adding Tests for New Endpoints</h2>
+
+    <p>
+      When adding a new API endpoint, you should create corresponding tests to ensure its functionality.
+      This guide outlines the process for adding tests for new endpoints.
+    </p>
+
+    <h3>Test Structure Overview</h3>
+
+    <p>
+      The Credex testing architecture follows a two-file approach for each endpoint:
+    </p>
+
+    <ol>
+      <li><strong>Function File</strong>: A reusable function that encapsulates the API call logic</li>
+      <li><strong>Test File</strong>: A Jest test file that uses the function to test the endpoint</li>
+    </ol>
+
+    <p>
+      This separation allows the function to be reused in both individual endpoint tests and integration tests.
+    </p>
+
+    <h3>Step 1: Create the Function File</h3>
+
+    <p>
+      First, create a function file in <code>tests/api/functions/</code> that encapsulates the API call logic:
+    </p>
+
+    <pre><code>// tests/api/functions/newEndpoint.ts
+import axios from "../../setup";
+
+export async function newEndpoint(
+  token: string,
+  param1: string,
+  param2: number,
+  optionalParam?: string
+) {
+  const headers = {
+    "x-client-api-key": process.env.CLIENT_API_KEY,
+    "Authorization": `Bearer ${token}`
+  };
+
+  console.log(`\nCalling new endpoint with ${param1}...`);
+  
+  const requestBody = {
+    param1,
+    param2,
+    ...(optionalParam && { optionalParam })
+  };
+
+  const response = await axios.post(
+    "/newEndpoint",
+    requestBody,
+    { headers }
+  );
+
+  console.log("newEndpoint response:", JSON.stringify(response.data, null, 2));
+  return response.data;
+}</code></pre>
+
+    <p>
+      Key elements of a function file:
+    </p>
+    <ul>
+      <li>Import the configured axios instance from <code>../../setup</code></li>
+      <li>Export an async function with appropriate parameters</li>
+      <li>Set up headers with API key and authorization token</li>
+      <li>Log the request for debugging</li>
+      <li>Make the API request with appropriate method (GET, POST, etc.)</li>
+      <li>Log the response for debugging</li>
+      <li>Return the response data</li>
+    </ul>
+
+    <h3>Step 2: Create the Test File</h3>
+
+    <p>
+      Next, create a test file in <code>tests/api/</code> that uses the function to test the endpoint:
+    </p>
+
+    <pre><code>// tests/api/newEndpoint.test.ts
+import axios from "../setup";
+
+describe("newEndpoint Test", () => {
+  it("tests the new endpoint functionality", async () => {
+    const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
+    const [token, param1, param2, optionalParam] = params;
+
+    if (!token || !param1 || !param2) {
+      throw new Error(
+        "Usage: npm test newEndpoint &lt;token&gt; &lt;param1&gt; &lt;param2&gt; [optionalParam]"
+      );
+    }
+
+    const headers = {
+      "x-client-api-key": process.env.CLIENT_API_KEY || "",
+      "Authorization": `Bearer ${token}`
+    };
+
+    console.log("\nTesting new endpoint...");
+    const response = await axios.post(
+      "/newEndpoint",
+      {
+        param1,
+        param2: parseFloat(param2),
+        ...(optionalParam && { optionalParam })
+      },
+      { headers }
+    );
+
+    console.log(
+      "newEndpoint response:",
+      JSON.stringify(response.data, null, 2)
+    );
+    
+    expect(response.status).toBe(200);
+    expect(response.data.data.action.type).toBe("EXPECTED_ACTION_TYPE");
+    
+    // Print important information for the next step
+    console.log("\n=== DATA FOR NEXT STEP ===");
+    console.log(`Token: ${token}`);
+    console.log(`Result ID: ${response.data.data.action.details.resultID}`);
+    console.log("=========================\n");
+  });
+});</code></pre>
+
+    <p>
+      Key elements of a test file:
+    </p>
+    <ul>
+      <li>Import the configured axios instance from <code>../setup</code></li>
+      <li>Create a Jest test suite with <code>describe</code> and <code>it</code></li>
+      <li>Parse parameters from <code>process.env.TEST_PARAMS</code></li>
+      <li>Provide clear usage instructions for missing parameters</li>
+      <li>Make the API request and verify the response</li>
+      <li>Include assertions to validate the response</li>
+      <li>Print important information for subsequent tests</li>
+    </ul>
+
+    <h3>Step 3: Update the run.js Script (if needed)</h3>
+
+    <p>
+      If your endpoint requires special handling, update the <code>tests/run.js</code> script:
+    </p>
+
+    <ul>
+      <li>Add to <code>noJwtTests</code> if the endpoint doesn't require authentication</li>
+      <li>Add to <code>devAdminCommands</code> if it's a DevAdmin operation</li>
+      <li>Add to <code>integrationCommands</code> if it's part of integration tests</li>
+    </ul>
+
+    <pre><code>// Example: Adding to noJwtTests
+const noJwtTests = ["onboardmember", "login", "newEndpoint"];</code></pre>
+
+    <h3>Step 4: Add Error Case Tests (if needed)</h3>
+
+    <p>
+      For comprehensive testing, add error case tests in <code>tests/api/error-cases/</code>:
+    </p>
+
+    <pre><code>// tests/api/error-cases/newEndpoint.errors.ts
+import axios from "../../setup";
+
+describe("newEndpoint Error Cases", () => {
+  it("handles invalid parameters", async () => {
+    const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
+    const [token] = params;
+
+    if (!token) {
+      throw new Error("Error tests require a valid token");
+    }
+
+    const headers = {
+      "x-client-api-key": process.env.CLIENT_API_KEY || "",
+      "Authorization": `Bearer ${token}`
+    };
+
+    // Test missing required parameter
+    try {
+      await axios.post(
+        "/newEndpoint",
+        { param2: 123 }, // Missing param1
+        { headers }
+      );
+      fail("Should have thrown an error for missing param1");
+    } catch (error) {
+      expect(error.response.status).toBe(400);
+      expect(error.response.data.error.code).toBe("VALIDATION_ERROR");
+    }
+
+    // Test invalid parameter type
+    try {
+      await axios.post(
+        "/newEndpoint",
+        { 
+          param1: "test",
+          param2: "not-a-number" // Should be a number
+        },
+        { headers }
+      );
+      fail("Should have thrown an error for invalid param2 type");
+    } catch (error) {
+      expect(error.response.status).toBe(400);
+      expect(error.response.data.error.code).toBe("VALIDATION_ERROR");
+    }
+  });
+});</code></pre>
+
+    <h3>Step 5: Add to Integration Tests (if needed)</h3>
+
+    <p>
+      If your endpoint is part of a larger workflow, add it to integration tests:
+    </p>
+
+    <pre><code>// In tests/integration/index.test.ts
+import { newEndpoint } from "../api/functions/newEndpoint";
+
+// ... existing code ...
+
+it("tests the complete workflow including new endpoint", async () => {
+  // ... existing setup ...
+  
+  // Call the new endpoint
+  const newEndpointResult = await newEndpoint(
+    token,
+    "test-param",
+    123
+  );
+  
+  // Verify the result
+  expect(newEndpointResult.data.action.type).toBe("EXPECTED_ACTION_TYPE");
+  
+  // ... continue with workflow ...
+});</code></pre>
+
+    <h3>Step 6: Update Documentation</h3>
+
+    <p>
+      Finally, update the documentation to include your new endpoint:
+    </p>
+
+    <ol>
+      <li>Add to the <a href="command-reference.html">Command Reference</a> page</li>
+      <li>Update any relevant workflow documentation</li>
+      <li>Add examples of how to use the new endpoint</li>
+    </ol>
+
+    <h3>Best Practices for Test Implementation</h3>
+
+    <ol>
+      <li><strong>Clear Usage Instructions</strong>: Always include clear usage instructions in error messages</li>
+      <li><strong>Consistent Formatting</strong>: Follow the established patterns for logging and output</li>
+      <li><strong>Comprehensive Testing</strong>: Test both success and error cases</li>
+      <li><strong>Reusable Functions</strong>: Make functions reusable for integration tests</li>
+      <li><strong>Meaningful Assertions</strong>: Include assertions that verify the expected behavior</li>
+      <li><strong>Data for Next Step</strong>: Print important information for subsequent tests</li>
+      <li><strong>Parameter Validation</strong>: Validate and parse parameters appropriately</li>
+      <li><strong>Error Handling</strong>: Include proper error handling and logging</li>
+    </ol>
+
+    <h3>Example: Market Flow Test</h3>
+
+    <p>
+      For complex workflows, you can create a complete flow test like <code>marketFlow.test.ts</code>:
+    </p>
+
+    <pre><code>// tests/api/marketFlow.test.ts
+import { onboardMember } from "./functions/onboardMember";
+import { sellInMarket } from "./functions/sellInMarket";
+import { newEndpoint } from "./functions/newEndpoint";
+// ... other imports ...
+
+describe("Complete Flow with New Endpoint", () => {
+  it("completes the full flow", async () => {
+    // Step 1: Create test member
+    console.log("\n--- Step 1: Create test member ---");
+    const timestamp = Date.now();
+    const memberResponse = await onboardMember(
+      "Test",
+      "Member",
+      `${timestamp}`,
+      "USD"
+    );
+    
+    const token = memberResponse.data.action.details.token;
+    
+    // Step 2: Enable vendor functionality
+    console.log("\n--- Step 2: Enable vendor functionality ---");
+    await sellInMarket(token, true);
+    
+    // Step 3: Call new endpoint
+    console.log("\n--- Step 3: Call new endpoint ---");
+    const newEndpointResponse = await newEndpoint(
+      token,
+      "test-param",
+      123
+    );
+    
+    // ... continue with flow ...
+    
+    // Final verification
+    expect(newEndpointResponse.data.action.type).toBe("EXPECTED_ACTION_TYPE");
+  }, 60000); // 60 second timeout
+});</code></pre>
+
+    <p>
+      This approach allows for testing complete workflows without manual intervention between steps.
+    </p>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+    
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for tests subdirectory
+      window.templateLevels = 2;
+    </script>
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
+  </body>
+</html>

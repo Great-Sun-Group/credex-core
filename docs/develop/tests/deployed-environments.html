@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Testing Against Deployed Environments - Credex API Testing Guide</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+    
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+    <h1>Testing Against Deployed Environments</h1>
+
+    <div class="toc">
+      <h2>Testing Documentation</h2>
+      <ul>
+        <li><a href="index.html">Test Architecture Overview</a></li>
+        <li><a href="code-coverage.html">Code Coverage</a></li>
+        <li><a href="local-development.html">Local Development Testing</a></li>
+        <li><a href="deployed-environments.html">Testing Against Deployed Environments</a></li>
+        <li><a href="command-reference.html">Command Reference</a></li>
+        <li><a href="adding-tests.html">Adding Tests for New Endpoints</a></li>
+      </ul>
+    </div>
+
+    <h2>Testing Against Deployed Environments</h2>
+
+    <p>
+      In addition to local testing, you can run tests against deployed environments to verify functionality
+      in staging and development environments. This is useful for:
+    </p>
+
+    <ul>
+      <li>Verifying deployments</li>
+      <li>Testing against production-like configurations</li>
+      <li>Debugging environment-specific issues</li>
+      <li>Validating integrations with external services</li>
+    </ul>
+
+    <h3>Available Environments</h3>
+
+    <p>
+      To test against deployed environments, add the environment prefix to any test command:
+    </p>
+
+    <ul>
+      <li><strong>Development</strong>: dev.mycredex.dev - prefix commands with <code>dev</code></li>
+      <li><strong>Staging</strong>: stage.mycredex.dev - prefix commands with <code>stage</code></li>
+    </ul>
+
+    <h3>Running Tests Against Deployed Environments</h3>
+
+    <p>
+      Examples of testing against the development environment:
+    </p>
+
+    <pre><code># Run integration tests on dev
+npm test dev integrate
+
+# Run member tests on dev
+npm test dev member
+
+# Test endpoint on dev
+npm test dev onboardmember Test Member1 1234567890 USD
+
+# Reset dev environment
+npm test dev clearforce</code></pre>
+
+    <p>
+      Examples of testing against the staging environment:
+    </p>
+
+    <pre><code># Run integration tests on staging
+npm test stage integrate
+
+# Run member tests on staging
+npm test stage member
+
+# Test endpoint on staging
+npm test stage onboardmember Test Member1 1234567890 USD
+
+# Reset staging environment
+npm test stage clearforce</code></pre>
+
+    <h3>Environment-Specific Configurations</h3>
+
+    <p>
+      When testing against deployed environments, the test runner:
+    </p>
+
+    <ul>
+      <li>Sets <code>NODE_ENV</code> and <code>API_ENV</code> to the target environment</li>
+      <li>Runs tests with <code>--runInBand</code> to prevent concurrency issues</li>
+      <li>Uses the appropriate base URL for API requests</li>
+      <li>Skips starting a local server</li>
+    </ul>
+
+    <p>
+      The environment-specific flags are defined in <code>tests/run.js</code>:
+    </p>
+
+    <pre><code>// Add environment-specific flags
+const envFlags = {
+  local: "",
+  dev: "--runInBand",
+  stage: "--runInBand",
+};</code></pre>
+
+    <h3>Environment Variables</h3>
+
+    <p>
+      When testing against deployed environments, the following environment variables are set:
+    </p>
+
+    <ul>
+      <li><code>NODE_ENV</code>: Set to the target environment (dev/stage)</li>
+      <li><code>API_ENV</code>: Set to the target environment (dev/stage)</li>
+      <li><code>TEST_PARAMS</code>: Contains the test parameters</li>
+    </ul>
+
+    <h3>Docker Container Testing</h3>
+
+    <p>
+      You can also run tests against deployed environments from within a Docker container:
+    </p>
+
+    <pre><code># Run tests against dev environment in container
+npm run docker:test dev onboardmember Test Member1 1234567890 USD
+
+# Run tests against staging environment in container
+npm run docker:test stage onboardmember Test Member1 1234567890 USD</code></pre>
+
+    <h3>Best Practices for Deployed Environment Testing</h3>
+
+    <p>
+      When testing against deployed environments, follow these best practices:
+    </p>
+
+    <ol>
+      <li><strong>Use test accounts</strong>: Create dedicated test accounts with clear naming conventions</li>
+      <li><strong>Clean up after testing</strong>: Use <code>clearforce</code> or similar commands to reset the environment</li>
+      <li><strong>Be cautious with data</strong>: Avoid creating large amounts of test data in shared environments</li>
+      <li><strong>Coordinate with team</strong>: Communicate when running tests that might affect others</li>
+      <li><strong>Test in isolation</strong>: Use <code>--runInBand</code> to prevent concurrency issues (done automatically)</li>
+      <li><strong>Verify environment</strong>: Confirm you're testing against the intended environment</li>
+    </ol>
+
+    <h3>Troubleshooting</h3>
+
+    <p>
+      If you encounter issues when testing against deployed environments:
+    </p>
+
+    <ul>
+      <li><strong>Connection issues</strong>: Verify network connectivity and VPN if required</li>
+      <li><strong>Authentication failures</strong>: Check if your API key is valid for the environment</li>
+      <li><strong>Unexpected behavior</strong>: Confirm the environment is running the expected version</li>
+      <li><strong>Rate limiting</strong>: Add delays between requests or use rate limiter bypass keys if available</li>
+      <li><strong>Data conflicts</strong>: Clear test data before running tests</li>
+    </ul>
+
+    <p>
+      For persistent issues, check the server logs or contact the environment administrator.
+    </p>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+    
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for tests subdirectory
+      window.templateLevels = 2;
+    </script>
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
+  </body>
+</html>

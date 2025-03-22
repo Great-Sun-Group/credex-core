@@ -504,31 +504,8 @@ SET
             </div>
           </div>
 
-          <div class="section-divider"></div>
-
-          <h3>Implementation Progress Summary</h3>
-          <div class="progress-summary">
-            <h4>Completed</h4>
-            <ul>
-              <li>✅ Phase 1: Setup and Preparation</li>
-              <li>✅ Phase 2: Member Endpoints Implementation</li>
-              <li>✅ Phase 3: AccountInternal Endpoints Implementation</li>
-              <li>✅ Phase 4: AssetMarker Endpoints Verification</li>
-              <li>✅ Phase 5: Invoice Module Implementation</li>
-              <li>✅ Phase 6: DCO Updates for AssetMarker Support</li>
-            </ul>
-            
-            <h4>Pending</h4>
-            <ul>
-              <li>❌ Phase 3: <code>/editAccount</code> Endpoint Implementation</li>
-              <li>❌ Phase 7: Integration and Testing</li>
-            </ul>
-          </div>
-
-          <div class="section-divider"></div>
-
-          <h3>Revised Database Relationships</h3>
-          <p>Based on our review and decisions, the implementation will use these key relationships:</p>
+          <h3>Database Relationships</h3>
+          <p>The implementation will use these key relationships:</p>
 
           <pre><code>// Member to Account relationships
 (:Member {vendor: true|false})-[:OWNS]->(:Account)

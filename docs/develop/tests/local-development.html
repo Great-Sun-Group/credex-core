@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Local Development Testing - Credex API Testing Guide</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+    
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+    <h1>Local Development Testing</h1>
+
+    <div class="toc">
+      <h2>Testing Documentation</h2>
+      <ul>
+        <li><a href="index.html">Test Architecture Overview</a></li>
+        <li><a href="code-coverage.html">Code Coverage</a></li>
+        <li><a href="local-development.html">Local Development Testing</a></li>
+        <li><a href="deployed-environments.html">Testing Against Deployed Environments</a></li>
+        <li><a href="command-reference.html">Command Reference</a></li>
+        <li><a href="adding-tests.html">Adding Tests for New Endpoints</a></li>
+      </ul>
+    </div>
+
+    <h2>Local Development Testing</h2>
+
+    <p>
+      During local development, you can run tests either directly on your local machine or within a Docker container. 
+      The container approach is recommended when using the dev container environment as it ensures consistent test execution.
+    </p>
+
+    <h3>Test Runner Script</h3>
+
+    <p>
+      The <code>tests/run.js</code> script provides a unified interface for running tests. It handles:
+    </p>
+
+    <ul>
+      <li>Starting and stopping the test server</li>
+      <li>Parsing command-line arguments</li>
+      <li>Setting up the test environment</li>
+      <li>Running the appropriate tests</li>
+      <li>Passing parameters to tests via environment variables</li>
+    </ul>
+
+    <h3>Running Tests in Docker Container</h3>
+
+    <p>
+      To run tests in the Docker container environment:
+    </p>
+
+    <pre><code># Run all tests in container
+npm run docker:test
+
+# Run specific tests in container
+npm run docker:test login
+npm run docker:test member
+npm run docker:test onboardmember Test Member1 1234567890 USD</code></pre>
+
+    <p>
+      Running tests in a container provides several benefits:
+    </p>
+    <ul>
+      <li>Consistent test environment across all developers</li>
+      <li>Isolation from local system dependencies</li>
+      <li>Matches the dev container environment configuration</li>
+    </ul>
+
+    <h3>Running Tests Locally</h3>
+
+    <p>
+      Alternatively, you can run tests directly on your local machine:
+    </p>
+
+    <pre><code># Run all tests
+npm test
+
+# Run all integration tests
+npm test integrate
+
+# Run all Member tests
+npm test member
+
+# Test a specific endpoint
+npm test onboardmember Test Member1 1234567890 USD
+
+# Reset test environment
+npm test clearforce
+
+# Run tests with coverage reporting
+npm run test:coverage</code></pre>
+
+    <h3>Test Server Management</h3>
+
+    <p>
+      The test runner automatically manages the test server:
+    </p>
+
+    <ul>
+      <li>Checks if a server is already running on port 3000</li>
+      <li>If no server is running, builds TypeScript and starts a test server</li>
+      <li>Waits for the server to initialize before running tests</li>
+      <li>Shuts down the server after tests complete (if it started the server)</li>
+    </ul>
+
+    <p>
+      This allows you to:
+    </p>
+    <ul>
+      <li>Run multiple tests in sequence without restarting the server</li>
+      <li>Start a server manually for debugging and still run tests against it</li>
+      <li>Ensure tests always have a server available</li>
+    </ul>
+
+    <h3>Test Parameters</h3>
+
+    <p>
+      Most tests accept parameters that are passed as command-line arguments:
+    </p>
+
+    <pre><code># Format: npm test [command] [param1] [param2] ...
+npm test onboardmember John Doe 1234567890 USD
+npm test login 1234567890
+npm test createcredex eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... 100 USD receiver-handle</code></pre>
+
+    <p>
+      The test runner:
+    </p>
+    <ul>
+      <li>Parses command-line arguments, handling quoted strings properly</li>
+      <li>Passes parameters to tests via the TEST_PARAMS environment variable</li>
+      <li>For tests requiring authentication, automatically runs login to get a JWT</li>
+    </ul>
+
+    <h3>Test Output</h3>
+
+    <p>
+      Tests provide detailed output to help with debugging and chaining tests:
+    </p>
+
+    <ul>
+      <li>Request and response details for each API call</li>
+      <li>Clear error messages when parameters are missing</li>
+      <li>Highlighted "DATA FOR NEXT STEP" sections with tokens, IDs, and other values needed for subsequent tests</li>
+      <li>Jest assertions to verify expected behavior</li>
+    </ul>
+
+    <p>
+      Example test output:
+    </p>
+
+    <pre><code>$ npm test onboardmember John Doe 1234567890 USD
+
+> credex-core@1.0.0 test
+> node tests/run.js "onboardmember" "John" "Doe" "1234567890" "USD"
+
+Using existing server...
+
+Onboarding member John Doe with phone 1234567890...
+onboardMember response: {
+  "status": "success",
+  "data": {
+    "action": {
+      "type": "MEMBER_CREATED",
+      "id": "d8f7e6c5-b4a3-2c1d-0e9f-8g7h6i5j4k3l",
+      "details": {
+        "memberID": "d8f7e6c5-b4a3-2c1d-0e9f-8g7h6i5j4k3l",
+        "defaultAccountID": "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6",
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      }
+    }
+  }
+}
+
+=== DATA FOR NEXT STEP ===
+Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Member ID: d8f7e6c5-b4a3-2c1d-0e9f-8g7h6i5j4k3l
+Account ID: a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6
+=========================
+
+PASS tests/api/onboardmember.test.ts
+  onboardMember Test
+    ✓ onboard member (1234ms)</code></pre>
+
+    <h3>Test Environment</h3>
+
+    <p>
+      The test environment is configured in <code>tests/setup.ts</code>:
+    </p>
+
+    <ul>
+      <li>Sets up environment variables for testing</li>
+      <li>Configures axios for API requests</li>
+      <li>Handles server initialization and cleanup</li>
+      <li>Ensures a daynode exists for testing</li>
+      <li>Manages database connections</li>
+    </ul>
+
+    <p>
+      Key environment variables for testing:
+    </p>
+    <ul>
+      <li><code>NODE_ENV=test</code>: Forces test environment</li>
+      <li><code>OTP_EXPIRY=300</code>: Sets OTP expiry to 5 minutes</li>
+      <li><code>MAX_DAILY_OTP_REQUESTS=5</code>: Limits OTP requests</li>
+      <li><code>JWT_SECRET=test-secret-key</code>: Uses test JWT secret</li>
+      <li><code>CLIENT_API_KEY=love-achingly</code>: Sets test API key</li>
+    </ul>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+    
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for tests subdirectory
+      window.templateLevels = 2;
+    </script>
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
+  </body>
+</html>

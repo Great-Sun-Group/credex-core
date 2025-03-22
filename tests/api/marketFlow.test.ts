@@ -69,10 +69,8 @@ describe("Vimbiso Market Flow", () => {
     const initialInventoryResponse = await addAssetMarker(
       vendorToken,
       "Initial Tomato Inventory",
-      productionAccountID,
-      100,
-      productAccountID,
-      100,
+      [{ accountID: productionAccountID, amount: 100 }],
+      [{ accountID: productAccountID, amount: 100 }],
       "USD",
       {
         description: "Initial inventory of fresh tomatoes",

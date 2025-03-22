@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Credex API Testing Guide</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+    
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+    <h1>Credex API Testing Guide</h1>
+
+    <div class="toc">
+      <h2>Testing Documentation</h2>
+      <ul>
+        <li><a href="index.html">Test Architecture Overview</a></li>
+        <li><a href="code-coverage.html">Code Coverage</a></li>
+        <li><a href="local-development.html">Local Development Testing</a></li>
+        <li><a href="deployed-environments.html">Testing Against Deployed Environments</a></li>
+        <li><a href="command-reference.html">Command Reference</a></li>
+        <li><a href="adding-tests.html">Adding Tests for New Endpoints</a></li>
+      </ul>
+    </div>
+
+    <h2>Test Architecture</h2>
+
+    <p>
+      The Credex test suite is organized into three main categories:
+    </p>
+
+    <ul>
+      <li><strong>Endpoint Tests</strong>: Individual API endpoint tests that can be run in isolation or as part of larger flows</li>
+      <li><strong>Integration Tests</strong>: End-to-end scenarios testing multiple endpoints in sequence</li>
+      <li><strong>DevAdmin Operations</strong>: Administrative commands for test environment setup</li>
+    </ul>
+
+    <p>
+      Tests are structured in the following directories:
+    </p>
+
+    <pre><code>tests/
+├── api/                  # API endpoint tests
+│   ├── functions/        # Reusable endpoint functions
+│   ├── error-cases/      # Error case tests
+│   ├── devadmin/         # DevAdmin operation tests
+│   └── Member/           # Member-specific tests
+├── integration/          # Integration test scenarios
+├── noti_cache/           # Notification tests
+├── utils/                # Test utilities
+│   ├── cleanup.ts        # Test data cleanup
+│   ├── setup-test-data.ts # Test data setup
+│   ├── testUtils.ts      # General test utilities
+│   └── endpoints/        # Endpoint-specific utilities
+├── run.js                # Test runner script
+└── setup.ts              # Global test setup</code></pre>
+
+    <h2>Test Types</h2>
+
+    <h3>Endpoint Tests</h3>
+    <p>
+      Each API endpoint has a dedicated test file in the <code>tests/api/</code> directory that:
+    </p>
+    <ul>
+      <li>Tests a specific endpoint with appropriate parameters</li>
+      <li>Verifies response structure and status codes</li>
+      <li>Handles authentication when needed</li>
+      <li>Provides clear usage instructions</li>
+      <li>Outputs data needed for subsequent tests</li>
+    </ul>
+
+    <h3>Function Files</h3>
+    <p>
+      Common endpoint functionality is encapsulated in reusable functions under <code>tests/api/functions/</code>:
+    </p>
+    <ul>
+      <li>Provide consistent interfaces for API operations</li>
+      <li>Handle request formatting and response parsing</li>
+      <li>Include proper error handling</li>
+      <li>Support both individual tests and integration flows</li>
+    </ul>
+
+    <h3>Integration Tests</h3>
+    <p>
+      Integration tests in <code>tests/integration/</code> verify complete workflows:
+    </p>
+    <ul>
+      <li>Test end-to-end scenarios across multiple endpoints</li>
+      <li>Verify data consistency throughout the flow</li>
+      <li>Test complex business logic spanning multiple operations</li>
+      <li>Validate system behavior in realistic usage scenarios</li>
+    </ul>
+
+    <h3>Error Case Tests</h3>
+    <p>
+      Error case tests in <code>tests/api/error-cases/</code> verify proper error handling:
+    </p>
+    <ul>
+      <li>Test validation errors with invalid inputs</li>
+      <li>Verify appropriate error codes and messages</li>
+      <li>Test authorization and authentication failures</li>
+      <li>Ensure robust error handling throughout the API</li>
+    </ul>
+
+    <h3>Notification Tests</h3>
+    <p>
+      Notification tests in <code>tests/noti_cache/</code> verify the notification system:
+    </p>
+    <ul>
+      <li>Test FCM token management</li>
+      <li>Verify notification sending for various events</li>
+      <li>Test notification content and formatting</li>
+      <li>Validate error handling in the notification pipeline</li>
+    </ul>
+
+    <h3>Market Tests</h3>
+    <p>
+      The Vimbiso Market functionality has dedicated tests that:
+    </p>
+    <ul>
+      <li>Test vendor profile management</li>
+      <li>Verify product listing and inventory management</li>
+      <li>Test invoice generation and payment processing</li>
+      <li>Support both step-by-step testing and complete flows</li>
+    </ul>
+
+    <h2>Test Runner</h2>
+    <p>
+      The <code>tests/run.js</code> script provides a command-line interface for running tests:
+    </p>
+    <ul>
+      <li>Supports running individual endpoint tests</li>
+      <li>Handles environment selection (local, dev, stage)</li>
+      <li>Manages server startup and shutdown</li>
+      <li>Passes parameters to tests via environment variables</li>
+      <li>Supports special test types (integration, error cases, etc.)</li>
+    </ul>
+
+    <p>
+      For detailed information on running tests, see the <a href="local-development.html">Local Development Testing</a> and <a href="command-reference.html">Command Reference</a> pages.
+    </p>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+    
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for tests subdirectory
+      window.templateLevels = 2;
+    </script>
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
+  </body>
+</html>
