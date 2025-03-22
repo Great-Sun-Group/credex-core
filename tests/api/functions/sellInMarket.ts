@@ -8,7 +8,7 @@ export async function sellInMarket(token: string, vendor: boolean = true) {
 
   console.log(`\nEnabling vendor functionality (vendor=${vendor})...`);
   const response = await axios.post(
-    "/sellInMarket",
+    "sellInMarket", // Remove the leading slash to match onboardMember
     { vendor },
     { headers }
   );
