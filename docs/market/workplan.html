@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="../css/layout.css" />
     <link rel="stylesheet" href="../css/components.css" />
     <link rel="stylesheet" href="../css/responsive.css" />
+    <link rel="stylesheet" href="css/variables.css" />
     <link rel="stylesheet" href="css/market.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
@@ -469,9 +470,76 @@ SET
           </div>
 
           <div class="phase-container">
-            <h4>Phase 7: Integration and Testing</h4>
+            <h4>Phase 7: S3 Implementation for AssetMarkers</h4>
             <div class="phase-details">
-              <h5>11. Integration Testing</h5>
+              <h5>11. Create S3 Infrastructure for AssetMarkers</h5>
+              <ul>
+                <li>Add a dedicated S3 bucket for AssetMarkers in terraform</li>
+                <li>Configure proper security settings (encryption, access policies)</li>
+                <li>Set up CORS for secure API access</li>
+                <li>Add IAM permissions for the ECS task role</li>
+              </ul>
+
+              <p>S3 bucket configuration in terraform:</p>
+              <pre><code># AssetMarker S3 bucket for profile and account pictures
+resource "aws_s3_bucket" "asset_marker_images" {
+  bucket = "credexbuckets2-assetmarker-images-${var.environment}"
+  
+  tags = merge(var.common_tags, {
+    Name = "asset-marker-images-${var.environment}"
+    Purpose = "AssetMarker Image Storage"
+  })
+}
+
+# Security configurations
+resource "aws_s3_bucket_public_access_block" "asset_marker_images" {
+  bucket = aws_s3_bucket.asset_marker_images.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Encryption
+resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_images" {
+  bucket = aws_s3_bucket.asset_marker_images.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}</code></pre>
+
+              <h5>12. Implement S3 Service for AssetMarkers</h5>
+              <ul>
+                <li>Add AWS S3 SDK dependencies to package.json</li>
+                <li>Create an S3 service module for handling uploads and downloads</li>
+                <li>Implement image optimization and resizing functionality</li>
+                <li>Update AssetMarker controllers to use the S3 service</li>
+              </ul>
+
+              <p>Key implementation details:</p>
+              <ul>
+                <li>Use the AWS S3 SDK to interact with the S3 bucket</li>
+                <li>Implement image optimization using Sharp library</li>
+                <li>Generate pre-signed URLs for client-side access</li>
+                <li>Store S3 keys in AssetMarker nodes for reference</li>
+              </ul>
+
+              <p>This implementation will enable:</p>
+              <ul>
+                <li>Storing profile pictures for members</li>
+                <li>Storing account pictures for product listings</li>
+                <li>Automatic creation of optimized versions (200px, 600px)</li>
+                <li>Secure access to images through pre-signed URLs</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 8: Integration and Testing</h4>
+            <div class="phase-details">
+              <h5>13. Integration Testing</h5>
               <ul>
                 <li>Test each endpoint individually</li>
                 <li>
@@ -489,7 +557,7 @@ SET
                 <li>Error handling and validation</li>
               </ul>
 
-              <h5>11. Documentation and Swagger Updates</h5>
+              <h5>14. Documentation and Swagger Updates</h5>
               <ul>
                 <li>Update API documentation</li>
                 <li>Add Swagger annotations for new endpoints</li>

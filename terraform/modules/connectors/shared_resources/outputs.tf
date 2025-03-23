@@ -95,3 +95,14 @@ output "verification_replication_role_arn" {
   value = aws_iam_role.verification_replication.arn
   description = "The ARN of the verification replication IAM role"
 }
+
+# AssetMarker system outputs
+output "asset_marker_bucket" {
+  value = aws_s3_bucket.asset_marker_images.id
+  description = "The ID of the AssetMarker images bucket"
+}
+
+output "asset_marker_bucket_arn" {
+  value = aws_s3_bucket.asset_marker_images.arn
+  description = "The ARN of the AssetMarker images bucket"
+}

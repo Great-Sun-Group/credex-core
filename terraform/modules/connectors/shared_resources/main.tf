@@ -811,3 +811,126 @@ resource "aws_iam_role_policy" "ecs_task_s3_verification" {
     ]
   })
 }
+
+#############################
+# AssetMarker System Storage
+#############################
+
+# Main storage bucket for AssetMarkers
+# Purpose: Stores any data, starting with profile/account photos
+# Security: Encrypted at rest, no public access
+resource "aws_s3_bucket" "asset_marker_images" {
+  bucket = "credexbuckets2-assetmarker-images-${var.environment}"
+
+  tags = merge(var.common_tags, {
+    Name = "asset-marker-images-${var.environment}"
+    Purpose = "AssetMarker Image Storage"
+    DataClassification = "Application Data"
+  })
+}
+
+# Enable versioning to maintain file history and prevent accidental deletions
+resource "aws_s3_bucket_versioning" "asset_marker_images" {
+  bucket = aws_s3_bucket.asset_marker_images.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# Enable server-side encryption for data at rest
+resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_images" {
+  bucket = aws_s3_bucket.asset_marker_images.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Block all public access for security
+resource "aws_s3_bucket_public_access_block" "asset_marker_images" {
+  bucket = aws_s3_bucket.asset_marker_images.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# No predefined folder structure needed
+# S3 doesn't have actual folders - just key prefixes
+# The application will generate appropriate keys when storing objects
+
+# Configure lifecycle rules for cost optimization and data management
+resource "aws_s3_bucket_lifecycle_configuration" "asset_marker_images" {
+  bucket = aws_s3_bucket.asset_marker_images.id
+
+  rule {
+    id     = "transition-to-ia"
+    status = "Enabled"
+
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+
+    filter {
+      prefix = "images/"
+    }
+  }
+
+  rule {
+    id     = "clean-temp-folder"
+    status = "Enabled"
+    
+    expiration {
+      days = 1
+    }
+
+    filter {
+      prefix = "temp/"
+    }
+  }
+}
+
+# Configure CORS for secure API access
+resource "aws_s3_bucket_cors_configuration" "asset_marker_images" {
+  bucket = aws_s3_bucket.asset_marker_images.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "PUT", "POST"]
+    allowed_origins = ["https://*.${var.domain}"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}
+
+# Add S3 permissions to ECS task role for AssetMarker images
+resource "aws_iam_role_policy" "ecs_task_s3_asset_marker" {
+  name = "ecs-task-s3-asset-marker-${var.environment}"
+  role = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "${aws_s3_bucket.asset_marker_images.arn}/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = aws_s3_bucket.asset_marker_images.arn
+      }
+    ]
+  })
+}

@@ -1,5 +1,20 @@
 /* Market-specific styles */
 
+/* Base Overrides */
+body {
+  background-color: var(--dark-blue);
+  color: var(--text-white);
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  padding: 0 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
 /* Header */
 .market-header {
   background-color: #0a2535; /* Darker teal that matches the dark theme */
@@ -85,7 +100,7 @@
 
 .market-content .lead {
   font-size: 1.2rem;
-  color: #555;
+  color: var(--text-white);
   margin-bottom: 2rem;
 }
 
@@ -100,7 +115,7 @@
 /* Tabs */
 .tabs {
   display: flex;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--market-divider);
   margin-bottom: 2rem;
   overflow-x: auto;
 }
@@ -109,7 +124,7 @@
   padding: 0.75rem 1.5rem;
   cursor: pointer;
   font-weight: 600;
-  color: #555;
+  color: var(--text-white);
   transition: all 0.2s;
   white-space: nowrap;
 }
@@ -140,16 +155,18 @@
 }
 
 .feature-card {
-  background-color: #f8f8f8;
+  background-color: var(--market-card-bg);
+  border: 1px solid var(--market-card-border);
   border-radius: 8px;
   padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .feature-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  border-color: var(--market-card-hover-border);
 }
 
 .feature-card h3 {
@@ -167,12 +184,13 @@
 
 .feature-card .card-link:hover {
   text-decoration: underline;
+  color: var(--organic-gold);
 }
 
 /* Section Divider */
 .section-divider {
   height: 1px;
-  background-color: #ddd;
+  background-color: var(--market-divider);
   margin: 2rem 0;
 }
 
@@ -187,25 +205,27 @@
 .data-table td {
   padding: 0.75rem;
   text-align: left;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--market-divider);
 }
 
 .data-table th {
-  background-color: #f5f5f5;
+  background-color: var(--market-section-bg);
   font-weight: 600;
+  color: var(--tech-azure);
 }
 
 .data-table tr:hover {
-  background-color: #f9f9f9;
+  background-color: rgba(4, 160, 178, 0.1);
 }
 
 /* Endpoint Cards */
 .endpoint-card {
-  background-color: #f8f8f8;
+  background-color: var(--market-card-bg);
+  border: 1px solid var(--market-card-border);
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .endpoint-card h4 {
@@ -216,16 +236,17 @@
 
 .endpoint-card .endpoint-description {
   margin-bottom: 1rem;
+  color: var(--text-white);
 }
 
 .endpoint-card h5 {
   margin-top: 1.5rem;
   margin-bottom: 0.5rem;
-  color: #555;
+  color: var(--tech-azure);
 }
 
 .endpoint-card pre {
-  background-color: #f1f1f1;
+  background-color: var(--market-code-bg);
   padding: 1rem;
   border-radius: 4px;
   overflow-x: auto;
@@ -233,6 +254,7 @@
 
 .endpoint-card code {
   font-family: monospace;
+  color: var(--organic-gold);
 }
 
 /* Dual Nature Display */
@@ -254,17 +276,19 @@
 .mermaid-container {
   margin: 2rem 0;
   padding: 1rem;
-  background-color: #f8f8f8;
+  background-color: var(--market-section-bg);
   border-radius: 8px;
+  border: 1px solid var(--market-card-border);
 }
 
 /* UI Screen Cards */
 .ui-screen-card {
-  background-color: #f8f8f8;
+  background-color: var(--market-card-bg);
+  border: 1px solid var(--market-card-border);
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .ui-screen-card h4 {
