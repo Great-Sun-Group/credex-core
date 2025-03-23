@@ -817,29 +817,29 @@ resource "aws_iam_role_policy" "ecs_task_s3_verification" {
 #############################
 
 # Main storage bucket for AssetMarkers
-# Purpose: Stores any data, starting with profile/account photos
+# Purpose: Stores any type of data referenced by AssetMarker nodes
 # Security: Encrypted at rest, no public access
-resource "aws_s3_bucket" "asset_marker_images" {
-  bucket = "credexbuckets2-assetmarker-images-${var.environment}"
+resource "aws_s3_bucket" "asset_marker_data" {
+  bucket = "credexbuckets2-assetmarker-data-${var.environment}"
 
   tags = merge(var.common_tags, {
-    Name = "asset-marker-images-${var.environment}"
-    Purpose = "AssetMarker Image Storage"
+    Name = "asset-marker-data-${var.environment}"
+    Purpose = "AssetMarker Storage"
     DataClassification = "Application Data"
   })
 }
 
 # Enable versioning to maintain file history and prevent accidental deletions
-resource "aws_s3_bucket_versioning" "asset_marker_images" {
-  bucket = aws_s3_bucket.asset_marker_images.id
+resource "aws_s3_bucket_versioning" "asset_marker_data" {
+  bucket = aws_s3_bucket.asset_marker_data.id
   versioning_configuration {
     status = "Enabled"
   }
 }
 
 # Enable server-side encryption for data at rest
-resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_images" {
-  bucket = aws_s3_bucket.asset_marker_images.id
+resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data" {
+  bucket = aws_s3_bucket.asset_marker_data.id
 
   rule {
     apply_server_side_encryption_by_default {
@@ -849,8 +849,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_imag
 }
 
 # Block all public access for security
-resource "aws_s3_bucket_public_access_block" "asset_marker_images" {
-  bucket = aws_s3_bucket.asset_marker_images.id
+resource "aws_s3_bucket_public_access_block" "asset_marker_data" {
+  bucket = aws_s3_bucket.asset_marker_data.id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -863,8 +863,8 @@ resource "aws_s3_bucket_public_access_block" "asset_marker_images" {
 # The application will generate appropriate keys when storing objects
 
 # Configure lifecycle rules for cost optimization and data management
-resource "aws_s3_bucket_lifecycle_configuration" "asset_marker_images" {
-  bucket = aws_s3_bucket.asset_marker_images.id
+resource "aws_s3_bucket_lifecycle_configuration" "asset_marker_data" {
+  bucket = aws_s3_bucket.asset_marker_data.id
 
   rule {
     id     = "transition-to-ia"
@@ -875,28 +875,13 @@ resource "aws_s3_bucket_lifecycle_configuration" "asset_marker_images" {
       storage_class = "STANDARD_IA"
     }
 
-    filter {
-      prefix = "images/"
-    }
-  }
-
-  rule {
-    id     = "clean-temp-folder"
-    status = "Enabled"
-    
-    expiration {
-      days = 1
-    }
-
-    filter {
-      prefix = "temp/"
-    }
+    # No prefix filter - apply to all objects
   }
 }
 
 # Configure CORS for secure API access
-resource "aws_s3_bucket_cors_configuration" "asset_marker_images" {
-  bucket = aws_s3_bucket.asset_marker_images.id
+resource "aws_s3_bucket_cors_configuration" "asset_marker_data" {
+  bucket = aws_s3_bucket.asset_marker_data.id
 
   cors_rule {
     allowed_headers = ["*"]
@@ -907,7 +892,7 @@ resource "aws_s3_bucket_cors_configuration" "asset_marker_images" {
   }
 }
 
-# Add S3 permissions to ECS task role for AssetMarker images
+# Add S3 permissions to ECS task role for AssetMarker data
 resource "aws_iam_role_policy" "ecs_task_s3_asset_marker" {
   name = "ecs-task-s3-asset-marker-${var.environment}"
   role = aws_iam_role.ecs_task_role.id
@@ -922,14 +907,14 @@ resource "aws_iam_role_policy" "ecs_task_s3_asset_marker" {
           "s3:GetObject",
           "s3:DeleteObject"
         ]
-        Resource = "${aws_s3_bucket.asset_marker_images.arn}/*"
+        Resource = "${aws_s3_bucket.asset_marker_data.arn}/*"
       },
       {
         Effect = "Allow"
         Action = [
           "s3:ListBucket"
         ]
-        Resource = aws_s3_bucket.asset_marker_images.arn
+        Resource = aws_s3_bucket.asset_marker_data.arn
       }
     ]
   })
