@@ -3,7 +3,8 @@ import addAssetMarkerRoute from "./addAssetMarkerRoute";
 import uploadAndOptimizeJpgRoute from "./uploadAndOptimizeJpgRoute";
 import connectAssetRoute from "./connectAssetRoute";
 import disconnectAssetRoute from "./disconnectAssetRoute";
-import logger from "../../../utils/logger";
+import getAssetMarkerUrlRoute from "./getAssetMarkerUrlRoute";
+import { logInfo } from "../../../utils/logger";
 
 /**
  * @swagger
@@ -14,17 +15,18 @@ import logger from "../../../utils/logger";
 
 export default function AssetMarkerRoutes() {
   const router = express.Router();
-  logger.info("Initializing AssetMarker routes");
+  logInfo("Initializing AssetMarker routes");
 
   // Mount individual routes
   router.use(addAssetMarkerRoute());
   router.use(uploadAndOptimizeJpgRoute());
   router.use(connectAssetRoute());
   router.use(disconnectAssetRoute());
+  router.use(getAssetMarkerUrlRoute);
 
-  logger.info("AssetMarker routes initialized successfully", {
+  logInfo("AssetMarker routes initialized successfully", {
     module: "assetMarkerRoutes",
-    routesCount: 4,
+    routesCount: 5,
   });
 
   return router;
