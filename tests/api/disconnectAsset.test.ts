@@ -16,14 +16,17 @@ describe("disconnectAsset Test", () => {
       "Authorization": `Bearer ${token}`
     };
 
-    console.log("\nDisconnecting asset...");
+    // Build request body
+    const requestBody = {
+      assetID,
+      connectedID,
+      relName
+    };
+
+    console.log(`\nDisconnecting asset ${assetID} from ${connectedID} with relationship ${relName}`);
     const response = await axios.post(
       "/disconnectAsset",
-      {
-        assetID,
-        connectedID,
-        relName
-      },
+      requestBody,
       { headers }
     );
 
@@ -39,7 +42,7 @@ describe("disconnectAsset Test", () => {
     console.log("\n=== DATA FOR NEXT STEP ===");
     console.log(`Token: ${token}`);
     console.log(`Asset ID: ${assetID}`);
-    console.log(`Disconnected ID: ${connectedID}`);
+    console.log(`Connected ID: ${connectedID}`);
     console.log(`Relationship: ${relName}`);
     console.log("=========================\n");
   });
