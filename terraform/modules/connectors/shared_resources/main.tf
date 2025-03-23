@@ -817,14 +817,14 @@ resource "aws_iam_role_policy" "ecs_task_s3_verification" {
 #############################
 
 # Main storage bucket for AssetMarkers
-# Purpose: Stores any data, including profile/account pictures
+# Purpose: Stores any type of data referenced by AssetMarker nodes
 # Security: Encrypted at rest, no public access
 resource "aws_s3_bucket" "asset_marker_data" {
   bucket = "credexbuckets2-assetmarker-data-${var.environment}"
 
   tags = merge(var.common_tags, {
     Name = "asset-marker-data-${var.environment}"
-    Purpose = "AssetMarker Data Storage"
+    Purpose = "AssetMarker Storage"
     DataClassification = "Application Data"
   })
 }
@@ -869,10 +869,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "asset_marker_data" {
     transition {
       days          = 30
       storage_class = "STANDARD_IA"
-    }
-
-    filter {
-      prefix = ""  # Apply to all objects
     }
   }
 }
