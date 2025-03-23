@@ -98,11 +98,11 @@ output "verification_replication_role_arn" {
 
 # AssetMarker system outputs
 output "asset_marker_bucket" {
-  value = aws_s3_bucket.asset_marker_images.id
-  description = "The ID of the AssetMarker images bucket"
+  value = aws_s3_bucket.asset_marker_data.id
+  description = "The ID of the AssetMarker data bucket"
 }
 
 output "asset_marker_bucket_arn" {
-  value = aws_s3_bucket.asset_marker_images.arn
-  description = "The ARN of the AssetMarker images bucket"
+  value = aws_s3_bucket.asset_marker_data.arn
+  description = "The ARN of the AssetMarker data bucket"
 }
