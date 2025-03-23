@@ -858,10 +858,6 @@ resource "aws_s3_bucket_public_access_block" "asset_marker_data" {
   restrict_public_buckets = true
 }
 
-# No predefined folder structure needed
-# S3 doesn't have actual folders - just key prefixes
-# The application will generate appropriate keys when storing objects
-
 # Configure lifecycle rules for cost optimization and data management
 resource "aws_s3_bucket_lifecycle_configuration" "asset_marker_data" {
   bucket = aws_s3_bucket.asset_marker_data.id
@@ -874,8 +870,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "asset_marker_data" {
       days          = 30
       storage_class = "STANDARD_IA"
     }
-
-    # No prefix filter - apply to all objects
   }
 }
 

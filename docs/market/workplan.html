@@ -470,39 +470,42 @@ SET
           </div>
 
           <div class="phase-container">
-            <h4>Phase 7: S3 Implementation for AssetMarkers</h4>
+            <h4>Phase 7: S3 Implementation for AssetMarkers ✅</h4>
             <div class="phase-details">
-              <h5>11. Create S3 Infrastructure for AssetMarkers</h5>
+              <h5>11. Create S3 Infrastructure for AssetMarkers ✅</h5>
               <ul>
-                <li>Add a dedicated S3 bucket for AssetMarkers in terraform</li>
-                <li>Configure proper security settings (encryption, access policies)</li>
-                <li>Set up CORS for secure API access</li>
-                <li>Add IAM permissions for the ECS task role</li>
+                <li>Add a dedicated S3 bucket for AssetMarkers in terraform ✅</li>
+                <li>Configure proper security settings (encryption, access policies) ✅</li>
+                <li>Set up CORS for secure API access ✅</li>
+                <li>Add IAM permissions for the ECS task role ✅</li>
               </ul>
 
-              <p>S3 bucket configuration in terraform:</p>
-              <pre><code># AssetMarker S3 bucket for profile and account pictures
-resource "aws_s3_bucket" "asset_marker_images" {
-  bucket = "credexbuckets2-assetmarker-images-${var.environment}"
-  
+              <p>Implemented S3 bucket configuration in terraform:</p>
+              <pre><code># Main storage bucket for AssetMarkers
+# Purpose: Stores any data, including profile/account pictures
+# Security: Encrypted at rest, no public access
+resource "aws_s3_bucket" "asset_marker_data" {
+  bucket = "credexbuckets2-assetmarker-data-${var.environment}"
+
   tags = merge(var.common_tags, {
-    Name = "asset-marker-images-${var.environment}"
-    Purpose = "AssetMarker Image Storage"
+    Name = "asset-marker-data-${var.environment}"
+    Purpose = "AssetMarker Data Storage"
+    DataClassification = "Application Data"
   })
 }
 
-# Security configurations
-resource "aws_s3_bucket_public_access_block" "asset_marker_images" {
-  bucket = aws_s3_bucket.asset_marker_images.id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+# Enable versioning to maintain file history and prevent accidental deletions
+resource "aws_s3_bucket_versioning" "asset_marker_data" {
+  bucket = aws_s3_bucket.asset_marker_data.id
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
-# Encryption
-resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_images" {
-  bucket = aws_s3_bucket.asset_marker_images.id
+# Enable server-side encryption for data at rest
+resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data" {
+  bucket = aws_s3_bucket.asset_marker_data.id
+
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -510,28 +513,66 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_imag
   }
 }</code></pre>
 
-              <h5>12. Implement S3 Service for AssetMarkers</h5>
+              <h5>12. Implement S3 Service for AssetMarkers ✅</h5>
               <ul>
-                <li>Add AWS S3 SDK dependencies to package.json</li>
-                <li>Create an S3 service module for handling uploads and downloads</li>
-                <li>Implement image optimization and resizing functionality</li>
-                <li>Update AssetMarker controllers to use the S3 service</li>
+                <li>Add AWS S3 SDK dependencies to package.json ✅</li>
+                <li>Create an S3 service module for handling uploads and downloads ✅</li>
+                <li>Implement image optimization and resizing functionality ✅</li>
+                <li>Update AssetMarker controllers to use the S3 service ✅</li>
+                <li>Add pre-signed URL generation for secure client access ✅</li>
               </ul>
 
               <p>Key implementation details:</p>
               <ul>
-                <li>Use the AWS S3 SDK to interact with the S3 bucket</li>
-                <li>Implement image optimization using Sharp library</li>
-                <li>Generate pre-signed URLs for client-side access</li>
-                <li>Store S3 keys in AssetMarker nodes for reference</li>
+                <li>Created a dedicated S3 service module in <code>src/services/s3Service.ts</code> with functions for:</li>
+                <ul>
+                  <li><code>uploadToS3</code>: Upload data to S3 bucket</li>
+                  <li><code>getSignedS3Url</code>: Generate pre-signed URLs for temporary access</li>
+                  <li><code>deleteFromS3</code>: Remove objects from S3</li>
+                  <li><code>generateS3Key</code>: Create unique keys for S3 objects</li>
+                </ul>
+                <li>Implemented image processing service in <code>src/services/imageService.ts</code> with:</li>
+                <ul>
+                  <li><code>resizeImage</code>: Resize images to specific dimensions</li>
+                  <li><code>optimizeJpeg</code>: Optimize JPEG images for storage efficiency</li>
+                  <li><code>processAssetMarkerImage</code>: Create original, 200px, and 600px versions</li>
+                </ul>
+                <li>Updated <code>UploadAndOptimizeJpgController</code> to use these services for:</li>
+                <ul>
+                  <li>Processing uploaded images (resize, optimize)</li>
+                  <li>Uploading to S3 with appropriate content types</li>
+                  <li>Storing S3 keys in AssetMarker nodes</li>
+                </ul>
+                <li>Added <code>GetAssetMarkerUrlController</code> to generate pre-signed URLs for client access</li>
               </ul>
 
-              <p>This implementation will enable:</p>
+              <h5>13. Deployment and Testing Plan</h5>
+              <p>To deploy and test the S3 implementation:</p>
+              <ol>
+                <li>Deploy the terraform changes to create the S3 bucket:
+                  <pre><code>cd terraform
+./tf.sh [environment] apply</code></pre>
+                </li>
+                <li>Build and deploy the updated application code:
+                  <pre><code>npm run build
+# Deploy using your CI/CD pipeline or manual deployment process</code></pre>
+                </li>
+                <li>Test the AssetMarker functionality:
+                  <ul>
+                    <li>Upload profile pictures through the member profile UI</li>
+                    <li>Upload product images through the product management UI</li>
+                    <li>Verify that images are properly stored, optimized, and accessible</li>
+                  </ul>
+                </li>
+              </ol>
+
+              <p>This implementation enables:</p>
               <ul>
                 <li>Storing profile pictures for members</li>
                 <li>Storing account pictures for product listings</li>
                 <li>Automatic creation of optimized versions (200px, 600px)</li>
                 <li>Secure access to images through pre-signed URLs</li>
+                <li>Proper accounting relationships through AssetMarker nodes</li>
               </ul>
             </div>
           </div>

@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from "express";
-import logger from "../../../utils/logger";
+import { logInfo, logError } from "../../../utils/logger";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { v4 as uuidv4 } from "uuid";
+import { uploadToS3, generateS3Key } from "../../../services/s3Service";
+import { processAssetMarkerImage } from "../../../services/imageService";
 
 /**
  * Controller for handling the upload and optimization of JPG images
@@ -17,7 +19,7 @@ export async function UploadAndOptimizeJpgController(
   const session = ledgerSpaceDriver.session();
   
   try {
-    logger.info("UploadAndOptimizeJpgController called", {
+    logInfo("UploadAndOptimizeJpgController called", {
       controller: "UploadAndOptimizeJpgController",
       body: {
         ...req.body,
@@ -92,21 +94,26 @@ export async function UploadAndOptimizeJpgController(
       }
     }
 
-    // In a real implementation, we would process the JPG image here
-    // For this example, we'll simulate creating three asset markers:
-    // 1. Original image
-    // 2. 200px resized image
-    // 3. 600px resized image
-
-    // Create the original image asset marker
+    // Process the JPG image (decode base64, optimize, and resize)
+    const imageBuffer = Buffer.from(jpg, "base64");
+    
+    // Process the image to create original, 200px, and 600px versions
+    const { original, size200, size600 } = await processAssetMarkerImage(imageBuffer);
+    
+    // Create asset marker IDs
     const originalAssetID = uuidv4();
     const asset200ID = uuidv4();
     const asset600ID = uuidv4();
     
-    // Simulate S3 upload by generating keys
-    const s3KeyOriginal = `images/${memberID}/${name}_original.jpg`;
-    const s3Key200 = `images/${memberID}/${name}_200.jpg`;
-    const s3Key600 = `images/${memberID}/${name}_600.jpg`;
+    // Generate S3 keys
+    const s3KeyOriginal = generateS3Key(`${memberID}/original`, `${name}.jpg`);
+    const s3Key200 = generateS3Key(`${memberID}/200px`, `${name}.jpg`);
+    const s3Key600 = generateS3Key(`${memberID}/600px`, `${name}.jpg`);
+    
+    // Upload images to S3
+    await uploadToS3(original, s3KeyOriginal, "image/jpeg");
+    await uploadToS3(size200, s3Key200, "image/jpeg");
+    await uploadToS3(size600, s3Key600, "image/jpeg");
 
     // Create the original asset marker
     await session.executeWrite(async (tx: any) => {
@@ -246,7 +253,7 @@ export async function UploadAndOptimizeJpgController(
       },
     });
   } catch (error) {
-    logger.error("Error in UploadAndOptimizeJpgController", {
+    logError("Error in UploadAndOptimizeJpgController", error instanceof Error ? error : new Error(String(error)), {
       controller: "UploadAndOptimizeJpgController",
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
