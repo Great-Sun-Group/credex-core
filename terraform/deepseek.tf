@@ -8,7 +8,7 @@ module "deepseek_serverless" {
   security_group_ids = [module.connectors.ecs_tasks_security_group_id]
   
   # Serverless configuration
-  memory_size_in_mb  = 6144  # 6GB (maximum supported value)
+  memory_size_in_mb  = 3072  # 3GB (maximum allowed by current quota)
   max_concurrency    = 5
   
   # Container configuration - these values need to be provided during deployment
