@@ -62,7 +62,25 @@
         "rekognition:SearchFacesByImage",
         "rekognition:IndexFaces",
         "rekognition:DeleteFaces",
-        "rekognition:ListFaces"
+        "rekognition:ListFaces",
+        "sagemaker:CreateModel",
+        "sagemaker:CreateEndpoint",
+        "sagemaker:CreateEndpointConfig",
+        "sagemaker:DeleteModel",
+        "sagemaker:DeleteEndpoint",
+        "sagemaker:DeleteEndpointConfig",
+        "sagemaker:DescribeModel",
+        "sagemaker:DescribeEndpoint",
+        "sagemaker:DescribeEndpointConfig",
+        "sagemaker:ListModels",
+        "sagemaker:ListEndpoints",
+        "sagemaker:ListEndpointConfigs",
+        "sagemaker:InvokeEndpoint",
+        "sagemaker:AddTags",
+        "sagemaker:DeleteTags",
+        "sagemaker:ListTags",
+        "sagemaker:UpdateEndpoint",
+        "sagemaker:UpdateEndpointWeightsAndCapacities"
       ],
       "Resource": "*"
     },
@@ -93,6 +111,16 @@
       "Condition": {
         "StringLike": {
           "iam:AWSServiceName": "rekognition.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/sagemaker.amazonaws.com/AWSServiceRoleForSageMaker",
+      "Condition": {
+        "StringLike": {
+          "iam:AWSServiceName": "sagemaker.amazonaws.com"
         }
       }
     }
