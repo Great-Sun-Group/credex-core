@@ -20,11 +20,26 @@ export async function ConnectAssetController(
     logger.info("ConnectAssetController called", {
       controller: "ConnectAssetController",
       body: req.body,
+      user: req.user,
+      headers: req.headers,
+      requestId: req.id
     });
 
     const memberID = req.user?.memberID;
 
+    logger.info("User info", {
+      controller: "ConnectAssetController",
+      memberID,
+      user: req.user,
+      requestId: req.id
+    });
+
     if (!memberID) {
+      logger.error("User ID not found in request", {
+        controller: "ConnectAssetController",
+        user: req.user,
+        requestId: req.id
+      });
       throw new Error("User ID not found in request");
     }
 

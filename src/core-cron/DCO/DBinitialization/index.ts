@@ -121,8 +121,8 @@ export async function DBinitialization(): Promise<void> {
       );
       const ndlovuTrustID = await createInitialTrustAccount(
         collen.onboardedMemberID,
-        "Love Achingly Trust CAD", // accountName
-        "LOVE_TRUST_CAD", // accountHandle
+        "Love Achingly Trust USD", // accountName
+        "LOVE_TRUST_USD", // accountHandle
         "BANK", // subtype
         "USD", // denomination
         {

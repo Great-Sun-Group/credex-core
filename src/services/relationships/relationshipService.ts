@@ -5,6 +5,113 @@ import { logInfo, logError } from "../../utils/logger";
  */
 export class RelationshipService {
   /**
+   * Verify if a node is accessible to a member (is the member or directly owned by member)
+   * @param session - Neo4j session
+   * @param memberID - Member ID
+   * @param nodeID - Node ID to verify
+   * @returns The node if accessible, null otherwise
+   */
+  private async verifyNodeAccess(
+    session: any,
+    memberID: string,
+    nodeID: string
+  ): Promise<any | null> {
+    try {
+      logInfo(`Starting verifyNodeAccess`, {
+        service: "RelationshipService",
+        method: "verifyNodeAccess",
+        memberID,
+        nodeID
+      });
+      
+      // First, try to find the node directly
+      const findNodeResult = await session.executeRead(async (tx: any) => {
+        return await tx.run(
+          `MATCH (node)
+           WHERE node.id = $nodeID OR node.memberID = $nodeID OR node.accountID = $nodeID
+           RETURN node`,
+          { nodeID }
+        );
+      });
+
+      // If node not found by ID, return null
+      if (findNodeResult.records.length === 0) {
+        logInfo(`Node not found with ID: ${nodeID}`, {
+          service: "RelationshipService",
+          method: "verifyNodeAccess",
+          nodeID
+        });
+        return null;
+      }
+
+      const node = findNodeResult.records[0].get("node");
+      
+      logInfo(`Found node with labels: ${JSON.stringify(node.labels)}`, {
+        service: "RelationshipService",
+        method: "verifyNodeAccess",
+        nodeID,
+        nodeLabels: node.labels,
+        nodeProperties: node.properties
+      });
+
+      // If the node is a Member node with the matching memberID, it's accessible
+      if (
+        node.labels.includes("Member") &&
+        node.properties.memberID === memberID
+      ) {
+        logInfo(`Node is a Member node with matching memberID`, {
+          service: "RelationshipService",
+          method: "verifyNodeAccess",
+          nodeID,
+          memberID
+        });
+        return node;
+      }
+
+      // Check if the member owns the node (checking multiple ID fields)
+      const ownershipResult = await session.executeRead(async (tx: any) => {
+        return await tx.run(
+          `MATCH (m:Member {memberID: $memberID})-[:OWNS]->(node)
+           WHERE node.id = $nodeID OR node.memberID = $nodeID OR node.accountID = $nodeID
+           RETURN node`,
+          { memberID, nodeID }
+        );
+      });
+
+      if (ownershipResult.records.length > 0) {
+        logInfo(`Member owns the node`, {
+          service: "RelationshipService",
+          method: "verifyNodeAccess",
+          nodeID,
+          memberID
+        });
+        return ownershipResult.records[0].get("node");
+      }
+
+      logInfo(`Node not accessible by member`, {
+        service: "RelationshipService",
+        method: "verifyNodeAccess",
+        nodeID,
+        memberID
+      });
+      return null;
+    } catch (error) {
+      logError(
+        "Error verifying node access",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          service: "RelationshipService",
+          method: "verifyNodeAccess",
+          memberID,
+          nodeID,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      );
+      return null;
+    }
+  }
+
+  /**
    * Connect an asset to another node with a specified relationship
    * @param session - Neo4j session
    * @param memberID - Member ID
@@ -21,49 +128,42 @@ export class RelationshipService {
     relName: string
   ): Promise<{ asset: any; connected: any; relType: string }> {
     try {
-      // Check if the asset exists and is owned by the member
-      const assetCheckResult = await session.executeRead(async (tx: any) => {
-        return await tx.run(
-          `MATCH (m:Member {id: $memberID})-[:OWNS]->()-[:CR|DR]-(:AssetMarker {id: $assetID})
-           RETURN count(*) AS assetCount`,
-          { memberID, assetID }
-        );
+      logInfo(`Starting connectAsset`, {
+        service: "RelationshipService",
+        method: "connectAsset",
+        memberID,
+        assetID,
+        connectedID,
+        relName,
       });
 
-      const assetCount = assetCheckResult.records[0]
-        .get("assetCount")
-        .toNumber();
-      if (assetCount === 0) {
-        throw new Error("Asset not found or not owned by the member");
+      // Verify asset node access
+      const assetNode = await this.verifyNodeAccess(session, memberID, assetID);
+      if (!assetNode) {
+        throw new Error("Asset node not found or not accessible by the member");
       }
 
-      // Check if the connected node exists and is owned by the member
-      const connectedCheckResult = await session.executeRead(
-        async (tx: any) => {
-          return await tx.run(
-            `MATCH (m:Member {id: $memberID})-[:OWNS]->(n)
-           WHERE n.id = $connectedID
-           RETURN n`,
-            { memberID, connectedID }
-          );
-        }
+      // Verify connected node access
+      const connectedNode = await this.verifyNodeAccess(
+        session,
+        memberID,
+        connectedID
       );
-
-      if (connectedCheckResult.records.length === 0) {
-        throw new Error("Connected node not found or not owned by the member");
+      if (!connectedNode) {
+        throw new Error(
+          "Connected node not found or not accessible by the member"
+        );
       }
 
       // Check if the relationship already exists
-      const relCheckResult = await session.executeRead(async (tx: any) => {
-        return await tx.run(
-          `MATCH (a:AssetMarker {id: $assetID})-[r:${relName}]->(n {id: $connectedID})
-           RETURN count(r) AS relCount`,
-          { assetID, connectedID, relName }
-        );
-      });
+      const relationshipExists = await this.relationshipExists(
+        session,
+        assetID,
+        connectedID,
+        relName
+      );
 
-      const relCount = relCheckResult.records[0].get("relCount").toNumber();
-      if (relCount > 0) {
+      if (relationshipExists) {
         throw new Error(
           `Relationship ${relName} already exists between the asset and the connected node`
         );
@@ -72,8 +172,10 @@ export class RelationshipService {
       // Create the relationship
       const result = await session.executeWrite(async (tx: any) => {
         return await tx.run(
-          `MATCH (a:AssetMarker {id: $assetID})
-           MATCH (n {id: $connectedID})
+          `MATCH (a)
+           WHERE a.id = $assetID OR a.memberID = $assetID OR a.accountID = $assetID
+           MATCH (n)
+           WHERE n.id = $connectedID OR n.memberID = $connectedID OR n.accountID = $connectedID
            CREATE (a)-[r:${relName}]->(n)
            RETURN a, n, type(r) AS relType`,
           { assetID, connectedID }
@@ -235,68 +337,73 @@ export class RelationshipService {
     relName: string
   ): Promise<{ asset: any; connected: any }> {
     try {
-      // Check if the asset exists and is owned by the member
-      const assetCheckResult = await session.executeRead(async (tx: any) => {
-        return await tx.run(
-          `MATCH (m:Member {id: $memberID})-[:OWNS]->()-[:CR|DR]-(:AssetMarker {id: $assetID})
-           RETURN count(*) AS assetCount`,
-          { memberID, assetID }
-        );
+      logInfo(`Starting disconnectAsset`, {
+        service: "RelationshipService",
+        method: "disconnectAsset",
+        memberID,
+        assetID,
+        connectedID,
+        relName,
       });
 
-      const assetCount = assetCheckResult.records[0]
-        .get("assetCount")
-        .toNumber();
-      if (assetCount === 0) {
-        throw new Error("Asset not found or not owned by the member");
+      // Verify asset node access
+      const assetNode = await this.verifyNodeAccess(session, memberID, assetID);
+      if (!assetNode) {
+        throw new Error("Asset node not found or not accessible by the member");
       }
 
-      // Check if the connected node exists and is owned by the member
-      const connectedCheckResult = await session.executeRead(
-        async (tx: any) => {
-          return await tx.run(
-            `MATCH (m:Member {id: $memberID})-[:OWNS]->(n)
-           WHERE n.id = $connectedID
-           RETURN n`,
-            { memberID, connectedID }
-          );
-        }
+      // Verify connected node access
+      const connectedNode = await this.verifyNodeAccess(
+        session,
+        memberID,
+        connectedID
       );
-
-      if (connectedCheckResult.records.length === 0) {
-        throw new Error("Connected node not found or not owned by the member");
+      if (!connectedNode) {
+        throw new Error(
+          "Connected node not found or not accessible by the member"
+        );
       }
 
       // Check if the relationship exists
-      const relCheckResult = await session.executeRead(async (tx: any) => {
+      const result = await session.executeRead(async (tx: any) => {
         return await tx.run(
-          `MATCH (a:AssetMarker {id: $assetID})-[r:${relName}]->(n {id: $connectedID})
+          `MATCH (a)
+           WHERE a.id = $assetID OR a.memberID = $assetID OR a.accountID = $assetID
+           MATCH (n)
+           WHERE n.id = $connectedID OR n.memberID = $connectedID OR n.accountID = $connectedID
+           OPTIONAL MATCH (a)-[r:${relName}]->(n)
            RETURN a, n, count(r) AS relCount`,
           { assetID, connectedID, relName }
         );
       });
 
-      const relCount = relCheckResult.records[0].get("relCount").toNumber();
+      const relCount = result.records[0].get("relCount").toNumber();
       if (relCount === 0) {
         throw new Error(
           `Relationship ${relName} does not exist between the asset and the connected node`
         );
       }
 
-      const asset = relCheckResult.records[0].get("a").properties;
-      const connected = relCheckResult.records[0].get("n").properties;
+      const asset = result.records[0].get("a").properties;
+      const connected = result.records[0].get("n").properties;
 
       // Delete the relationship
-      const result = await session.executeWrite(async (tx: any) => {
+      const deleteResult = await session.executeWrite(async (tx: any) => {
         return await tx.run(
-          `MATCH (a:AssetMarker {id: $assetID})-[r:${relName}]->(n {id: $connectedID})
+          `MATCH (a)
+           WHERE a.id = $assetID OR a.memberID = $assetID OR a.accountID = $assetID
+           MATCH (n)
+           WHERE n.id = $connectedID OR n.memberID = $connectedID OR n.accountID = $connectedID
+           MATCH (a)-[r:${relName}]->(n)
            DELETE r
            RETURN count(r) AS deletedCount`,
           { assetID, connectedID }
         );
       });
 
-      const deletedCount = result.records[0].get("deletedCount").toNumber();
+      const deletedCount = deleteResult.records[0]
+        .get("deletedCount")
+        .toNumber();
       if (deletedCount === 0) {
         throw new Error("Failed to delete relationship");
       }
@@ -343,9 +450,18 @@ export class RelationshipService {
     relName: string
   ): Promise<any[]> {
     try {
+      logInfo(`Getting asset relationships`, {
+        service: "RelationshipService",
+        method: "getAssetRelationships",
+        assetID,
+        relName,
+      });
+
       const result = await session.executeRead(async (tx: any) => {
         return await tx.run(
-          `MATCH (a:AssetMarker {id: $assetID})-[:${relName}]->(n)
+          `MATCH (a)
+           WHERE a.id = $assetID OR a.memberID = $assetID OR a.accountID = $assetID
+           MATCH (a)-[:${relName}]->(n)
            RETURN n`,
           { assetID, relName }
         );
@@ -383,9 +499,21 @@ export class RelationshipService {
     relName: string
   ): Promise<boolean> {
     try {
+      logInfo(`Checking if relationship exists`, {
+        service: "RelationshipService",
+        method: "relationshipExists",
+        assetID,
+        connectedID,
+        relName,
+      });
+
       const result = await session.executeRead(async (tx: any) => {
         return await tx.run(
-          `MATCH (a:AssetMarker {id: $assetID})-[r:${relName}]->(n {id: $connectedID})
+          `MATCH (a)
+           WHERE a.id = $assetID OR a.memberID = $assetID OR a.accountID = $assetID
+           MATCH (n)
+           WHERE n.id = $connectedID OR n.memberID = $connectedID OR n.accountID = $connectedID
+           OPTIONAL MATCH (a)-[r:${relName}]->(n)
            RETURN count(r) AS relCount`,
           { assetID, connectedID, relName }
         );

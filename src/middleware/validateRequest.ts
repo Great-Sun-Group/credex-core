@@ -128,6 +128,17 @@ export function validateRequest(
       );
 
       if (error) {
+        // Add detailed logging for validation errors
+        logger.error("Validation error", { 
+          path: req.path, 
+          method: req.method,
+          source,
+          error: error.message, 
+          field: error.field,
+          requestId: (req as any).id,
+          body: req[source]
+        });
+
         const response = {
           message: error.message,
           data: {
