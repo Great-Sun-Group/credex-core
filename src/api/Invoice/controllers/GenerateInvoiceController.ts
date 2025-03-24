@@ -24,7 +24,7 @@ export async function GenerateInvoiceController(
     });
 
     const { paymentAccountID, AssetMarkerData } = req.body;
-    const memberID = req.user?.id;
+    const memberID = req.user?.memberID;
     
     if (!memberID) {
       throw new Error("User ID not found in request");

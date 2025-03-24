@@ -6,7 +6,7 @@ import { verifyRateLimiterBypass } from "./rateLimiterBypass";
 import { authMiddleware } from "./authMiddleware";
 import { verifyDevAdminKey } from "./devAdminAuth";
 import { verifyClientApiKey } from "./clientApiKeyAuth";
-import logger from "../utils/logger";
+import logger, { logDebug } from "../utils/logger";
 
 export const applySecurityMiddleware = (app: Application) => {
   logger.debug("Applying security middleware");
@@ -219,29 +219,39 @@ export const applySecurityMiddleware = (app: Application) => {
 
   // Add a logging middleware to track requests after security middleware
   app.use((req: Request, res: Response, next: NextFunction) => {
-    const logData: any = {
-      method: req.method,
-      path: req.path,
-      ip: req.ip,
-      query: req.query,
-    };
-
-    if (req.body) {
-      logData.request_body = req.body;
+    // Check if this is a large request
+    const isLargeRequest = req.headers['content-length'] && 
+      parseInt(req.headers['content-length'] as string, 10) > 10000;
+    
+    if (isLargeRequest) {
+      // For large requests, log minimal information
+      logDebug(
+        "[SC1] Large request passed through all security middleware",
+        {
+          method: req.method,
+          path: req.path,
+          ip: req.ip,
+          contentLength: req.headers['content-length'],
+          contentType: req.headers['content-type'],
+          query: req.query,
+          issuerAccountID: req.query.issuerAccountID || 
+            (req.body ? req.body.issuerAccountID : undefined)
+        }
+      );
+    } else {
+      // For normal requests, log more details but still sanitize
+      logDebug(
+        "[SC1] Request passed through all security middleware",
+        {
+          method: req.method,
+          path: req.path,
+          ip: req.ip,
+          query: req.query,
+          issuerAccountID: req.query.issuerAccountID || 
+            (req.body ? req.body.issuerAccountID : undefined)
+        }
+      );
     }
-
-    if (req.query.issuerAccountID) {
-      logData.issuerAccountID = req.query.issuerAccountID;
-    }
-
-    if (req.body && req.body.issuerAccountID) {
-      logData.bodyIssuerAccountID = req.body.issuerAccountID;
-    }
-
-    logger.debug(
-      "[SC1] Request passed through all security middleware",
-      logData
-    );
 
     next();
   });

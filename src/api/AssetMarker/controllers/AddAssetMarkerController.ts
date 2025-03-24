@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import logger from "../../../utils/logger";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { assetMarkerService, AccountAmount, AssetMarkerProps } from "../../../services/assetMarker/assetMarkerService";
+import {
+  assetMarkerService,
+  AccountAmount,
+  AssetMarkerProps,
+} from "../../../services/assetMarker/assetMarkerService";
 
 /**
  * Controller for handling the creation of asset markers with multiple CR/DR relationships
@@ -15,25 +19,25 @@ export async function AddAssetMarkerController(
   next: NextFunction
 ): Promise<void> {
   const session = ledgerSpaceDriver.session();
-  
+
   try {
     logger.info("AddAssetMarkerController called", {
       controller: "AddAssetMarkerController",
       body: req.body,
     });
 
-    const { 
-      assetName, 
-      description, 
-      s3Key, 
-      crAccounts, 
-      drAccounts, 
-      denomination = "USD", 
-      AssetMarkerData 
+    const {
+      assetName,
+      description,
+      s3Key,
+      crAccounts,
+      drAccounts,
+      denomination = "USD",
+      AssetMarkerData,
     } = req.body;
-    
-    const memberID = req.user?.id;
-    
+
+    const memberID = req.user?.memberID;
+
     if (!memberID) {
       throw new Error("User ID not found in request");
     }
@@ -41,9 +45,9 @@ export async function AddAssetMarkerController(
     // Check if all accounts exist and are owned by the member
     const accountIDs = [
       ...crAccounts.map((a: any) => a.accountID),
-      ...drAccounts.map((a: any) => a.accountID)
+      ...drAccounts.map((a: any) => a.accountID),
     ];
-    
+
     const accountCheckResult = await session.executeRead(async (tx: any) => {
       return await tx.run(
         `MATCH (m:Member {id: $memberID})-[:OWNS]->(a)
@@ -53,11 +57,17 @@ export async function AddAssetMarkerController(
       );
     });
 
-    const foundAccountIDs = accountCheckResult.records.map((record: any) => record.get("accountID"));
-    const missingAccountIDs = accountIDs.filter((id: string) => !foundAccountIDs.includes(id));
-    
+    const foundAccountIDs = accountCheckResult.records.map((record: any) =>
+      record.get("accountID")
+    );
+    const missingAccountIDs = accountIDs.filter(
+      (id: string) => !foundAccountIDs.includes(id)
+    );
+
     if (missingAccountIDs.length > 0) {
-      throw new Error(`Accounts not found or not owned by the member: ${missingAccountIDs.join(", ")}`);
+      throw new Error(
+        `Accounts not found or not owned by the member: ${missingAccountIDs.join(", ")}`
+      );
     }
 
     // Create asset marker properties
@@ -66,19 +76,23 @@ export async function AddAssetMarkerController(
       description,
       s3Key,
       denomination,
-      assetMarkerData: AssetMarkerData
+      assetMarkerData: AssetMarkerData,
     };
 
     // Create the asset markers using the service
-    const { assetIDs, glid } = await assetMarkerService.createMultipleAssetMarkers(
-      session,
-      assetProps,
-      crAccounts as AccountAmount[],
-      drAccounts as AccountAmount[]
-    );
+    const { assetIDs, glid } =
+      await assetMarkerService.createMultipleAssetMarkers(
+        session,
+        assetProps,
+        crAccounts as AccountAmount[],
+        drAccounts as AccountAmount[]
+      );
 
     // Calculate total amount
-    const totalCR = crAccounts.reduce((sum: number, account: any) => sum + account.amount, 0);
+    const totalCR = crAccounts.reduce(
+      (sum: number, account: any) => sum + account.amount,
+      0
+    );
 
     res.status(201).json({
       message: "Asset markers created successfully",
@@ -111,8 +125,8 @@ export async function AddAssetMarkerController(
             totalAmount: totalCR,
             denomination,
             createdAt: new Date().toISOString(),
-            assetCount: assetIDs.length
-          }
+            assetCount: assetIDs.length,
+          },
         },
       },
     });

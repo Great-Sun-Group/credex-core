@@ -12,7 +12,7 @@ import logger from "../../../utils/logger";
 export async function editAccountController(req: Request, res: Response) {
   const { accountName, accountHandle, defaultDenom } = req.body;
   const accountID = req.params.accountID;
-  const memberID = req.user?.id;
+  const memberID = req.user?.memberID;
   
   if (!memberID) {
     logger.error("User ID not found in request", { accountID });

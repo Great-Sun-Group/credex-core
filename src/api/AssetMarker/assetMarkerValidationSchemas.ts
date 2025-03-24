@@ -195,16 +195,61 @@ export const uploadAndOptimizeJpgSchema = {
 };
 logger.debug("uploadAndOptimizeJpgSchema initialized");
 
+// Helper function to validate a single connection
+const validateConnection = (connection: any) => {
+  if (typeof connection !== 'object' || connection === null) {
+    return {
+      isValid: false,
+      message: "Connection must be an object",
+    };
+  }
+  
+  if (!connection.assetID || typeof connection.assetID !== 'string') {
+    return {
+      isValid: false,
+      message: "Connection must have an assetID string",
+    };
+  }
+  
+  if (!connection.connectedID || typeof connection.connectedID !== 'string') {
+    return {
+      isValid: false,
+      message: "Connection must have a connectedID string",
+    };
+  }
+  
+  if (!connection.relName || typeof connection.relName !== 'string') {
+    return {
+      isValid: false,
+      message: "Connection must have a relName string",
+    };
+  }
+  
+  const validRelNames = ["USED_IN", "PROFILE_PIC_ORIGINAL_JPG", "PROFILE_PIC_200_JPG", "PROFILE_PIC_600_JPG"];
+  if (!validRelNames.includes(connection.relName.toUpperCase())) {
+    return {
+      isValid: false,
+      message: `Invalid relationship name. Must be one of: ${validRelNames.join(", ")}`,
+    };
+  }
+  
+  return {
+    isValid: true,
+    message: "Valid connection",
+  };
+};
+
 export const connectAssetSchema = {
+  // For backward compatibility, support the original single connection format
   assetID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
-    required: true,
+    required: false, // Not required if connections array is provided
   },
   connectedID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
-    required: true,
+    required: false, // Not required if connections array is provided
   },
   relName: {
     sanitizer: (value: string) => value.toUpperCase(),
@@ -215,6 +260,72 @@ export const connectAssetSchema = {
         message: validRelNames.includes(value) 
           ? "Valid relationship name" 
           : `Invalid relationship name. Must be one of: ${validRelNames.join(", ")}`,
+      };
+    },
+    required: false, // Not required if connections array is provided
+  },
+  // New format for multiple connections
+  connections: {
+    sanitizer: (value: any) => {
+      if (Array.isArray(value)) {
+        return value.map((connection) => ({
+          ...connection,
+          relName: connection.relName ? connection.relName.toUpperCase() : connection.relName
+        }));
+      }
+      return value;
+    },
+    validator: (value: any) => {
+      // If connections is provided, it must be an array
+      if (value !== undefined && !Array.isArray(value)) {
+        return {
+          isValid: false,
+          message: "connections must be an array",
+        };
+      }
+      
+      // If connections is provided, it must not be empty
+      if (Array.isArray(value) && value.length === 0) {
+        return {
+          isValid: false,
+          message: "connections must not be empty",
+        };
+      }
+      
+      // If connections is provided, each connection must be valid
+      if (Array.isArray(value)) {
+        for (const connection of value) {
+          const validationResult = validateConnection(connection);
+          if (!validationResult.isValid) {
+            return validationResult;
+          }
+        }
+      }
+      
+      return {
+        isValid: true,
+        message: "Valid connections",
+      };
+    },
+    required: false, // Not required if single connection format is used
+  },
+  // Custom validator to ensure either single connection or connections array is provided
+  __custom: {
+    sanitizer: (value: any) => value, // Identity sanitizer
+    validator: (body: any) => {
+      const hasSingleConnection = body.assetID && body.connectedID && body.relName;
+      const hasMultipleConnections = Array.isArray(body.connections) && body.connections.length > 0;
+      
+      if (!hasSingleConnection && !hasMultipleConnections) {
+        return {
+          isValid: false,
+          message: "Either provide assetID, connectedID, and relName for a single connection, or provide a connections array for multiple connections",
+        };
+      }
+      
+      return {
+        isValid: true,
+        message: "Valid request format",
       };
     },
     required: true,

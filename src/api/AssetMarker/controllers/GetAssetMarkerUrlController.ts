@@ -18,7 +18,7 @@ export async function GetAssetMarkerUrlController(
   
   try {
     const { assetID } = req.params;
-    const memberID = req.user?.id;
+    const memberID = req.user?.memberID;
     
     if (!memberID) {
       throw new Error("User ID not found in request");

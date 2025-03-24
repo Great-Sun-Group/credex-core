@@ -83,7 +83,7 @@ export async function UploadAndOptimizeJpgController(req: Request, res: Response
   try {
     // Extract request data
     const { jpg, name, drAccountID, crAccountID } = req.body;
-    const memberID = req.user?.id;
+    const memberID = req.user?.memberID;
     
     // Process the image using the service
     const { original, size200, size600 } = await imageProcessingService.processAssetMarkerImage(imageBuffer);

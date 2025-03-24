@@ -47,21 +47,44 @@ export class AssetMarkerService {
       const assetID = uuidv4();
       const finalGlid = glid || uuidv4(); // Generate a new GLid if not provided
       
+      // Build the properties object dynamically
+      const properties: Record<string, any> = {
+        id: assetID,
+        assetName: assetProps.assetName,
+        description: assetProps.description || "",
+        s3Key: assetProps.s3Key || "",
+        filename: assetProps.filename || "",
+        GLid: finalGlid,
+        AssetMarkerData: assetProps.assetMarkerData ? JSON.stringify(assetProps.assetMarkerData) : "{}",
+        createdAt: "datetime()"
+      };
+      
+      // Add optional properties only if they're provided
+      if (assetProps.generalLedgerAmount !== undefined) {
+        properties.GeneralLedgerAmount = assetProps.generalLedgerAmount;
+      }
+      
+      if (assetProps.cxxMultiplier !== undefined) {
+        properties.CXXmultiplier = assetProps.cxxMultiplier;
+      }
+      
+      if (assetProps.denomination !== undefined) {
+        properties.Denomination = assetProps.denomination;
+      }
+      
+      // Create the property string for the Cypher query
+      const propertyStrings = Object.entries(properties).map(([key, value]) => {
+        if (key === 'createdAt') {
+          return `${key}: ${value}`;
+        }
+        return `${key}: $${key.charAt(0).toLowerCase() + key.slice(1)}`;
+      });
+      
       // Create the asset marker node
       await session.executeWrite(async (tx: any) => {
         await tx.run(
           `CREATE (a:AssetMarker {
-            id: $assetID,
-            assetName: $assetName,
-            description: $description,
-            s3Key: $s3Key,
-            filename: $filename,
-            GeneralLedgerAmount: $generalLedgerAmount,
-            CXXmultiplier: $cxxMultiplier,
-            Denomination: $denomination,
-            GLid: $glid,
-            AssetMarkerData: $assetMarkerData,
-            createdAt: datetime()
+            ${propertyStrings.join(',\n            ')}
           })
           WITH a
           MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
@@ -74,9 +97,9 @@ export class AssetMarkerService {
             description: assetProps.description || "", 
             s3Key: assetProps.s3Key || "", 
             filename: assetProps.filename || "",
-            generalLedgerAmount: assetProps.generalLedgerAmount || crAccount.amount, 
-            cxxMultiplier: assetProps.cxxMultiplier || 1,
-            denomination: assetProps.denomination || "USD",
+            ...(assetProps.generalLedgerAmount !== undefined ? { generalLedgerAmount: assetProps.generalLedgerAmount } : {}),
+            ...(assetProps.cxxMultiplier !== undefined ? { cxxMultiplier: assetProps.cxxMultiplier } : {}),
+            ...(assetProps.denomination !== undefined ? { denomination: assetProps.denomination } : {}),
             glid: finalGlid,
             assetMarkerData: assetProps.assetMarkerData ? JSON.stringify(assetProps.assetMarkerData) : "{}",
             crAccountID: crAccount.accountID,
@@ -132,6 +155,38 @@ export class AssetMarkerService {
       const glid = uuidv4();
       const assetIDs: string[] = [];
       
+      // Build the properties object dynamically
+      const getPropertyStrings = (amount: number) => {
+        const properties: Record<string, any> = {
+          id: "$assetID",
+          assetName: "$assetName",
+          description: "$description",
+          s3Key: "$s3Key",
+          filename: "$filename",
+          GLid: "$glid",
+          AssetMarkerData: "$assetMarkerData",
+          createdAt: "datetime()"
+        };
+        
+        // Add optional properties only if they're provided
+        if (assetProps.generalLedgerAmount !== undefined) {
+          properties.GeneralLedgerAmount = "$amount";
+        }
+        
+        if (assetProps.cxxMultiplier !== undefined) {
+          properties.CXXmultiplier = "$cxxMultiplier";
+        }
+        
+        if (assetProps.denomination !== undefined) {
+          properties.Denomination = "$denomination";
+        }
+        
+        // Create the property string for the Cypher query
+        return Object.entries(properties).map(([key, value]) => {
+          return `${key}: ${value}`;
+        }).join(',\n              ');
+      };
+      
       // Create separate AssetMarker nodes for each CR/DR pair
       await session.executeWrite(async (tx: any) => {
         // Ensure we have matching CR and DR accounts
@@ -147,17 +202,7 @@ export class AssetMarkerService {
           // Create the asset marker node with GLid
           await tx.run(
             `CREATE (a:AssetMarker {
-              id: $assetID,
-              assetName: $assetName,
-              description: $description,
-              s3Key: $s3Key,
-              filename: $filename,
-              GeneralLedgerAmount: $amount,
-              CXXmultiplier: $cxxMultiplier,
-              Denomination: $denomination,
-              GLid: $glid,
-              AssetMarkerData: $assetMarkerData,
-              createdAt: datetime()
+              ${getPropertyStrings(crAccount.amount)}
             })
             WITH a
             MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
@@ -170,9 +215,9 @@ export class AssetMarkerService {
               description: assetProps.description || "", 
               s3Key: assetProps.s3Key || "", 
               filename: assetProps.filename || "",
-              amount: crAccount.amount, 
-              cxxMultiplier: assetProps.cxxMultiplier || 1,
-              denomination: assetProps.denomination || "USD",
+              amount: crAccount.amount,
+              ...(assetProps.cxxMultiplier !== undefined ? { cxxMultiplier: assetProps.cxxMultiplier } : {}),
+              ...(assetProps.denomination !== undefined ? { denomination: assetProps.denomination } : {}),
               glid,
               assetMarkerData: assetProps.assetMarkerData ? JSON.stringify(assetProps.assetMarkerData) : "{}",
               crAccountID: crAccount.accountID,
@@ -195,17 +240,7 @@ export class AssetMarkerService {
           // Create the asset marker node
           await tx.run(
             `CREATE (a:AssetMarker {
-              id: $assetID,
-              assetName: $assetName,
-              description: $description,
-              s3Key: $s3Key,
-              filename: $filename,
-              GeneralLedgerAmount: $amount,
-              CXXmultiplier: $cxxMultiplier,
-              Denomination: $denomination,
-              GLid: $glid,
-              AssetMarkerData: $assetMarkerData,
-              createdAt: datetime()
+              ${getPropertyStrings(crAccount.amount)}
             })
             WITH a
             MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
@@ -218,9 +253,9 @@ export class AssetMarkerService {
               description: assetProps.description || "", 
               s3Key: assetProps.s3Key || "", 
               filename: assetProps.filename || "",
-              amount: crAccount.amount, 
-              cxxMultiplier: assetProps.cxxMultiplier || 1,
-              denomination: assetProps.denomination || "USD",
+              amount: crAccount.amount,
+              ...(assetProps.cxxMultiplier !== undefined ? { cxxMultiplier: assetProps.cxxMultiplier } : {}),
+              ...(assetProps.denomination !== undefined ? { denomination: assetProps.denomination } : {}),
               glid,
               assetMarkerData: assetProps.assetMarkerData ? JSON.stringify(assetProps.assetMarkerData) : "{}",
               crAccountID: crAccount.accountID,
@@ -243,17 +278,7 @@ export class AssetMarkerService {
           // Create the asset marker node
           await tx.run(
             `CREATE (a:AssetMarker {
-              id: $assetID,
-              assetName: $assetName,
-              description: $description,
-              s3Key: $s3Key,
-              filename: $filename,
-              GeneralLedgerAmount: $amount,
-              CXXmultiplier: $cxxMultiplier,
-              Denomination: $denomination,
-              GLid: $glid,
-              AssetMarkerData: $assetMarkerData,
-              createdAt: datetime()
+              ${getPropertyStrings(drAccount.amount)}
             })
             WITH a
             MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
@@ -266,9 +291,9 @@ export class AssetMarkerService {
               description: assetProps.description || "", 
               s3Key: assetProps.s3Key || "", 
               filename: assetProps.filename || "",
-              amount: drAccount.amount, 
-              cxxMultiplier: assetProps.cxxMultiplier || 1,
-              denomination: assetProps.denomination || "USD",
+              amount: drAccount.amount,
+              ...(assetProps.cxxMultiplier !== undefined ? { cxxMultiplier: assetProps.cxxMultiplier } : {}),
+              ...(assetProps.denomination !== undefined ? { denomination: assetProps.denomination } : {}),
               glid,
               assetMarkerData: assetProps.assetMarkerData ? JSON.stringify(assetProps.assetMarkerData) : "{}",
               crAccountID: crAccount.accountID,
@@ -331,9 +356,6 @@ export class AssetMarkerService {
             assetName: $assetName,
             filename: $filename,
             s3Key: $s3Key,
-            GeneralLedgerAmount: 1,
-            CXXmultiplier: 1,
-            Denomination: "USD",
             createdAt: datetime()
           })
           WITH a
@@ -358,9 +380,6 @@ export class AssetMarkerService {
             assetName: $assetName,
             filename: $filename,
             s3Key: $s3Key,
-            GeneralLedgerAmount: 1,
-            CXXmultiplier: 1,
-            Denomination: "USD",
             createdAt: datetime()
           })
           WITH a
@@ -388,9 +407,6 @@ export class AssetMarkerService {
             assetName: $assetName,
             filename: $filename,
             s3Key: $s3Key,
-            GeneralLedgerAmount: 1,
-            CXXmultiplier: 1,
-            Denomination: "USD",
             createdAt: datetime()
           })
           WITH a
@@ -500,7 +516,7 @@ export class AssetMarkerService {
         params.filename = updates.filename || "";
       }
       
-      if (updates.denomination) {
+      if (updates.denomination !== undefined) {
         setClause.push("a.Denomination = $denomination");
         params.denomination = updates.denomination;
       }
@@ -628,7 +644,7 @@ export class AssetMarkerService {
     try {
       const onboardedAssetsResult = await session.executeRead(async (tx: any) => {
         return await tx.run(
-          `MATCH (m:Member {id: $memberID})-[:OWNS]->(a:AccountInternal {accountName: "Onboarded Assets"})
+          `MATCH (m:Member {memberID: $memberID})-[:OWNS]->(a:AccountInternal {accountName: "Onboarded Assets"})
            RETURN a.id AS accountID`,
           { memberID }
         );
@@ -640,7 +656,7 @@ export class AssetMarkerService {
         // Create the "Onboarded Assets" account
         const createAccountResult = await session.executeWrite(async (tx: any) => {
           return await tx.run(
-            `MATCH (m:Member {id: $memberID})
+            `MATCH (m:Member {memberID: $memberID})
              CREATE (a:AccountInternal {
                id: apoc.create.uuid(),
                accountName: "Onboarded Assets",

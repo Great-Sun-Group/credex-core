@@ -256,7 +256,7 @@ export const audit = (actionType) => async (req, res, next) => {
     res.send = originalSend;
     await auditService.logAction({
       actionType,
-      userId: req.user?.id,
+      userId: req.user?.memberID,
       requestData: {
         method: req.method,
         path: req.path,

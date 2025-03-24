@@ -105,6 +105,94 @@ export class RelationshipService {
   }
 
   /**
+   * Connect multiple assets to a node with specified relationships
+   * @param session - Neo4j session
+   * @param memberID - Member ID
+   * @param connections - Array of connections with assetID, connectedID, and relName
+   * @returns Array of connection results
+   */
+  public async connectMultipleAssets(
+    session: any,
+    memberID: string,
+    connections: Array<{ assetID: string, connectedID: string, relName: string }>
+  ): Promise<Array<{ asset: any, connected: any, relType: string, error?: string }>> {
+    try {
+      const results = [];
+
+      // Process each connection
+      for (const connection of connections) {
+        const { assetID, connectedID, relName } = connection;
+
+        try {
+          // For each connection, first check if there's an existing relationship and remove it
+          const existingRelationships = await this.getAssetRelationships(
+            session,
+            connectedID,
+            relName
+          );
+
+          if (existingRelationships.length > 0) {
+            for (const rel of existingRelationships) {
+              await this.disconnectAsset(
+                session,
+                memberID,
+                rel.id,
+                connectedID,
+                relName
+              );
+            }
+          }
+
+          // Create the new relationship
+          const result = await this.connectAsset(
+            session,
+            memberID,
+            assetID,
+            connectedID,
+            relName
+          );
+
+          results.push(result);
+        } catch (error) {
+          logError(`Error connecting asset ${assetID} to ${connectedID} with relationship ${relName}`, 
+            error instanceof Error ? error : new Error(String(error)), {
+            service: "RelationshipService",
+            method: "connectMultipleAssets",
+            assetID,
+            connectedID,
+            relName,
+            error: error instanceof Error ? error.message : String(error)
+          });
+          
+          // Continue with other connections even if one fails
+          results.push({
+            asset: { id: assetID },
+            connected: { id: connectedID },
+            relType: relName,
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+
+      logInfo(`Connected ${results.length} assets`, {
+        service: "RelationshipService",
+        method: "connectMultipleAssets",
+        connectionCount: connections.length,
+        successCount: results.filter(r => !('error' in r)).length
+      });
+
+      return results;
+    } catch (error) {
+      logError("Error connecting multiple assets", error instanceof Error ? error : new Error(String(error)), {
+        service: "RelationshipService",
+        method: "connectMultipleAssets",
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Disconnect an asset from another node
    * @param session - Neo4j session
    * @param memberID - Member ID
