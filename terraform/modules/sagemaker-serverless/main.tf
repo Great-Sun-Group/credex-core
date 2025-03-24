@@ -39,8 +39,11 @@ resource "aws_sagemaker_model" "deepseek_model" {
   
   primary_container {
     image          = var.container_image
-    model_data_url = var.model_data_url
     environment = {
+      # Hugging Face model configuration
+      HF_MODEL_ID            = var.huggingface_model_id
+      HF_TASK                = "text-generation"
+      # SageMaker configuration
       SAGEMAKER_PROGRAM      = "inference.py"
       SAGEMAKER_SUBMIT_DIRECTORY = "/opt/ml/model/code"
       MODEL_CACHE_ROOT       = "/opt/ml/model"
