@@ -38,9 +38,10 @@ variable "container_image" {
   type        = string
 }
 
-variable "model_data_url" {
-  description = "The S3 URL for the model data"
+variable "huggingface_model_id" {
+  description = "The Hugging Face model ID to use (e.g., deepseek-ai/deepseek-coder-6.7b)"
   type        = string
+  default     = "deepseek-ai/deepseek-coder-6.7b"
 }
 
 variable "model_name" {
