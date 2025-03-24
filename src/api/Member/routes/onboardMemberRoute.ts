@@ -160,26 +160,6 @@ export default function onboardMemberRoute() {
    *                                 type: string
    *                                 enum: [CONSUMPTION, PRODUCTION, DIGITAL_ASSET, PHYSICAL_ASSET]
    *                                 description: Type of the internal account
-   *                           items:
-   *                             type: object
-   *                             properties:
-   *                               accountID:
-   *                                 type: string
-   *                                 format: uuid
-   *                               accountName:
-   *                                 type: string
-   *                               accountHandle:
-   *                                 type: string
-   *                               accountType:
-   *                                 type: string
-   *                                 enum: [PERSONAL, TRUST, OPERATIONS]
-   *                                 description: Type of the account (PERSONAL for new members)
-   *                               defaultDenom:
-   *                                 type: string
-   *                                 enum: [CXX, CAD, USD, XAU]
-   *                               isOwnedAccount:
-   *                                 type: boolean
-   *                                 description: Whether the member owns this account (true for personal account)
    *                               sendOffersTo:
    *                                 type: object
    *                                 description: Member configured to receive offers for this account
