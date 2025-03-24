@@ -15,7 +15,8 @@ module "deepseek_serverless" {
   # Container configuration - these values need to be provided during deployment
   # Using the correct AWS-managed container for af-south-1 region with Hugging Face integration
   container_image    = "626614931356.dkr.ecr.af-south-1.amazonaws.com/huggingface-pytorch-inference:1.13.1-transformers4.26.0-cpu-py39-ubuntu20.04"
-  huggingface_model_id = "deepseek-ai/deepseek-coder-6.7b"
+  # Using a smaller model that will fit within the 3GB memory constraint
+  huggingface_model_id = "Xenova/distilbert-base-uncased"
 }
 
 # Output the endpoint name for reference

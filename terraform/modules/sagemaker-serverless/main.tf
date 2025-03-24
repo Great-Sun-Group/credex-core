@@ -42,7 +42,7 @@ resource "aws_sagemaker_model" "deepseek_model" {
     environment = {
       # Hugging Face model configuration
       HF_MODEL_ID            = var.huggingface_model_id
-      HF_TASK                = "text-generation"
+      HF_TASK                = "fill-mask"  # DistilBERT is a fill-mask model
       # SageMaker configuration
       SAGEMAKER_PROGRAM      = "inference.py"
       SAGEMAKER_SUBMIT_DIRECTORY = "/opt/ml/model/code"

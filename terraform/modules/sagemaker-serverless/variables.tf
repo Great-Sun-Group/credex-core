@@ -39,9 +39,9 @@ variable "container_image" {
 }
 
 variable "huggingface_model_id" {
-  description = "The Hugging Face model ID to use (e.g., deepseek-ai/deepseek-coder-6.7b)"
+  description = "The Hugging Face model ID to use"
   type        = string
-  default     = "deepseek-ai/deepseek-coder-6.7b"
+  default     = "Xenova/distilbert-base-uncased"
 }
 
 variable "model_name" {
