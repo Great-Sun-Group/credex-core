@@ -73,6 +73,54 @@ import logger from "../../../utils/logger";
  *                             authMethod:
  *                               type: string
  *                               example: password
+ *                     dashboard:
+ *                       type: object
+ *                       properties:
+ *                         member:
+ *                           type: object
+ *                           properties:
+ *                             memberID:
+ *                               type: string
+ *                               format: uuid
+ *                             memberTier:
+ *                               type: integer
+ *                             firstname:
+ *                               type: string
+ *                             lastname:
+ *                               type: string
+ *                             memberHandle:
+ *                               type: string
+ *                             defaultDenom:
+ *                               type: string
+ *                         accounts:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               accountID:
+ *                                 type: string
+ *                                 format: uuid
+ *                               accountName:
+ *                                 type: string
+ *                               accountType:
+ *                                 type: string
+ *                         accountsInternal:
+ *                           type: array
+ *                           description: List of internal accounts owned by the member
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               accountID:
+ *                                 type: string
+ *                                 format: uuid
+ *                                 description: Unique identifier for the internal account
+ *                               accountName:
+ *                                 type: string
+ *                                 description: Name of the internal account
+ *                               accountType:
+ *                                 type: string
+ *                                 enum: [CONSUMPTION, PRODUCTION, DIGITAL_ASSET, PHYSICAL_ASSET]
+ *                                 description: Type of the internal account
  *       400:
  *         description: Invalid request parameters
  *       401:

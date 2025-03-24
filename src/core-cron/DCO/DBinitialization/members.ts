@@ -84,7 +84,7 @@ export async function createInitialMember(
   const defaultAccountID = accountResult.data.accountID;
 
   // Update member tier
-  const updateTierResult = await UpdateMemberTierService(onboardedMemberID, 5);
+  const updateTierResult = await UpdateMemberTierService(onboardedMemberID, 8);
   if (!updateTierResult.data) {
     logger.error("Failed to update member tier", {
       memberID: onboardedMemberID,

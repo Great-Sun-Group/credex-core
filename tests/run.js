@@ -19,35 +19,50 @@ process.env.SILENT = "true";
 
 // Parse command line arguments handling quoted strings
 function parseArgs(args) {
+  // Join all arguments with spaces
+  const argsString = args.join(' ');
   const result = [];
-  let current = "";
+  let current = '';
   let inQuotes = false;
-  let quoteChar = "";
+  let quoteChar = '';
 
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    // Check if argument starts with a quote
-    if (!inQuotes && (arg.startsWith('"') || arg.startsWith("'"))) {
+  // Process character by character
+  for (let i = 0; i < argsString.length; i++) {
+    const char = argsString[i];
+    
+    // Handle quotes
+    if ((char === '"' || char === "'") && (i === 0 || argsString[i-1] === ' ')) {
       inQuotes = true;
-      quoteChar = arg[0];
-      current = arg.slice(1);
+      quoteChar = char;
+      continue;
     }
-    // Check if argument ends with the same quote
-    else if (inQuotes && arg.endsWith(quoteChar)) {
-      current += " " + arg.slice(0, -1);
-      result.push(current);
-      current = "";
+    
+    // Handle end of quotes
+    if (inQuotes && char === quoteChar && (i === argsString.length - 1 || argsString[i+1] === ' ')) {
       inQuotes = false;
+      result.push(current);
+      current = '';
+      continue;
     }
-    // If we're in quotes, add the argument with a space
-    else if (inQuotes) {
-      current += " " + arg;
+    
+    // Handle spaces outside quotes
+    if (char === ' ' && !inQuotes) {
+      if (current) {
+        result.push(current);
+        current = '';
+      }
+      continue;
     }
-    // Not in quotes, treat as normal argument
-    else {
-      result.push(arg);
-    }
+    
+    // Add character to current argument
+    current += char;
   }
+  
+  // Add the last argument if there is one
+  if (current) {
+    result.push(current);
+  }
+  
   return result;
 }
 

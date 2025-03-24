@@ -349,7 +349,7 @@ export class AssetMarkerService {
       
       // Create the original asset marker
       await session.executeWrite(async (tx: any) => {
-        // Create the original asset marker node
+        // Create the original asset marker node with direct OWNS relationship from member
         await tx.run(
           `CREATE (a:AssetMarker {
             id: $assetID,
@@ -360,8 +360,10 @@ export class AssetMarkerService {
           })
           WITH a
           MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
-          MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
+          MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR cr:AccountInternal)
+          MATCH (m:Member {memberID: $memberID})
           CREATE (cr)-[:CR {amount: 1}]->(a)-[:DR {amount: 1}]->(dr)
+          CREATE (m)-[:OWNS]->(a)
           RETURN a`,
           { 
             assetID: originalAssetID, 
@@ -369,11 +371,12 @@ export class AssetMarkerService {
             filename: `${name}_original.jpg`,
             s3Key: s3Keys.original,
             crAccountID,
-            drAccountID
+            drAccountID,
+            memberID
           }
         );
 
-        // Create the 200px asset marker node
+        // Create the 200px asset marker node with direct OWNS relationship from member
         await tx.run(
           `CREATE (a:AssetMarker {
             id: $assetID,
@@ -384,10 +387,12 @@ export class AssetMarkerService {
           })
           WITH a
           MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
-          MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
+          MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR cr:AccountInternal)
           MATCH (original:AssetMarker {id: $originalAssetID})
+          MATCH (m:Member {memberID: $memberID})
           CREATE (cr)-[:CR {amount: 1}]->(a)-[:DR {amount: 1}]->(dr)
           CREATE (original)-[:USED_IN]->(a)
+          CREATE (m)-[:OWNS]->(a)
           RETURN a`,
           { 
             assetID: asset200ID, 
@@ -396,11 +401,12 @@ export class AssetMarkerService {
             s3Key: s3Keys.size200,
             crAccountID,
             drAccountID,
-            originalAssetID
+            originalAssetID,
+            memberID
           }
         );
 
-        // Create the 600px asset marker node
+        // Create the 600px asset marker node with direct OWNS relationship from member
         await tx.run(
           `CREATE (a:AssetMarker {
             id: $assetID,
@@ -411,10 +417,12 @@ export class AssetMarkerService {
           })
           WITH a
           MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
-          MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
+          MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR cr:AccountInternal)
           MATCH (original:AssetMarker {id: $originalAssetID})
+          MATCH (m:Member {memberID: $memberID})
           CREATE (cr)-[:CR {amount: 1}]->(a)-[:DR {amount: 1}]->(dr)
           CREATE (original)-[:USED_IN]->(a)
+          CREATE (m)-[:OWNS]->(a)
           RETURN a`,
           { 
             assetID: asset600ID, 
@@ -423,7 +431,8 @@ export class AssetMarkerService {
             s3Key: s3Keys.size600,
             crAccountID,
             drAccountID,
-            originalAssetID
+            originalAssetID,
+            memberID
           }
         );
       });

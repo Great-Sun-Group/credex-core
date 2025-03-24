@@ -186,7 +186,8 @@ export async function loginMemberV2ExpressHandler(
     // Combine all account data into a single dashboard
     const dashboard = {
       member: dashboards[0].member, // Member data is same for all dashboards
-      accounts: dashboards.flatMap(d => d.accounts || [])
+      accounts: dashboards.flatMap(d => d.accounts || []),
+      accountsInternal: dashboards[0].accountsInternal // Internal accounts are the same for all dashboards
     };
 
     const response: LoginResponse = {

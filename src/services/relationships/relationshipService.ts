@@ -19,7 +19,7 @@ export class RelationshipService {
     assetID: string,
     connectedID: string,
     relName: string
-  ): Promise<{ asset: any, connected: any, relType: string }> {
+  ): Promise<{ asset: any; connected: any; relType: string }> {
     try {
       // Check if the asset exists and is owned by the member
       const assetCheckResult = await session.executeRead(async (tx: any) => {
@@ -30,20 +30,24 @@ export class RelationshipService {
         );
       });
 
-      const assetCount = assetCheckResult.records[0].get("assetCount").toNumber();
+      const assetCount = assetCheckResult.records[0]
+        .get("assetCount")
+        .toNumber();
       if (assetCount === 0) {
         throw new Error("Asset not found or not owned by the member");
       }
 
       // Check if the connected node exists and is owned by the member
-      const connectedCheckResult = await session.executeRead(async (tx: any) => {
-        return await tx.run(
-          `MATCH (m:Member {id: $memberID})-[:OWNS]->(n)
+      const connectedCheckResult = await session.executeRead(
+        async (tx: any) => {
+          return await tx.run(
+            `MATCH (m:Member {id: $memberID})-[:OWNS]->(n)
            WHERE n.id = $connectedID
            RETURN n`,
-          { memberID, connectedID }
-        );
-      });
+            { memberID, connectedID }
+          );
+        }
+      );
 
       if (connectedCheckResult.records.length === 0) {
         throw new Error("Connected node not found or not owned by the member");
@@ -60,7 +64,9 @@ export class RelationshipService {
 
       const relCount = relCheckResult.records[0].get("relCount").toNumber();
       if (relCount > 0) {
-        throw new Error(`Relationship ${relName} already exists between the asset and the connected node`);
+        throw new Error(
+          `Relationship ${relName} already exists between the asset and the connected node`
+        );
       }
 
       // Create the relationship
@@ -82,24 +88,31 @@ export class RelationshipService {
       const connected = result.records[0].get("n").properties;
       const relType = result.records[0].get("relType");
 
-      logInfo(`Connected asset ${assetID} to ${connectedID} with relationship ${relName}`, {
-        service: "RelationshipService",
-        method: "connectAsset",
-        assetID,
-        connectedID,
-        relName
-      });
+      logInfo(
+        `Connected asset ${assetID} to ${connectedID} with relationship ${relName}`,
+        {
+          service: "RelationshipService",
+          method: "connectAsset",
+          assetID,
+          connectedID,
+          relName,
+        }
+      );
 
       return { asset, connected, relType };
     } catch (error) {
-      logError("Error connecting asset", error instanceof Error ? error : new Error(String(error)), {
-        service: "RelationshipService",
-        method: "connectAsset",
-        assetID,
-        connectedID,
-        relName,
-        error: error instanceof Error ? error.message : String(error)
-      });
+      logError(
+        "Error connecting asset",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          service: "RelationshipService",
+          method: "connectAsset",
+          assetID,
+          connectedID,
+          relName,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      );
       throw error;
     }
   }
@@ -114,8 +127,14 @@ export class RelationshipService {
   public async connectMultipleAssets(
     session: any,
     memberID: string,
-    connections: Array<{ assetID: string, connectedID: string, relName: string }>
-  ): Promise<Array<{ asset: any, connected: any, relType: string, error?: string }>> {
+    connections: Array<{
+      assetID: string;
+      connectedID: string;
+      relName: string;
+    }>
+  ): Promise<
+    Array<{ asset: any; connected: any; relType: string; error?: string }>
+  > {
     try {
       const results = [];
 
@@ -154,22 +173,25 @@ export class RelationshipService {
 
           results.push(result);
         } catch (error) {
-          logError(`Error connecting asset ${assetID} to ${connectedID} with relationship ${relName}`, 
-            error instanceof Error ? error : new Error(String(error)), {
-            service: "RelationshipService",
-            method: "connectMultipleAssets",
-            assetID,
-            connectedID,
-            relName,
-            error: error instanceof Error ? error.message : String(error)
-          });
-          
+          logError(
+            `Error connecting asset ${assetID} to ${connectedID} with relationship ${relName}`,
+            error instanceof Error ? error : new Error(String(error)),
+            {
+              service: "RelationshipService",
+              method: "connectMultipleAssets",
+              assetID,
+              connectedID,
+              relName,
+              error: error instanceof Error ? error.message : String(error),
+            }
+          );
+
           // Continue with other connections even if one fails
           results.push({
             asset: { id: assetID },
             connected: { id: connectedID },
             relType: relName,
-            error: error instanceof Error ? error.message : String(error)
+            error: error instanceof Error ? error.message : String(error),
           });
         }
       }
@@ -178,16 +200,20 @@ export class RelationshipService {
         service: "RelationshipService",
         method: "connectMultipleAssets",
         connectionCount: connections.length,
-        successCount: results.filter(r => !('error' in r)).length
+        successCount: results.filter((r) => !("error" in r)).length,
       });
 
       return results;
     } catch (error) {
-      logError("Error connecting multiple assets", error instanceof Error ? error : new Error(String(error)), {
-        service: "RelationshipService",
-        method: "connectMultipleAssets",
-        error: error instanceof Error ? error.message : String(error)
-      });
+      logError(
+        "Error connecting multiple assets",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          service: "RelationshipService",
+          method: "connectMultipleAssets",
+          error: error instanceof Error ? error.message : String(error),
+        }
+      );
       throw error;
     }
   }
@@ -207,7 +233,7 @@ export class RelationshipService {
     assetID: string,
     connectedID: string,
     relName: string
-  ): Promise<{ asset: any, connected: any }> {
+  ): Promise<{ asset: any; connected: any }> {
     try {
       // Check if the asset exists and is owned by the member
       const assetCheckResult = await session.executeRead(async (tx: any) => {
@@ -218,20 +244,24 @@ export class RelationshipService {
         );
       });
 
-      const assetCount = assetCheckResult.records[0].get("assetCount").toNumber();
+      const assetCount = assetCheckResult.records[0]
+        .get("assetCount")
+        .toNumber();
       if (assetCount === 0) {
         throw new Error("Asset not found or not owned by the member");
       }
 
       // Check if the connected node exists and is owned by the member
-      const connectedCheckResult = await session.executeRead(async (tx: any) => {
-        return await tx.run(
-          `MATCH (m:Member {id: $memberID})-[:OWNS]->(n)
+      const connectedCheckResult = await session.executeRead(
+        async (tx: any) => {
+          return await tx.run(
+            `MATCH (m:Member {id: $memberID})-[:OWNS]->(n)
            WHERE n.id = $connectedID
            RETURN n`,
-          { memberID, connectedID }
-        );
-      });
+            { memberID, connectedID }
+          );
+        }
+      );
 
       if (connectedCheckResult.records.length === 0) {
         throw new Error("Connected node not found or not owned by the member");
@@ -248,7 +278,9 @@ export class RelationshipService {
 
       const relCount = relCheckResult.records[0].get("relCount").toNumber();
       if (relCount === 0) {
-        throw new Error(`Relationship ${relName} does not exist between the asset and the connected node`);
+        throw new Error(
+          `Relationship ${relName} does not exist between the asset and the connected node`
+        );
       }
 
       const asset = relCheckResult.records[0].get("a").properties;
@@ -269,24 +301,31 @@ export class RelationshipService {
         throw new Error("Failed to delete relationship");
       }
 
-      logInfo(`Disconnected asset ${assetID} from ${connectedID} with relationship ${relName}`, {
-        service: "RelationshipService",
-        method: "disconnectAsset",
-        assetID,
-        connectedID,
-        relName
-      });
+      logInfo(
+        `Disconnected asset ${assetID} from ${connectedID} with relationship ${relName}`,
+        {
+          service: "RelationshipService",
+          method: "disconnectAsset",
+          assetID,
+          connectedID,
+          relName,
+        }
+      );
 
       return { asset, connected };
     } catch (error) {
-      logError("Error disconnecting asset", error instanceof Error ? error : new Error(String(error)), {
-        service: "RelationshipService",
-        method: "disconnectAsset",
-        assetID,
-        connectedID,
-        relName,
-        error: error instanceof Error ? error.message : String(error)
-      });
+      logError(
+        "Error disconnecting asset",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          service: "RelationshipService",
+          method: "disconnectAsset",
+          assetID,
+          connectedID,
+          relName,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      );
       throw error;
     }
   }
@@ -314,13 +353,17 @@ export class RelationshipService {
 
       return result.records.map((record: any) => record.get("n").properties);
     } catch (error) {
-      logError("Error getting asset relationships", error instanceof Error ? error : new Error(String(error)), {
-        service: "RelationshipService",
-        method: "getAssetRelationships",
-        assetID,
-        relName,
-        error: error instanceof Error ? error.message : String(error)
-      });
+      logError(
+        "Error getting asset relationships",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          service: "RelationshipService",
+          method: "getAssetRelationships",
+          assetID,
+          relName,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      );
       throw error;
     }
   }
@@ -350,14 +393,18 @@ export class RelationshipService {
 
       return result.records[0].get("relCount").toNumber() > 0;
     } catch (error) {
-      logError("Error checking relationship existence", error instanceof Error ? error : new Error(String(error)), {
-        service: "RelationshipService",
-        method: "relationshipExists",
-        assetID,
-        connectedID,
-        relName,
-        error: error instanceof Error ? error.message : String(error)
-      });
+      logError(
+        "Error checking relationship existence",
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          service: "RelationshipService",
+          method: "relationshipExists",
+          assetID,
+          connectedID,
+          relName,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      );
       throw error;
     }
   }

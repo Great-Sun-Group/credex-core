@@ -40,7 +40,7 @@
             <a href="ui-specs.html">UI Specifications</a>
           </li>
           <li class="nav-item">
-            <a href="workplan.html">Implementation Workplan</a>
+            <a href="api-workplan.html">API Implementation</a>
           </li>
         </ul>
       </div>
@@ -70,9 +70,7 @@
             <div class="tab" data-tab="invoice-endpoints">
               Invoice Endpoints
             </div>
-            <div class="tab" data-tab="credex-endpoints">
-              Credex Endpoints
-            </div>
+            <div class="tab" data-tab="credex-endpoints">Credex Endpoints</div>
           </div>
 
           <!-- Member Endpoints Tab Content -->
@@ -283,9 +281,18 @@
                 <h5>Parameters:</h5>
                 <ul>
                   <li><code>assetName</code>: string</li>
-                  <li><code>crAccounts</code>: Array of {accountID, amount} objects</li>
-                  <li><code>drAccounts</code>: Array of {accountID, amount} objects</li>
-                  <li><code>denomination</code>: string (optional, defaults to "USD")</li>
+                  <li>
+                    <code>crAccounts</code>: Array of {accountID, amount}
+                    objects
+                  </li>
+                  <li>
+                    <code>drAccounts</code>: Array of {accountID, amount}
+                    objects
+                  </li>
+                  <li>
+                    <code>denomination</code>: string (optional, defaults to
+                    "USD")
+                  </li>
                   <li>
                     Arbitrary key/value pairs and/or neo4j-safed objects up to
                     max size of 2kb
@@ -304,7 +311,9 @@
                 <ul>
                   <li>Creates AssetMarker nodes with a shared GLid</li>
                   <li>Each AssetMarker has a single CR and DR relationship</li>
-                  <li>The sum of CR amounts must equal the sum of DR amounts</li>
+                  <li>
+                    The sum of CR amounts must equal the sum of DR amounts
+                  </li>
                 </ul>
               </div>
               <div class="endpoint-example">
@@ -442,14 +451,22 @@
               <div class="endpoint-params">
                 <h5>Parameters:</h5>
                 <ul>
-                  <li><code>paymentAccountID</code>: string - Account ID to receive payment</li>
                   <li>
-                    <code>AssetMarkerData</code>: Object - Data for invoice items
+                    <code>paymentAccountID</code>: string - Account ID to
+                    receive payment
+                  </li>
+                  <li>
+                    <code>AssetMarkerData</code>: Object - Data for invoice
+                    items
                     <ul>
                       <li><code>items</code>: Array of item objects</li>
                       <li><code>total</code>: number - Total amount</li>
-                      <li><code>currency</code>: string - Currency denomination</li>
-                      <li><code>notes</code>: string (optional) - Additional notes</li>
+                      <li>
+                        <code>currency</code>: string - Currency denomination
+                      </li>
+                      <li>
+                        <code>notes</code>: string (optional) - Additional notes
+                      </li>
                     </ul>
                   </li>
                 </ul>
@@ -458,7 +475,9 @@
                 <h5>Operations:</h5>
                 <ul>
                   <li>Creates an Invoice node with the specified properties</li>
-                  <li>Creates a CREDITS_TO relationship to the payment account</li>
+                  <li>
+                    Creates a CREDITS_TO relationship to the payment account
+                  </li>
                   <li>Digitally signs the invoice</li>
                   <li>Generates a QR code link for the invoice</li>
                 </ul>
@@ -540,35 +559,65 @@
           <div id="credex-endpoints" class="tab-content">
             <h3>Credex Endpoints</h3>
             <p>
-              These endpoints manage credit exchange transactions in the Vimbiso Market.
+              These endpoints manage credit exchange transactions in the Vimbiso
+              Market.
             </p>
 
             <div class="endpoint-card">
               <h4>/createCredex</h4>
               <p class="endpoint-description">
-                Create a new credex transaction, optionally executing an invoice.
+                Create a new credex transaction, optionally executing an
+                invoice.
               </p>
               <div class="endpoint-params">
                 <h5>Parameters:</h5>
                 <ul>
-                  <li><code>issuerAccountID</code>: string - Account issuing the credex</li>
-                  <li><code>receiverAccountID</code>: string - Account receiving the credex</li>
-                  <li><code>Denomination</code>: string - Currency denomination</li>
-                  <li><code>InitialAmount</code>: number - Amount of the credex</li>
+                  <li>
+                    <code>issuerAccountID</code>: string - Account issuing the
+                    credex
+                  </li>
+                  <li>
+                    <code>receiverAccountID</code>: string - Account receiving
+                    the credex
+                  </li>
+                  <li>
+                    <code>Denomination</code>: string - Currency denomination
+                  </li>
+                  <li>
+                    <code>InitialAmount</code>: number - Amount of the credex
+                  </li>
                   <li><code>credexType</code>: string - Type of credex</li>
-                  <li><code>OFFERSorREQUESTS</code>: string - "OFFERS" or "REQUESTS"</li>
-                  <li><code>securedCredex</code>: boolean - Whether the credex is secured</li>
-                  <li><code>dueDate</code>: string (optional) - Due date for unsecured credex</li>
-                  <li><code>invoiceID</code>: string (optional) - ID of invoice to execute</li>
+                  <li>
+                    <code>OFFERSorREQUESTS</code>: string - "OFFERS" or
+                    "REQUESTS"
+                  </li>
+                  <li>
+                    <code>securedCredex</code>: boolean - Whether the credex is
+                    secured
+                  </li>
+                  <li>
+                    <code>dueDate</code>: string (optional) - Due date for
+                    unsecured credex
+                  </li>
+                  <li>
+                    <code>invoiceID</code>: string (optional) - ID of invoice to
+                    execute
+                  </li>
                 </ul>
               </div>
               <div class="endpoint-operations">
                 <h5>Operations:</h5>
                 <ul>
                   <li>Creates a Credex node with the specified properties</li>
-                  <li>If invoiceID is provided, creates an EXECUTES relationship to the Invoice</li>
+                  <li>
+                    If invoiceID is provided, creates an EXECUTES relationship
+                    to the Invoice
+                  </li>
                   <li>Sets the GLid field on the Credex node</li>
-                  <li>Creates appropriate relationships between accounts and the Credex</li>
+                  <li>
+                    Creates appropriate relationships between accounts and the
+                    Credex
+                  </li>
                 </ul>
               </div>
               <div class="endpoint-example">
