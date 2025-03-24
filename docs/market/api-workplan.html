@@ -43,6 +43,9 @@
           <li class="nav-item active">
             <a href="api-workplan.html">API Implementation</a>
           </li>
+          <li class="nav-item">
+            <a href="client-workplan.html">Client Implementation</a>
+          </li>
         </ul>
       </div>
     </nav>
@@ -479,124 +482,7 @@ SET
           </div>
 
           <div class="phase-container">
-            <h4>Phase 7: Fix Critical Swagger Documentation Mismatch</h4>
-            <div class="phase-details">
-              <h5>11. Address Fundamental Swagger Documentation Issues</h5>
-              <p>
-                <strong>Critical Problem:</strong> The Swagger documentation
-                across many routes is fundamentally incorrect and does not match
-                the actual implementation:
-              </p>
-              <ul>
-                <li>
-                  Many routes return full dashboard data with accounts, but the
-                  Swagger documentation doesn't mention accounts at all
-                </li>
-                <li>
-                  The actual implementation returns a standardized dashboard
-                  structure, but this is not reflected in the documentation
-                </li>
-                <li>
-                  Routes that use the getDashboardData utility function all
-                  return the same dashboard structure, but their Swagger
-                  documentation varies wildly
-                </li>
-                <li>
-                  Some routes document dashboard properties directly at the root
-                  level, while the actual implementation uses nested objects
-                </li>
-                <li>
-                  The newly added accountsInternal field is completely missing
-                  from most route documentation
-                </li>
-              </ul>
-
-              <p>
-                <strong>Solution:</strong> Comprehensive Swagger documentation
-                overhaul:
-              </p>
-              <ul>
-                <li>
-                  Identify all routes that use the getDashboardData function
-                </li>
-                <li>
-                  Create a standardized dashboard schema that accurately
-                  reflects the actual implementation
-                </li>
-                <li>
-                  Update all route documentation to use this standardized schema
-                </li>
-                <li>
-                  Ensure all routes properly document the full dashboard
-                  structure, including accounts and accountsInternal
-                </li>
-              </ul>
-
-              <p>Routes requiring urgent updates:</p>
-              <ul>
-                <li><code>/login</code> - Member login endpoint</li>
-                <li><code>/v2/login</code> - Password-based login endpoint</li>
-                <li>
-                  <code>/onboardMember</code> - Member onboarding endpoint
-                </li>
-                <li><code>/getCredex</code> - Credex details endpoint</li>
-                <li><code>/createCredex</code> - Credex creation endpoint</li>
-                <li>All other routes that use the getDashboardData function</li>
-              </ul>
-
-              <p>Implementation approach:</p>
-              <ul>
-                <li>
-                  Create a standardized dashboard schema that includes all
-                  properties returned by getDashboardData
-                </li>
-                <li>
-                  Update each route's Swagger documentation to use this
-                  standardized schema
-                </li>
-                <li>
-                  Ensure consistency across all routes by using the same schema
-                  structure
-                </li>
-                <li>
-                  Verify that the documentation accurately reflects the actual
-                  API responses
-                </li>
-              </ul>
-
-              <h5>12. Implement AccountInternal Dashboard Integration</h5>
-              <ul>
-                <li>Add AccountInternal data to the dashboard response</li>
-                <li>
-                  Update the Swagger documentation to include accountsInternal
-                  in all relevant routes
-                </li>
-              </ul>
-
-              <p>Key implementation details:</p>
-              <ul>
-                <li>
-                  Create AccountInternalRepository with methods to find internal
-                  accounts by member ID
-                </li>
-                <li>
-                  Implement AccountInternalDashboardService to retrieve internal
-                  account data
-                </li>
-                <li>
-                  Update dashboardUtils.ts to include accountsInternal in the
-                  dashboard response
-                </li>
-                <li>
-                  Update all relevant Swagger documentation to include
-                  accountsInternal
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="phase-container">
-            <h4>Phase 8: S3 Implementation for AssetMarkers ✅</h4>
+            <h4>Phase 7: S3 Implementation for AssetMarkers ✅</h4>
             <div class="phase-details">
               <h5>13. Create S3 Infrastructure for AssetMarkers ✅</h5>
               <ul>
@@ -755,7 +641,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
           </div>
 
           <div class="phase-container">
-            <h4>Phase 9: Integration and Testing</h4>
+            <h4>Phase 8: Integration and Testing</h4>
             <div class="phase-details">
               <h5>16. Integration Testing</h5>
               <ul>
@@ -774,6 +660,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
                     <strong>Member Onboarding</strong> - Successfully tested
                     creating new members with personal accounts. Eg:
                     <pre>npm test onboardmember John Doe 1234567890 USD</pre>
+                    <pre>npm test login 1234567890</pre>
                   </li>
                   <li>
                     <strong>Vendor Enablement</strong> - Successfully tested
@@ -795,6 +682,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
                     <strong>Image Upload</strong> - Successfully tested
                     uploading and optimizing profile images with
                     <code>/uploadAndOptimizeJpg</code> endpoint
+                    <pre><code>npm test uploadandoptimizejpg token local/image/url/jpg "profile_pic" "accountID" "accountID"</code></pre>
                     <ul>
                       <li>
                         Verified creation of original, 200px, and 600px versions
@@ -812,28 +700,31 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
                   </li>
                 </ul>
 
-                <h6>Test Frontier 🔍</h6>
+                <h6>Completed Tests (continued) ✅</h6>
                 <ul>
                   <li>
-                    <strong>Profile Picture Relationships</strong> - Testing
-                    connecting profile pictures to member profiles with
-                    <code>/editMember</code> endpoint
+                    <strong>Profile Picture Relationships</strong> - Successfully tested
+                    connecting multiple profile pictures to member profiles with
+                    <code>/connectMultipleAssets</code> endpoint
+                    <pre>npm test connectMultipleAssets token assetID1,memberID,PROFILE_PIC_ORIGINAL_JPG assetID2,memberID,PROFILE_PIC_200_JPG assetID3,memberID,PROFILE_PIC_600_JPG</pre>
                     <ul>
                       <li>
-                        Need to verify PROFILE_PIC_ORIGINAL_JPG relationship
-                        creation
+                        Verified PROFILE_PIC_ORIGINAL_JPG relationship creation
                       </li>
                       <li>
-                        Need to verify PROFILE_PIC_200_JPG relationship creation
+                        Verified PROFILE_PIC_200_JPG relationship creation
                       </li>
                       <li>
-                        Need to verify PROFILE_PIC_600_JPG relationship creation
+                        Verified PROFILE_PIC_600_JPG relationship creation
+                      </li>
+                      <li>
+                        Confirmed all connections can be made in a single API call
                       </li>
                     </ul>
                   </li>
                 </ul>
 
-                <h6>Remaining Tests 📋</h6>
+                <h6>Test Frontier 🔍</h6>
                 <ul>
                   <li>
                     <strong>Product Listing Creation</strong> - Test creating
@@ -878,6 +769,73 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
                 <a href="../develop/api_reference.html"
                   >API Documentation Standards</a
                 >
+              </p>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 9: Client Implementation Guidelines</h4>
+            <div class="phase-details">
+              <h5>18. Client-Side Implementation for Profile Pictures</h5>
+              <p>
+                Based on our testing, we've established a two-step process for setting profile pictures:
+              </p>
+              
+              <ol>
+                <li>
+                  <strong>Upload and Optimize Images</strong>: Use the <code>/uploadAndOptimizeJpg</code> endpoint to upload the image and create optimized versions.
+                  <ul>
+                    <li>The API automatically creates three versions of the image (original, 200px, and 600px)</li>
+                    <li>Each image version gets its own AssetMarker ID</li>
+                    <li>The response includes all three AssetMarker IDs</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Connect Multiple Assets</strong>: Use the <code>/connectMultipleAssets</code> endpoint to connect all three image versions to the member profile in a single API call.
+                  <ul>
+                    <li>This is more efficient than making three separate <code>/connectAsset</code> calls</li>
+                    <li>Ensures all three relationships are created atomically</li>
+                    <li>Simplifies client-side error handling</li>
+                  </ul>
+                </li>
+              </ol>
+              
+              <p>Client implementation example:</p>
+              <pre><code>// Step 1: Upload and optimize the image
+const uploadResponse = await api.post('/uploadAndOptimizeJpg', {
+  jpg: imageData,
+  name: "profile_picture",
+  drAccountID: onboardedAssetsAccountID,
+  crAccountID: profilePicturesAccountID
+});
+
+// Extract asset IDs from the response
+const originalAssetID = uploadResponse.data.data.action.details.originalAssetID;
+const asset200ID = uploadResponse.data.data.action.details.asset200ID;
+const asset600ID = uploadResponse.data.data.action.details.asset600ID;
+const memberID = currentUser.memberID;
+
+// Step 2: Connect all three assets to the member profile
+const connectResponse = await api.post('/connectMultipleAssets', {
+  connections: [
+    { assetID: originalAssetID, connectedID: memberID, relName: "PROFILE_PIC_ORIGINAL_JPG" },
+    { assetID: asset200ID, connectedID: memberID, relName: "PROFILE_PIC_200_JPG" },
+    { assetID: asset600ID, connectedID: memberID, relName: "PROFILE_PIC_600_JPG" }
+  ]
+});</code></pre>
+              
+              <p>
+                This approach provides several benefits:
+              </p>
+              <ul>
+                <li>Reduces the number of API calls needed to set a profile picture</li>
+                <li>Ensures all image versions are properly connected</li>
+                <li>Simplifies error handling and rollback procedures</li>
+                <li>Improves performance by reducing network overhead</li>
+              </ul>
+              
+              <p>
+                For detailed client implementation guidelines, see the <a href="client-workplan.html">Client Implementation Workplan</a>.
               </p>
             </div>
           </div>

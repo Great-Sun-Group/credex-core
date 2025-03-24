@@ -328,7 +328,7 @@ export const connectAssetSchema = {
         message: "Valid request format",
       };
     },
-    required: true,
+    required: false, // Changed from true to false - __custom is a special field for validation logic, not a request field
   },
 };
 logger.debug("connectAssetSchema initialized");

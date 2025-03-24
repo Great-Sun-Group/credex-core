@@ -13,31 +13,31 @@ describe("connectAsset Test", () => {
 
     const headers = {
       "x-client-api-key": process.env.CLIENT_API_KEY || "",
-      "Authorization": `Bearer ${token}`
+      Authorization: `Bearer ${token}`,
     };
 
     // Build request body
     const requestBody = {
       assetID,
       connectedID,
-      relName
+      relName,
     };
 
-    console.log(`\nConnecting asset ${assetID} to ${connectedID} with relationship ${relName}`);
-    const response = await axios.post(
-      "/connectAsset",
-      requestBody,
-      { headers }
+    console.log(
+      `\nConnecting asset ${assetID} to ${connectedID} with relationship ${relName}`
     );
+    const response = await axios.post("/connectAsset", requestBody, {
+      headers,
+    });
 
     console.log(
       "connectAsset response:",
       JSON.stringify(response.data, null, 2)
     );
-    
+
     expect(response.status).toBe(200);
     expect(response.data.data.action.type).toBe("ASSET_CONNECTED");
-    
+
     // Print important information for the next step
     console.log("\n=== DATA FOR NEXT STEP ===");
     console.log(`Token: ${token}`);
