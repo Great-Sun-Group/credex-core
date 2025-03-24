@@ -4,18 +4,21 @@ variable "environment" {
 }
 
 variable "vpc_id" {
-  description = "The ID of the VPC"
+  description = "The ID of the VPC (optional for non-VPC deployments)"
   type        = string
+  default     = ""
 }
 
 variable "subnet_ids" {
-  description = "List of subnet IDs for the SageMaker endpoint"
+  description = "List of subnet IDs for the SageMaker endpoint (optional for non-VPC deployments)"
   type        = list(string)
+  default     = []
 }
 
 variable "security_group_ids" {
-  description = "List of security group IDs for the SageMaker endpoint"
+  description = "List of security group IDs for the SageMaker endpoint (optional for non-VPC deployments)"
   type        = list(string)
+  default     = []
 }
 
 variable "memory_size_in_mb" {
