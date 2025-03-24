@@ -29,31 +29,7 @@ resource "aws_iam_role_policy_attachment" "s3_access" {
 
 resource "aws_iam_role_policy_attachment" "ecr_access" {
   role       = aws_iam_role.sagemaker_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonECR-FullAccess"
-}
-
-# Add inline policy for ECR access
-resource "aws_iam_role_policy" "ecr_access_policy" {
-  name   = "ECRAccessPolicy"
-  role   = aws_iam_role.sagemaker_execution_role.name
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage",
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:GetAuthorizationToken",
-          "ecr:DescribeRepositories",
-          "ecr:ListImages",
-          "ecr:DescribeImages"
-        ],
-        Resource = "*"
-      }
-    ]
-  })
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
 # SageMaker model

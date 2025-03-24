@@ -12,8 +12,8 @@ module "deepseek_serverless" {
   max_concurrency    = 5
   
   # Container configuration - these values need to be provided during deployment
-  # Using a public Docker Hub container to avoid ECR permission issues
-  container_image    = "huggingface/pytorch-inference:1.13.1-transformers4.26.0-cpu-py39-ubuntu20.04"
+  # Using the correct AWS-managed container for af-south-1 region
+  container_image    = "626614931356.dkr.ecr.af-south-1.amazonaws.com/huggingface-pytorch-inference:1.13.1-transformers4.26.0-cpu-py39-ubuntu20.04"
   model_data_url     = "s3://deepseek-model-${var.environment}/deepseek-coder-6.7b/model.tar.gz"
 }
 
