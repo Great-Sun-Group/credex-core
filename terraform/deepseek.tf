@@ -12,7 +12,8 @@ module "deepseek_serverless" {
   max_concurrency    = 5
   
   # Container configuration - these values need to be provided during deployment
-  container_image    = "763104351884.dkr.ecr.af-south-1.amazonaws.com/huggingface-pytorch-inference:1.13.1-transformers4.26.0-gpu-py39-cu117-ubuntu20.04"
+  # Using CPU-based container as SageMaker Serverless doesn't support GPU
+  container_image    = "763104351884.dkr.ecr.af-south-1.amazonaws.com/huggingface-pytorch-inference:1.13.1-transformers4.26.0-cpu-py39-ubuntu20.04"
   model_data_url     = "s3://deepseek-model-${var.environment}/deepseek-coder-6.7b/model.tar.gz"
 }
 

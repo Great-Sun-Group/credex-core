@@ -89,12 +89,54 @@ DEEPSEEK_API_KEY</code></pre>
 
       <h3>3. IAM Permissions</h3>
       <p>
-        The deployment requires specific IAM permissions defined in <code>terraform/iam_sagemaker.tf</code>:
+        The deployment requires specific IAM permissions defined in <code>terraform/iam_sagemaker.tf</code> and <code>docs/develop/deployment/credex-core-permissions.json</code>:
       </p>
       <ul>
-        <li>Permission to invoke SageMaker endpoints</li>
-        <li>Permission to describe endpoints for status checking</li>
+        <li>Permission to create, manage, and invoke SageMaker endpoints</li>
+        <li>Permission to create and manage SageMaker models</li>
+        <li>Permission to add and manage tags on SageMaker resources</li>
+        <li>Permission to create service-linked roles for SageMaker</li>
       </ul>
+      
+      <p>
+        The following SageMaker permissions are required in your IAM policy:
+      </p>
+      <pre><code>
+"sagemaker:CreateModel",
+"sagemaker:CreateEndpoint",
+"sagemaker:CreateEndpointConfig",
+"sagemaker:DeleteModel",
+"sagemaker:DeleteEndpoint",
+"sagemaker:DeleteEndpointConfig",
+"sagemaker:DescribeModel",
+"sagemaker:DescribeEndpoint",
+"sagemaker:DescribeEndpointConfig",
+"sagemaker:ListModels",
+"sagemaker:ListEndpoints",
+"sagemaker:ListEndpointConfigs",
+"sagemaker:InvokeEndpoint",
+"sagemaker:AddTags",
+"sagemaker:DeleteTags",
+"sagemaker:ListTags",
+"sagemaker:UpdateEndpoint",
+"sagemaker:UpdateEndpointWeightsAndCapacities"
+      </code></pre>
+      
+      <p>
+        Additionally, you need permission to create a service-linked role for SageMaker:
+      </p>
+      <pre><code>
+{
+  "Effect": "Allow",
+  "Action": "iam:CreateServiceLinkedRole",
+  "Resource": "arn:aws:iam::*:role/aws-service-role/sagemaker.amazonaws.com/AWSServiceRoleForSageMaker",
+  "Condition": {
+    "StringLike": {
+      "iam:AWSServiceName": "sagemaker.amazonaws.com"
+    }
+  }
+}
+      </code></pre>
 
       <h2>Deployment Process</h2>
 
@@ -189,8 +231,8 @@ docker-compose up -d
         </tr>
         <tr>
           <td>container_image</td>
-          <td>Docker image for the model</td>
-          <td>HuggingFace PyTorch Inference</td>
+          <td>Docker image for the model (CPU-based as SageMaker Serverless doesn't support GPU)</td>
+          <td>HuggingFace PyTorch Inference (CPU)</td>
         </tr>
         <tr>
           <td>model_data_url</td>
