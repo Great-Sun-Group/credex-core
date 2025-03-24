@@ -209,11 +209,11 @@ async function connectProfilePictures(assetIDs) {
     const memberID = currentUser.memberID;
     
     const response = await api.post('/connectMultipleAssets', {
-      connections: [
-        { assetID: originalAssetID, connectedID: memberID, relName: "PROFILE_PIC_ORIGINAL_JPG" },
-        { assetID: asset200ID, connectedID: memberID, relName: "PROFILE_PIC_200_JPG" },
-        { assetID: asset600ID, connectedID: memberID, relName: "PROFILE_PIC_600_JPG" }
-      ]
+  connections: [
+    { connectedID: memberID, assetID: originalAssetID, relName: "PROFILE_PIC_ORIGINAL_JPG" },
+    { connectedID: memberID, assetID: asset200ID, relName: "PROFILE_PIC_200_JPG" },
+    { connectedID: memberID, assetID: asset600ID, relName: "PROFILE_PIC_600_JPG" }
+  ]
     });
     
     return response.data;

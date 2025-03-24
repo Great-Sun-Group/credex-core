@@ -660,6 +660,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
                     <strong>Member Onboarding</strong> - Successfully tested
                     creating new members with personal accounts. Eg:
                     <pre>npm test onboardmember John Doe 1234567890 USD</pre>
+                    or if already onboarded:
                     <pre>npm test login 1234567890</pre>
                   </li>
                   <li>
@@ -703,10 +704,13 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
                 <h6>Completed Tests (continued) ✅</h6>
                 <ul>
                   <li>
-                    <strong>Profile Picture Relationships</strong> - Successfully tested
-                    connecting multiple profile pictures to member profiles with
+                    <strong>Profile Picture Relationships</strong> -
+                    Successfully tested connecting multiple profile pictures to
+                    member profiles with
                     <code>/connectMultipleAssets</code> endpoint
-                    <pre>npm test connectMultipleAssets token assetID1,memberID,PROFILE_PIC_ORIGINAL_JPG assetID2,memberID,PROFILE_PIC_200_JPG assetID3,memberID,PROFILE_PIC_600_JPG</pre>
+                    <pre>
+npm test connectMultipleAssets token memberID,assetID1,PROFILE_PIC_ORIGINAL_JPG memberID,assetID2,PROFILE_PIC_200_JPG memberID,assetID3,PROFILE_PIC_600_JPG</pre
+                    >
                     <ul>
                       <li>
                         Verified PROFILE_PIC_ORIGINAL_JPG relationship creation
@@ -718,7 +722,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
                         Verified PROFILE_PIC_600_JPG relationship creation
                       </li>
                       <li>
-                        Confirmed all connections can be made in a single API call
+                        Confirmed all connections can be made in a single API
+                        call
                       </li>
                     </ul>
                   </li>
@@ -778,28 +783,42 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
             <div class="phase-details">
               <h5>18. Client-Side Implementation for Profile Pictures</h5>
               <p>
-                Based on our testing, we've established a two-step process for setting profile pictures:
+                Based on our testing, we've established a two-step process for
+                setting profile pictures:
               </p>
-              
+
               <ol>
                 <li>
-                  <strong>Upload and Optimize Images</strong>: Use the <code>/uploadAndOptimizeJpg</code> endpoint to upload the image and create optimized versions.
+                  <strong>Upload and Optimize Images</strong>: Use the
+                  <code>/uploadAndOptimizeJpg</code> endpoint to upload the
+                  image and create optimized versions.
                   <ul>
-                    <li>The API automatically creates three versions of the image (original, 200px, and 600px)</li>
+                    <li>
+                      The API automatically creates three versions of the image
+                      (original, 200px, and 600px)
+                    </li>
                     <li>Each image version gets its own AssetMarker ID</li>
                     <li>The response includes all three AssetMarker IDs</li>
                   </ul>
                 </li>
                 <li>
-                  <strong>Connect Multiple Assets</strong>: Use the <code>/connectMultipleAssets</code> endpoint to connect all three image versions to the member profile in a single API call.
+                  <strong>Connect Multiple Assets</strong>: Use the
+                  <code>/connectMultipleAssets</code> endpoint to connect all
+                  three image versions to the member profile in a single API
+                  call.
                   <ul>
-                    <li>This is more efficient than making three separate <code>/connectAsset</code> calls</li>
-                    <li>Ensures all three relationships are created atomically</li>
+                    <li>
+                      This is more efficient than making three separate
+                      <code>/connectAsset</code> calls
+                    </li>
+                    <li>
+                      Ensures all three relationships are created atomically
+                    </li>
                     <li>Simplifies client-side error handling</li>
                   </ul>
                 </li>
               </ol>
-              
+
               <p>Client implementation example:</p>
               <pre><code>// Step 1: Upload and optimize the image
 const uploadResponse = await api.post('/uploadAndOptimizeJpg', {
@@ -823,19 +842,22 @@ const connectResponse = await api.post('/connectMultipleAssets', {
     { assetID: asset600ID, connectedID: memberID, relName: "PROFILE_PIC_600_JPG" }
   ]
 });</code></pre>
-              
-              <p>
-                This approach provides several benefits:
-              </p>
+
+              <p>This approach provides several benefits:</p>
               <ul>
-                <li>Reduces the number of API calls needed to set a profile picture</li>
+                <li>
+                  Reduces the number of API calls needed to set a profile
+                  picture
+                </li>
                 <li>Ensures all image versions are properly connected</li>
                 <li>Simplifies error handling and rollback procedures</li>
                 <li>Improves performance by reducing network overhead</li>
               </ul>
-              
+
               <p>
-                For detailed client implementation guidelines, see the <a href="client-workplan.html">Client Implementation Workplan</a>.
+                For detailed client implementation guidelines, see the
+                <a href="client-workplan.html">Client Implementation Workplan</a
+                >.
               </p>
             </div>
           </div>
@@ -847,6 +869,7 @@ const connectResponse = await api.post('/connectMultipleAssets', {
 (:Member {vendor: true|false})-[:OWNS]->(:Account)
 
 // Member to AssetMarker relationships
+(:Member)-[:OWNS]->(:AssetMarker)
 (:Member)-[:PROFILE_PIC_ORIGINAL_JPG]->(:AssetMarker)
 (:Member)-[:PROFILE_PIC_200_JPG]->(:AssetMarker)
 (:Member)-[:PROFILE_PIC_600_JPG]->(:AssetMarker)
