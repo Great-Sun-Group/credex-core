@@ -147,6 +147,21 @@ export const editMemberSchema = {
     },
     required: false,
   },
+  profile_picture_original_jpg: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: false,
+  },
+  profile_picture_200_jpg: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: false,
+  },
+  profile_picture_600_jpg: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: false,
+  },
 };
 logger.debug("editMemberSchema initialized");
 

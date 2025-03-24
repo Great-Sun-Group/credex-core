@@ -9,6 +9,7 @@ import AdminRoutes from "./api/Admin/routes";
 import DevAdminRoutes from "./api/DevAdmin/routes";
 import NotificationRoutes from "./api/Notifications";
 import InvoiceRoutes from "./api/Invoice/routes";
+import AssetMarkerRoutes from "./api/AssetMarker/routes";
 import logger, {
   addRequestId,
   expressLogger,
@@ -92,6 +93,7 @@ async function initializeApp() {
     app.use(AdminRoutes());
     app.use(RecurringRoutes());
     app.use(InvoiceRoutes());
+    app.use(AssetMarkerRoutes());
     app.use("/api", NotificationRoutes);
     logger.info("Route handlers applied for production modules");
 

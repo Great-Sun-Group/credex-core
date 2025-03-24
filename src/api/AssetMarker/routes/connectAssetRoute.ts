@@ -14,8 +14,8 @@ export default function connectAssetRoute() {
    * /connectAsset:
    *   post:
    *     tags: [AssetMarker]
-   *     summary: Connect an asset to another node
-   *     description: Connect an asset marker to another node with a specified relationship
+   *     summary: Connect one or more assets to other nodes
+   *     description: Connect one or more asset markers to other nodes with specified relationships
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -23,71 +23,160 @@ export default function connectAssetRoute() {
    *       content:
    *         application/json:
    *           schema:
-   *             type: object
-   *             required:
-   *               - assetID
-   *               - connectedID
-   *               - relName
-   *             properties:
-   *               assetID:
-   *                 type: string
-   *                 format: uuid
-   *                 description: ID of the asset marker to connect
-   *               connectedID:
-   *                 type: string
-   *                 format: uuid
-   *                 description: ID of the node to connect to
-   *               relName:
-   *                 type: string
-   *                 enum: [USED_IN, PROFILE_PIC_ORIGINAL_JPG, PROFILE_PIC_200_JPG, PROFILE_PIC_600_JPG]
-   *                 description: Name of the relationship to create
+   *             oneOf:
+   *               - type: object
+   *                 required:
+   *                   - assetID
+   *                   - connectedID
+   *                   - relName
+   *                 properties:
+   *                   assetID:
+   *                     type: string
+   *                     format: uuid
+   *                     description: ID of the asset marker to connect
+   *                   connectedID:
+   *                     type: string
+   *                     format: uuid
+   *                     description: ID of the node to connect to
+   *                   relName:
+   *                     type: string
+   *                     enum: [USED_IN, PROFILE_PIC_ORIGINAL_JPG, PROFILE_PIC_200_JPG, PROFILE_PIC_600_JPG]
+   *                     description: Name of the relationship to create
+   *               - type: object
+   *                 required:
+   *                   - connections
+   *                 properties:
+   *                   connections:
+   *                     type: array
+   *                     description: Array of connections to create
+   *                     items:
+   *                       type: object
+   *                       required:
+   *                         - assetID
+   *                         - connectedID
+   *                         - relName
+   *                       properties:
+   *                         assetID:
+   *                           type: string
+   *                           format: uuid
+   *                           description: ID of the asset marker to connect
+   *                         connectedID:
+   *                           type: string
+   *                           format: uuid
+   *                           description: ID of the node to connect to
+   *                         relName:
+   *                           type: string
+   *                           enum: [USED_IN, PROFILE_PIC_ORIGINAL_JPG, PROFILE_PIC_200_JPG, PROFILE_PIC_600_JPG]
+   *                           description: Name of the relationship to create
    *     responses:
    *       200:
-   *         description: Asset connected successfully
+   *         description: Asset(s) connected successfully
    *         content:
    *           application/json:
    *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: Asset connected successfully
-   *                 data:
-   *                   type: object
+   *               oneOf:
+   *                 - type: object
    *                   properties:
-   *                     action:
+   *                     message:
+   *                       type: string
+   *                       example: Asset connected successfully
+   *                     data:
    *                       type: object
    *                       properties:
-   *                         id:
-   *                           type: string
-   *                           format: uuid
-   *                           description: The asset marker ID
-   *                         type:
-   *                           type: string
-   *                           enum: [ASSET_CONNECTED]
-   *                           description: The type of action performed
-   *                         timestamp:
-   *                           type: string
-   *                           format: date-time
-   *                           description: When the action occurred
-   *                         actor:
-   *                           type: string
-   *                           format: uuid
-   *                           description: ID of the member who performed the connection
-   *                         details:
+   *                         action:
    *                           type: object
    *                           properties:
-   *                             assetID:
+   *                             id:
    *                               type: string
    *                               format: uuid
-   *                             connectedID:
+   *                               description: The asset marker ID
+   *                             type:
+   *                               type: string
+   *                               enum: [ASSET_CONNECTED]
+   *                               description: The type of action performed
+   *                             timestamp:
+   *                               type: string
+   *                               format: date-time
+   *                               description: When the action occurred
+   *                             actor:
    *                               type: string
    *                               format: uuid
-   *                             relName:
-   *                               type: string
-   *                     dashboard:
+   *                               description: ID of the member who performed the connection
+   *                             details:
+   *                               type: object
+   *                               properties:
+   *                                 assetID:
+   *                                   type: string
+   *                                   format: uuid
+   *                                 connectedID:
+   *                                   type: string
+   *                                   format: uuid
+   *                                 relName:
+   *                                   type: string
+   *                         dashboard:
+   *                           type: object
+   *                           description: Current state of the member dashboard
+   *                 - type: object
+   *                   properties:
+   *                     message:
+   *                       type: string
+   *                       example: Connected 3 assets successfully
+   *                     data:
    *                       type: object
-   *                       description: Current state of the member dashboard
+   *                       properties:
+   *                         action:
+   *                           type: object
+   *                           properties:
+   *                             id:
+   *                               type: string
+   *                               format: uuid
+   *                               description: The member ID
+   *                             type:
+   *                               type: string
+   *                               enum: [MULTIPLE_ASSETS_CONNECTED]
+   *                               description: The type of action performed
+   *                             timestamp:
+   *                               type: string
+   *                               format: date-time
+   *                               description: When the action occurred
+   *                             actor:
+   *                               type: string
+   *                               format: uuid
+   *                               description: ID of the member who performed the connections
+   *                             details:
+   *                               type: object
+   *                               properties:
+   *                                 totalConnections:
+   *                                   type: integer
+   *                                   description: Total number of connections attempted
+   *                                 successfulConnections:
+   *                                   type: integer
+   *                                   description: Number of successful connections
+   *                                 failedConnections:
+   *                                   type: integer
+   *                                   description: Number of failed connections
+   *                                 connections:
+   *                                   type: array
+   *                                   description: Details of each connection
+   *                                   items:
+   *                                     type: object
+   *                                     properties:
+   *                                       assetID:
+   *                                         type: string
+   *                                         format: uuid
+   *                                       connectedID:
+   *                                         type: string
+   *                                         format: uuid
+   *                                       relName:
+   *                                         type: string
+   *                                       success:
+   *                                         type: boolean
+   *                                       error:
+   *                                         type: string
+   *                                         description: Error message if the connection failed
+   *                         dashboard:
+   *                           type: object
+   *                           description: Current state of the member dashboard
    *       400:
    *         description: Invalid input data
    *         content:

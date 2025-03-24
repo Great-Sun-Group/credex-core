@@ -20,7 +20,7 @@ export default async function UpdateMemberTierService(
     throw new AdminError('The memberID is required', 'INVALID_ID', ErrorCodes.Admin.INVALID_ID);
   }
 
-  if (newTier < 1 || newTier > 5) {
+  if (newTier < 1 || newTier > 8) {
     logger.warn('Invalid member tier value', { memberID, newTier });
     throw new AdminError('New member tier must be between 1 and 5', 'INVALID_ID', ErrorCodes.Admin.INVALID_ID);
   }

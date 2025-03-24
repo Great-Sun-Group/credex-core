@@ -86,6 +86,16 @@ export async function DBinitialization(): Promise<void> {
         requestId
       );
 
+      // Create initial member
+      const collen = await createInitialMember(
+        "Collen",
+        "Ndlovu",
+        "353834140206",
+        "USD",
+        false, // DCO participant
+        requestId
+      );
+
       // Create initial accounts
       const credexFoundationID = await createInitialAccount(
         rdubs.onboardedMemberID,
@@ -109,16 +119,22 @@ export async function DBinitialization(): Promise<void> {
         },
         requestId
       );
-      const greatSunOpsID = await createInitialAccount(
-        rdubs.onboardedMemberID,
-        "OPERATIONS",
-        "Great Sun Financial: Operations",
-        "GREATSUN_OPS",
-        "CAD",
+      const ndlovuTrustID = await createInitialTrustAccount(
+        collen.onboardedMemberID,
+        "Love Achingly Trust CAD", // accountName
+        "LOVE_TRUST_CAD", // accountHandle
+        "BANK", // subtype
+        "USD", // denomination
+        {
+          jurisdiction: "CA",
+          accountNumber: "4394129",
+          transitNumber: "23459",
+          branchNumber: "015",
+        },
         requestId
       );
 
-      // Create relationships between foundation and trust accounts
+      // sets isCredexFoundation = true
       await createCredexFoundation(
         memberSession,
         credexFoundationID,

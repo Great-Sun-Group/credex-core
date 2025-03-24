@@ -14,16 +14,17 @@ export async function EditAccountInternalController(
   next: NextFunction
 ): Promise<void> {
   const session = ledgerSpaceDriver.session();
-  
+
   try {
     logger.info("EditAccountInternalController called", {
       controller: "EditAccountInternalController",
       body: req.body,
     });
 
-    const { accountID, accountName, accountHandle, accountDescription } = req.body;
-    const memberID = req.user?.id;
-    
+    const { accountID, accountName, accountHandle, accountDescription } =
+      req.body;
+    const memberID = req.user?.memberID;
+
     if (!memberID) {
       throw new Error("User ID not found in request");
     }
@@ -115,7 +116,7 @@ export async function EditAccountInternalController(
             accountHandle: account.accountHandle,
             accountDescription: account.accountDescription,
             ownerID: memberID,
-          }
+          },
         },
       },
     });

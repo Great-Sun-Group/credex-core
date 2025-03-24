@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { logInfo, logError } from "../utils/logger";
+import { logInfo, logError, logDebug } from "../utils/logger";
 
 /**
  * Resize an image to a specific width
@@ -20,16 +20,17 @@ export async function resizeImage(
     quality?: number;
   } = {}
 ): Promise<Buffer> {
-  try {
-    const {
-      height,
-      fit = "inside",
-      position = "centre",
-      background = { r: 255, g: 255, b: 255, alpha: 1 },
-      withoutEnlargement = true,
-      quality = 80
-    } = options;
+  // Extract options outside try/catch to ensure they're in scope for both blocks
+  const {
+    height,
+    fit = "inside",
+    position = "centre",
+    background = { r: 255, g: 255, b: 255, alpha: 1 },
+    withoutEnlargement = true,
+    quality = 80
+  } = options;
 
+  try {
     const resizedImageBuffer = await sharp(imageBuffer)
       .resize({
         width,
@@ -42,17 +43,25 @@ export async function resizeImage(
       .jpeg({ quality })
       .toBuffer();
 
-    logInfo(`Image resized to ${width}px width`, {
+    logDebug(`Image resized to ${width}px width`, {
+      service: "imageService",
+      operation: "resizeImage",
       originalSize: imageBuffer.length,
       resizedSize: resizedImageBuffer.length,
       width,
-      height
+      ...(height !== undefined ? { height } : {}),
+      compressionRatio: imageBuffer.length > 0 ? 
+        (resizedImageBuffer.length / imageBuffer.length).toFixed(2) : 'N/A'
     });
 
     return resizedImageBuffer;
   } catch (error) {
     logError("Error resizing image", error instanceof Error ? error : new Error(String(error)), {
+      service: "imageService",
+      operation: "resizeImage",
       width,
+      ...(height !== undefined ? { height } : {}),
+      imageSize: imageBuffer.length,
       error: error instanceof Error ? error.message : String(error)
     });
     throw new Error(`Failed to resize image: ${error instanceof Error ? error.message : String(error)}`);
@@ -71,15 +80,23 @@ export async function optimizeJpeg(imageBuffer: Buffer, quality = 85): Promise<B
       .jpeg({ quality })
       .toBuffer();
 
-    logInfo(`Image optimized`, {
+    logDebug(`Image optimized`, {
+      service: "imageService",
+      operation: "optimizeJpeg",
       originalSize: imageBuffer.length,
       optimizedSize: optimizedImageBuffer.length,
-      quality
+      quality,
+      compressionRatio: imageBuffer.length > 0 ? 
+        (optimizedImageBuffer.length / imageBuffer.length).toFixed(2) : 'N/A'
     });
 
     return optimizedImageBuffer;
   } catch (error) {
     logError("Error optimizing JPEG", error instanceof Error ? error : new Error(String(error)), {
+      service: "imageService",
+      operation: "optimizeJpeg",
+      imageSize: imageBuffer.length,
+      quality,
       error: error instanceof Error ? error.message : String(error)
     });
     throw new Error(`Failed to optimize JPEG: ${error instanceof Error ? error.message : String(error)}`);
@@ -98,6 +115,12 @@ export async function processAssetMarkerImage(imageBuffer: Buffer): Promise<{
   size600: Buffer;
 }> {
   try {
+    logDebug("Starting AssetMarker image processing", {
+      service: "imageService",
+      operation: "processAssetMarkerImage",
+      originalSize: imageBuffer.length
+    });
+    
     // Optimize the original image
     const optimizedOriginal = await optimizeJpeg(imageBuffer);
     
@@ -115,6 +138,15 @@ export async function processAssetMarkerImage(imageBuffer: Buffer): Promise<{
       quality: 85
     });
     
+    logInfo("AssetMarker image processing complete", {
+      service: "imageService",
+      operation: "processAssetMarkerImage",
+      originalSize: imageBuffer.length,
+      optimizedOriginalSize: optimizedOriginal.length,
+      size200Size: size200.length,
+      size600Size: size600.length
+    });
+    
     return {
       original: optimizedOriginal,
       size200,
@@ -122,6 +154,9 @@ export async function processAssetMarkerImage(imageBuffer: Buffer): Promise<{
     };
   } catch (error) {
     logError("Error processing AssetMarker image", error instanceof Error ? error : new Error(String(error)), {
+      service: "imageService",
+      operation: "processAssetMarkerImage",
+      imageSize: imageBuffer.length,
       error: error instanceof Error ? error.message : String(error)
     });
     throw new Error(`Failed to process AssetMarker image: ${error instanceof Error ? error.message : String(error)}`);

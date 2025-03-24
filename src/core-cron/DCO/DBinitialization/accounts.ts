@@ -87,7 +87,7 @@ export async function createInitialTrustAccount(
 }
 
 /**
- * Creates initial relationships between accounts and members.
+ * Sets isCredexFoundation = true
  */
 export async function createCredexFoundation(
   { ledgerSpace }: DatabaseSessions,

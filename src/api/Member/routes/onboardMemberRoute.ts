@@ -143,26 +143,23 @@ export default function onboardMemberRoute() {
    *                         accounts:
    *                           type: array
    *                           description: List of accounts accessible to the member (initially just personal account)
+   *                         accountsInternal:
+   *                           type: array
+   *                           description: List of internal accounts owned by the member
    *                           items:
    *                             type: object
    *                             properties:
    *                               accountID:
    *                                 type: string
    *                                 format: uuid
+   *                                 description: Unique identifier for the internal account
    *                               accountName:
    *                                 type: string
-   *                               accountHandle:
-   *                                 type: string
+   *                                 description: Name of the internal account
    *                               accountType:
    *                                 type: string
-   *                                 enum: [PERSONAL, TRUST, OPERATIONS]
-   *                                 description: Type of the account (PERSONAL for new members)
-   *                               defaultDenom:
-   *                                 type: string
-   *                                 enum: [CXX, CAD, USD, XAU]
-   *                               isOwnedAccount:
-   *                                 type: boolean
-   *                                 description: Whether the member owns this account (true for personal account)
+   *                                 enum: [CONSUMPTION, PRODUCTION, DIGITAL_ASSET, PHYSICAL_ASSET]
+   *                                 description: Type of the internal account
    *                               sendOffersTo:
    *                                 type: object
    *                                 description: Member configured to receive offers for this account

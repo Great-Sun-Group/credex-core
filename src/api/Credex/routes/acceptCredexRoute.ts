@@ -84,7 +84,7 @@ export default function acceptCredexRoute() {
    *                               format: uuid
    *                     dashboard:
    *                       type: object
-   *                       description: Current state of the account dashboard
+   *                       description: Full dashboard state after the action
    *                       properties:
    *                         member:
    *                           type: object
@@ -112,74 +112,93 @@ export default function acceptCredexRoute() {
    *                             defaultDenom:
    *                               type: string
    *                               description: Member's default denomination
-   *                         account:
-   *                           type: object
-   *                           description: Account-level dashboard data
-   *                           properties:
-   *                             accountID:
-   *                               type: string
-   *                               format: uuid
-   *                             accountName:
-   *                               type: string
-   *                             accountHandle:
-   *                               type: string
-   *                             accountType:
-   *                               type: string
-   *                               enum: [PERSONAL, TRUST, OPERATIONS]
-   *                               description: Type of the account
-   *                             defaultDenom:
-   *                               type: string
-   *                               enum: [CXX, CAD, USD, XAU]
-   *                             isOwnedAccount:
-   *                               type: boolean
-   *                               description: Whether the member owns this account
-   *                             sendOffersTo:
-   *                               type: object
-   *                               description: Member configured to receive offers for this account
-   *                               properties:
-   *                                 memberID:
-   *                                   type: string
-   *                                   format: uuid
-   *                                 firstname:
-   *                                   type: string
-   *                                 lastname:
-   *                                   type: string
-   *                             balanceData:
-   *                               type: object
-   *                               description: Account balance information
-   *                               properties:
-   *                                 securedNetBalancesByDenom:
-   *                                   type: array
-   *                                   items:
+   *                         accounts:
+   *                           type: array
+   *                           description: List of accounts accessible to the member
+   *                           items:
+   *                             type: object
+   *                             properties:
+   *                               accountID:
+   *                                 type: string
+   *                                 format: uuid
+   *                               accountName:
+   *                                 type: string
+   *                               accountHandle:
+   *                                 type: string
+   *                               accountType:
+   *                                 type: string
+   *                                 enum: [PERSONAL, TRUST, OPERATIONS]
+   *                                 description: Type of the account
+   *                               defaultDenom:
+   *                                 type: string
+   *                                 enum: [CXX, CAD, USD, XAU]
+   *                               isOwnedAccount:
+   *                                 type: boolean
+   *                                 description: Whether the member owns this account
+   *                               sendOffersTo:
+   *                                 type: object
+   *                                 description: Member configured to receive offers for this account
+   *                                 properties:
+   *                                   memberID:
    *                                     type: string
-   *                                     description: Formatted balance with denomination (e.g. "100.00 USD")
-   *                                 unsecuredBalancesInDefaultDenom:
+   *                                     format: uuid
+   *                                   firstname:
+   *                                     type: string
+   *                                   lastname:
+   *                                     type: string
+   *                               balanceData:
+   *                                 type: object
+   *                                 description: Account balance information
+   *                                 properties:
+   *                                   securedNetBalancesByDenom:
+   *                                     type: array
+   *                                     items:
+   *                                       type: string
+   *                                       description: Formatted balance with denomination (e.g. "100.00 USD")
+   *                                   unsecuredBalancesInDefaultDenom:
+   *                                     type: object
+   *                                     properties:
+   *                                       totalPayables:
+   *                                         type: string
+   *                                         description: Total payables in account default denomination
+   *                                       totalReceivables:
+   *                                         type: string
+   *                                         description: Total receivables in account default denomination
+   *                                       netPayRec:
+   *                                         type: string
+   *                                         description: Net payables/receivables in account default denomination
+   *                                   netCredexAssetsInDefaultDenom:
+   *                                     type: string
+   *                                     description: Net credex assets in account default denomination
+   *                               pendingInData:
+   *                                 type: array
+   *                                 description: Pending incoming transactions
+   *                                 items:
    *                                   type: object
-   *                                   properties:
-   *                                     totalPayables:
-   *                                       type: string
-   *                                       description: Total payables in account default denomination
-   *                                     totalReceivables:
-   *                                       type: string
-   *                                       description: Total receivables in account default denomination
-   *                                     netPayRec:
-   *                                       type: string
-   *                                       description: Net payables/receivables in account default denomination
-   *                                 netCredexAssetsInDefaultDenom:
-   *                                   type: string
-   *                                   description: Net credex assets in account default denomination
-   *                             pendingInData:
-   *                               type: array
-   *                               description: Pending incoming transactions
-   *                               items:
-   *                                 type: object
-   *                                 description: Pending transaction details
-   *                             pendingOutData:
-   *                               type: array
-   *                               description: Pending outgoing transactions
-   *                               items:
-   *                                 type: object
-   *                                 description: Pending transaction details
+   *                                   description: Pending transaction details
+   *                               pendingOutData:
+   *                                 type: array
+   *                                 description: Pending outgoing transactions
+   *                                 items:
+   *                                   type: object
+   *                                   description: Pending transaction details
+   *                         accountsInternal:
+   *                           type: array
+   *                           description: List of internal accounts owned by the member
+   *                           items:
+   *                             type: object
+   *                             properties:
+   *                               accountID:
+   *                                 type: string
+   *                                 format: uuid
+   *                                 description: Unique identifier for the internal account
+   *                               accountName:
+   *                                 type: string
+   *                                 description: Name of the internal account
+   *                               accountType:
+   *                                 type: string
+   *                                 enum: [CONSUMPTION, PRODUCTION, DIGITAL_ASSET, PHYSICAL_ASSET]
+   *                                 description: Type of the internal account
    *       400:
    *         description: Invalid input data or Credex not in acceptable state
    *         content:

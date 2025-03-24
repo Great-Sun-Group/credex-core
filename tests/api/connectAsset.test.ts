@@ -1,7 +1,7 @@
 import axios from "../setup";
 
 describe("connectAsset Test", () => {
-  it("connects an asset to another node with a relationship", async () => {
+  it("connects an asset to another node with a specified relationship", async () => {
     const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
     const [token, assetID, connectedID, relName] = params;
 
@@ -16,14 +16,17 @@ describe("connectAsset Test", () => {
       "Authorization": `Bearer ${token}`
     };
 
-    console.log("\nConnecting asset...");
+    // Build request body
+    const requestBody = {
+      assetID,
+      connectedID,
+      relName
+    };
+
+    console.log(`\nConnecting asset ${assetID} to ${connectedID} with relationship ${relName}`);
     const response = await axios.post(
       "/connectAsset",
-      {
-        assetID,
-        connectedID,
-        relName
-      },
+      requestBody,
       { headers }
     );
 

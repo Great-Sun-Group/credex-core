@@ -17,6 +17,10 @@ services:
       DEV_ADMIN_KEY: ${DEV_ADMIN_KEY}
       # Network configuration
       NODE_OPTIONS: "--dns-result-order=ipv4first"
+      # AWS Configuration
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION:-af-south-1}
     # Environment variables are provided through Codespaces secrets or directly from the shell
     # No env_file directive to avoid errors when .env doesn't exist
     volumes:

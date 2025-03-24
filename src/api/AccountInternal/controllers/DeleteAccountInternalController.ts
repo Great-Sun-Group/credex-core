@@ -14,7 +14,7 @@ export async function DeleteAccountInternalController(
   next: NextFunction
 ): Promise<void> {
   const session = ledgerSpaceDriver.session();
-  
+
   try {
     logger.info("DeleteAccountInternalController called", {
       controller: "DeleteAccountInternalController",
@@ -22,8 +22,8 @@ export async function DeleteAccountInternalController(
     });
 
     const { accountID } = req.body;
-    const memberID = req.user?.id;
-    
+    const memberID = req.user?.memberID;
+
     if (!memberID) {
       throw new Error("User ID not found in request");
     }
@@ -52,7 +52,9 @@ export async function DeleteAccountInternalController(
 
     const assetCount = assetCheckResult.records[0].get("assetCount").toNumber();
     if (assetCount > 0) {
-      throw new Error("Cannot delete account with linked assets. Remove all assets first.");
+      throw new Error(
+        "Cannot delete account with linked assets. Remove all assets first."
+      );
     }
 
     // Delete the account
