@@ -232,7 +232,7 @@ docker-compose up -d
         <tr>
           <td>container_image</td>
           <td>Docker image for the model (CPU-based as SageMaker Serverless doesn't support GPU)</td>
-          <td>HuggingFace PyTorch Inference (CPU)</td>
+          <td>Public ECR HuggingFace PyTorch Inference (CPU)</td>
         </tr>
         <tr>
           <td>model_data_url</td>
@@ -331,54 +331,6 @@ docker-compose up -d
         <li>Optimizing cache settings based on usage patterns</li>
         <li>Adjusting serverless configuration based on performance metrics</li>
         <li>Monitoring costs and optimizing as needed</li>
-      </ul>
-
-      <h2>Troubleshooting</h2>
-
-      <h3>Common Issues</h3>
-      <ul>
-        <li>
-          <strong>Cold Start Latency</strong>
-          <ul>
-            <li>Symptom: First request after inactivity is slow</li>
-            <li>Solution: Implement a warming strategy or adjust client-side timeout settings</li>
-          </ul>
-        </li>
-        <li>
-          <strong>Connection Issues</strong>
-          <ul>
-            <li>Symptom: Proxy service cannot connect to SageMaker endpoint</li>
-            <li>Solution: Check IAM permissions and network configuration</li>
-          </ul>
-        </li>
-        <li>
-          <strong>Cache Issues</strong>
-          <ul>
-            <li>Symptom: Cache not working or high miss rate</li>
-            <li>Solution: Check Redis connection and cache key generation</li>
-          </ul>
-        </li>
-        <li>
-          <strong>Authentication Issues</strong>
-          <ul>
-            <li>Symptom: Receiving 401 Unauthorized responses</li>
-            <li>Solution: Verify the API key is correctly set in both the client request headers and the proxy service environment variables</li>
-          </ul>
-        </li>
-        <li>
-          <strong>AWS Credentials Issues</strong>
-          <ul>
-            <li>Symptom: Proxy service cannot invoke SageMaker endpoint</li>
-            <li>Solution: Ensure AWS credentials are correctly set in the environment variables</li>
-          </ul>
-        </li>
-        <li>
-          <strong>Memory Size Limitations</strong>
-          <ul>
-            <li>Symptom: Deployment fails with memory size error</li>
-            <li>Solution: Ensure memory_size_in_mb is set to one of the supported values (1024, 2048, 3072, 4096, 5120, 6144)</li>
-          </ul>
-        </li>
       </ul>
 
       <h3>Logs and Diagnostics</h3>
