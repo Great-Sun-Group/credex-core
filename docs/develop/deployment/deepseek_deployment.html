@@ -179,8 +179,8 @@ docker-compose up -d
         </tr>
         <tr>
           <td>memory_size_in_mb</td>
-          <td>Memory allocation for the serverless endpoint</td>
-          <td>16384 (16GB)</td>
+          <td>Memory allocation for the serverless endpoint (supported values: 1024, 2048, 3072, 4096, 5120, 6144)</td>
+          <td>6144 (6GB)</td>
         </tr>
         <tr>
           <td>max_concurrency</td>
@@ -252,9 +252,9 @@ docker-compose up -d
         <li><strong>Active hours</strong>: 50 hours/week = 215 hours/month</li>
         <li><strong>Requests per hour</strong>: ~100 requests/hour</li>
         <li><strong>Total requests</strong>: 21,500 requests/month</li>
-        <li><strong>Memory configuration</strong>: 16GB</li>
+        <li><strong>Memory configuration</strong>: 6GB</li>
         <li><strong>Average processing time</strong>: ~5 seconds per request</li>
-        <li><strong>Compute duration</strong>: 21,500 requests × 5 seconds × 16GB × $0.0000185 = <strong>$31.82/month</strong></li>
+        <li><strong>Compute duration</strong>: 21,500 requests × 5 seconds × 6GB × $0.0000185 = <strong>$11.93/month</strong></li>
       </ul>
 
       <h3>Additional Costs</h3>
@@ -266,7 +266,7 @@ docker-compose up -d
       </ul>
 
       <h3>Total Monthly Cost</h3>
-      <p><strong>$60-90/month</strong></p>
+      <p><strong>$40-70/month</strong></p>
 
       <h2>Monitoring and Maintenance</h2>
 
@@ -328,6 +328,13 @@ docker-compose up -d
           <ul>
             <li>Symptom: Proxy service cannot invoke SageMaker endpoint</li>
             <li>Solution: Ensure AWS credentials are correctly set in the environment variables</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Memory Size Limitations</strong>
+          <ul>
+            <li>Symptom: Deployment fails with memory size error</li>
+            <li>Solution: Ensure memory_size_in_mb is set to one of the supported values (1024, 2048, 3072, 4096, 5120, 6144)</li>
           </ul>
         </li>
       </ul>

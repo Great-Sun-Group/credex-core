@@ -19,9 +19,9 @@ variable "security_group_ids" {
 }
 
 variable "memory_size_in_mb" {
-  description = "The memory size for the serverless endpoint in MB"
+  description = "The memory size for the serverless endpoint in MB (supported values: 1024, 2048, 3072, 4096, 5120, 6144)"
   type        = number
-  default     = 16384  # 16GB
+  default     = 6144  # 6GB (maximum supported value)
 }
 
 variable "max_concurrency" {
