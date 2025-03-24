@@ -3,9 +3,10 @@ module "deepseek_serverless" {
   source = "./modules/sagemaker-serverless"
   
   environment        = var.environment
-  vpc_id             = module.connectors.vpc_id
-  subnet_ids         = module.connectors.private_subnet_ids
-  security_group_ids = [module.connectors.ecs_tasks_security_group_id]
+  # Not using VPC configuration for serverless endpoint to avoid compatibility issues
+  vpc_id             = ""
+  subnet_ids         = []
+  security_group_ids = []
   
   # Serverless configuration
   memory_size_in_mb  = 3072  # 3GB (maximum allowed by current quota)
