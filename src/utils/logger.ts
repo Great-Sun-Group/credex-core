@@ -163,9 +163,12 @@ export const addRequestId = (req: Request, res: Response, next: NextFunction) =>
 export const expressLogger = (req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   
-  // Log request with minimal info for large requests
-  const isLargeRequest = req.headers['content-length'] && 
-    parseInt(req.headers['content-length'] as string, 10) > 10000;
+  // Check if this is an image upload request
+  const isImageUpload = req.path.includes('/uploadAndOptimizeJpg') && req.body && req.body.jpg;
+  
+  // Log request with minimal info for large requests or image uploads
+  const isLargeRequest = (req.headers['content-length'] && 
+    parseInt(req.headers['content-length'] as string, 10) > 10000) || isImageUpload;
   
   if (isLargeRequest) {
     logDebug('Incoming large request', {
@@ -174,6 +177,7 @@ export const expressLogger = (req: Request, res: Response, next: NextFunction) =
       url: req.originalUrl,
       contentLength: req.headers['content-length'],
       contentType: req.headers['content-type'],
+      isImageUpload: isImageUpload,
       headers: sanitizeData(req.headers)
     });
   } else {
@@ -189,7 +193,7 @@ export const expressLogger = (req: Request, res: Response, next: NextFunction) =
   res.on("finish", () => {
     const duration = Date.now() - start;
     
-    // For large requests, don't log the body
+    // For large requests or image uploads, don't log the body
     if (isLargeRequest) {
       logInfo("HTTP Request completed", {
         requestId: req.id,
@@ -199,6 +203,7 @@ export const expressLogger = (req: Request, res: Response, next: NextFunction) =
         duration: `${duration}ms`,
         contentLength: req.headers['content-length'],
         contentType: req.headers['content-type'],
+        isImageUpload: isImageUpload,
         params: sanitizeData(req.params),
         query: sanitizeData(req.query),
         ip: req.ip,
@@ -225,15 +230,31 @@ export const expressLogger = (req: Request, res: Response, next: NextFunction) =
 
 // Error logger middleware
 export const errorLogger = (err: Error, req: Request, res: Response, next: NextFunction) => {
-  logError("Request Error", err, {
-    requestId: req.id,
-    method: req.method,
-    url: req.originalUrl,
-    body: sanitizeData(req.body),
-    params: sanitizeData(req.params),
-    query: sanitizeData(req.query),
-    headers: sanitizeData(req.headers),
-  });
+  // Check if this is an image upload request
+  const isImageUpload = req.path.includes('/uploadAndOptimizeJpg') && req.body && req.body.jpg;
+  
+  // For image uploads, don't log the body
+  if (isImageUpload) {
+    logError("Request Error", err, {
+      requestId: req.id,
+      method: req.method,
+      url: req.originalUrl,
+      isImageUpload: true,
+      params: sanitizeData(req.params),
+      query: sanitizeData(req.query),
+      headers: sanitizeData(req.headers),
+    });
+  } else {
+    logError("Request Error", err, {
+      requestId: req.id,
+      method: req.method,
+      url: req.originalUrl,
+      body: sanitizeData(req.body),
+      params: sanitizeData(req.params),
+      query: sanitizeData(req.query),
+      headers: sanitizeData(req.headers),
+    });
+  }
   next(err);
 };
 

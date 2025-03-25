@@ -342,6 +342,14 @@ body {
   margin-bottom: 1rem;
 }
 
+/* Account Handle */
+.account-handle {
+  font-size: 0.8em;
+  color: #fbb016; /* Orange color to match the header title */
+  font-weight: normal;
+  margin-left: 5px;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 768px) {
   .dual-nature {
