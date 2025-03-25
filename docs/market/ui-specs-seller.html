@@ -71,7 +71,7 @@
                   The first time a member goes to the market, they will see a
                   single screen with a button saying
                   <strong>"Open My Vimbiso Market Store"</strong>. When clicked,
-                  this button hits the <code>/sellinmarket</code> endpoint, then
+                  this button hits the <code>/sellInMarket</code> endpoint, then
                   takes member to Store.
                 </p>
               </div>
@@ -99,7 +99,7 @@
                     </li>
                     <li>
                       <strong>Create Credex Invoice</strong> section. This
-                      section loads all accounts with type PHYSICAL_ASSET
+                      section loads all accounts with type PHYSICAL_ASSET returned from dashboard
                     </li>
                     <li>
                       <strong>Add Product</strong> link when no PHYSICAL_ASSET
@@ -107,7 +107,7 @@
                     </li>
                     <li>
                       <strong>Generate Credex Invoice QR</strong> button - Hits
-                      <code>/generateInvoice</code>
+                      <code>/generateInvoice</code> and goes to QR screen
                     </li>
                     <li>
                       <strong>Navigation</strong> to Vimbiso Store Management
@@ -183,17 +183,18 @@
                   </p>
                   <h5>Components:</h5>
                   <ul>
+                    <li><code>/getAccountDashboard</code></li>
                     <li>
-                      <strong>Store Header</strong> section
+                      <strong>Store Header</strong> section 
                       <ul>
                         <li>Store name with thumbnail image on same line</li>
-                        <li>Edit buttons for both name and image</li>
+                        <li>Edit buttons for both name and image <code>/editAccount, /UploadAndOptimizeJpg, /updateProfilePics</code></li>
                       </ul>
                     </li>
                     <li>
                       <strong>Store Description</strong> section (displayed below accounts)
                       <ul>
-                        <li>Store description with edit button</li>
+                        <li>Store description with edit button <code>/editAccount</code></li>
                       </ul>
                     </li>
                     <li>
@@ -374,8 +375,9 @@
                   <p>This screen allows vendors to manage a Product account.</p>
                   <h5>Components:</h5>
                   <ul>
+                    <li><code>/getAccountInternalData</code></li>
                     <li><strong>Account Name</strong> with edit button</li>
-                    <li>
+                    <li> 
                       <strong>Media</strong>
                       <ul>
                         <li>
@@ -397,7 +399,7 @@
                     <li>
                       <strong>Controls</strong>
                       <ul>
-                        <li><strong>Save</strong> button</li>
+                        <li><strong>Save</strong> button <code>/editAccountInternal</code></li>
                         <li>
                           <strong>Adjust Balances</strong> button (to be added
                           later)
@@ -477,7 +479,8 @@ Fresh, organic tomatoes grown in Ruwa. Available year-round with peak harvest in
                     <li>
                       <strong>Profile Information</strong>
                       <ul>
-                        <li>Profile picture</li>
+                      <li>Returned with dashboard on <code>/login</code> etc</li>
+                      <li>Profile picture</li>
                         <li>
                           Profile pic add button (triggers
                           <code>/uploadAndOptimizeJpg</code> then
