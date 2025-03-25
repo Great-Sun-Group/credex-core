@@ -95,6 +95,9 @@ export enum ApiActionType {
 
   // Trust account actions
   TRUST_ACCOUNT_CREATED = "TRUST_ACCOUNT_CREATED",
+  
+  // Store actions
+  STORE_STATUS_UPDATED = "STORE_STATUS_UPDATED",
 }
 
 /**
@@ -167,6 +170,11 @@ export interface AccountActionDetails {
   ownerID?: string;
   memberIdAuthorized?: string;
   memberIdUnauthorized?: string;
+  storeOpen?: boolean;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
   balances?: {
     securedNetBalancesByDenom?: string[];
     unsecuredBalancesInDefaultDenom?: {

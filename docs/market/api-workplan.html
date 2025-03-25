@@ -146,10 +146,13 @@
             <li>
               <code>/disconnectAsset</code> - Remove asset relationships ✅
             </li>
+            <li>
+              <code>/updateProfilePics</code> - Update profile pictures in a single call ✅
+            </li>
           </ol>
 
           <h4>Invoice Endpoints (New Module)</h4>
-          <ol start="11">
+          <ol start="12">
             <li>
               <code>/generateInvoice</code> - Generate transaction invoices with
               digital signatures ✅
@@ -226,6 +229,7 @@
                   Handle profile picture relationships using AssetMarker
                   connections
                 </li>
+                <li>Support all four image sizes (original, thumbnail, 200px, 600px)</li>
                 <li>Ensure proper error handling for invalid inputs</li>
               </ul>
 
@@ -318,6 +322,10 @@
                   <strong>Revised Approach:</strong> After review, we've decided
                   to maintain simpler single CR/DR relationships rather than
                   implementing multiple CR/DR relationships.
+                </li>
+                <li>
+                  <strong>Image Optimization:</strong> The system now creates four versions of uploaded images:
+                  original, thumbnail, 200px, and 600px, each with its own AssetMarker node.
                 </li>
                 <li>
                   To maintain the same functionality, we will add a
@@ -579,7 +587,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
                   </li>
                   <li>
                     <code>processAssetMarkerImage</code>: Create original,
-                    200px, and 600px versions
+                    thumbnail, 200px, and 600px versions
                   </li>
                 </ul>
                 <li>
@@ -631,7 +639,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
               <ul>
                 <li>Storing profile pictures for members</li>
                 <li>Storing account pictures for product listings</li>
-                <li>Automatic creation of optimized versions (200px, 600px)</li>
+                <li>Automatic creation of optimized versions (thumbnail, 200px, 600px)</li>
                 <li>Secure access to images through pre-signed URLs</li>
                 <li>
                   Proper accounting relationships through AssetMarker nodes
@@ -641,9 +649,60 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
           </div>
 
           <div class="phase-container">
-            <h4>Phase 8: Integration and Testing</h4>
+            <h4>Phase 8: Relationship Direction Update ✅</h4>
             <div class="phase-details">
-              <h5>16. Integration Testing</h5>
+              <h5>16. Update Relationship Direction for Profile Pictures</h5>
+              <ul>
+                <li>
+                  Review and update relationship direction for consistency ✅
+                </li>
+                <li>
+                  Implement the UpdateProfilePicsController for managing profile pictures ✅
+                </li>
+                <li>
+                  Update client implementation guidelines ✅
+                </li>
+              </ul>
+
+              <p>Key improvements:</p>
+              <ul>
+                <li>
+                  <strong>Consistent Direction:</strong> All relationships now follow the Source -> AssetMarker direction
+                  (e.g., Member -> AssetMarker, Account -> AssetMarker)
+                </li>
+                <li>
+                  <strong>Clear Variable Names:</strong> Updated variable names in controllers to be more intuitive
+                  (sourceNodeID, assetNodeID, relType)
+                </li>
+                <li>
+                  <strong>Improved Error Handling:</strong> Better error messages when relationships don't exist or
+                  can't be created
+                </li>
+                <li>
+                  <strong>Simplified API:</strong> Created a dedicated endpoint for updating all profile picture relationships
+                  in a single API call
+                </li>
+              </ul>
+
+              <p>Implementation details:</p>
+              <pre><code>// UpdateProfilePicsController handles updating all profile picture relationships
+// in a single API call, with proper disconnection of existing relationships
+export async function UpdateProfilePicsController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  // Step 1: Find existing profile picture relationships
+  // Step 2: Disconnect existing relationships
+  // Step 3: Connect new assets with appropriate relationship types
+}</code></pre>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 9: Integration and Testing</h4>
+            <div class="phase-details">
+              <h5>17. Integration Testing</h5>
               <ul>
                 <li>Test each endpoint individually</li>
                 <li>
@@ -686,7 +745,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
                     <pre><code>npm test uploadandoptimizejpg token local/image/url/jpg "profile_pic" "accountID" "accountID"</code></pre>
                     <ul>
                       <li>
-                        Verified creation of original, 200px, and 600px versions
+                        Verified creation of original, thumbnail, 200px, and 600px versions
                       </li>
                       <li>
                         Verified CR relationship to "Onboarded Assets" account
@@ -707,13 +766,16 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
                     <strong>Profile Picture Relationships</strong> -
                     Successfully tested connecting multiple profile pictures to
                     member profiles with
-                    <code>/connectMultipleAssets</code> endpoint
+                    <code>/updateProfilePics</code> endpoint
                     <pre>
-npm test connectMultipleAssets token memberID,assetID1,PROFILE_PIC_ORIGINAL_JPG memberID,assetID2,PROFILE_PIC_200_JPG memberID,assetID3,PROFILE_PIC_600_JPG</pre
+npm test updateProfilePics token sourceID originalAssetID thumbnailAssetID asset200ID asset600ID</pre
                     >
                     <ul>
                       <li>
                         Verified PROFILE_PIC_ORIGINAL_JPG relationship creation
+                      </li>
+                      <li>
+                        Verified PROFILE_PIC_THUMBNAIL_JPG relationship creation
                       </li>
                       <li>
                         Verified PROFILE_PIC_200_JPG relationship creation
@@ -724,6 +786,9 @@ npm test connectMultipleAssets token memberID,assetID1,PROFILE_PIC_ORIGINAL_JPG 
                       <li>
                         Confirmed all connections can be made in a single API
                         call
+                      </li>
+                      <li>
+                        Verified proper disconnection of existing relationships
                       </li>
                     </ul>
                   </li>
@@ -759,230 +824,3 @@ npm test connectMultipleAssets token memberID,assetID1,PROFILE_PIC_ORIGINAL_JPG 
                 <li>Vendor profile creation and management</li>
                 <li>Product listing creation with images</li>
                 <li>Inventory management with multiple CR/DR relationships</li>
-                <li>Invoice generation and digital signing</li>
-                <li>Error handling and validation</li>
-              </ul>
-
-              <h5>17. Documentation and Swagger Updates</h5>
-              <ul>
-                <li>Update API documentation</li>
-                <li>Add Swagger annotations for new endpoints</li>
-              </ul>
-
-              <p>
-                Reference:
-                <a href="../develop/api_reference.html"
-                  >API Documentation Standards</a
-                >
-              </p>
-            </div>
-          </div>
-
-          <div class="phase-container">
-            <h4>Phase 9: Client Implementation Guidelines</h4>
-            <div class="phase-details">
-              <h5>18. Client-Side Implementation for Profile Pictures</h5>
-              <p>
-                Based on our testing, we've established a two-step process for
-                setting profile pictures:
-              </p>
-
-              <ol>
-                <li>
-                  <strong>Upload and Optimize Images</strong>: Use the
-                  <code>/uploadAndOptimizeJpg</code> endpoint to upload the
-                  image and create optimized versions.
-                  <ul>
-                    <li>
-                      The API automatically creates three versions of the image
-                      (original, 200px, and 600px)
-                    </li>
-                    <li>Each image version gets its own AssetMarker ID</li>
-                    <li>The response includes all three AssetMarker IDs</li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Connect Multiple Assets</strong>: Use the
-                  <code>/connectMultipleAssets</code> endpoint to connect all
-                  three image versions to the member profile in a single API
-                  call.
-                  <ul>
-                    <li>
-                      This is more efficient than making three separate
-                      <code>/connectAsset</code> calls
-                    </li>
-                    <li>
-                      Ensures all three relationships are created atomically
-                    </li>
-                    <li>Simplifies client-side error handling</li>
-                  </ul>
-                </li>
-              </ol>
-
-              <p>Client implementation example:</p>
-              <pre><code>// Step 1: Upload and optimize the image
-const uploadResponse = await api.post('/uploadAndOptimizeJpg', {
-  jpg: imageData,
-  name: "profile_picture",
-  drAccountID: onboardedAssetsAccountID,
-  crAccountID: profilePicturesAccountID
-});
-
-// Extract asset IDs from the response
-const originalAssetID = uploadResponse.data.data.action.details.originalAssetID;
-const asset200ID = uploadResponse.data.data.action.details.asset200ID;
-const asset600ID = uploadResponse.data.data.action.details.asset600ID;
-const memberID = currentUser.memberID;
-
-// Step 2: Connect all three assets to the member profile
-const connectResponse = await api.post('/connectMultipleAssets', {
-  connections: [
-    { assetID: originalAssetID, connectedID: memberID, relName: "PROFILE_PIC_ORIGINAL_JPG" },
-    { assetID: asset200ID, connectedID: memberID, relName: "PROFILE_PIC_200_JPG" },
-    { assetID: asset600ID, connectedID: memberID, relName: "PROFILE_PIC_600_JPG" }
-  ]
-});</code></pre>
-
-              <p>This approach provides several benefits:</p>
-              <ul>
-                <li>
-                  Reduces the number of API calls needed to set a profile
-                  picture
-                </li>
-                <li>Ensures all image versions are properly connected</li>
-                <li>Simplifies error handling and rollback procedures</li>
-                <li>Improves performance by reducing network overhead</li>
-              </ul>
-
-              <p>
-                For detailed client implementation guidelines, see the
-                <a href="client-workplan.html">Client Implementation Workplan</a
-                >.
-              </p>
-            </div>
-          </div>
-
-          <h3>Database Relationships</h3>
-          <p>The implementation will use these key relationships:</p>
-
-          <pre><code>// Member to Account relationships
-(:Member {vendor: true|false})-[:OWNS]->(:Account)
-
-// Member to AssetMarker relationships
-(:Member)-[:OWNS]->(:AssetMarker)
-(:Member)-[:PROFILE_PIC_ORIGINAL_JPG]->(:AssetMarker)
-(:Member)-[:PROFILE_PIC_200_JPG]->(:AssetMarker)
-(:Member)-[:PROFILE_PIC_600_JPG]->(:AssetMarker)
-
-// Account to AssetMarker relationships
-(:Account)-[:ACCOUNT_PIC_ORIGINAL_JPG]->(:AssetMarker)
-(:Account)-[:ACCOUNT_PIC_200_JPG]->(:AssetMarker)
-(:Account)-[:ACCOUNT_PIC_600_JPG]->(:AssetMarker)
-
-// AssetMarker relationships (simplified with GLid)
-(:Account|AccountInternal)-[:CR {amount: number}]->(:AssetMarker {
-  GLid: string,               // Shared General Ledger ID
-  GeneralLedgerAmount: number,
-  CXXmultiplier: number,
-  Denomination: string
-})-[:DR {amount: number}]->(:Account|AccountInternal)
-
-// AssetMarker to AssetMarker relationships
-(:AssetMarker)-[:USED_IN]->(:AssetMarker)
-
-// Invoice as reusable template
-(:Invoice {
-  templateItems: string,      // JSON array of line items
-  amount: number,             // Template amount
-  currency: string            // Currency denomination
-})-[:CREDITS_TO]->(:Account|AccountInternal)
-
-// Credex executes Invoice
-(:Invoice)<-[:EXECUTES]-(:Credex {
-  GLid: string,               // Same GLid as related AssetMarkers
-  InitialAmount: number
-})
-
-// Digital signature relationships
-(:Member)-[:SIGNED]->(:Signature)-[:SIGNED]->(:Invoice|:Credex)</code></pre>
-
-          <p>
-            For more details on the data model, see the
-            <a href="data-model.html">Data Model</a> page.
-          </p>
-
-          <div class="section-divider"></div>
-
-          <h3>Revised Technical Considerations</h3>
-          <ul>
-            <li>
-              <strong>GLid for Related Entities</strong>: Use a shared GLid
-              field to group related AssetMarkers and Credexes, enabling balance
-              verification and aggregation without complex relationship
-              structures.
-            </li>
-            <li>
-              <strong>Single CR/DR Relationships</strong>: Maintain simpler
-              single CR/DR relationships for AssetMarkers, with the GLid
-              providing the grouping mechanism for related entries.
-            </li>
-            <li>
-              <strong>Reusable Invoice Templates</strong>: Design invoices as
-              reusable templates that can be executed multiple times, with each
-              execution creating a new set of AssetMarkers and a Credex sharing
-              the same GLid.
-            </li>
-            <li>
-              <strong>AssetMarker Properties</strong>: AssetMarker nodes must
-              include GeneralLedgerAmount, CXXmultiplier, Denomination, and GLid
-              properties to support proper accounting and exchange rate
-              handling.
-            </li>
-            <li>
-              <strong>DCO Integration</strong>: Use direct node type queries to
-              update all AssetMarker nodes during the DCO process, applying the
-              same exchange rate logic used for Credex nodes.
-            </li>
-            <li>
-              <strong>Digital Signatures</strong>: Invoices must be digitally
-              signed by the creating member using the
-              <code>digitallySign</code> utility.
-            </li>
-            <li>
-              <strong>Relationship Naming</strong>: Use
-              <code>ACCOUNT_PIC_*</code> for relationships between accounts and
-              asset markers (these may be displayed as product images on the
-              client side).
-            </li>
-            <li>
-              <strong>Error Handling</strong>: Implement comprehensive error
-              handling and validation to ensure data integrity.
-            </li>
-            <li>
-              <strong>Performance</strong>: Consider the performance
-              implications of complex queries, especially those involving
-              multiple relationships.
-            </li>
-          </ul>
-        </section>
-      </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="market-footer">
-      <div class="container">
-        <p>&copy; 2025 VimbisoPay. All rights reserved.</p>
-      </div>
-    </footer>
-
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        // Initialize mermaid with minimal configuration
-        mermaid.initialize({
-          startOnLoad: true,
-          securityLevel: "loose",
-        });
-      });
-    </script>
-  </body>
-</html>

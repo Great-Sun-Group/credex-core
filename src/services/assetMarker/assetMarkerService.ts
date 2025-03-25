@@ -207,7 +207,7 @@ export class AssetMarkerService {
             WITH a
             MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
             MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
-            CREATE (cr)-[:CR {amount: $crAmount}]->(a)-[:DR {amount: $drAmount}]->(dr)
+            CREATE (cr)-[:CR]->(a)-[:DR]->(dr)
             RETURN a`,
             { 
               assetID, 
@@ -245,7 +245,7 @@ export class AssetMarkerService {
             WITH a
             MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
             MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
-            CREATE (cr)-[:CR {amount: $crAmount}]->(a)-[:DR {amount: $drAmount}]->(dr)
+            CREATE (cr)-[:CR]->(a)-[:DR]->(dr)
             RETURN a`,
             { 
               assetID, 

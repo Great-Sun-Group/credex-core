@@ -51,26 +51,29 @@ export async function UpdateProfilePicsController(
     ];
 
     // Step 1: Find existing profile picture relationships
+    // The relationship direction is Source -> AssetMarker
     const existingRelationships = [];
 
     for (const relType of relationshipTypes) {
-      // Find assets connected to the source with this relationship type
+      // Find assets that the source is connected to with this relationship type
       const result = await session.executeRead(async (tx: any) => {
         return await tx.run(
           `MATCH (source)-[:${relType}]->(asset:AssetMarker)
            WHERE source.id = $sourceID OR source.memberID = $sourceID OR source.accountID = $sourceID
-           RETURN asset.id AS assetID`,
+           RETURN source.id AS sourceID, asset.id AS assetID`,
           { sourceID }
         );
       });
 
       // Add any found relationships to our list
       for (const record of result.records) {
-        const assetID = record.get("assetID");
+        const sourceNodeID = record.get("sourceID");
+        const assetNodeID = record.get("assetID");
+        
         existingRelationships.push({
-          assetID,
-          connectedID: sourceID,
-          relName: relType,
+          sourceNodeID: sourceNodeID || sourceID, // Use the ID from the query or fall back to the input sourceID
+          assetNodeID,
+          relType,
         });
       }
     }
@@ -89,46 +92,47 @@ export async function UpdateProfilePicsController(
 
     for (const rel of existingRelationships) {
       try {
+        // Disconnect the relationship from source to asset
         const result = await relationshipService.disconnectAsset(
           session,
           memberID,
-          rel.assetID,
-          rel.connectedID,
-          rel.relName
+          rel.sourceNodeID, // This is the "from" node (assetID in the service)
+          rel.assetNodeID,  // This is the "to" node (connectedID in the service)
+          rel.relType
         );
 
         disconnectResults.push({
-          assetID: rel.assetID,
-          connectedID: rel.connectedID,
-          relName: rel.relName,
+          sourceNodeID: rel.sourceNodeID,
+          assetNodeID: rel.assetNodeID,
+          relType: rel.relType,
           success: true,
         });
 
-        logDebug(`Disconnected relationship: ${rel.relName}`, {
+        logDebug(`Disconnected relationship: ${rel.relType}`, {
           controller: "UpdateProfilePicsController",
           requestId: req.id,
-          assetID: rel.assetID,
-          connectedID: rel.connectedID,
-          relName: rel.relName,
+          sourceNodeID: rel.sourceNodeID,
+          assetNodeID: rel.assetNodeID,
+          relType: rel.relType,
         });
       } catch (error) {
         logError(
-          `Error disconnecting relationship: ${rel.relName}`,
+          `Error disconnecting relationship: ${rel.relType}`,
           error instanceof Error ? error : new Error(String(error)),
           {
             controller: "UpdateProfilePicsController",
             requestId: req.id,
-            assetID: rel.assetID,
-            connectedID: rel.connectedID,
-            relName: rel.relName,
+            sourceNodeID: rel.sourceNodeID,
+            assetNodeID: rel.assetNodeID,
+            relType: rel.relType,
             error: error instanceof Error ? error.message : String(error),
           }
         );
 
         disconnectResults.push({
-          assetID: rel.assetID,
-          connectedID: rel.connectedID,
-          relName: rel.relName,
+          sourceNodeID: rel.sourceNodeID,
+          assetNodeID: rel.assetNodeID,
+          relType: rel.relType,
           success: false,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -136,11 +140,11 @@ export async function UpdateProfilePicsController(
     }
 
     // Step 3: Connect new assets with appropriate relationship types
-    // The relationship direction should be Source -> AssetMarker
+    // The relationship direction is Source -> AssetMarker
     const connections = [
       {
-        assetID: sourceID,
-        connectedID: originalAssetID,
+        assetID: sourceID,         // This is the "from" node
+        connectedID: originalAssetID, // This is the "to" node
         relName: "PROFILE_PIC_ORIGINAL_JPG",
       },
       {
@@ -190,11 +194,17 @@ export async function UpdateProfilePicsController(
             thumbnailAssetID,
             asset200ID,
             asset600ID,
-            disconnected: disconnectResults,
+            disconnected: disconnectResults.map((r) => ({
+              sourceNodeID: r.sourceNodeID,
+              assetNodeID: r.assetNodeID,
+              relType: r.relType,
+              success: r.success,
+              error: r.error,
+            })),
             connected: connectResults.map((r) => ({
-              assetID: r.asset.id,
-              connectedID: r.connected.id,
-              relName: r.relType,
+              sourceNodeID: r.asset.id,
+              assetNodeID: r.connected.id,
+              relType: r.relType,
               success: !("error" in r),
               error: "error" in r ? r.error : undefined,
             })),

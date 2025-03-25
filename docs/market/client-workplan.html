@@ -159,7 +159,7 @@ async function toggleVendorStatus(enabled) {
               </p>
               <ol>
                 <li>Upload and optimize the image using <code>/uploadAndOptimizeJpg</code></li>
-                <li>Connect the image versions to the member profile using <code>/connectMultipleAssets</code></li>
+                <li>Connect the image versions to the member profile using <code>/updateProfilePics</code></li>
               </ol>
 
               <h5>Implementation Steps:</h5>
@@ -186,11 +186,17 @@ async function uploadProfilePicture(imageFile) {
     });
     
     // Extract the asset IDs from the response
-    const { originalAssetID, asset200ID, asset600ID } = response.data.data.action.details;
+    const { 
+      originalAssetID, 
+      thumbnailAssetID,
+      asset200ID, 
+      asset600ID 
+    } = response.data.data.action.details;
     
     // Return the asset IDs for the next step
     return {
       originalAssetID,
+      thumbnailAssetID,
       asset200ID,
       asset600ID
     };
@@ -201,24 +207,24 @@ async function uploadProfilePicture(imageFile) {
 }</code></pre>
                 </li>
                 <li>
-                  <strong>Implement the connect assets function</strong> to handle the second step:
+                  <strong>Implement the update profile pictures function</strong> to handle the second step:
                   <pre><code>// Example implementation using axios
-async function connectProfilePictures(assetIDs) {
+async function updateProfilePictures(assetIDs) {
   try {
-    const { originalAssetID, asset200ID, asset600ID } = assetIDs;
-    const memberID = currentUser.memberID;
+    const { originalAssetID, thumbnailAssetID, asset200ID, asset600ID } = assetIDs;
+    const sourceID = currentUser.memberID;
     
-    const response = await api.post('/connectMultipleAssets', {
-  connections: [
-    { connectedID: memberID, assetID: originalAssetID, relName: "PROFILE_PIC_ORIGINAL_JPG" },
-    { connectedID: memberID, assetID: asset200ID, relName: "PROFILE_PIC_200_JPG" },
-    { connectedID: memberID, assetID: asset600ID, relName: "PROFILE_PIC_600_JPG" }
-  ]
+    const response = await api.post('/updateProfilePics', {
+      sourceID,
+      originalAssetID,
+      thumbnailAssetID,
+      asset200ID,
+      asset600ID
     });
     
     return response.data;
   } catch (error) {
-    console.error('Error connecting profile pictures:', error);
+    console.error('Error updating profile pictures:', error);
     throw error;
   }
 }</code></pre>
@@ -234,8 +240,8 @@ async function setProfilePicture(imageFile) {
     // Step 1: Upload and optimize the image
     const assetIDs = await uploadProfilePicture(imageFile);
     
-    // Step 2: Connect the image versions to the member profile
-    await connectProfilePictures(assetIDs);
+    // Step 2: Update profile pictures
+    await updateProfilePictures(assetIDs);
     
     // Update UI to show the new profile picture
     // You can use the asset200ID for displaying the profile picture in the UI
@@ -271,6 +277,9 @@ async function setProfilePicture(imageFile) {
                 <li>
                   <strong>Caching:</strong> Cache the profile picture URLs to avoid unnecessary API calls.
                 </li>
+                <li>
+                  <strong>Thumbnail Usage:</strong> Use the thumbnail version for profile picture previews in lists and small UI elements to improve performance.
+                </li>
               </ul>
 
               <div class="mermaid-container">
@@ -290,10 +299,10 @@ async function setProfilePicture(imageFile) {
                     
                     User->>Client: Upload profile picture
                     Client->>API: POST /uploadAndOptimizeJpg
-                    API->>DB: Create AssetMarker nodes
+                    API->>DB: Create AssetMarker nodes (original, thumbnail, 200px, 600px)
                     API-->>Client: Return asset IDs
                     
-                    Client->>API: POST /connectMultipleAssets
+                    Client->>API: POST /updateProfilePics
                     API->>DB: Create relationships
                     API-->>Client: Confirm connections
                     Client-->>User: Show profile picture
@@ -347,89 +356,12 @@ async function createProductAccount(accountName) {
                 </li>
               </ol>
             </div>
-          </div>
 
-          <div class="phase-container">
             <h4>2. Uploading Product Images</h4>
             <div class="phase-details">
               <p>
-                The process for uploading product images is similar to profile pictures, but uses different relationship types.
+                The process for uploading product images is the same as for profile pictures.
               </p>
-
-              <h5>Implementation Steps:</h5>
-              <ol>
-                <li>
-                  <strong>Create a product image upload component</strong> in the product management UI.
-                </li>
-                <li>
-                  <strong>Implement the image upload function</strong>:
-                  <pre><code>// Example implementation using axios and FormData
-async function uploadProductImage(imageFile, productName, productAccountID) {
-  try {
-    // Create a FormData object to send the image
-    const formData = new FormData();
-    formData.append('jpg', imageFile);
-    formData.append('name', `${productName}_image`);
-    formData.append('drAccountID', accountIDs.onboardedAssetsAccountID);
-    formData.append('crAccountID', productAccountID);
-    
-    const response = await api.post('/uploadAndOptimizeJpg', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-    
-    // Extract the asset IDs from the response
-    const { originalAssetID, asset200ID, asset600ID } = response.data.data.action.details;
-    
-    // Return the asset IDs for the next step
-    return {
-      originalAssetID,
-      asset200ID,
-      asset600ID
-    };
-  } catch (error) {
-    console.error('Error uploading product image:', error);
-    throw error;
-  }
-}</code></pre>
-                </li>
-                <li>
-                  <strong>Implement the connect assets function</strong>:
-                  <pre><code>// Example implementation using axios
-async function connectProductImages(assetIDs, accountID) {
-  try {
-    const { originalAssetID, asset200ID, asset600ID } = assetIDs;
-    
-    const response = await api.post('/connectMultipleAssets', {
-      connections: [
-        { assetID: originalAssetID, connectedID: accountID, relName: "ACCOUNT_PIC_ORIGINAL_JPG" },
-        { assetID: asset200ID, connectedID: accountID, relName: "ACCOUNT_PIC_200_JPG" },
-        { assetID: asset600ID, connectedID: accountID, relName: "ACCOUNT_PIC_600_JPG" }
-      ]
-    });
-    
-    return response.data;
-  } catch (error) {
-    console.error('Error connecting product images:', error);
-    throw error;
-  }
-}</code></pre>
-                </li>
-              </ol>
-
-              <h5>Key Differences from Profile Pictures:</h5>
-              <ul>
-                <li>
-                  <strong>Relationship Types:</strong> Product images use <code>ACCOUNT_PIC_*</code> relationships instead of <code>PROFILE_PIC_*</code>.
-                </li>
-                <li>
-                  <strong>Connected ID:</strong> Product images are connected to account IDs instead of member IDs.
-                </li>
-                <li>
-                  <strong>Credit Account:</strong> Product images credit the product account instead of the profile pictures account.
-                </li>
-              </ul>
             </div>
           </div>
 
@@ -505,8 +437,8 @@ async function connectProductImages(assetIDs, accountID) {
     // Step 1: Upload and optimize the image
     assetIDs = await uploadProfilePicture(imageFile);
     
-    // Step 2: Connect the image versions to the member profile
-    await connectProfilePictures(assetIDs);
+    // Step 2: Update profile pictures
+    await updateProfilePictures(assetIDs);
     
     // Success case
     showSuccessMessage('Profile picture updated successfully');
@@ -519,7 +451,7 @@ async function connectProductImages(assetIDs, accountID) {
         'Image uploaded but could not be connected to your profile',
         async () => {
           // Retry just the connection step
-          await connectProfilePictures(assetIDs);
+          await updateProfilePictures(assetIDs);
           showSuccessMessage('Profile picture updated successfully');
           return true;
         }
@@ -660,6 +592,32 @@ const cache = {
       loading="lazy" 
     />
   );
+}</code></pre>
+
+              <h5>4. Responsive Image Selection</h5>
+              <p>
+                Choose the appropriate image size based on the display context:
+              </p>
+              <pre><code>function getAppropriateImageSize(context) {
+  switch (context) {
+    case 'avatar':
+      return 'thumbnail'; // Use thumbnail for small avatars
+    case 'list':
+      return '200px'; // Use 200px for list items
+    case 'detail':
+      return '600px'; // Use 600px for detailed views
+    case 'fullscreen':
+      return 'original'; // Use original for fullscreen views
+    default:
+      return '200px'; // Default to 200px
+  }
+}
+
+function ProfileImage({ member, context = 'avatar' }) {
+  const size = getAppropriateImageSize(context);
+  const assetID = getAssetIDForSize(member, size);
+  
+  return <Image assetID={assetID} />;
 }</code></pre>
             </div>
           </div>

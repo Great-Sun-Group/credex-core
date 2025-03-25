@@ -395,7 +395,7 @@
                   </li>
                   <li>
                     <code>relName</code>: string - One of
-                    [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
+                    [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_THUMBNAIL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
                   </li>
                 </ul>
               </div>
@@ -423,7 +423,7 @@
                   </li>
                   <li>
                     <code>relName</code>: string - One of
-                    [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
+                    [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_THUMBNAIL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
                   </li>
                 </ul>
               </div>
@@ -576,15 +576,20 @@
                 <h5>Parameters:</h5>
                 <ul>
                   <li>
-                    <code>issuerAccountID</code>: string - Account issuing the
-                    credex
+                    <code>profile_picture_original_jpg</code>: string - ID of
+                    node to link with PROFILE_PIC_ORIGINAL_JPG relationship
                   </li>
                   <li>
-                    <code>receiverAccountID</code>: string - Account receiving
-                    the credex
+                    <code>profile_picture_thumbnail_jpg</code>: string - ID of
+                    node to link with PROFILE_PIC_THUMBNAIL_JPG relationship
                   </li>
                   <li>
-                    <code>Denomination</code>: string - Currency denomination
+                    <code>profile_picture_200_jpg</code>: string - ID of node to
+                    link with PROFILE_PIC_200_JPG relationship
+                  </li>
+                  <li>
+                    <code>profile_picture_600_jpg</code>: string - ID of node to
+                    link with PROFILE_PIC_600_JPG relationship
                   </li>
                   <li>
                     <code>InitialAmount</code>: number - Amount of the credex

@@ -45,7 +45,7 @@ export async function SellInMarketController(
     const updateResult = await session.executeWrite(async (tx: any) => {
       return await tx.run(
         `MATCH (m:Member {memberID: $memberID})
-         SET m.vendor = $vendor
+         SET m.activateMarket = $vendor
          RETURN m`,
         { memberID, vendor }
       );

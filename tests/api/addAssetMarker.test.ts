@@ -2,50 +2,67 @@ import axios from "../setup";
 
 describe("addAssetMarker Test", () => {
   it("adds an asset marker", async () => {
+    // Get parameters from environment variable
     const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
-    const [token, assetName, crAccountID, crAmount, drAccountID, drAmount, denomination, ...additionalParams] = params;
-
-    if (!token || !assetName || !crAccountID || !crAmount || !drAccountID || !drAmount) {
-      throw new Error(
-        "Usage: npm test addAssetMarker <token> <assetName> <crAccountID> <crAmount> <drAccountID> <drAmount> [denomination] [additionalParams]"
-      );
+    
+    // Extract token (required)
+    const token = params[0];
+    if (!token) {
+      throw new Error("Usage: npm test addAssetMarker <token> <assetName> <crAccountID> <crAmount> <drAccountID> <drAmount> [denomination] [additionalParams]");
     }
-
+    
+    // Set up headers
     const headers = {
       "x-client-api-key": process.env.CLIENT_API_KEY || "",
       "Authorization": `Bearer ${token}`
     };
-
+    
+    // Extract remaining parameters
+    const assetName = params[1] || "Asset Marker";
+    const crAccountID = params[2];
+    const crAmount = params[3] ? parseFloat(params[3]) : 100;
+    const drAccountID = params[4];
+    const drAmount = params[5] ? parseFloat(params[5]) : 100;
+    const denomination = params[6] || "USD";
+    
+    // Validate required parameters
+    if (!crAccountID || !drAccountID) {
+      throw new Error("Credit account ID and debit account ID are required");
+    }
+    
     // Parse additional parameters as AssetMarkerData
     let assetMarkerData: Record<string, any> = {};
-    if (additionalParams.length > 0) {
-      try {
-        // Try to parse as JSON if it's a single parameter
-        if (additionalParams.length === 1) {
-          assetMarkerData = JSON.parse(additionalParams[0]);
-        } else {
-          // Otherwise, parse as key-value pairs
-          for (let i = 0; i < additionalParams.length; i += 2) {
-            if (i + 1 < additionalParams.length) {
-              assetMarkerData[additionalParams[i]] = additionalParams[i + 1];
-            }
-          }
+    if (params.length > 7) {
+      for (let i = 7; i < params.length; i += 2) {
+        if (i + 1 < params.length) {
+          assetMarkerData[params[i]] = params[i + 1];
         }
-      } catch (error) {
-        console.warn("Failed to parse additional parameters as JSON:", error);
       }
     }
-
+    
+    // Log what we're about to do
     console.log("\nAdding asset marker...");
+    console.log(`Asset Name: ${assetName}`);
+    console.log(`Credit Account: ${crAccountID} (${crAmount})`);
+    console.log(`Debit Account: ${drAccountID} (${drAmount})`);
+    console.log(`Denomination: ${denomination}`);
+    if (Object.keys(assetMarkerData).length > 0) {
+      console.log("Additional Data:", assetMarkerData);
+    }
+    
+    // Prepare request body
+    const requestBody = {
+      assetName,
+      crAccounts: [{ accountID: crAccountID, amount: crAmount }],
+      drAccounts: [{ accountID: drAccountID, amount: drAmount }],
+      denomination,
+      ...assetMarkerData
+    };
+    
+    // Make the request
     const response = await axios.post(
       "/addAssetMarker",
-      {
-        assetName,
-        crAccounts: [{ accountID: crAccountID, amount: parseFloat(crAmount) }],
-        drAccounts: [{ accountID: drAccountID, amount: parseFloat(drAmount) }],
-        denomination: denomination || "USD",
-        ...assetMarkerData
-      },
+      requestBody,
       { headers }
     );
 
