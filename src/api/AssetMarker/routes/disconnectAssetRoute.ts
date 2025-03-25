@@ -39,7 +39,7 @@ export default function disconnectAssetRoute() {
    *                 description: ID of the node to disconnect from
    *               relName:
    *                 type: string
-   *                 enum: [USED_IN, PROFILE_PIC_ORIGINAL_JPG, PROFILE_PIC_200_JPG, PROFILE_PIC_600_JPG]
+   *                 enum: [USED_IN, PROFILE_PIC_ORIGINAL_JPG, PROFILE_PIC_THUMBNAIL_JPG, PROFILE_PIC_200_JPG, PROFILE_PIC_600_JPG]
    *                 description: Name of the relationship to remove
    *     responses:
    *       200:

@@ -324,128 +324,128 @@ export class AssetMarkerService {
   }
   
   /**
-   * Create image asset markers for original, 200px, and 600px versions
+   * Create a related set of asset markers with a shared source
    * @param session - Neo4j session
    * @param memberID - Member ID
-   * @param name - Base name for the assets
-   * @param s3Keys - S3 keys for the images
+   * @param sourceAssetProps - Properties for the source asset
+   * @param derivedAssets - Array of properties for derived assets
    * @param crAccountID - Credit account ID
    * @param drAccountID - Debit account ID
+   * @param glid - Optional GLid to group related assets
    * @returns The IDs of the created asset markers
    */
-  public async createImageAssets(
+  public async createRelatedAssetMarkers(
     session: any,
     memberID: string,
-    name: string,
-    s3Keys: { original: string, size200: string, size600: string },
+    sourceAssetProps: AssetMarkerProps,
+    derivedAssets: AssetMarkerProps[],
     crAccountID: string,
-    drAccountID: string
-  ): Promise<{ originalAssetID: string, asset200ID: string, asset600ID: string }> {
+    drAccountID: string,
+    glid?: string
+  ): Promise<{ sourceAssetID: string, derivedAssetIDs: string[], glid: string }> {
     try {
-      // Create asset marker IDs
-      const originalAssetID = uuidv4();
-      const asset200ID = uuidv4();
-      const asset600ID = uuidv4();
+      // Create asset marker IDs and GLid
+      const sourceAssetID = uuidv4();
+      const derivedAssetIDs: string[] = derivedAssets.map(() => uuidv4());
+      const finalGlid = glid || uuidv4(); // Generate a new GLid if not provided
       
-      // Create the original asset marker
+      // Create the asset markers
       await session.executeWrite(async (tx: any) => {
-        // Create the original asset marker node with direct OWNS relationship from member
+        // Create the source asset marker node with direct OWNS relationship from member
         await tx.run(
           `CREATE (a:AssetMarker {
             id: $assetID,
             assetName: $assetName,
-            filename: $filename,
+            description: $description,
             s3Key: $s3Key,
+            filename: $filename,
+            GLid: $glid,
+            ${sourceAssetProps.generalLedgerAmount !== undefined ? 'GeneralLedgerAmount: $generalLedgerAmount,' : ''}
+            ${sourceAssetProps.cxxMultiplier !== undefined ? 'CXXmultiplier: $cxxMultiplier,' : ''}
+            ${sourceAssetProps.denomination !== undefined ? 'Denomination: $denomination,' : ''}
+            AssetMarkerData: $assetMarkerData,
             createdAt: datetime()
           })
           WITH a
           MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
-          MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR cr:AccountInternal)
+          MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
           MATCH (m:Member {memberID: $memberID})
           CREATE (cr)-[:CR {amount: 1}]->(a)-[:DR {amount: 1}]->(dr)
           CREATE (m)-[:OWNS]->(a)
           RETURN a`,
           { 
-            assetID: originalAssetID, 
-            assetName: `${name} (Original)`, 
-            filename: `${name}_original.jpg`,
-            s3Key: s3Keys.original,
+            assetID: sourceAssetID, 
+            assetName: sourceAssetProps.assetName,
+            description: sourceAssetProps.description || "",
+            s3Key: sourceAssetProps.s3Key || "",
+            filename: sourceAssetProps.filename || "",
+            glid: finalGlid,
+            ...(sourceAssetProps.generalLedgerAmount !== undefined ? { generalLedgerAmount: sourceAssetProps.generalLedgerAmount } : {}),
+            ...(sourceAssetProps.cxxMultiplier !== undefined ? { cxxMultiplier: sourceAssetProps.cxxMultiplier } : {}),
+            ...(sourceAssetProps.denomination !== undefined ? { denomination: sourceAssetProps.denomination } : {}),
+            assetMarkerData: sourceAssetProps.assetMarkerData ? JSON.stringify(sourceAssetProps.assetMarkerData) : "{}",
             crAccountID,
             drAccountID,
             memberID
           }
         );
 
-        // Create the 200px asset marker node with direct OWNS relationship from member
-        await tx.run(
-          `CREATE (a:AssetMarker {
-            id: $assetID,
-            assetName: $assetName,
-            filename: $filename,
-            s3Key: $s3Key,
-            createdAt: datetime()
-          })
-          WITH a
-          MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
-          MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR cr:AccountInternal)
-          MATCH (original:AssetMarker {id: $originalAssetID})
-          MATCH (m:Member {memberID: $memberID})
-          CREATE (cr)-[:CR {amount: 1}]->(a)-[:DR {amount: 1}]->(dr)
-          CREATE (original)-[:USED_IN]->(a)
-          CREATE (m)-[:OWNS]->(a)
-          RETURN a`,
-          { 
-            assetID: asset200ID, 
-            assetName: `${name} (200px)`, 
-            filename: `${name}_200.jpg`,
-            s3Key: s3Keys.size200,
-            crAccountID,
-            drAccountID,
-            originalAssetID,
-            memberID
-          }
-        );
-
-        // Create the 600px asset marker node with direct OWNS relationship from member
-        await tx.run(
-          `CREATE (a:AssetMarker {
-            id: $assetID,
-            assetName: $assetName,
-            filename: $filename,
-            s3Key: $s3Key,
-            createdAt: datetime()
-          })
-          WITH a
-          MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
-          MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR cr:AccountInternal)
-          MATCH (original:AssetMarker {id: $originalAssetID})
-          MATCH (m:Member {memberID: $memberID})
-          CREATE (cr)-[:CR {amount: 1}]->(a)-[:DR {amount: 1}]->(dr)
-          CREATE (original)-[:USED_IN]->(a)
-          CREATE (m)-[:OWNS]->(a)
-          RETURN a`,
-          { 
-            assetID: asset600ID, 
-            assetName: `${name} (600px)`, 
-            filename: `${name}_600.jpg`,
-            s3Key: s3Keys.size600,
-            crAccountID,
-            drAccountID,
-            originalAssetID,
-            memberID
-          }
-        );
+        // Create the derived asset markers
+        for (let i = 0; i < derivedAssets.length; i++) {
+          const derivedAsset = derivedAssets[i];
+          const derivedAssetID = derivedAssetIDs[i];
+          
+          await tx.run(
+            `CREATE (a:AssetMarker {
+              id: $assetID,
+              assetName: $assetName,
+              description: $description,
+              s3Key: $s3Key,
+              filename: $filename,
+              GLid: $glid,
+              ${derivedAsset.generalLedgerAmount !== undefined ? 'GeneralLedgerAmount: $generalLedgerAmount,' : ''}
+              ${derivedAsset.cxxMultiplier !== undefined ? 'CXXmultiplier: $cxxMultiplier,' : ''}
+              ${derivedAsset.denomination !== undefined ? 'Denomination: $denomination,' : ''}
+              AssetMarkerData: $assetMarkerData,
+              createdAt: datetime()
+            })
+            WITH a
+            MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
+            MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
+            MATCH (source:AssetMarker {id: $sourceAssetID})
+            MATCH (m:Member {memberID: $memberID})
+            CREATE (cr)-[:CR {amount: 1}]->(a)-[:DR {amount: 1}]->(dr)
+            CREATE (source)-[:USED_IN]->(a)
+            CREATE (m)-[:OWNS]->(a)
+            RETURN a`,
+            { 
+              assetID: derivedAssetID, 
+              assetName: derivedAsset.assetName,
+              description: derivedAsset.description || "",
+              s3Key: derivedAsset.s3Key || "",
+              filename: derivedAsset.filename || "",
+              glid: finalGlid,
+              ...(derivedAsset.generalLedgerAmount !== undefined ? { generalLedgerAmount: derivedAsset.generalLedgerAmount } : {}),
+              ...(derivedAsset.cxxMultiplier !== undefined ? { cxxMultiplier: derivedAsset.cxxMultiplier } : {}),
+              ...(derivedAsset.denomination !== undefined ? { denomination: derivedAsset.denomination } : {}),
+              assetMarkerData: derivedAsset.assetMarkerData ? JSON.stringify(derivedAsset.assetMarkerData) : "{}",
+              crAccountID,
+              drAccountID,
+              sourceAssetID,
+              memberID
+            }
+          );
+        }
       });
       
-      logInfo(`Created image assets for ${name}`, {
+      logInfo(`Created related asset markers for ${sourceAssetProps.assetName}`, {
         service: "AssetMarkerService",
-        method: "createImageAssets",
-        originalAssetID,
-        asset200ID,
-        asset600ID
+        method: "createRelatedAssetMarkers",
+        sourceAssetID,
+        derivedAssetIDs
       });
       
-      return { originalAssetID, asset200ID, asset600ID };
+      return { sourceAssetID, derivedAssetIDs, glid: finalGlid };
     } catch (error) {
       logError("Error creating image assets", error instanceof Error ? error : new Error(String(error)), {
         service: "AssetMarkerService",

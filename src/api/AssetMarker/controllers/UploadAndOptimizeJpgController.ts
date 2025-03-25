@@ -3,7 +3,7 @@ import { logInfo, logError, logDebug } from "../../../utils/logger";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { generateS3Key, uploadToS3 } from "../../../services/s3Service";
 import { imageProcessingService } from "../../../services/transformations/imageProcessingService";
-import { assetMarkerService } from "../../../services/assetMarker/assetMarkerService";
+import { assetMarkerService, AssetMarkerProps } from "../../../services/assetMarker/assetMarkerService";
 
 /**
  * Controller for handling the upload and optimization of JPG images
@@ -89,20 +89,22 @@ export async function UploadAndOptimizeJpgController(
       imageName: name,
     });
 
-    // Process the image to create original, 200px, and 600px versions
-    const { original, size200, size600 } =
+    // Process the image to create original, thumbnail, 200px, and 600px versions
+    const { original, thumbnail, size200, size600 } =
       await imageProcessingService.processAssetMarkerImage(imageBuffer);
 
     logDebug("Image processed successfully", {
       controller: "UploadAndOptimizeJpgController",
       requestId: req.id,
       originalSize: original.length,
+      thumbnailSize: thumbnail.length,
       size200Size: size200.length,
       size600Size: size600.length,
     });
 
     // Generate S3 keys
     const s3KeyOriginal = generateS3Key(`${memberID}/original`, `${name}.jpg`);
+    const s3KeyThumbnail = generateS3Key(`${memberID}/thumbnail`, `${name}.jpg`);
     const s3Key200 = generateS3Key(`${memberID}/200px`, `${name}.jpg`);
     const s3Key600 = generateS3Key(`${memberID}/600px`, `${name}.jpg`);
 
@@ -112,12 +114,14 @@ export async function UploadAndOptimizeJpgController(
       requestId: req.id,
       s3Keys: {
         original: s3KeyOriginal,
+        thumbnail: s3KeyThumbnail,
         size200: s3Key200,
         size600: s3Key600,
       },
     });
 
     await uploadToS3(original, s3KeyOriginal, "image/jpeg");
+    await uploadToS3(thumbnail, s3KeyThumbnail, "image/jpeg");
     await uploadToS3(size200, s3Key200, "image/jpeg");
     await uploadToS3(size600, s3Key600, "image/jpeg");
 
@@ -126,20 +130,46 @@ export async function UploadAndOptimizeJpgController(
       requestId: req.id,
     });
 
-    // Create the asset markers
-    const { originalAssetID, asset200ID, asset600ID } =
-      await assetMarkerService.createImageAssets(
+    // Create the asset markers using the generic createRelatedAssetMarkers method
+    const sourceAssetProps: AssetMarkerProps = {
+      assetName: `${name} (Original)`,
+      filename: `${name}_original.jpg`,
+      s3Key: s3KeyOriginal
+    };
+    
+    const derivedAssets: AssetMarkerProps[] = [
+      {
+        assetName: `${name} (Thumbnail)`,
+        filename: `${name}_thumbnail.jpg`,
+        s3Key: s3KeyThumbnail
+      },
+      {
+        assetName: `${name} (200px)`,
+        filename: `${name}_200.jpg`,
+        s3Key: s3Key200
+      },
+      {
+        assetName: `${name} (600px)`,
+        filename: `${name}_600.jpg`,
+        s3Key: s3Key600
+      }
+    ];
+    
+    const { sourceAssetID, derivedAssetIDs, glid } =
+      await assetMarkerService.createRelatedAssetMarkers(
         session,
         memberID,
-        name,
-        {
-          original: s3KeyOriginal,
-          size200: s3Key200,
-          size600: s3Key600,
-        },
+        sourceAssetProps,
+        derivedAssets,
         finalCrAccountID,
         drAccountID
       );
+    
+    // Map the returned IDs to their specific roles
+    const originalAssetID = sourceAssetID;
+    const thumbnailAssetID = derivedAssetIDs[0];
+    const asset200ID = derivedAssetIDs[1];
+    const asset600ID = derivedAssetIDs[2];
 
     res.status(201).json({
       message: "Image uploaded and optimized successfully",
@@ -151,10 +181,12 @@ export async function UploadAndOptimizeJpgController(
           actor: memberID,
           details: {
             originalAssetID,
+            thumbnailAssetID,
             asset200ID,
             asset600ID,
             assetName: name,
             s3KeyOriginal,
+            s3KeyThumbnail,
             s3Key200,
             s3Key600,
             drAccountID,
@@ -168,6 +200,13 @@ export async function UploadAndOptimizeJpgController(
               assetName: `${name} (Original)`,
               filename: `${name}_original.jpg`,
               s3Key: s3KeyOriginal,
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: thumbnailAssetID,
+              assetName: `${name} (Thumbnail)`,
+              filename: `${name}_thumbnail.jpg`,
+              s3Key: s3KeyThumbnail,
               createdAt: new Date().toISOString(),
             },
             {

@@ -18,9 +18,10 @@ export const addAssetMarkerSchema = {
     validator: (value: string) => {
       return {
         isValid: value.length >= 3 && value.length <= 100,
-        message: value.length >= 3 && value.length <= 100 
-          ? "Valid asset name" 
-          : "Asset name must be between 3 and 100 characters",
+        message:
+          value.length >= 3 && value.length <= 100
+            ? "Valid asset name"
+            : "Asset name must be between 3 and 100 characters",
       };
     },
     required: true,
@@ -30,7 +31,10 @@ export const addAssetMarkerSchema = {
     validator: (value: string) => {
       return {
         isValid: value.length <= 500,
-        message: value.length <= 500 ? "Valid description" : "Description must be at most 500 characters",
+        message:
+          value.length <= 500
+            ? "Valid description"
+            : "Description must be at most 500 characters",
       };
     },
     required: false,
@@ -54,37 +58,41 @@ export const addAssetMarkerSchema = {
           message: "crAccounts must be an array",
         };
       }
-      
+
       if (value.length === 0) {
         return {
           isValid: false,
           message: "crAccounts must not be empty",
         };
       }
-      
+
       for (const account of value) {
-        if (typeof account !== 'object' || account === null) {
+        if (typeof account !== "object" || account === null) {
           return {
             isValid: false,
             message: "Each crAccount must be an object",
           };
         }
-        
-        if (!account.accountID || typeof account.accountID !== 'string') {
+
+        if (!account.accountID || typeof account.accountID !== "string") {
           return {
             isValid: false,
             message: "Each crAccount must have an accountID string",
           };
         }
-        
-        if (!account.amount || typeof account.amount !== 'number' || account.amount <= 0) {
+
+        if (
+          !account.amount ||
+          typeof account.amount !== "number" ||
+          account.amount <= 0
+        ) {
           return {
             isValid: false,
             message: "Each crAccount must have a positive amount number",
           };
         }
       }
-      
+
       return {
         isValid: true,
         message: "Valid crAccounts",
@@ -101,37 +109,41 @@ export const addAssetMarkerSchema = {
           message: "drAccounts must be an array",
         };
       }
-      
+
       if (value.length === 0) {
         return {
           isValid: false,
           message: "drAccounts must not be empty",
         };
       }
-      
+
       for (const account of value) {
-        if (typeof account !== 'object' || account === null) {
+        if (typeof account !== "object" || account === null) {
           return {
             isValid: false,
             message: "Each drAccount must be an object",
           };
         }
-        
-        if (!account.accountID || typeof account.accountID !== 'string') {
+
+        if (!account.accountID || typeof account.accountID !== "string") {
           return {
             isValid: false,
             message: "Each drAccount must have an accountID string",
           };
         }
-        
-        if (!account.amount || typeof account.amount !== 'number' || account.amount <= 0) {
+
+        if (
+          !account.amount ||
+          typeof account.amount !== "number" ||
+          account.amount <= 0
+        ) {
           return {
             isValid: false,
             message: "Each drAccount must have a positive amount number",
           };
         }
       }
-      
+
       return {
         isValid: true,
         message: "Valid drAccounts",
@@ -148,10 +160,11 @@ export const addAssetMarkerSchema = {
     sanitizer: (value: any) => value,
     validator: (value: any) => {
       return {
-        isValid: typeof value === 'object' && value !== null,
-        message: typeof value === 'object' && value !== null 
-          ? "Valid AssetMarkerData" 
-          : "AssetMarkerData must be an object",
+        isValid: typeof value === "object" && value !== null,
+        message:
+          typeof value === "object" && value !== null
+            ? "Valid AssetMarkerData"
+            : "AssetMarkerData must be an object",
       };
     },
     required: false,
@@ -165,7 +178,10 @@ export const uploadAndOptimizeJpgSchema = {
     validator: (value: any) => {
       return {
         isValid: value !== undefined && value !== null,
-        message: value !== undefined && value !== null ? "Valid JPG data" : "JPG data is required",
+        message:
+          value !== undefined && value !== null
+            ? "Valid JPG data"
+            : "JPG data is required",
       };
     },
     required: true,
@@ -175,9 +191,10 @@ export const uploadAndOptimizeJpgSchema = {
     validator: (value: string) => {
       return {
         isValid: value.length >= 3 && value.length <= 100,
-        message: value.length >= 3 && value.length <= 100 
-          ? "Valid asset name" 
-          : "Asset name must be between 3 and 100 characters",
+        message:
+          value.length >= 3 && value.length <= 100
+            ? "Valid asset name"
+            : "Asset name must be between 3 and 100 characters",
       };
     },
     required: true,
@@ -195,44 +212,55 @@ export const uploadAndOptimizeJpgSchema = {
 };
 logger.debug("uploadAndOptimizeJpgSchema initialized");
 
+// Define valid relationship types for asset connections
+const VALID_RELATIONSHIP_TYPES = [
+  // Generic relationship for derived assets
+  "USED_IN",
+  
+  // Profile picture relationships (used for Member, Account, and AccountInternal)
+  "PROFILE_PIC_ORIGINAL_JPG",
+  "PROFILE_PIC_THUMBNAIL_JPG",
+  "PROFILE_PIC_200_JPG", 
+  "PROFILE_PIC_600_JPG"
+];
+
 // Helper function to validate a single connection
 const validateConnection = (connection: any) => {
-  if (typeof connection !== 'object' || connection === null) {
+  if (typeof connection !== "object" || connection === null) {
     return {
       isValid: false,
       message: "Connection must be an object",
     };
   }
-  
-  if (!connection.assetID || typeof connection.assetID !== 'string') {
+
+  if (!connection.assetID || typeof connection.assetID !== "string") {
     return {
       isValid: false,
       message: "Connection must have an assetID string",
     };
   }
-  
-  if (!connection.connectedID || typeof connection.connectedID !== 'string') {
+
+  if (!connection.connectedID || typeof connection.connectedID !== "string") {
     return {
       isValid: false,
       message: "Connection must have a connectedID string",
     };
   }
-  
-  if (!connection.relName || typeof connection.relName !== 'string') {
+
+  if (!connection.relName || typeof connection.relName !== "string") {
     return {
       isValid: false,
       message: "Connection must have a relName string",
     };
   }
-  
-  const validRelNames = ["USED_IN", "PROFILE_PIC_ORIGINAL_JPG", "PROFILE_PIC_200_JPG", "PROFILE_PIC_600_JPG"];
-  if (!validRelNames.includes(connection.relName.toUpperCase())) {
+
+  if (!VALID_RELATIONSHIP_TYPES.includes(connection.relName.toUpperCase())) {
     return {
       isValid: false,
-      message: `Invalid relationship name. Must be one of: ${validRelNames.join(", ")}`,
+      message: `Invalid relationship name. Must be one of: ${VALID_RELATIONSHIP_TYPES.join(", ")}`,
     };
   }
-  
+
   return {
     isValid: true,
     message: "Valid connection",
@@ -254,12 +282,11 @@ export const connectAssetSchema = {
   relName: {
     sanitizer: (value: string) => value.toUpperCase(),
     validator: (value: string) => {
-      const validRelNames = ["USED_IN", "PROFILE_PIC_ORIGINAL_JPG", "PROFILE_PIC_200_JPG", "PROFILE_PIC_600_JPG"];
       return {
-        isValid: validRelNames.includes(value),
-        message: validRelNames.includes(value) 
-          ? "Valid relationship name" 
-          : `Invalid relationship name. Must be one of: ${validRelNames.join(", ")}`,
+        isValid: VALID_RELATIONSHIP_TYPES.includes(value),
+        message: VALID_RELATIONSHIP_TYPES.includes(value)
+          ? "Valid relationship name"
+          : `Invalid relationship name. Must be one of: ${VALID_RELATIONSHIP_TYPES.join(", ")}`,
       };
     },
     required: false, // Not required if connections array is provided
@@ -270,7 +297,9 @@ export const connectAssetSchema = {
       if (Array.isArray(value)) {
         return value.map((connection) => ({
           ...connection,
-          relName: connection.relName ? connection.relName.toUpperCase() : connection.relName
+          relName: connection.relName
+            ? connection.relName.toUpperCase()
+            : connection.relName,
         }));
       }
       return value;
@@ -283,7 +312,7 @@ export const connectAssetSchema = {
           message: "connections must be an array",
         };
       }
-      
+
       // If connections is provided, it must not be empty
       if (Array.isArray(value) && value.length === 0) {
         return {
@@ -291,7 +320,7 @@ export const connectAssetSchema = {
           message: "connections must not be empty",
         };
       }
-      
+
       // If connections is provided, each connection must be valid
       if (Array.isArray(value)) {
         for (const connection of value) {
@@ -301,7 +330,7 @@ export const connectAssetSchema = {
           }
         }
       }
-      
+
       return {
         isValid: true,
         message: "Valid connections",
@@ -313,16 +342,19 @@ export const connectAssetSchema = {
   __custom: {
     sanitizer: (value: any) => value, // Identity sanitizer
     validator: (body: any) => {
-      const hasSingleConnection = body.assetID && body.connectedID && body.relName;
-      const hasMultipleConnections = Array.isArray(body.connections) && body.connections.length > 0;
-      
+      const hasSingleConnection =
+        body.assetID && body.connectedID && body.relName;
+      const hasMultipleConnections =
+        Array.isArray(body.connections) && body.connections.length > 0;
+
       if (!hasSingleConnection && !hasMultipleConnections) {
         return {
           isValid: false,
-          message: "Either provide assetID, connectedID, and relName for a single connection, or provide a connections array for multiple connections",
+          message:
+            "Either provide assetID, connectedID, and relName for a single connection, or provide a connections array for multiple connections",
         };
       }
-      
+
       return {
         isValid: true,
         message: "Valid request format",
@@ -347,17 +379,45 @@ export const disconnectAssetSchema = {
   relName: {
     sanitizer: (value: string) => value.toUpperCase(),
     validator: (value: string) => {
-      const validRelNames = ["USED_IN", "PROFILE_PIC_ORIGINAL_JPG", "PROFILE_PIC_200_JPG", "PROFILE_PIC_600_JPG"];
       return {
-        isValid: validRelNames.includes(value),
-        message: validRelNames.includes(value) 
-          ? "Valid relationship name" 
-          : `Invalid relationship name. Must be one of: ${validRelNames.join(", ")}`,
+        isValid: VALID_RELATIONSHIP_TYPES.includes(value),
+        message: VALID_RELATIONSHIP_TYPES.includes(value)
+          ? "Valid relationship name"
+          : `Invalid relationship name. Must be one of: ${VALID_RELATIONSHIP_TYPES.join(", ")}`,
       };
     },
     required: true,
   },
 };
 logger.debug("disconnectAssetSchema initialized");
+
+export const updateProfilePicsSchema = {
+  sourceID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+  originalAssetID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+  thumbnailAssetID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+  asset200ID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+  asset600ID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+};
+logger.debug("updateProfilePicsSchema initialized");
 
 logger.debug("All assetMarker validation schemas initialized");

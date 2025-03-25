@@ -4,6 +4,7 @@ import uploadAndOptimizeJpgRoute from "./uploadAndOptimizeJpgRoute";
 import connectAssetRoute from "./connectAssetRoute";
 import disconnectAssetRoute from "./disconnectAssetRoute";
 import getAssetMarkerUrlRoute from "./getAssetMarkerUrlRoute";
+import updateProfilePicsRoute from "./updateProfilePicsRoute";
 import { logInfo } from "../../../utils/logger";
 
 /**
@@ -23,10 +24,11 @@ export default function AssetMarkerRoutes() {
   router.use(connectAssetRoute());
   router.use(disconnectAssetRoute());
   router.use(getAssetMarkerUrlRoute);
+  router.use(updateProfilePicsRoute());
 
   logInfo("AssetMarker routes initialized successfully", {
     module: "assetMarkerRoutes",
-    routesCount: 5,
+    routesCount: 6,
   });
 
   return router;
