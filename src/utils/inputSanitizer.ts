@@ -180,6 +180,61 @@ export function sanitizeTrustAccountSubtype(value: any): string {
   return value.trim().toUpperCase();
 }
 
+export function sanitizeLocation(value: any): any {
+  logger.info("Sanitizing location", { value, type: typeof value });
+  
+  // If null or undefined, return null (for when store is closed)
+  if (value === null || value === undefined) {
+    logger.info("Location is null or undefined, returning null");
+    return null;
+  }
+
+  // If not an object, return null
+  if (typeof value !== 'object') {
+    logger.warn("Location sanitization received non-object input", { value, type: typeof value });
+    return null;
+  }
+
+  // Create a sanitized location object
+  const sanitizedLocation: { latitude: number; longitude: number } = {
+    latitude: 0,
+    longitude: 0
+  };
+
+  // Sanitize latitude
+  if ('latitude' in value) {
+    const lat = Number(value.latitude);
+    sanitizedLocation.latitude = !isNaN(lat) ? Math.max(-90, Math.min(90, lat)) : 0;
+    logger.info("Sanitized latitude", { 
+      original: value.latitude, 
+      sanitized: sanitizedLocation.latitude,
+      isNumber: !isNaN(lat)
+    });
+  } else {
+    logger.warn("Location missing latitude property");
+  }
+
+  // Sanitize longitude
+  if ('longitude' in value) {
+    const lng = Number(value.longitude);
+    sanitizedLocation.longitude = !isNaN(lng) ? Math.max(-180, Math.min(180, lng)) : 0;
+    logger.info("Sanitized longitude", { 
+      original: value.longitude, 
+      sanitized: sanitizedLocation.longitude,
+      isNumber: !isNaN(lng)
+    });
+  } else {
+    logger.warn("Location missing longitude property");
+  }
+
+  logger.info("Location sanitized", { 
+    originalInput: value, 
+    sanitized: sanitizedLocation 
+  });
+
+  return sanitizedLocation;
+}
+
 export function sanitizeBankFields(value: any): any {
   if (!value || typeof value !== 'object') return {};
 

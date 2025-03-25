@@ -359,6 +359,67 @@ export function validateTrustAccountSubtype(value: any): {
   return { isValid, message };
 }
 
+export function validateLocation(value: any): {
+  isValid: boolean;
+  message: string;
+} {
+  logger.debug("Validating location", { value, type: typeof value });
+
+  // If null, it's valid (for when store is closed)
+  if (value === null) {
+    logger.debug("Location is null, which is valid");
+    return { isValid: true, message: "Valid location (null)" };
+  }
+
+  // Check if it's an object with latitude and longitude
+  if (!value || typeof value !== "object") {
+    logger.warn("Invalid location: not an object", { value, type: typeof value });
+    return {
+      isValid: false,
+      message: "Location must be an object with latitude and longitude properties"
+    };
+  }
+
+  // Check if latitude and longitude are present and are numbers
+  if (!('latitude' in value) || !('longitude' in value)) {
+    logger.warn("Invalid location: missing latitude or longitude", { value });
+    return {
+      isValid: false,
+      message: "Location must have both latitude and longitude properties"
+    };
+  }
+
+  // Validate latitude (-90 to 90)
+  if (typeof value.latitude !== 'number' || 
+      isNaN(value.latitude) || 
+      value.latitude < -90 || 
+      value.latitude > 90) {
+    logger.warn("Invalid latitude", { latitude: value.latitude });
+    return {
+      isValid: false,
+      message: "Latitude must be a number between -90 and 90"
+    };
+  }
+
+  // Validate longitude (-180 to 180)
+  if (typeof value.longitude !== 'number' || 
+      isNaN(value.longitude) || 
+      value.longitude < -180 || 
+      value.longitude > 180) {
+    logger.warn("Invalid longitude", { longitude: value.longitude });
+    return {
+      isValid: false,
+      message: "Longitude must be a number between -180 and 180"
+    };
+  }
+
+  logger.debug("Location is valid", { latitude: value.latitude, longitude: value.longitude });
+  return {
+    isValid: true,
+    message: "Valid location"
+  };
+}
+
 export function validateBankFields(value: any): {
   isValid: boolean;
   message: string;

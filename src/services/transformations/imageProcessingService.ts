@@ -19,6 +19,7 @@ export interface ImageProcessingOptions {
  */
 export interface ProcessedImageVersions {
   original: Buffer;
+  thumbnail: Buffer;
   size200: Buffer;
   size600: Buffer;
 }
@@ -224,7 +225,7 @@ export class ImageProcessingService {
 
   /**
    * Process an image for AssetMarker storage
-   * Creates original, 200px, and 600px versions
+   * Creates original, thumbnail, 200px, and 600px versions
    * @param imageBuffer - The original image buffer
    * @returns An object containing the processed image buffers
    */
@@ -232,6 +233,14 @@ export class ImageProcessingService {
     try {
       // Optimize the original image
       const optimizedOriginal = await this.optimizeJpeg(imageBuffer);
+      
+      // Create thumbnail version (50px)
+      const thumbnail = await this.resizeImage(imageBuffer, {
+        width: 50,
+        height: 50,
+        fit: "inside",
+        quality: 75
+      });
       
       // Create 200px version
       const size200 = await this.resizeImage(imageBuffer, {
@@ -254,12 +263,14 @@ export class ImageProcessingService {
         method: "processAssetMarkerImage",
         originalSize: imageBuffer.length,
         optimizedSize: optimizedOriginal.length,
+        thumbnailSize: thumbnail.length,
         size200Size: size200.length,
         size600Size: size600.length
       });
       
       return {
         original: optimizedOriginal,
+        thumbnail,
         size200,
         size600
       };

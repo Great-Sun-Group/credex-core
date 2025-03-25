@@ -50,7 +50,7 @@ export async function AddAssetMarkerController(
 
     const accountCheckResult = await session.executeRead(async (tx: any) => {
       return await tx.run(
-        `MATCH (m:Member {id: $memberID})-[:OWNS]->(a)
+        `MATCH (m:Member {memberID: $memberID})-[:OWNS]->(a)
          WHERE a.id IN $accountIDs AND (a:Account OR a:AccountInternal)
          RETURN a.id AS accountID`,
         { memberID, accountIDs }
@@ -76,6 +76,10 @@ export async function AddAssetMarkerController(
       description,
       s3Key,
       denomination,
+      // Store the amount on the AssetMarker node itself
+      generalLedgerAmount: crAccounts.reduce((sum: number, account: any) => sum + account.amount, 0),
+      // Set CXX multiplier (default to 1 if not provided)
+      cxxMultiplier: 1,
       assetMarkerData: AssetMarkerData,
     };
 

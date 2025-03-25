@@ -2,23 +2,20 @@ import axios from "../setup";
 
 describe("createAccountInternal Success Test", () => {
   it("creates an internal account for a member", async () => {
-    // Get the token from the first parameter
-    const token = process.env.TEST_PARAMS?.split(" ")[0];
+    const params = (process.env.TEST_PARAMS || "").split(" ").filter(Boolean);
+    const [token, accountName, defaultDenom, accountType, ...descriptionParts] = params;
+    const description = descriptionParts.join(" ");
 
-    if (!token) {
-      throw new Error("Usage: npm test createAccountInternal <token>");
+    if (!token || !accountName) {
+      throw new Error(
+        "Usage: npm test createAccountInternal <token> <accountName> [defaultDenom] [accountType] [description]"
+      );
     }
 
     const headers = {
       "x-client-api-key": process.env.CLIENT_API_KEY || "",
       Authorization: `Bearer ${token}`,
     };
-
-    // Use hardcoded values for the account
-    const accountName = "Fresh Tomatoes";
-    const defaultDenom = "USD";
-    const accountType = "PRODUCTION";
-    const description = "Fresh organic tomatoes grown locally";
 
     console.log(
       `Creating internal account '${accountName}' with token: ${token.substring(0, 15)}...`

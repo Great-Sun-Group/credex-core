@@ -224,28 +224,58 @@
 })</code></pre>
 
             <p><strong>USED_IN Relationship</strong></p>
-            <pre><code>(:AssetMarker { filename: "profile_pic_original.jpg" })-[:USED_IN]->(:AssetMarker { filename: "profile_pic_200.jpg" })</code></pre>
+            <pre><code>(:AssetMarker { filename: "profile_pic_original.jpg" })-[:USED_IN]->(:AssetMarker { filename: "profile_pic_thumbnail.jpg" })
+(:AssetMarker { filename: "profile_pic_original.jpg" })-[:USED_IN]->(:AssetMarker { filename: "profile_pic_200.jpg" })
+(:AssetMarker { filename: "profile_pic_original.jpg" })-[:USED_IN]->(:AssetMarker { filename: "profile_pic_600.jpg" })</code></pre>
 
             <p><strong>Reference Relationships</strong></p>
-            <pre><code>(:Member)-[:PROFILE_PIC_200_JPG]->(:AssetMarker)
-(:Account)-[:ACCOUNT_PIC_200_JPG]->(:AssetMarker)</code></pre>
+            <pre><code>// Both Member and Account use the same relationship types for images
+// Source (Member or Account) to AssetMarker relationships
+(:Source)-[:PROFILE_PIC_ORIGINAL_JPG]->(:AssetMarker)
+(:Source)-[:PROFILE_PIC_THUMBNAIL_JPG]->(:AssetMarker)
+(:Source)-[:PROFILE_PIC_200_JPG]->(:AssetMarker)
+(:Source)-[:PROFILE_PIC_600_JPG]->(:AssetMarker)</code></pre>
 
             <div class="asset-marker-diagram">
               <h4>AssetMarker in the Database</h4>
               <div class="mermaid">
-                graph TD AM1((":AssetMarker<br />filename: 'original.jpg'"))
+                graph TD 
+                AM1((":AssetMarker<br />filename: 'original.jpg'"))
+                AM4((":AssetMarker<br />filename: 'thumbnail.jpg'"))
                 AM2((":AssetMarker<br />filename: '200px.jpg'"))
                 AM3((":AssetMarker<br />filename: '600px.jpg'"))
-                A1((":Account<br />name: 'onboardedAssets'")) A2((":Account<br />name:
-                'digitalAssets'")) M1((":Member<br />name: 'Munya'")) AM1
-                -->|USED_IN| AM2 AM1 -->|USED_IN| AM3 A1 -->|CR| AM1 AM1 -->|DR|
-                A2 A1 -->|CR| AM2 AM2 -->|DR| A2 A1 -->|CR| AM3 AM3 -->|DR| A2
-                M1 -->|PROFILE_PIC_ORIGINAL_JPG| AM1 M1 -->|PROFILE_PIC_200_JPG|
-                AM2 M1 -->|PROFILE_PIC_600_JPG| AM3 classDef assetMarker
-                fill:#FBB016,stroke:#FBB016,color:black classDef account
-                fill:#006400,stroke:#006400,color:#FBB016 classDef member
-                fill:black,stroke:black,color:white class AM1,AM2,AM3
-                assetMarker class A1,A2 account class M1 member
+                A1((":Account<br />name: 'onboardedAssets'")) 
+                A2((":Account<br />name: 'digitalAssets'")) 
+                M1((":Member<br />name: 'Munya'")) 
+                
+                AM1 -->|USED_IN| AM4
+                AM1 -->|USED_IN| AM2 
+                AM1 -->|USED_IN| AM3 
+                
+                A1 -->|CR| AM1 
+                AM1 -->|DR| A2 
+                
+                A1 -->|CR| AM4
+                AM4 -->|DR| A2
+                
+                A1 -->|CR| AM2 
+                AM2 -->|DR| A2 
+                
+                A1 -->|CR| AM3 
+                AM3 -->|DR| A2
+                
+                M1 -->|PROFILE_PIC_ORIGINAL_JPG| AM1 
+                M1 -->|PROFILE_PIC_THUMBNAIL_JPG| AM4
+                M1 -->|PROFILE_PIC_200_JPG| AM2 
+                M1 -->|PROFILE_PIC_600_JPG| AM3 
+                
+                classDef assetMarker fill:#FBB016,stroke:#FBB016,color:black 
+                classDef account fill:#006400,stroke:#006400,color:#FBB016 
+                classDef member fill:black,stroke:black,color:white 
+                
+                class AM1,AM2,AM3,AM4 assetMarker 
+                class A1,A2 account 
+                class M1 member
               </div>
             </div>
           </div>

@@ -85,6 +85,9 @@ export default function uploadAndOptimizeJpgRoute() {
    *                             originalAssetID:
    *                               type: string
    *                               format: uuid
+   *                             thumbnailAssetID:
+   *                               type: string
+   *                               format: uuid
    *                             asset200ID:
    *                               type: string
    *                               format: uuid

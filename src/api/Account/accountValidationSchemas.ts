@@ -169,4 +169,18 @@ export const getBalancesSchema = {
 };
 logger.debug("getBalancesSchema initialized");
 
+export const storeStatusSchema = {
+  storeOpen: {
+    sanitizer: s.sanitizeBoolean,
+    validator: v.validateBoolean,
+    required: true,
+  },
+  location: {
+    sanitizer: s.sanitizeLocation,
+    validator: v.validateLocation,
+    required: false,
+  },
+};
+logger.debug("storeStatusSchema initialized");
+
 logger.debug("All account validation schemas initialized");
