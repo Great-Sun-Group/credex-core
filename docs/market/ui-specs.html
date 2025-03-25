@@ -59,18 +59,6 @@
             Detailed descriptions of user interfaces for the Vimbiso Market
             features.
           </p>
-          <div class="ui-screen-card">
-            <div class="info-box">
-              <h4>First-Time User Experience</h4>
-              <p>
-                The first time a member goes to the market, they will see a
-                single screen with a button saying
-                <strong>"Open My Vimbiso Market Store"</strong>. When clicked,
-                this button hits the <code>/sellinmarket</code> endpoint, then takes member to Store.
-              </p>
-            </div>
-          </div>
-          
           <!-- Tabs for UI Categories -->
           <div class="tabs">
             <div class="tab active" data-tab="vendor-screens">
@@ -89,6 +77,18 @@
               and transactions in the Vimbiso Market.
             </p>
 
+          <div class="ui-screen-card">
+            <div class="info-box">
+              <h4>First-Time User Experience</h4>
+              <p>
+                The first time a member goes to the market, they will see a
+                single screen with a button saying
+                <strong>"Open My Vimbiso Market Store"</strong>. When clicked,
+                this button hits the <code>/sellinmarket</code> endpoint, then takes member to Store.
+              </p>
+            </div>
+          </div>
+          
             <div class="ui-screen-card">
               <h4>Vimbiso Store</h4>
               <div class="ui-screen-details">
@@ -158,77 +158,6 @@
                       </div>
 
                       <a href="#" class="manage-store-link">Manage My Store</a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="ui-screen-card">
-              <h4>Edit Member Profile</h4>
-              <div class="ui-screen-details">
-                <div class="ui-adjusting-description">
-                  <p>
-                    This is the landing screen that users are directed to after clicking
-                    "Open My Vimbiso Market Store" for the first time. It allows vendors to edit their profile information
-                    and manage their vendor settings.
-                  </p>
-                  <h5>Components:</h5>
-                  <ul>
-                    <li>
-                      <strong>Profile Information</strong>
-                      <ul>
-                        <li>Profile picture</li>
-                        <li>
-                          Profile pic add button (triggers
-                          <code>/uploadAndOptimizeJpg</code> then
-                          <code>/updateProfilePics</code> with assetIDs)
-                        </li>
-                        <li>First name (short text)</li>
-                        <li>Last name (short text)</li>
-                        <li>Member handle (short text)</li>
-                        <li>Vendor bio (long text)</li>
-                      </ul>
-                    </li>
-                    <li>
-                      <strong>Save button</strong> - Hits
-                      <code>/editMember</code> with text fields
-                    </li>
-                  </ul>
-                </div>
-                <div class="ui-screen-mockup">
-                  <div class="mockup-placeholder">
-                    <div class="mockup-content">
-                      <h5>Edit Member Profile</h5>
-                      <div class="profile-section">
-                        <div class="profile-image">
-                          <div class="image-placeholder"></div>
-                          <button class="add-image-btn">+</button>
-                        </div>
-                        <div class="profile-fields">
-                          <div class="field">
-                            <label>First Name</label>
-                            <input type="text" placeholder="Munya" />
-                          </div>
-                          <div class="field">
-                            <label>Last Name</label>
-                            <input type="text" placeholder="Farmer" />
-                          </div>
-                          <div class="field">
-                            <label>Member Handle</label>
-                            <input type="text" placeholder="munyaFarmer" />
-                          </div>
-                          <div class="field">
-                            <label>Vendor Bio</label>
-                            <textarea
-                              placeholder="I grow the freshest tomatoes in Harare..."
-                            ></textarea>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="save-btn-container">
-                        <button class="save-btn">Save Profile</button>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -591,6 +520,75 @@ Fresh, organic tomatoes grown in Harare. Available year-round with peak harvest 
                 </div>
               </div>
             </div>
+            <div class="ui-screen-card">
+              <h4>Edit Member Profile</h4>
+              <div class="ui-screen-details">
+                <div class="ui-adjusting-description">
+                  <p>
+                    This screen allows vendors to edit their profile information.
+                  </p>
+                  <h5>Components:</h5>
+                  <ul>
+                    <li>
+                      <strong>Profile Information</strong>
+                      <ul>
+                        <li>Profile picture</li>
+                        <li>
+                          Profile pic add button (triggers
+                          <code>/uploadAndOptimizeJpg</code> then
+                          <code>/updateProfilePics</code> with assetIDs)
+                        </li>
+                        <li>First name (short text)</li>
+                        <li>Last name (short text)</li>
+                        <li>Member handle (short text)</li>
+                        <li>Vendor bio (long text)</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <strong>Save button</strong> - Hits
+                      <code>/editMember</code> with text fields
+                    </li>
+                  </ul>
+                </div>
+                <div class="ui-screen-mockup">
+                  <div class="mockup-placeholder">
+                    <div class="mockup-content">
+                      <h5>Edit Member Profile</h5>
+                      <div class="profile-section">
+                        <div class="profile-image">
+                          <div class="image-placeholder"></div>
+                          <button class="add-image-btn">+</button>
+                        </div>
+                        <div class="profile-fields">
+                          <div class="field">
+                            <label>First Name</label>
+                            <input type="text" placeholder="Munya" />
+                          </div>
+                          <div class="field">
+                            <label>Last Name</label>
+                            <input type="text" placeholder="Farmer" />
+                          </div>
+                          <div class="field">
+                            <label>Member Handle</label>
+                            <input type="text" placeholder="munyaFarmer" />
+                          </div>
+                          <div class="field">
+                            <label>Vendor Bio</label>
+                            <textarea
+                              placeholder="I grow the freshest tomatoes in Harare..."
+                            ></textarea>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="save-btn-container">
+                        <button class="save-btn">Save Profile</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <!-- Purchaser Screens Tab Content -->
