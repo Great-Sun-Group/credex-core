@@ -40,13 +40,16 @@
             <a href="api-reference.html">API Reference</a>
           </li>
           <li class="nav-item">
-            <a href="ui-specs.html">UI Specifications</a>
-          </li>
-          <li class="nav-item">
             <a href="api-workplan.html">API Implementation</a>
           </li>
           <li class="nav-item">
-            <a href="client-workplan.html">Client Implementation</a>
+            <a href="api-testing.html">API Testing</a>
+          </li>
+          <li class="nav-item">
+            <a href="ui-specs-seller.html">UI Specs Seller</a>
+          </li>
+          <li class="nav-item">
+            <a href="ui-specs-purchaser.html">UI Specs Purchaser</a>
           </li>
         </ul>
       </div>
@@ -239,43 +242,22 @@
             <div class="asset-marker-diagram">
               <h4>AssetMarker in the Database</h4>
               <div class="mermaid">
-                graph TD 
-                AM1((":AssetMarker<br />filename: 'original.jpg'"))
+                graph TD AM1((":AssetMarker<br />filename: 'original.jpg'"))
                 AM4((":AssetMarker<br />filename: 'thumbnail.jpg'"))
                 AM2((":AssetMarker<br />filename: '200px.jpg'"))
                 AM3((":AssetMarker<br />filename: '600px.jpg'"))
-                A1((":Account<br />name: 'onboardedAssets'")) 
-                A2((":Account<br />name: 'digitalAssets'")) 
-                M1((":Member<br />name: 'Munya'")) 
-                
-                AM1 -->|USED_IN| AM4
-                AM1 -->|USED_IN| AM2 
-                AM1 -->|USED_IN| AM3 
-                
-                A1 -->|CR| AM1 
-                AM1 -->|DR| A2 
-                
-                A1 -->|CR| AM4
-                AM4 -->|DR| A2
-                
-                A1 -->|CR| AM2 
-                AM2 -->|DR| A2 
-                
-                A1 -->|CR| AM3 
-                AM3 -->|DR| A2
-                
-                M1 -->|PROFILE_PIC_ORIGINAL_JPG| AM1 
-                M1 -->|PROFILE_PIC_THUMBNAIL_JPG| AM4
-                M1 -->|PROFILE_PIC_200_JPG| AM2 
-                M1 -->|PROFILE_PIC_600_JPG| AM3 
-                
-                classDef assetMarker fill:#FBB016,stroke:#FBB016,color:black 
-                classDef account fill:#006400,stroke:#006400,color:#FBB016 
-                classDef member fill:black,stroke:black,color:white 
-                
-                class AM1,AM2,AM3,AM4 assetMarker 
-                class A1,A2 account 
-                class M1 member
+                A1((":Account<br />name: 'onboardedAssets'")) A2((":Account<br />name:
+                'digitalAssets'")) M1((":Member<br />name: 'Munya'")) AM1
+                -->|USED_IN| AM4 AM1 -->|USED_IN| AM2 AM1 -->|USED_IN| AM3 A1
+                -->|CR| AM1 AM1 -->|DR| A2 A1 -->|CR| AM4 AM4 -->|DR| A2 A1
+                -->|CR| AM2 AM2 -->|DR| A2 A1 -->|CR| AM3 AM3 -->|DR| A2 M1
+                -->|PROFILE_PIC_ORIGINAL_JPG| AM1 M1
+                -->|PROFILE_PIC_THUMBNAIL_JPG| AM4 M1 -->|PROFILE_PIC_200_JPG|
+                AM2 M1 -->|PROFILE_PIC_600_JPG| AM3 classDef assetMarker
+                fill:#FBB016,stroke:#FBB016,color:black classDef account
+                fill:#006400,stroke:#006400,color:#FBB016 classDef member
+                fill:black,stroke:black,color:white class AM1,AM2,AM3,AM4
+                assetMarker class A1,A2 account class M1 member
               </div>
             </div>
           </div>

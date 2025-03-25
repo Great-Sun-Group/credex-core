@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UI Specifications - Vimbiso Market</title>
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/layout.css" />
+    <link rel="stylesheet" href="../css/components.css" />
+    <link rel="stylesheet" href="../css/responsive.css" />
+    <link rel="stylesheet" href="css/variables.css" />
+    <link rel="stylesheet" href="css/market.css" />
+    <link rel="stylesheet" href="css/ui-mockups.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="market-header">
+      <div class="container">
+        <div class="header-content">
+          <a href="../index.html" class="back-link">← Back to MyCredex.App</a>
+          <h1>Vimbiso Market</h1>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Navigation -->
+    <nav class="market-nav">
+      <div class="container">
+        <ul class="nav-list">
+          <li class="nav-item"><a href="index.html">Overview</a></li>
+          <li class="nav-item"><a href="user-flows.html">User Flows</a></li>
+          <li class="nav-item"><a href="data-model.html">Data Model</a></li>
+          <li class="nav-item">
+            <a href="api-reference.html">API Reference</a>
+          </li>
+          <li class="nav-item">
+            <a href="api-workplan.html">API Implementation</a>
+          </li>
+          <li class="nav-item">
+            <a href="api-testing.html">API Testing</a>
+          <li class="nav-item">
+            <a href="ui-specs-seller.html">UI Specs Seller</a>
+          </li>
+          <li class="nav-item active">
+            <a href="ui-specs-purchaser.html">UI Specs Purchaser</a>
+          </li>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="market-content">
+      <div class="container">
+        <section>
+          <h2>Purchaser User Interface Specifications</h2>
+          <p class="lead">
+            These screens allow purchasers to issue payment and browse products, stores, and vendors
+            in the Vimbiso Market.
+          </p>
+
+            <div class="ui-screen-card">
+              <h4>Offer Credex</h4>
+              <div class="ui-screen-details">
+                <div class="ui-adjusting-description">
+                  <p>
+                    This screen allows purchasers to offer a credex in response
+                    to an invoice.
+                  </p>
+                  <h5>Components:</h5>
+                  <ul>
+                    <li>Read-only offerCredex screen</li>
+                    <li>
+                      Values (including list of accounts and amounts) filled out
+                      based on invoice QR scanned
+                    </li>
+                    <li><strong>Sign & Send</strong> button</li>
+                  </ul>
+                </div>
+                <div class="ui-screen-mockup">
+                  <div class="mockup-placeholder">
+                    <div class="mockup-content">
+                      <h5>Offer Credex</h5>
+                      <div class="invoice-details">
+                        <div class="vendor-info">
+                          <h6>Payable to: Munya Farmer Personal</h6>
+                        </div>
+
+                        <table class="invoice-items">
+                          <thead>
+                            <tr>
+                              <th>Item</th>
+                              <th>Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>Fresh Tomatoes</td>
+                              <td>$20.00</td>
+                            </tr>
+                          </tbody>
+                          <tfoot>
+                            <tr>
+                              <td>Total:</td>
+                              <td>$20.00</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+
+                        <div class="payment-method">
+                          <p>Payment from: Personal Account</p>
+                          <p>Balance: $150.00</p>
+                        </div>
+
+                        <button class="offer-credex-btn">Sign & Send</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="ui-screen-card">
+              <h4>Search Screen</h4>
+              <div class="ui-screen-details">
+                <div class="ui-adjusting-description">
+                  <p>
+                    This screen allows purchasers to search for items, stores,
+                    and vendors in the Vimbiso Market.
+                  </p>
+                  <h5>Components:</h5>
+                  <ul>
+                    <li>Search box</li>
+                    <li>Map box with near me and results</li>
+                    <li>
+                      List of results (clicks to view Item, Store, Vendor pages)
+                    </li>
+                  </ul>
+                  <p>Search returns:</p>
+                  <ul>
+                    <li>
+                      Products with location and link to product page to be
+                      displayed on on map and in list below map with links.
+                    </li>
+                    <li>
+                      Links to stores and members are within product pages, not
+                      here.
+                    </li>
+                  </ul>
+                </div>
+                <div class="ui-screen-mockup">
+                  <div class="mockup-placeholder">
+                    <div class="mockup-content">
+                      <h5>Search Vimbiso Market</h5>
+                      <div class="search-container">
+                        <input
+                          type="text"
+                          placeholder="Search for products"
+                          class="search-box"
+                        />
+                        <button class="search-btn">Search</button>
+                      </div>
+
+                      <div class="map-container">
+                        <div class="map-placeholder">
+                          <div class="map-pin product"></div>
+                          <div class="map-pin user"></div>
+                        </div>
+                      </div>
+
+                      <div class="search-results">
+                        <h6>Results Near You</h6>
+                        <div class="result-item">
+                          <div class="result-icon product"></div>
+                          <div class="result-details">
+                            <h6><a href="#" class="product-link">Fresh Tomatoes</a></h6>
+                            <p>Fresh from family farm in..</p>
+                            <p>0.7 km away</p>
+                          </div>
+                        </div>
+                        <div class="result-item">
+                          <div class="result-icon product"></div>
+                          <div class="result-details">
+                            <h6><a href="#" class="product-link">Maize</a></h6>
+                            <p>2kg and 10kg bags • In stock</p>
+                            <p>0.5 km away</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="ui-screen-card">
+              <h4>Product Page</h4>
+              <div class="ui-screen-details">
+                <div class="ui-adjusting-description">
+                  <p>
+                    This screen displays information about a specific product.
+                  </p>
+                  <h5>Components:</h5>
+                  <ul>
+                    <li>Product name</li>
+                    <li>Photo</li>
+                    <li>Description</li>
+                    <li>Link to store</li>
+                    <li><strong>Search</strong> button that searches for account name near me</li>
+                  </ul>
+                </div>
+                <div class="ui-screen-mockup">
+                  <div class="mockup-placeholder">
+                    <div class="mockup-content">
+                      <div class="product-header">
+                        <h5>Fresh Tomatoes</h5>
+                      </div>
+
+                      <div class="product-photo">
+                        <div class="photo-placeholder"></div>
+                      </div>
+
+                      <div class="product-description">
+                        <p>
+                          Fresh, organic tomatoes grown in Harare. Available
+                          year-round with peak harvest in summer months.
+                        </p>
+                      </div>
+
+                      <div class="product-details">
+                        <div class="detail-item">
+                          <span class="detail-label">Store:</span>
+                          <span class="detail-value"><a href="#" class="store-link">Munya's Produce<br /><span class="account-handle">💳 MUNYAS_PRODUCE</span></a></span>
+                        </div>
+                      </div>
+
+                      <button class="purchase-btn">Search</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="ui-screen-card">
+              <h4>Store Page</h4>
+              <div class="ui-screen-details">
+                <div class="ui-adjusting-description">
+                  <p>
+                    This screen displays information about a specific store and its products.
+                  </p>
+                  <h5>Components:</h5>
+                  <ul>
+                    <li>Store name and thumbnail</li>
+                    <li>Store description</li>
+                    <li>List of products with photo and description</li>
+                    <li>Link to vendor/member profile</li>
+                  </ul>
+                </div>
+                <div class="ui-screen-mockup">
+                  <div class="mockup-placeholder">
+                    <div class="mockup-content">
+                      <div class="store-header">
+                        <div class="thumbnail-image"></div>
+                        <h5>Munya's Produce<br /><span class="account-handle">💳 MUNYAS_PRODUCE</span></h5>
+                      </div>
+
+                      <div class="store-description">
+                        <p>
+                          Fresh, organic produce from our family farm in Ruwa. We specialize in 
+                          seasonal vegetables and fruits grown without pesticides.
+                        </p>
+                      </div>
+
+                      <div class="store-products">
+                        <h6>Products</h6>
+                        <div class="product-list">
+                          <div class="product-item">
+                            <div class="product-photo"></div>
+                            <div class="product-details">
+                              <h6><a href="#" class="product-link">Fresh Tomatoes</a></h6>
+                              <p>Organic and fresh</p>
+                            </div>
+                          </div>
+                          <div class="product-item">
+                            <div class="product-photo"></div>
+                            <div class="product-details">
+                              <h6><a href="#" class="product-link">Maize</a></h6>
+                              <p>Best around...</p>
+                            </div>
+                          </div>
+                          <div class="product-item">
+                            <div class="product-photo"></div>
+                            <div class="product-details">
+                              <h6><a href="#" class="product-link">Peanut Butter</a></h6>
+                              <p>$3.75 per jar</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="store-vendor">
+                        <h6>Vendor</h6>
+                        <div class="vendor-preview">
+                          <div class="vendor-photo"></div>
+                          <div class="vendor-info">
+                            <h6><a href="#" class="vendor-link">Munya Farmer</a></h6>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="ui-screen-card">
+              <h4>Vendor (Member) Page</h4>
+              <div class="ui-screen-details">
+                <div class="ui-adjusting-description">
+                  <p>
+                    This screen displays information about a specific vendor.
+                  </p>
+                  <h5>Components:</h5>
+                  <ul>
+                    <li>Name</li>
+                    <li>Member role</li>
+                    <li>Profile photo</li>
+                    <li>Vendor bio</li>
+                    <li>Links to stores</li>
+                  </ul>
+                </div>
+                <div class="ui-screen-mockup">
+                  <div class="mockup-placeholder">
+                    <div class="mockup-content">
+                      <div class="vendor-header">
+                        <div class="vendor-photo">
+                          <div class="photo-placeholder"></div>
+                        </div>
+                        <div class="vendor-info">
+                          <h5>Munya Farmer</h5>
+                          <p class="vendor-role">Hustler • Vendor</p>
+                        </div>
+                      </div>
+
+                      <div class="vendor-bio">
+                        <h6>About</h6>
+                        <p>
+                          I grow the freshest tomatoes in Harare. My farm has
+                          been in my family for three generations, and we take
+                          pride in growing high-quality, organic produce. In
+                          addition to tomatoes, we also offer seasonal
+                          vegetables and fruits.
+                        </p>
+                      </div>
+
+                      <div class="vendor-products">
+                        <h6>Stores</h6>
+                        <div class="product-list">
+                          <div class="product-item">
+                            <div class="product-photo"></div>
+                            <div class="product-details">
+                              <h6><a href="#" class="product-link">Munya's Other Store <span class="account-handle">💳 MUNYAS_OTHER</span></a></h6>
+                            </div>
+                          </div>
+                          <div class="product-item">
+                            <div class="product-photo"></div>
+                            <div class="product-details">
+                              <h6><a href="#" class="product-link">Munya's Produce<br /><span class="account-handle">💳 MUNYAS_PRODUCE</span></a></h6>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="market-footer">
+      <div class="container">
+        <p>&copy; 2025 VimbisoPay. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Tab functionality
+        const tabs = document.querySelectorAll(".tab");
+        const tabContents = document.querySelectorAll(".tab-content");
+
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
+            const tabId = tab.getAttribute("data-tab");
+
+            // Remove active class from all tabs and contents
+            tabs.forEach((t) => t.classList.remove("active"));
+            tabContents.forEach((c) => c.classList.remove("active"));
+
+            // Add active class to clicked tab and corresponding content
+            tab.classList.add("active");
+            document.getElementById(tabId).classList.add("active");
+          });
+        });
+
+        // Check for hash in URL to activate specific tab
+        if (window.location.hash) {
+          const hash = window.location.hash.substring(1);
+          const tab = document.querySelector(`.tab[data-tab="${hash}"]`);
+          if (tab) {
+            tab.click();
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
