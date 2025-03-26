@@ -32,7 +32,7 @@ export async function EditAccountInternalController(
     // Check if the account exists and is owned by the member
     const accountCheckResult = await session.executeRead(async (tx: any) => {
       return await tx.run(
-        `MATCH (m:Member {id: $memberID})-[:OWNS]->(a:AccountInternal {id: $accountID})
+        `MATCH (m:Member {memberID: $memberID})-[:OWNS]->(a:AccountInternal {id: $accountID})
          RETURN a`,
         { memberID, accountID }
       );

@@ -78,6 +78,27 @@
                   <pre>npm test login 1234567890</pre>
                 </li>
                 <li>
+                  <strong>Edit Member Profile</strong> - Successfully tested
+                  updating member profile information with
+                  <code>/editMember</code> endpoint
+                  <pre>npm test editmember tokenHere "New First" "New Last" "NEWHANDLE" "Updated vendor bio with more details"</pre>
+                  <ul>
+                    <li>
+                      Verified updating all fields at once (first name, last name, member handle, and vendor bio)
+                    </li>
+                    <li>
+                      Verified updating individual fields separately (single field updates)
+                    </li>
+                    <li>
+                      Confirmed proper validation for member handle (uppercase letters, numbers, and underscores only)
+                    </li>
+                    <li>
+                      Tested with curl to verify API behavior:
+                      <pre>curl -X POST http://localhost:3000/editMember -H "Content-Type: application/json" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"vendorBio": "Testing single field update"}'</pre>
+                    </li>
+                  </ul>
+                </li>
+                <li>
                   <strong>Vendor Enablement</strong> - Successfully tested
                   enabling vendor functionality with
                   <code>/sellInMarket</code> endpoint
@@ -155,37 +176,34 @@
                     </li>
                   </ul>
                 </li>
+                <li>
+                  <strong>Edit Product Account</strong> - Successfully tested
+                  updating product account details with
+                  <code>/editAccountInternal</code> endpoint
+                  <pre>curl -X POST http://localhost:3000/editAccountInternal -H "Content-Type: application/json" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"accountID": "accountID", "accountName": "Updated Product Name"}'</pre>
+                  <ul>
+                    <li>
+                      Verified updating all fields at once (account name, description, handle)
+                    </li>
+                    <li>
+                      Verified updating individual fields separately (single field updates)
+                    </li>
+                    <li>
+                      Confirmed proper sanitization for account handle (converts lowercase to uppercase, removes spaces and special characters)
+                    </li>
+                    <li>
+                      Fixed bug in controller where Member ID property was incorrectly referenced
+                    </li>
+                  </ul>
+                </li>
               </ul>
             </div>
 
             <h5>Tests To Complete ❌</h5>
             <div class="testing-progress">
-              <h6>Member Management</h6>
               <ul>
-                <li>
-                  <strong>Edit Member Profile</strong> - Test updating member profile information with
-                  <code>/editMember</code> endpoint
-                  <pre>npm test editmember tokenHere "New First" "New Last" "newhandle" "Updated vendor bio with more details"</pre>
-                  <ul>
-                    <li>
-                      Test updating first name, last name, member handle, and vendor bio
-                    </li>
-                  </ul>
-                </li>
-              </ul>
-
               <h6>Account Management</h6>
               <ul>
-                <li>
-                  <strong>Edit Product Account</strong> - Test updating product account details with
-                  <code>/editAccountInternal</code> endpoint
-                  <pre>npm test editaccountinternal tokenHere accountID "Updated Product Name" "Updated product description with more details"</pre>
-                  <ul>
-                    <li>
-                      Test updating account name, description, handle
-                    </li>
-                  </ul>
-                </li>
                 <li>
                   <strong>Store Status Management</strong> - Test updating store status and location with
                   <code>/storeStatus</code> endpoint
