@@ -2,6 +2,10 @@ import express from "express";
 import createAccountInternalRoute from "./createAccountInternalRoute";
 import editAccountInternalRoute from "./editAccountInternalRoute";
 import deleteAccountInternalRoute from "./deleteAccountInternalRoute";
+import searchProductsRoute from "./searchProductsRoute";
+import getAccountDashboardRoute from "./getAccountDashboardRoute";
+import getAccountInternalDataRoute from "./getAccountInternalDataRoute";
+import getProductRoute from "./getProductRoute";
 import logger from "../../../utils/logger";
 
 /**
@@ -19,10 +23,14 @@ export default function AccountInternalRoutes() {
   router.use(createAccountInternalRoute());
   router.use(editAccountInternalRoute());
   router.use(deleteAccountInternalRoute());
+  router.use(searchProductsRoute());
+  router.use(getAccountDashboardRoute());
+  router.use(getAccountInternalDataRoute());
+  router.use(getProductRoute());
 
   logger.info("AccountInternal routes initialized successfully", {
     module: "accountInternalRoutes",
-    routesCount: 3,
+    routesCount: 7,
   });
 
   return router;

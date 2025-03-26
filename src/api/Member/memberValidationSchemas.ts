@@ -174,4 +174,13 @@ export const sellInMarketSchema = {
 };
 logger.debug("sellInMarketSchema initialized");
 
+export const getMemberSchema = {
+  memberID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+};
+logger.debug("getMemberSchema initialized");
+
 logger.debug("All member validation schemas initialized");
