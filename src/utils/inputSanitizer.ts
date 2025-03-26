@@ -60,15 +60,27 @@ export const sanitizeAccountName = (input: string): string => {
   return sanitized;
 };
 
-// Function to sanitize handles (converts to uppercase and spaces to underscores)
+// Function to sanitize handles (transforms input to valid format instead of erroring)
 export const sanitizeHandle = (input: string): string => {
   logger.debug("Sanitizing handle", { input, type: typeof input });
   if (typeof input !== 'string') {
     logger.warn("Handle sanitization received non-string input", { input, type: typeof input });
     return '';
   }
-  // Convert to uppercase and replace spaces with underscores
-  const sanitized = sanitizeString(input).toUpperCase().replace(/\s+/g, '_');
+  
+  // 1. Sanitize the string (remove HTML tags and trim)
+  let sanitized = sanitizeString(input);
+  
+  // 2. Convert to uppercase (already handles lowercase letters)
+  sanitized = sanitized.toUpperCase();
+  
+  // 3. Remove spaces
+  sanitized = sanitized.replace(/\s+/g, '');
+  
+  // 4. Remove any characters that aren't uppercase letters, numbers, or underscores
+  // This handles special characters like hyphens, plus signs, etc.
+  sanitized = sanitized.replace(/[^A-Z0-9_]/g, '');
+  
   logger.debug("Handle sanitized", { 
     originalInput: input, 
     sanitized: sanitized 

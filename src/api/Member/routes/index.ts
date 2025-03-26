@@ -9,6 +9,7 @@ import setInitialPasswordRoute from "./setInitialPasswordRoute";
 import verificationRoutes from "./verificationRoutes";
 import editMemberRoute from "./editMemberRoute";
 import sellInMarketRoute from "./sellInMarketRoute";
+import getMemberRoute from "./getMemberRoute";
 import logger from "../../../utils/logger";
 
 /**
@@ -32,11 +33,12 @@ export default function MemberRoutes() {
   router.use(passwordResetRoute());
   router.use(editMemberRoute());
   router.use(sellInMarketRoute());
+  router.use(getMemberRoute());
   router.use("/verify", verificationRoutes()); // Mount verification routes with prefix
 
   logger.info("Member routes initialized successfully", {
     module: "memberRoutes",
-    routesCount: 10,
+    routesCount: 11,
   });
 
   return router;

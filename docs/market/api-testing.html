@@ -78,6 +78,27 @@
                   <pre>npm test login 1234567890</pre>
                 </li>
                 <li>
+                  <strong>Edit Member Profile</strong> - Successfully tested
+                  updating member profile information with
+                  <code>/editMember</code> endpoint
+                  <pre>npm test editmember tokenHere "New First" "New Last" "NEWHANDLE" "Updated vendor bio with more details"</pre>
+                  <ul>
+                    <li>
+                      Verified updating all fields at once (first name, last name, member handle, and vendor bio)
+                    </li>
+                    <li>
+                      Verified updating individual fields separately (single field updates)
+                    </li>
+                    <li>
+                      Confirmed proper validation for member handle (uppercase letters, numbers, and underscores only)
+                    </li>
+                    <li>
+                      Tested with curl to verify API behavior:
+                      <pre>curl -X POST http://localhost:3000/editMember -H "Content-Type: application/json" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"vendorBio": "Testing single field update"}'</pre>
+                    </li>
+                  </ul>
+                </li>
+                <li>
                   <strong>Vendor Enablement</strong> - Successfully tested
                   enabling vendor functionality with
                   <code>/sellInMarket</code> endpoint
@@ -155,65 +176,149 @@
                     </li>
                   </ul>
                 </li>
+                <li>
+                  <strong>Edit Product Account</strong> - Successfully tested
+                  updating product account details with
+                  <code>/editAccountInternal</code> endpoint
+                  <pre>curl -X POST http://localhost:3000/editAccountInternal -H "Content-Type: application/json" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"accountID": "accountID", "accountName": "Updated Product Name"}'</pre>
+                  <ul>
+                    <li>
+                      Verified updating all fields at once (account name, description, handle)
+                    </li>
+                    <li>
+                      Verified updating individual fields separately (single field updates)
+                    </li>
+                    <li>
+                      Confirmed proper sanitization for account handle (converts lowercase to uppercase, removes spaces and special characters)
+                    </li>
+                    <li>
+                      Fixed bug in controller where Member ID property was incorrectly referenced
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Store Status Management</strong> - Successfully tested
+                  updating store status and location with
+                  <code>/storeStatus</code> endpoint
+                  <pre>curl -X POST "http://localhost:3000/storeStatus/accountID" -H "Content-Type: application/json" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"storeOpen": true, "location": {"latitude": 17.8252, "longitude": 31.0335}}'</pre>
+                  <ul>
+                    <li>
+                      Verified opening store with location coordinates
+                    </li>
+                    <li>
+                      Verified closing store (setting storeOpen to false)
+                    </li>
+                    <li>
+                      Confirmed validation of location data when store is open
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Product Search</strong> - Successfully tested
+                  searching for products with
+                  <code>/searchProducts</code> endpoint
+                  <pre>curl -X GET "http://localhost:3000/searchProducts?keyword=tomatoes&latitude=17.8252&longitude=31.0335&radius=10" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
+                  <ul>
+                    <li>
+                      Verified search by product name/keyword
+                    </li>
+                    <li>
+                      Verified filter by location (latitude, longitude)
+                    </li>
+                    <li>
+                      Verified filter by radius (in kilometers)
+                    </li>
+                    <li>
+                      Confirmed return of products with location and store information
+                    </li>
+                    <li>
+                      Fixed validation middleware to properly handle query parameters
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Account Internal Data</strong> - Successfully tested
+                  retrieving account internal data with
+                  <code>/getAccountInternalData</code> endpoint
+                  <pre>curl -X GET "http://localhost:3000/getAccountInternalData/accountID" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
+                  <ul>
+                    <li>
+                      Verified return of detailed account information for public view
+                    </li>
+                    <li>
+                      Verified return of product details for product accounts
+                    </li>
+                    <li>
+                      Verified return of profile pictures and other media
+                    </li>
+                    <li>
+                      Fixed validation middleware to properly handle path parameters
+                    </li>
+                    <li>
+                      Fixed security issue to prevent exposure of sensitive member information
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Product Information</strong> - Successfully tested
+                  retrieving product information with
+                  <code>/getProduct</code> endpoint
+                  <pre>curl -X GET "http://localhost:3000/getProduct/productID" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
+                  <ul>
+                    <li>
+                      Verified return of product details including name, description, images
+                    </li>
+                    <li>
+                      Verified return of store information for the product
+                    </li>
+                    <li>
+                      Verified return of vendor information
+                    </li>
+                    <li>
+                      Fixed validation middleware to properly handle path parameters
+                    </li>
+                  </ul>
+                </li>
               </ul>
             </div>
 
             <h5>Tests To Complete ❌</h5>
             <div class="testing-progress">
-              <h6>Member Management</h6>
               <ul>
-                <li>
-                  <strong>Edit Member Profile</strong> - Test updating member profile information with
-                  <code>/editMember</code> endpoint
-                  <pre>npm test editmember tokenHere "New First" "New Last" "newhandle" "Updated vendor bio with more details"</pre>
-                  <ul>
-                    <li>
-                      Test updating first name, last name, member handle, and vendor bio
-                    </li>
-                    <li>
-                      Verify validation of member handle format (lowercase letters, numbers, underscores)
-                    </li>
-                    <li>
-                      Test error handling for duplicate member handles
-                    </li>
-                  </ul>
-                </li>
-              </ul>
-
               <h6>Account Management</h6>
               <ul>
                 <li>
-                  <strong>Edit Product Account</strong> - Test updating product account details with
-                  <code>/editAccountInternal</code> endpoint
-                  <pre>npm test editaccountinternal tokenHere accountID "Updated Product Name" "Updated product description with more details"</pre>
+                  <strong>Account Dashboard</strong> - Test retrieving account dashboard with
+                  <code>/getAccountDashboard</code> endpoint
+                  <pre>curl -X GET "http://localhost:3000/getAccountDashboard/accountID" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
                   <ul>
                     <li>
-                      Test updating account name and description
+                      Return account details including name, handle, description
                     </li>
                     <li>
-                      Test updating account handle (optional)
+                      Return account balances and transaction history
                     </li>
                     <li>
-                      Verify validation of account handle format (uppercase letters, numbers, underscores)
+                      Return related product accounts
                     </li>
                     <li>
-                      Test error handling for duplicate account handles
+                      Return store status and location if applicable
                     </li>
                   </ul>
                 </li>
                 <li>
-                  <strong>Store Status Management</strong> - Test updating store status and location with
-                  <code>/storeStatus</code> endpoint
-                  <pre>npm test storestatus tokenHere accountID true 17.8252 31.0335</pre>
+                  <strong>Member Information</strong> - Test retrieving member information with
+                  <code>/getMember</code> endpoint
+                  <pre>curl -X GET "http://localhost:3000/getMember/memberID" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
                   <ul>
                     <li>
-                      Test opening store with location coordinates
+                      Return member profile information for public view
                     </li>
                     <li>
-                      Test closing store (setting storeOpen to false)
+                      Return member's stores and products
                     </li>
                     <li>
-                      Verify validation of location data when store is open
+                      Return profile pictures and other media
                     </li>
                   </ul>
                 </li>
@@ -262,97 +367,6 @@
               </ul>
             </div>
 
-            <h5>Endpoints Needing Implementation ⚠️</h5>
-            <div class="testing-progress">
-              <ul>
-                <li>
-                  <strong>Product Search</strong> - Implement and test searching for products with
-                  <code>/searchProducts</code> endpoint
-                  <pre>npm test searchproducts tokenHere "tomatoes" 17.8252 31.0335 10</pre>
-                  <ul>
-                    <li>
-                      Search by product name/keyword
-                    </li>
-                    <li>
-                      Filter by location (latitude, longitude)
-                    </li>
-                    <li>
-                      Filter by radius (in kilometers)
-                    </li>
-                    <li>
-                      Return products with location and store information
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Account Dashboard</strong> - Implement and test retrieving account dashboard with
-                  <code>/getAccountDashboard</code> endpoint
-                  <pre>npm test getaccountdashboard tokenHere accountID</pre>
-                  <ul>
-                    <li>
-                      Return account details including name, handle, description
-                    </li>
-                    <li>
-                      Return account balances and transaction history
-                    </li>
-                    <li>
-                      Return related product accounts
-                    </li>
-                    <li>
-                      Return store status and location if applicable
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Account Internal Data</strong> - Implement and test retrieving account internal data with
-                  <code>/getAccountInternalData</code> endpoint
-                  <pre>npm test getaccountinternaldata tokenHere accountID</pre>
-                  <ul>
-                    <li>
-                      Return detailed account information for public view
-                    </li>
-                    <li>
-                      Return product details if account is a product account
-                    </li>
-                    <li>
-                      Return profile pictures and other media
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Product Information</strong> - Implement and test retrieving product information with
-                  <code>/getProduct</code> endpoint
-                  <pre>npm test getproduct tokenHere productID</pre>
-                  <ul>
-                    <li>
-                      Return product details including name, description, images
-                    </li>
-                    <li>
-                      Return store information for the product
-                    </li>
-                    <li>
-                      Return vendor information
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Member Information</strong> - Implement and test retrieving member information with
-                  <code>/getMember</code> endpoint
-                  <pre>npm test getmember tokenHere memberID</pre>
-                  <ul>
-                    <li>
-                      Return member profile information for public view
-                    </li>
-                    <li>
-                      Return member's stores and products
-                    </li>
-                    <li>
-                      Return profile pictures and other media
-                    </li>
-                  </ul>
-                </li>
-              </ul>
-            </div>
           </div>
         </section>
       </div>

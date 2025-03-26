@@ -3,7 +3,7 @@
 The credex ecosystem is a shared ledger that enables the efficient circulation of value, accumulation of capital, investment of profits, and giving of gifts. Credex is a tool for financial inclusion, financial empowerment, and financial protection.
 
 ## Core Architecture
-This credex-core API codebase, which is deployed and documented at [mycredex.app](https://mycredex.app), is the portal through which we connect to the streams of free-flowing value that course oganically across the economic landscape. To access the credex-core portal requires a client app such as the [vimbiso-chatserver](https://github.com/Great-Sun-Group/vimbiso-chatserver) provided by [VimbisoPay Africa](https://www.vimbisopay.co.zw/).
+This credex-core API codebase, which is deployed and documented at [mycredex.app](https://mycredex.app), is the portal to your credex account. You can access the credex-core with a client app such as the [vimbisopay](https://github.com/Great-Sun-Group/vimbisopay) app or the [vimbiso-chatserver](https://github.com/Great-Sun-Group/vimbiso-chatserver) provided by [VimbisoPay Africa](https://www.vimbisopay.co.zw/).
 
 ## Services
 The accounting and data management services provided by the credex ecosystem establish a network protocol that provides:
