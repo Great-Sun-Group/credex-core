@@ -14,6 +14,7 @@ interface MemberDashboardData {
   memberHandle: string;
   defaultDenom: string;
   otpVerified: boolean;
+  activateMarket: boolean;
 }
 
 export interface IMemberDashboardService {
@@ -59,7 +60,8 @@ export class MemberDashboardService implements IMemberDashboardService {
         lastname: memberData.lastname,
         memberHandle: memberData.memberHandle,
         defaultDenom: memberData.defaultDenom,
-        otpVerified: memberData.otpVerified || false
+        otpVerified: memberData.otpVerified || false,
+        activateMarket: memberData.activateMarket || false
       };
     } catch (error) {
       logger.error("Error in getMemberDashboardData", {

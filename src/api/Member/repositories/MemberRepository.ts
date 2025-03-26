@@ -11,6 +11,7 @@ export interface MemberData {
   memberHandle: string;
   defaultDenom: string;
   otpVerified: boolean;
+  activateMarket?: boolean;
   phone?: string;
 }
 
@@ -60,7 +61,8 @@ export class MemberRepository implements IMemberRepository {
               member.lastname as lastname,
               member.memberHandle as memberHandle,
               member.defaultDenom as defaultDenom,
-              member.otpVerified as otpVerified
+              member.otpVerified as otpVerified,
+              member.activateMarket as activateMarket
           `;
 
             const queryResult = await tx.run(query, { memberID });
@@ -97,7 +99,8 @@ export class MemberRepository implements IMemberRepository {
           lastname,
           memberHandle,
           defaultDenom,
-          otpVerified: result.get("otpVerified") || false
+          otpVerified: result.get("otpVerified") || false,
+          activateMarket: result.get("activateMarket") || false
         };
 
         // Cache the result
@@ -160,6 +163,7 @@ export class MemberRepository implements IMemberRepository {
               member.memberHandle as memberHandle,
               member.defaultDenom as defaultDenom,
               member.otpVerified as otpVerified,
+              member.activateMarket as activateMarket,
               member.phone as phone
           `;
 
@@ -180,6 +184,7 @@ export class MemberRepository implements IMemberRepository {
           memberHandle: result.get("memberHandle"),
           defaultDenom: result.get("defaultDenom"),
           otpVerified: result.get("otpVerified") || false,
+          activateMarket: result.get("activateMarket") || false,
           phone: result.get("phone")
         };
 
