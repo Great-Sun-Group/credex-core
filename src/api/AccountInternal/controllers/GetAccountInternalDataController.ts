@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import logger from "../../../utils/logger";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import { getMultipleAssetUrls } from "../../../services/assetUrlService";
 
 /**
  * Controller for retrieving detailed account internal data for public view
@@ -49,10 +50,10 @@ export async function GetAccountInternalDataController(
     const accountDetailsResult = await session.executeRead(async (tx: any) => {
       return await tx.run(
         `MATCH (a:AccountInternal {id: $accountID})
-         OPTIONAL MATCH (a)-[:PROFILE_PIC_ORIGINAL_JPG]->(originalPic:Asset)
-         OPTIONAL MATCH (a)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:Asset)
-         OPTIONAL MATCH (a)-[:PROFILE_PIC_200_JPG]->(pic200:Asset)
-         OPTIONAL MATCH (a)-[:PROFILE_PIC_600_JPG]->(pic600:Asset)
+         OPTIONAL MATCH (a)-[:PROFILE_PIC_ORIGINAL_JPG]->(originalPic:AssetMarker)
+         OPTIONAL MATCH (a)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:AssetMarker)
+         OPTIONAL MATCH (a)-[:PROFILE_PIC_200_JPG]->(pic200:AssetMarker)
+         OPTIONAL MATCH (a)-[:PROFILE_PIC_600_JPG]->(pic600:AssetMarker)
          OPTIONAL MATCH (owner:Member)-[:OWNS]->(a)
          RETURN a, owner,
          originalPic.id as originalPicID,
@@ -89,8 +90,8 @@ export async function GetAccountInternalDataController(
     const mediaResult = await session.executeRead(async (tx: any) => {
       return await tx.run(
         `MATCH (a:AccountInternal {id: $accountID})
-         MATCH (a)-[r:HAS_MEDIA]->(media:Asset)
-         RETURN media, type(r) as relationshipType
+         MATCH (a)-[r:HAS_MEDIA]->(media:AssetMarker)
+         RETURN media, type(r) as relationshipType, media.id as mediaID
          ORDER BY media.createdAt DESC`,
         { accountID }
       );
@@ -110,6 +111,18 @@ export async function GetAccountInternalDataController(
       }
     }
 
+    // Get all asset IDs that need URLs
+    const assetIDs = [
+      accountDetailsResult.records[0].get("originalPicID"),
+      accountDetailsResult.records[0].get("thumbnailPicID"),
+      accountDetailsResult.records[0].get("pic200ID"),
+      accountDetailsResult.records[0].get("pic600ID"),
+      ...mediaResult.records.map((record: any) => record.get("mediaID"))
+    ].filter(Boolean);
+
+    // Get URLs for all assets in a single batch operation
+    const assetUrls = await getMultipleAssetUrls(assetIDs);
+
     // Format the account details
     const accountDetails = {
       accountID: account.id,
@@ -126,11 +139,15 @@ export async function GetAccountInternalDataController(
         memberHandle: accountDetailsResult.records[0].get("owner").properties.memberHandle,
         vendorBio: accountDetailsResult.records[0].get("owner").properties.vendorBio
       } : null,
-      profilePictures: {
-        original: accountDetailsResult.records[0].get("originalPicID") || null,
-        thumbnail: accountDetailsResult.records[0].get("thumbnailPicID") || null,
-        pic200: accountDetailsResult.records[0].get("pic200ID") || null,
-        pic600: accountDetailsResult.records[0].get("pic600ID") || null,
+      profilePictureUrls: {
+        original: accountDetailsResult.records[0].get("originalPicID") ? 
+          assetUrls[accountDetailsResult.records[0].get("originalPicID")] : null,
+        thumbnail: accountDetailsResult.records[0].get("thumbnailPicID") ? 
+          assetUrls[accountDetailsResult.records[0].get("thumbnailPicID")] : null,
+        pic200: accountDetailsResult.records[0].get("pic200ID") ? 
+          assetUrls[accountDetailsResult.records[0].get("pic200ID")] : null,
+        pic600: accountDetailsResult.records[0].get("pic600ID") ? 
+          assetUrls[accountDetailsResult.records[0].get("pic600ID")] : null
       }
     };
 
@@ -138,12 +155,13 @@ export async function GetAccountInternalDataController(
     const media = mediaResult.records.map((record: any) => {
       const mediaAsset = record.get("media").properties;
       const relationshipType = record.get("relationshipType");
+      const mediaID = record.get("mediaID");
       
       return {
         assetID: mediaAsset.id,
         assetType: mediaAsset.assetType || "IMAGE",
         relationshipType,
-        url: mediaAsset.url || null,
+        url: mediaID && assetUrls[mediaID] ? assetUrls[mediaID] : (mediaAsset.url || null),
         createdAt: mediaAsset.createdAt,
       };
     });

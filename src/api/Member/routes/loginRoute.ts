@@ -107,9 +107,12 @@ export default function loginRoute() {
    *                             memberHandle:
    *                               type: string
    *                               description: Member's handle
-   *                             defaultDenom:
-   *                               type: string
-   *                               description: Member's default denomination
+ *                             defaultDenom:
+ *                               type: string
+ *                               description: Member's default denomination
+ *                             profilePictureThumbnail:
+ *                               type: string
+ *                               description: URL to the member's profile picture thumbnail
  *                         accounts:
  *                           type: array
  *                           description: List of accounts accessible to the member
@@ -133,6 +136,9 @@ export default function loginRoute() {
  *                               isOwnedAccount:
  *                                 type: boolean
  *                                 description: Whether the member owns this account
+ *                               profilePictureThumbnail:
+ *                                 type: string
+ *                                 description: URL to the account's profile picture thumbnail
  *                         accountsInternal:
  *                           type: array
  *                           description: List of internal accounts owned by the member
@@ -150,6 +156,9 @@ export default function loginRoute() {
  *                                 type: string
  *                                 enum: [CONSUMPTION, PRODUCTION, DIGITAL_ASSET, PHYSICAL_ASSET]
  *                                 description: Type of the internal account
+ *                               profilePictureThumbnail:
+ *                                 type: string
+ *                                 description: URL to the internal account's profile picture thumbnail
    *                               sendOffersTo:
    *                                 type: object
    *                                 description: Member configured to receive offers for this account

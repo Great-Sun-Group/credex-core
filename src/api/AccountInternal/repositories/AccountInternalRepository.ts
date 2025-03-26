@@ -7,6 +7,7 @@ export interface AccountInternalData {
   accountID: string;
   accountName: string;
   accountType: "CONSUMPTION" | "PRODUCTION" | "DIGITAL_ASSET" | "PHYSICAL_ASSET";
+  profilePictureThumbnail?: string;
 }
 
 export interface IAccountInternalRepository {

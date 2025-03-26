@@ -56,12 +56,12 @@ export async function uploadToS3(
 /**
  * Get a pre-signed URL for an S3 object
  * @param key - The S3 key of the object
- * @param expiresIn - The number of seconds until the URL expires (default: 3600)
+ * @param expiresIn - The number of seconds until the URL expires (default: 7 days)
  * @returns A pre-signed URL for the object
  */
 export async function getSignedS3Url(
   key: string,
-  expiresIn = 3600
+  expiresIn = 604800 // 7 days in seconds
 ): Promise<string> {
   try {
     const command = new GetObjectCommand({
