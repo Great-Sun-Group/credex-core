@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import logger from "../../../utils/logger";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import { getMultipleAssetUrls } from "../../../services/assetUrlService";
 
 /**
  * Controller for searching products in the Vimbiso Market
@@ -55,11 +56,17 @@ export async function SearchProductsController(
            point({latitude: storeAccount.location.latitude, longitude: storeAccount.location.longitude}),
            point({latitude: $latitude, longitude: $longitude})
          ) <= $radius * 1000 // Convert km to meters
+         OPTIONAL MATCH (a)-[:PROFILE_PIC_THUMBNAIL_JPG]->(productThumb:Asset)
+         OPTIONAL MATCH (storeAccount)-[:PROFILE_PIC_THUMBNAIL_JPG]->(storeThumb:Asset)
+         OPTIONAL MATCH (m)-[:PROFILE_PIC_THUMBNAIL_JPG]->(memberThumb:Asset)
          RETURN a, m, storeAccount,
          point.distance(
            point({latitude: storeAccount.location.latitude, longitude: storeAccount.location.longitude}),
            point({latitude: $latitude, longitude: $longitude})
-         ) / 1000 as distance // Convert meters to km
+         ) / 1000 as distance, // Convert meters to km
+         productThumb.id as productThumbID,
+         storeThumb.id as storeThumbID,
+         memberThumb.id as memberThumbID
          ORDER BY distance ASC`,
         { 
           keyword: searchKeyword, 
@@ -70,12 +77,27 @@ export async function SearchProductsController(
       );
     });
 
+    // Get all asset IDs that need URLs
+    const assetIDs = result.records
+      .flatMap((record: any) => [
+        record.get('productThumbID'),
+        record.get('storeThumbID'),
+        record.get('memberThumbID')
+      ])
+      .filter(Boolean);
+
+    // Get URLs for all assets in a single batch operation
+    const assetUrls = await getMultipleAssetUrls(assetIDs);
+
     // Transform the results into a more usable format
     const products = result.records.map((record: any) => {
       const product = record.get('a').properties;
       const member = record.get('m').properties;
       const store = record.get('storeAccount').properties;
       const distance = record.get('distance');
+      const productThumbID = record.get('productThumbID');
+      const storeThumbID = record.get('storeThumbID');
+      const memberThumbID = record.get('memberThumbID');
 
       // Parse location if it's a string
       let location = store.location;
@@ -95,20 +117,23 @@ export async function SearchProductsController(
         productName: product.accountName,
         productDescription: product.accountDescription || "",
         productHandle: product.accountHandle || "",
+        thumbnailPicUrl: productThumbID ? assetUrls[productThumbID] : null,
         store: {
           storeID: store.id,
           storeName: store.accountName,
           storeHandle: store.accountHandle || "",
           storeDescription: store.accountDescription || "",
           location: location,
-          distance: Math.round(distance * 100) / 100 // Round to 2 decimal places
+          distance: Math.round(distance * 100) / 100, // Round to 2 decimal places
+          thumbnailPicUrl: storeThumbID ? assetUrls[storeThumbID] : null
         },
         vendor: {
           memberID: member.memberID,
           firstname: member.firstname,
           lastname: member.lastname,
           memberHandle: member.memberHandle || "",
-          vendorBio: member.vendorBio || ""
+          vendorBio: member.vendorBio || "",
+          thumbnailPicUrl: memberThumbID ? assetUrls[memberThumbID] : null
         }
       };
     });

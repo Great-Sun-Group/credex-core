@@ -648,6 +648,59 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data
                   Proper accounting relationships through AssetMarker nodes
                 </li>
               </ul>
+
+              <h5>16. Asset URL Service Implementation ✅</h5>
+              <ul>
+                <li>Created a dedicated service for managing asset URLs ✅</li>
+                <li>Implemented in-memory caching for performance optimization ✅</li>
+                <li>Added support for profile picture URL retrieval ✅</li>
+              </ul>
+
+              <p>The <code>assetUrlService.ts</code> provides a comprehensive solution for retrieving and managing asset URLs:</p>
+
+              <pre><code>// Key components of assetUrlService.ts
+import { getSignedS3Url } from './s3Service';
+import { ledgerSpaceDriver } from '../../config/neo4j';
+
+// In-memory cache implementation
+interface CacheEntry {
+  value: string;
+  expiry: number;
+}
+
+// Cache object to store URLs
+const urlCache: Record&lt;string, CacheEntry&gt; = {};</code></pre>
+
+              <p>Core functionality:</p>
+              <ul>
+                <li><strong>URL Caching:</strong> Implements an in-memory cache to store pre-signed S3 URLs with automatic expiration, reducing unnecessary S3 API calls and improving performance</li>
+                <li><strong>Single Asset URL Retrieval:</strong> Fetches S3 keys from Neo4j and generates pre-signed URLs for individual assets</li>
+                <li><strong>Batch URL Processing:</strong> Efficiently retrieves multiple asset URLs in parallel using Promise.all</li>
+                <li><strong>Profile Picture Management:</strong> Specialized function to retrieve all profile picture variants (original, thumbnail, 200px, 600px) for members and other entities</li>
+                <li><strong>Cache Invalidation:</strong> Provides a method to invalidate cached URLs when assets are updated</li>
+              </ul>
+
+              <p>Implementation details:</p>
+              <pre><code>// Profile picture URL retrieval
+export async function getProfilePictureUrls(entityID: string, entityType: string): Promise&lt;{
+  original?: string;
+  thumbnail?: string;
+  pic200?: string;
+  pic600?: string;
+} | null&gt; {
+  // Retrieves all profile picture variants for an entity
+  // Handles different entity types (Member, AccountInternal, etc.)
+  // Returns an object with URLs for each image size
+}</code></pre>
+
+              <p>This service works in conjunction with the S3 service to provide a complete solution for asset URL management, handling the complexity of:</p>
+              <ul>
+                <li>Neo4j database queries to retrieve S3 keys</li>
+                <li>Generating secure, time-limited pre-signed URLs</li>
+                <li>Optimizing performance through caching</li>
+                <li>Supporting different entity types and relationship patterns</li>
+                <li>Providing a clean API for frontend consumption</li>
+              </ul>
             </div>
           </div>
 

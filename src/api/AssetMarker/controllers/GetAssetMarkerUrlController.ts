@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { logInfo, logError } from "../../../utils/logger";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
-import { getSignedS3Url } from "../../../services/s3Service";
+import { getAssetUrl } from "../../../services/assetUrlService";
 
 /**
  * Controller for getting a pre-signed URL for an AssetMarker's S3 object
@@ -58,8 +58,8 @@ export async function GetAssetMarkerUrlController(
       return;
     }
 
-    // Generate a pre-signed URL for the S3 object
-    const url = await getSignedS3Url(s3Key);
+    // Get a cached or fresh pre-signed URL for the S3 object
+    const url = await getAssetUrl(assetID);
 
     res.status(200).json({
       message: "AssetMarker URL generated successfully",
@@ -68,7 +68,7 @@ export async function GetAssetMarkerUrlController(
         assetID,
         assetName,
         s3Key,
-        expiresIn: 3600 // 1 hour
+        expiresIn: 604800 // 7 days
       }
     });
   } catch (error) {

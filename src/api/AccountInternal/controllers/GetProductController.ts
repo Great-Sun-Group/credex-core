@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import logger from "../../../utils/logger";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import { getMultipleAssetUrls } from "../../../services/assetUrlService";
 
 /**
  * Controller for retrieving product information
@@ -102,17 +103,33 @@ export async function GetProductController(
       }
     }
 
+    // Get all asset IDs that need URLs
+    const assetIDs = [
+      productDetailsResult.records[0].get("originalPicID"),
+      productDetailsResult.records[0].get("thumbnailPicID"),
+      productDetailsResult.records[0].get("pic200ID"),
+      productDetailsResult.records[0].get("pic600ID"),
+      productDetailsResult.records[0].get("ownerThumbPicID")
+    ].filter(Boolean);
+
+    // Get URLs for all assets in a single batch operation
+    const assetUrls = await getMultipleAssetUrls(assetIDs);
+
     // Format the product details
     const productDetails = {
       productID: product.id,
       productName: product.accountName,
       productHandle: product.accountHandle || "",
       productDescription: product.accountDescription || "",
-      profilePictures: {
-        original: productDetailsResult.records[0].get("originalPicID") || null,
-        thumbnail: productDetailsResult.records[0].get("thumbnailPicID") || null,
-        pic200: productDetailsResult.records[0].get("pic200ID") || null,
-        pic600: productDetailsResult.records[0].get("pic600ID") || null,
+      profilePictureUrls: {
+        original: productDetailsResult.records[0].get("originalPicID") ? 
+          assetUrls[productDetailsResult.records[0].get("originalPicID")] : null,
+        thumbnail: productDetailsResult.records[0].get("thumbnailPicID") ? 
+          assetUrls[productDetailsResult.records[0].get("thumbnailPicID")] : null,
+        pic200: productDetailsResult.records[0].get("pic200ID") ? 
+          assetUrls[productDetailsResult.records[0].get("pic200ID")] : null,
+        pic600: productDetailsResult.records[0].get("pic600ID") ? 
+          assetUrls[productDetailsResult.records[0].get("pic600ID")] : null
       },
       attributes: formattedAttributes,
     };
@@ -128,13 +145,14 @@ export async function GetProductController(
     } : null;
 
     // Format the vendor information
+    const ownerThumbPicID = productDetailsResult.records[0].get("ownerThumbPicID");
     const vendorInfo = {
       memberID: owner.memberID,
       firstname: owner.firstname,
       lastname: owner.lastname,
       memberHandle: owner.memberHandle || "",
       vendorBio: owner.vendorBio || "",
-      profilePicture: productDetailsResult.records[0].get("ownerThumbPicID") || null,
+      profilePictureUrl: ownerThumbPicID ? assetUrls[ownerThumbPicID] : null
     };
 
     res.status(200).json({

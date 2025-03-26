@@ -45,6 +45,7 @@
     "moment-timezone": "^0.5.45",
     "nanoid": "^5.0.7",
     "neo4j-driver": "^5.20.0",
+    "node-cache": "^5.1.2",
     "node-cron": "^3.0.3",
     "sharp": "^0.33.2",
     "swagger-jsdoc": "^6.2.8",

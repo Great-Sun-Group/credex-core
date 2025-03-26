@@ -1,6 +1,7 @@
 import { AccountInternalData, accountInternalRepository } from "../repositories/AccountInternalRepository";
 import logger from "../../../utils/logger";
 import { AccountError, ErrorCodes } from "../../../utils/errorUtils";
+import { getProfilePictureUrls } from "../../../services/assetUrlService";
 
 export interface IAccountInternalDashboardService {
   getAccountInternalDashboardData(memberID: string): Promise<AccountInternalData[]>;
@@ -27,7 +28,33 @@ export class AccountInternalDashboardService implements IAccountInternalDashboar
         count: internalAccounts.length 
       });
 
-      return internalAccounts;
+      // Fetch profile picture thumbnails for each account
+      const accountsWithPictures = await Promise.all(
+        internalAccounts.map(async (account) => {
+          try {
+            const profilePicUrls = await getProfilePictureUrls(account.accountID, 'AccountInternal').catch(err => {
+              logger.warn("Failed to fetch profile picture URLs for internal account", {
+                accountID: account.accountID,
+                error: err instanceof Error ? err.message : "Unknown error"
+              });
+              return null;
+            });
+
+            return {
+              ...account,
+              profilePictureThumbnail: profilePicUrls?.thumbnail
+            };
+          } catch (error) {
+            logger.warn("Error getting profile picture for internal account", {
+              accountID: account.accountID,
+              error: error instanceof Error ? error.message : "Unknown error"
+            });
+            return account;
+          }
+        })
+      );
+
+      return accountsWithPictures;
     } catch (error) {
       logger.error("Error in getAccountInternalDashboardData", {
         error: error instanceof Error ? error.message : "Unknown error",

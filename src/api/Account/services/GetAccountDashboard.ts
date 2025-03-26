@@ -4,6 +4,7 @@ import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import { IAccountRepository } from "../repositories/AccountRepository";
 import { IBalanceRepository } from "../repositories/BalanceRepository";
 import logger from "../../../utils/logger";
+import { getProfilePictureUrls } from "../../../services/assetUrlService";
 
 // Import types from pending offers services
 interface OfferedCredex {
@@ -28,6 +29,7 @@ interface AccountDashboardData {
   accountType: 'PERSONAL' | 'TRUST' | 'OPERATIONS';
   defaultDenom: 'CXX' | 'CAD' | 'USD' | 'XAU';
   isOwnedAccount: boolean;
+  profilePictureThumbnail?: string;
   sendOffersTo?: {
     memberID: string;
     firstname: string;
@@ -112,6 +114,16 @@ export class GetAccountDashboardService {
         };
       }
 
+      // Get profile picture thumbnail URL
+      logger.debug("Fetching profile picture thumbnail URL", { accountID });
+      const profilePicUrls = await getProfilePictureUrls(accountID, 'Account').catch(err => {
+        logger.warn("Failed to fetch profile picture URLs", {
+          accountID,
+          error: err instanceof Error ? err.message : "Unknown error"
+        });
+        return null;
+      });
+
       // Construct the standardized dashboard data
       const dashboardData: AccountDashboardData = {
         accountID: accountData.accountID,
@@ -120,6 +132,7 @@ export class GetAccountDashboardService {
         accountType: accountData.accountType,
         defaultDenom: accountData.defaultDenom,
         isOwnedAccount: accountData.isOwnedAccount,
+        profilePictureThumbnail: profilePicUrls?.thumbnail,
         sendOffersTo: accountData.sendOffersTo,
         // Add trust-specific fields if present
         ...(accountData.subtype && { subtype: accountData.subtype }),

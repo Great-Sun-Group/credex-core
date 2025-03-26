@@ -1,8 +1,9 @@
-import { dashboardSwaggerTemplate } from '../../../types/dashboardSwaggerTemplate';
-import { MemberError, ErrorCodes } from '../../../utils/errorUtils';
-import { IMemberRepository } from '../repositories/MemberRepository';
-import { ISpendLimitService } from './SpendLimitService';
-import logger from '../../../utils/logger';
+import { dashboardSwaggerTemplate } from "../../../types/dashboardSwaggerTemplate";
+import { MemberError, ErrorCodes } from "../../../utils/errorUtils";
+import { IMemberRepository } from "../repositories/MemberRepository";
+import { ISpendLimitService } from "./SpendLimitService";
+import logger from "../../../utils/logger";
+import { getProfilePictureUrls } from "../../../services/assetUrlService";
 
 // Define the actual data type for the response
 interface MemberDashboardData {
@@ -15,6 +16,7 @@ interface MemberDashboardData {
   defaultDenom: string;
   otpVerified: boolean;
   activateMarket: boolean;
+  profilePictureThumbnail?: string;
 }
 
 export interface IMemberDashboardService {
@@ -41,15 +43,46 @@ export class MemberDashboardService implements IMemberDashboardService {
       const memberData = await this.memberRepo.findById(memberID);
       if (!memberData) {
         logger.warn("Member not found", { memberID });
-        throw new MemberError('Member not found', 'NOT_FOUND', ErrorCodes.Member.NOT_FOUND);
+        throw new MemberError(
+          "Member not found",
+          "NOT_FOUND",
+          ErrorCodes.Member.NOT_FOUND
+        );
       }
 
       // Get tier-specific spend limit if applicable using optimized service
       let remainingAvailableUSD: number | null = null;
       if (memberData.tier < 3) {
-        logger.debug("Calculating remaining spend limit", { memberID, tier: memberData.tier });
-        remainingAvailableUSD = await this.spendLimitService.getRemainingLimit(memberID);
+        logger.debug("Calculating remaining spend limit", {
+          memberID,
+          tier: memberData.tier,
+        });
+        remainingAvailableUSD =
+          await this.spendLimitService.getRemainingLimit(memberID);
       }
+
+      // Get profile picture thumbnail URL
+      logger.debug("Fetching profile picture thumbnail URL", { memberID });
+      const profilePicUrls = await getProfilePictureUrls(
+        memberID,
+        "Member"
+      ).catch((err) => {
+        logger.warn("Failed to fetch profile picture URLs", {
+          memberID,
+          error: err instanceof Error ? err.message : "Unknown error",
+        });
+        return null;
+      });
+
+      // Log the profile picture URLs for debugging
+      logger.debug("Profile picture URLs retrieved", {
+        memberID,
+        hasProfilePics: !!profilePicUrls,
+        thumbnail: profilePicUrls?.thumbnail || "none",
+        original: profilePicUrls?.original ? "exists" : "none",
+        pic200: profilePicUrls?.pic200 ? "exists" : "none",
+        pic600: profilePicUrls?.pic600 ? "exists" : "none"
+      });
 
       // Construct standardized response
       return {
@@ -61,12 +94,13 @@ export class MemberDashboardService implements IMemberDashboardService {
         memberHandle: memberData.memberHandle,
         defaultDenom: memberData.defaultDenom,
         otpVerified: memberData.otpVerified || false,
-        activateMarket: memberData.activateMarket || false
+        activateMarket: memberData.activateMarket || false,
+        profilePictureThumbnail: profilePicUrls?.thumbnail,
       };
     } catch (error) {
       logger.error("Error in getMemberDashboardData", {
         error: error instanceof Error ? error.message : "Unknown error",
-        memberID
+        memberID,
       });
 
       if (error instanceof MemberError) {
@@ -74,8 +108,8 @@ export class MemberDashboardService implements IMemberDashboardService {
       }
 
       throw new MemberError(
-        'Error retrieving member dashboard data',
-        'INTERNAL_ERROR',
+        "Error retrieving member dashboard data",
+        "INTERNAL_ERROR",
         ErrorCodes.Admin.INTERNAL_ERROR
       );
     }
