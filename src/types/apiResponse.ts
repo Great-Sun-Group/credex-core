@@ -166,6 +166,7 @@ export interface MemberActionDetails {
 export interface AccountActionDetails {
   accountID: string;
   accountName?: string;
+  accountHandle?: string;
   defaultDenom?: string;
   ownerID?: string;
   memberIdAuthorized?: string;
