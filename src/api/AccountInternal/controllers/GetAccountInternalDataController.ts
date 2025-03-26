@@ -50,10 +50,10 @@ export async function GetAccountInternalDataController(
     const accountDetailsResult = await session.executeRead(async (tx: any) => {
       return await tx.run(
         `MATCH (a:AccountInternal {id: $accountID})
-         OPTIONAL MATCH (a)-[:PROFILE_PIC_ORIGINAL_JPG]->(originalPic:Asset)
-         OPTIONAL MATCH (a)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:Asset)
-         OPTIONAL MATCH (a)-[:PROFILE_PIC_200_JPG]->(pic200:Asset)
-         OPTIONAL MATCH (a)-[:PROFILE_PIC_600_JPG]->(pic600:Asset)
+         OPTIONAL MATCH (a)-[:PROFILE_PIC_ORIGINAL_JPG]->(originalPic:AssetMarker)
+         OPTIONAL MATCH (a)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:AssetMarker)
+         OPTIONAL MATCH (a)-[:PROFILE_PIC_200_JPG]->(pic200:AssetMarker)
+         OPTIONAL MATCH (a)-[:PROFILE_PIC_600_JPG]->(pic600:AssetMarker)
          OPTIONAL MATCH (owner:Member)-[:OWNS]->(a)
          RETURN a, owner,
          originalPic.id as originalPicID,
@@ -90,7 +90,7 @@ export async function GetAccountInternalDataController(
     const mediaResult = await session.executeRead(async (tx: any) => {
       return await tx.run(
         `MATCH (a:AccountInternal {id: $accountID})
-         MATCH (a)-[r:HAS_MEDIA]->(media:Asset)
+         MATCH (a)-[r:HAS_MEDIA]->(media:AssetMarker)
          RETURN media, type(r) as relationshipType, media.id as mediaID
          ORDER BY media.createdAt DESC`,
         { accountID }

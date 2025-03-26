@@ -56,9 +56,9 @@ export async function SearchProductsController(
            point({latitude: storeAccount.location.latitude, longitude: storeAccount.location.longitude}),
            point({latitude: $latitude, longitude: $longitude})
          ) <= $radius * 1000 // Convert km to meters
-         OPTIONAL MATCH (a)-[:PROFILE_PIC_THUMBNAIL_JPG]->(productThumb:Asset)
-         OPTIONAL MATCH (storeAccount)-[:PROFILE_PIC_THUMBNAIL_JPG]->(storeThumb:Asset)
-         OPTIONAL MATCH (m)-[:PROFILE_PIC_THUMBNAIL_JPG]->(memberThumb:Asset)
+         OPTIONAL MATCH (a)-[:PROFILE_PIC_THUMBNAIL_JPG]->(productThumb:AssetMarker)
+         OPTIONAL MATCH (storeAccount)-[:PROFILE_PIC_THUMBNAIL_JPG]->(storeThumb:AssetMarker)
+         OPTIONAL MATCH (m)-[:PROFILE_PIC_THUMBNAIL_JPG]->(memberThumb:AssetMarker)
          RETURN a, m, storeAccount,
          point.distance(
            point({latitude: storeAccount.location.latitude, longitude: storeAccount.location.longitude}),

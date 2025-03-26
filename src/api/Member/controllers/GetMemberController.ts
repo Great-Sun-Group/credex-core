@@ -49,10 +49,10 @@ export async function GetMemberController(
     const memberDetailsResult = await session.executeRead(async (tx: any) => {
       return await tx.run(
         `MATCH (m:Member {memberID: $memberID})
-         OPTIONAL MATCH (m)-[:PROFILE_PIC_ORIGINAL_JPG]->(originalPic:Asset)
-         OPTIONAL MATCH (m)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:Asset)
-         OPTIONAL MATCH (m)-[:PROFILE_PIC_200_JPG]->(pic200:Asset)
-         OPTIONAL MATCH (m)-[:PROFILE_PIC_600_JPG]->(pic600:Asset)
+         OPTIONAL MATCH (m)-[:PROFILE_PIC_ORIGINAL_JPG]->(originalPic:AssetMarker)
+         OPTIONAL MATCH (m)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:AssetMarker)
+         OPTIONAL MATCH (m)-[:PROFILE_PIC_200_JPG]->(pic200:AssetMarker)
+         OPTIONAL MATCH (m)-[:PROFILE_PIC_600_JPG]->(pic600:AssetMarker)
          RETURN m,
          originalPic.id as originalPicID,
          thumbnailPic.id as thumbnailPicID,
@@ -67,7 +67,7 @@ export async function GetMemberController(
       return await tx.run(
         `MATCH (m:Member {memberID: $memberID})-[:OWNS]->(a:AccountInternal)
          WHERE a.accountType <> 'PHYSICAL_ASSET'
-         OPTIONAL MATCH (a)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:Asset)
+         OPTIONAL MATCH (a)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:AssetMarker)
          RETURN a, thumbnailPic.id as thumbnailPicID
          ORDER BY a.accountName`,
         { memberID }
@@ -79,7 +79,7 @@ export async function GetMemberController(
       return await tx.run(
         `MATCH (m:Member {memberID: $memberID})-[:OWNS]->(p:AccountInternal)
          WHERE p.accountType = 'PHYSICAL_ASSET'
-         OPTIONAL MATCH (p)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:Asset)
+         OPTIONAL MATCH (p)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:AssetMarker)
          RETURN p, thumbnailPic.id as thumbnailPicID
          ORDER BY p.accountName`,
         { memberID }
@@ -94,8 +94,8 @@ export async function GetMemberController(
       memberDetailsResult.records[0].get("thumbnailPicID"),
       memberDetailsResult.records[0].get("pic200ID"),
       memberDetailsResult.records[0].get("pic600ID"),
-      ...storesResult.records.map((record) => record.get("thumbnailPicID")),
-      ...productsResult.records.map((record) => record.get("thumbnailPicID")),
+      ...storesResult.records.map((record: any) => record.get("thumbnailPicID")),
+      ...productsResult.records.map((record: any) => record.get("thumbnailPicID")),
     ].filter(Boolean);
 
     // Get URLs for all assets in a single batch operation

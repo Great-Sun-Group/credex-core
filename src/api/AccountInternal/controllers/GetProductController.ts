@@ -49,11 +49,11 @@ export async function GetProductController(
          MATCH (owner:Member)-[:OWNS]->(p)
          OPTIONAL MATCH (owner)-[:OWNS]->(store:AccountInternal)
          WHERE store.storeOpen = true
-         OPTIONAL MATCH (p)-[:PROFILE_PIC_ORIGINAL_JPG]->(originalPic:Asset)
-         OPTIONAL MATCH (p)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:Asset)
-         OPTIONAL MATCH (p)-[:PROFILE_PIC_200_JPG]->(pic200:Asset)
-         OPTIONAL MATCH (p)-[:PROFILE_PIC_600_JPG]->(pic600:Asset)
-         OPTIONAL MATCH (owner)-[:PROFILE_PIC_THUMBNAIL_JPG]->(ownerThumbPic:Asset)
+         OPTIONAL MATCH (p)-[:PROFILE_PIC_ORIGINAL_JPG]->(originalPic:AssetMarker)
+         OPTIONAL MATCH (p)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:AssetMarker)
+         OPTIONAL MATCH (p)-[:PROFILE_PIC_200_JPG]->(pic200:AssetMarker)
+         OPTIONAL MATCH (p)-[:PROFILE_PIC_600_JPG]->(pic600:AssetMarker)
+         OPTIONAL MATCH (owner)-[:PROFILE_PIC_THUMBNAIL_JPG]->(ownerThumbPic:AssetMarker)
          RETURN p, owner, store,
          originalPic.id as originalPicID,
          thumbnailPic.id as thumbnailPicID,
