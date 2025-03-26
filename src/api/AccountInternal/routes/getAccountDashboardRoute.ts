@@ -379,7 +379,7 @@ export default function getAccountDashboardRoute() {
    */
   router.get(
     `/getAccountDashboard/:accountID`,
-    validateRequest(getAccountDashboardSchema),
+    validateRequest(getAccountDashboardSchema, "params"),
     authenticatedHandler(GetAccountDashboardController),
     errorHandler
   );

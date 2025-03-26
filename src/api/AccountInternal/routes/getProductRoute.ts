@@ -339,7 +339,7 @@ export default function getProductRoute() {
    */
   router.get(
     `/getProduct/:productID`,
-    validateRequest(getProductSchema),
+    validateRequest(getProductSchema, "params"),
     authenticatedHandler(GetProductController),
     errorHandler
   );

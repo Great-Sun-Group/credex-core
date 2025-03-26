@@ -119,7 +119,13 @@ export async function GetAccountInternalDataController(
       accountType: account.accountType,
       storeOpen: account.storeOpen || false,
       location: location,
-      owner: accountDetailsResult.records[0].get("owner")?.properties || null,
+      owner: accountDetailsResult.records[0].get("owner") ? {
+        memberID: accountDetailsResult.records[0].get("owner").properties.memberID,
+        firstname: accountDetailsResult.records[0].get("owner").properties.firstname,
+        lastname: accountDetailsResult.records[0].get("owner").properties.lastname,
+        memberHandle: accountDetailsResult.records[0].get("owner").properties.memberHandle,
+        vendorBio: accountDetailsResult.records[0].get("owner").properties.vendorBio
+      } : null,
       profilePictures: {
         original: accountDetailsResult.records[0].get("originalPicID") || null,
         thumbnail: accountDetailsResult.records[0].get("thumbnailPicID") || null,

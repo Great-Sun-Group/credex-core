@@ -339,7 +339,7 @@ export default function getMemberRoute() {
    */
   router.get(
     `/getMember/:memberID`,
-    validateRequest(getMemberSchema),
+    validateRequest(getMemberSchema, "params"),
     authenticatedHandler(GetMemberController),
     errorHandler
   );

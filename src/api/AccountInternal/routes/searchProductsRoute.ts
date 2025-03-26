@@ -318,7 +318,7 @@ export default function searchProductsRoute() {
    */
   router.get(
     `/searchProducts`,
-    validateRequest(searchProductsSchema),
+    validateRequest(searchProductsSchema, "query"),
     authenticatedHandler(SearchProductsController),
     errorHandler
   );

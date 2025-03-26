@@ -196,6 +196,89 @@
                     </li>
                   </ul>
                 </li>
+                <li>
+                  <strong>Store Status Management</strong> - Successfully tested
+                  updating store status and location with
+                  <code>/storeStatus</code> endpoint
+                  <pre>curl -X POST "http://localhost:3000/storeStatus/accountID" -H "Content-Type: application/json" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"storeOpen": true, "location": {"latitude": 17.8252, "longitude": 31.0335}}'</pre>
+                  <ul>
+                    <li>
+                      Verified opening store with location coordinates
+                    </li>
+                    <li>
+                      Verified closing store (setting storeOpen to false)
+                    </li>
+                    <li>
+                      Confirmed validation of location data when store is open
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Product Search</strong> - Successfully tested
+                  searching for products with
+                  <code>/searchProducts</code> endpoint
+                  <pre>curl -X GET "http://localhost:3000/searchProducts?keyword=tomatoes&latitude=17.8252&longitude=31.0335&radius=10" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
+                  <ul>
+                    <li>
+                      Verified search by product name/keyword
+                    </li>
+                    <li>
+                      Verified filter by location (latitude, longitude)
+                    </li>
+                    <li>
+                      Verified filter by radius (in kilometers)
+                    </li>
+                    <li>
+                      Confirmed return of products with location and store information
+                    </li>
+                    <li>
+                      Fixed validation middleware to properly handle query parameters
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Account Internal Data</strong> - Successfully tested
+                  retrieving account internal data with
+                  <code>/getAccountInternalData</code> endpoint
+                  <pre>curl -X GET "http://localhost:3000/getAccountInternalData/accountID" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
+                  <ul>
+                    <li>
+                      Verified return of detailed account information for public view
+                    </li>
+                    <li>
+                      Verified return of product details for product accounts
+                    </li>
+                    <li>
+                      Verified return of profile pictures and other media
+                    </li>
+                    <li>
+                      Fixed validation middleware to properly handle path parameters
+                    </li>
+                    <li>
+                      Fixed security issue to prevent exposure of sensitive member information
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Product Information</strong> - Successfully tested
+                  retrieving product information with
+                  <code>/getProduct</code> endpoint
+                  <pre>curl -X GET "http://localhost:3000/getProduct/productID" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
+                  <ul>
+                    <li>
+                      Verified return of product details including name, description, images
+                    </li>
+                    <li>
+                      Verified return of store information for the product
+                    </li>
+                    <li>
+                      Verified return of vendor information
+                    </li>
+                    <li>
+                      Fixed validation middleware to properly handle path parameters
+                    </li>
+                  </ul>
+                </li>
               </ul>
             </div>
 
@@ -205,44 +288,9 @@
               <h6>Account Management</h6>
               <ul>
                 <li>
-                  <strong>Store Status Management</strong> - Test updating store status and location with
-                  <code>/storeStatus</code> endpoint
-                  <pre>npm test storestatus tokenHere accountID true 17.8252 31.0335</pre>
-                  <ul>
-                    <li>
-                      Test opening store with location coordinates
-                    </li>
-                    <li>
-                      Test closing store (setting storeOpen to false)
-                    </li>
-                    <li>
-                      Verify validation of location data when store is open
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Product Search</strong> - Test searching for products with
-                  <code>/searchProducts</code> endpoint
-                  <pre>npm test searchproducts tokenHere "tomatoes" 17.8252 31.0335 10</pre>
-                  <ul>
-                    <li>
-                      Search by product name/keyword
-                    </li>
-                    <li>
-                      Filter by location (latitude, longitude)
-                    </li>
-                    <li>
-                      Filter by radius (in kilometers)
-                    </li>
-                    <li>
-                      Return products with location and store information
-                    </li>
-                  </ul>
-                </li>
-                <li>
                   <strong>Account Dashboard</strong> - Test retrieving account dashboard with
                   <code>/getAccountDashboard</code> endpoint
-                  <pre>npm test getaccountdashboard tokenHere accountID</pre>
+                  <pre>curl -X GET "http://localhost:3000/getAccountDashboard/accountID" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
                   <ul>
                     <li>
                       Return account details including name, handle, description
@@ -259,41 +307,9 @@
                   </ul>
                 </li>
                 <li>
-                  <strong>Account Internal Data</strong> - Test retrieving account internal data with
-                  <code>/getAccountInternalData</code> endpoint
-                  <pre>npm test getaccountinternaldata tokenHere accountID</pre>
-                  <ul>
-                    <li>
-                      Return detailed account information for public view
-                    </li>
-                    <li>
-                      Return product details if account is a product account
-                    </li>
-                    <li>
-                      Return profile pictures and other media
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  <strong>Product Information</strong> - Test retrieving product information with
-                  <code>/getProduct</code> endpoint
-                  <pre>npm test getproduct tokenHere productID</pre>
-                  <ul>
-                    <li>
-                      Return product details including name, description, images
-                    </li>
-                    <li>
-                      Return store information for the product
-                    </li>
-                    <li>
-                      Return vendor information
-                    </li>
-                  </ul>
-                </li>
-                <li>
                   <strong>Member Information</strong> - Test retrieving member information with
                   <code>/getMember</code> endpoint
-                  <pre>npm test getmember tokenHere memberID</pre>
+                  <pre>curl -X GET "http://localhost:3000/getMember/memberID" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
                   <ul>
                     <li>
                       Return member profile information for public view

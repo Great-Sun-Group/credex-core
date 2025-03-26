@@ -349,7 +349,7 @@ export default function getAccountInternalDataRoute() {
    */
   router.get(
     `/getAccountInternalData/:accountID`,
-    validateRequest(getAccountInternalDataSchema),
+    validateRequest(getAccountInternalDataSchema, "params"),
     authenticatedHandler(GetAccountInternalDataController),
     errorHandler
   );
