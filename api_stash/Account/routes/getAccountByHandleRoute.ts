@@ -71,13 +71,6 @@ export default function getAccountByHandleRoute() {
    *                               type: string
    *                             accountHandle:
    *                               type: string
-   *                             accountType:
-   *                               type: string
-   *                             defaultDenom:
-   *                               type: string
-   *                             createdAt:
-   *                               type: string
-   *                               format: date-time
    *                     dashboard:
    *                       type: object
    *                       description: Empty dashboard since this is just a lookup endpoint

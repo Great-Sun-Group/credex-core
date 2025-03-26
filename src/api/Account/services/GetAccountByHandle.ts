@@ -5,9 +5,6 @@ interface AccountDetails {
   accountID: string;
   accountName: string;
   accountHandle: string;
-  accountType: string;
-  defaultDenom: string;
-  createdAt: string;
 }
 
 interface GetAccountResult {
@@ -56,10 +53,7 @@ export async function GetAccountByHandleService(
       RETURN
         account.accountID AS accountID,
         account.accountName AS accountName,
-        account.accountHandle AS accountHandle,
-        account.accountType AS accountType,
-        account.defaultDenom AS defaultDenom,
-        account.createdAt AS createdAt
+        account.accountHandle AS accountHandle
       `,
       { accountHandle }
     );
@@ -80,10 +74,7 @@ export async function GetAccountByHandleService(
     const accountDetails: AccountDetails = {
       accountID: record.get("accountID"),
       accountName: record.get("accountName"),
-      accountHandle: record.get("accountHandle"),
-      accountType: record.get("accountType"),
-      defaultDenom: record.get("defaultDenom"),
-      createdAt: record.get("createdAt")
+      accountHandle: record.get("accountHandle")
     };
 
     logger.info("Account retrieved from database", { 
