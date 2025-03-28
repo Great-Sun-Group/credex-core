@@ -15,7 +15,10 @@ export default function generateInvoiceRoute() {
    *   post:
    *     tags: [Invoice]
    *     summary: Generate an invoice for a transaction
-   *     description: Generate an invoice for a transaction in the Vimbiso Market
+   *     description: |
+   *       Generate an invoice for a transaction with multiple line items.
+   *       The invoice creates a DEBITS_TO relationship to the payment account and
+   *       CREDITS_TO relationships to each AccountInternal specified in the items array.
    *     security:
    *       - bearerAuth: []
    *     requestBody:
@@ -31,46 +34,36 @@ export default function generateInvoiceRoute() {
    *               paymentAccountID:
    *                 type: string
    *                 format: uuid
-   *                 description: ID of the account to receive payment
+   *                 description: ID of the account to debit payment from (DEBITS_TO relationship)
    *               AssetMarkerData:
    *                 type: object
    *                 required:
    *                   - items
    *                   - total
-   *                   - currency
+   *                   - denomination
    *                 properties:
    *                   items:
    *                     type: array
+   *                     description: Array of items to credit payment to (CREDITS_TO relationships)
    *                     items:
    *                       type: object
    *                       required:
    *                         - name
-   *                         - quantity
-   *                         - unit
-   *                         - price
-   *                         - total
+   *                         - amount
    *                       properties:
    *                         name:
    *                           type: string
-   *                           description: Name of the item
-   *                         quantity:
+   *                           description: Name of the AccountInternal to credit
+   *                         amount:
    *                           type: number
-   *                           description: Quantity of the item
-   *                         unit:
-   *                           type: string
-   *                           description: Unit of measurement (e.g., kg, each)
-   *                         price:
-   *                           type: number
-   *                           description: Price per unit
-   *                         total:
-   *                           type: number
-   *                           description: Total price for this item (price * quantity)
+   *                           description: Amount to credit to this account
    *                   total:
    *                     type: number
-   *                     description: Total amount for the invoice (sum of all item totals)
-   *                   currency:
+   *                     description: Total amount for the invoice (sum of all item amounts)
+   *                   denomination:
    *                     type: string
-   *                     description: Currency for the invoice (e.g., USD)
+   *                     enum: [USD, CAD, CXX, XAU]
+   *                     description: Denomination for the invoice
    *                   notes:
    *                     type: string
    *                     description: Additional notes for the invoice
@@ -113,22 +106,37 @@ export default function generateInvoiceRoute() {
    *                             invoiceID:
    *                               type: string
    *                               format: uuid
+   *                               description: Unique identifier for the invoice
    *                             invoiceQRLink:
    *                               type: string
    *                               format: uri
-   *                             amount:
+   *                               example: "https://mycredex.app/getInvoice/b61db57c-528d-4932-9db4-292bc45ee07b"
+   *                               description: URL for the invoice QR code
+   *                             totalAmount:
    *                               type: number
-   *                             currency:
+   *                               description: Total amount of the invoice
+   *                             denomination:
    *                               type: string
+   *                               description: Denomination of the invoice
    *                             paymentAccountID:
    *                               type: string
    *                               format: uuid
-   *                             items:
+   *                               description: ID of the account to debit payment from
+   *                             lines:
    *                               type: array
+   *                               description: Array of line items in the invoice
    *                               items:
    *                                 type: object
+   *                                 properties:
+   *                                   accountName:
+   *                                     type: string
+   *                                     description: Name of the AccountInternal to credit
+   *                                   amount:
+   *                                     type: number
+   *                                     description: Amount to credit to this account
    *                             notes:
    *                               type: string
+   *                               description: Additional notes for the invoice
    *                     dashboard:
    *                       type: object
    *                       properties:
@@ -138,27 +146,36 @@ export default function generateInvoiceRoute() {
    *                             invoiceID:
    *                               type: string
    *                               format: uuid
+   *                               description: Unique identifier for the invoice
    *                             invoiceQRLink:
    *                               type: string
    *                               format: uri
-   *                             amount:
+   *                               description: URL for the invoice QR code
+   *                             totalAmount:
    *                               type: number
+   *                               description: Total amount of the invoice
    *                             denomination:
    *                               type: string
+   *                               description: Denomination of the invoice
    *                             lines:
    *                               type: array
+   *                               description: Array of line items in the invoice
    *                               items:
    *                                 type: object
    *                                 properties:
    *                                   accountName:
    *                                     type: string
+   *                                     description: Name of the AccountInternal to credit
    *                                   amount:
    *                                     type: number
+   *                                     description: Amount to credit to this account
    *                             notes:
    *                               type: string
+   *                               description: Additional notes for the invoice
    *                             createdAt:
    *                               type: string
    *                               format: date-time
+   *                               description: When the invoice was created
    *       400:
    *         description: Invalid input data
    *         content:

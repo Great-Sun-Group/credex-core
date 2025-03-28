@@ -52,40 +52,10 @@ export const generateInvoiceSchema = {
           };
         }
         
-        if (item.quantity === undefined || typeof item.quantity !== 'number' || item.quantity <= 0) {
+        if (item.amount === undefined || typeof item.amount !== 'number' || item.amount <= 0) {
           return {
             isValid: false,
-            message: "Each item must have a positive quantity number",
-          };
-        }
-        
-        if (!item.unit || typeof item.unit !== 'string') {
-          return {
-            isValid: false,
-            message: "Each item must have a unit string",
-          };
-        }
-        
-        if (item.price === undefined || typeof item.price !== 'number' || item.price <= 0) {
-          return {
-            isValid: false,
-            message: "Each item must have a positive price number",
-          };
-        }
-        
-        if (item.total === undefined || typeof item.total !== 'number' || item.total <= 0) {
-          return {
-            isValid: false,
-            message: "Each item must have a positive total number",
-          };
-        }
-        
-        // Check if total equals price * quantity
-        const calculatedTotal = item.price * item.quantity;
-        if (Math.abs(item.total - calculatedTotal) > 0.01) { // Allow for small floating point differences
-          return {
-            isValid: false,
-            message: `Item total (${item.total}) does not match price * quantity (${calculatedTotal})`,
+            message: "Each item must have a positive amount number",
           };
         }
       }
@@ -98,20 +68,20 @@ export const generateInvoiceSchema = {
         };
       }
       
-      // Check if total equals sum of item totals
-      const itemTotalSum = value.items.reduce((sum: number, item: any) => sum + item.total, 0);
+      // Check if total equals sum of item amounts
+      const itemTotalSum = value.items.reduce((sum: number, item: any) => sum + item.amount, 0);
       if (Math.abs(value.total - itemTotalSum) > 0.01) { // Allow for small floating point differences
         return {
           isValid: false,
-          message: `Invoice total (${value.total}) does not match sum of item totals (${itemTotalSum})`,
+          message: `Invoice total (${value.total}) does not match sum of item amounts (${itemTotalSum})`,
         };
       }
       
-      // Check if currency exists and is valid
-      if (!value.currency || typeof value.currency !== 'string') {
+      // Check if denomination exists and is valid
+      if (!value.denomination || typeof value.denomination !== 'string') {
         return {
           isValid: false,
-          message: "AssetMarkerData must contain a currency string",
+          message: "AssetMarkerData must contain a denomination string",
         };
       }
       
@@ -124,5 +94,14 @@ export const generateInvoiceSchema = {
   },
 };
 logger.debug("generateInvoiceSchema initialized");
+
+export const getInvoiceSchema = {
+  invoiceID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+};
+logger.debug("getInvoiceSchema initialized");
 
 logger.debug("All invoice validation schemas initialized");

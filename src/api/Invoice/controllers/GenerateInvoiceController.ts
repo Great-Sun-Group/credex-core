@@ -16,7 +16,7 @@ export async function GenerateInvoiceController(
   next: NextFunction
 ): Promise<void> {
   const session = ledgerSpaceDriver.session();
-  
+
   try {
     logger.info("GenerateInvoiceController called", {
       controller: "GenerateInvoiceController",
@@ -25,7 +25,7 @@ export async function GenerateInvoiceController(
 
     const { paymentAccountID, AssetMarkerData } = req.body;
     const memberID = req.user?.memberID;
-    
+
     if (!memberID) {
       throw new Error("User ID not found in request");
     }
@@ -33,7 +33,7 @@ export async function GenerateInvoiceController(
     // Check if the member exists and is a vendor
     const memberCheckResult = await session.executeRead(async (tx: any) => {
       return await tx.run(
-        `MATCH (m:Member {id: $memberID, vendor: true})
+        `MATCH (m:Member {memberID: $memberID, activateMarket: true})
          RETURN m`,
         { memberID }
       );
@@ -46,7 +46,7 @@ export async function GenerateInvoiceController(
     // Check if the payment account exists and is owned by the member
     const accountCheckResult = await session.executeRead(async (tx: any) => {
       return await tx.run(
-        `MATCH (m:Member {id: $memberID})-[:OWNS]->(a:AccountInternal {id: $accountID})
+        `MATCH (m:Member {memberID: $memberID})-[:OWNS]->(a:Account {accountID: $accountID})
          RETURN a`,
         { memberID, accountID: paymentAccountID }
       );
@@ -58,38 +58,60 @@ export async function GenerateInvoiceController(
 
     // Generate a unique invoice ID
     const invoiceID = uuidv4();
-    
+
     // Create the invoice
     const result = await session.executeWrite(async (tx: any) => {
-      // Create the invoice node with updated structure
+      // First, create the invoice node
       const createInvoiceResult = await tx.run(
         `CREATE (i:Invoice {
           invoiceID: $invoiceID,
           Lines: $lines,
-          Amount: $amount,
+          TotalAmount: $totalAmount,
           Denomination: $denomination,
           Notes: $notes,
           createdAt: datetime()
         })
         WITH i
-        MATCH (a:AccountInternal {id: $paymentAccountID})
-        CREATE (i)-[:CREDITS_TO]->(a)
+        
+        // Create DEBITS_TO relationship to payment account
+        MATCH (a:Account {accountID: $paymentAccountID})
+        CREATE (i)-[:DEBITS_TO]->(a)
+        WITH i
+        
+        // Return the invoice
         RETURN i`,
-        { 
-          invoiceID, 
-          lines: JSON.stringify(AssetMarkerData.items.map((item: any) => ({
-            accountName: item.name,
-            amount: item.total
-          }))),
-          amount: AssetMarkerData.total,
-          denomination: AssetMarkerData.currency,
+        {
+          invoiceID,
+          lines: JSON.stringify(
+            AssetMarkerData.items.map((item: any) => ({
+              accountName: item.name,
+              amount: item.amount,
+            }))
+          ),
+          totalAmount: AssetMarkerData.total,
+          denomination: AssetMarkerData.denomination,
           notes: AssetMarkerData.notes || "",
-          paymentAccountID
+          paymentAccountID,
         }
       );
 
       if (createInvoiceResult.records.length === 0) {
         throw new Error("Failed to create invoice");
+      }
+
+      // Now create CREDITS_TO relationships for each item
+      for (const item of AssetMarkerData.items) {
+        // Find the AccountInternal by name and create CREDITS_TO relationship with amount
+        await tx.run(
+          `MATCH (i:Invoice {invoiceID: $invoiceID})
+           MATCH (a:AccountInternal {accountName: $accountName})
+           CREATE (i)-[:CREDITS_TO {Amount: $amount}]->(a)`,
+          {
+            invoiceID,
+            accountName: item.name,
+            amount: item.amount,
+          }
+        );
       }
 
       // Digitally sign the invoice
@@ -107,7 +129,7 @@ export async function GenerateInvoiceController(
     });
 
     // Generate the invoice QR link
-    const invoiceQRLink = `https://vimbisopay.com/invoice/qr/${invoiceID}`;
+    const invoiceQRLink = `https://mycredex.app/getInvoice/${invoiceID}`;
 
     res.status(201).json({
       message: "Invoice generated successfully",
@@ -120,12 +142,12 @@ export async function GenerateInvoiceController(
           details: {
             invoiceID,
             invoiceQRLink,
-            amount: AssetMarkerData.total,
-            denomination: AssetMarkerData.currency,
+            totalAmount: AssetMarkerData.total,
+            denomination: AssetMarkerData.denomination,
             paymentAccountID,
             lines: AssetMarkerData.items.map((item: any) => ({
               accountName: item.name,
-              amount: item.total
+              amount: item.amount,
             })),
             notes: AssetMarkerData.notes || "",
           },
@@ -134,15 +156,15 @@ export async function GenerateInvoiceController(
           invoice: {
             invoiceID,
             invoiceQRLink,
-            amount: AssetMarkerData.total,
-            denomination: AssetMarkerData.currency,
+            totalAmount: AssetMarkerData.total,
+            denomination: AssetMarkerData.denomination,
             lines: AssetMarkerData.items.map((item: any) => ({
               accountName: item.name,
-              amount: item.total
+              amount: item.amount,
             })),
             notes: AssetMarkerData.notes || "",
             createdAt: new Date().toISOString(),
-          }
+          },
         },
       },
     });

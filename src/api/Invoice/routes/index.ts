@@ -1,5 +1,6 @@
 import express from "express";
 import generateInvoiceRoute from "./generateInvoiceRoute";
+import getInvoiceRoute from "./getInvoiceRoute";
 import logger from "../../../utils/logger";
 
 /**
@@ -15,10 +16,11 @@ export default function InvoiceRoutes() {
 
   // Mount individual routes
   router.use(generateInvoiceRoute());
+  router.use(getInvoiceRoute());
 
   logger.info("Invoice routes initialized successfully", {
     module: "invoiceRoutes",
-    routesCount: 1,
+    routesCount: 2,
   });
 
   return router;
