@@ -79,7 +79,7 @@ export class SpendLimitService implements ISpendLimitService {
               CASE 
                 WHEN size(credexes) > 0 
                 THEN reduce(total = 0.0, c IN credexes |
-                  total + (c.InitialAmount * daynodeUSD) / c.CXXmultiplier
+                  total + (c.InitialAmount / c.CXXmultiplier)
                 )
                 ELSE 0 
               END as dailyUsageUSD
@@ -122,7 +122,10 @@ export class SpendLimitService implements ISpendLimitService {
 
         // Calculate remaining limit
         // Ensure all values are regular numbers
-        const remainingLimit = Math.max(0, Number(tierLimit) - dailyUsageNumber);
+        const remainingLimit = Math.max(
+          0,
+          Number(tierLimit) - dailyUsageNumber
+        );
 
         // Cache the result
         this.cache.set(memberID, {
