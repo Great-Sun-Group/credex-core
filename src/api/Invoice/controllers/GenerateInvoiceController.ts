@@ -129,7 +129,7 @@ export async function GenerateInvoiceController(
     });
 
     // Generate the invoice QR link
-    const invoiceQRLink = `https://mycredex.app/invoice/${invoiceID}`;
+    const invoiceQRLink = `https://mycredex.app/getInvoice/${invoiceID}`;
 
     res.status(201).json({
       message: "Invoice generated successfully",

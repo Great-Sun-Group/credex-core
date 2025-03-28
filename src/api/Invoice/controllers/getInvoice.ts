@@ -14,7 +14,7 @@ export async function GetInvoiceController(
   next: NextFunction
 ): Promise<void> {
   const session = ledgerSpaceDriver.session();
-  
+
   try {
     logger.info("GetInvoiceController called", {
       controller: "GetInvoiceController",
@@ -22,7 +22,7 @@ export async function GetInvoiceController(
     });
 
     const { invoiceID } = req.params;
-    
+
     if (!invoiceID) {
       throw new Error("Invoice ID is required");
     }
@@ -73,23 +73,33 @@ export async function GetInvoiceController(
       const amount = record.get("amount");
       return {
         accountName: record.get("accountName"),
-        amount: typeof amount === 'number' ? amount : 
-               (typeof amount === 'object' && amount !== null && typeof amount.toNumber === 'function') ? 
-               amount.toNumber() : parseFloat(amount),
+        amount:
+          typeof amount === "number"
+            ? amount
+            : typeof amount === "object" &&
+                amount !== null &&
+                typeof amount.toNumber === "function"
+              ? amount.toNumber()
+              : parseFloat(amount),
       };
     });
 
     // Generate the invoice QR link
-    const invoiceQRLink = `https://mycredex.app/invoice/${invoiceID}`;
+    const invoiceQRLink = `https://mycredex.app/getInvoice/${invoiceID}`;
 
     // Prepare the response
     const totalAmount = invoiceNode.TotalAmount;
     const invoiceData = {
       invoiceID: invoiceNode.invoiceID,
       invoiceQRLink,
-      totalAmount: typeof totalAmount === 'number' ? totalAmount : 
-                  (typeof totalAmount === 'object' && totalAmount !== null && typeof totalAmount.toNumber === 'function') ? 
-                  totalAmount.toNumber() : parseFloat(totalAmount),
+      totalAmount:
+        typeof totalAmount === "number"
+          ? totalAmount
+          : typeof totalAmount === "object" &&
+              totalAmount !== null &&
+              typeof totalAmount.toNumber === "function"
+            ? totalAmount.toNumber()
+            : parseFloat(totalAmount),
       denomination: invoiceNode.Denomination,
       paymentAccountID,
       lines,

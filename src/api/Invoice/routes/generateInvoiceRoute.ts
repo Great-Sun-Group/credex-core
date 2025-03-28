@@ -110,7 +110,7 @@ export default function generateInvoiceRoute() {
    *                             invoiceQRLink:
    *                               type: string
    *                               format: uri
-   *                               example: "https://mycredex.app/invoice/b61db57c-528d-4932-9db4-292bc45ee07b"
+   *                               example: "https://mycredex.app/getInvoice/b61db57c-528d-4932-9db4-292bc45ee07b"
    *                               description: URL for the invoice QR code
    *                             totalAmount:
    *                               type: number
