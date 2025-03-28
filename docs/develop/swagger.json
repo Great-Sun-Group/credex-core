@@ -3061,6 +3061,1972 @@
         }
       }
     },
+    "/getAccountDashboard/{accountID}": {
+      "get": {
+        "tags": [
+          "AccountInternal"
+        ],
+        "summary": "Get account dashboard information",
+        "description": "Retrieve account details, balances, transaction history, and related product accounts",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the account to retrieve dashboard for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account dashboard retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Account dashboard retrieved successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The account ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ACCOUNT_DASHBOARD_RETRIEVED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who retrieved the dashboard"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "accountID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the account"
+                                },
+                                "accountName": {
+                                  "type": "string",
+                                  "description": "Name of the account"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "properties": {
+                            "account": {
+                              "type": "object",
+                              "properties": {
+                                "accountID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the account"
+                                },
+                                "accountName": {
+                                  "type": "string",
+                                  "description": "Name of the account"
+                                },
+                                "accountHandle": {
+                                  "type": "string",
+                                  "description": "Handle of the account"
+                                },
+                                "accountDescription": {
+                                  "type": "string",
+                                  "description": "Description of the account"
+                                },
+                                "accountType": {
+                                  "type": "string",
+                                  "enum": [
+                                    "CONSUMPTION",
+                                    "PRODUCTION",
+                                    "DIGITAL_ASSET",
+                                    "PHYSICAL_ASSET"
+                                  ],
+                                  "description": "Type of the account"
+                                },
+                                "storeOpen": {
+                                  "type": "boolean",
+                                  "description": "Whether the store is open (if applicable)"
+                                },
+                                "location": {
+                                  "type": "object",
+                                  "nullable": true,
+                                  "properties": {
+                                    "latitude": {
+                                      "type": "number",
+                                      "format": "float",
+                                      "description": "Latitude coordinate of the store"
+                                    },
+                                    "longitude": {
+                                      "type": "number",
+                                      "format": "float",
+                                      "description": "Longitude coordinate of the store"
+                                    }
+                                  }
+                                },
+                                "owner": {
+                                  "type": "object",
+                                  "nullable": true,
+                                  "properties": {
+                                    "memberID": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "ID of the member who owns the account"
+                                    },
+                                    "firstname": {
+                                      "type": "string",
+                                      "description": "First name of the owner"
+                                    },
+                                    "lastname": {
+                                      "type": "string",
+                                      "description": "Last name of the owner"
+                                    },
+                                    "memberHandle": {
+                                      "type": "string",
+                                      "description": "Handle of the owner"
+                                    }
+                                  }
+                                },
+                                "profilePictures": {
+                                  "type": "object",
+                                  "properties": {
+                                    "original": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the original profile picture"
+                                    },
+                                    "thumbnail": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the thumbnail profile picture"
+                                    },
+                                    "pic200": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the 200px profile picture"
+                                    },
+                                    "pic600": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the 600px profile picture"
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "balances": {
+                              "type": "object",
+                              "properties": {
+                                "totalCredits": {
+                                  "type": "number",
+                                  "description": "Total credits in the account"
+                                },
+                                "totalDebits": {
+                                  "type": "number",
+                                  "description": "Total debits in the account"
+                                },
+                                "netBalance": {
+                                  "type": "number",
+                                  "description": "Net balance of the account"
+                                }
+                              }
+                            },
+                            "transactions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "transactionID": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the transaction"
+                                  },
+                                  "amount": {
+                                    "type": "number",
+                                    "description": "Amount of the transaction"
+                                  },
+                                  "denomination": {
+                                    "type": "string",
+                                    "description": "Denomination of the transaction"
+                                  },
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "Credit",
+                                      "Debit"
+                                    ],
+                                    "description": "Type of the transaction"
+                                  },
+                                  "counterparty": {
+                                    "type": "object",
+                                    "properties": {
+                                      "accountID": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "description": "ID of the counterparty account"
+                                      },
+                                      "accountName": {
+                                        "type": "string",
+                                        "description": "Name of the counterparty account"
+                                      }
+                                    }
+                                  },
+                                  "createdAt": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "description": "When the transaction occurred"
+                                  },
+                                  "description": {
+                                    "type": "string",
+                                    "description": "Description of the transaction"
+                                  }
+                                }
+                              }
+                            },
+                            "relatedProducts": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "productID": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the product"
+                                  },
+                                  "productName": {
+                                    "type": "string",
+                                    "description": "Name of the product"
+                                  },
+                                  "productDescription": {
+                                    "type": "string",
+                                    "description": "Description of the product"
+                                  },
+                                  "productHandle": {
+                                    "type": "string",
+                                    "description": "Handle of the product"
+                                  },
+                                  "thumbnailPicID": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "nullable": true,
+                                    "description": "ID of the thumbnail picture for the product"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid input parameters"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "VALIDATION_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Account not found"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "ACCOUNT_NOT_FOUND"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while retrieving account dashboard"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getAccountInternalData/{accountID}": {
+      "get": {
+        "tags": [
+          "AccountInternal"
+        ],
+        "summary": "Get detailed account internal data",
+        "description": "Retrieve detailed account information for public view, product details, and media",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the account to retrieve data for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account internal data retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Account internal data retrieved successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The account ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ACCOUNT_INTERNAL_DATA_RETRIEVED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who retrieved the data"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "accountID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the account"
+                                },
+                                "accountName": {
+                                  "type": "string",
+                                  "description": "Name of the account"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "properties": {
+                            "account": {
+                              "type": "object",
+                              "properties": {
+                                "accountID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the account"
+                                },
+                                "accountName": {
+                                  "type": "string",
+                                  "description": "Name of the account"
+                                },
+                                "accountHandle": {
+                                  "type": "string",
+                                  "description": "Handle of the account"
+                                },
+                                "accountDescription": {
+                                  "type": "string",
+                                  "description": "Description of the account"
+                                },
+                                "accountType": {
+                                  "type": "string",
+                                  "enum": [
+                                    "CONSUMPTION",
+                                    "PRODUCTION",
+                                    "DIGITAL_ASSET",
+                                    "PHYSICAL_ASSET"
+                                  ],
+                                  "description": "Type of the account"
+                                },
+                                "storeOpen": {
+                                  "type": "boolean",
+                                  "description": "Whether the store is open (if applicable)"
+                                },
+                                "location": {
+                                  "type": "object",
+                                  "nullable": true,
+                                  "properties": {
+                                    "latitude": {
+                                      "type": "number",
+                                      "format": "float",
+                                      "description": "Latitude coordinate of the store"
+                                    },
+                                    "longitude": {
+                                      "type": "number",
+                                      "format": "float",
+                                      "description": "Longitude coordinate of the store"
+                                    }
+                                  }
+                                },
+                                "owner": {
+                                  "type": "object",
+                                  "nullable": true,
+                                  "properties": {
+                                    "memberID": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "description": "ID of the member who owns the account"
+                                    },
+                                    "firstname": {
+                                      "type": "string",
+                                      "description": "First name of the owner"
+                                    },
+                                    "lastname": {
+                                      "type": "string",
+                                      "description": "Last name of the owner"
+                                    },
+                                    "memberHandle": {
+                                      "type": "string",
+                                      "description": "Handle of the owner"
+                                    }
+                                  }
+                                },
+                                "profilePictures": {
+                                  "type": "object",
+                                  "properties": {
+                                    "original": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the original profile picture"
+                                    },
+                                    "thumbnail": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the thumbnail profile picture"
+                                    },
+                                    "pic200": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the 200px profile picture"
+                                    },
+                                    "pic600": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the 600px profile picture"
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "productDetails": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "attributes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string",
+                                        "description": "Name of the attribute"
+                                      },
+                                      "value": {
+                                        "type": "string",
+                                        "description": "Value of the attribute"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "media": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "assetID": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the media asset"
+                                  },
+                                  "assetType": {
+                                    "type": "string",
+                                    "description": "Type of the media asset"
+                                  },
+                                  "relationshipType": {
+                                    "type": "string",
+                                    "description": "Type of relationship between account and media"
+                                  },
+                                  "url": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "URL of the media asset"
+                                  },
+                                  "createdAt": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "description": "When the media asset was created"
+                                  }
+                                }
+                              }
+                            },
+                            "isOwner": {
+                              "type": "boolean",
+                              "description": "Whether the requesting member owns the account"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid input parameters"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "VALIDATION_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Account not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Account not found"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "ACCOUNT_NOT_FOUND"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while retrieving account internal data"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getProduct/{productID}": {
+      "get": {
+        "tags": [
+          "AccountInternal"
+        ],
+        "summary": "Get product information",
+        "description": "Retrieve product details, store information, and vendor information",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "productID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the product to retrieve information for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product information retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Product information retrieved successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The product ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "PRODUCT_RETRIEVED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who retrieved the information"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "productID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the product"
+                                },
+                                "productName": {
+                                  "type": "string",
+                                  "description": "Name of the product"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "properties": {
+                            "product": {
+                              "type": "object",
+                              "properties": {
+                                "productID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the product"
+                                },
+                                "productName": {
+                                  "type": "string",
+                                  "description": "Name of the product"
+                                },
+                                "productHandle": {
+                                  "type": "string",
+                                  "description": "Handle of the product"
+                                },
+                                "productDescription": {
+                                  "type": "string",
+                                  "description": "Description of the product"
+                                },
+                                "profilePictures": {
+                                  "type": "object",
+                                  "properties": {
+                                    "original": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the original profile picture"
+                                    },
+                                    "thumbnail": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the thumbnail profile picture"
+                                    },
+                                    "pic200": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the 200px profile picture"
+                                    },
+                                    "pic600": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the 600px profile picture"
+                                    }
+                                  }
+                                },
+                                "attributes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string",
+                                        "description": "Name of the attribute"
+                                      },
+                                      "value": {
+                                        "type": "string",
+                                        "description": "Value of the attribute"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "store": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "storeID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the store"
+                                },
+                                "storeName": {
+                                  "type": "string",
+                                  "description": "Name of the store"
+                                },
+                                "storeHandle": {
+                                  "type": "string",
+                                  "description": "Handle of the store"
+                                },
+                                "storeDescription": {
+                                  "type": "string",
+                                  "description": "Description of the store"
+                                },
+                                "storeOpen": {
+                                  "type": "boolean",
+                                  "description": "Whether the store is open"
+                                },
+                                "location": {
+                                  "type": "object",
+                                  "nullable": true,
+                                  "properties": {
+                                    "latitude": {
+                                      "type": "number",
+                                      "format": "float",
+                                      "description": "Latitude coordinate of the store"
+                                    },
+                                    "longitude": {
+                                      "type": "number",
+                                      "format": "float",
+                                      "description": "Longitude coordinate of the store"
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "vendor": {
+                              "type": "object",
+                              "properties": {
+                                "memberID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the vendor"
+                                },
+                                "firstname": {
+                                  "type": "string",
+                                  "description": "First name of the vendor"
+                                },
+                                "lastname": {
+                                  "type": "string",
+                                  "description": "Last name of the vendor"
+                                },
+                                "memberHandle": {
+                                  "type": "string",
+                                  "description": "Handle of the vendor"
+                                },
+                                "vendorBio": {
+                                  "type": "string",
+                                  "description": "Biography of the vendor"
+                                },
+                                "profilePicture": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "nullable": true,
+                                  "description": "ID of the vendor's profile picture"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid input parameters"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "VALIDATION_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Product not found"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "PRODUCT_NOT_FOUND"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while retrieving product information"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/searchProducts": {
+      "get": {
+        "tags": [
+          "AccountInternal"
+        ],
+        "summary": "Search for products in the Vimbiso Market",
+        "description": "Search for products by keyword and location in the Vimbiso Market",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search keyword for product names"
+          },
+          {
+            "in": "query",
+            "name": "latitude",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "float",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "description": "Latitude coordinate for location-based search"
+          },
+          {
+            "in": "query",
+            "name": "longitude",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "float",
+              "minimum": -180,
+              "maximum": 180
+            },
+            "description": "Longitude coordinate for location-based search"
+          },
+          {
+            "in": "query",
+            "name": "radius",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "format": "float",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "Search radius in kilometers (default 10km)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Products found successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Products found"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "No specific ID for search action"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "PRODUCTS_SEARCHED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who performed the search"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "keyword": {
+                                  "type": "string",
+                                  "description": "Search keyword used"
+                                },
+                                "latitude": {
+                                  "type": "number",
+                                  "format": "float",
+                                  "description": "Latitude coordinate used"
+                                },
+                                "longitude": {
+                                  "type": "number",
+                                  "format": "float",
+                                  "description": "Longitude coordinate used"
+                                },
+                                "radius": {
+                                  "type": "number",
+                                  "format": "float",
+                                  "description": "Search radius in kilometers"
+                                },
+                                "resultsCount": {
+                                  "type": "integer",
+                                  "description": "Number of products found"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "properties": {
+                            "products": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "productID": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the product"
+                                  },
+                                  "productName": {
+                                    "type": "string",
+                                    "description": "Name of the product"
+                                  },
+                                  "productDescription": {
+                                    "type": "string",
+                                    "description": "Description of the product"
+                                  },
+                                  "productHandle": {
+                                    "type": "string",
+                                    "description": "Handle of the product"
+                                  },
+                                  "store": {
+                                    "type": "object",
+                                    "properties": {
+                                      "storeID": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "description": "ID of the store"
+                                      },
+                                      "storeName": {
+                                        "type": "string",
+                                        "description": "Name of the store"
+                                      },
+                                      "storeHandle": {
+                                        "type": "string",
+                                        "description": "Handle of the store"
+                                      },
+                                      "storeDescription": {
+                                        "type": "string",
+                                        "description": "Description of the store"
+                                      },
+                                      "location": {
+                                        "type": "object",
+                                        "properties": {
+                                          "latitude": {
+                                            "type": "number",
+                                            "format": "float",
+                                            "description": "Latitude coordinate of the store"
+                                          },
+                                          "longitude": {
+                                            "type": "number",
+                                            "format": "float",
+                                            "description": "Longitude coordinate of the store"
+                                          }
+                                        }
+                                      },
+                                      "distance": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "description": "Distance from search location in kilometers"
+                                      }
+                                    }
+                                  },
+                                  "vendor": {
+                                    "type": "object",
+                                    "properties": {
+                                      "memberID": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "description": "ID of the vendor"
+                                      },
+                                      "firstname": {
+                                        "type": "string",
+                                        "description": "First name of the vendor"
+                                      },
+                                      "lastname": {
+                                        "type": "string",
+                                        "description": "Last name of the vendor"
+                                      },
+                                      "memberHandle": {
+                                        "type": "string",
+                                        "description": "Handle of the vendor"
+                                      },
+                                      "vendorBio": {
+                                        "type": "string",
+                                        "description": "Biography of the vendor"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "searchParams": {
+                              "type": "object",
+                              "properties": {
+                                "keyword": {
+                                  "type": "string",
+                                  "description": "Search keyword used"
+                                },
+                                "latitude": {
+                                  "type": "number",
+                                  "format": "float",
+                                  "description": "Latitude coordinate used"
+                                },
+                                "longitude": {
+                                  "type": "number",
+                                  "format": "float",
+                                  "description": "Longitude coordinate used"
+                                },
+                                "radius": {
+                                  "type": "number",
+                                  "format": "float",
+                                  "description": "Search radius in kilometers"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid input parameters"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "VALIDATION_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while searching products"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/getAccountDetails": {
       "post": {
         "tags": [
@@ -12455,7 +14421,7 @@
           "Invoice"
         ],
         "summary": "Generate an invoice for a transaction",
-        "description": "Generate an invoice for a transaction in the Vimbiso Market",
+        "description": "Generate an invoice for a transaction with multiple line items.\nThe invoice creates a DEBITS_TO relationship to the payment account and\nCREDITS_TO relationships to each AccountInternal specified in the items array.\n",
         "security": [
           {
             "bearerAuth": []
@@ -12475,58 +14441,50 @@
                   "paymentAccountID": {
                     "type": "string",
                     "format": "uuid",
-                    "description": "ID of the account to receive payment"
+                    "description": "ID of the account to debit payment from (DEBITS_TO relationship)"
                   },
                   "AssetMarkerData": {
                     "type": "object",
                     "required": [
                       "items",
                       "total",
-                      "currency"
+                      "denomination"
                     ],
                     "properties": {
                       "items": {
                         "type": "array",
+                        "description": "Array of items to credit payment to (CREDITS_TO relationships)",
                         "items": {
                           "type": "object",
                           "required": [
                             "name",
-                            "quantity",
-                            "unit",
-                            "price",
-                            "total"
+                            "amount"
                           ],
                           "properties": {
                             "name": {
                               "type": "string",
-                              "description": "Name of the item"
+                              "description": "Name of the AccountInternal to credit"
                             },
-                            "quantity": {
+                            "amount": {
                               "type": "number",
-                              "description": "Quantity of the item"
-                            },
-                            "unit": {
-                              "type": "string",
-                              "description": "Unit of measurement (e.g., kg, each)"
-                            },
-                            "price": {
-                              "type": "number",
-                              "description": "Price per unit"
-                            },
-                            "total": {
-                              "type": "number",
-                              "description": "Total price for this item (price * quantity)"
+                              "description": "Amount to credit to this account"
                             }
                           }
                         }
                       },
                       "total": {
                         "type": "number",
-                        "description": "Total amount for the invoice (sum of all item totals)"
+                        "description": "Total amount for the invoice (sum of all item amounts)"
                       },
-                      "currency": {
+                      "denomination": {
                         "type": "string",
-                        "description": "Currency for the invoice (e.g., USD)"
+                        "enum": [
+                          "USD",
+                          "CAD",
+                          "CXX",
+                          "XAU"
+                        ],
+                        "description": "Denomination for the invoice"
                       },
                       "notes": {
                         "type": "string",
@@ -12584,30 +14542,48 @@
                               "properties": {
                                 "invoiceID": {
                                   "type": "string",
-                                  "format": "uuid"
+                                  "format": "uuid",
+                                  "description": "Unique identifier for the invoice"
                                 },
                                 "invoiceQRLink": {
                                   "type": "string",
-                                  "format": "uri"
+                                  "format": "uri",
+                                  "example": "https://mycredex.app/getInvoice/b61db57c-528d-4932-9db4-292bc45ee07b",
+                                  "description": "URL for the invoice QR code"
                                 },
-                                "amount": {
-                                  "type": "number"
+                                "totalAmount": {
+                                  "type": "number",
+                                  "description": "Total amount of the invoice"
                                 },
-                                "currency": {
-                                  "type": "string"
+                                "denomination": {
+                                  "type": "string",
+                                  "description": "Denomination of the invoice"
                                 },
                                 "paymentAccountID": {
                                   "type": "string",
-                                  "format": "uuid"
+                                  "format": "uuid",
+                                  "description": "ID of the account to debit payment from"
                                 },
-                                "items": {
+                                "lines": {
                                   "type": "array",
+                                  "description": "Array of line items in the invoice",
                                   "items": {
-                                    "type": "object"
+                                    "type": "object",
+                                    "properties": {
+                                      "accountName": {
+                                        "type": "string",
+                                        "description": "Name of the AccountInternal to credit"
+                                      },
+                                      "amount": {
+                                        "type": "number",
+                                        "description": "Amount to credit to this account"
+                                      }
+                                    }
                                   }
                                 },
                                 "notes": {
-                                  "type": "string"
+                                  "type": "string",
+                                  "description": "Additional notes for the invoice"
                                 }
                               }
                             }
@@ -12621,38 +14597,47 @@
                               "properties": {
                                 "invoiceID": {
                                   "type": "string",
-                                  "format": "uuid"
+                                  "format": "uuid",
+                                  "description": "Unique identifier for the invoice"
                                 },
                                 "invoiceQRLink": {
                                   "type": "string",
-                                  "format": "uri"
+                                  "format": "uri",
+                                  "description": "URL for the invoice QR code"
                                 },
-                                "amount": {
-                                  "type": "number"
+                                "totalAmount": {
+                                  "type": "number",
+                                  "description": "Total amount of the invoice"
                                 },
                                 "denomination": {
-                                  "type": "string"
+                                  "type": "string",
+                                  "description": "Denomination of the invoice"
                                 },
                                 "lines": {
                                   "type": "array",
+                                  "description": "Array of line items in the invoice",
                                   "items": {
                                     "type": "object",
                                     "properties": {
                                       "accountName": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "description": "Name of the AccountInternal to credit"
                                       },
                                       "amount": {
-                                        "type": "number"
+                                        "type": "number",
+                                        "description": "Amount to credit to this account"
                                       }
                                     }
                                   }
                                 },
                                 "notes": {
-                                  "type": "string"
+                                  "type": "string",
+                                  "description": "Additional notes for the invoice"
                                 },
                                 "createdAt": {
                                   "type": "string",
-                                  "format": "date-time"
+                                  "format": "date-time",
+                                  "description": "When the invoice was created"
                                 }
                               }
                             }
@@ -12942,6 +14927,301 @@
                             "actor": {
                               "type": "string",
                               "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getInvoice/{invoiceID}": {
+      "get": {
+        "tags": [
+          "Invoice"
+        ],
+        "summary": "Get invoice data by ID",
+        "description": "Retrieves invoice data by ID, including the payment account (DEBITS_TO)\nand the line items (CREDITS_TO relationships).\n",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoiceID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the invoice to retrieve"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invoice retrieved successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The invoice ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "INVOICE_RETRIEVED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who retrieved the invoice"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "invoiceID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "Unique identifier for the invoice"
+                                },
+                                "invoiceQRLink": {
+                                  "type": "string",
+                                  "format": "uri",
+                                  "example": "https://mycredex.app/getInvoice/b61db57c-528d-4932-9db4-292bc45ee07b",
+                                  "description": "URL for the invoice QR code"
+                                },
+                                "totalAmount": {
+                                  "type": "number",
+                                  "description": "Total amount of the invoice"
+                                },
+                                "denomination": {
+                                  "type": "string",
+                                  "description": "Denomination of the invoice"
+                                },
+                                "paymentAccountID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the account to debit payment from"
+                                },
+                                "lines": {
+                                  "type": "array",
+                                  "description": "Array of line items in the invoice",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "accountName": {
+                                        "type": "string",
+                                        "description": "Name of the AccountInternal to credit"
+                                      },
+                                      "amount": {
+                                        "type": "number",
+                                        "description": "Amount to credit to this account"
+                                      }
+                                    }
+                                  }
+                                },
+                                "notes": {
+                                  "type": "string",
+                                  "description": "Additional notes for the invoice"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "properties": {
+                            "invoice": {
+                              "type": "object",
+                              "properties": {
+                                "invoiceID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "Unique identifier for the invoice"
+                                },
+                                "invoiceQRLink": {
+                                  "type": "string",
+                                  "format": "uri",
+                                  "description": "URL for the invoice QR code"
+                                },
+                                "totalAmount": {
+                                  "type": "number",
+                                  "description": "Total amount of the invoice"
+                                },
+                                "denomination": {
+                                  "type": "string",
+                                  "description": "Denomination of the invoice"
+                                },
+                                "paymentAccountID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the account to debit payment from"
+                                },
+                                "lines": {
+                                  "type": "array",
+                                  "description": "Array of line items in the invoice",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "accountName": {
+                                        "type": "string",
+                                        "description": "Name of the AccountInternal to credit"
+                                      },
+                                      "amount": {
+                                        "type": "number",
+                                        "description": "Amount to credit to this account"
+                                      }
+                                    }
+                                  }
+                                },
+                                "notes": {
+                                  "type": "string",
+                                  "description": "Additional notes for the invoice"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invoice not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invoice not found"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NOT_FOUND"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while retrieving invoice"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
                             },
                             "details": {
                               "type": "object",
@@ -13412,6 +15692,485 @@
                     "message": {
                       "type": "string",
                       "example": "Internal server error while updating member"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_INTERNAL"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "INTERNAL_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getMember/{memberID}": {
+      "get": {
+        "tags": [
+          "Members"
+        ],
+        "summary": "Get member information",
+        "description": "Retrieve member profile information, stores, products, and profile pictures",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "memberID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID of the member to retrieve information for"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Member information retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Member information retrieved successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The member ID"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "MEMBER_RETRIEVED"
+                              ],
+                              "description": "The type of action performed"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time",
+                              "description": "When the action occurred"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "ID of the member who retrieved the information"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "memberID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the member"
+                                },
+                                "memberName": {
+                                  "type": "string",
+                                  "description": "Full name of the member"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "properties": {
+                            "member": {
+                              "type": "object",
+                              "properties": {
+                                "memberID": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "description": "ID of the member"
+                                },
+                                "firstname": {
+                                  "type": "string",
+                                  "description": "First name of the member"
+                                },
+                                "lastname": {
+                                  "type": "string",
+                                  "description": "Last name of the member"
+                                },
+                                "memberHandle": {
+                                  "type": "string",
+                                  "description": "Handle of the member"
+                                },
+                                "vendorBio": {
+                                  "type": "string",
+                                  "description": "Biography of the vendor"
+                                },
+                                "vendor": {
+                                  "type": "boolean",
+                                  "description": "Whether the member is a vendor"
+                                },
+                                "profilePictures": {
+                                  "type": "object",
+                                  "properties": {
+                                    "original": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the original profile picture"
+                                    },
+                                    "thumbnail": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the thumbnail profile picture"
+                                    },
+                                    "pic200": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the 200px profile picture"
+                                    },
+                                    "pic600": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "nullable": true,
+                                      "description": "ID of the 600px profile picture"
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "stores": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "storeID": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the store"
+                                  },
+                                  "storeName": {
+                                    "type": "string",
+                                    "description": "Name of the store"
+                                  },
+                                  "storeHandle": {
+                                    "type": "string",
+                                    "description": "Handle of the store"
+                                  },
+                                  "storeDescription": {
+                                    "type": "string",
+                                    "description": "Description of the store"
+                                  },
+                                  "storeOpen": {
+                                    "type": "boolean",
+                                    "description": "Whether the store is open"
+                                  },
+                                  "location": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                      "latitude": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "description": "Latitude coordinate of the store"
+                                      },
+                                      "longitude": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "description": "Longitude coordinate of the store"
+                                      }
+                                    }
+                                  },
+                                  "thumbnailPicID": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "nullable": true,
+                                    "description": "ID of the store's thumbnail picture"
+                                  }
+                                }
+                              }
+                            },
+                            "products": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "productID": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "ID of the product"
+                                  },
+                                  "productName": {
+                                    "type": "string",
+                                    "description": "Name of the product"
+                                  },
+                                  "productHandle": {
+                                    "type": "string",
+                                    "description": "Handle of the product"
+                                  },
+                                  "productDescription": {
+                                    "type": "string",
+                                    "description": "Description of the product"
+                                  },
+                                  "thumbnailPicID": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "nullable": true,
+                                    "description": "ID of the product's thumbnail picture"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invalid input parameters"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_VALIDATION"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "VALIDATION_ERROR"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "field": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Authentication required"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_UNAUTHORIZED"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "NO_AUTH"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Member not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Member not found"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "ERROR_NOT_FOUND"
+                              ]
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "example": "MEMBER_NOT_FOUND"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "dashboard": {
+                          "type": "object",
+                          "description": "Empty dashboard object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal server error while retrieving member information"
                     },
                     "data": {
                       "type": "object",
@@ -13941,6 +16700,10 @@
                                 "defaultDenom": {
                                   "type": "string",
                                   "description": "Member's default denomination"
+                                },
+                                "profilePictureThumbnail": {
+                                  "type": "string",
+                                  "description": "URL to the member's profile picture thumbnail"
                                 }
                               }
                             },
@@ -13981,6 +16744,10 @@
                                   "isOwnedAccount": {
                                     "type": "boolean",
                                     "description": "Whether the member owns this account"
+                                  },
+                                  "profilePictureThumbnail": {
+                                    "type": "string",
+                                    "description": "URL to the account's profile picture thumbnail"
                                   }
                                 }
                               }
@@ -14009,6 +16776,10 @@
                                       "PHYSICAL_ASSET"
                                     ],
                                     "description": "Type of the internal account"
+                                  },
+                                  "profilePictureThumbnail": {
+                                    "type": "string",
+                                    "description": "URL to the internal account's profile picture thumbnail"
                                   },
                                   "sendOffersTo": {
                                     "type": "object",
