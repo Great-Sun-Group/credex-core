@@ -44,7 +44,7 @@ export async function generateApiDocs(): Promise<void> {
       const apiSpec = ${JSON.stringify(swaggerSpec, null, 2)};
 
       // Module order
-      const moduleOrder = ['Member', 'Account', 'Credex', 'AccountInternal', 'AssetMarker', 'Recurring', 'Admin', 'DevAdmin'];
+      const moduleOrder = ['Member', 'Account', 'Credex', 'AccountInternal', 'AssetMarker', 'Recurring', 'Invoice', 'Admin', 'DevAdmin'];
 
       function escapeHtml(unsafe) {
         return unsafe
@@ -75,6 +75,7 @@ export async function generateApiDocs(): Promise<void> {
           'AccountInternal': 'AccountInternal',
           'AssetMarker': 'AssetMarker',
           'Recurring': 'Recurring',
+          'Invoice': 'Invoice',
           'Admin': 'Admin',
           'DevAdmin': 'DevAdmin'
         };

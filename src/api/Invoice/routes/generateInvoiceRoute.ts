@@ -29,13 +29,13 @@ export default function generateInvoiceRoute() {
    *             type: object
    *             required:
    *               - paymentAccountID
-   *               - AssetMarkerData
+   *               - InvoiceData
    *             properties:
    *               paymentAccountID:
    *                 type: string
    *                 format: uuid
    *                 description: ID of the account to debit payment from (DEBITS_TO relationship)
-   *               AssetMarkerData:
+   *               InvoiceData:
    *                 type: object
    *                 required:
    *                   - items
@@ -48,12 +48,13 @@ export default function generateInvoiceRoute() {
    *                     items:
    *                       type: object
    *                       required:
-   *                         - name
+   *                         - accountID
    *                         - amount
    *                       properties:
-   *                         name:
+   *                         accountID:
    *                           type: string
-   *                           description: Name of the AccountInternal to credit
+   *                           format: uuid
+   *                           description: ID of the AccountInternal to credit
    *                         amount:
    *                           type: number
    *                           description: Amount to credit to this account
@@ -128,47 +129,13 @@ export default function generateInvoiceRoute() {
    *                               items:
    *                                 type: object
    *                                 properties:
-   *                                   accountName:
+   *                                   accountID:
    *                                     type: string
-   *                                     description: Name of the AccountInternal to credit
+   *                                     format: uuid
+   *                                     description: ID of the AccountInternal credited
    *                                   amount:
    *                                     type: number
-   *                                     description: Amount to credit to this account
-   *                             notes:
-   *                               type: string
-   *                               description: Additional notes for the invoice
-   *                     dashboard:
-   *                       type: object
-   *                       properties:
-   *                         invoice:
-   *                           type: object
-   *                           properties:
-   *                             invoiceID:
-   *                               type: string
-   *                               format: uuid
-   *                               description: Unique identifier for the invoice
-   *                             invoiceQRLink:
-   *                               type: string
-   *                               format: uri
-   *                               description: URL for the invoice QR code
-   *                             totalAmount:
-   *                               type: number
-   *                               description: Total amount of the invoice
-   *                             denomination:
-   *                               type: string
-   *                               description: Denomination of the invoice
-   *                             lines:
-   *                               type: array
-   *                               description: Array of line items in the invoice
-   *                               items:
-   *                                 type: object
-   *                                 properties:
-   *                                   accountName:
-   *                                     type: string
-   *                                     description: Name of the AccountInternal to credit
-   *                                   amount:
-   *                                     type: number
-   *                                     description: Amount to credit to this account
+   *                                     description: Amount credited to this account
    *                             notes:
    *                               type: string
    *                               description: Additional notes for the invoice

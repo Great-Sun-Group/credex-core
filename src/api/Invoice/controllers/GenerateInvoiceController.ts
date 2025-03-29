@@ -23,7 +23,7 @@ export async function GenerateInvoiceController(
       body: req.body,
     });
 
-    const { paymentAccountID, AssetMarkerData } = req.body;
+    const { paymentAccountID, InvoiceData } = req.body;
     const memberID = req.user?.memberID;
 
     if (!memberID) {
@@ -65,7 +65,6 @@ export async function GenerateInvoiceController(
       const createInvoiceResult = await tx.run(
         `CREATE (i:Invoice {
           invoiceID: $invoiceID,
-          Lines: $lines,
           TotalAmount: $totalAmount,
           Denomination: $denomination,
           Notes: $notes,
@@ -82,15 +81,9 @@ export async function GenerateInvoiceController(
         RETURN i`,
         {
           invoiceID,
-          lines: JSON.stringify(
-            AssetMarkerData.items.map((item: any) => ({
-              accountName: item.name,
-              amount: item.amount,
-            }))
-          ),
-          totalAmount: AssetMarkerData.total,
-          denomination: AssetMarkerData.denomination,
-          notes: AssetMarkerData.notes || "",
+          totalAmount: InvoiceData.total,
+          denomination: InvoiceData.denomination,
+          notes: InvoiceData.notes || "",
           paymentAccountID,
         }
       );
@@ -100,15 +93,15 @@ export async function GenerateInvoiceController(
       }
 
       // Now create CREDITS_TO relationships for each item
-      for (const item of AssetMarkerData.items) {
-        // Find the AccountInternal by name and create CREDITS_TO relationship with amount
+      for (const item of InvoiceData.items) {
+        // Find the AccountInternal by ID and create CREDITS_TO relationship with amount
         await tx.run(
           `MATCH (i:Invoice {invoiceID: $invoiceID})
-           MATCH (a:AccountInternal {accountName: $accountName})
+           MATCH (a:AccountInternal {accountID: $accountID})
            CREATE (i)-[:CREDITS_TO {Amount: $amount}]->(a)`,
           {
             invoiceID,
-            accountName: item.name,
+            accountID: item.accountID,
             amount: item.amount,
           }
         );
@@ -142,30 +135,17 @@ export async function GenerateInvoiceController(
           details: {
             invoiceID,
             invoiceQRLink,
-            totalAmount: AssetMarkerData.total,
-            denomination: AssetMarkerData.denomination,
+            totalAmount: InvoiceData.total,
+            denomination: InvoiceData.denomination,
             paymentAccountID,
-            lines: AssetMarkerData.items.map((item: any) => ({
-              accountName: item.name,
+            lines: InvoiceData.items.map((item: any) => ({
+              accountID: item.accountID,
               amount: item.amount,
             })),
-            notes: AssetMarkerData.notes || "",
+            notes: InvoiceData.notes || "",
           },
         },
-        dashboard: {
-          invoice: {
-            invoiceID,
-            invoiceQRLink,
-            totalAmount: AssetMarkerData.total,
-            denomination: AssetMarkerData.denomination,
-            lines: AssetMarkerData.items.map((item: any) => ({
-              accountName: item.name,
-              amount: item.amount,
-            })),
-            notes: AssetMarkerData.notes || "",
-            createdAt: new Date().toISOString(),
-          },
-        },
+        createdAt: new Date().toISOString(),
       },
     });
   } catch (error) {
