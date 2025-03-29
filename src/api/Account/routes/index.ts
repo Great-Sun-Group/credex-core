@@ -4,6 +4,7 @@ import getLedgerRoute from "./getLedgerRoute";
 import createTrustAccountRoute from "./createTrustAccountRoute";
 import editAccountRoute from "./editAccountRoute";
 import storeStatusRoute from "./storeStatusRoute";
+import getStorefrontRoute from "./getStorefrontRoute";
 import logger from "../../../utils/logger";
 
 /**
@@ -23,10 +24,11 @@ export default function AccountRoutes() {
   router.use(createTrustAccountRoute());
   router.use(editAccountRoute());
   router.use(storeStatusRoute());
+  router.use(getStorefrontRoute());
 
   logger.info("Account routes initialized successfully", {
     module: "accountRoutes",
-    routesCount: 5,
+    routesCount: 6,
   });
 
   return router;
