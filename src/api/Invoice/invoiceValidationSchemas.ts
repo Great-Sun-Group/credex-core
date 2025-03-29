@@ -18,13 +18,13 @@ export const generateInvoiceSchema = {
     validator: v.validateUUID,
     required: true,
   },
-  AssetMarkerData: {
+  InvoiceData: {
     sanitizer: (value: any) => value,
     validator: (value: any) => {
       if (typeof value !== 'object' || value === null) {
         return {
           isValid: false,
-          message: "AssetMarkerData must be an object",
+          message: "InvoiceData must be an object",
         };
       }
       
@@ -32,7 +32,7 @@ export const generateInvoiceSchema = {
       if (!Array.isArray(value.items) || value.items.length === 0) {
         return {
           isValid: false,
-          message: "AssetMarkerData must contain a non-empty items array",
+          message: "InvoiceData must contain a non-empty items array",
         };
       }
       
@@ -45,10 +45,10 @@ export const generateInvoiceSchema = {
           };
         }
         
-        if (!item.name || typeof item.name !== 'string') {
+        if (!item.accountID || typeof item.accountID !== 'string') {
           return {
             isValid: false,
-            message: "Each item must have a name string",
+            message: "Each item must have an accountID string",
           };
         }
         
@@ -64,7 +64,7 @@ export const generateInvoiceSchema = {
       if (value.total === undefined || typeof value.total !== 'number' || value.total <= 0) {
         return {
           isValid: false,
-          message: "AssetMarkerData must contain a positive total number",
+          message: "InvoiceData must contain a positive total number",
         };
       }
       
@@ -81,13 +81,13 @@ export const generateInvoiceSchema = {
       if (!value.denomination || typeof value.denomination !== 'string') {
         return {
           isValid: false,
-          message: "AssetMarkerData must contain a denomination string",
+          message: "InvoiceData must contain a denomination string",
         };
       }
       
       return {
         isValid: true,
-        message: "Valid AssetMarkerData",
+        message: "Valid InvoiceData",
       };
     },
     required: true,
