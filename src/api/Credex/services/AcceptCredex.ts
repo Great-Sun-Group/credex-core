@@ -2,11 +2,13 @@ import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { digitallySign } from "../../../utils/digitalSignature";
 import logger from "../../../utils/logger";
 import { BalanceRepository } from "../../Account/repositories/BalanceRepository";
+import { ProcessInvoiceCredexService } from "./ProcessInvoiceCredex";
 
 const balanceRepository = BalanceRepository.getInstance();
 
 interface AcceptCredexData {
   credexID: string;
+  GLid?: string;  // Added GLid property
   acceptorAccountID: string;
   acceptorSignerID: string;
   acceptedAt: string;
@@ -191,6 +193,7 @@ export async function AcceptCredexService(
           acceptedCredex.queueStatus = "PENDING_CREDEX"
         RETURN
           acceptedCredex.credexID AS credexID,
+          acceptedCredex.GLid AS GLid,
           acceptor.accountID AS acceptorAccountID,
           CASE
             WHEN signer:Member THEN signer.memberID
@@ -222,6 +225,7 @@ export async function AcceptCredexService(
           success: true,
           data: {
             credexID: record.get("credexID"),
+            GLid: record.get("GLid"),
             acceptorAccountID: record.get("acceptorAccountID"),
             acceptorSignerID: record.get("signerID"),
             acceptedAt: record.get("acceptedAt"),
@@ -287,6 +291,52 @@ export async function AcceptCredexService(
             }
           : undefined
       );
+    }
+
+    // Check if the Credex has a GLid and it's not the same as the credexID (meaning it's from an invoice)
+    if (acceptedCredexData.GLid && acceptedCredexData.GLid !== acceptedCredexData.credexID) {
+      logger.info("Credex has a GLid, processing invoice-based Credex", {
+        credexID: acceptedCredexData.credexID,
+        GLid: acceptedCredexData.GLid,
+        requestId
+      });
+      
+      try {
+        // Process the invoice-based Credex
+        const processResult = await ProcessInvoiceCredexService({
+          credexID: acceptedCredexData.credexID,
+          GLid: acceptedCredexData.GLid,
+          acceptorAccountID: acceptedCredexData.acceptorAccountID,
+          acceptorSignerID: acceptedCredexData.acceptorSignerID,
+          requestId
+        });
+        
+        if (!processResult.success) {
+          logger.warn("Failed to process invoice-based Credex, but continuing", {
+            credexID: acceptedCredexData.credexID,
+            GLid: acceptedCredexData.GLid,
+            error: processResult.error,
+            requestId
+          });
+          // We continue even if processing fails, as the Credex itself was accepted successfully
+        } else {
+          logger.info("Successfully processed invoice-based Credex", {
+            credexID: acceptedCredexData.credexID,
+            GLid: acceptedCredexData.GLid,
+            message: processResult.message,
+            requestId
+          });
+        }
+      } catch (error) {
+        // Log but don't fail the overall operation
+        logger.error("Error processing invoice-based Credex", {
+          error: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined,
+          credexID: acceptedCredexData.credexID,
+          GLid: acceptedCredexData.GLid,
+          requestId
+        });
+      }
     }
 
     logger.info("Credex accepted successfully", {

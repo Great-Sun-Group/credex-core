@@ -279,6 +279,43 @@
                     </li>
                   </ul>
                 </li>
+                <li>
+                  <strong>Member Information</strong> - Successfully tested
+                  retrieving member information with
+                  <code>/getMember</code> endpoint
+                  <pre>curl -X GET "http://localhost:3000/getMember/memberID" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
+                  <ul>
+                    <li>
+                      Verified return of member profile information for public view
+                    </li>
+                    <li>
+                      Verified return of member's stores and products
+                    </li>
+                    <li>
+                      Verified return of profile pictures and other media
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Invoice Generation</strong> - Successfully tested
+                  creating invoices with
+                  <code>/generateInvoice</code> endpoint
+                  <pre>npm test generateinvoice tokenHere paymentAccountID '{"items":[{"name":"Fresh Tomatoes","quantity":2,"unit":"kg","price":10,"total":20}],"total":20,"currency":"USD"}'</pre>
+                  <ul>
+                    <li>
+                      Verified creating invoice with single item
+                    </li>
+                    <li>
+                      Verified creating invoice with multiple items
+                    </li>
+                    <li>
+                      Verified invoice QR link generation
+                    </li>
+                    <li>
+                      Verified validation of item totals and invoice total
+                    </li>
+                  </ul>
+                </li>
               </ul>
             </div>
 
@@ -306,45 +343,10 @@
                     </li>
                   </ul>
                 </li>
-                <li>
-                  <strong>Member Information</strong> - Test retrieving member information with
-                  <code>/getMember</code> endpoint
-                  <pre>curl -X GET "http://localhost:3000/getMember/memberID" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
-                  <ul>
-                    <li>
-                      Return member profile information for public view
-                    </li>
-                    <li>
-                      Return member's stores and products
-                    </li>
-                    <li>
-                      Return profile pictures and other media
-                    </li>
-                  </ul>
-                </li>
               </ul>
 
               <h6>Transaction Management</h6>
               <ul>
-                <li>
-                  <strong>Invoice Generation</strong> - Test creating invoices with
-                  <code>/generateInvoice</code> endpoint
-                  <pre>npm test generateinvoice tokenHere paymentAccountID '{"items":[{"name":"Fresh Tomatoes","quantity":2,"unit":"kg","price":10,"total":20}],"total":20,"currency":"USD"}'</pre>
-                  <ul>
-                    <li>
-                      Test creating invoice with single item
-                    </li>
-                    <li>
-                      Test creating invoice with multiple items
-                    </li>
-                    <li>
-                      Verify invoice QR link generation
-                    </li>
-                    <li>
-                      Test validation of item totals and invoice total
-                    </li>
-                  </ul>
-                </li>
                 <li>
                   <strong>Payment Processing</strong> - Test executing invoices with
                   <code>/createCredex</code> endpoint

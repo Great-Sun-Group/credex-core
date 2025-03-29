@@ -82,9 +82,6 @@ export async function CreateCredexService(
   const {
     signerID,
     issuerAccountID,
-    receiverAccountID,
-    InitialAmount,
-    Denomination,
     credexType,
     OFFERSorREQUESTS,
     securedCredex = false,
@@ -93,16 +90,13 @@ export async function CreateCredexService(
     requestId,
   } = credexData;
 
+  // Create mutable variables for parameters that might be updated from invoice
+  let receiverAccountID = credexData.receiverAccountID;
+  let InitialAmount = credexData.InitialAmount;
+  let Denomination = credexData.Denomination;
+
   // Validate required fields
-  if (
-    !signerID ||
-    !issuerAccountID ||
-    !receiverAccountID ||
-    !InitialAmount ||
-    !Denomination ||
-    !credexType ||
-    !OFFERSorREQUESTS
-  ) {
+  if (!signerID || !issuerAccountID || !credexType || !OFFERSorREQUESTS) {
     return {
       success: false,
       message: "Missing required parameters",
@@ -114,6 +108,119 @@ export async function CreateCredexService(
   }
 
   const ledgerSpaceSession = ledgerSpaceDriver.session();
+
+  // If invoiceID is provided, always fetch and use invoice data, overriding any passed parameters
+  if (invoiceID) {
+    logger.debug("Fetching invoice data for Credex creation", {
+      invoiceID,
+      requestId,
+    });
+
+    try {
+      // Fetch invoice data
+      const invoiceData = await ledgerSpaceSession.executeRead(async (tx) => {
+        const query = `
+          MATCH (invoice:Invoice {invoiceID: $invoiceID})
+          OPTIONAL MATCH (invoice)-[:DEBITS_TO]->(receiver:Account)
+          RETURN 
+            invoice.TotalAmount as totalAmount,
+            invoice.Denomination as denomination,
+            receiver.accountID as receiverAccountID
+        `;
+
+        const result = await tx.run(query, { invoiceID });
+
+        if (result.records.length === 0) {
+          return { success: false, error: "INVOICE_NOT_FOUND" };
+        }
+
+        const record = result.records[0];
+        return {
+          success: true,
+          data: {
+            totalAmount: record.get("totalAmount"),
+            denomination: record.get("denomination"),
+            receiverAccountID: record.get("receiverAccountID"),
+          },
+        };
+      });
+
+      if (!invoiceData.success || !invoiceData.data) {
+        return {
+          success: false,
+          message: "Failed to fetch invoice data",
+          error: {
+            code:
+              invoiceData.error === "INVOICE_NOT_FOUND"
+                ? "INVOICE_NOT_FOUND"
+                : "DB_ERROR",
+            details: "The specified invoice could not be found or accessed",
+          },
+        };
+      }
+
+      // Always override with invoice data when invoice ID is provided
+      if (invoiceData.data.receiverAccountID) {
+        receiverAccountID = invoiceData.data.receiverAccountID;
+        logger.debug("Set receiverAccountID from invoice", {
+          receiverAccountID,
+          requestId,
+        });
+      }
+
+      if (invoiceData.data.totalAmount) {
+        InitialAmount = invoiceData.data.totalAmount;
+        logger.debug("Set InitialAmount from invoice", {
+          InitialAmount,
+          requestId,
+        });
+      }
+
+      if (invoiceData.data.denomination) {
+        Denomination = invoiceData.data.denomination;
+        logger.debug("Set Denomination from invoice", {
+          Denomination,
+          requestId,
+        });
+      }
+
+      // If still missing required parameters, return error
+      if (!receiverAccountID || !InitialAmount || !Denomination) {
+        return {
+          success: false,
+          message: "Missing required parameters from invoice",
+          error: {
+            code: "MISSING_PARAMS",
+            details:
+              "Required parameters could not be extracted from the invoice",
+          },
+        };
+      }
+
+      logger.debug("Successfully fetched invoice data", {
+        receiverAccountID,
+        totalAmount: InitialAmount,
+        denomination: Denomination,
+        requestId,
+      });
+    } catch (error) {
+      logger.error("Error fetching invoice data", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        invoiceID,
+        requestId,
+      });
+
+      return {
+        success: false,
+        message: "Failed to fetch invoice data",
+        error: {
+          code: "DB_ERROR",
+          details: "Error accessing invoice data",
+        },
+      };
+    }
+  }
+
   const OFFEREDorREQUESTED =
     OFFERSorREQUESTS === "OFFERS" ? "OFFERED" : "REQUESTED";
 
@@ -126,7 +233,10 @@ export async function CreateCredexService(
     });
 
     // Check if issuer has access
-    const issuerAccount = await accountRepository.findByIdWithAccess(issuerAccountID, signerID);
+    const issuerAccount = await accountRepository.findByIdWithAccess(
+      issuerAccountID,
+      signerID
+    );
     if (!issuerAccount) {
       const message = "Issuer account not found or no access";
       logger.warn(message, {
@@ -139,8 +249,8 @@ export async function CreateCredexService(
         message,
         error: {
           code: "FORBIDDEN",
-          details: message
-        }
+          details: message,
+        },
       };
     }
 
@@ -157,8 +267,8 @@ export async function CreateCredexService(
         message,
         error: {
           code: "FORBIDDEN",
-          details: message
-        }
+          details: message,
+        },
       };
     }
 
@@ -167,6 +277,7 @@ export async function CreateCredexService(
       logger.debug("Verifying secured authorization", {
         issuerAccountID,
         Denomination,
+        InitialAmount,
         requestId,
       });
 
@@ -187,8 +298,13 @@ export async function CreateCredexService(
           success: false,
           message: "Failed to verify secured authorization",
           error: {
-            code: secureableData.error?.code === "DATABASE_ERROR" ? "DB_ERROR" : "INTERNAL_ERROR",
-            details: secureableData.error?.details || "Unable to verify secured authorization",
+            code:
+              secureableData.error?.code === "DATABASE_ERROR"
+                ? "DB_ERROR"
+                : "INTERNAL_ERROR",
+            details:
+              secureableData.error?.details ||
+              "Unable to verify secured authorization",
           },
         };
       }
@@ -230,7 +346,7 @@ export async function CreateCredexService(
     });
 
     // Generate a GLid for the Credex
-    const GLid = invoiceID || require('uuid').v4();
+    const GLid = invoiceID || require("uuid").v4();
 
     const result: DatabaseCreateResult = await ledgerSpaceSession.executeWrite(
       async (tx) => {
@@ -241,7 +357,7 @@ export async function CreateCredexService(
              RETURN invoice`,
             { invoiceID }
           );
-          
+
           if (invoiceCheck.records.length === 0) {
             logger.error("Invoice not found", {
               invoiceID,
@@ -250,11 +366,89 @@ export async function CreateCredexService(
             return {
               success: false,
               error: "INVOICE_NOT_FOUND",
-              details: "The specified invoice could not be found"
+              details: "The specified invoice could not be found",
             };
           }
         }
-        
+
+        // Verify that both accounts exist before running the main query
+        logger.debug(
+          "Verifying accounts exist in database before creating Credex",
+          {
+            issuerAccountID,
+            receiverAccountID,
+            requestId,
+          }
+        );
+
+        const accountCheckQuery = await tx.run(
+          `MATCH (issuer:Account {accountID: $issuerAccountID})
+           MATCH (receiver:Account {accountID: $receiverAccountID})
+           RETURN issuer.accountName as issuerName, receiver.accountName as receiverName`,
+          { issuerAccountID, receiverAccountID }
+        );
+
+        if (accountCheckQuery.records.length === 0) {
+          logger.error("Failed to find both accounts in database", {
+            issuerAccountID,
+            receiverAccountID,
+            requestId,
+          });
+
+          // Run individual checks to determine which account is missing
+          const issuerCheck = await tx.run(
+            `MATCH (issuer:Account {accountID: $issuerAccountID})
+             RETURN issuer.accountName as name`,
+            { issuerAccountID }
+          );
+
+          const receiverCheck = await tx.run(
+            `MATCH (receiver:Account {accountID: $receiverAccountID})
+             RETURN receiver.accountName as name`,
+            { receiverAccountID }
+          );
+
+          logger.debug("Individual account check results", {
+            issuerFound: issuerCheck.records.length > 0,
+            issuerName:
+              issuerCheck.records.length > 0
+                ? issuerCheck.records[0].get("name")
+                : null,
+            receiverFound: receiverCheck.records.length > 0,
+            receiverName:
+              receiverCheck.records.length > 0
+                ? receiverCheck.records[0].get("name")
+                : null,
+            requestId,
+          });
+
+          return {
+            success: false,
+            error: "ACCOUNT_NOT_FOUND",
+            details: "One or both accounts could not be found in the database",
+          };
+        }
+
+        logger.debug("Both accounts found in database", {
+          issuerName: accountCheckQuery.records[0].get("issuerName"),
+          receiverName: accountCheckQuery.records[0].get("receiverName"),
+          requestId,
+        });
+
+        // Log the query parameters for debugging
+        logger.debug("Creating Credex with query parameters", {
+          issuerAccountID,
+          receiverAccountID,
+          InitialAmount,
+          Denomination,
+          credexType,
+          securedCredex,
+          GLid,
+          invoiceID,
+          requestId
+        });
+
+        // Main Credex creation query (same for all cases, without invoice relationship)
         const query = `
         MATCH (daynode:Daynode { Active: true })
         MATCH (issuer:Account { accountID: $issuerAccountID })
@@ -277,7 +471,6 @@ export async function CreateCredexService(
         MERGE (newCredex)-[:CREATED_ON]->(daynode)
         MERGE (issuer)-[:${OFFERSorREQUESTS}]->(newCredex)-[:${OFFERSorREQUESTS}]->(receiver)
         MERGE (issuer)-[:${OFFEREDorREQUESTED}]->(newCredex)-[:${OFFEREDorREQUESTED}]->(receiver)
-        ${invoiceID ? 'WITH newCredex MATCH (invoice:Invoice {invoiceID: $invoiceID}) CREATE (newCredex)-[:EXECUTES]->(invoice)' : ''}
         RETURN
           newCredex.credexID AS credexID,
           receiver.accountName AS counterpartyAccountName,
@@ -303,8 +496,7 @@ export async function CreateCredexService(
           Denomination,
           credexType,
           securedCredex,
-          GLid,
-          invoiceID
+          GLid
         });
 
         // At this point we know both accounts exist (checked earlier), 
@@ -320,6 +512,49 @@ export async function CreateCredexService(
             error: "DB_ERROR",
             details: "Failed to create Credex relationship in database"
           };
+        }
+
+        // If this is an invoice-based Credex, create the EXECUTES relationship in a separate query
+        if (invoiceID) {
+          const credexID = queryResult.records[0].get("credexID");
+          logger.debug("Creating EXECUTES relationship to invoice", {
+            credexID,
+            invoiceID,
+            requestId
+          });
+          
+          try {
+            const invoiceRelationshipQuery = await tx.run(
+              `MATCH (newCredex:Credex {credexID: $credexID})
+               MATCH (invoice:Invoice {invoiceID: $invoiceID})
+               CREATE (newCredex)-[:EXECUTES]->(invoice)
+               RETURN invoice.invoiceID as invoiceID`,
+              { credexID, invoiceID }
+            );
+            
+            if (invoiceRelationshipQuery.records.length === 0) {
+              logger.warn("Failed to create EXECUTES relationship to invoice", {
+                credexID,
+                invoiceID,
+                requestId
+              });
+              // We don't fail the entire transaction here, just log the warning
+            } else {
+              logger.debug("Successfully created EXECUTES relationship to invoice", {
+                credexID,
+                invoiceID,
+                requestId
+              });
+            }
+          } catch (error) {
+            // Log the error but don't fail the transaction
+            logger.error("Error creating EXECUTES relationship to invoice", {
+              error: error instanceof Error ? error.message : "Unknown error",
+              credexID,
+              invoiceID,
+              requestId
+            });
+          }
         }
 
         const record = queryResult.records[0];
@@ -343,13 +578,18 @@ export async function CreateCredexService(
     if (!result.success || !result.data) {
       return {
         success: false,
-        message: result.error === "INVOICE_NOT_FOUND" 
-          ? "Failed to create Credex: Invoice not found" 
-          : "Failed to create Credex",
+        message:
+          result.error === "INVOICE_NOT_FOUND"
+            ? "Failed to create Credex: Invoice not found"
+            : "Failed to create Credex",
         error: {
-          code: result.error === "INVOICE_NOT_FOUND" ? "INVOICE_NOT_FOUND" : "DB_ERROR",
-          details: result.error || "An error occurred while creating the Credex"
-        }
+          code:
+            result.error === "INVOICE_NOT_FOUND"
+              ? "INVOICE_NOT_FOUND"
+              : "DB_ERROR",
+          details:
+            result.error || "An error occurred while creating the Credex",
+        },
       };
     }
 
