@@ -94,17 +94,54 @@ export async function GenerateInvoiceController(
 
       // Now create CREDITS_TO relationships for each item
       for (const item of InvoiceData.items) {
+        // First check if the AccountInternal exists
+        const accountCheck = await tx.run(
+          `MATCH (a:AccountInternal {id: $accountID})
+           RETURN a`,
+          {
+            accountID: item.accountID,
+          }
+        );
+
+        if (accountCheck.records.length === 0) {
+          throw new Error(`AccountInternal with ID ${item.accountID} not found`);
+        }
+
         // Find the AccountInternal by ID and create CREDITS_TO relationship with amount
-        await tx.run(
+        const result = await tx.run(
           `MATCH (i:Invoice {invoiceID: $invoiceID})
-           MATCH (a:AccountInternal {accountID: $accountID})
-           CREATE (i)-[:CREDITS_TO {Amount: $amount}]->(a)`,
+           MATCH (a:AccountInternal {id: $accountID})
+           CREATE (i)-[:CREDITS_TO {Amount: $amount}]->(a)
+           RETURN i, a`,
           {
             invoiceID,
             accountID: item.accountID,
             amount: item.amount,
           }
         );
+
+        // Verify that the relationship was created
+        if (result.records.length === 0) {
+          throw new Error(`Failed to create CREDITS_TO relationship for item with accountID ${item.accountID}`);
+        }
+      }
+
+      // Verify that CREDITS_TO relationships were created
+      const verifyCreditsTo = await tx.run(
+        `MATCH (i:Invoice {invoiceID: $invoiceID})-[r:CREDITS_TO]->()
+         RETURN count(r) as relationshipCount`,
+        {
+          invoiceID,
+        }
+      );
+
+      const relationshipCount = verifyCreditsTo.records[0].get("relationshipCount").toNumber();
+      if (relationshipCount === 0) {
+        throw new Error("No CREDITS_TO relationships were created for the invoice");
+      }
+
+      if (relationshipCount !== InvoiceData.items.length) {
+        throw new Error(`Expected ${InvoiceData.items.length} CREDITS_TO relationships, but found ${relationshipCount}`);
       }
 
       // Digitally sign the invoice

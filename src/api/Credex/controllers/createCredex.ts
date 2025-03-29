@@ -7,6 +7,8 @@ import { checkDueDate, credspan } from "../../../core-cron/constants/credspan";
 import { AuthForTierSpendLimitService } from "../../Member/services/AuthForTierSpendLimit";
 import logger from "../../../utils/logger";
 import { getDashboardData } from "../../../utils/dashboardUtils";
+import { ledgerSpaceDriver } from "../../../../config/neo4j";
+import { ManagedTransaction } from "neo4j-driver";
 
 // Initialize services
 const memberDashboardService = new MemberDashboardService(
@@ -73,6 +75,47 @@ export async function CreateCredexController(
     // Get memberID from auth token to use as signerID
     const signerID = req.user.memberID;
 
+    // Custom validation for invoice-based Credex creation
+    if (invoiceID) {
+      logger.debug("Invoice-based Credex creation detected", {
+        requestId,
+        invoiceID,
+        issuerAccountID,
+      });
+
+      // If invoiceID is provided but other required fields are missing, we'll let the service handle it
+      // The service will fetch the missing data from the invoice
+    } else {
+      // For direct Credex creation, validate all required fields
+      if (!receiverAccountID || !Denomination || !InitialAmount) {
+        logger.warn("Missing required parameters for direct Credex creation", {
+          requestId,
+          receiverAccountID,
+          Denomination,
+          InitialAmount,
+        });
+
+        const errorResponse: CreateCredexErrorResponse = {
+          message: "Missing required parameters for direct Credex creation",
+          data: {
+            action: {
+              id: null,
+              type: ApiActionType.ERROR_VALIDATION,
+              timestamp: new Date().toISOString(),
+              actor: signerID,
+              details: {
+                code: "MISSING_PARAMS",
+                reason:
+                  "receiverAccountID, Denomination, and InitialAmount are required when not using invoiceID",
+              },
+            },
+            dashboard: {},
+          },
+        };
+        return res.status(400).json(errorResponse);
+      }
+    }
+
     // Basic validation is handled by validateRequest middleware
     logger.debug("Validating business rules", {
       requestId,
@@ -83,7 +126,7 @@ export async function CreateCredexController(
     });
 
     // Check if issuer and receiver are different
-    if (issuerAccountID === receiverAccountID) {
+    if (receiverAccountID && issuerAccountID === receiverAccountID) {
       logger.warn("Attempted to create Credex with same issuer and receiver", {
         issuerAccountID,
         receiverAccountID,
@@ -109,18 +152,122 @@ export async function CreateCredexController(
       return res.status(400).json(errorResponse);
     }
 
+    // If invoiceID is provided but other parameters are missing, fetch them from the invoice
+    let updatedInitialAmount = InitialAmount;
+    let updatedDenomination = Denomination;
+
+    if (invoiceID && (!InitialAmount || !Denomination)) {
+      logger.debug("Fetching invoice data for tier authorization", {
+        invoiceID,
+        requestId,
+      });
+
+      const ledgerSpaceSession = ledgerSpaceDriver.session();
+      try {
+        // Fetch invoice data
+        const invoiceData = await ledgerSpaceSession.executeRead(async (tx: ManagedTransaction) => {
+          const query = `
+            MATCH (invoice:Invoice {invoiceID: $invoiceID})
+            RETURN 
+              invoice.TotalAmount as totalAmount,
+              invoice.Denomination as denomination
+          `;
+
+          const result = await tx.run(query, { invoiceID });
+
+          if (result.records.length === 0) {
+            return { success: false, error: "INVOICE_NOT_FOUND" };
+          }
+
+          const record = result.records[0];
+          return {
+            success: true,
+            data: {
+              totalAmount: record.get("totalAmount"),
+              denomination: record.get("denomination"),
+            },
+          };
+        });
+
+        if (!invoiceData.success || !invoiceData.data) {
+          logger.warn("Failed to fetch invoice data for tier authorization", {
+            invoiceID,
+            requestId,
+          });
+
+          const errorResponse: CreateCredexErrorResponse = {
+            message: "Failed to fetch invoice data",
+            data: {
+              action: {
+                id: null,
+                type: ApiActionType.ERROR_NOT_FOUND,
+                timestamp: new Date().toISOString(),
+                actor: signerID,
+                details: {
+                  code: "INVOICE_NOT_FOUND",
+                  reason:
+                    "The specified invoice could not be found or accessed",
+                },
+              },
+              dashboard: {},
+            },
+          };
+          return res.status(404).json(errorResponse);
+        }
+
+        // Use invoice data for tier authorization
+        updatedInitialAmount = InitialAmount || invoiceData.data.totalAmount;
+        updatedDenomination = Denomination || invoiceData.data.denomination;
+
+        logger.debug(
+          "Successfully fetched invoice data for tier authorization",
+          {
+            totalAmount: updatedInitialAmount,
+            denomination: updatedDenomination,
+            requestId,
+          }
+        );
+      } catch (error) {
+        logger.error("Error fetching invoice data for tier authorization", {
+          error: error instanceof Error ? error.message : "Unknown error",
+          invoiceID,
+          requestId,
+        });
+
+        const errorResponse: CreateCredexErrorResponse = {
+          message: "Failed to fetch invoice data",
+          data: {
+            action: {
+              id: null,
+              type: ApiActionType.ERROR_INTERNAL,
+              timestamp: new Date().toISOString(),
+              actor: signerID,
+              details: {
+                code: "DB_ERROR",
+                reason: "Error accessing invoice data",
+              },
+            },
+            dashboard: {},
+          },
+        };
+        return res.status(500).json(errorResponse);
+      } finally {
+        await ledgerSpaceSession.close();
+      }
+    }
+
     // Check membership tier authorization
     logger.debug("Checking membership tier authorization", {
       issuerAccountID,
-      InitialAmount,
-      Denomination,
+      InitialAmount: updatedInitialAmount,
+      Denomination: updatedDenomination,
       requestId,
     });
 
     const tierAuth = await AuthForTierSpendLimitService(
       issuerAccountID,
-      InitialAmount,
-      Denomination,
+      updatedInitialAmount,
+      updatedDenomination,
       securedCredex,
       requestId
     );
@@ -282,7 +429,7 @@ export async function CreateCredexController(
             type: ApiActionType.ERROR_UNAUTHORIZED,
             details: {
               code: createCredexResult.error?.code || "CREATE_FAILED",
-              reason: createCredexResult.message || "Failed to create Credex"
+              reason: createCredexResult.message || "Failed to create Credex",
             },
           },
           dashboard: {},
@@ -296,12 +443,14 @@ export async function CreateCredexController(
           return res.status(403).json(errorResponse);
         case "INVOICE_NOT_FOUND":
           errorResponse.data.action.type = ApiActionType.ERROR_NOT_FOUND;
-          errorResponse.data.action.details.reason = "The specified invoice could not be found";
+          errorResponse.data.action.details.reason =
+            "The specified invoice could not be found";
           return res.status(404).json(errorResponse);
         case "DB_ERROR":
         case "INTERNAL_ERROR":
           errorResponse.data.action.type = ApiActionType.ERROR_INTERNAL;
-          errorResponse.data.action.details.suggestion = "Please try again or contact support if the issue persists";
+          errorResponse.data.action.details.suggestion =
+            "Please try again or contact support if the issue persists";
           return res.status(500).json(errorResponse);
         default:
           errorResponse.data.action.type = ApiActionType.CREDEX_CREATE_FAILED;
@@ -323,9 +472,9 @@ export async function CreateCredexController(
       memberDashboardService
     );
 
-    const formattedAmount = denomFormatter(InitialAmount, Denomination);
+    // Use the formatted amount from the service result
     const successResponse: CreateCredexResponse = {
-      message: `${securedCredex ? "Secured" : "Unsecured"} credex for ${formattedAmount} ${Denomination} ${OFFERSorREQUESTS.toLowerCase()} created successfully`,
+      message: `${securedCredex ? "Secured" : "Unsecured"} credex for ${createCredexResult.data.formattedInitialAmount} ${createCredexResult.data.transactionType.toLowerCase()} created successfully`,
       data: {
         action: {
           id: createCredexResult.data.credexID,
@@ -333,11 +482,12 @@ export async function CreateCredexController(
           timestamp: new Date().toISOString(),
           actor: signerID,
           details: {
-            amount: formattedAmount,
-            denomination: Denomination,
+            amount: createCredexResult.data.formattedInitialAmount,
+            denomination: createCredexResult.data.secured ? "USD" : Denomination, // Fallback to USD for secured Credex if Denomination is undefined
             securedCredex,
             receiverAccountID: createCredexResult.data.receiverAccountID,
-            receiverAccountName: createCredexResult.data.counterpartyAccountName,
+            receiverAccountName:
+              createCredexResult.data.counterpartyAccountName,
             invoiceID: invoiceID || undefined,
           },
         },
@@ -358,8 +508,8 @@ export async function CreateCredexController(
       await notificationService.notifyOfferCreated({
         receiverMemberID: createCredexResult.data.receiverMemberID,
         credexID: createCredexResult.data.credexID,
-        amount: formattedAmount,
-        denomination: Denomination,
+        amount: createCredexResult.data.formattedInitialAmount,
+        denomination: createCredexResult.data.secured ? "USD" : Denomination, // Fallback to USD for secured Credex if Denomination is undefined
         counterpartyName: createCredexResult.data.issuerAccountName,
         requestId,
       });
