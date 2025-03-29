@@ -7,7 +7,7 @@ import logger from "../../../utils/logger";
 
 /**
  * @swagger
- * /api/account/{accountID}:
+ * /editAccount/{accountID}:
  *   put:
  *     summary: Update an existing exchange account
  *     tags: [Accounts]
@@ -116,7 +116,7 @@ export default function editAccountRoute() {
   logger.debug("Initializing edit account route");
 
   router.put(
-    "/account/:accountID",
+    "/editAccount/:accountID",
     authMiddleware,
     validateRequest(updateAccountSchema),
     editAccountController

@@ -183,4 +183,13 @@ export const storeStatusSchema = {
 };
 logger.debug("storeStatusSchema initialized");
 
+export const getStorefrontSchema = {
+  accountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+};
+logger.debug("getStorefrontSchema initialized");
+
 logger.debug("All account validation schemas initialized");

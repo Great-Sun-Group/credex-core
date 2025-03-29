@@ -8,7 +8,7 @@ import logger from "../../../utils/logger";
 
 /**
  * @swagger
- * /api/storeStatus/{accountID}:
+ * /storeStatus/{accountID}:
  *   post:
  *     summary: Update a store's status and location
  *     tags: [Accounts]
