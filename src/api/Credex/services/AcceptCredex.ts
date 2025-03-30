@@ -48,6 +48,27 @@ class CredexError extends Error {
 }
 
 /**
+ * Helper function to get the invoiceID for a credex
+ * @param session - Neo4j session
+ * @param credexID - ID of the credex
+ * @returns The invoiceID if the credex is associated with an invoice, null otherwise
+ */
+async function getInvoiceIDForCredex(session: any, credexID: string): Promise<string | null> {
+  const result = await session.executeRead(async (tx: any) => {
+    const query = `
+      MATCH (credex:Credex {credexID: $credexID})-[:EXECUTES]->(invoice:Invoice)
+      RETURN invoice.invoiceID as invoiceID
+    `;
+    return await tx.run(query, { credexID });
+  });
+  
+  if (result.records.length > 0) {
+    return result.records[0].get("invoiceID");
+  }
+  return null;
+}
+
+/**
  * AcceptCredexService
  *
  * Handles the acceptance of a Credex offer. Updates the Credex status from OFFERS to OWES,
@@ -293,19 +314,25 @@ export async function AcceptCredexService(
       );
     }
 
-    // Check if the Credex has a GLid and it's not the same as the credexID (meaning it's from an invoice)
-    if (acceptedCredexData.GLid && acceptedCredexData.GLid !== acceptedCredexData.credexID) {
-      logger.info("Credex has a GLid, processing invoice-based Credex", {
+    // Check if the Credex is associated with an invoice
+    const invoiceID = await getInvoiceIDForCredex(ledgerSpaceSession, acceptedCredexData.credexID);
+    if (invoiceID) {
+      logger.info("Credex is associated with an invoice, processing invoice-based Credex", {
         credexID: acceptedCredexData.credexID,
+        invoiceID,
         GLid: acceptedCredexData.GLid,
         requestId
       });
       
       try {
+        // Ensure GLid is defined, use credexID as fallback if not
+        const GLid = acceptedCredexData.GLid || acceptedCredexData.credexID;
+        
         // Process the invoice-based Credex
         const processResult = await ProcessInvoiceCredexService({
           credexID: acceptedCredexData.credexID,
-          GLid: acceptedCredexData.GLid,
+          invoiceID,
+          GLid,
           acceptorAccountID: acceptedCredexData.acceptorAccountID,
           acceptorSignerID: acceptedCredexData.acceptorSignerID,
           requestId

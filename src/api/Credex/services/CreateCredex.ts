@@ -345,8 +345,8 @@ export async function CreateCredexService(
       requestId,
     });
 
-    // Generate a GLid for the Credex
-    const GLid = invoiceID || require("uuid").v4();
+    // Always generate a new GLid for the Credex
+    const GLid = require("uuid").v4();
 
     const result: DatabaseCreateResult = await ledgerSpaceSession.executeWrite(
       async (tx) => {
