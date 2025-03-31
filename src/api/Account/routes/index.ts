@@ -5,6 +5,7 @@ import createTrustAccountRoute from "./createTrustAccountRoute";
 import editAccountRoute from "./editAccountRoute";
 import storeStatusRoute from "./storeStatusRoute";
 import getStorefrontRoute from "./getStorefrontRoute";
+import getAccountDashboardRoute from "./getAccountDashboardRoute";
 import logger from "../../../utils/logger";
 
 /**
@@ -25,10 +26,11 @@ export default function AccountRoutes() {
   router.use(editAccountRoute());
   router.use(storeStatusRoute());
   router.use(getStorefrontRoute());
+  router.use(getAccountDashboardRoute());
 
   logger.info("Account routes initialized successfully", {
     module: "accountRoutes",
-    routesCount: 6,
+    routesCount: 7,
   });
 
   return router;

@@ -382,7 +382,7 @@ curl -X POST "$API_URL/updateProfilePics" \
   }'
 </pre>
 
-    <h4>4.6 Edit Product Account ❌</h4>
+    <h4>4.6 Edit Product Account ✅</h4>
     <pre>
 # Update product account details
 curl -X POST "$API_URL/editAccountInternal" \
@@ -396,7 +396,7 @@ curl -X POST "$API_URL/editAccountInternal" \
   }'
 </pre>
 
-    <h4>4.7 Set Store Status and Location</h4>
+    <h4>4.7 Set Store Status and Location ✅</h4>
     <pre>
 # Open the store and set location
 curl -X POST "$API_URL/storeStatus/$PRODUCT_ACCOUNT_ID" \
@@ -412,7 +412,7 @@ curl -X POST "$API_URL/storeStatus/$PRODUCT_ACCOUNT_ID" \
   }'
 </pre>
 
-    <h4>4.8 Generate Invoice</h4>
+    <h4>4.8 Generate Invoice ✅</h4>
     <pre>
 # Generate an invoice for tomatoes
 curl -X POST "$API_URL/generateInvoice" \
@@ -458,7 +458,7 @@ curl -X GET "$API_URL/getProduct/$PRODUCT_ACCOUNT_ID" \
   -H "x-client-api-key: $CLIENT_API_KEY"
 </pre>
 
-    <h4>5.3 Get Member Information</h4>
+    <h4>5.3 Get Member Information ✅</h4>
     <pre>
 # Get information about the seller
 curl -X GET "$API_URL/getMember/$SELLER_MEMBER_ID" \
@@ -474,7 +474,7 @@ curl -X GET "$API_URL/getAccountInternalData/$PRODUCT_ACCOUNT_ID" \
   -H "x-client-api-key: $CLIENT_API_KEY"
 </pre>
 
-    <h4>5.5 Get Invoice</h4>
+    <h4>5.5 Get Invoice ❌</h4>
     <pre>
 # Get the invoice details
 curl -X GET "$API_URL/getInvoice/$INVOICE_ID" \
@@ -482,7 +482,7 @@ curl -X GET "$API_URL/getInvoice/$INVOICE_ID" \
   -H "x-client-api-key: $CLIENT_API_KEY"
 </pre>
 
-    <h4>5.6 Process Payment</h4>
+    <h4>5.6 Process Payment ❌</h4>
     <pre>
 # Create a credex to pay for the invoice
 curl -X POST "$API_URL/createCredex" \
@@ -498,11 +498,11 @@ curl -X POST "$API_URL/createCredex" \
   }'
 </pre>
 
-    <h3>Step 6: Verification ❌</h3>
+    <h3>Step 6: Verification ✅</h3>
     <p class="note">
-      <strong>Note:</strong> The following commands have been updated to match the API requirements.
+      <strong>Note:</strong> The getAccountDashboard endpoint has been implemented and tested.
     </p>
-    <h4>6.1 Verify Seller Account Balance</h4>
+    <h4>6.1 Verify Seller Account Balance ❌</h4>
     <pre>
 # Get the seller's account dashboard
 curl -X GET "$API_URL/getAccountDashboard/$SELLER_PERSONAL_ACCOUNT_ID" \
@@ -510,7 +510,7 @@ curl -X GET "$API_URL/getAccountDashboard/$SELLER_PERSONAL_ACCOUNT_ID" \
   -H "x-client-api-key: $CLIENT_API_KEY"
 </pre>
 
-    <h4>6.2 Verify Buyer Account Balance</h4>
+    <h4>6.2 Verify Buyer Account Balance ✅</h4>
     <pre>
 # Get the buyer's account dashboard
 curl -X GET "$API_URL/getAccountDashboard/$BUYER_PERSONAL_ACCOUNT_ID" \
@@ -518,7 +518,30 @@ curl -X GET "$API_URL/getAccountDashboard/$BUYER_PERSONAL_ACCOUNT_ID" \
   -H "x-client-api-key: $CLIENT_API_KEY"
 </pre>
 
-    <h4>6.3 Verify Invoice Status</h4>
+    <h4>6.3 Verify Store Account ✅</h4>
+    <pre>
+# Get the seller's store account dashboard
+curl -X GET "$API_URL/getAccountDashboard/$SELLER_STORE_ACCOUNT_ID" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY"
+</pre>
+
+    <h4>6.4 Edit Account ✅</h4>
+    <pre>
+# Update account details
+curl -X POST "$API_URL/editAccount" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "accountID": "'$SELLER_STORE_ACCOUNT_ID'", 
+    "accountName": "Updated Seller Store", 
+    "accountHandle": "UPDATED_SELLER_STORE", 
+    "defaultDenom": "USD"
+  }'
+</pre>
+
+    <h4>6.5 Verify Invoice Status ❌</h4>
     <pre>
 # Check the invoice status after payment
 curl -X GET "$API_URL/getInvoice/$INVOICE_ID" \

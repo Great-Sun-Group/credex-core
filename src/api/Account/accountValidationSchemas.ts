@@ -192,4 +192,13 @@ export const getStorefrontSchema = {
 };
 logger.debug("getStorefrontSchema initialized");
 
+export const getAccountDashboardSchema = {
+  accountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+};
+logger.debug("getAccountDashboardSchema initialized");
+
 logger.debug("All account validation schemas initialized");
