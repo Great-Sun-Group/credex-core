@@ -10,9 +10,27 @@ import logger from "../../../utils/logger";
  * @param res - Express response object
  */
 export async function editAccountController(req: Request, res: Response) {
-  const { accountName, accountHandle, defaultDenom } = req.body;
-  const accountID = req.params.accountID;
+  logger.info("editAccountController called", {
+    method: req.method,
+    path: req.path,
+    body: req.body,
+    headers: {
+      contentType: req.headers['content-type'],
+      authorization: req.headers.authorization ? 'Bearer [truncated]' : 'none',
+      clientApiKey: req.headers['x-client-api-key'] ? '[truncated]' : 'none'
+    }
+  });
+
+  const { accountID, accountName, accountHandle, defaultDenom } = req.body;
   const memberID = req.user?.memberID;
+  
+  logger.info("Request parameters", {
+    accountID,
+    accountName,
+    accountHandle,
+    defaultDenom,
+    memberID
+  });
   
   if (!memberID) {
     logger.error("User ID not found in request", { accountID });
@@ -44,6 +62,11 @@ export async function editAccountController(req: Request, res: Response) {
   });
 
   try {
+    logger.info("Calling editAccount service", {
+      accountID,
+      memberID
+    });
+    
     const result = await editAccount(
       {
         accountID,
@@ -54,6 +77,12 @@ export async function editAccountController(req: Request, res: Response) {
       memberID
     );
 
+    logger.info("editAccount service returned", {
+      success: result.success,
+      message: result.message,
+      error: result.error
+    });
+    
     if (!result.success) {
       logger.warn("Edit account failed", {
         accountID,

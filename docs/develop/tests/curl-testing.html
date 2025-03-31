@@ -95,7 +95,7 @@ export INVOICE_ID=""
 </pre>
 
     <h3>Step 2: Account Setup ✅</h3>
-    <h4>2.1 Login as Admin (Account with Trust Creation Capability)</h4>
+    <h4>2.1 Login as Admin (Account with Trust Creation Capability) ✅</h4>
     <pre>
 # Login as admin (263778177125)
 curl -X POST "$API_URL/login" \
@@ -110,7 +110,7 @@ export ADMIN_TOKEN="token_from_response"
 export ADMIN_MEMBER_ID="member_id_from_response"
 </pre>
 
-    <h4>2.2 Create a USD Trust Account</h4>
+    <h4>2.2 Create a USD Trust Account ✅</h4>
     <pre>
 # Create a USD trust account for the admin
 curl -X POST "$API_URL/createTrustAccount" \
@@ -134,7 +134,7 @@ curl -X POST "$API_URL/createTrustAccount" \
 export TRUST_ACCOUNT_ID="account_id_from_response"
 </pre>
 
-    <h4>2.3 Create Seller Account</h4>
+    <h4>2.3 Create Seller Account ✅</h4>
     <pre>
 # Onboard a new member as seller
 curl -X POST "$API_URL/onboardMember" \
@@ -163,7 +163,7 @@ export SELLER_MEMBER_ID="member_id_from_response"
 export SELLER_PERSONAL_ACCOUNT_ID="personal_account_id_from_response"
 </pre>
 
-    <h4>2.4 Create Buyer Account</h4>
+    <h4>2.4 Create Buyer Account ✅</h4>
     <pre>
 # Onboard a new member as buyer
 curl -X POST "$API_URL/onboardMember" \
@@ -196,7 +196,7 @@ export BUYER_PERSONAL_ACCOUNT_ID="personal_account_id_from_response"
     <p class="note">
       <strong>Note:</strong> The following commands have been updated to match the API requirements.
     </p>
-    <h4>3.1 Send Credex from Trust Account to Seller</h4>
+    <h4>3.1 Send Credex from Trust Account to Seller ✅</h4>
     <pre>
 # Create a credex from trust account to seller's personal account
 curl -X POST "$API_URL/createCredex" \
@@ -217,7 +217,7 @@ curl -X POST "$API_URL/createCredex" \
 export SELLER_CREDEX_ID="credex_id_from_response"
 </pre>
 
-    <h4>3.2 Accept Credex as Seller</h4>
+    <h4>3.2 Accept Credex as Seller ✅</h4>
     <pre>
 # Accept the credex
 curl -X POST "$API_URL/acceptCredex" \
@@ -229,7 +229,7 @@ curl -X POST "$API_URL/acceptCredex" \
   }'
 </pre>
 
-    <h4>3.3 Send Credex from Trust Account to Buyer</h4>
+    <h4>3.3 Send Credex from Trust Account to Buyer ✅</h4>
     <pre>
 # Create a credex from trust account to buyer's personal account
 curl -X POST "$API_URL/createCredex" \
@@ -250,7 +250,7 @@ curl -X POST "$API_URL/createCredex" \
 export BUYER_CREDEX_ID="credex_id_from_response"
 </pre>
 
-    <h4>3.4 Accept Credex as Buyer</h4>
+    <h4>3.4 Accept Credex as Buyer ✅</h4>
     <pre>
 # Accept the credex
 curl -X POST "$API_URL/acceptCredex" \
