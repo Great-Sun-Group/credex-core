@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Curl Testing for credex-core API</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">Curl Testing</h1>
+
+    <p>
+      Examples of curl commands to test the credex-core API endpoints directly.
+      Login and onboard routes are the only that do not require a token.
+    </p>
+
+    <h2>Login</h2>
+    <pre>
+curl -X POST http://localhost:3000/login -H "Content-Type: application/json" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"phoneNumber": "1234567890"}'</pre
+    >
+
+    <h2>Onboard Member</h2>
+    <pre>
+curl -X POST http://localhost:3000/onboardMember -H "Content-Type: application/json" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"firstname": "Fortunate", "lastname": "Vendor", "phone": "1234567890", "defaultDenom": "USD"}'</pre
+    >
+
+    <h2>Create Credex</h2>
+    <pre>
+curl -X POST http://localhost:3000/createCredex -H "Content-Type: application/json" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"issuerAccountID": "issuerAccountID", "receiverAccountID": "receiverAccountID", "currency": "USD", "amount": "20.00", "credexType": "PURCHASE", "credexSubType": "OFFERS", "clearable": true, "invoiceID": "invoiceID"}'</pre
+    >
+
+    <h2>Create Invoice</h2>
+    <pre>
+curl -X POST http://localhost:3000/generateInvoice -H "Content-Type: application/json" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"paymentAccountID": "paymentAccountID", "invoice": {"items": [{"name": "Fresh Tomatoes", "quantity": 2, "unit": "kg", "price": 10, "total": 20}], "total": 20, "currency": "USD"}}'</pre
+    >
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script src="../js/template.js"></script>
+    <script src="../js/dropdown.js"></script>
+  </body>
+</html>

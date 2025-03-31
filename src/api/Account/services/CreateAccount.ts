@@ -125,7 +125,7 @@ export async function CreateAccountService(
       return tierCheck as CreateAccountResult;
     }
 
-    if (tierCheck.memberTier <= 2 && tierCheck.numAccounts >= 1) {
+    if (tierCheck.memberTier <= 2 && tierCheck.numAccounts >= 2) {
       return {
         success: false,
         message: "Account creation not permitted on current membership tier",

@@ -9,7 +9,7 @@
 
 import { v, s } from "../../middleware/validateRequest";
 import logger from "../../utils/logger";
-import { validatePassword } from "../../utils/validators";
+import { validatePassword, validateAccountName, validateHandle } from "../../utils/validators";
 
 logger.debug("Initializing member validation schemas");
 
@@ -142,7 +142,10 @@ export const editMemberSchema = {
     validator: (value: string) => {
       return {
         isValid: value.length <= 500,
-        message: value.length <= 500 ? "Valid vendor bio" : "Vendor bio must be at most 500 characters",
+        message:
+          value.length <= 500
+            ? "Valid vendor bio"
+            : "Vendor bio must be at most 500 characters",
       };
     },
     required: false,
@@ -170,6 +173,16 @@ export const sellInMarketSchema = {
     sanitizer: s.sanitizeBoolean,
     validator: v.validateBoolean,
     required: true,
+  },
+  storeAccountName: {
+    sanitizer: s.sanitizeAccountName,
+    validator: validateAccountName,
+    required: false,
+  },
+  storeAccountHandle: {
+    sanitizer: s.sanitizeHandle,
+    validator: validateHandle,
+    required: false,
   },
 };
 logger.debug("sellInMarketSchema initialized");
