@@ -43,25 +43,20 @@ export async function SearchProductsController(
     // Search for products matching the keyword and within the specified radius
     const result = await session.executeRead(async (tx: any) => {
       return await tx.run(
-        `MATCH (a:AccountInternal)
-         WHERE a.accountType = 'PHYSICAL_ASSET' 
-         AND toLower(a.accountName) CONTAINS $keyword
-         WITH a
-         MATCH (m:Member)-[:OWNS]->(a)
-         OPTIONAL MATCH (m)-[:OWNS]->(storeAccount:AccountInternal)
-         WHERE storeAccount.storeOpen = true
-         WITH a, m, storeAccount
-         WHERE storeAccount IS NOT NULL
+        `MATCH (product:AccountInternal)-[:AVAILABLE_IN]->(store:Account {accountType: "PHYSICAL_ASSET"})
+         WHERE toLower(product.accountName) CONTAINS $keyword
+         AND store.storeOpen = true
          AND point.distance(
-           point({latitude: storeAccount.location.latitude, longitude: storeAccount.location.longitude}),
+           point({latitude: store.location.latitude, longitude: store.location.longitude}),
            point({latitude: $latitude, longitude: $longitude})
          ) <= $radius * 1000 // Convert km to meters
-         OPTIONAL MATCH (a)-[:PROFILE_PIC_THUMBNAIL_JPG]->(productThumb:AssetMarker)
-         OPTIONAL MATCH (storeAccount)-[:PROFILE_PIC_THUMBNAIL_JPG]->(storeThumb:AssetMarker)
+         MATCH (m:Member)-[:OWNS]->(product)
+         OPTIONAL MATCH (product)-[:PROFILE_PIC_THUMBNAIL_JPG]->(productThumb:AssetMarker)
+         OPTIONAL MATCH (store)-[:PROFILE_PIC_THUMBNAIL_JPG]->(storeThumb:AssetMarker)
          OPTIONAL MATCH (m)-[:PROFILE_PIC_THUMBNAIL_JPG]->(memberThumb:AssetMarker)
-         RETURN a, m, storeAccount,
+         RETURN product as a, m, store as storeAccount,
          point.distance(
-           point({latitude: storeAccount.location.latitude, longitude: storeAccount.location.longitude}),
+           point({latitude: store.location.latitude, longitude: store.location.longitude}),
            point({latitude: $latitude, longitude: $longitude})
          ) / 1000 as distance, // Convert meters to km
          productThumb.id as productThumbID,
