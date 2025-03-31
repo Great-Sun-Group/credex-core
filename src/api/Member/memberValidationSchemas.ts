@@ -177,12 +177,12 @@ export const sellInMarketSchema = {
   storeAccountName: {
     sanitizer: s.sanitizeAccountName,
     validator: validateAccountName,
-    required: false,
+    required: true,
   },
   storeAccountHandle: {
     sanitizer: s.sanitizeHandle,
     validator: validateHandle,
-    required: false,
+    required: true,
   },
 };
 logger.debug("sellInMarketSchema initialized");

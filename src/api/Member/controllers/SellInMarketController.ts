@@ -166,80 +166,73 @@ export async function SellInMarketController(
 
       createdAccounts = createAccountsResult as AccountInfo[];
       
-      // Create OPERATIONS account if storeAccountName and storeAccountHandle are provided
-      if (storeAccountName && storeAccountHandle) {
-        logger.info("Creating OPERATIONS account for vendor", {
-          memberID,
-          storeAccountName,
-          storeAccountHandle
-        });
-        
-        // Check if an OPERATIONS account with this handle already exists
-        const operationsAccountCheck = await session.executeRead(async (tx: any) => {
-          return await tx.run(
-            `MATCH (m:Member {memberID: $memberID})-[:OWNS]->(a:Account)
-             WHERE a.accountType = "OPERATIONS" AND a.accountHandle = $storeAccountHandle
-             RETURN a.accountID AS accountID, a.accountName AS accountName, a.accountType AS accountType`,
-            { memberID, storeAccountHandle }
+      // Create OPERATIONS account (storeAccountName and storeAccountHandle are now required)
+      logger.info("Creating OPERATIONS account for vendor", {
+        memberID,
+        storeAccountName,
+        storeAccountHandle
+      });
+      
+      // Check if an OPERATIONS account with this handle already exists
+      const operationsAccountCheck = await session.executeRead(async (tx: any) => {
+        return await tx.run(
+          `MATCH (m:Member {memberID: $memberID})-[:OWNS]->(a:Account)
+           WHERE a.accountType = "OPERATIONS" AND a.accountHandle = $storeAccountHandle
+           RETURN a.accountID AS accountID, a.accountName AS accountName, a.accountType AS accountType`,
+          { memberID, storeAccountHandle }
+        );
+      });
+      
+      // Only create if it doesn't exist
+      if (operationsAccountCheck.records.length === 0) {
+        try {
+          // Use CreateAccountService to create the OPERATIONS account
+          const createResult = await CreateAccountService(
+            memberID,
+            "OPERATIONS",
+            storeAccountName,
+            storeAccountHandle,
+            "CXX", // Default denomination
+            null,  // No DCO give
+            null   // No DCO denomination
           );
-        });
-        
-        // Only create if it doesn't exist
-        if (operationsAccountCheck.records.length === 0) {
-          try {
-            // Use CreateAccountService to create the OPERATIONS account
-            const createResult = await CreateAccountService(
-              memberID,
-              "OPERATIONS",
-              storeAccountName,
-              storeAccountHandle,
-              "CXX", // Default denomination
-              null,  // No DCO give
-              null   // No DCO denomination
-            );
+          
+          if (createResult.success && createResult.data) {
+            logger.info("OPERATIONS account created successfully", {
+              accountID: createResult.data.accountID,
+              accountName: storeAccountName,
+              accountHandle: storeAccountHandle
+            });
             
-            if (createResult.success && createResult.data) {
-              logger.info("OPERATIONS account created successfully", {
-                accountID: createResult.data.accountID,
-                accountName: storeAccountName,
-                accountHandle: storeAccountHandle
-              });
-              
-              // Add to createdAccounts array
-              createdAccounts.push({
-                accountID: createResult.data.accountID,
-                accountName: storeAccountName,
-                accountType: "OPERATIONS"
-              });
-            } else {
-              logger.error("Failed to create OPERATIONS account", {
-                error: createResult.message,
-                code: createResult.error?.code
-              });
-            }
-          } catch (error) {
-            logger.error("Error creating OPERATIONS account", {
-              error: error instanceof Error ? error.message : String(error),
-              stack: error instanceof Error ? error.stack : undefined
+            // Add to createdAccounts array
+            createdAccounts.push({
+              accountID: createResult.data.accountID,
+              accountName: storeAccountName,
+              accountType: "OPERATIONS"
+            });
+          } else {
+            logger.error("Failed to create OPERATIONS account", {
+              error: createResult.message,
+              code: createResult.error?.code
             });
           }
-        } else {
-          logger.info("OPERATIONS account already exists", {
-            accountID: operationsAccountCheck.records[0].get("accountID"),
-            accountName: operationsAccountCheck.records[0].get("accountName")
-          });
-          
-          // Add existing account to the response
-          createdAccounts.push({
-            accountID: operationsAccountCheck.records[0].get("accountID"),
-            accountName: operationsAccountCheck.records[0].get("accountName"),
-            accountType: operationsAccountCheck.records[0].get("accountType")
+        } catch (error) {
+          logger.error("Error creating OPERATIONS account", {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
           });
         }
-      } else if (vendor) {
-        logger.warn("Vendor functionality enabled but storeAccountName and/or storeAccountHandle not provided", {
-          storeAccountName,
-          storeAccountHandle
+      } else {
+        logger.info("OPERATIONS account already exists", {
+          accountID: operationsAccountCheck.records[0].get("accountID"),
+          accountName: operationsAccountCheck.records[0].get("accountName")
+        });
+        
+        // Add existing account to the response
+        createdAccounts.push({
+          accountID: operationsAccountCheck.records[0].get("accountID"),
+          accountName: operationsAccountCheck.records[0].get("accountName"),
+          accountType: operationsAccountCheck.records[0].get("accountType")
         });
       }
     }

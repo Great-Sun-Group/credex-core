@@ -3,7 +3,10 @@ import { logInfo, logError, logDebug } from "../../../utils/logger";
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { generateS3Key, uploadToS3 } from "../../../services/s3Service";
 import { imageProcessingService } from "../../../services/transformations/imageProcessingService";
-import { assetMarkerService, AssetMarkerProps } from "../../../services/assetMarker/assetMarkerService";
+import {
+  assetMarkerService,
+  AssetMarkerProps,
+} from "../../../services/assetMarker/assetMarkerService";
 
 /**
  * Controller for handling the upload and optimization of JPG images
@@ -104,7 +107,10 @@ export async function UploadAndOptimizeJpgController(
 
     // Generate S3 keys
     const s3KeyOriginal = generateS3Key(`${memberID}/original`, `${name}.jpg`);
-    const s3KeyThumbnail = generateS3Key(`${memberID}/thumbnail`, `${name}.jpg`);
+    const s3KeyThumbnail = generateS3Key(
+      `${memberID}/thumbnail`,
+      `${name}.jpg`
+    );
     const s3Key200 = generateS3Key(`${memberID}/200px`, `${name}.jpg`);
     const s3Key600 = generateS3Key(`${memberID}/600px`, `${name}.jpg`);
 
@@ -134,27 +140,45 @@ export async function UploadAndOptimizeJpgController(
     const sourceAssetProps: AssetMarkerProps = {
       assetName: `${name} (Original)`,
       filename: `${name}_original.jpg`,
-      s3Key: s3KeyOriginal
+      s3Key: s3KeyOriginal,
+      assetMarkerData: { type: "original", uploadedBy: memberID },
     };
-    
+
     const derivedAssets: AssetMarkerProps[] = [
       {
         assetName: `${name} (Thumbnail)`,
         filename: `${name}_thumbnail.jpg`,
-        s3Key: s3KeyThumbnail
+        s3Key: s3KeyThumbnail,
+        assetMarkerData: {
+          type: "thumbnail",
+          derivedFrom: "original",
+          uploadedBy: memberID,
+        },
       },
       {
         assetName: `${name} (200px)`,
         filename: `${name}_200.jpg`,
-        s3Key: s3Key200
+        s3Key: s3Key200,
+        assetMarkerData: {
+          type: "resized",
+          size: "200px",
+          derivedFrom: "original",
+          uploadedBy: memberID,
+        },
       },
       {
         assetName: `${name} (600px)`,
         filename: `${name}_600.jpg`,
-        s3Key: s3Key600
-      }
+        s3Key: s3Key600,
+        assetMarkerData: {
+          type: "resized",
+          size: "600px",
+          derivedFrom: "original",
+          uploadedBy: memberID,
+        },
+      },
     ];
-    
+
     const { sourceAssetID, derivedAssetIDs, glid } =
       await assetMarkerService.createRelatedAssetMarkers(
         session,
@@ -164,7 +188,7 @@ export async function UploadAndOptimizeJpgController(
         finalCrAccountID,
         drAccountID
       );
-    
+
     // Map the returned IDs to their specific roles
     const originalAssetID = sourceAssetID;
     const thumbnailAssetID = derivedAssetIDs[0];

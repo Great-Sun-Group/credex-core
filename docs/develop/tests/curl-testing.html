@@ -192,9 +192,9 @@ export BUYER_MEMBER_ID="member_id_from_response"
 export BUYER_PERSONAL_ACCOUNT_ID="personal_account_id_from_response"
 </pre>
 
-    <h3>Step 3: Fund Accounts ❌</h3>
+    <h3>Step 3: Fund Accounts ✅</h3>
     <p class="note">
-      <strong>Note:</strong> The following commands have not been fully tested. Refer to the API code for the most accurate field names and values.
+      <strong>Note:</strong> The following commands have been updated to match the API requirements.
     </p>
     <h4>3.1 Send Credex from Trust Account to Seller</h4>
     <pre>
@@ -207,7 +207,7 @@ curl -X POST "$API_URL/createCredex" \
     "issuerAccountID": "'$TRUST_ACCOUNT_ID'",
     "receiverAccountID": "'$SELLER_PERSONAL_ACCOUNT_ID'",
     "Denomination": "USD",
-    "InitialAmount": 9.00,
+    "InitialAmount": 99.00,
     "credexType": "PURCHASE",
     "OFFERSorREQUESTS": "OFFERS",
     "securedCredex": true
@@ -219,11 +219,6 @@ export SELLER_CREDEX_ID="credex_id_from_response"
 
     <h4>3.2 Accept Credex as Seller</h4>
     <pre>
-# Get pending credex for seller
-curl -X GET "$API_URL/getPendingCredexes" \
-  -H "Authorization: Bearer $SELLER_TOKEN" \
-  -H "x-client-api-key: $CLIENT_API_KEY"
-
 # Accept the credex
 curl -X POST "$API_URL/acceptCredex" \
   -H "Content-Type: application/json" \
@@ -245,7 +240,7 @@ curl -X POST "$API_URL/createCredex" \
     "issuerAccountID": "'$TRUST_ACCOUNT_ID'",
     "receiverAccountID": "'$BUYER_PERSONAL_ACCOUNT_ID'",
     "Denomination": "USD",
-    "InitialAmount": 9.00,
+    "InitialAmount": 99.00,
     "credexType": "PURCHASE",
     "OFFERSorREQUESTS": "OFFERS",
     "securedCredex": true
@@ -257,11 +252,6 @@ export BUYER_CREDEX_ID="credex_id_from_response"
 
     <h4>3.4 Accept Credex as Buyer</h4>
     <pre>
-# Get pending credex for buyer
-curl -X GET "$API_URL/getPendingCredexes" \
-  -H "Authorization: Bearer $BUYER_TOKEN" \
-  -H "x-client-api-key: $CLIENT_API_KEY"
-
 # Accept the credex
 curl -X POST "$API_URL/acceptCredex" \
   -H "Content-Type: application/json" \
@@ -272,11 +262,11 @@ curl -X POST "$API_URL/acceptCredex" \
   }'
 </pre>
 
-    <h3>Step 4: Seller Setup ❌</h3>
+    <h3>Step 4: Seller Setup</h3>
     <p class="note">
-      <strong>Note:</strong> The following commands have not been fully tested. Refer to the API code for the most accurate field names and values.
+      <strong>Note:</strong> The following commands have been updated to match the API requirements.
     </p>
-    <h4>4.1 Enable Vendor Functionality</h4>
+    <h4>4.1 Enable Vendor Functionality ✅</h4>
     <pre>
 # Enable seller to sell in the market
 curl -X POST "$API_URL/sellInMarket" \
@@ -284,7 +274,9 @@ curl -X POST "$API_URL/sellInMarket" \
   -H "Authorization: Bearer $SELLER_TOKEN" \
   -H "x-client-api-key: $CLIENT_API_KEY" \
   -d '{
-    "sellInMarket": true
+    "vendor": true,
+    "storeAccountName": "Test Seller Store",
+    "storeAccountHandle": "TEST_SELLER_STORE"
   }'
 
 # Store the onboarded assets account ID and profile pictures account ID
@@ -292,7 +284,7 @@ export ONBOARDED_ASSETS_ACCOUNT_ID="onboarded_assets_account_id_from_response"
 export PROFILE_PICTURES_ACCOUNT_ID="profile_pictures_account_id_from_response"
 </pre>
 
-    <h4>4.2 Edit Member Profile</h4>
+    <h4>4.2 Edit Member Profile ✅</h4>
     <pre>
 # Update seller's profile information
 curl -X POST "$API_URL/editMember" \
@@ -302,12 +294,12 @@ curl -X POST "$API_URL/editMember" \
   -d '{
     "firstname": "Test",
     "lastname": "Seller",
-    "memberHandle": "TEST_SELLER",
+    "memberHandle": "test_seller",
     "vendorBio": "I am a test seller offering fresh produce."
   }'
 </pre>
 
-    <h4>4.3 Create Product Account</h4>
+    <h4>4.3 Create Product Account ✅</h4>
     <pre>
 # Create a product account for fresh tomatoes
 curl -X POST "$API_URL/createAccountInternal" \
@@ -316,38 +308,65 @@ curl -X POST "$API_URL/createAccountInternal" \
   -H "x-client-api-key: $CLIENT_API_KEY" \
   -d '{
     "accountName": "Fresh Tomatoes",
-    "accountHandle": "FRESH_TOMATOES",
     "accountType": "PHYSICAL_ASSET",
-    "defaultDenom": "USD",
-    "description": "Fresh, organic tomatoes grown locally."
+    "accountDescription": "Fresh, organic tomatoes grown locally."
   }'
 
 # Store the product account ID
 export PRODUCT_ACCOUNT_ID="product_account_id_from_response"
 </pre>
 
-    <h4>4.4 Upload Product Image</h4>
+    <h4>4.4 Upload Product Image ✅</h4>
+    <p class="note">
+      <strong>Note:</strong> Directly including large base64-encoded images in curl commands can result in an "Argument list too long" error. 
+      The solution is to create a temporary JSON file with the image data and use that file as input to curl.
+    </p>
     <pre>
-# Note: This assumes you have a local image file. Adjust the path as needed.
-# For testing purposes, you might need to use a different endpoint or approach.
+# Create a script to handle the image upload
+cat > upload-image.sh << 'EOF'
+#!/bin/bash
 
-# Upload and optimize a product image
-curl -X POST "$API_URL/uploadAndOptimizeJpg" \
+# Set variables
+CLIENT_API_KEY="$CLIENT_API_KEY"
+SELLER_TOKEN="$1"
+PROFILE_PICTURES_ACCOUNT_ID="$2"
+ONBOARDED_ASSETS_ACCOUNT_ID="$3"
+IMAGE_PATH="$4"
+
+# Convert image to base64
+BASE64_IMAGE=$(base64 -w 0 "$IMAGE_PATH")
+
+# Create JSON payload file
+cat > image-payload.json << EOF_JSON
+{
+  "jpg": "$BASE64_IMAGE",
+  "name": "test_image",
+  "drAccountID": "$PROFILE_PICTURES_ACCOUNT_ID",
+  "crAccountID": "$ONBOARDED_ASSETS_ACCOUNT_ID"
+}
+EOF_JSON
+
+# Upload image using the JSON file
+curl -X POST "http://localhost:3000/uploadAndOptimizeJpg" \
+  -H "Content-Type: application/json" \
   -H "Authorization: Bearer $SELLER_TOKEN" \
   -H "x-client-api-key: $CLIENT_API_KEY" \
-  -F "image=@/path/to/tomato.jpg" \
-  -F "assetName=tomato_pic" \
-  -F "onboardedAssetsAccountID=$ONBOARDED_ASSETS_ACCOUNT_ID" \
-  -F "profilePicturesAccountID=$PROFILE_PICTURES_ACCOUNT_ID"
+  -d @image-payload.json
+EOF
 
-# Store the image asset IDs
+chmod +x upload-image.sh
+
+# Run the script with the appropriate parameters
+./upload-image.sh "$SELLER_TOKEN" "$PROFILE_PICTURES_ACCOUNT_ID" "$ONBOARDED_ASSETS_ACCOUNT_ID" "/path/to/image.jpg"
+
+# From the response, store the image asset IDs
 export ORIGINAL_ASSET_ID="original_asset_id_from_response"
 export THUMBNAIL_ASSET_ID="thumbnail_asset_id_from_response"
 export ASSET_200_ID="asset_200_id_from_response"
 export ASSET_600_ID="asset_600_id_from_response"
 </pre>
 
-    <h4>4.5 Update Profile Pictures</h4>
+    <h4>4.5 Update Profile Pictures ✅</h4>
     <pre>
 # Connect the uploaded images to the product account
 curl -X POST "$API_URL/updateProfilePics" \
@@ -363,7 +382,7 @@ curl -X POST "$API_URL/updateProfilePics" \
   }'
 </pre>
 
-    <h4>4.6 Edit Product Account</h4>
+    <h4>4.6 Edit Product Account ❌</h4>
     <pre>
 # Update product account details
 curl -X POST "$API_URL/editAccountInternal" \
@@ -373,7 +392,7 @@ curl -X POST "$API_URL/editAccountInternal" \
   -d '{
     "accountID": "'$PRODUCT_ACCOUNT_ID'",
     "accountName": "Fresh Organic Tomatoes",
-    "description": "Fresh, organic tomatoes grown locally. Available year-round with peak harvest in summer months."
+    "accountDescription": "Fresh, organic tomatoes grown locally. Available year-round with peak harvest in summer months."
   }'
 </pre>
 
@@ -402,18 +421,16 @@ curl -X POST "$API_URL/generateInvoice" \
   -H "x-client-api-key: $CLIENT_API_KEY" \
   -d '{
     "paymentAccountID": "'$SELLER_PERSONAL_ACCOUNT_ID'",
-    "invoice": {
+    "InvoiceData": {
       "items": [
         {
-          "name": "Fresh Organic Tomatoes",
-          "quantity": 2,
-          "unit": "kg",
-          "price": 3,
-          "total": 6
+          "accountID": "'$PRODUCT_ACCOUNT_ID'",
+          "amount": 6
         }
       ],
       "total": 6,
-      "currency": "USD"
+      "denomination": "USD",
+      "notes": "Fresh Organic Tomatoes - 2kg at $3/kg"
     }
   }'
 
@@ -421,9 +438,9 @@ curl -X POST "$API_URL/generateInvoice" \
 export INVOICE_ID="invoice_id_from_response"
 </pre>
 
-    <h3>Step 5: Buyer Actions ❌</h3>
+    <h3>Step 5: Buyer Actions</h3>
     <p class="note">
-      <strong>Note:</strong> The following commands have not been fully tested. Refer to the API code for the most accurate field names and values.
+      <strong>Note:</strong> The following commands have been updated to match the API requirements. The sellInMarket endpoint now requires storeAccountName and storeAccountHandle parameters to ensure an OPERATIONS account is created.
     </p>
     <h4>5.1 Search for Products</h4>
     <pre>
@@ -433,7 +450,7 @@ curl -X GET "$API_URL/searchProducts?keyword=tomatoes&latitude=17.8252&longitude
   -H "x-client-api-key: $CLIENT_API_KEY"
 </pre>
 
-    <h4>5.2 Get Product Information</h4>
+    <h4>5.2 Get Product Information ✅</h4>
     <pre>
 # Get detailed information about the tomatoes product
 curl -X GET "$API_URL/getProduct/$PRODUCT_ACCOUNT_ID" \
@@ -449,11 +466,11 @@ curl -X GET "$API_URL/getMember/$SELLER_MEMBER_ID" \
   -H "x-client-api-key: $CLIENT_API_KEY"
 </pre>
 
-    <h4>5.4 Get Account Internal Data</h4>
+    <h4>5.4 Get Account Internal Data ✅</h4>
     <pre>
 # Get detailed account information for the product
 curl -X GET "$API_URL/getAccountInternalData/$PRODUCT_ACCOUNT_ID" \
-  -H "Authorization: Bearer $BUYER_TOKEN" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
   -H "x-client-api-key: $CLIENT_API_KEY"
 </pre>
 
@@ -474,9 +491,6 @@ curl -X POST "$API_URL/createCredex" \
   -H "x-client-api-key: $CLIENT_API_KEY" \
   -d '{
     "issuerAccountID": "'$BUYER_PERSONAL_ACCOUNT_ID'",
-    "receiverAccountID": "'$SELLER_PERSONAL_ACCOUNT_ID'",
-    "Denomination": "USD",
-    "InitialAmount": 6.00,
     "credexType": "PURCHASE",
     "OFFERSorREQUESTS": "OFFERS",
     "securedCredex": true,
@@ -486,7 +500,7 @@ curl -X POST "$API_URL/createCredex" \
 
     <h3>Step 6: Verification ❌</h3>
     <p class="note">
-      <strong>Note:</strong> The following commands have not been fully tested. Refer to the API code for the most accurate field names and values.
+      <strong>Note:</strong> The following commands have been updated to match the API requirements.
     </p>
     <h4>6.1 Verify Seller Account Balance</h4>
     <pre>
