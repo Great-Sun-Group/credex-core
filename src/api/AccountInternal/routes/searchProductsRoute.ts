@@ -50,7 +50,7 @@ export default function searchProductsRoute() {
    *           type: number
    *           format: float
    *           minimum: 0
-   *           maximum: 100
+   *           maximum: 10000
    *           default: 10
    *         description: Search radius in kilometers (default 10km)
    *     responses:

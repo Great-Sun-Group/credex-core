@@ -4,6 +4,7 @@ import { assetMarkerService } from "../../../services/assetMarker/assetMarkerSer
 
 interface ProcessInvoiceCredexInput {
   credexID: string;
+  invoiceID: string;
   GLid: string;
   acceptorAccountID: string;
   acceptorSignerID: string;
@@ -40,10 +41,10 @@ export async function ProcessInvoiceCredexService(
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    // 1. Fetch the invoice data using the GLid (which is the invoiceID)
+    // 1. Fetch the invoice data using the invoiceID
     const invoiceData = await ledgerSpaceSession.executeRead(async (tx) => {
       const query = `
-        MATCH (invoice:Invoice {invoiceID: $GLid})
+        MATCH (invoice:Invoice {invoiceID: $invoiceID})
         MATCH (invoice)-[:DEBITS_TO]->(receiver:Account)
         MATCH (invoice)-[r:CREDITS_TO]->(internal:AccountInternal)
         RETURN 
@@ -57,7 +58,7 @@ export async function ProcessInvoiceCredexService(
           }) as lineItems
       `;
 
-      const result = await tx.run(query, { GLid });
+      const result = await tx.run(query, { invoiceID: input.invoiceID });
 
       if (result.records.length === 0) {
         return { success: false, error: "INVOICE_NOT_FOUND" };
@@ -129,28 +130,84 @@ export async function ProcessInvoiceCredexService(
 
     const cxxMultiplier = cxxMultiplierResult.data.cxxMultiplier;
 
+    // Validate that the total of line items matches the credex amount
+    const totalLineItemAmount = lineItems.reduce(
+      (sum: number, item: { amount: number }) => sum + item.amount,
+      0
+    );
+    const credexAmountResult = await ledgerSpaceSession.executeRead(
+      async (tx) => {
+        const query = `
+        MATCH (credex:Credex {credexID: $credexID})
+        RETURN credex.OutstandingAmount / credex.CXXmultiplier as credexAmount
+      `;
+        const result = await tx.run(query, { credexID });
+        if (result.records.length === 0) {
+          return { success: false, error: "CREDEX_NOT_FOUND" };
+        }
+        return {
+          success: true,
+          data: {
+            credexAmount: result.records[0].get("credexAmount"),
+          },
+        };
+      }
+    );
+
+    if (!credexAmountResult.success || !credexAmountResult.data) {
+      return {
+        success: false,
+        message: "Failed to fetch credex amount for validation",
+        error: {
+          code: "DB_ERROR",
+          details:
+            "Could not validate credex amount against invoice line items",
+        },
+      };
+    }
+
+    const credexAmount = credexAmountResult.data.credexAmount;
+
+    // Allow for small floating point differences (0.01 tolerance)
+    if (Math.abs(totalLineItemAmount - credexAmount) > 0.01) {
+      logger.warn("Invoice line item total does not match credex amount", {
+        totalLineItemAmount,
+        credexAmount,
+        difference: totalLineItemAmount - credexAmount,
+        credexID,
+        invoiceID: input.invoiceID,
+        GLid,
+        requestId,
+      });
+      // We'll continue processing but log the warning
+    }
+
     // Create AssetMarkers for each line item
+    const createdAssetIDs: string[] = [];
     for (const lineItem of lineItems) {
       try {
         // Create an AssetMarker for this line item
-        await assetMarkerService.createSingleAssetMarker(
+        const assetID = await assetMarkerService.createSingleAssetMarker(
           ledgerSpaceSession,
           {
             assetName: `Invoice item: ${lineItem.accountName}`,
-            description: `Created from invoice ${GLid} when Credex ${credexID} was accepted`,
+            description: `Created from invoice ${input.invoiceID} when Credex ${credexID} was accepted`,
             denomination: denomination,
             generalLedgerAmount: lineItem.amount,
             cxxMultiplier: cxxMultiplier,
             assetMarkerData: {
               source: "invoice_credex",
-              invoiceID: GLid,
+              invoiceID: input.invoiceID,
               credexID: credexID,
+              GLid: GLid,
             },
           },
           { accountID: lineItem.accountID, amount: lineItem.amount },
           { accountID: acceptorAccountID, amount: lineItem.amount },
           GLid // Use the same GLid to link all related assets
         );
+
+        createdAssetIDs.push(assetID);
       } catch (error) {
         logger.error("Error creating AssetMarker for invoice line item", {
           error: error instanceof Error ? error.message : "Unknown error",
@@ -163,8 +220,46 @@ export async function ProcessInvoiceCredexService(
       }
     }
 
+    // Create EXECUTES relationships from AssetMarkers to Invoice
+    if (createdAssetIDs.length > 0) {
+      try {
+        await ledgerSpaceSession.executeWrite(async (tx) => {
+          const query = `
+            MATCH (invoice:Invoice {invoiceID: $invoiceID})
+            MATCH (asset:AssetMarker) 
+            WHERE asset.id IN $assetIDs
+            MERGE (asset)-[:EXECUTES]->(invoice)
+          `;
+          await tx.run(query, {
+            invoiceID: input.invoiceID,
+            assetIDs: createdAssetIDs,
+          });
+        });
+
+        logger.debug(
+          "Created EXECUTES relationships from AssetMarkers to Invoice",
+          {
+            assetCount: createdAssetIDs.length,
+            invoiceID: input.invoiceID,
+            credexID,
+            requestId,
+          }
+        );
+      } catch (error) {
+        logger.error("Error creating EXECUTES relationships to Invoice", {
+          error: error instanceof Error ? error.message : "Unknown error",
+          assetIDs: createdAssetIDs,
+          invoiceID: input.invoiceID,
+          credexID,
+          requestId,
+        });
+        // Continue processing even if relationship creation fails
+      }
+    }
+
     logger.info("Successfully processed invoice-based Credex", {
       credexID,
+      invoiceID: input.invoiceID,
       GLid,
       lineItemCount: lineItems.length,
       requestId,
@@ -172,13 +267,14 @@ export async function ProcessInvoiceCredexService(
 
     return {
       success: true,
-      message: `Successfully processed ${lineItems.length} line items from invoice ${GLid}`,
+      message: `Successfully processed ${lineItems.length} line items from invoice ${input.invoiceID}`,
     };
   } catch (error) {
     logger.error("Unexpected error in ProcessInvoiceCredexService", {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
       credexID,
+      invoiceID: input.invoiceID,
       GLid,
       requestId,
     });
@@ -196,6 +292,7 @@ export async function ProcessInvoiceCredexService(
     await ledgerSpaceSession.close();
     logger.debug("Exiting ProcessInvoiceCredexService", {
       credexID,
+      invoiceID: input.invoiceID,
       GLid,
       requestId,
     });

@@ -317,8 +317,28 @@
                   </ul>
                 </li>
               </ul>
+              <ul>
+                <li>
+                  <strong>Payment Processing</strong> - Test executing invoices with
+                  <code>/createCredex</code> endpoint
+                  <pre>npm test createcredex tokenHere issuerAccountID receiverAccountID USD 20.00 PURCHASE OFFERS true invoiceID</pre>
+                  <ul>
+                    <li>
+                      Test creating payment for an invoice
+                    </li>
+                    <li>
+                      Verify GLid is added to the transaction
+                    </li>
+                    <li>
+                      Verify invoice is activated on the seller side
+                    </li>
+                    <li>
+                      Test validation of payment amount against invoice total
+                    </li>
+                  </ul>
+                </li>
+              </ul>
             </div>
-
             <h5>Tests To Complete ❌</h5>
             <div class="testing-progress">
               <ul>
@@ -344,31 +364,7 @@
                   </ul>
                 </li>
               </ul>
-
-              <h6>Transaction Management</h6>
-              <ul>
-                <li>
-                  <strong>Payment Processing</strong> - Test executing invoices with
-                  <code>/createCredex</code> endpoint
-                  <pre>npm test createcredex tokenHere issuerAccountID receiverAccountID USD 20.00 PURCHASE OFFERS true invoiceID</pre>
-                  <ul>
-                    <li>
-                      Test creating payment for an invoice
-                    </li>
-                    <li>
-                      Verify GLid is added to the transaction
-                    </li>
-                    <li>
-                      Verify invoice is activated on the seller side
-                    </li>
-                    <li>
-                      Test validation of payment amount against invoice total
-                    </li>
-                  </ul>
-                </li>
-              </ul>
             </div>
-
           </div>
         </section>
       </div>
