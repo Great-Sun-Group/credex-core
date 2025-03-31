@@ -125,13 +125,13 @@ export async function CreateAccountService(
       return tierCheck as CreateAccountResult;
     }
 
-    if (tierCheck.memberTier <= 2 && tierCheck.numAccounts >= 1) {
+    if (tierCheck.memberTier <= 2 && tierCheck.numAccounts >= 2) {
       return {
         success: false,
         message: "Account creation not permitted on current membership tier",
         error: {
           code: "TIER_LIMIT_EXCEEDED",
-          details: "Your current membership tier allows only one account. Please upgrade to create additional accounts."
+          details: "Your current membership tier allows only two accounts. Please upgrade to create additional accounts."
         }
       };
     }

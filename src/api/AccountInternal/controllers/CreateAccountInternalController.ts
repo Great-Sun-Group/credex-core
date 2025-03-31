@@ -15,16 +15,17 @@ export async function CreateAccountInternalController(
   next: NextFunction
 ): Promise<void> {
   const session = ledgerSpaceDriver.session();
-  
+
   try {
     logger.info("CreateAccountInternalController called", {
       controller: "CreateAccountInternalController",
       body: req.body,
     });
 
-    const { accountName, accountType, accountDescription } = req.body;
+    const { accountName, accountType, accountDescription, storeAccountID } =
+      req.body;
     const memberID = req.user?.memberID;
-    
+
     if (!memberID) {
       throw new Error("User ID not found in request");
     }
@@ -45,25 +46,37 @@ export async function CreateAccountInternalController(
     // Create the account
     const accountID = uuidv4();
     const result = await session.executeWrite(async (tx: any) => {
-      return await tx.run(
-        `MATCH (m:Member {memberID: $memberID})
-         CREATE (a:AccountInternal {
-           id: $accountID,
-           accountName: $accountName,
-           accountType: $accountType,
-           accountDescription: $accountDescription,
-           createdAt: datetime()
-         })
-         CREATE (m)-[:OWNS]->(a)
-         RETURN a`,
-        { 
-          memberID, 
-          accountID, 
-          accountName, 
-          accountType, 
-          accountDescription: accountDescription || "" 
-        }
-      );
+      let query = `
+        MATCH (m:Member {memberID: $memberID})
+        CREATE (a:AccountInternal {
+          id: $accountID,
+          accountName: $accountName,
+          accountType: $accountType,
+          accountDescription: $accountDescription,
+          createdAt: datetime()
+        })
+        CREATE (m)-[:OWNS]->(a)
+      `;
+
+      // If a store account ID is provided, create AVAILABLE_IN relationship
+      if (storeAccountID) {
+        query += `
+          WITH a
+          MATCH (store:Account {accountID: $storeAccountID})
+          CREATE (a)-[:AVAILABLE_IN]->(store)
+        `;
+      }
+
+      query += ` RETURN a`;
+
+      return await tx.run(query, {
+        memberID,
+        accountID,
+        accountName,
+        accountType,
+        accountDescription: accountDescription || "",
+        storeAccountID,
+      });
     });
 
     if (result.records.length === 0) {
@@ -86,6 +99,7 @@ export async function CreateAccountInternalController(
             accountType,
             accountDescription: accountDescription || "",
             ownerID: memberID,
+            storeAccountID: storeAccountID ? storeAccountID : undefined,
           },
         },
         dashboard: {
@@ -95,7 +109,8 @@ export async function CreateAccountInternalController(
             accountType,
             accountDescription: accountDescription || "",
             ownerID: memberID,
-          }
+            availableIn: storeAccountID ? storeAccountID : undefined,
+          },
         },
       },
     });

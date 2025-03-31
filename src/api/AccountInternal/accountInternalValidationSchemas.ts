@@ -49,6 +49,11 @@ export const createAccountInternalSchema = {
     },
     required: true,
   },
+  storeAccountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: false,
+  },
 };
 logger.debug("createAccountInternalSchema initialized");
 

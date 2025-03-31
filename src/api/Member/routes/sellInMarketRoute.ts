@@ -28,8 +28,14 @@ export default function sellInMarketRoute() {
    *               - vendor
    *             properties:
    *               vendor:
-   *                 type: boolean
-   *                 description: Whether to enable (true) or disable (false) vendor functionality
+ *                 type: boolean
+ *                 description: Whether to enable (true) or disable (false) vendor functionality
+ *               storeAccountName:
+ *                 type: string
+ *                 description: Name for the store operations account (required when enabling vendor functionality)
+ *               storeAccountHandle:
+ *                 type: string
+ *                 description: Handle for the store operations account (required when enabling vendor functionality)
    *     responses:
    *       200:
    *         description: Vendor status updated successfully

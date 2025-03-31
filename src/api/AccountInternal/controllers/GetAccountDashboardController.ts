@@ -73,18 +73,32 @@ export async function GetAccountDashboardController(
       );
     });
 
-    // Get related product accounts if this is a store account
+    // Get related product accounts
     const relatedProductsResult = await session.executeRead(async (tx: any) => {
-      return await tx.run(
-        `MATCH (a:AccountInternal {id: $accountID})
-         MATCH (owner:Member)-[:OWNS]->(a)
-         MATCH (owner)-[:OWNS]->(productAccount:AccountInternal)
-         WHERE productAccount.accountType = 'PHYSICAL_ASSET'
-         OPTIONAL MATCH (productAccount)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:Asset)
-         RETURN productAccount, thumbnailPic.id as thumbnailPicID
-         ORDER BY productAccount.accountName`,
-        { accountID }
-      );
+      // If this is a store (OPERATIONS account), get products available in this store
+      if (account.accountType === 'OPERATIONS') {
+        return await tx.run(
+          `MATCH (a:AccountInternal {id: $accountID})
+           MATCH (productAccount:AccountInternal)-[:AVAILABLE_IN]->(a)
+           WHERE productAccount.accountType = 'PHYSICAL_ASSET'
+           OPTIONAL MATCH (productAccount)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:Asset)
+           RETURN productAccount, thumbnailPic.id as thumbnailPicID
+           ORDER BY productAccount.accountName`,
+          { accountID }
+        );
+      } else {
+        // Otherwise, get products owned by the same member
+        return await tx.run(
+          `MATCH (a:AccountInternal {id: $accountID})
+           MATCH (owner:Member)-[:OWNS]->(a)
+           MATCH (owner)-[:OWNS]->(productAccount:AccountInternal)
+           WHERE productAccount.accountType = 'PHYSICAL_ASSET'
+           OPTIONAL MATCH (productAccount)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:Asset)
+           RETURN productAccount, thumbnailPic.id as thumbnailPicID
+           ORDER BY productAccount.accountName`,
+          { accountID }
+        );
+      }
     });
 
     // Get recent transactions for this account
