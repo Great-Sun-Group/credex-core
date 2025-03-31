@@ -380,9 +380,9 @@ export class AssetMarkerService {
             s3Key: $s3Key,
             filename: $filename,
             GLid: $glid,
-            ${sourceAssetProps.generalLedgerAmount !== undefined && sourceAssetProps.cxxMultiplier !== undefined ? 
-              'GeneralLedgerAmount: $generalLedgerAmount * $cxxMultiplier, CXXmultiplier: $cxxMultiplier,' : 'GeneralLedgerAmount: 0, CXXmultiplier: 0,'}
-            ${sourceAssetProps.denomination !== undefined ? 'Denomination: $denomination,' : ''}
+            GeneralLedgerAmount: $generalLedgerAmount,
+            CXXmultiplier: $cxxMultiplier,
+            Denomination: $denomination,
             AssetMarkerData: $assetMarkerData,
             createdAt: datetime()
           })
@@ -394,16 +394,16 @@ export class AssetMarkerService {
           CREATE (m)-[:OWNS]->(a)
           RETURN a`,
           { 
-            id: sourceAssetID, 
+            assetID: sourceAssetID, 
             assetName: sourceAssetProps.assetName,
             description: sourceAssetProps.description || "",
             s3Key: sourceAssetProps.s3Key || "",
             filename: sourceAssetProps.filename || "",
-            GLid: finalGlid,
-            ...(sourceAssetProps.generalLedgerAmount !== undefined && sourceAssetProps.cxxMultiplier !== undefined ? 
-                { generalLedgerAmount: sourceAssetProps.generalLedgerAmount, cxxMultiplier: sourceAssetProps.cxxMultiplier } : {}),
-            ...(sourceAssetProps.denomination !== undefined ? { denomination: sourceAssetProps.denomination } : {}),
-            AssetMarkerData: sourceAssetProps.assetMarkerData ? JSON.stringify(sourceAssetProps.assetMarkerData) : "{}",
+            glid: finalGlid,
+            generalLedgerAmount: sourceAssetProps.generalLedgerAmount !== undefined ? sourceAssetProps.generalLedgerAmount : 0,
+            cxxMultiplier: sourceAssetProps.cxxMultiplier !== undefined ? sourceAssetProps.cxxMultiplier : 0,
+            denomination: sourceAssetProps.denomination !== undefined ? sourceAssetProps.denomination : "",
+            assetMarkerData: sourceAssetProps.assetMarkerData ? JSON.stringify(sourceAssetProps.assetMarkerData) : "{}",
             crAccountID,
             drAccountID,
             memberID
@@ -423,9 +423,9 @@ export class AssetMarkerService {
               s3Key: $s3Key,
               filename: $filename,
               GLid: $glid,
-              ${derivedAsset.generalLedgerAmount !== undefined && derivedAsset.cxxMultiplier !== undefined ? 
-                'GeneralLedgerAmount: $generalLedgerAmount * $cxxMultiplier, CXXmultiplier: $cxxMultiplier,' : 'GeneralLedgerAmount: 0, CXXmultiplier: 0,'}
-              ${derivedAsset.denomination !== undefined ? 'Denomination: $denomination,' : ''}
+              GeneralLedgerAmount: $generalLedgerAmount,
+              CXXmultiplier: $cxxMultiplier,
+              Denomination: $denomination,
               AssetMarkerData: $assetMarkerData,
               createdAt: datetime()
             })
@@ -439,16 +439,16 @@ export class AssetMarkerService {
             CREATE (m)-[:OWNS]->(a)
             RETURN a`,
             { 
-              id: derivedAssetID, 
+              assetID: derivedAssetID, 
               assetName: derivedAsset.assetName,
               description: derivedAsset.description || "",
               s3Key: derivedAsset.s3Key || "",
               filename: derivedAsset.filename || "",
-              GLid: finalGlid,
-              ...(derivedAsset.generalLedgerAmount !== undefined && derivedAsset.cxxMultiplier !== undefined ? 
-                  { generalLedgerAmount: derivedAsset.generalLedgerAmount, cxxMultiplier: derivedAsset.cxxMultiplier } : {}),
-              ...(derivedAsset.denomination !== undefined ? { denomination: derivedAsset.denomination } : {}),
-              AssetMarkerData: derivedAsset.assetMarkerData ? JSON.stringify(derivedAsset.assetMarkerData) : "{}",
+              glid: finalGlid,
+              generalLedgerAmount: derivedAsset.generalLedgerAmount !== undefined ? derivedAsset.generalLedgerAmount : 0,
+              cxxMultiplier: derivedAsset.cxxMultiplier !== undefined ? derivedAsset.cxxMultiplier : 0,
+              denomination: derivedAsset.denomination !== undefined ? derivedAsset.denomination : "",
+              assetMarkerData: derivedAsset.assetMarkerData ? JSON.stringify(derivedAsset.assetMarkerData) : "{}",
               crAccountID,
               drAccountID,
               sourceAssetID,
@@ -467,9 +467,9 @@ export class AssetMarkerService {
       
       return { sourceAssetID, derivedAssetIDs, glid: finalGlid };
     } catch (error) {
-      logError("Error creating image assets", error instanceof Error ? error : new Error(String(error)), {
+      logError("Error creating related asset markers", error instanceof Error ? error : new Error(String(error)), {
         service: "AssetMarkerService",
-        method: "createImageAssets",
+        method: "createRelatedAssetMarkers",
         error: error instanceof Error ? error.message : String(error)
       });
       throw error;

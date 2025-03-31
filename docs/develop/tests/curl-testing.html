@@ -24,25 +24,507 @@
       Login and onboard routes are the only that do not require a token.
     </p>
 
-    <h2>Login</h2>
+    <div class="info-box">
+      <h3>⚠️ Important Notes</h3>
+      <ul>
+        <li>Always check the API code before testing to ensure you're using the correct field names and values.</li>
+        <li>Tokens expire after a few minutes, so you may need to login again if you encounter authentication errors.</li>
+        <li>This document separates verified commands (✅) from untested commands (❌) to help guide your testing.</li>
+      </ul>
+    </div>
+
+    <h2>Verified Basic API Endpoints ✅</h2>
+    <h3>Login</h3>
     <pre>
-curl -X POST http://localhost:3000/login -H "Content-Type: application/json" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"phoneNumber": "1234567890"}'</pre
+curl -X POST http://localhost:3000/login -H "Content-Type: application/json" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"phone": "1234567890"}'</pre
     >
 
-    <h2>Onboard Member</h2>
+    <h3>Onboard Member</h3>
     <pre>
 curl -X POST http://localhost:3000/onboardMember -H "Content-Type: application/json" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"firstname": "Fortunate", "lastname": "Vendor", "phone": "1234567890", "defaultDenom": "USD"}'</pre
     >
 
-    <h2>Create Credex</h2>
+    <h3>Create Trust Account</h3>
     <pre>
-curl -X POST http://localhost:3000/createCredex -H "Content-Type: application/json" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"issuerAccountID": "issuerAccountID", "receiverAccountID": "receiverAccountID", "currency": "USD", "amount": "20.00", "credexType": "PURCHASE", "credexSubType": "OFFERS", "clearable": true, "invoiceID": "invoiceID"}'</pre
+curl -X POST http://localhost:3000/createTrustAccount -H "Content-Type: application/json" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY" -d '{
+  "accountName": "Test USD Trust",
+  "accountHandle": "TEST_USD_TRUST",
+  "subtype": "BANK",
+  "denomination": "USD",
+  "bankFields": {
+    "jurisdiction": "ZW",
+    "accountNumber": "12345678",
+    "branchCode": "001",
+    "bankCode": "42"
+  }
+}'</pre
     >
 
-    <h2>Create Invoice</h2>
+    <h2>Testing the Vimbiso Market API Flow</h2>
+    <p>
+      This guide demonstrates how to test the complete Vimbiso Market API flow using curl commands.
+      We'll set up accounts, fund them, and test both seller and purchaser functionalities.
+    </p>
+
+    <h3>Step 1: Environment Setup</h3>
+    <p>
+      First, set up environment variables to make the curl commands more readable and reusable.
+      Replace placeholder values with actual values as you proceed through the testing.
+    </p>
     <pre>
-curl -X POST http://localhost:3000/generateInvoice -H "Content-Type: application/json" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"paymentAccountID": "paymentAccountID", "invoice": {"items": [{"name": "Fresh Tomatoes", "quantity": 2, "unit": "kg", "price": 10, "total": 20}], "total": 20, "currency": "USD"}}'</pre
-    >
+# Set the API key (should be available in your environment)
+# export CLIENT_API_KEY="your_client_api_key"
+
+# Base URL for local testing
+export API_URL="http://localhost:3000"
+
+# Store tokens and IDs as we obtain them
+export ADMIN_TOKEN=""
+export SELLER_TOKEN=""
+export BUYER_TOKEN=""
+
+export ADMIN_MEMBER_ID=""
+export SELLER_MEMBER_ID=""
+export BUYER_MEMBER_ID=""
+
+export TRUST_ACCOUNT_ID=""
+export SELLER_PERSONAL_ACCOUNT_ID=""
+export BUYER_PERSONAL_ACCOUNT_ID=""
+export PRODUCT_ACCOUNT_ID=""
+export INVOICE_ID=""
+</pre>
+
+    <h3>Step 2: Account Setup ✅</h3>
+    <h4>2.1 Login as Admin (Account with Trust Creation Capability)</h4>
+    <pre>
+# Login as admin (263778177125)
+curl -X POST "$API_URL/login" \
+  -H "Content-Type: application/json" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{"phone": "263778177125"}'
+
+# Store the token
+export ADMIN_TOKEN="token_from_response"
+
+# Store the member ID
+export ADMIN_MEMBER_ID="member_id_from_response"
+</pre>
+
+    <h4>2.2 Create a USD Trust Account</h4>
+    <pre>
+# Create a USD trust account for the admin
+curl -X POST "$API_URL/createTrustAccount" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "accountName": "Test USD Trust",
+    "accountHandle": "TEST_USD_TRUST",
+    "subtype": "BANK",
+    "denomination": "USD",
+    "bankFields": {
+      "jurisdiction": "ZW",
+      "accountNumber": "12345678",
+      "branchCode": "001",
+      "bankCode": "42"
+    }
+  }'
+
+# Store the trust account ID
+export TRUST_ACCOUNT_ID="account_id_from_response"
+</pre>
+
+    <h4>2.3 Create Seller Account</h4>
+    <pre>
+# Onboard a new member as seller
+curl -X POST "$API_URL/onboardMember" \
+  -H "Content-Type: application/json" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "firstname": "Test",
+    "lastname": "Seller",
+    "phone": "1111111111",
+    "defaultDenom": "USD"
+  }'
+
+# Login as the seller
+curl -X POST "$API_URL/login" \
+  -H "Content-Type: application/json" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{"phone": "1111111111"}'
+
+# Store the seller token
+export SELLER_TOKEN="token_from_response"
+
+# Store the seller member ID
+export SELLER_MEMBER_ID="member_id_from_response"
+
+# Store the seller's personal account ID
+export SELLER_PERSONAL_ACCOUNT_ID="personal_account_id_from_response"
+</pre>
+
+    <h4>2.4 Create Buyer Account</h4>
+    <pre>
+# Onboard a new member as buyer
+curl -X POST "$API_URL/onboardMember" \
+  -H "Content-Type: application/json" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "firstname": "Test",
+    "lastname": "Buyer",
+    "phone": "2222222222",
+    "defaultDenom": "USD"
+  }'
+
+# Login as the buyer
+curl -X POST "$API_URL/login" \
+  -H "Content-Type: application/json" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{"phone": "2222222222"}'
+
+# Store the buyer token
+export BUYER_TOKEN="token_from_response"
+
+# Store the buyer member ID
+export BUYER_MEMBER_ID="member_id_from_response"
+
+# Store the buyer's personal account ID
+export BUYER_PERSONAL_ACCOUNT_ID="personal_account_id_from_response"
+</pre>
+
+    <h3>Step 3: Fund Accounts ✅</h3>
+    <p class="note">
+      <strong>Note:</strong> The following commands have been updated to match the API requirements.
+    </p>
+    <h4>3.1 Send Credex from Trust Account to Seller</h4>
+    <pre>
+# Create a credex from trust account to seller's personal account
+curl -X POST "$API_URL/createCredex" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "issuerAccountID": "'$TRUST_ACCOUNT_ID'",
+    "receiverAccountID": "'$SELLER_PERSONAL_ACCOUNT_ID'",
+    "Denomination": "USD",
+    "InitialAmount": 99.00,
+    "credexType": "PURCHASE",
+    "OFFERSorREQUESTS": "OFFERS",
+    "securedCredex": true
+  }'
+
+# Store the credex ID
+export SELLER_CREDEX_ID="credex_id_from_response"
+</pre>
+
+    <h4>3.2 Accept Credex as Seller</h4>
+    <pre>
+# Accept the credex
+curl -X POST "$API_URL/acceptCredex" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "credexID": "'$SELLER_CREDEX_ID'"
+  }'
+</pre>
+
+    <h4>3.3 Send Credex from Trust Account to Buyer</h4>
+    <pre>
+# Create a credex from trust account to buyer's personal account
+curl -X POST "$API_URL/createCredex" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "issuerAccountID": "'$TRUST_ACCOUNT_ID'",
+    "receiverAccountID": "'$BUYER_PERSONAL_ACCOUNT_ID'",
+    "Denomination": "USD",
+    "InitialAmount": 99.00,
+    "credexType": "PURCHASE",
+    "OFFERSorREQUESTS": "OFFERS",
+    "securedCredex": true
+  }'
+
+# Store the credex ID
+export BUYER_CREDEX_ID="credex_id_from_response"
+</pre>
+
+    <h4>3.4 Accept Credex as Buyer</h4>
+    <pre>
+# Accept the credex
+curl -X POST "$API_URL/acceptCredex" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $BUYER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "credexID": "'$BUYER_CREDEX_ID'"
+  }'
+</pre>
+
+    <h3>Step 4: Seller Setup</h3>
+    <p class="note">
+      <strong>Note:</strong> The following commands have been updated to match the API requirements.
+    </p>
+    <h4>4.1 Enable Vendor Functionality ✅</h4>
+    <pre>
+# Enable seller to sell in the market
+curl -X POST "$API_URL/sellInMarket" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "vendor": true,
+    "storeAccountName": "Test Seller Store",
+    "storeAccountHandle": "TEST_SELLER_STORE"
+  }'
+
+# Store the onboarded assets account ID and profile pictures account ID
+export ONBOARDED_ASSETS_ACCOUNT_ID="onboarded_assets_account_id_from_response"
+export PROFILE_PICTURES_ACCOUNT_ID="profile_pictures_account_id_from_response"
+</pre>
+
+    <h4>4.2 Edit Member Profile ✅</h4>
+    <pre>
+# Update seller's profile information
+curl -X POST "$API_URL/editMember" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "firstname": "Test",
+    "lastname": "Seller",
+    "memberHandle": "test_seller",
+    "vendorBio": "I am a test seller offering fresh produce."
+  }'
+</pre>
+
+    <h4>4.3 Create Product Account ✅</h4>
+    <pre>
+# Create a product account for fresh tomatoes
+curl -X POST "$API_URL/createAccountInternal" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "accountName": "Fresh Tomatoes",
+    "accountType": "PHYSICAL_ASSET",
+    "accountDescription": "Fresh, organic tomatoes grown locally."
+  }'
+
+# Store the product account ID
+export PRODUCT_ACCOUNT_ID="product_account_id_from_response"
+</pre>
+
+    <h4>4.4 Upload Product Image ✅</h4>
+    <p class="note">
+      <strong>Note:</strong> Directly including large base64-encoded images in curl commands can result in an "Argument list too long" error. 
+      The solution is to create a temporary JSON file with the image data and use that file as input to curl.
+    </p>
+    <pre>
+# Create a script to handle the image upload
+cat > upload-image.sh << 'EOF'
+#!/bin/bash
+
+# Set variables
+CLIENT_API_KEY="$CLIENT_API_KEY"
+SELLER_TOKEN="$1"
+PROFILE_PICTURES_ACCOUNT_ID="$2"
+ONBOARDED_ASSETS_ACCOUNT_ID="$3"
+IMAGE_PATH="$4"
+
+# Convert image to base64
+BASE64_IMAGE=$(base64 -w 0 "$IMAGE_PATH")
+
+# Create JSON payload file
+cat > image-payload.json << EOF_JSON
+{
+  "jpg": "$BASE64_IMAGE",
+  "name": "test_image",
+  "drAccountID": "$PROFILE_PICTURES_ACCOUNT_ID",
+  "crAccountID": "$ONBOARDED_ASSETS_ACCOUNT_ID"
+}
+EOF_JSON
+
+# Upload image using the JSON file
+curl -X POST "http://localhost:3000/uploadAndOptimizeJpg" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d @image-payload.json
+EOF
+
+chmod +x upload-image.sh
+
+# Run the script with the appropriate parameters
+./upload-image.sh "$SELLER_TOKEN" "$PROFILE_PICTURES_ACCOUNT_ID" "$ONBOARDED_ASSETS_ACCOUNT_ID" "/path/to/image.jpg"
+
+# From the response, store the image asset IDs
+export ORIGINAL_ASSET_ID="original_asset_id_from_response"
+export THUMBNAIL_ASSET_ID="thumbnail_asset_id_from_response"
+export ASSET_200_ID="asset_200_id_from_response"
+export ASSET_600_ID="asset_600_id_from_response"
+</pre>
+
+    <h4>4.5 Update Profile Pictures ✅</h4>
+    <pre>
+# Connect the uploaded images to the product account
+curl -X POST "$API_URL/updateProfilePics" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "sourceID": "'$PRODUCT_ACCOUNT_ID'",
+    "originalAssetID": "'$ORIGINAL_ASSET_ID'",
+    "thumbnailAssetID": "'$THUMBNAIL_ASSET_ID'",
+    "asset200ID": "'$ASSET_200_ID'",
+    "asset600ID": "'$ASSET_600_ID'"
+  }'
+</pre>
+
+    <h4>4.6 Edit Product Account ❌</h4>
+    <pre>
+# Update product account details
+curl -X POST "$API_URL/editAccountInternal" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "accountID": "'$PRODUCT_ACCOUNT_ID'",
+    "accountName": "Fresh Organic Tomatoes",
+    "accountDescription": "Fresh, organic tomatoes grown locally. Available year-round with peak harvest in summer months."
+  }'
+</pre>
+
+    <h4>4.7 Set Store Status and Location</h4>
+    <pre>
+# Open the store and set location
+curl -X POST "$API_URL/storeStatus/$PRODUCT_ACCOUNT_ID" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "storeOpen": true,
+    "location": {
+      "latitude": 17.8252,
+      "longitude": 31.0335
+    }
+  }'
+</pre>
+
+    <h4>4.8 Generate Invoice</h4>
+    <pre>
+# Generate an invoice for tomatoes
+curl -X POST "$API_URL/generateInvoice" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "paymentAccountID": "'$SELLER_PERSONAL_ACCOUNT_ID'",
+    "InvoiceData": {
+      "items": [
+        {
+          "accountID": "'$PRODUCT_ACCOUNT_ID'",
+          "amount": 6
+        }
+      ],
+      "total": 6,
+      "denomination": "USD",
+      "notes": "Fresh Organic Tomatoes - 2kg at $3/kg"
+    }
+  }'
+
+# Store the invoice ID
+export INVOICE_ID="invoice_id_from_response"
+</pre>
+
+    <h3>Step 5: Buyer Actions</h3>
+    <p class="note">
+      <strong>Note:</strong> The following commands have been updated to match the API requirements. The sellInMarket endpoint now requires storeAccountName and storeAccountHandle parameters to ensure an OPERATIONS account is created.
+    </p>
+    <h4>5.1 Search for Products</h4>
+    <pre>
+# Search for tomatoes near a specific location
+curl -X GET "$API_URL/searchProducts?keyword=tomatoes&latitude=17.8252&longitude=31.0335&radius=10" \
+  -H "Authorization: Bearer $BUYER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY"
+</pre>
+
+    <h4>5.2 Get Product Information ✅</h4>
+    <pre>
+# Get detailed information about the tomatoes product
+curl -X GET "$API_URL/getProduct/$PRODUCT_ACCOUNT_ID" \
+  -H "Authorization: Bearer $BUYER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY"
+</pre>
+
+    <h4>5.3 Get Member Information</h4>
+    <pre>
+# Get information about the seller
+curl -X GET "$API_URL/getMember/$SELLER_MEMBER_ID" \
+  -H "Authorization: Bearer $BUYER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY"
+</pre>
+
+    <h4>5.4 Get Account Internal Data ✅</h4>
+    <pre>
+# Get detailed account information for the product
+curl -X GET "$API_URL/getAccountInternalData/$PRODUCT_ACCOUNT_ID" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY"
+</pre>
+
+    <h4>5.5 Get Invoice</h4>
+    <pre>
+# Get the invoice details
+curl -X GET "$API_URL/getInvoice/$INVOICE_ID" \
+  -H "Authorization: Bearer $BUYER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY"
+</pre>
+
+    <h4>5.6 Process Payment</h4>
+    <pre>
+# Create a credex to pay for the invoice
+curl -X POST "$API_URL/createCredex" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $BUYER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "issuerAccountID": "'$BUYER_PERSONAL_ACCOUNT_ID'",
+    "credexType": "PURCHASE",
+    "OFFERSorREQUESTS": "OFFERS",
+    "securedCredex": true,
+    "invoiceID": "'$INVOICE_ID'"
+  }'
+</pre>
+
+    <h3>Step 6: Verification ❌</h3>
+    <p class="note">
+      <strong>Note:</strong> The following commands have been updated to match the API requirements.
+    </p>
+    <h4>6.1 Verify Seller Account Balance</h4>
+    <pre>
+# Get the seller's account dashboard
+curl -X GET "$API_URL/getAccountDashboard/$SELLER_PERSONAL_ACCOUNT_ID" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY"
+</pre>
+
+    <h4>6.2 Verify Buyer Account Balance</h4>
+    <pre>
+# Get the buyer's account dashboard
+curl -X GET "$API_URL/getAccountDashboard/$BUYER_PERSONAL_ACCOUNT_ID" \
+  -H "Authorization: Bearer $BUYER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY"
+</pre>
+
+    <h4>6.3 Verify Invoice Status</h4>
+    <pre>
+# Check the invoice status after payment
+curl -X GET "$API_URL/getInvoice/$INVOICE_ID" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY"
+</pre>
 
     <!-- Footer Component -->
     <div id="footer-develop"></div>
