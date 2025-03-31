@@ -59,13 +59,16 @@ export class AssetMarkerService {
         createdAt: "datetime()"
       };
       
-      // Add optional properties only if they're provided
-      if (assetProps.generalLedgerAmount !== undefined) {
-        properties.GeneralLedgerAmount = assetProps.generalLedgerAmount;
-      }
-      
-      if (assetProps.cxxMultiplier !== undefined) {
+      // Check if both generalLedgerAmount and cxxMultiplier are provided
+      if (assetProps.generalLedgerAmount !== undefined && assetProps.cxxMultiplier !== undefined) {
+        properties.GeneralLedgerAmount = assetProps.generalLedgerAmount * assetProps.cxxMultiplier;
         properties.CXXmultiplier = assetProps.cxxMultiplier;
+      } else if (assetProps.generalLedgerAmount !== undefined || assetProps.cxxMultiplier !== undefined) {
+        throw new Error("Both generalLedgerAmount and cxxMultiplier must be provided or neither");
+      } else {
+        // If neither is provided, set them to 0
+        properties.GeneralLedgerAmount = 0;
+        properties.CXXmultiplier = 0;
       }
       
       if (assetProps.denomination !== undefined) {
@@ -88,8 +91,8 @@ export class AssetMarkerService {
             ${propertyStrings.join(',\n            ')}
           })
           WITH a
-          MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
-          MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
+          MATCH (cr) WHERE cr.accountID = $crAccountID OR cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
+          MATCH (dr) WHERE dr.accountID = $drAccountID OR dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
           CREATE (cr)-[:CR {amount: $crAmount}]->(a)-[:DR {amount: $drAmount}]->(dr)
           RETURN a`,
           { 
@@ -98,8 +101,8 @@ export class AssetMarkerService {
             description: assetProps.description || "", 
             s3Key: assetProps.s3Key || "", 
             filename: assetProps.filename || "",
-            ...(assetProps.generalLedgerAmount !== undefined ? { GeneralLedgerAmount: assetProps.generalLedgerAmount } : {}),
-            ...(assetProps.cxxMultiplier !== undefined ? { CXXmultiplier: assetProps.cxxMultiplier } : {}),
+            GeneralLedgerAmount: properties.GeneralLedgerAmount,
+            CXXmultiplier: properties.CXXmultiplier,
             ...(assetProps.denomination !== undefined ? { Denomination: assetProps.denomination } : {}),
             GLid: finalGlid,
             AssetMarkerData: assetProps.assetMarkerData ? JSON.stringify(assetProps.assetMarkerData) : "{}",
@@ -144,6 +147,15 @@ export class AssetMarkerService {
     drAccounts: AccountAmount[]
   ): Promise<{ assetIDs: string[], glid: string }> {
     try {
+      // Check if only one of generalLedgerAmount or cxxMultiplier is provided
+      if ((assetProps.generalLedgerAmount !== undefined && assetProps.cxxMultiplier === undefined) ||
+          (assetProps.generalLedgerAmount === undefined && assetProps.cxxMultiplier !== undefined)) {
+        throw new Error("Both generalLedgerAmount and cxxMultiplier must be provided or neither");
+      }
+      
+      // If neither is provided, set them to 0
+      const cxxMultiplier = assetProps.cxxMultiplier !== undefined ? assetProps.cxxMultiplier : 0;
+      
       // Validate that the sum of CR amounts equals the sum of DR amounts
       const totalCR = crAccounts.reduce((sum, account) => sum + account.amount, 0);
       const totalDR = drAccounts.reduce((sum, account) => sum + account.amount, 0);
@@ -166,17 +178,10 @@ export class AssetMarkerService {
           filename: "$filename",
           GLid: "$GLid",
           AssetMarkerData: "$AssetMarkerData",
-          createdAt: "datetime()"
+          createdAt: "datetime()",
+          GeneralLedgerAmount: "$GeneralLedgerAmount",
+          CXXmultiplier: "$CXXmultiplier"
         };
-        
-        // Add optional properties only if they're provided
-        if (assetProps.generalLedgerAmount !== undefined) {
-          properties.GeneralLedgerAmount = "$GeneralLedgerAmount";
-        }
-        
-        if (assetProps.cxxMultiplier !== undefined) {
-          properties.CXXmultiplier = "$CXXmultiplier";
-        }
         
         if (assetProps.denomination !== undefined) {
           properties.Denomination = "$Denomination";
@@ -206,9 +211,9 @@ export class AssetMarkerService {
               ${getPropertyStrings(crAccount.amount)}
             })
             WITH a
-            MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
-            MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
-            CREATE (cr)-[:CR]->(a)-[:DR]->(dr)
+            MATCH (cr) WHERE cr.accountID = $crAccountID OR cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
+            MATCH (dr) WHERE dr.accountID = $drAccountID OR dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
+            CREATE (cr)<-[:DR]-(a)<-[:CR]-(dr)
             RETURN a`,
             { 
               id: assetID, 
@@ -216,8 +221,8 @@ export class AssetMarkerService {
               description: assetProps.description || "", 
               s3Key: assetProps.s3Key || "", 
               filename: assetProps.filename || "",
-              GeneralLedgerAmount: crAccount.amount,
-              ...(assetProps.cxxMultiplier !== undefined ? { CXXmultiplier: assetProps.cxxMultiplier } : {}),
+              GeneralLedgerAmount: crAccount.amount * cxxMultiplier,
+              CXXmultiplier: cxxMultiplier,
               ...(assetProps.denomination !== undefined ? { Denomination: assetProps.denomination } : {}),
               GLid: glid,
               AssetMarkerData: assetProps.assetMarkerData ? JSON.stringify(assetProps.assetMarkerData) : "{}",
@@ -244,9 +249,9 @@ export class AssetMarkerService {
               ${getPropertyStrings(crAccount.amount)}
             })
             WITH a
-            MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
-            MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
-            CREATE (cr)-[:CR]->(a)-[:DR]->(dr)
+            MATCH (cr) WHERE cr.accountID = $crAccountID OR cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
+            MATCH (dr) WHERE dr.accountID = $drAccountID OR dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
+            CREATE (cr)<-[:DR]-(a)<-[:CR]-(dr)
             RETURN a`,
             { 
               id: assetID, 
@@ -254,8 +259,8 @@ export class AssetMarkerService {
               description: assetProps.description || "", 
               s3Key: assetProps.s3Key || "", 
               filename: assetProps.filename || "",
-              GeneralLedgerAmount: crAccount.amount,
-              ...(assetProps.cxxMultiplier !== undefined ? { CXXmultiplier: assetProps.cxxMultiplier } : {}),
+              GeneralLedgerAmount: crAccount.amount * cxxMultiplier,
+              CXXmultiplier: cxxMultiplier,
               ...(assetProps.denomination !== undefined ? { Denomination: assetProps.denomination } : {}),
               GLid: glid,
               AssetMarkerData: assetProps.assetMarkerData ? JSON.stringify(assetProps.assetMarkerData) : "{}",
@@ -282,8 +287,8 @@ export class AssetMarkerService {
               ${getPropertyStrings(drAccount.amount)}
             })
             WITH a
-            MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
-            MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
+            MATCH (cr) WHERE cr.accountID = $crAccountID OR cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
+            MATCH (dr) WHERE dr.accountID = $drAccountID OR dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
             CREATE (cr)-[:CR {amount: $crAmount}]->(a)-[:DR {amount: $drAmount}]->(dr)
             RETURN a`,
             { 
@@ -292,8 +297,8 @@ export class AssetMarkerService {
               description: assetProps.description || "", 
               s3Key: assetProps.s3Key || "", 
               filename: assetProps.filename || "",
-              GeneralLedgerAmount: drAccount.amount,
-              ...(assetProps.cxxMultiplier !== undefined ? { CXXmultiplier: assetProps.cxxMultiplier } : {}),
+              GeneralLedgerAmount: drAccount.amount * cxxMultiplier,
+              CXXmultiplier: cxxMultiplier,
               ...(assetProps.denomination !== undefined ? { Denomination: assetProps.denomination } : {}),
               GLid: glid,
               AssetMarkerData: assetProps.assetMarkerData ? JSON.stringify(assetProps.assetMarkerData) : "{}",
@@ -345,6 +350,20 @@ export class AssetMarkerService {
     glid?: string
   ): Promise<{ sourceAssetID: string, derivedAssetIDs: string[], glid: string }> {
     try {
+      // Validate that both generalLedgerAmount and cxxMultiplier are provided for source asset
+      if ((sourceAssetProps.generalLedgerAmount !== undefined && sourceAssetProps.cxxMultiplier === undefined) ||
+          (sourceAssetProps.generalLedgerAmount === undefined && sourceAssetProps.cxxMultiplier !== undefined)) {
+        throw new Error("Both generalLedgerAmount and cxxMultiplier must be provided for source asset");
+      }
+      
+      // Validate that both generalLedgerAmount and cxxMultiplier are provided for all derived assets
+      for (const derivedAsset of derivedAssets) {
+        if ((derivedAsset.generalLedgerAmount !== undefined && derivedAsset.cxxMultiplier === undefined) ||
+            (derivedAsset.generalLedgerAmount === undefined && derivedAsset.cxxMultiplier !== undefined)) {
+          throw new Error("Both generalLedgerAmount and cxxMultiplier must be provided for all derived assets");
+        }
+      }
+      
       // Create asset marker IDs and GLid
       const sourceAssetID = uuidv4();
       const derivedAssetIDs: string[] = derivedAssets.map(() => uuidv4());
@@ -361,17 +380,17 @@ export class AssetMarkerService {
             s3Key: $s3Key,
             filename: $filename,
             GLid: $glid,
-            ${sourceAssetProps.generalLedgerAmount !== undefined ? 'GeneralLedgerAmount: $generalLedgerAmount,' : ''}
-            ${sourceAssetProps.cxxMultiplier !== undefined ? 'CXXmultiplier: $cxxMultiplier,' : ''}
+            ${sourceAssetProps.generalLedgerAmount !== undefined && sourceAssetProps.cxxMultiplier !== undefined ? 
+              'GeneralLedgerAmount: $generalLedgerAmount * $cxxMultiplier, CXXmultiplier: $cxxMultiplier,' : 'GeneralLedgerAmount: 0, CXXmultiplier: 0,'}
             ${sourceAssetProps.denomination !== undefined ? 'Denomination: $denomination,' : ''}
             AssetMarkerData: $assetMarkerData,
             createdAt: datetime()
           })
           WITH a
-          MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
-          MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
+          MATCH (cr) WHERE cr.accountID = $crAccountID OR cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
+          MATCH (dr) WHERE dr.accountID = $drAccountID OR dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
           MATCH (m:Member {memberID: $memberID})
-          CREATE (cr)-[:CR {amount: 1}]->(a)-[:DR {amount: 1}]->(dr)
+          CREATE (cr)<-[:DR]-(a)<-[:CR]-(dr)
           CREATE (m)-[:OWNS]->(a)
           RETURN a`,
           { 
@@ -381,9 +400,9 @@ export class AssetMarkerService {
             s3Key: sourceAssetProps.s3Key || "",
             filename: sourceAssetProps.filename || "",
             GLid: finalGlid,
-            ...(sourceAssetProps.generalLedgerAmount !== undefined ? { GeneralLedgerAmount: sourceAssetProps.generalLedgerAmount } : {}),
-            ...(sourceAssetProps.cxxMultiplier !== undefined ? { CXXmultiplier: sourceAssetProps.cxxMultiplier } : {}),
-            ...(sourceAssetProps.denomination !== undefined ? { Denomination: sourceAssetProps.denomination } : {}),
+            ...(sourceAssetProps.generalLedgerAmount !== undefined && sourceAssetProps.cxxMultiplier !== undefined ? 
+                { generalLedgerAmount: sourceAssetProps.generalLedgerAmount, cxxMultiplier: sourceAssetProps.cxxMultiplier } : {}),
+            ...(sourceAssetProps.denomination !== undefined ? { denomination: sourceAssetProps.denomination } : {}),
             AssetMarkerData: sourceAssetProps.assetMarkerData ? JSON.stringify(sourceAssetProps.assetMarkerData) : "{}",
             crAccountID,
             drAccountID,
@@ -404,18 +423,18 @@ export class AssetMarkerService {
               s3Key: $s3Key,
               filename: $filename,
               GLid: $glid,
-              ${derivedAsset.generalLedgerAmount !== undefined ? 'GeneralLedgerAmount: $generalLedgerAmount,' : ''}
-              ${derivedAsset.cxxMultiplier !== undefined ? 'CXXmultiplier: $cxxMultiplier,' : ''}
+              ${derivedAsset.generalLedgerAmount !== undefined && derivedAsset.cxxMultiplier !== undefined ? 
+                'GeneralLedgerAmount: $generalLedgerAmount * $cxxMultiplier, CXXmultiplier: $cxxMultiplier,' : 'GeneralLedgerAmount: 0, CXXmultiplier: 0,'}
               ${derivedAsset.denomination !== undefined ? 'Denomination: $denomination,' : ''}
               AssetMarkerData: $assetMarkerData,
               createdAt: datetime()
             })
             WITH a
-            MATCH (cr) WHERE cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
-            MATCH (dr) WHERE dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
+            MATCH (cr) WHERE cr.accountID = $crAccountID OR cr.id = $crAccountID AND (cr:Account OR cr:AccountInternal)
+            MATCH (dr) WHERE dr.accountID = $drAccountID OR dr.id = $drAccountID AND (dr:Account OR dr:AccountInternal)
             MATCH (source:AssetMarker {id: $sourceAssetID})
             MATCH (m:Member {memberID: $memberID})
-            CREATE (cr)-[:CR {amount: 1}]->(a)-[:DR {amount: 1}]->(dr)
+            CREATE (cr)<-[:DR]-(a)<-[:CR]-(dr)
             CREATE (source)-[:USED_IN]->(a)
             CREATE (m)-[:OWNS]->(a)
             RETURN a`,
@@ -426,9 +445,9 @@ export class AssetMarkerService {
               s3Key: derivedAsset.s3Key || "",
               filename: derivedAsset.filename || "",
               GLid: finalGlid,
-              ...(derivedAsset.generalLedgerAmount !== undefined ? { GeneralLedgerAmount: derivedAsset.generalLedgerAmount } : {}),
-              ...(derivedAsset.cxxMultiplier !== undefined ? { CXXmultiplier: derivedAsset.cxxMultiplier } : {}),
-              ...(derivedAsset.denomination !== undefined ? { Denomination: derivedAsset.denomination } : {}),
+              ...(derivedAsset.generalLedgerAmount !== undefined && derivedAsset.cxxMultiplier !== undefined ? 
+                  { generalLedgerAmount: derivedAsset.generalLedgerAmount, cxxMultiplier: derivedAsset.cxxMultiplier } : {}),
+              ...(derivedAsset.denomination !== undefined ? { denomination: derivedAsset.denomination } : {}),
               AssetMarkerData: derivedAsset.assetMarkerData ? JSON.stringify(derivedAsset.assetMarkerData) : "{}",
               crAccountID,
               drAccountID,
@@ -531,13 +550,30 @@ export class AssetMarkerService {
         params.denomination = updates.denomination;
       }
       
-      if (updates.generalLedgerAmount !== undefined) {
-        setClause.push("a.GeneralLedgerAmount = $generalLedgerAmount");
-        params.generalLedgerAmount = updates.generalLedgerAmount;
-      }
-      
-      if (updates.cxxMultiplier !== undefined) {
+      // If either generalLedgerAmount or cxxMultiplier is being updated, we need to handle them together
+      if (updates.generalLedgerAmount !== undefined || updates.cxxMultiplier !== undefined) {
+        // Get the current values if not provided in updates
+        if (updates.generalLedgerAmount === undefined || updates.cxxMultiplier === undefined) {
+          const currentValues = await this.getAssetMarker(session, assetID);
+          
+          if (updates.generalLedgerAmount === undefined && currentValues.GeneralLedgerAmount !== undefined) {
+            updates.generalLedgerAmount = parseFloat(currentValues.GeneralLedgerAmount);
+          }
+          
+          if (updates.cxxMultiplier === undefined && currentValues.CXXmultiplier !== undefined) {
+            updates.cxxMultiplier = parseFloat(currentValues.CXXmultiplier);
+          }
+        }
+        
+        // Ensure both values are available
+        if (updates.generalLedgerAmount === undefined || updates.cxxMultiplier === undefined) {
+          throw new Error("Both generalLedgerAmount and cxxMultiplier must be available for update");
+        }
+        
+        // Update both values
+        setClause.push("a.GeneralLedgerAmount = $generalLedgerAmount * $cxxMultiplier");
         setClause.push("a.CXXmultiplier = $cxxMultiplier");
+        params.generalLedgerAmount = updates.generalLedgerAmount;
         params.cxxMultiplier = updates.cxxMultiplier;
       }
       

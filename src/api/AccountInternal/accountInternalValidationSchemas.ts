@@ -143,10 +143,10 @@ export const searchProductsSchema = {
     },
     validator: (value: number) => {
       return {
-        isValid: value > 0 && value <= 100,
-        message: value > 0 && value <= 100
+        isValid: value > 0 && value <= 10000,
+        message: value > 0 && value <= 10000
           ? "Valid radius"
-          : "Radius must be between 0 and 100 kilometers",
+          : "Radius must be between 0 and 10000 kilometers",
       };
     },
     required: false,
