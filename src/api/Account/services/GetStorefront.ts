@@ -120,12 +120,11 @@ export async function GetStorefrontService(
 
     logger.debug("Account details retrieved, getting products", { accountID });
 
-    // Get products (AccountInternal nodes with accountType = 'PHYSICAL_ASSET') owned by the same member
+    // Get products (AccountInternal nodes with accountType = 'PHYSICAL_ASSET') available in this store
     const accountProductsResult = await session.executeRead(async (tx: any) => {
       return await tx.run(
         `MATCH (a:Account {accountID: $accountID})
-         MATCH (owner:Member)-[:OWNS]->(a)
-         OPTIONAL MATCH (owner)-[:OWNS]->(p:AccountInternal)
+         OPTIONAL MATCH (p:AccountInternal)-[:AVAILABLE_IN]->(a)
          WHERE p.accountType = 'PHYSICAL_ASSET'
          OPTIONAL MATCH (p)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:AssetMarker)
          RETURN p, thumbnailPic.id as thumbnailPicID

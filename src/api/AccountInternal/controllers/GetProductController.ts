@@ -47,7 +47,7 @@ export async function GetProductController(
       return await tx.run(
         `MATCH (p:AccountInternal {id: $productID, accountType: 'PHYSICAL_ASSET'})
          MATCH (owner:Member)-[:OWNS]->(p)
-         OPTIONAL MATCH (owner)-[:OWNS]->(store:AccountInternal)
+         OPTIONAL MATCH (p)-[:AVAILABLE_IN]->(store:Account {accountType: 'OPERATIONS'})
          WHERE store.storeOpen = true
          OPTIONAL MATCH (p)-[:PROFILE_PIC_ORIGINAL_JPG]->(originalPic:AssetMarker)
          OPTIONAL MATCH (p)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:AssetMarker)

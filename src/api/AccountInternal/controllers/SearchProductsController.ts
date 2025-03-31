@@ -43,7 +43,7 @@ export async function SearchProductsController(
     // Search for products matching the keyword and within the specified radius
     const result = await session.executeRead(async (tx: any) => {
       return await tx.run(
-        `MATCH (product:AccountInternal)-[:AVAILABLE_IN]->(store:Account {accountType: "PHYSICAL_ASSET"})
+        `MATCH (product:AccountInternal)-[:AVAILABLE_IN]->(store:Account {accountType: "OPERATIONS"})
          WHERE toLower(product.accountName) CONTAINS $keyword
          AND store.storeOpen = true
          AND point.distance(
