@@ -52,7 +52,8 @@ export async function GetAccountDashboardFullService(
             accountID: product.accountID,
             accountName: product.accountName,
             accountType: product.accountType,
-            profilePictureThumbnail: profilePicUrls?.thumbnail
+            profilePictureThumbnail: profilePicUrls?.thumbnail,
+            accountBalanceUSD: 24.99 // Dummy placeholder value for client development
           };
         })
       );
