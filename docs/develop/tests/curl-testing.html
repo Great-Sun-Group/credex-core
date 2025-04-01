@@ -28,16 +28,25 @@
       <h3>⚠️ Important Notes</h3>
       <ul>
         <li>Always check the API code before testing to ensure you're using the correct field names and values.</li>
-        <li>Tokens expire after a few minutes, so you may need to login again if you encounter authentication errors.</li>
+        <li>Tokens expire after a few minutes, so you may need to login again if you encounter authentication errors. If you see a "Token expired" error with "Token activity timeout" reason, you'll need to login again to get a fresh token.</li>
         <li>This document separates verified commands (✅) from untested commands (❌) to help guide your testing.</li>
+        <li>The CLIENT_API_KEY environment variable is set in this dev environment.</li>
       </ul>
     </div>
 
     <h2>Verified Basic API Endpoints ✅</h2>
     <h3>Login</h3>
     <pre>
-curl -X POST http://localhost:3000/login -H "Content-Type: application/json" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"phone": "1234567890"}'</pre
-    >
+curl -X POST http://localhost:3000/login -H "Content-Type: application/json" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"phone": "1234567890"}'</pre>
+
+    <p class="note">
+      <strong>Alternative:</strong> You can also use the test script to login, which will display the token and member information:
+    </p>
+    <pre>
+npm test login [phone_number]
+
+# Example:
+npm test login 19023332786</pre>
 
     <h3>Onboard Member</h3>
     <pre>
@@ -316,6 +325,23 @@ curl -X POST "$API_URL/createAccountInternal" \
 export PRODUCT_ACCOUNT_ID="product_account_id_from_response"
 </pre>
 
+    <p class="note">
+      <strong>Note:</strong> To create a product and associate it with a store in one step, include the storeAccountID parameter:
+    </p>
+    <pre>
+# Create a product and associate it with a store
+curl -X POST "http://localhost:3000/createAccountInternal" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "accountName": "Premium Winter Tires",
+    "accountType": "PHYSICAL_ASSET",
+    "accountDescription": "High-quality winter tires with excellent snow and ice traction.",
+    "storeAccountID": "18a4569f-9da2-4f3f-ab82-723923ce98b0"
+  }'
+</pre>
+
     <h4>4.4 Upload Product Image ✅</h4>
     <p class="note">
       <strong>Note:</strong> Directly including large base64-encoded images in curl commands can result in an "Argument list too long" error. 
@@ -442,12 +468,81 @@ export INVOICE_ID="invoice_id_from_response"
     <p class="note">
       <strong>Note:</strong> The following commands have been updated to match the API requirements. The sellInMarket endpoint now requires storeAccountName and storeAccountHandle parameters to ensure an OPERATIONS account is created.
     </p>
-    <h4>5.1 Search for Products</h4>
+    <h4>5.1 Search for Products ✅</h4>
     <pre>
 # Search for tomatoes near a specific location
 curl -X GET "$API_URL/searchProducts?keyword=tomatoes&latitude=17.8252&longitude=31.0335&radius=10" \
   -H "Authorization: Bearer $BUYER_TOKEN" \
   -H "x-client-api-key: $CLIENT_API_KEY"
+</pre>
+
+    <p class="note">
+      <strong>Example:</strong> Search for "tire" products in Halifax, Nova Scotia:
+    </p>
+    <pre>
+curl -X GET "http://localhost:3000/searchProducts?keyword=tire&latitude=44.6484848&longitude=-63.6053617&radius=10" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY"
+</pre>
+
+    <p>
+      The search response includes detailed product information, store details, and vendor information:
+    </p>
+    <pre>
+{
+  "message": "Products found",
+  "data": {
+    "action": {
+      "id": null,
+      "type": "PRODUCTS_SEARCHED",
+      "timestamp": "2025-04-01T13:36:45.887Z",
+      "actor": "41f1057a-b463-4a58-b4f0-6a3af34b62c1",
+      "details": {
+        "keyword": "tire",
+        "latitude": 44.6484848,
+        "longitude": -63.6053617,
+        "radius": 10,
+        "resultsCount": 1
+      }
+    },
+    "dashboard": {
+      "products": [
+        {
+          "productID": "2b241ba3-6fa3-4486-83b5-33682b2ff4d6",
+          "productName": "Premium Winter Tires",
+          "productDescription": "High-quality winter tires with excellent snow and ice traction.",
+          "productHandle": "",
+          "thumbnailPicUrl": null,
+          "store": {
+            "storeName": "Test Seller Store",
+            "storeHandle": "TEST_SELLER_STORE",
+            "storeDescription": "",
+            "location": {
+              "latitude": 44.6484848,
+              "longitude": -63.6053617
+            },
+            "distance": 0,
+            "thumbnailPicUrl": null
+          },
+          "vendor": {
+            "memberID": "41f1057a-b463-4a58-b4f0-6a3af34b62c1",
+            "firstname": "Tony",
+            "lastname": "Stark",
+            "memberHandle": "19023332786",
+            "vendorBio": "",
+            "thumbnailPicUrl": null
+          }
+        }
+      ],
+      "searchParams": {
+        "keyword": "tire",
+        "latitude": 44.6484848,
+        "longitude": -63.6053617,
+        "radius": 10
+      }
+    }
+  }
+}
 </pre>
 
     <h4>5.2 Get Product Information ✅</h4>
@@ -592,11 +687,15 @@ curl -X POST "$API_URL/createAccountInternal" \
     "accountName": "Fresh Apples",
     "accountType": "PHYSICAL_ASSET",
     "accountDescription": "Fresh, organic apples grown locally.",
-    "storeAccountID": "$SELLER_STORE_ACCOUNT_ID"
+    "storeAccountID": "'$SELLER_STORE_ACCOUNT_ID'"
   }'
 
 # The product will now appear in the store's dashboard products array
 </pre>
+
+    <p class="note">
+      <strong>Important:</strong> Note the use of single quotes around the variable in the JSON payload. This ensures proper variable substitution in the shell. For example: <code>"storeAccountID": "'$SELLER_STORE_ACCOUNT_ID'"</code>
+    </p>
 
     <!-- Footer Component -->
     <div id="footer-develop"></div>
