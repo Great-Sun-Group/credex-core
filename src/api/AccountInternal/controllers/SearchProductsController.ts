@@ -46,8 +46,10 @@ export async function SearchProductsController(
         `MATCH (product:AccountInternal)-[:AVAILABLE_IN]->(store:Account {accountType: "OPERATIONS"})
          WHERE toLower(product.accountName) CONTAINS $keyword
          AND store.storeOpen = true
+         AND store.locationLatitude IS NOT NULL
+         AND store.locationLongitude IS NOT NULL
          AND point.distance(
-           point({latitude: store.location.latitude, longitude: store.location.longitude}),
+           point({latitude: store.locationLatitude, longitude: store.locationLongitude}),
            point({latitude: $latitude, longitude: $longitude})
          ) <= $radius * 1000 // Convert km to meters
          MATCH (m:Member)-[:OWNS]->(product)
@@ -56,7 +58,7 @@ export async function SearchProductsController(
          OPTIONAL MATCH (m)-[:PROFILE_PIC_THUMBNAIL_JPG]->(memberThumb:AssetMarker)
          RETURN product as a, m, store as storeAccount,
          point.distance(
-           point({latitude: store.location.latitude, longitude: store.location.longitude}),
+           point({latitude: store.locationLatitude, longitude: store.locationLongitude}),
            point({latitude: $latitude, longitude: $longitude})
          ) / 1000 as distance, // Convert meters to km
          productThumb.id as productThumbID,
@@ -94,18 +96,11 @@ export async function SearchProductsController(
       const storeThumbID = record.get('storeThumbID');
       const memberThumbID = record.get('memberThumbID');
 
-      // Parse location if it's a string
-      let location = store.location;
-      if (typeof location === 'string') {
-        try {
-          location = JSON.parse(location);
-        } catch (e) {
-          logger.warn("Failed to parse location data", {
-            location,
-            error: e instanceof Error ? e.message : "Unknown error"
-          });
-        }
-      }
+      // Create location object from latitude and longitude properties
+      const location = {
+        latitude: store.locationLatitude,
+        longitude: store.locationLongitude
+      };
 
       return {
         productID: product.id,
