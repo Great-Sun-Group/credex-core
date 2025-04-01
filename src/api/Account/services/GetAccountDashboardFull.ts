@@ -1,6 +1,8 @@
 import { GetAccountDashboardService } from "./GetAccountDashboard";
 import { AccountRepository } from "../repositories/AccountRepository";
 import { BalanceRepository } from "../repositories/BalanceRepository";
+import { accountInternalRepository } from "../../AccountInternal/repositories/AccountInternalRepository";
+import { getProfilePictureUrls } from "../../../services/assetUrlService";
 import logger from "../../../utils/logger";
 
 /**
@@ -29,8 +31,35 @@ export async function GetAccountDashboardFullService(
     const dashboardService = new GetAccountDashboardService(accountRepo, balanceRepo);
     const dashboardResult = await dashboardService.getDashboard(memberID, accountID);
     
-    // TODO: Add additional data and processing here
-    // This is where we'll extend the functionality in the future
+    // Add products data if the dashboard retrieval was successful
+    if (dashboardResult.success && dashboardResult.data) {
+      // Get all products (AccountInternal) with AVAILABLE_IN relationship to this account
+      const products = await accountInternalRepository.findProductsInStore(accountID);
+      
+      // Get thumbnail URLs for each product
+      const productsWithThumbnails = await Promise.all(
+        products.map(async (product) => {
+          const profilePicUrls = await getProfilePictureUrls(product.accountID, 'AccountInternal')
+            .catch(err => {
+              logger.warn("Failed to fetch profile picture URLs for product", {
+                productID: product.accountID,
+                error: err instanceof Error ? err.message : "Unknown error"
+              });
+              return null;
+            });
+          
+          return {
+            accountID: product.accountID,
+            accountName: product.accountName,
+            accountType: product.accountType,
+            profilePictureThumbnail: profilePicUrls?.thumbnail
+          };
+        })
+      );
+      
+      // Add products to the dashboard result
+      dashboardResult.data.products = productsWithThumbnails;
+    }
     
     return dashboardResult;
   } catch (error) {

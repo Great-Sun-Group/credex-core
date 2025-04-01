@@ -500,9 +500,9 @@ curl -X POST "$API_URL/createCredex" \
 
     <h3>Step 6: Verification ✅</h3>
     <p class="note">
-      <strong>Note:</strong> The getAccountDashboard endpoint has been implemented and tested.
+      <strong>Note:</strong> The getAccountDashboard endpoint has been implemented and tested. The enhanced GetAccountDashboardFullService now returns products (AccountInternal entities) with AVAILABLE_IN relationship to the store account.
     </p>
-    <h4>6.1 Verify Seller Account Balance ❌</h4>
+    <h4>6.1 Verify Seller Account Balance ✅</h4>
     <pre>
 # Get the seller's account dashboard
 curl -X GET "$API_URL/getAccountDashboard/$SELLER_PERSONAL_ACCOUNT_ID" \
@@ -526,6 +526,38 @@ curl -X GET "$API_URL/getAccountDashboard/$SELLER_STORE_ACCOUNT_ID" \
   -H "x-client-api-key: $CLIENT_API_KEY"
 </pre>
 
+<p class="note">
+  <strong>Note:</strong> The response now includes a "products" array in the dashboard data, containing all AccountInternal entities with an AVAILABLE_IN relationship to the store account. Each product includes accountID, accountName, accountType, and profilePictureThumbnail (if available).
+</p>
+
+<pre>
+# Example response (truncated):
+{
+  "message": "Account dashboard information retrieved successfully",
+  "data": {
+    "dashboard": {
+      "accountID": "9a3d8d77-b7f0-4f9c-8900-45add7ba5bad",
+      "accountName": "Updated Seller Store",
+      "accountHandle": "UPDATED_SELLER_STORE",
+      "accountType": "OPERATIONS",
+      "defaultDenom": "USD",
+      "isOwnedAccount": true,
+      "balanceData": { ... },
+      "pendingInData": [],
+      "pendingOutData": [],
+      "products": [
+        {
+          "accountID": "dcdea6f1-39f8-4081-b443-64f8da5d73e2",
+          "accountName": "Fresh Apples",
+          "accountType": "PHYSICAL_ASSET",
+          "profilePictureThumbnail": "https://example.com/thumbnail.jpg"
+        }
+      ]
+    }
+  }
+}
+</pre>
+
     <h4>6.4 Edit Account ✅</h4>
     <pre>
 # Update account details
@@ -547,6 +579,23 @@ curl -X POST "$API_URL/editAccount" \
 curl -X GET "$API_URL/getInvoice/$INVOICE_ID" \
   -H "Authorization: Bearer $SELLER_TOKEN" \
   -H "x-client-api-key: $CLIENT_API_KEY"
+</pre>
+
+    <h4>6.6 Create Product with Store Relationship ✅</h4>
+    <pre>
+# Create a product with an AVAILABLE_IN relationship to a store
+curl -X POST "$API_URL/createAccountInternal" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "x-client-api-key: $CLIENT_API_KEY" \
+  -d '{
+    "accountName": "Fresh Apples",
+    "accountType": "PHYSICAL_ASSET",
+    "accountDescription": "Fresh, organic apples grown locally.",
+    "storeAccountID": "$SELLER_STORE_ACCOUNT_ID"
+  }'
+
+# The product will now appear in the store's dashboard products array
 </pre>
 
     <!-- Footer Component -->

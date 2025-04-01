@@ -13,6 +13,7 @@ export interface AccountInternalData {
 export interface IAccountInternalRepository {
   findByMemberId(memberID: string): Promise<AccountInternalData[]>;
   findById(accountID: string): Promise<AccountInternalData | null>;
+  findProductsInStore(storeAccountID: string): Promise<AccountInternalData[]>;
 }
 
 /**
@@ -157,6 +158,60 @@ export class AccountInternalRepository implements IAccountInternalRepository {
    */
   clearAllCache(): void {
     this.cache.clear();
+  }
+
+  /**
+   * Find all internal accounts (products) available in a store account
+   * @param storeAccountID - UUID of the store account
+   * @returns Array of internal account data
+   */
+  async findProductsInStore(storeAccountID: string): Promise<AccountInternalData[]> {
+    try {
+      const session = ledgerSpaceDriver.session();
+
+      try {
+        // Query to get all internal accounts with AVAILABLE_IN relationship to the store
+        const result = await session.executeRead(
+          async (tx: ManagedTransaction) => {
+            const query = `
+              MATCH (product:AccountInternal)-[:AVAILABLE_IN]->(store:Account {accountID: $storeAccountID})
+              RETURN
+                product.id as accountID,
+                product.accountName as accountName,
+                product.accountType as accountType
+              ORDER BY product.accountName
+            `;
+
+            const queryResult = await tx.run(query, { storeAccountID });
+            return queryResult.records;
+          }
+        );
+
+        if (!result || result.length === 0) {
+          return [];
+        }
+
+        const products: AccountInternalData[] = result.map(record => ({
+          accountID: record.get("accountID"),
+          accountName: record.get("accountName"),
+          accountType: record.get("accountType")
+        }));
+
+        return products;
+      } finally {
+        await session.close();
+      }
+    } catch (error) {
+      logger.error("Error in AccountInternalRepository.findProductsInStore", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        storeAccountID,
+      });
+      throw new AccountError(
+        "Database error retrieving products in store",
+        "DB_ERROR",
+        ErrorCodes.Admin.INTERNAL_ERROR
+      );
+    }
   }
 }
 
