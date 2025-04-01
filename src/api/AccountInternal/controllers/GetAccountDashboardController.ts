@@ -14,7 +14,7 @@ export async function GetAccountDashboardController(
   next: NextFunction
 ): Promise<void> {
   const session = ledgerSpaceDriver.session();
-  
+
   try {
     logger.info("GetAccountDashboardController called", {
       controller: "GetAccountDashboardController",
@@ -23,7 +23,7 @@ export async function GetAccountDashboardController(
 
     const { accountID } = req.params;
     const memberID = req.user?.memberID;
-    
+
     if (!memberID) {
       throw new Error("User ID not found in request");
     }
@@ -76,7 +76,7 @@ export async function GetAccountDashboardController(
     // Get related product accounts
     const relatedProductsResult = await session.executeRead(async (tx: any) => {
       // If this is a store (OPERATIONS account), get products available in this store
-      if (account.accountType === 'OPERATIONS') {
+      if (account.accountType === "OPERATIONS") {
         return await tx.run(
           `MATCH (a:AccountInternal {id: $accountID})
            MATCH (productAccount:AccountInternal)-[:AVAILABLE_IN]->(a)
@@ -90,7 +90,7 @@ export async function GetAccountDashboardController(
         // Otherwise, get products owned by the same member
         return await tx.run(
           `MATCH (a:AccountInternal {id: $accountID})
-           MATCH (owner:Member)-[:OWNS]->(a)
+           MATCH (owner:Member)-[:AUTHORIZED_FOR]->(a)
            MATCH (owner)-[:OWNS]->(productAccount:AccountInternal)
            WHERE productAccount.accountType = 'PHYSICAL_ASSET'
            OPTIONAL MATCH (productAccount)-[:PROFILE_PIC_THUMBNAIL_JPG]->(thumbnailPic:Asset)
@@ -122,13 +122,13 @@ export async function GetAccountDashboardController(
 
     // Parse location if it's a string
     let location = account.location;
-    if (typeof location === 'string') {
+    if (typeof location === "string") {
       try {
         location = JSON.parse(location);
       } catch (e) {
         logger.warn("Failed to parse location data", {
           location,
-          error: e instanceof Error ? e.message : "Unknown error"
+          error: e instanceof Error ? e.message : "Unknown error",
         });
         location = null;
       }
@@ -146,10 +146,11 @@ export async function GetAccountDashboardController(
       owner: accountDetailsResult.records[0].get("owner")?.properties || null,
       profilePictures: {
         original: accountDetailsResult.records[0].get("originalPicID") || null,
-        thumbnail: accountDetailsResult.records[0].get("thumbnailPicID") || null,
+        thumbnail:
+          accountDetailsResult.records[0].get("thumbnailPicID") || null,
         pic200: accountDetailsResult.records[0].get("pic200ID") || null,
         pic600: accountDetailsResult.records[0].get("pic600ID") || null,
-      }
+      },
     };
 
     // Format the related products
@@ -170,7 +171,7 @@ export async function GetAccountDashboardController(
       const relationshipType = record.get("relationshipType");
       const counterpartyName = record.get("counterpartyName");
       const counterpartyID = record.get("counterpartyID");
-      
+
       return {
         transactionID: tx.id,
         amount: tx.amount,

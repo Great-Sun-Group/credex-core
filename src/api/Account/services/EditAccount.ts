@@ -31,8 +31,29 @@ export async function editAccount(
 
   try {
     // Check if the member has access to the account
+    logger.info("Checking member access to account", { memberID, accountID });
+    
     const accessCheckResult = await session.executeRead(
       async (tx: ManagedTransaction) => {
+        // First check if the account exists
+        const accountCheckQuery = `
+          MATCH (account:Account {accountID: $accountID})
+          RETURN account.accountID as accountID, account.accountType as accountType
+        `;
+        
+        const accountCheckResult = await tx.run(accountCheckQuery, { accountID });
+        
+        if (accountCheckResult.records.length === 0) {
+          logger.warn("Account not found in database", { accountID });
+          return null;
+        }
+        
+        logger.info("Account found", { 
+          accountID, 
+          accountType: accountCheckResult.records[0].get("accountType") 
+        });
+        
+        // Then check if the member has access
         const query = `
           MATCH (member:Member {memberID: $memberID})
           MATCH (account:Account {accountID: $accountID})
@@ -42,7 +63,22 @@ export async function editAccount(
             account.accountHandle as currentHandle,
             account.defaultDenom as currentDenom
         `;
+        
+        logger.debug("Executing access check query", { query, memberID, accountID });
+        
         const result = await tx.run(query, { memberID, accountID });
+        
+        if (result.records.length === 0) {
+          logger.warn("No records returned from access check query", { memberID, accountID });
+          return null;
+        }
+        
+        logger.info("Access check result", { 
+          hasAccess: result.records[0].get("hasAccess"),
+          currentName: result.records[0].get("currentName"),
+          currentHandle: result.records[0].get("currentHandle")
+        });
+        
         return result.records[0];
       }
     );

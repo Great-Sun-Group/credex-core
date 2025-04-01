@@ -57,6 +57,13 @@ interface AccountDashboardData {
     routingNumber?: string;
     transitNumber?: string;
   };
+  // Products available in this store account
+  products?: {
+    accountID: string;
+    accountName: string;
+    accountType: string;
+    profilePictureThumbnail?: string;
+  }[];
 }
 
 interface DashboardResult {

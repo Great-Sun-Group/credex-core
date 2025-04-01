@@ -7,20 +7,12 @@ import logger from "../../../utils/logger";
 
 /**
  * @swagger
- * /editAccount/{accountID}:
- *   put:
+ * /editAccount:
+ *   post:
  *     summary: Update an existing exchange account
  *     tags: [Accounts]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: accountID
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: ID of the account to update
  *     requestBody:
  *       required: true
  *       content:
@@ -28,6 +20,11 @@ import logger from "../../../utils/logger";
  *           schema:
  *             type: object
  *             properties:
+ *               accountID:
+ *                 type: string
+ *                 format: uuid
+ *                 description: ID of the account to update
+ *                 required: true
  *               accountName:
  *                 type: string
  *                 description: New name for the account
@@ -39,6 +36,7 @@ import logger from "../../../utils/logger";
  *                 enum: [CXX, USD, CAD, XAU]
  *                 description: Default denomination for the account
  *             example:
+ *               accountID: "9a3d8d77-b7f0-4f9c-8900-45add7ba5bad"
  *               accountName: "Fresh Tomatoes"
  *               accountHandle: "freshTomatoes"
  *               defaultDenom: "USD"
@@ -115,10 +113,43 @@ export default function editAccountRoute() {
   const router = express.Router();
   logger.debug("Initializing edit account route");
 
-  router.put(
-    "/editAccount/:accountID",
-    authMiddleware,
+  // Add a middleware to log all requests to this route
+  router.use('/editAccount', (req, res, next) => {
+    logger.info("Request received at editAccount route", {
+      method: req.method,
+      path: req.path,
+      query: req.query,
+      body: req.body,
+      headers: {
+        contentType: req.headers['content-type'],
+        authorization: req.headers.authorization ? 'Bearer [truncated]' : 'none',
+        clientApiKey: req.headers['x-client-api-key'] ? '[truncated]' : 'none'
+      }
+    });
+    next();
+  });
+
+  router.post(
+    "/editAccount",
+    (req, res, next) => {
+      logger.info("POST request to /editAccount before authMiddleware");
+      next();
+    },
+    authMiddleware(),
+    (req, res, next) => {
+      logger.info("POST request to /editAccount after authMiddleware", {
+        authenticated: !!req.user,
+        memberID: req.user?.memberID
+      });
+      next();
+    },
     validateRequest(updateAccountSchema),
+    (req, res, next) => {
+      logger.info("POST request to /editAccount after validateRequest", {
+        body: req.body
+      });
+      next();
+    },
     editAccountController
   );
 
