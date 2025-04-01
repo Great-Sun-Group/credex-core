@@ -87,23 +87,10 @@ export async function storeStatusController(
       hasLocation: location !== null && location !== undefined,
     });
 
-    // Parse location if it's a string (JSON)
-    let locationData = result.data?.location;
-    if (typeof locationData === 'string') {
-      try {
-        locationData = JSON.parse(locationData);
-      } catch (e) {
-        logger.warn("Failed to parse location data", {
-          location: locationData,
-          error: e instanceof Error ? e.message : "Unknown error"
-        });
-      }
-    }
-
     const accountDetails: AccountActionDetails = {
       accountID: accountID,
       storeOpen: result.data?.storeOpen,
-      location: locationData || undefined,
+      location: result.data?.location || undefined,
     };
 
     return res.status(200).json({
@@ -120,7 +107,7 @@ export async function storeStatusController(
           account: {
             accountID: accountID,
             storeOpen: result.data?.storeOpen,
-            location: locationData,
+            location: result.data?.location,
           },
         },
       },

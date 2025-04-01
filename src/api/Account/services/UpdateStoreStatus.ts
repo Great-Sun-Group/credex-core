@@ -84,12 +84,14 @@ export async function updateStoreStatus(
 
         // Update location if store is open and location is provided
         if (storeOpen && location) {
-          setClause.push("account.location = $location");
-          // Stringify the location object to avoid Neo4j Map issues
-          params.location = JSON.stringify(location);
+          setClause.push("account.locationLatitude = $locationLatitude");
+          setClause.push("account.locationLongitude = $locationLongitude");
+          params.locationLatitude = location.latitude;
+          params.locationLongitude = location.longitude;
         } else if (!storeOpen) {
           // If store is closed, set location to null
-          setClause.push("account.location = null");
+          setClause.push("account.locationLatitude = null");
+          setClause.push("account.locationLongitude = null");
         }
 
         const query = `
@@ -98,14 +100,24 @@ export async function updateStoreStatus(
           RETURN 
             account.accountID as accountID,
             account.storeOpen as storeOpen,
-            account.location as location
+            account.locationLatitude as locationLatitude,
+            account.locationLongitude as locationLongitude
         `;
 
         const result = await tx.run(query, params);
+        const record = result.records[0];
+        const locationLatitude = record.get("locationLatitude");
+        const locationLongitude = record.get("locationLongitude");
+        
+        // Create a location object if both latitude and longitude are present
+        const locationObj = (locationLatitude !== null && locationLongitude !== null) 
+          ? { latitude: locationLatitude, longitude: locationLongitude } 
+          : null;
+        
         return {
-          accountID: result.records[0].get("accountID"),
-          storeOpen: result.records[0].get("storeOpen"),
-          location: result.records[0].get("location"),
+          accountID: record.get("accountID"),
+          storeOpen: record.get("storeOpen"),
+          location: locationObj,
         };
       }
     );
