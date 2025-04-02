@@ -86,7 +86,7 @@ jobs:
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
           echo "Planning Terraform changes..."
-          terraform plan -input=false -out=tfplan -target=module.connectors -target=module.deepseek_serverless
+          terraform plan -input=false -out=tfplan -target=module.connectors
 
       - name: Terraform Apply
         env:
@@ -131,8 +131,4 @@ jobs:
           echo "Neo4j Security Group ID: $(terraform output -raw neo4j_security_group_id)"
           echo "Key Pair Name: $(terraform output -raw key_pair_name)"
           echo "ALB Security Group ID: $(terraform output -raw alb_security_group_id)"
-          echo "========================================"
-          echo "DeepSeek Outputs:"
-          echo "DeepSeek Endpoint Name: $(terraform output -raw deepseek_endpoint_name)"
-          echo "DeepSeek Endpoint ARN: $(terraform output -raw deepseek_endpoint_arn)"
           echo "========================================"
