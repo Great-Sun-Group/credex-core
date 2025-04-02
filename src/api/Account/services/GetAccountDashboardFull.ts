@@ -8,10 +8,10 @@ import logger from "../../../utils/logger";
 /**
  * Enhanced account dashboard service that extends the original dashboard service
  * with additional functionality.
- * 
+ *
  * This service uses the original GetAccountDashboardService class internally
  * and will be extended with additional features in the future.
- * 
+ *
  * @param accountID - The ID of the account to retrieve dashboard information for
  * @param memberID - The ID of the member requesting the dashboard
  * @returns Dashboard result with the same structure as the original service
@@ -20,48 +20,60 @@ export async function GetAccountDashboardFullService(
   accountID: string,
   memberID: string
 ): Promise<any> {
-  logger.debug("GetAccountDashboardFullService called", { accountID, memberID });
+  logger.debug("GetAccountDashboardFullService called", {
+    accountID,
+    memberID,
+  });
 
   try {
     // Initialize repositories
     const accountRepo = new AccountRepository();
     const balanceRepo = BalanceRepository.getInstance();
-    
+
     // Use the original dashboard service
-    const dashboardService = new GetAccountDashboardService(accountRepo, balanceRepo);
-    const dashboardResult = await dashboardService.getDashboard(memberID, accountID);
-    
+    const dashboardService = new GetAccountDashboardService(
+      accountRepo,
+      balanceRepo
+    );
+    const dashboardResult = await dashboardService.getDashboard(
+      memberID,
+      accountID
+    );
+
     // Add products data if the dashboard retrieval was successful
     if (dashboardResult.success && dashboardResult.data) {
       // Get all products (AccountInternal) with AVAILABLE_IN relationship to this account
-      const products = await accountInternalRepository.findProductsInStore(accountID);
-      
+      const products =
+        await accountInternalRepository.findProductsInStore(accountID);
+
       // Get thumbnail URLs for each product
       const productsWithThumbnails = await Promise.all(
         products.map(async (product) => {
-          const profilePicUrls = await getProfilePictureUrls(product.accountID, 'AccountInternal')
-            .catch(err => {
-              logger.warn("Failed to fetch profile picture URLs for product", {
-                productID: product.accountID,
-                error: err instanceof Error ? err.message : "Unknown error"
-              });
-              return null;
+          const profilePicUrls = await getProfilePictureUrls(
+            product.accountID,
+            "AccountInternal"
+          ).catch((err) => {
+            logger.warn("Failed to fetch profile picture URLs for product", {
+              productID: product.accountID,
+              error: err instanceof Error ? err.message : "Unknown error",
             });
-          
+            return null;
+          });
+
           return {
             accountID: product.accountID,
             accountName: product.accountName,
             accountType: product.accountType,
             profilePictureThumbnail: profilePicUrls?.thumbnail,
-            accountBalanceUSD: 24.99 // Dummy placeholder value for client development
+            accountBalanceUSD: generateRandomPrice(), // Random price for development
           };
         })
       );
-      
+
       // Add products to the dashboard result
       dashboardResult.data.products = productsWithThumbnails;
     }
-    
+
     return dashboardResult;
   } catch (error) {
     logger.error("Error in GetAccountDashboardFullService", {
@@ -70,14 +82,28 @@ export async function GetAccountDashboardFullService(
       accountID,
       memberID,
     });
-    
+
     return {
       success: false,
       message: "Failed to retrieve enhanced account dashboard information",
       error: {
         code: "SERVICE_ERROR",
-        details: error instanceof Error ? error.message : "An unknown error occurred",
+        details:
+          error instanceof Error ? error.message : "An unknown error occurred",
       },
     };
   }
+}
+
+/**
+ * Generates a random price between 10.00 and 999.99 (2-3 digits with 2 decimal places)
+ * @returns A random price value
+ */
+function generateRandomPrice(): number {
+  // Generate a random number between 10 and 999
+  const randomValue = Math.floor(Math.random() * 990) + 10;
+  // Add random cents (0-99)
+  const cents = Math.floor(Math.random() * 100) / 100;
+  // Return the combined value with 2 decimal places
+  return parseFloat((randomValue + cents).toFixed(2));
 }
