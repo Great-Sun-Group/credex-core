@@ -42,7 +42,7 @@ export default function createCredexRoute() {
    *                 description: ID of the account receiving the Credex
    *               Denomination:
    *                 type: string
-   *                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                 enum: [CXX, CAD, USD, XAU]
    *                 description: Denomination of the transaction
    *               InitialAmount:
    *                 type: number
@@ -65,6 +65,10 @@ export default function createCredexRoute() {
    *                 format: date
    *                 pattern: ^\d{4}-\d{2}-\d{2}$
    *                 description: Optional due date for unsecured Credex
+   *               invoiceID:
+   *                 type: string
+   *                 format: uuid
+   *                 description: Optional ID of an invoice to execute with this Credex
    *     responses:
    *       200:
    *         description: Credex created successfully
@@ -75,7 +79,7 @@ export default function createCredexRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: "Secured credex for $2.58 USD offered to Vimbisopay: Trust."
+   *                   example: "Secured credex for 100.00 USD offers created successfully"
    *                   description: Human-friendly message describing the action
    *                 data:
    *                   type: object
@@ -102,15 +106,14 @@ export default function createCredexRoute() {
    *                         details:
    *                           type: object
    *                           properties:
-   *                             credexID:
-   *                               type: string
-   *                               format: uuid
    *                             amount:
    *                               type: string
-   *                               description: Formatted amount with denomination
+   *                               pattern: ^\d+\.\d{2}$
+   *                               example: "100.00"
+   *                               description: Amount in decimal format
    *                             denomination:
    *                               type: string
-   *                               enum: [CXX, CAD, USD, XAU, ZWG]
+   *                               enum: [CXX, CAD, USD, XAU]
    *                             securedCredex:
    *                               type: boolean
    *                             receiverAccountID:
@@ -118,104 +121,136 @@ export default function createCredexRoute() {
    *                               format: uuid
    *                             receiverAccountName:
    *                               type: string
+   *                             invoiceID:
+   *                               type: string
+   *                               format: uuid
+   *                               description: ID of the executed invoice (if applicable)
    *                     dashboard:
    *                       type: object
    *                       description: Current state of the account dashboard
    *                       properties:
    *                         member:
    *                           type: object
-   *                           description: Member-level dashboard data
    *                           properties:
    *                             memberID:
    *                               type: string
    *                               format: uuid
-   *                               description: ID of the authenticated member
    *                             memberTier:
    *                               type: integer
-   *                               description: Current membership tier level
    *                             remainingAvailableUSD:
    *                               type: number
-   *                               description: Available USD for transactions (optional, n/a for memberTier>=3)
+   *                               nullable: true
+   *                               description: null for memberTier>=3
    *                             firstname:
    *                               type: string
-   *                               description: Member's first name
    *                             lastname:
    *                               type: string
-   *                               description: Member's last name
    *                             memberHandle:
    *                               type: string
-   *                               description: Member's handle
    *                             defaultDenom:
    *                               type: string
-   *                               description: Member's default denomination
-   *                         account:
-   *                           type: object
-   *                           description: Account-level dashboard data
-   *                           properties:
-   *                             accountID:
-   *                               type: string
-   *                               format: uuid
-   *                             accountName:
-   *                               type: string
-   *                             accountHandle:
-   *                               type: string
-   *                             accountType:
-   *                               type: string
-   *                               enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
-   *                               description: Type of the account
-   *                             defaultDenom:
-   *                               type: string
-   *                               enum: [CXX, CAD, USD, XAU, ZWG]
-   *                             isOwnedAccount:
-   *                               type: boolean
-   *                               description: Whether the member owns this account
-   *                             sendOffersTo:
-   *                               type: object
-   *                               description: Member configured to receive offers for this account
-   *                               properties:
-   *                                 memberID:
-   *                                   type: string
-   *                                   format: uuid
-   *                                 firstname:
-   *                                   type: string
-   *                                 lastname:
-   *                                   type: string
-   *                             balanceData:
-   *                               type: object
-   *                               description: Account balance information
-   *                               properties:
-   *                                 securedNetBalancesByDenom:
-   *                                   type: array
-   *                                   items:
+   *                               enum: [CXX, CAD, USD, XAU]
+  
+ *                         accountsInternal:
+ *                           type: array
+ *                           description: List of internal accounts owned by the member
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               accountID:
+ *                                 type: string
+ *                                 format: uuid
+ *                                 description: Unique identifier for the internal account
+ *                               accountName:
+ *                                 type: string
+ *                                 description: Name of the internal account
+ *                               accountType:
+ *                                 type: string
+ *                                 enum: [CONSUMPTION, PRODUCTION, DIGITAL_ASSET, PHYSICAL_ASSET]
+ *                                 description: Type of the internal account
+ *                         accounts:
+   *                           type: array
+   *                           items:
+   *                             type: object
+   *                             properties:
+   *                               accountID:
+   *                                 type: string
+   *                                 format: uuid
+   *                               accountName:
+   *                                 type: string
+   *                               accountHandle:
+   *                                 type: string
+   *                               accountType:
+   *                                 type: string
+   *                                 enum: [PERSONAL, TRUST, OPERATIONS]
+   *                               defaultDenom:
+   *                                 type: string
+   *                                 enum: [CXX, CAD, USD, XAU]
+   *                               isOwnedAccount:
+   *                                 type: boolean
+   *                               sendOffersTo:
+   *                                 type: object
+   *                                 properties:
+   *                                   memberID:
    *                                     type: string
-   *                                     description: Formatted balance with denomination (e.g. "100.00 USD")
-   *                                 unsecuredBalancesInDefaultDenom:
+   *                                     format: uuid
+   *                                   firstname:
+   *                                     type: string
+   *                                   lastname:
+   *                                     type: string
+   *                               balanceData:
+   *                                 type: object
+   *                                 properties:
+   *                                   securedNetBalancesByDenom:
+   *                                     type: array
+   *                                     items:
+   *                                       type: string
+   *                                       example: "-100.00 USD"
+   *                                   unsecuredBalancesInDefaultDenom:
+   *                                     type: object
+   *                                     properties:
+   *                                       totalPayables:
+   *                                         type: string
+   *                                         example: "0.00 USD"
+   *                                       totalReceivables:
+   *                                         type: string
+   *                                         example: "0.00 USD"
+   *                                       netPayRec:
+   *                                         type: string
+   *                                         example: "0.00 USD"
+   *                                   netCredexAssetsInDefaultDenom:
+   *                                     type: string
+   *                                     example: "-8502.53 USD"
+   *                               pendingInData:
+   *                                 type: array
+   *                                 items:
    *                                   type: object
    *                                   properties:
-   *                                     totalPayables:
+   *                                     credexID:
    *                                       type: string
-   *                                       description: Total payables in account default denomination
-   *                                     totalReceivables:
+   *                                       format: uuid
+   *                                     formattedInitialAmount:
    *                                       type: string
-   *                                       description: Total receivables in account default denomination
-   *                                     netPayRec:
+   *                                       example: "-100.00 USD"
+   *                                     counterpartyAccountName:
    *                                       type: string
-   *                                       description: Net payables/receivables in account default denomination
-   *                                 netCredexAssetsInDefaultDenom:
-   *                                   type: string
-   *                                   description: Net credex assets in account default denomination
-   *                             pendingInData:
-   *                               type: array
-   *                               description: Pending incoming transactions
-   *                               items:
-   *                                 type: object
-   *                                 description: Pending transaction details
-   *                             pendingOutData:
-   *                               type: array
-   *                               description: Pending outgoing transactions
-   *                               items:
-   *                                 type: object
-   *                                 description: Pending transaction details
+   *                                     secured:
+   *                                       type: boolean
+   *                               pendingOutData:
+   *                                 type: array
+   *                                 items:
+   *                                   type: object
+   *                                   properties:
+   *                                     credexID:
+   *                                       type: string
+   *                                       format: uuid
+   *                                     formattedInitialAmount:
+   *                                       type: string
+   *                                       example: "-100.00 USD"
+   *                                     counterpartyAccountName:
+   *                                       type: string
+   *                                     secured:
+   *                                       type: boolean
    *       400:
    *         description: Invalid input data or validation error
    *         content:
@@ -225,8 +260,6 @@ export default function createCredexRoute() {
    *               properties:
    *                 message:
    *                   type: string
-   *                   example: "Your secured credex for 7.00 USD cannot be issued because your maximum securable USD balance is 5.00 USD"
-   *                   description: Human-friendly error message
    *                 data:
    *                   type: object
    *                   properties:
@@ -238,24 +271,22 @@ export default function createCredexRoute() {
    *                           nullable: true
    *                         type:
    *                           type: string
-   *                           enum: [CREDEX_CREATE_FAILED, ERROR_VALIDATION]
+   *                           enum: [ERROR_VALIDATION]
    *                         timestamp:
    *                           type: string
    *                           format: date-time
    *                         actor:
    *                           type: string
-   *                           format: uuid
+   *                           enum: [system]
    *                         details:
    *                           type: object
    *                           properties:
    *                             code:
    *                               type: string
-   *                               enum: [INSUFFICIENT_SECURED_BALANCE, INVALID_AMOUNT, INVALID_DATE, VALIDATION_ERROR]
+   *                               enum: [VALIDATION_ERROR]
    *                             reason:
    *                               type: string
    *                             field:
-   *                               type: string
-   *                             suggestion:
    *                               type: string
    *                     dashboard:
    *                       type: object
@@ -270,6 +301,15 @@ export default function createCredexRoute() {
    *                 message:
    *                   type: string
    *                   example: "Authentication required"
+   *       403:
+   *         description: Not authorized or insufficient tier level
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
    *                 data:
    *                   type: object
    *                   properties:
@@ -287,94 +327,15 @@ export default function createCredexRoute() {
    *                           format: date-time
    *                         actor:
    *                           type: string
-   *                           enum: [system]
-   *                         details:
-   *                           type: object
-   *                           properties:
-   *                             code:
-   *                               type: string
-   *                               enum: [UNAUTHORIZED]
-   *                             reason:
-   *                               type: string
-   *                     dashboard:
-   *                       type: object
-   *                       description: Empty dashboard object
-   *       403:
-   *         description: Not authorized or insufficient tier level
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: "Insufficient membership tier for secured credex"
-   *                 data:
-   *                   type: object
-   *                   properties:
-   *                     action:
-   *                       type: object
-   *                       properties:
-   *                         id:
-   *                           type: string
-   *                           format: uuid
-   *                         type:
-   *                           type: string
-   *                           enum: [ERROR_UNAUTHORIZED]
-   *                         timestamp:
-   *                           type: string
-   *                           format: date-time
-   *                         actor:
-   *                           type: string
    *                           format: uuid
    *                         details:
    *                           type: object
    *                           properties:
    *                             code:
    *                               type: string
-   *                               enum: [FORBIDDEN, INSUFFICIENT_TIER]
+   *                               enum: [FORBIDDEN, INSUFFICIENT_TIER, INSUFFICIENT_SECURED_BALANCE]
+   *                               description: FORBIDDEN for account not found, INSUFFICIENT_TIER for tier level issues, INSUFFICIENT_SECURED_BALANCE for insufficient secured balance
    *                             reason:
-   *                               type: string
-   *                     dashboard:
-   *                       type: object
-   *                       description: Empty dashboard object
-   *       404:
-   *         description: Account not found
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 message:
-   *                   type: string
-   *                   example: "Account not found"
-   *                 data:
-   *                   type: object
-   *                   properties:
-   *                     action:
-   *                       type: object
-   *                       properties:
-   *                         id:
-   *                           type: string
-   *                           format: uuid
-   *                         type:
-   *                           type: string
-   *                           enum: [ERROR_NOT_FOUND]
-   *                         timestamp:
-   *                           type: string
-   *                           format: date-time
-   *                         actor:
-   *                           type: string
-   *                           format: uuid
-   *                         details:
-   *                           type: object
-   *                           properties:
-   *                             code:
-   *                               type: string
-   *                               enum: [NOT_FOUND]
-   *                             reason:
-   *                               type: string
-   *                             field:
    *                               type: string
    *                     dashboard:
    *                       type: object

@@ -73,7 +73,7 @@ export default function cancelCredexRoute() {
    *                               example: "0"
    *                             denomination:
    *                               type: string
-   *                               enum: [CXX, CAD, USD, XAU, ZWG]
+   *                               enum: [CXX, CAD, USD, XAU]
    *                               description: Original denomination of the Credex
    *                             securedCredex:
    *                               type: boolean
@@ -87,23 +87,121 @@ export default function cancelCredexRoute() {
    *                               example: "Cancelled by issuer"
    *                     dashboard:
    *                       type: object
-   *                       description: Updated dashboard state for issuer's account
+   *                       description: Full dashboard state after the action
    *                       properties:
-   *                         accountID:
-   *                           type: string
-   *                           format: uuid
-   *                         accountName:
-   *                           type: string
-   *                         accountType:
-   *                           type: string
-   *                         defaultDenom:
-   *                           type: string
-   *                         balances:
+   *                         member:
    *                           type: object
-   *                         pendingOffers:
-   *                           type: object
-   *                         recentActivity:
+   *                           description: Member-level dashboard data
+   *                           properties:
+   *                             memberID:
+   *                               type: string
+   *                               format: uuid
+   *                               description: ID of the authenticated member
+   *                             memberTier:
+   *                               type: integer
+   *                               description: Current membership tier level
+   *                             remainingAvailableUSD:
+   *                               type: number
+   *                               description: Available USD for transactions (optional, n/a for memberTier>=3)
+   *                             firstname:
+   *                               type: string
+   *                               description: Member's first name
+   *                             lastname:
+   *                               type: string
+   *                               description: Member's last name
+   *                             memberHandle:
+   *                               type: string
+   *                               description: Member's handle
+   *                             defaultDenom:
+   *                               type: string
+   *                               description: Member's default denomination
+   *                         accounts:
    *                           type: array
+   *                           description: List of accounts accessible to the member
+   *                           items:
+   *                             type: object
+   *                             properties:
+   *                               accountID:
+   *                                 type: string
+   *                                 format: uuid
+   *                               accountName:
+   *                                 type: string
+   *                               accountHandle:
+   *                                 type: string
+   *                               accountType:
+   *                                 type: string
+   *                                 enum: [PERSONAL, TRUST, OPERATIONS]
+   *                                 description: Type of the account
+   *                               defaultDenom:
+   *                                 type: string
+   *                                 enum: [CXX, CAD, USD, XAU]
+   *                               isOwnedAccount:
+   *                                 type: boolean
+   *                                 description: Whether the member owns this account
+   *                               sendOffersTo:
+   *                                 type: object
+   *                                 description: Member configured to receive offers for this account
+   *                                 properties:
+   *                                   memberID:
+   *                                     type: string
+   *                                     format: uuid
+   *                                   firstname:
+   *                                     type: string
+   *                                   lastname:
+   *                                     type: string
+   *                               balanceData:
+   *                                 type: object
+   *                                 description: Account balance information
+   *                                 properties:
+   *                                   securedNetBalancesByDenom:
+   *                                     type: array
+   *                                     items:
+   *                                       type: string
+   *                                       description: Formatted balance with denomination (e.g. "100.00 USD")
+   *                                   unsecuredBalancesInDefaultDenom:
+   *                                     type: object
+   *                                     properties:
+   *                                       totalPayables:
+   *                                         type: string
+   *                                         description: Total payables in account default denomination
+   *                                       totalReceivables:
+   *                                         type: string
+   *                                         description: Total receivables in account default denomination
+   *                                       netPayRec:
+   *                                         type: string
+   *                                         description: Net payables/receivables in account default denomination
+   *                                   netCredexAssetsInDefaultDenom:
+   *                                     type: string
+   *                                     description: Net credex assets in account default denomination
+   *                               pendingInData:
+   *                                 type: array
+   *                                 description: Pending incoming transactions
+   *                                 items:
+   *                                   type: object
+   *                                   description: Pending transaction details
+   *                               pendingOutData:
+   *                                 type: array
+   *                                 description: Pending outgoing transactions
+   *                                 items:
+   *                                   type: object
+   *                                   description: Pending transaction details
+   *                         accountsInternal:
+   *                           type: array
+   *                           description: List of internal accounts owned by the member
+   *                           items:
+   *                             type: object
+   *                             properties:
+   *                               accountID:
+   *                                 type: string
+   *                                 format: uuid
+   *                                 description: Unique identifier for the internal account
+   *                               accountName:
+   *                                 type: string
+   *                                 description: Name of the internal account
+   *                               accountType:
+   *                                 type: string
+   *                                 enum: [CONSUMPTION, PRODUCTION, DIGITAL_ASSET, PHYSICAL_ASSET]
+   *                                 description: Type of the internal account
    *       400:
    *         description: Invalid input data or Credex not in cancellable state
    *         content:
@@ -124,9 +222,11 @@ export default function cancelCredexRoute() {
    *                         id:
    *                           type: string
    *                           format: uuid
+   *                           description: The attempted credexID for business logic errors, null for validation errors
+   *                           nullable: true
    *                         type:
    *                           type: string
-   *                           enum: [ERROR_VALIDATION]
+   *                           enum: [ERROR_INTERNAL]
    *                         timestamp:
    *                           type: string
    *                           format: date-time
@@ -138,7 +238,7 @@ export default function cancelCredexRoute() {
    *                           properties:
    *                             code:
    *                               type: string
-   *                               enum: [INVALID_STATE, VALIDATION_ERROR]
+   *                               enum: [INVALID_STATE, VALIDATION_ERROR, CANCEL_FAILED]
    *                             reason:
    *                               type: string
    *                             field:
@@ -242,9 +342,10 @@ export default function cancelCredexRoute() {
    *                         id:
    *                           type: string
    *                           format: uuid
+   *                           description: The attempted credexID
    *                         type:
    *                           type: string
-   *                           enum: [ERROR_NOT_FOUND]
+   *                           enum: [ERROR_INTERNAL]
    *                         timestamp:
    *                           type: string
    *                           format: date-time
@@ -282,9 +383,10 @@ export default function cancelCredexRoute() {
    *                         id:
    *                           type: string
    *                           format: uuid
+   *                           description: The attempted credexID
    *                         type:
    *                           type: string
-   *                           enum: [ERROR_VALIDATION]
+   *                           enum: [ERROR_INTERNAL]
    *                         timestamp:
    *                           type: string
    *                           format: date-time

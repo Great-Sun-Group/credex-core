@@ -2,29 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=0.8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Daily Credcoin Offering (DCO)</title>
     <link rel="stylesheet" href="../style.css" />
   </head>
   <body>
-    <div id="menuButton" onclick="window.location.href='../menu.html'">
-      <img src="../images/logo.png" alt="Menu" class="menu-logo">
-      <span class="menu-text">MENU</span>
-    </div>
-
-    <div class="header-container">
-      <div class="header-logo">
-        <img
-          src="../images/logo.png"
-          alt="Credex Logo"
-          class="subsection-logo"
-        />
-      </div>
-      <div class="header-text">
-        <h1>Due Diligence</h1>
-        <h3 class="subtitle">Mathematical logic and conceptual specifics</h3>
-      </div>
-    </div>
+    <!-- Header Component -->
+    <div id="header-due-diligence"></div>
+    
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
 
     <h1 class="chapter-title">Daily Credcoin Offering (DCO)</h1>
 
@@ -62,7 +49,6 @@
         Fetch current exchange rates from external sources:
         <ul>
           <li>OpenExchangeRates API for major currency pairs</li>
-          <li>Reserve Bank of Zimbabwe for ZWG rates</li>
           <li>Convert all rates to XAU (gold) basis</li>
         </ul>
       </li>
@@ -76,7 +62,7 @@
       </li>
       <li>Create a new daynode with the updated CXX rates.</li>
       <li>
-        Update all credex and asset balances across the system to reflect new rates.
+        Update all Credex, LoopAnchor, and AssetMarker nodes, and all CREDLOOP and REDEEMED relationships across the system to reflect new rates.
       </li>
       <li>
         Process DCO transactions:
@@ -158,6 +144,18 @@
         <li>This preserves accounting truth in local currency while maintaining system-wide value relationships</li>
       </ul>
     </p>
+
+    <h4>AssetMarker Updates</h4>
+    <p>
+      AssetMarker nodes are updated using the same principles as Credex nodes:
+      <ul>
+        <li>CXX-denominated AssetMarkers have their GeneralLedgerAmount divided by CXXprior_CXXcurrent</li>
+        <li>Currency-denominated AssetMarkers have their GeneralLedgerAmount recalculated to maintain face value</li>
+        <li>CXXmultiplier is updated to the new exchange rate for the denomination</li>
+        <li>This ensures AssetMarker values remain true across the system</li>
+      </ul>
+    </p>
+    
 
     <h2>Transaction Processing</h2>
 
@@ -384,5 +382,11 @@
         </tr>
     </table>
 
+    <!-- Footer Component -->
+    <div id="footer-due-diligence"></div>
+    
+    <!-- Template System JavaScript -->
+    <script src="../js/template.js"></script>
+    <script src="../js/dropdown.js"></script>
   </body>
 </html>

@@ -2,21 +2,22 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Environment Setup</title>
     <link rel="stylesheet" href="../style.css" />
   </head>
   <body>
-    <div id="menuButton" onclick="window.location.href='../menu.html'">
-      <img src="../images/logo.png" alt="Menu" class="menu-logo" />
-      <span class="menu-text">MENU</span>
-    </div>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
 
-    <div class="header-logo">
-      <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
-    </div>
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
 
-    <h1>Deployed Environments Setup</h1>
+    <!-- Page Content -->
+    <h1 class="chapter-title">Deployed Environments Setup</h1>
 
     <h3>Types of Environments</h3>
     <p>Our infrastructure supports two distinct types of environments:</p>
@@ -113,34 +114,6 @@
       <li>Testing economic theories and scenarios</li>
     </ul>
 
-    <h3>Top Level Authorization</h3>
-    <p>
-      Top level authorization is managed by Ryan Watson. In his personal
-      accounts are:
-    </p>
-    <ul>
-      <li>
-        Domains <code>mycredex.app</code> and <code>mycredex.dev</code> are
-        registered at <a href="https://www.hover.com/">Hover.com</a>, with
-        nameservers pointed to Route 53 at AWS.
-      </li>
-      <li>
-        A master AWS root login has been created under hq@greatsunfinancial.ca,
-        an email address managed by a Google Workspace with primary domain
-        ryanlukewatson.com. 2FA is implemented for the root login, linked to
-        Ryan's phone. Root users have been set for AWS accounts associated with
-        each domain, isolating the production environment to it's own AWS
-        account and domain. Production domain <code>mycredex.app</code> and
-        development/testing/modeling domain <code>mycredex.dev</code> both have
-        a manual Route 53 and IAM configuration as below.
-      </li>
-    </ul>
-
-    <p>
-      In case of Ryan's incapacitation, contact sister Hayley Watson for root
-      access.
-    </p>
-
     <h3>Neo4j License</h3>
     <p>
       Great Sun Financial Inc. has received a Neo4j Startup License, whose value
@@ -150,19 +123,19 @@
     </p>
 
     <h3>AWS Manual Configuration</h3>
-    <p>Within the root account above:</p>
+    <p>Two accounts are required:</p>
     <ul>
       <li>
-        a <code>production</code> AWS account has been set up to manage the
-        production deployment to <code>mycredex.app</code>
+        a <code>production</code> AWS account to manage the production
+        deployment to <code>mycredex.app</code>
       </li>
       <li>
-        a <code>development</code> AWS account has been set up with identical
-        configuration to manage the development and modeling deployments to
+        a <code>development</code> AWS account with identical configuration to
+        manage the development and modeling deployments to
         <code>mycredex.dev</code>.
       </li>
       <li>
-        Each environment has been manually configured as below by logging into
+        Each environment must be manually configured as below by logging into
         the console as the root of the respective AWS account.
       </li>
     </ul>
@@ -176,13 +149,14 @@
     <h4>Route 53</h4>
     <p>
       Route 53 is manually configured with a hosted zone that manages traffic at
-      the highest level of domain and subdomain DNS records.
+      the highest level of domain and subdomain DNS records. Point domain
+      nameservers to the 4 hosted zone NS record values.
     </p>
 
     <h4>IAM</h4>
     <p>
-      To manage access to AWS resources for deployment, we have manually created
-      the following IAM setup:
+      To manage access to AWS resources for deployment, manually create the
+      following IAM setup:
     </p>
 
     <ol>
@@ -200,8 +174,8 @@
         IAM Group (both accounts):
         <ul>
           <li>
-            <code>credex-core-deployment</code>: Group assigned the above policy
-            to connect it will deployment users below.
+            <code>deployment</code>: Group assigned the above policy to connect
+            it with deployment users below.
           </li>
         </ul>
       </li>
@@ -209,27 +183,18 @@
       <li>
         a. IAM Users in <code>production</code> assigned to group above:
         <ul>
-          <li>
-            <code>credex-core-production-deployment</code>: User for production
-            deployments
-          </li>
+          <li><code>production</code>: User for production deployments</li>
         </ul>
       </li>
 
       <li>
         b. IAM Users in <code>development</code> assigned to group above:
         <ul>
+          <li><code>development</code>: User for development deployments</li>
+          <li><code>staging</code>: User for staging deployments</li>
           <li>
-            <code>credex-core-development-deployment</code>: User for
-            development deployments
-          </li>
-          <li>
-            <code>credex-core-staging-deployment</code>: User for staging
-            deployments
-          </li>
-          <li>
-            <code>credex-core-model_01-deployment</code>: User required for each
-            model environment deployment
+            <code>model_01</code>: User required for each model environment
+            deployment
           </li>
         </ul>
       </li>
@@ -262,10 +227,15 @@
     </p>
 
     <p>
-      <strong>CREDEXCORE_DEV_AWS_ACCESS_KEY</strong><br />
-      <strong>CREDEXCORE_DEV_AWS_SECRET_ACCESS_KEY</strong><br />
+      <strong>AWS_ACCESS_KEY</strong><br />
+      <strong>AWS_SECRET_ACCESS_KEY</strong><br />
       <strong>NEO4J_ENTERPRISE_LICENSE</strong>
     </p>
+
+    <h3>S3 buckets</h3>
+    S3 bucket names are unique across AWS, so for new deployments, buckets must
+    be renamed in this codesbase with a find/replace on "credexbuckets2-"
+    (current) and increment the integer.
 
     <h2>Infrastructure as Code</h2>
     <p>
@@ -349,8 +319,8 @@
           <li>
             Add required secrets:
             <ul>
-              <li>CREDEXCORE_DEV_AWS_ACCESS_KEY</li>
-              <li>CREDEXCORE_DEV_AWS_SECRET_ACCESS_KEY</li>
+              <li>AWS_ACCESS_KEY</li>
+              <li>AWS_SECRET_ACCESS_KEY</li>
               <li>NEO4J_ENTERPRISE_LICENSE</li>
               <li>(Other secrets after database deployment etc)</li>
             </ul>
@@ -468,5 +438,12 @@
       run on changes to it's relevant part of the codebase. Connectors will be
       redeployed rarely, Databases occasionally, and Application daily or more.
     </p>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script src="../js/template.js"></script>
+    <script src="../js/dropdown.js"></script>
   </body>
 </html>

@@ -61,8 +61,6 @@ export const dashboardSwaggerTemplate = {
             type: "string",
             enum: [
               "PERSONAL",
-              "BUSINESS",
-              "CREDEX_FOUNDATION",
               "TRUST",
               "OPERATIONS",
             ],
@@ -70,7 +68,7 @@ export const dashboardSwaggerTemplate = {
           },
           defaultDenom: {
             type: "string",
-            enum: ["CXX", "CAD", "USD", "XAU", "ZWG"],
+            enum: ["CXX", "CAD", "USD", "XAU"],
           },
           isOwnedAccount: {
             type: "boolean",

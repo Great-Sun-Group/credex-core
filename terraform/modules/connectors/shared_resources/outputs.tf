@@ -55,14 +55,54 @@ output "cloudwatch_log_group_name" {
   value = aws_cloudwatch_log_group.ecs_logs.name
 }
 
-output "docs_bucket_name" {
-  value = aws_s3_bucket.docs.id
+# Verification system outputs
+output "verification_photos_bucket" {
+  value = aws_s3_bucket.verification_photos.id
+  description = "The ID of the verification photos bucket"
 }
 
-output "docs_bucket_website_endpoint" {
-  value = aws_s3_bucket_website_configuration.docs.website_endpoint
+output "verification_logs_bucket" {
+  value = aws_s3_bucket.verification_logs.id
+  description = "The ID of the verification logs bucket"
 }
 
-output "docs_cloudfront_domain_name" {
-  value = aws_cloudfront_distribution.docs.domain_name
+output "verification_backups_bucket" {
+  value = aws_s3_bucket.verification_backups.id
+  description = "The ID of the verification backups bucket"
+}
+
+output "verification_photos_bucket_arn" {
+  value = aws_s3_bucket.verification_photos.arn
+  description = "The ARN of the verification photos bucket"
+}
+
+output "verification_logs_bucket_arn" {
+  value = aws_s3_bucket.verification_logs.arn
+  description = "The ARN of the verification logs bucket"
+}
+
+output "verification_backups_bucket_arn" {
+  value = aws_s3_bucket.verification_backups.arn
+  description = "The ARN of the verification backups bucket"
+}
+
+output "rekognition_role_arn" {
+  value = aws_iam_role.rekognition_role.arn
+  description = "The ARN of the Rekognition IAM role"
+}
+
+output "verification_replication_role_arn" {
+  value = aws_iam_role.verification_replication.arn
+  description = "The ARN of the verification replication IAM role"
+}
+
+# AssetMarker system outputs
+output "asset_marker_bucket" {
+  value = aws_s3_bucket.asset_marker_data.id
+  description = "The ID of the AssetMarker data bucket"
+}
+
+output "asset_marker_bucket_arn" {
+  value = aws_s3_bucket.asset_marker_data.arn
+  description = "The ARN of the AssetMarker data bucket"
 }

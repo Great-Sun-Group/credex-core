@@ -58,7 +58,7 @@ export async function OnboardMemberController(
   logger.debug("Entering OnboardMemberController", { requestId });
 
   try {
-    const { firstname, lastname, phone, defaultDenom } = req.body;
+    const { firstname, lastname, phone, defaultDenom, password } = req.body;
 
     // Basic validation is handled by validateRequest middleware
     logger.info("Onboarding new member", {
@@ -66,6 +66,7 @@ export async function OnboardMemberController(
       lastname,
       phone,
       defaultDenom,
+      hasPassword: !!password,
       requestId,
     });
 
@@ -75,6 +76,7 @@ export async function OnboardMemberController(
       lastname,
       phone,
       defaultDenom,
+      password,
       requestId
     );
 
@@ -94,7 +96,9 @@ export async function OnboardMemberController(
               ? 400
               : memberResult.error?.code === "MISSING_PARAMS"
                 ? 400
-                : 500;
+                : memberResult.error?.code === "INVALID_PASSWORD"
+                  ? 400
+                  : 500;
 
       const errorType =
         statusCode === 409
@@ -178,7 +182,10 @@ export async function OnboardMemberController(
       requestId,
     });
 
-    const dashboardResult = await LoginMemberService(phone);
+    const dashboardResult = await LoginMemberService({ 
+      phone,
+      password: password // Pass password if it exists
+    });
 
     if (!dashboardResult.success || !dashboardResult.data) {
       logger.error("Failed to retrieve initial dashboard", {
@@ -231,7 +238,8 @@ export async function OnboardMemberController(
     // Combine all account data into a single dashboard
     const dashboard = {
       member: dashboards[0].member, // Member data is same for all dashboards
-      accounts: dashboards.flatMap(d => d.accounts || [])
+      accounts: dashboards.flatMap(d => d.accounts || []),
+      accountsInternal: dashboards[0].accountsInternal // Internal accounts are the same for all dashboards
     };
 
     logger.info("Member onboarded successfully", {

@@ -1,8 +1,15 @@
 import express from "express";
 import loginRoute from "./loginRoute";
-import getMemberByHandleRoute from "./getMemberByHandleRoute";
+import loginV2Route from "./loginV2Route";
 import onboardMemberRoute from "./onboardMemberRoute";
-import authForTierSpendLimitRoute from "./authForTierSpendLimitRoute";
+import hustler10kRoute from "./hustler10kRoute";
+import updatePasswordRoute from "./updatePasswordRoute";
+import passwordResetRoute from "./passwordResetRoute";
+import setInitialPasswordRoute from "./setInitialPasswordRoute";
+import verificationRoutes from "./verificationRoutes";
+import editMemberRoute from "./editMemberRoute";
+import sellInMarketRoute from "./sellInMarketRoute";
+import getMemberRoute from "./getMemberRoute";
 import logger from "../../../utils/logger";
 
 /**
@@ -18,13 +25,20 @@ export default function MemberRoutes() {
 
   // Mount individual routes
   router.use(loginRoute());
-  router.use(getMemberByHandleRoute());
+  router.use(loginV2Route());
   router.use(onboardMemberRoute());
-  router.use(authForTierSpendLimitRoute());
+  router.use(hustler10kRoute());
+  router.use(updatePasswordRoute());
+  router.use(setInitialPasswordRoute());
+  router.use(passwordResetRoute());
+  router.use(editMemberRoute());
+  router.use(sellInMarketRoute());
+  router.use(getMemberRoute());
+  router.use("/verify", verificationRoutes()); // Mount verification routes with prefix
 
   logger.info("Member routes initialized successfully", {
     module: "memberRoutes",
-    routesCount: 4,
+    routesCount: 11,
   });
 
   return router;

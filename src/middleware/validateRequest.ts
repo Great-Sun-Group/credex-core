@@ -3,6 +3,7 @@ import * as validators from "../utils/validators";
 import * as sanitizers from "../utils/inputSanitizer";
 import logger from "../utils/logger";
 import { ApiActionType } from "../types/apiResponse";
+import { UserRequest } from "../types/auth";
 
 type ValidatorFunction = (value: any) => {
   isValid: boolean;
@@ -118,7 +119,7 @@ export function validateRequest(
   schema: ValidationSchema,
   source: "body" | "query" | "params" = "body"
 ) {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request | UserRequest, res: Response, next: NextFunction) => {
     try {
       const { sanitizedObj, error } = sanitizeAndValidateObject(
         req[source],
@@ -127,6 +128,17 @@ export function validateRequest(
       );
 
       if (error) {
+        // Add detailed logging for validation errors
+        logger.error("Validation error", { 
+          path: req.path, 
+          method: req.method,
+          source,
+          error: error.message, 
+          field: error.field,
+          requestId: (req as any).id,
+          body: req[source]
+        });
+
         const response = {
           message: error.message,
           data: {

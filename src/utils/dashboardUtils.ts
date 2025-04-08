@@ -4,20 +4,41 @@ import { BalanceRepository } from "../api/Account/repositories/BalanceRepository
 import { MemberDashboardService } from "../api/Member/services/MemberDashboardService";
 import { MemberRepository } from "../api/Member/repositories/MemberRepository";
 import { SpendLimitService } from "../api/Member/services/SpendLimitService";
+import {
+  AccountInternalDashboardService,
+  accountInternalDashboardService,
+} from "../api/AccountInternal/services/AccountInternalDashboardService";
 import logger from "./logger";
 
 // Initialize repositories and services
 const accountRepo = new AccountRepository();
-const balanceRepo = new BalanceRepository();
+const balanceRepo = BalanceRepository.getInstance();
 const memberRepo = new MemberRepository();
 const spendLimitService = new SpendLimitService();
-const accountDashboardService = new GetAccountDashboardService(accountRepo, balanceRepo);
-export const memberDashboardService = new MemberDashboardService(memberRepo, spendLimitService);
+const accountDashboardService = new GetAccountDashboardService(
+  accountRepo,
+  balanceRepo
+);
+export const memberDashboardService = new MemberDashboardService(
+  memberRepo,
+  spendLimitService
+);
 
 // Types for standardized dashboard response
 interface StandardizedDashboardData {
-  member: Awaited<ReturnType<typeof MemberDashboardService.prototype.getMemberDashboardData>>;
-  accounts: NonNullable<Awaited<ReturnType<typeof GetAccountDashboardService.prototype.getDashboard>>['data']>[];
+  member: Awaited<
+    ReturnType<typeof MemberDashboardService.prototype.getMemberDashboardData>
+  >;
+  accounts: NonNullable<
+    Awaited<
+      ReturnType<typeof GetAccountDashboardService.prototype.getDashboard>
+    >["data"]
+  >[];
+  accountsInternal?: Awaited<
+    ReturnType<
+      typeof AccountInternalDashboardService.prototype.getAccountInternalDashboardData
+    >
+  >;
 }
 
 /**
@@ -39,9 +60,21 @@ export async function getDashboardData(
   try {
     logger.debug("Fetching dashboard data", { memberID, accountID, requestId });
 
-    const [memberData, accountResult] = await Promise.all([
-      (customMemberDashboardService || memberDashboardService).getMemberDashboardData(memberID),
-      accountDashboardService.getDashboard(memberID, accountID)
+    const [memberData, accountResult, accountsInternal] = await Promise.all([
+      (
+        customMemberDashboardService || memberDashboardService
+      ).getMemberDashboardData(memberID),
+      accountDashboardService.getDashboard(memberID, accountID),
+      accountInternalDashboardService
+        .getAccountInternalDashboardData(memberID)
+        .catch((err) => {
+          logger.warn("Failed to fetch internal accounts", {
+            memberID,
+            error: err instanceof Error ? err.message : "Unknown error",
+            requestId,
+          });
+          return [];
+        }),
     ]);
 
     if (!accountResult.success || !accountResult.data) {
@@ -51,12 +84,16 @@ export async function getDashboardData(
         message: accountResult.message,
         requestId,
       });
-      return { member: memberData };
+      return {
+        member: memberData,
+        accountsInternal,
+      };
     }
 
     return {
       member: memberData,
-      accounts: [accountResult.data]
+      accounts: [accountResult.data],
+      accountsInternal,
     };
   } catch (error) {
     logger.error("Error fetching dashboard data", {

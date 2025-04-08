@@ -2,31 +2,31 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>API Response Standards</title>
     <link rel="stylesheet" href="../style.css" />
   </head>
   <body>
-    <div id="menuButton" onclick="window.location.href='../menu.html'">
-      <img src="../images/logo.png" alt="Menu" class="menu-logo">
-      <span class="menu-text">MENU</span>
-    </div>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
 
-    <div class="header-logo">
-      <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
-    </div>
-    <h1>API Response Standards</h1>
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">API Response Standards</h1>
 
     <p>
-      The credex-core API follows standardized patterns for all responses to ensure consistency 
-      and predictability. This document outlines these standards and explains how responses 
-      are structured.
+      The credex-core API follows standardized patterns for all responses to
+      ensure consistency and predictability. This document outlines these
+      standards and explains how responses are structured.
     </p>
 
     <h2>Response Structure</h2>
-    <p>
-      All API responses follow this standard structure:
-    </p>
+    <p>All API responses follow this standard structure:</p>
     <pre>
 {
   "message": "Human-readable description of the operation result",
@@ -44,11 +44,13 @@
       // Current state information
     }
   }
-}</pre>
+}</pre
+    >
 
     <h3>Message Field</h3>
     <p>
-      The message field provides a human-readable description of what occurred. It should be:
+      The message field provides a human-readable description of what occurred.
+      It should be:
     </p>
     <ul>
       <li>Clear and concise</li>
@@ -57,21 +59,33 @@
     </ul>
 
     <h3>Action Object</h3>
-    <p>
-      The action object records what operation was performed:
-    </p>
+    <p>The action object records what operation was performed:</p>
     <ul>
-      <li><strong>id:</strong> UUID of the primary resource affected (may be null for some operations)</li>
-      <li><strong>type:</strong> Standardized action type (e.g., ACCOUNT_CREATED, ERROR_VALIDATION)</li>
-      <li><strong>timestamp:</strong> When the action occurred (ISO 8601 format)</li>
-      <li><strong>actor:</strong> Who performed the action (member UUID or "system")</li>
-      <li><strong>details:</strong> Action-specific information about what changed</li>
+      <li>
+        <strong>id:</strong> UUID of the primary resource affected (may be null
+        for some operations)
+      </li>
+      <li>
+        <strong>type:</strong> Standardized action type (e.g., ACCOUNT_CREATED,
+        ERROR_VALIDATION)
+      </li>
+      <li>
+        <strong>timestamp:</strong> When the action occurred (ISO 8601 format)
+      </li>
+      <li>
+        <strong>actor:</strong> Who performed the action (member UUID or
+        "system")
+      </li>
+      <li>
+        <strong>details:</strong> Action-specific information about what changed
+      </li>
     </ul>
 
     <h2>Dashboard Structure</h2>
     <p>
-      The dashboard object provides the current state after an operation. Its structure is defined 
-      in <code>src/types/dashboardSwaggerTemplate.ts</code> and includes:
+      The dashboard object provides the current state after an operation. Its
+      structure is defined in
+      <code>src/types/dashboardSwaggerTemplate.ts</code> and includes:
     </p>
 
     <h3>Member Information</h3>
@@ -122,14 +136,10 @@
     </ul>
 
     <h2>Dashboard Response Patterns</h2>
-    <p>
-      The API uses three main patterns for dashboard responses:
-    </p>
+    <p>The API uses three main patterns for dashboard responses:</p>
 
     <h3>1. Full Dashboard State</h3>
-    <p>
-      Returned by operations that modify state:
-    </p>
+    <p>Returned by operations that modify state:</p>
     <ul>
       <li>Authentication operations</li>
       <li>Account management</li>
@@ -137,9 +147,7 @@
     </ul>
 
     <h3>2. Empty Dashboard</h3>
-    <p>
-      Used for operations that don't affect state:
-    </p>
+    <p>Used for operations that don't affect state:</p>
     <ul>
       <li>Lookup operations</li>
       <li>Validation checks</li>
@@ -147,9 +155,7 @@
     </ul>
 
     <h3>3. Specialized Dashboard</h3>
-    <p>
-      Contains additional context-specific data:
-    </p>
+    <p>Contains additional context-specific data:</p>
     <ul>
       <li>Transaction history (getLedger)</li>
       <li>Recurring transaction details</li>
@@ -193,9 +199,7 @@
     </ul>
 
     <h2>Implementation Notes</h2>
-    <p>
-      When implementing API endpoints:
-    </p>
+    <p>When implementing API endpoints:</p>
     <ul>
       <li>Use consistent property names and types</li>
       <li>Include proper validation and error handling</li>
@@ -207,10 +211,16 @@
     </ul>
 
     <p>
-      For detailed specifications of the dashboard format and all available fields, 
-      refer to <code>dashboardSwaggerTemplate</code> in 
+      For detailed specifications of the dashboard format and all available
+      fields, refer to <code>dashboardSwaggerTemplate</code> in
       <code>src/types/dashboardSwaggerTemplate.ts</code>.
     </p>
 
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script src="../js/template.js"></script>
+    <script src="../js/dropdown.js"></script>
   </body>
 </html>

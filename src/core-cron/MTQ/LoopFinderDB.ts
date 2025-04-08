@@ -42,7 +42,7 @@ export async function createSearchSpaceCredex(
         ON CREATE SET searchOwesType.searchAnchorID = randomUUID()
       CREATE (searchOwesType)<-[:SEARCH_SECURED]-(credex:Credex {
           credexID: $credexID,
-          outstandingAmount: $credexAmount,
+          OutstandingAmount: $credexAmount,
           Denomination: $Denomination,
           CXXmultiplier: $CXXmultiplier,
           dueDate: date($credexDueDate)
@@ -51,7 +51,7 @@ export async function createSearchSpaceCredex(
       CALL apoc.do.case(
           [
               searchOwesType.earliestDueDate IS NULL
-              OR searchOwesType.earliestDueDate > date($credexDueDate), 
+              OR searchOwesType.earliestDueDate > date($credexDueDate),
               'SET searchOwesType.earliestDueDate = date($credexDueDate) RETURN true'
           ],
           'RETURN false',
@@ -99,9 +99,9 @@ export async function findCredloop(
   logger.debug("Finding credloop", { issuerAccountID, searchOwesType });
   const result = await session.run(
     `
-    // Step 1: Find all loops starting and ending at the specified account, with the specified searchOwesType
+    // Step 1: Find all loops starting and ending at the specified account with the specified searchOwesType
     MATCH credloops = (issuer:Account {accountID: $issuerAccountID})-[:${searchOwesType}*]->(issuer)
-    
+
     WITH credloops, nodes(credloops) AS loopNodes
     UNWIND loopNodes AS node
     WITH credloops, node
@@ -124,25 +124,25 @@ export async function findCredloop(
     UNWIND credloopNodes AS loopNode
     MATCH (loopNode)<-[:SEARCH_SECURED]-(credex:Credex)
     WITH loopNode, collect(credex) AS credexList
-    WITH 
-           reduce(minCredex = credexList[0], c IN credexList | 
-                  CASE 
+    WITH
+           reduce(minCredex = credexList[0], c IN credexList |
+                  CASE
                     WHEN c.dueDate < minCredex.dueDate THEN c
-                    WHEN c.dueDate = minCredex.dueDate AND c.outstandingAmount > minCredex.outstandingAmount THEN c
-                    ELSE minCredex 
+                    WHEN c.dueDate = minCredex.dueDate AND c.OutstandingAmount > minCredex.OutstandingAmount THEN c
+                    ELSE minCredex
                   END) AS earliestCredex
     WITH collect(earliestCredex) AS finalCredexes, COLLECT(earliestCredex.credexID) AS credexIDs
 
     // Step 6: Identify the minimum outstandingAmount and subtract it from all credexes
     UNWIND finalCredexes AS credexInLoop
-    WITH finalCredexes, min(credexInLoop.outstandingAmount) AS lowestAmount, credexIDs
+    WITH finalCredexes, min(credexInLoop.OutstandingAmount) AS lowestAmount, credexIDs
 
     UNWIND finalCredexes AS credex
-    SET credex.outstandingAmount = credex.outstandingAmount - lowestAmount
+    SET credex.OutstandingAmount = credex.OutstandingAmount - lowestAmount
 
-    // Step 7: Collect all credexes and filter those with outstandingAmount = 0.
+    // Step 7: Collect all credexes and filter those with OutstandingAmount = 0.
     WITH lowestAmount, COLLECT(credex) AS allCredexes, credexIDs
-    WITH lowestAmount, allCredexes, [credex IN allCredexes WHERE credex.outstandingAmount = 0] AS zeroCredexes, credexIDs
+    WITH lowestAmount, allCredexes, [credex IN allCredexes WHERE credex.OutstandingAmount = 0] AS zeroCredexes, credexIDs
 
     //Step 8: collect credexIDs of the zeroCredexes
     UNWIND zeroCredexes as zeroCredex
@@ -152,7 +152,8 @@ export async function findCredloop(
   );
 
   if (result.records.length > 0) {
-    const valueToClear = result.records[0].get("lowestAmount").toNumber();
+    const lowestAmount = result.records[0].get("lowestAmount");
+    const valueToClear = typeof lowestAmount?.toNumber === 'function' ? lowestAmount.toNumber() : Number(lowestAmount);
     const credexesInLoop = result.records[0].get("credexIDs");
     const credexesRedeemed = result.records[0].get("zeroCredexIDs");
     logger.info("Credloop found", {

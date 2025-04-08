@@ -19,7 +19,7 @@ export function validateHandle(handle: string): {
   isValid: boolean;
   message: string;
 } {
-  const handleRegex = /^[a-z0-9_]{3,30}$/;
+  const handleRegex = /^[A-Z0-9_]{3,30}$/;
   const isValid = handleRegex.test(handle);
 
   if (!isValid) {
@@ -29,10 +29,17 @@ export function validateHandle(handle: string): {
         message: `Invalid handle: must be between 3 and 30 characters long`,
       };
     }
-    if (/[^a-z0-9_]/.test(handle)) {
+    if (/[^A-Z0-9_]/.test(handle)) {
+      const invalidChars = handle.match(/[^A-Z0-9_]/g);
+      if (invalidChars?.some(c => /[a-z]/.test(c))) {
+        return {
+          isValid: false,
+          message: `Invalid handle: lowercase letters are not allowed. Use uppercase letters only.`,
+        };
+      }
       return {
         isValid: false,
-        message: `Invalid handle: only lowercase letters, numbers, and underscores are allowed. Received "${handle}"`,
+        message: `Invalid handle: only uppercase letters, numbers 0-9, and underscores are allowed. Invalid characters: "${invalidChars?.join(', ')}"`,
       };
     }
   }
@@ -222,6 +229,27 @@ export function validateTemplateType(type: string): {
   return { isValid, message };
 }
 
+export function validatePassword(password: string): {
+  isValid: boolean;
+  message: string;
+} {
+  const requirements = [
+    { regex: /.{10,}/, message: "Password must be at least 10 characters long" },
+    { regex: /[A-Z]/, message: "Password must contain at least one uppercase letter" },
+    { regex: /[a-z]/, message: "Password must contain at least one lowercase letter" },
+    { regex: /[0-9]/, message: "Password must contain at least one number" },
+    { regex: /[^A-Za-z0-9]/, message: "Password must contain at least one special character" }
+  ];
+
+  for (const requirement of requirements) {
+    if (!requirement.regex.test(password)) {
+      return { isValid: false, message: requirement.message };
+    }
+  }
+
+  return { isValid: true, message: "Valid password" };
+}
+
 export const v = {
   isNonEmptyString: (value: any): { isValid: boolean; message: string } => {
     const isValid = typeof value === 'string' && value.trim().length > 0;
@@ -255,11 +283,59 @@ export const v = {
 
 const VALID_ACCOUNT_TYPES = [
   "PERSONAL",
-  "BUSINESS",
-  "CREDEX_FOUNDATION",
   "TRUST",
   "OPERATIONS",
 ];
+
+const VALID_TRUST_SUBTYPES = ["BANK", "VAULT"];
+
+// Bank field requirements by jurisdiction
+interface BankFieldFormat {
+  [key: string]: RegExp;
+}
+
+interface JurisdictionRequirement {
+  required: string[];
+  format: BankFieldFormat;
+}
+
+interface BankFieldRequirements {
+  [key: string]: JurisdictionRequirement;
+}
+
+const BANK_FIELD_REQUIREMENTS: BankFieldRequirements = {
+  CA: {
+    required: ["accountNumber", "transitNumber", "branchNumber"],
+    format: {
+      accountNumber: /^\d{7,12}$/,
+      transitNumber: /^\d{5}$/,
+      branchNumber: /^\d{3,4}$/
+    }
+  },
+  US: {
+    required: ["accountNumber", "routingNumber"],
+    format: {
+      accountNumber: /^\d{4,17}$/,
+      routingNumber: /^\d{9}$/
+    }
+  },
+  ZW: {
+    required: ["accountNumber", "branchCode", "bankCode"],
+    format: {
+      accountNumber: /^\d{5,16}$/,
+      branchCode: /^\d{3,6}$/,
+      bankCode: /^\d{2,4}$/
+    }
+  },
+  // Add more countries as needed
+  DEFAULT: {
+    required: ["accountNumber", "bankIdentifier"],
+    format: {
+      accountNumber: /^[A-Za-z0-9]{5,34}$/,  // IBAN-like format
+      bankIdentifier: /^[A-Za-z0-9]{8,11}$/  // BIC/SWIFT-like format
+    }
+  }
+};
 
 export function validateAccountType(value: any): {
   isValid: boolean;
@@ -270,4 +346,123 @@ export function validateAccountType(value: any): {
     ? "Valid account type"
     : `Invalid account type. Must be one of: ${VALID_ACCOUNT_TYPES.join(", ")}`;
   return { isValid, message };
+}
+
+export function validateTrustAccountSubtype(value: any): {
+  isValid: boolean;
+  message: string;
+} {
+  const isValid = VALID_TRUST_SUBTYPES.includes(value);
+  const message = isValid
+    ? "Valid trust account subtype"
+    : `Invalid trust account subtype. Must be one of: ${VALID_TRUST_SUBTYPES.join(", ")}`;
+  return { isValid, message };
+}
+
+export function validateLocation(value: any): {
+  isValid: boolean;
+  message: string;
+} {
+  logger.debug("Validating location", { value, type: typeof value });
+
+  // If null, it's valid (for when store is closed)
+  if (value === null) {
+    logger.debug("Location is null, which is valid");
+    return { isValid: true, message: "Valid location (null)" };
+  }
+
+  // Check if it's an object with latitude and longitude
+  if (!value || typeof value !== "object") {
+    logger.warn("Invalid location: not an object", { value, type: typeof value });
+    return {
+      isValid: false,
+      message: "Location must be an object with latitude and longitude properties"
+    };
+  }
+
+  // Check if latitude and longitude are present and are numbers
+  if (!('latitude' in value) || !('longitude' in value)) {
+    logger.warn("Invalid location: missing latitude or longitude", { value });
+    return {
+      isValid: false,
+      message: "Location must have both latitude and longitude properties"
+    };
+  }
+
+  // Validate latitude (-90 to 90)
+  if (typeof value.latitude !== 'number' || 
+      isNaN(value.latitude) || 
+      value.latitude < -90 || 
+      value.latitude > 90) {
+    logger.warn("Invalid latitude", { latitude: value.latitude });
+    return {
+      isValid: false,
+      message: "Latitude must be a number between -90 and 90"
+    };
+  }
+
+  // Validate longitude (-180 to 180)
+  if (typeof value.longitude !== 'number' || 
+      isNaN(value.longitude) || 
+      value.longitude < -180 || 
+      value.longitude > 180) {
+    logger.warn("Invalid longitude", { longitude: value.longitude });
+    return {
+      isValid: false,
+      message: "Longitude must be a number between -180 and 180"
+    };
+  }
+
+  logger.debug("Location is valid", { latitude: value.latitude, longitude: value.longitude });
+  return {
+    isValid: true,
+    message: "Valid location"
+  };
+}
+
+export function validateBankFields(value: any): {
+  isValid: boolean;
+  message: string;
+} {
+  if (!value || typeof value !== "object") {
+    return {
+      isValid: false,
+      message: "Bank fields must be an object"
+    };
+  }
+
+  const { jurisdiction, ...fields } = value;
+
+  if (!jurisdiction) {
+    return {
+      isValid: false,
+      message: "Jurisdiction is required"
+    };
+  }
+
+  // Get requirements for jurisdiction, fallback to DEFAULT if not specifically defined
+  const requirements = BANK_FIELD_REQUIREMENTS[jurisdiction] || BANK_FIELD_REQUIREMENTS.DEFAULT;
+
+  // Check required fields
+  for (const field of requirements.required) {
+    if (!fields[field]) {
+      return {
+        isValid: false,
+        message: `Missing required field for ${jurisdiction}: ${field}`
+      };
+    }
+
+    // Validate format if defined
+    if (requirements.format[field] && !requirements.format[field].test(fields[field])) {
+      return {
+        isValid: false,
+        message: `Invalid format for ${field} in jurisdiction ${jurisdiction}`
+      };
+    }
+  }
+
+  return {
+    isValid: true,
+    message: "Valid bank fields"
+  };
 }

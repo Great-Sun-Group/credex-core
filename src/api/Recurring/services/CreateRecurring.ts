@@ -115,7 +115,7 @@ export async function CreateRecurringService(
         MATCH (target:Account {accountID: $targetAccountID})
         ${
           templateType === TEMPLATE_TYPES.DCO_GIVE
-            ? 'WHERE target.accountType = "CREDEX_FOUNDATION"'
+            ? 'WHERE target.isCredexFoundation = true'
             : ""
         }
         RETURN
@@ -182,7 +182,6 @@ export async function CreateRecurringService(
         MATCH (target:Account {accountID: $targetAccountID})
         CREATE (recurring:Recurring {
           recurringID: randomUUID(),
-          memberID: $ownerID,
           templateType: $templateType,
           payFrequency: $payFrequency,
           startDate: date($startDate),
@@ -197,7 +196,6 @@ export async function CreateRecurringService(
         CREATE (source)-[:${RELATIONSHIP_TYPES.REQUESTED}]->(recurring)-[:${RELATIONSHIP_TYPES.REQUESTED}]->(target)
         RETURN
           recurring.recurringID as recurringID,
-          recurring.memberID as memberID,
           recurring.payFrequency as payFrequency,
           recurring.nextPayDate as nextRunDate,
           recurring.templateType as templateType,
@@ -310,7 +308,6 @@ export async function CreateRecurringService(
 
     logger.info("Recurring transaction created successfully", {
       recurringID,
-      memberID: record.get("memberID"),
       sourceAccountID,
       targetAccountID,
       templateType,

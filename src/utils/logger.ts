@@ -76,13 +76,29 @@ export async function updateLoggerConfig() {
 
 function sanitizeData(data: any): any {
   const sensitiveFields = ["password", "token", "apiKey", "creditCard", "privateKey"];
+  const binaryFields = ["jpg", "jpeg", "png", "gif", "image", "file", "binary", "buffer", "base64"];
+  const maxStringLength = 100; // Maximum length for string values in logs
+  
   if (typeof data === "object" && data !== null) {
     return Object.keys(data).reduce(
       (acc: { [key: string]: any }, key: string) => {
         if (sensitiveFields.includes(key)) {
           acc[key] = "[REDACTED]";
+        } else if (binaryFields.includes(key.toLowerCase())) {
+          // For binary/image fields, show only the data size
+          if (typeof data[key] === 'string') {
+            const size = Buffer.from(data[key], 'base64').length;
+            acc[key] = `[BINARY DATA: ${size} bytes]`;
+          } else if (Buffer.isBuffer(data[key])) {
+            acc[key] = `[BINARY DATA: ${data[key].length} bytes]`;
+          } else {
+            acc[key] = "[BINARY DATA]";
+          }
         } else if (typeof data[key] === "object") {
           acc[key] = sanitizeData(data[key]);
+        } else if (typeof data[key] === "string" && data[key].length > maxStringLength) {
+          // Truncate long strings
+          acc[key] = `${data[key].substring(0, maxStringLength)}... [truncated, total length: ${data[key].length}]`;
         } else {
           acc[key] = data[key];
         }
@@ -147,46 +163,112 @@ export const addRequestId = (req: Request, res: Response, next: NextFunction) =>
 export const expressLogger = (req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   
-  // Log request
-  logDebug('Incoming request', {
-    requestId: req.id,
-    method: req.method,
-    url: req.originalUrl,
-    body: sanitizeData(req.body),
-    headers: sanitizeData(req.headers)
-  });
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    logInfo("HTTP Request completed", {
+  // Check if this is an image upload request
+  const isImageUpload = req.path.includes('/uploadAndOptimizeJpg') && req.body && req.body.jpg;
+  
+  // Log request with minimal info for large requests or image uploads
+  const isLargeRequest = (req.headers['content-length'] && 
+    parseInt(req.headers['content-length'] as string, 10) > 10000) || isImageUpload;
+  
+  if (isLargeRequest) {
+    logDebug('Incoming large request', {
       requestId: req.id,
       method: req.method,
       url: req.originalUrl,
-      statusCode: res.statusCode,
-      duration: `${duration}ms`,
-      body: sanitizeData(req.body),
-      params: sanitizeData(req.params),
-      query: sanitizeData(req.query),
-      headers: sanitizeData(req.headers),
-      ip: req.ip,
-      userAgent: req.get("User-Agent"),
+      contentLength: req.headers['content-length'],
+      contentType: req.headers['content-type'],
+      isImageUpload: isImageUpload,
+      headers: sanitizeData(req.headers)
     });
+  } else {
+    logDebug('Incoming request', {
+      requestId: req.id,
+      method: req.method,
+      url: req.originalUrl,
+      body: sanitizeData(req.body),
+      headers: sanitizeData(req.headers)
+    });
+  }
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    
+    // For large requests or image uploads, don't log the body
+    if (isLargeRequest) {
+      logInfo("HTTP Request completed", {
+        requestId: req.id,
+        method: req.method,
+        url: req.originalUrl,
+        statusCode: res.statusCode,
+        duration: `${duration}ms`,
+        contentLength: req.headers['content-length'],
+        contentType: req.headers['content-type'],
+        isImageUpload: isImageUpload,
+        params: sanitizeData(req.params),
+        query: sanitizeData(req.query),
+        ip: req.ip,
+        userAgent: req.get("User-Agent"),
+      });
+    } else {
+      logInfo("HTTP Request completed", {
+        requestId: req.id,
+        method: req.method,
+        url: req.originalUrl,
+        statusCode: res.statusCode,
+        duration: `${duration}ms`,
+        body: sanitizeData(req.body),
+        params: sanitizeData(req.params),
+        query: sanitizeData(req.query),
+        headers: sanitizeData(req.headers),
+        ip: req.ip,
+        userAgent: req.get("User-Agent"),
+      });
+    }
   });
   next();
 };
 
 // Error logger middleware
 export const errorLogger = (err: Error, req: Request, res: Response, next: NextFunction) => {
-  logError("Request Error", err, {
-    requestId: req.id,
-    method: req.method,
-    url: req.originalUrl,
-    body: sanitizeData(req.body),
-    params: sanitizeData(req.params),
-    query: sanitizeData(req.query),
-    headers: sanitizeData(req.headers),
-  });
+  // Check if this is an image upload request
+  const isImageUpload = req.path.includes('/uploadAndOptimizeJpg') && req.body && req.body.jpg;
+  
+  // For image uploads, don't log the body
+  if (isImageUpload) {
+    logError("Request Error", err, {
+      requestId: req.id,
+      method: req.method,
+      url: req.originalUrl,
+      isImageUpload: true,
+      params: sanitizeData(req.params),
+      query: sanitizeData(req.query),
+      headers: sanitizeData(req.headers),
+    });
+  } else {
+    logError("Request Error", err, {
+      requestId: req.id,
+      method: req.method,
+      url: req.originalUrl,
+      body: sanitizeData(req.body),
+      params: sanitizeData(req.params),
+      query: sanitizeData(req.query),
+      headers: sanitizeData(req.headers),
+    });
+  }
   next(err);
+};
+
+// Function to configure DCO logging
+export const configureDCOLogger = (processId: string) => {
+  const dcoTransport = new winston.transports.File({
+    filename: `src/core-cron/DCO/DCOsnapshots/dco_${processId}.log`,
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.json()
+    )
+  });
+  baseLogger.add(dcoTransport);
+  return () => baseLogger.remove(dcoTransport);
 };
 
 // Function to log DCO rates

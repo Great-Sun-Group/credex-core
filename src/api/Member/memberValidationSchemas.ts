@@ -9,6 +9,7 @@
 
 import { v, s } from "../../middleware/validateRequest";
 import logger from "../../utils/logger";
+import { validatePassword, validateAccountName, validateHandle } from "../../utils/validators";
 
 logger.debug("Initializing member validation schemas");
 
@@ -51,6 +52,11 @@ export const onboardMemberSchema = {
     validator: v.validateDenomination,
     required: true,
   },
+  password: {
+    sanitizer: (value: string) => value,
+    validator: validatePassword,
+    required: false,
+  },
 };
 logger.debug("onboardMemberSchema initialized");
 
@@ -84,7 +90,110 @@ export const loginMemberSchema = {
     validator: v.validatePhone,
     required: true,
   },
+  password: {
+    sanitizer: (value: string) => value,
+    validator: validatePassword,
+    required: false,
+  },
 };
 logger.debug("loginMemberSchema initialized");
+
+export const loginMemberV2Schema = {
+  phone: {
+    sanitizer: s.sanitizePhone,
+    validator: v.validatePhone,
+    required: true,
+  },
+  password: {
+    sanitizer: (value: string) => value,
+    validator: validatePassword,
+    required: true,
+  },
+};
+logger.debug("loginMemberV2Schema initialized");
+
+export const hustler10kSchema = {
+  personalAccountID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+};
+logger.debug("hustler10kSchema initialized");
+
+export const editMemberSchema = {
+  firstname: {
+    sanitizer: s.sanitizeName,
+    validator: v.validateName,
+    required: false,
+  },
+  lastname: {
+    sanitizer: s.sanitizeName,
+    validator: v.validateName,
+    required: false,
+  },
+  memberHandle: {
+    sanitizer: s.sanitizeHandle,
+    validator: v.validateHandle,
+    required: false,
+  },
+  vendorBio: {
+    sanitizer: s.sanitizeString,
+    validator: (value: string) => {
+      return {
+        isValid: value.length <= 500,
+        message:
+          value.length <= 500
+            ? "Valid vendor bio"
+            : "Vendor bio must be at most 500 characters",
+      };
+    },
+    required: false,
+  },
+  profile_picture_original_jpg: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: false,
+  },
+  profile_picture_200_jpg: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: false,
+  },
+  profile_picture_600_jpg: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: false,
+  },
+};
+logger.debug("editMemberSchema initialized");
+
+export const sellInMarketSchema = {
+  vendor: {
+    sanitizer: s.sanitizeBoolean,
+    validator: v.validateBoolean,
+    required: true,
+  },
+  storeAccountName: {
+    sanitizer: s.sanitizeAccountName,
+    validator: validateAccountName,
+    required: true,
+  },
+  storeAccountHandle: {
+    sanitizer: s.sanitizeHandle,
+    validator: validateHandle,
+    required: true,
+  },
+};
+logger.debug("sellInMarketSchema initialized");
+
+export const getMemberSchema = {
+  memberID: {
+    sanitizer: s.sanitizeUUID,
+    validator: v.validateUUID,
+    required: true,
+  },
+};
+logger.debug("getMemberSchema initialized");
 
 logger.debug("All member validation schemas initialized");

@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>API Implementation - Vimbiso Market</title>
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/layout.css" />
+    <link rel="stylesheet" href="../css/components.css" />
+    <link rel="stylesheet" href="../css/responsive.css" />
+    <link rel="stylesheet" href="css/variables.css" />
+    <link rel="stylesheet" href="css/market.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="market-header">
+      <div class="container">
+        <div class="header-content">
+          <a href="../index.html" class="back-link">← Back to MyCredex.App</a>
+          <h1>Vimbiso Market</h1>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Navigation -->
+    <nav class="market-nav">
+      <div class="container">
+        <ul class="nav-list">
+          <li class="nav-item"><a href="index.html">Overview</a></li>
+          <li class="nav-item"><a href="user-flows.html">User Flows</a></li>
+          <li class="nav-item"><a href="data-model.html">Data Model</a></li>
+          <li class="nav-item">
+            <a href="api-reference.html">API Reference</a>
+          </li>
+          <li class="nav-item active">
+            <a href="api-workplan.html">API Implementation</a>
+          </li>
+          <li class="nav-item">
+            <a href="api-testing.html">API Testing</a>
+          </li>
+          <li class="nav-item">
+            <a href="ui-specs-seller.html">UI Specs Seller</a>
+          </li>
+          <li class="nav-item">
+            <a href="ui-specs-purchaser.html">UI Specs Purchaser</a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="market-content">
+      <div class="container">
+        <section>
+          <h2>API Implementation</h2>
+          <p class="lead">
+            A comprehensive step-by-step plan for implementing the Vimbiso
+            Market endpoints and functionality.
+          </p>
+
+          <div class="section-divider"></div>
+
+          <h3>Current System Analysis</h3>
+          <p>The current system has the following API modules:</p>
+          <ul>
+            <li>
+              <a href="../develop/repository_architecture.html">Member</a> -
+              User management and authentication
+            </li>
+            <li>
+              <a href="../develop/repository_architecture.html">Account</a> -
+              Exchange account operations
+            </li>
+            <li>
+              <a href="../develop/repository_architecture.html"
+                >AccountInternal</a
+              >
+              - Internal account operations
+            </li>
+            <li>
+              <a href="../develop/repository_architecture.html">AssetMarker</a>
+              - Digital asset management
+            </li>
+            <li>
+              <a href="../develop/repository_architecture.html">Credex</a> -
+              Credit exchange transactions
+            </li>
+            <li>Admin - Administrative functions</li>
+            <li>DevAdmin - Development and testing utilities</li>
+            <li>Notifications - User notification system</li>
+            <li>Recurring - Scheduled operations</li>
+          </ul>
+
+          <p>Each module follows a consistent structure:</p>
+          <ul>
+            <li>Routes define API endpoints and validation</li>
+            <li>Controllers handle request processing</li>
+            <li>Validation schemas ensure data integrity</li>
+          </ul>
+
+          <div class="section-divider"></div>
+
+          <h3>Required Endpoints</h3>
+          <p>
+            Based on the <a href="api-reference.html">API Reference</a>, we need
+            to implement the following endpoints:
+          </p>
+
+          <h4>Member Endpoints</h4>
+          <ol>
+            <li>
+              <code>/editMember</code> - Update member profiles with vendor
+              details ✅
+            </li>
+            <li>
+              <code>/sellInMarket</code> - Enable/disable vendor functionality
+              ✅
+            </li>
+          </ol>
+
+          <h4>Account Endpoints</h4>
+          <ol start="3">
+            <li>
+              <code>/editAccount</code> - Update exchange account details ✅
+            </li>
+            <li>
+              <code>/createAccountInternal</code> - Create internal accounts ✅
+            </li>
+            <li>
+              <code>/editAccountInternal</code> - Update internal accounts ✅
+            </li>
+            <li>
+              <code>/deleteAccountInternal</code> - Delete internal accounts ✅
+            </li>
+          </ol>
+
+          <h4>AssetMarker Endpoints</h4>
+          <ol start="7">
+            <li><code>/addAssetMarker</code> - Create asset markers ✅</li>
+            <li>
+              <code>/uploadAndOptimizeJpg</code> - Upload and optimize images ✅
+            </li>
+            <li><code>/connectAsset</code> - Connect assets to nodes ✅</li>
+            <li>
+              <code>/disconnectAsset</code> - Remove asset relationships ✅
+            </li>
+            <li>
+              <code>/updateProfilePics</code> - Update profile pictures in a single call ✅
+            </li>
+          </ol>
+
+          <h4>Invoice Endpoints (New Module)</h4>
+          <ol start="12">
+            <li>
+              <code>/generateInvoice</code> - Generate transaction invoices with
+              digital signatures ✅
+            </li>
+          </ol>
+
+          <div class="section-divider"></div>
+
+          <h3>Implementation Plan</h3>
+
+          <div class="phase-container">
+            <h4>Phase 1: Setup and Preparation</h4>
+            <div class="phase-details">
+              <h5>1. Create Invoice Module Structure</h5>
+              <ul>
+                <li>
+                  Create directory structure for Invoice module following
+                  <a href="../develop/repository_architecture.html"
+                    >repository architecture</a
+                  >
+                </li>
+                <li>Set up routes, controllers, and validation schemas</li>
+                <li>Update main index.ts to include Invoice routes</li>
+              </ul>
+
+              <p>Example directory structure:</p>
+              <pre><code>src/api/Invoice/
+├── controllers/
+│   ├── GenerateInvoiceController.ts
+│   └── index.ts
+├── routes/
+│   ├── generateInvoiceRoute.ts
+│   └── index.ts
+└── invoiceValidationSchemas.ts</code></pre>
+
+              <p>
+                Reference implementation:
+                <a
+                  href="https://github.com/your-org/credex-core/blob/main/src/api/AccountInternal"
+                  >AccountInternal module</a
+                >
+              </p>
+
+              <h5>2. Update Existing Module Implementations</h5>
+              <ul>
+                <li>
+                  Complete AccountInternal controllers (currently placeholders)
+                </li>
+                <li>
+                  Verify AssetMarker implementations match requirements for
+                  multiple CR/DR relationships
+                </li>
+                <li>Add vendor-specific fields to Member module</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 2: Member Endpoints Implementation</h4>
+            <div class="phase-details">
+              <h5>3. Implement <code>/editMember</code> Endpoint</h5>
+              <ul>
+                <li>
+                  Update Member validation schema to include vendor fields
+                </li>
+                <li>Create controller to handle profile updates</li>
+                <li>Add support for profile picture relationships</li>
+              </ul>
+
+              <p>Key considerations:</p>
+              <ul>
+                <li>Validate vendor-specific fields only when vendor=true</li>
+                <li>
+                  Handle profile picture relationships using AssetMarker
+                  connections
+                </li>
+                <li>Support all four image sizes (original, thumbnail, 200px, 600px)</li>
+                <li>Ensure proper error handling for invalid inputs</li>
+              </ul>
+
+              <p>
+                Reference implementation:
+                <a
+                  href="https://github.com/your-org/credex-core/blob/main/src/api/Member"
+                  >Member module</a
+                >
+              </p>
+
+              <h5>4. Implement <code>/sellInMarket</code> Endpoint</h5>
+              <ul>
+                <li>Create validation schema for vendor toggle</li>
+                <li>Implement controller to update member vendor status</li>
+                <li>
+                  Add logic to create required internal accounts when enabling
+                  vendor status
+                </li>
+              </ul>
+
+              <p>Required internal accounts:</p>
+              <ul>
+                <li>
+                  <code
+                    >(:accountInternal { accountName: "Tomatoes", accountType:
+                    "PRODUCTION" })</code
+                  >
+                </li>
+                <li>
+                  <code
+                    >(:accountInternal { accountName: "Profile Pictures",
+                    accountType: "DIGITAL_ASSET" })</code
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 3: Account Endpoints Implementation</h4>
+            <div class="phase-details">
+              <h5>5. Implement <code>/editAccount</code> Endpoint</h5>
+              <ul>
+                <li>Create validation schema for account updates</li>
+                <li>Implement controller to update account details</li>
+                <li>Ensure proper validation of account handle uniqueness</li>
+              </ul>
+
+              <p>
+                Reference implementation:
+                <a
+                  href="https://github.com/your-org/credex-core/blob/main/src/api/Account"
+                  >Account module</a
+                >
+              </p>
+
+              <h5>6. Complete AccountInternal Endpoints</h5>
+              <ul>
+                <li>Implement controller logic for createAccountInternal</li>
+                <li>Implement controller logic for editAccountInternal</li>
+                <li>Implement controller logic for deleteAccountInternal</li>
+              </ul>
+
+              <p>
+                Reference implementation:
+                <a
+                  href="https://github.com/your-org/credex-core/blob/main/src/api/AccountInternal/controllers/CreateAccountInternalController.ts"
+                  >CreateAccountInternalController.ts</a
+                >
+              </p>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 4: AssetMarker Endpoints Verification ✅</h4>
+            <div class="phase-details">
+              <h5>7. Verify and Update AssetMarker Endpoints</h5>
+              <ul>
+                <li>Review existing implementations ✅</li>
+                <li>
+                  Update to support single CR/DR relationships with GLid ✅
+                </li>
+                <li>Ensure proper relationship handling ✅</li>
+              </ul>
+
+              <p>Key updates for AssetMarker relationships:</p>
+              <ul>
+                <li>
+                  <strong>Revised Approach:</strong> After review, we've decided
+                  to maintain simpler single CR/DR relationships rather than
+                  implementing multiple CR/DR relationships.
+                </li>
+                <li>
+                  <strong>Image Optimization:</strong> The system now creates four versions of uploaded images:
+                  original, thumbnail, 200px, and 600px, each with its own AssetMarker node.
+                </li>
+                <li>
+                  To maintain the same functionality, we will add a
+                  <code>GLid</code> (General Ledger ID) field to AssetMarker
+                  nodes to group related entries (including the credex)
+                </li>
+                <li>
+                  Maintain validation to ensure the sum of CR amounts equals the
+                  sum of DR amounts
+                </li>
+                <li>
+                  Use the GLid for aggregation and balance verification across
+                  related entries
+                </li>
+              </ul>
+
+              <p>
+                Reference implementation:
+                <a
+                  href="https://github.com/your-org/credex-core/blob/main/src/api/AssetMarker"
+                  >AssetMarker module</a
+                >
+              </p>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 5: Invoice Module Implementation ✅</h4>
+            <div class="phase-details">
+              <h5>8. Create Invoice Data Model</h5>
+              <ul>
+                <li>Define Invoice node structure ✅</li>
+                <li>Define relationships with Account and Credex nodes ✅</li>
+                <li>Implement digital signature integration ✅</li>
+              </ul>
+
+              <p>Revised Invoice node structure (as reusable template):</p>
+              <pre><code>(:Invoice {
+  invoiceID: string,                 // Unique Invoice ID
+  Lines: string,      // JSON array of line items (template) <-this needs to be InternalAccount name and amount for each. these represent/are the transactions debiting the seller's payment account and crediting other accounts as above,
+  Amount: number,             // Template amount <- total amount. this represents/is the transaction (credex) debiting (decreasing) the seller's account and crediting the buyer's
+  Denomination: string,           // Currency denomination
+  Notes: string,              // Additional notes
+  createdAt: datetime         // Creation timestamp
+})</code></pre>
+
+              <p>
+                We'll add an optional invoiceID field to the /createCredex
+                route, and add the GLid field onto the Credex node:
+              </p>
+              <pre><code>(:Credex {
+  GLid: string }) -[:EXECUTES]-> (:Invoice)</code></pre>
+
+              <p>
+                the createCredex route is where the instantiation of the
+                template occurs, becoming both payment and reconciling GL
+                entries for the seller, and (for now) just the payment entry for
+                the purchaser.
+              </p>
+
+              <p>Key relationships:</p>
+              <ul>
+                <li>
+                  <code
+                    >(:Invoice)-[:CREDITS_TO]->(:Account|AccountInternal)</code
+                  >
+                </li>
+                <li><code>(:Invoice)&lt;-[:EXECUTES]-(:Credex)</code></li>
+                <li>
+                  <code
+                    >(:Member)-[:SIGNED]->(:Signature)-[:SIGNED]->(:Invoice)</code
+                  >
+                </li>
+                <li>
+                  <code>(:AssetMarker {GLid: "shared-id"})</code> - AssetMarkers
+                  share GLid with the Credex that executes the invoice
+                </li>
+              </ul>
+
+              <h5>9. Implement <code>/generateInvoice</code> Endpoint</h5>
+              <ul>
+                <li>Create validation schema for invoice generation ✅</li>
+                <li>Implement controller to create invoice records ✅</li>
+                <li>
+                  Add digital signature using the
+                  <a
+                    href="https://github.com/your-org/credex-core/blob/main/src/utils/digitalSignature.ts"
+                    >digitallySign</a
+                  >
+                  utility ✅
+                </li>
+                <li>Add QR code generation functionality ✅</li>
+              </ul>
+
+              <p>Digital signature integration:</p>
+              <pre><code>import { digitallySign } from "../../../utils/digitalSignature";
+
+// In controller
+await digitallySign(
+  session,
+  req.user.id,  // signerID
+  "Invoice",    // entityType
+  invoiceID,    // entityId
+  "INVOICE_CREATED", // actionType
+  JSON.stringify(req.body), // inputData
+  req.id        // requestId
+);</code></pre>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 6: DCO Updates for AssetMarker Support ✅</h4>
+            <div class="phase-details">
+              <h5>10. Update DCO Process for AssetMarker Nodes</h5>
+              <ul>
+                <li>
+                  Modify DCO balance update logic to include AssetMarker nodes
+                  ✅
+                </li>
+                <li>
+                  Add support for updating GeneralLedgerAmount, CXXmultiplier,
+                  and Denomination properties ✅
+                </li>
+                <li>
+                  Ensure exchange rate calculations are applied consistently ✅
+                </li>
+              </ul>
+
+              <p>Implemented approach for DCO updates:</p>
+              <ul>
+                <li>
+                  Use direct node type queries to update all AssetMarker nodes
+                </li>
+                <li>
+                  Apply the same exchange rate logic used for Credex nodes
+                </li>
+                <li>
+                  Update both CXX-denominated and currency-denominated
+                  AssetMarkers
+                </li>
+              </ul>
+
+              <p>Implementation for updating AssetMarker nodes:</p>
+              <pre><code>// Update CXX-denominated AssetMarkers
+MATCH (assetMarker:AssetMarker)
+WHERE assetMarker.Denomination = "CXX"
+SET assetMarker.GeneralLedgerAmount = assetMarker.GeneralLedgerAmount / newDaynode.CXXprior_CXXcurrent
+WITH newDaynode
+
+// Update currency-denominated AssetMarkers
+MATCH (assetMarker:AssetMarker)
+WHERE assetMarker.Denomination <> "CXX"
+SET
+  assetMarker.GeneralLedgerAmount = (assetMarker.GeneralLedgerAmount / assetMarker.CXXmultiplier) * newDaynode[assetMarker.Denomination],
+  assetMarker.CXXmultiplier = newDaynode[assetMarker.Denomination]</code></pre>
+
+              <p>
+                Reference implementation:
+                <a href="../due-diligence/DCO.html">DCO Documentation</a>
+              </p>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 7: S3 Implementation for AssetMarkers ✅</h4>
+            <div class="phase-details">
+              <h5>13. Create S3 Infrastructure for AssetMarkers ✅</h5>
+              <ul>
+                <li>
+                  Add a dedicated S3 bucket for AssetMarkers in terraform ✅
+                </li>
+                <li>
+                  Configure proper security settings (encryption, access
+                  policies) ✅
+                </li>
+                <li>Set up CORS for secure API access ✅</li>
+                <li>Add IAM permissions for the ECS task role ✅</li>
+              </ul>
+
+              <p>Implemented S3 bucket configuration in terraform:</p>
+              <pre><code># Main storage bucket for AssetMarkers
+# Purpose: Stores any data, including profile/account pictures
+# Security: Encrypted at rest, no public access
+resource "aws_s3_bucket" "asset_marker_data" {
+  bucket = "credexbuckets2-assetmarker-data-${var.environment}"
+
+  tags = merge(var.common_tags, {
+    Name = "asset-marker-data-${var.environment}"
+    Purpose = "AssetMarker Data Storage"
+    DataClassification = "Application Data"
+  })
+}
+
+# Enable versioning to maintain file history and prevent accidental deletions
+resource "aws_s3_bucket_versioning" "asset_marker_data" {
+  bucket = aws_s3_bucket.asset_marker_data.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# Enable server-side encryption for data at rest
+resource "aws_s3_bucket_server_side_encryption_configuration" "asset_marker_data" {
+  bucket = aws_s3_bucket.asset_marker_data.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}</code></pre>
+
+              <h5>14. Implement S3 Service for AssetMarkers ✅</h5>
+              <ul>
+                <li>Add AWS S3 SDK dependencies to package.json ✅</li>
+                <li>
+                  Create an S3 service module for handling uploads and downloads
+                  ✅
+                </li>
+                <li>
+                  Implement image optimization and resizing functionality ✅
+                </li>
+                <li>Update AssetMarker controllers to use the S3 service ✅</li>
+                <li>
+                  Add pre-signed URL generation for secure client access ✅
+                </li>
+              </ul>
+
+              <p>Key implementation details:</p>
+              <ul>
+                <li>
+                  Created a dedicated S3 service module in
+                  <code>src/services/s3Service.ts</code> with functions for:
+                </li>
+                <ul>
+                  <li><code>uploadToS3</code>: Upload data to S3 bucket</li>
+                  <li>
+                    <code>getSignedS3Url</code>: Generate pre-signed URLs for
+                    temporary access
+                  </li>
+                  <li><code>deleteFromS3</code>: Remove objects from S3</li>
+                  <li>
+                    <code>generateS3Key</code>: Create unique keys for S3
+                    objects
+                  </li>
+                </ul>
+                <li>
+                  Implemented image processing service in
+                  <code>src/services/imageService.ts</code> with:
+                </li>
+                <ul>
+                  <li>
+                    <code>resizeImage</code>: Resize images to specific
+                    dimensions
+                  </li>
+                  <li>
+                    <code>optimizeJpeg</code>: Optimize JPEG images for storage
+                    efficiency
+                  </li>
+                  <li>
+                    <code>processAssetMarkerImage</code>: Create original,
+                    thumbnail, 200px, and 600px versions
+                  </li>
+                </ul>
+                <li>
+                  Updated <code>UploadAndOptimizeJpgController</code> to use
+                  these services for:
+                </li>
+                <ul>
+                  <li>Processing uploaded images (resize, optimize)</li>
+                  <li>Uploading to S3 with appropriate content types</li>
+                  <li>Storing S3 keys in AssetMarker nodes</li>
+                </ul>
+                <li>
+                  Added <code>GetAssetMarkerUrlController</code> to generate
+                  pre-signed URLs for client access
+                </li>
+              </ul>
+
+              <h5>15. Deployment and Testing Plan</h5>
+              <p>To deploy and test the S3 implementation:</p>
+              <ol>
+                <li>
+                  Deploy the terraform changes to create the S3 bucket:
+                  <pre><code>cd terraform
+./tf.sh [environment] apply</code></pre>
+                </li>
+                <li>
+                  Build and deploy the updated application code:
+                  <pre><code>npm run build
+# Deploy using your CI/CD pipeline or manual deployment process</code></pre>
+                </li>
+                <li>
+                  Test the AssetMarker functionality:
+                  <ul>
+                    <li>
+                      Upload profile pictures through the member profile UI
+                    </li>
+                    <li>
+                      Upload product images through the product management UI
+                    </li>
+                    <li>
+                      Verify that images are properly stored, optimized, and
+                      accessible
+                    </li>
+                  </ul>
+                </li>
+              </ol>
+
+              <p>This implementation enables:</p>
+              <ul>
+                <li>Storing profile pictures for members</li>
+                <li>Storing account pictures for product listings</li>
+                <li>Automatic creation of optimized versions (thumbnail, 200px, 600px)</li>
+                <li>Secure access to images through pre-signed URLs</li>
+                <li>
+                  Proper accounting relationships through AssetMarker nodes
+                </li>
+              </ul>
+
+              <h5>16. Asset URL Service Implementation ✅</h5>
+              <ul>
+                <li>Created a dedicated service for managing asset URLs ✅</li>
+                <li>Implemented in-memory caching for performance optimization ✅</li>
+                <li>Added support for profile picture URL retrieval ✅</li>
+              </ul>
+
+              <p>The <code>assetUrlService.ts</code> provides a comprehensive solution for retrieving and managing asset URLs:</p>
+
+              <pre><code>// Key components of assetUrlService.ts
+import { getSignedS3Url } from './s3Service';
+import { ledgerSpaceDriver } from '../../config/neo4j';
+
+// In-memory cache implementation
+interface CacheEntry {
+  value: string;
+  expiry: number;
+}
+
+// Cache object to store URLs
+const urlCache: Record&lt;string, CacheEntry&gt; = {};</code></pre>
+
+              <p>Core functionality:</p>
+              <ul>
+                <li><strong>URL Caching:</strong> Implements an in-memory cache to store pre-signed S3 URLs with automatic expiration, reducing unnecessary S3 API calls and improving performance</li>
+                <li><strong>Single Asset URL Retrieval:</strong> Fetches S3 keys from Neo4j and generates pre-signed URLs for individual assets</li>
+                <li><strong>Batch URL Processing:</strong> Efficiently retrieves multiple asset URLs in parallel using Promise.all</li>
+                <li><strong>Profile Picture Management:</strong> Specialized function to retrieve all profile picture variants (original, thumbnail, 200px, 600px) for members and other entities</li>
+                <li><strong>Cache Invalidation:</strong> Provides a method to invalidate cached URLs when assets are updated</li>
+              </ul>
+
+              <p>Implementation details:</p>
+              <pre><code>// Profile picture URL retrieval
+export async function getProfilePictureUrls(entityID: string, entityType: string): Promise&lt;{
+  original?: string;
+  thumbnail?: string;
+  pic200?: string;
+  pic600?: string;
+} | null&gt; {
+  // Retrieves all profile picture variants for an entity
+  // Handles different entity types (Member, AccountInternal, etc.)
+  // Returns an object with URLs for each image size
+}</code></pre>
+
+              <p>This service works in conjunction with the S3 service to provide a complete solution for asset URL management, handling the complexity of:</p>
+              <ul>
+                <li>Neo4j database queries to retrieve S3 keys</li>
+                <li>Generating secure, time-limited pre-signed URLs</li>
+                <li>Optimizing performance through caching</li>
+                <li>Supporting different entity types and relationship patterns</li>
+                <li>Providing a clean API for frontend consumption</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="phase-container">
+            <h4>Phase 8: Relationship Direction Update ✅</h4>
+            <div class="phase-details">
+              <h5>16. Update Relationship Direction for Profile Pictures</h5>
+              <ul>
+                <li>
+                  Review and update relationship direction for consistency ✅
+                </li>
+                <li>
+                  Implement the UpdateProfilePicsController for managing profile pictures ✅
+                </li>
+              </ul>
+
+              <p>Key improvements:</p>
+              <ul>
+                <li>
+                  <strong>Consistent Direction:</strong> All relationships now follow the Source -> AssetMarker direction
+                  (e.g., Member -> AssetMarker, Account -> AssetMarker)
+                </li>
+                <li>
+                  <strong>Clear Variable Names:</strong> Updated variable names in controllers to be more intuitive
+                  (sourceNodeID, assetNodeID, relType)
+                </li>
+                <li>
+                  <strong>Improved Error Handling:</strong> Better error messages when relationships don't exist or
+                  can't be created
+                </li>
+                <li>
+                  <strong>Simplified API:</strong> Created a dedicated endpoint for updating all profile picture relationships
+                  in a single API call
+                </li>
+              </ul>
+
+              <p>Implementation details:</p>
+              <pre><code>// UpdateProfilePicsController handles updating all profile picture relationships
+// in a single API call, with proper disconnection of existing relationships
+export async function UpdateProfilePicsController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  // Step 1: Find existing profile picture relationships
+  // Step 2: Disconnect existing relationships
+  // Step 3: Connect new assets with appropriate relationship types
+}</code></pre>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="market-footer">
+      <div class="container">
+        <p>&copy; 2025 VimbisoPay. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Initialize mermaid with minimal configuration
+        mermaid.initialize({
+          startOnLoad: true,
+          securityLevel: "loose",
+        });
+      });
+    </script>
+  </body>
+</html>

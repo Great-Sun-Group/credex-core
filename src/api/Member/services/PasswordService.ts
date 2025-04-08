@@ -1,0 +1,157 @@
+import bcrypt from 'bcrypt';
+import { z } from 'zod';
+import logger from '../../../utils/logger';
+import { authConfig } from '../../../config/auth';
+import { getConfig } from '../../../../config/config';
+
+// Password validation schema based on configuration
+const passwordSchema = z.string()
+  .min(authConfig.password.validation.minLength, `Password must be at least ${authConfig.password.validation.minLength} characters long`)
+  .max(authConfig.password.validation.maxLength, `Password must not exceed ${authConfig.password.validation.maxLength} characters`)
+  .refine(
+    (password) => !authConfig.password.validation.requireUppercase || /[A-Z]/.test(password),
+    'Password must contain at least one uppercase letter'
+  )
+  .refine(
+    (password) => !authConfig.password.validation.requireLowercase || /[a-z]/.test(password),
+    'Password must contain at least one lowercase letter'
+  )
+  .refine(
+    (password) => !authConfig.password.validation.requireNumber || /[0-9]/.test(password),
+    'Password must contain at least one number'
+  )
+  .refine(
+    (password) => !authConfig.password.validation.requireSpecial || /[^A-Za-z0-9]/.test(password),
+    'Password must contain at least one special character'
+  );
+
+export interface PasswordValidationResult {
+  isValid: boolean;
+  errors?: string[];
+}
+
+export interface PasswordHashResult {
+  hash: string;
+  salt: string;
+}
+
+export class PasswordService {
+  private readonly SALT_ROUNDS = authConfig.password.bcryptCost;
+
+  /**
+   * Validates a password against the defined complexity requirements
+   * @param password - The password to validate
+   * @returns PasswordValidationResult indicating if password is valid and any validation errors
+   */
+  validatePassword(password: string): PasswordValidationResult {
+    try {
+      passwordSchema.parse(password);
+      return { isValid: true };
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return {
+          isValid: false,
+          errors: error.errors.map(err => err.message)
+        };
+      }
+      return {
+        isValid: false,
+        errors: ['Invalid password format']
+      };
+    }
+  }
+
+  /**
+   * Hashes a password using bcrypt
+   * @param password - The plain text password to hash
+   * @returns Promise<PasswordHashResult> containing the hash and salt
+   */
+  async hashPassword(password: string): Promise<PasswordHashResult> {
+    // Validate password before hashing
+    const validation = this.validatePassword(password);
+    if (!validation.isValid) {
+      throw new Error(validation.errors?.join(', ') || 'Invalid password format');
+    }
+
+    try {
+      const salt = await bcrypt.genSalt(this.SALT_ROUNDS);
+      const config = await getConfig();
+      const pepperedPassword = `${password}${config.auth.passwordPepper}`;
+      const hash = await bcrypt.hash(pepperedPassword, salt);
+      return { hash, salt };
+    } catch (error) {
+      logger.error('Error hashing password', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw new Error('Failed to hash password');
+    }
+  }
+
+  /**
+   * Verifies a password against its hash
+   * @param password - The plain text password to verify
+   * @param hash - The stored hash to compare against
+   * @returns Promise<boolean> indicating if the password matches
+   */
+  async verifyPassword(password: string, hash: string): Promise<boolean> {
+    try {
+      const config = await getConfig();
+      const pepperedPassword = `${password}${config.auth.passwordPepper}`;
+      const isValid = await bcrypt.compare(pepperedPassword, hash);
+      return isValid;
+    } catch (error) {
+      logger.error('Error verifying password', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw new Error('Failed to verify password');
+    }
+  }
+
+  /**
+   * Updates a password, generating a new hash and salt
+   * @param currentPassword - The current password for verification
+   * @param newPassword - The new password to set
+   * @param storedHash - The stored hash of the current password
+   * @returns Promise<PasswordHashResult> containing the new hash and salt if successful
+   * @throws Error if current password verification fails
+   */
+  async updatePassword(
+    currentPassword: string,
+    newPassword: string,
+    storedHash: string
+  ): Promise<PasswordHashResult> {
+    // First validate the new password
+    const validation = this.validatePassword(newPassword);
+    if (!validation.isValid) {
+      throw new Error(validation.errors?.join(', ') || 'Invalid password format');
+    }
+
+    // Then check if new password is same as current
+    if (currentPassword === newPassword) {
+      throw new Error('New password must be different from current password');
+    }
+
+    // Finally verify the current password
+    const isValid = await this.verifyPassword(currentPassword, storedHash);
+    if (!isValid) {
+      throw new Error('Current password is incorrect');
+    }
+
+    // Hash the new password
+    try {
+      const salt = await bcrypt.genSalt(this.SALT_ROUNDS);
+      const config = await getConfig();
+      const pepperedPassword = `${newPassword}${config.auth.passwordPepper}`;
+      const hash = await bcrypt.hash(pepperedPassword, salt);
+      return { hash, salt };
+    } catch (error) {
+      logger.error('Error hashing password', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw new Error('Failed to hash password');
+    }
+  }
+}
+
+// Export a singleton instance
+export const passwordService = new PasswordService();

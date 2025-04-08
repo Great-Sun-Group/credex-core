@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Services Architecture - Credex API</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+    
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">Services Architecture</h1>
+    <h2>Modular Service-Based Architecture</h2>
+    
+    <p>
+      The Credex API implements a modular service-based architecture that separates business logic from controllers,
+      promoting code reuse, maintainability, and extensibility. This document outlines the service architecture,
+      its organization, and best practices for using and creating services.
+    </p>
+
+    <h2>Service Categories</h2>
+    <p>
+      Services are organized into categories based on their purpose and domain. Each category has its own directory
+      under <code>src/services/</code>.
+    </p>
+
+    <h3>AssetMarker Services</h3>
+    <p>
+      Located in <code>/services/assetMarker/</code>, these services handle the creation, retrieval, updating, and deletion 
+      of asset markers in the system.
+    </p>
+    <ul>
+      <li>
+        <strong>assetMarkerService.ts</strong>: Provides methods for managing asset markers, including creating single and 
+        multiple asset markers, finding or creating accounts, and handling image assets.
+      </li>
+    </ul>
+
+    <h3>Relationship Services</h3>
+    <p>
+      Located in <code>/services/relationships/</code>, these services manage relationships between nodes in the Neo4j database.
+    </p>
+    <ul>
+      <li>
+        <strong>relationshipService.ts</strong>: Provides methods for connecting and disconnecting assets to other nodes, 
+        checking if relationships exist, and retrieving relationships.
+      </li>
+    </ul>
+
+    <h3>Transformation Services</h3>
+    <p>
+      Located in <code>/services/transformations/</code>, these services handle data transformations and can be shared with other members.
+    </p>
+    <ul>
+      <li>
+        <strong>imageProcessingService.ts</strong>: Provides methods for processing images, including resizing, optimizing, 
+        and creating different versions of images.
+      </li>
+    </ul>
+
+    <h2>Service Design Principles</h2>
+    <p>
+      The service architecture follows these key design principles:
+    </p>
+
+    <h3>1. Separation of Concerns</h3>
+    <p>
+      Services separate business logic from controllers, allowing controllers to focus on request handling, validation,
+      and response formatting. This separation makes the code more maintainable and testable.
+    </p>
+
+    <div class="code-example">
+      <h4>Controller Using a Service</h4>
+      <pre><code>// Controller
+export async function UploadAndOptimizeJpgController(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const session = ledgerSpaceDriver.session();
+  
+  try {
+    // Extract request data
+    const { jpg, name, drAccountID, crAccountID } = req.body;
+    const memberID = req.user?.memberID;
+    
+    // Process the image using the service
+    const { original, size200, size600 } = await imageProcessingService.processAssetMarkerImage(imageBuffer);
+    
+    // Create the asset markers using the service
+    const { originalAssetID, asset200ID, asset600ID } = await assetMarkerService.createImageAssets(
+      session, memberID, name, s3Keys, finalCrAccountID, drAccountID
+    );
+
+    // Format and send the response
+    res.status(201).json({
+      message: "Image uploaded and optimized successfully",
+      data: { /* response data */ }
+    });
+  } catch (error) {
+    next(error);
+  } finally {
+    await session.close();
+  }
+}</code></pre>
+    </div>
+
+    <h3>2. Reusability</h3>
+    <p>
+      Services are designed to be reusable across multiple controllers and use cases. This reduces code duplication
+      and ensures consistent behavior across the application.
+    </p>
+
+    <h3>3. Single Responsibility</h3>
+    <p>
+      Each service has a single responsibility and focuses on a specific domain. This makes services easier to understand,
+      test, and maintain.
+    </p>
+
+    <h3>4. Dependency Injection</h3>
+    <p>
+      Services receive dependencies like database sessions as parameters rather than creating them internally. This
+      makes services more testable and allows for better resource management.
+    </p>
+
+    <div class="code-example">
+      <h4>Dependency Injection Example</h4>
+      <pre><code>// Service method with dependency injection
+public async createSingleAssetMarker(
+  session: any,  // Database session passed as a parameter
+  assetProps: AssetMarkerProps,
+  crAccount: AccountAmount,
+  drAccount: AccountAmount,
+  glid?: string
+): Promise<string> {
+  // Implementation
+}</code></pre>
+    </div>
+
+    <h3>5. Error Handling</h3>
+    <p>
+      Services include proper error handling and logging to aid in debugging and monitoring. Errors are caught,
+      logged, and rethrown to be handled by the calling code.
+    </p>
+
+    <div class="code-example">
+      <h4>Error Handling Example</h4>
+      <pre><code>public async someMethod(param1: string, param2: number): Promise<any> {
+  try {
+    // Implementation
+    logInfo("Method called", {
+      service: "SomeService",
+      method: "someMethod",
+      param1,
+      param2
+    });
+    
+    return result;
+  } catch (error) {
+    logError("Error in method", error instanceof Error ? error : new Error(String(error)), {
+      service: "SomeService",
+      method: "someMethod",
+      error: error instanceof Error ? error.message : String(error)
+    });
+    throw error;
+  }
+}</code></pre>
+    </div>
+
+    <h2>Using Services</h2>
+    <p>
+      Services are designed to be used by controllers to implement API endpoints. Here's how to use a service in a controller:
+    </p>
+
+    <ol>
+      <li>Import the service from its module:
+        <pre><code>import { assetMarkerService } from "../../../services/assetMarker/assetMarkerService";</code></pre>
+      </li>
+      <li>Create a database session (if needed):
+        <pre><code>const session = ledgerSpaceDriver.session();</code></pre>
+      </li>
+      <li>Use the service methods within a try/catch block:
+        <pre><code>try {
+  const result = await assetMarkerService.someMethod(session, ...);
+  // Use the result
+} catch (error) {
+  // Handle the error
+} finally {
+  await session.close();
+}</code></pre>
+      </li>
+    </ol>
+
+    <h2>Creating New Services</h2>
+    <p>
+      When creating a new service, follow these guidelines:
+    </p>
+
+    <ol>
+      <li><strong>Categorize</strong>: Place the service in the appropriate category directory based on its purpose.</li>
+      <li><strong>Single Responsibility</strong>: Each service should have a single responsibility and focus on a specific domain.</li>
+      <li><strong>Reusability</strong>: Design services to be reusable across multiple controllers.</li>
+      <li><strong>Error Handling</strong>: Include proper error handling and logging in service methods.</li>
+      <li><strong>Documentation</strong>: Document the service's purpose, methods, and parameters.</li>
+    </ol>
+
+    <div class="code-example">
+      <h4>Example Service Structure</h4>
+      <pre><code>import { logInfo, logError } from "../../utils/logger";
+
+/**
+ * Service for managing some functionality
+ */
+export class SomeService {
+  /**
+   * Method description
+   * @param param1 - Description of param1
+   * @param param2 - Description of param2
+   * @returns Description of return value
+   */
+  public async someMethod(param1: string, param2: number): Promise<any> {
+    try {
+      // Implementation
+      logInfo("Method called", {
+        service: "SomeService",
+        method: "someMethod",
+        param1,
+        param2
+      });
+      
+      return result;
+    } catch (error) {
+      logError("Error in method", error instanceof Error ? error : new Error(String(error)), {
+        service: "SomeService",
+        method: "someMethod",
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+}
+
+// Export a singleton instance
+export const someService = new SomeService();</code></pre>
+    </div>
+
+    <h2>Transformation Services as User-Generated Services</h2>
+    <p>
+      Transformation services are designed to be potentially user-generated and shareable. These services can be used
+      to transform data in various ways and can be made available to other members.
+    </p>
+
+    <p>
+      The <code>imageProcessingService</code> is an example of a transformation service that could be shared with other members.
+      It provides methods for processing images, including resizing, optimizing, and creating different versions of images.
+    </p>
+
+    <p>
+      When creating a transformation service, consider:
+    </p>
+
+    <ol>
+      <li><strong>Modularity</strong>: Design the service to be modular and self-contained.</li>
+      <li><strong>Configuration</strong>: Allow for configuration options to customize the transformation.</li>
+      <li><strong>Input/Output</strong>: Clearly define the expected input and output formats.</li>
+      <li><strong>Documentation</strong>: Provide clear documentation on how to use the service.</li>
+    </ol>
+
+    <div class="code-example">
+      <h4>Example Transformation Service</h4>
+      <pre><code>/**
+ * Service for processing and transforming images
+ * 
+ * This service can be used as a standalone service or as part of a library
+ * of user-generated services that can be shared with others.
+ */
+export class ImageProcessingService {
+  /**
+   * Resize an image to a specific width and height
+   * @param imageBuffer - The image buffer to resize
+   * @param options - Resize options
+   * @returns A buffer containing the resized image
+   */
+  public async resizeImage(
+    imageBuffer: Buffer,
+    options: ImageProcessingOptions = {}
+  ): Promise<Buffer> {
+    // Implementation
+  }
+
+  /**
+   * Optimize a JPEG image
+   * @param imageBuffer - The image buffer to optimize
+   * @param quality - The JPEG quality (1-100)
+   * @returns A buffer containing the optimized image
+   */
+  public async optimizeJpeg(imageBuffer: Buffer, quality = 85): Promise<Buffer> {
+    // Implementation
+  }
+
+  // Other transformation methods...
+}</code></pre>
+    </div>
+
+    <h2>Best Practices</h2>
+    <p>
+      Follow these best practices when working with services:
+    </p>
+
+    <ol>
+      <li><strong>Use Dependency Injection</strong>: Pass dependencies like database sessions to service methods rather than creating them inside the service.</li>
+      <li><strong>Validate Inputs</strong>: Validate inputs to service methods to ensure they are valid before performing operations.</li>
+      <li><strong>Return Meaningful Results</strong>: Return meaningful results from service methods, including success/failure indicators and relevant data.</li>
+      <li><strong>Log Operations</strong>: Log important operations and errors to aid in debugging and monitoring.</li>
+      <li><strong>Handle Errors</strong>: Handle errors gracefully and provide meaningful error messages.</li>
+      <li><strong>Use Interfaces</strong>: Define interfaces for service parameters and return values to ensure type safety.</li>
+      <li><strong>Write Tests</strong>: Write tests for service methods to ensure they work as expected.</li>
+    </ol>
+
+    <h2>Testing Services</h2>
+    <p>
+      Services should be tested independently of controllers to ensure they work as expected. Here's an example of how to test a service:
+    </p>
+
+    <div class="code-example">
+      <h4>Example Service Test</h4>
+      <pre><code>import { assetMarkerService } from "../../../src/services/assetMarker/assetMarkerService";
+
+describe("AssetMarkerService", () => {
+  let mockSession: any;
+
+  beforeEach(() => {
+    // Create a mock session
+    mockSession = {
+      executeRead: jest.fn(),
+      executeWrite: jest.fn(),
+      close: jest.fn()
+    };
+  });
+
+  describe("createSingleAssetMarker", () => {
+    it("should create a single asset marker", async () => {
+      // Arrange
+      const assetProps = { assetName: "Test Asset" };
+      const crAccount = { accountID: "cr-account-id", amount: 100 };
+      const drAccount = { accountID: "dr-account-id", amount: 100 };
+      
+      mockSession.executeWrite.mockResolvedValue({
+        records: [{ get: () => ({ properties: { id: "asset-id" } }) }]
+      });
+
+      // Act
+      const result = await assetMarkerService.createSingleAssetMarker(
+        mockSession, assetProps, crAccount, drAccount
+      );
+
+      // Assert
+      expect(result).toBe("asset-id");
+      expect(mockSession.executeWrite).toHaveBeenCalled();
+    });
+  });
+});</code></pre>
+    </div>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script src="../js/template.js"></script>
+    <script src="../js/dropdown.js"></script>
+  </body>
+</html>

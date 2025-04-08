@@ -45,62 +45,61 @@ export class SpendLimitService implements ISpendLimitService {
         const result = await session.executeRead(
           async (tx: ManagedTransaction) => {
             const query = `
-            // First check member tier
+            // Get member and their tier first
             MATCH (member:Member {memberID: $memberID})
-            WITH member, member.memberTier AS memberTier
-            WHERE memberTier <= 2
+            WITH member, coalesce(member.memberTier, 0) AS memberTier
             
-            // Then get daynode and calculate usage
-            MATCH (daynode:Daynode { Active: true })
+            // For tier 3+, return tier with 0 usage
+            OPTIONAL MATCH (daynode:Daynode { Active: true })
+            WITH member, memberTier, daynode
+            WHERE memberTier > 2
+            RETURN
+              memberTier as tier,
+              0 as dailyUsageUSD
+            
+            UNION
+            
+            // Calculate usage for tiers 1 and 2
+            MATCH (member:Member {memberID: $memberID})
+            WITH member, coalesce(member.memberTier, 0) AS memberTier
+            WHERE memberTier <= 2
+            OPTIONAL MATCH (daynode:Daynode { Active: true })
             OPTIONAL MATCH (member)-[:OWNS]->(account:Account)
             OPTIONAL MATCH
               (account)-[r:OFFERS|OWES]->
               (credex:Credex)-[:CREATED_ON]->(daynode)
             WITH 
               memberTier,
-              daynode.USD AS daynodeUSD,
-              credex,
-              daynode
+              daynode.USD as daynodeUSD,
+              collect(credex) as credexes
+            
+            // Return tier and calculated usage with more precise math
             RETURN
               memberTier as tier,
-              sum(
-                CASE 
-                  WHEN credex IS NOT NULL 
-                  THEN credex.InitialAmount / credex.CXXmultiplier * daynode['USD']
-                  ELSE 0 
-                END
-              ) as dailyUsageUSD
-
-            UNION
-
-            // For tier 3+, return tier with 0 usage
-            MATCH (member:Member {memberID: $memberID})
-            WITH member, member.memberTier AS memberTier
-            WHERE memberTier > 2
-            RETURN
-              memberTier as tier,
-              0 as dailyUsageUSD
+              CASE 
+                WHEN size(credexes) > 0 
+                THEN reduce(total = 0.0, c IN credexes |
+                  total + (c.InitialAmount / c.CXXmultiplier)
+                )
+                ELSE 0 
+              END as dailyUsageUSD
           `;
 
-            const queryResult = await tx.run(query, { memberID });
-            return queryResult.records[0];
+            return await tx.run(query, { memberID });
           }
         );
 
-        if (!result) {
-          throw new MemberError(
-            "Member not found",
-            "NOT_FOUND",
-            ErrorCodes.Member.NOT_FOUND
-          );
+        if (!result || result.records.length === 0) {
+          logger.warn("No records found for member", { memberID });
+          return 0;
         }
 
-        const tierValue = result.get("tier");
-        // Convert Neo4j Integer to JavaScript number for tier
+        const record = result.records[0];
+        const tierValue = record.get("tier");
         const tier = tierValue ? tierValue.toNumber() : 0;
-        
+
         if (!tier) {
-          logger.warn("Member tier not found", { memberID });
+          logger.warn("Member tier not found or is 0", { memberID });
           return 0;
         }
 
@@ -109,18 +108,24 @@ export class SpendLimitService implements ISpendLimitService {
           return Infinity;
         }
 
-        // Get tier limit
-        const tierLimit = this.TIER_LIMITS[tier as keyof typeof this.TIER_LIMITS];
+        // Get tier limit - ensure tier is a number for lookup
+        const tierLimit =
+          this.TIER_LIMITS[Number(tier) as keyof typeof this.TIER_LIMITS];
         if (!tierLimit) {
           return Infinity;
         }
 
-        const dailyUsageUSD = result.get("dailyUsageUSD");
-        // Convert Neo4j Integer to JavaScript number
-        const dailyUsageNumber = dailyUsageUSD ? dailyUsageUSD.toNumber() : 0;
+        const dailyUsageUSD = record.get("dailyUsageUSD");
+        // Neo4j returns this as a float already since we used 0.0 in the query
+        // Ensure we're working with regular numbers by using Number()
+        const dailyUsageNumber = Number(dailyUsageUSD || 0);
 
         // Calculate remaining limit
-        const remainingLimit = Math.max(0, tierLimit - dailyUsageNumber);
+        // Ensure all values are regular numbers
+        const remainingLimit = Math.max(
+          0,
+          Number(tierLimit) - dailyUsageNumber
+        );
 
         // Cache the result
         this.cache.set(memberID, {

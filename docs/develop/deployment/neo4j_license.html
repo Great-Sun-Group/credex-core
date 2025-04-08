@@ -2,36 +2,40 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Neo4j License Management</title>
     <link rel="stylesheet" href="../../style.css" />
   </head>
   <body>
-    <div id="menuButton" onclick="window.location.href='../../menu.html'">
-      <img src="../../images/logo.png" alt="Menu" class="menu-logo">
-      <span class="menu-text">MENU</span>
-    </div>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
 
-    <div class="header-logo">
-      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
-    </div>
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">Neo4j License Management</h1>
+
     <div class="container">
       <h1>Neo4j License Management</h1>
 
-        <h2>License Limitations</h2>
-        <p>
-          We use a Neo4j Enterprise Startup Edition license with the following
-          limitations:
-        </p>
-        <ul>
-          <li>
-            Up to 3 Machines for production use (24 Cores / 256 GB RAM each)
-          </li>
-          <li>Up to 6 Machines for development</li>
-          <li>
-            Up to 3 Machines for non-production internal testing (e.g., staging)
-          </li>
-        </ul>
+      <h2>License Limitations</h2>
+      <p>
+        We use a Neo4j Enterprise Startup Edition license with the following
+        limitations:
+      </p>
+      <ul>
+        <li>
+          Up to 3 Machines for production use (24 Cores / 256 GB RAM each)
+        </li>
+        <li>Up to 6 Machines for development</li>
+        <li>
+          Up to 3 Machines for non-production internal testing (e.g., staging)
+        </li>
+      </ul>
 
       <h2>Current Allocation</h2>
       <ul>
@@ -59,18 +63,26 @@
       </ul>
 
       <h2>License Management Process</h2>
-        <ol>
-          <li>The license is stored as a secret in GitHub Actions
-          (<code>NEO4J_ENTERPRISE_LICENSE</code>).</li>
-          <li>During deployment, the license is retrieved and applied to Neo4j
-          instances.</li>
-          <li>Instance counts and specifications are enforced through Terraform
+      <ol>
+        <li>
+          The license is stored as a secret in GitHub Actions
+          (<code>NEO4J_ENTERPRISE_LICENSE</code>).
+        </li>
+        <li>
+          During deployment, the license is retrieved and applied to Neo4j
+          instances.
+        </li>
+        <li>
+          Instance counts and specifications are enforced through Terraform
           configurations in <code>terraform/neo4j.tf</code> and
-          <code>terraform/variables.tf</code>.</li>
-          <li>Pre-deployment checks verify compliance with license limitations.</li>
-          <li>Regular audits are conducted to ensure ongoing compliance.</li>
-        </ol>
-        
+          <code>terraform/variables.tf</code>.
+        </li>
+        <li>
+          Pre-deployment checks verify compliance with license limitations.
+        </li>
+        <li>Regular audits are conducted to ensure ongoing compliance.</li>
+      </ol>
+
       <h2>License Update Process</h2>
       <ol>
         <li>Obtain the new license file from Neo4j.</li>
@@ -81,5 +93,16 @@
         <li>Trigger a new deployment to apply the updated license.</li>
       </ol>
     </div>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for deployment subdirectory
+      window.templateLevels = 2;
+    </script>
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
   </body>
 </html>

@@ -4,6 +4,7 @@ import { AccountError, handleServiceError } from "../../../utils/errorUtils";
 import { IAccountRepository } from "../repositories/AccountRepository";
 import { IBalanceRepository } from "../repositories/BalanceRepository";
 import logger from "../../../utils/logger";
+import { getProfilePictureUrls } from "../../../services/assetUrlService";
 
 // Import types from pending offers services
 interface OfferedCredex {
@@ -25,9 +26,10 @@ interface AccountDashboardData {
   accountID: string;
   accountName: string;
   accountHandle: string;
-  accountType: 'PERSONAL' | 'BUSINESS' | 'CREDEX_FOUNDATION' | 'TRUST' | 'OPERATIONS';
-  defaultDenom: 'CXX' | 'CAD' | 'USD' | 'XAU' | 'ZWG';
+  accountType: 'PERSONAL' | 'TRUST' | 'OPERATIONS';
+  defaultDenom: 'CXX' | 'CAD' | 'USD' | 'XAU';
   isOwnedAccount: boolean;
+  profilePictureThumbnail?: string;
   sendOffersTo?: {
     memberID: string;
     firstname: string;
@@ -44,6 +46,24 @@ interface AccountDashboardData {
   };
   pendingInData: OfferedCredex[];
   pendingOutData: OfferedCredex[];
+  // Trust account specific fields
+  subtype?: 'BANK' | 'VAULT';
+  denomination?: 'CXX' | 'CAD' | 'USD' | 'XAU';
+  bankFields?: {
+    jurisdiction: string;
+    accountNumber: string;
+    branchCode?: string;
+    bankCode?: string;
+    routingNumber?: string;
+    transitNumber?: string;
+  };
+  // Products available in this store account
+  products?: {
+    accountID: string;
+    accountName: string;
+    accountType: string;
+    profilePictureThumbnail?: string;
+  }[];
 }
 
 interface DashboardResult {
@@ -101,6 +121,16 @@ export class GetAccountDashboardService {
         };
       }
 
+      // Get profile picture thumbnail URL
+      logger.debug("Fetching profile picture thumbnail URL", { accountID });
+      const profilePicUrls = await getProfilePictureUrls(accountID, 'Account').catch(err => {
+        logger.warn("Failed to fetch profile picture URLs", {
+          accountID,
+          error: err instanceof Error ? err.message : "Unknown error"
+        });
+        return null;
+      });
+
       // Construct the standardized dashboard data
       const dashboardData: AccountDashboardData = {
         accountID: accountData.accountID,
@@ -109,7 +139,12 @@ export class GetAccountDashboardService {
         accountType: accountData.accountType,
         defaultDenom: accountData.defaultDenom,
         isOwnedAccount: accountData.isOwnedAccount,
+        profilePictureThumbnail: profilePicUrls?.thumbnail,
         sendOffersTo: accountData.sendOffersTo,
+        // Add trust-specific fields if present
+        ...(accountData.subtype && { subtype: accountData.subtype }),
+        ...(accountData.defaultDenom && { denomination: accountData.defaultDenom }),
+        ...(accountData.bankFields && { bankFields: accountData.bankFields }),
         balanceData: {
           securedNetBalancesByDenom: [],
           unsecuredBalancesInDefaultDenom: {

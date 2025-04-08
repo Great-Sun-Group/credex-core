@@ -11,7 +11,6 @@ import {
   validateDenomination,
   validateAmount,
 } from "../../../utils/validators";
-import { fetchZwgRate, ZwgRateError, ExchangeRate } from "../fetchZwgRate";
 import { Rates, DCOResult, ParticipantData } from "./types";
 
 /**
@@ -29,34 +28,6 @@ export async function fetchCurrencyRates(nextDate: string): Promise<Rates> {
     `https://openexchangerates.org/api/historical/${nextDate}.json`,
     { params: { app_id: process.env.OPEN_EXCHANGE_RATES_API, symbols } }
   );
-
-  try {
-    const ZWGrates: ExchangeRate[] = await fetchZwgRate();
-    if (ZWGrates.length > 0) {
-      const usdZwgRate = ZWGrates.find((rate) => rate.currency === "USD/ZWG");
-      if (usdZwgRate) {
-        USDbaseRates.ZWG = parseFloat(usdZwgRate.avg);
-        logInfo(`ZWG rate fetched successfully: ${USDbaseRates.ZWG}`);
-      } else {
-        logWarning("USD/ZWG rate not found in fetched ZWG rates");
-      }
-    } else {
-      logWarning("No ZWG rates fetched");
-    }
-  } catch (error) {
-    if (error instanceof ZwgRateError) {
-      logWarning(
-        "Failed to fetch ZWG rate, excluding ZWG from denominations",
-        error
-      );
-    } else {
-      logError(
-        "Unexpected error while fetching ZWG rate",
-        error instanceof Error ? error : new Error(String(error))
-      );
-      throw error;
-    }
-  }
 
   validateRates(USDbaseRates);
   return USDbaseRates;

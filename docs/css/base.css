@@ -1,0 +1,145 @@
+/* Base Styles */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.6;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  color: #ffffff;
+  background-color: #06151f;
+  text-align: justify;
+}
+
+/* Typography */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #04a0b2;
+}
+
+h1 {
+  padding-bottom: 0.3em;
+  text-align: center;
+  font-size: 3em;
+  margin-bottom: 10px;
+  color: #fbb016;
+}
+
+h2 {
+  padding-bottom: 0.3em;
+  font-size: 1.5em;
+  border-bottom: 1px solid #04a0b2;
+}
+
+.subtitle {
+  text-align: center;
+  color: #04a0b2;
+  margin-top: 0;
+  margin-bottom: 30px;
+  font-size: 1.7em;
+  font-weight: normal;
+}
+
+.big-words {
+  text-align: center;
+  color: #fbb016;
+  margin-top: 0;
+  margin-bottom: 30px;
+  font-size: 1.7em;
+  font-weight: normal;
+}
+
+.not-as-big-words {
+  text-align: center;
+  color: #fbb016;
+  margin-top: 0;
+  margin-bottom: 30px;
+  font-size: 1.2em;
+  font-weight: normal;
+}
+
+.not-as-big-words-left {
+  text-align: left;
+  color: #fbb016;
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.2em;
+  font-weight: normal;
+}
+
+.chapter-title {
+  color: #fbb016;
+  text-align: left;
+}
+
+/* Links */
+a {
+  color: #fbb016;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #04a0b2;
+  text-decoration: none;
+}
+
+/* Code */
+code {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: #000000;
+  border-radius: 3px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier,
+    monospace;
+  color: #fbb016;
+}
+
+pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #000000;
+  border-radius: 3px;
+}
+
+pre code {
+  padding: 0;
+  margin: 0;
+  background-color: transparent;
+}
+
+/* Lists */
+ul,
+ol {
+  padding-left: 2em;
+}
+
+/* Blockquotes */
+blockquote {
+  padding: 0 1em;
+  color: #fbb016;
+  border-left: 0.25em solid #04a0b2;
+  margin: 0;
+}
+
+/* Selection color */
+::selection {
+  background: #04a0b2;
+  color: #ffffff;
+}
+
+::-moz-selection {
+  background: #04a0b2;
+  color: #ffffff;
+}

@@ -1,11 +1,23 @@
+version: "3.8"
+
 services:
   server:
+    build:
+      context: .
+      target: development
     depends_on:
       neo4j-ledger:
         condition: service_healthy
       neo4j-search:
         condition: service_healthy
     environment:
+      # Core environment
+      NODE_ENV: ${NODE_ENV:-development}
+      DOCKER_ENV: "true"
+      # Test configuration
+      BUILD_TARGET: ${BUILD_TARGET:-test}
+      TEST_FILTER: ${TEST_FILTER:-""}
+      # API keys and secrets
       SKIP_RATE_LIMITER_KEY: ${SKIP_RATE_LIMITER_KEY}
       DEV_ADMIN_KEY: ${DEV_ADMIN_KEY}
       # Neo4j bolt URLs for local instances
@@ -15,10 +27,20 @@ services:
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
       FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
+      # Network configuration
+      NODE_OPTIONS: "--dns-result-order=ipv4first"
+      # AWS Configuration
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION:-af-south-1}
+    # Environment variables are provided through Codespaces secrets or directly from the shell
+    # No env_file directive to avoid errors when .env doesn't exist
     volumes:
       - .:/app
       - ./logs:/app/logs
       - /app/node_modules
+    ports:
+      - "3000:3000"
 
   # Download APOC plugin during startup
   apoc-setup:

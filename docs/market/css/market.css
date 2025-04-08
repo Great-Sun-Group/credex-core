@@ -1,0 +1,371 @@
+/* Market-specific styles */
+
+/* Base Overrides */
+body {
+  background-color: var(--dark-blue);
+  color: var(--text-white);
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  padding: 0 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Header */
+.market-header {
+  background-color: #0a2535; /* Darker teal that matches the dark theme */
+  color: white;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid #04a0b2; /* Subtle teal border */
+}
+
+.market-header .header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.market-header h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fbb016; /* Orange color for the title */
+}
+
+.market-header .back-link {
+  color: #04a0b2; /* Teal color for the back link */
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.market-header .back-link:hover {
+  opacity: 0.8;
+  color: white;
+}
+
+/* Navigation */
+.market-nav {
+  background-color: #0a1925; /* Darker green that matches the dark theme */
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #04a0b2; /* Subtle teal border */
+}
+
+.market-nav .nav-list {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+}
+
+.market-nav .nav-item {
+  margin-right: 1.5rem;
+  white-space: nowrap;
+}
+
+.market-nav .nav-item a {
+  color: #fbb016;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.5rem 0;
+  display: block;
+  transition: color 0.2s;
+}
+
+.market-nav .nav-item a:hover {
+  color: white;
+}
+
+.market-nav .nav-item.active a {
+  color: white;
+  border-bottom: 2px solid white;
+}
+
+/* Main Content */
+.market-content {
+  padding: 2rem 0;
+  min-height: calc(100vh - 200px);
+}
+
+.market-content h2 {
+  color: #04a0b2;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.market-content .lead {
+  font-size: 1.2rem;
+  color: var(--text-white);
+  margin-bottom: 2rem;
+}
+
+/* Footer */
+.market-footer {
+  background-color: #333;
+  color: #ccc;
+  padding: 1.5rem 0;
+  text-align: center;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--market-divider);
+  margin-bottom: 2rem;
+  overflow-x: auto;
+}
+
+.tab {
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-white);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: #04a0b2;
+}
+
+.tab.active {
+  color: #04a0b2;
+  border-bottom: 3px solid #04a0b2;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Feature Cards */
+.feature-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.feature-card {
+  background-color: var(--market-card-bg);
+  border: 1px solid var(--market-card-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  border-color: var(--market-card-hover-border);
+}
+
+.feature-card h3 {
+  color: #04a0b2;
+  margin-top: 0;
+}
+
+.feature-card .card-link {
+  display: inline-block;
+  margin-top: 1rem;
+  color: #04a0b2;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.feature-card .card-link:hover {
+  text-decoration: underline;
+  color: var(--organic-gold);
+}
+
+/* Section Divider */
+.section-divider {
+  height: 1px;
+  background-color: var(--market-divider);
+  margin: 2rem 0;
+}
+
+/* Data Tables */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--market-divider);
+}
+
+.data-table th {
+  background-color: var(--market-section-bg);
+  font-weight: 600;
+  color: var(--tech-azure);
+}
+
+.data-table tr:hover {
+  background-color: rgba(4, 160, 178, 0.1);
+}
+
+/* Endpoint Cards */
+.endpoint-card {
+  background-color: var(--market-card-bg);
+  border: 1px solid var(--market-card-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.endpoint-card h4 {
+  color: #04a0b2;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.endpoint-card .endpoint-description {
+  margin-bottom: 1rem;
+  color: var(--text-white);
+}
+
+.endpoint-card h5 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--tech-azure);
+}
+
+.endpoint-card pre {
+  background-color: var(--market-code-bg);
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.endpoint-card code {
+  font-family: monospace;
+  color: var(--organic-gold);
+}
+
+/* Dual Nature Display */
+.dual-nature {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.dual-column {
+  flex: 1;
+}
+
+.dual-column h5 {
+  color: #04a0b2;
+}
+
+/* Mermaid Diagrams */
+.mermaid-container {
+  margin: 2rem 0;
+  padding: 1rem;
+  background-color: var(--market-section-bg);
+  border-radius: 8px;
+  border: 1px solid var(--market-card-border);
+}
+
+/* UI Screen Cards */
+.ui-screen-card {
+  background-color: var(--market-card-bg);
+  border: 1px solid var(--market-card-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.ui-screen-card h4 {
+  color: #04a0b2;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.ui-screen-details {
+  display: flex;
+  gap: 2rem;
+}
+
+.ui-adjusting-description {
+  flex: 1;
+}
+
+.ui-screen-mockup {
+  flex: 1;
+}
+
+/* Phase Container */
+.phase-container {
+  background-color: #0a1925; /* Dark background to match the theme */
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  border: 1px solid #04a0b2; /* Teal border for definition */
+}
+
+.phase-container h4 {
+  color: #04a0b2;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.phase-details h5 {
+  color: #04a0b2; /* Changed from green to teal to match other headings */
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Flow Details */
+.flow-details {
+  margin-top: 2rem;
+}
+
+.flow-details h4 {
+  color: #04a0b2;
+  margin-bottom: 1rem;
+}
+
+/* Account Handle */
+.account-handle {
+  font-size: 0.8em;
+  color: #fbb016; /* Orange color to match the header title */
+  font-weight: normal;
+  margin-left: 5px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .dual-nature {
+    flex-direction: column;
+  }
+  
+  .ui-screen-details {
+    flex-direction: column;
+  }
+  
+  .tabs {
+    flex-wrap: wrap;
+  }
+  
+  .tab {
+    flex-grow: 1;
+    text-align: center;
+  }
+}

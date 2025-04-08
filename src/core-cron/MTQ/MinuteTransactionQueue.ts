@@ -1,5 +1,6 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { LoopFinder } from "./LoopFinder";
+import { performTrustAudit } from "../../audits/trustAudit";
 import _ from "lodash";
 import logger from "../../utils/logger";
 
@@ -18,6 +19,7 @@ interface Credex {
   CXXmultiplier: number;
   credexSecuredDenom: string;
   dueDate: string;
+  trustAccountID?: string;
 }
 
 export async function MinuteTransactionQueue(): Promise<boolean> {
@@ -55,6 +57,18 @@ export async function MinuteTransactionQueue(): Promise<boolean> {
     try {
       await processQueuedAccounts(ledgerSpaceSession, searchSpaceSession);
       await processQueuedCredexes(ledgerSpaceSession, searchSpaceSession);
+
+      // Run trust audit after queue processing
+      try {
+        logger.info("Starting trust audit");
+        await performTrustAudit(ledgerSpaceSession);
+        logger.info("Trust audit completed");
+      } catch (error) {
+        logger.error("Error in trust audit", {
+          error: error instanceof Error ? error.message : "Unknown error",
+          stack: error instanceof Error ? error.stack : undefined
+        });
+      }
 
       if (bailTimerReached) {
         logger.warn("MTQ processing completed after bail timer was reached");
@@ -240,7 +254,8 @@ async function processQueuedCredexes(
         credex.CXXmultiplier,
         credex.credexSecuredDenom,
         credex.dueDate,
-        credex.acceptorAccountID
+        credex.acceptorAccountID,
+        credex.trustAccountID
       );
       logger.debug("Credex processed successfully", {
         credexID: credex.credexID,
@@ -267,7 +282,7 @@ async function getQueuedCredexes(session: any): Promise<Credex[]> {
     RETURN queuedCredex.acceptedAt AS acceptedAt,
            issuerAccount.accountID AS issuerAccountID,
            acceptorAccount.accountID AS acceptorAccountID,
-           securer.accountID AS securerID,
+           securer.accountID AS trustAccountID,
            queuedCredex.credexID AS credexID,
            queuedCredex.InitialAmount AS amount,
            queuedCredex.Denomination AS denomination,
@@ -290,9 +305,10 @@ async function getQueuedCredexes(session: any): Promise<Credex[]> {
       denomination: record.get("denomination"),
       CXXmultiplier: typeof CXXmultiplier?.toNumber === 'function' ? CXXmultiplier.toNumber() : Number(CXXmultiplier),
       credexSecuredDenom:
-        record.get("securerID") !== null
+        record.get("trustAccountID") !== null
           ? record.get("denomination")
-          : "floating",
+          : "UNSECURED",
+      trustAccountID: record.get("trustAccountID"),
       dueDate: record.get("dueDate"),
     };
   });

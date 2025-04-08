@@ -10,10 +10,14 @@ export interface MemberData {
   lastname: string;
   memberHandle: string;
   defaultDenom: string;
+  otpVerified: boolean;
+  activateMarket?: boolean;
+  phone?: string;
 }
 
 export interface IMemberRepository {
   findById(memberID: string): Promise<MemberData | null>;
+  findByPhone(phone: string): Promise<MemberData | null>;
 }
 
 /**
@@ -56,7 +60,9 @@ export class MemberRepository implements IMemberRepository {
               member.firstname as firstname,
               member.lastname as lastname,
               member.memberHandle as memberHandle,
-              member.defaultDenom as defaultDenom
+              member.defaultDenom as defaultDenom,
+              member.otpVerified as otpVerified,
+              member.activateMarket as activateMarket
           `;
 
             const queryResult = await tx.run(query, { memberID });
@@ -93,6 +99,8 @@ export class MemberRepository implements IMemberRepository {
           lastname,
           memberHandle,
           defaultDenom,
+          otpVerified: result.get("otpVerified") || false,
+          activateMarket: result.get("activateMarket") || false
         };
 
         // Cache the result
@@ -131,5 +139,79 @@ export class MemberRepository implements IMemberRepository {
    */
   clearAllCache(): void {
     this.cache.clear();
+  }
+
+  /**
+   * Find member by phone number
+   * @param phone - Phone number of the member
+   * @returns Member data or null if not found
+   */
+  async findByPhone(phone: string): Promise<MemberData | null> {
+    try {
+      const session = ledgerSpaceDriver.session();
+
+      try {
+        const result = await session.executeRead(
+          async (tx: ManagedTransaction) => {
+            const query = `
+            MATCH (member:Member {phone: $phone})
+            RETURN
+              member.memberID as id,
+              member.memberTier as tier,
+              member.firstname as firstname,
+              member.lastname as lastname,
+              member.memberHandle as memberHandle,
+              member.defaultDenom as defaultDenom,
+              member.otpVerified as otpVerified,
+              member.activateMarket as activateMarket,
+              member.phone as phone
+          `;
+
+            const queryResult = await tx.run(query, { phone });
+            return queryResult.records[0];
+          }
+        );
+
+        if (!result) {
+          return null;
+        }
+
+        const memberData: MemberData = {
+          id: result.get("id"),
+          tier: result.get("tier") ? result.get("tier").toNumber() : 0,
+          firstname: result.get("firstname"),
+          lastname: result.get("lastname"),
+          memberHandle: result.get("memberHandle"),
+          defaultDenom: result.get("defaultDenom"),
+          otpVerified: result.get("otpVerified") || false,
+          activateMarket: result.get("activateMarket") || false,
+          phone: result.get("phone")
+        };
+
+        // Validate required fields
+        if (!memberData.memberHandle) {
+          logger.error("Member found with null memberHandle", { phone });
+          throw new MemberError(
+            "Invalid member data: handle is required",
+            "INVALID_MEMBER_DATA",
+            ErrorCodes.Member.INVALID_DATA
+          );
+        }
+
+        return memberData;
+      } finally {
+        await session.close();
+      }
+    } catch (error) {
+      logger.error("Error in MemberRepository.findByPhone", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        phone,
+      });
+      throw new MemberError(
+        "Database error retrieving member data",
+        "DB_ERROR",
+        ErrorCodes.Admin.INTERNAL_ERROR
+      );
+    }
   }
 }

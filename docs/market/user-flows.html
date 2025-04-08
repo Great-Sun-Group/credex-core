@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Flows - Vimbiso Market</title>
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/layout.css" />
+    <link rel="stylesheet" href="../css/components.css" />
+    <link rel="stylesheet" href="../css/responsive.css" />
+    <link rel="stylesheet" href="css/variables.css" />
+    <link rel="stylesheet" href="css/market.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="market-header">
+      <div class="container">
+        <div class="header-content">
+          <a href="../index.html" class="back-link">← Back to MyCredex.App</a>
+          <h1>Vimbiso Market</h1>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Navigation -->
+    <nav class="market-nav">
+      <div class="container">
+        <ul class="nav-list">
+          <li class="nav-item"><a href="index.html">Overview</a></li>
+          <li class="nav-item active">
+            <a href="user-flows.html">User Flows</a>
+          </li>
+          <li class="nav-item"><a href="data-model.html">Data Model</a></li>
+          <li class="nav-item">
+            <a href="api-reference.html">API Reference</a>
+          </li>
+          <li class="nav-item">
+            <a href="api-workplan.html">API Implementation</a>
+          </li>
+          <li class="nav-item">
+            <a href="api-testing.html">API Testing</a>
+          </li>
+          <li class="nav-item">
+            <a href="ui-specs-seller.html">UI Specs Seller</a>
+          </li>
+          <li class="nav-item">
+            <a href="ui-specs-purchaser.html">UI Specs Purchaser</a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="market-content">
+      <div class="container">
+        <section>
+          <h2>User Flows</h2>
+          <p class="lead">
+            Step-by-step processes for vendor and purchaser interactions within
+            the Vimbiso Market.
+          </p>
+
+          <!-- Tabs for User Flows -->
+          <div class="tabs">
+            <div class="tab active" data-tab="vendor-profiles">
+              Vendor Profiles
+            </div>
+            <div class="tab" data-tab="product-listings">Product Listings</div>
+            <div class="tab" data-tab="inventory">Inventory Management</div>
+            <div class="tab" data-tab="invoicing">Invoicing & Payments</div>
+          </div>
+
+          <!-- Vendor Profiles Tab Content -->
+          <div id="vendor-profiles" class="tab-content active">
+            <h3>Munya the farmer adds a vendor profile pic</h3>
+            <p>
+              This flow demonstrates how a member can add a profile picture to
+              their vendor profile. The system handles image uploads,
+              optimization, and storage in the S3 bucket while maintaining
+              proper accounting relationships in the database.
+            </p>
+
+            <div class="mermaid-container" data-diagram="vendor-profiles"></div>
+
+            <div class="flow-details">
+              <h4>Process Details</h4>
+              <ol>
+                <li>User navigates to the Edit Member Profile screen</li>
+                <li>User selects the Add Image option</li>
+                <li>System calls the uploadAndOptimizeJpg API endpoint</li>
+                <li>
+                  System creates optimized versions of the image (200px and
+                  600px)
+                </li>
+                <li>
+                  System calls the connectAsset API endpoint to link the images
+                  to the member profile
+                </li>
+                <li>
+                  Images are stored in the S3 bucket with proper relationships
+                  in the database
+                </li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- Product Listings Tab Content -->
+          <div id="product-listings" class="tab-content">
+            <h3>Munya lists tomatoes in the Vimbiso Market</h3>
+            <p>
+              This flow shows how a vendor can list a product (tomatoes) in the
+              Vimbiso Market. The system creates the necessary account
+              structures and asset relationships to track the product.
+            </p>
+
+            <div
+              class="mermaid-container"
+              data-diagram="product-listings"
+            ></div>
+
+            <div class="flow-details">
+              <h4>Process Details</h4>
+              <ol>
+                <li>User creates a new product listing (tomatoes)</li>
+                <li>
+                  System calls the addAccountInternal API endpoint to create the
+                  product account
+                </li>
+                <li>User uploads product images</li>
+                <li>System calls the uploadAndOptimizeJpg API endpoint</li>
+                <li>System creates optimized versions of the images</li>
+                <li>
+                  System calls the connectAsset API endpoint to link the images
+                  to the product account
+                </li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- Inventory Management Tab Content -->
+          <div id="inventory" class="tab-content">
+            <h3>
+              Munya harvests $100 of tomatoes and tracks with production account
+            </h3>
+            <p>
+              This flow demonstrates how a vendor can track inventory production
+              in the system. The vendor records the harvesting of tomatoes and
+              updates the inventory accordingly.
+            </p>
+
+            <div
+              class="mermaid-container"
+              data-diagram="inventory-management"
+            ></div>
+
+            <div class="flow-details">
+              <h4>Process Details</h4>
+              <ol>
+                <li>User navigates to the Add Account screen</li>
+                <li>User creates a PRODUCTION account called "produceGrown"</li>
+                <li>System calls the addAccountInternal API endpoint</li>
+                <li>User navigates to the Add Adjusting Entry screen</li>
+                <li>User records the harvesting of $100 worth of tomatoes</li>
+                <li>System calls the addAssetMarker API endpoint</li>
+                <li>System creates the necessary accounting relationships</li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- Invoicing Tab Content -->
+          <div id="invoicing" class="tab-content">
+            <h3>
+              Munya creates an invoice for $20 of tomatoes which are purchased
+              by Farai the merchant
+            </h3>
+            <p>
+              This flow illustrates the invoicing and payment process between a
+              vendor and a purchaser. Munya creates an invoice for tomatoes,
+              which Farai pays using a credex.
+            </p>
+
+            <div
+              class="mermaid-container"
+              data-diagram="invoicing-payments"
+            ></div>
+
+            <div class="flow-details">
+              <h4>Process Details</h4>
+              <ol>
+                <li>Munya navigates to the Vimbiso Store screen</li>
+                <li>Munya creates an invoice for $20 of tomatoes</li>
+                <li>System calls the generateInvoice API endpoint</li>
+                <li>System displays a QR code for the invoice</li>
+                <li>Farai scans the QR code</li>
+                <li>
+                  Farai is directed to the Create Credex from Invoice screen
+                </li>
+                <li>Farai confirms the payment</li>
+                <li>
+                  System calls the createCredex API endpoint with the invoiceID
+                </li>
+                <li>System creates the Credex with a GLid field</li>
+                <li>
+                  System creates an EXECUTES relationship from the Credex to the
+                  Invoice
+                </li>
+                <li>
+                  System creates AssetMarker nodes with the same GLid to
+                  represent the accounting entries
+                </li>
+              </ol>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="market-footer">
+      <div class="container">
+        <p>&copy; 2025 VimbisoPay. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Initialize mermaid with configuration
+        mermaid.initialize({
+          startOnLoad: false, // We'll manually render diagrams
+          theme: "dark",
+          securityLevel: "loose",
+          themeVariables: {
+            primaryColor: "#04a0b2",
+            primaryTextColor: "#ffffff",
+            primaryBorderColor: "#fbb016",
+            lineColor: "#04a0b2",
+            secondaryColor: "#006400",
+            tertiaryColor: "#fbb016",
+          },
+        });
+
+        // Function to load and render a mermaid diagram
+        async function loadAndRenderDiagram(container) {
+          if (container.getAttribute("data-loaded") === "true") {
+            return; // Already loaded
+          }
+
+          try {
+            const diagramName = container.getAttribute("data-diagram");
+            const response = await fetch(`diagrams/${diagramName}.mmd`);
+            const diagramCode = await response.text();
+
+            // Create a new div for the mermaid content
+            const mermaidDiv = document.createElement("div");
+            mermaidDiv.className = "mermaid";
+            mermaidDiv.textContent = diagramCode;
+
+            // Clear the container and append the mermaid div
+            container.innerHTML = "";
+            container.appendChild(mermaidDiv);
+            container.setAttribute("data-loaded", "true");
+
+            // Render this specific diagram
+            mermaid.init(undefined, mermaidDiv);
+          } catch (error) {
+            console.error(`Error loading diagram:`, error);
+            container.innerHTML = `<p>Error loading diagram: ${error.message}</p>`;
+          }
+        }
+
+        // Tab functionality
+        const tabs = document.querySelectorAll(".tab");
+        const tabContents = document.querySelectorAll(".tab-content");
+
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
+            const tabId = tab.getAttribute("data-tab");
+
+            // Remove active class from all tabs and contents
+            tabs.forEach((t) => t.classList.remove("active"));
+            tabContents.forEach((c) => c.classList.remove("active"));
+
+            // Add active class to clicked tab and corresponding content
+            tab.classList.add("active");
+            const activeContent = document.getElementById(tabId);
+            activeContent.classList.add("active");
+
+            // Load and render the diagram in the active tab
+            const diagramContainer =
+              activeContent.querySelector(".mermaid-container");
+            if (diagramContainer) {
+              loadAndRenderDiagram(diagramContainer);
+            }
+          });
+        });
+
+        // Check for hash in URL to activate specific tab
+        if (window.location.hash) {
+          const hash = window.location.hash.substring(1);
+          const tab = document.querySelector(`.tab[data-tab="${hash}"]`);
+          if (tab) {
+            tab.click();
+          }
+        } else {
+          // Load the diagram in the default active tab
+          const activeContent = document.querySelector(".tab-content.active");
+          if (activeContent) {
+            const diagramContainer =
+              activeContent.querySelector(".mermaid-container");
+            if (diagramContainer) {
+              loadAndRenderDiagram(diagramContainer);
+            }
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

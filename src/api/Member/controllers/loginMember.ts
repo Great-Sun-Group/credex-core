@@ -40,7 +40,7 @@ export async function loginMemberExpressHandler(
   });
 
   try {
-    const { phone } = req.body;
+    const { phone, password } = req.body;
 
     if (!phone) {
       logger.warn("Missing phone number", { requestId });
@@ -89,8 +89,12 @@ export async function loginMemberExpressHandler(
       return;
     }
 
-    logger.info("Attempting to login member", { phone, requestId });
-    const result = await LoginMemberService(phone);
+    logger.info("Attempting to login member", { 
+      phone, 
+      hasPassword: !!password,
+      requestId 
+    });
+    const result = await LoginMemberService({ phone, password });
 
     if (!result.success || !result.data) {
       logger.warn("Login failed", {
@@ -99,18 +103,23 @@ export async function loginMemberExpressHandler(
         requestId,
       });
 
-      const statusCode = result.message.includes("not found")
-        ? 404
-        : result.message.includes("Invalid")
-          ? 400
-          : 401;
+      let statusCode = 401; // Default to unauthorized
+      let errorType = ApiActionType.ERROR_UNAUTHORIZED;
+      let errorCode = "LOGIN_FAILED";
 
-      const errorType =
-        statusCode === 404
-          ? ApiActionType.ERROR_NOT_FOUND
-          : statusCode === 400
-            ? ApiActionType.ERROR_VALIDATION
-            : ApiActionType.ERROR_UNAUTHORIZED;
+      if (result.message.includes("not found")) {
+        statusCode = 404;
+        errorType = ApiActionType.ERROR_NOT_FOUND;
+        errorCode = "NOT_FOUND";
+      } else if (result.message.includes("Invalid")) {
+        statusCode = 400;
+        errorType = ApiActionType.ERROR_VALIDATION;
+        errorCode = "INVALID_CREDENTIALS";
+      } else if (result.message.includes("Password is required")) {
+        statusCode = 401;
+        errorType = ApiActionType.ERROR_UNAUTHORIZED;
+        errorCode = "PASSWORD_REQUIRED";
+      }
 
       const response: LoginErrorResponse = {
         message: result.message,
@@ -121,12 +130,7 @@ export async function loginMemberExpressHandler(
             timestamp: new Date().toISOString(),
             actor: "system",
             details: {
-              code:
-                statusCode === 404
-                  ? "NOT_FOUND"
-                  : statusCode === 400
-                    ? "INVALID_PHONE"
-                    : "LOGIN_FAILED",
+              code: errorCode,
               reason: result.message,
             },
           },
@@ -160,7 +164,8 @@ export async function loginMemberExpressHandler(
     // Combine all account data into a single dashboard
     const dashboard = {
       member: dashboards[0].member, // Member data is same for all dashboards
-      accounts: dashboards.flatMap(d => d.accounts || [])
+      accounts: dashboards.flatMap(d => d.accounts || []),
+      accountsInternal: dashboards[0].accountsInternal // Internal accounts are the same for all dashboards
     };
 
     const response: LoginResponse = {

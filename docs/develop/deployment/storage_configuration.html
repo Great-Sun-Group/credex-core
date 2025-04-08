@@ -2,25 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Storage Configuration Documentation</title>
     <link rel="stylesheet" href="../../style.css" />
   </head>
   <body>
-    <div id="menuButton" onclick="window.location.href='../../menu.html'">
-      <img src="../../images/logo.png" alt="Menu" class="menu-logo">
-      <span class="menu-text">MENU</span>
-    </div>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
 
-    <div class="header-logo">
-      <img src="../../images/logo.png" alt="Credex Logo" class="secondary-logo" />
-    </div>
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">Storage Configuration Documentation</h1>
+
     <div class="container">
       <h1>Storage Configuration Documentation</h1>
 
       <h2>Folder Structure</h2>
 
-      <pre><code>credex-verification-photos-{environment}/
+      <pre><code>credexbuckets2-verifybucket-photos-{environment}/
 ├── uploads/
 │   ├── id-documents/     # Raw ID document uploads
 │   └── selfies/         # Raw selfie photo uploads
@@ -30,10 +34,10 @@
 ├── archived/            # Long-term storage for historical records
 └── temp/               # Temporary storage for processing
 
-credex-verification-logs-{environment}/
+credexbuckets2-verifybucket-logs-{environment}/
 └── access-logs/        # S3 access logs for audit trail
 
-credex-verification-backups-{environment}/
+credexbuckets2-verifybucket-backups-{environment}/
 └── processed/          # Cross-region backup of processed files</code></pre>
 
       <h2>Lifecycle Policies</h2>
@@ -109,7 +113,8 @@ credex-verification-backups-{environment}/
       <ul>
         <li>Primary Region: af-south-1</li>
         <li>Backup Region: us-east-1</li>
-        <li>Replication Rules:
+        <li>
+          Replication Rules:
           <ul>
             <li>Processed files only</li>
             <li>Storage class: STANDARD_IA in backup region</li>
@@ -184,31 +189,41 @@ credex-verification-backups-{environment}/
 
       <h3>Storage Operations</h3>
       <pre><code># Upload test
-aws s3 cp test-image.jpg s3://credex-verification-photos-${ENV}/uploads/id-documents/
+aws s3 cp test-image.jpg s3://credexbuckets2-verifybucket-photos-${ENV}/uploads/id-documents/
 
 # Read test
-aws s3 cp s3://credex-verification-photos-${ENV}/processed/id-documents/test-image.jpg .
+aws s3 cp s3://credexbuckets2-verifybucket-photos-${ENV}/processed/id-documents/test-image.jpg .
 
 # List objects
-aws s3 ls s3://credex-verification-photos-${ENV}/uploads/id-documents/
+aws s3 ls s3://credexbuckets2-verifybucket-photos-${ENV}/uploads/id-documents/
 
 # Check encryption
-aws s3api head-object --bucket credex-verification-photos-${ENV} --key uploads/id-documents/test-image.jpg</code></pre>
+aws s3api head-object --bucket credexbuckets2-verifybucket-photos-${ENV} --key uploads/id-documents/test-image.jpg</code></pre>
 
       <h3>Lifecycle Testing</h3>
       <pre><code># Check lifecycle rules
-aws s3api get-bucket-lifecycle-configuration --bucket credex-verification-photos-${ENV}
+aws s3api get-bucket-lifecycle-configuration --bucket credexbuckets2-verifybucket-photos-${ENV}
 
 # Verify transitions
-aws s3api head-object --bucket credex-verification-photos-${ENV} --key processed/id-documents/test-image.jpg</code></pre>
+aws s3api head-object --bucket credexbuckets2-verifybucket-photos-${ENV} --key processed/id-documents/test-image.jpg</code></pre>
 
       <h3>Replication Testing</h3>
       <pre><code># Check replication status
-aws s3api head-object --bucket credex-verification-backups-${ENV} --key processed/id-documents/test-image.jpg
+aws s3api head-object --bucket credexbuckets2-verifybucket-backups-${ENV} --key processed/id-documents/test-image.jpg
 
 # Verify backup bucket
-aws s3api get-bucket-versioning --bucket credex-verification-backups-${ENV}</code></pre>
-
+aws s3api get-bucket-versioning --bucket credexbuckets2-verifybucket-backups-${ENV}</code></pre>
     </div>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for deployment subdirectory
+      window.templateLevels = 2;
+    </script>
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
   </body>
 </html>

@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Trust Account Audits</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-due-diligence"></div>
+
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <h1 class="chapter-title">Trust Account Audits</h1>
+
+    <p>
+      Think of a trust account like a community savings club's lockbox, but with
+      three important differences:
+    </p>
+    <ol>
+      <li>
+        Instead of one person holding the key, the whole community can verify
+        what's inside
+      </li>
+      <li>
+        Instead of counting cash by hand, computers check the numbers constantly
+      </li>
+      <li>
+        Instead of just trusting the treasurer's word, there are bank statements
+        proving the money exists
+      </li>
+    </ol>
+
+    <h2>The Three-Way Match</h2>
+    <p>
+      Every trust account must pass three checks, like having three different
+      people count the money and all getting the same answer:
+    </p>
+    <ol>
+      <li>
+        <strong>What the Trust Says It Has:</strong>
+        <ul>
+          <li>Every secured credex the trust has issued</li>
+          <li>Like a detailed list of who the trust owes money to</li>
+          <li>Must match exactly with what's in the bank</li>
+        </ul>
+      </li>
+      <li>
+        <strong>What's Actually in the Bank:</strong>
+        <ul>
+          <li>Real bank statements showing the money is there</li>
+          <li>Updated daily so everyone knows the backing is real</li>
+          <li>
+            Each trust account has specific details for its jurisdiction (like
+            transit numbers for Canadian banks or branch codes for Zimbabwean
+            banks)
+          </li>
+        </ul>
+      </li>
+      <li>
+        <strong>What People's Accounts Show:</strong>
+        <ul>
+          <li>The sum of all balances in the system</li>
+          <li>Like having everyone in the savings club show their passbooks</li>
+          <li>Must match both what the trust claims and what's in the bank</li>
+        </ul>
+      </li>
+    </ol>
+
+    <h2>When Do We Check?</h2>
+    <p>
+      The system is always watching, but there are three special times when
+      everything gets extra attention:
+    </p>
+    <ol>
+      <li>
+        Before Daily Updates:
+        <ul>
+          <li>Like counting the money before opening the shop</li>
+          <li>Makes sure we're starting with correct numbers</li>
+          <li>Creates a backup point we can return to if needed</li>
+        </ul>
+      </li>
+      <li>
+        After Daily Updates:
+        <ul>
+          <li>Like counting the till after a busy day</li>
+          <li>Verifies all the day's transactions were proper</li>
+          <li>If anything's wrong, we can roll back to the morning's count</li>
+        </ul>
+      </li>
+      <li>
+        During Every Transaction:
+        <ul>
+          <li>Like having someone watch every time money moves</li>
+          <li>Catches problems before they can grow</li>
+          <li>Stops any transaction that would create an imbalance</li>
+        </ul>
+      </li>
+    </ol>
+
+    <h2>Trust-Specific Transaction Handling</h2>
+    <p>
+      The system maintains strict separation between different trust accounts'
+      transactions:
+    </p>
+    <ul>
+      <li>
+        <strong>Isolated Transaction Paths:</strong>
+        <ul>
+          <li>
+            Each trust account has its own unique transaction paths in the
+            system
+          </li>
+          <li>
+            Secured credexes can only form loops with other credexes from the
+            same trust account
+          </li>
+          <li>
+            This ensures proper accounting and maintains the direct link between
+            real assets and secured balances
+          </li>
+        </ul>
+      </li>
+      <li>
+        <strong>Trust-Specific Identifiers:</strong>
+        <ul>
+          <li>Each trust account gets a unique identifier in the system</li>
+          <li>All transactions are tagged with this identifier</li>
+          <li>
+            Makes it easy to track and verify all movements within each trust
+            account
+          </li>
+        </ul>
+      </li>
+      <li>
+        <strong>Automated Separation:</strong>
+        <ul>
+          <li>
+            The system automatically keeps different trust accounts'
+            transactions separate
+          </li>
+          <li>
+            Prevents any accidental mixing of secured credexes from different
+            trust accounts
+          </li>
+          <li>Maintains clear audit trails for each trust account</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h2>How We Keep Things Safe</h2>
+    <p>
+      The system has multiple safety features, like a lockbox with several
+      different locks:
+    </p>
+    <ul>
+      <li>
+        <strong>Double-Entry Protection:</strong>
+        <ul>
+          <li>Every transaction is recorded in two places</li>
+          <li>Like having two separate record books that must match</li>
+          <li>If they don't match, we know something's wrong</li>
+        </ul>
+      </li>
+      <li>
+        <strong>Automatic Safeguards:</strong>
+        <ul>
+          <li>Trust accounts can only issue what they can back</li>
+          <li>The system checks bank details are valid for each country</li>
+          <li>Continuous monitoring catches any issues instantly</li>
+        </ul>
+      </li>
+      <li>
+        <strong>Community Verification:</strong>
+        <ul>
+          <li>Anyone can check the total amounts</li>
+          <li>Daily bank statement totals are public</li>
+          <li>
+            Your personal balance stays private, but you can verify the system
+            is sound
+          </li>
+        </ul>
+      </li>
+    </ul>
+
+    <h2>If Something Goes Wrong</h2>
+    <p>
+      The system has multiple ways to fix problems, like having spare keys for
+      the lockbox:
+    </p>
+    <ul>
+      <li>
+        <strong>Quick Detection:</strong>
+        <ul>
+          <li>Problems are found immediately</li>
+          <li>Like noticing a mistake while counting, not weeks later</li>
+          <li>Detailed records show exactly what happened</li>
+        </ul>
+      </li>
+      <li>
+        <strong>Automatic Fixes:</strong>
+        <ul>
+          <li>If daily updates fail, everything rolls back</li>
+          <li>Like being able to undo any mistakes</li>
+          <li>No partial changes - everything works or nothing changes</li>
+        </ul>
+      </li>
+      <li>
+        <strong>Human Oversight:</strong>
+        <ul>
+          <li>Detailed reports for manual review</li>
+          <li>Clear steps for fixing any issues</li>
+          <li>Multiple people can verify the fixes</li>
+        </ul>
+      </li>
+    </ul>
+
+    <p>
+      This system works like a modern version of the community savings clubs
+      that have served African communities for generations. Instead of relying
+      on one trusted elder, we use technology to make sure everyone can verify
+      their money is safe. Every secured credex is backed by real money in a
+      real bank account, and anyone can check this is true at any time. This
+      creates the foundation of trust that lets the whole credex ecosystem work
+      for everyone's benefit.
+    </p>
+    <!-- Footer Component -->
+    <div id="footer-due-diligence"></div>
+
+    <!-- Template System JavaScript -->
+    <script src="../js/template.js"></script>
+    <script src="../js/dropdown.js"></script>
+  </body>
+</html>

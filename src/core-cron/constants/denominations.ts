@@ -47,12 +47,6 @@ const denominations: Denomination[] = [
     regionalization: "en-CA",
     sourceForRate: "OpenExchangeRates",
   },
-  {
-    code: "ZWG",
-    fulldescription: "ZWG (Zimbabwe Gold Official Rate)",
-    regionalization: "en-CA",
-    sourceForRate: "RBZ",
-  },
 ];
 
 /**

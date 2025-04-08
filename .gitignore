@@ -167,3 +167,6 @@ tfplan
 aws/credentials
 aws/config
 aws/*.log
+
+# PR cleanup script
+cleanup-pr.sh

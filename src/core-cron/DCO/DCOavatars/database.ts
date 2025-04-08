@@ -83,7 +83,7 @@ export async function getActiveDCOGiveTemplates(
     AND (template.remainingPays IS NULL OR template.remainingPays > 0)
     AND template.lastProcessed IS NULL
     MATCH (issuer:Account)-[:ACTIVE]->(template)-[:ACTIVE]->(target:Account)
-    WHERE target.accountType = "CREDEX_FOUNDATION"
+    WHERE target.isCredexFoundation = true
     WITH DISTINCT template, issuer, target, daynode
     RETURN
       template.recurringID as recurringID,
@@ -185,10 +185,11 @@ export async function deleteMarkedAuthorizations(
   logger.debug("Updating template processing status", { requestId, avatarId });
 
   const query = `
+    MATCH (daynode:Daynode {Active: true})
     MATCH (avatar:Recurring {recurringID: $avatarId})
     WHERE avatar.status = 'ACTIVE'
     SET avatar.lastProcessed = datetime(),
-        avatar.nextPayDate = date(datetime()) + duration.inDays(avatar.payFrequency).days
+        avatar.nextPayDate = date(daynode.Date) + duration.inDays(avatar.payFrequency).days
     WITH avatar
     MATCH (avatar)-[r:MARKED_FOR_DELETION]->()
     DELETE r

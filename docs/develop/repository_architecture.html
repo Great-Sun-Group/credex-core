@@ -2,24 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Repository Architecture</title>
     <link rel="stylesheet" href="../style.css" />
   </head>
   <body>
-    <div id="menuButton" onclick="window.location.href='../menu.html'">
-      <img src="../images/logo.png" alt="Menu" class="menu-logo">
-      <span class="menu-text">MENU</span>
-    </div>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
 
-    <div class="header-logo">
-      <img src="../images/logo.png" alt="Credex Logo" class="secondary-logo" />
-    </div>
-    <h1>Repository Architecture</h1>
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">Repository Architecture</h1>
 
     <p>
-      The credex-core API uses a repository pattern to abstract database operations and optimize 
-      data access. This document outlines the key repositories and their usage patterns.
+      The credex-core API uses a repository pattern to abstract database
+      operations and optimize data access. This document outlines the key
+      repositories and their usage patterns.
     </p>
 
     <h2>Member Repositories</h2>
@@ -52,19 +55,21 @@ const memberData = await memberRepo.findById(memberID);
 if (memberData) {
   // Access member properties
   const { tier, firstname, lastname, handle, defaultDenom } = memberData;
-}</pre>
+}</pre
+        >
       </li>
     </ul>
 
     <h3>SpendLimitRepository</h3>
-    <p>
-      Manages tier-specific spend limit calculations:
-    </p>
+    <p>Manages tier-specific spend limit calculations:</p>
     <ul>
       <li>
         <strong>Key Methods</strong>
         <ul>
-          <li>getRemainingLimit: Calculates available spend based on tier and usage</li>
+          <li>
+            getRemainingLimit: Calculates available spend based on tier and
+            usage
+          </li>
           <li>getCurrentMonthUsage: Tracks month-to-date spend</li>
         </ul>
       </li>
@@ -81,14 +86,14 @@ if (memberData) {
     <h2>Account Repositories</h2>
 
     <h3>AccountRepository</h3>
-    <p>
-      Manages account data and access control:
-    </p>
+    <p>Manages account data and access control:</p>
     <ul>
       <li>
         <strong>Key Methods</strong>
         <ul>
-          <li>findByIdWithAccess: Gets account data with authorization check</li>
+          <li>
+            findByIdWithAccess: Gets account data with authorization check
+          </li>
           <li>findAccessibleAccountIds: Lists accounts a member can access</li>
         </ul>
       </li>
@@ -108,20 +113,21 @@ const accountData = await accountRepo.findByIdWithAccess(accountID, memberID);
 if (accountData) {
   // Access account properties
   const { accountName, accountType, defaultDenom, isOwnedAccount } = accountData;
-}</pre>
+}</pre
+        >
       </li>
     </ul>
 
     <h3>BalanceRepository</h3>
-    <p>
-      Handles complex balance calculations across denominations:
-    </p>
+    <p>Handles complex balance calculations across denominations:</p>
     <ul>
       <li>
         <strong>Key Methods</strong>
         <ul>
           <li>getBalances: Retrieves comprehensive balance data</li>
-          <li>getSecuredBalances: Gets secured credex balances by denomination</li>
+          <li>
+            getSecuredBalances: Gets secured credex balances by denomination
+          </li>
           <li>getUnsecuredBalances: Gets unsecured credex totals</li>
         </ul>
       </li>
@@ -142,7 +148,8 @@ const {
   securedNetBalancesByDenom,
   unsecuredBalancesInDefaultDenom,
   netCredexAssetsInDefaultDenom
-} = balanceData;</pre>
+} = balanceData;</pre
+        >
       </li>
     </ul>
 
@@ -150,7 +157,8 @@ const {
 
     <h3>Repository Initialization</h3>
     <p>
-      Repositories should be initialized at the service level and passed to controllers:
+      Repositories should be initialized at the service level and passed to
+      controllers:
     </p>
     <pre>
 // Initialize repositories
@@ -161,12 +169,11 @@ const spendLimitService = new SpendLimitService();
 const memberDashboardService = new MemberDashboardService(
   memberRepo,
   spendLimitService
-);</pre>
+);</pre
+    >
 
     <h3>Error Handling</h3>
-    <p>
-      Repositories use standardized error handling:
-    </p>
+    <p>Repositories use standardized error handling:</p>
     <ul>
       <li>Database errors are wrapped in domain-specific errors</li>
       <li>Not found conditions return null rather than throwing</li>
@@ -174,9 +181,7 @@ const memberDashboardService = new MemberDashboardService(
     </ul>
 
     <h3>Caching Strategy</h3>
-    <p>
-      All repositories implement consistent caching:
-    </p>
+    <p>All repositories implement consistent caching:</p>
     <ul>
       <li>30-second TTL for standard operations</li>
       <li>Cache keys include all relevant identifiers</li>
@@ -185,9 +190,7 @@ const memberDashboardService = new MemberDashboardService(
     </ul>
 
     <h3>Query Optimization</h3>
-    <p>
-      Repositories follow these optimization principles:
-    </p>
+    <p>Repositories follow these optimization principles:</p>
     <ul>
       <li>Single query pattern for related data</li>
       <li>Proper use of Neo4j indexes</li>
@@ -195,5 +198,11 @@ const memberDashboardService = new MemberDashboardService(
       <li>Minimal data transformation in memory</li>
     </ul>
 
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script src="../js/template.js"></script>
+    <script src="../js/dropdown.js"></script>
   </body>
 </html>

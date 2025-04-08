@@ -26,8 +26,19 @@ export interface IBalanceRepository {
  * - Result caching
  */
 export class BalanceRepository implements IBalanceRepository {
-  private cache: Map<string, { data: BalanceData; timestamp: number }> = new Map();
+  private static instance: BalanceRepository;
+  private cache: Map<string, { data: BalanceData; timestamp: number }> =
+    new Map();
   private readonly CACHE_TTL = 30000; // 30 seconds
+
+  private constructor() {}
+
+  public static getInstance(): BalanceRepository {
+    if (!BalanceRepository.instance) {
+      BalanceRepository.instance = new BalanceRepository();
+    }
+    return BalanceRepository.instance;
+  }
 
   /**
    * Get all balance data for an account
@@ -46,78 +57,125 @@ export class BalanceRepository implements IBalanceRepository {
 
       try {
         // Single optimized query to get all balance data
-        const result = await session.executeRead(async (tx: ManagedTransaction) => {
-          const query = `
+        const result = await session.executeRead(
+          async (tx: ManagedTransaction) => {
+            const query = `
             // Match the account and get its default denomination
             MATCH (account:Account {accountID: $accountID})
             
             // Get active daynode for rate conversions
             MATCH (daynode:Daynode {Active: true})
             
-            // Get all unique denominations from Credex nodes
-            OPTIONAL MATCH (account)-[:OWES|OFFERED]-(securedCredex:Credex)<-[:SECURES]-()
-            WITH DISTINCT securedCredex.Denomination AS denom, account, daynode
+            // First collect all active denominations from secured credexes
+            WITH account, daynode
+
+            // Get denominations from incoming OWES
+            OPTIONAL MATCH (account)<-[:OWES]-(inCredex:Credex)<-[:SECURES]-()
+            WHERE NOT (inCredex)-[:CLEARED]->()
+            WITH account, daynode, collect(DISTINCT inCredex.Denomination) AS inDenoms
+
+            // Get denominations from outgoing OWES and OFFERS
+            OPTIONAL MATCH (account)-[r:OWES|OFFERS]->(outCredex:Credex)<-[:SECURES]-()
+            WHERE NOT (outCredex)-[:CLEARED]->() AND type(r) IN ['OWES', 'OFFERS']
+            WITH account, daynode, inDenoms, collect(DISTINCT outCredex.Denomination) AS outDenoms
+
+            // Combine denominations
+            WITH account, daynode, inDenoms + outDenoms AS allDenoms
+
+            // Unwind and make unique list of denominations
+            UNWIND allDenoms AS denom
+            WITH DISTINCT denom, account, daynode
             WHERE denom IS NOT NULL
-            
-            // Calculate secured balances by denomination
+
+            // Calculate secured balances
+            // Incoming - only count OWES (certain)
             OPTIONAL MATCH (account)<-[:OWES]-(inSecuredCredex:Credex {Denomination: denom})<-[:SECURES]-()
+            WHERE NOT (inSecuredCredex)-[:CLEARED]->()
             WITH denom, account, daynode,
-                collect(DISTINCT inSecuredCredex) AS inSecuredCredexes
-            
-            OPTIONAL MATCH (account)-[:OWES|OFFERED]->(outSecuredCredex:Credex {Denomination: denom})<-[:SECURES]-()
-            WITH denom, account, daynode,
-                reduce(s = 0, n IN inSecuredCredexes | s + n.OutstandingAmount) AS sumSecuredIn,
-                collect(DISTINCT outSecuredCredex) AS outSecuredCredexes
-            
-            WITH denom, account, daynode,
-                sumSecuredIn,
-                reduce(s = 0, n IN outSecuredCredexes | s + n.OutstandingAmount) AS sumSecuredOut
-            
+                reduce(s = 0, n IN collect(DISTINCT inSecuredCredex) | s + n.OutstandingAmount) AS sumSecuredIn
+
+            // Outgoing OWES - use OutstandingAmount
+            OPTIONAL MATCH (account)-[:OWES]->(outSecuredOwesCredex:Credex {Denomination: denom})<-[:SECURES]-()
+            WHERE NOT (outSecuredOwesCredex)-[:CLEARED]->()
+            WITH denom, account, daynode, sumSecuredIn,
+                reduce(s = 0, n IN collect(DISTINCT outSecuredOwesCredex) | s + n.OutstandingAmount) AS sumSecuredOwesOut
+
+            // Outgoing OFFERS - use InitialAmount
+            OPTIONAL MATCH (account)-[:OFFERS]->(outSecuredOffersCredex:Credex {Denomination: denom})<-[:SECURES]-()
+            WHERE NOT (outSecuredOffersCredex)-[:CLEARED]->()
+            WITH denom, account, daynode, sumSecuredIn, sumSecuredOwesOut,
+                reduce(s = 0, n IN collect(DISTINCT outSecuredOffersCredex) | s + n.InitialAmount) AS sumSecuredOffersOut
+
+            // Calculate total outgoing (OWES + OFFERS)
+            WITH denom, account, daynode, sumSecuredIn,
+                sumSecuredOwesOut + sumSecuredOffersOut AS sumSecuredOut
+
             // Calculate net secured balance for each denomination
             WITH denom, account, daynode,
-                (sumSecuredIn - sumSecuredOut) / daynode[denom] AS netSecured
-            WHERE netSecured <> 0
+                (sumSecuredIn - sumSecuredOut) / daynode[toString(denom)] AS netSecured
             
             // Get unsecured balances
             WITH collect({denom: denom, amount: netSecured}) AS securedBalances,
                 account, daynode
             
+            // Get unsecured incoming OWES
             OPTIONAL MATCH (account)<-[:OWES]-(owesInCredexUnsecured:Credex)
             WHERE NOT (owesInCredexUnsecured)<-[:SECURES]-()
             WITH account, daynode, securedBalances,
                 collect(DISTINCT owesInCredexUnsecured) AS unsecuredCredexesIn
             
+            // Get unsecured outgoing OWES
             OPTIONAL MATCH (account)-[:OWES]->(owesOutCredexUnsecured:Credex)
             WHERE NOT (owesOutCredexUnsecured)<-[:SECURES]-()
             WITH account, daynode, securedBalances, unsecuredCredexesIn,
-                collect(DISTINCT owesOutCredexUnsecured) AS unsecuredCredexesOut
+                collect(DISTINCT owesOutCredexUnsecured) AS unsecuredCredexesOwesOut
             
-            // Calculate total assets
+            // Get unsecured outgoing OFFERS
+            OPTIONAL MATCH (account)-[:OFFERS]->(offersOutCredexUnsecured:Credex)
+            WHERE NOT (offersOutCredexUnsecured)<-[:SECURES]-()
+            WITH account, daynode, securedBalances, unsecuredCredexesIn, unsecuredCredexesOwesOut,
+                collect(DISTINCT offersOutCredexUnsecured) AS unsecuredCredexesOffersOut
+            
+            // Calculate total assets including both OWES and OFFERS
+            // Incoming OWES
             OPTIONAL MATCH (account)<-[:OWES]-(owesInCredexAll:Credex)
-            WITH account, daynode, securedBalances, unsecuredCredexesIn, unsecuredCredexesOut,
+            WITH account, daynode, securedBalances, unsecuredCredexesIn, unsecuredCredexesOwesOut, unsecuredCredexesOffersOut,
                 collect(DISTINCT owesInCredexAll) AS owesInCredexesAll
             
+            // Outgoing OWES
             OPTIONAL MATCH (account)-[:OWES]->(owesOutCredexAll:Credex)
-            WITH account, daynode, securedBalances, unsecuredCredexesIn, unsecuredCredexesOut,
+            WITH account, daynode, securedBalances, unsecuredCredexesIn, unsecuredCredexesOwesOut, unsecuredCredexesOffersOut,
                 owesInCredexesAll, collect(DISTINCT owesOutCredexAll) AS owesOutCredexesAll
             
+            // Outgoing OFFERS
+            OPTIONAL MATCH (account)-[:OFFERS]->(offersOutCredexAll:Credex)
+            WITH account, daynode, securedBalances, unsecuredCredexesIn, unsecuredCredexesOwesOut, unsecuredCredexesOffersOut,
+                owesInCredexesAll, owesOutCredexesAll,
+                collect(DISTINCT offersOutCredexAll) AS offersOutCredexesAll
+            
             WITH account, daynode, securedBalances,
+                // Receivables (incoming OWES)
                 REDUCE(total = 0, credex IN unsecuredCredexesIn | total + credex.OutstandingAmount) AS receivablesTotalCXX,
-                REDUCE(total = 0, credex IN unsecuredCredexesOut | total + credex.OutstandingAmount) AS payablesTotalCXX,
+                // Payables (outgoing OWES + OFFERS)
+                REDUCE(total = 0, credex IN unsecuredCredexesOwesOut | total + credex.OutstandingAmount) +
+                REDUCE(total = 0, credex IN unsecuredCredexesOffersOut | total + credex.InitialAmount) AS payablesTotalCXX,
+                // Calculate net assets including OWES and OFFERS
                 REDUCE(total = 0, credex IN owesInCredexesAll | total + credex.OutstandingAmount) -
-                REDUCE(total = 0, credex IN owesOutCredexesAll | total + credex.OutstandingAmount) AS netCredexAssetsCXX
+                REDUCE(total = 0, credex IN owesOutCredexesAll | total + credex.OutstandingAmount) -
+                REDUCE(total = 0, credex IN offersOutCredexesAll | total + credex.InitialAmount) AS netCredexAssetsCXX
             
             RETURN
                 account.defaultDenom AS defaultDenom,
                 securedBalances,
-                receivablesTotalCXX / daynode[account.defaultDenom] AS receivablesTotalInDefaultDenom,
-                payablesTotalCXX / daynode[account.defaultDenom] AS payablesTotalInDefaultDenom,
-                netCredexAssetsCXX / daynode[account.defaultDenom] AS netCredexAssetsInDefaultDenom
+                receivablesTotalCXX / daynode[toString(account.defaultDenom)] AS receivablesTotalInDefaultDenom,
+                payablesTotalCXX / daynode[toString(account.defaultDenom)] AS payablesTotalInDefaultDenom,
+                netCredexAssetsCXX / daynode[toString(account.defaultDenom)] AS netCredexAssetsInDefaultDenom
           `;
 
-          const queryResult = await tx.run(query, { accountID });
-          return queryResult.records[0];
-        });
+            const queryResult = await tx.run(query, { accountID });
+            return queryResult.records[0];
+          }
+        );
 
         if (!result) {
           throw new AccountError(
@@ -145,7 +203,8 @@ export class BalanceRepository implements IBalanceRepository {
               defaultDenom
             )} ${defaultDenom}`,
             netPayRec: `${denomFormatter(
-              result.get("receivablesTotalInDefaultDenom") - result.get("payablesTotalInDefaultDenom"),
+              result.get("receivablesTotalInDefaultDenom") -
+                result.get("payablesTotalInDefaultDenom"),
               defaultDenom
             )} ${defaultDenom}`,
           },
@@ -162,7 +221,6 @@ export class BalanceRepository implements IBalanceRepository {
         });
 
         return balanceData;
-
       } finally {
         await session.close();
       }

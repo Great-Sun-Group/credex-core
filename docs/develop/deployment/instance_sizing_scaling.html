@@ -2,15 +2,22 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Credex Instance Sizing - Scaling Scenarios</title>
     <link rel="stylesheet" href="../../style.css" />
   </head>
   <body>
-    <div id="menuButton" onclick="window.location.href='../../menu.html'">
-      <img src="../../images/logo.png" alt="Menu" class="menu-logo">
-      <span class="menu-text">MENU</span>
-    </div>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">Credex Instance Sizing - Scaling Scenarios</h1>
 
     <div class="container">
       <h1>Credex Instance Sizing - Scaling Scenarios</h1>
@@ -115,10 +122,22 @@
 
         <h3>Cost Reduction Strategies</h3>
         <ul>
-          <li><strong>Volume Discounts</strong>: 20-30% reduction ($300,000 - $450,000/month)</li>
-          <li><strong>Reserved Instances</strong>: Up to 60% reduction on compute ($400,000 - $500,000/month)</li>
-          <li><strong>Storage Optimization</strong>: 30-40% reduction in storage costs ($20,000 - $30,000/month)</li>
-          <li><strong>Custom Hardware</strong>: 15-25% reduction ($150,000 - $250,000/month)</li>
+          <li>
+            <strong>Volume Discounts</strong>: 20-30% reduction ($300,000 -
+            $450,000/month)
+          </li>
+          <li>
+            <strong>Reserved Instances</strong>: Up to 60% reduction on compute
+            ($400,000 - $500,000/month)
+          </li>
+          <li>
+            <strong>Storage Optimization</strong>: 30-40% reduction in storage
+            costs ($20,000 - $30,000/month)
+          </li>
+          <li>
+            <strong>Custom Hardware</strong>: 15-25% reduction ($150,000 -
+            $250,000/month)
+          </li>
         </ul>
 
         <h3>Technical Optimizations</h3>
@@ -159,13 +178,28 @@
       <section>
         <h2>Implementation Considerations</h2>
         <ul>
-          <li>Implement gradual scaling with continuous performance monitoring</li>
+          <li>
+            Implement gradual scaling with continuous performance monitoring
+          </li>
           <li>Use data-driven approach to optimize resource allocation</li>
-          <li>Consider hybrid solutions combining cloud and custom infrastructure</li>
+          <li>
+            Consider hybrid solutions combining cloud and custom infrastructure
+          </li>
           <li>Maintain flexibility for future scaling requirements</li>
           <li>Regular review and optimization of costs and performance</li>
         </ul>
       </section>
     </div>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for deployment subdirectory
+      window.templateLevels = 2;
+    </script>
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
   </body>
 </html>

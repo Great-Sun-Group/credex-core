@@ -110,7 +110,24 @@ export default function getCredexRoute() {
    *                         defaultDenom:
    *                           type: string
    *                           description: Member's default denomination
-   *                         accounts:
+*                         accountsInternal:
+*                           type: array
+*                           description: List of internal accounts owned by the member
+*                           items:
+*                             type: object
+*                             properties:
+*                               accountID:
+*                                 type: string
+*                                 format: uuid
+*                                 description: Unique identifier for the internal account
+*                               accountName:
+*                                 type: string
+*                                 description: Name of the internal account
+*                               accountType:
+*                                 type: string
+*                                 enum: [CONSUMPTION, PRODUCTION, DIGITAL_ASSET, PHYSICAL_ASSET]
+*                                 description: Type of the internal account
+ *                         accounts:
    *                           type: array
    *                           description: List of accounts accessible to the member
    *                           items:
@@ -125,11 +142,11 @@ export default function getCredexRoute() {
    *                                 type: string
    *                               accountType:
    *                                 type: string
-   *                                 enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
+   *                                 enum: [PERSONAL, TRUST, OPERATIONS]
    *                                 description: Type of the account
    *                               defaultDenom:
    *                                 type: string
-   *                                 enum: [CXX, CAD, USD, XAU, ZWG]
+   *                                 enum: [CXX, CAD, USD, XAU]
    *                               isOwnedAccount:
    *                                 type: boolean
    *                                 description: Whether the member owns this account

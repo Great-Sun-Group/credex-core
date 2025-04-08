@@ -1,17 +1,21 @@
 name: Deploy Application
 
 on:
+  push:
+    branches:
+      - prod
+      - dev
   workflow_dispatch:
 
 jobs:
   deploy_application:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
+    environment: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
 
     env:
-      ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
-      BUILD_TARGET: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'production' || 'development' }}
-      DOMAIN: ${{ github.ref == 'refs/heads/prod' && 'mycredex.app' || github.ref == 'refs/heads/stage' && 'stage.mycredex.dev' || 'dev.mycredex.dev' }}
+      ENVIRONMENT: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
+      BUILD_TARGET: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'production') || 'development' }}
+      DOMAIN: ${{ (github.ref == 'refs/heads/prod' && 'mycredex.app') || (github.ref == 'refs/heads/stage' && 'stage.mycredex.dev') || 'dev.mycredex.dev' }}
 
     steps:
       - name: Checkout code
@@ -34,10 +38,10 @@ jobs:
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
           terraform init \
-            -backend-config="bucket=credex-terraform-state-${ENVIRONMENT}" \
+            -backend-config="bucket=credexbuckets2-statebucket-${ENVIRONMENT}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=credex-terraform-state-lock-${ENVIRONMENT}"
+            -backend-config="dynamodb_table=credexbuckets2-statebucket-lock-${ENVIRONMENT}"
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -87,6 +91,10 @@ jobs:
             --arg FKEY "${{ secrets.FIREBASE_PRIVATE_KEY }}" \
             --arg NEO4J_LEDGER "$NEO4J_LEDGER_URL" \
             --arg NEO4J_SEARCH "$NEO4J_SEARCH_URL" \
+            --arg PASSWORD_PEPPER "${{ secrets.PASSWORD_PEPPER }}" \
+            --arg WHATSAPP_API_KEY "${{ secrets.CREDEX_CORE_WHATSAPP_API_KEY }}" \
+            --arg WHATSAPP_BUSINESS_ID "${{ secrets.CREDEX_CORE_WHATSAPP_BUSINESS_ID }}" \
+            --arg WHATSAPP_PHONE_ID "${{ secrets.CREDEX_CORE_WHATSAPP_PHONE_ID }}" \
             '.containerDefinitions[0].image = $IMAGE | 
              .containerDefinitions[0].environment = [
               {"name": "NODE_ENV", "value": "\($NODE_ENV)"},
@@ -101,7 +109,11 @@ jobs:
               {"name": "FIREBASE_PRIVATE_KEY", "value": "\($FKEY)"},
               {"name": "AWS_REGION", "value": "af-south-1"},
               {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "\($NEO4J_LEDGER)"},
-              {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "\($NEO4J_SEARCH)"}
+              {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "\($NEO4J_SEARCH)"},
+              {"name": "PASSWORD_PEPPER", "value": "\($PASSWORD_PEPPER)"},
+              {"name": "CREDEX_CORE_WHATSAPP_API_KEY", "value": "\($WHATSAPP_API_KEY)"},
+              {"name": "CREDEX_CORE_WHATSAPP_BUSINESS_ID", "value": "\($WHATSAPP_BUSINESS_ID)"},
+              {"name": "CREDEX_CORE_WHATSAPP_PHONE_ID", "value": "\($WHATSAPP_PHONE_ID)"}
             ] | 
             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "Task definition updated."
@@ -216,53 +228,3 @@ jobs:
           echo "ECS Service Name: $(terraform output -raw ecs_service_name)"
           echo "ECS Service ID: $(terraform output -raw ecs_service_id)"
           echo "========================================"
-
-  deploy_docs:
-    runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
-    needs: deploy_application
-
-    env:
-      ENVIRONMENT: ${{ github.ref == 'refs/heads/prod' && 'production' || github.ref == 'refs/heads/stage' && 'staging' || 'development' }}
-      DOMAIN: ${{ github.ref == 'refs/heads/prod' && 'mycredex.app' || github.ref == 'refs/heads/stage' && 'stage.mycredex.dev' || 'dev.mycredex.dev' }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.CREDEXCORE_DEV_AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.CREDEXCORE_DEV_AWS_SECRET_ACCESS_KEY }}
-          aws-region: af-south-1
-
-      - name: Deploy to S3
-        run: |
-          aws s3 sync docs/ s3://docs.${DOMAIN} \
-            --delete
-
-      - name: Invalidate CloudFront Cache
-        run: |
-          # Get CloudFront distribution ID for docs
-          DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?contains(@, 'docs.${DOMAIN}')]].Id" --output text)
-
-          if [ -n "$DISTRIBUTION_ID" ]; then
-            echo "Creating CloudFront invalidation for distribution $DISTRIBUTION_ID"
-            aws cloudfront create-invalidation \
-              --distribution-id $DISTRIBUTION_ID \
-              --paths "/*"
-            echo "Cache invalidation initiated"
-          else
-            echo "Error: Could not find CloudFront distribution for docs.${DOMAIN}"
-            exit 1
-          fi
-
-      - name: Print Deployment Information
-        run: |
-          echo "Documentation deployment completed successfully."
-          echo "Environment: $ENVIRONMENT"
-          echo "Bucket: docs.${DOMAIN}"
-          echo "URL: https://docs.${DOMAIN}"

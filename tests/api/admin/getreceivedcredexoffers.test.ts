@@ -1,0 +1,19 @@
+import { authRequest } from "../utils/auth";
+
+describe("Get Received Credex Offers Test", () => {
+  it("getReceivedCredexOffers", async () => {
+    const params = (process.env.TEST_PARAMS || '').split(' ').filter(Boolean);
+    const [jwt, accountID] = params;
+    
+    if (!jwt || !accountID) {
+      throw new Error("Usage: npm test admin/getreceivedcredexoffers <jwt> <accountID>");
+    }
+
+    console.log("\nGetting received Credex offers...");
+    const response = await authRequest("/admin/getReceivedCredexOffers", {
+      accountID
+    }, jwt);
+    console.log("Received offers:", response.data);
+    expect(response.status).toBe(200);
+  });
+});

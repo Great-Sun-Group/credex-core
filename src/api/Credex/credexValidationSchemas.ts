@@ -7,22 +7,25 @@ export const createCredexSchema = {
   issuerAccountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
-    required: true,
+    required: true, // Always required
   },
+  // TODO: Enhance validateRequest middleware to support conditional requirements
+  // Ideal solution would be to allow required to be a function: (body) => !body.invoiceID
+  // For now, we're setting required to false and handling validation in the controller
   receiverAccountID: {
     sanitizer: s.sanitizeUUID,
     validator: v.validateUUID,
-    required: true,
+    required: false, // Not required when invoiceID is provided, validated in controller
   },
   Denomination: {
     sanitizer: s.sanitizeDenomination,
     validator: v.validateDenomination,
-    required: true,
+    required: false, // Not required when invoiceID is provided, validated in controller
   },
   InitialAmount: {
     sanitizer: s.sanitizeNumber,
     validator: v.validatePositiveNumber,
-    required: true,
+    required: false, // Not required when invoiceID is provided, validated in controller
   },
   credexType: {
     sanitizer: s.sanitizeString,
@@ -52,6 +55,14 @@ export const createCredexSchema = {
         return { isValid: false, message: "dueDate must be in YYYY-MM-DD format" };
       }
       return { isValid: true };
+    },
+    required: false,
+  },
+  invoiceID: {
+    sanitizer: s.sanitizeUUID,
+    validator: (value: string) => {
+      if (!value) return { isValid: true };
+      return v.validateUUID(value);
     },
     required: false,
   },

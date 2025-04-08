@@ -77,7 +77,7 @@ export default function loginRoute() {
    *                     dashboard:
    *                       type: object
    *                       description: Full dashboard state after login
-   *                       properties: 
+   *                       properties:
    *                         member:
    *                           type: object
    *                           required:
@@ -107,32 +107,58 @@ export default function loginRoute() {
    *                             memberHandle:
    *                               type: string
    *                               description: Member's handle
-   *                             defaultDenom:
-   *                               type: string
-   *                               description: Member's default denomination
-   *                         accounts:
-   *                           type: array
-   *                           description: List of accounts accessible to the member
-   *                           items:
-   *                             type: object
-   *                             properties:
-   *                               accountID:
-   *                                 type: string
-   *                                 format: uuid
-   *                               accountName:
-   *                                 type: string
-   *                               accountHandle:
-   *                                 type: string
-   *                               accountType:
-   *                                 type: string
-   *                                 enum: [PERSONAL, BUSINESS, CREDEX_FOUNDATION, TRUST, OPERATIONS]
-   *                                 description: Type of the account
-   *                               defaultDenom:
-   *                                 type: string
-   *                                 enum: [CXX, CAD, USD, XAU, ZWG]
-   *                               isOwnedAccount:
-   *                                 type: boolean
-   *                                 description: Whether the member owns this account
+ *                             defaultDenom:
+ *                               type: string
+ *                               description: Member's default denomination
+ *                             profilePictureThumbnail:
+ *                               type: string
+ *                               description: URL to the member's profile picture thumbnail
+ *                         accounts:
+ *                           type: array
+ *                           description: List of accounts accessible to the member
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               accountID:
+ *                                 type: string
+ *                                 format: uuid
+ *                               accountName:
+ *                                 type: string
+ *                               accountHandle:
+ *                                 type: string
+ *                               accountType:
+ *                                 type: string
+ *                                 enum: [PERSONAL, TRUST, OPERATIONS]
+ *                                 description: Type of the account
+ *                               defaultDenom:
+ *                                 type: string
+ *                                 enum: [CXX, CAD, USD, XAU]
+ *                               isOwnedAccount:
+ *                                 type: boolean
+ *                                 description: Whether the member owns this account
+ *                               profilePictureThumbnail:
+ *                                 type: string
+ *                                 description: URL to the account's profile picture thumbnail
+ *                         accountsInternal:
+ *                           type: array
+ *                           description: List of internal accounts owned by the member
+ *                           items:
+ *                             type: object
+ *                             properties:
+ *                               accountID:
+ *                                 type: string
+ *                                 format: uuid
+ *                                 description: Unique identifier for the internal account
+ *                               accountName:
+ *                                 type: string
+ *                                 description: Name of the internal account
+ *                               accountType:
+ *                                 type: string
+ *                                 enum: [CONSUMPTION, PRODUCTION, DIGITAL_ASSET, PHYSICAL_ASSET]
+ *                                 description: Type of the internal account
+ *                               profilePictureThumbnail:
+ *                                 type: string
+ *                                 description: URL to the internal account's profile picture thumbnail
    *                               sendOffersTo:
    *                                 type: object
    *                                 description: Member configured to receive offers for this account

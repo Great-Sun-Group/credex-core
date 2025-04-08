@@ -1,0 +1,46 @@
+flowchart TD
+    %% Styles
+    classDef screen fill:#d4f1f9,stroke:#05a,stroke-width:2px,color:black,rx:10,ry:10
+    classDef endpoint fill:#ffe6cc,stroke:#f90,stroke-width:2px,color:black,shape:hexagon
+    classDef account fill:#e1d5e7,stroke:#9673a6,stroke-width:1px,color:black,shape:circle
+    classDef asset fill:#d5e8d4,stroke:#82b366,stroke-width:1px,color:black,shape:circle
+    classDef property fill:#fff2cc,stroke:#d6b656,stroke-width:1px,color:black,shape:rect
+
+    %% Group screens
+    subgraph UI ["<b><font size='4' color='black'>User Interface</font></b>"]
+        S1[Add Account]
+        S2[Add Adjusting Entry]
+    end
+
+    %% Group endpoints
+    subgraph API ["<b><font size='4' color='black'>API Endpoints</font></b>"]
+        E1[/addAccountInternal/]
+        E2[/addAssetMarker/]
+    end
+
+    %% Graph Relationships - Neo4j Nodes
+    subgraph DB ["<b><font size='4' color='black'>Neo4j Database</font></b>"]
+        A1((produceGrown<br/>PRODUCTION))
+        A2((tomatoesToSell<br/>:AssetMarker))
+        A3((tomatoes<br/>:Account))
+
+        A1 -->|CR| A2
+        A2 -->|DR| A3
+    end
+
+    %% Connect UI to API to Database
+    S1 --> E1
+    S2 --> E2
+    E1 --> A1
+    E2 --> A2
+
+    %% Class assignments
+    class S1,S2 screen
+    class E1,E2 endpoint
+    class A1,A3 account
+    class A2 asset
+
+    %% Style subgraphs
+    style UI fill:#8ECBD6,font-size:16px,font-weight:bold
+    style API fill:#8ECBD6,font-size:16px,font-weight:bold
+    style DB fill:#8ECBD6,font-size:16px,font-weight:bold

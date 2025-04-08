@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>API Testing - Vimbiso Market</title>
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/layout.css" />
+    <link rel="stylesheet" href="../css/components.css" />
+    <link rel="stylesheet" href="../css/responsive.css" />
+    <link rel="stylesheet" href="css/variables.css" />
+    <link rel="stylesheet" href="css/market.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="market-header">
+      <div class="container">
+        <div class="header-content">
+          <a href="../index.html" class="back-link">← Back to MyCredex.App</a>
+          <h1>Vimbiso Market</h1>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Navigation -->
+    <nav class="market-nav">
+      <div class="container">
+        <ul class="nav-list">
+          <li class="nav-item"><a href="index.html">Overview</a></li>
+          <li class="nav-item"><a href="user-flows.html">User Flows</a></li>
+          <li class="nav-item"><a href="data-model.html">Data Model</a></li>
+          <li class="nav-item">
+            <a href="api-reference.html">API Reference</a>
+          </li>
+          <li class="nav-item">
+            <a href="api-workplan.html">API Implementation</a>
+          </li>
+          <li class="nav-item active">
+            <a href="api-testing.html">API Testing</a>
+          </li>
+          <li class="nav-item">
+            <a href="ui-specs-seller.html">UI Specs Seller</a>
+          </li>
+          <li class="nav-item">
+            <a href="ui-specs-purchaser.html">UI Specs Purchaser</a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="market-content">
+      <div class="container">
+        <section>
+          <h2>API Testing</h2>
+          <p class="lead">
+            Comprehensive testing plan and progress tracking for the Vimbiso Market API implementation.
+          </p>
+
+          <div class="section-divider"></div>
+
+          <div class="phase-container">
+            <h4>Testing Progress</h4>
+
+            <h5>Completed Tests ✅</h5>
+            <div class="testing-progress">
+              <ul>
+                <li>
+                  <strong>Member Onboarding</strong> - Successfully tested
+                  creating new members with personal accounts:
+                  <pre>npm test onboardmember Fortunate Vendor 1234567890 USD</pre>
+                  or if already onboarded to get token:
+                  <pre>npm test login 1234567890</pre>
+                </li>
+                <li>
+                  <strong>Edit Member Profile</strong> - Successfully tested
+                  updating member profile information with
+                  <code>/editMember</code> endpoint
+                  <pre>npm test editmember tokenHere "New First" "New Last" "NEWHANDLE" "Updated vendor bio with more details"</pre>
+                  <ul>
+                    <li>
+                      Verified updating all fields at once (first name, last name, member handle, and vendor bio)
+                    </li>
+                    <li>
+                      Verified updating individual fields separately (single field updates)
+                    </li>
+                    <li>
+                      Confirmed proper validation for member handle (uppercase letters, numbers, and underscores only)
+                    </li>
+                    <li>
+                      Tested with curl to verify API behavior:
+                      <pre>curl -X POST http://localhost:3000/editMember -H "Content-Type: application/json" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"vendorBio": "Testing single field update"}'</pre>
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Vendor Enablement</strong> - Successfully tested
+                  enabling vendor functionality with
+                  <code>/sellInMarket</code> endpoint
+                  <pre>npm test sellinmarket tokenHere true</pre>
+                  <ul>
+                    <li>
+                      Verified creation of "Onboarded Assets" account
+                      (PRODUCTION type)
+                    </li>
+                    <li>
+                      Verified creation of "Profile Pictures" account
+                      (DIGITAL_ASSET type)
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Product Account Creation</strong> - Successfully tested
+                  creating product accounts with
+                  <code>/createAccountInternal</code> endpoint
+                  <pre>npm test createAccountInternal tokenHere "Fresh Tomatoes" USD PHYSICAL_ASSET</pre>
+                  <ul>
+                    <li>
+                      Verified creation of product account with PHYSICAL_ASSET type
+                    </li>
+                    <li>
+                      Verified proper ownership relationship to member
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Image Upload</strong> - Successfully tested
+                  uploading and optimizing profile images with
+                  <code>/uploadAndOptimizeJpg</code> endpoint
+                  <pre><code>npm test uploadandoptimizejpg token local/image/url/jpg "profile_pic" "Onboarded Assets accountID" "Profile Pictures accountID"</code></pre>
+                  <ul>
+                    <li>
+                      Verified creation of original, thumbnail, 200px, and 600px versions
+                    </li>
+                    <li>
+                      Verified CR relationship to "Onboarded Assets" account
+                    </li>
+                    <li>
+                      Verified DR relationship to "Profile Pictures" account
+                    </li>
+                    <li>
+                      Verified USED_IN relationships between image versions
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Profile Picture Relationships</strong> -
+                  Successfully tested connecting multiple profile pictures to
+                  member and account source nodes with
+                  <code>/updateProfilePics</code> endpoint
+                  <pre>npm test updateProfilePics token sourceID originalAssetID thumbnailAssetID asset200ID asset600ID</pre>
+                  <ul>
+                    <li>
+                      Verified PROFILE_PIC_ORIGINAL_JPG relationship creation
+                    </li>
+                    <li>
+                      Verified PROFILE_PIC_THUMBNAIL_JPG relationship creation
+                    </li>
+                    <li>
+                      Verified PROFILE_PIC_200_JPG relationship creation
+                    </li>
+                    <li>
+                      Verified PROFILE_PIC_600_JPG relationship creation
+                    </li>
+                    <li>
+                      Confirmed all connections can be made in a single API
+                      call
+                    </li>
+                    <li>
+                      Verified proper disconnection of existing relationships
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Edit Product Account</strong> - Successfully tested
+                  updating product account details with
+                  <code>/editAccountInternal</code> endpoint
+                  <pre>curl -X POST http://localhost:3000/editAccountInternal -H "Content-Type: application/json" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"accountID": "accountID", "accountName": "Updated Product Name"}'</pre>
+                  <ul>
+                    <li>
+                      Verified updating all fields at once (account name, description, handle)
+                    </li>
+                    <li>
+                      Verified updating individual fields separately (single field updates)
+                    </li>
+                    <li>
+                      Confirmed proper sanitization for account handle (converts lowercase to uppercase, removes spaces and special characters)
+                    </li>
+                    <li>
+                      Fixed bug in controller where Member ID property was incorrectly referenced
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Store Status Management</strong> - Successfully tested
+                  updating store status and location with
+                  <code>/storeStatus</code> endpoint
+                  <pre>curl -X POST "http://localhost:3000/storeStatus/accountID" -H "Content-Type: application/json" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY" -d '{"storeOpen": true, "location": {"latitude": 17.8252, "longitude": 31.0335}}'</pre>
+                  <ul>
+                    <li>
+                      Verified opening store with location coordinates
+                    </li>
+                    <li>
+                      Verified closing store (setting storeOpen to false)
+                    </li>
+                    <li>
+                      Confirmed validation of location data when store is open
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Product Search</strong> - Successfully tested
+                  searching for products with
+                  <code>/searchProducts</code> endpoint
+                  <pre>curl -X GET "http://localhost:3000/searchProducts?keyword=tomatoes&latitude=17.8252&longitude=31.0335&radius=10" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
+                  <ul>
+                    <li>
+                      Verified search by product name/keyword
+                    </li>
+                    <li>
+                      Verified filter by location (latitude, longitude)
+                    </li>
+                    <li>
+                      Verified filter by radius (in kilometers)
+                    </li>
+                    <li>
+                      Confirmed return of products with location and store information
+                    </li>
+                    <li>
+                      Fixed validation middleware to properly handle query parameters
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Account Internal Data</strong> - Successfully tested
+                  retrieving account internal data with
+                  <code>/getAccountInternalData</code> endpoint
+                  <pre>curl -X GET "http://localhost:3000/getAccountInternalData/accountID" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
+                  <ul>
+                    <li>
+                      Verified return of detailed account information for public view
+                    </li>
+                    <li>
+                      Verified return of product details for product accounts
+                    </li>
+                    <li>
+                      Verified return of profile pictures and other media
+                    </li>
+                    <li>
+                      Fixed validation middleware to properly handle path parameters
+                    </li>
+                    <li>
+                      Fixed security issue to prevent exposure of sensitive member information
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Product Information</strong> - Successfully tested
+                  retrieving product information with
+                  <code>/getProduct</code> endpoint
+                  <pre>curl -X GET "http://localhost:3000/getProduct/productID" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
+                  <ul>
+                    <li>
+                      Verified return of product details including name, description, images
+                    </li>
+                    <li>
+                      Verified return of store information for the product
+                    </li>
+                    <li>
+                      Verified return of vendor information
+                    </li>
+                    <li>
+                      Fixed validation middleware to properly handle path parameters
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Member Information</strong> - Successfully tested
+                  retrieving member information with
+                  <code>/getMember</code> endpoint
+                  <pre>curl -X GET "http://localhost:3000/getMember/memberID" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
+                  <ul>
+                    <li>
+                      Verified return of member profile information for public view
+                    </li>
+                    <li>
+                      Verified return of member's stores and products
+                    </li>
+                    <li>
+                      Verified return of profile pictures and other media
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Invoice Generation</strong> - Successfully tested
+                  creating invoices with
+                  <code>/generateInvoice</code> endpoint
+                  <pre>npm test generateinvoice tokenHere paymentAccountID '{"items":[{"name":"Fresh Tomatoes","quantity":2,"unit":"kg","price":10,"total":20}],"total":20,"currency":"USD"}'</pre>
+                  <ul>
+                    <li>
+                      Verified creating invoice with single item
+                    </li>
+                    <li>
+                      Verified creating invoice with multiple items
+                    </li>
+                    <li>
+                      Verified invoice QR link generation
+                    </li>
+                    <li>
+                      Verified validation of item totals and invoice total
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+              <ul>
+                <li>
+                  <strong>Payment Processing</strong> - Test executing invoices with
+                  <code>/createCredex</code> endpoint
+                  <pre>npm test createcredex tokenHere issuerAccountID receiverAccountID USD 20.00 PURCHASE OFFERS true invoiceID</pre>
+                  <ul>
+                    <li>
+                      Test creating payment for an invoice
+                    </li>
+                    <li>
+                      Verify GLid is added to the transaction
+                    </li>
+                    <li>
+                      Verify invoice is activated on the seller side
+                    </li>
+                    <li>
+                      Test validation of payment amount against invoice total
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+            <h5>Tests To Complete ❌</h5>
+            <div class="testing-progress">
+              <ul>
+              <h6>Account Management</h6>
+              <ul>
+                <li>
+                  <strong>Account Dashboard</strong> - Test retrieving account dashboard with
+                  <code>/getAccountDashboard</code> endpoint
+                  <pre>curl -X GET "http://localhost:3000/getAccountDashboard/accountID" -H "Authorization: Bearer token" -H "x-client-api-key: $CLIENT_API_KEY"</pre>
+                  <ul>
+                    <li>
+                      Return account details including name, handle, description
+                    </li>
+                    <li>
+                      Return account balances and transaction history
+                    </li>
+                    <li>
+                      Return related product accounts
+                    </li>
+                    <li>
+                      Return store status and location if applicable
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="market-footer">
+      <div class="container">
+        <p>&copy; 2025 VimbisoPay. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Initialize mermaid with minimal configuration
+        mermaid.initialize({
+          startOnLoad: true,
+          securityLevel: "loose",
+        });
+      });
+    </script>
+  </body>
+</html>

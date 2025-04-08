@@ -60,15 +60,27 @@ export const sanitizeAccountName = (input: string): string => {
   return sanitized;
 };
 
-// Function to sanitize handles (only converts to lowercase, preserves all other characters for validation)
+// Function to sanitize handles (transforms input to valid format instead of erroring)
 export const sanitizeHandle = (input: string): string => {
   logger.debug("Sanitizing handle", { input, type: typeof input });
   if (typeof input !== 'string') {
     logger.warn("Handle sanitization received non-string input", { input, type: typeof input });
     return '';
   }
-  // Only convert to lowercase, preserve all other characters for validation
-  const sanitized = sanitizeString(input).toLowerCase();
+  
+  // 1. Sanitize the string (remove HTML tags and trim)
+  let sanitized = sanitizeString(input);
+  
+  // 2. Convert to uppercase (already handles lowercase letters)
+  sanitized = sanitized.toUpperCase();
+  
+  // 3. Remove spaces
+  sanitized = sanitized.replace(/\s+/g, '');
+  
+  // 4. Remove any characters that aren't uppercase letters, numbers, or underscores
+  // This handles special characters like hyphens, plus signs, etc.
+  sanitized = sanitized.replace(/[^A-Z0-9_]/g, '');
+  
   logger.debug("Handle sanitized", { 
     originalInput: input, 
     sanitized: sanitized 
@@ -173,4 +185,85 @@ export function sanitizeTemplateType(value: any): string {
 export function sanitizeTier(value: any): number {
   const num = Number(value);
   return !isNaN(num) && Number.isInteger(num) ? num : 0;
+}
+
+export function sanitizeTrustAccountSubtype(value: any): string {
+  if (typeof value !== 'string') return '';
+  return value.trim().toUpperCase();
+}
+
+export function sanitizeLocation(value: any): any {
+  logger.info("Sanitizing location", { value, type: typeof value });
+  
+  // If null or undefined, return null (for when store is closed)
+  if (value === null || value === undefined) {
+    logger.info("Location is null or undefined, returning null");
+    return null;
+  }
+
+  // If not an object, return null
+  if (typeof value !== 'object') {
+    logger.warn("Location sanitization received non-object input", { value, type: typeof value });
+    return null;
+  }
+
+  // Create a sanitized location object
+  const sanitizedLocation: { latitude: number; longitude: number } = {
+    latitude: 0,
+    longitude: 0
+  };
+
+  // Sanitize latitude
+  if ('latitude' in value) {
+    const lat = Number(value.latitude);
+    sanitizedLocation.latitude = !isNaN(lat) ? Math.max(-90, Math.min(90, lat)) : 0;
+    logger.info("Sanitized latitude", { 
+      original: value.latitude, 
+      sanitized: sanitizedLocation.latitude,
+      isNumber: !isNaN(lat)
+    });
+  } else {
+    logger.warn("Location missing latitude property");
+  }
+
+  // Sanitize longitude
+  if ('longitude' in value) {
+    const lng = Number(value.longitude);
+    sanitizedLocation.longitude = !isNaN(lng) ? Math.max(-180, Math.min(180, lng)) : 0;
+    logger.info("Sanitized longitude", { 
+      original: value.longitude, 
+      sanitized: sanitizedLocation.longitude,
+      isNumber: !isNaN(lng)
+    });
+  } else {
+    logger.warn("Location missing longitude property");
+  }
+
+  logger.info("Location sanitized", { 
+    originalInput: value, 
+    sanitized: sanitizedLocation 
+  });
+
+  return sanitizedLocation;
+}
+
+export function sanitizeBankFields(value: any): any {
+  if (!value || typeof value !== 'object') return {};
+
+  const sanitizedFields: { [key: string]: string } = {};
+  
+  // Sanitize jurisdiction
+  if (value.jurisdiction) {
+    sanitizedFields.jurisdiction = value.jurisdiction.trim().toUpperCase();
+  }
+
+  // Sanitize all other fields - remove any non-alphanumeric characters
+  Object.entries(value).forEach(([key, val]) => {
+    if (key !== 'jurisdiction' && typeof val === 'string') {
+      // Keep only alphanumeric characters for account numbers and other fields
+      sanitizedFields[key] = val.replace(/[^a-zA-Z0-9]/g, '');
+    }
+  });
+
+  return sanitizedFields;
 }

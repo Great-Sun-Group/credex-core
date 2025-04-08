@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 
 FROM node:18.17.1-alpine AS base
+# Install build dependencies for bcrypt
+RUN apk add --no-cache python3 make g++ gcc
 WORKDIR /app
 COPY package*.json ./
 
@@ -44,6 +46,6 @@ CMD ["ts-node-dev", "--respawn", "--transpile-only", "src/index.ts"]
 
 # Test stage
 FROM base AS test
-RUN npm ci
+RUN npm ci --build-from-source
 COPY . .
 CMD ["npm", "test"]

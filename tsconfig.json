@@ -19,6 +19,6 @@
     "types": ["node", "jest"],
     "baseUrl": "."
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts", "config"]
+  "include": ["src/**/*.ts", "tests/**/*.ts"],
+  "exclude": ["node_modules", "config", "tests/noti_cache"]
 }

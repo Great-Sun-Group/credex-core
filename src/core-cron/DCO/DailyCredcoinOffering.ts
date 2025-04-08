@@ -1,14 +1,13 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { DBinitialization } from "./DBinitialization/index";
 import { DCOexecute } from "./DCOexecute/index";
-import { DCOavatars } from "./DCOavatars/index";
-import { DCOtriggersExecute } from "./DCOtriggers/index";
-import logger from "../../utils/logger";
+import logger, { configureDCOLogger } from "../../utils/logger";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Executes the Daily Credcoin Offering (DCO) process.
  * This function checks for an active daynode, initializes the database if necessary,
- * and runs the DCO execution, avatar update, and trigger processes.
+ * and runs the DCO execution and trigger processes.
  *
  * @returns {Promise<{ success: boolean, error?: string }>} Returns an object indicating success and any error message.
  */
@@ -16,7 +15,9 @@ export async function DailyCredcoinOffering(): Promise<{
   success: boolean;
   error?: string;
 }> {
-  logger.info("Starting Daily Credcoin Offering process");
+  const dcoProcessId = uuidv4();
+  const removeDCOLogger = configureDCOLogger(dcoProcessId);
+  logger.info("Starting Daily Credcoin Offering process", { dcoProcessId });
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
@@ -33,16 +34,13 @@ export async function DailyCredcoinOffering(): Promise<{
     }
 
     logger.debug("Starting DCO execution");
-    await DCOexecute();
+    const dcoResult = await DCOexecute();
+    if (!dcoResult) {
+      const error = new Error("DCO execution failed");
+      logger.error(error.message);
+      throw error;
+    }
     logger.debug("DCO execution completed");
-
-    logger.debug("Starting DCO avatars update");
-    await DCOavatars();
-    logger.debug("DCO avatars update completed");
-
-    logger.debug("Starting DCO triggers execution");
-    await DCOtriggersExecute();
-    logger.debug("DCO triggers execution completed");
 
     logger.info("Daily Credcoin Offering process completed successfully");
     return { success: true };
@@ -58,6 +56,7 @@ export async function DailyCredcoinOffering(): Promise<{
     await resetDCORunningFlag(ledgerSpaceSession);
     await ledgerSpaceSession.close();
     logger.debug("LedgerSpace session closed");
+    removeDCOLogger(); // Clean up DCO logger
   }
 }
 
@@ -73,12 +72,12 @@ async function checkActiveDaynode(session: any): Promise<boolean> {
     MATCH (daynode:Daynode {Active: true})
     RETURN daynode IS NOT NULL AS activeDaynodeExists
   `);
-  
+
   if (!result.records || result.records.length === 0) {
     logger.debug("No records found, assuming no active daynode exists");
     return false;
   }
-  
+
   const activeDaynodeExists = result.records[0].get("activeDaynodeExists");
   logger.debug(`Active daynode exists: ${activeDaynodeExists}`);
   return activeDaynodeExists === true;

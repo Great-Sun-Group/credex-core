@@ -47,11 +47,16 @@ export enum ApiActionType {
   MEMBER_LOGIN = "MEMBER_LOGIN",
   MEMBER_ONBOARDED = "MEMBER_ONBOARDED",
   MEMBER_FOUND = "MEMBER_FOUND",
+  MEMBER_UPDATE = "MEMBER_UPDATE",
+  MEMBER_PASSWORD_UPDATED = "MEMBER_PASSWORD_UPDATED",
+  MEMBER_PASSWORD_RESET = "MEMBER_PASSWORD_RESET",
   DASHBOARD_RETRIEVED = "DASHBOARD_RETRIEVED",
   SPEND_AUTHORIZED = "SPEND_AUTHORIZED",
+  HUSTLER_10K_ENROLLED = "HUSTLER_10K_ENROLLED",
 
   // Account actions
   ACCOUNT_CREATED = "ACCOUNT_CREATED",
+  ACCOUNT_INTERNAL_CREATED = "ACCOUNT_INTERNAL_CREATED",
   ACCOUNT_AUTHORIZED = "ACCOUNT_AUTHORIZED",
   ACCOUNT_UNAUTHORIZED = "ACCOUNT_UNAUTHORIZED",
   ACCOUNT_UPDATED = "ACCOUNT_UPDATED",
@@ -87,6 +92,12 @@ export enum ApiActionType {
   ERROR_NOT_FOUND = "ERROR_NOT_FOUND",
   ERROR_VALIDATION = "ERROR_VALIDATION",
   ERROR_INTERNAL = "ERROR_INTERNAL",
+
+  // Trust account actions
+  TRUST_ACCOUNT_CREATED = "TRUST_ACCOUNT_CREATED",
+  
+  // Store actions
+  STORE_STATUS_UPDATED = "STORE_STATUS_UPDATED",
 }
 
 /**
@@ -103,6 +114,7 @@ export interface CredexActionDetails {
   reason?: string;
   limit?: string;
   transactionType?: string; // Added for getCredex response
+  invoiceID?: string; // Added for invoice-related Credex
   // Additional fields for Credex retrieval
   status?: {
     outstandingAmount: string;
@@ -142,6 +154,13 @@ export interface MemberActionDetails {
   phone?: string;
   tier?: string;
   spendLimit?: string;
+  token?: string;
+  version?: 'v1' | 'v2';
+  authMethod?: 'phone_only' | 'password';
+  otpVerified?: boolean;
+  resetToken?: string;
+  purpose?: 'PASSWORD_RESET';
+  expiresIn?: number;
 }
 
 export interface AccountActionDetails {
@@ -152,6 +171,11 @@ export interface AccountActionDetails {
   ownerID?: string;
   memberIdAuthorized?: string;
   memberIdUnauthorized?: string;
+  storeOpen?: boolean;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
   balances?: {
     securedNetBalancesByDenom?: string[];
     unsecuredBalancesInDefaultDenom?: {
