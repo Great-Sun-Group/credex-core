@@ -99,8 +99,8 @@ jobs:
           echo "Verifying Neo4j deployments..."
 
           # Get instance IDs
-          LEDGER_ID=$(terraform output -raw module.databases.neo4j_ledger_instance_id || echo "")
-          SEARCH_ID=$(terraform output -raw module.databases.neo4j_search_instance_id || echo "")
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id || echo "")
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id || echo "")
 
           if [ -z "$LEDGER_ID" ] || [ -z "$SEARCH_ID" ]; then
             echo "Error: Could not get Neo4j instance IDs"
@@ -153,7 +153,7 @@ jobs:
           echo "========================================"
 
           # Get all outputs
-          OUTPUTS=$(terraform output -json module.databases)
+          OUTPUTS=$(terraform output -json)
 
           # Print LedgerSpace details
           echo "Neo4j LedgerSpace Instance:"
