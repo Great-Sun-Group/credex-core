@@ -99,8 +99,9 @@ jobs:
           echo "Verifying Neo4j deployments..."
 
           # Get instance IDs - strip any debug output that might be included and remove newlines
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | tr -d '\n' || echo "")
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | tr -d '\n' || echo "")
+          # Use head -n 1 to ensure we only get the first match
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 | tr -d '\n' || echo "")
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 | tr -d '\n' || echo "")
 
           if [ -z "$LEDGER_ID" ] || [ -z "$SEARCH_ID" ]; then
             echo "Error: Could not get Neo4j instance IDs"
@@ -157,13 +158,13 @@ jobs:
           echo "========================================"
 
           # Get individual outputs directly and clean them
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | tr -d '\n' || echo "")
-          LEDGER_IP=$(terraform output -raw neo4j_ledger_private_ip 2>/dev/null | tr -d '\n' || echo "")
-          LEDGER_BOLT=$(terraform output -raw neo4j_ledger_bolt_endpoint 2>/dev/null | tr -d '\n' || echo "")
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 | tr -d '\n' || echo "")
+          LEDGER_IP=$(terraform output -raw neo4j_ledger_private_ip 2>/dev/null | head -n 1 | tr -d '\n' || echo "")
+          LEDGER_BOLT=$(terraform output -raw neo4j_ledger_bolt_endpoint 2>/dev/null | head -n 1 | tr -d '\n' || echo "")
           
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | tr -d '\n' || echo "")
-          SEARCH_IP=$(terraform output -raw neo4j_search_private_ip 2>/dev/null | tr -d '\n' || echo "")
-          SEARCH_BOLT=$(terraform output -raw neo4j_search_bolt_endpoint 2>/dev/null | tr -d '\n' || echo "")
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 | tr -d '\n' || echo "")
+          SEARCH_IP=$(terraform output -raw neo4j_search_private_ip 2>/dev/null | head -n 1 | tr -d '\n' || echo "")
+          SEARCH_BOLT=$(terraform output -raw neo4j_search_bolt_endpoint 2>/dev/null | head -n 1 | tr -d '\n' || echo "")
 
           # Print LedgerSpace details
           echo "Neo4j LedgerSpace Instance:"
