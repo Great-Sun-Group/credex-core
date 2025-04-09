@@ -98,14 +98,18 @@ jobs:
           cd terraform
           echo "Verifying Neo4j deployments..."
 
-          # Get instance IDs
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id || echo "")
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id || echo "")
+          # Get instance IDs - strip any debug output that might be included
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" || echo "")
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" || echo "")
 
           if [ -z "$LEDGER_ID" ] || [ -z "$SEARCH_ID" ]; then
             echo "Error: Could not get Neo4j instance IDs"
             exit 1
           fi
+
+          echo "Retrieved instance IDs:"
+          echo "LedgerSpace: $LEDGER_ID"
+          echo "SearchSpace: $SEARCH_ID"
 
           # Function to verify instance
           verify_instance() {
@@ -116,14 +120,14 @@ jobs:
             
             # Wait for instance to be running
             echo "Waiting for instance to be running..."
-            aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+            aws ec2 wait instance-running --instance-ids "$INSTANCE_ID"
             
             # Wait for status checks
             echo "Waiting for status checks to pass..."
-            aws ec2 wait instance-status-ok --instance-ids $INSTANCE_ID
+            aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID"
             
             # Get instance details
-            INSTANCE_DETAILS=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID)
+            INSTANCE_DETAILS=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID")
             PRIVATE_IP=$(echo $INSTANCE_DETAILS | jq -r '.Reservations[0].Instances[0].PrivateIpAddress')
             
             echo "$SPACE_NAME instance is running:"
@@ -133,7 +137,7 @@ jobs:
             # Verify instance is responding
             echo "Checking instance system status..."
             aws ec2 describe-instance-status \
-              --instance-ids $INSTANCE_ID \
+              --instance-ids "$INSTANCE_ID" \
               --query 'InstanceStatuses[0].{SystemStatus:SystemStatus.Status,InstanceStatus:InstanceStatus.Status}' \
               --output table
           }
