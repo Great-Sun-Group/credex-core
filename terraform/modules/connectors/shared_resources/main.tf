@@ -207,6 +207,19 @@ resource "aws_vpc_endpoint" "s3" {
     Version = "2012-10-17"
     Statement = [
       {
+        Sid       = "AllowYumRepositoryAccess"
+        Effect    = "Allow"
+        Principal = "*"
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::yum.neo4j.com/*",
+          "arn:aws:s3:::yum.neo4j.com"
+        ]
+      },
+      {
         Sid       = "AllowAllS3Access"
         Effect    = "Allow"
         Principal = "*"
