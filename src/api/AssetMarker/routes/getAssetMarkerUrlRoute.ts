@@ -40,7 +40,7 @@ const router = Router();
  *                   properties:
  *                     url:
  *                       type: string
- *                       example: https://credexbuckets2-assetmarker-data-development.s3.af-south-1.amazonaws.com/123/original/image.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=...
+ *                       example: https://credexbuckets3-assetmarker-data-development.s3.af-south-1.amazonaws.com/123/original/image.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=...
  *                     assetID:
  *                       type: string
  *                       example: 123e4567-e89b-12d3-a456-426614174000
@@ -62,6 +62,10 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.get("/getAssetMarkerUrl/:assetID", authMiddleware, GetAssetMarkerUrlController);
+router.get(
+  "/getAssetMarkerUrl/:assetID",
+  authMiddleware,
+  GetAssetMarkerUrlController
+);
 
 export default router;

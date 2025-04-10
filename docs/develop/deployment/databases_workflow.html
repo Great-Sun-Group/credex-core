@@ -20,7 +20,10 @@
     <h1 class="chapter-title">Database Deployment Workflow</h1>
 
     <h1>WARNING</h1>
-    <p>This workflow currently destroys the deployed databases and all their data. BACKUPS MUST BE HANDLED ELSEWHERE.</p>
+    <p>
+      This workflow currently destroys the deployed databases and all their
+      data. BACKUPS MUST BE HANDLED ELSEWHERE.
+    </p>
 
     <p>
       This document provides an overview of the database deployment workflow,
@@ -84,9 +87,7 @@
     <h2>Infrastructure Components</h2>
 
     <h3>Neo4j Instances</h3>
-    <p>
-      The workflow deploys two Neo4j Enterprise instances:
-    </p>
+    <p>The workflow deploys two Neo4j Enterprise instances:</p>
     <ol>
       <li>
         <strong>LedgerSpace Instance</strong>: Primary database for ledger
@@ -100,8 +101,8 @@
 
     <p>
       Both instances are currently configured identically in terms of instance
-      type and storage. The workflow includes instance replacement functionality to ensure clean
-      deployments.
+      type and storage. The workflow includes instance replacement functionality
+      to ensure clean deployments.
     </p>
 
     <h3>Instance Specifications</h3>
@@ -209,20 +210,24 @@
 
     <h3>Dummy Variables</h3>
     <p>
-      The workflow uses dummy values for variables required by other modules but not
-      used by the databases module.
+      The workflow uses dummy values for variables required by other modules but
+      not used by the databases module.
     </p>
 
     <h2>Instance Replacement</h2>
 
     <p>
-      The workflow DESTROYS and replaces both Neo4j instances with new databases:
+      The workflow DESTROYS and replaces both Neo4j instances with new
+      databases:
     </p>
     <ul>
       <li>Uses Terraform's -replace flag to force instance recreation</li>
       <li>Targets both LedgerSpace and SearchSpace instance</li>
       <li>Ensures clean deployment with fresh configuration</li>
-      <li>Only required for version upgrades (when deemed necessary) or configuration changes</li>
+      <li>
+        Only required for version upgrades (when deemed necessary) or
+        configuration changes
+      </li>
     </ul>
 
     <h2>State Management</h2>
@@ -233,11 +238,11 @@
     </p>
     <ul>
       <li>
-        <strong>S3 Backend</strong>: credexbuckets2-statebucket-${ENVIRONMENT}
+        <strong>S3 Backend</strong>: credexbuckets3-statebucket-${ENVIRONMENT}
       </li>
       <li>
         <strong>DynamoDB Lock Table</strong>:
-        credexbuckets2-statebucket-lock-${ENVIRONMENT}
+        credexbuckets3-statebucket-lock-${ENVIRONMENT}
       </li>
     </ul>
 
@@ -297,7 +302,10 @@
         Save the output information securely:
         <ul>
           <li>Note the bolt endpoints for use in the application deployment</li>
-          <li>The application will automatically use these endpoints from Terraform state</li>
+          <li>
+            The application will automatically use these endpoints from
+            Terraform state
+          </li>
         </ul>
       </li>
       <li>
@@ -338,8 +346,9 @@
       includes comprehensive validation, automatic instance configuration, and
       detailed output information necessary for application configuration. The
       deployment process is designed with security in mind, utilizing encrypted
-      storage and proper secrets management. The instances are configured with authentication
-      disabled for simplified internal access, as they are only accessible within the VPC.
+      storage and proper secrets management. The instances are configured with
+      authentication disabled for simplified internal access, as they are only
+      accessible within the VPC.
     </p>
     <!-- Footer Component -->
     <div id="footer-develop"></div>

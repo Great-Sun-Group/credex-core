@@ -892,7 +892,10 @@ resource "aws_iam_role_policy" "verification_replication" {
 
 # Configure replication rules
 resource "aws_s3_bucket_replication_configuration" "verification_photos" {
-  depends_on = [aws_s3_bucket_versioning.verification_photos]
+  depends_on = [
+    aws_s3_bucket_versioning.verification_photos,
+    aws_s3_bucket_versioning.verification_backups
+  ]
 
   role   = aws_iam_role.verification_replication.arn
   bucket = aws_s3_bucket.verification_photos.id

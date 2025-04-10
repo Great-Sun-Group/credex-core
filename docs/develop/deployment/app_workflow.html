@@ -33,12 +33,13 @@
         environment to create the necessary Terraform state infrastructure.
       </li>
       <li>
-        The databases workflow has been run to create the Neo4j instances. The application
-        will automatically use the bolt endpoints from Terraform state (no authentication required).
+        The databases workflow has been run to create the Neo4j instances. The
+        application will automatically use the bolt endpoints from Terraform
+        state (no authentication required).
       </li>
       <li>
-        All required secrets (JWT_SECRET, CLIENT_API_KEY, Firebase configuration, etc.) are properly
-        configured in GitHub.
+        All required secrets (JWT_SECRET, CLIENT_API_KEY, Firebase
+        configuration, etc.) are properly configured in GitHub.
       </li>
     </ol>
 
@@ -116,21 +117,23 @@
     </ul>
 
     <h3>2. Infrastructure and Application Deployment</h3>
-    <p>
-      The deployment process uses a combination of Terraform and AWS CLI:
-    </p>
+    <p>The deployment process uses a combination of Terraform and AWS CLI:</p>
     <ul>
-      <li>Terraform is used only to:
+      <li>
+        Terraform is used only to:
         <ul>
           <li>Initialize backend configuration</li>
           <li>Read infrastructure outputs (Neo4j endpoints, etc.)</li>
           <li>Note: Terraform apply is NOT used for app deployment</li>
         </ul>
       </li>
-      <li>AWS CLI is used to:
+      <li>
+        AWS CLI is used to:
         <ul>
           <li>Get current ECS task definition</li>
-          <li>Update task definition with new image and environment variables</li>
+          <li>
+            Update task definition with new image and environment variables
+          </li>
           <li>Deploy updated task definition</li>
           <li>Monitor deployment status and collect logs</li>
         </ul>
@@ -166,7 +169,7 @@
       <li>
         <strong>S3 Bucket</strong>:
         <ul>
-          <li>Name: credexbuckets2-verifybucket-photos-${environment}</li>
+          <li>Name: credexbuckets3-verifybucket-photos-${environment}</li>
           <li>Versioning enabled</li>
           <li>Server-side encryption (AES-256)</li>
           <li>Public access blocked</li>
@@ -209,11 +212,11 @@
     </p>
     <ul>
       <li>
-        <strong>S3 Backend</strong>: credexbuckets2-statebucket-${ENVIRONMENT}
+        <strong>S3 Backend</strong>: credexbuckets3-statebucket-${ENVIRONMENT}
       </li>
       <li>
         <strong>DynamoDB Lock Table</strong>:
-        credexbuckets2-statebucket-lock-${ENVIRONMENT}
+        credexbuckets3-statebucket-lock-${ENVIRONMENT}
       </li>
     </ul>
 
@@ -259,7 +262,9 @@
           <li>AWS credentials stored as GitHub secrets</li>
           <li>Application secrets passed as build arguments</li>
           <li>Environment variables set in ECS task definition</li>
-          <li>Firebase configuration securely managed through GitHub secrets</li>
+          <li>
+            Firebase configuration securely managed through GitHub secrets
+          </li>
         </ul>
       </li>
       <li>
@@ -330,12 +335,13 @@
 
     <p>
       The application deployment workflow provides a comprehensive solution for
-      deploying the application. It ensures consistent deployments across environments 
-      through environment-specific configuration and state management. The workflow 
-      includes proper security measures, handles sensitive information appropriately, 
-      and provides detailed output for monitoring and troubleshooting. The deployment 
-      process, with proper infrastructure setup and application configuration, ensures 
-      that all components are updated together while maintaining proper dependencies.
+      deploying the application. It ensures consistent deployments across
+      environments through environment-specific configuration and state
+      management. The workflow includes proper security measures, handles
+      sensitive information appropriately, and provides detailed output for
+      monitoring and troubleshooting. The deployment process, with proper
+      infrastructure setup and application configuration, ensures that all
+      components are updated together while maintaining proper dependencies.
     </p>
 
     <!-- Footer Component -->

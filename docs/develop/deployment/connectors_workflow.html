@@ -79,7 +79,7 @@
       <li>
         <strong>S3 State Bucket</strong>:
         <ul>
-          <li>Name: credexbuckets2-statebucket-${ENVIRONMENT}</li>
+          <li>Name: credexbuckets3-statebucket-${ENVIRONMENT}</li>
           <li>Versioning enabled for state history</li>
           <li>Server-side encryption with AES-256</li>
           <li>Created if it doesn't exist</li>
@@ -88,7 +88,7 @@
       <li>
         <strong>DynamoDB Lock Table</strong>:
         <ul>
-          <li>Name: credexbuckets2-statebucket-lock-${ENVIRONMENT}</li>
+          <li>Name: credexbuckets3-statebucket-lock-${ENVIRONMENT}</li>
           <li>Uses LockID as hash key</li>
           <li>Pay-per-request billing mode</li>
           <li>Created if it doesn't exist</li>
@@ -249,9 +249,9 @@
     <h2>Dummy Variables</h2>
 
     <p>
-      The workflow uses dummy values for variables required by other modules but not
-      used by the connectors module. These include application secrets, Neo4j bolt URLs,
-      and Firebase configuration.
+      The workflow uses dummy values for variables required by other modules but
+      not used by the connectors module. These include application secrets,
+      Neo4j bolt URLs, and Firebase configuration.
     </p>
 
     <p>
