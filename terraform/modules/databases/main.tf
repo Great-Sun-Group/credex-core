@@ -459,11 +459,19 @@ heap_size_mb=$((total_mem_mb * 10 / 100))  # Reduced from 15% to 10%
 page_cache_mb=$((total_mem_mb * 20 / 100))  # Reduced from 30% to 20%
 off_heap_mb=$((total_mem_mb * 5 / 100))    # Added explicit off-heap calculation at 5%
 
-# Apply minimum and maximum limits
-heap_size_mb=$(( heap_size_mb < 512 ? 512 : heap_size_mb ))      # Reduced min from 1024m to 512m
-heap_size_mb=$(( heap_size_mb > 16384 ? 16384 : heap_size_mb ))  # Reduced max from 31744m to 16384m
-page_cache_mb=$(( page_cache_mb < 1024 ? 1024 : page_cache_mb )) # Reduced min from 2048m to 1024m
-off_heap_mb=$(( off_heap_mb < 256 ? 256 : off_heap_mb ))         # Set min off-heap to 256m
+# Apply minimum and maximum limits using if statements instead of ternary operators
+if [ $heap_size_mb -lt 512 ]; then
+  heap_size_mb=512
+fi
+if [ $heap_size_mb -gt 16384 ]; then
+  heap_size_mb=16384
+fi
+if [ $page_cache_mb -lt 1024 ]; then
+  page_cache_mb=1024
+fi
+if [ $off_heap_mb -lt 256 ]; then
+  off_heap_mb=256
+fi
 
 # Configure Neo4j using printf to avoid heredoc issues
 echo "Configuring Neo4j with memory settings: heap=$heap_size_mb MB, page_cache=$page_cache_mb MB"
