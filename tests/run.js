@@ -113,8 +113,18 @@ async function runTest() {
     // Force Docker environment to ensure we connect to the existing container
     process.env.DOCKER_ENV = "true";
 
-    // Set baseURL to Docker container - use localhost since we're running tests from outside Docker
-    process.env.TEST_BASE_URL = "http://localhost:3000";
+    // Define base URLs for different environments
+    const baseUrls = {
+      local: "http://localhost:3000",
+      dev: "https://dev.mycredex.dev",
+      stage: "https://stage.mycredex.dev",
+    };
+
+    // Set baseURL based on the selected environment
+    process.env.TEST_BASE_URL = baseUrls[env] || "http://localhost:3000";
+    
+    // Log the environment and base URL being used (even in minimal logs mode)
+    console.log(`Running tests against ${env} environment: ${process.env.TEST_BASE_URL}`);
 
     let jestCommand;
     let testParams = remainingArgs;

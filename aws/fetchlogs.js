@@ -6,8 +6,8 @@ const { CloudWatchLogsClient, GetLogEventsCommand, DescribeLogStreamsCommand } =
 const client = new CloudWatchLogsClient({
   region: "af-south-1",
   credentials: {
-    accessKeyId: process.env.CREDEXCORE_DEV_AWS_ACCESS_KEY,
-    secretAccessKey: process.env.CREDEXCORE_DEV_AWS_SECRET_ACCESS_KEY
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
   }
 });
 
