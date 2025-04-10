@@ -1108,3 +1108,48 @@ resource "aws_iam_role_policy" "ecs_task_s3_asset_marker" {
     ]
   })
 }
+
+#############################
+# Infrastructure Scripts Storage
+#############################
+
+# Bucket for infrastructure scripts
+# Purpose: Stores scripts used for infrastructure setup and configuration
+resource "aws_s3_bucket" "infrastructure_scripts" {
+  bucket = "credexbuckets2-scripts-${var.environment}"
+
+  tags = merge(var.common_tags, {
+    Name = "infrastructure-scripts-${var.environment}"
+    Purpose = "Infrastructure Scripts Storage"
+    DataClassification = "Configuration"
+  })
+}
+
+# Enable versioning for script history
+resource "aws_s3_bucket_versioning" "infrastructure_scripts" {
+  bucket = aws_s3_bucket.infrastructure_scripts.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# Enable server-side encryption for data at rest
+resource "aws_s3_bucket_server_side_encryption_configuration" "infrastructure_scripts" {
+  bucket = aws_s3_bucket.infrastructure_scripts.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Block all public access for security
+resource "aws_s3_bucket_public_access_block" "infrastructure_scripts" {
+  bucket = aws_s3_bucket.infrastructure_scripts.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
