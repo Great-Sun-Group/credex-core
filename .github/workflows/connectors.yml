@@ -61,7 +61,7 @@ jobs:
             -backend-config="bucket=credexbuckets2-statebucket-${ENVIRONMENT}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=credexbuckets2-statebucket-lock-${ENVIRONMENT}"
+            -backend-config="use_lock=true"
 
       - name: Terraform Plan
         env:
