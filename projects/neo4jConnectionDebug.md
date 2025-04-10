@@ -39,11 +39,34 @@ While our tests show the instances can reach the internet through NAT Gateways, 
 - User data script from Terraform should handle installation but appears to be failing
 - Yum repository configuration might be affected by S3 endpoint routing
 
+### 4. Recent Debugging Steps (April 10, 2025)
+
+#### 4.1 Direct Installation Attempt
+- Connected to instance i-095f09149726c75ab using AWS Systems Manager (SSM)
+- Created and executed a custom Neo4j installation script
+- Successfully installed Java 11 (OpenJDK 11)
+- Encountered issues during Neo4j installation:
+  - Yum package manager was locked by another process (pid 2822)
+  - Installation script waited for the lock to be released
+  - Neo4j installation was not completed successfully
+
+#### 4.2 Verification
+- Confirmed Neo4j is not installed: `rpm -q neo4j-enterprise` returned "package neo4j-enterprise is not installed"
+- Confirmed Neo4j service is not running: `systemctl status neo4j` returned "Unit neo4j.service could not be found"
+- No Neo4j ports are open: `netstat -tlpn | grep neo4j` found no open ports
+
+#### 4.3 Installation Script Analysis
+- The installation script in the Terraform configuration appears to be correct
+- The script includes proper error handling and logging
+- The script attempts to install Neo4j from the official repository
+- The issue appears to be related to package installation rather than script logic
+
 ## Key Findings
 
 1. **Network Access**: Not a network connectivity issue as instances can reach the internet
 2. **Service State**: Neo4j is not installed, indicating installation failure during instance launch
 3. **Infrastructure**: All required infrastructure components exist but might need configuration adjustments
+4. **Package Management**: Yum package manager issues (locks) may be preventing successful installation
 
 ## Solution Implemented
 
@@ -90,6 +113,29 @@ resource "aws_vpc_endpoint" "s3" {
 
 This policy now explicitly allows access to the Neo4j repository (`yum.neo4j.com`), which is needed during the installation process. This ensures that when the EC2 instances try to download Neo4j packages from S3, the requests are properly allowed through the VPC endpoint.
 
+## Next Steps
+
+Based on our recent debugging, we need to:
+
+1. **Resolve Yum Lock Issues**:
+   - Investigate why yum locks are occurring during installation
+   - Consider adding retry logic with exponential backoff in the installation script
+   - Add explicit checks for yum locks before attempting installation
+
+2. **Enhance Installation Script**:
+   - Add more detailed logging for package installation steps
+   - Implement better error handling for yum-related issues
+   - Consider using alternative package installation methods if yum continues to fail
+
+3. **Verify Java Version Requirements**:
+   - Confirm that Neo4j 5.x is compatible with OpenJDK 11
+   - Consider installing Java 17 instead, as seen in the installation logs (Neo4j was attempting to install java-17-amazon-corretto)
+
+4. **Implement Deployment Verification**:
+   - Add post-deployment verification steps to the CI/CD pipeline
+   - Create automated tests to verify Neo4j installation and connectivity
+   - Set up monitoring for Neo4j service status
+
 ## Deployment Steps
 
 To complete the fix, follow these steps:
@@ -103,7 +149,12 @@ To complete the fix, follow these steps:
      terraform apply -target=module.connectors
      ```
 
-2. **Redeploy the Neo4j Instances**:
+2. **Update the Neo4j Installation Script**:
+   - Modify the script to handle yum locks more gracefully
+   - Add explicit Java 17 installation instead of Java 11
+   - Enhance error reporting and logging
+
+3. **Redeploy the Neo4j Instances**:
    - After the connectors module is updated, redeploy the Neo4j instances
    - Run the databases workflow in GitHub Actions or use Terraform directly:
      ```bash
@@ -112,12 +163,12 @@ To complete the fix, follow these steps:
      terraform apply -target=module.databases -replace="module.databases.aws_instance.neo4j_ledger" -replace="module.databases.aws_instance.neo4j_search"
      ```
 
-3. **Verify the Deployment**:
+4. **Verify the Deployment**:
    - Check that the Neo4j instances are running
    - Verify that the Neo4j service is installed and running on the instances
    - Test the application's connection to the databases
 
-4. **Update Environment Variables**:
+5. **Update Environment Variables**:
    - After successful deployment, you may need to update the following environment variables:
      - `NEO_4J_LEDGER_SPACE_BOLT_URL`
      - `NEO_4J_SEARCH_SPACE_BOLT_URL`

@@ -104,16 +104,6 @@ else
     fi
 fi
 
-# Check SSM agent connectivity
-echo "=== Checking SSM Agent Connectivity ==="
-# Wait for SSM agent to register with the service
-sleep 30
-# Check if instance is registered with SSM
-aws ssm describe-instance-information --region ${AWS_REGION} --filters "Key=InstanceIds,Values=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)" || {
-    echo "Instance not registered with SSM yet, this is normal during initial setup"
-    send_status_to_cloudwatch "INFO" "Instance not yet registered with SSM, continuing setup"
-}
-
 # Configure early CloudWatch logging - with more robust setup
 mkdir -p /opt/aws/amazon-cloudwatch-agent/
 cat > /opt/aws/amazon-cloudwatch-agent/early-config.json << 'CWCONFIG'
@@ -330,16 +320,6 @@ fi
 # Create required directories if they don't exist
 echo "Creating Neo4j directories..."
 mkdir -p /var/lib/neo4j /var/log/neo4j
-
-# Download and install APOC Core plugin
-mkdir -p /var/lib/neo4j/plugins
-curl -L https://github.com/neo4j/apoc/releases/download/5.26.1/apoc-5.26.1-core.jar -o /var/lib/neo4j/plugins/apoc.jar
-chown -R neo4j:neo4j /var/lib/neo4j/plugins
-echo "APOC plugin downloaded and configured."
-
-# Enable APOC procedures
-echo "dbms.security.procedures.unrestricted=apoc.*" >> /etc/neo4j/neo4j.conf
-echo "dbms.security.procedures.allowlist=apoc.*" >> /etc/neo4j/neo4j.conf
 
 # Configure CloudWatch
 cat > /opt/aws/amazon-cloudwatch-agent/config.json << 'CWCONFIG'
