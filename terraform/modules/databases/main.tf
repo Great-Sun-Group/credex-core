@@ -285,12 +285,13 @@ aws ssm describe-instance-information --region ${var.aws_region} --filters "Key=
     send_status_to_cloudwatch "INFO" "Instance not yet registered with SSM, continuing setup"
 }
 
-# Configure early CloudWatch logging
+# Configure early CloudWatch logging - with more robust setup
 mkdir -p /opt/aws/amazon-cloudwatch-agent/
 cat > /opt/aws/amazon-cloudwatch-agent/early-config.json << 'CWCONFIG'
 {
   "agent": {
-    "metrics_collection_interval": 60
+    "metrics_collection_interval": 60,
+    "run_as_user": "root"
   },
   "logs": {
     "logs_collected": {
@@ -301,16 +302,39 @@ cat > /opt/aws/amazon-cloudwatch-agent/early-config.json << 'CWCONFIG'
             "log_group_name": "/aws/ec2/neo4j/$${ENVIRONMENT}",
             "log_stream_name": "$$(curl -s http://169.254.169.254/latest/meta-data/instance-id)-setup",
             "timestamp_format": "%Y-%m-%d %H:%M:%S"
+          },
+          {
+            "file_path": "/var/log/cloud-init.log",
+            "log_group_name": "/aws/ec2/neo4j/$${ENVIRONMENT}",
+            "log_stream_name": "$$(curl -s http://169.254.169.254/latest/meta-data/instance-id)-cloud-init",
+            "timestamp_format": "%Y-%m-%d %H:%M:%S"
+          },
+          {
+            "file_path": "/var/log/cloud-init-output.log",
+            "log_group_name": "/aws/ec2/neo4j/$${ENVIRONMENT}",
+            "log_stream_name": "$$(curl -s http://169.254.169.254/latest/meta-data/instance-id)-cloud-init-output",
+            "timestamp_format": "%Y-%m-%d %H:%M:%S"
           }
         ]
       }
-    }
+    },
+    "force_flush_interval": 15
   }
 }
 CWCONFIG
 
-# Start CloudWatch agent with early configuration
-/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/early-config.json || true
+# Create log group explicitly
+INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+aws logs create-log-group --log-group-name "/aws/ec2/neo4j/${ENVIRONMENT}" --region ${var.aws_region} || true
+aws logs create-log-stream --log-group-name "/aws/ec2/neo4j/${ENVIRONMENT}" --log-stream-name "$INSTANCE_ID-setup" --region ${var.aws_region} || true
+
+# Start CloudWatch agent with early configuration and verify it's running
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/early-config.json
+systemctl status amazon-cloudwatch-agent || systemctl start amazon-cloudwatch-agent
+
+# Test CloudWatch logging
+echo "Testing CloudWatch logging at $(date)" >> /var/log/neo4j-setup.log
+sleep 5  # Give CloudWatch agent time to send initial logs
 
 # Test S3 connectivity to Neo4j repository
 echo "=== Testing S3 Connectivity ==="

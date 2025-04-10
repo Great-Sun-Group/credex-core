@@ -149,158 +149,100 @@ jobs:
 
           echo "Both Neo4j instances verified successfully"
 
-      - name: Verify Neo4j Service Installation
+      - name: Install Neo4j Driver for Direct Connection Testing
+        run: |
+          npm install neo4j-driver
+
+      - name: Verify Neo4j Connectivity
         run: |
           cd terraform
-          echo "Verifying Neo4j service installation..."
+          echo "Verifying Neo4j connectivity..."
 
-          # Get instance IDs
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 | tr -d '\n' || echo "")
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 | tr -d '\n' || echo "")
+          # Get instance IPs
+          LEDGER_IP=$(terraform output -raw neo4j_ledger_private_ip 2>/dev/null | tr -d '\n' || echo "")
+          SEARCH_IP=$(terraform output -raw neo4j_search_private_ip 2>/dev/null | tr -d '\n' || echo "")
 
-          # Function to verify Neo4j service
-          verify_neo4j_service() {
-            local INSTANCE_ID=$1
+          if [ -z "$LEDGER_IP" ] || [ -z "$SEARCH_IP" ]; then
+            echo "Error: Could not get Neo4j instance IPs"
+            exit 1
+          fi
+
+          echo "Neo4j instance IPs:"
+          echo "LedgerSpace: $LEDGER_IP"
+          echo "SearchSpace: $SEARCH_IP"
+
+          # Function to verify Neo4j connectivity
+          verify_neo4j_connectivity() {
+            local IP=$1
             local SPACE_NAME=$2
-            local MAX_RETRIES=5
+            local MAX_RETRIES=10
             local RETRY_COUNT=0
             local SUCCESS=false
             
-            echo "Verifying Neo4j service on $SPACE_NAME instance ($INSTANCE_ID)..."
+            echo "Verifying Neo4j connectivity on $SPACE_NAME ($IP)..."
             
-            # Wait for SSM agent to be ready
+            # Wait for instance to be fully initialized
             sleep 180
-            
-            # Check if instance is registered with SSM
-            if ! aws ssm describe-instance-information --filters "Key=InstanceIds,Values=$INSTANCE_ID" | grep -q "$INSTANCE_ID"; then
-              echo "Warning: Instance not registered with SSM yet"
-              
-              # Try to restart SSM agent remotely
-              aws ec2-instance-connect send-serial-console-ssh-public-key --instance-id "$INSTANCE_ID" --serial-port 0 --ssh-public-key file://~/.ssh/id_rsa.pub &>/dev/null || true
-              
-              # Get console output and check for Neo4j status
-              if aws ec2 get-console-output --instance-id "$INSTANCE_ID" --output text | grep -q "NEO4J_INSTALL_STATUS"; then
-                echo "Neo4j installation status from console:"
-                aws ec2 get-console-output --instance-id "$INSTANCE_ID" --output text | grep "NEO4J_INSTALL_STATUS"
-              fi
-              
-              # Get instance private IP
-              PRIVATE_IP=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text)
-              
-              # Check if instance is running
-              if aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --query 'Reservations[0].Instances[0].State.Name' --output text | grep -q "running"; then
-                # Create CloudWatch log group if needed
-                LOG_GROUP="/aws/ec2/neo4j/$ENVIRONMENT"
-                LOG_STREAM="$INSTANCE_ID-setup"
-                aws logs create-log-group --log-group-name "$LOG_GROUP" 2>/dev/null || true
-                
-                # Check CloudWatch logs
-                if aws logs describe-log-streams --log-group-name "$LOG_GROUP" --log-stream-name-prefix "$LOG_STREAM" 2>/dev/null; then
-                  LOG_CONTENT=$(aws logs get-log-events --log-group-name "$LOG_GROUP" --log-stream-name "$LOG_STREAM" --limit 1000 --query 'events[*].message' --output text)
-                  
-                  if echo "$LOG_CONTENT" | grep -q "Neo4j is ready"; then
-                    echo "CloudWatch logs confirm Neo4j is running"
-                    SUCCESS=true
-                  elif echo "$LOG_CONTENT" | grep -q "Active: active (running)"; then
-                    echo "CloudWatch logs confirm Neo4j service is active"
-                    SUCCESS=true
-                  else
-                    echo "CloudWatch logs do not confirm Neo4j is running"
-                    echo "Last 10 log entries:"
-                    echo "$LOG_CONTENT" | tail -10
-                  fi
-                else
-                  echo "No CloudWatch log stream found for $LOG_STREAM"
-                  # List available streams
-                  aws logs describe-log-streams --log-group-name "$LOG_GROUP" --limit 5 2>/dev/null || echo "No log streams found"
-                fi
-                
-                # If logs don't confirm, check instance health
-                if [ "$SUCCESS" != "true" ]; then
-                  if aws ec2 describe-instance-status --instance-ids "$INSTANCE_ID" --query 'InstanceStatuses[0].InstanceStatus.Status' --output text | grep -q "ok"; then
-                    echo "Instance is healthy, assuming Neo4j is running"
-                    SUCCESS=true
-                  else
-                    echo "Instance is not healthy"
-                  fi
-                fi
-              else
-                echo "Instance is not running"
-              fi
-              
-              # Return result
-              if [ "$SUCCESS" != "true" ]; then
-                echo "Could not verify Neo4j is running without SSM"
-                return 1
-              fi
-              
-              return 0
-            fi
             
             # Try multiple times with increasing backoff
             while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" != "true" ]; do
-              echo "Attempt $(($RETRY_COUNT + 1))/$MAX_RETRIES: Checking Neo4j service status..."
+              echo "Attempt $(($RETRY_COUNT + 1))/$MAX_RETRIES: Testing Neo4j Bolt connection..."
               
-              # Run SSM command to check Neo4j
-              COMMAND_ID=$(aws ssm send-command \
-                --instance-ids "$INSTANCE_ID" \
-                --document-name "AWS-RunShellScript" \
-                --parameters "commands=['systemctl status neo4j', 'rpm -q neo4j-enterprise', 'netstat -tlpn | grep neo4j']" \
-                --output text --query "Command.CommandId" 2>/dev/null || echo "")
-              
-              if [ -z "$COMMAND_ID" ]; then
-                echo "Failed to send SSM command"
-                sleep 30
-                RETRY_COUNT=$((RETRY_COUNT + 1))
-                continue
-              fi
-              
-              # Wait for command to complete
-              if ! timeout 120 aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" 2>/dev/null; then
-                echo "Command execution timed out"
-                sleep 30
-                RETRY_COUNT=$((RETRY_COUNT + 1))
-                continue
-              fi
-              
-              # Get command results
-              STATUS=$(aws ssm get-command-invocation \
-                --command-id "$COMMAND_ID" \
-                --instance-id "$INSTANCE_ID" \
-                --query "Status" \
-                --output text 2>/dev/null || echo "Failed")
-              
-              OUTPUT=$(aws ssm get-command-invocation \
-                --command-id "$COMMAND_ID" \
-                --instance-id "$INSTANCE_ID" \
-                --query "StandardOutputContent" \
-                --output text 2>/dev/null || echo "No output available")
-              
-              # Check results
-              if [ "$STATUS" = "Success" ]; then
-                if echo "$OUTPUT" | grep -q "Active: active (running)"; then
-                  echo "Neo4j service is running"
+              # Test TCP connection to Neo4j Bolt port
+              if nc -z -w 5 $IP 7687 2>/dev/null; then
+                echo "Neo4j Bolt port is open"
+                
+                # Create a simple Node.js script to test Neo4j connection
+                echo 'const neo4j = require("neo4j-driver");' > /tmp/test-neo4j-connection.js
+                echo '' >> /tmp/test-neo4j-connection.js
+                echo 'const uri = process.argv[2];' >> /tmp/test-neo4j-connection.js
+                echo 'console.log(`Testing connection to: ${uri}`);' >> /tmp/test-neo4j-connection.js
+                echo '' >> /tmp/test-neo4j-connection.js
+                echo 'const driver = neo4j.driver(uri, neo4j.auth.basic("neo4j", "neo4j"), {' >> /tmp/test-neo4j-connection.js
+                echo '  maxConnectionLifetime: 3000,' >> /tmp/test-neo4j-connection.js
+                echo '  maxConnectionPoolSize: 1,' >> /tmp/test-neo4j-connection.js
+                echo '  connectionAcquisitionTimeout: 5000,' >> /tmp/test-neo4j-connection.js
+                echo '  connectionTimeout: 5000' >> /tmp/test-neo4j-connection.js
+                echo '});' >> /tmp/test-neo4j-connection.js
+                echo '' >> /tmp/test-neo4j-connection.js
+                echo 'async function testConnection() {' >> /tmp/test-neo4j-connection.js
+                echo '  const session = driver.session();' >> /tmp/test-neo4j-connection.js
+                echo '  try {' >> /tmp/test-neo4j-connection.js
+                echo '    const result = await session.run("RETURN 1 AS num");' >> /tmp/test-neo4j-connection.js
+                echo '    console.log("Connection successful");' >> /tmp/test-neo4j-connection.js
+                echo '    console.log(`Result: ${JSON.stringify(result.records[0].get("num"))}`);' >> /tmp/test-neo4j-connection.js
+                echo '    return true;' >> /tmp/test-neo4j-connection.js
+                echo '  } catch (error) {' >> /tmp/test-neo4j-connection.js
+                echo '    console.error(`Connection failed: ${error.message}`);' >> /tmp/test-neo4j-connection.js
+                echo '    return false;' >> /tmp/test-neo4j-connection.js
+                echo '  } finally {' >> /tmp/test-neo4j-connection.js
+                echo '    await session.close();' >> /tmp/test-neo4j-connection.js
+                echo '    await driver.close();' >> /tmp/test-neo4j-connection.js
+                echo '  }' >> /tmp/test-neo4j-connection.js
+                echo '}' >> /tmp/test-neo4j-connection.js
+                echo '' >> /tmp/test-neo4j-connection.js
+                echo 'testConnection()' >> /tmp/test-neo4j-connection.js
+                echo '  .then(success => process.exit(success ? 0 : 1))' >> /tmp/test-neo4j-connection.js
+                echo '  .catch(error => {' >> /tmp/test-neo4j-connection.js
+                echo '    console.error(`Error: ${error.message}`);' >> /tmp/test-neo4j-connection.js
+                echo '    process.exit(1);' >> /tmp/test-neo4j-connection.js
+                echo '  });' >> /tmp/test-neo4j-connection.js
+
+                # Try to connect to Neo4j using the driver
+                if node /tmp/test-neo4j-connection.js "bolt://$IP:7687"; then
+                  echo "Successfully connected to Neo4j and executed a query"
                   SUCCESS=true
                   break
                 else
-                  echo "Neo4j service is not running according to systemctl"
-                  echo "Command output:"
-                  echo "$OUTPUT"
+                  echo "Could not connect to Neo4j using the driver"
                 fi
               else
-                echo "Command failed with status: $STATUS"
-                ERROR_OUTPUT=$(aws ssm get-command-invocation \
-                  --command-id "$COMMAND_ID" \
-                  --instance-id "$INSTANCE_ID" \
-                  --query "StandardErrorContent" \
-                  --output text 2>/dev/null || echo "No error output available")
-                
-                echo "Error output: $ERROR_OUTPUT"
+                echo "Neo4j Bolt port is not open yet"
               fi
               
               # Retry with backoff
               if [ $RETRY_COUNT -lt $((MAX_RETRIES - 1)) ]; then
-                SLEEP_TIME=$((30 * (RETRY_COUNT + 1)))
+                SLEEP_TIME=$((15 * (RETRY_COUNT + 1)))
                 echo "Retrying in $SLEEP_TIME seconds..."
                 sleep $SLEEP_TIME
               fi
@@ -310,53 +252,39 @@ jobs:
             
             # Handle verification failure
             if [ "$SUCCESS" != "true" ]; then
-              echo "Error: Neo4j service verification failed on $SPACE_NAME instance after $MAX_RETRIES attempts"
+              echo "Error: Neo4j connectivity verification failed on $SPACE_NAME after $MAX_RETRIES attempts"
               
-              # Get installation logs
-              echo "Installation logs:"
-              aws ssm send-command \
-                --instance-ids "$INSTANCE_ID" \
-                --document-name "AWS-RunShellScript" \
-                --parameters "commands=['cat /var/log/neo4j-setup.log']" \
-                --output text | \
-                xargs -0 aws ssm get-command-invocation \
-                  --command-id \
-                  --instance-id "$INSTANCE_ID" \
-                  --query "StandardOutputContent" \
-                  --output text 2>/dev/null || echo "Could not retrieve installation logs"
+              # Check instance status
+              echo "Instance status:"
+              aws ec2 describe-instance-status --instance-ids $(aws ec2 describe-instances --filters "Name=private-ip-address,Values=$IP" --query "Reservations[0].Instances[0].InstanceId" --output text) --include-all-statuses --output json
               
-              # Check CloudWatch logs
-              LOG_GROUP="/aws/ec2/neo4j/$ENVIRONMENT"
-              LOG_STREAM="$INSTANCE_ID-setup"
-              
-              if aws logs describe-log-streams --log-group-name "$LOG_GROUP" --log-stream-name-prefix "$LOG_STREAM" 2>/dev/null; then
-                echo "CloudWatch logs:"
-                aws logs get-log-events --log-group-name "$LOG_GROUP" --log-stream-name "$LOG_STREAM" --limit 100 --query 'events[*].message' --output text
-              fi
+              # Try to get console output
+              echo "Console output:"
+              aws ec2 get-console-output --instance-id $(aws ec2 describe-instances --filters "Name=private-ip-address,Values=$IP" --query "Reservations[0].Instances[0].InstanceId" --output text) --output text | grep -A 10 "NEO4J_INSTALL_STATUS" || echo "No Neo4j status found in console output"
               
               return 1
             fi
             
-            echo "Neo4j service verification successful on $SPACE_NAME instance"
+            echo "Neo4j connectivity verification successful on $SPACE_NAME"
             return 0
           }
 
-          # Verify Neo4j service on both instances
-          if verify_neo4j_service "$LEDGER_ID" "LedgerSpace"; then
-            echo "LedgerSpace verification successful"
+          # Verify Neo4j connectivity on both instances
+          if verify_neo4j_connectivity "$LEDGER_IP" "LedgerSpace"; then
+            echo "LedgerSpace connectivity verification successful"
           else
-            echo "LedgerSpace verification failed"
+            echo "LedgerSpace connectivity verification failed"
             exit 1
           fi
           
-          if verify_neo4j_service "$SEARCH_ID" "SearchSpace"; then
-            echo "SearchSpace verification successful"
+          if verify_neo4j_connectivity "$SEARCH_IP" "SearchSpace"; then
+            echo "SearchSpace connectivity verification successful"
           else
-            echo "SearchSpace verification failed"
+            echo "SearchSpace connectivity verification failed"
             exit 1
           fi
 
-          echo "Neo4j service verified successfully on both instances"
+          echo "Neo4j connectivity verified successfully on both instances"
 
       - name: Print Database Infrastructure Outputs
         run: |
