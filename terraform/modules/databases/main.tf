@@ -323,10 +323,10 @@ cat > /opt/aws/amazon-cloudwatch-agent/early-config.json << 'CWCONFIG'
 }
 CWCONFIG
 
-# Create log group explicitly
+# Create log group explicitly - using bash variables to avoid Terraform interpolation
 INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
-aws logs create-log-group --log-group-name "/aws/ec2/neo4j/${ENVIRONMENT}" --region ${var.aws_region} || true
-aws logs create-log-stream --log-group-name "/aws/ec2/neo4j/${ENVIRONMENT}" --log-stream-name "$INSTANCE_ID-setup" --region ${var.aws_region} || true
+aws logs create-log-group --log-group-name "/aws/ec2/neo4j/$ENVIRONMENT" --region $AWS_REGION || true
+aws logs create-log-stream --log-group-name "/aws/ec2/neo4j/$ENVIRONMENT" --log-stream-name "$INSTANCE_ID-setup" --region $AWS_REGION || true
 
 # Start CloudWatch agent with early configuration and verify it's running
 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/early-config.json
