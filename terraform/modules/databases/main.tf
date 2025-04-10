@@ -186,8 +186,38 @@ set -e
 # Setup logging
 exec > /var/log/neo4j-setup.log 2>&1
 
+# Function to send installation status to CloudWatch
+send_status_to_cloudwatch() {
+    local status=$1
+    local message=$2
+    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    # Create a temporary JSON file
+    cat > /tmp/cloudwatch-event.json << EOL
+{
+  "environment": "${var.environment}",
+  "instance_id": "$(curl -s http://169.254.169.254/latest/meta-data/instance-id)",
+  "status": "$status",
+  "message": "$message",
+  "timestamp": "$timestamp"
+}
+EOL
+    
+    # Try to send the event to CloudWatch
+    aws cloudwatch put-metric-data \
+      --namespace "Neo4j/Installation" \
+      --metric-name "InstallationStatus" \
+      --dimensions Environment=${var.environment},InstanceId=$(curl -s http://169.254.169.254/latest/meta-data/instance-id) \
+      --value $([ "$status" == "SUCCESS" ] && echo 1 || echo 0) \
+      --region ${var.aws_region} || true
+      
+    # Also log to the instance's console output (retrievable via AWS API)
+    echo "NEO4J_INSTALL_STATUS: $status - $message" > /dev/console
+}
+
 # Set environment for CloudWatch agent
 export ENVIRONMENT="${var.environment}"
+export AWS_REGION="${var.aws_region}"
 
 # System setup
 echo "=== System Initialization ==="
@@ -197,14 +227,78 @@ until ! pgrep -f "yum" > /dev/null; do
     sleep 30
 done
 
+# Install AWS CLI and CloudWatch agent early for logging
+echo "=== Installing AWS CLI and CloudWatch Agent ==="
+yum install -y aws-cli amazon-cloudwatch-agent amazon-ssm-agent || {
+    echo "Failed to install AWS CLI or monitoring agents"
+    send_status_to_cloudwatch "FAILED" "Failed to install AWS CLI or monitoring agents"
+    exit 1
+}
+
+# Start SSM agent early to allow troubleshooting
+systemctl enable amazon-ssm-agent
+systemctl start amazon-ssm-agent
+
+# Configure early CloudWatch logging
+mkdir -p /opt/aws/amazon-cloudwatch-agent/
+cat > /opt/aws/amazon-cloudwatch-agent/early-config.json << 'CWCONFIG'
+{
+  "agent": {
+    "metrics_collection_interval": 60
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/neo4j-setup.log",
+            "log_group_name": "/aws/ec2/neo4j/${ENVIRONMENT}",
+            "log_stream_name": "$(curl -s http://169.254.169.254/latest/meta-data/instance-id)-setup",
+            "timestamp_format": "%Y-%m-%d %H:%M:%S"
+          }
+        ]
+      }
+    }
+  }
+}
+CWCONFIG
+
+# Start CloudWatch agent with early configuration
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/early-config.json || true
+
+# Test S3 connectivity to Neo4j repository
+echo "=== Testing S3 Connectivity ==="
+echo "Testing connectivity to Neo4j repository..."
+aws s3 ls s3://yum.neo4j.com/ --region ${var.aws_region} || {
+    echo "WARNING: Cannot access Neo4j repository via S3. This may indicate an S3 VPC endpoint policy issue."
+    echo "Attempting to diagnose S3 endpoint issues..."
+    
+    # Check if we can reach other S3 buckets
+    echo "Testing access to S3 service..."
+    aws s3 ls --region ${var.aws_region}
+    
+    # Check VPC endpoint configuration
+    echo "Checking VPC endpoints..."
+    aws ec2 describe-vpc-endpoints --region ${var.aws_region} --query "VpcEndpoints[?ServiceName=='com.amazonaws.${var.aws_region}.s3'].VpcEndpointId" --output text
+    
+    # Log the warning but continue - we'll try the installation anyway
+    send_status_to_cloudwatch "WARNING" "S3 connectivity issue detected - may affect Neo4j installation"
+}
+
 echo "=== Java Installation ==="
 amazon-linux-extras install java-openjdk11 -y || {
     echo "Failed to install Java"
+    send_status_to_cloudwatch "FAILED" "Failed to install Java"
     exit 1
 }
 
 echo "=== Neo4j Repository Setup ==="
-rpm --import https://debian.neo4j.com/neotechnology.gpg.key
+rpm --import https://debian.neo4j.com/neotechnology.gpg.key || {
+    echo "Failed to import Neo4j GPG key"
+    send_status_to_cloudwatch "FAILED" "Failed to import Neo4j GPG key"
+    exit 1
+}
+
 cat > /etc/yum.repos.d/neo4j.repo << 'REPO'
 [neo4j]
 name=Neo4j RPM Repository
@@ -213,10 +307,19 @@ enabled=1
 gpgcheck=1
 REPO
 
+# Verify repository configuration
+echo "Verifying Neo4j repository configuration..."
+yum repolist | grep neo4j || {
+    echo "Neo4j repository not properly configured"
+    send_status_to_cloudwatch "FAILED" "Neo4j repository not properly configured"
+    exit 1
+}
+
 echo "=== Installing Required Packages ==="
-echo "Installing Neo4j Enterprise, CloudWatch agent, and SSM agent..."
-yum install -y neo4j-enterprise amazon-cloudwatch-agent amazon-ssm-agent || {
-    echo "Installation failed. Diagnostic information:"
+echo "Installing Neo4j Enterprise..."
+# Try to install Neo4j with detailed error capture
+yum install -y neo4j-enterprise || {
+    echo "Neo4j installation failed. Diagnostic information:"
     echo "=== YUM Log ==="
     cat /var/log/yum.log
     echo "=== Neo4j Repository ==="
@@ -225,6 +328,12 @@ yum install -y neo4j-enterprise amazon-cloudwatch-agent amazon-ssm-agent || {
     free -m
     echo "=== Disk Space ==="
     df -h
+    echo "=== Network Connectivity Test ==="
+    curl -v https://yum.neo4j.com/stable/5/
+    echo "=== S3 Endpoint Test ==="
+    aws s3 ls s3://yum.neo4j.com/ --region ${var.aws_region} || echo "S3 endpoint access failed"
+    
+    send_status_to_cloudwatch "FAILED" "Neo4j installation failed - likely S3 endpoint policy issue"
     exit 1
 }
 

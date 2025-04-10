@@ -138,25 +138,54 @@ After deployment, you can verify the fix by:
 
 3. Verify that the application can connect to the databases by checking the application logs.
 
-## Workflow Improvements
+## Improvements Implemented
 
-To prevent similar issues in the future, we've enhanced the GitHub workflow to verify the actual Neo4j service installation:
+We've made several improvements to prevent similar issues in the future:
 
-1. **Added Neo4j Service Verification Step**:
-   - The workflow now uses AWS Systems Manager (SSM) to run commands on the instances
-   - Verifies that Neo4j is installed and running by checking:
-     - Service status (`systemctl status neo4j`)
-     - Package installation (`rpm -q neo4j-enterprise`)
-     - Open ports (`netstat -tlpn | grep neo4j`)
-   - If verification fails, the workflow will:
-     - Report detailed error information
-     - Display the Neo4j installation logs
-     - Fail the deployment
+### 1. Enhanced GitHub Workflow
 
-2. **Benefits**:
-   - Early detection of installation failures
-   - Detailed error reporting for faster troubleshooting
-   - Prevents false "success" reports when only the EC2 instances are running but Neo4j isn't installed
+We've added a robust verification step to the GitHub workflow:
+
+- **Added Neo4j Service Verification Step**:
+  - The workflow now uses AWS Systems Manager (SSM) to run commands on the instances
+  - Verifies that Neo4j is installed and running by checking:
+    - Service status (`systemctl status neo4j`)
+    - Package installation (`rpm -q neo4j-enterprise`)
+    - Open ports (`netstat -tlpn | grep neo4j`)
+  - If verification fails, the workflow will:
+    - Report detailed error information
+    - Display the Neo4j installation logs
+    - Fail the deployment
+
+- **Benefits**:
+  - Early detection of installation failures
+  - Detailed error reporting for faster troubleshooting
+  - Prevents false "success" reports when only the EC2 instances are running but Neo4j isn't installed
+
+### 2. Improved User Data Script
+
+We've enhanced the EC2 instance user data script to better detect and report S3 endpoint issues:
+
+- **Early CloudWatch Integration**:
+  - Installs and configures CloudWatch agent at the beginning of the script
+  - Sends installation status metrics to CloudWatch
+  - Logs to instance console output for easier debugging
+
+- **S3 Connectivity Testing**:
+  - Explicitly tests S3 connectivity to the Neo4j repository
+  - Performs diagnostic tests if connectivity issues are detected
+  - Logs detailed information about S3 endpoint configuration
+
+- **Enhanced Error Handling**:
+  - More detailed error reporting at each critical step
+  - Specific checks for repository configuration
+  - Network connectivity tests when installation fails
+  - Explicit testing of S3 endpoint access
+
+- **Benefits**:
+  - Catches S3 endpoint policy issues early in the installation process
+  - Provides clear diagnostic information about the specific failure point
+  - Makes silent failures visible through multiple logging channels
 
 ## Long-term Recommendations
 
