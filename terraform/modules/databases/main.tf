@@ -229,15 +229,61 @@ done
 
 # Install AWS CLI and CloudWatch agent early for logging
 echo "=== Installing AWS CLI and CloudWatch Agent ==="
-yum install -y aws-cli amazon-cloudwatch-agent amazon-ssm-agent || {
-    echo "Failed to install AWS CLI or monitoring agents"
-    send_status_to_cloudwatch "FAILED" "Failed to install AWS CLI or monitoring agents"
+yum install -y aws-cli amazon-cloudwatch-agent || {
+    echo "Failed to install AWS CLI or CloudWatch agent"
+    send_status_to_cloudwatch "FAILED" "Failed to install AWS CLI or CloudWatch agent"
     exit 1
 }
 
-# Start SSM agent early to allow troubleshooting
+# Install SSM agent
+echo "=== Installing SSM Agent ==="
+# First check if SSM agent is already installed
+if rpm -q amazon-ssm-agent > /dev/null; then
+    echo "SSM agent is already installed"
+else
+    # Download and install the SSM agent
+    echo "Downloading SSM agent..."
+    mkdir -p /tmp/ssm
+    cd /tmp/ssm
+    wget https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+    echo "Installing SSM agent..."
+    yum install -y amazon-ssm-agent.rpm
+    cd -
+    rm -rf /tmp/ssm
+fi
+
+# Configure and start SSM agent
+echo "=== Configuring and Starting SSM Agent ==="
+# Ensure SSM agent is enabled and started
 systemctl enable amazon-ssm-agent
 systemctl start amazon-ssm-agent
+
+# Verify SSM agent is running
+echo "=== Verifying SSM Agent Status ==="
+if systemctl is-active amazon-ssm-agent > /dev/null; then
+    echo "SSM agent is running"
+else
+    echo "SSM agent is not running, attempting to restart..."
+    systemctl restart amazon-ssm-agent
+    sleep 5
+    if systemctl is-active amazon-ssm-agent > /dev/null; then
+        echo "SSM agent is now running after restart"
+    else
+        echo "Failed to start SSM agent"
+        send_status_to_cloudwatch "WARNING" "Failed to start SSM agent"
+        # Continue anyway, as we'll try to fix it later
+    fi
+fi
+
+# Check SSM agent connectivity
+echo "=== Checking SSM Agent Connectivity ==="
+# Wait for SSM agent to register with the service
+sleep 30
+# Check if instance is registered with SSM
+aws ssm describe-instance-information --region ${var.aws_region} --filters "Key=InstanceIds,Values=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)" || {
+    echo "Instance not registered with SSM yet, this is normal during initial setup"
+    send_status_to_cloudwatch "INFO" "Instance not yet registered with SSM, continuing setup"
+}
 
 # Configure early CloudWatch logging
 mkdir -p /opt/aws/amazon-cloudwatch-agent/

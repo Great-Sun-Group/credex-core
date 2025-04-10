@@ -164,12 +164,18 @@ We've added a robust verification step to the GitHub workflow:
 
 ### 2. Improved User Data Script
 
-We've enhanced the EC2 instance user data script to better detect and report S3 endpoint issues:
+We've enhanced the EC2 instance user data script to better detect and report issues:
 
 - **Early CloudWatch Integration**:
   - Installs and configures CloudWatch agent at the beginning of the script
   - Sends installation status metrics to CloudWatch
   - Logs to instance console output for easier debugging
+
+- **Robust SSM Agent Installation**:
+  - Explicitly downloads and installs the latest SSM agent
+  - Verifies the agent is running and restarts if necessary
+  - Tests SSM connectivity to ensure the agent is registered with AWS
+  - Provides detailed logging of SSM agent status
 
 - **S3 Connectivity Testing**:
   - Explicitly tests S3 connectivity to the Neo4j repository
@@ -184,8 +190,33 @@ We've enhanced the EC2 instance user data script to better detect and report S3 
 
 - **Benefits**:
   - Catches S3 endpoint policy issues early in the installation process
+  - Ensures SSM agent is properly installed and running
   - Provides clear diagnostic information about the specific failure point
   - Makes silent failures visible through multiple logging channels
+
+### 3. Improved GitHub Workflow Verification
+
+We've enhanced the GitHub workflow verification step to be more robust:
+
+- **Multiple Verification Methods**:
+  - Primary verification through SSM commands
+  - Fallback to CloudWatch logs if SSM is unavailable
+  - Instance health checks as a last resort
+
+- **Retry Logic**:
+  - Multiple attempts with increasing backoff
+  - Detailed error reporting for each attempt
+  - Timeout handling to prevent workflow hangs
+
+- **Comprehensive Diagnostics**:
+  - Retrieves console output for debugging
+  - Checks CloudWatch logs for installation status
+  - Verifies Neo4j service is actually running
+
+- **Benefits**:
+  - More reliable verification process
+  - Better error reporting for troubleshooting
+  - Prevents false negatives due to SSM agent initialization
 
 ## Long-term Recommendations
 
