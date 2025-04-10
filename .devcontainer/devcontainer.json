@@ -36,7 +36,7 @@
   "remoteEnv": {
     "NODE_ENV":"development",
     "AWS_REGION": "af-south-1",
-    "AWS_ACCESS_KEY_ID": "${localEnv:CREDEX_CORE_DEV_AWS_ACCESS_KEY_ID}",
-    "AWS_SECRET_ACCESS_KEY": "${localEnv:CREDEX_CORE_DEV_AWS_SECRET_ACCESS_KEY}"
+    "AWS_ACCESS_KEY_ID": "${localEnv:CREDEX_CORE_DEV_AWS_ACCESS_KEY_ID2}",
+    "AWS_SECRET_ACCESS_KEY": "${localEnv:CREDEX_CORE_DEV_AWS_SECRET_ACCESS_KEY2}"
   }
 }
