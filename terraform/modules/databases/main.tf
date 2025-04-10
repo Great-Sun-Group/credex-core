@@ -387,11 +387,38 @@ yum repolist | grep neo4j || {
 
 echo "=== Installing Required Packages ==="
 echo "Installing Neo4j Enterprise..."
+
+# First check if we can access the Neo4j repository
+echo "Testing direct HTTPS access to Neo4j repository..."
+curl -v https://yum.neo4j.com/stable/5/ || {
+    echo "WARNING: Cannot access Neo4j repository via HTTPS"
+    send_status_to_cloudwatch "WARNING" "Cannot access Neo4j repository via HTTPS"
+}
+
+echo "Testing S3 access to Neo4j repository..."
+aws s3 ls s3://yum.neo4j.com/ --region $AWS_REGION || {
+    echo "WARNING: Cannot access Neo4j repository via S3"
+    send_status_to_cloudwatch "WARNING" "Cannot access Neo4j repository via S3"
+    
+    # Check S3 VPC endpoint policy
+    echo "Checking S3 VPC endpoint policy..."
+    ENDPOINT_ID=$(aws ec2 describe-vpc-endpoints --region $AWS_REGION --filters "Name=service-name,Values=com.amazonaws.$AWS_REGION.s3" --query "VpcEndpoints[0].VpcEndpointId" --output text)
+    if [ -n "$ENDPOINT_ID" ]; then
+        echo "S3 VPC endpoint found: $ENDPOINT_ID"
+        aws ec2 describe-vpc-endpoints --region $AWS_REGION --vpc-endpoint-ids $ENDPOINT_ID --query "VpcEndpoints[0].PolicyDocument" --output text || echo "Could not retrieve endpoint policy"
+    else
+        echo "No S3 VPC endpoint found"
+    fi
+}
+
 # Try to install Neo4j with detailed error capture
+echo "Attempting to install Neo4j Enterprise..."
 yum install -y neo4j-enterprise || {
-    echo "Neo4j installation failed. Diagnostic information:"
+    echo "Neo4j installation failed. Detailed diagnostic information:"
     echo "=== YUM Log ==="
     cat /var/log/yum.log
+    echo "=== YUM Error Log ==="
+    cat /var/log/yum.log | grep -i error
     echo "=== Neo4j Repository ==="
     cat /etc/yum.repos.d/neo4j.repo
     echo "=== System Memory ==="
@@ -401,10 +428,65 @@ yum install -y neo4j-enterprise || {
     echo "=== Network Connectivity Test ==="
     curl -v https://yum.neo4j.com/stable/5/
     echo "=== S3 Endpoint Test ==="
-    aws s3 ls s3://yum.neo4j.com/ --region ${var.aws_region} || echo "S3 endpoint access failed"
+    aws s3 ls s3://yum.neo4j.com/ --region $AWS_REGION || echo "S3 endpoint access failed"
+    echo "=== DNS Resolution Test ==="
+    nslookup yum.neo4j.com || echo "DNS resolution failed"
+    echo "=== Route to Neo4j Repository ==="
+    traceroute yum.neo4j.com || echo "Traceroute failed"
     
-    send_status_to_cloudwatch "FAILED" "Neo4j installation failed - likely S3 endpoint policy issue"
-    exit 1
+    # Try alternative installation method
+    echo "Attempting alternative installation method..."
+    mkdir -p /tmp/neo4j
+    cd /tmp/neo4j
+    
+    # Try to download directly
+    echo "Downloading Neo4j package directly..."
+    curl -L -O https://neo4j.com/artifact.php?name=neo4j-enterprise-5.13.0-unix.tar.gz || {
+        echo "Direct download failed"
+        send_status_to_cloudwatch "FAILED" "Neo4j installation failed - all methods exhausted"
+        exit 1
+    }
+    
+    # Extract and install manually
+    echo "Extracting Neo4j package..."
+    tar -xf neo4j-enterprise-5.13.0-unix.tar.gz
+    echo "Installing Neo4j manually..."
+    cp -r neo4j-enterprise-5.13.0 /var/lib/neo4j
+    
+    # Create service file
+    echo "Creating Neo4j service..."
+    cat > /etc/systemd/system/neo4j.service << 'NEOSERVICE'
+[Unit]
+Description=Neo4j Graph Database
+After=network.target
+
+[Service]
+ExecStart=/var/lib/neo4j/bin/neo4j start
+ExecStop=/var/lib/neo4j/bin/neo4j stop
+Type=forking
+User=neo4j
+Group=neo4j
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+NEOSERVICE
+
+    # Create neo4j user if it doesn't exist
+    id -u neo4j &>/dev/null || useradd -r -d /var/lib/neo4j neo4j
+    
+    # Set permissions
+    chown -R neo4j:neo4j /var/lib/neo4j
+    
+    # Enable service
+    systemctl daemon-reload
+    systemctl enable neo4j
+    
+    # Clean up
+    cd -
+    rm -rf /tmp/neo4j
+    
+    send_status_to_cloudwatch "WARNING" "Neo4j installed via alternative method"
 }
 
 # Verify Neo4j package installation
@@ -558,11 +640,38 @@ chmod 600 /etc/neo4j/neo4j.conf
 echo "Enabling and starting Neo4j service..."
 systemctl enable neo4j
 systemctl start neo4j || {
-    echo "Failed to start Neo4j service. Checking logs..."
+    echo "Failed to start Neo4j service. Detailed diagnostics:"
+    echo "=== Neo4j Service Status ==="
+    systemctl status neo4j
+    echo "=== Neo4j Service Logs ==="
     journalctl -u neo4j -n 100
-    echo "Checking Neo4j configuration..."
+    echo "=== Neo4j Configuration ==="
     cat /etc/neo4j/neo4j.conf
-    exit 1
+    echo "=== Neo4j Data Directory ==="
+    ls -la /var/lib/neo4j/
+    echo "=== Neo4j Log Directory ==="
+    ls -la /var/log/neo4j/
+    echo "=== Neo4j Permissions ==="
+    ls -la /etc/neo4j/
+    echo "=== Java Version ==="
+    java -version
+    echo "=== System Limits ==="
+    ulimit -a
+    
+    # Try to fix common issues
+    echo "Attempting to fix common issues..."
+    
+    # Fix permissions
+    echo "Fixing permissions..."
+    chown -R neo4j:neo4j /var/lib/neo4j /var/log/neo4j /etc/neo4j
+    chmod 755 /var/lib/neo4j /var/log/neo4j
+    
+    # Try starting again
+    echo "Trying to start Neo4j again..."
+    systemctl start neo4j || {
+        send_status_to_cloudwatch "FAILED" "Neo4j service failed to start after fixes"
+        exit 1
+    }
 }
 
 # Give Neo4j time to initialize
@@ -580,14 +689,38 @@ echo "Waiting for Neo4j bolt connection..."
 for i in {1..30}; do
   if cypher-shell --non-interactive "RETURN 1;" >/dev/null 2>&1; then
     echo "Neo4j is ready"
+    send_status_to_cloudwatch "SUCCESS" "Neo4j is ready and accepting connections"
+    
+    # Verify Neo4j is listening on the correct ports
+    echo "Verifying Neo4j ports..."
+    netstat -tlpn | grep neo4j
+    
+    # Create a test node to verify database functionality
+    echo "Creating test node..."
+    cypher-shell --non-interactive "CREATE (n:Test {name: 'test'}) RETURN n;" || echo "Failed to create test node"
+    
     exit 0
   fi
   echo "Waiting for Neo4j to be ready... ($i/30)"
   sleep 10
 done
 
-echo "Neo4j failed to start properly"
+echo "Neo4j failed to start properly. Final diagnostics:"
+echo "=== Neo4j Service Status ==="
+systemctl status neo4j
+echo "=== Neo4j Service Logs ==="
 journalctl -u neo4j -n 100
+echo "=== Neo4j Process ==="
+ps aux | grep neo4j
+echo "=== Neo4j Ports ==="
+netstat -tlpn | grep neo4j || echo "No Neo4j ports found"
+echo "=== System Resources ==="
+free -m
+df -h
+echo "=== Last 50 lines of system log ==="
+tail -n 50 /var/log/messages || tail -n 50 /var/log/syslog || echo "System logs not available"
+
+send_status_to_cloudwatch "FAILED" "Neo4j failed to start properly after 30 attempts"
 exit 1
 EOF
 }

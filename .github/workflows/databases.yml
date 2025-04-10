@@ -158,13 +158,28 @@ jobs:
           cd terraform
           echo "Verifying Neo4j connectivity..."
 
-          # Get instance IPs
-          LEDGER_IP=$(terraform output -raw neo4j_ledger_private_ip 2>/dev/null | tr -d '\n' || echo "")
-          SEARCH_IP=$(terraform output -raw neo4j_search_private_ip 2>/dev/null | tr -d '\n' || echo "")
+          # Get instance IPs - ensure clean output with no debug info
+          LEDGER_IP=$(terraform output -raw neo4j_ledger_private_ip 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+' | head -n 1 || echo "")
+          SEARCH_IP=$(terraform output -raw neo4j_search_private_ip 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+' | head -n 1 || echo "")
 
           if [ -z "$LEDGER_IP" ] || [ -z "$SEARCH_IP" ]; then
             echo "Error: Could not get Neo4j instance IPs"
-            exit 1
+            # Try a different approach to get IPs
+            LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 || echo "")
+            SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 || echo "")
+            
+            if [ -n "$LEDGER_ID" ]; then
+              LEDGER_IP=$(aws ec2 describe-instances --instance-ids "$LEDGER_ID" --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text)
+            fi
+            
+            if [ -n "$SEARCH_ID" ]; then
+              SEARCH_IP=$(aws ec2 describe-instances --instance-ids "$SEARCH_ID" --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text)
+            fi
+            
+            if [ -z "$LEDGER_IP" ] || [ -z "$SEARCH_IP" ]; then
+              echo "Error: Still could not get Neo4j instance IPs"
+              exit 1
+            fi
           fi
 
           echo "Neo4j instance IPs:"
@@ -254,13 +269,30 @@ jobs:
             if [ "$SUCCESS" != "true" ]; then
               echo "Error: Neo4j connectivity verification failed on $SPACE_NAME after $MAX_RETRIES attempts"
               
+              # Get instance ID directly from terraform outputs
+              local INSTANCE_ID=""
+              if [[ "$SPACE_NAME" == "LedgerSpace" ]]; then
+                INSTANCE_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1)
+              else
+                INSTANCE_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1)
+              fi
+              
+              if [ -z "$INSTANCE_ID" ]; then
+                echo "Could not determine instance ID for $SPACE_NAME"
+                return 1
+              fi
+              
               # Check instance status
-              echo "Instance status:"
-              aws ec2 describe-instance-status --instance-ids $(aws ec2 describe-instances --filters "Name=private-ip-address,Values=$IP" --query "Reservations[0].Instances[0].InstanceId" --output text) --include-all-statuses --output json
+              echo "Instance status for $INSTANCE_ID:"
+              aws ec2 describe-instance-status --instance-ids "$INSTANCE_ID" --include-all-statuses --output json || echo "Could not get instance status"
               
               # Try to get console output
-              echo "Console output:"
-              aws ec2 get-console-output --instance-id $(aws ec2 describe-instances --filters "Name=private-ip-address,Values=$IP" --query "Reservations[0].Instances[0].InstanceId" --output text) --output text | grep -A 10 "NEO4J_INSTALL_STATUS" || echo "No Neo4j status found in console output"
+              echo "Console output for $INSTANCE_ID:"
+              aws ec2 get-console-output --instance-id "$INSTANCE_ID" --output text | grep -A 10 "NEO4J_INSTALL_STATUS" || echo "No Neo4j status found in console output"
+              
+              # Try to get system log
+              echo "Checking system log for Neo4j installation issues:"
+              aws ec2 get-console-output --instance-id "$INSTANCE_ID" --output text | grep -i "neo4j\|error\|fail" || echo "No relevant log entries found"
               
               return 1
             fi
