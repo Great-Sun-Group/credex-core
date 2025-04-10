@@ -196,7 +196,7 @@ send_status_to_cloudwatch() {
     cat > /tmp/cloudwatch-event.json << EOL
 {
   "environment": "${var.environment}",
-  "instance_id": "$(curl -s http://169.254.169.254/latest/meta-data/instance-id)",
+  "instance_id": "$$(curl -s http://169.254.169.254/latest/meta-data/instance-id)",
   "status": "$status",
   "message": "$message",
   "timestamp": "$timestamp"
@@ -207,8 +207,8 @@ EOL
     aws cloudwatch put-metric-data \
       --namespace "Neo4j/Installation" \
       --metric-name "InstallationStatus" \
-      --dimensions Environment=${var.environment},InstanceId=$(curl -s http://169.254.169.254/latest/meta-data/instance-id) \
-      --value $([ "$status" == "SUCCESS" ] && echo 1 || echo 0) \
+      --dimensions Environment=${var.environment},InstanceId=$$(curl -s http://169.254.169.254/latest/meta-data/instance-id) \
+      --value $$([ "$status" == "SUCCESS" ] && echo 1 || echo 0) \
       --region ${var.aws_region} || true
       
     # Also log to the instance's console output (retrievable via AWS API)
@@ -252,8 +252,8 @@ cat > /opt/aws/amazon-cloudwatch-agent/early-config.json << 'CWCONFIG'
         "collect_list": [
           {
             "file_path": "/var/log/neo4j-setup.log",
-            "log_group_name": "/aws/ec2/neo4j/${ENVIRONMENT}",
-            "log_stream_name": "$(curl -s http://169.254.169.254/latest/meta-data/instance-id)-setup",
+            "log_group_name": "/aws/ec2/neo4j/$${ENVIRONMENT}",
+            "log_stream_name": "$$(curl -s http://169.254.169.254/latest/meta-data/instance-id)-setup",
             "timestamp_format": "%Y-%m-%d %H:%M:%S"
           }
         ]
