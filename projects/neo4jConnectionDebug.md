@@ -45,106 +45,118 @@ While our tests show the instances can reach the internet through NAT Gateways, 
 2. **Service State**: Neo4j is not installed, indicating installation failure during instance launch
 3. **Infrastructure**: All required infrastructure components exist but might need configuration adjustments
 
-## Potential Solutions
+## Solution Implemented
 
-### 1. S3 VPC Endpoint Configuration
-- While an S3 VPC endpoint exists, it might need route table associations review
-- Verify S3 endpoint policy allows access to yum repositories
-- Consider adding specific routes for yum repository access
+We've updated the S3 VPC endpoint policy in `terraform/modules/connectors/shared_resources/main.tf` to explicitly allow access to the Neo4j repository:
 
-#### S3 Endpoint and Yum Repositories
-The relationship between S3 and yum repositories is critical because:
-- Many yum repositories, including Neo4j's, use S3 buckets to store their packages
-- The S3 VPC endpoint can intercept and route S3 requests locally within AWS
-- Without proper endpoint policies, these requests might fail or timeout
-
-Current S3 endpoint lacks a policy allowing access to external yum repositories. Recommended policy:
-```json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "AllowYumRepositoryAccess",
-            "Effect": "Allow",
-            "Principal": "*",
-            "Action": [
-                "s3:GetObject",
-                "s3:ListBucket"
-            ],
-            "Resource": [
-                "arn:aws:s3:::yum.neo4j.com/*",
-                "arn:aws:s3:::yum.neo4j.com"
-            ]
-        }
+```hcl
+resource "aws_vpc_endpoint" "s3" {
+  # ... existing configuration ...
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowYumRepositoryAccess"
+        Effect    = "Allow"
+        Principal = "*"
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::yum.neo4j.com/*",
+          "arn:aws:s3:::yum.neo4j.com"
+        ]
+      },
+      {
+        Sid       = "AllowAllS3Access"
+        Effect    = "Allow"
+        Principal = "*"
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
+        ]
+        Resource = [
+          "arn:aws:s3:::*",
+          "arn:aws:s3:::*/*"
+        ]
+      }
     ]
+  })
+  # ... rest of configuration ...
 }
 ```
 
-### 2. Instance Reinstallation
-- Could terminate and recreate instances after fixing S3 endpoint configuration
-- Modify user data script to include more error logging
-- Add explicit checks for successful Neo4j installation
+This policy now explicitly allows access to the Neo4j repository (`yum.neo4j.com`), which is needed during the installation process. This ensures that when the EC2 instances try to download Neo4j packages from S3, the requests are properly allowed through the VPC endpoint.
 
-### 3. Manual Installation
-- Could attempt manual installation after fixing S3 endpoint configuration
-- Would provide more detailed error messages for troubleshooting
-- Temporary solution to verify if S3 endpoint is the root cause
+## Deployment Steps
 
-## Solution Implementation
+To complete the fix, follow these steps:
 
-After investigation, we recommend using the proper deployment workflow rather than direct terraform commands:
-
-1. **Update S3 VPC Endpoint Configuration via Connectors Workflow**:
-   - The S3 endpoint policy change should be deployed through the connectors workflow
-   - This ensures proper infrastructure change management
-   - Changes should be made in a PR and deployed via GitHub Actions
-
-2. **Redeploy Neo4j Instances via Databases Workflow**:
-   - Use the databases.yml workflow which is specifically designed for this purpose
-   - The workflow already includes proper instance replacement flags:
-     ```yaml
-     terraform plan -target=module.databases -replace="module.databases.aws_instance.neo4j_ledger" -replace="module.databases.aws_instance.neo4j_search"
+1. **Deploy the Connectors Module First**:
+   - This will update the S3 VPC endpoint policy
+   - Run the connectors workflow in GitHub Actions or use Terraform directly:
+     ```bash
+     cd terraform
+     terraform init
+     terraform apply -target=module.connectors
      ```
-   - This ensures:
-     * Clean instance recreation
-     * Proper terraform state management
-     * Consistent deployment process
 
-## Previous Investigation Steps
+2. **Redeploy the Neo4j Instances**:
+   - After the connectors module is updated, redeploy the Neo4j instances
+   - Run the databases workflow in GitHub Actions or use Terraform directly:
+     ```bash
+     cd terraform
+     terraform init
+     terraform apply -target=module.databases -replace="module.databases.aws_instance.neo4j_ledger" -replace="module.databases.aws_instance.neo4j_search"
+     ```
 
-1. **Review S3 VPC Endpoint Configuration**:
-   ```hcl
-   # Current configuration in terraform/modules/connectors/shared_resources/main.tf
-   resource "aws_vpc_endpoint" "s3" {
-     vpc_id            = aws_vpc.main.id
-     service_name      = "com.amazonaws.${data.aws_region.current.name}.s3"
-     vpc_endpoint_type = "Gateway"
-     route_table_ids   = aws_route_table.private[*].id
-   }
+3. **Verify the Deployment**:
+   - Check that the Neo4j instances are running
+   - Verify that the Neo4j service is installed and running on the instances
+   - Test the application's connection to the databases
+
+4. **Update Environment Variables**:
+   - After successful deployment, you may need to update the following environment variables:
+     - `NEO_4J_LEDGER_SPACE_BOLT_URL`
+     - `NEO_4J_SEARCH_SPACE_BOLT_URL`
+
+## Monitoring and Verification
+
+After deployment, you can verify the fix by:
+
+1. SSH into one of the Neo4j instances and check if Neo4j is installed:
+   ```bash
+   systemctl status neo4j
    ```
-   - Verify route table associations
-   - Consider adding specific endpoint policies for yum repository access
-   - Review route table entries for S3 access
 
-2. **S3 Endpoint Policy Update**:
-   - Add the above S3 endpoint policy to allow yum repository access
-   - Verify policy is applied correctly
-   - Test S3 access from instances
+2. Check the installation logs for any errors:
+   ```bash
+   cat /var/log/neo4j-setup.log
+   ```
 
-3. **Enhance Installation Logging**:
-   - Modify user data script to include more detailed logging
-   - Add explicit verification steps for Neo4j installation
-   - Consider adding CloudWatch log streaming for installation logs
+3. Verify that the application can connect to the databases by checking the application logs.
 
-3. **Infrastructure Validation**:
-   - Verify all required security group rules
-   - Confirm NAT Gateway configurations
-   - Review instance IAM roles and permissions
+## Workflow Improvements
 
-4. **After S3 Configuration**:
-   - Test manual Neo4j installation
-   - If successful, update Terraform configuration
-   - If still failing, collect detailed installation logs
+To prevent similar issues in the future, we've enhanced the GitHub workflow to verify the actual Neo4j service installation:
+
+1. **Added Neo4j Service Verification Step**:
+   - The workflow now uses AWS Systems Manager (SSM) to run commands on the instances
+   - Verifies that Neo4j is installed and running by checking:
+     - Service status (`systemctl status neo4j`)
+     - Package installation (`rpm -q neo4j-enterprise`)
+     - Open ports (`netstat -tlpn | grep neo4j`)
+   - If verification fails, the workflow will:
+     - Report detailed error information
+     - Display the Neo4j installation logs
+     - Fail the deployment
+
+2. **Benefits**:
+   - Early detection of installation failures
+   - Detailed error reporting for faster troubleshooting
+   - Prevents false "success" reports when only the EC2 instances are running but Neo4j isn't installed
 
 ## Long-term Recommendations
 
