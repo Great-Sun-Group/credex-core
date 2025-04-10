@@ -187,8 +187,8 @@ resource "aws_iam_role_policy" "neo4j_s3_access" {
           "s3:ListBucket"
         ]
         Resource = [
-          "arn:aws:s3:::credexbuckets2-scripts-${var.environment}",
-          "arn:aws:s3:::credexbuckets2-scripts-${var.environment}/*"
+          "arn:aws:s3:::credexbuckets3-scripts-${var.environment}",
+          "arn:aws:s3:::credexbuckets3-scripts-${var.environment}/*"
         ]
       }
     ]
@@ -202,7 +202,7 @@ resource "aws_iam_instance_profile" "neo4j_instance_profile" {
 
 # Upload Neo4j installation script to S3
 resource "aws_s3_object" "neo4j_install_script" {
-  bucket = "credexbuckets2-scripts-${var.environment}"
+  bucket = "credexbuckets3-scripts-${var.environment}"
   key    = "neo4j_install.sh"
   source = "${path.module}/../../files/neo4j_install.sh"
   etag   = filemd5("${path.module}/../../files/neo4j_install.sh")
@@ -274,7 +274,7 @@ yum install -y aws-cli amazon-cloudwatch-agent || {
 
 # Download and execute the Neo4j installation script from S3
 echo "=== Downloading Neo4j installation script from S3 ==="
-aws s3 cp s3://credexbuckets2-scripts-${var.environment}/neo4j_install.sh /tmp/neo4j_install.sh || {
+aws s3 cp s3://credexbuckets3-scripts-${var.environment}/neo4j_install.sh /tmp/neo4j_install.sh || {
     echo "Failed to download Neo4j installation script from S3"
     send_status_to_cloudwatch "FAILED" "Failed to download Neo4j installation script from S3"
     exit 1
