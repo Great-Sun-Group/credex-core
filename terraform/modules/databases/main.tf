@@ -172,7 +172,7 @@ resource "aws_iam_role_policy_attachment" "neo4j_ssm_policy_full" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
 }
 
-# Add S3 access policy for Neo4j instances to access installation script
+# Add S3 access policy for Neo4j instances
 resource "aws_iam_role_policy" "neo4j_s3_access" {
   name = "neo4j-s3-access-${var.environment}"
   role = aws_iam_role.neo4j_role.id
@@ -187,8 +187,8 @@ resource "aws_iam_role_policy" "neo4j_s3_access" {
           "s3:ListBucket"
         ]
         Resource = [
-          "arn:aws:s3:::credexbuckets3-scripts-${var.environment}",
-          "arn:aws:s3:::credexbuckets3-scripts-${var.environment}/*"
+          "arn:aws:s3:::*",
+          "arn:aws:s3:::*/*"
         ]
       }
     ]
@@ -200,61 +200,24 @@ resource "aws_iam_instance_profile" "neo4j_instance_profile" {
   role = aws_iam_role.neo4j_role.name
 }
 
-# Upload Neo4j installation script to S3
-resource "aws_s3_object" "neo4j_install_script" {
-  bucket = "credexbuckets3-scripts-${var.environment}"
-  key    = "neo4j_install.sh"
-  source = "${path.module}/../../files/neo4j_install.sh"
-  etag   = filemd5("${path.module}/../../files/neo4j_install.sh")
-
-  tags = merge(var.common_tags, {
-    Name = "neo4j-install-script-${var.environment}"
-    Purpose = "Neo4j Installation"
-  })
-}
-
-# Helper to create user data script
+# Helper to create minimal user data script for instance initialization
 locals {
-  neo4j_install_script = <<EOF
+  minimal_init_script = <<EOF
 #!/bin/bash
 set -e
 
 # Setup logging
-exec > /var/log/neo4j-setup.log 2>&1
+exec > /var/log/instance-setup.log 2>&1
 
 # Set environment variables
 export ENVIRONMENT="${var.environment}"
 export AWS_REGION="${var.aws_region}"
-export NEO4J_LICENSE="${var.neo4j_enterprise_license}"
 
-# Function to send installation status to CloudWatch
-send_status_to_cloudwatch() {
-    local status=$1
-    local message=$2
-    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    
-    # Create a temporary JSON file
-    cat > /tmp/cloudwatch-event.json << EOL
-{
-  "environment": "${var.environment}",
-  "instance_id": "$$(curl -s http://169.254.169.254/latest/meta-data/instance-id)",
-  "status": "$status",
-  "message": "$message",
-  "timestamp": "$timestamp"
-}
-EOL
-    
-    # Try to send the event to CloudWatch
-    aws cloudwatch put-metric-data \
-      --namespace "Neo4j/Installation" \
-      --metric-name "InstallationStatus" \
-      --dimensions Environment=${var.environment},InstanceId=$$(curl -s http://169.254.169.254/latest/meta-data/instance-id) \
-      --value $$([ "$status" == "SUCCESS" ] && echo 1 || echo 0) \
-      --region ${var.aws_region} || true
-      
-    # Also log to the instance's console output (retrievable via AWS API)
-    echo "NEO4J_INSTALL_STATUS: $status - $message" > /dev/console
-}
+# Log environment information
+echo "=== Environment Information ==="
+echo "Environment: $ENVIRONMENT"
+echo "AWS Region: $AWS_REGION"
+echo "Instance ID: $(curl -s http://169.254.169.254/latest/meta-data/instance-id)"
 
 # System setup
 echo "=== System Initialization ==="
@@ -264,28 +227,33 @@ until ! pgrep -f "yum" > /dev/null; do
     sleep 30
 done
 
-# Install AWS CLI and CloudWatch agent early for logging
+# Install AWS CLI and CloudWatch agent for logging
 echo "=== Installing AWS CLI and CloudWatch Agent ==="
-yum install -y aws-cli amazon-cloudwatch-agent || {
-    echo "Failed to install AWS CLI or CloudWatch agent"
-    send_status_to_cloudwatch "FAILED" "Failed to install AWS CLI or CloudWatch agent"
-    exit 1
-}
+yum install -y aws-cli amazon-cloudwatch-agent
 
-# Download and execute the Neo4j installation script from S3
-echo "=== Downloading Neo4j installation script from S3 ==="
-aws s3 cp s3://credexbuckets3-scripts-${var.environment}/neo4j_install.sh /tmp/neo4j_install.sh || {
-    echo "Failed to download Neo4j installation script from S3"
-    send_status_to_cloudwatch "FAILED" "Failed to download Neo4j installation script from S3"
-    exit 1
-}
+# Install SSM agent
+echo "=== Installing SSM Agent ==="
+# First check if SSM agent is already installed
+if rpm -q amazon-ssm-agent > /dev/null; then
+    echo "SSM agent is already installed"
+else
+    # Download and install the SSM agent
+    echo "Downloading SSM agent..."
+    mkdir -p /tmp/ssm
+    cd /tmp/ssm
+    wget https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+    echo "Installing SSM agent..."
+    yum install -y amazon-ssm-agent.rpm
+    cd -
+    rm -rf /tmp/ssm
+fi
 
-# Make the script executable
-chmod +x /tmp/neo4j_install.sh
+# Configure and start SSM agent
+echo "=== Configuring and Starting SSM Agent ==="
+systemctl enable amazon-ssm-agent
+systemctl start amazon-ssm-agent
 
-# Execute the script
-echo "=== Executing Neo4j installation script ==="
-/tmp/neo4j_install.sh
+echo "Instance initialization complete. Neo4j will be installed via GitHub Actions workflow."
 EOF
 }
 
@@ -310,7 +278,7 @@ resource "aws_instance" "neo4j_ledger" {
     })
   }
 
-  user_data = local.neo4j_install_script
+  user_data = local.minimal_init_script
 
   tags = merge(var.common_tags, {
     Name = "Neo4j-LedgerSpace-${var.environment}"
@@ -344,7 +312,7 @@ resource "aws_instance" "neo4j_search" {
     })
   }
 
-  user_data = local.neo4j_install_script
+  user_data = local.minimal_init_script
 
   tags = merge(var.common_tags, {
     Name = "Neo4j-SearchSpace-${var.environment}"

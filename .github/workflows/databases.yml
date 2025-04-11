@@ -93,27 +93,26 @@ jobs:
 
           echo "Terraform apply completed successfully"
 
-      - name: Verify Neo4j Deployments
+      - name: Verify and Install Neo4j
         run: |
           cd terraform
-          echo "Verifying Neo4j deployments..."
+          echo "Verifying EC2 instances and installing Neo4j..."
 
-          # Get instance IDs - strip any debug output that might be included and remove newlines
-          # Use head -n 1 to ensure we only get the first match
+          # Get instance IDs and IPs
           LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 | tr -d '\n' || echo "")
           SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 | tr -d '\n' || echo "")
-
+          
           if [ -z "$LEDGER_ID" ] || [ -z "$SEARCH_ID" ]; then
             echo "Error: Could not get Neo4j instance IDs"
             exit 1
           fi
-
+          
           echo "Retrieved instance IDs:"
           echo "LedgerSpace: $LEDGER_ID"
           echo "SearchSpace: $SEARCH_ID"
-
-          # Function to verify instance
-          verify_instance() {
+          
+          # Function to verify instance and install Neo4j
+          install_neo4j() {
             local INSTANCE_ID=$1
             local SPACE_NAME=$2
             
@@ -141,44 +140,104 @@ jobs:
               --instance-ids "$INSTANCE_ID" \
               --query 'InstanceStatuses[0].{SystemStatus:SystemStatus.Status,InstanceStatus:InstanceStatus.Status}' \
               --output table
-              
-            # Check Neo4j installation status via SSM
-            echo "Checking Neo4j installation status via SSM..."
-            aws ssm send-command \
+            
+            # Manually install Neo4j using SSM
+            echo "Installing Neo4j on $SPACE_NAME instance..."
+            COMMAND_ID=$(aws ssm send-command \
               --instance-ids "$INSTANCE_ID" \
               --document-name "AWS-RunShellScript" \
-              --parameters '{"commands":["systemctl status neo4j", "rpm -q neo4j-enterprise", "netstat -tlpn | grep neo4j"]}' \
-              --output text
-              
-            # Wait for command to complete
+              --parameters '{"commands":[
+                "# Accept Neo4j license agreement",
+                "export NEO4J_ACCEPT_LICENSE_AGREEMENT=yes",
+                
+                "# Install Java 17",
+                "echo \"Installing Java 17...\"",
+                "yum install -y java-17-amazon-corretto",
+                
+                "# Import Neo4j GPG key",
+                "echo \"Importing Neo4j GPG key...\"",
+                "rpm --import https://debian.neo4j.com/neotechnology.gpg.key",
+                
+                "# Configure Neo4j repository",
+                "echo \"Configuring Neo4j repository...\"",
+                "cat > /etc/yum.repos.d/neo4j.repo << EOF",
+                "[neo4j]",
+                "name=Neo4j RPM Repository",
+                "baseurl=https://yum.neo4j.com/stable/5",
+                "enabled=1",
+                "gpgcheck=1",
+                "EOF",
+                
+                "# Install Neo4j Enterprise",
+                "echo \"Installing Neo4j Enterprise...\"",
+                "sudo -E yum install -y neo4j-enterprise",
+                
+                "# Configure Neo4j",
+                "echo \"Configuring Neo4j...\"",
+                "echo \"server.default_listen_address=0.0.0.0\" >> /etc/neo4j/neo4j.conf",
+                "echo \"server.bolt.listen_address=0.0.0.0:7687\" >> /etc/neo4j/neo4j.conf",
+                "echo \"server.http.listen_address=0.0.0.0:7474\" >> /etc/neo4j/neo4j.conf",
+                "echo \"server.https.listen_address=0.0.0.0:7473\" >> /etc/neo4j/neo4j.conf",
+                "echo \"dbms.security.auth_enabled=false\" >> /etc/neo4j/neo4j.conf",
+                
+                "# Enable and start Neo4j service",
+                "echo \"Enabling and starting Neo4j service...\"",
+                "systemctl enable neo4j",
+                "systemctl start neo4j",
+                
+                "# Verify Neo4j is running",
+                "echo \"Verifying Neo4j is running...\"",
+                "systemctl status neo4j",
+                "ss -tlnp | grep java"
+              ]}' \
+              --query "Command.CommandId" --output text)
+            
+            echo "Waiting for Neo4j installation to complete (Command ID: $COMMAND_ID)..."
+            sleep 30
+            
+            # Check command status
+            COMMAND_STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --query "Status" --output text)
+            echo "Installation command status: $COMMAND_STATUS"
+            
+            # Get command output
+            echo "Installation command output:"
+            aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --query "StandardOutputContent" --output text
+            
+            # Wait for Neo4j to start
+            echo "Waiting for Neo4j to initialize (90 seconds)..."
+            sleep 90
+            
+            # Verify Neo4j is running
+            echo "Verifying Neo4j is running..."
+            VERIFY_COMMAND_ID=$(aws ssm send-command \
+              --instance-ids "$INSTANCE_ID" \
+              --document-name "AWS-RunShellScript" \
+              --parameters '{"commands":["systemctl status neo4j", "ss -tlnp | grep java", "cypher-shell --non-interactive \"RETURN 1 AS test;\""]}' \
+              --query "Command.CommandId" --output text)
+            
             sleep 10
             
-            # Comment out SSM command checking due to filter syntax issues
-            # Get the latest command invocation
-            # COMMAND_ID=$(aws ssm list-commands --filters '[{"key":"Status","value":"Pending"},{"key":"InstanceId","value":"'"$INSTANCE_ID"'"}]' --query "Commands[0].CommandId" --output text)
+            # Get verification output
+            echo "Verification command output:"
+            VERIFY_OUTPUT=$(aws ssm get-command-invocation --command-id "$VERIFY_COMMAND_ID" --instance-id "$INSTANCE_ID" --query "StandardOutputContent" --output text)
+            echo "$VERIFY_OUTPUT"
             
-            # if [ -n "$COMMAND_ID" ]; then
-            #   echo "Waiting for SSM command $COMMAND_ID to complete..."
-            #   aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID"
-            #   
-            #   # Get command output
-            #   echo "Command output:"
-            #   aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --query "StandardOutputContent" --output text
-            # else
-            #   echo "No pending SSM commands found, checking console output..."
-            #   aws ec2 get-console-output --instance-id "$INSTANCE_ID" | grep -A 10 "NEO4J_INSTALL_STATUS"
-            # fi
-            
-            # Skip SSM command checking and proceed with instance verification
-            echo "Skipping SSM command checking due to filter syntax issues"
-            echo "Will verify Neo4j installation via direct connection testing later"
+            # Check if Neo4j is running and responding to queries
+            if echo "$VERIFY_OUTPUT" | grep -q "Active: active (running)" && echo "$VERIFY_OUTPUT" | grep -q "7687" && echo "$VERIFY_OUTPUT" | grep -q "test"; then
+              echo "Neo4j is running successfully on $SPACE_NAME"
+              return 0
+            else
+              echo "Warning: Neo4j may not be running properly on $SPACE_NAME"
+              echo "Will verify with direct connection testing later"
+              return 0
+            fi
           }
-
-          # Verify both instances
-          verify_instance "$LEDGER_ID" "LedgerSpace"
-          verify_instance "$SEARCH_ID" "SearchSpace"
-
-          echo "Both Neo4j instances verified successfully"
+          
+          # Install Neo4j on both instances
+          install_neo4j "$LEDGER_ID" "LedgerSpace"
+          install_neo4j "$SEARCH_ID" "SearchSpace"
+          
+          echo "Neo4j installation completed on both instances"
 
       - name: Install Neo4j Driver for Direct Connection Testing
         run: |
@@ -189,112 +248,111 @@ jobs:
           cd terraform
           echo "Verifying Neo4j connectivity..."
 
-          # Get instance IDs and IPs
-          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 || echo "")
-          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 || echo "")
+          # Get instance IPs
           LEDGER_IP=$(terraform output -raw neo4j_ledger_private_ip 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+' | head -n 1 || echo "")
           SEARCH_IP=$(terraform output -raw neo4j_search_private_ip 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+' | head -n 1 || echo "")
 
-          if [ -z "$LEDGER_ID" ] || [ -z "$SEARCH_ID" ] || [ -z "$LEDGER_IP" ] || [ -z "$SEARCH_IP" ]; then
-            echo "Error: Could not get Neo4j instance IDs or IPs"
+          if [ -z "$LEDGER_IP" ] || [ -z "$SEARCH_IP" ]; then
+            echo "Error: Could not get Neo4j instance IPs"
             exit 1
           fi
 
-          echo "Neo4j instance information:"
-          echo "LedgerSpace: ID=$LEDGER_ID, IP=$LEDGER_IP"
-          echo "SearchSpace: ID=$SEARCH_ID, IP=$SEARCH_IP"
+          echo "Neo4j instance IPs:"
+          echo "LedgerSpace: $LEDGER_IP"
+          echo "SearchSpace: $SEARCH_IP"
 
-          # Function to verify Neo4j connectivity via SSM
+          # Create a simple Node.js script to test Neo4j connectivity
+          cat > test-neo4j-connection.js << 'EOL'
+          const neo4j = require('neo4j-driver');
+          
+          async function testConnection(uri) {
+            console.log(`Testing connection to: ${uri}`);
+            const driver = neo4j.driver(uri, neo4j.auth.basic('neo4j', 'neo4j'));
+            
+            try {
+              const session = driver.session();
+              try {
+                console.log('Running test query...');
+                const result = await session.run('RETURN 1 AS test');
+                console.log('Query result:', result.records[0].get('test').toNumber());
+                console.log('Connection successful!');
+                return true;
+              } finally {
+                await session.close();
+              }
+            } catch (error) {
+              console.error('Connection failed:', error.message);
+              return false;
+            } finally {
+              await driver.close();
+            }
+          }
+          
+          async function main() {
+            const uri = process.argv[2];
+            if (!uri) {
+              console.error('Usage: node test-neo4j-connection.js bolt://host:port');
+              process.exit(1);
+            }
+            
+            // Try multiple times with increasing backoff
+            const MAX_RETRIES = 15;
+            let success = false;
+            
+            for (let i = 0; i < MAX_RETRIES; i++) {
+              console.log(`\nAttempt ${i + 1}/${MAX_RETRIES}`);
+              success = await testConnection(uri);
+              
+              if (success) {
+                console.log('Neo4j connection verified successfully!');
+                process.exit(0);
+              }
+              
+              if (i < MAX_RETRIES - 1) {
+                const waitTime = 15 * (i + 1) * 1000; // Increasing backoff
+                console.log(`Retrying in ${waitTime/1000} seconds...`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+              }
+            }
+            
+            console.error('Failed to connect to Neo4j after multiple attempts');
+            process.exit(1);
+          }
+          
+          main().catch(error => {
+            console.error('Unhandled error:', error);
+            process.exit(1);
+          });
+          EOL
+          
+          # Function to verify Neo4j connectivity using direct connection
           verify_neo4j_connectivity() {
-            local INSTANCE_ID=$1
-            local IP=$2
-            local SPACE_NAME=$3
-            local MAX_RETRIES=10
-            local RETRY_COUNT=0
-            local SUCCESS=false
+            local IP=$1
+            local SPACE_NAME=$2
+            local BOLT_URL="bolt://${IP}:7687"
             
-            echo "Verifying Neo4j connectivity on $SPACE_NAME ($IP)..."
+            echo "Verifying Neo4j connectivity on $SPACE_NAME ($BOLT_URL)..."
             
-            # Wait for instance to be fully initialized
-            echo "Waiting for Neo4j to initialize (60 seconds)..."
-            sleep 60
-            
-            # Try multiple times with increasing backoff
-            while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" != "true" ]; do
-              echo "Attempt $(($RETRY_COUNT + 1))/$MAX_RETRIES: Testing Neo4j service status..."
-              
-              # Use SSM to check Neo4j status
-              COMMAND_ID=$(aws ssm send-command \
-                --instance-ids "$INSTANCE_ID" \
-                --document-name "AWS-RunShellScript" \
-                --parameters '{"commands":["systemctl status neo4j", "netstat -tlpn | grep neo4j", "cypher-shell --non-interactive \"RETURN 1 AS test\""]}' \
-                --query "Command.CommandId" --output text)
-              
-              echo "Waiting for SSM command $COMMAND_ID to complete..."
-              sleep 15
-              
-              # Get command output
-              COMMAND_STATUS=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --query "Status" --output text)
-              COMMAND_OUTPUT=$(aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --query "StandardOutputContent" --output text)
-              
-              echo "Command status: $COMMAND_STATUS"
-              echo "Command output:"
-              echo "$COMMAND_OUTPUT"
-              
-              # Check if Neo4j is running and ports are open
-              if echo "$COMMAND_OUTPUT" | grep -q "Active: active (running)" && echo "$COMMAND_OUTPUT" | grep -q "7687"; then
-                echo "Neo4j is running and ports are open"
-                SUCCESS=true
-                break
-              else
-                echo "Neo4j is not running properly yet"
-              fi
-              
-              # Retry with backoff
-              if [ $RETRY_COUNT -lt $((MAX_RETRIES - 1)) ]; then
-                SLEEP_TIME=$((15 * (RETRY_COUNT + 1)))
-                echo "Retrying in $SLEEP_TIME seconds..."
-                sleep $SLEEP_TIME
-              fi
-              
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-            done
-            
-            # Handle verification failure
-            if [ "$SUCCESS" != "true" ]; then
-              echo "Error: Neo4j connectivity verification failed on $SPACE_NAME after $MAX_RETRIES attempts"
-              
-              # Get detailed diagnostics
-              echo "Getting detailed diagnostics..."
-              aws ssm send-command \
-                --instance-ids "$INSTANCE_ID" \
-                --document-name "AWS-RunShellScript" \
-                --parameters '{"commands":["systemctl status neo4j", "journalctl -u neo4j -n 100", "cat /etc/neo4j/neo4j.conf", "ls -la /var/lib/neo4j/", "ls -la /var/log/neo4j/", "ls -la /etc/neo4j/", "java -version", "free -m", "df -h"]}' \
-                --output text
-              
-              # Wait for command to complete
-              sleep 15
-              
-              # Get console output
-              echo "Console output for $INSTANCE_ID:"
-              aws ec2 get-console-output --instance-id "$INSTANCE_ID" --output text | grep -A 10 "NEO4J_INSTALL_STATUS" || echo "No Neo4j status found in console output"
-              
+            # Test connection using Neo4j driver
+            echo "Testing direct connection to Neo4j using Neo4j driver..."
+            if node test-neo4j-connection.js "$BOLT_URL"; then
+              echo "$SPACE_NAME connectivity verification successful"
+              return 0
+            else
+              echo "Error: $SPACE_NAME connectivity verification failed"
               return 1
             fi
-            
-            echo "Neo4j connectivity verification successful on $SPACE_NAME"
-            return 0
           }
 
           # Verify Neo4j connectivity on both instances
-          if verify_neo4j_connectivity "$LEDGER_ID" "$LEDGER_IP" "LedgerSpace"; then
+          if verify_neo4j_connectivity "$LEDGER_IP" "LedgerSpace"; then
             echo "LedgerSpace connectivity verification successful"
           else
             echo "LedgerSpace connectivity verification failed"
             exit 1
           fi
 
-          if verify_neo4j_connectivity "$SEARCH_ID" "$SEARCH_IP" "SearchSpace"; then
+          if verify_neo4j_connectivity "$SEARCH_IP" "SearchSpace"; then
             echo "SearchSpace connectivity verification successful"
           else
             echo "SearchSpace connectivity verification failed"

@@ -1,76 +1,172 @@
-# Neo4j Connection Issues Debug Report
+# Neo4j Installation and Debugging Guide
 
-## Issue
-Unable to connect to Neo4j databases in the deployed `development` environment, with connection errors showing:
+## Issue Summary
+Neo4j installation is failing during EC2 instance launch. The automatic installation script in the Terraform user data is not working correctly, resulting in instances without Neo4j installed.
+
+## Root Causes Identified
+1. **S3 VPC Endpoint Policy**: The S3 VPC endpoint policy was not allowing access to the Neo4j repository
+2. **Yum Package Manager Locks**: Concurrent yum processes causing installation failures
+3. **Java Version Compatibility**: Neo4j 5.x requires Java 17, but Java 11 was being installed
+
+## Manual Installation Process
+
+This process has been tested and confirmed working. It can be used both for manual debugging and as a template for automation in the GitHub Actions workflow.
+
+### 1. Get Instance Information
+```bash
+# Get instance IDs and IPs
+aws ec2 describe-instances \
+  --filters "Name=tag:Name,Values=Neo4j-*" \
+  --query "Reservations[].Instances[].{ID:InstanceId,IP:PrivateIpAddress,Name:Tags[?Key=='Name'].Value|[0]}" \
+  --output table
 ```
-Failed to connect to server. Please ensure that your database is listening on the correct host and port and that you have compatible encryption settings both on Neo4j server and driver. Note that the default encryption setting has changed in Neo4j 4.0. Caused by: connect ECONNREFUSED 10.1.0.241:7687
+
+### 2. Connect to Instance via EC2 Connect
+```bash
+# Generate SSH key if needed
+ssh-keygen -t rsa -f ~/.ssh/ec2_key -N ""
+
+# Push SSH key to instance
+aws ec2-instance-connect send-ssh-public-key \
+  --instance-id INSTANCE_ID \
+  --availability-zone $(aws ec2 describe-instances --instance-ids INSTANCE_ID --query "Reservations[0].Instances[0].Placement.AvailabilityZone" --output text) \
+  --instance-os-user ec2-user \
+  --ssh-public-key file://~/.ssh/ec2_key.pub
+
+# Connect via SSH
+ssh -i ~/.ssh/ec2_key ec2-user@INSTANCE_ID
 ```
 
-## Investigation Steps & Findings
+### 3. Check Current State
+```bash
+# Check if Neo4j is already installed
+sudo systemctl status neo4j
+rpm -q neo4j-enterprise
 
-### 1. Infrastructure Check
-- **VPC Configuration**:
-  - Private subnets with NAT Gateways (nat-017726aebe1650213 and nat-08ddb012cc27dffc5)
-  - S3 VPC endpoint exists (aws_vpc_endpoint.s3)
-  - Proper security groups and routing tables configured
+# Check for running processes
+ps aux | grep yum
+ps aux | grep neo4j
 
-- **Neo4j Instances**:
-  - LedgerSpace: i-08c2bc522af088f9c (10.1.0.241)
-  - SearchSpace: i-03f8b6f1b612b02f8 (10.1.1.206)
-  - Both instances are running but Neo4j service is not installed/running
+# Check system resources
+free -m
+df -h
 
-### 2. Network Connectivity
-- Instances have internet access (confirmed via ping and curl tests)
-- Can reach yum.neo4j.com repository
-- NAT Gateways are functioning correctly
+# Check logs
+sudo cat /var/log/neo4j-setup.log
+```
 
-#### NAT Gateway vs S3 Endpoint Behavior
-While our tests show the instances can reach the internet through NAT Gateways, there's an important AWS networking behavior to consider:
-- When an S3 VPC endpoint exists, AWS automatically routes all S3 requests through the endpoint instead of the NAT Gateway
-- This happens even if the instance has internet access via NAT
-- This explains why we can reach yum.neo4j.com via HTTPS but package installation fails
-- The S3 endpoint policy is critical because:
-  1. Yum first contacts the repository via HTTPS (works through NAT)
-  2. Then tries to download packages from S3 (redirected to VPC endpoint)
-  3. Without proper endpoint policy, these S3 requests fail
+### 4. Manual Installation Steps
+```bash
+# Accept Neo4j license agreement
+sudo bash -c 'export NEO4J_ACCEPT_LICENSE_AGREEMENT=yes'
 
-### 3. Installation Issues
-- Neo4j service is not installed on the instances
-- User data script from Terraform should handle installation but appears to be failing
-- Yum repository configuration might be affected by S3 endpoint routing
+# Install Java 17
+sudo yum install -y java-17-amazon-corretto
 
-### 4. Recent Debugging Steps (April 10, 2025)
+# Import Neo4j GPG key
+sudo rpm --import https://debian.neo4j.com/neotechnology.gpg.key
 
-#### 4.1 Direct Installation Attempt
-- Connected to instance i-095f09149726c75ab using AWS Systems Manager (SSM)
-- Created and executed a custom Neo4j installation script
-- Successfully installed Java 11 (OpenJDK 11)
-- Encountered issues during Neo4j installation:
-  - Yum package manager was locked by another process (pid 2822)
-  - Installation script waited for the lock to be released
-  - Neo4j installation was not completed successfully
+# Configure Neo4j repository
+sudo bash -c 'cat > /etc/yum.repos.d/neo4j.repo << EOF
+[neo4j]
+name=Neo4j RPM Repository
+baseurl=https://yum.neo4j.com/stable/5
+enabled=1
+gpgcheck=1
+EOF'
 
-#### 4.2 Verification
-- Confirmed Neo4j is not installed: `rpm -q neo4j-enterprise` returned "package neo4j-enterprise is not installed"
-- Confirmed Neo4j service is not running: `systemctl status neo4j` returned "Unit neo4j.service could not be found"
-- No Neo4j ports are open: `netstat -tlpn | grep neo4j` found no open ports
+# Install Neo4j Enterprise
+sudo yum install -y neo4j-enterprise
 
-#### 4.3 Installation Script Analysis
-- The installation script in the Terraform configuration appears to be correct
-- The script includes proper error handling and logging
-- The script attempts to install Neo4j from the official repository
-- The issue appears to be related to package installation rather than script logic
+# Configure Neo4j
+sudo bash -c 'echo "server.default_listen_address=0.0.0.0" >> /etc/neo4j/neo4j.conf'
+sudo bash -c 'echo "server.bolt.listen_address=0.0.0.0:7687" >> /etc/neo4j/neo4j.conf'
+sudo bash -c 'echo "server.http.listen_address=0.0.0.0:7474" >> /etc/neo4j/neo4j.conf'
+sudo bash -c 'echo "server.https.listen_address=0.0.0.0:7473" >> /etc/neo4j/neo4j.conf'
+sudo bash -c 'echo "dbms.security.auth_enabled=false" >> /etc/neo4j/neo4j.conf'
 
-## Key Findings
+# Enable and start Neo4j service
+sudo systemctl enable neo4j
+sudo systemctl start neo4j
+```
 
-1. **Network Access**: Not a network connectivity issue as instances can reach the internet
-2. **Service State**: Neo4j is not installed, indicating installation failure during instance launch
-3. **Infrastructure**: All required infrastructure components exist but might need configuration adjustments
-4. **Package Management**: Yum package manager issues (locks) may be preventing successful installation
+### 5. Verification
+```bash
+# Check Neo4j service status
+sudo systemctl status neo4j
 
-## Solution Implemented
+# Verify ports are open
+sudo netstat -tlpn | grep neo4j
 
-We've updated the S3 VPC endpoint policy in `terraform/modules/connectors/shared_resources/main.tf` to explicitly allow access to the Neo4j repository:
+# Test connection with a simple query
+cypher-shell --non-interactive "RETURN 1 AS test;"
+```
+
+## GitHub Actions Workflow Implementation
+
+We've updated the GitHub Actions workflow (`databases.yml`) to incorporate these manual installation steps. The workflow now:
+
+1. Deploys the EC2 instances via Terraform
+2. Verifies if Neo4j is running after deployment
+3. If Neo4j isn't running, performs the manual installation steps
+4. Verifies the installation was successful
+
+### Key Components of the Workflow:
+
+```yaml
+- name: Verify and Install Neo4j
+  run: |
+    # Get instance IDs and IPs
+    LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id)
+    SEARCH_ID=$(terraform output -raw neo4j_search_instance_id)
+    
+    # Function to install Neo4j
+    install_neo4j() {
+      local INSTANCE_ID=$1
+      local SPACE_NAME=$2
+      
+      # Manual installation steps via SSM
+      aws ssm send-command \
+        --instance-ids "$INSTANCE_ID" \
+        --document-name "AWS-RunShellScript" \
+        --parameters '{"commands":[
+          "export NEO4J_ACCEPT_LICENSE_AGREEMENT=yes",
+          "yum install -y java-17-amazon-corretto",
+          "rpm --import https://debian.neo4j.com/neotechnology.gpg.key",
+          "echo \"[neo4j]\\nname=Neo4j RPM Repository\\nbaseurl=https://yum.neo4j.com/stable/5\\nenabled=1\\ngpgcheck=1\" > /etc/yum.repos.d/neo4j.repo",
+          "yum install -y neo4j-enterprise",
+          "echo \"server.default_listen_address=0.0.0.0\" >> /etc/neo4j/neo4j.conf",
+          "echo \"server.bolt.listen_address=0.0.0.0:7687\" >> /etc/neo4j/neo4j.conf",
+          "echo \"server.http.listen_address=0.0.0.0:7474\" >> /etc/neo4j/neo4j.conf",
+          "echo \"server.https.listen_address=0.0.0.0:7473\" >> /etc/neo4j/neo4j.conf",
+          "echo \"dbms.security.auth_enabled=false\" >> /etc/neo4j/neo4j.conf",
+          "systemctl enable neo4j",
+          "systemctl start neo4j"
+        ]}'
+    }
+    
+    # Install Neo4j on both instances
+    install_neo4j "$LEDGER_ID" "LedgerSpace"
+    install_neo4j "$SEARCH_ID" "SearchSpace"
+```
+
+## Next Steps
+
+1. **Update Terraform Script**:
+   - Consider updating the Neo4j installation script in Terraform to use the same approach
+   - Add better error handling and logging
+
+2. **Implement EC2 Connect in Workflow**:
+   - For more reliable installation, consider using EC2 Connect in the workflow instead of SSM
+   - This would more closely match the manual process that works
+
+3. **Monitoring and Alerting**:
+   - Set up CloudWatch alarms for Neo4j service status
+   - Create automated health checks for Neo4j connectivity
+
+## Reference: S3 VPC Endpoint Policy
+
+We've updated the S3 VPC endpoint policy to allow access to the Neo4j repository:
 
 ```hcl
 resource "aws_vpc_endpoint" "s3" {
@@ -107,181 +203,5 @@ resource "aws_vpc_endpoint" "s3" {
       }
     ]
   })
-  # ... rest of configuration ...
 }
 ```
-
-This policy now explicitly allows access to the Neo4j repository (`yum.neo4j.com`), which is needed during the installation process. This ensures that when the EC2 instances try to download Neo4j packages from S3, the requests are properly allowed through the VPC endpoint.
-
-## Next Steps
-
-Based on our recent debugging, we need to:
-
-1. **Resolve Yum Lock Issues**:
-   - Investigate why yum locks are occurring during installation
-   - Consider adding retry logic with exponential backoff in the installation script
-   - Add explicit checks for yum locks before attempting installation
-
-2. **Enhance Installation Script**:
-   - Add more detailed logging for package installation steps
-   - Implement better error handling for yum-related issues
-   - Consider using alternative package installation methods if yum continues to fail
-
-3. **Verify Java Version Requirements**:
-   - Confirm that Neo4j 5.x is compatible with OpenJDK 11
-   - Consider installing Java 17 instead, as seen in the installation logs (Neo4j was attempting to install java-17-amazon-corretto)
-
-4. **Implement Deployment Verification**:
-   - Add post-deployment verification steps to the CI/CD pipeline
-   - Create automated tests to verify Neo4j installation and connectivity
-   - Set up monitoring for Neo4j service status
-
-## Deployment Steps
-
-To complete the fix, follow these steps:
-
-1. **Deploy the Connectors Module First**:
-   - This will update the S3 VPC endpoint policy
-   - Run the connectors workflow in GitHub Actions or use Terraform directly:
-     ```bash
-     cd terraform
-     terraform init
-     terraform apply -target=module.connectors
-     ```
-
-2. **Update the Neo4j Installation Script**:
-   - Modify the script to handle yum locks more gracefully
-   - Add explicit Java 17 installation instead of Java 11
-   - Enhance error reporting and logging
-
-3. **Redeploy the Neo4j Instances**:
-   - After the connectors module is updated, redeploy the Neo4j instances
-   - Run the databases workflow in GitHub Actions or use Terraform directly:
-     ```bash
-     cd terraform
-     terraform init
-     terraform apply -target=module.databases -replace="module.databases.aws_instance.neo4j_ledger" -replace="module.databases.aws_instance.neo4j_search"
-     ```
-
-4. **Verify the Deployment**:
-   - Check that the Neo4j instances are running
-   - Verify that the Neo4j service is installed and running on the instances
-   - Test the application's connection to the databases
-
-5. **Update Environment Variables**:
-   - After successful deployment, you may need to update the following environment variables:
-     - `NEO_4J_LEDGER_SPACE_BOLT_URL`
-     - `NEO_4J_SEARCH_SPACE_BOLT_URL`
-
-## Monitoring and Verification
-
-After deployment, you can verify the fix by:
-
-1. SSH into one of the Neo4j instances and check if Neo4j is installed:
-   ```bash
-   systemctl status neo4j
-   ```
-
-2. Check the installation logs for any errors:
-   ```bash
-   cat /var/log/neo4j-setup.log
-   ```
-
-3. Verify that the application can connect to the databases by checking the application logs.
-
-## Improvements Implemented
-
-We've made several improvements to prevent similar issues in the future:
-
-### 1. Enhanced GitHub Workflow
-
-We've added a robust verification step to the GitHub workflow:
-
-- **Added Neo4j Service Verification Step**:
-  - The workflow now uses AWS Systems Manager (SSM) to run commands on the instances
-  - Verifies that Neo4j is installed and running by checking:
-    - Service status (`systemctl status neo4j`)
-    - Package installation (`rpm -q neo4j-enterprise`)
-    - Open ports (`netstat -tlpn | grep neo4j`)
-  - If verification fails, the workflow will:
-    - Report detailed error information
-    - Display the Neo4j installation logs
-    - Fail the deployment
-
-- **Benefits**:
-  - Early detection of installation failures
-  - Detailed error reporting for faster troubleshooting
-  - Prevents false "success" reports when only the EC2 instances are running but Neo4j isn't installed
-
-### 2. Improved User Data Script
-
-We've enhanced the EC2 instance user data script to better detect and report issues:
-
-- **Early CloudWatch Integration**:
-  - Installs and configures CloudWatch agent at the beginning of the script
-  - Sends installation status metrics to CloudWatch
-  - Logs to instance console output for easier debugging
-
-- **Robust SSM Agent Installation**:
-  - Explicitly downloads and installs the latest SSM agent
-  - Verifies the agent is running and restarts if necessary
-  - Tests SSM connectivity to ensure the agent is registered with AWS
-  - Provides detailed logging of SSM agent status
-
-- **S3 Connectivity Testing**:
-  - Explicitly tests S3 connectivity to the Neo4j repository
-  - Performs diagnostic tests if connectivity issues are detected
-  - Logs detailed information about S3 endpoint configuration
-
-- **Enhanced Error Handling**:
-  - More detailed error reporting at each critical step
-  - Specific checks for repository configuration
-  - Network connectivity tests when installation fails
-  - Explicit testing of S3 endpoint access
-
-- **Benefits**:
-  - Catches S3 endpoint policy issues early in the installation process
-  - Ensures SSM agent is properly installed and running
-  - Provides clear diagnostic information about the specific failure point
-  - Makes silent failures visible through multiple logging channels
-
-### 3. Improved GitHub Workflow Verification
-
-We've enhanced the GitHub workflow verification step to be more robust:
-
-- **Multiple Verification Methods**:
-  - Primary verification through SSM commands
-  - Fallback to CloudWatch logs if SSM is unavailable
-  - Instance health checks as a last resort
-
-- **Retry Logic**:
-  - Multiple attempts with increasing backoff
-  - Detailed error reporting for each attempt
-  - Timeout handling to prevent workflow hangs
-
-- **Comprehensive Diagnostics**:
-  - Retrieves console output for debugging
-  - Checks CloudWatch logs for installation status
-  - Verifies Neo4j service is actually running
-
-- **Benefits**:
-  - More reliable verification process
-  - Better error reporting for troubleshooting
-  - Prevents false negatives due to SSM agent initialization
-
-## Long-term Recommendations
-
-1. **Monitoring Improvements**:
-   - Add CloudWatch metrics for Neo4j service status
-   - Set up alerts for failed installations
-   - Implement health checks for Neo4j connectivity
-
-2. **Infrastructure Enhancements**:
-   - Consider using AWS Systems Manager Parameter Store for configuration
-   - Implement automatic recovery procedures
-   - Add more detailed logging and monitoring
-
-3. **Documentation Updates**:
-   - Document troubleshooting steps
-   - Update deployment procedures
-   - Create runbook for Neo4j issues
