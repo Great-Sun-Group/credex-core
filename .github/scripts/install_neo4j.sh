@@ -212,6 +212,16 @@ sudo chown -R neo4j:neo4j /usr/share/neo4j/licenses || handle_error "Failed to s
 echo "Creating required directories..."
 sudo mkdir -p /etc/neo4j /usr/share/neo4j/conf /usr/share/neo4j/plugins /usr/share/neo4j/licenses /var/lib/neo4j /var/log/neo4j
 
+# Download and install APOC plugin
+echo "Downloading and installing APOC plugin..."
+sudo yum install -y curl || echo "Warning: curl is already installed"
+sudo mkdir -p /var/lib/neo4j/plugins
+cd /var/lib/neo4j/plugins
+sudo curl -L https://github.com/neo4j/apoc/releases/download/5.26.1/apoc-5.26.1-core.jar -o apoc.jar || handle_error "Failed to download APOC plugin"
+sudo chown neo4j:neo4j /var/lib/neo4j/plugins/apoc.jar
+sudo chmod 644 /var/lib/neo4j/plugins/apoc.jar
+echo "APOC plugin installed successfully"
+
 # Check listening ports
 echo "Checking all listening ports:"
 sudo netstat -tulpn | grep LISTEN
@@ -264,6 +274,10 @@ server.https.enabled=false
 
 # Disable strict validation
 server.config.strict_validation.enabled=false
+
+# APOC plugin configuration
+dbms.security.procedures.unrestricted=apoc.*
+dbms.security.procedures.allowlist=apoc.*
 EOF
 
 # Verify license files
@@ -298,6 +312,12 @@ sleep 30
 echo "Verifying Neo4j is running..."
 systemctl status neo4j || echo "Warning: Neo4j service status check failed"
 ss -tlnp | grep -E ':(7474|7687)' || echo "Warning: Neo4j ports not detected"
+
+# Verify APOC plugin is available
+echo "Verifying APOC plugin is available..."
+ls -la /var/lib/neo4j/plugins/apoc.jar || echo "Warning: APOC plugin jar not found"
+echo "Testing APOC procedures availability..."
+cypher-shell --non-interactive "CALL apoc.help('schema');" || echo "Warning: APOC procedures may not be available"
 
 # Check for any errors in the logs
 echo "Checking Neo4j logs for errors..."

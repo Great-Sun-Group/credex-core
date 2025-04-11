@@ -73,6 +73,23 @@ else
     handle_error "Neo4j configuration file not found"
 fi
 
+# Verify APOC plugin is installed and configured
+echo "Verifying APOC plugin installation..."
+if [ -f /var/lib/neo4j/plugins/apoc.jar ]; then
+    echo "APOC plugin JAR file found"
+    ls -la /var/lib/neo4j/plugins/apoc.jar
+else
+    handle_error "APOC plugin JAR file not found"
+fi
+
+# Check APOC configuration in neo4j.conf
+echo "Checking APOC configuration in neo4j.conf..."
+grep -E "dbms.security.procedures.(unrestricted|allowlist)" /etc/neo4j/neo4j.conf || handle_error "APOC configuration not found in neo4j.conf"
+
+# Test APOC functionality
+echo "Testing APOC functionality..."
+cypher-shell --non-interactive "CALL apoc.help('schema');" || handle_error "APOC procedures not available"
+
 # Check system resources
 echo "Checking system resources..."
 free -m
@@ -105,6 +122,8 @@ echo "Bolt Port (7687): $(ss -tlnp | grep -q 7687 && echo "LISTENING" || echo "N
 echo "HTTP Port (7474): $(ss -tlnp | grep -q 7474 && echo "LISTENING" || echo "NOT LISTENING")"
 echo "Log File: $([ -f /var/log/neo4j/neo4j.log ] && echo "EXISTS" || echo "MISSING")"
 echo "Config File: $([ -f /etc/neo4j/neo4j.conf ] && echo "EXISTS" || echo "MISSING")"
+echo "APOC Plugin: $([ -f /var/lib/neo4j/plugins/apoc.jar ] && echo "INSTALLED" || echo "MISSING")"
+echo "APOC Procedures: $(cypher-shell --non-interactive "CALL apoc.help('schema');" &>/dev/null && echo "AVAILABLE" || echo "NOT AVAILABLE")"
 echo "========================================"
 
 echo "Neo4j verification completed"
