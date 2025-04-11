@@ -150,11 +150,39 @@ We've updated the GitHub Actions workflow (`databases.yml`) to incorporate these
     install_neo4j "$SEARCH_ID" "SearchSpace"
 ```
 
+## Progress Update (April 11, 2025)
+
+We've made significant progress in resolving the Neo4j installation issues:
+
+1. **Removed Neo4j Installation from Terraform**:
+   - Removed the Neo4j installation script from Terraform user data
+   - Replaced it with a minimal initialization script that only sets up basic requirements
+   - Removed the Neo4j installation script file from the Terraform files directory
+   - Updated the S3 access policy to be more generic
+
+2. **Enhanced GitHub Actions Workflow**:
+   - Modified the installation commands to use our verified manual steps
+   - Added the `-E` flag to the sudo command to properly pass the license agreement environment variable
+   - Replaced `netstat` with `ss` for more reliable port verification
+   - Added `cypher-shell` verification to ensure Neo4j is fully operational
+   - Implemented a more comprehensive Neo4j configuration with explicit settings for:
+     - Network configuration (listening addresses)
+     - Security settings (auth disabled for testing)
+     - Memory configuration (reduced for testing)
+     - Connectivity settings (TLS disabled, routing enabled)
+
+3. **Current Status**:
+   - The workflow successfully deploys EC2 instances via Terraform
+   - Neo4j installation via GitHub Actions is working
+   - Still experiencing connectivity issues when testing with the Neo4j driver
+
 ## Next Steps
 
-1. **Update Terraform Script**:
-   - Consider updating the Neo4j installation script in Terraform to use the same approach
-   - Add better error handling and logging
+1. **Troubleshoot Connectivity Issues**:
+   - Verify security group settings to ensure port 7687 is accessible
+   - Check network ACLs and routing tables
+   - Verify Neo4j is actually listening on the correct interfaces and ports
+   - Consider direct SSH connection for more detailed diagnostics
 
 2. **Implement EC2 Connect in Workflow**:
    - For more reliable installation, consider using EC2 Connect in the workflow instead of SSM

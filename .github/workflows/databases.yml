@@ -101,16 +101,16 @@ jobs:
           # Get instance IDs and IPs
           LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 | tr -d '\n' || echo "")
           SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 | tr -d '\n' || echo "")
-          
+
           if [ -z "$LEDGER_ID" ] || [ -z "$SEARCH_ID" ]; then
             echo "Error: Could not get Neo4j instance IDs"
             exit 1
           fi
-          
+
           echo "Retrieved instance IDs:"
           echo "LedgerSpace: $LEDGER_ID"
           echo "SearchSpace: $SEARCH_ID"
-          
+
           # Function to verify instance and install Neo4j
           install_neo4j() {
             local INSTANCE_ID=$1
@@ -174,11 +174,32 @@ jobs:
                 
                 "# Configure Neo4j",
                 "echo \"Configuring Neo4j...\"",
-                "echo \"server.default_listen_address=0.0.0.0\" >> /etc/neo4j/neo4j.conf",
-                "echo \"server.bolt.listen_address=0.0.0.0:7687\" >> /etc/neo4j/neo4j.conf",
-                "echo \"server.http.listen_address=0.0.0.0:7474\" >> /etc/neo4j/neo4j.conf",
-                "echo \"server.https.listen_address=0.0.0.0:7473\" >> /etc/neo4j/neo4j.conf",
-                "echo \"dbms.security.auth_enabled=false\" >> /etc/neo4j/neo4j.conf",
+                "cat > /etc/neo4j/neo4j.conf << EOF",
+                "# Network configuration",
+                "server.default_listen_address=0.0.0.0",
+                "server.bolt.listen_address=0.0.0.0:7687",
+                "server.http.listen_address=0.0.0.0:7474",
+                "server.https.listen_address=0.0.0.0:7473",
+                "",
+                "# Security settings",
+                "dbms.security.auth_enabled=false",
+                "dbms.default_database=neo4j",
+                "",
+                "# Memory configuration - reduced for testing",
+                "server.memory.heap.initial_size=512m",
+                "server.memory.heap.max_size=512m",
+                "server.memory.pagecache.size=512m",
+                "",
+                "# Connectivity settings",
+                "dbms.routing.enabled=true",
+                "dbms.routing.default_router=SERVER",
+                "dbms.connector.bolt.tls_level=DISABLED",
+                "dbms.connector.http.enabled=true",
+                "dbms.connector.https.enabled=true",
+                "EOF",
+                "",
+                "# Ensure Neo4j user owns the config",
+                "chown -R neo4j:neo4j /etc/neo4j",
                 
                 "# Enable and start Neo4j service",
                 "echo \"Enabling and starting Neo4j service...\"",
@@ -232,11 +253,11 @@ jobs:
               return 0
             fi
           }
-          
+
           # Install Neo4j on both instances
           install_neo4j "$LEDGER_ID" "LedgerSpace"
           install_neo4j "$SEARCH_ID" "SearchSpace"
-          
+
           echo "Neo4j installation completed on both instances"
 
       - name: Install Neo4j Driver for Direct Connection Testing
@@ -264,7 +285,7 @@ jobs:
           # Create a simple Node.js script to test Neo4j connectivity
           cat > test-neo4j-connection.js << 'EOL'
           const neo4j = require('neo4j-driver');
-          
+
           async function testConnection(uri) {
             console.log(`Testing connection to: ${uri}`);
             const driver = neo4j.driver(uri, neo4j.auth.basic('neo4j', 'neo4j'));
@@ -287,7 +308,7 @@ jobs:
               await driver.close();
             }
           }
-          
+
           async function main() {
             const uri = process.argv[2];
             if (!uri) {
@@ -318,13 +339,13 @@ jobs:
             console.error('Failed to connect to Neo4j after multiple attempts');
             process.exit(1);
           }
-          
+
           main().catch(error => {
             console.error('Unhandled error:', error);
             process.exit(1);
           });
           EOL
-          
+
           # Function to verify Neo4j connectivity using direct connection
           verify_neo4j_connectivity() {
             local IP=$1
