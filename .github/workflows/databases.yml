@@ -260,13 +260,31 @@ jobs:
               --instance-ids "$INSTANCE_ID" \
               --document-name "AWS-RunShellScript" \
               --parameters "{\"commands\":[
+                \"# Check Neo4j service status\",
+                \"echo \\\"Checking Neo4j service status...\\\"\",
                 \"systemctl status neo4j\", 
-                \"ss -tlnp | grep java\", 
-                \"cypher-shell --non-interactive \\\"RETURN 1 AS test;\\\"\",
+                
+                \"# Check if Neo4j is listening on port 7687\",
+                \"echo \\\"Checking if Neo4j is listening on port 7687...\\\"\",
+                \"ss -tlnp | grep 7687 || echo \\\"No process listening on port 7687\\\"\", 
+                
+                \"# Check Neo4j logs for any errors\",
+                \"echo \\\"Checking Neo4j logs for errors...\\\"\",
+                \"tail -n 50 /var/log/neo4j/neo4j.log || echo \\\"No Neo4j logs found\\\"\",
+                
+                \"# Try to run a simple query with cypher-shell with verbose output\",
+                \"echo \\\"Testing Neo4j with cypher-shell...\\\"\",
+                \"cypher-shell --verbose --non-interactive \\\"RETURN 1 AS test;\\\" || echo \\\"Cypher-shell command failed\\\"\",
+                
+                \"# Check if Neo4j is actually running\",
                 \"if ! systemctl is-active neo4j > /dev/null; then\",
                 \"  echo \\\"Neo4j failed to start, running with --verbose for detailed logs...\\\"\",
                 \"  sudo -u neo4j /usr/share/neo4j/bin/neo4j console --verbose\",
-                \"fi\"
+                \"fi\",
+                
+                \"# Check Neo4j configuration\",
+                \"echo \\\"Neo4j configuration:\\\"\",
+                \"cat /etc/neo4j/neo4j.conf | grep -v '^#' | grep -v '^$' || echo \\\"No Neo4j configuration found\\\"\"
               ]}" \
               --query "Command.CommandId" --output text)
             
@@ -308,7 +326,7 @@ jobs:
             echo "ERROR: Failed to install Neo4j on LedgerSpace instance"
             exit 1
           fi
-          
+
           if ! install_neo4j "$SEARCH_ID" "SearchSpace"; then
             echo "ERROR: Failed to install Neo4j on SearchSpace instance"
             exit 1
@@ -448,6 +466,26 @@ jobs:
             
             echo "Verifying Neo4j connectivity on $SPACE_NAME ($BOLT_URL)..."
             
+            # First check basic network connectivity
+            echo "Checking basic network connectivity to $IP:7687..."
+            if nc -zv -w 5 $IP 7687 2>&1; then
+              echo "Network connectivity to $IP:7687 verified successfully"
+            else
+              echo "ERROR: Cannot establish network connection to $IP:7687"
+              echo "This indicates a network or firewall issue, not a Neo4j configuration problem"
+              
+              # Check security groups
+              echo "Checking security groups for instance..."
+              INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=private-ip-address,Values=$IP" --query "Reservations[0].Instances[0].InstanceId" --output text)
+              if [ -n "$INSTANCE_ID" ]; then
+                echo "Instance ID: $INSTANCE_ID"
+                echo "Security groups:"
+                aws ec2 describe-instances --instance-ids $INSTANCE_ID --query "Reservations[0].Instances[0].SecurityGroups[*].{GroupId:GroupId,GroupName:GroupName}" --output table
+              fi
+              
+              return 1
+            fi
+            
             # Test connection using Neo4j driver
             echo "Testing direct connection to Neo4j using Neo4j driver..."
             if node test-neo4j-connection.js "$BOLT_URL"; then
@@ -455,6 +493,19 @@ jobs:
               return 0
             else
               echo "Error: $SPACE_NAME connectivity verification failed"
+              
+              # Check if Neo4j is running on the instance
+              echo "Checking if Neo4j is running on the instance..."
+              INSTANCE_ID=$(aws ec2 describe-instances --filters "Name=private-ip-address,Values=$IP" --query "Reservations[0].Instances[0].InstanceId" --output text)
+              if [ -n "$INSTANCE_ID" ]; then
+                echo "Running systemctl status neo4j on instance..."
+                aws ssm send-command \
+                  --instance-ids "$INSTANCE_ID" \
+                  --document-name "AWS-RunShellScript" \
+                  --parameters '{"commands":["systemctl status neo4j", "ss -tlnp | grep 7687", "cat /etc/neo4j/neo4j.conf | grep -E \"listen_address|tls_level|auth_enabled\""]}' \
+                  --output text
+              fi
+              
               return 1
             fi
           }
