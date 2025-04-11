@@ -175,9 +175,14 @@ jobs:
                 "echo \"Installing Neo4j Enterprise...\"",
                 "sudo -E yum install -y neo4j-enterprise",
                 
+                "# Accept Neo4j license agreement",
+                "echo \"Accepting Neo4j license agreement...\"",
+                "sudo -E neo4j-admin server license --accept-commercial",
+                
                 "# Configure Neo4j",
                 "echo \"Configuring Neo4j...\"",
-                "cat > /etc/neo4j/neo4j.conf << EOF",
+                "sudo mkdir -p /etc/neo4j /usr/share/neo4j/conf",
+                "sudo cat > /etc/neo4j/neo4j.conf << EOF",
                 "# Network configuration",
                 "server.default_listen_address=0.0.0.0",
                 "server.bolt.listen_address=0.0.0.0:7687",
@@ -205,8 +210,11 @@ jobs:
                 "EOF",
                 "",
                 "# Ensure Neo4j user owns all relevant directories",
-                "mkdir -p /var/lib/neo4j /var/log/neo4j",
-                "chown -R neo4j:neo4j /etc/neo4j /var/lib/neo4j /var/log/neo4j",
+                "sudo mkdir -p /var/lib/neo4j /var/log/neo4j",
+                "sudo chown -R neo4j:neo4j /etc/neo4j /var/lib/neo4j /var/log/neo4j /usr/share/neo4j",
+                
+                "# Create symlink for config file",
+                "sudo ln -sf /etc/neo4j/neo4j.conf /usr/share/neo4j/conf/neo4j.conf",
                 
                 "# Enable and start Neo4j service",
                 "echo \"Enabling and starting Neo4j service...\"",
