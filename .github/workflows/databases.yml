@@ -200,7 +200,6 @@ jobs:
                 \"dbms.security.auth_enabled=false\",
                 \"initial.dbms.default_database=neo4j\",
                 \"dbms.mode=SINGLE\",
-                \"causal_clustering.discovery_type=NONE\",
                 \"\",
                 \"# Memory configuration - reduced for testing\",
                 \"server.memory.heap.initial_size=512m\",
