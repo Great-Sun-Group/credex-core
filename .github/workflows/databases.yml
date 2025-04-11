@@ -150,9 +150,12 @@ jobs:
                 "# Accept Neo4j license agreement",
                 "export NEO4J_ACCEPT_LICENSE_AGREEMENT=yes",
                 
-                "# Install Java 17",
+                "# Install Java 17 and set as default",
                 "echo \"Installing Java 17...\"",
                 "yum install -y java-17-amazon-corretto",
+                "echo \"Setting Java 17 as default...\"",
+                "alternatives --set java $(alternatives --display java | grep 'java-17-amazon-corretto' | grep -o '/usr/lib/jvm/.*java' | head -1)",
+                "java -version",
                 
                 "# Import Neo4j GPG key",
                 "echo \"Importing Neo4j GPG key...\"",
@@ -196,10 +199,14 @@ jobs:
                 "dbms.connector.bolt.tls_level=DISABLED",
                 "dbms.connector.http.enabled=true",
                 "dbms.connector.https.enabled=true",
+                "",
+                "# Disable strict validation",
+                "server.config.strict_validation.enabled=false",
                 "EOF",
                 "",
-                "# Ensure Neo4j user owns the config",
-                "chown -R neo4j:neo4j /etc/neo4j",
+                "# Ensure Neo4j user owns all relevant directories",
+                "mkdir -p /var/lib/neo4j /var/log/neo4j",
+                "chown -R neo4j:neo4j /etc/neo4j /var/lib/neo4j /var/log/neo4j",
                 
                 "# Enable and start Neo4j service",
                 "echo \"Enabling and starting Neo4j service...\"",
@@ -233,10 +240,18 @@ jobs:
             VERIFY_COMMAND_ID=$(aws ssm send-command \
               --instance-ids "$INSTANCE_ID" \
               --document-name "AWS-RunShellScript" \
-              --parameters '{"commands":["systemctl status neo4j", "ss -tlnp | grep java", "cypher-shell --non-interactive \"RETURN 1 AS test;\""]}' \
+              --parameters '{"commands":[
+                "systemctl status neo4j", 
+                "ss -tlnp | grep java", 
+                "cypher-shell --non-interactive \"RETURN 1 AS test;\"",
+                "if ! systemctl is-active neo4j > /dev/null; then",
+                "  echo \"Neo4j failed to start, running with --verbose for detailed logs...\"",
+                "  sudo -u neo4j /usr/share/neo4j/bin/neo4j console --verbose",
+                "fi"
+              ]}' \
               --query "Command.CommandId" --output text)
             
-            sleep 10
+            sleep 30
             
             # Get verification output
             echo "Verification command output:"
