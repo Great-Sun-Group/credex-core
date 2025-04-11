@@ -2,9 +2,13 @@
 
 /* Main Navigation */
 .main-nav {
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   margin-bottom: 40px;
   z-index: 1000;
+  transition: all 0.3s ease;
 }
 
 .nav-container {
@@ -14,6 +18,9 @@
   border-radius: 5px;
   border: 1px solid #04a0b2;
   padding: 0 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
 .nav-items {

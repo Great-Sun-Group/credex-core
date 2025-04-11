@@ -4,7 +4,7 @@
 @media (max-width: 992px) {
   /* Base responsive adjustments */
   body {
-    padding: 20px;
+    padding: 70px 20px 20px 20px;
   }
   
   h1 {
@@ -43,7 +43,7 @@
 @media (max-width: 768px) {
   /* Base responsive adjustments */
   body {
-    padding: 15px;
+    padding: 70px 15px 15px 15px;
   }
   
   h1 {
@@ -60,16 +60,29 @@
   }
   
   /* Navigation responsive adjustments */
-  .mobile-menu-toggle {
-    display: flex;
-    margin: 12px 0;
+  .main-nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: auto;
+    margin-bottom: 0;
+    z-index: 1000;
   }
-
+  
   .nav-container {
     flex-wrap: wrap;
     padding: 0 15px;
     position: relative;
+    border-radius: 0 0 0 5px;
+    border-top: none;
+    border-right: none;
   }
+  
+  .mobile-menu-toggle {
+    display: flex;
+    margin: 12px 0;
+  }
+  
 
   .nav-items {
     display: none;
@@ -101,6 +114,7 @@
     padding: 15px;
     font-size: 16px;
   }
+  
   
   /* Dropdown styling for mobile */
   .dropdown-toggle::after {
@@ -207,8 +221,11 @@
     padding: 0 10px;
   }
   
+  
   .mobile-menu-toggle {
     margin: 10px 0;
+    width: 24px;
+    height: 18px;
   }
   
   .nav-items > li > a {
