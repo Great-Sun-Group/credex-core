@@ -201,7 +201,7 @@ jobs:
                 \"initial.dbms.default_database=neo4j\",
                 \"server.cluster.system_database_mode=PRIMARY\",
                 \"initial.server.mode_constraint=PRIMARY\",
-                \"server.cluster.listen_address=0.0.0.0:7000\",
+                \"server.cluster.listen_address=0.0.0.0:9000\",
                 \"\",
                 \"# Memory configuration - reduced for testing\",
                 \"server.memory.heap.initial_size=512m\",
