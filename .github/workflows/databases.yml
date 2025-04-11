@@ -236,7 +236,7 @@ jobs:
                 \"# Clustering configuration\",
                 \"dbms.cluster.minimum_initial_system_primaries_count=1\",
                 \"internal.db.cluster.raft.minimum_voting_members=1\",
-                \"dbms.cluster.single_member_raft=true\",
+                \"server.cluster.raft.single_member=true\",
                 \"server.bolt.advertised_address=$PRIVATE_IP:7687\",
                 \"\",
                 \"# Memory configuration - reduced for testing\",
