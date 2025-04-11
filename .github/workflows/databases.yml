@@ -210,7 +210,7 @@ jobs:
                 \"dbms.routing.default_router=SERVER\",
                 \"server.bolt.tls_level=DISABLED\",
                 \"server.http.enabled=true\",
-                \"server.https.enabled=true\",
+                \"server.https.enabled=false\",
                 \"\",
                 \"# Disable strict validation\",
                 \"server.config.strict_validation.enabled=false\",
