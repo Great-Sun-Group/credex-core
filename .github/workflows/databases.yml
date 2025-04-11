@@ -315,7 +315,9 @@ jobs:
 
           async function testConnection(uri) {
             console.log(`Testing connection to: ${uri}`);
-            const driver = neo4j.driver(uri, neo4j.auth.basic('neo4j', 'neo4j'));
+            const driver = neo4j.driver(uri, neo4j.auth.basic('', ''), {
+              encrypted: false // Disable encryption for Neo4j 4.0+ compatibility
+            });
             
             try {
               const session = driver.session();
