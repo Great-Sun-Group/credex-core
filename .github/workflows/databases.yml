@@ -385,9 +385,76 @@ jobs:
                   \"ps aux | grep neo4j | grep -v grep\",
                   \"pkill -f neo4j || echo \\\"No Neo4j processes to kill\\\"\",
                   
-                  \"# Run Neo4j in console mode with maximum verbosity\",
+                  \"# Save current Neo4j configuration for reference\",
+                  \"echo \\\"Current Neo4j configuration:\\\"\",
+                  \"cat /etc/neo4j/neo4j.conf > /tmp/neo4j.conf.backup\",
+                  \"cat /tmp/neo4j.conf.backup\",
+                  
+                  \"# Create a minimal test configuration\",
+                  \"echo \\\"Creating minimal test configuration...\\\"\",
+                  \"sudo cat > /etc/neo4j/neo4j.conf << EOF\",
+                  \"# Absolute minimal configuration\",
+                  \"server.default_listen_address=0.0.0.0\",
+                  \"server.bolt.listen_address=0.0.0.0:7687\",
+                  \"server.http.listen_address=0.0.0.0:7474\",
+                  \"server.https.listen_address=0.0.0.0:7473\",
+                  \"server.bolt.advertised_address=$PRIVATE_IP:7687\",
+                  \"\",
+                  \"# Security settings\",
+                  \"dbms.security.auth_enabled=false\",
+                  \"initial.dbms.default_database=neo4j\",
+                  \"\",
+                  \"# Disable ALL clustering\",
+                  \"server.cluster.enabled=false\",
+                  \"server.discovery.enabled=false\",
+                  \"\",
+                  \"# Memory configuration\",
+                  \"server.memory.heap.initial_size=512m\",
+                  \"server.memory.heap.max_size=512m\",
+                  \"server.memory.pagecache.size=512m\",
+                  \"EOF\",
+                  
+                  \"# Ensure Neo4j user owns the config\",
+                  \"sudo chown neo4j:neo4j /etc/neo4j/neo4j.conf\",
+                  \"sudo chmod 644 /etc/neo4j/neo4j.conf\",
+                  
+                  \"# Check system resources\",
+                  \"echo \\\"System resources:\\\"\",
+                  \"free -m\",
+                  \"df -h\",
+                  
+                  \"# Check all listening ports\",
+                  \"echo \\\"All listening ports:\\\"\",
+                  \"ss -tulpn\",
+                  
+                  \"# Run Neo4j in console mode with maximum verbosity and redirect output to file\",
                   \"echo \\\"Starting Neo4j in console mode with maximum verbosity...\\\"\",
-                  \"sudo -u neo4j NEO4J_ACCEPT_LICENSE_AGREEMENT=yes /usr/share/neo4j/bin/neo4j console --verbose\"
+                  \"sudo -u neo4j NEO4J_ACCEPT_LICENSE_AGREEMENT=yes /usr/share/neo4j/bin/neo4j console --verbose > /tmp/neo4j-verbose.log 2>&1 &\",
+                  \"sleep 10\",
+                  
+                  \"# Capture the log output\",
+                  \"echo \\\"Neo4j verbose log output:\\\"\",
+                  \"cat /tmp/neo4j-verbose.log\",
+                  
+                  \"# Check if Neo4j started successfully\",
+                  \"if ps aux | grep -q '[n]eo4j'; then\",
+                  \"  echo \\\"Neo4j process is running\\\"\",
+                  \"else\",
+                  \"  echo \\\"Neo4j process is NOT running\\\"\",
+                  \"fi\",
+                  
+                  \"# Check for any errors in the logs\",
+                  \"echo \\\"Checking for errors in logs:\\\"\",
+                  \"grep -i error /tmp/neo4j-verbose.log || echo \\\"No errors found in verbose log\\\"\",
+                  \"grep -i exception /tmp/neo4j-verbose.log || echo \\\"No exceptions found in verbose log\\\"\",
+                  
+                  \"# Check if ports are now in use\",
+                  \"echo \\\"Checking if ports are now in use:\\\"\",
+                  \"ss -tulpn | grep -E ':(7474|7687)' || echo \\\"No Neo4j ports in use\\\"\",
+                  
+                  \"# Try direct connection to bolt port\",
+                  \"echo \\\"Testing direct connection to bolt port:\\\"\",
+                  \"nc -zv localhost 7687 || echo \\\"Cannot connect to bolt port\\\"\"
                 ]}" \
                 --query "Command.CommandId" --output text)
               
