@@ -219,8 +219,8 @@ jobs:
                 
                 \"# Configure Neo4j\",
                 \"echo \\\"Configuring Neo4j...\\\"\",
-                \"# Get the instance's private IP address\",
-                \"INSTANCE_IP=\\$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)\",
+                \"# Get the instance's IP address using hostname -I\",
+                \"INSTANCE_IP=\\$(hostname -I | awk '{print \\$1}')\",
                 \"echo \\\"Instance IP: \\$INSTANCE_IP\\\"\",
                 \"sudo cat > /etc/neo4j/neo4j.conf << EOF\",
                 \"# Network configuration\",
