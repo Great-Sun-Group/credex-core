@@ -4,19 +4,44 @@ set -e
 # This script installs and configures Neo4j on an EC2 instance
 # It is designed to be executed via AWS SSM Run Command
 
+# Function to handle errors
+handle_error() {
+    echo "ERROR: $1"
+    exit 1
+}
+
+# Function to wait for yum lock to be released
+wait_for_yum_lock() {
+    echo "Waiting for yum lock to be released..."
+    local max_wait=300  # Maximum wait time in seconds
+    local wait_time=0
+    
+    while [ -f /var/run/yum.pid ] && [ $wait_time -lt $max_wait ]; do
+        echo "Yum is locked. Waiting... ($wait_time/$max_wait seconds)"
+        sleep 5
+        wait_time=$((wait_time + 5))
+    done
+    
+    if [ $wait_time -ge $max_wait ]; then
+        handle_error "Timed out waiting for yum lock to be released"
+    fi
+    
+    echo "Yum lock released or not present. Proceeding..."
+}
+
 # Accept Neo4j license agreement
 export NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
 
 # Install Java 17 and set as default
 echo "Installing Java 17..."
-yum install -y java-17-amazon-corretto
+yum install -y java-17-amazon-corretto || handle_error "Failed to install Java 17"
 echo "Setting Java 17 as default..."
-alternatives --set java $(alternatives --display java | grep 'java-17-amazon-corretto' | grep -o '/usr/lib/jvm/.*java' | head -1)
+alternatives --set java $(alternatives --display java | grep 'java-17-amazon-corretto' | grep -o '/usr/lib/jvm/.*java' | head -1) || handle_error "Failed to set Java 17 as default"
 java -version
 
 # Import Neo4j GPG key
 echo "Importing Neo4j GPG key..."
-rpm --import https://debian.neo4j.com/neotechnology.gpg.key
+rpm --import https://debian.neo4j.com/neotechnology.gpg.key || handle_error "Failed to import Neo4j GPG key"
 
 # Configure Neo4j repository
 echo "Configuring Neo4j repository..."
@@ -30,16 +55,19 @@ EOF
 
 # Install Neo4j Enterprise
 echo "Installing Neo4j Enterprise..."
-sudo -E yum install -y neo4j-enterprise
+wait_for_yum_lock
+sudo -E yum clean all || echo "Warning: Failed to clean yum cache"
+wait_for_yum_lock
+sudo -E yum install -y neo4j-enterprise || handle_error "Failed to install Neo4j Enterprise"
 
 # Accept Neo4j license agreement
 echo "Accepting Neo4j license agreement..."
-sudo -E neo4j-admin server license --accept-commercial || true
+sudo -E neo4j-admin server license --accept-commercial || echo "Warning: License acceptance command failed, using direct file creation"
 echo "Creating license acceptance file directly..."
-sudo mkdir -p /usr/share/neo4j/licenses
+sudo mkdir -p /usr/share/neo4j/licenses || handle_error "Failed to create licenses directory"
 sudo bash -c 'echo "commercial" > /usr/share/neo4j/licenses/accept-license.txt'
 sudo bash -c 'echo "yes" > /usr/share/neo4j/licenses/ACCEPT_LICENSE_AGREEMENT'
-sudo chown -R neo4j:neo4j /usr/share/neo4j/licenses
+sudo chown -R neo4j:neo4j /usr/share/neo4j/licenses || handle_error "Failed to set permissions on licenses directory"
 
 # Create required directories
 echo "Creating required directories..."
@@ -120,15 +148,25 @@ if ss -tulpn | grep -q ':7474'; then echo "WARNING: Port 7474 is already in use"
 
 # Enable and start Neo4j service
 echo "Enabling and starting Neo4j service..."
-systemctl enable neo4j
-systemctl start neo4j
+systemctl enable neo4j || handle_error "Failed to enable Neo4j service"
+systemctl start neo4j || handle_error "Failed to start Neo4j service"
+
+# Wait for Neo4j to fully initialize
+echo "Waiting for Neo4j to initialize (30 seconds)..."
+sleep 30
 
 # Verify Neo4j is running
 echo "Verifying Neo4j is running..."
-systemctl status neo4j
-ss -tlnp | grep java
+systemctl status neo4j || echo "Warning: Neo4j service status check failed"
+ss -tlnp | grep -E ':(7474|7687)' || echo "Warning: Neo4j ports not detected"
 
 # Check for any errors in the logs
 echo "Checking Neo4j logs for errors..."
-grep -i error /var/log/neo4j/neo4j.log || echo "No errors found in log"
-grep -i exception /var/log/neo4j/neo4j.log || echo "No exceptions found in log"
+if [ -f /var/log/neo4j/neo4j.log ]; then
+    grep -i error /var/log/neo4j/neo4j.log || echo "No errors found in log"
+    grep -i exception /var/log/neo4j/neo4j.log || echo "No exceptions found in log"
+else
+    echo "Warning: Neo4j log file not found"
+fi
+
+echo "Neo4j installation and configuration completed"
