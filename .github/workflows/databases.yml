@@ -171,25 +171,86 @@ jobs:
       - name: Upload Scripts to Instances
         run: |
           echo "Uploading scripts to instances..."
-
-          # Upload scripts to S3
+          
+          # Read script contents
+          INSTALL_SCRIPT=$(cat .github/scripts/install_neo4j.sh)
+          VERIFY_SCRIPT=$(cat .github/scripts/verify_neo4j.sh)
+          
+          echo "Script files exist and have been read"
+          echo "Install script size: $(wc -c < .github/scripts/install_neo4j.sh) bytes"
+          echo "Verify script size: $(wc -c < .github/scripts/verify_neo4j.sh) bytes"
+          
+          # Upload scripts to S3 as backup
+          echo "Uploading scripts to S3..."
           aws s3 cp .github/scripts/install_neo4j.sh s3://credexbuckets3-statebucket-${{ env.ENVIRONMENT }}/scripts/install_neo4j.sh
           aws s3 cp .github/scripts/verify_neo4j.sh s3://credexbuckets3-statebucket-${{ env.ENVIRONMENT }}/scripts/verify_neo4j.sh
-
-          # Copy scripts from S3 to instances
-          aws ssm send-command \
+          
+          # Create scripts directly on instances using SSM
+          echo "Creating scripts directly on LedgerSpace instance..."
+          LEDGER_CMD_ID=$(aws ssm send-command \
             --instance-ids "${{ env.LEDGER_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters "commands=['aws s3 cp s3://credexbuckets3-statebucket-${{ env.ENVIRONMENT }}/scripts/install_neo4j.sh /tmp/install_neo4j.sh && aws s3 cp s3://credexbuckets3-statebucket-${{ env.ENVIRONMENT }}/scripts/verify_neo4j.sh /tmp/verify_neo4j.sh && chmod +x /tmp/install_neo4j.sh /tmp/verify_neo4j.sh']" \
-            --comment "Copy scripts to LedgerSpace instance"
-
-          aws ssm send-command \
+            --parameters "commands=[
+              'echo \"#!/bin/bash\" > /tmp/install_neo4j.sh',
+              'cat << \"EOF\" >> /tmp/install_neo4j.sh
+              $INSTALL_SCRIPT
+              EOF',
+              'echo \"#!/bin/bash\" > /tmp/verify_neo4j.sh',
+              'cat << \"EOF\" >> /tmp/verify_neo4j.sh
+              $VERIFY_SCRIPT
+              EOF',
+              'chmod +x /tmp/install_neo4j.sh /tmp/verify_neo4j.sh',
+              'ls -la /tmp/install_neo4j.sh /tmp/verify_neo4j.sh || echo \"Files not found\"',
+              'head -n 5 /tmp/install_neo4j.sh || echo \"Cannot read install script\"',
+              'head -n 5 /tmp/verify_neo4j.sh || echo \"Cannot read verify script\"'
+            ]" \
+            --comment "Create scripts on LedgerSpace instance" \
+            --output text \
+            --query "Command.CommandId")
+          
+          echo "Creating scripts directly on SearchSpace instance..."
+          SEARCH_CMD_ID=$(aws ssm send-command \
             --instance-ids "${{ env.SEARCH_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters "commands=['aws s3 cp s3://credexbuckets3-statebucket-${{ env.ENVIRONMENT }}/scripts/install_neo4j.sh /tmp/install_neo4j.sh && aws s3 cp s3://credexbuckets3-statebucket-${{ env.ENVIRONMENT }}/scripts/verify_neo4j.sh /tmp/verify_neo4j.sh && chmod +x /tmp/install_neo4j.sh /tmp/verify_neo4j.sh']" \
-            --comment "Copy scripts to SearchSpace instance"
-
-          echo "Scripts uploaded to instances"
+            --parameters "commands=[
+              'echo \"#!/bin/bash\" > /tmp/install_neo4j.sh',
+              'cat << \"EOF\" >> /tmp/install_neo4j.sh
+              $INSTALL_SCRIPT
+              EOF',
+              'echo \"#!/bin/bash\" > /tmp/verify_neo4j.sh',
+              'cat << \"EOF\" >> /tmp/verify_neo4j.sh
+              $VERIFY_SCRIPT
+              EOF',
+              'chmod +x /tmp/install_neo4j.sh /tmp/verify_neo4j.sh',
+              'ls -la /tmp/install_neo4j.sh /tmp/verify_neo4j.sh || echo \"Files not found\"',
+              'head -n 5 /tmp/install_neo4j.sh || echo \"Cannot read install script\"',
+              'head -n 5 /tmp/verify_neo4j.sh || echo \"Cannot read verify script\"'
+            ]" \
+            --comment "Create scripts on SearchSpace instance" \
+            --output text \
+            --query "Command.CommandId")
+          
+          # Wait for commands to complete
+          echo "Waiting for script creation commands to complete..."
+          aws ssm wait command-executed --command-id "$LEDGER_CMD_ID" --instance-id "${{ env.LEDGER_ID }}"
+          aws ssm wait command-executed --command-id "$SEARCH_CMD_ID" --instance-id "${{ env.SEARCH_ID }}"
+          
+          # Verify script creation
+          echo "Verifying script creation on LedgerSpace instance..."
+          aws ssm get-command-invocation \
+            --command-id "$LEDGER_CMD_ID" \
+            --instance-id "${{ env.LEDGER_ID }}" \
+            --query "StandardOutputContent" \
+            --output text
+          
+          echo "Verifying script creation on SearchSpace instance..."
+          aws ssm get-command-invocation \
+            --command-id "$SEARCH_CMD_ID" \
+            --instance-id "${{ env.SEARCH_ID }}" \
+            --query "StandardOutputContent" \
+            --output text
+          
+          echo "Scripts created on instances"
 
       - name: Run Install Script on LedgerSpace
         run: |
