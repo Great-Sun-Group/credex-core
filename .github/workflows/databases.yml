@@ -172,85 +172,71 @@ jobs:
         run: |
           echo "Uploading scripts to instances..."
           
-          # Read script contents
-          INSTALL_SCRIPT=$(cat .github/scripts/install_neo4j.sh)
-          VERIFY_SCRIPT=$(cat .github/scripts/verify_neo4j.sh)
-          
-          echo "Script files exist and have been read"
-          echo "Install script size: $(wc -c < .github/scripts/install_neo4j.sh) bytes"
-          echo "Verify script size: $(wc -c < .github/scripts/verify_neo4j.sh) bytes"
-          
-          # Upload scripts to S3 as backup
+          # Upload scripts to S3
           echo "Uploading scripts to S3..."
           aws s3 cp .github/scripts/install_neo4j.sh s3://credexbuckets3-statebucket-${{ env.ENVIRONMENT }}/scripts/install_neo4j.sh
           aws s3 cp .github/scripts/verify_neo4j.sh s3://credexbuckets3-statebucket-${{ env.ENVIRONMENT }}/scripts/verify_neo4j.sh
           
-          # Create scripts directly on instances using SSM
-          echo "Creating scripts directly on LedgerSpace instance..."
+          # Create a pre-signed URL for the scripts (valid for 15 minutes)
+          echo "Creating pre-signed URLs for scripts..."
+          INSTALL_URL=$(aws s3 presign s3://credexbuckets3-statebucket-${{ env.ENVIRONMENT }}/scripts/install_neo4j.sh --expires-in 900)
+          VERIFY_URL=$(aws s3 presign s3://credexbuckets3-statebucket-${{ env.ENVIRONMENT }}/scripts/verify_neo4j.sh --expires-in 900)
+          
+          echo "Using curl to download scripts to instances..."
+          
+          # Download scripts to LedgerSpace instance using curl
+          echo "Downloading scripts to LedgerSpace instance..."
           LEDGER_CMD_ID=$(aws ssm send-command \
             --instance-ids "${{ env.LEDGER_ID }}" \
             --document-name "AWS-RunShellScript" \
             --parameters "commands=[
-              'echo \"#!/bin/bash\" > /tmp/install_neo4j.sh',
-              'cat << \"EOF\" >> /tmp/install_neo4j.sh
-              $INSTALL_SCRIPT
-              EOF',
-              'echo \"#!/bin/bash\" > /tmp/verify_neo4j.sh',
-              'cat << \"EOF\" >> /tmp/verify_neo4j.sh
-              $VERIFY_SCRIPT
-              EOF',
+              'curl -s \"$INSTALL_URL\" -o /tmp/install_neo4j.sh',
+              'curl -s \"$VERIFY_URL\" -o /tmp/verify_neo4j.sh',
               'chmod +x /tmp/install_neo4j.sh /tmp/verify_neo4j.sh',
               'ls -la /tmp/install_neo4j.sh /tmp/verify_neo4j.sh || echo \"Files not found\"',
-              'head -n 5 /tmp/install_neo4j.sh || echo \"Cannot read install script\"',
-              'head -n 5 /tmp/verify_neo4j.sh || echo \"Cannot read verify script\"'
+              'head -n 5 /tmp/install_neo4j.sh || echo \"Cannot read install script\"'
             ]" \
-            --comment "Create scripts on LedgerSpace instance" \
+            --comment "Download scripts to LedgerSpace instance" \
             --output text \
             --query "Command.CommandId")
           
-          echo "Creating scripts directly on SearchSpace instance..."
+          # Download scripts to SearchSpace instance using curl
+          echo "Downloading scripts to SearchSpace instance..."
           SEARCH_CMD_ID=$(aws ssm send-command \
             --instance-ids "${{ env.SEARCH_ID }}" \
             --document-name "AWS-RunShellScript" \
             --parameters "commands=[
-              'echo \"#!/bin/bash\" > /tmp/install_neo4j.sh',
-              'cat << \"EOF\" >> /tmp/install_neo4j.sh
-              $INSTALL_SCRIPT
-              EOF',
-              'echo \"#!/bin/bash\" > /tmp/verify_neo4j.sh',
-              'cat << \"EOF\" >> /tmp/verify_neo4j.sh
-              $VERIFY_SCRIPT
-              EOF',
+              'curl -s \"$INSTALL_URL\" -o /tmp/install_neo4j.sh',
+              'curl -s \"$VERIFY_URL\" -o /tmp/verify_neo4j.sh',
               'chmod +x /tmp/install_neo4j.sh /tmp/verify_neo4j.sh',
               'ls -la /tmp/install_neo4j.sh /tmp/verify_neo4j.sh || echo \"Files not found\"',
-              'head -n 5 /tmp/install_neo4j.sh || echo \"Cannot read install script\"',
-              'head -n 5 /tmp/verify_neo4j.sh || echo \"Cannot read verify script\"'
+              'head -n 5 /tmp/install_neo4j.sh || echo \"Cannot read install script\"'
             ]" \
-            --comment "Create scripts on SearchSpace instance" \
+            --comment "Download scripts to SearchSpace instance" \
             --output text \
             --query "Command.CommandId")
           
           # Wait for commands to complete
-          echo "Waiting for script creation commands to complete..."
+          echo "Waiting for script download commands to complete..."
           aws ssm wait command-executed --command-id "$LEDGER_CMD_ID" --instance-id "${{ env.LEDGER_ID }}"
           aws ssm wait command-executed --command-id "$SEARCH_CMD_ID" --instance-id "${{ env.SEARCH_ID }}"
           
-          # Verify script creation
-          echo "Verifying script creation on LedgerSpace instance..."
+          # Verify script downloads
+          echo "Verifying script download on LedgerSpace instance..."
           aws ssm get-command-invocation \
             --command-id "$LEDGER_CMD_ID" \
             --instance-id "${{ env.LEDGER_ID }}" \
             --query "StandardOutputContent" \
             --output text
           
-          echo "Verifying script creation on SearchSpace instance..."
+          echo "Verifying script download on SearchSpace instance..."
           aws ssm get-command-invocation \
             --command-id "$SEARCH_CMD_ID" \
             --instance-id "${{ env.SEARCH_ID }}" \
             --query "StandardOutputContent" \
             --output text
           
-          echo "Scripts created on instances"
+          echo "Scripts downloaded to instances"
 
       - name: Run Install Script on LedgerSpace
         run: |
