@@ -191,6 +191,24 @@ jobs:
                 \"echo \\\"Checking all listening ports:\\\"\",
                 \"sudo netstat -tulpn | grep LISTEN\",
                 
+                \"# Check for SELinux/AppArmor\",
+                \"echo \\\"Checking security modules...\\\"\",
+                \"getenforce || echo \\\"SELinux not installed\\\"\",
+                \"aa-status || echo \\\"AppArmor not installed\\\"\",
+                
+                \"# Check system limits\",
+                \"echo \\\"Checking system limits...\\\"\",
+                \"ulimit -a\",
+                
+                \"# Check network configuration\",
+                \"echo \\\"Checking network configuration...\\\"\",
+                \"ip addr\",
+                \"ip route\",
+                
+                \"# Check for existing processes using ports\",
+                \"echo \\\"Checking for processes using relevant ports...\\\"\",
+                \"ss -tulpn | grep -E ':(5000|7474|7687|59000|59001|59002|59003)'\",
+                
                 \"# Configure Neo4j with the private IP we already have from Terraform\",
                 \"echo \\\"Configuring Neo4j with private IP: $PRIVATE_IP\\\"\",
                 \"sudo cat > /etc/neo4j/neo4j.conf << EOF\",
@@ -199,24 +217,15 @@ jobs:
                 \"server.bolt.listen_address=0.0.0.0:7687\",
                 \"server.http.listen_address=0.0.0.0:7474\",
                 \"server.https.listen_address=0.0.0.0:7473\",
+                \"server.bolt.advertised_address=$PRIVATE_IP:7687\",
                 \"\",
                 \"# Security settings\",
                 \"dbms.security.auth_enabled=false\",
                 \"initial.dbms.default_database=neo4j\",
                 \"\",
-                \"# Run in single instance mode but keep Enterprise features\",
-                \"dbms.mode=SINGLE\",
-                \"server.bolt.advertised_address=$PRIVATE_IP:7687\",
-                \"\",
-                \"# Configure Akka to use a high-numbered port (unlikely to conflict)\",
-                \"akka.remote.artery.canonical.port=59000\",
-                \"akka.remote.classic.netty.tcp.port=59000\",
-                \"causal_clustering.discovery_listen_address=0.0.0.0:59001\",
-                \"causal_clustering.transaction_listen_address=0.0.0.0:59002\",
-                \"causal_clustering.raft_listen_address=0.0.0.0:59003\",
-                \"causal_clustering.discovery_advertised_address=$PRIVATE_IP:59001\",
-                \"causal_clustering.transaction_advertised_address=$PRIVATE_IP:59002\",
-                \"causal_clustering.raft_advertised_address=$PRIVATE_IP:59003\",
+                \"# Completely disable clustering for single instance mode\",
+                \"server.cluster.enabled=false\",
+                \"server.discovery.enabled=false\",
                 \"\",
                 \"# Memory configuration - reduced for testing\",
                 \"server.memory.heap.initial_size=512m\",
@@ -235,14 +244,29 @@ jobs:
                 \"\",
                 \"# Properly accept Neo4j license\",
                 \"echo \\\"Accepting Neo4j license agreement...\\\"\",
+                \"sudo mkdir -p /usr/share/neo4j/licenses\",
+                \"sudo bash -c 'echo \\\"yes\\\" > /usr/share/neo4j/licenses/ACCEPT_LICENSE_AGREEMENT'\",
                 \"sudo bash -c 'echo \\\"commercial\\\" > /usr/share/neo4j/licenses/accept-license.txt'\",
                 \"sudo -u neo4j NEO4J_ACCEPT_LICENSE_AGREEMENT=yes /usr/share/neo4j/bin/neo4j-admin server license --accept-commercial || true\",
                 
+                \"# Verify license files\",
+                \"echo \\\"Verifying license files...\\\"\",
+                \"ls -la /usr/share/neo4j/licenses/\",
+                \"cat /usr/share/neo4j/licenses/accept-license.txt\",
+                \"sudo -u neo4j cat /usr/share/neo4j/licenses/accept-license.txt || echo \\\"Neo4j user cannot read license file\\\"\",
+                
                 \"# Ensure Neo4j user owns all relevant directories\",
+                \"echo \\\"Setting correct permissions...\\\"\",
                 \"sudo chown -R neo4j:neo4j /etc/neo4j /var/lib/neo4j /var/log/neo4j /usr/share/neo4j\",
+                \"sudo chmod -R 755 /etc/neo4j /var/lib/neo4j /var/log/neo4j /usr/share/neo4j\",
                 
                 \"# Create symlink for config file\",
                 \"sudo ln -sf /etc/neo4j/neo4j.conf /usr/share/neo4j/conf/neo4j.conf\",
+                
+                \"# Check for port availability before starting\",
+                \"echo \\\"Checking port availability before starting Neo4j...\\\"\",
+                \"if ss -tulpn | grep -q ':7687'; then echo \\\"WARNING: Port 7687 is already in use\\\"; fi\",
+                \"if ss -tulpn | grep -q ':7474'; then echo \\\"WARNING: Port 7474 is already in use\\\"; fi\",
                 
                 \"# Enable and start Neo4j service\",
                 \"echo \\\"Enabling and starting Neo4j service...\\\"\",
@@ -252,7 +276,12 @@ jobs:
                 \"# Verify Neo4j is running\",
                 \"echo \\\"Verifying Neo4j is running...\\\"\",
                 \"systemctl status neo4j\",
-                \"ss -tlnp | grep java\"
+                \"ss -tlnp | grep java\",
+                
+                \"# Check for any errors in the logs\",
+                \"echo \\\"Checking Neo4j logs for errors...\\\"\",
+                \"grep -i error /var/log/neo4j/neo4j.log || echo \\\"No errors found in log\\\"\",
+                \"grep -i exception /var/log/neo4j/neo4j.log || echo \\\"No exceptions found in log\\\"\"
               ]}" \
               --query "Command.CommandId" --output text)
             
@@ -301,7 +330,30 @@ jobs:
                 
                 \"# Check Neo4j configuration\",
                 \"echo \\\"Neo4j configuration:\\\"\",
-                \"cat /etc/neo4j/neo4j.conf | grep -v '^#' | grep -v '^$' || echo \\\"No Neo4j configuration found\\\"\"
+                \"cat /etc/neo4j/neo4j.conf | grep -v '^#' | grep -v '^$' || echo \\\"No Neo4j configuration found\\\"\",
+                
+                \"# Check system resources\",
+                \"echo \\\"Checking system resources...\\\"\",
+                \"free -m\",
+                \"df -h\",
+                
+                \"# Check Java version\",
+                \"echo \\\"Checking Java version...\\\"\",
+                \"java -version\",
+                
+                \"# Check for any port conflicts\",
+                \"echo \\\"Checking for port conflicts...\\\"\",
+                \"ss -tulpn | grep -E ':(7474|7687|59000|59001|59002|59003)'\",
+                
+                \"# Check SELinux/AppArmor status\",
+                \"echo \\\"Checking security modules status...\\\"\",
+                \"getenforce || echo \\\"SELinux not installed\\\"\",
+                \"aa-status || echo \\\"AppArmor not installed\\\"\",
+                
+                \"# Check Neo4j user permissions\",
+                \"echo \\\"Checking Neo4j user permissions...\\\"\",
+                \"sudo -u neo4j touch /var/lib/neo4j/test_file && echo \\\"Neo4j user can write to data directory\\\" || echo \\\"Neo4j user CANNOT write to data directory\\\"\",
+                \"sudo -u neo4j rm /var/lib/neo4j/test_file 2>/dev/null\"
               ]}" \
               --query "Command.CommandId" --output text)
             
@@ -324,7 +376,19 @@ jobs:
               VERBOSE_COMMAND_ID=$(aws ssm send-command \
                 --instance-ids "$INSTANCE_ID" \
                 --document-name "AWS-RunShellScript" \
-                --parameters "{\"commands\":[\"sudo -u neo4j /usr/share/neo4j/bin/neo4j console --verbose\"]}" \
+                --parameters "{\"commands\":[
+                  \"# Stop Neo4j service first\",
+                  \"systemctl stop neo4j\",
+                  
+                  \"# Check for any lingering Neo4j processes\",
+                  \"echo \\\"Checking for lingering Neo4j processes...\\\"\",
+                  \"ps aux | grep neo4j | grep -v grep\",
+                  \"pkill -f neo4j || echo \\\"No Neo4j processes to kill\\\"\",
+                  
+                  \"# Run Neo4j in console mode with maximum verbosity\",
+                  \"echo \\\"Starting Neo4j in console mode with maximum verbosity...\\\"\",
+                  \"sudo -u neo4j NEO4J_ACCEPT_LICENSE_AGREEMENT=yes /usr/share/neo4j/bin/neo4j console --verbose\"
+                ]}" \
                 --query "Command.CommandId" --output text)
               
               sleep 30
