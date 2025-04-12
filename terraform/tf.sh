@@ -42,7 +42,7 @@ TF_CMD=${2:-plan}
 # Initialize if needed with correct backend config
 if [ ! -d ".terraform" ] || [ "$3" == "-init" ]; then
     echo "Initializing Terraform for $ENV environment..."
-    terraform init -backend-config="bucket=credexbuckets2-deploy-state-$ENV"
+    terraform init -backend-config="bucket=credexbuckets3-deploy-state-$ENV"
 fi
 
 # Run terraform command with environment and variables

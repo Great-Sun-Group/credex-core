@@ -418,7 +418,7 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
 # Security: Encrypted at rest, no public access, versioning enabled
 # Access Pattern: Write to uploads/, process to processed/, archive to archived/
 resource "aws_s3_bucket" "verification_photos" {
-  bucket = "credexbuckets2-verifybucket-photos-${var.environment}"
+  bucket = "credexbuckets3-verifybucket-photos-${var.environment}"
 
   tags = merge(var.common_tags, {
     Name = "verification-photos-${var.environment}"
@@ -556,7 +556,7 @@ resource "aws_s3_bucket_cors_configuration" "verification_photos" {
 # Access logging bucket for audit trail
 # Purpose: Store access logs for security and compliance
 resource "aws_s3_bucket" "verification_logs" {
-  bucket = "credexbuckets2-verifybucket-logs-${var.environment}"
+  bucket = "credexbuckets3-verifybucket-logs-${var.environment}"
 
   tags = merge(var.common_tags, {
     Name = "verification-logs-${var.environment}"
@@ -596,7 +596,7 @@ resource "aws_s3_bucket_logging" "verification_photos" {
 
 # Backup bucket for disaster recovery
 resource "aws_s3_bucket" "verification_backups" {
-  bucket   = "credexbuckets2-verifybucket-backups-${var.environment}"
+  bucket   = "credexbuckets3-verifybucket-backups-${var.environment}"
 
   tags = merge(var.common_tags, {
     Name = "verification-backups-${var.environment}"
@@ -820,7 +820,7 @@ resource "aws_iam_role_policy" "ecs_task_s3_verification" {
 # Purpose: Stores any type of data referenced by AssetMarker nodes
 # Security: Encrypted at rest, no public access
 resource "aws_s3_bucket" "asset_marker_data" {
-  bucket = "credexbuckets2-assetmarker-data-${var.environment}"
+  bucket = "credexbuckets3-assetmarker-data-${var.environment}"
 
   tags = merge(var.common_tags, {
     Name = "asset-marker-data-${var.environment}"
