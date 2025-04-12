@@ -37,6 +37,12 @@ export async function generateSwaggerSpec(): Promise<swaggerJsdoc.OAS3Definition
             scheme: "bearer",
             bearerFormat: "JWT",
           },
+          clientApiKey: {
+            type: "apiKey",
+            in: "header",
+            name: "x-client-api-key",
+            description: "Client API key for authentication"
+          },
           devAdminAuth: {
             type: "apiKey",
             in: "header",
@@ -216,6 +222,7 @@ export async function generateSwaggerSpec(): Promise<swaggerJsdoc.OAS3Definition
         { name: "Admin", description: "Administrative operations for managing members, accounts, and credex transactions" },
         { name: "DevAdmin", description: "Development and administration operations" },
         { name: "Notifications", description: "Push notification management and testing operations" },
+        { name: "App", description: "App version and update operations" },
       ],
     },
     apis: [

@@ -19,6 +19,7 @@ module.exports = {
     '**/tests/api/services/**/*.test.ts',
     '**/tests/api/Credex/**/*.test.ts',
     '**/tests/api/Member/**/*.test.ts',  // Added pattern for Member tests
+    '**/tests/api/App/**/*.test.ts',     // Added pattern for App tests
     '**/tests/api/error-cases/**/*.errors.ts',  // Added pattern for error test files
     '**/tests/integration/**/*.test.ts'  // Added pattern for integration tests
   ],

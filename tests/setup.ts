@@ -120,6 +120,14 @@ instance.interceptors.request.use(
       const { token, ...rest } = config.data;
       config.data = rest;
     }
+    
+    // If token is in query params (for GET requests), move it to Authorization header
+    if (config.params && config.params.token) {
+      config.headers.Authorization = `Bearer ${config.params.token}`;
+      // Remove token from query params
+      const { token, ...rest } = config.params;
+      config.params = rest;
+    }
 
     return config;
   },
