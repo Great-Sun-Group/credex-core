@@ -1,5 +1,5 @@
 // Mock the controller before any imports
-jest.mock('../../../src/api/App/controllers/appVersionController', () => ({
+jest.mock('../../src/api/App/controllers/appVersionController', () => ({
   AppVersionController: jest.fn((req, res) => {
     // Check for client API key
     const clientApiKey = req.headers['x-client-api-key'];
@@ -103,28 +103,6 @@ jest.mock('../../../src/api/App/controllers/appVersionController', () => ({
       return;
     }
     
-    // Special case for the test that checks for "No update available"
-    if (currentVersion === '1.1.0' && !isTestEndpoint) {
-      res.status(200).json({
-        message: "No update available",
-        data: {
-          action: {
-            id: req.body.app_id,
-            type: "APP_VERSION_CHECK",
-            timestamp: new Date().toISOString(),
-            actor: "system",
-            details: {
-              update_available: false,
-              latest_version: sampleAppVersion.version,
-              update_required: false
-            }
-          },
-          dashboard: {}
-        }
-      });
-      return;
-    }
-    
     // Always return update available for test endpoint
     if (isTestEndpoint) {
       res.status(200).json({
@@ -145,6 +123,28 @@ jest.mock('../../../src/api/App/controllers/appVersionController', () => ({
               file_size_bytes: sampleAppVersion.fileSizeBytes,
               release_notes: sampleAppVersion.releaseNotes,
               release_date: sampleAppVersion.releaseDate
+            }
+          },
+          dashboard: {}
+        }
+      });
+      return;
+    }
+    
+    // Special case for the test that checks for "No update available"
+    if (currentVersion === '1.1.0' && !isTestEndpoint) {
+      res.status(200).json({
+        message: "No update available",
+        data: {
+          action: {
+            id: req.body.app_id,
+            type: "APP_VERSION_CHECK",
+            timestamp: new Date().toISOString(),
+            actor: "system",
+            details: {
+              update_available: false,
+              latest_version: sampleAppVersion.version,
+              update_required: false
             }
           },
           dashboard: {}
@@ -180,7 +180,7 @@ jest.mock('../../../src/api/App/controllers/appVersionController', () => ({
   })
 }));
 
-import axios from '../../../tests/setup';
+import axios from '../setup';
 
 describe('App Version API', () => {
   // Client API key headers
