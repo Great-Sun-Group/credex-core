@@ -19,6 +19,19 @@ export interface AppVersion {
   active: boolean;
   createdAt: string;
   updatedAt: string;
+  
+  // Checksum fields
+  checksumAlgorithm: string;
+  checksumUniversal: string;
+  checksumArm64: string;
+  checksumArm: string;
+  checksumX86_64: string;
+  checksumUrl: string;
+  architectureSpecificDownloads: {
+    'arm64-v8a': string;
+    'armeabi-v7a': string;
+    'x86_64': string;
+  };
 }
 
 export interface AppVersionCreateInput {
@@ -33,6 +46,19 @@ export interface AppVersionCreateInput {
   updatePriority: 'low' | 'medium' | 'high' | 'critical';
   updateType: 'patch' | 'minor' | 'major';
   active?: boolean;
+  
+  // Checksum fields
+  checksumAlgorithm: string;
+  checksumUniversal: string;
+  checksumArm64: string;
+  checksumArm: string;
+  checksumX86_64: string;
+  checksumUrl: string;
+  architectureSpecificDownloads: {
+    'arm64-v8a': string;
+    'armeabi-v7a': string;
+    'x86_64': string;
+  };
 }
 
 export interface AppVersionUpdateInput {
@@ -45,6 +71,19 @@ export interface AppVersionUpdateInput {
   updatePriority?: 'low' | 'medium' | 'high' | 'critical';
   updateType?: 'patch' | 'minor' | 'major';
   active?: boolean;
+  
+  // Checksum fields
+  checksumAlgorithm?: string;
+  checksumUniversal?: string;
+  checksumArm64?: string;
+  checksumArm?: string;
+  checksumX86_64?: string;
+  checksumUrl?: string;
+  architectureSpecificDownloads?: {
+    'arm64-v8a': string;
+    'armeabi-v7a': string;
+    'x86_64': string;
+  };
 }
 
 export interface AppVersionResponse {
@@ -57,4 +96,17 @@ export interface AppVersionResponse {
   file_size_bytes?: number;
   release_notes?: string;
   release_date?: string;
+  
+  // New fields for checksums
+  integrity?: {
+    algorithm: string;
+    checksum: string;
+    checksumUrl: string;
+  };
+  architecture_specific_downloads?: {
+    [key: string]: {
+      url: string;
+      checksum: string;
+    };
+  };
 }

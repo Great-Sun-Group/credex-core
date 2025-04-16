@@ -25,6 +25,14 @@ export default function appRoutes() {
         message: 'Current version must be in format x.y.z or x.y.z+build'
       }),
       required: true
+    },
+    device_info: {
+      sanitizer: (value: any) => value,
+      validator: (value: any) => ({
+        isValid: !value || typeof value === 'object',
+        message: 'Device info must be an object'
+      }),
+      required: false
     }
   };
 
@@ -81,6 +89,11 @@ export default function appRoutes() {
    *                     type: string
    *                     description: Screen resolution
    *                     example: "1080x2400"
+   *                   architecture:
+   *                     type: string
+   *                     description: Device architecture
+   *                     enum: [arm64-v8a, armeabi-v7a, x86_64]
+   *                     example: "arm64-v8a"
    *               user_info:
    *                 type: object
    *                 description: Information about the user
@@ -167,6 +180,59 @@ export default function appRoutes() {
    *                               format: date-time
    *                               description: Date the update was released
    *                               example: "2025-03-15T00:00:00Z"
+   *                             integrity:
+   *                               type: object
+   *                               description: Integrity verification information
+   *                               properties:
+   *                                 algorithm:
+   *                                   type: string
+   *                                   description: Hash algorithm used for checksums
+   *                                   example: "sha256"
+   *                                 checksum:
+   *                                   type: string
+   *                                   description: Checksum of the universal APK
+   *                                   example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+   *                                 checksumUrl:
+   *                                   type: string
+   *                                   description: URL to download the checksums file
+   *                                   example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-checksums.txt"
+   *                             architecture_specific_downloads:
+   *                               type: object
+   *                               description: Architecture-specific download information
+   *                               properties:
+   *                                 arm64-v8a:
+   *                                   type: object
+   *                                   properties:
+   *                                     url:
+   *                                       type: string
+   *                                       description: URL to download the ARM64 APK
+   *                                       example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm64.apk"
+   *                                     checksum:
+   *                                       type: string
+   *                                       description: Checksum of the ARM64 APK
+   *                                       example: "b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1"
+   *                                 armeabi-v7a:
+   *                                   type: object
+   *                                   properties:
+   *                                     url:
+   *                                       type: string
+   *                                       description: URL to download the ARM APK
+   *                                       example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm.apk"
+   *                                     checksum:
+   *                                       type: string
+   *                                       description: Checksum of the ARM APK
+   *                                       example: "c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2"
+   *                                 x86_64:
+   *                                   type: object
+   *                                   properties:
+   *                                     url:
+   *                                       type: string
+   *                                       description: URL to download the x86_64 APK
+   *                                       example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-x86_64.apk"
+   *                                     checksum:
+   *                                       type: string
+   *                                       description: Checksum of the x86_64 APK
+   *                                       example: "d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3"
    *       400:
    *         description: Bad request - missing required parameters
    *         content:
@@ -276,6 +342,27 @@ export default function appRoutes() {
    *                 type: string
    *                 description: Current app version (e.g., 1.0.0 or 1.0.0+33)
    *                 example: "1.0.0"
+   *               device_info:
+   *                 type: object
+   *                 description: Information about the device
+   *                 properties:
+   *                   android_version:
+   *                     type: string
+   *                     description: Android OS version
+   *                     example: "12"
+   *                   device_model:
+   *                     type: string
+   *                     description: Device model
+   *                     example: "Pixel 6"
+   *                   screen_size:
+   *                     type: string
+   *                     description: Screen resolution
+   *                     example: "1080x2400"
+   *                   architecture:
+   *                     type: string
+   *                     description: Device architecture
+   *                     enum: [arm64-v8a, armeabi-v7a, x86_64]
+   *                     example: "arm64-v8a"
    *     responses:
    *       200:
    *         description: Test update response
@@ -335,12 +422,87 @@ export default function appRoutes() {
    *                             release_date:
    *                               type: string
    *                               example: "2025-03-15T00:00:00Z"
+   *                             integrity:
+   *                               type: object
+   *                               description: Integrity verification information
+   *                               properties:
+   *                                 algorithm:
+   *                                   type: string
+   *                                   description: Hash algorithm used for checksums
+   *                                   example: "sha256"
+   *                                 checksum:
+   *                                   type: string
+   *                                   description: Checksum of the universal APK
+   *                                   example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+   *                                 checksumUrl:
+   *                                   type: string
+   *                                   description: URL to download the checksums file
+   *                                   example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-checksums.txt"
+   *                             architecture_specific_downloads:
+   *                               type: object
+   *                               description: Architecture-specific download information
+   *                               properties:
+   *                                 arm64-v8a:
+   *                                   type: object
+   *                                   properties:
+   *                                     url:
+   *                                       type: string
+   *                                       description: URL to download the ARM64 APK
+   *                                       example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm64.apk"
+   *                                     checksum:
+   *                                       type: string
+   *                                       description: Checksum of the ARM64 APK
+   *                                       example: "b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1"
+   *                                 armeabi-v7a:
+   *                                   type: object
+   *                                   properties:
+   *                                     url:
+   *                                       type: string
+   *                                       description: URL to download the ARM APK
+   *                                       example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm.apk"
+   *                                     checksum:
+   *                                       type: string
+   *                                       description: Checksum of the ARM APK
+   *                                       example: "c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2"
+   *                                 x86_64:
+   *                                   type: object
+   *                                   properties:
+   *                                     url:
+   *                                       type: string
+   *                                       description: URL to download the x86_64 APK
+   *                                       example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-x86_64.apk"
+   *                                     checksum:
+   *                                       type: string
+   *                                       description: Checksum of the x86_64 APK
+   *                                       example: "d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3"
    */
   router.post(
     '/version-check/test',
     verifyClientApiKey,
     rateLimiter,
     (req, res) => {
+      // Get device architecture from request
+      const deviceArchitecture = req.body.device_info?.architecture;
+      
+      // Prepare architecture-specific downloads if device architecture is provided
+      let architectureSpecificDownloads;
+      if (deviceArchitecture) {
+        architectureSpecificDownloads = {
+          'arm64-v8a': {
+            url: 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm64.apk',
+            checksum: 'b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1'
+          },
+          'armeabi-v7a': {
+            url: 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm.apk',
+            checksum: 'c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2'
+          },
+          'x86_64': {
+            url: 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-x86_64.apk',
+            checksum: 'd4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3'
+          }
+        };
+      }
+      
       res.status(200).json({
         message: "Update available",
         data: {
@@ -358,7 +520,13 @@ export default function appRoutes() {
               update_url: "https://downloads.vimbisopay.com/app/vimbisopay-1.1.0.apk",
               file_size_bytes: 15728640,
               release_notes: "Bug fixes and performance improvements",
-              release_date: "2025-03-15T00:00:00Z"
+              release_date: "2025-03-15T00:00:00Z",
+              integrity: {
+                algorithm: 'sha256',
+                checksum: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6',
+                checksumUrl: 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-checksums.txt'
+              },
+              architecture_specific_downloads: architectureSpecificDownloads
             }
           },
           dashboard: {}

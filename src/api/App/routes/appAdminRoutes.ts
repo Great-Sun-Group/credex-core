@@ -88,6 +88,66 @@ export default function appAdminRoutes() {
         message: 'Update type must be patch, minor, or major'
       }),
       required: true
+    },
+    // Checksum fields
+    checksumAlgorithm: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'Checksum algorithm is required'
+      }),
+      required: true
+    },
+    checksumUniversal: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'Universal checksum is required'
+      }),
+      required: true
+    },
+    checksumArm64: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'ARM64 checksum is required'
+      }),
+      required: true
+    },
+    checksumArm: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'ARM checksum is required'
+      }),
+      required: true
+    },
+    checksumX86_64: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'x86_64 checksum is required'
+      }),
+      required: true
+    },
+    checksumUrl: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'Checksum URL is required'
+      }),
+      required: true
+    },
+    architectureSpecificDownloads: {
+      sanitizer: (value: any) => value,
+      validator: (value: any) => ({
+        isValid: value && typeof value === 'object' && 
+                 'arm64-v8a' in value && 
+                 'armeabi-v7a' in value && 
+                 'x86_64' in value,
+        message: 'Architecture-specific downloads must include arm64-v8a, armeabi-v7a, and x86_64'
+      }),
+      required: true
     }
   };
 
@@ -146,6 +206,66 @@ export default function appAdminRoutes() {
       validator: (value: boolean) => ({
         isValid: typeof value === 'boolean',
         message: 'Active must be a boolean'
+      }),
+      required: false
+    },
+    // Checksum fields
+    checksumAlgorithm: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'Checksum algorithm is required'
+      }),
+      required: false
+    },
+    checksumUniversal: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'Universal checksum is required'
+      }),
+      required: false
+    },
+    checksumArm64: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'ARM64 checksum is required'
+      }),
+      required: false
+    },
+    checksumArm: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'ARM checksum is required'
+      }),
+      required: false
+    },
+    checksumX86_64: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'x86_64 checksum is required'
+      }),
+      required: false
+    },
+    checksumUrl: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'Checksum URL is required'
+      }),
+      required: false
+    },
+    architectureSpecificDownloads: {
+      sanitizer: (value: any) => value,
+      validator: (value: any) => ({
+        isValid: !value || (typeof value === 'object' && 
+                 'arm64-v8a' in value && 
+                 'armeabi-v7a' in value && 
+                 'x86_64' in value),
+        message: 'Architecture-specific downloads must include arm64-v8a, armeabi-v7a, and x86_64'
       }),
       required: false
     }
@@ -230,6 +350,46 @@ export default function appAdminRoutes() {
    *                 type: boolean
    *                 description: Whether the version is active (default is true)
    *                 example: true
+   *               checksumAlgorithm:
+   *                 type: string
+   *                 description: Hash algorithm used for checksums
+   *                 example: "sha256"
+   *               checksumUniversal:
+   *                 type: string
+   *                 description: Checksum of the universal APK
+   *                 example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+   *               checksumArm64:
+   *                 type: string
+   *                 description: Checksum of the ARM64 APK
+   *                 example: "b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1"
+   *               checksumArm:
+   *                 type: string
+   *                 description: Checksum of the ARM APK
+   *                 example: "c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2"
+   *               checksumX86_64:
+   *                 type: string
+   *                 description: Checksum of the x86_64 APK
+   *                 example: "d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3"
+   *               checksumUrl:
+   *                 type: string
+   *                 description: URL to download the checksums file
+   *                 example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-checksums.txt"
+   *               architectureSpecificDownloads:
+   *                 type: object
+   *                 description: Architecture-specific download URLs
+   *                 properties:
+   *                   arm64-v8a:
+   *                     type: string
+   *                     description: URL to download the ARM64 APK
+   *                     example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm64.apk"
+   *                   armeabi-v7a:
+   *                     type: string
+   *                     description: URL to download the ARM APK
+   *                     example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm.apk"
+   *                   x86_64:
+   *                     type: string
+   *                     description: URL to download the x86_64 APK
+   *                     example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-x86_64.apk"
    *     responses:
    *       201:
    *         description: App version created successfully
@@ -297,6 +457,46 @@ export default function appAdminRoutes() {
    *                             active:
    *                               type: boolean
    *                               example: true
+   *                             checksumAlgorithm:
+   *                               type: string
+   *                               description: Hash algorithm used for checksums
+   *                               example: "sha256"
+   *                             checksumUniversal:
+   *                               type: string
+   *                               description: Checksum of the universal APK
+   *                               example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+   *                             checksumArm64:
+   *                               type: string
+   *                               description: Checksum of the ARM64 APK
+   *                               example: "b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1"
+   *                             checksumArm:
+   *                               type: string
+   *                               description: Checksum of the ARM APK
+   *                               example: "c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2"
+   *                             checksumX86_64:
+   *                               type: string
+   *                               description: Checksum of the x86_64 APK
+   *                               example: "d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3"
+   *                             checksumUrl:
+   *                               type: string
+   *                               description: URL to download the checksums file
+   *                               example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-checksums.txt"
+   *                             architectureSpecificDownloads:
+   *                               type: object
+   *                               description: Architecture-specific download URLs
+   *                               properties:
+   *                                 arm64-v8a:
+   *                                   type: string
+   *                                   description: URL to download the ARM64 APK
+   *                                   example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm64.apk"
+   *                                 armeabi-v7a:
+   *                                   type: string
+   *                                   description: URL to download the ARM APK
+   *                                   example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm.apk"
+   *                                 x86_64:
+   *                                   type: string
+   *                                   description: URL to download the x86_64 APK
+   *                                   example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-x86_64.apk"
    *                             createdAt:
    *                               type: string
    *                               format: date-time
@@ -399,6 +599,46 @@ export default function appAdminRoutes() {
    *                             active:
    *                               type: boolean
    *                               example: true
+   *                             checksumAlgorithm:
+   *                               type: string
+   *                               description: Hash algorithm used for checksums
+   *                               example: "sha256"
+   *                             checksumUniversal:
+   *                               type: string
+   *                               description: Checksum of the universal APK
+   *                               example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+   *                             checksumArm64:
+   *                               type: string
+   *                               description: Checksum of the ARM64 APK
+   *                               example: "b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1"
+   *                             checksumArm:
+   *                               type: string
+   *                               description: Checksum of the ARM APK
+   *                               example: "c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2"
+   *                             checksumX86_64:
+   *                               type: string
+   *                               description: Checksum of the x86_64 APK
+   *                               example: "d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3"
+   *                             checksumUrl:
+   *                               type: string
+   *                               description: URL to download the checksums file
+   *                               example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-checksums.txt"
+   *                             architectureSpecificDownloads:
+   *                               type: object
+   *                               description: Architecture-specific download URLs
+   *                               properties:
+   *                                 arm64-v8a:
+   *                                   type: string
+   *                                   description: URL to download the ARM64 APK
+   *                                   example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm64.apk"
+   *                                 armeabi-v7a:
+   *                                   type: string
+   *                                   description: URL to download the ARM APK
+   *                                   example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm.apk"
+   *                                 x86_64:
+   *                                   type: string
+   *                                   description: URL to download the x86_64 APK
+   *                                   example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-x86_64.apk"
    *                             createdAt:
    *                               type: string
    *                               format: date-time
@@ -539,6 +779,46 @@ export default function appAdminRoutes() {
    *                                   active:
    *                                     type: boolean
    *                                     example: true
+   *                                   checksumAlgorithm:
+   *                                     type: string
+   *                                     description: Hash algorithm used for checksums
+   *                                     example: "sha256"
+   *                                   checksumUniversal:
+   *                                     type: string
+   *                                     description: Checksum of the universal APK
+   *                                     example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+   *                                   checksumArm64:
+   *                                     type: string
+   *                                     description: Checksum of the ARM64 APK
+   *                                     example: "b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1"
+   *                                   checksumArm:
+   *                                     type: string
+   *                                     description: Checksum of the ARM APK
+   *                                     example: "c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2"
+   *                                   checksumX86_64:
+   *                                     type: string
+   *                                     description: Checksum of the x86_64 APK
+   *                                     example: "d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3"
+   *                                   checksumUrl:
+   *                                     type: string
+   *                                     description: URL to download the checksums file
+   *                                     example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-checksums.txt"
+   *                                   architectureSpecificDownloads:
+   *                                     type: object
+   *                                     description: Architecture-specific download URLs
+   *                                     properties:
+   *                                       arm64-v8a:
+   *                                         type: string
+   *                                         description: URL to download the ARM64 APK
+   *                                         example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm64.apk"
+   *                                       armeabi-v7a:
+   *                                         type: string
+   *                                         description: URL to download the ARM APK
+   *                                         example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm.apk"
+   *                                       x86_64:
+   *                                         type: string
+   *                                         description: URL to download the x86_64 APK
+   *                                         example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-x86_64.apk"
    *                                   createdAt:
    *                                     type: string
    *                                     format: date-time
@@ -621,6 +901,46 @@ export default function appAdminRoutes() {
    *                 type: boolean
    *                 description: Whether the version is active
    *                 example: true
+   *               checksumAlgorithm:
+   *                 type: string
+   *                 description: Hash algorithm used for checksums
+   *                 example: "sha256"
+   *               checksumUniversal:
+   *                 type: string
+   *                 description: Checksum of the universal APK
+   *                 example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+   *               checksumArm64:
+   *                 type: string
+   *                 description: Checksum of the ARM64 APK
+   *                 example: "b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1"
+   *               checksumArm:
+   *                 type: string
+   *                 description: Checksum of the ARM APK
+   *                 example: "c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2"
+   *               checksumX86_64:
+   *                 type: string
+   *                 description: Checksum of the x86_64 APK
+   *                 example: "d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3"
+   *               checksumUrl:
+   *                 type: string
+   *                 description: URL to download the checksums file
+   *                 example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-checksums.txt"
+   *               architectureSpecificDownloads:
+   *                 type: object
+   *                 description: Architecture-specific download URLs
+   *                 properties:
+   *                   arm64-v8a:
+   *                     type: string
+   *                     description: URL to download the ARM64 APK
+   *                     example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm64.apk"
+   *                   armeabi-v7a:
+   *                     type: string
+   *                     description: URL to download the ARM APK
+   *                     example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm.apk"
+   *                   x86_64:
+   *                     type: string
+   *                     description: URL to download the x86_64 APK
+   *                     example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-x86_64.apk"
    *     responses:
    *       200:
    *         description: App version updated successfully
@@ -688,6 +1008,46 @@ export default function appAdminRoutes() {
    *                             active:
    *                               type: boolean
    *                               example: true
+   *                             checksumAlgorithm:
+   *                               type: string
+   *                               description: Hash algorithm used for checksums
+   *                               example: "sha256"
+   *                             checksumUniversal:
+   *                               type: string
+   *                               description: Checksum of the universal APK
+   *                               example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+   *                             checksumArm64:
+   *                               type: string
+   *                               description: Checksum of the ARM64 APK
+   *                               example: "b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1"
+   *                             checksumArm:
+   *                               type: string
+   *                               description: Checksum of the ARM APK
+   *                               example: "c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2"
+   *                             checksumX86_64:
+   *                               type: string
+   *                               description: Checksum of the x86_64 APK
+   *                               example: "d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3"
+   *                             checksumUrl:
+   *                               type: string
+   *                               description: URL to download the checksums file
+   *                               example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-checksums.txt"
+   *                             architectureSpecificDownloads:
+   *                               type: object
+   *                               description: Architecture-specific download URLs
+   *                               properties:
+   *                                 arm64-v8a:
+   *                                   type: string
+   *                                   description: URL to download the ARM64 APK
+   *                                   example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm64.apk"
+   *                                 armeabi-v7a:
+   *                                   type: string
+   *                                   description: URL to download the ARM APK
+   *                                   example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-arm.apk"
+   *                                 x86_64:
+   *                                   type: string
+   *                                   description: URL to download the x86_64 APK
+   *                                   example: "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-x86_64.apk"
    *                             createdAt:
    *                               type: string
    *                               format: date-time

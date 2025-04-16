@@ -243,6 +243,19 @@ export interface AppActionDetails {
   file_size_bytes?: number;
   release_notes?: string;
   release_date?: string;
+  
+  // New fields for checksums
+  integrity?: {
+    algorithm: string;
+    checksum: string;
+    checksumUrl: string;
+  };
+  architecture_specific_downloads?: {
+    [key: string]: {
+      url: string;
+      checksum: string;
+    };
+  };
 }
 
 /**

@@ -45,7 +45,10 @@ export class AppVersionAdminController {
       
       // Validate request
       if (!input.appId || !input.platform || !input.version || !input.minRequiredVersion || 
-          !input.updateUrl || !input.releaseNotes || !input.releaseDate) {
+          !input.updateUrl || !input.releaseNotes || !input.releaseDate || 
+          !input.checksumAlgorithm || !input.checksumUniversal || 
+          !input.checksumArm64 || !input.checksumArm || !input.checksumX86_64 || 
+          !input.checksumUrl || !input.architectureSpecificDownloads) {
         logger.warn("Invalid request - Missing required parameters", { requestId });
         
         const errorResponse: AppVersionErrorResponse = {
@@ -58,7 +61,7 @@ export class AppVersionAdminController {
               actor: req.user?.memberID || "system",
               details: {
                 code: "INVALID_REQUEST",
-                reason: "Missing required parameters: appId, platform, version, minRequiredVersion, updateUrl, releaseNotes, releaseDate"
+                reason: "Missing required parameters: appId, platform, version, minRequiredVersion, updateUrl, releaseNotes, releaseDate, checksumAlgorithm, checksumUniversal, checksumArm64, checksumArm, checksumX86_64, checksumUrl, architectureSpecificDownloads"
               }
             },
             dashboard: {}
@@ -101,6 +104,13 @@ export class AppVersionAdminController {
               updatePriority: appVersion.updatePriority,
               updateType: appVersion.updateType,
               active: appVersion.active,
+              checksumAlgorithm: appVersion.checksumAlgorithm,
+              checksumUniversal: appVersion.checksumUniversal,
+              checksumArm64: appVersion.checksumArm64,
+              checksumArm: appVersion.checksumArm,
+              checksumX86_64: appVersion.checksumX86_64,
+              checksumUrl: appVersion.checksumUrl,
+              architectureSpecificDownloads: appVersion.architectureSpecificDownloads,
               createdAt: appVersion.createdAt,
               updatedAt: appVersion.updatedAt
             }
@@ -206,6 +216,13 @@ export class AppVersionAdminController {
               updatePriority: appVersion.updatePriority,
               updateType: appVersion.updateType,
               active: appVersion.active,
+              checksumAlgorithm: appVersion.checksumAlgorithm,
+              checksumUniversal: appVersion.checksumUniversal,
+              checksumArm64: appVersion.checksumArm64,
+              checksumArm: appVersion.checksumArm,
+              checksumX86_64: appVersion.checksumX86_64,
+              checksumUrl: appVersion.checksumUrl,
+              architectureSpecificDownloads: appVersion.architectureSpecificDownloads,
               createdAt: appVersion.createdAt,
               updatedAt: appVersion.updatedAt
             }
@@ -288,6 +305,13 @@ export class AppVersionAdminController {
                 updatePriority: v.updatePriority,
                 updateType: v.updateType,
                 active: v.active,
+                checksumAlgorithm: v.checksumAlgorithm,
+                checksumUniversal: v.checksumUniversal,
+                checksumArm64: v.checksumArm64,
+                checksumArm: v.checksumArm,
+                checksumX86_64: v.checksumX86_64,
+                checksumUrl: v.checksumUrl,
+                architectureSpecificDownloads: v.architectureSpecificDownloads,
                 createdAt: v.createdAt,
                 updatedAt: v.updatedAt
               }))
@@ -395,6 +419,13 @@ export class AppVersionAdminController {
               updatePriority: appVersion.updatePriority,
               updateType: appVersion.updateType,
               active: appVersion.active,
+              checksumAlgorithm: appVersion.checksumAlgorithm,
+              checksumUniversal: appVersion.checksumUniversal,
+              checksumArm64: appVersion.checksumArm64,
+              checksumArm: appVersion.checksumArm,
+              checksumX86_64: appVersion.checksumX86_64,
+              checksumUrl: appVersion.checksumUrl,
+              architectureSpecificDownloads: appVersion.architectureSpecificDownloads,
               createdAt: appVersion.createdAt,
               updatedAt: appVersion.updatedAt
             }

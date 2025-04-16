@@ -9,6 +9,7 @@ interface DeviceInfo {
   ios_version?: string;
   device_model?: string;
   screen_size?: string;
+  architecture?: string;
 }
 
 interface UserInfo {
@@ -115,6 +116,56 @@ export async function AppVersionService(request: VersionCheckRequest): Promise<A
         update_required: updateRequired
       });
       
+      // Determine which architecture-specific download to include based on device info
+      const deviceArchitecture = deviceInfo.architecture;
+      let architectureSpecificDownloads: { [key: string]: { url: string; checksum: string } } | undefined;
+      
+      // Map device architecture to our stored architecture keys
+      let architectureKey: string | undefined;
+      if (deviceArchitecture) {
+        if (deviceArchitecture === 'arm64-v8a') {
+          architectureKey = 'arm64-v8a';
+        } else if (deviceArchitecture === 'armeabi-v7a') {
+          architectureKey = 'armeabi-v7a';
+        } else if (deviceArchitecture === 'x86_64') {
+          architectureKey = 'x86_64';
+        }
+      }
+      
+      // If we have a valid architecture and architecture-specific downloads, include them
+      if (architectureKey && latestVersion.architectureSpecificDownloads) {
+        architectureSpecificDownloads = {};
+        
+        // Add all architecture-specific downloads
+        for (const [arch, url] of Object.entries(latestVersion.architectureSpecificDownloads)) {
+          let checksum = '';
+          if (arch === 'arm64-v8a') {
+            checksum = latestVersion.checksumArm64;
+          } else if (arch === 'armeabi-v7a') {
+            checksum = latestVersion.checksumArm;
+          } else if (arch === 'x86_64') {
+            checksum = latestVersion.checksumX86_64;
+          }
+          
+          architectureSpecificDownloads[arch] = {
+            url,
+            checksum
+          };
+        }
+      }
+      
+      // Determine which checksum to use for the universal APK
+      const universalChecksum = latestVersion.checksumUniversal;
+      
+      logger.info("Update available with checksums", {
+        app_id: request.app_id,
+        current_version: request.current_version,
+        latest_version: latestVersion.version,
+        update_required: updateRequired,
+        device_architecture: deviceArchitecture,
+        has_architecture_specific_downloads: !!architectureSpecificDownloads
+      });
+      
       return {
         update_available: true,
         latest_version: latestVersion.version,
@@ -124,7 +175,13 @@ export async function AppVersionService(request: VersionCheckRequest): Promise<A
         update_url: latestVersion.updateUrl,
         file_size_bytes: latestVersion.fileSizeBytes,
         release_notes: latestVersion.releaseNotes,
-        release_date: latestVersion.releaseDate
+        release_date: latestVersion.releaseDate,
+        integrity: {
+          algorithm: latestVersion.checksumAlgorithm,
+          checksum: universalChecksum,
+          checksumUrl: latestVersion.checksumUrl
+        },
+        architecture_specific_downloads: architectureSpecificDownloads
       };
     }
 
