@@ -129,7 +129,9 @@ export async function AppVersionController(
             update_url: updateInfo.update_url,
             file_size_bytes: updateInfo.file_size_bytes,
             release_notes: updateInfo.release_notes,
-            release_date: updateInfo.release_date
+            release_date: updateInfo.release_date,
+            integrity: updateInfo.integrity,
+            architecture_specific_downloads: updateInfo.architecture_specific_downloads
           }
         },
         dashboard: {}

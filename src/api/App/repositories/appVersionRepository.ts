@@ -52,6 +52,13 @@ export class AppVersionRepository {
             updatePriority: $updatePriority,
             updateType: $updateType,
             active: $active,
+            checksumAlgorithm: $checksumAlgorithm,
+            checksumUniversal: $checksumUniversal,
+            checksumArm64: $checksumArm64,
+            checksumArm: $checksumArm,
+            checksumX86_64: $checksumX86_64,
+            checksumUrl: $checksumUrl,
+            architectureSpecificDownloads: $architectureSpecificDownloads,
             createdAt: $now,
             updatedAt: $now
           })
@@ -70,6 +77,13 @@ export class AppVersionRepository {
             updatePriority: input.updatePriority,
             updateType: input.updateType,
             active,
+            checksumAlgorithm: input.checksumAlgorithm,
+            checksumUniversal: input.checksumUniversal,
+            checksumArm64: input.checksumArm64,
+            checksumArm: input.checksumArm,
+            checksumX86_64: input.checksumX86_64,
+            checksumUrl: input.checksumUrl,
+            architectureSpecificDownloads: JSON.stringify(input.architectureSpecificDownloads),
             now
           }
         );
@@ -94,6 +108,15 @@ export class AppVersionRepository {
         updatePriority: result.updatePriority,
         updateType: result.updateType,
         active: result.active,
+        checksumAlgorithm: result.checksumAlgorithm,
+        checksumUniversal: result.checksumUniversal,
+        checksumArm64: result.checksumArm64,
+        checksumArm: result.checksumArm,
+        checksumX86_64: result.checksumX86_64,
+        checksumUrl: result.checksumUrl,
+        architectureSpecificDownloads: result.architectureSpecificDownloads ? 
+          JSON.parse(result.architectureSpecificDownloads) : 
+          { 'arm64-v8a': '', 'armeabi-v7a': '', 'x86_64': '' },
         createdAt: result.createdAt,
         updatedAt: result.updatedAt
       };
@@ -159,6 +182,15 @@ export class AppVersionRepository {
         updatePriority: result.updatePriority,
         updateType: result.updateType,
         active: result.active,
+        checksumAlgorithm: result.checksumAlgorithm,
+        checksumUniversal: result.checksumUniversal,
+        checksumArm64: result.checksumArm64,
+        checksumArm: result.checksumArm,
+        checksumX86_64: result.checksumX86_64,
+        checksumUrl: result.checksumUrl,
+        architectureSpecificDownloads: result.architectureSpecificDownloads ? 
+          JSON.parse(result.architectureSpecificDownloads) : 
+          { 'arm64-v8a': '', 'armeabi-v7a': '', 'x86_64': '' },
         createdAt: result.createdAt,
         updatedAt: result.updatedAt
       };
@@ -226,6 +258,15 @@ export class AppVersionRepository {
         updatePriority: result.updatePriority,
         updateType: result.updateType,
         active: result.active,
+        checksumAlgorithm: result.checksumAlgorithm,
+        checksumUniversal: result.checksumUniversal,
+        checksumArm64: result.checksumArm64,
+        checksumArm: result.checksumArm,
+        checksumX86_64: result.checksumX86_64,
+        checksumUrl: result.checksumUrl,
+        architectureSpecificDownloads: result.architectureSpecificDownloads ? 
+          JSON.parse(result.architectureSpecificDownloads) : 
+          { 'arm64-v8a': '', 'armeabi-v7a': '', 'x86_64': '' },
         createdAt: result.createdAt,
         updatedAt: result.updatedAt
       };
@@ -283,6 +324,15 @@ export class AppVersionRepository {
         updatePriority: record.updatePriority,
         updateType: record.updateType,
         active: record.active,
+        checksumAlgorithm: record.checksumAlgorithm,
+        checksumUniversal: record.checksumUniversal,
+        checksumArm64: record.checksumArm64,
+        checksumArm: record.checksumArm,
+        checksumX86_64: record.checksumX86_64,
+        checksumUrl: record.checksumUrl,
+        architectureSpecificDownloads: record.architectureSpecificDownloads ? 
+          JSON.parse(record.architectureSpecificDownloads) : 
+          { 'arm64-v8a': '', 'armeabi-v7a': '', 'x86_64': '' },
         createdAt: record.createdAt,
         updatedAt: record.updatedAt
       }));
@@ -360,6 +410,42 @@ export class AppVersionRepository {
         setClauses.push('v.active = $active');
         setParams.active = input.active;
       }
+      
+      // Add checksum fields to SET clauses
+      if (input.checksumAlgorithm !== undefined) {
+        setClauses.push('v.checksumAlgorithm = $checksumAlgorithm');
+        setParams.checksumAlgorithm = input.checksumAlgorithm;
+      }
+      
+      if (input.checksumUniversal !== undefined) {
+        setClauses.push('v.checksumUniversal = $checksumUniversal');
+        setParams.checksumUniversal = input.checksumUniversal;
+      }
+      
+      if (input.checksumArm64 !== undefined) {
+        setClauses.push('v.checksumArm64 = $checksumArm64');
+        setParams.checksumArm64 = input.checksumArm64;
+      }
+      
+      if (input.checksumArm !== undefined) {
+        setClauses.push('v.checksumArm = $checksumArm');
+        setParams.checksumArm = input.checksumArm;
+      }
+      
+      if (input.checksumX86_64 !== undefined) {
+        setClauses.push('v.checksumX86_64 = $checksumX86_64');
+        setParams.checksumX86_64 = input.checksumX86_64;
+      }
+      
+      if (input.checksumUrl !== undefined) {
+        setClauses.push('v.checksumUrl = $checksumUrl');
+        setParams.checksumUrl = input.checksumUrl;
+      }
+      
+      if (input.architectureSpecificDownloads !== undefined) {
+        setClauses.push('v.architectureSpecificDownloads = $architectureSpecificDownloads');
+        setParams.architectureSpecificDownloads = JSON.stringify(input.architectureSpecificDownloads);
+      }
 
       const result = await session.executeWrite(async (tx) => {
         // First, get the app version to check if it exists and to get appId and platform
@@ -424,6 +510,15 @@ export class AppVersionRepository {
         updatePriority: result.updatePriority,
         updateType: result.updateType,
         active: result.active,
+        checksumAlgorithm: result.checksumAlgorithm,
+        checksumUniversal: result.checksumUniversal,
+        checksumArm64: result.checksumArm64,
+        checksumArm: result.checksumArm,
+        checksumX86_64: result.checksumX86_64,
+        checksumUrl: result.checksumUrl,
+        architectureSpecificDownloads: result.architectureSpecificDownloads ? 
+          JSON.parse(result.architectureSpecificDownloads) : 
+          { 'arm64-v8a': '', 'armeabi-v7a': '', 'x86_64': '' },
         createdAt: result.createdAt,
         updatedAt: result.updatedAt
       };

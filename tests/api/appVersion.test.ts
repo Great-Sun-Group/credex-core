@@ -105,6 +105,28 @@ jest.mock('../../src/api/App/controllers/appVersionController', () => ({
     
     // Always return update available for test endpoint
     if (isTestEndpoint) {
+      // Get device architecture from request
+      const deviceArchitecture = req.body.device_info?.architecture;
+      
+      // Prepare architecture-specific downloads if device architecture is provided
+      let architectureSpecificDownloads;
+      if (deviceArchitecture) {
+        architectureSpecificDownloads = {
+          'arm64-v8a': {
+            url: 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm64.apk',
+            checksum: 'b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1'
+          },
+          'armeabi-v7a': {
+            url: 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm.apk',
+            checksum: 'c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2'
+          },
+          'x86_64': {
+            url: 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-x86_64.apk',
+            checksum: 'd4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3'
+          }
+        };
+      }
+      
       res.status(200).json({
         message: "Update available",
         data: {
@@ -122,7 +144,13 @@ jest.mock('../../src/api/App/controllers/appVersionController', () => ({
               update_url: sampleAppVersion.updateUrl,
               file_size_bytes: sampleAppVersion.fileSizeBytes,
               release_notes: sampleAppVersion.releaseNotes,
-              release_date: sampleAppVersion.releaseDate
+              release_date: sampleAppVersion.releaseDate,
+              integrity: {
+                algorithm: 'sha256',
+                checksum: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6',
+                checksumUrl: 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-checksums.txt'
+              },
+              architecture_specific_downloads: architectureSpecificDownloads
             }
           },
           dashboard: {}
@@ -277,6 +305,29 @@ describe('App Version API', () => {
       expect(response.status).toBe(200);
       expect(response.data.data.action.details.update_available).toBe(true);
       expect(response.data.data.action.details.latest_version).toBe('1.1.0');
+    });
+    
+    it('should include checksum information in the response', async () => {
+      const response = await axios.post('/app/version-check/test', {
+        app_id: 'com.vimbisopay.app',
+        current_version: '1.0.0',
+        device_info: {
+          android_version: '12',
+          device_model: 'Pixel 6',
+          screen_size: '1080x2400',
+          architecture: 'arm64-v8a'
+        }
+      }, { headers });
+      
+      expect(response.status).toBe(200);
+      expect(response.data.data.action.details.integrity).toBeDefined();
+      expect(response.data.data.action.details.integrity.algorithm).toBe('sha256');
+      expect(response.data.data.action.details.integrity.checksum).toBeDefined();
+      expect(response.data.data.action.details.integrity.checksumUrl).toBeDefined();
+      expect(response.data.data.action.details.architecture_specific_downloads).toBeDefined();
+      expect(response.data.data.action.details.architecture_specific_downloads['arm64-v8a']).toBeDefined();
+      expect(response.data.data.action.details.architecture_specific_downloads['arm64-v8a'].url).toBeDefined();
+      expect(response.data.data.action.details.architecture_specific_downloads['arm64-v8a'].checksum).toBeDefined();
     });
   });
 });

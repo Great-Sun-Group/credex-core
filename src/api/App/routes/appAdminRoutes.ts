@@ -88,6 +88,66 @@ export default function appAdminRoutes() {
         message: 'Update type must be patch, minor, or major'
       }),
       required: true
+    },
+    // Checksum fields
+    checksumAlgorithm: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'Checksum algorithm is required'
+      }),
+      required: true
+    },
+    checksumUniversal: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'Universal checksum is required'
+      }),
+      required: true
+    },
+    checksumArm64: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'ARM64 checksum is required'
+      }),
+      required: true
+    },
+    checksumArm: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'ARM checksum is required'
+      }),
+      required: true
+    },
+    checksumX86_64: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'x86_64 checksum is required'
+      }),
+      required: true
+    },
+    checksumUrl: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'Checksum URL is required'
+      }),
+      required: true
+    },
+    architectureSpecificDownloads: {
+      sanitizer: (value: any) => value,
+      validator: (value: any) => ({
+        isValid: value && typeof value === 'object' && 
+                 'arm64-v8a' in value && 
+                 'armeabi-v7a' in value && 
+                 'x86_64' in value,
+        message: 'Architecture-specific downloads must include arm64-v8a, armeabi-v7a, and x86_64'
+      }),
+      required: true
     }
   };
 
@@ -146,6 +206,66 @@ export default function appAdminRoutes() {
       validator: (value: boolean) => ({
         isValid: typeof value === 'boolean',
         message: 'Active must be a boolean'
+      }),
+      required: false
+    },
+    // Checksum fields
+    checksumAlgorithm: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'Checksum algorithm is required'
+      }),
+      required: false
+    },
+    checksumUniversal: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'Universal checksum is required'
+      }),
+      required: false
+    },
+    checksumArm64: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'ARM64 checksum is required'
+      }),
+      required: false
+    },
+    checksumArm: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'ARM checksum is required'
+      }),
+      required: false
+    },
+    checksumX86_64: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'x86_64 checksum is required'
+      }),
+      required: false
+    },
+    checksumUrl: {
+      sanitizer: sanitizeString,
+      validator: (value: string) => ({
+        isValid: !!value,
+        message: 'Checksum URL is required'
+      }),
+      required: false
+    },
+    architectureSpecificDownloads: {
+      sanitizer: (value: any) => value,
+      validator: (value: any) => ({
+        isValid: !value || (typeof value === 'object' && 
+                 'arm64-v8a' in value && 
+                 'armeabi-v7a' in value && 
+                 'x86_64' in value),
+        message: 'Architecture-specific downloads must include arm64-v8a, armeabi-v7a, and x86_64'
       }),
       required: false
     }
