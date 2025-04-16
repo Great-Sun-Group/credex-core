@@ -15,6 +15,17 @@ jest.mock('../../../src/api/App/controllers/appVersionAdminController', () => ({
         updatePriority: 'medium',
         updateType: 'patch',
         active: true,
+        checksumAlgorithm: 'sha256',
+        checksumUniversal: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6',
+        checksumArm64: 'b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1',
+        checksumArm: 'c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2',
+        checksumX86_64: 'd4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3',
+        checksumUrl: 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-checksums.txt',
+        architectureSpecificDownloads: {
+          'arm64-v8a': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm64.apk',
+          'armeabi-v7a': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm.apk',
+          'x86_64': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-x86_64.apk'
+        },
         createdAt: '2025-03-15T00:00:00Z',
         updatedAt: '2025-03-15T00:00:00Z'
       };
@@ -47,6 +58,17 @@ jest.mock('../../../src/api/App/controllers/appVersionAdminController', () => ({
         updatePriority: 'medium',
         updateType: 'patch',
         active: true,
+        checksumAlgorithm: 'sha256',
+        checksumUniversal: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6',
+        checksumArm64: 'b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1',
+        checksumArm: 'c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2',
+        checksumX86_64: 'd4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3',
+        checksumUrl: 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-checksums.txt',
+        architectureSpecificDownloads: {
+          'arm64-v8a': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm64.apk',
+          'armeabi-v7a': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm.apk',
+          'x86_64': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-x86_64.apk'
+        },
         createdAt: '2025-03-15T00:00:00Z',
         updatedAt: '2025-03-15T00:00:00Z'
       };
@@ -99,6 +121,17 @@ jest.mock('../../../src/api/App/controllers/appVersionAdminController', () => ({
         updatePriority: 'medium',
         updateType: 'patch',
         active: true,
+        checksumAlgorithm: 'sha256',
+        checksumUniversal: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6',
+        checksumArm64: 'b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1',
+        checksumArm: 'c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2',
+        checksumX86_64: 'd4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3',
+        checksumUrl: 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-checksums.txt',
+        architectureSpecificDownloads: {
+          'arm64-v8a': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm64.apk',
+          'armeabi-v7a': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm.apk',
+          'x86_64': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-x86_64.apk'
+        },
         createdAt: '2025-03-15T00:00:00Z',
         updatedAt: '2025-03-15T00:00:00Z'
       };
@@ -133,6 +166,17 @@ jest.mock('../../../src/api/App/controllers/appVersionAdminController', () => ({
         updatePriority: 'medium',
         updateType: 'patch',
         active: true,
+        checksumAlgorithm: 'sha256',
+        checksumUniversal: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6',
+        checksumArm64: 'b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1',
+        checksumArm: 'c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2',
+        checksumX86_64: 'd4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3',
+        checksumUrl: 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-checksums.txt',
+        architectureSpecificDownloads: {
+          'arm64-v8a': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm64.apk',
+          'armeabi-v7a': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm.apk',
+          'x86_64': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-x86_64.apk'
+        },
         createdAt: '2025-03-15T00:00:00Z',
         updatedAt: '2025-03-16T00:00:00Z'
       };
@@ -241,6 +285,17 @@ describe('App Version Admin API', () => {
     updatePriority: 'medium',
     updateType: 'patch',
     active: true,
+    checksumAlgorithm: 'sha256',
+    checksumUniversal: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6',
+    checksumArm64: 'b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1',
+    checksumArm: 'c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2',
+    checksumX86_64: 'd4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3',
+    checksumUrl: 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-checksums.txt',
+    architectureSpecificDownloads: {
+      'arm64-v8a': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm64.apk',
+      'armeabi-v7a': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm.apk',
+      'x86_64': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-x86_64.apk'
+    },
     createdAt: '2025-03-15T00:00:00Z',
     updatedAt: '2025-03-15T00:00:00Z'
   };
@@ -257,7 +312,18 @@ describe('App Version Admin API', () => {
     releaseDate: '2025-03-15T00:00:00Z',
     updatePriority: 'medium',
     updateType: 'patch',
-    active: true
+    active: true,
+    checksumAlgorithm: 'sha256',
+    checksumUniversal: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6',
+    checksumArm64: 'b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1',
+    checksumArm: 'c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2',
+    checksumX86_64: 'd4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3',
+    checksumUrl: 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-checksums.txt',
+    architectureSpecificDownloads: {
+      'arm64-v8a': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm64.apk',
+      'armeabi-v7a': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-arm.apk',
+      'x86_64': 'https://downloads.vimbisopay.com/app/vimbisopay-1.1.0-x86_64.apk'
+    }
   };
 
   // Sample app version update input
