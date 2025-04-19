@@ -25,8 +25,13 @@ module "neo4j_browser_proxy" {
   domain                 = local.current_env.domain
   neo4j_ledger_instance_id = module.databases.neo4j_ledger_instance_id
   neo4j_search_instance_id = module.databases.neo4j_search_instance_id
+  neo4j_ledger_private_ip = module.databases.neo4j_ledger_private_ip
+  neo4j_search_private_ip = module.databases.neo4j_search_private_ip
   alb_listener_arn       = module.connectors.alb_listener
   browser_auth_password  = var.client_api_key
+  aws_region             = local.current_env.aws_region
+  subnet_id              = module.connectors.private_subnet_ids[0]
+  key_pair_name          = module.connectors.key_pair_name
 
   common_tags = local.common_tags
   

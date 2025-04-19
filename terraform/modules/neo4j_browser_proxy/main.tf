@@ -1,10 +1,10 @@
 # Neo4j Browser Proxy Module
-# This module sets up ALB listener rules to route traffic to Neo4j Browser
+# This module sets up an Nginx proxy to route traffic to Neo4j Browser instances
 
-# Create target groups for Neo4j instances
-resource "aws_lb_target_group" "neo4j_ledger" {
-  name        = "neo4j-ledger-tg-${var.environment}"
-  port        = 7474
+# Create target group for Nginx proxy
+resource "aws_lb_target_group" "nginx_proxy" {
+  name        = "nginx-proxy-tg-${var.environment}"
+  port        = 80
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "instance"
@@ -14,58 +14,49 @@ resource "aws_lb_target_group" "neo4j_ledger" {
     unhealthy_threshold = 5
     timeout             = 5
     interval            = 30
-    path                = "/"
-    port                = "7474"
-    matcher             = "200-399"
+    path                = "/health"
+    port                = "80"
+    matcher             = "200"
   }
 
   tags = var.common_tags
 }
 
-resource "aws_lb_target_group" "neo4j_search" {
-  name        = "neo4j-search-tg-${var.environment}"
-  port        = 7474
-  protocol    = "HTTP"
+# Create security group for Nginx proxy
+resource "aws_security_group" "nginx_proxy" {
+  name        = "nginx-proxy-sg-${var.environment}"
+  description = "Security group for Nginx proxy"
   vpc_id      = var.vpc_id
-  target_type = "instance"
 
-  health_check {
-    healthy_threshold   = 2
-    unhealthy_threshold = 5
-    timeout             = 5
-    interval            = 30
-    path                = "/"
-    port                = "7474"
-    matcher             = "200-399"
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = var.common_tags
-}
-
-# Register Neo4j instances with target groups
-resource "aws_lb_target_group_attachment" "neo4j_ledger" {
-  target_group_arn = aws_lb_target_group.neo4j_ledger.arn
-  target_id        = var.neo4j_ledger_instance_id
-  port             = 7474
-  
-  lifecycle {
-    create_before_destroy = true
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
-}
 
-resource "aws_lb_target_group_attachment" "neo4j_search" {
-  target_group_arn = aws_lb_target_group.neo4j_search.arn
-  target_id        = var.neo4j_search_instance_id
-  port             = 7474
-  
-  lifecycle {
-    create_before_destroy = true
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = merge(var.common_tags, {
+    Name = "nginx-proxy-sg-${var.environment}"
+  })
 }
 
-# Keep IAM role for Lambda but disable authentication temporarily
-resource "aws_iam_role" "lambda_edge_role" {
-  name = "neo4j-browser-auth-lambda-role-${var.environment}"
+# Create IAM role for Nginx proxy
+resource "aws_iam_role" "nginx_proxy" {
+  name = "nginx-proxy-role-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -74,10 +65,7 @@ resource "aws_iam_role" "lambda_edge_role" {
         Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          Service = [
-            "lambda.amazonaws.com",
-            "edgelambda.amazonaws.com"
-          ]
+          Service = "ec2.amazonaws.com"
         }
       }
     ]
@@ -86,24 +74,116 @@ resource "aws_iam_role" "lambda_edge_role" {
   tags = var.common_tags
 }
 
-resource "aws_iam_role_policy" "lambda_edge_policy" {
-  name = "neo4j-browser-auth-lambda-policy-${var.environment}"
-  role = aws_iam_role.lambda_edge_role.id
+# Create IAM instance profile for Nginx proxy
+resource "aws_iam_instance_profile" "nginx_proxy" {
+  name = "nginx-proxy-profile-${var.environment}"
+  role = aws_iam_role.nginx_proxy.name
+}
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:*:*:*"
-      }
-    ]
+# Create EC2 instance for Nginx proxy
+resource "aws_instance" "nginx_proxy" {
+  # Use the latest Amazon Linux 2 AMI for the specified region
+  ami                    = "ami-0a887e401f7654935" # Amazon Linux 2 AMI for af-south-1
+  instance_type          = "t3.micro"
+  subnet_id              = var.subnet_id
+  vpc_security_group_ids = [aws_security_group.nginx_proxy.id]
+  iam_instance_profile   = aws_iam_instance_profile.nginx_proxy.name
+  key_name               = var.key_pair_name
+
+  user_data = <<-EOF
+    #!/bin/bash
+    yum update -y
+    amazon-linux-extras install nginx1 -y
+    systemctl start nginx
+    systemctl enable nginx
+
+    # Create Nginx configuration
+    cat > /etc/nginx/conf.d/neo4j.conf << 'NGINX_CONF'
+    server {
+        listen 80;
+        server_name localhost;
+
+        # Neo4j Ledger Browser proxy configuration
+        location /neo4jbrowser-ledger/ {
+            # Authentication temporarily disabled
+            # auth_basic "Neo4j Browser Access";
+            # auth_basic_user_file /etc/nginx/.htpasswd;
+            
+            # Proxy to Neo4j Browser
+            proxy_pass http://${var.neo4j_ledger_private_ip}:7474/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            # WebSocket support for Neo4j Browser
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            
+            # Handle redirects properly
+            proxy_redirect http://localhost/ http://$host/neo4jbrowser-ledger/;
+            
+            # Modify the response to replace bolt URLs
+            sub_filter 'bolt://localhost:7687' 'bolt://${var.neo4j_ledger_private_ip}:7687';
+            sub_filter 'neo4j://localhost:7687' 'neo4j://${var.neo4j_ledger_private_ip}:7687';
+            sub_filter_once off;
+            sub_filter_types application/json;
+        }
+
+        # Neo4j Search Browser proxy configuration
+        location /neo4jbrowser-search/ {
+            # Authentication temporarily disabled
+            # auth_basic "Neo4j Search Browser Access";
+            # auth_basic_user_file /etc/nginx/.htpasswd;
+            
+            proxy_pass http://${var.neo4j_search_private_ip}:7474/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            
+            # Handle redirects properly
+            proxy_redirect http://localhost/ http://$host/neo4jbrowser-search/;
+            
+            # Modify the response to replace bolt URLs
+            sub_filter 'bolt://localhost:7687' 'bolt://${var.neo4j_search_private_ip}:7687';
+            sub_filter 'neo4j://localhost:7687' 'neo4j://${var.neo4j_search_private_ip}:7687';
+            sub_filter_once off;
+            sub_filter_types application/json;
+        }
+
+        # Standard /browser path redirects to Ledger Browser
+        location /browser/ {
+            return 302 /neo4jbrowser-ledger/;
+        }
+
+        # Health check endpoint
+        location /health {
+            return 200 'OK';
+            add_header Content-Type text/plain;
+        }
+    }
+    NGINX_CONF
+
+    # Restart Nginx to apply configuration
+    systemctl restart nginx
+  EOF
+
+  tags = merge(var.common_tags, {
+    Name = "nginx-proxy-${var.environment}"
   })
+}
+
+# Register Nginx proxy with target group
+resource "aws_lb_target_group_attachment" "nginx_proxy" {
+  target_group_arn = aws_lb_target_group.nginx_proxy.arn
+  target_id        = aws_instance.nginx_proxy.id
+  port             = 80
 }
 
 # Store the password in AWS Secrets Manager with a new name to avoid conflict
@@ -122,55 +202,6 @@ resource "aws_secretsmanager_secret_version" "neo4j_browser_password" {
     username = "admin"
     password = var.browser_auth_password
   })
-}
-
-# Create Lambda function for ALB authentication (temporarily disabled)
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  output_path = "${path.module}/lambda_function.zip"
-
-  source {
-    content = <<EOF
-exports.handler = async (event, context) => {
-    console.log('Authentication request:', JSON.stringify(event));
-    
-    // Authentication is temporarily disabled - always return authorized
-    return {
-        isAuthorized: true,
-        context: {
-            user: "admin"
-        }
-    };
-};
-EOF
-    filename = "index.js"
-  }
-}
-
-resource "aws_lambda_function" "auth_lambda" {
-  filename         = data.archive_file.lambda_zip.output_path
-  function_name    = "neo4j-browser-auth-${var.environment}"
-  role             = aws_iam_role.lambda_edge_role.arn
-  handler          = "index.handler"
-  runtime          = "nodejs18.x"
-  publish          = true
-  
-  environment {
-    variables = {
-      AUTH_USERNAME = "admin"
-      AUTH_PASSWORD = var.browser_auth_password
-    }
-  }
-  
-  tags = var.common_tags
-}
-
-# Create Lambda permission for ALB
-resource "aws_lambda_permission" "alb_auth_permission" {
-  statement_id  = "AllowExecutionFromALB"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.auth_lambda.function_name
-  principal     = "elasticloadbalancing.amazonaws.com"
 }
 
 # Create ALB listener rules for Neo4j Browser with simplified login pages
@@ -206,7 +237,7 @@ resource "aws_lb_listener_rule" "neo4j_ledger_browser" {
 <body>
   <h2>Neo4j Ledger Browser</h2>
   <p>Click the button below to access the Neo4j Ledger Browser</p>
-  <a href="/browser-ledger/" class="button">Access Neo4j Ledger Browser</a>
+  <a href="/neo4jbrowser-ledger/" class="button">Access Neo4j Ledger Browser</a>
 </body>
 </html>
 EOF
@@ -253,7 +284,7 @@ resource "aws_lb_listener_rule" "neo4j_search_browser" {
 <body>
   <h2>Neo4j Search Browser</h2>
   <p>Click the button below to access the Neo4j Search Browser</p>
-  <a href="/browser-search/" class="button">Access Neo4j Search Browser</a>
+  <a href="/neo4jbrowser-search/" class="button">Access Neo4j Search Browser</a>
 </body>
 </html>
 EOF
@@ -268,35 +299,19 @@ EOF
   }
 }
 
-# Create ALB listener rules for Neo4j Browser with direct access (no authentication)
-resource "aws_lb_listener_rule" "neo4j_ledger_browser_direct" {
+# Create ALB listener rule for Neo4j Browser paths
+resource "aws_lb_listener_rule" "neo4j_browser_proxy" {
   listener_arn = var.alb_listener_arn
   priority     = 120
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.neo4j_ledger.arn
+    target_group_arn = aws_lb_target_group.nginx_proxy.arn
   }
 
   condition {
     path_pattern {
-      values = ["/browser-ledger*", "/neo4jbrowser-ledger*"]
-    }
-  }
-}
-
-resource "aws_lb_listener_rule" "neo4j_search_browser_direct" {
-  listener_arn = var.alb_listener_arn
-  priority     = 130
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.neo4j_search.arn
-  }
-
-  condition {
-    path_pattern {
-      values = ["/browser-search*", "/neo4jbrowser-search*"]
+      values = ["/neo4jbrowser-*", "/browser*"]
     }
   }
 }
@@ -338,27 +353,6 @@ resource "aws_lb_listener_rule" "neo4j_search_browser_redirect" {
   condition {
     path_pattern {
       values = ["/neo4jbrowser-search"]
-    }
-  }
-}
-
-# Add rules for the standard /browser path to redirect to the appropriate login page
-resource "aws_lb_listener_rule" "browser_redirect" {
-  listener_arn = var.alb_listener_arn
-  priority     = 160
-
-  action {
-    type = "redirect"
-    
-    redirect {
-      path        = "/neo4jbrowser-ledger-login"
-      status_code = "HTTP_302"
-    }
-  }
-
-  condition {
-    path_pattern {
-      values = ["/browser", "/browser/"]
     }
   }
 }

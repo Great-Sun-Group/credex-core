@@ -33,3 +33,13 @@ output "auth_lambda_arn" {
   description = "ARN of the Lambda function for authentication (authentication temporarily disabled)"
   value       = aws_lambda_function.auth_lambda.arn
 }
+
+output "nginx_proxy_instance_id" {
+  description = "ID of the Nginx proxy instance"
+  value       = aws_instance.nginx_proxy.id
+}
+
+output "nginx_proxy_private_ip" {
+  description = "Private IP address of the Nginx proxy instance"
+  value       = aws_instance.nginx_proxy.private_ip
+}
