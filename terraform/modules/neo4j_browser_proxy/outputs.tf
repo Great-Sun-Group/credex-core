@@ -24,21 +24,7 @@ output "nginx_proxy_target_group_arn" {
   value       = aws_lb_target_group.nginx_proxy.arn
 }
 
-# Legacy outputs that reference resources with count=0
-output "neo4j_ledger_target_group_arn" {
-  description = "ARN of the Neo4j Ledger target group (legacy)"
-  value       = length(aws_lb_target_group.neo4j_ledger) > 0 ? aws_lb_target_group.neo4j_ledger[0].arn : null
-}
-
-output "neo4j_search_target_group_arn" {
-  description = "ARN of the Neo4j Search target group (legacy)"
-  value       = length(aws_lb_target_group.neo4j_search) > 0 ? aws_lb_target_group.neo4j_search[0].arn : null
-}
-
-output "auth_lambda_arn" {
-  description = "ARN of the Lambda function for authentication (legacy)"
-  value       = length(aws_lambda_function.auth_lambda) > 0 ? aws_lambda_function.auth_lambda[0].arn : null
-}
+# Legacy outputs have been removed for a clean deployment
 
 output "nginx_proxy_instance_id" {
   description = "ID of the Nginx proxy instance"

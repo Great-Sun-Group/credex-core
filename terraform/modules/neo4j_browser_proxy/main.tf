@@ -186,77 +186,7 @@ resource "aws_lb_target_group_attachment" "nginx_proxy" {
   port             = 80
 }
 
-# These resources are being kept with count=0 to properly handle state transitions
-# They will be removed from the state after the next apply
-
-# Legacy target groups that are being replaced by the nginx proxy
-resource "aws_lb_target_group" "neo4j_ledger" {
-  count = 0
-  name        = "neo4j-ledger-tg-${var.environment}"
-  port        = 7474
-  protocol    = "HTTP"
-  vpc_id      = var.vpc_id
-  target_type = "instance"
-  
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "aws_lb_target_group" "neo4j_search" {
-  count = 0
-  name        = "neo4j-search-tg-${var.environment}"
-  port        = 7474
-  protocol    = "HTTP"
-  vpc_id      = var.vpc_id
-  target_type = "instance"
-  
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Legacy target group attachments
-resource "aws_lb_target_group_attachment" "neo4j_ledger" {
-  count = 0
-  target_group_arn = try(aws_lb_target_group.neo4j_ledger[0].arn, "")
-  target_id        = var.neo4j_ledger_instance_id
-  port             = 7474
-  
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "aws_lb_target_group_attachment" "neo4j_search" {
-  count = 0
-  target_group_arn = try(aws_lb_target_group.neo4j_search[0].arn, "")
-  target_id        = var.neo4j_search_instance_id
-  port             = 7474
-  
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# Legacy auth lambda that is no longer used
-resource "aws_lambda_function" "auth_lambda" {
-  count = 0
-  function_name = "neo4j-browser-auth-${var.environment}"
-  role          = "arn:aws:iam::123456789012:role/dummy-role"
-  handler       = "index.handler"
-  runtime       = "nodejs14.x"
-  
-  # Using s3 parameters instead of filename
-  s3_bucket     = "dummy-bucket-that-does-not-exist"
-  s3_key        = "dummy-key"
-  
-  lifecycle {
-    create_before_destroy = true
-    # Prevent Terraform from trying to destroy this resource
-    ignore_changes = all
-  }
-}
+# Legacy resources have been completely removed for a clean deployment
 
 # Store the password in AWS Secrets Manager with a new name to avoid conflict
 resource "aws_secretsmanager_secret" "neo4j_browser_password" {

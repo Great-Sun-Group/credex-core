@@ -80,3 +80,18 @@ output "neo4j_search_browser_url" {
   description = "URL for accessing the Neo4j Search Browser"
   value       = module.neo4j_browser_proxy.neo4j_search_browser_url
 }
+
+output "nginx_proxy_target_group_arn" {
+  description = "ARN of the Nginx proxy target group"
+  value       = module.neo4j_browser_proxy.nginx_proxy_target_group_arn
+}
+
+output "nginx_proxy_instance_id" {
+  description = "ID of the Nginx proxy instance"
+  value       = module.neo4j_browser_proxy.nginx_proxy_instance_id
+}
+
+output "nginx_proxy_private_ip" {
+  description = "Private IP address of the Nginx proxy instance"
+  value       = module.neo4j_browser_proxy.nginx_proxy_private_ip
+}
