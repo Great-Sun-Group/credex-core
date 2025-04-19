@@ -63,188 +63,10 @@ resource "aws_lb_target_group_attachment" "neo4j_search" {
   }
 }
 
-# Create Lambda function for basic auth
-resource "aws_iam_role" "lambda_edge_role" {
-  name = "neo4j-browser-auth-lambda-role-${var.environment}"
+# Authentication has been temporarily removed to fix Terraform errors
+# Will be added back later
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = [
-            "lambda.amazonaws.com",
-            "edgelambda.amazonaws.com"
-          ]
-        }
-      }
-    ]
-  })
-
-  tags = var.common_tags
-}
-
-resource "aws_iam_role_policy" "lambda_edge_policy" {
-  name = "neo4j-browser-auth-lambda-policy-${var.environment}"
-  role = aws_iam_role.lambda_edge_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:*:*:*"
-      }
-    ]
-  })
-}
-
-# Store the password in AWS Secrets Manager
-resource "aws_secretsmanager_secret" "neo4j_browser_password" {
-  name        = "neo4j-browser-password-${var.environment}"
-  description = "Password for Neo4j Browser access"
-  
-  tags = merge(var.common_tags, {
-    Name = "neo4j-browser-password-${var.environment}"
-  })
-}
-
-resource "aws_secretsmanager_secret_version" "neo4j_browser_password" {
-  secret_id     = aws_secretsmanager_secret.neo4j_browser_password.id
-  secret_string = jsonencode({
-    username = "admin"
-    password = var.browser_auth_password
-  })
-}
-
-# Create Lambda function for ALB authentication
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  output_path = "${path.module}/lambda_function.zip"
-
-  source {
-    content = <<EOF
-exports.handler = async (event, context) => {
-    console.log('Authentication request:', JSON.stringify(event));
-    
-    try {
-        // Get the Authorization header from the request
-        const authHeader = event.headers.authorization || event.headers.Authorization;
-        
-        // Get credentials from environment variables
-        const expectedUser = process.env.AUTH_USERNAME;
-        const expectedPass = process.env.AUTH_PASSWORD;
-        
-        if (!authHeader) {
-            console.log('No Authorization header provided');
-            return {
-                isAuthorized: false,
-                context: {
-                    message: 'No credentials provided'
-                }
-            };
-        }
-        
-        // Parse the Authorization header
-        if (!authHeader.startsWith('Basic ')) {
-            console.log('Authorization header is not Basic Auth');
-            return {
-                isAuthorized: false,
-                context: {
-                    message: 'Invalid authentication scheme'
-                }
-            };
-        }
-        
-        // Extract and decode credentials from the request
-        const base64Credentials = authHeader.split(' ')[1];
-        let providedCredentials;
-        try {
-            providedCredentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
-        } catch (e) {
-            console.error('Error decoding credentials:', e);
-            return {
-                isAuthorized: false,
-                context: {
-                    message: 'Invalid credentials format'
-                }
-            };
-        }
-        
-        // Split username and password
-        const [providedUser, providedPass] = providedCredentials.split(':');
-        
-        // More robust comparison that doesn't rely on exact string matching of the base64 encoded values
-        // This handles cases where the browser might encode the credentials slightly differently
-        if (providedUser === expectedUser && providedPass === expectedPass) {
-            console.log('Authentication successful');
-            return {
-                isAuthorized: true,
-                context: {
-                    user: expectedUser
-                }
-            };
-        } else {
-            console.log('Invalid credentials provided');
-            console.log(`Expected username: ${expectedUser}, Provided username: ${providedUser}`);
-            console.log(`Expected password length: ${expectedPass.length}, Provided password length: ${providedPass ? providedPass.length : 0}`);
-            
-            return {
-                isAuthorized: false,
-                context: {
-                    message: 'Invalid credentials'
-                }
-            };
-        }
-    } catch (error) {
-        console.error('Authentication error:', error);
-        return {
-            isAuthorized: false,
-            context: {
-                message: 'Error during authentication'
-            }
-        };
-    }
-};
-EOF
-    filename = "index.js"
-  }
-}
-
-resource "aws_lambda_function" "auth_lambda" {
-  filename         = data.archive_file.lambda_zip.output_path
-  function_name    = "neo4j-browser-auth-${var.environment}"
-  role             = aws_iam_role.lambda_edge_role.arn
-  handler          = "index.handler"
-  runtime          = "nodejs18.x"
-  publish          = true
-  
-  environment {
-    variables = {
-      AUTH_USERNAME = "admin"
-      AUTH_PASSWORD = var.browser_auth_password
-    }
-  }
-  
-  tags = var.common_tags
-}
-
-# Create Lambda permission for ALB
-resource "aws_lambda_permission" "alb_auth_permission" {
-  statement_id  = "AllowExecutionFromALB"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.auth_lambda.function_name
-  principal     = "elasticloadbalancing.amazonaws.com"
-}
-
-# Create ALB listener rules for Neo4j Browser with fixed-response for authentication
+# Create ALB listener rules for Neo4j Browser with simplified login pages
 resource "aws_lb_listener_rule" "neo4j_ledger_browser" {
   listener_arn = var.alb_listener_arn
   priority     = 100
@@ -255,7 +77,31 @@ resource "aws_lb_listener_rule" "neo4j_ledger_browser" {
     fixed_response {
       content_type = "text/html"
       message_body = <<EOF
-<!DOCTYPE html><html><head><title>Neo4j Ledger Login</title><style>body{font-family:sans-serif;margin:20px}form{max-width:300px;margin:0 auto}input{width:100%;margin:5px 0;padding:5px}button{background:#04a0b2;color:white;border:none;padding:8px;cursor:pointer}#error{color:red;display:none}</style></head><body><h2>Neo4j Ledger Browser</h2><div id="error">Invalid credentials</div><form id="f"><input id="u" placeholder="Username" required><input type="password" id="p" placeholder="Password" required><button type="submit">Login</button></form><script>document.getElementById("f").addEventListener("submit",function(e){e.preventDefault();try{const u=document.getElementById("u").value;const p=document.getElementById("p").value;console.log("Auth:",u,p.length);fetch("/neo4jbrowser-ledger/",{headers:{Authorization:"Basic "+btoa(u+":"+p)}}).then(r=>r.ok?location.href="/neo4jbrowser-ledger/":(console.log("Failed:",r.status),document.getElementById("error").style.display="block")).catch(e=>{console.log("Error:",e);document.getElementById("error").style.display="block"})}catch(e){console.log("Error:",e);document.getElementById("error").style.display="block"}});</script></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Neo4j Ledger Browser</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; text-align: center; }
+    .button { 
+      display: inline-block;
+      background: #04a0b2; 
+      color: white; 
+      border: none; 
+      padding: 10px 20px; 
+      margin: 20px 0; 
+      text-decoration: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>Neo4j Ledger Browser</h2>
+  <p>Click the button below to access the Neo4j Ledger Browser</p>
+  <a href="/neo4jbrowser-ledger/" class="button">Access Neo4j Ledger Browser</a>
+</body>
+</html>
 EOF
       status_code = "200"
     }
@@ -278,7 +124,31 @@ resource "aws_lb_listener_rule" "neo4j_search_browser" {
     fixed_response {
       content_type = "text/html"
       message_body = <<EOF
-<!DOCTYPE html><html><head><title>Neo4j Search Login</title><style>body{font-family:sans-serif;margin:20px}form{max-width:300px;margin:0 auto}input{width:100%;margin:5px 0;padding:5px}button{background:#04a0b2;color:white;border:none;padding:8px;cursor:pointer}#error{color:red;display:none}</style></head><body><h2>Neo4j Search Browser</h2><div id="error">Invalid credentials</div><form id="f"><input id="u" placeholder="Username" required><input type="password" id="p" placeholder="Password" required><button type="submit">Login</button></form><script>document.getElementById("f").addEventListener("submit",function(e){e.preventDefault();try{const u=document.getElementById("u").value;const p=document.getElementById("p").value;console.log("Auth:",u,p.length);fetch("/neo4jbrowser-search/",{headers:{Authorization:"Basic "+btoa(u+":"+p)}}).then(r=>r.ok?location.href="/neo4jbrowser-search/":(console.log("Failed:",r.status),document.getElementById("error").style.display="block")).catch(e=>{console.log("Error:",e);document.getElementById("error").style.display="block"})}catch(e){console.log("Error:",e);document.getElementById("error").style.display="block"}});</script></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Neo4j Search Browser</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; text-align: center; }
+    .button { 
+      display: inline-block;
+      background: #04a0b2; 
+      color: white; 
+      border: none; 
+      padding: 10px 20px; 
+      margin: 20px 0; 
+      text-decoration: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>Neo4j Search Browser</h2>
+  <p>Click the button below to access the Neo4j Search Browser</p>
+  <a href="/neo4jbrowser-search/" class="button">Access Neo4j Search Browser</a>
+</body>
+</html>
 EOF
       status_code = "200"
     }
@@ -291,8 +161,8 @@ EOF
   }
 }
 
-# Create ALB listener rules for Neo4j Browser with authentication check
-resource "aws_lb_listener_rule" "neo4j_ledger_browser_auth" {
+# Create ALB listener rules for Neo4j Browser with direct access (no authentication)
+resource "aws_lb_listener_rule" "neo4j_ledger_browser_direct" {
   listener_arn = var.alb_listener_arn
   priority     = 120
 
@@ -306,16 +176,9 @@ resource "aws_lb_listener_rule" "neo4j_ledger_browser_auth" {
       values = ["/neo4jbrowser-ledger*"]
     }
   }
-
-  condition {
-    http_header {
-      http_header_name = "Authorization"
-      values           = ["*"]
-    }
-  }
 }
 
-resource "aws_lb_listener_rule" "neo4j_search_browser_auth" {
+resource "aws_lb_listener_rule" "neo4j_search_browser_direct" {
   listener_arn = var.alb_listener_arn
   priority     = 130
 
@@ -327,13 +190,6 @@ resource "aws_lb_listener_rule" "neo4j_search_browser_auth" {
   condition {
     path_pattern {
       values = ["/neo4jbrowser-search*"]
-    }
-  }
-
-  condition {
-    http_header {
-      http_header_name = "Authorization"
-      values           = ["*"]
     }
   }
 }
@@ -354,7 +210,7 @@ resource "aws_lb_listener_rule" "neo4j_ledger_browser_redirect" {
 
   condition {
     path_pattern {
-      values = ["/neo4jbrowser-ledger*"]
+      values = ["/neo4jbrowser-ledger"]
     }
   }
 }
@@ -374,7 +230,7 @@ resource "aws_lb_listener_rule" "neo4j_search_browser_redirect" {
 
   condition {
     path_pattern {
-      values = ["/neo4jbrowser-search*"]
+      values = ["/neo4jbrowser-search"]
     }
   }
 }
