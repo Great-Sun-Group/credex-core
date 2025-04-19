@@ -47,12 +47,20 @@ resource "aws_lb_target_group_attachment" "neo4j_ledger" {
   target_group_arn = aws_lb_target_group.neo4j_ledger.arn
   target_id        = var.neo4j_ledger_instance_id
   port             = 7474
+  
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_lb_target_group_attachment" "neo4j_search" {
   target_group_arn = aws_lb_target_group.neo4j_search.arn
   target_id        = var.neo4j_search_instance_id
   port             = 7474
+  
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # Create Lambda function for basic auth

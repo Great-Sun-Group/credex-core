@@ -29,6 +29,10 @@ module "neo4j_browser_proxy" {
   browser_auth_password  = var.client_api_key
 
   common_tags = local.common_tags
+  
+  depends_on = [
+    module.databases
+  ]
 }
 
 output "neo4j_ledger_instance_id" {
