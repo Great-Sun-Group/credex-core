@@ -106,13 +106,13 @@ resource "aws_iam_role_policy" "lambda_edge_policy" {
   })
 }
 
-# Store the password in AWS Secrets Manager
+# Store the password in AWS Secrets Manager with a new name to avoid conflict
 resource "aws_secretsmanager_secret" "neo4j_browser_password" {
-  name        = "neo4j-browser-password-${var.environment}"
+  name        = "neo4j-browser-password-${var.environment}-new"
   description = "Password for Neo4j Browser access"
   
   tags = merge(var.common_tags, {
-    Name = "neo4j-browser-password-${var.environment}"
+    Name = "neo4j-browser-password-${var.environment}-new"
   })
 }
 
