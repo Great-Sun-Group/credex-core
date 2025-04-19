@@ -183,7 +183,7 @@ resource "aws_lambda_function" "auth_lambda" {
   function_name    = "neo4j-browser-auth-${var.environment}"
   role             = aws_iam_role.lambda_edge_role.arn
   handler          = "index.handler"
-  runtime          = "nodejs20.x"
+  runtime          = "nodejs18.x"
   publish          = true
   
   environment {
