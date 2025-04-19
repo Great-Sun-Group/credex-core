@@ -206,7 +206,7 @@ resource "aws_lb_listener_rule" "neo4j_ledger_browser" {
 <body>
   <h2>Neo4j Ledger Browser</h2>
   <p>Click the button below to access the Neo4j Ledger Browser</p>
-  <a href="/neo4jbrowser-ledger/" class="button">Access Neo4j Ledger Browser</a>
+  <a href="/browser-ledger/" class="button">Access Neo4j Ledger Browser</a>
 </body>
 </html>
 EOF
@@ -253,7 +253,7 @@ resource "aws_lb_listener_rule" "neo4j_search_browser" {
 <body>
   <h2>Neo4j Search Browser</h2>
   <p>Click the button below to access the Neo4j Search Browser</p>
-  <a href="/neo4jbrowser-search/" class="button">Access Neo4j Search Browser</a>
+  <a href="/browser-search/" class="button">Access Neo4j Search Browser</a>
 </body>
 </html>
 EOF
@@ -280,7 +280,7 @@ resource "aws_lb_listener_rule" "neo4j_ledger_browser_direct" {
 
   condition {
     path_pattern {
-      values = ["/neo4jbrowser-ledger*"]
+      values = ["/browser-ledger*", "/neo4jbrowser-ledger*"]
     }
   }
 }
@@ -296,7 +296,7 @@ resource "aws_lb_listener_rule" "neo4j_search_browser_direct" {
 
   condition {
     path_pattern {
-      values = ["/neo4jbrowser-search*"]
+      values = ["/browser-search*", "/neo4jbrowser-search*"]
     }
   }
 }
@@ -338,6 +338,27 @@ resource "aws_lb_listener_rule" "neo4j_search_browser_redirect" {
   condition {
     path_pattern {
       values = ["/neo4jbrowser-search"]
+    }
+  }
+}
+
+# Add rules for the standard /browser path to redirect to the appropriate login page
+resource "aws_lb_listener_rule" "browser_redirect" {
+  listener_arn = var.alb_listener_arn
+  priority     = 160
+
+  action {
+    type = "redirect"
+    
+    redirect {
+      path        = "/neo4jbrowser-ledger-login"
+      status_code = "HTTP_302"
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/browser", "/browser/"]
     }
   }
 }
