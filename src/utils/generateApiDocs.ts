@@ -1,9 +1,26 @@
+// Set required environment variables before any imports
+process.env.NODE_ENV = 'development';
+process.env.NEO_4J_LEDGER_SPACE_BOLT_URL = 'dummy';
+process.env.NEO_4J_SEARCH_SPACE_BOLT_URL = 'dummy';
+process.env.OPEN_EXCHANGE_RATES_API = 'dummy';
+process.env.JWT_SECRET = 'dummy';
+process.env.CLIENT_API_KEY = 'dummy';
+process.env.DEV_ADMIN_KEY = 'dummy';
+process.env.SKIP_RATE_LIMITER_KEY = 'dummy';
+process.env.PASSWORD_PEPPER = 'dummy';
+process.env.CREDEX_CORE_WHATSAPP_API_KEY = 'dummy';
+process.env.CREDEX_CORE_WHATSAPP_BUSINESS_ID = 'dummy';
+process.env.CREDEX_CORE_WHATSAPP_PHONE_ID = 'dummy';
+process.env.FIREBASE_PROJECT_ID = 'dummy';
+process.env.FIREBASE_CLIENT_EMAIL = 'dummy';
+process.env.FIREBASE_PRIVATE_KEY = 'dummy';
+
 import swaggerJsdoc from "swagger-jsdoc";
 import fs from "fs";
 import path from "path";
 import logger from "./logger";
 
-// Import the same swagger config we use in the API
+// Import the swagger config now that we've set the environment variables
 import { generateSwaggerSpec } from "../../config/swagger";
 
 export async function generateApiDocs(): Promise<void> {
@@ -236,13 +253,8 @@ export async function generateApiDocs(): Promise<void> {
     await fs.promises.writeFile(htmlOutputPath, html);
     logger.info(`Generated API documentation at: ${htmlOutputPath}`);
 
-    // Write the raw Swagger specification
-    const swaggerOutputPath = path.join(docsDir, "swagger.json");
-    await fs.promises.writeFile(
-      swaggerOutputPath,
-      JSON.stringify(swaggerSpec, null, 2)
-    );
-    logger.info(`Generated Swagger specification at: ${swaggerOutputPath}`);
+    // No longer generating the swagger.json file
+    logger.info("Skipping generation of swagger.json file");
   } catch (error) {
     logger.error(
       "Failed to generate API documentation:",
