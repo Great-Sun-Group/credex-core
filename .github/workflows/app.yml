@@ -71,10 +71,6 @@ jobs:
           # Dummy values for Neo4j variables since we're only targeting app module
           TF_VAR_neo_4j_ledger_space_bolt_url: "dummy"
           TF_VAR_neo_4j_search_space_bolt_url: "dummy"
-          TF_VAR_neo_4j_ledger_space_user: "dummy"
-          TF_VAR_neo_4j_search_space_user: "dummy"
-          TF_VAR_neo_4j_ledger_space_password: "dummy"
-          TF_VAR_neo_4j_search_space_password: "dummy"
           TF_VAR_neo4j_enterprise_license: "dummy"
           TF_VAR_firebase_project_id: "${{ secrets.FIREBASE_PROJECT_ID }}"
           TF_VAR_firebase_client_email: "${{ secrets.FIREBASE_CLIENT_EMAIL }}"
@@ -92,10 +88,6 @@ jobs:
           # Dummy values for Neo4j variables since we're only targeting app module
           TF_VAR_neo_4j_ledger_space_bolt_url: "dummy"
           TF_VAR_neo_4j_search_space_bolt_url: "dummy"
-          TF_VAR_neo_4j_ledger_space_user: "dummy"
-          TF_VAR_neo_4j_search_space_user: "dummy"
-          TF_VAR_neo_4j_ledger_space_password: "dummy"
-          TF_VAR_neo_4j_search_space_password: "dummy"
           TF_VAR_neo4j_enterprise_license: "dummy"
         run: |
           cd terraform
@@ -112,27 +104,49 @@ jobs:
           echo "Current task definition fetched."
 
           echo "Updating task definition with new image and environment variables..."
-          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment = [
-            {"name": "NODE_ENV", "value": $NODE_ENV},
-            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_USER }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}"},
-            {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_USER }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}"},
-            {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}"},
-            {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
-            {"name": "CLIENT_API_KEY", "value": "${{ secrets.CLIENT_API_KEY }}"},
-            {"name": "DEV_ADMIN_KEY", "value": "${{ secrets.DEV_ADMIN_KEY }}"},
-            {"name": "SKIP_RATE_LIMITER_KEY", "value": "${{ secrets.SKIP_RATE_LIMITER_KEY }}"},
-            {"name": "PASSWORD_PEPPER", "value": "${{ secrets.PASSWORD_PEPPER }}"},
-            {"name": "CREDEX_CORE_WHATSAPP_API_KEY", "value": "${{ secrets.CREDEX_CORE_WHATSAPP_API_KEY }}"},
-            {"name": "CREDEX_CORE_WHATSAPP_BUSINESS_ID", "value": "${{ secrets.CREDEX_CORE_WHATSAPP_BUSINESS_ID }}"},
-            {"name": "CREDEX_CORE_WHATSAPP_PHONE_ID", "value": "${{ secrets.CREDEX_CORE_WHATSAPP_PHONE_ID }}"},
-            {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"},
-            {"name": "FIREBASE_PROJECT_ID", "value": "${{ secrets.FIREBASE_PROJECT_ID }}"},
-            {"name": "FIREBASE_CLIENT_EMAIL", "value": "${{ secrets.FIREBASE_CLIENT_EMAIL }}"},
-            {"name": "FIREBASE_PRIVATE_KEY", "value": "${{ secrets.FIREBASE_PRIVATE_KEY }}"}
-          ]' | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+          # Get Neo4j URLs from Terraform outputs
+          cd terraform
+          # Get Neo4j URLs and extract just the first bolt URL match
+          NEO4J_LEDGER_URL=$(terraform output -raw neo4j_ledger_bolt_endpoint | grep -o 'bolt://[0-9.]*:7687' | head -n 1)
+          NEO4J_SEARCH_URL=$(terraform output -raw neo4j_search_bolt_endpoint | grep -o 'bolt://[0-9.]*:7687' | head -n 1)
+          cd ..
+
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" --arg PORT "3000" \
+            --arg JWT "${{ secrets.JWT_SECRET }}" \
+            --arg API "${{ secrets.CLIENT_API_KEY }}" \
+            --arg ADMIN "${{ secrets.DEV_ADMIN_KEY }}" \
+            --arg SKIP "${{ secrets.SKIP_RATE_LIMITER_KEY }}" \
+            --arg OER "${{ secrets.OPEN_EXCHANGE_RATES_API }}" \
+            --arg FID "${{ secrets.FIREBASE_PROJECT_ID }}" \
+            --arg FEMAIL "${{ secrets.FIREBASE_CLIENT_EMAIL }}" \
+            --arg FKEY "${{ secrets.FIREBASE_PRIVATE_KEY }}" \
+            --arg NEO4J_LEDGER "$NEO4J_LEDGER_URL" \
+            --arg NEO4J_SEARCH "$NEO4J_SEARCH_URL" \
+            --arg PASSWORD_PEPPER "${{ secrets.PASSWORD_PEPPER }}" \
+            --arg WHATSAPP_API_KEY "${{ secrets.CREDEX_CORE_WHATSAPP_API_KEY }}" \
+            --arg WHATSAPP_BUSINESS_ID "${{ secrets.CREDEX_CORE_WHATSAPP_BUSINESS_ID }}" \
+            --arg WHATSAPP_PHONE_ID "${{ secrets.CREDEX_CORE_WHATSAPP_PHONE_ID }}" \
+            '.containerDefinitions[0].image = $IMAGE | 
+             .containerDefinitions[0].environment = [
+              {"name": "NODE_ENV", "value": "\($NODE_ENV)"},
+              {"name": "PORT", "value": "\($PORT)"},
+              {"name": "JWT_SECRET", "value": "\($JWT)"},
+              {"name": "CLIENT_API_KEY", "value": "\($API)"},
+              {"name": "DEV_ADMIN_KEY", "value": "\($ADMIN)"},
+              {"name": "SKIP_RATE_LIMITER_KEY", "value": "\($SKIP)"},
+              {"name": "OPEN_EXCHANGE_RATES_API", "value": "\($OER)"},
+              {"name": "FIREBASE_PROJECT_ID", "value": "\($FID)"},
+              {"name": "FIREBASE_CLIENT_EMAIL", "value": "\($FEMAIL)"},
+              {"name": "FIREBASE_PRIVATE_KEY", "value": "\($FKEY)"},
+              {"name": "AWS_REGION", "value": "af-south-1"},
+              {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "\($NEO4J_LEDGER)"},
+              {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "\($NEO4J_SEARCH)"},
+              {"name": "PASSWORD_PEPPER", "value": "\($PASSWORD_PEPPER)"},
+              {"name": "CREDEX_CORE_WHATSAPP_API_KEY", "value": "\($WHATSAPP_API_KEY)"},
+              {"name": "CREDEX_CORE_WHATSAPP_BUSINESS_ID", "value": "\($WHATSAPP_BUSINESS_ID)"},
+              {"name": "CREDEX_CORE_WHATSAPP_PHONE_ID", "value": "\($WHATSAPP_PHONE_ID)"}
+            ] | 
+            del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
           echo "Task definition updated."
 
           echo "Registering new task definition..."

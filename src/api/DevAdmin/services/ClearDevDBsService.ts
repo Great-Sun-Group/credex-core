@@ -12,11 +12,11 @@ export async function ClearDevDBsService(): Promise<void> {
     } catch (error) {
       logger.error(`Error clearing ${name} database`, {
         error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       });
       throw new AdminError(
-        `Error clearing ${name} database`, 
-        'INTERNAL_ERROR', 
+        `Error clearing ${name} database`,
+        "INTERNAL_ERROR",
         ErrorCodes.Admin.INTERNAL_ERROR
       );
     } finally {
@@ -26,26 +26,26 @@ export async function ClearDevDBsService(): Promise<void> {
   };
 
   try {
-    logger.info('Starting database clearing process');
-    
+    logger.info("Starting database clearing process");
+
     // Clear databases sequentially to avoid potential conflicts
     await clearDatabase(ledgerSpaceDriver, "LedgerSpace");
     await clearDatabase(searchSpaceDriver, "SearchSpace");
-    
-    logger.info('All development databases cleared successfully');
+
+    logger.info("All development databases cleared successfully");
   } catch (error) {
-    logger.error('Error in database clearing process', {
+    logger.error("Error in database clearing process", {
       error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
+      stack: error instanceof Error ? error.stack : undefined,
     });
-    
+
     if (error instanceof AdminError) {
       throw error;
     }
-    
+
     throw new AdminError(
-      'Failed to clear development databases', 
-      'INTERNAL_ERROR', 
+      "Failed to clear development databases",
+      "INTERNAL_ERROR",
       ErrorCodes.Admin.INTERNAL_ERROR
     );
   }

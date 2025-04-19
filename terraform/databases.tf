@@ -3,6 +3,7 @@ module "databases" {
 
   environment              = var.environment
   vpc_id                   = module.connectors.vpc_id
+  vpc_cidr                 = local.current_env.vpc_cidr
   subnet_ids               = module.connectors.private_subnet_ids
   neo4j_security_group_id  = module.connectors.neo4j_security_group_id
   key_pair_name            = module.connectors.key_pair_name
@@ -12,6 +13,22 @@ module "databases" {
   create_neo4j_instances   = true
   common_tags             = local.common_tags
   aws_region              = local.current_env.aws_region
+  ecs_tasks_security_group_id = module.connectors.ecs_tasks_security_group_id
+}
+
+# Neo4j Browser Proxy Module
+module "neo4j_browser_proxy" {
+  source = "./modules/neo4j_browser_proxy"
+
+  environment            = var.environment
+  vpc_id                 = module.connectors.vpc_id
+  domain                 = local.current_env.domain
+  neo4j_ledger_instance_id = module.databases.neo4j_ledger_instance_id
+  neo4j_search_instance_id = module.databases.neo4j_search_instance_id
+  alb_listener_arn       = module.connectors.alb_listener
+  browser_auth_password  = var.client_api_key
+
+  common_tags = local.common_tags
 }
 
 output "neo4j_ledger_instance_id" {
@@ -42,4 +59,15 @@ output "neo4j_ledger_bolt_endpoint" {
 output "neo4j_search_bolt_endpoint" {
   value       = module.databases.neo4j_search_bolt_endpoint
   description = "The Bolt endpoint for the Neo4j SearchSpace instance"
+}
+
+# Neo4j Browser Proxy Outputs
+output "neo4j_ledger_browser_url" {
+  description = "URL for accessing the Neo4j Ledger Browser"
+  value       = module.neo4j_browser_proxy.neo4j_ledger_browser_url
+}
+
+output "neo4j_search_browser_url" {
+  description = "URL for accessing the Neo4j Search Browser"
+  value       = module.neo4j_browser_proxy.neo4j_search_browser_url
 }

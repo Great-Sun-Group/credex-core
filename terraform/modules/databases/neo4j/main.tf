@@ -120,25 +120,3 @@ output "NEO_4J_SEARCH_SPACE_BOLT_URL" {
   value       = "bolt://${aws_instance.neo4j[1].private_ip}:7687"
   description = "Neo4j SearchSpace Bolt URL"
 }
-
-output "NEO_4J_LEDGER_SPACE_USERNAME" {
-  value       = random_string.neo4j_username[0].result
-  description = "Neo4j LedgerSpace username"
-}
-
-output "NEO_4J_SEARCH_SPACE_USER" {
-  value       = random_string.neo4j_username[1].result
-  description = "Neo4j SearchSpace username"
-}
-
-output "NEO_4J_LEDGER_SPACE_PASS" {
-  value       = random_password.neo4j_password[0].result
-  sensitive   = true
-  description = "Neo4j LedgerSpace password"
-}
-
-output "NEO_4J_SEARCH_SPACE_PASS" {
-  value       = random_password.neo4j_password[1].result
-  sensitive   = true
-  description = "Neo4j SearchSpace password"
-}

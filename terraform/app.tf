@@ -1,3 +1,13 @@
+# Read Neo4j endpoints from state
+data "terraform_remote_state" "databases" {
+  backend = "s3"
+  config = {
+    bucket = "credexbuckets4-statebucket-${var.environment}"
+    key    = "terraform.tfstate"
+    region = "af-south-1"
+  }
+}
+
 module "app" {
   source = "./modules/app"
 
@@ -26,12 +36,9 @@ module "app" {
   ecs_task_role_arn          = module.connectors.ecs_task_role_arn
   cloudwatch_log_group_name  = module.connectors.cloudwatch_log_group_name
 
-  neo_4j_ledger_space_bolt_url   = var.neo_4j_ledger_space_bolt_url
-  neo_4j_search_space_bolt_url   = var.neo_4j_search_space_bolt_url
-  neo_4j_ledger_space_user   = var.neo_4j_ledger_space_user
-  neo_4j_search_space_user   = var.neo_4j_search_space_user
-  neo_4j_ledger_space_password = var.neo_4j_ledger_space_password
-  neo_4j_search_space_password = var.neo_4j_search_space_password
+  # Neo4j configuration - using bolt endpoints from database state
+  neo_4j_ledger_space_bolt_url = data.terraform_remote_state.databases.outputs.neo4j_ledger_bolt_endpoint
+  neo_4j_search_space_bolt_url = data.terraform_remote_state.databases.outputs.neo4j_search_bolt_endpoint
 
   # Firebase configuration
   firebase_project_id = var.firebase_project_id

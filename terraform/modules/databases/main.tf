@@ -39,97 +39,222 @@ data "aws_ami" "amazon_linux_2" {
   }
 }
 
-# Helper to create user data script
+# VPC Endpoint for CloudWatch Logs
+resource "aws_vpc_endpoint" "logs" {
+  vpc_id            = var.vpc_id
+  service_name      = "com.amazonaws.${var.aws_region}.logs"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = var.subnet_ids
+  security_group_ids = [aws_security_group.neo4j_internal.id]
+  private_dns_enabled = true
+
+  tags = merge(var.common_tags, {
+    Name = "CloudWatch-Logs-${var.environment}"
+  })
+}
+
+# Security group for Neo4j internal communication
+resource "aws_security_group" "neo4j_internal" {
+  name        = "neo4j-internal-${var.environment}"
+  description = "Security group for internal Neo4j communication"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description = "Neo4j Bolt Internal"
+    from_port   = 7687
+    to_port     = 7687
+    protocol    = "tcp"
+    self        = true
+  }
+
+  ingress {
+    description     = "Neo4j Bolt from App"
+    from_port       = 7687
+    to_port         = 7687
+    protocol        = "tcp"
+    security_groups = [var.ecs_tasks_security_group_id]  # Allow Bolt from ECS tasks
+  }
+
+  ingress {
+    description = "Neo4j Bolt Cross-Subnet"
+    from_port   = 7687
+    to_port     = 7687
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]  # Allow Bolt traffic within the VPC
+  }
+
+  ingress {
+    description = "Neo4j HTTP"
+    from_port   = 7474
+    to_port     = 7474
+    protocol    = "tcp"
+    self        = true
+  }
+
+  ingress {
+    description = "Neo4j HTTPS"
+    from_port   = 7473
+    to_port     = 7473
+    protocol    = "tcp"
+    self        = true
+  }
+
+  # Allow HTTPS for AWS services (CloudWatch, SSM)
+  ingress {
+    description     = "HTTPS from ECS tasks"
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [var.ecs_tasks_security_group_id]
+  }
+
+  ingress {
+    description = "HTTPS for VPC Endpoints"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    self        = true
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(var.common_tags, {
+    Name = "Neo4j Internal Communication - ${var.environment}"
+  })
+}
+
+# CloudWatch Log Group for Neo4j logs
+resource "aws_cloudwatch_log_group" "neo4j_logs" {
+  name              = "/aws/ec2/neo4j/${var.environment}"
+  retention_in_days = 14
+
+  tags = var.common_tags
+}
+
+# Create IAM role for CloudWatch access
+resource "aws_iam_role" "neo4j_role" {
+  name = "neo4j-role-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.common_tags
+}
+
+# Add required AWS service permissions
+resource "aws_iam_role_policy_attachment" "neo4j_cloudwatch_policy" {
+  role       = aws_iam_role.neo4j_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "neo4j_ssm_policy" {
+  role       = aws_iam_role.neo4j_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_role_policy_attachment" "neo4j_ssm_policy_full" {
+  role       = aws_iam_role.neo4j_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
+}
+
+# Add S3 access policy for Neo4j instances
+resource "aws_iam_role_policy" "neo4j_s3_access" {
+  name = "neo4j-s3-access-${var.environment}"
+  role = aws_iam_role.neo4j_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::*",
+          "arn:aws:s3:::*/*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_instance_profile" "neo4j_instance_profile" {
+  name = "neo4j-instance-profile-${var.environment}"
+  role = aws_iam_role.neo4j_role.name
+}
+
+# Helper to create minimal user data script for instance initialization
 locals {
-  neo4j_install_script = <<-EOF
-              #!/bin/bash
-              set -e
-              exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+  minimal_init_script = <<EOF
+#!/bin/bash
+set -e
 
-              echo "Starting Neo4j installation and configuration..."
+# Setup logging
+exec > /var/log/instance-setup.log 2>&1
 
-              # Update the system
-              echo "Updating system packages..."
-              yum update -y || {
-                echo "Failed to update system packages"
-                exit 1
-              }
+# Set environment variables
+export ENVIRONMENT="${var.environment}"
+export AWS_REGION="${var.aws_region}"
 
-              # Install Java
-              echo "Installing Java..."
-              amazon-linux-extras install java-openjdk11 -y || {
-                echo "Failed to install Java"
-                exit 1
-              }
+# Log environment information
+echo "=== Environment Information ==="
+echo "Environment: $ENVIRONMENT"
+echo "AWS Region: $AWS_REGION"
+echo "Instance ID: $(curl -s http://169.254.169.254/latest/meta-data/instance-id)"
 
-              # Add Neo4j repository
-              echo "Adding Neo4j repository..."
-              rpm --import https://debian.neo4j.com/neotechnology.gpg.key || {
-                echo "Failed to import Neo4j GPG key"
-                exit 1
-              }
-              cat << REPO > /etc/yum.repos.d/neo4j.repo
-              [neo4j]
-              name=Neo4j RPM Repository
-              baseurl=https://yum.neo4j.com/stable
-              enabled=1
-              gpgcheck=1
-              REPO
+# System setup
+echo "=== System Initialization ==="
+echo "Waiting for initial system updates to complete..."
+until ! pgrep -f "yum" > /dev/null; do
+    echo "System is updating, waiting 30 seconds..."
+    sleep 30
+done
 
-              # Install Neo4j
-              echo "Installing Neo4j..."
-              yum install neo4j-enterprise -y || {
-                echo "Failed to install Neo4j"
-                exit 1
-              }
+# Install AWS CLI and CloudWatch agent for logging
+echo "=== Installing AWS CLI and CloudWatch Agent ==="
+yum install -y aws-cli amazon-cloudwatch-agent
 
-              # Configure Neo4j
-              echo "Configuring Neo4j..."
-              sed -i 's/#dbms.default_listen_address=0.0.0.0/dbms.default_listen_address=0.0.0.0/' /etc/neo4j/neo4j.conf || {
-                echo "Failed to configure Neo4j listen address"
-                exit 1
-              }
+# Install SSM agent
+echo "=== Installing SSM Agent ==="
+# First check if SSM agent is already installed
+if rpm -q amazon-ssm-agent > /dev/null; then
+    echo "SSM agent is already installed"
+else
+    # Download and install the SSM agent
+    echo "Downloading SSM agent..."
+    mkdir -p /tmp/ssm
+    cd /tmp/ssm
+    wget https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+    echo "Installing SSM agent..."
+    yum install -y amazon-ssm-agent.rpm
+    cd -
+    rm -rf /tmp/ssm
+fi
 
-              # Set Neo4j license
-              echo "${var.neo4j_enterprise_license}" > /etc/neo4j/neo4j.license || {
-                echo "Failed to set Neo4j license"
-                exit 1
-              }
+# Configure and start SSM agent
+echo "=== Configuring and Starting SSM Agent ==="
+systemctl enable amazon-ssm-agent
+systemctl start amazon-ssm-agent
 
-              # Configure memory settings based on instance size
-              total_mem_kb=$$(grep MemTotal /proc/meminfo | awk '{print $$2}')
-              heap_size_mb=$$(($total_mem_kb / 1024 / 4))  # Use 25% of total memory for heap
-              page_cache_mb=$$(($total_mem_kb / 1024 / 2))  # Use 50% of total memory for page cache
-
-              echo "dbms.memory.heap.initial_size=$${heap_size_mb}m" >> /etc/neo4j/neo4j.conf
-              echo "dbms.memory.heap.max_size=$${heap_size_mb}m" >> /etc/neo4j/neo4j.conf
-              echo "dbms.memory.pagecache.size=$${page_cache_mb}m" >> /etc/neo4j/neo4j.conf
-
-              # Start Neo4j
-              echo "Starting Neo4j service..."
-              systemctl enable neo4j || {
-                echo "Failed to enable Neo4j service"
-                exit 1
-              }
-              systemctl start neo4j || {
-                echo "Failed to start Neo4j service"
-                exit 1
-              }
-
-              # Wait for Neo4j to start and verify it's running
-              echo "Waiting for Neo4j to start..."
-              for i in {1..30}; do
-                if systemctl is-active neo4j >/dev/null 2>&1; then
-                  echo "Neo4j started successfully"
-                  exit 0
-                fi
-                echo "Waiting... ($i/30)"
-                sleep 10
-              done
-
-              echo "Failed to confirm Neo4j startup"
-              exit 1
-              EOF
+echo "Instance initialization complete. Neo4j will be installed via GitHub Actions workflow."
+EOF
 }
 
 # Neo4j instance for ledgerSpace
@@ -137,8 +262,9 @@ resource "aws_instance" "neo4j_ledger" {
   ami                    = data.aws_ami.amazon_linux_2.id
   instance_type          = var.neo4j_instance_type
   key_name               = var.key_pair_name
-  vpc_security_group_ids = [var.neo4j_security_group_id]
+  vpc_security_group_ids = [var.neo4j_security_group_id, aws_security_group.neo4j_internal.id]
   subnet_id              = var.subnet_ids[0]
+  monitoring             = true
 
   root_block_device {
     volume_type = "gp3"
@@ -152,14 +278,16 @@ resource "aws_instance" "neo4j_ledger" {
     })
   }
 
-  user_data = local.neo4j_install_script
+  user_data = local.minimal_init_script
 
   tags = merge(var.common_tags, {
     Name = "Neo4j-LedgerSpace-${var.environment}"
   })
 
+  iam_instance_profile = aws_iam_instance_profile.neo4j_instance_profile.name
+
   lifecycle {
-    create_before_destroy = true
+    create_before_destroy = false
   }
 }
 
@@ -168,8 +296,9 @@ resource "aws_instance" "neo4j_search" {
   ami                    = data.aws_ami.amazon_linux_2.id
   instance_type          = var.neo4j_instance_type
   key_name               = var.key_pair_name
-  vpc_security_group_ids = [var.neo4j_security_group_id]
+  vpc_security_group_ids = [var.neo4j_security_group_id, aws_security_group.neo4j_internal.id]
   subnet_id              = var.subnet_ids[1]
+  monitoring             = true
 
   root_block_device {
     volume_type = "gp3"
@@ -183,14 +312,16 @@ resource "aws_instance" "neo4j_search" {
     })
   }
 
-  user_data = local.neo4j_install_script
+  user_data = local.minimal_init_script
 
   tags = merge(var.common_tags, {
     Name = "Neo4j-SearchSpace-${var.environment}"
   })
 
+  iam_instance_profile = aws_iam_instance_profile.neo4j_instance_profile.name
+
   lifecycle {
-    create_before_destroy = true
+    create_before_destroy = false
   }
 }
 

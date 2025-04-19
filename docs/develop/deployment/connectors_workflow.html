@@ -69,6 +69,33 @@
       </li>
     </ol>
 
+    <h2>State Management Infrastructure</h2>
+
+    <p>
+      The workflow automatically sets up and manages the state infrastructure:
+    </p>
+
+    <ul>
+      <li>
+        <strong>S3 State Bucket</strong>:
+        <ul>
+          <li>Name: credexbuckets4-statebucket-${ENVIRONMENT}</li>
+          <li>Versioning enabled for state history</li>
+          <li>Server-side encryption with AES-256</li>
+          <li>Created if it doesn't exist</li>
+        </ul>
+      </li>
+      <li>
+        <strong>DynamoDB Lock Table</strong>:
+        <ul>
+          <li>Name: credexbuckets4-statebucket-lock-${ENVIRONMENT}</li>
+          <li>Uses LockID as hash key</li>
+          <li>Pay-per-request billing mode</li>
+          <li>Created if it doesn't exist</li>
+        </ul>
+      </li>
+    </ul>
+
     <h2>Terraform Configuration</h2>
 
     <p>
@@ -218,6 +245,14 @@
       <li>CloudWatch Log Group Name</li>
       <li>Documentation Hosting Details (S3 bucket, CloudFront domain)</li>
     </ul>
+
+    <h2>Dummy Variables</h2>
+
+    <p>
+      The workflow uses dummy values for variables required by other modules but
+      not used by the connectors module. These include application secrets,
+      Neo4j bolt URLs, and Firebase configuration.
+    </p>
 
     <p>
       These outputs are crucial for other modules and workflows that depend on

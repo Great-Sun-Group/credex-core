@@ -159,6 +159,15 @@ tests/manual/firebase-config.js
 # Generated diff files
 diff.txt
 
+# Additional Terraform files
+tfplan
+
+# AWS CLI
+.aws/
+aws/credentials
+aws/config
+aws/*.log
+
 # PR cleanup script
 cleanup-pr.sh
 .env.dev

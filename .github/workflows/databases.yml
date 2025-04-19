@@ -44,55 +44,74 @@ jobs:
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
-          # Add dummy values for required variables since they're not used by the databases module
+          # Use actual CLIENT_API_KEY for Neo4j Browser authentication
+          TF_VAR_client_api_key: ${{ secrets.CLIENT_API_KEY }}
+          # Add dummy values for other required variables since they're not used by the databases module
           TF_VAR_jwt_secret: "dummy"
-          TF_VAR_client_api_key: "dummy"
           TF_VAR_dev_admin_key: "dummy"
           TF_VAR_skip_rate_limiter_key: "dummy"
           TF_VAR_open_exchange_rates_api: "dummy"
+          # Add dummy values for Neo4j bolt URLs that will be replaced with real values after deployment
+          TF_VAR_neo_4j_ledger_space_bolt_url: "bolt://dummy-ledger:7687"
+          TF_VAR_neo_4j_search_space_bolt_url: "bolt://dummy-search:7687"
+          # Add dummy values for Firebase variables since they're not used by the databases module
           TF_VAR_firebase_project_id: "dummy"
-          TF_VAR_firebase_client_email: "dummy"
-          TF_VAR_firebase_private_key: "dummy"
+          TF_VAR_firebase_client_email: "dummy@project.iam.gserviceaccount.com"
+          TF_VAR_firebase_private_key: "dummy-private-key"
         run: |
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
           echo "Planning Terraform changes..."
-          terraform plan -input=false -out=tfplan -target=module.databases
+          terraform plan -input=false -out=tfplan -target=module.databases -target=module.neo4j_browser_proxy -replace="module.databases.aws_instance.neo4j_ledger" -replace="module.databases.aws_instance.neo4j_search"
 
       - name: Terraform Apply
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
-          # Add dummy values for required variables since they're not used by the databases module
+          # Use actual CLIENT_API_KEY for Neo4j Browser authentication
+          TF_VAR_client_api_key: ${{ secrets.CLIENT_API_KEY }}
+          # Add dummy values for other required variables since they're not used by the databases module
           TF_VAR_jwt_secret: "dummy"
-          TF_VAR_client_api_key: "dummy"
           TF_VAR_dev_admin_key: "dummy"
           TF_VAR_skip_rate_limiter_key: "dummy"
-          TF_VAR_open_exchange_rates_api: "dummy"
+          # Add dummy values for Neo4j bolt URLs that will be replaced with real values after deployment
+          TF_VAR_neo_4j_ledger_space_bolt_url: "bolt://dummy-ledger:7687"
+          TF_VAR_neo_4j_search_space_bolt_url: "bolt://dummy-search:7687"
+          # Add dummy values for Firebase variables since they're not used by the databases module
           TF_VAR_firebase_project_id: "dummy"
-          TF_VAR_firebase_client_email: "dummy"
-          TF_VAR_firebase_private_key: "dummy"
+          TF_VAR_firebase_client_email: "dummy@project.iam.gserviceaccount.com"
+          TF_VAR_firebase_private_key: "dummy-private-key"
         run: |
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
           echo "Applying Terraform changes..."
-          terraform apply -auto-approve -input=false tfplan
+
+          if ! terraform apply -auto-approve -input=false tfplan; then
+            echo "Error: Terraform apply failed"
+            echo "Checking terraform logs for details..."
+            terraform show tfplan
+            exit 1
+          fi
 
           echo "Terraform apply completed successfully"
 
-      - name: Verify Neo4j Deployments
+      - name: Verify EC2 Instances
         run: |
           cd terraform
-          echo "Verifying Neo4j deployments..."
+          echo "Verifying EC2 instances..."
 
-          # Get instance IDs
-          LEDGER_ID=$(terraform output -raw module.databases.neo4j_ledger_instance_id || echo "")
-          SEARCH_ID=$(terraform output -raw module.databases.neo4j_search_instance_id || echo "")
+          # Get instance IDs and IPs
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 | tr -d '\n' || echo "")
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 | tr -d '\n' || echo "")
 
           if [ -z "$LEDGER_ID" ] || [ -z "$SEARCH_ID" ]; then
             echo "Error: Could not get Neo4j instance IDs"
             exit 1
           fi
+
+          echo "Retrieved instance IDs:"
+          echo "LedgerSpace: $LEDGER_ID"
+          echo "SearchSpace: $SEARCH_ID"
 
           # Function to verify instance
           verify_instance() {
@@ -103,14 +122,14 @@ jobs:
             
             # Wait for instance to be running
             echo "Waiting for instance to be running..."
-            aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+            aws ec2 wait instance-running --instance-ids "$INSTANCE_ID"
             
             # Wait for status checks
             echo "Waiting for status checks to pass..."
-            aws ec2 wait instance-status-ok --instance-ids $INSTANCE_ID
+            aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID"
             
             # Get instance details
-            INSTANCE_DETAILS=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID)
+            INSTANCE_DETAILS=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID")
             PRIVATE_IP=$(echo $INSTANCE_DETAILS | jq -r '.Reservations[0].Instances[0].PrivateIpAddress')
             
             echo "$SPACE_NAME instance is running:"
@@ -120,16 +139,472 @@ jobs:
             # Verify instance is responding
             echo "Checking instance system status..."
             aws ec2 describe-instance-status \
-              --instance-ids $INSTANCE_ID \
+              --instance-ids "$INSTANCE_ID" \
               --query 'InstanceStatuses[0].{SystemStatus:SystemStatus.Status,InstanceStatus:InstanceStatus.Status}' \
               --output table
+            
+            return 0
           }
 
           # Verify both instances
-          verify_instance "$LEDGER_ID" "LedgerSpace"
-          verify_instance "$SEARCH_ID" "SearchSpace"
+          if ! verify_instance "$LEDGER_ID" "LedgerSpace"; then
+            echo "ERROR: Failed to verify LedgerSpace instance"
+            exit 1
+          fi
 
-          echo "Both Neo4j instances verified successfully"
+          if ! verify_instance "$SEARCH_ID" "SearchSpace"; then
+            echo "ERROR: Failed to verify SearchSpace instance"
+            exit 1
+          fi
+
+          echo "EC2 instances verified successfully"
+
+          # Export instance IDs and IPs for later steps
+          echo "LEDGER_ID=$LEDGER_ID" >> $GITHUB_ENV
+          echo "SEARCH_ID=$SEARCH_ID" >> $GITHUB_ENV
+
+          # Get private IPs
+          LEDGER_IP=$(aws ec2 describe-instances --instance-ids "$LEDGER_ID" --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text)
+          SEARCH_IP=$(aws ec2 describe-instances --instance-ids "$SEARCH_ID" --query 'Reservations[0].Instances[0].PrivateIpAddress' --output text)
+
+          echo "LEDGER_IP=$LEDGER_IP" >> $GITHUB_ENV
+          echo "SEARCH_IP=$SEARCH_IP" >> $GITHUB_ENV
+
+      - name: Upload Scripts to Instances
+        run: |
+          echo "Uploading scripts to instances..."
+          
+          # Upload scripts to S3
+          echo "Uploading scripts to S3..."
+          aws s3 cp .github/scripts/install_neo4j.sh s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/scripts/install_neo4j.sh
+          aws s3 cp .github/scripts/verify_neo4j.sh s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/scripts/verify_neo4j.sh
+          
+          # Create a pre-signed URL for the scripts (valid for 15 minutes)
+          echo "Creating pre-signed URLs for scripts..."
+          INSTALL_URL=$(aws s3 presign s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/scripts/install_neo4j.sh --expires-in 900)
+          VERIFY_URL=$(aws s3 presign s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/scripts/verify_neo4j.sh --expires-in 900)
+          
+          echo "Using curl to download scripts to instances..."
+          
+          # Download scripts to LedgerSpace instance using curl
+          echo "Downloading scripts to LedgerSpace instance..."
+          LEDGER_CMD_ID=$(aws ssm send-command \
+            --instance-ids "${{ env.LEDGER_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[
+              'curl -s \"$INSTALL_URL\" -o /tmp/install_neo4j.sh',
+              'curl -s \"$VERIFY_URL\" -o /tmp/verify_neo4j.sh',
+              'chmod +x /tmp/install_neo4j.sh /tmp/verify_neo4j.sh',
+              'ls -la /tmp/install_neo4j.sh /tmp/verify_neo4j.sh || echo \"Files not found\"',
+              'head -n 5 /tmp/install_neo4j.sh || echo \"Cannot read install script\"'
+            ]" \
+            --comment "Download scripts to LedgerSpace instance" \
+            --output text \
+            --query "Command.CommandId")
+          
+          # Download scripts to SearchSpace instance using curl
+          echo "Downloading scripts to SearchSpace instance..."
+          SEARCH_CMD_ID=$(aws ssm send-command \
+            --instance-ids "${{ env.SEARCH_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[
+              'curl -s \"$INSTALL_URL\" -o /tmp/install_neo4j.sh',
+              'curl -s \"$VERIFY_URL\" -o /tmp/verify_neo4j.sh',
+              'chmod +x /tmp/install_neo4j.sh /tmp/verify_neo4j.sh',
+              'ls -la /tmp/install_neo4j.sh /tmp/verify_neo4j.sh || echo \"Files not found\"',
+              'head -n 5 /tmp/install_neo4j.sh || echo \"Cannot read install script\"'
+            ]" \
+            --comment "Download scripts to SearchSpace instance" \
+            --output text \
+            --query "Command.CommandId")
+          
+          # Wait for commands to complete
+          echo "Waiting for script download commands to complete..."
+          aws ssm wait command-executed --command-id "$LEDGER_CMD_ID" --instance-id "${{ env.LEDGER_ID }}"
+          aws ssm wait command-executed --command-id "$SEARCH_CMD_ID" --instance-id "${{ env.SEARCH_ID }}"
+          
+          # Verify script downloads
+          echo "Verifying script download on LedgerSpace instance..."
+          aws ssm get-command-invocation \
+            --command-id "$LEDGER_CMD_ID" \
+            --instance-id "${{ env.LEDGER_ID }}" \
+            --query "StandardOutputContent" \
+            --output text
+          
+          echo "Verifying script download on SearchSpace instance..."
+          aws ssm get-command-invocation \
+            --command-id "$SEARCH_CMD_ID" \
+            --instance-id "${{ env.SEARCH_ID }}" \
+            --query "StandardOutputContent" \
+            --output text
+          
+          echo "Scripts downloaded to instances"
+
+      - name: Run Install Script on LedgerSpace
+        run: |
+          echo "Running install_neo4j.sh on LedgerSpace instance..."
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ env.LEDGER_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=['export PRIVATE_IP=${{ env.LEDGER_IP }} && bash -ex /tmp/install_neo4j.sh']" \
+            --output-s3-bucket-name "credexbuckets4-statebucket-${{ env.ENVIRONMENT }}" \
+            --output-s3-key-prefix "ssm-logs/ledgerspace-install" \
+            --timeout-seconds 3600 \
+            --comment "Install Neo4j on LedgerSpace instance" \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          # Custom wait with longer timeout (30 minutes)
+          echo "Waiting for install command to complete (up to 30 minutes)..."
+          MAX_WAIT_TIME=1800  # 30 minutes in seconds
+          WAIT_INTERVAL=60    # Check every minute
+          ELAPSED_TIME=0
+          
+          while [ $ELAPSED_TIME -lt $MAX_WAIT_TIME ]; do
+            # Get command status
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ env.LEDGER_ID }}" \
+              --query "Status" \
+              --output text 2>/dev/null || echo "Unknown")
+            
+            echo "Current status after $ELAPSED_TIME seconds: $STATUS"
+            
+            # Check if command has completed
+            if [[ "$STATUS" == "Success" ]]; then
+              echo "Command completed successfully"
+              break
+            elif [[ "$STATUS" == "Failed" || "$STATUS" == "Cancelled" || "$STATUS" == "TimedOut" ]]; then
+              echo "Command failed with status: $STATUS"
+              break
+            elif [[ "$STATUS" == "Unknown" ]]; then
+              echo "Could not retrieve command status, will retry..."
+            fi
+            
+            # Wait before checking again
+            sleep $WAIT_INTERVAL
+            ELAPSED_TIME=$((ELAPSED_TIME + WAIT_INTERVAL))
+            
+            # Show progress
+            echo "Waited $ELAPSED_TIME seconds out of $MAX_WAIT_TIME maximum..."
+          done
+          
+          # Get command output regardless of status
+          echo "Getting command output..."
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.LEDGER_ID }}" \
+            --query "StandardOutputContent" \
+            --output text || echo "Failed to get command output"
+          
+          echo "Getting command error output..."
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.LEDGER_ID }}" \
+            --query "StandardErrorContent" \
+            --output text || echo "Failed to get error output"
+          
+          # Final status check
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.LEDGER_ID }}" \
+            --query "Status" \
+            --output text 2>/dev/null || echo "Unknown")
+          
+          echo "Final command status: $STATUS"
+          
+          if [[ "$STATUS" != "Success" ]]; then
+            echo "ERROR: Neo4j installation on LedgerSpace instance failed with status: $STATUS"
+            echo "S3 logs location: s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/ledgerspace-install/"
+            
+            # Try to get any available logs from the instance
+            echo "Attempting to retrieve Neo4j logs from instance..."
+            aws ssm send-command \
+              --instance-ids "${{ env.LEDGER_ID }}" \
+              --document-name "AWS-RunShellScript" \
+              --parameters "commands=['ls -la /tmp/ && cat /var/log/neo4j/neo4j.log 2>/dev/null || echo \"Neo4j log not available\"']" \
+              --output text \
+              --query "Command.CommandId" | xargs -I{} aws ssm wait command-executed --command-id {} --instance-id "${{ env.LEDGER_ID }}" && \
+            aws ssm list-command-invocations \
+              --command-id {} \
+              --instance-id "${{ env.LEDGER_ID }}" \
+              --details \
+              --query "CommandInvocations[0].CommandPlugins[0].Output" \
+              --output text || echo "Could not retrieve additional logs"
+            
+            exit 1
+          fi
+          
+          echo "Installation of Neo4j on LedgerSpace instance completed successfully"
+          echo "LEDGER_INSTALL_STATUS=$STATUS" >> $GITHUB_ENV
+
+      - name: Run Install Script on SearchSpace
+        run: |
+          echo "Running install_neo4j.sh on SearchSpace instance..."
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ env.SEARCH_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=['export PRIVATE_IP=${{ env.SEARCH_IP }} && bash -ex /tmp/install_neo4j.sh']" \
+            --output-s3-bucket-name "credexbuckets4-statebucket-${{ env.ENVIRONMENT }}" \
+            --output-s3-key-prefix "ssm-logs/searchspace-install" \
+            --timeout-seconds 3600 \
+            --comment "Install Neo4j on SearchSpace instance" \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          # Custom wait with longer timeout (30 minutes)
+          echo "Waiting for install command to complete (up to 30 minutes)..."
+          MAX_WAIT_TIME=1800  # 30 minutes in seconds
+          WAIT_INTERVAL=60    # Check every minute
+          ELAPSED_TIME=0
+          
+          while [ $ELAPSED_TIME -lt $MAX_WAIT_TIME ]; do
+            # Get command status
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ env.SEARCH_ID }}" \
+              --query "Status" \
+              --output text 2>/dev/null || echo "Unknown")
+            
+            echo "Current status after $ELAPSED_TIME seconds: $STATUS"
+            
+            # Check if command has completed
+            if [[ "$STATUS" == "Success" ]]; then
+              echo "Command completed successfully"
+              break
+            elif [[ "$STATUS" == "Failed" || "$STATUS" == "Cancelled" || "$STATUS" == "TimedOut" ]]; then
+              echo "Command failed with status: $STATUS"
+              break
+            elif [[ "$STATUS" == "Unknown" ]]; then
+              echo "Could not retrieve command status, will retry..."
+            fi
+            
+            # Wait before checking again
+            sleep $WAIT_INTERVAL
+            ELAPSED_TIME=$((ELAPSED_TIME + WAIT_INTERVAL))
+            
+            # Show progress
+            echo "Waited $ELAPSED_TIME seconds out of $MAX_WAIT_TIME maximum..."
+          done
+          
+          # Get command output regardless of status
+          echo "Getting command output..."
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.SEARCH_ID }}" \
+            --query "StandardOutputContent" \
+            --output text || echo "Failed to get command output"
+          
+          echo "Getting command error output..."
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.SEARCH_ID }}" \
+            --query "StandardErrorContent" \
+            --output text || echo "Failed to get error output"
+          
+          # Final status check
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.SEARCH_ID }}" \
+            --query "Status" \
+            --output text 2>/dev/null || echo "Unknown")
+          
+          echo "Final command status: $STATUS"
+          
+          if [[ "$STATUS" != "Success" ]]; then
+            echo "ERROR: Neo4j installation on SearchSpace instance failed with status: $STATUS"
+            echo "S3 logs location: s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/searchspace-install/"
+            
+            # Try to get any available logs from the instance
+            echo "Attempting to retrieve Neo4j logs from instance..."
+            aws ssm send-command \
+              --instance-ids "${{ env.SEARCH_ID }}" \
+              --document-name "AWS-RunShellScript" \
+              --parameters "commands=['ls -la /tmp/ && cat /var/log/neo4j/neo4j.log 2>/dev/null || echo \"Neo4j log not available\"']" \
+              --output text \
+              --query "Command.CommandId" | xargs -I{} aws ssm wait command-executed --command-id {} --instance-id "${{ env.SEARCH_ID }}" && \
+            aws ssm list-command-invocations \
+              --command-id {} \
+              --instance-id "${{ env.SEARCH_ID }}" \
+              --details \
+              --query "CommandInvocations[0].CommandPlugins[0].Output" \
+              --output text || echo "Could not retrieve additional logs"
+            
+            exit 1
+          fi
+          
+          echo "Installation of Neo4j on SearchSpace instance completed successfully"
+          echo "SEARCH_INSTALL_STATUS=$STATUS" >> $GITHUB_ENV
+
+      - name: Run Verify Script on LedgerSpace
+        run: |
+          echo "Running verify_neo4j.sh on LedgerSpace instance..."
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ env.LEDGER_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=['bash -ex /tmp/verify_neo4j.sh']" \
+            --output-s3-bucket-name "credexbuckets4-statebucket-${{ env.ENVIRONMENT }}" \
+            --output-s3-key-prefix "ssm-logs/ledgerspace-verify" \
+            --comment "Verify Neo4j on LedgerSpace instance" \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          # Wait for command to complete
+          echo "Waiting for verify command to complete..."
+          if ! aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "${{ env.LEDGER_ID }}"; then
+            echo "ERROR: Command execution failed or timed out"
+            
+            # Try to get command details even if wait failed
+            echo "Getting command details..."
+            aws ssm describe-command-invocations \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ env.LEDGER_ID }}" \
+              --details || echo "Failed to get command details"
+            
+            # Try to get command output
+            echo "Getting command output..."
+            aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ env.LEDGER_ID }}" \
+              --query "StandardOutputContent" \
+              --output text || echo "Failed to get command output"
+            
+            echo "Getting command error output..."
+            aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ env.LEDGER_ID }}" \
+              --query "StandardErrorContent" \
+              --output text || echo "Failed to get error output"
+            
+            # Get S3 logs location
+            echo "S3 logs location: s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/ledgerspace-verify/"
+            
+            exit 1
+          fi
+          
+          # Get command output
+          echo "Getting command output..."
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.LEDGER_ID }}" \
+            --query "StandardOutputContent" \
+            --output text || echo "Failed to get command output"
+          
+          echo "Getting command error output..."
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.LEDGER_ID }}" \
+            --query "StandardErrorContent" \
+            --output text || echo "Failed to get error output"
+          
+          # Check command status
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.LEDGER_ID }}" \
+            --query "Status" \
+            --output text)
+          
+          echo "Command status: $STATUS"
+          
+          if [[ "$STATUS" != "Success" ]]; then
+            echo "ERROR: Neo4j verification on LedgerSpace instance failed with status: $STATUS"
+            echo "S3 logs location: s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/ledgerspace-verify/"
+            exit 1
+          fi
+          
+          echo "Verification of Neo4j on LedgerSpace instance completed successfully"
+          echo "LEDGER_VERIFY_STATUS=$STATUS" >> $GITHUB_ENV
+
+      - name: Run Verify Script on SearchSpace
+        run: |
+          echo "Running verify_neo4j.sh on SearchSpace instance..."
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "${{ env.SEARCH_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=['bash -ex /tmp/verify_neo4j.sh']" \
+            --output-s3-bucket-name "credexbuckets4-statebucket-${{ env.ENVIRONMENT }}" \
+            --output-s3-key-prefix "ssm-logs/searchspace-verify" \
+            --comment "Verify Neo4j on SearchSpace instance" \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          # Wait for command to complete
+          echo "Waiting for verify command to complete..."
+          if ! aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "${{ env.SEARCH_ID }}"; then
+            echo "ERROR: Command execution failed or timed out"
+            
+            # Try to get command details even if wait failed
+            echo "Getting command details..."
+            aws ssm describe-command-invocations \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ env.SEARCH_ID }}" \
+              --details || echo "Failed to get command details"
+            
+            # Try to get command output
+            echo "Getting command output..."
+            aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ env.SEARCH_ID }}" \
+              --query "StandardOutputContent" \
+              --output text || echo "Failed to get command output"
+            
+            echo "Getting command error output..."
+            aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ env.SEARCH_ID }}" \
+              --query "StandardErrorContent" \
+              --output text || echo "Failed to get error output"
+            
+            # Get S3 logs location
+            echo "S3 logs location: s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/searchspace-verify/"
+            
+            exit 1
+          fi
+          
+          # Get command output
+          echo "Getting command output..."
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.SEARCH_ID }}" \
+            --query "StandardOutputContent" \
+            --output text || echo "Failed to get command output"
+          
+          echo "Getting command error output..."
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.SEARCH_ID }}" \
+            --query "StandardErrorContent" \
+            --output text || echo "Failed to get error output"
+          
+          # Check command status
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ env.SEARCH_ID }}" \
+            --query "Status" \
+            --output text)
+          
+          echo "Command status: $STATUS"
+          
+          if [[ "$STATUS" != "Success" ]]; then
+            echo "ERROR: Neo4j verification on SearchSpace instance failed with status: $STATUS"
+            echo "S3 logs location: s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/searchspace-verify/"
+            exit 1
+          fi
+          
+          echo "Verification of Neo4j on SearchSpace instance completed successfully"
+          echo "SEARCH_VERIFY_STATUS=$STATUS" >> $GITHUB_ENV
 
       - name: Print Database Infrastructure Outputs
         run: |
@@ -139,32 +614,47 @@ jobs:
           echo "Database Infrastructure Outputs:"
           echo "========================================"
 
-          # Get all outputs
-          OUTPUTS=$(terraform output -json module.databases)
+          # Get individual outputs directly and clean them
+          LEDGER_ID=$(terraform output -raw neo4j_ledger_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 | tr -d '\n' || echo "")
+          LEDGER_IP=$(terraform output -raw neo4j_ledger_private_ip 2>/dev/null | head -n 1 | tr -d '\n' || echo "")
+          LEDGER_BOLT=$(terraform output -raw neo4j_ledger_bolt_endpoint 2>/dev/null | head -n 1 | tr -d '\n' || echo "")
+
+          SEARCH_ID=$(terraform output -raw neo4j_search_instance_id 2>/dev/null | grep -o "i-[a-z0-9]*" | head -n 1 | tr -d '\n' || echo "")
+          SEARCH_IP=$(terraform output -raw neo4j_search_private_ip 2>/dev/null | head -n 1 | tr -d '\n' || echo "")
+          SEARCH_BOLT=$(terraform output -raw neo4j_search_bolt_endpoint 2>/dev/null | head -n 1 | tr -d '\n' || echo "")
 
           # Print LedgerSpace details
           echo "Neo4j LedgerSpace Instance:"
-          echo "  Instance ID: $(echo $OUTPUTS | jq -r '.neo4j_ledger_instance_id.value')"
-          echo "  Private IP: $(echo $OUTPUTS | jq -r '.neo4j_ledger_private_ip.value')"
-          echo "  Bolt URL: $(echo $OUTPUTS | jq -r '.neo4j_ledger_bolt_endpoint.value')"
-          echo "  HTTP URL: http://$(echo $OUTPUTS | jq -r '.neo4j_ledger_private_ip.value'):7474"
-          echo "  HTTPS URL: https://$(echo $OUTPUTS | jq -r '.neo4j_ledger_private_ip.value'):7473"
+          echo "  Instance ID: $LEDGER_ID"
+          echo "  Private IP: $LEDGER_IP"
+          echo "  Bolt URL: $LEDGER_BOLT"
+          echo "  HTTP URL: http://$LEDGER_IP:7474"
+          echo "  HTTPS URL: https://$LEDGER_IP:7473"
+          echo "  Install Status: ${{ env.LEDGER_INSTALL_STATUS }}"
+          echo "  Verify Status: ${{ env.LEDGER_VERIFY_STATUS }}"
 
           echo ""
           echo "Neo4j SearchSpace Instance:"
-          echo "  Instance ID: $(echo $OUTPUTS | jq -r '.neo4j_search_instance_id.value')"
-          echo "  Private IP: $(echo $OUTPUTS | jq -r '.neo4j_search_private_ip.value')"
-          echo "  Bolt URL: $(echo $OUTPUTS | jq -r '.neo4j_search_bolt_endpoint.value')"
-          echo "  HTTP URL: http://$(echo $OUTPUTS | jq -r '.neo4j_search_private_ip.value'):7474"
-          echo "  HTTPS URL: https://$(echo $OUTPUTS | jq -r '.neo4j_search_private_ip.value'):7473"
+          echo "  Instance ID: $SEARCH_ID"
+          echo "  Private IP: $SEARCH_IP"
+          echo "  Bolt URL: $SEARCH_BOLT"
+          echo "  HTTP URL: http://$SEARCH_IP:7474"
+          echo "  HTTPS URL: https://$SEARCH_IP:7473"
+          echo "  Install Status: ${{ env.SEARCH_INSTALL_STATUS }}"
+          echo "  Verify Status: ${{ env.SEARCH_VERIFY_STATUS }}"
+
+          # Get Neo4j Browser Proxy URLs
+          LEDGER_BROWSER_URL=$(terraform output -raw neo4j_ledger_browser_url 2>/dev/null || echo "Not available")
+          SEARCH_BROWSER_URL=$(terraform output -raw neo4j_search_browser_url 2>/dev/null || echo "Not available")
+
+          echo ""
+          echo "Neo4j Browser Proxy URLs:"
+          echo "  Ledger Browser URL: $LEDGER_BROWSER_URL"
+          echo "  Search Browser URL: $SEARCH_BROWSER_URL"
 
           echo "========================================"
           echo "Please save these values securely. You may need to manually set them as GitHub secrets or use them in your application configuration."
           echo "Remember to set up the following secrets:"
           echo "- NEO_4J_LEDGER_SPACE_BOLT_URL"
           echo "- NEO_4J_SEARCH_SPACE_BOLT_URL"
-          echo "- NEO_4J_LEDGER_SPACE_USER"
-          echo "- NEO_4J_SEARCH_SPACE_USER"
-          echo "- NEO_4J_LEDGER_SPACE_PASS"
-          echo "- NEO_4J_SEARCH_SPACE_PASS"
           echo "========================================"

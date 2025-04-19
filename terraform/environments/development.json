@@ -10,7 +10,7 @@
     "memory": "512"
   },
   "neo4j": {
-    "instance_type": "t3.medium",
+    "instance_type": "t3.small",
     "volume_size": 50
   }
 }

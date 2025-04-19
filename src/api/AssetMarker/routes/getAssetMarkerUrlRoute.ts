@@ -62,6 +62,10 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.get("/getAssetMarkerUrl/:assetID", authMiddleware, GetAssetMarkerUrlController);
+router.get(
+  "/getAssetMarkerUrl/:assetID",
+  authMiddleware,
+  GetAssetMarkerUrlController
+);
 
 export default router;
