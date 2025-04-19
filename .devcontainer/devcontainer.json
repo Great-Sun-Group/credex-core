@@ -10,7 +10,6 @@
         "ms-azuretools.vscode-docker",
         "yzhang.markdown-all-in-one",
         "github.vscode-github-actions",
-        "ritwickdey.LiveServer",
         "bierner.markdown-mermaid"
       ],
       "settings": {
