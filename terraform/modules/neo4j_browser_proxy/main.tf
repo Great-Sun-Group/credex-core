@@ -452,13 +452,3 @@ resource "aws_lb_listener_rule" "neo4j_search_browser_redirect" {
     }
   }
 }
-
-
-output "neo4j_browser_credentials" {
-  description = "Credentials for accessing the Neo4j Browser"
-  value       = {
-    username = "admin"
-    password = var.browser_auth_password
-  }
-  sensitive = true
-}
