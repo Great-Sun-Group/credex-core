@@ -37,7 +37,7 @@ variable "alb_listener_arn" {
 }
 
 variable "browser_auth_password" {
-  description = "Password for Neo4j Browser authentication (uses CLIENT_API_KEY)"
+  description = "Password for Neo4j Browser authentication (temporarily not used, will be re-enabled later)"
   type        = string
   sensitive   = true
 }
