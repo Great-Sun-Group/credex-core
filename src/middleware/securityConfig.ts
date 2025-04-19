@@ -268,8 +268,7 @@ export const applyAuthMiddleware = (app: Application) => {
       // Keyholes in the auth layer where we don't apply the middleware
       req.path === "/login" ||
       req.path === "/v2/login" ||
-      req.path === "/neo4jbrowser-ledger/" ||
-      req.path === "/neo4jbrowser-search/" ||
+      req.path.endsWith("/browser") ||
       req.path.endsWith("/onboardMember") ||
       req.path === "/setInitialPassword" ||
       req.path.includes("/devadmin/") || // routes are not published in prod
