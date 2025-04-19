@@ -80,10 +80,26 @@ resource "aws_iam_instance_profile" "nginx_proxy" {
   role = aws_iam_role.nginx_proxy.name
 }
 
+# Get the latest Amazon Linux 2 AMI for the specified region
+data "aws_ami" "amazon_linux_2" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
 # Create EC2 instance for Nginx proxy
 resource "aws_instance" "nginx_proxy" {
   # Use the latest Amazon Linux 2 AMI for the specified region
-  ami                    = "ami-0a887e401f7654935" # Amazon Linux 2 AMI for af-south-1
+  ami                    = data.aws_ami.amazon_linux_2.id
   instance_type          = "t3.micro"
   subnet_id              = var.subnet_id
   vpc_security_group_ids = [aws_security_group.nginx_proxy.id]
