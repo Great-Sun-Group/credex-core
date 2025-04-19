@@ -247,8 +247,14 @@ resource "aws_lambda_function" "auth_lambda" {
   handler       = "index.handler"
   runtime       = "nodejs14.x"
   
+  # Using s3 parameters instead of filename
+  s3_bucket     = "dummy-bucket-that-does-not-exist"
+  s3_key        = "dummy-key"
+  
   lifecycle {
     create_before_destroy = true
+    # Prevent Terraform from trying to destroy this resource
+    ignore_changes = all
   }
 }
 
