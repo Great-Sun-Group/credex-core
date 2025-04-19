@@ -63,8 +63,115 @@ resource "aws_lb_target_group_attachment" "neo4j_search" {
   }
 }
 
-# Authentication has been temporarily removed to fix Terraform errors
-# Will be added back later
+# Keep IAM role for Lambda but disable authentication temporarily
+resource "aws_iam_role" "lambda_edge_role" {
+  name = "neo4j-browser-auth-lambda-role-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = [
+            "lambda.amazonaws.com",
+            "edgelambda.amazonaws.com"
+          ]
+        }
+      }
+    ]
+  })
+
+  tags = var.common_tags
+}
+
+resource "aws_iam_role_policy" "lambda_edge_policy" {
+  name = "neo4j-browser-auth-lambda-policy-${var.environment}"
+  role = aws_iam_role.lambda_edge_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      }
+    ]
+  })
+}
+
+# Store the password in AWS Secrets Manager
+resource "aws_secretsmanager_secret" "neo4j_browser_password" {
+  name        = "neo4j-browser-password-${var.environment}"
+  description = "Password for Neo4j Browser access"
+  
+  tags = merge(var.common_tags, {
+    Name = "neo4j-browser-password-${var.environment}"
+  })
+}
+
+resource "aws_secretsmanager_secret_version" "neo4j_browser_password" {
+  secret_id     = aws_secretsmanager_secret.neo4j_browser_password.id
+  secret_string = jsonencode({
+    username = "admin"
+    password = var.browser_auth_password
+  })
+}
+
+# Create Lambda function for ALB authentication (temporarily disabled)
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  output_path = "${path.module}/lambda_function.zip"
+
+  source {
+    content = <<EOF
+exports.handler = async (event, context) => {
+    console.log('Authentication request:', JSON.stringify(event));
+    
+    // Authentication is temporarily disabled - always return authorized
+    return {
+        isAuthorized: true,
+        context: {
+            user: "admin"
+        }
+    };
+};
+EOF
+    filename = "index.js"
+  }
+}
+
+resource "aws_lambda_function" "auth_lambda" {
+  filename         = data.archive_file.lambda_zip.output_path
+  function_name    = "neo4j-browser-auth-${var.environment}"
+  role             = aws_iam_role.lambda_edge_role.arn
+  handler          = "index.handler"
+  runtime          = "nodejs18.x"
+  publish          = true
+  
+  environment {
+    variables = {
+      AUTH_USERNAME = "admin"
+      AUTH_PASSWORD = var.browser_auth_password
+    }
+  }
+  
+  tags = var.common_tags
+}
+
+# Create Lambda permission for ALB
+resource "aws_lambda_permission" "alb_auth_permission" {
+  statement_id  = "AllowExecutionFromALB"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.auth_lambda.function_name
+  principal     = "elasticloadbalancing.amazonaws.com"
+}
 
 # Create ALB listener rules for Neo4j Browser with simplified login pages
 resource "aws_lb_listener_rule" "neo4j_ledger_browser" {
