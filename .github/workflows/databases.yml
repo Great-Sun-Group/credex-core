@@ -44,9 +44,10 @@ jobs:
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
-          # Add dummy values for required variables since they're not used by the databases module
+          # Use actual CLIENT_API_KEY for Neo4j Browser authentication
+          TF_VAR_client_api_key: ${{ secrets.CLIENT_API_KEY }}
+          # Add dummy values for other required variables since they're not used by the databases module
           TF_VAR_jwt_secret: "dummy"
-          TF_VAR_client_api_key: "dummy"
           TF_VAR_dev_admin_key: "dummy"
           TF_VAR_skip_rate_limiter_key: "dummy"
           TF_VAR_open_exchange_rates_api: "dummy"
@@ -61,15 +62,16 @@ jobs:
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
           echo "Planning Terraform changes..."
-          terraform plan -input=false -out=tfplan -target=module.databases -replace="module.databases.aws_instance.neo4j_ledger" -replace="module.databases.aws_instance.neo4j_search"
+          terraform plan -input=false -out=tfplan -target=module.databases -target=module.neo4j_browser_proxy -replace="module.databases.aws_instance.neo4j_ledger" -replace="module.databases.aws_instance.neo4j_search"
 
       - name: Terraform Apply
         env:
           TF_VAR_environment: ${{ env.ENVIRONMENT }}
           TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
-          # Add dummy values for required variables since they're not used by the databases module
+          # Use actual CLIENT_API_KEY for Neo4j Browser authentication
+          TF_VAR_client_api_key: ${{ secrets.CLIENT_API_KEY }}
+          # Add dummy values for other required variables since they're not used by the databases module
           TF_VAR_jwt_secret: "dummy"
-          TF_VAR_client_api_key: "dummy"
           TF_VAR_dev_admin_key: "dummy"
           TF_VAR_skip_rate_limiter_key: "dummy"
           # Add dummy values for Neo4j bolt URLs that will be replaced with real values after deployment
@@ -640,6 +642,15 @@ jobs:
           echo "  HTTPS URL: https://$SEARCH_IP:7473"
           echo "  Install Status: ${{ env.SEARCH_INSTALL_STATUS }}"
           echo "  Verify Status: ${{ env.SEARCH_VERIFY_STATUS }}"
+
+          # Get Neo4j Browser Proxy URLs
+          LEDGER_BROWSER_URL=$(terraform output -raw neo4j_ledger_browser_url 2>/dev/null || echo "Not available")
+          SEARCH_BROWSER_URL=$(terraform output -raw neo4j_search_browser_url 2>/dev/null || echo "Not available")
+
+          echo ""
+          echo "Neo4j Browser Proxy URLs:"
+          echo "  Ledger Browser URL: $LEDGER_BROWSER_URL"
+          echo "  Search Browser URL: $SEARCH_BROWSER_URL"
 
           echo "========================================"
           echo "Please save these values securely. You may need to manually set them as GitHub secrets or use them in your application configuration."

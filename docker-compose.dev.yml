@@ -164,6 +164,29 @@ services:
     profiles:
       - dev
 
+  # Nginx proxy for Neo4j Browser
+  nginx:
+    image: nginx:latest
+    depends_on:
+      neo4j-ledger:
+        condition: service_healthy
+      neo4j-search:
+        condition: service_healthy
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/.htpasswd:/etc/nginx/.htpasswd
+    ports:
+      - "8080:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    profiles:
+      - dev
+
 volumes:
   neo4j-ledger-data:
   neo4j-ledger-logs:

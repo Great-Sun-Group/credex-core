@@ -83,6 +83,25 @@
   display: none;
   z-index: 1001;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  max-height: 80vh; /* Limit height to 80% of viewport height */
+  overflow-y: auto; /* Enable vertical scrolling */
+  scrollbar-width: thin; /* For Firefox */
+  scrollbar-color: #04a0b2 rgba(6, 21, 31, 0.5); /* For Firefox */
+}
+
+/* Custom scrollbar styling for Webkit browsers (Chrome, Safari, Edge) */
+.dropdown-menu::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dropdown-menu::-webkit-scrollbar-track {
+  background: rgba(6, 21, 31, 0.5);
+  border-radius: 4px;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb {
+  background-color: #04a0b2;
+  border-radius: 4px;
 }
 
 .dropdown.active .dropdown-menu {

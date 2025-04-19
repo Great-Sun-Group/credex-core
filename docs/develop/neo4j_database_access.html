@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Neo4j Database Access - Credex Developer Documentation</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+    
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">Neo4j Database Access</h1>
+    
+    <p>
+      Credex-core runs on two Neo4j databases. This page provides connection information for accessing these databases directly through the Neo4j Browser interface.
+    </p>
+
+    <blockquote>
+      <p><strong>Important:</strong> When accessing the Neo4j Browser, you'll need to manually enter these connection URLs to ensure you're connecting to the correct database.</p>
+    </blockquote>
+
+    <h2>Development Environment</h2>
+    <p>
+      In the development environment, the Neo4j databases are accessible through Docker containers:
+    </p>
+
+    <h3>Neo4j Ledger Database</h3>
+    <p>Connection URL: <code id="dev-ledger-url">localhost:7687</code> <button onclick="copyToClipboard('dev-ledger-url')" style="background-color: #04a0b2; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Copy</button></p>
+    <p>Browser URL: <a href="http://localhost:7474/browser/" target="_blank">http://localhost:7474/browser/</a></p>
+
+    <h3>Neo4j Search Database</h3>
+    <p>Connection URL: <code id="dev-search-url">localhost:7688</code> <button onclick="copyToClipboard('dev-search-url')" style="background-color: #04a0b2; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Copy</button></p>
+    <p>Browser URL: <a href="http://localhost:7475/browser/" target="_blank">http://localhost:7475/browser/</a></p>
+
+    <h2>Production Environment</h2>
+    <p>
+      In the production environment, the Neo4j databases are deployed on AWS EC2 instances. The actual connection URLs and browser URLs are displayed in the output of the databases.yml workflow after deployment.
+    </p>
+
+    <h3>Neo4j Ledger Database</h3>
+    <p>Connection URL format: <code>bolt://[neo4j_ledger_private_ip]:7687</code></p>
+    <p>Browser URL format: <code>https://[domain]/neo4jbrowser-ledger-login</code></p>
+    <p><em>Note: Replace [neo4j_ledger_private_ip] and [domain] with the actual values from the workflow output.</em></p>
+
+    <h3>Neo4j Search Database</h3>
+    <p>Connection URL format: <code>bolt://[neo4j_search_private_ip]:7687</code></p>
+    <p>Browser URL format: <code>https://[domain]/neo4jbrowser-search-login</code></p>
+    <p><em>Note: Replace [neo4j_search_private_ip] and [domain] with the actual values from the workflow output.</em></p>
+    
+    <h3>Finding the Actual URLs</h3>
+    <p>
+      To get the actual URLs for the production environment:
+    </p>
+    <ol>
+      <li>Run the databases.yml workflow in GitHub Actions</li>
+      <li>Check the output of the "Print Database Infrastructure Outputs" step</li>
+      <li>Look for the "Neo4j LedgerSpace Instance" and "Neo4j SearchSpace Instance" sections to find the private IPs</li>
+      <li>Look for the "Neo4j Browser Proxy URLs" section to find the browser URLs</li>
+    </ol>
+
+    <script>
+      function copyToClipboard(elementId) {
+        const element = document.getElementById(elementId);
+        const text = element.textContent;
+        
+        navigator.clipboard.writeText(text)
+          .then(() => {
+            // Visual feedback
+            const button = element.nextElementSibling;
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            setTimeout(() => {
+              button.textContent = originalText;
+            }, 2000);
+          })
+          .catch(err => {
+            console.error('Failed to copy text: ', err);
+            
+            // Fallback for older browsers
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+              document.execCommand('copy');
+              // Visual feedback
+              const button = element.nextElementSibling;
+              const originalText = button.textContent;
+              button.textContent = 'Copied!';
+              setTimeout(() => {
+                button.textContent = originalText;
+              }, 2000);
+            } catch (err) {
+              console.error('Fallback failed: ', err);
+              alert('Failed to copy text. Please try again.');
+            }
+            
+            document.body.removeChild(textarea);
+          });
+      }
+    </script>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script src="../js/template.js"></script>
+    <script src="../js/dropdown.js"></script>
+  </body>
+</html>
