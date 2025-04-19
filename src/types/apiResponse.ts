@@ -53,6 +53,9 @@ export enum ApiActionType {
   DASHBOARD_RETRIEVED = "DASHBOARD_RETRIEVED",
   SPEND_AUTHORIZED = "SPEND_AUTHORIZED",
   HUSTLER_10K_ENROLLED = "HUSTLER_10K_ENROLLED",
+  
+  // App actions
+  APP_VERSION_CHECK = "APP_VERSION_CHECK",
 
   // Account actions
   ACCOUNT_CREATED = "ACCOUNT_CREATED",
@@ -228,6 +231,31 @@ export interface ErrorActionDetails {
   reason: string;
   field?: string;
   suggestion?: string;
+}
+
+export interface AppActionDetails {
+  update_available: boolean;
+  latest_version?: string;
+  update_required?: boolean;
+  update_priority?: 'low' | 'medium' | 'high' | 'critical';
+  update_type?: 'patch' | 'minor' | 'major';
+  update_url?: string;
+  file_size_bytes?: number;
+  release_notes?: string;
+  release_date?: string;
+  
+  // New fields for checksums
+  integrity?: {
+    algorithm: string;
+    checksum: string;
+    checksumUrl: string;
+  };
+  architecture_specific_downloads?: {
+    [key: string]: {
+      url: string;
+      checksum: string;
+    };
+  };
 }
 
 /**

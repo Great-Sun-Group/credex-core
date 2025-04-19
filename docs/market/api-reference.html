@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="../css/layout.css" />
     <link rel="stylesheet" href="../css/components.css" />
     <link rel="stylesheet" href="../css/responsive.css" />
-    <link rel="stylesheet" href="css/variables.css" />
     <link rel="stylesheet" href="css/market.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
@@ -37,16 +36,10 @@
             <a href="api-reference.html">API Reference</a>
           </li>
           <li class="nav-item">
-            <a href="api-workplan.html">API Implementation</a>
+            <a href="ui-specs.html">UI Specifications</a>
           </li>
           <li class="nav-item">
-            <a href="api-testing.html">API Testing</a>
-          </li>
-          <li class="nav-item">
-            <a href="ui-specs-seller.html">UI Specs Seller</a>
-          </li>
-          <li class="nav-item">
-            <a href="ui-specs-purchaser.html">UI Specs Purchaser</a>
+            <a href="workplan.html">Implementation Workplan</a>
           </li>
         </ul>
       </div>
@@ -76,7 +69,6 @@
             <div class="tab" data-tab="invoice-endpoints">
               Invoice Endpoints
             </div>
-            <div class="tab" data-tab="credex-endpoints">Credex Endpoints</div>
           </div>
 
           <!-- Member Endpoints Tab Content -->
@@ -288,18 +280,6 @@
                 <ul>
                   <li><code>assetName</code>: string</li>
                   <li>
-                    <code>crAccounts</code>: Array of {accountID, amount}
-                    objects
-                  </li>
-                  <li>
-                    <code>drAccounts</code>: Array of {accountID, amount}
-                    objects
-                  </li>
-                  <li>
-                    <code>denomination</code>: string (optional, defaults to
-                    "USD")
-                  </li>
-                  <li>
                     Arbitrary key/value pairs and/or neo4j-safed objects up to
                     max size of 2kb
                   </li>
@@ -309,16 +289,6 @@
                   <li>
                     <code>AssetMarkerData</code>: Object - Data for AssetMarkers
                     created when a connected credex is accepted
-                  </li>
-                </ul>
-              </div>
-              <div class="endpoint-operations">
-                <h5>Operations:</h5>
-                <ul>
-                  <li>Creates AssetMarker nodes with a shared GLid</li>
-                  <li>Each AssetMarker has a single CR and DR relationship</li>
-                  <li>
-                    The sum of CR amounts must equal the sum of DR amounts
                   </li>
                 </ul>
               </div>
@@ -398,7 +368,7 @@
                   </li>
                   <li>
                     <code>relName</code>: string - One of
-                    [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_THUMBNAIL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
+                    [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
                   </li>
                 </ul>
               </div>
@@ -426,7 +396,7 @@
                   </li>
                   <li>
                     <code>relName</code>: string - One of
-                    [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_THUMBNAIL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
+                    [:USED_IN|PROFILE_PIC_ORIGINAL_JPG|PROFILE_PIC_200_JPG|PROFILE_PIC_600_JPG]
                   </li>
                 </ul>
               </div>
@@ -457,35 +427,11 @@
               <div class="endpoint-params">
                 <h5>Parameters:</h5>
                 <ul>
+                  <li><code>payment accountID</code>: string - Account</li>
                   <li>
-                    <code>paymentAccountID</code>: string - Account ID to
-                    receive payment
+                    <code>AssetMarkerData</code>: Object - Data for AssetMarkers
+                    created when a connected credex is accepted
                   </li>
-                  <li>
-                    <code>AssetMarkerData</code>: Object - Data for invoice
-                    items
-                    <ul>
-                      <li><code>items</code>: Array of item objects</li>
-                      <li><code>total</code>: number - Total amount</li>
-                      <li>
-                        <code>currency</code>: string - Currency denomination
-                      </li>
-                      <li>
-                        <code>notes</code>: string (optional) - Additional notes
-                      </li>
-                    </ul>
-                  </li>
-                </ul>
-              </div>
-              <div class="endpoint-operations">
-                <h5>Operations:</h5>
-                <ul>
-                  <li>Creates an Invoice node with the specified properties</li>
-                  <li>
-                    Creates a CREDITS_TO relationship to the payment account
-                  </li>
-                  <li>Digitally signs the invoice</li>
-                  <li>Generates a QR code link for the invoice</li>
                 </ul>
               </div>
               <div class="endpoint-returns">

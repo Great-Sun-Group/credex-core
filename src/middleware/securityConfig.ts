@@ -273,9 +273,9 @@ export const applyAuthMiddleware = (app: Application) => {
       req.path.endsWith("/onboardMember") ||
       req.path === "/setInitialPassword" ||
       req.path.includes("/devadmin/") || // routes are not published in prod
-      (req.path.includes("/verify/") &&
-        (req.body?.purpose === "PASSWORD_RESET" || req.method === "OPTIONS")) ||
-      req.path === "/resetPassword"
+      (req.path.includes("/verify/") && (req.body?.purpose === "PASSWORD_RESET" || req.method === "OPTIONS")) ||
+      req.path === "/resetPassword" ||
+      req.path.includes("/app/version-check") // App version endpoints only need client API key
     ) {
       logger.debug("[SC3] Skipping auth middleware for path", {
         path: req.path,

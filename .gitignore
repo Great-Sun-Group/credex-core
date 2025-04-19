@@ -170,3 +170,4 @@ aws/*.log
 
 # PR cleanup script
 cleanup-pr.sh
+.env.dev
