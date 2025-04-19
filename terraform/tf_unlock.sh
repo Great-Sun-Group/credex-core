@@ -52,10 +52,10 @@ echo "AWS Region: $AWS_REGION"
 # Initialize with correct backend config
 echo "Initializing Terraform for $ENV environment..."
 terraform init -reconfigure \
-  -backend-config="bucket=credexbuckets3-deploy-state-$ENV" \
+  -backend-config="bucket=credexbuckets4-deploy-state-$ENV" \
   -backend-config="key=terraform.tfstate" \
   -backend-config="region=af-south-1" \
-  -backend-config="dynamodb_table=credexbuckets3-deploy-state-lock-$ENV"
+  -backend-config="dynamodb_table=credexbuckets4-deploy-state-lock-$ENV"
 
 # Run force-unlock command directly without extra vars
 echo "Running terraform force-unlock..."
