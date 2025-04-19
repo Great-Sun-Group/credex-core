@@ -53,7 +53,8 @@ terraform $TF_CMD \
     -var="neo4j_enterprise_license=$NEO4J_ENTERPRISE_LICENSE" \
     -var="firebase_project_id=$FIREBASE_PROJECT_ID" \
     -var="firebase_client_email=$FIREBASE_CLIENT_EMAIL" \
-    -var="firebase_private_key=$FIREBASE_PRIVATE_KEY"
+    -var="firebase_private_key=$FIREBASE_PRIVATE_KEY" \
+    -var="client_api_key=$CLIENT_API_KEY"
 
 # Usage instructions if no command specified
 if [ $# -eq 0 ]; then
