@@ -207,68 +207,7 @@ resource "aws_lb_listener_rule" "neo4j_ledger_browser" {
     fixed_response {
       content_type = "text/html"
       message_body = <<EOF
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Neo4j Ledger Browser Authentication</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    .container { max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-    h1 { color: #04a0b2; }
-    input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
-    button { background-color: #04a0b2; color: white; padding: 10px 15px; border: none; cursor: pointer; }
-    .error { color: red; display: none; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Neo4j Ledger Browser</h1>
-    <p>Please enter your credentials to access the Neo4j Ledger Browser:</p>
-    <div id="error" class="error">Invalid username or password</div>
-    <form id="auth-form">
-      <div>
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required>
-      </div>
-      <div>
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required>
-      </div>
-      <button type="submit">Login</button>
-    </form>
-  </div>
-  
-  <script>
-    document.getElementById('auth-form').addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
-      
-      // Create Basic Auth header
-      const authHeader = 'Basic ' + btoa(username + ':' + password);
-      
-      // Redirect to the actual Neo4j Browser with the auth header
-      fetch('/neo4jbrowser-ledger/', {
-        headers: {
-          'Authorization': authHeader
-        }
-      })
-      .then(response => {
-        if (response.ok) {
-          window.location.href = '/neo4jbrowser-ledger/';
-        } else {
-          document.getElementById('error').style.display = 'block';
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        document.getElementById('error').style.display = 'block';
-      });
-    });
-  </script>
-</body>
-</html>
+<!DOCTYPE html><html><head><title>Neo4j Ledger Login</title><style>body{font-family:sans-serif;margin:20px}form{max-width:300px;margin:0 auto}input{width:100%;margin:5px 0;padding:5px}button{background:#04a0b2;color:white;border:none;padding:8px;cursor:pointer}#error{color:red;display:none}</style></head><body><h2>Neo4j Ledger Browser</h2><div id="error">Invalid credentials</div><form id="f"><input id="u" placeholder="Username" required><input type="password" id="p" placeholder="Password" required><button type="submit">Login</button></form><script>document.getElementById("f").addEventListener("submit",function(e){e.preventDefault();const h="Basic "+btoa(document.getElementById("u").value+":"+document.getElementById("p").value);fetch("/neo4jbrowser-ledger/",{headers:{Authorization:h}}).then(r=>r.ok?location.href="/neo4jbrowser-ledger/":document.getElementById("error").style.display="block").catch(()=>document.getElementById("error").style.display="block")})</script></body></html>
 EOF
       status_code = "200"
     }
@@ -291,68 +230,7 @@ resource "aws_lb_listener_rule" "neo4j_search_browser" {
     fixed_response {
       content_type = "text/html"
       message_body = <<EOF
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Neo4j Search Browser Authentication</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    .container { max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-    h1 { color: #04a0b2; }
-    input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
-    button { background-color: #04a0b2; color: white; padding: 10px 15px; border: none; cursor: pointer; }
-    .error { color: red; display: none; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Neo4j Search Browser</h1>
-    <p>Please enter your credentials to access the Neo4j Search Browser:</p>
-    <div id="error" class="error">Invalid username or password</div>
-    <form id="auth-form">
-      <div>
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required>
-      </div>
-      <div>
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required>
-      </div>
-      <button type="submit">Login</button>
-    </form>
-  </div>
-  
-  <script>
-    document.getElementById('auth-form').addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
-      
-      // Create Basic Auth header
-      const authHeader = 'Basic ' + btoa(username + ':' + password);
-      
-      // Redirect to the actual Neo4j Browser with the auth header
-      fetch('/neo4jbrowser-search/', {
-        headers: {
-          'Authorization': authHeader
-        }
-      })
-      .then(response => {
-        if (response.ok) {
-          window.location.href = '/neo4jbrowser-search/';
-        } else {
-          document.getElementById('error').style.display = 'block';
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        document.getElementById('error').style.display = 'block';
-      });
-    });
-  </script>
-</body>
-</html>
+<!DOCTYPE html><html><head><title>Neo4j Search Login</title><style>body{font-family:sans-serif;margin:20px}form{max-width:300px;margin:0 auto}input{width:100%;margin:5px 0;padding:5px}button{background:#04a0b2;color:white;border:none;padding:8px;cursor:pointer}#error{color:red;display:none}</style></head><body><h2>Neo4j Search Browser</h2><div id="error">Invalid credentials</div><form id="f"><input id="u" placeholder="Username" required><input type="password" id="p" placeholder="Password" required><button type="submit">Login</button></form><script>document.getElementById("f").addEventListener("submit",function(e){e.preventDefault();const h="Basic "+btoa(document.getElementById("u").value+":"+document.getElementById("p").value);fetch("/neo4jbrowser-search/",{headers:{Authorization:h}}).then(r=>r.ok?location.href="/neo4jbrowser-search/":document.getElementById("error").style.display="block").catch(()=>document.getElementById("error").style.display="block")})</script></body></html>
 EOF
       status_code = "200"
     }

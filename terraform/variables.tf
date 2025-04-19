@@ -30,6 +30,13 @@ variable "firebase_project_id" {
   sensitive   = true
 }
 
+# Client API key for Neo4j browser authentication
+variable "client_api_key" {
+  description = "API key used for Neo4j browser authentication"
+  type        = string
+  sensitive   = true
+}
+
 variable "firebase_client_email" {
   description = "The Firebase client email"
   type        = string
