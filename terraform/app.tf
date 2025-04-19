@@ -2,7 +2,7 @@
 data "terraform_remote_state" "databases" {
   backend = "s3"
   config = {
-    bucket = "credexbuckets4-statebucket-${var.environment}"
+    bucket = "credexbuckets5-statebucket-${var.environment}"
     key    = "terraform.tfstate"
     region = "af-south-1"
   }

@@ -35,10 +35,10 @@ jobs:
           cd terraform
           echo "Initializing Terraform..."
           terraform init \
-            -backend-config="bucket=credexbuckets4-statebucket-${ENVIRONMENT}" \
+            -backend-config="bucket=credexbuckets5-statebucket-${ENVIRONMENT}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=credexbuckets4-statebucket-lock-${ENVIRONMENT}"
+            -backend-config="dynamodb_table=credexbuckets5-statebucket-lock-${ENVIRONMENT}"
 
       - name: Terraform Plan
         env:
@@ -176,13 +176,13 @@ jobs:
           
           # Upload scripts to S3
           echo "Uploading scripts to S3..."
-          aws s3 cp .github/scripts/install_neo4j.sh s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/scripts/install_neo4j.sh
-          aws s3 cp .github/scripts/verify_neo4j.sh s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/scripts/verify_neo4j.sh
+          aws s3 cp .github/scripts/install_neo4j.sh s3://credexbuckets5-statebucket-${{ env.ENVIRONMENT }}/scripts/install_neo4j.sh
+          aws s3 cp .github/scripts/verify_neo4j.sh s3://credexbuckets5-statebucket-${{ env.ENVIRONMENT }}/scripts/verify_neo4j.sh
           
           # Create a pre-signed URL for the scripts (valid for 15 minutes)
           echo "Creating pre-signed URLs for scripts..."
-          INSTALL_URL=$(aws s3 presign s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/scripts/install_neo4j.sh --expires-in 900)
-          VERIFY_URL=$(aws s3 presign s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/scripts/verify_neo4j.sh --expires-in 900)
+          INSTALL_URL=$(aws s3 presign s3://credexbuckets5-statebucket-${{ env.ENVIRONMENT }}/scripts/install_neo4j.sh --expires-in 900)
+          VERIFY_URL=$(aws s3 presign s3://credexbuckets5-statebucket-${{ env.ENVIRONMENT }}/scripts/verify_neo4j.sh --expires-in 900)
           
           echo "Using curl to download scripts to instances..."
           
@@ -248,7 +248,7 @@ jobs:
             --instance-ids "${{ env.LEDGER_ID }}" \
             --document-name "AWS-RunShellScript" \
             --parameters "commands=['export PRIVATE_IP=${{ env.LEDGER_IP }} && bash -ex /tmp/install_neo4j.sh']" \
-            --output-s3-bucket-name "credexbuckets4-statebucket-${{ env.ENVIRONMENT }}" \
+            --output-s3-bucket-name "credexbuckets5-statebucket-${{ env.ENVIRONMENT }}" \
             --output-s3-key-prefix "ssm-logs/ledgerspace-install" \
             --timeout-seconds 3600 \
             --comment "Install Neo4j on LedgerSpace instance" \
@@ -318,7 +318,7 @@ jobs:
           
           if [[ "$STATUS" != "Success" ]]; then
             echo "ERROR: Neo4j installation on LedgerSpace instance failed with status: $STATUS"
-            echo "S3 logs location: s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/ledgerspace-install/"
+            echo "S3 logs location: s3://credexbuckets5-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/ledgerspace-install/"
             
             # Try to get any available logs from the instance
             echo "Attempting to retrieve Neo4j logs from instance..."
@@ -349,7 +349,7 @@ jobs:
             --instance-ids "${{ env.SEARCH_ID }}" \
             --document-name "AWS-RunShellScript" \
             --parameters "commands=['export PRIVATE_IP=${{ env.SEARCH_IP }} && bash -ex /tmp/install_neo4j.sh']" \
-            --output-s3-bucket-name "credexbuckets4-statebucket-${{ env.ENVIRONMENT }}" \
+            --output-s3-bucket-name "credexbuckets5-statebucket-${{ env.ENVIRONMENT }}" \
             --output-s3-key-prefix "ssm-logs/searchspace-install" \
             --timeout-seconds 3600 \
             --comment "Install Neo4j on SearchSpace instance" \
@@ -419,7 +419,7 @@ jobs:
           
           if [[ "$STATUS" != "Success" ]]; then
             echo "ERROR: Neo4j installation on SearchSpace instance failed with status: $STATUS"
-            echo "S3 logs location: s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/searchspace-install/"
+            echo "S3 logs location: s3://credexbuckets5-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/searchspace-install/"
             
             # Try to get any available logs from the instance
             echo "Attempting to retrieve Neo4j logs from instance..."
@@ -450,7 +450,7 @@ jobs:
             --instance-ids "${{ env.LEDGER_ID }}" \
             --document-name "AWS-RunShellScript" \
             --parameters "commands=['bash -ex /tmp/verify_neo4j.sh']" \
-            --output-s3-bucket-name "credexbuckets4-statebucket-${{ env.ENVIRONMENT }}" \
+            --output-s3-bucket-name "credexbuckets5-statebucket-${{ env.ENVIRONMENT }}" \
             --output-s3-key-prefix "ssm-logs/ledgerspace-verify" \
             --comment "Verify Neo4j on LedgerSpace instance" \
             --query "Command.CommandId" \
@@ -486,7 +486,7 @@ jobs:
               --output text || echo "Failed to get error output"
             
             # Get S3 logs location
-            echo "S3 logs location: s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/ledgerspace-verify/"
+            echo "S3 logs location: s3://credexbuckets5-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/ledgerspace-verify/"
             
             exit 1
           fi
@@ -517,7 +517,7 @@ jobs:
           
           if [[ "$STATUS" != "Success" ]]; then
             echo "ERROR: Neo4j verification on LedgerSpace instance failed with status: $STATUS"
-            echo "S3 logs location: s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/ledgerspace-verify/"
+            echo "S3 logs location: s3://credexbuckets5-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/ledgerspace-verify/"
             exit 1
           fi
           
@@ -532,7 +532,7 @@ jobs:
             --instance-ids "${{ env.SEARCH_ID }}" \
             --document-name "AWS-RunShellScript" \
             --parameters "commands=['bash -ex /tmp/verify_neo4j.sh']" \
-            --output-s3-bucket-name "credexbuckets4-statebucket-${{ env.ENVIRONMENT }}" \
+            --output-s3-bucket-name "credexbuckets5-statebucket-${{ env.ENVIRONMENT }}" \
             --output-s3-key-prefix "ssm-logs/searchspace-verify" \
             --comment "Verify Neo4j on SearchSpace instance" \
             --query "Command.CommandId" \
@@ -568,7 +568,7 @@ jobs:
               --output text || echo "Failed to get error output"
             
             # Get S3 logs location
-            echo "S3 logs location: s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/searchspace-verify/"
+            echo "S3 logs location: s3://credexbuckets5-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/searchspace-verify/"
             
             exit 1
           fi
@@ -599,7 +599,7 @@ jobs:
           
           if [[ "$STATUS" != "Success" ]]; then
             echo "ERROR: Neo4j verification on SearchSpace instance failed with status: $STATUS"
-            echo "S3 logs location: s3://credexbuckets4-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/searchspace-verify/"
+            echo "S3 logs location: s3://credexbuckets5-statebucket-${{ env.ENVIRONMENT }}/ssm-logs/searchspace-verify/"
             exit 1
           fi
           
