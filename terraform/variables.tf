@@ -35,6 +35,7 @@ variable "client_api_key" {
   description = "API key used for Neo4j browser authentication"
   type        = string
   sensitive   = true
+  default     = "default-api-key-for-development"  # Default value for development environment
 }
 
 variable "firebase_client_email" {
