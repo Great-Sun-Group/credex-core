@@ -14,55 +14,59 @@ process.env.WINSTON_SILENT = "true";
 // Disable console output from the server
 process.env.SILENT = "true";
 
-
-
-
 // Parse command line arguments handling quoted strings
 function parseArgs(args) {
   // Join all arguments with spaces
-  const argsString = args.join(' ');
+  const argsString = args.join(" ");
   const result = [];
-  let current = '';
+  let current = "";
   let inQuotes = false;
-  let quoteChar = '';
+  let quoteChar = "";
 
   // Process character by character
   for (let i = 0; i < argsString.length; i++) {
     const char = argsString[i];
-    
+
     // Handle quotes
-    if ((char === '"' || char === "'") && (i === 0 || argsString[i-1] === ' ')) {
+    if (
+      (char === '"' || char === "'") &&
+      (i === 0 || argsString[i - 1] === " ")
+    ) {
       inQuotes = true;
       quoteChar = char;
       continue;
     }
-    
+
     // Handle end of quotes
-    if (inQuotes && char === quoteChar && (i === argsString.length - 1 || argsString[i+1] === ' ')) {
+    if (
+      inQuotes &&
+      char === quoteChar &&
+      (i === argsString.length - 1 || argsString[i + 1] === " ")
+    ) {
       inQuotes = false;
       result.push(current);
-      current = '';
+      current = "";
       continue;
     }
-    
+
     // Handle spaces outside quotes
-    if (char === ' ' && !inQuotes) {
+    if (char === " " && !inQuotes) {
       if (current) {
         result.push(current);
-        current = '';
+        current = "";
       }
       continue;
     }
-    
+
     // Add character to current argument
     current += char;
   }
-  
+
   // Add the last argument if there is one
   if (current) {
     result.push(current);
   }
-  
+
   return result;
 }
 
@@ -107,14 +111,28 @@ async function runTest() {
   try {
     // Minimal logging
     if (!process.env.MINIMAL_LOGS) {
-      console.log("Using existing Docker container started with npm run docker:dev");
+      console.log(
+        "Using existing Docker container started with npm run docker:dev"
+      );
     }
 
     // Force Docker environment to ensure we connect to the existing container
     process.env.DOCKER_ENV = "true";
 
-    // Set baseURL to Docker container - use localhost since we're running tests from outside Docker
-    process.env.TEST_BASE_URL = "http://localhost:3000";
+    // Define base URLs for different environments
+    const baseUrls = {
+      local: "http://localhost:3000",
+      dev: "https://dev.mycredex.dev",
+      stage: "https://stage.mycredex.dev",
+    };
+
+    // Set baseURL based on the selected environment
+    process.env.TEST_BASE_URL = baseUrls[env] || "http://localhost:3000";
+
+    // Log the environment and base URL being used (even in minimal logs mode)
+    console.log(
+      `Running tests against ${env} environment: ${process.env.TEST_BASE_URL}`
+    );
 
     let jestCommand;
     let testParams = remainingArgs;
@@ -292,7 +310,9 @@ async function runTest() {
   } finally {
     // Minimal logging
     if (!process.env.MINIMAL_LOGS) {
-      console.log("Test completed - using existing Docker container, no cleanup needed");
+      console.log(
+        "Test completed - using existing Docker container, no cleanup needed"
+      );
     }
   }
 }
