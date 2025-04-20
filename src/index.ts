@@ -1,5 +1,6 @@
 // Import required modules and dependencies
 import express, { Request, Response, NextFunction } from "express";
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import MemberRoutes from "./api/Member/routes";
 import AccountRoutes from "./api/Account/routes";
 import AccountInternalRoutes from "./api/AccountInternal/routes";
@@ -81,6 +82,60 @@ async function initializeApp() {
     app.get("/health", (req: Request, res: Response) => {
       res.status(200).json({ status: "healthy" });
     });
+
+    // Add explicit handlers for Neo4j browser paths before auth middleware
+    app.get("/browser", (req: Request, res: Response) => {
+      logger.info("Redirecting /browser to /neo4jbrowser-ledger/");
+      res.redirect("/neo4jbrowser-ledger/");
+    });
+
+    app.get("/browser/", (req: Request, res: Response) => {
+      logger.info("Redirecting /browser/ to /neo4jbrowser-ledger/");
+      res.redirect("/neo4jbrowser-ledger/");
+    });
+
+    // Set up proxy middleware for Neo4j browser paths
+    // For local development, proxy to the appropriate Neo4j browser instances
+    // Determine the Neo4j browser URLs based on environment
+    // In Docker, use the container names, otherwise use localhost with the mapped ports
+    const isDocker = process.env.DOCKER_ENV === 'true';
+    
+    const neo4jLedgerProxyConfig = {
+      target: isDocker 
+        ? 'http://neo4j-ledger:7474'
+        : process.env.NEO4J_LEDGER_BROWSER_URL || 'http://localhost:7474',
+      changeOrigin: true,
+      pathRewrite: {
+        '^/neo4jbrowser-ledger': '/'
+      },
+      logLevel: 'debug',
+      onProxyReq: (proxyReq: any, req: Request, res: Response) => {
+        logger.info(`Proxying request to Neo4j Ledger Browser: ${req.method} ${req.url}`);
+      }
+    };
+
+    const neo4jSearchProxyConfig = {
+      target: isDocker
+        ? 'http://neo4j-search:7474'
+        : process.env.NEO4J_SEARCH_BROWSER_URL || 'http://localhost:7475',
+      changeOrigin: true,
+      pathRewrite: {
+        '^/neo4jbrowser-search': '/'
+      },
+      logLevel: 'debug',
+      onProxyReq: (proxyReq: any, req: Request, res: Response) => {
+        logger.info(`Proxying request to Neo4j Search Browser: ${req.method} ${req.url}`);
+      }
+    };
+
+    logger.info('Neo4j browser proxy configuration:', {
+      ledgerTarget: neo4jLedgerProxyConfig.target,
+      searchTarget: neo4jSearchProxyConfig.target,
+      isDocker
+    });
+
+    app.use('/neo4jbrowser-ledger', createProxyMiddleware(neo4jLedgerProxyConfig));
+    app.use('/neo4jbrowser-search', createProxyMiddleware(neo4jSearchProxyConfig));
 
     // Start cron jobs for scheduled tasks
     startCronJobs();

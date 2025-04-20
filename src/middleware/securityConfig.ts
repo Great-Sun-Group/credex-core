@@ -261,6 +261,28 @@ export const applySecurityMiddleware = (app: Application) => {
 
 export const applyAuthMiddleware = (app: Application) => {
   app.use((req, res, next) => {
+    // Log detailed request information for debugging
+    logger.debug("[SC2] Request details for auth middleware decision", {
+      path: req.path,
+      originalUrl: req.originalUrl,
+      method: req.method,
+      hostname: req.hostname,
+      protocol: req.protocol
+    });
+
+    // Check for browser paths in both path and originalUrl to be more robust
+    const isBrowserPath = 
+      req.path === "/browser" || 
+      req.path === "/browser/" || 
+      req.path.includes("/browser/") || 
+      req.path.includes("/neo4jbrowser-") ||
+      (req.originalUrl && (
+        req.originalUrl === "/browser" || 
+        req.originalUrl === "/browser/" || 
+        req.originalUrl.includes("/browser/") || 
+        req.originalUrl.includes("/neo4jbrowser-")
+      ));
+
     if (
       // Skip auth for docs directory
       req.path === "/" ||
@@ -268,9 +290,9 @@ export const applyAuthMiddleware = (app: Application) => {
       // Keyholes in the auth layer where we don't apply the middleware
       req.path === "/login" ||
       req.path === "/v2/login" ||
-      req.path.endsWith("/browser") ||
       req.path.endsWith("/onboardMember") ||
       req.path === "/setInitialPassword" ||
+      isBrowserPath || // Use the more robust browser path check
       req.path.includes("/devadmin/") || // routes are not published in prod
       (req.path.includes("/verify/") && (req.body?.purpose === "PASSWORD_RESET" || req.method === "OPTIONS")) ||
       req.path === "/resetPassword" ||
@@ -278,6 +300,8 @@ export const applyAuthMiddleware = (app: Application) => {
     ) {
       logger.debug("[SC3] Skipping auth middleware for path", {
         path: req.path,
+        originalUrl: req.originalUrl,
+        isBrowserPath: isBrowserPath,
         issuerAccountIDInQuery: req.query.issuerAccountID,
         issuerAccountIDInBody: req.body ? req.body.issuerAccountID : undefined,
       });
@@ -285,6 +309,7 @@ export const applyAuthMiddleware = (app: Application) => {
     }
     logger.debug("[SC4] Applying auth middleware for path", {
       path: req.path,
+      originalUrl: req.originalUrl,
       query: req.query,
       issuerAccountIDInQuery: req.query.issuerAccountID,
       issuerAccountIDInBody: req.body ? req.body.issuerAccountID : undefined,
