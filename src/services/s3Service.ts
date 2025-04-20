@@ -13,7 +13,7 @@ const s3Client = new S3Client({
 });
 
 // Bucket name for AssetMarker data
-const ASSET_MARKER_BUCKET = `credexbuckets5-assetmarker-data-${process.env.NODE_ENV || "development"}`;
+const ASSET_MARKER_BUCKET = `credexbuckets6-assetmarker-data-${process.env.NODE_ENV || "development"}`;
 
 /**
  * Upload data to S3
