@@ -30,8 +30,8 @@ jobs:
       - name: Setup and Initialize Terraform Backend
         run: |
           echo "Current environment: ${ENVIRONMENT}"
-          BUCKET_NAME="credexbuckets4-statebucket-${ENVIRONMENT}"
-          TABLE_NAME="credexbuckets4-statebucket-lock-${ENVIRONMENT}"
+          BUCKET_NAME="credexbuckets5-statebucket-${ENVIRONMENT}"
+          TABLE_NAME="credexbuckets5-statebucket-lock-${ENVIRONMENT}"
 
           # Check if S3 bucket exists, create if it doesn't
           if ! aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
@@ -58,10 +58,10 @@ jobs:
           cd terraform
           echo "Initializing Terraform..."
           terraform init \
-            -backend-config="bucket=credexbuckets4-statebucket-${ENVIRONMENT}" \
+            -backend-config="bucket=credexbuckets5-statebucket-${ENVIRONMENT}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=credexbuckets4-statebucket-lock-${ENVIRONMENT}"
+            -backend-config="dynamodb_table=credexbuckets5-statebucket-lock-${ENVIRONMENT}"
 
       - name: Terraform Plan
         env:
