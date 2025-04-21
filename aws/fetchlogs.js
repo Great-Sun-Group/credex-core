@@ -42,7 +42,7 @@ function readCredentialsFromEnvFile() {
 
 // Get credentials from environment variables or .env file
 let credentials;
-if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+if ((process.env.AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY) && process.env.AWS_SECRET_ACCESS_KEY) {
   credentials = {
     region: process.env.AWS_REGION || 'af-south-1',
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY,

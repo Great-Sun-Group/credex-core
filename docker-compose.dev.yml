@@ -8,6 +8,7 @@ services:
     environment:
       # Core environment
       NODE_ENV: ${NODE_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
       DOCKER_ENV: "true"
       # Test configuration
       BUILD_TARGET: ${BUILD_TARGET:-test}
