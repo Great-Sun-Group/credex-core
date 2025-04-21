@@ -6,7 +6,9 @@ import { getConfig } from "../../config/config";
 
 // Default configuration
 const defaultConfig = {
-  logLevel: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
+  // Prioritize explicit LOG_LEVEL environment variable if set
+  // Otherwise, use NODE_ENV-based logic (debug for development, info otherwise)
+  logLevel: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'development' ? 'debug' : 'info'),
   environment: process.env.NODE_ENV || 'development'
 };
 
@@ -37,7 +39,11 @@ const baseLogger = winston.createLogger({
 // Function to update logger configuration
 export async function updateLoggerConfig() {
   const config = await getConfig();
-  baseLogger.level = process.env.NODE_ENV === 'development' ? 'debug' : config.logLevel;
+  
+  // Prioritize explicit LOG_LEVEL environment variable if set
+  // Otherwise, use NODE_ENV-based logic or fall back to config.logLevel
+  baseLogger.level = process.env.LOG_LEVEL || 
+                     (process.env.NODE_ENV === 'development' ? 'debug' : config.logLevel);
 
   // Add file transports for production environment
   if (config.environment === "production") {

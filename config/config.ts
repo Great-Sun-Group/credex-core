@@ -9,7 +9,9 @@ const isDevelopment = process.env.NODE_ENV === "development";
 
 // Create a logger
 const logger = winston.createLogger({
-  level: isProduction ? "info" : "debug",
+  // Prioritize explicit LOG_LEVEL environment variable if set
+  // Otherwise, use NODE_ENV-based logic (info for production, debug otherwise)
+  level: process.env.LOG_LEVEL || (isProduction ? "info" : "debug"),
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.json()
@@ -83,7 +85,9 @@ async function initConfig() {
   const config = {
     environment: envVars.NODE_ENV,
     port: parseInt(process.env.PORT || "3000", 10),
-    logLevel: isProduction ? "info" : "debug",
+    // Prioritize explicit LOG_LEVEL environment variable if set
+    // Otherwise, use NODE_ENV-based logic (info for production, debug otherwise)
+    logLevel: process.env.LOG_LEVEL || (isProduction ? "info" : "debug"),
     fallbackPorts: [5001, 5002, 5003, 5004, 5005],
     database: {
       neo4jLedgerSpace: {

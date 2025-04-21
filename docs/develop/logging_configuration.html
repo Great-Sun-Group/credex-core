@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Logging Configuration - credex-core API</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+    
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">Logging Configuration</h1>
+    <h2>Overview of the credex-core Logging System</h2>
+    
+    <p>
+      The credex-core application uses a structured logging system built on Winston to provide
+      consistent, configurable logging across different environments. This document explains how
+      logging is configured, how to control log levels, and best practices for logging in different
+      deployment environments.
+    </p>
+
+    <h2>Log Levels</h2>
+    <p>
+      The application supports the following log levels, in order of increasing verbosity:
+    </p>
+    <ul>
+      <li><strong>error</strong>: Critical errors that require immediate attention</li>
+      <li><strong>warn</strong>: Warning conditions that should be addressed</li>
+      <li><strong>info</strong>: Informational messages about normal operation</li>
+      <li><strong>http</strong>: HTTP request/response details</li>
+      <li><strong>verbose</strong>: Detailed operational information</li>
+      <li><strong>debug</strong>: Debugging information for development</li>
+      <li><strong>silly</strong>: Extremely detailed debugging information</li>
+    </ul>
+
+    <h2>Environment-Based Configuration</h2>
+    <p>
+      By default, the log level is determined based on the <code>NODE_ENV</code> environment variable:
+    </p>
+    <ul>
+      <li><strong>development</strong>: Uses <code>debug</code> level for verbose logging</li>
+      <li><strong>production</strong>: Uses <code>info</code> level for standard operational logging</li>
+      <li><strong>staging</strong>: Follows the same pattern as development (debug level)</li>
+      <li><strong>test</strong>: Follows the same pattern as development (debug level)</li>
+    </ul>
+
+    <h2>Overriding Log Levels</h2>
+    <p>
+      You can override the default log level by setting the <code>LOG_LEVEL</code> environment variable.
+      This takes precedence over the environment-based defaults.
+    </p>
+
+    <h3>Examples:</h3>
+    <pre><code>
+# Set debug level logging in any environment
+LOG_LEVEL=debug
+
+# Set info level logging in any environment
+LOG_LEVEL=info
+
+# Set error-only logging for minimal output
+LOG_LEVEL=error
+    </code></pre>
+
+    <h2>Configuration in Different Environments</h2>
+
+    <h3>Local Development</h3>
+    <p>
+      For local development, you can set the log level when starting the application:
+    </p>
+    <pre><code>
+LOG_LEVEL=debug npm run dev
+    </code></pre>
+
+    <h3>Docker Development</h3>
+    <p>
+      When using Docker Compose for development, the log level is set in <code>docker-compose.dev.yml</code>:
+    </p>
+    <pre><code>
+environment:
+  NODE_ENV: ${NODE_ENV:-development}
+  LOG_LEVEL: ${LOG_LEVEL:-debug}
+    </code></pre>
+    <p>
+      You can override this when starting Docker Compose:
+    </p>
+    <pre><code>
+LOG_LEVEL=info docker-compose -f docker-compose.dev.yml up
+    </code></pre>
+
+    <h3>Deployed Environments</h3>
+    <p>
+      In deployed environments, we explicitly set the <code>LOG_LEVEL</code> environment variable in the ECS task definition
+      rather than relying on <code>NODE_ENV</code>-based defaults:
+    </p>
+    <ul>
+      <li><strong>Development</strong>: <code>LOG_LEVEL=debug</code> for verbose logging in the development environment</li>
+      <li><strong>Production</strong>: <code>LOG_LEVEL=info</code> for standard operational logging in the production environment</li>
+    </ul>
+    <p>
+      These settings are configured in the Terraform infrastructure code and can be modified if needed.
+    </p>
+
+    <h2>Log Output</h2>
+    <p>
+      Logs are output in different formats depending on the environment:
+    </p>
+    <ul>
+      <li><strong>Console</strong>: All environments log to the console/stdout</li>
+      <li><strong>Files</strong>: Production environment also logs to rotating files:
+        <ul>
+          <li><code>logs/error-%DATE%.log</code>: Error-level logs only</li>
+          <li><code>logs/combined-%DATE%.log</code>: All logs</li>
+        </ul>
+      </li>
+      <li><strong>CloudWatch</strong>: In AWS deployments, logs are sent to CloudWatch Logs</li>
+    </ul>
+
+    <h2>Best Practices</h2>
+    <ul>
+      <li>Use <code>debug</code> level for development environments to get detailed information</li>
+      <li>Use <code>info</code> level for production to reduce noise while maintaining operational visibility</li>
+      <li>For troubleshooting specific issues in production, temporarily increase the log level to <code>debug</code></li>
+      <li>Remember that sensitive information is automatically redacted from logs</li>
+      <li>Large request/response bodies are truncated in logs to prevent excessive log size</li>
+    </ul>
+
+    <h2>Viewing Logs</h2>
+    <h3>Local Development</h3>
+    <p>
+      Logs are output to the console during local development.
+    </p>
+
+    <h3>AWS Deployments</h3>
+    <p>
+      For AWS deployments, logs can be viewed in CloudWatch Logs or using the <code>aws/fetchlogs.js</code> utility:
+    </p>
+    <pre><code>
+# Stream logs in real-time
+node aws/fetchlogs.js
+
+# Fetch the last 5 minutes of logs
+node aws/fetchlogs.js 300
+    </code></pre>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script src="../js/template.js"></script>
+    <script src="../js/dropdown.js"></script>
+  </body>
+</html>

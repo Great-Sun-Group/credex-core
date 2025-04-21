@@ -60,7 +60,11 @@ resource "aws_ecs_task_definition" "credex_core" {
       ]
       environment = [
         { name = "NODE_ENV", value = var.environment },
-        { name = "PORT", value = tostring(var.app_port) }
+        { name = "PORT", value = tostring(var.app_port) },
+        # Set LOG_LEVEL based on environment
+        # For development environments, use debug level for verbose logging
+        # For production, use info level for standard logging
+        { name = "LOG_LEVEL", value = var.environment == "development" ? "debug" : "info" }
       ]
       healthCheck = {
         command     = ["CMD-SHELL", "node -e 'const http = require(\"http\"); const options = { hostname: \"localhost\", port: process.env.PORT, path: \"/health\", timeout: 2000 }; const req = http.get(options, (res) => process.exit(res.statusCode === 200 ? 0 : 1)); req.on(\"error\", () => process.exit(1));'"]
