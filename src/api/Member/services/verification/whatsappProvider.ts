@@ -13,7 +13,7 @@ export class WhatsAppProvider implements IVerificationProvider {
     this.apiKey = process.env.CREDEX_CORE_WHATSAPP_API_KEY || '';
     this.businessId = process.env.CREDEX_CORE_WHATSAPP_BUSINESS_ID || '';
     this.phoneId = process.env.CREDEX_CORE_WHATSAPP_PHONE_ID || '';
-    this.apiBaseUrl = `https://graph.facebook.com/v17.0/${this.phoneId}`;
+    this.apiBaseUrl = `https://graph.facebook.com/v22.0/${this.phoneId}`;
     
     if (!this.apiKey || !this.businessId || !this.phoneId) {
       logger.error('WhatsAppProvider: Missing required environment variables');
@@ -22,7 +22,11 @@ export class WhatsAppProvider implements IVerificationProvider {
 
     logger.info('WhatsAppProvider initialized', {
       businessId: this.businessId,
-      phoneId: this.phoneId
+      phoneId: this.phoneId,
+      apiVersion: 'v22.0',
+      apiBaseUrl: this.apiBaseUrl,
+      hasApiKey: !!this.apiKey,
+      apiKeyLength: this.apiKey.length
     });
   }
 
@@ -75,7 +79,11 @@ export class WhatsAppProvider implements IVerificationProvider {
       logger.debug('Sending WhatsApp message:', {
         phone: formattedPhone,
         template: 'vimbiso_otp',
-        url: `${this.apiBaseUrl}/messages`
+        url: `${this.apiBaseUrl}/messages`,
+        apiVersion: 'v22.0',
+        businessId: this.businessId,
+        phoneId: this.phoneId,
+        messagePayload: JSON.stringify(message)
       });
 
       // Send message via WhatsApp API
@@ -90,12 +98,29 @@ export class WhatsAppProvider implements IVerificationProvider {
         }
       );
 
+      logger.info('WhatsApp API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: JSON.stringify(response.data),
+        phone: formattedPhone
+      });
+
       if (response.data.messages && response.data.messages[0]) {
+        const deliveryId = response.data.messages[0].id;
+        const messageStatus = response.data.messages[0].message_status;
+        
+        logger.info('WhatsApp message accepted:', {
+          deliveryId,
+          messageStatus,
+          phone: formattedPhone
+        });
+        
         return {
           success: true,
           message: 'OTP sent successfully',
           data: {
-            deliveryId: response.data.messages[0].id
+            deliveryId,
+            messageStatus
           }
         };
       }
@@ -106,8 +131,13 @@ export class WhatsAppProvider implements IVerificationProvider {
         if (error.response) {
           logger.error('WhatsApp API Error Response:', {
             status: error.response.status,
-            data: error.response.data,
-            phone: to
+            statusText: error.response.statusText,
+            data: JSON.stringify(error.response.data),
+            headers: error.response.headers,
+            phone: to,
+            apiVersion: 'v22.0',
+            businessId: this.businessId,
+            phoneId: this.phoneId
           });
           return {
             success: false,
@@ -117,6 +147,15 @@ export class WhatsAppProvider implements IVerificationProvider {
               details: error.response.data?.error?.message || 'Failed to send WhatsApp message'
             }
           };
+        } else if (error.request) {
+          // The request was made but no response was received
+          logger.error('WhatsApp API No Response:', {
+            request: error.request,
+            phone: to,
+            apiVersion: 'v22.0',
+            businessId: this.businessId,
+            phoneId: this.phoneId
+          });
         }
       }
       
@@ -143,6 +182,14 @@ export class WhatsAppProvider implements IVerificationProvider {
    */
   async validateDelivery(deliveryId: string): Promise<boolean> {
     try {
+      logger.debug('Validating WhatsApp message delivery:', {
+        deliveryId,
+        url: `${this.apiBaseUrl}/${deliveryId}`,
+        apiVersion: 'v22.0',
+        businessId: this.businessId,
+        phoneId: this.phoneId
+      });
+
       const response = await axios.get(
         `${this.apiBaseUrl}/${deliveryId}`,
         {
@@ -152,8 +199,40 @@ export class WhatsAppProvider implements IVerificationProvider {
         }
       );
 
-      return response.data.status === 'delivered';
+      const isDelivered = response.data.status === 'delivered';
+      
+      logger.info('WhatsApp message delivery status:', {
+        deliveryId,
+        status: response.data.status,
+        isDelivered,
+        responseData: JSON.stringify(response.data)
+      });
+
+      return isDelivered;
     } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          logger.error('WhatsApp API Error Response during delivery validation:', {
+            status: error.response.status,
+            statusText: error.response.statusText,
+            data: JSON.stringify(error.response.data),
+            headers: error.response.headers,
+            deliveryId,
+            apiVersion: 'v22.0',
+            businessId: this.businessId,
+            phoneId: this.phoneId
+          });
+        } else if (error.request) {
+          logger.error('WhatsApp API No Response during delivery validation:', {
+            request: error.request,
+            deliveryId,
+            apiVersion: 'v22.0',
+            businessId: this.businessId,
+            phoneId: this.phoneId
+          });
+        }
+      }
+      
       logger.error('WhatsAppProvider: Failed to validate delivery', { 
         error: error instanceof Error ? error.message : 'Unknown error',
         deliveryId 
