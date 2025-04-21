@@ -113,9 +113,23 @@ export async function DBinitialization(): Promise<void> {
         "CAD", // denomination
         {
           jurisdiction: "CA",
-          accountNumber: "5394119",
-          transitNumber: "03353",
-          branchNumber: "003",
+          accountNumber: "549115",
+          transitNumber: "03628",
+          branchNumber: "009",
+        },
+        requestId
+      );
+      const greatSunTrustIDusd = await createInitialTrustAccount(
+        rdubs.onboardedMemberID,
+        "Great Sun Financial Trust USD", // accountName
+        "GREATSUN_TRUST_USD", // accountHandle
+        "BANK", // subtype
+        "USD", // denomination
+        {
+          jurisdiction: "CA",
+          accountNumber: "5374119",
+          transitNumber: "03233",
+          branchNumber: "006",
         },
         requestId
       );
@@ -130,6 +144,32 @@ export async function DBinitialization(): Promise<void> {
           accountNumber: "4394129",
           transitNumber: "23459",
           branchNumber: "015",
+        },
+        requestId
+      );
+
+      // Create OPERATIONS account for Ryan
+      const ryanOpsAccountID = await createInitialAccount(
+        rdubs.onboardedMemberID,
+        "OPERATIONS",
+        "Great Sun Financial Operations",
+        "GREATSUN_OPS",
+        "USD",
+        requestId
+      );
+      
+      // Create TRUST account for Collin
+      const collinTrustAccountID = await createInitialTrustAccount(
+        collen.onboardedMemberID,
+        "Love Achingly Trust CAD", // accountName
+        "LOVE_TRUST_CAD", // accountHandle
+        "BANK", // subtype
+        "CAD", // denomination
+        {
+          jurisdiction: "CA",
+          accountNumber: "7654321",
+          transitNumber: "45678",
+          branchNumber: "021",
         },
         requestId
       );
