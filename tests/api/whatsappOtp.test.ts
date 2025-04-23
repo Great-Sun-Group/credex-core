@@ -129,4 +129,126 @@ describe("OTP Verification Tests", () => {
       expect(secondResult.error?.code).toBe('RATE_LIMITED');
     });
   });
+
+  describe("OTP Rate Limiting Reset", () => {
+    it("should reset OTP counter when the last request was on a previous day", async () => {
+      // Create a test member
+      const session = ledgerSpaceDriver.session();
+      const phone = generateRandomPhone();
+      const memberID = "test-otp-reset-member";
+      
+      try {
+        // Create member with max daily requests reached but last request was yesterday
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        await session.run(`
+          CREATE (m:Member {
+            memberID: $memberID,
+            phone: $phone,
+            version: 'v2',
+            authMethod: 'password',
+            firstname: 'Test',
+            lastname: 'User',
+            passwordHash: $passwordHash,
+            memberHandle: $phone,
+            otpRequestsToday: 5,
+            lastOtpRequest: $lastRequest
+          })
+        `, { 
+          memberID, 
+          phone,
+          passwordHash: '$2b$12$YdTBeOaejdkw2IPKYGyDKeFcFycQgNXQ69Y2IIfHpHa9uRk2C.pY6',
+          lastRequest: yesterday.toISOString()
+        });
+      } finally {
+        await session.close();
+      }
+
+      TestCleanup.trackMember(memberID, phone);
+
+      // Send OTP - should succeed because last request was yesterday and counter should be reset
+      const result = await verificationService.sendOTP(memberID, phone);
+      
+      // Verify that the OTP was sent successfully
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('OTP sent successfully');
+      
+      // Verify the counter was reset in the database
+      const verifySession = ledgerSpaceDriver.session();
+      try {
+        const verifyResult = await verifySession.run(
+          `MATCH (m:Member {memberID: $memberID}) RETURN m.otpRequestsToday as requests`,
+          { memberID }
+        );
+        
+        // Should be reset to 0 and then incremented to 1 (since we sent an OTP)
+        const requests = verifyResult.records[0].get('requests');
+        expect(requests.low).toBe(1);
+        expect(requests.high).toBe(0);
+      } finally {
+        await verifySession.close();
+      }
+    });
+
+    it("should not reset OTP counter when the last request was today", async () => {
+      // Create a test member
+      const session = ledgerSpaceDriver.session();
+      const phone = generateRandomPhone();
+      const memberID = "test-otp-no-reset-member";
+      
+      try {
+        // Create member with max daily requests reached and last request was today
+        const today = new Date();
+        
+        await session.run(`
+          CREATE (m:Member {
+            memberID: $memberID,
+            phone: $phone,
+            version: 'v2',
+            authMethod: 'password',
+            firstname: 'Test',
+            lastname: 'User',
+            passwordHash: $passwordHash,
+            memberHandle: $phone,
+            otpRequestsToday: 5,
+            lastOtpRequest: $lastRequest
+          })
+        `, { 
+          memberID, 
+          phone,
+          passwordHash: '$2b$12$YdTBeOaejdkw2IPKYGyDKeFcFycQgNXQ69Y2IIfHpHa9uRk2C.pY6',
+          lastRequest: today.toISOString()
+        });
+      } finally {
+        await session.close();
+      }
+
+      TestCleanup.trackMember(memberID, phone);
+
+      // Send OTP - should fail because max requests reached today
+      const result = await verificationService.sendOTP(memberID, phone);
+      
+      // Verify that the OTP was not sent due to rate limiting
+      expect(result.success).toBe(false);
+      expect(result.error?.code).toBe('RATE_LIMITED');
+      expect(result.message).toBe('Daily OTP request limit exceeded');
+      
+      // Verify the counter was NOT reset in the database
+      const verifySession = ledgerSpaceDriver.session();
+      try {
+        const verifyResult = await verifySession.run(
+          `MATCH (m:Member {memberID: $memberID}) RETURN m.otpRequestsToday as requests`,
+          { memberID }
+        );
+        
+        // Should still be 5
+        const requests = verifyResult.records[0].get('requests');
+        expect(requests.low).toBe(5);
+        expect(requests.high).toBe(0);
+      } finally {
+        await verifySession.close();
+      }
+    });
+  });
 });
