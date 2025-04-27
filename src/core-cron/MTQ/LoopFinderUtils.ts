@@ -14,18 +14,20 @@ export function getSearchOwesType(credexSecuredDenom: string, trustAccountID?: s
 export async function adjustCredexDueDate(
   session: neo4j.Session,
   credexSecuredDenom: string,
-  credexDueDate: string
-): Promise<string> {
+  credexDueDate: string,
+  noDueDate?: boolean
+): Promise<{ dueDate: string; noDueDate?: boolean }> {
   logger.debug("Adjusting credex due date", {
     credexSecuredDenom,
     credexDueDate,
+    noDueDate,
   });
   if (credexSecuredDenom !== "UNSECURED") {
     const result = await session.run(`
       MATCH (daynode:Daynode {Active: true})
       RETURN daynode.Date AS today
     `);
-    return result.records[0].get("today");
+    return { dueDate: result.records[0].get("today") };
   }
-  return credexDueDate;
+  return { dueDate: credexDueDate, noDueDate };
 }

@@ -36,11 +36,26 @@ export async function LoopFinder(
 
   try {
     const searchOwesType = getSearchOwesType(credexSecuredDenom, trustAccountID);
-    credexDueDate = await adjustCredexDueDate(
+    
+    // Check if this credex has the noDueDate flag
+    const credexDetails = await sessions.ledgerSpaceSession.executeRead(async (tx) => {
+      const query = `
+        MATCH (credex:Credex {credexID: $credexID})
+        RETURN credex.noDueDate AS noDueDate
+      `;
+      const result = await tx.run(query, { credexID });
+      return result.records.length > 0 ? { noDueDate: result.records[0].get("noDueDate") } : { noDueDate: false };
+    });
+    
+    const adjustedDueDate = await adjustCredexDueDate(
       sessions.ledgerSpaceSession,
       credexSecuredDenom,
-      credexDueDate
+      credexDueDate,
+      credexDetails.noDueDate
     );
+    
+    credexDueDate = adjustedDueDate.dueDate;
+    const noDueDate = adjustedDueDate.noDueDate;
 
     const credexExists = await checkCredexExists(
       sessions.searchSpaceSession,
@@ -56,7 +71,8 @@ export async function LoopFinder(
         Denomination,
         CXXmultiplier,
         credexDueDate,
-        searchOwesType
+        searchOwesType,
+        noDueDate
       );
     } else {
       logger.info("Credex already exists in SearchSpace", { credexID });

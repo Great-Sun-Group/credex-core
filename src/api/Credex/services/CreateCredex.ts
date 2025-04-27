@@ -595,40 +595,81 @@ export async function CreateCredexService(
 
     const credexData = result.data; // Store in variable for type safety
 
-    // Add due date for unsecured Credex
-    if (!securedCredex && dueDate) {
-      logger.debug("Adding due date for unsecured Credex", {
-        credexID: credexData.credexID,
-        dueDate,
-        requestId,
-      });
+// Handle due date for unsecured Credex
+if (!securedCredex) {
+  if (dueDate) {
+    // Add provided due date for unsecured Credex
+    logger.debug("Adding due date for unsecured Credex", {
+      credexID: credexData.credexID,
+      dueDate,
+      requestId,
+    });
 
-      const addDueDateQuery = await ledgerSpaceSession.executeWrite(
-        async (tx) => {
-          const query = `
-          MATCH (newCredex:Credex { credexID: $credexID })
-          SET newCredex.dueDate = date($dueDate)
-          RETURN newCredex.dueDate AS dueDate
-        `;
+    const addDueDateQuery = await ledgerSpaceSession.executeWrite(
+      async (tx) => {
+        const query = `
+        MATCH (newCredex:Credex { credexID: $credexID })
+        SET newCredex.dueDate = date($dueDate)
+        RETURN newCredex.dueDate AS dueDate
+      `;
 
-          return tx.run(query, {
-            credexID: credexData.credexID,
-            dueDate,
-          });
-        }
-      );
-
-      if (addDueDateQuery.records.length === 0) {
-        return {
-          success: false,
-          message: "Failed to add due date to Credex",
-          error: {
-            code: "DUE_DATE_ERROR",
-            details: "Unable to set due date for unsecured Credex",
-          },
-        };
+        return tx.run(query, {
+          credexID: credexData.credexID,
+          dueDate,
+        });
       }
+    );
+
+    if (addDueDateQuery.records.length === 0) {
+      return {
+        success: false,
+        message: "Failed to add due date to Credex",
+        error: {
+          code: "DUE_DATE_ERROR",
+          details: "Unable to set due date for unsecured Credex",
+        },
+      };
     }
+  } else {
+    // No due date provided, set a far-future date (100 years from now) and add noDueDate flag
+    const futureDate = new Date();
+    futureDate.setFullYear(futureDate.getFullYear() + 100);
+    const farFutureDateStr = futureDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+    
+    logger.debug("Setting far-future date for unsecured Credex without due date", {
+      credexID: credexData.credexID,
+      farFutureDate: farFutureDateStr,
+      requestId,
+    });
+
+    const addFutureDateQuery = await ledgerSpaceSession.executeWrite(
+      async (tx) => {
+        const query = `
+        MATCH (newCredex:Credex { credexID: $credexID })
+        SET newCredex.dueDate = date($farFutureDate),
+            newCredex.noDueDate = true
+        RETURN newCredex.dueDate AS dueDate
+      `;
+
+        return tx.run(query, {
+          credexID: credexData.credexID,
+          farFutureDate: farFutureDateStr,
+        });
+      }
+    );
+
+    if (addFutureDateQuery.records.length === 0) {
+      return {
+        success: false,
+        message: "Failed to set far-future date for Credex",
+        error: {
+          code: "DUE_DATE_ERROR",
+          details: "Unable to set far-future date for unsecured Credex",
+        },
+      };
+    }
+  }
+}
 
     // Add secured relationships if needed
     if (securedCredex) {

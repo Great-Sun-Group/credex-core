@@ -36,10 +36,10 @@ interface DatabaseTierResult {
  * AuthForTierSpendLimitService
  *
  * Validates if a member's tier permits the requested spend amount.
- * Different tiers have different daily spend limits and secured/unsecured permissions:
- * - Tier 1: $10 daily limit, secured credex only
- * - Tier 2: $100 daily limit, secured and unsecured credex
- * - Tier 3+: No limits, secured and unsecured credex
+ * Different tiers have different daily spend limits:
+ * - Tier 1: $10 daily limit
+ * - Tier 2: $100 daily limit
+ * - Tier 3+: No limits
  *
  * @param issuerAccountID - ID of the account attempting to spend
  * @param amount - Amount of the transaction
@@ -88,18 +88,6 @@ export async function AuthForTierSpendLimitService(
       async (tx) => {
         const queryResult = await tx.run(
           `
-        // If memberTier = 1, and securedCredex = false return false immediately as "result"
-        MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
-        WITH member, member.memberTier AS memberTier
-        WHERE memberTier = 1 AND NOT $securedCredex
-        RETURN
-          {
-            isAuthorized: false,
-            message: "Unsecured credex not permitted on open tier"
-          } AS result
-
-        UNION
-
         // If memberTier > 2, return true immediately as "result"
         MATCH (member:Member)-[:OWNS]->(account:Account { accountID: $issuerAccountID })
         WITH member, member.memberTier AS memberTier

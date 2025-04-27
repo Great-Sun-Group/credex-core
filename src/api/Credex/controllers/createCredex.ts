@@ -3,7 +3,6 @@ import { CreateCredexService } from "../services/CreateCredex";
 import { MemberDashboardService } from "../../Member/services/MemberDashboardService";
 import { MemberRepository } from "../../Member/repositories/MemberRepository";
 import { SpendLimitService } from "../../Member/services/SpendLimitService";
-import { checkDueDate, credspan } from "../../../core-cron/constants/credspan";
 import { AuthForTierSpendLimitService } from "../../Member/services/AuthForTierSpendLimit";
 import logger from "../../../utils/logger";
 import { getDashboardData } from "../../../utils/dashboardUtils";
@@ -321,53 +320,8 @@ export async function CreateCredexController(
       }
     }
 
-    // Validate due date for unsecured credex
-    if (!securedCredex) {
-      if (!dueDate) {
-        logger.warn("Missing due date for unsecured credex", { requestId });
-        const errorResponse: CreateCredexErrorResponse = {
-          message: "Due date is required for unsecured credex",
-          data: {
-            action: {
-              id: null,
-              type: ApiActionType.ERROR_VALIDATION,
-              timestamp: new Date().toISOString(),
-              actor: signerID,
-              details: {
-                code: "MISSING_DUE_DATE",
-                reason: "Due date is required for unsecured credex",
-                field: "dueDate",
-              },
-            },
-            dashboard: {},
-          },
-        };
-        return res.status(400).json(errorResponse);
-      }
-
-      const dueDateOK = await checkDueDate(dueDate);
-      if (!dueDateOK) {
-        logger.warn("Invalid due date", { dueDate, requestId });
-        const errorResponse: CreateCredexErrorResponse = {
-          message: `Due date must be permitted date, in format YYYY-MM-DD. First permitted due date is 1 week from today. Last permitted due date is ${credspan / 7} weeks from today.`,
-          data: {
-            action: {
-              id: null,
-              type: ApiActionType.ERROR_VALIDATION,
-              timestamp: new Date().toISOString(),
-              actor: signerID,
-              details: {
-                code: "INVALID_DUE_DATE",
-                reason: `Due date must be between 1 and ${credspan / 7} weeks from today`,
-                field: "dueDate",
-              },
-            },
-            dashboard: {},
-          },
-        };
-        return res.status(400).json(errorResponse);
-      }
-    } else if (dueDate) {
+    // Validate due date for secured credex
+    if (securedCredex && dueDate) {
       logger.warn("Due date provided for secured credex", { requestId });
       const errorResponse: CreateCredexErrorResponse = {
         message: "Due date is not allowed for secured credex",
