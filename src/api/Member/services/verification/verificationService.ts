@@ -245,9 +245,11 @@ export class VerificationService {
    * Verify an OTP for a member
    * @param memberID The member's ID
    * @param otp The OTP to verify
+   * @param purpose The purpose of the OTP (e.g., PASSWORD_RESET)
+   * @param source The source of the verification request (e.g., 'app' or 'chatbot')
    * @returns ServiceResult indicating verification status
    */
-  async verifyOTP(memberID: string, otp: string, purpose?: 'PASSWORD_RESET'): Promise<ServiceResult> {
+  async verifyOTP(memberID: string, otp: string, purpose?: 'PASSWORD_RESET', source?: string): Promise<ServiceResult> {
     const session = ledgerSpaceDriver.session();
     try {
       // Validate purpose
@@ -400,7 +402,7 @@ export class VerificationService {
    * @param memberID The member's ID
    * @returns ServiceResult indicating if rate limits are satisfied
    */
-  private async checkRateLimits(memberID: string): Promise<ServiceResult> {
+  async checkRateLimits(memberID: string): Promise<ServiceResult> {
     const session = ledgerSpaceDriver.session();
     try {
       const result = await session.run(
@@ -490,6 +492,84 @@ export class VerificationService {
         error: {
           code: 'INTERNAL_ERROR',
           details: 'Database error occurred'
+        }
+      };
+    } finally {
+      await session.close();
+    }
+  }
+
+  /**
+   * Store a pre-generated OTP for a member
+   * @param memberID The member's ID
+   * @param phone The phone number to associate with the OTP
+   * @param hashedOTP The pre-hashed OTP to store
+   * @param purpose The purpose of the OTP (e.g., PASSWORD_RESET)
+   * @returns ServiceResult with the operation status
+   */
+  async storeOTP(memberID: string, phone: string, hashedOTP: string, purpose?: 'PASSWORD_RESET'): Promise<ServiceResult> {
+    const session = ledgerSpaceDriver.session();
+    try {
+      // Check if member exists and purpose is valid
+      const memberCheck = await this.checkMemberExists(memberID);
+      if (!memberCheck.success) {
+        return memberCheck;
+      }
+
+      // Validate purpose
+      if (purpose && purpose !== 'PASSWORD_RESET') {
+        return {
+          success: false,
+          message: 'Invalid purpose',
+          error: {
+            code: VerificationError.INVALID_OTP,
+            details: 'Purpose must be PASSWORD_RESET'
+          }
+        };
+      }
+
+      // Store OTP details in database
+      const query = `
+        MATCH (m:Member {memberID: $memberID})
+        SET m.hashedOTP = $hashedOTP,
+            m.otpExpiry = $expiry,
+            m.otpAttempts = 0,
+            m.lastOtpRequest = $now,
+            m.otpRequestsToday = COALESCE(m.otpRequestsToday, 0) + 1
+        WITH m
+        RETURN properties(m) as member
+      `;
+
+      const result = await session.run(query, {
+        memberID,
+        hashedOTP,
+        expiry: new Date(Date.now() + this.config.otpExpiry * 1000).toISOString(),
+        now: new Date().toISOString()
+      });
+
+      // Verify OTP was stored
+      const record = result.records[0];
+      const memberData = record.get('member');
+      logger.info('Stored OTP verification', {
+        memberID,
+        hashedOTPStored: !!memberData.hashedOTP
+      });
+
+      return {
+        success: true,
+        message: 'OTP stored successfully',
+        data: {
+          expiresIn: this.config.otpExpiry
+        }
+      };
+    } catch (error) {
+      logger.error('Failed to store OTP', { error, memberID });
+      return {
+        success: false,
+        message: 'Failed to store OTP',
+        error: {
+          code: VerificationError.PROVIDER_ERROR,
+          details: 'Internal error occurred'
         }
       };
     } finally {

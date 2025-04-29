@@ -65,6 +65,8 @@ export interface VerificationConfig {
 
 export type VerificationPurpose = 'PASSWORD_RESET' | undefined;
 
+export type VerificationSource = 'app' | 'chatbot' | undefined;
+
 export interface VerificationServiceConfig {
   provider: IVerificationProvider;
   otpManager: OTPManager;

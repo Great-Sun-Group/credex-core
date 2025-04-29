@@ -26,14 +26,31 @@ export async function createSearchSpaceCredex(
   Denomination: string,
   CXXmultiplier: number,
   credexDueDate: string,
-  searchOwesType: string
+  searchOwesType: string,
+  noDueDate?: boolean
 ): Promise<void> {
   logger.debug("Creating SearchSpace credex", {
     credexID,
     Denomination,
     searchOwesType,
+    noDueDate,
   });
   try {
+    // Check if this credex has the noDueDate flag in ledgerSpace
+    if (noDueDate === undefined) {
+      const checkNoDueDateResult = await session.run(
+        `
+        MATCH (credex:Credex {credexID: $credexID})
+        RETURN credex.noDueDate AS noDueDate
+        `,
+        { credexID }
+      );
+      
+      if (checkNoDueDateResult.records.length > 0) {
+        noDueDate = checkNoDueDateResult.records[0].get("noDueDate");
+      }
+    }
+    
     const result = await session.run(
       `
       MATCH (issuer:Account {accountID: $issuerAccountID})
@@ -45,19 +62,26 @@ export async function createSearchSpaceCredex(
           OutstandingAmount: $credexAmount,
           Denomination: $Denomination,
           CXXmultiplier: $CXXmultiplier,
-          dueDate: date($credexDueDate)
+          dueDate: date($credexDueDate),
+          noDueDate: $noDueDate
       })
       WITH searchOwesType, credex
       CALL apoc.do.case(
           [
-              searchOwesType.earliestDueDate IS NULL
-              OR searchOwesType.earliestDueDate > date($credexDueDate),
+              // Only update earliestDueDate if:
+              // 1. This credex doesn't have noDueDate flag, or
+              // 2. searchOwesType doesn't have earliestDueDate yet
+              ($noDueDate <> true AND 
+               (searchOwesType.earliestDueDate IS NULL OR searchOwesType.earliestDueDate > date($credexDueDate)))
+              OR
+              (searchOwesType.earliestDueDate IS NULL),
               'SET searchOwesType.earliestDueDate = date($credexDueDate) RETURN true'
           ],
           'RETURN false',
           {
             searchOwesType: searchOwesType,
-            credexDueDate: credex.dueDate
+            credexDueDate: credex.dueDate,
+            noDueDate: credex.noDueDate
           }
       ) YIELD value
       RETURN credex.credexID AS credexID
@@ -71,6 +95,7 @@ export async function createSearchSpaceCredex(
         CXXmultiplier,
         credexDueDate,
         searchOwesType,
+        noDueDate: noDueDate || false
       }
     );
 
@@ -127,6 +152,10 @@ export async function findCredloop(
     WITH
            reduce(minCredex = credexList[0], c IN credexList |
                   CASE
+                    // Prioritize credexes without noDueDate flag
+                    WHEN c.noDueDate = true AND minCredex.noDueDate <> true THEN minCredex
+                    WHEN c.noDueDate <> true AND minCredex.noDueDate = true THEN c
+                    // If both have same noDueDate status, compare due dates
                     WHEN c.dueDate < minCredex.dueDate THEN c
                     WHEN c.dueDate = minCredex.dueDate AND c.OutstandingAmount > minCredex.OutstandingAmount THEN c
                     ELSE minCredex
@@ -196,13 +225,27 @@ export async function cleanupSearchSpace(
     WHERE deleteValue <> "searchAnchorDeleted"
 
     // Step 12: Update earliestDueDate on remaining searchAnchors
-    UNWIND otherCredexes AS otherCredex
-    WITH DISTINCT searchAnchor, otherCredex
+    // First, find credexes without noDueDate flag
+    WITH searchAnchor, otherCredexes
+    WITH searchAnchor, [c IN otherCredexes WHERE c.noDueDate <> true] AS regularCredexes, otherCredexes
+    
+    // If there are regular credexes, find the earliest due date among them
     CALL apoc.do.when(
-      (searchAnchor.earliestDueDate IS NULL OR searchAnchor.earliestDueDate > date(otherCredex.dueDate)),
-      'SET searchAnchor.earliestDueDate = date(otherCredex.dueDate) RETURN "searchAnchorEarliestUpdated" AS result',
-      'RETURN "noChanges" AS result',
-      {searchAnchor: searchAnchor, otherCredex: otherCredex}
+      size(regularCredexes) > 0,
+      'UNWIND regularCredexes AS regularCredex
+       WITH searchAnchor, regularCredex
+       ORDER BY regularCredex.dueDate ASC
+       LIMIT 1
+       SET searchAnchor.earliestDueDate = date(regularCredex.dueDate)
+       RETURN "searchAnchorEarliestUpdated" AS result',
+      // If no regular credexes, use the earliest due date from any credex (including those with noDueDate)
+      'UNWIND otherCredexes AS anyCredex
+       WITH searchAnchor, anyCredex
+       ORDER BY anyCredex.dueDate ASC
+       LIMIT 1
+       SET searchAnchor.earliestDueDate = date(anyCredex.dueDate)
+       RETURN "searchAnchorEarliestUpdated" AS result',
+      {searchAnchor: searchAnchor, regularCredexes: regularCredexes, otherCredexes: otherCredexes}
     ) YIELD value AS updateValue
     RETURN searchAnchor
     `,

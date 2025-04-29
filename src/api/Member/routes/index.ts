@@ -7,6 +7,7 @@ import updatePasswordRoute from "./updatePasswordRoute";
 import passwordResetRoute from "./passwordResetRoute";
 import setInitialPasswordRoute from "./setInitialPasswordRoute";
 import verificationRoutes from "./verificationRoutes";
+import otpStoreRoutes from "./otpStoreRoutes";
 import editMemberRoute from "./editMemberRoute";
 import sellInMarketRoute from "./sellInMarketRoute";
 import getMemberRoute from "./getMemberRoute";
@@ -35,10 +36,11 @@ export default function MemberRoutes() {
   router.use(sellInMarketRoute());
   router.use(getMemberRoute());
   router.use("/verify", verificationRoutes()); // Mount verification routes with prefix
+  router.use("/verify", otpStoreRoutes()); // Mount OTP store routes with same prefix
 
   logger.info("Member routes initialized successfully", {
     module: "memberRoutes",
-    routesCount: 11,
+    routesCount: 12,
   });
 
   return router;
