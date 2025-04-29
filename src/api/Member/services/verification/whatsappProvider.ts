@@ -41,44 +41,19 @@ export class WhatsAppProvider implements IVerificationProvider {
       // Format phone number to international format if needed
       const formattedPhone = this.formatPhoneNumber(to);
       
-      // Message template for OTP
+      // Regular text message for OTP
       const message = {
         messaging_product: 'whatsapp',
         to: formattedPhone,
-        type: 'template',
-        template: {
-          name: 'vimbiso_otp',
-          language: {
-            code: 'en'
-          },
-          components: [
-            {
-              type: 'body',
-              parameters: [
-                {
-                  type: 'text',
-                  text: otp
-                }
-              ]
-            },
-            {
-              type: 'button',
-              sub_type: 'url',
-              index: 0,
-              parameters: [
-                {
-                  type: 'text',
-                  text: otp
-                }
-              ]
-            }
-          ]
+        type: 'text',
+        text: {
+          body: `Your verification code is: ${otp}. This code will expire in 5 minutes.`
         }
       };
 
       logger.debug('Sending WhatsApp message:', {
         phone: formattedPhone,
-        template: 'vimbiso_otp',
+        messageType: 'text',
         url: `${this.apiBaseUrl}/messages`,
         apiVersion: 'v22.0',
         businessId: this.businessId,
