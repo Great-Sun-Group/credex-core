@@ -6,6 +6,8 @@ import { VerificationProviderType } from '../services/verification/types';
 import { OTPManager } from '../services/verification/otpManager';
 import { authConfig } from '../../../config/auth';
 import logger from '../../../utils/logger';
+import { v4 as uuidv4 } from 'uuid';
+import { ledgerSpaceDriver } from '../../../../config/neo4j';
 
 // Create default service configuration from auth config
 const defaultConfig = {
@@ -14,6 +16,39 @@ const defaultConfig = {
   cooldownMinutes: authConfig.otp.cooldownMinutes,
   maxAttempts: authConfig.otp.maxAttempts
 };
+
+// Verification token expiry time (5 minutes)
+export const VERIFICATION_TOKEN_EXPIRY = 5 * 60; // 5 minutes in seconds
+
+/**
+ * Generates a verification token for a member
+ * This token can be used for any operation requiring enhanced authentication
+ * 
+ * @param memberID The ID of the member to generate a token for
+ * @returns The generated verification token
+ */
+export async function generateVerificationToken(memberID: string): Promise<string> {
+  const session = ledgerSpaceDriver.session();
+  try {
+    const verificationToken = uuidv4();
+    const expiry = Math.floor(Date.now() / 1000) + VERIFICATION_TOKEN_EXPIRY;
+
+    await session.run(
+      `MATCH (m:Member {memberID: $memberID})
+       SET m.verificationToken = $verificationToken,
+           m.verificationTokenExpiry = $expiry`,
+      { memberID, verificationToken, expiry }
+    );
+
+    logger.info('Generated verification token', { memberID });
+    return verificationToken;
+  } catch (error) {
+    logger.error('Failed to generate verification token', { error, memberID });
+    throw error;
+  } finally {
+    await session.close();
+  }
+}
 
 // Create verification service for each request
 const createVerificationService = () => {
@@ -60,7 +95,40 @@ export const checkOTPVerificationStatus = async (req: Request, res: Response) =>
     // Check if OTP has been verified
     const result = await verificationService.checkOTPVerificationStatus(memberID, phone);
     
-    // Return response
+    // Check if token is active but don't return it in the response
+    // This is for logging purposes only
+    if (result.success) {
+      try {
+        // Check if there's an active verification token
+        const session = ledgerSpaceDriver.session();
+        try {
+          const tokenResult = await session.run(
+            `MATCH (m:Member {memberID: $memberID})
+             WHERE m.verificationTokenActive = true
+             AND m.verificationTokenExpiry > $now
+             RETURN count(m) as hasActiveToken`,
+            { 
+              memberID,
+              now: Math.floor(Date.now() / 1000)
+            }
+          );
+          
+          const hasActiveToken = tokenResult.records[0].get('hasActiveToken') > 0;
+          
+          logger.info('Verification token status check', { 
+            memberID, 
+            phone,
+            hasActiveToken
+          });
+        } finally {
+          await session.close();
+        }
+      } catch (error) {
+        logger.error('Failed to check verification token status', { error, memberID, phone });
+      }
+    }
+    
+    // Return response without the verification token
     res.json({
       message: result.success ? 'OTP verification status retrieved' : 'OTP not verified',
       data: {

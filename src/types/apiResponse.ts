@@ -162,8 +162,11 @@ export interface MemberActionDetails {
   authMethod?: 'phone_only' | 'password';
   otpVerified?: boolean;
   resetToken?: string;
+  verificationToken?: string;
   purpose?: 'PASSWORD_RESET';
   expiresIn?: number;
+  verified?: boolean;
+  verifiedAt?: string;
 }
 
 export interface AccountActionDetails {
