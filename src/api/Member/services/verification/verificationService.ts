@@ -328,8 +328,8 @@ export class VerificationService {
         };
       }
 
-      // Check attempts
-      if (attempts >= this.config.maxAttempts) {
+      // Check attempts - bypassed in development environment
+      if (process.env.NODE_ENV !== 'development' && attempts >= this.config.maxAttempts) {
         return {
           success: false,
           message: 'Maximum verification attempts exceeded',

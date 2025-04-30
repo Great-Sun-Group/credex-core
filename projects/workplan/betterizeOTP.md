@@ -199,12 +199,23 @@ The user-initiated WhatsApp OTP verification approach offers significant advanta
 ### Credex Core
 - Added `/api/Member/verify/storeOtp` endpoint to store app-generated OTPs
 - Added `/api/Member/verify/validateChatbotOtp` endpoint to validate OTPs from the chatbot
+- Added `/api/Member/verify/checkOtpStatus` endpoint to check OTP verification status
 - Implemented proper validation, rate limiting, and security measures
 
 ### VimbisoPay App
 - Added `storeOtp` method to the `AccountRepositoryImpl` class
   - This method sends OTPs to Credex Core for storage
   - Properly formats phone numbers and handles authentication
+- Added `checkOtpVerificationStatus` method to check if an OTP has been verified
+- Implemented `WhatsAppOTPVerification` widget
+  - Generates and stores OTPs
+  - Creates WhatsApp deep links with pre-populated verification messages
+  - Provides UI for the verification flow
+  - Handles verification status checking
+- Implemented `OTPUtils` class for OTP generation and WhatsApp deep linking
+- Fixed issue with manual verification status checking in password reset flow
+  - Now properly proceeds with the flow after successful verification
+  - Creates a minimal User object when needed for the password reset flow
 
 ### Vimbiso Chatserver
 - Created `VerifyOTPHandler` in the chatserver
@@ -219,27 +230,21 @@ The user-initiated WhatsApp OTP verification approach offers significant advanta
 
 ## Next Steps
 
-### VimbisoPay App UI
-1. Implement OTP generation in the app:
-   - Create a secure random number generator for 6-digit OTPs
-   - Add this to the verification flow in the login and password reset screens
+### Deep Link Integration
+1. Implement deep link handling in the chatbot:
+   - Add deep link generation in the chatbot response
+   - Format: `vimbisopay://verification-complete?phone=[PHONE]&status=success`
+   - Send this link in the verification success message
 
-2. Create WhatsApp deep linking functionality:
-   - Format: `https://wa.me/263785304448?text=VERIFY%20[OTP]`
-   - Implement in the OTP verification screens
-
-3. Update the UI to guide users:
-   - Add instructions explaining the verification process
-   - Create a button to open WhatsApp with the pre-populated message
-   - Show verification status and success/failure messages
+2. Test deep link handling:
+   - Verify that deep links correctly return to the app
+   - Confirm that verification status is properly updated
 
 ### Testing
 1. End-to-end testing:
-   - Verify OTP generation in the app
-   - Confirm OTP storage in Credex Core
-   - Test WhatsApp deep linking functionality
+   - Test the complete flow from app to WhatsApp and back
    - Verify OTP validation via the chatbot
-   - Confirm the app receives verification status correctly
+   - Test both deep link and manual verification paths
 
 2. Edge case testing:
    - Test rate limiting behavior
@@ -253,10 +258,15 @@ The implementation follows a simple and efficient approach:
 
 1. For the chatserver, we've modified the `WhatsAppFlowProcessor._extract_message_data` method to detect "VERIFY" messages and mark them with an `is_verification` flag. Then in the `process_message` method, we check for this flag and route these messages to the `VerifyOTPHandler` instead of the normal flow processing.
 
-2. For the VimbisoPay app, we need to:
-   - Generate a random 6-digit OTP
-   - Store it via the existing `storeOtp` method
+2. For the VimbisoPay app:
+   - We generate a random 6-digit OTP
+   - Store it via the `storeOtp` method
    - Create a WhatsApp deep link with the format `https://wa.me/263785304448?text=VERIFY%20[OTP]`
    - Open this link when the user taps a button
+   - Provide a manual verification check option for cases where deep links fail
 
-This approach requires minimal changes to the existing architecture while providing a seamless user experience and reducing costs associated with business-initiated WhatsApp messages.
+3. Fixed Issues:
+   - Resolved an issue where the WhatsApp validation screen would hang after successful verification when not using the deep link
+   - Implemented proper handling for the password reset flow by creating a minimal User object with the necessary information
+
+This approach provides a seamless user experience while reducing costs associated with business-initiated WhatsApp messages. It also includes fallback mechanisms for when deep links aren't available or don't work as expected.
