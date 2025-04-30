@@ -431,27 +431,27 @@ export class VerificationService {
       if (lastRequest) {
         const lastRequestDate = new Date(lastRequest);
         const today = new Date();
-        
+
         // Check if the last request was on a different day
         if (lastRequestDate.getUTCDate() !== today.getUTCDate() ||
             lastRequestDate.getUTCMonth() !== today.getUTCMonth() ||
             lastRequestDate.getUTCFullYear() !== today.getUTCFullYear()) {
-          
+
           // Reset the counter in the database
           await session.run(
             `MATCH (m:Member {memberID: $memberID})
              SET m.otpRequestsToday = 0`,
             { memberID }
           );
-          
+
           // Update local variable for subsequent checks
           requests = 0;
           logger.info('Reset daily OTP request counter', { memberID });
         }
       }
 
-      // Check daily limit
-      if (requests >= this.config.maxDailyRequests) {
+      // Check daily limit - bypassed in development environment
+      if (process.env.NODE_ENV !== 'development' && requests >= this.config.maxDailyRequests) {
         return {
           success: false,
           message: 'Daily OTP request limit exceeded',
@@ -462,8 +462,8 @@ export class VerificationService {
         };
       }
 
-      // Check cooldown
-      if (lastRequest) {
+      // Check cooldown - bypassed in development environment
+      if (process.env.NODE_ENV !== 'development' && lastRequest) {
         const cooldownEnd = new Date(lastRequest);
         cooldownEnd.setMinutes(cooldownEnd.getMinutes() + this.config.cooldownMinutes);
 
