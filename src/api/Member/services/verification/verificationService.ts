@@ -427,8 +427,8 @@ export class VerificationService {
       const requests = record.get('requests') || 0;
       const lastRequest = record.get('lastRequest');
 
-      // Check daily limit
-      if (requests >= this.config.maxDailyRequests) {
+      // Check daily limit - bypassed in development environment
+      if (process.env.NODE_ENV !== 'development' && requests >= this.config.maxDailyRequests) {
         return {
           success: false,
           message: 'Daily OTP request limit exceeded',
@@ -439,8 +439,8 @@ export class VerificationService {
         };
       }
 
-      // Check cooldown
-      if (lastRequest) {
+      // Check cooldown - bypassed in development environment
+      if (process.env.NODE_ENV !== 'development' && lastRequest) {
         const cooldownEnd = new Date(lastRequest);
         cooldownEnd.setMinutes(cooldownEnd.getMinutes() + this.config.cooldownMinutes);
 
