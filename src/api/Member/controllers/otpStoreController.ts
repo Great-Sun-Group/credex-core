@@ -118,7 +118,18 @@ export const storeOTP = async (req: Request, res: Response) => {
       });
     }
 
-    // Return success response
+    // Return success response with verification token
+    const responseDetails: MemberActionDetails = {
+      memberID,
+      phone,
+      expiresIn: defaultConfig.otpExpiry
+    };
+    
+    // Add verification token if available
+    if (storeResult.data && typeof storeResult.data === 'object' && 'verificationToken' in storeResult.data) {
+      responseDetails.verificationToken = storeResult.data.verificationToken as string;
+    }
+      
     res.json({
       message: 'OTP stored successfully',
       data: {
@@ -127,11 +138,7 @@ export const storeOTP = async (req: Request, res: Response) => {
           type: ApiActionType.MEMBER_UPDATE,
           timestamp: new Date().toISOString(),
           actor: memberID,
-          details: {
-            memberID,
-            phone,
-            expiresIn: defaultConfig.otpExpiry
-          } as MemberActionDetails
+          details: responseDetails
         }
       }
     });

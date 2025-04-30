@@ -30,24 +30,25 @@ export async function generateResetToken(memberID: string): Promise<string> {
 }
 
 export async function resetPassword(req: Request, res: Response) {
-  const { resetToken, newPassword } = req.body;
+  const { verificationToken, newPassword } = req.body;
   const session = ledgerSpaceDriver.session();
 
   try {
-    // Find member by reset token and check expiry
+    // Find member by verification token and check if it's active and not expired
     const result = await session.run(
-      `MATCH (m:Member {resetToken: $resetToken})
-       WHERE m.resetTokenExpiry > $now
+      `MATCH (m:Member {verificationToken: $verificationToken})
+       WHERE m.verificationTokenExpiry > $now
+       AND m.verificationTokenActive = true
        RETURN m.memberID as memberID`,
       { 
-        resetToken,
+        verificationToken,
         now: Math.floor(Date.now() / 1000)
       }
     );
 
     if (result.records.length === 0) {
       return res.status(400).json({
-        message: 'Invalid or expired reset token',
+        message: 'Invalid or expired verification token',
         data: {
           action: {
             id: null,
@@ -55,7 +56,7 @@ export async function resetPassword(req: Request, res: Response) {
             timestamp: new Date().toISOString(),
             details: {
               code: 'TOKEN_EXPIRED',
-              reason: 'Reset token is invalid or has expired'
+              reason: 'Verification token is invalid, inactive, or has expired'
             }
           }
         }
@@ -67,12 +68,12 @@ export async function resetPassword(req: Request, res: Response) {
     // Hash new password
     const { hash: newPasswordHash } = await passwordService.hashPassword(newPassword);
 
-    // Update password and clear reset token
+    // Update password and clear verification token
     await session.run(
       `MATCH (m:Member {memberID: $memberID})
        SET m.passwordHash = $newPasswordHash,
-           m.resetToken = null,
-           m.resetTokenExpiry = null,
+           m.verificationToken = null,
+           m.verificationTokenExpiry = null,
            m.passwordUpdatedAt = datetime()`,
       { memberID, newPasswordHash }
     );

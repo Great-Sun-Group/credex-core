@@ -12,6 +12,7 @@ import { MemberRepository } from '../../repositories/MemberRepository';
 import { WhatsAppProvider } from './whatsappProvider';
 import { OTPManager } from './otpManager';
 import logger from '../../../../utils/logger';
+import { v4 as uuidv4 } from 'uuid';
 
 const RESET_TOKEN_EXPIRY = 10 * 60; // 10 minutes in seconds
 
@@ -348,12 +349,12 @@ export class VerificationService {
         message: verifyResult.message
       });
       
-      // Update attempts
+      // Update attempts and activate verification token if successful
       await session.run(
         `MATCH (m:Member {memberID: $memberID})
          SET m.otpAttempts = m.otpAttempts + 1
-         ${verifyResult.success ? ', m.otpVerified = true, m.hashedOTP = null' : ''}`,
-        { memberID }
+         ${verifyResult.success ? ', m.otpVerified = true, m.hashedOTP = null, m.verificationTokenActive = true, m.lastOtpVerification = $now' : ''}`,
+        { memberID, now: new Date().toISOString() }
       );
 
       if (verifyResult.success && purpose === 'PASSWORD_RESET') {
@@ -505,7 +506,7 @@ export class VerificationService {
    * @param phone The phone number to associate with the OTP
    * @param hashedOTP The pre-hashed OTP to store
    * @param purpose The purpose of the OTP (e.g., PASSWORD_RESET)
-   * @returns ServiceResult with the operation status
+   * @returns ServiceResult with the operation status and verification token
    */
   async storeOTP(memberID: string, phone: string, hashedOTP: string, purpose?: 'PASSWORD_RESET'): Promise<ServiceResult> {
     const session = ledgerSpaceDriver.session();
@@ -528,14 +529,22 @@ export class VerificationService {
         };
       }
 
-      // Store OTP details in database
+      // Generate a verification token
+      const verificationToken = uuidv4();
+      const tokenExpiry = Math.floor(Date.now() / 1000) + 300; // 5 minutes
+
+      // Store OTP details and verification token in database
       const query = `
         MATCH (m:Member {memberID: $memberID})
         SET m.hashedOTP = $hashedOTP,
             m.otpExpiry = $expiry,
             m.otpAttempts = 0,
             m.lastOtpRequest = $now,
-            m.otpRequestsToday = COALESCE(m.otpRequestsToday, 0) + 1
+            m.otpRequestsToday = COALESCE(m.otpRequestsToday, 0) + 1,
+            m.verificationToken = $verificationToken,
+            m.verificationTokenExpiry = $tokenExpiry,
+            m.verificationTokenActive = false,
+            m.otpPurpose = $purpose
         WITH m
         RETURN properties(m) as member
       `;
@@ -544,22 +553,27 @@ export class VerificationService {
         memberID,
         hashedOTP,
         expiry: new Date(Date.now() + this.config.otpExpiry * 1000).toISOString(),
-        now: new Date().toISOString()
+        now: new Date().toISOString(),
+        verificationToken,
+        tokenExpiry,
+        purpose: purpose || 'GENERAL'
       });
 
       // Verify OTP was stored
       const record = result.records[0];
       const memberData = record.get('member');
-      logger.info('Stored OTP verification', {
+      logger.info('Stored OTP verification with verification token', {
         memberID,
-        hashedOTPStored: !!memberData.hashedOTP
+        hashedOTPStored: !!memberData.hashedOTP,
+        verificationTokenStored: !!memberData.verificationToken
       });
 
       return {
         success: true,
         message: 'OTP stored successfully',
         data: {
-          expiresIn: this.config.otpExpiry
+          expiresIn: this.config.otpExpiry,
+          verificationToken
         }
       };
     } catch (error) {

@@ -139,6 +139,10 @@ export default function otpStoreRoutes() {
    *                             expiresIn:
    *                               type: number
    *                               description: OTP expiry in seconds
+   *                             verificationToken:
+   *                               type: string
+   *                               format: uuid
+   *                               description: Token that can be used for password reset after OTP verification
    */
   router.post('/storeOtp', verifyClientApiKey, validateRequest(storeOTPSchema), storeOTP);
 

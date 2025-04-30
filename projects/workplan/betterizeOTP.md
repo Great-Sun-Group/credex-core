@@ -230,6 +230,27 @@ The user-initiated WhatsApp OTP verification approach offers significant advanta
 
 ## Next Steps
 
+### Enhanced Verification Token System
+1. Implement the new verification token system:
+   - The server now generates a verification token when storing an OTP
+   - This token is initially inactive and returned to the client
+   - When the OTP is verified via WhatsApp, the token is activated
+   - The token can then be used for password reset or other sensitive operations
+   - Tokens expire after 5 minutes and are single-use
+
+2. Client-side changes needed:
+   - Update `AccountRepository` to handle the verification token in responses
+   - Store the verification token when received from `storeOtp` endpoint
+   - Update `WhatsAppOTPVerification` widget to check for active tokens
+   - Pass the verification token to the password reset flow
+   - Update `ChangePasswordBottomSheet` to use the verification token
+
+3. Security improvements:
+   - The verification token provides an additional layer of security
+   - Only activated tokens (after WhatsApp verification) can be used
+   - Tokens are time-limited and tied to specific operations
+   - This prevents unauthorized password resets even if an attacker has access to the device
+
 ### Deep Link Integration
 1. Implement deep link handling in the chatbot:
    - Add deep link generation in the chatbot response
@@ -245,12 +266,15 @@ The user-initiated WhatsApp OTP verification approach offers significant advanta
    - Test the complete flow from app to WhatsApp and back
    - Verify OTP validation via the chatbot
    - Test both deep link and manual verification paths
+   - Verify that the verification token is properly activated and used
 
 2. Edge case testing:
    - Test rate limiting behavior
-   - Test expired OTPs
+   - Test expired OTPs and tokens
    - Test invalid OTP formats
    - Test network failures during verification
+   - Test using inactive tokens (should fail)
+   - Test using expired tokens (should fail)
 
 ## Implementation Notes
 
@@ -260,13 +284,23 @@ The implementation follows a simple and efficient approach:
 
 2. For the VimbisoPay app:
    - We generate a random 6-digit OTP
-   - Store it via the `storeOtp` method
+   - Store it via the `storeOtp` method, which returns an inactive verification token
    - Create a WhatsApp deep link with the format `https://wa.me/263785304448?text=VERIFY%20[OTP]`
    - Open this link when the user taps a button
-   - Provide a manual verification check option for cases where deep links fail
+   - Periodically check if the OTP has been verified and the token activated
+   - Use the activated token for password reset or other sensitive operations
 
-3. Fixed Issues:
+3. Verification Token Flow:
+   - When the app stores an OTP, it receives an inactive verification token
+   - When the OTP is verified via WhatsApp, the token is activated on the server
+   - The app checks the verification status and retrieves the active token
+   - The active token is then used for password reset or other sensitive operations
+   - Tokens expire after 5 minutes and are single-use
+
+4. Fixed Issues:
    - Resolved an issue where the WhatsApp validation screen would hang after successful verification when not using the deep link
    - Implemented proper handling for the password reset flow by creating a minimal User object with the necessary information
+   - Added security improvements with the verification token system
+   - Fixed potential security vulnerabilities in the password reset flow
 
-This approach provides a seamless user experience while reducing costs associated with business-initiated WhatsApp messages. It also includes fallback mechanisms for when deep links aren't available or don't work as expected.
+This approach provides a seamless user experience while reducing costs associated with business-initiated WhatsApp messages. It also includes fallback mechanisms for when deep links aren't available or don't work as expected. The verification token system adds an additional layer of security to sensitive operations.

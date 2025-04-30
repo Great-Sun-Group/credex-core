@@ -9,10 +9,10 @@ import * as sanitizers from '../../../utils/inputSanitizer';
  * /resetPassword:
  *   post:
  *     tags: [Members]
- *     summary: Reset member password using a reset token
+ *     summary: Reset member password using a verification token
  *     description: |
  *       Resets a member's password using a token obtained through the OTP verification process.
- *       The reset token must be valid and not expired.
+ *       The verification token must be valid and not expired.
  *     requestBody:
  *       required: true
  *       content:
@@ -20,13 +20,13 @@ import * as sanitizers from '../../../utils/inputSanitizer';
  *           schema:
  *             type: object
  *             required:
- *               - resetToken
+ *               - verificationToken
  *               - newPassword
  *             properties:
- *               resetToken:
+ *               verificationToken:
  *                 type: string
  *                 format: uuid
- *                 description: Reset token obtained from OTP verification
+ *                 description: Verification token obtained from OTP verification
  *               newPassword:
  *                 type: string
  *                 minLength: 10
@@ -48,11 +48,11 @@ export default function passwordResetRoute() {
 
   // Schema for password reset request
   const resetPasswordSchema = {
-    resetToken: {
+    verificationToken: {
       sanitizer: sanitizers.sanitizeString,
       validator: (value: string) => ({
         isValid: /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value),
-        message: 'Invalid reset token format'
+        message: 'Invalid verification token format'
       }),
       required: true
     },
