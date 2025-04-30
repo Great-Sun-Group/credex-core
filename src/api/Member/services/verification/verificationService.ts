@@ -424,8 +424,31 @@ export class VerificationService {
       }
 
       const record = result.records[0];
-      const requests = record.get('requests') || 0;
+      let requests = record.get('requests') || 0;
       const lastRequest = record.get('lastRequest');
+
+      // Check if last request was on a previous day and reset counter if needed
+      if (lastRequest) {
+        const lastRequestDate = new Date(lastRequest);
+        const today = new Date();
+
+        // Check if the last request was on a different day
+        if (lastRequestDate.getUTCDate() !== today.getUTCDate() ||
+            lastRequestDate.getUTCMonth() !== today.getUTCMonth() ||
+            lastRequestDate.getUTCFullYear() !== today.getUTCFullYear()) {
+
+          // Reset the counter in the database
+          await session.run(
+            `MATCH (m:Member {memberID: $memberID})
+             SET m.otpRequestsToday = 0`,
+            { memberID }
+          );
+
+          // Update local variable for subsequent checks
+          requests = 0;
+          logger.info('Reset daily OTP request counter', { memberID });
+        }
+      }
 
       // Check daily limit - bypassed in development environment
       if (process.env.NODE_ENV !== 'development' && requests >= this.config.maxDailyRequests) {
