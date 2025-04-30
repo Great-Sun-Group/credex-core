@@ -576,4 +576,77 @@ export class VerificationService {
       await session.close();
     }
   }
+
+  /**
+   * Check if an OTP has been verified for a member
+   * @param memberID The member's ID
+   * @param phone The phone number to check
+   * @returns ServiceResult indicating if OTP has been verified
+   */
+  async checkOTPVerificationStatus(memberID: string, phone: string): Promise<ServiceResult<{verified: boolean, verifiedAt: string}>> {
+    const session = ledgerSpaceDriver.session();
+    try {
+      // Get verification status
+      const result = await session.run(
+        `MATCH (m:Member {memberID: $memberID})
+         RETURN m.otpVerified as otpVerified,
+                m.lastOtpVerification as verifiedAt`,
+        { memberID }
+      );
+
+      if (result.records.length === 0) {
+        return {
+          success: false,
+          message: 'Member not found',
+          error: {
+            code: 'NOT_FOUND',
+            details: 'Member does not exist'
+          }
+        };
+      }
+
+      const record = result.records[0];
+      const otpVerified = record.get('otpVerified');
+      const verifiedAt = record.get('verifiedAt');
+
+      logger.info('OTP verification status check', {
+        memberID,
+        phone,
+        otpVerified,
+        verifiedAt
+      });
+
+      if (otpVerified === true) {
+        return {
+          success: true,
+          message: 'OTP has been verified',
+          data: {
+            verified: true,
+            verifiedAt: verifiedAt || new Date().toISOString()
+          }
+        };
+      }
+
+      return {
+        success: false,
+        message: 'OTP has not been verified',
+        error: {
+          code: VerificationError.INVALID_OTP,
+          details: 'OTP verification is pending'
+        }
+      };
+    } catch (error) {
+      logger.error('Failed to check OTP verification status', { error, memberID });
+      return {
+        success: false,
+        message: 'Failed to check OTP verification status',
+        error: {
+          code: 'INTERNAL_ERROR',
+          details: 'Database error occurred'
+        }
+      };
+    } finally {
+      await session.close();
+    }
+  }
 }

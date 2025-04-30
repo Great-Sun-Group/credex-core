@@ -5,6 +5,7 @@ import { validateUUID, validatePhone } from '../../../utils/validators';
 import { sanitizeUUID, sanitizePhone } from '../../../utils/inputSanitizer';
 import { VerificationPurpose } from '../services/verification/types';
 import { storeOTP, validateChatbotOTP } from '../controllers/otpStoreController';
+import { checkOTPVerificationStatus } from '../controllers/otpVerificationStatusController';
 
 export default function otpStoreRoutes() {
   const router = express.Router();
@@ -214,6 +215,68 @@ export default function otpStoreRoutes() {
    *                               example: chatbot
    */
   router.post('/validateChatbotOtp', verifyClientApiKey, validateRequest(validateChatbotOTPSchema), validateChatbotOTP);
+
+  /**
+   * @swagger
+   * /verify/checkOtpStatus:
+   *   get:
+   *     tags: [Members]
+   *     summary: Check OTP verification status
+   *     description: Checks if an OTP has been verified for a given phone number
+   *     parameters:
+   *       - in: query
+   *         name: phone
+   *         required: true
+   *         schema:
+   *           type: string
+   *           pattern: ^\+?[1-9]\d{1,14}$
+   *         description: Phone number to check verification status for
+   *     responses:
+   *       200:
+   *         description: OTP verification status retrieved
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: OTP verification status retrieved
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: object
+   *                       properties:
+   *                         id:
+   *                           type: string
+   *                           format: uuid
+   *                         type:
+   *                           type: string
+   *                           enum: [MEMBER_UPDATE]
+   *                         timestamp:
+   *                           type: string
+   *                           format: date-time
+   *                         actor:
+   *                           type: string
+   *                           format: uuid
+   *                         details:
+   *                           type: object
+   *                           properties:
+   *                             memberID:
+   *                               type: string
+   *                               format: uuid
+   *                             phone:
+   *                               type: string
+   *                             verified:
+   *                               type: boolean
+   *                               example: true
+   *                             verifiedAt:
+   *                               type: string
+   *                               format: date-time
+   *                               nullable: true
+   */
+  router.get('/checkOtpStatus', verifyClientApiKey, checkOTPVerificationStatus);
 
   return router;
 }
