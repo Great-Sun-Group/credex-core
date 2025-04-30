@@ -431,12 +431,10 @@ export class VerificationService {
       if (lastRequest) {
         const lastRequestDate = new Date(lastRequest);
         const today = new Date();
-
         // Check if the last request was on a different day
         if (lastRequestDate.getUTCDate() !== today.getUTCDate() ||
             lastRequestDate.getUTCMonth() !== today.getUTCMonth() ||
             lastRequestDate.getUTCFullYear() !== today.getUTCFullYear()) {
-
           // Reset the counter in the database
           await session.run(
             `MATCH (m:Member {memberID: $memberID})
