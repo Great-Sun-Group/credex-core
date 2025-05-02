@@ -119,7 +119,8 @@ export const GetAccountByHandleController = async (
           details: {
             accountID: result.data!.accountID,
             accountName: result.data!.accountName,
-            accountHandle: result.data!.accountHandle
+            accountHandle: result.data!.accountHandle,
+            creditRating: result.data!.creditRating
           }
         },
         dashboard: {} // Empty dashboard since this is just a lookup endpoint
