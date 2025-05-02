@@ -1,10 +1,17 @@
 import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import logger from "../../../utils/logger";
+import { CreditRatingService } from "../../../api/Member/services/CreditRatingService";
 
 interface AccountDetails {
   accountID: string;
   accountName: string;
   accountHandle: string;
+  creditRating?: {
+    redeemedTotalUSD: number;
+    outstandingTotalUSD: number;
+    defaultedTotalUSD: number;
+    writtenOffTotalUSD: number;
+  };
 }
 
 interface GetAccountResult {
@@ -71,8 +78,9 @@ export async function GetAccountByHandleService(
     }
 
     const record = result.records[0];
+    const accountID = record.get("accountID");
     const accountDetails: AccountDetails = {
-      accountID: record.get("accountID"),
+      accountID,
       accountName: record.get("accountName"),
       accountHandle: record.get("accountHandle")
     };
@@ -81,6 +89,32 @@ export async function GetAccountByHandleService(
       accountID: accountDetails.accountID, 
       accountHandle 
     });
+
+      // Get credit rating for the account owner
+      try {
+        logger.debug("Fetching credit rating for account owner", { accountID });
+        const creditRating = await CreditRatingService.getInstance().getAccountOwnerCreditRatingInDenom(accountID, "USD");
+      
+      // Add credit rating to account details
+      accountDetails.creditRating = {
+        redeemedTotalUSD: creditRating.redeemedTotal,
+        outstandingTotalUSD: creditRating.outstandingTotal,
+        defaultedTotalUSD: creditRating.defaultedTotal,
+        writtenOffTotalUSD: creditRating.writtenOffTotal
+      };
+      
+      logger.debug("Credit rating added to account details", { 
+        accountID,
+        creditRating: accountDetails.creditRating
+      });
+    } catch (error) {
+      // Log the error but don't fail the request
+      logger.warn("Failed to fetch credit rating for account owner", {
+        accountID,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      // Continue without credit rating
+    }
 
     return {
       success: true,

@@ -124,6 +124,7 @@ export const ErrorCodes = {
   Admin: {
     NOT_FOUND: 404,
     INVALID_ID: 400,
+    INVALID_PARAMETER: 400,
     TIER_LIMIT: 403,
     UNAUTHORIZED: 403,
     INTERNAL_ERROR: 500

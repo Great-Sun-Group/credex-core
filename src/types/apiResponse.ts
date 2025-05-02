@@ -182,6 +182,12 @@ export interface AccountActionDetails {
     latitude: number;
     longitude: number;
   };
+  creditRating?: {
+    redeemedTotalUSD: number;
+    outstandingTotalUSD: number;
+    defaultedTotalUSD: number;
+    writtenOffTotalUSD: number;
+  };
   balances?: {
     securedNetBalancesByDenom?: string[];
     unsecuredBalancesInDefaultDenom?: {

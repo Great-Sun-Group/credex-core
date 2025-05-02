@@ -2,6 +2,7 @@ import { dashboardSwaggerTemplate } from "../../../types/dashboardSwaggerTemplat
 import { MemberError, ErrorCodes } from "../../../utils/errorUtils";
 import { IMemberRepository } from "../repositories/MemberRepository";
 import { ISpendLimitService } from "./SpendLimitService";
+import { CreditRatingService } from "./CreditRatingService";
 import logger from "../../../utils/logger";
 import { getProfilePictureUrls } from "../../../services/assetUrlService";
 
@@ -17,6 +18,12 @@ interface MemberDashboardData {
   otpVerified: boolean;
   activateMarket: boolean;
   profilePictureThumbnail?: string;
+  creditRating?: {
+    redeemedTotalUSD: number;
+    outstandingTotalUSD: number;
+    defaultedTotalUSD: number;
+    writtenOffTotalUSD: number;
+  };
 }
 
 export interface IMemberDashboardService {
@@ -84,6 +91,17 @@ export class MemberDashboardService implements IMemberDashboardService {
         pic600: profilePicUrls?.pic600 ? "exists" : "none"
       });
 
+      // Get credit rating in USD using the singleton
+      logger.debug("Fetching credit rating", { memberID });
+      const creditRating = await CreditRatingService.getInstance().getMemberCreditRatingInDenom(memberID, "USD")
+        .catch((err) => {
+          logger.warn("Failed to fetch credit rating", {
+            memberID,
+            error: err instanceof Error ? err.message : "Unknown error",
+          });
+          return null;
+        });
+
       // Construct standardized response
       return {
         memberID: memberData.id,
@@ -96,6 +114,12 @@ export class MemberDashboardService implements IMemberDashboardService {
         otpVerified: memberData.otpVerified || false,
         activateMarket: memberData.activateMarket || false,
         profilePictureThumbnail: profilePicUrls?.thumbnail,
+        creditRating: creditRating ? {
+          redeemedTotalUSD: creditRating.redeemedTotal,
+          outstandingTotalUSD: creditRating.outstandingTotal,
+          defaultedTotalUSD: creditRating.defaultedTotal,
+          writtenOffTotalUSD: creditRating.writtenOffTotal
+        } : undefined
       };
     } catch (error) {
       logger.error("Error in getMemberDashboardData", {
