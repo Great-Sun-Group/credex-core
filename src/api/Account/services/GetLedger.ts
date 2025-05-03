@@ -98,7 +98,6 @@ export async function GetLedgerService(
       `
       MATCH
           (member:Member {memberID: $memberID})-[:AUTHORIZED_FOR]->(account:Account {accountID: $accountID})-[transactionType:OWES|CLEARED]-(credex:Credex)-[:OWES|CLEARED]-(counterparty:Account)
-      OPTIONAL MATCH (credex)<-[:SECURES]-(securer:Account)
       WITH credex, transactionType, counterparty, account
       ORDER BY credex.acceptedAt DESC
       SKIP $startRow
@@ -110,7 +109,8 @@ export async function GetLedgerService(
           credex.acceptedAt AS timestamp,
           type(transactionType) AS transactionType,
           (startNode(transactionType) = account) as debit,
-          counterparty.accountName AS counterpartyAccountName
+          counterparty.accountName AS counterpartyAccountName,
+          credex.securedCredex AS securedCredex
       `,
       {
         accountID,
@@ -140,13 +140,14 @@ export async function GetLedgerService(
       };
     }
 
-    const entries = records.map((record): LedgerEntry => {
+      const entries = records.map((record): LedgerEntry => {
       const amount = record.get("debit")
         ? -parseFloat(record.get("InitialAmount"))
         : record.get("InitialAmount");
       const denomination = record.get("Denomination");
       const transactionType = record.get("transactionType");
       const counterpartyName = record.get("counterpartyAccountName");
+      const securedCredex = record.get("securedCredex");
       const formattedAmount = `${denomFormatter(amount, denomination)} ${denomination}`;
 
       // Create a descriptive message based on transaction type and direction
@@ -157,7 +158,7 @@ export async function GetLedgerService(
       return {
         credexID: record.get("credexID"),
         timestamp: record.get("timestamp"),
-        type: transactionType,
+        type: securedCredex ? "secured" : "unsecured",
         amount: String(amount),
         denomination,
         description,
