@@ -111,6 +111,7 @@ export interface CredexActionDetails {
   amount: string;
   denomination: string;
   securedCredex: boolean;
+  dueDate?: string | null; // Added for unsecured Credex creation
   receiverAccountID?: string;
   receiverAccountName?: string;
   acceptorAccountID?: string;

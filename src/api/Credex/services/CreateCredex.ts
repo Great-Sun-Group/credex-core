@@ -18,9 +18,10 @@ interface CreateCredexInput {
   credexType: string;
   OFFERSorREQUESTS: "OFFERS" | "REQUESTS";
   securedCredex: boolean;
-  dueDate?: string;
+  dueDate?: string | null;
   invoiceID?: string;
   requestId: string;
+  noDueDate?: boolean;
 }
 
 interface CreateCredexData {
@@ -28,7 +29,7 @@ interface CreateCredexData {
   formattedInitialAmount: string;
   counterpartyAccountName: string;
   secured: boolean;
-  dueDate?: string;
+  dueDate?: string | null;
   transactionType: string;
   issuerAccountID: string;
   issuerAccountName: string;
@@ -85,10 +86,16 @@ export async function CreateCredexService(
     credexType,
     OFFERSorREQUESTS,
     securedCredex = false,
-    dueDate = "",
+    dueDate: rawDueDate,
     invoiceID,
     requestId,
+    noDueDate: rawNoDueDate,
   } = credexData;
+
+  // Normalize noDueDate flag - treat dueDate: null the same as noDueDate: true
+  const noDueDate = rawNoDueDate === true || rawDueDate === null;
+  // Only use dueDate if it's a non-empty string and noDueDate is not true
+  const dueDate = (!noDueDate && typeof rawDueDate === 'string' && rawDueDate !== '') ? rawDueDate : '';
 
   // Create mutable variables for parameters that might be updated from invoice
   let receiverAccountID = credexData.receiverAccountID;
@@ -753,6 +760,27 @@ if (!securedCredex) {
     balanceRepository.clearCache(issuerAccountID);
     balanceRepository.clearCache(receiverAccountID);
 
+    // Check if this is an unsecured credex with noDueDate flag
+    let finalDueDate: string | null | undefined = dueDate || undefined;
+    
+    if (!securedCredex) {
+      // For unsecured credex, check if noDueDate flag is set
+      const checkNoDueDateQuery = await ledgerSpaceSession.executeRead(async (tx) => {
+        const query = `
+          MATCH (credex:Credex { credexID: $credexID })
+          RETURN credex.noDueDate AS noDueDate
+        `;
+        return tx.run(query, { credexID: credexData.credexID });
+      });
+      
+      if (checkNoDueDateQuery.records.length > 0) {
+        const noDueDate = checkNoDueDateQuery.records[0].get("noDueDate");
+        if (noDueDate === true) {
+          finalDueDate = null; // Set to null when noDueDate is true
+        }
+      }
+    }
+
     return {
       success: true,
       data: {
@@ -760,7 +788,7 @@ if (!securedCredex) {
         formattedInitialAmount: denomFormatter(InitialAmount, Denomination),
         counterpartyAccountName: credexData.counterpartyAccountName,
         secured: securedCredex,
-        dueDate: dueDate || undefined,
+        dueDate: finalDueDate,
         transactionType: OFFERSorREQUESTS,
         issuerAccountID: credexData.issuerAccountID,
         issuerAccountName: credexData.issuerAccountName,
