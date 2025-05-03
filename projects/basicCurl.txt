@@ -24,3 +24,6 @@ curl -X POST https://dev.mycredex.dev/devadmin/forceDCO -H "Content-Type: applic
 
 Clear Dev DBs
 curl -X POST https://dev.mycredex.dev/devadmin/clearDevDBs -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW1iZXJJRCI6IjE2NDYwMGUxLTQ1ZWEtNDdiNS1iNWFhLWY3MGM2NmNjYmI5ZCIsImlhdCI6MTc0NjE3ODAxNCwibGFzdEFjdGl2aXR5IjoxNzQ2MTc4MDE0LCJhYnNvbHV0ZUV4cGlyeSI6MTc0NjE4MTYxNCwidmVyc2lvbiI6InYxIiwiYXV0aE1ldGhvZCI6InBob25lX29ubHkifQ.W1w_HZuCK9AThv8ypds9kmJ_-1TiSkBKkMVCflsli3Y" -H "x-dev-admin-key: bgjdsfgny63465hHGDSfgJHDFgjfdR4r56gnf54Fd4h" -H "x-client-api-key: gfnsrtj543dGJFDGjffDhjdyKGjugDg436vBNb" -d ''
+
+Get Ledger
+curl -X POST http://localhost:3000/getLedger -H "Content-Type: application/json" -H "x-client-api-key: gfnsrtj543dGJFDGjffDhjdyKGjugDg436vBNb" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW1iZXJJRCI6IjU2MjRiZjBkLWZhOWMtNGNkYi05OTkyLWQ3ODJmOGFlNmQwZiIsImlhdCI6MTc0NjI4OTY4NiwibGFzdEFjdGl2aXR5IjoxNzQ2Mjg5Njg2LCJhYnNvbHV0ZUV4cGlyeSI6MTc0NjI5MzI4NiwidmVyc2lvbiI6InYxIiwiYXV0aE1ldGhvZCI6InBob25lX29ubHkifQ.mvcrE0r8wG0CBItRxjjuUlEv4zlNWEAtR_UJtmJPVgc" -d '{"accountID": "2061ad60-b0f8-4120-b414-4cee9e13d208"}'
