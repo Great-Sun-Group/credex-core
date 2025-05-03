@@ -2,6 +2,7 @@ import { ledgerSpaceDriver } from "../../../../config/neo4j";
 import { denomFormatter } from "../../../utils/denomUtils";
 import moment from "moment-timezone";
 import logger from "../../../utils/logger";
+import { CreditRatingService } from "../../../api/Member/services/CreditRatingService";
 
 interface OfferedCredex {
   credexID: string;
@@ -9,6 +10,12 @@ interface OfferedCredex {
   counterpartyAccountName: string;
   dueDate?: string | null;
   secured?: boolean;
+  counterpartyCreditRating?: {
+    redeemedTotalUSD: number;
+    outstandingTotalUSD: number;
+    defaultedTotalUSD: number;
+    writtenOffTotalUSD: number;
+  };
 }
 
 interface GetPendingOffersResult {
@@ -79,6 +86,7 @@ export async function GetPendingOffersInService(
           offersInCredex.dueDate AS dueDate,
           offersInCredex.noDueDate AS noDueDate,
           counterparty.accountName AS counterpartyAccountName,
+          counterparty.accountID AS counterpartyAccountID,
           secured
         ORDER BY offersInCredex.createdAt DESC
         `,
@@ -96,17 +104,21 @@ export async function GetPendingOffersInService(
       };
     }
 
-    const offeredCredexData: OfferedCredex[] = result.records.map(record => {
+    // Process the records to create the response data
+    const offeredCredexPromises = result.records.map(async record => {
       const formattedInitialAmount = `${denomFormatter(
         record.get("InitialAmount"),
         record.get("Denomination")
       )} ${record.get("Denomination")}`;
 
+      const secured = record.get("secured") || false;
+      const counterpartyAccountID = record.get("counterpartyAccountID");
+
       const offeredCredex: OfferedCredex = {
         credexID: record.get("credexID"),
         formattedInitialAmount,
         counterpartyAccountName: record.get("counterpartyAccountName"),
-        secured: record.get("secured") || false,
+        secured,
       };
 
       // Always include dueDate field, but set to null when noDueDate is true
@@ -123,8 +135,39 @@ export async function GetPendingOffersInService(
         offeredCredex.dueDate = null;
       }
 
+      // If the credex is unsecured, get the counterparty's credit rating
+      if (!secured && counterpartyAccountID) {
+        try {
+          logger.debug("Fetching credit rating for counterparty", { counterpartyAccountID });
+          const creditRating = await CreditRatingService.getInstance().getAccountOwnerCreditRatingInDenom(counterpartyAccountID, "USD");
+          
+          // Add credit rating to the response
+          offeredCredex.counterpartyCreditRating = {
+            redeemedTotalUSD: creditRating.redeemedTotal,
+            outstandingTotalUSD: creditRating.outstandingTotal,
+            defaultedTotalUSD: creditRating.defaultedTotal,
+            writtenOffTotalUSD: creditRating.writtenOffTotal
+          };
+          
+          logger.debug("Credit rating added to counterparty details", { 
+            counterpartyAccountID,
+            creditRating: offeredCredex.counterpartyCreditRating
+          });
+        } catch (error) {
+          // Log the error but don't fail the request
+          logger.warn("Failed to fetch credit rating for counterparty", {
+            counterpartyAccountID,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+          // Continue without credit rating
+        }
+      }
+
       return offeredCredex;
     });
+
+    // Wait for all promises to resolve
+    const offeredCredexData = await Promise.all(offeredCredexPromises);
 
     logger.info("Successfully retrieved pending offers", {
       accountID,
