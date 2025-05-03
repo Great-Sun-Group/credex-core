@@ -14,10 +14,13 @@ curl -X POST http://localhost:3000/createCredex -H "Content-Type: application/js
 }'
 
 Login
-curl -X POST http://localhost:3000/login -H "Content-Type: application/json" -H "x-client-api-key: gfnsrtj543dGJFDGjffDhjdyKGjugDg436vBNb" -d '{"phone": "19023332786"}'
+curl -X POST https://dev.mycredex.dev/login -H "Content-Type: application/json" -H "x-client-api-key: gfnsrtj543dGJFDGjffDhjdyKGjugDg436vBNb" -d '{"phone": "19023332786"}'
 
 Accept Credex
 curl -X POST http://localhost:3000/acceptCredex -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW1iZXJJRCI6IjVmODZhMTY4LTRlMDMtNDhiZS1iZWE4LTdkMzVlNmVlYjM3YyIsImlhdCI6MTc0NjE3NzM3MywibGFzdEFjdGl2aXR5IjoxNzQ2MTc3MzczLCJhYnNvbHV0ZUV4cGlyeSI6MTc0NjE4MDk3MywidmVyc2lvbiI6InYxIiwiYXV0aE1ldGhvZCI6InBob25lX29ubHkifQ.AG7J6sPuNKq6fHbVQzf4gb_yzeCLytkRjqBU2Bg_rOw" -H "x-client-api-key: gfnsrtj543dGJFDGjffDhjdyKGjugDg436vBNb" -d '{"credexID": "eb1eca43-5007-47de-a20a-bd6bdd6654ee"}'
 
 forceDCO
-curl -X POST http://localhost:3000/devadmin/forceDCO -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW1iZXJJRCI6IjE2NDYwMGUxLTQ1ZWEtNDdiNS1iNWFhLWY3MGM2NmNjYmI5ZCIsImlhdCI6MTc0NjE3ODAxNCwibGFzdEFjdGl2aXR5IjoxNzQ2MTc4MDE0LCJhYnNvbHV0ZUV4cGlyeSI6MTc0NjE4MTYxNCwidmVyc2lvbiI6InYxIiwiYXV0aE1ldGhvZCI6InBob25lX29ubHkifQ.W1w_HZuCK9AThv8ypds9kmJ_-1TiSkBKkMVCflsli3Y" -H "x-dev-admin-key: bgjdsfgny63465hHGDSfgJHDFgjfdR4r56gnf54Fd4h" -H "x-client-api-key: gfnsrtj543dGJFDGjffDhjdyKGjugDg436vBNb" -d ''
+curl -X POST https://dev.mycredex.dev/devadmin/forceDCO -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW1iZXJJRCI6IjE2NDYwMGUxLTQ1ZWEtNDdiNS1iNWFhLWY3MGM2NmNjYmI5ZCIsImlhdCI6MTc0NjE3ODAxNCwibGFzdEFjdGl2aXR5IjoxNzQ2MTc4MDE0LCJhYnNvbHV0ZUV4cGlyeSI6MTc0NjE4MTYxNCwidmVyc2lvbiI6InYxIiwiYXV0aE1ldGhvZCI6InBob25lX29ubHkifQ.W1w_HZuCK9AThv8ypds9kmJ_-1TiSkBKkMVCflsli3Y" -H "x-dev-admin-key: bgjdsfgny63465hHGDSfgJHDFgjfdR4r56gnf54Fd4h" -H "x-client-api-key: gfnsrtj543dGJFDGjffDhjdyKGjugDg436vBNb" -d ''
+
+Clear Dev DBs
+curl -X POST https://dev.mycredex.dev/devadmin/clearDevDBs -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW1iZXJJRCI6IjE2NDYwMGUxLTQ1ZWEtNDdiNS1iNWFhLWY3MGM2NmNjYmI5ZCIsImlhdCI6MTc0NjE3ODAxNCwibGFzdEFjdGl2aXR5IjoxNzQ2MTc4MDE0LCJhYnNvbHV0ZUV4cGlyeSI6MTc0NjE4MTYxNCwidmVyc2lvbiI6InYxIiwiYXV0aE1ldGhvZCI6InBob25lX29ubHkifQ.W1w_HZuCK9AThv8ypds9kmJ_-1TiSkBKkMVCflsli3Y" -H "x-dev-admin-key: bgjdsfgny63465hHGDSfgJHDFgjfdR4r56gnf54Fd4h" -H "x-client-api-key: gfnsrtj543dGJFDGjffDhjdyKGjugDg436vBNb" -d ''

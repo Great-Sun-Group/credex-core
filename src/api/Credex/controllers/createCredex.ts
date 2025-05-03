@@ -439,6 +439,7 @@ export async function CreateCredexController(
             amount: createCredexResult.data.formattedInitialAmount,
             denomination: createCredexResult.data.secured ? "USD" : Denomination, // Fallback to USD for secured Credex if Denomination is undefined
             securedCredex,
+            dueDate: createCredexResult.data.dueDate,
             receiverAccountID: createCredexResult.data.receiverAccountID,
             receiverAccountName:
               createCredexResult.data.counterpartyAccountName,

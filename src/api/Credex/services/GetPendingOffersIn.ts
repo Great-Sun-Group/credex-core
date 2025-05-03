@@ -7,7 +7,7 @@ interface OfferedCredex {
   credexID: string;
   formattedInitialAmount: string;
   counterpartyAccountName: string;
-  dueDate?: string;
+  dueDate?: string | null;
   secured?: boolean;
 }
 
@@ -77,6 +77,7 @@ export async function GetPendingOffersInService(
           offersInCredex.credexID AS credexID,
           offersInCredex.Denomination AS Denomination,
           offersInCredex.dueDate AS dueDate,
+          offersInCredex.noDueDate AS noDueDate,
           counterparty.accountName AS counterpartyAccountName,
           secured
         ORDER BY offersInCredex.createdAt DESC
@@ -105,19 +106,21 @@ export async function GetPendingOffersInService(
         credexID: record.get("credexID"),
         formattedInitialAmount,
         counterpartyAccountName: record.get("counterpartyAccountName"),
+        secured: record.get("secured") || false,
       };
 
-      // Add optional fields if they exist
+      // Always include dueDate field, but set to null when noDueDate is true
       const dueDate = record.get("dueDate");
-      if (dueDate) {
+      const noDueDate = record.get("noDueDate");
+      
+      if (noDueDate) {
+        offeredCredex.dueDate = null;
+      } else if (dueDate) {
         offeredCredex.dueDate = moment(dueDate)
           .subtract(1, "months") // Adjust for moment using Jan = 0 while neo4j uses Jan = 1
           .format("YYYY-MM-DD");
-      }
-
-      const secured = record.get("secured");
-      if (secured) {
-        offeredCredex.secured = secured;
+      } else {
+        offeredCredex.dueDate = null;
       }
 
       return offeredCredex;
