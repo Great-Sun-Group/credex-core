@@ -5,15 +5,7 @@ import { IAccountRepository } from "../repositories/AccountRepository";
 import { IBalanceRepository } from "../repositories/BalanceRepository";
 import logger from "../../../utils/logger";
 import { getProfilePictureUrls } from "../../../services/assetUrlService";
-
-// Import types from pending offers services
-interface OfferedCredex {
-  credexID: string;
-  formattedInitialAmount: string;
-  counterpartyAccountName: string;
-  dueDate?: string;
-  secured?: boolean;
-}
+import { OfferedCredex } from "../../../types/credex";
 
 interface AuthorizedMember {
   memberID: string;
