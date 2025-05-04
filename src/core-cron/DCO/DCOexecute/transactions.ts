@@ -9,9 +9,10 @@ import { GetRecurringService } from "../../../api/Recurring/services/GetRecurrin
 import { CreateCredexService } from "../../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../../api/Credex/services/AcceptCredex";
 import { ServiceResult } from "../../../types/apiResponse";
-import { DCOCreateCredexResult, DCOCredexData } from "../DCOavatars/types";
+import { DCOCreateCredexResult } from "../DCOavatars/types";
 import { DCO_CONSTANTS } from "../constants";
 import { Participant, ParticipantData } from "./types";
+import { CreateCredexData, DCOCredexData } from "../../../types/credex";
 
 /**
  * Custom error class for DCO-related errors

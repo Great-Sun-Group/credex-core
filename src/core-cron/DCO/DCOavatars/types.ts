@@ -1,6 +1,7 @@
 import { DCO_CONSTANTS } from "../constants";
 import { ServiceResult } from "../../../types/apiResponse";
 import { TEMPLATE_TYPES } from "../../../api/Recurring/types";
+import { DCOCredexData } from "../../../types/credex";
 
 export type TemplateType = typeof TEMPLATE_TYPES[keyof typeof TEMPLATE_TYPES];
 export type TemplateStatus = typeof DCO_CONSTANTS.RECURRING.STATUS[keyof typeof DCO_CONSTANTS.RECURRING.STATUS];
@@ -13,7 +14,7 @@ export interface Avatar {
   credspan: string;
   remainingPays: number | null;
   nextPayDate: string | null;
-  dueDate?: string;
+  dueDate?: string | null;
   status: TemplateStatus;
   templateType: TemplateType;
   lastProcessed?: string;
@@ -24,21 +25,7 @@ export interface CredexObject {
   formattedInitialAmount: string;
   counterpartyAccountName: string;
   secured: boolean;
-  dueDate?: string;
-}
-
-// DCO-specific Credex data interface
-export interface DCOCredexData {
-  credexID: string;
-  formattedInitialAmount: string;
-  counterpartyAccountName: string;
-  secured: boolean;
-  dueDate?: string;
-  transactionType: string;
-  issuerAccountID: string;
-  receiverAccountID: string;
-  createdAt: string;
-  cxxMultiplier: number;
+  dueDate?: string | null;
 }
 
 // Extend ServiceResult for DCO-specific needs
