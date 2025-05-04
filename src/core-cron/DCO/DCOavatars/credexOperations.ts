@@ -4,8 +4,9 @@ import logger from "../../../utils/logger";
 import { CreateCredexService } from "../../../api/Credex/services/CreateCredex";
 import { AcceptCredexService } from "../../../api/Credex/services/AcceptCredex";
 import { ServiceResult } from "../../../types/apiResponse";
-import { Avatar, DCOCreateCredexResult, DCOCredexData } from "./types";
+import { Avatar, DCOCreateCredexResult } from "./types";
 import { DCO_CONSTANTS } from "../constants";
+import { CreateCredexData, DCOCredexData } from "../../../types/credex";
 
 // Match CreateCredexInput interface exactly
 interface OfferData {

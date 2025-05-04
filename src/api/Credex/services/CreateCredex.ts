@@ -24,31 +24,10 @@ interface CreateCredexInput {
   noDueDate?: boolean;
 }
 
-interface CreateCredexData {
-  credexID: string;
-  formattedInitialAmount: string;
-  counterpartyAccountName: string;
-  secured: boolean;
-  dueDate?: string | null;
-  transactionType: string;
-  issuerAccountID: string;
-  issuerAccountName: string;
-  receiverAccountID: string;
-  receiverMemberID: string | null;
-  issuerMemberID: string | null;
-  createdAt: string;
-  cxxMultiplier: number;
-}
+import { CreateCredexData } from "../../../types/credex";
+import { ServiceResult } from "../../../types/apiResponse";
 
-interface CreateCredexResult {
-  success: boolean;
-  data?: CreateCredexData;
-  message: string;
-  error?: {
-    code: string;
-    details?: string;
-  };
-}
+interface CreateCredexResult extends ServiceResult<CreateCredexData> {}
 
 interface DatabaseCreateResult {
   success: boolean;

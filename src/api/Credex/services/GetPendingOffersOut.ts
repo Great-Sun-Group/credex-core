@@ -3,20 +3,7 @@ import { denomFormatter } from "../../../utils/denomUtils";
 import moment from "moment-timezone";
 import logger from "../../../utils/logger";
 import { CreditRatingService } from "../../../api/Member/services/CreditRatingService";
-
-interface OfferedCredex {
-  credexID: string;
-  formattedInitialAmount: string;
-  counterpartyAccountName: string;
-  dueDate?: string | null;
-  secured?: boolean;
-  counterpartyCreditRating?: {
-    redeemedTotalUSD: number;
-    outstandingTotalUSD: number;
-    defaultedTotalUSD: number;
-    writtenOffTotalUSD: number;
-  };
-}
+import { OfferedCredex } from "../../../types/credex";
 
 interface GetPendingOffersResult {
   success: boolean;
