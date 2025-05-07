@@ -513,7 +513,7 @@ SET
 # Purpose: Stores any data, including profile/account pictures
 # Security: Encrypted at rest, no public access
 resource "aws_s3_bucket" "asset_marker_data" {
-  bucket = "credexbuckets6-assetmarker-data-${var.environment}"
+  bucket = "credexbuckets5-assetmarker-data-${var.environment}"
 
   tags = merge(var.common_tags, {
     Name = "asset-marker-data-${var.environment}"
