@@ -12,6 +12,8 @@ services:
       NEO4J_PLUGINS: '["apoc"]'
       # License from environment variable
       NEO4J_ENTERPRISE_LICENSE: ${NEO4J_ENTERPRISE_LICENSE}
+      # Disable strict validation to allow enterprise license
+      NEO4J_server_config_strict__validation_enabled: "false"
       # Memory configuration for development
       NEO4J_dbms_memory_heap_initial__size: 512m
       NEO4J_dbms_memory_heap_max__size: 1g
@@ -48,6 +50,8 @@ services:
       NEO4J_PLUGINS: '["apoc"]'
       # License from environment variable
       NEO4J_ENTERPRISE_LICENSE: ${NEO4J_ENTERPRISE_LICENSE}
+      # Disable strict validation to allow enterprise license
+      NEO4J_server_config_strict__validation_enabled: "false"
       # Memory configuration for development
       NEO4J_dbms_memory_heap_initial__size: 512m
       NEO4J_dbms_memory_heap_max__size: 1g
