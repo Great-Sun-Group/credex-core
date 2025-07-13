@@ -98,13 +98,13 @@ services:
       
       # Development Keys
       JWT_SECRET: dev-jwt-secret-key-change-in-production
-      CLIENT_API_KEY: dev-client-api-key-change-in-production
+      CLIENT_API_KEY: bdgyk83HjdhjtSfhy36msfthf
       DEV_ADMIN_KEY: dev-admin-key-for-testing
       SKIP_RATE_LIMITER_KEY: dev-skip-rate-limiter-key
       PASSWORD_PEPPER: dev-password-pepper-change-in-production
       
       # External APIs (placeholder values for development)
-      OPEN_EXCHANGE_RATES_API: your_open_exchange_rates_api_key_here
+      OPEN_EXCHANGE_RATES_API: 8db9eabefc004a6e8fb69c4b6f40196d
       CREDEX_CORE_WHATSAPP_API_KEY: your_whatsapp_api_key_here
       CREDEX_CORE_WHATSAPP_BUSINESS_ID: whats-app-business-id
       CREDEX_CORE_WHATSAPP_PHONE_ID: whats-app-phone-id
@@ -124,6 +124,80 @@ services:
         condition: service_healthy
       neo4j-search:
         condition: service_healthy
+    restart: unless-stopped
+
+  # Vimbiso ChatServer Application
+  vimbiso-chatserver:
+    build:
+      context: ../vimbiso-chatserver
+      target: development
+    container_name: vimbiso-chatserver-app
+    environment:
+      - DJANGO_ENV=development
+      - DEBUG=True
+      - ALLOWED_HOSTS=*
+      - DJANGO_SECRET=dev-django-secret-key-change-in-production
+      - REDIS_URL=redis://redis-state:6379/0
+      - WHATSAPP_API_URL=http://mock-whatsapp:8001/
+      - WHATSAPP_ACCESS_TOKEN=dev-mock-access-token
+      - WHATSAPP_PHONE_NUMBER_ID=dev-mock-phone-id
+      - WHATSAPP_BUSINESS_ID=dev-mock-business-id
+      - MYCREDEX_APP_URL=http://credex-core:3000/
+      - CLIENT_API_KEY=bdgyk83HjdhjtSfhy36msfthf
+      - USE_PROGRESSIVE_FLOW=True
+      - MOCK_TEST_KEY=dev-mock-test-key-for-testing
+      - PORT=8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../vimbiso-chatserver/app/data:/app/data
+      - ../vimbiso-chatserver/app/core:/app/core
+      - ../vimbiso-chatserver/app/config:/app/config
+      - ../vimbiso-chatserver/app/services:/app/services
+      - ../vimbiso-chatserver/app/manage.py:/app/manage.py
+    command: ["bash", "-c", "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"]
+    depends_on:
+      redis-state:
+        condition: service_healthy
+      credex-core:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 2
+      start_period: 20s
+    restart: unless-stopped
+
+  # Redis State Manager for Vimbiso ChatServer
+  redis-state:
+    image: redis:7.0-alpine
+    container_name: vimbiso-redis-state
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 2
+    restart: unless-stopped
+
+  # Mock WhatsApp Server for Testing
+  mock-whatsapp:
+    build:
+      context: ../vimbiso-chatserver
+      target: development
+    container_name: vimbiso-mock-whatsapp
+    volumes:
+      - ../vimbiso-chatserver/mock:/app/mock
+    ports:
+      - "8001:8001"
+    environment:
+      - MOCK_TEST_KEY=dev-mock-test-key-for-testing
+    command: ["python3", "mock/server.py"]
+    depends_on:
+      - vimbiso-chatserver
     restart: unless-stopped
 
 volumes:
