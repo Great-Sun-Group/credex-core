@@ -1,6 +1,7 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { DBinitialization } from "./DBinitialization/index";
 import { DCOexecute } from "./DCOexecute/index";
+import { triggerPreDCOBackup, triggerPostDCOBackup, scheduleMaintenanceWindow } from "./BackupIntegration";
 import logger, { configureDCOLogger } from "../../utils/logger";
 import { v4 as uuidv4 } from "uuid";
 
@@ -21,6 +22,15 @@ export async function DailyCredcoinOffering(): Promise<{
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
+    // Trigger pre-DCO backup for safety
+    try {
+      await triggerPreDCOBackup();
+    } catch (error) {
+      logger.warn("Pre-DCO backup failed, continuing with DCO", {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+
     // Check for active daynode
     logger.debug("Checking for active daynode");
     const daynodeExists = await checkActiveDaynode(ledgerSpaceSession);
@@ -41,6 +51,26 @@ export async function DailyCredcoinOffering(): Promise<{
       throw error;
     }
     logger.debug("DCO execution completed");
+
+    // Trigger post-DCO backup to capture results
+    try {
+      await triggerPostDCOBackup();
+    } catch (error) {
+      logger.error("Post-DCO backup failed", {
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      // Don't fail DCO if backup fails
+    }
+
+    // Schedule maintenance window for midnight UTC
+    try {
+      await scheduleMaintenanceWindow();
+    } catch (error) {
+      logger.warn("Failed to schedule maintenance window", {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
 
     logger.info("Daily Credcoin Offering process completed successfully");
     return { success: true };

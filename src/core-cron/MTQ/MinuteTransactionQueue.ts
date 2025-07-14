@@ -1,6 +1,7 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { LoopFinder } from "./LoopFinder";
 import { performTrustAudit } from "../../audits/trustAudit";
+import { triggerPostMTQBackup } from "./BackupIntegration";
 import _ from "lodash";
 import logger from "../../utils/logger";
 
@@ -74,6 +75,17 @@ export async function MinuteTransactionQueue(): Promise<boolean> {
         logger.warn("MTQ processing completed after bail timer was reached");
       } else {
         logger.info("MTQ processing completed successfully");
+        
+        // Trigger post-MTQ backup
+        try {
+          await triggerPostMTQBackup();
+        } catch (error) {
+          logger.error("Post-MTQ backup failed", {
+            error: error instanceof Error ? error.message : "Unknown error",
+            stack: error instanceof Error ? error.stack : undefined,
+          });
+          // Don't fail MTQ if backup fails
+        }
       }
       return true;
     } catch (error) {
