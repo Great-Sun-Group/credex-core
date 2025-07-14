@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Same-Server Production Deployment</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">Same-Server Production Deployment</h1>
+
+    <p>
+      This document provides a comprehensive guide for deploying the Credex Core production environment 
+      alongside your existing development setup on the same Windows server, with integrated MTQ/DCO backup system.
+    </p>
+
+    <h2>Overview</h2>
+    <p>
+      The same-server production deployment allows you to run both development and production environments 
+      on a single Windows machine with complete isolation and comprehensive backup integration. This approach 
+      is ideal for:
+    </p>
+    <ul>
+      <li>Small to medium-scale deployments (dozens of users)</li>
+      <li>Cost-effective production environments</li>
+      <li>Rapid deployment and testing scenarios</li>
+      <li>Environments where downtime is acceptable for maintenance</li>
+    </ul>
+
+    <h2>Prerequisites</h2>
+    <ul>
+      <li>Windows 10/11 with Docker Desktop</li>
+      <li>Development environment already running (as per VIMBISO_SETUP_SUMMARY.md)</li>
+      <li>At least 16GB RAM (8GB+ available for production)</li>
+      <li>100GB+ free disk space</li>
+      <li>Stable internet connection</li>
+    </ul>
+
+    <h2>Architecture Overview</h2>
+
+    <h3>Port Allocation</h3>
+    <table>
+      <tr>
+        <th>Service</th>
+        <th>Development Port</th>
+        <th>Production Port</th>
+      </tr>
+      <tr>
+        <td>Credex Core API</td>
+        <td>3000</td>
+        <td>4000</td>
+      </tr>
+      <tr>
+        <td>Vimbiso ChatServer</td>
+        <td>8000</td>
+        <td>9000</td>
+      </tr>
+      <tr>
+        <td>Neo4j Ledger HTTP</td>
+        <td>7474</td>
+        <td>7476</td>
+      </tr>
+      <tr>
+        <td>Neo4j Ledger Bolt</td>
+        <td>7687</td>
+        <td>7689</td>
+      </tr>
+      <tr>
+        <td>Neo4j Search HTTP</td>
+        <td>7475</td>
+        <td>7477</td>
+      </tr>
+      <tr>
+        <td>Neo4j Search Bolt</td>
+        <td>7688</td>
+        <td>7690</td>
+      </tr>
+      <tr>
+        <td>Redis</td>
+        <td>6379</td>
+        <td>6380</td>
+      </tr>
+      <tr>
+        <td>System Monitor</td>
+        <td>-</td>
+        <td>9100</td>
+      </tr>
+    </table>
+
+    <h3>Resource Management</h3>
+    <p>Production services are configured with resource limits to prevent interference with development:</p>
+    <ul>
+      <li><strong>Neo4j instances</strong>: 2-3GB memory limit, 1-2 CPU cores each</li>
+      <li><strong>Application services</strong>: 512MB-1GB memory limit</li>
+      <li><strong>Total estimated usage</strong>: 6-8GB RAM, 4-6 CPU cores</li>
+    </ul>
+
+    <h2>Quick Start Guide</h2>
+
+    <h3>1. Configure Production Environment</h3>
+    <p>Copy and customize the production environment file:</p>
+    <pre><code>cp .env.prod .env.prod.local</code></pre>
+
+    <p>Edit <code>.env.prod.local</code> and replace ALL placeholder values:</p>
+
+    <h4>Critical Security Keys (MUST CHANGE):</h4>
+    <pre><code>JWT_SECRET_PROD=your-super-secure-jwt-secret-at-least-32-chars
+CLIENT_API_KEY_PROD=your-unique-client-api-key-for-production
+PASSWORD_PEPPER_PROD=your-password-pepper-for-extra-security
+DJANGO_SECRET_PROD=your-django-secret-key-50-chars-minimum</code></pre>
+
+    <h4>Neo4j License (same as dev):</h4>
+    <pre><code>NEO4J_ENTERPRISE_LICENSE=your_existing_neo4j_license</code></pre>
+
+    <h4>WhatsApp Production Credentials:</h4>
+    <pre><code>WHATSAPP_API_URL=https://graph.facebook.com/v18.0/
+WHATSAPP_ACCESS_TOKEN=your_production_whatsapp_token
+WHATSAPP_PHONE_NUMBER_ID=your_production_phone_number_id
+WHATSAPP_BUSINESS_ID=your_production_business_account_id</code></pre>
+
+    <h4>Firebase Production Credentials:</h4>
+    <pre><code>FIREBASE_PROJECT_ID=your-production-firebase-project
+FIREBASE_CLIENT_EMAIL=your-production-service-account@project.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour Production Key\n-----END PRIVATE KEY-----"</code></pre>
+
+    <h3>2. Start Production Environment</h3>
+    <pre><code># Start production services
+docker compose -f docker-compose.prod.yml --env-file .env.prod.local up -d
+
+# Check service status
+docker compose -f docker-compose.prod.yml ps</code></pre>
+
+    <h3>3. Verify Production Services</h3>
+
+    <h4>Production URLs:</h4>
+    <ul>
+      <li>Credex Core API: <a href="http://localhost:4000">http://localhost:4000</a></li>
+      <li>Vimbiso ChatServer: <a href="http://localhost:9000">http://localhost:9000</a></li>
+      <li>Neo4j Ledger Browser: <a href="http://localhost:7476">http://localhost:7476</a></li>
+      <li>Neo4j Search Browser: <a href="http://localhost:7477">http://localhost:7477</a></li>
+      <li>System Monitor: <a href="http://localhost:9100">http://localhost:9100</a></li>
+    </ul>
+
+    <h4>Health Checks:</h4>
+    <pre><code># Test Credex Core
+curl http://localhost:4000/api-docs
+
+# Test Vimbiso ChatServer
+curl http://localhost:9000/health/
+
+# Test Neo4j connections
+docker exec credex-neo4j-ledger-prod cypher-shell -u neo4j -p password "RETURN 'Ledger OK'"
+docker exec credex-neo4j-search-prod cypher-shell -u neo4j -p password "RETURN 'Search OK'"</code></pre>
+
+    <h2>Integrated Backup System</h2>
+
+    <h3>MTQ/DCO Integration</h3>
+    <p>The backup system is fully integrated with your critical business processes:</p>
+    <ul>
+      <li><strong>Pre-DCO Backup</strong>: Automatic safety snapshot before DCO starts</li>
+      <li><strong>Post-DCO Backup</strong>: Captures DCO results and exchange rates</li>
+      <li><strong>Post-MTQ Backup</strong>: Transaction logs after MTQ completion</li>
+      <li><strong>Exchange Rate Backup</strong>: Immediate backup after ZWG rate fetch</li>
+    </ul>
+
+    <h3>Backup Types & Schedule</h3>
+    <table>
+      <tr>
+        <th>Backup Type</th>
+        <th>Schedule</th>
+        <th>Content</th>
+        <th>Retention</th>
+      </tr>
+      <tr>
+        <td>Hourly</td>
+        <td>Every 2 hours</td>
+        <td>Transaction logs, Redis state</td>
+        <td>2 days</td>
+      </tr>
+      <tr>
+        <td>Daily</td>
+        <td>1 AM UTC</td>
+        <td>Full database backup</td>
+        <td>30 days</td>
+      </tr>
+      <tr>
+        <td>Weekly</td>
+        <td>Sunday 2 AM UTC</td>
+        <td>Complete system backup</td>
+        <td>12 weeks</td>
+      </tr>
+      <tr>
+        <td>Maintenance</td>
+        <td>Midnight UTC</td>
+        <td>Full backup + system maintenance</td>
+        <td>7 days</td>
+      </tr>
+      <tr>
+        <td>Post-MTQ</td>
+        <td>After MTQ completion</td>
+        <td>Transaction logs, state</td>
+        <td>2 days</td>
+      </tr>
+      <tr>
+        <td>Post-DCO</td>
+        <td>After DCO completion</td>
+        <td>Full backup + exchange rates</td>
+        <td>30 days</td>
+      </tr>
+    </table>
+
+    <h3>Manual Backup Commands</h3>
+    <pre><code># Trigger manual backups
+docker exec credex-backup-service /scripts/integrated-backup.sh daily
+docker exec credex-backup-service /scripts/integrated-backup.sh maintenance
+
+# Check backup logs
+docker logs credex-backup-service
+
+# List backup files
+ls -la ./backups/</code></pre>
+
+    <h3>Backup Locations</h3>
+    <ul>
+      <li><strong>Local</strong>: <code>./backups/</code> directory</li>
+      <li><strong>Cloud</strong>: AWS S3 (if configured)</li>
+      <li><strong>Structure</strong>:
+        <ul>
+          <li><code>./backups/hourly/</code> - Hourly backups</li>
+          <li><code>./backups/daily/</code> - Daily backups</li>
+          <li><code>./backups/weekly/</code> - Weekly backups</li>
+          <li><code>./backups/maintenance/</code> - Maintenance backups</li>
+          <li><code>./backups/post-mtq/</code> - Post-MTQ backups</li>
+          <li><code>./backups/post-dco/</code> - Post-DCO backups</li>
+          <li><code>./backups/exchange-rates/</code> - Exchange rate data</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h2>Daily Operations</h2>
+
+    <h3>Morning Checklist</h3>
+    <ol>
+      <li>Check service health: <code>docker compose -f docker-compose.prod.yml ps</code></li>
+      <li>Review backup logs: <code>docker logs credex-backup-service --tail 50</code></li>
+      <li>Check disk space: <code>df -h</code></li>
+      <li>Monitor system resources: Visit <a href="http://localhost:9100">http://localhost:9100</a></li>
+    </ol>
+
+    <h3>Maintenance Window (Midnight UTC)</h3>
+    <p>The system automatically performs comprehensive maintenance during the daily DCO window:</p>
+    <ul>
+      <li>Full system backup with consistent snapshots</li>
+      <li>Docker system cleanup</li>
+      <li>Log rotation and cleanup</li>
+      <li>Database optimization</li>
+      <li>System health checks</li>
+    </ul>
+
+    <h2>Performance Considerations</h2>
+
+    <h3>Resource Contention</h3>
+    <p><strong>High Impact Activities:</strong></p>
+    <ul>
+      <li>Visual Studio/VS Code with large projects</li>
+      <li>Database management tools</li>
+      <li>Docker builds</li>
+      <li>File indexing (Windows Search, antivirus)</li>
+    </ul>
+
+    <p><strong>Mitigation Strategies:</strong></p>
+    <ul>
+      <li>Resource limits on production containers</li>
+      <li>Separate Docker networks for isolation</li>
+      <li>Backup scheduling during low-usage periods</li>
+      <li>Process-aware backup system (waits for MTQ/DCO completion)</li>
+    </ul>
+
+    <h3>System Requirements</h3>
+    <p><strong>Minimum for Dev + Prod:</strong></p>
+    <ul>
+      <li><strong>RAM</strong>: 16GB (8GB might work but will be tight)</li>
+      <li><strong>CPU</strong>: 4+ cores (8+ preferred)</li>
+      <li><strong>Storage</strong>: SSD with 100GB+ free space</li>
+      <li><strong>Network</strong>: Stable broadband with decent upload</li>
+    </ul>
+
+    <h2>Troubleshooting</h2>
+
+    <h3>Service Won't Start</h3>
+    <pre><code># Check logs
+docker logs credex-core-prod
+docker logs vimbiso-chatserver-prod
+
+# Check resource usage
+docker stats
+
+# Restart specific service
+docker compose -f docker-compose.prod.yml restart credex-core-prod</code></pre>
+
+    <h3>Backup Issues</h3>
+    <pre><code># Check backup service logs
+docker logs credex-backup-service
+
+# Manual backup test
+docker exec credex-backup-service /scripts/integrated-backup.sh daily
+
+# Check backup directory
+ls -la ./backups/</code></pre>
+
+    <h3>Database Connection Issues</h3>
+    <pre><code># Test Neo4j connections
+docker exec credex-neo4j-ledger-prod cypher-shell -u neo4j -p password "RETURN datetime()"
+
+# Check Redis
+docker exec vimbiso-redis-state-prod redis-cli ping</code></pre>
+
+    <h2>Security Considerations</h2>
+
+    <h3>Network Isolation</h3>
+    <ul>
+      <li>Production and development use separate Docker networks</li>
+      <li>No cross-contamination between environments</li>
+      <li>Firewall configuration for external access</li>
+    </ul>
+
+    <h3>Data Protection</h3>
+    <ul>
+      <li>All production secrets in separate .env file</li>
+      <li>Regular automated backups with encryption</li>
+      <li>Transaction-level backup integration</li>
+      <li>Backup integrity verification</li>
+    </ul>
+
+    <h2>Migration Path to Cloud</h2>
+
+    <h3>When to Consider Migration</h3>
+    <ul>
+      <li>More than 100 concurrent users</li>
+      <li>Need for high availability</li>
+      <li>Geographic distribution required</li>
+      <li>Compliance requirements</li>
+    </ul>
+
+    <h3>Migration Strategy</h3>
+    <ul>
+      <li>Terraform configurations already exist for AWS</li>
+      <li>Backup system supports S3 upload</li>
+      <li>Database dumps are portable</li>
+      <li>Gradual migration possible</li>
+    </ul>
+
+    <h2>Quick Commands Reference</h2>
+
+    <pre><code># Start production
+docker compose -f docker-compose.prod.yml --env-file .env.prod.local up -d
+
+# Stop production
+docker compose -f docker-compose.prod.yml down
+
+# View logs
+docker compose -f docker-compose.prod.yml logs -f
+
+# Manual backup
+docker exec credex-backup-service /scripts/integrated-backup.sh daily
+
+# System status
+docker compose -f docker-compose.prod.yml ps
+docker stats --no-stream
+
+# Check backup status
+docker logs credex-backup-service --tail 20
+
+# Monitor system resources
+curl http://localhost:9100/metrics</code></pre>
+
+    <h2>Related Documentation</h2>
+    <ul>
+      <li><a href="app_workflow.html">Application Deployment Workflow</a></li>
+      <li><a href="databases_workflow.html">Database Deployment Workflow</a></li>
+      <li><a href="instance_sizing.html">Instance Sizing Overview</a></li>
+      <li><a href="terraform_usage.html">Terraform Usage Guide</a></li>
+    </ul>
+
+    <h2>Conclusion</h2>
+    <p>
+      The same-server production deployment provides a robust, cost-effective solution for running 
+      production workloads alongside development environments. The integrated backup system ensures 
+      comprehensive data protection with minimal operational overhead, while the process-aware backup 
+      triggers provide maximum protection during critical business operations like MTQ and DCO processing.
+    </p>
+
+    <p>
+      This deployment model is particularly well-suited for organizations that prioritize data protection 
+      over high availability and can accept scheduled maintenance windows for comprehensive system maintenance.
+    </p>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for deployment subdirectory
+      window.templateLevels = 2;
+    </script>
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
+  </body>
+</html>
