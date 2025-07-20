@@ -1,0 +1,47 @@
+# Cloudflared Configuration for Credex and Vimbiso Production
+# This configuration routes both domains through their respective tunnels
+
+# Credex Tunnel Configuration
+tunnel: 2e2b64d0-f3e9-49ab-80a2-8361b4c73e9d
+credentials-file: C:\Users\RyanLuke\.cloudflared\2e2b64d0-f3e9-49ab-80a2-8361b4c73e9d.json
+
+# Ingress rules - order matters!
+ingress:
+  # Credex Core API routes
+  - hostname: mycredex.app
+    service: http://localhost:4000
+    originRequest:
+      httpHostHeader: mycredex.app
+  - hostname: www.mycredex.app
+    service: http://localhost:4000
+    originRequest:
+      httpHostHeader: mycredex.app
+  - hostname: api.mycredex.app
+    service: http://localhost:4000
+    originRequest:
+      httpHostHeader: mycredex.app
+  
+  # Vimbiso ChatServer routes
+  - hostname: vimbisopay.africa
+    service: http://localhost:9000
+    originRequest:
+      httpHostHeader: vimbisopay.africa
+  - hostname: www.vimbisopay.africa
+    service: http://localhost:9000
+    originRequest:
+      httpHostHeader: vimbisopay.africa
+  - hostname: api.vimbisopay.africa
+    service: http://localhost:9000
+    originRequest:
+      httpHostHeader: vimbisopay.africa
+  
+  # Catch-all rule (required)
+  - service: http_status:404
+
+# Logging configuration
+loglevel: info
+logfile: C:\Great-Sun-Group\credex-core\logs\cloudflared.log
+
+# Connection settings
+retries: 3
+grace-period: 30s
