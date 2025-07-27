@@ -1,20 +1,17 @@
 # Production Deployment Checklist
 
 ## 🔐 Security Setup (COMPLETED)
-- ✅ `.env.prod` and `.env.prod.local` are in .gitignore
+- ✅ `.env.prod` is in .gitignore
 - ✅ `.env.prod.example` template created with placeholder values
 - ✅ Production secrets will be kept out of version control
 
 ## 📋 Pre-Deployment Steps
 
-### 1. Create Production Environment File
-```bash
-# Copy the template to create your actual production environment file
-cp .env.prod.example .env.prod.local
-```
+### 1. Production Environment File
+The production environment file `.env.prod` is already configured with Neo4j Aura credentials and production secrets.
 
-### 2. Configure Production Secrets
-Edit `.env.prod.local` and replace ALL placeholder values:
+### 2. Verify Production Configuration
+Review `.env.prod` to ensure all values are correct:
 
 #### 🔑 Critical Security Keys (MUST CHANGE):
 ```bash
@@ -25,9 +22,10 @@ PASSWORD_PEPPER_PROD=your-password-pepper-for-extra-security
 DJANGO_SECRET_PROD=your-django-secret-key-50-chars-minimum
 ```
 
-#### 📄 Neo4j License (same as dev):
+#### ☁️ Neo4j Aura Configuration (already configured in .env.prod):
 ```bash
-NEO4J_ENTERPRISE_LICENSE=your_existing_neo4j_license
+# Neo4j Aura connections are already set up in .env.prod
+# No additional license configuration needed - Aura is managed
 ```
 
 #### 📱 WhatsApp Production Credentials:
@@ -61,7 +59,7 @@ AWS_S3_BACKUP_BUCKET=your-backup-bucket-name
 ### 1. Start Production Environment
 ```bash
 # Start all production services
-docker compose -f docker-compose.prod.yml --env-file .env.prod.local up -d
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 
 # Check service status
 docker compose -f docker-compose.prod.yml ps
@@ -83,8 +81,7 @@ docker compose -f docker-compose.prod.yml logs
 - **API Documentation**: http://localhost:4000/api-docs
 - **Vimbiso ChatServer**: http://localhost:9000
 - **ChatServer Health**: http://localhost:9000/health/
-- **Neo4j Ledger Browser**: http://localhost:7476
-- **Neo4j Search Browser**: http://localhost:7477
+- **Neo4j Aura**: Managed cloud databases (access via Neo4j Browser with Aura credentials)
 - **System Monitor**: http://localhost:9100
 
 ### Command Line Health Checks:
@@ -95,11 +92,8 @@ curl http://localhost:4000/api-docs
 # Test Vimbiso ChatServer
 curl http://localhost:9000/health/
 
-# Test Neo4j Ledger connection
-docker exec credex-neo4j-ledger-prod cypher-shell -u neo4j -p password "RETURN 'Ledger OK'"
-
-# Test Neo4j Search connection
-docker exec credex-neo4j-search-prod cypher-shell -u neo4j -p password "RETURN 'Search OK'"
+# Test Neo4j Aura connections (check application logs)
+docker logs credex-core-prod --tail 20 | grep "Neo4j"
 
 # Test Redis connection
 docker exec vimbiso-redis-state-prod redis-cli ping
@@ -120,12 +114,12 @@ ls -la ./backups/
 ```
 
 ### Backup Schedule Verification:
-- **Hourly**: Every 2 hours - Transaction logs, Redis state
-- **Daily**: 1 AM UTC - Full database backup
+- **Hourly**: Every 2 hours - Redis state, Vimbiso data
+- **Daily**: 1 AM UTC - Application data backup (Neo4j backed up by Aura)
 - **Weekly**: Sunday 2 AM UTC - Complete system backup
-- **Maintenance**: Midnight UTC - Full backup + system maintenance
-- **Post-MTQ**: After MTQ completion - Transaction logs
-- **Post-DCO**: After DCO completion - Full backup + exchange rates
+- **Maintenance**: Midnight UTC - Full application backup + system maintenance
+- **Post-MTQ**: After MTQ completion - Application state
+- **Post-DCO**: After DCO completion - Application state backup
 
 ## 📊 Monitoring Setup
 
@@ -152,10 +146,7 @@ free -h
 |---------|-------------|------------|
 | Credex Core API | 3000 | 4000 |
 | Vimbiso ChatServer | 8000 | 9000 |
-| Neo4j Ledger HTTP | 7474 | 7476 |
-| Neo4j Ledger Bolt | 7687 | 7689 |
-| Neo4j Search HTTP | 7475 | 7477 |
-| Neo4j Search Bolt | 7688 | 7690 |
+| Neo4j Databases | Local containers | Neo4j Aura (cloud) |
 | Redis | 6379 | 6380 |
 | System Monitor | - | 9100 |
 
@@ -169,7 +160,7 @@ docker compose -f docker-compose.prod.yml logs
 # Check individual service logs
 docker logs credex-core-prod
 docker logs vimbiso-chatserver-prod
-docker logs credex-neo4j-ledger-prod
+docker logs vimbiso-redis-state-prod
 
 # Check resource usage
 docker stats

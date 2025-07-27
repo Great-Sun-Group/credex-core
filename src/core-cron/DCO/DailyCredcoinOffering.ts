@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver } from "../../../config/neo4j";
 import { DBinitialization } from "./DBinitialization/index";
 import { DCOexecute } from "./DCOexecute/index";
-import { triggerPreDCOBackup, triggerPostDCOBackup, scheduleMaintenanceWindow } from "./BackupIntegration";
+// import { triggerPreDCOBackup, triggerPostDCOBackup, scheduleMaintenanceWindow } from "./BackupIntegration"; // DISABLED for Neo4j Aura migration
 import logger, { configureDCOLogger } from "../../utils/logger";
 import { v4 as uuidv4 } from "uuid";
 
@@ -22,7 +22,9 @@ export async function DailyCredcoinOffering(): Promise<{
   const ledgerSpaceSession = ledgerSpaceDriver.session();
 
   try {
-    // Trigger pre-DCO backup for safety
+    // Trigger pre-DCO backup for safety - DISABLED for Neo4j Aura migration
+    // TODO: Re-implement application-level backup for Aura environment
+    /*
     try {
       await triggerPreDCOBackup();
     } catch (error) {
@@ -30,6 +32,7 @@ export async function DailyCredcoinOffering(): Promise<{
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }
+    */
 
     // Check for active daynode
     logger.debug("Checking for active daynode");
@@ -52,7 +55,9 @@ export async function DailyCredcoinOffering(): Promise<{
     }
     logger.debug("DCO execution completed");
 
-    // Trigger post-DCO backup to capture results
+    // Trigger post-DCO backup to capture results - DISABLED for Neo4j Aura migration
+    // TODO: Re-implement application-level backup for Aura environment
+    /*
     try {
       await triggerPostDCOBackup();
     } catch (error) {
@@ -62,8 +67,11 @@ export async function DailyCredcoinOffering(): Promise<{
       });
       // Don't fail DCO if backup fails
     }
+    */
 
-    // Schedule maintenance window for midnight UTC
+    // Schedule maintenance window for midnight UTC - DISABLED for Neo4j Aura migration
+    // TODO: Re-implement maintenance scheduling for Aura environment
+    /*
     try {
       await scheduleMaintenanceWindow();
     } catch (error) {
@@ -71,6 +79,7 @@ export async function DailyCredcoinOffering(): Promise<{
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }
+    */
 
     logger.info("Daily Credcoin Offering process completed successfully");
     return { success: true };

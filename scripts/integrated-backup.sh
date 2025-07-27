@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Credex Core Integrated Backup System
+# CURRENTLY OF NO USE, AS ALL MEANINGFUL DATA IS BACKED UP IN AURA
+
 # Integrates with MTQ and DCO processes for comprehensive data protection
 # Usage: ./integrated-backup.sh [pre-dco|post-dco|post-mtq|hourly|daily|weekly|maintenance]
 
@@ -20,120 +22,7 @@ log() {
     echo "$message" >> "$LOG_FILE"
 }
 
-# Function to check if MTQ/DCO is running
-check_process_status() {
-    local result=$(docker exec credex-neo4j-ledger-prod cypher-shell -u neo4j -p password \
-        "MATCH (daynode:Daynode {Active: true}) RETURN daynode.MTQrunningNow AS mtq, daynode.DCOrunningNow AS dco" 2>/dev/null)
-    
-    if [[ $result == *"true"* ]]; then
-        return 1  # Process is running
-    else
-        return 0  # No process running
-    fi
-}
-
-# Function to wait for MTQ/DCO to complete
-wait_for_processes() {
-    log "Checking if MTQ/DCO processes are running..."
-    local max_wait=1800  # 30 minutes max wait
-    local wait_time=0
-    
-    while check_process_status; do
-        if [ $wait_time -ge $max_wait ]; then
-            log "WARNING: Timeout waiting for MTQ/DCO to complete. Proceeding with backup."
-            break
-        fi
-        log "MTQ/DCO is running. Waiting 30 seconds..."
-        sleep 30
-        wait_time=$((wait_time + 30))
-    done
-    
-    log "MTQ/DCO processes are clear. Proceeding with backup."
-}
-
-# Function to create transaction log backup
-backup_transaction_logs() {
-    log "Backing up transaction logs"
-    
-    # Export recent transaction data
-    docker exec credex-neo4j-ledger-prod cypher-shell -u neo4j -p password \
-        "MATCH (credex:Credex)-[r:REDEEMED]->(loop:LoopAnchor) 
-         WHERE r.createdAt >= datetime() - duration('P1D')
-         RETURN credex.credexID, r.AmountRedeemed, r.createdAt, loop.loopID
-         ORDER BY r.createdAt DESC" > "$BACKUP_DIR/recent_transactions.csv" || {
-        log "ERROR: Failed to export recent transactions"
-        return 1
-    }
-    
-    # Export recent credex creations
-    docker exec credex-neo4j-ledger-prod cypher-shell -u neo4j -p password \
-        "MATCH (credex:Credex) 
-         WHERE credex.acceptedAt >= datetime() - duration('P1D')
-         RETURN credex.credexID, credex.InitialAmount, credex.acceptedAt, credex.queueStatus
-         ORDER BY credex.acceptedAt DESC" > "$BACKUP_DIR/recent_credexes.csv" || {
-        log "ERROR: Failed to export recent credexes"
-        return 1
-    }
-    
-    log "Transaction logs backed up successfully"
-}
-
-# Function to backup ZWG exchange rates
-backup_exchange_rates() {
-    log "Backing up exchange rate data"
-    
-    # Export exchange rate history
-    docker exec credex-neo4j-ledger-prod cypher-shell -u neo4j -p password \
-        "MATCH (rate:ExchangeRate) 
-         WHERE rate.fetchedAt >= datetime() - duration('P7D')
-         RETURN rate.currency, rate.bid, rate.ask, rate.avg, rate.fetchedAt
-         ORDER BY rate.fetchedAt DESC" > "$BACKUP_DIR/exchange_rates.csv" 2>/dev/null || {
-        log "WARNING: No exchange rate data found (this is normal if DCO hasn't run yet)"
-    }
-    
-    log "Exchange rate data backup completed"
-}
-
-# Function to backup Neo4j databases with transaction consistency
-backup_neo4j_consistent() {
-    local db_name=$1
-    local container_name=$2
-    
-    log "Creating consistent backup of Neo4j database: $db_name"
-    
-    # Stop writes temporarily for consistency (only during maintenance window)
-    if [[ "$BACKUP_TYPE" == "maintenance" || "$BACKUP_TYPE" == "pre-dco" ]]; then
-        log "Stopping database writes for consistent backup"
-        docker exec "$container_name" cypher-shell -u neo4j -p password \
-            "CALL dbms.setConfigValue('dbms.read_only', 'true')" 2>/dev/null || {
-            log "WARNING: Could not set read-only mode"
-        }
-        sleep 5
-    fi
-    
-    # Create database dump
-    docker exec "$container_name" neo4j-admin database dump neo4j --to-path=/backups || {
-        log "ERROR: Failed to dump $db_name database"
-        return 1
-    }
-    
-    # Copy dump file to timestamped backup
-    docker cp "$container_name:/backups/neo4j.dump" "$BACKUP_DIR/${db_name}_neo4j.dump" || {
-        log "ERROR: Failed to copy $db_name dump file"
-        return 1
-    }
-    
-    # Re-enable writes if we disabled them
-    if [[ "$BACKUP_TYPE" == "maintenance" || "$BACKUP_TYPE" == "pre-dco" ]]; then
-        log "Re-enabling database writes"
-        docker exec "$container_name" cypher-shell -u neo4j -p password \
-            "CALL dbms.setConfigValue('dbms.read_only', 'false')" 2>/dev/null || {
-            log "WARNING: Could not re-enable writes"
-        }
-    fi
-    
-    log "Successfully backed up $db_name database"
-}
+# Neo4j Aura handles database backups automatically, so we focus on application data only
 
 # Function to backup Redis with consistency
 backup_redis_consistent() {
@@ -303,60 +192,30 @@ execute_backup() {
     log "=== Starting Credex Core Integrated Backup Process ==="
     log "Backup type: $BACKUP_TYPE"
     log "Backup directory: $BACKUP_DIR"
+    log "NOTE: Neo4j databases are backed up automatically by Aura"
     
-    # Check if containers are running
-    if ! docker ps | grep -q "credex-neo4j-ledger-prod"; then
+    # Check if core containers are running
+    if ! docker ps | grep -q "credex-core-prod"; then
         log "ERROR: Production containers not running"
         send_notification "FAILED - containers not running"
         exit 1
     fi
     
-    # Wait for MTQ/DCO to complete (unless this is a pre-DCO backup)
-    if [[ "$BACKUP_TYPE" != "pre-dco" ]]; then
-        wait_for_processes
-    fi
-    
-    # Execute backup steps based on type
+    # Execute simplified backup steps - Neo4j Aura handles database backups
     case $BACKUP_TYPE in
-        pre-dco)
-            log "Executing pre-DCO backup"
-            backup_neo4j_consistent "ledger" "credex-neo4j-ledger-prod"
-            backup_neo4j_consistent "search" "credex-neo4j-search-prod"
+        pre-dco|post-dco|maintenance)
+            log "Executing ${BACKUP_TYPE} backup"
             backup_redis_consistent
             backup_vimbiso_data
             create_system_snapshot
             ;;
-        post-dco)
-            log "Executing post-DCO backup"
-            backup_transaction_logs
-            backup_exchange_rates
-            backup_neo4j_consistent "ledger" "credex-neo4j-ledger-prod"
-            backup_neo4j_consistent "search" "credex-neo4j-search-prod"
+        post-mtq|hourly)
+            log "Executing ${BACKUP_TYPE} backup"
             backup_redis_consistent
             backup_vimbiso_data
-            create_system_snapshot
-            ;;
-        post-mtq)
-            log "Executing post-MTQ backup"
-            backup_transaction_logs
-            backup_redis_consistent
-            backup_vimbiso_data
-            ;;
-        maintenance)
-            log "Executing maintenance backup"
-            backup_neo4j_consistent "ledger" "credex-neo4j-ledger-prod"
-            backup_neo4j_consistent "search" "credex-neo4j-search-prod"
-            backup_redis_consistent
-            backup_vimbiso_data
-            backup_transaction_logs
-            backup_exchange_rates
-            create_system_snapshot
             ;;
         *)
             log "Executing standard backup"
-            backup_transaction_logs
-            backup_neo4j_consistent "ledger" "credex-neo4j-ledger-prod"
-            backup_neo4j_consistent "search" "credex-neo4j-search-prod"
             backup_redis_consistent
             backup_vimbiso_data
             create_system_snapshot
