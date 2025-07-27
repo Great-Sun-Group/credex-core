@@ -5,13 +5,13 @@
 ### Start Production
 ```bash
 # Copy environment template (first time only)
-cp .env.prod.example .env.prod.local
+cp .env.prod.example .env.prod
 
 # Edit your production secrets
-# (Edit .env.prod.local with your actual values)
+# (Edit .env.prod with your actual values)
 
-# Start production environment
-docker compose -f docker-compose.prod.yml --env-file .env.prod.local up -d
+# Start production environment (from credex-core dir)
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 ```
 
 ### Check Status
