@@ -26,7 +26,7 @@ ingress:
 
 # Logging configuration
 loglevel: info
-logfile: C:\Great-Sun-Group\credex-core\logs\cloudflared-credex.log
+logfile: C:\Great-Sun-Group\credex-core\logs\cloudflared-service.log
 
 # Connection settings
 retries: 3
