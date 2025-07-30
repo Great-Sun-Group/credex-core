@@ -88,6 +88,9 @@ services:
       PORT: 3000
       LOG_LEVEL: debug
       
+      # Development Verification Settings
+      USE_MOCK_VERIFICATION: "true"  # Enable mock verification with fixed OTP (123456)
+      
       # Neo4j Configuration
       NEO_4J_LEDGER_SPACE_BOLT_URL: bolt://neo4j-ledger:7687
       NEO_4J_LEDGER_SPACE_USER: neo4j
