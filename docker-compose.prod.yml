@@ -66,18 +66,10 @@ services:
       context: ../vimbiso-chatserver
       target: production
     container_name: vimbiso-chatserver-prod
+    env_file:
+      - ../vimbiso-chatserver/.env.prod
     environment:
-      - JWT_SECRET=${JWT_SECRET}
-      - CLIENT_API_KEY=${CLIENT_API_KEY}
-      - PASSWORD_PEPPER=${PASSWORD_PEPPER}
-      - DJANGO_SECRET=${DJANGO_SECRET}
       - REDIS_URL=redis://redis-state-prod:6379/0
-      - WHATSAPP_API_URL=${WHATSAPP_API_URL}
-      - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN}
-      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID}
-      - WHATSAPP_BUSINESS_ID=${WHATSAPP_BUSINESS_ID}
-      - MYCREDEX_APP_URL=http://credex-core-prod:4000/
-      - CLIENT_API_KEY=${CLIENT_API_KEY}
       - USE_PROGRESSIVE_FLOW=True
       - PORT=9000
     ports:
