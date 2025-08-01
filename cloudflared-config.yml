@@ -1,0 +1,33 @@
+# Cloudflared Configuration for Credex Production Only
+# This configuration routes mycredex.app through the Credex tunnel
+
+# Credex Tunnel Configuration
+tunnel: 2e2b64d0-f3e9-49ab-80a2-8361b4c73e9d
+credentials-file: C:\Users\RyanLuke\.cloudflared\2e2b64d0-f3e9-49ab-80a2-8361b4c73e9d.json
+
+# Ingress rules - order matters!
+ingress:
+  # Credex Core API routes
+  - hostname: mycredex.app
+    service: http://127.0.0.1:4000
+    originRequest:
+      httpHostHeader: mycredex.app
+  - hostname: www.mycredex.app
+    service: http://127.0.0.1:4000
+    originRequest:
+      httpHostHeader: mycredex.app
+  - hostname: api.mycredex.app
+    service: http://127.0.0.1:4000
+    originRequest:
+      httpHostHeader: mycredex.app
+  
+  # Catch-all rule (required)
+  - service: http_status:404
+
+# Logging configuration
+loglevel: info
+logfile: C:\Great-Sun-Group\credex-core\logs\cloudflared-credex.log
+
+# Connection settings
+retries: 3
+grace-period: 30s

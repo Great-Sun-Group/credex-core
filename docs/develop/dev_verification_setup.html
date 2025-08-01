@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Development Verification Setup</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">Development Verification Setup</h1>
+
+    <h2>Overview</h2>
+    <p>
+      For local development, you can bypass WhatsApp verification by using a fixed OTP of <code>123456</code> 
+      instead of requiring actual WhatsApp messages.
+    </p>
+
+    <h2>Quick Setup</h2>
+
+    <ol>
+      <li>
+        <strong>Mock Verification Enabled</strong>: Already configured in <code>docker-compose.dev-local.yml</code>:
+        <pre><code>USE_MOCK_VERIFICATION: "true"</code></pre>
+      </li>
+      <li>
+        <strong>Use Fixed OTP</strong>: When in development mode, always use <code>123456</code> as the OTP code.
+      </li>
+    </ol>
+
+    <h2>What Was Implemented</h2>
+
+    <h3>Backend (credex-core)</h3>
+    <ul>
+      <li>✅ <strong>Enhanced Provider Factory</strong>: Modified <code>VerificationProviderFactory</code> to automatically use mock provider when <code>USE_MOCK_VERIFICATION=true</code> and <code>NODE_ENV=development</code></li>
+      <li>✅ <strong>Enhanced Mock Provider</strong>: Updated <code>MockWhatsAppProvider</code> to always return <code>123456</code> as the OTP in development mode</li>
+      <li>✅ <strong>Environment Configuration</strong>: Added <code>USE_MOCK_VERIFICATION</code> environment variable to docker-compose and .env.example</li>
+    </ul>
+
+    <h3>Mobile App (vimbisopay_app)</h3>
+    <ul>
+      <li>✅ <strong>Development Mode Detection</strong>: App detects development mode via <code>ApiConfig.isDevelopment</code> (when connecting to <code>http://10.0.2.2:3000</code>)</li>
+      <li>✅ <strong>Visual Development Indicator</strong>: Shows orange "Development Mode: Use OTP 123456" banner when in dev mode</li>
+      <li>✅ <strong>Modified Instructions</strong>: Changes verification steps to show development-specific instructions</li>
+      <li>✅ <strong>Fixed OTP Display</strong>: Shows <code>123456</code> in orange instead of the generated OTP when in development mode</li>
+    </ul>
+
+    <h2>How It Works</h2>
+
+    <h3>Development Flow</h3>
+    <ol>
+      <li>Mobile app detects it's connecting to local development server</li>
+      <li>Shows development mode indicator with fixed OTP <code>123456</code></li>
+      <li>Backend uses <code>MockWhatsAppProvider</code> which internally uses <code>123456</code></li>
+      <li>User manually enters <code>123456</code> in any OTP verification field</li>
+      <li>Verification succeeds without requiring WhatsApp</li>
+    </ol>
+
+    <h3>Production Flow</h3>
+    <ul>
+      <li>Uses real <code>WhatsAppProvider</code></li>
+      <li>Sends actual OTP via WhatsApp</li>
+      <li>No development indicators shown</li>
+      <li>Normal WhatsApp verification process</li>
+    </ul>
+
+    <h2>Log Messages</h2>
+    <p>When mock verification is active, you'll see:</p>
+    <pre><code>[INFO] Using development mock provider with fixed OTP
+[INFO] Mock provider using fixed development OTP { actualOTP: '123456' }</code></pre>
+
+    <h2>Production Safety</h2>
+    <ul>
+      <li>Mock verification only works when <code>NODE_ENV=development</code> AND <code>USE_MOCK_VERIFICATION=true</code></li>
+      <li>Production environments ignore the <code>USE_MOCK_VERIFICATION</code> setting</li>
+      <li>Real WhatsApp verification is always used in staging/production</li>
+    </ul>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for develop subdirectory
+      window.templateLevels = 1;
+    </script>
+    <script src="../js/template.js"></script>
+    <script src="../js/dropdown.js"></script>
+  </body>
+</html>

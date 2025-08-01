@@ -1,0 +1,243 @@
+name: Deploy Application
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy_application:
+    runs-on: ubuntu-latest
+    environment: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
+
+    env:
+      ENVIRONMENT: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
+      BUILD_TARGET: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'production') || 'development' }}
+      DOMAIN: ${{ (github.ref == 'refs/heads/prod' && 'mycredex.app') || (github.ref == 'refs/heads/stage' && 'stage.mycredex.dev') || 'dev.mycredex.dev' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: af-south-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          echo "Current environment: ${ENVIRONMENT}"
+          terraform init \
+            -backend-config="bucket=credexbuckets5-statebucket-${ENVIRONMENT}" \
+            -backend-config="key=terraform.tfstate" \
+            -backend-config="region=af-south-1" \
+            -backend-config="dynamodb_table=credexbuckets5-statebucket-lock-${ENVIRONMENT}"
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: credex-core-${{ env.ENVIRONMENT }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "Building Docker image with target $BUILD_TARGET..."
+          docker build --no-cache --target $BUILD_TARGET \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          echo "Docker image built successfully."
+
+          echo "Pushing image to ECR..."
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "Image pushed successfully: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+          echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Terraform Plan
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_docker_image: ${{ env.IMAGE }}
+          # Dummy values for Neo4j variables since we're only targeting app module
+          TF_VAR_neo_4j_ledger_space_bolt_url: "dummy"
+          TF_VAR_neo_4j_search_space_bolt_url: "dummy"
+          TF_VAR_neo_4j_ledger_space_user: "dummy"
+          TF_VAR_neo_4j_search_space_user: "dummy"
+          TF_VAR_neo_4j_ledger_space_password: "dummy"
+          TF_VAR_neo_4j_search_space_password: "dummy"
+          TF_VAR_neo4j_enterprise_license: "dummy"
+          TF_VAR_firebase_project_id: "${{ secrets.FIREBASE_PROJECT_ID }}"
+          TF_VAR_firebase_client_email: "${{ secrets.FIREBASE_CLIENT_EMAIL }}"
+          TF_VAR_firebase_private_key: "${{ secrets.FIREBASE_PRIVATE_KEY }}"
+        run: |
+          cd terraform
+          echo "Current environment: ${ENVIRONMENT}"
+          echo "Planning Terraform changes..."
+          terraform plan -input=false -out=tfplan -target=module.app
+
+      - name: Terraform Apply
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_docker_image: ${{ env.IMAGE }}
+          # Dummy values for Neo4j variables since we're only targeting app module
+          TF_VAR_neo_4j_ledger_space_bolt_url: "dummy"
+          TF_VAR_neo_4j_search_space_bolt_url: "dummy"
+          TF_VAR_neo_4j_ledger_space_user: "dummy"
+          TF_VAR_neo_4j_search_space_user: "dummy"
+          TF_VAR_neo_4j_ledger_space_password: "dummy"
+          TF_VAR_neo_4j_search_space_password: "dummy"
+          TF_VAR_neo4j_enterprise_license: "dummy"
+        run: |
+          cd terraform
+          echo "Current environment: ${ENVIRONMENT}"
+          echo "Applying Terraform changes..."
+          terraform apply -auto-approve -input=false tfplan
+
+      - name: Deploy Application
+        run: |
+          echo "Deploying application to $ENVIRONMENT from branch ${{ github.ref_name }}"
+
+          echo "Fetching current task definition..."
+          TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition credex-core-$ENVIRONMENT --query 'taskDefinition' --output json)
+          echo "Current task definition fetched."
+
+          echo "Updating task definition with new image and environment variables..."
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "$IMAGE" --arg NODE_ENV "$ENVIRONMENT" '.containerDefinitions[0].image = $IMAGE | .containerDefinitions[0].environment = [
+            {"name": "NODE_ENV", "value": $NODE_ENV},
+            {"name": "NEO_4J_LEDGER_SPACE_USER", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_USER }}"},
+            {"name": "NEO_4J_LEDGER_SPACE_PASS", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_PASS }}"},
+            {"name": "NEO_4J_LEDGER_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_LEDGER_SPACE_BOLT_URL }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_USER", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_USER }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_PASS", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_PASS }}"},
+            {"name": "NEO_4J_SEARCH_SPACE_BOLT_URL", "value": "${{ secrets.NEO_4J_SEARCH_SPACE_BOLT_URL }}"},
+            {"name": "JWT_SECRET", "value": "${{ secrets.JWT_SECRET }}"},
+            {"name": "CLIENT_API_KEY", "value": "${{ secrets.CLIENT_API_KEY }}"},
+            {"name": "DEV_ADMIN_KEY", "value": "${{ secrets.DEV_ADMIN_KEY }}"},
+            {"name": "SKIP_RATE_LIMITER_KEY", "value": "${{ secrets.SKIP_RATE_LIMITER_KEY }}"},
+            {"name": "PASSWORD_PEPPER", "value": "${{ secrets.PASSWORD_PEPPER }}"},
+            {"name": "CREDEX_CORE_WHATSAPP_API_KEY", "value": "${{ secrets.CREDEX_CORE_WHATSAPP_API_KEY }}"},
+            {"name": "CREDEX_CORE_WHATSAPP_BUSINESS_ID", "value": "${{ secrets.CREDEX_CORE_WHATSAPP_BUSINESS_ID }}"},
+            {"name": "CREDEX_CORE_WHATSAPP_PHONE_ID", "value": "${{ secrets.CREDEX_CORE_WHATSAPP_PHONE_ID }}"},
+            {"name": "OPEN_EXCHANGE_RATES_API", "value": "${{ secrets.OPEN_EXCHANGE_RATES_API }}"},
+            {"name": "FIREBASE_PROJECT_ID", "value": "${{ secrets.FIREBASE_PROJECT_ID }}"},
+            {"name": "FIREBASE_CLIENT_EMAIL", "value": "${{ secrets.FIREBASE_CLIENT_EMAIL }}"},
+            {"name": "FIREBASE_PRIVATE_KEY", "value": "${{ secrets.FIREBASE_PRIVATE_KEY }}"}
+          ]' | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+          echo "Task definition updated."
+
+          echo "Registering new task definition..."
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEFINITION" --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "New task definition registered: $NEW_TASK_DEF_ARN"
+
+          echo "Updating ECS service with new task definition..."
+          aws ecs update-service --cluster credex-cluster-$ENVIRONMENT --service credex-core-service-$ENVIRONMENT --task-definition $NEW_TASK_DEF_ARN --force-new-deployment
+
+          echo "Waiting for deployment to complete..."
+          MAX_ATTEMPTS=40  # 20 minutes total (30 seconds * 40)
+          ATTEMPTS=0
+          DEPLOYMENT_DONE=false
+
+          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+            # Get service details
+            SERVICE_JSON=$(aws ecs describe-services \
+              --cluster credex-cluster-$ENVIRONMENT \
+              --services credex-core-service-$ENVIRONMENT \
+              --query 'services[0]')
+            
+            # Get primary deployment status
+            PRIMARY_DEPLOYMENT=$(echo $SERVICE_JSON | jq -r '.deployments[] | select(.status == "PRIMARY")')
+            RUNNING_COUNT=$(echo $PRIMARY_DEPLOYMENT | jq -r '.runningCount')
+            DESIRED_COUNT=$(echo $PRIMARY_DEPLOYMENT | jq -r '.desiredCount')
+            FAILED_TASKS=$(echo $PRIMARY_DEPLOYMENT | jq -r '.failedTasks')
+            TASK_DEF=$(echo $PRIMARY_DEPLOYMENT | jq -r '.taskDefinition')
+            
+            echo "Deployment Status:"
+            echo "Running Count: $RUNNING_COUNT"
+            echo "Desired Count: $DESIRED_COUNT"
+            echo "Failed Tasks: $FAILED_TASKS"
+            echo "Task Definition: $TASK_DEF"
+            
+            # Check if deployment is using our new task definition
+            if [[ "$TASK_DEF" == "$NEW_TASK_DEF_ARN" ]]; then
+              if [[ "$RUNNING_COUNT" == "$DESIRED_COUNT" && "$DESIRED_COUNT" -gt 0 ]]; then
+                echo "Deployment completed successfully!"
+                DEPLOYMENT_DONE=true
+                break
+              elif [[ "$FAILED_TASKS" -gt 0 ]]; then
+                # Get task details and logs for debugging
+                TASKS=$(aws ecs list-tasks \
+                  --cluster credex-cluster-$ENVIRONMENT \
+                  --service-name credex-core-service-$ENVIRONMENT \
+                  --desired-status STOPPED \
+                  --query 'taskArns[]' --output text)
+                
+                for TASK in $TASKS; do
+                  echo "Failed task details for $TASK:"
+                  aws ecs describe-tasks \
+                    --cluster credex-cluster-$ENVIRONMENT \
+                    --tasks $TASK \
+                    --query 'tasks[].{reason: stoppedReason, exitCode: containers[].exitCode}'
+                  
+                  # Try to get logs even if task failed
+                  echo "Logs for failed task $TASK:"
+                  aws logs get-log-events \
+                    --log-group-name "/ecs/credex-core-$ENVIRONMENT" \
+                    --log-stream-name "credex-core-$ENVIRONMENT/${TASK##*/}" \
+                    --limit 20 \
+                    --query 'events[].message' \
+                    --output text || echo "No logs available"
+                done
+                
+                echo "Deployment failed due to task failures"
+                exit 1
+              fi
+            fi
+            
+            # Get recent service events
+            echo "Recent Events:"
+            echo $SERVICE_JSON | jq -r '.events[0:3][] | .message'
+            
+            ATTEMPTS=$((ATTEMPTS + 1))
+            if [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; then
+              echo "Waiting 30 seconds before next check (Attempt $ATTEMPTS of $MAX_ATTEMPTS)..."
+              sleep 30
+            fi
+          done
+
+          if [ "$DEPLOYMENT_DONE" != "true" ]; then
+            echo "Deployment did not complete within expected time"
+            exit 1
+          fi
+
+          # Verify final state
+          echo "Verifying final deployment state..."
+          FINAL_SERVICE=$(aws ecs describe-services \
+            --cluster credex-cluster-$ENVIRONMENT \
+            --services credex-core-service-$ENVIRONMENT \
+            --query 'services[0]')
+
+          echo "Final Service State:"
+          echo $FINAL_SERVICE | jq '{runningCount: .runningCount, desiredCount: .desiredCount, status: .status, events: .events[0:3]}'
+
+      - name: Print Deployment Information
+        run: |
+          echo "Deployment completed successfully. Updated ECS service with latest image and task definition."
+          echo "Environment: $ENVIRONMENT"
+          echo "Image: $IMAGE"
+          echo "Build Target: $BUILD_TARGET"
+
+          cd terraform
+          echo "========================================"
+          echo "App Infrastructure Outputs:"
+          echo "========================================"
+          echo "ECS Cluster ARN: $(terraform output -raw ecs_cluster_arn)"
+          echo "ECS Task Definition ARN: $(terraform output -raw ecs_task_definition_arn)"
+          echo "ECS Service Name: $(terraform output -raw ecs_service_name)"
+          echo "ECS Service ID: $(terraform output -raw ecs_service_id)"
+          echo "========================================"

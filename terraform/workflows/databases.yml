@@ -1,0 +1,170 @@
+name: Deploy Databases
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy_neo4j:
+    runs-on: ubuntu-latest
+    environment: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
+
+    env:
+      ENVIRONMENT: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: af-south-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Setup and Initialize Terraform Backend
+        run: |
+          echo "Current environment: ${ENVIRONMENT}"
+
+          # Initialize Terraform
+          cd terraform
+          echo "Initializing Terraform..."
+          terraform init \
+            -backend-config="bucket=credexbuckets5-statebucket-${ENVIRONMENT}" \
+            -backend-config="key=terraform.tfstate" \
+            -backend-config="region=af-south-1" \
+            -backend-config="dynamodb_table=credexbuckets5-statebucket-lock-${ENVIRONMENT}"
+
+      - name: Terraform Plan
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
+          # Add dummy values for required variables since they're not used by the databases module
+          TF_VAR_jwt_secret: "dummy"
+          TF_VAR_client_api_key: "dummy"
+          TF_VAR_dev_admin_key: "dummy"
+          TF_VAR_skip_rate_limiter_key: "dummy"
+          TF_VAR_open_exchange_rates_api: "dummy"
+          TF_VAR_firebase_project_id: "dummy"
+          TF_VAR_firebase_client_email: "dummy"
+          TF_VAR_firebase_private_key: "dummy"
+        run: |
+          cd terraform
+          echo "Current environment: ${ENVIRONMENT}"
+          echo "Planning Terraform changes..."
+          terraform plan -input=false -out=tfplan -target=module.databases
+
+      - name: Terraform Apply
+        env:
+          TF_VAR_environment: ${{ env.ENVIRONMENT }}
+          TF_VAR_neo4j_enterprise_license: ${{ secrets.NEO4J_ENTERPRISE_LICENSE }}
+          # Add dummy values for required variables since they're not used by the databases module
+          TF_VAR_jwt_secret: "dummy"
+          TF_VAR_client_api_key: "dummy"
+          TF_VAR_dev_admin_key: "dummy"
+          TF_VAR_skip_rate_limiter_key: "dummy"
+          TF_VAR_open_exchange_rates_api: "dummy"
+          TF_VAR_firebase_project_id: "dummy"
+          TF_VAR_firebase_client_email: "dummy"
+          TF_VAR_firebase_private_key: "dummy"
+        run: |
+          cd terraform
+          echo "Current environment: ${ENVIRONMENT}"
+          echo "Applying Terraform changes..."
+          terraform apply -auto-approve -input=false tfplan
+
+          echo "Terraform apply completed successfully"
+
+      - name: Verify Neo4j Deployments
+        run: |
+          cd terraform
+          echo "Verifying Neo4j deployments..."
+
+          # Get instance IDs
+          LEDGER_ID=$(terraform output -raw module.databases.neo4j_ledger_instance_id || echo "")
+          SEARCH_ID=$(terraform output -raw module.databases.neo4j_search_instance_id || echo "")
+
+          if [ -z "$LEDGER_ID" ] || [ -z "$SEARCH_ID" ]; then
+            echo "Error: Could not get Neo4j instance IDs"
+            exit 1
+          fi
+
+          # Function to verify instance
+          verify_instance() {
+            local INSTANCE_ID=$1
+            local SPACE_NAME=$2
+            
+            echo "Verifying $SPACE_NAME instance ($INSTANCE_ID)..."
+            
+            # Wait for instance to be running
+            echo "Waiting for instance to be running..."
+            aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+            
+            # Wait for status checks
+            echo "Waiting for status checks to pass..."
+            aws ec2 wait instance-status-ok --instance-ids $INSTANCE_ID
+            
+            # Get instance details
+            INSTANCE_DETAILS=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID)
+            PRIVATE_IP=$(echo $INSTANCE_DETAILS | jq -r '.Reservations[0].Instances[0].PrivateIpAddress')
+            
+            echo "$SPACE_NAME instance is running:"
+            echo "Instance ID: $INSTANCE_ID"
+            echo "Private IP: $PRIVATE_IP"
+            
+            # Verify instance is responding
+            echo "Checking instance system status..."
+            aws ec2 describe-instance-status \
+              --instance-ids $INSTANCE_ID \
+              --query 'InstanceStatuses[0].{SystemStatus:SystemStatus.Status,InstanceStatus:InstanceStatus.Status}' \
+              --output table
+          }
+
+          # Verify both instances
+          verify_instance "$LEDGER_ID" "LedgerSpace"
+          verify_instance "$SEARCH_ID" "SearchSpace"
+
+          echo "Both Neo4j instances verified successfully"
+
+      - name: Print Database Infrastructure Outputs
+        run: |
+          cd terraform
+          echo "Retrieving database infrastructure outputs..."
+          echo "========================================"
+          echo "Database Infrastructure Outputs:"
+          echo "========================================"
+
+          # Get all outputs
+          OUTPUTS=$(terraform output -json module.databases)
+
+          # Print LedgerSpace details
+          echo "Neo4j LedgerSpace Instance:"
+          echo "  Instance ID: $(echo $OUTPUTS | jq -r '.neo4j_ledger_instance_id.value')"
+          echo "  Private IP: $(echo $OUTPUTS | jq -r '.neo4j_ledger_private_ip.value')"
+          echo "  Bolt URL: $(echo $OUTPUTS | jq -r '.neo4j_ledger_bolt_endpoint.value')"
+          echo "  HTTP URL: http://$(echo $OUTPUTS | jq -r '.neo4j_ledger_private_ip.value'):7474"
+          echo "  HTTPS URL: https://$(echo $OUTPUTS | jq -r '.neo4j_ledger_private_ip.value'):7473"
+
+          echo ""
+          echo "Neo4j SearchSpace Instance:"
+          echo "  Instance ID: $(echo $OUTPUTS | jq -r '.neo4j_search_instance_id.value')"
+          echo "  Private IP: $(echo $OUTPUTS | jq -r '.neo4j_search_private_ip.value')"
+          echo "  Bolt URL: $(echo $OUTPUTS | jq -r '.neo4j_search_bolt_endpoint.value')"
+          echo "  HTTP URL: http://$(echo $OUTPUTS | jq -r '.neo4j_search_private_ip.value'):7474"
+          echo "  HTTPS URL: https://$(echo $OUTPUTS | jq -r '.neo4j_search_private_ip.value'):7473"
+
+          echo "========================================"
+          echo "Please save these values securely. You may need to manually set them as GitHub secrets or use them in your application configuration."
+          echo "Remember to set up the following secrets:"
+          echo "- NEO_4J_LEDGER_SPACE_BOLT_URL"
+          echo "- NEO_4J_SEARCH_SPACE_BOLT_URL"
+          echo "- NEO_4J_LEDGER_SPACE_USER"
+          echo "- NEO_4J_SEARCH_SPACE_USER"
+          echo "- NEO_4J_LEDGER_SPACE_PASS"
+          echo "- NEO_4J_SEARCH_SPACE_PASS"
+          echo "========================================"

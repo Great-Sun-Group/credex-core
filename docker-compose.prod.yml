@@ -1,0 +1,199 @@
+version: "3.8"
+
+services:
+  # Credex Core Application - Production
+  credex-core-prod:
+    build:
+      context: .
+      target: production
+    container_name: credex-core-prod
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      LOG_LEVEL: info
+      
+      # Neo4j Aura Configuration - Using environment variables
+      NEO_4J_LEDGER_SPACE_BOLT_URL: ${NEO_4J_LEDGER_SPACE_BOLT_URL}
+      NEO_4J_LEDGER_SPACE_USER: ${NEO_4J_LEDGER_SPACE_USER}
+      NEO_4J_LEDGER_SPACE_PASS: ${NEO_4J_LEDGER_SPACE_PASS}
+      NEO_4J_SEARCH_SPACE_BOLT_URL: ${NEO_4J_SEARCH_SPACE_BOLT_URL}
+      NEO_4J_SEARCH_SPACE_USER: ${NEO_4J_SEARCH_SPACE_USER}
+      NEO_4J_SEARCH_SPACE_PASS: ${NEO_4J_SEARCH_SPACE_PASS}
+      
+      # Production Keys (CHANGE THESE!)
+      JWT_SECRET: ${JWT_SECRET}
+      CLIENT_API_KEY: ${CLIENT_API_KEY}
+      PASSWORD_PEPPER: ${PASSWORD_PEPPER}
+      DEV_ADMIN_KEY: ${DEV_ADMIN_KEY}
+      SKIP_RATE_LIMITER_KEY: ${SKIP_RATE_LIMITER_KEY}
+      
+      # External APIs
+      OPEN_EXCHANGE_RATES_API: ${OPEN_EXCHANGE_RATES_API}
+      CREDEX_CORE_WHATSAPP_API_KEY: ${CREDEX_CORE_WHATSAPP_API_KEY}
+      CREDEX_CORE_WHATSAPP_BUSINESS_ID: ${CREDEX_CORE_WHATSAPP_BUSINESS_ID}
+      CREDEX_CORE_WHATSAPP_PHONE_ID: ${CREDEX_CORE_WHATSAPP_PHONE_ID}
+      
+      # Firebase
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./logs/prod:/app/logs
+      - ./backups/credex-core:/app/backups
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: '1.0'
+        reservations:
+          memory: 512m
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://0.0.0.0:4000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - credex-prod-network
+
+  # Vimbiso ChatServer Application - Production
+  vimbiso-chatserver-prod:
+    build:
+      context: ../vimbiso-chatserver
+      target: production
+    container_name: vimbiso-chatserver-prod
+    env_file:
+      - ../vimbiso-chatserver/.env.prod
+    environment:
+      - REDIS_URL=redis://redis-state-prod:6379/0
+      - USE_PROGRESSIVE_FLOW=True
+      - PORT=9000
+    ports:
+      - "9000:9000"
+    volumes:
+      - vimbiso-prod-data:/app/data
+      - ./backups/vimbiso:/app/backups
+    command: ["bash", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:9000 --workers 2 --timeout 120"]
+    depends_on:
+      redis-state-prod:
+        condition: service_healthy
+      credex-core-prod:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+        reservations:
+          memory: 256m
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/health/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - credex-prod-network
+
+  # Redis State Manager for Vimbiso ChatServer - Production
+  redis-state-prod:
+    image: redis:7.0-alpine
+    container_name: vimbiso-redis-state-prod
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-prod-data:/data
+      - ./backups/redis:/backups
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save 900 1 --save 300 10 --save 60 10000 --appendonly yes
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+        reservations:
+          memory: 256m
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 2
+    networks:
+      - credex-prod-network
+
+  # Integrated Backup Service
+  backup-service:
+    image: alpine:latest
+    container_name: credex-backup-service
+    volumes:
+      - ./backups:/backups
+      - ./scripts:/scripts
+      - ./logs/prod:/app/logs
+      - redis-prod-data:/redis-data:ro
+      - vimbiso-prod-data:/vimbiso-data:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}  # Daily at 2 AM
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_S3_BACKUP_BUCKET=${AWS_S3_BACKUP_BUCKET}
+      - WEBHOOK_URL=${BACKUP_WEBHOOK_URL}
+      # Neo4j Aura connection details for transaction log backups
+      - NEO_4J_LEDGER_SPACE_BOLT_URL=${NEO_4J_LEDGER_SPACE_BOLT_URL}
+      - NEO_4J_LEDGER_SPACE_USER=${NEO_4J_LEDGER_SPACE_USER}
+      - NEO_4J_LEDGER_SPACE_PASS=${NEO_4J_LEDGER_SPACE_PASS}
+      - NEO_4J_SEARCH_SPACE_BOLT_URL=${NEO_4J_SEARCH_SPACE_BOLT_URL}
+      - NEO_4J_SEARCH_SPACE_USER=${NEO_4J_SEARCH_SPACE_USER}
+      - NEO_4J_SEARCH_SPACE_PASS=${NEO_4J_SEARCH_SPACE_PASS}
+    command: |
+      sh -c "
+        apk add --no-cache dcron curl bash tar gzip findutils docker-cli &&
+        chmod +x /scripts/integrated-backup.sh &&
+        echo '0 */2 * * * /scripts/integrated-backup.sh hourly' > /etc/crontabs/root &&
+        echo '0 1 * * * /scripts/integrated-backup.sh daily' >> /etc/crontabs/root &&
+        echo '0 2 * * 0 /scripts/integrated-backup.sh weekly' >> /etc/crontabs/root &&
+        echo '0 0 * * * /scripts/integrated-backup.sh maintenance' >> /etc/crontabs/root &&
+        crond -f -d 8
+      "
+    restart: unless-stopped
+    depends_on:
+      - redis-state-prod
+      - credex-core-prod
+      - vimbiso-chatserver-prod
+    networks:
+      - credex-prod-network
+
+  # System Monitor
+  system-monitor:
+    image: prom/node-exporter:latest
+    container_name: credex-system-monitor
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    networks:
+      - credex-prod-network
+
+volumes:
+  redis-prod-data:
+  vimbiso-prod-data:
+
+networks:
+  credex-prod-network:
+    name: credex-prod-network
+    driver: bridge

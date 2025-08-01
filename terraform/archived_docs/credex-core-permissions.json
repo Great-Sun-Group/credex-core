@@ -1,0 +1,128 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecs:*",
+        "ecr:*",
+        "logs:*",
+        "secretsmanager:*",
+        "ec2:*",
+        "elasticloadbalancing:*",
+        "iam:PassRole",
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:TagRole",
+        "iam:GetRole",
+        "iam:CreateInstanceProfile",
+        "iam:DeleteInstanceProfile",
+        "iam:AddRoleToInstanceProfile",
+        "iam:RemoveRoleFromInstanceProfile",
+        "iam:ListAttachedRolePolicies",
+        "iam:TagInstanceProfile",
+        "iam:GetInstanceProfile",
+        "iam:GetRolePolicy",
+        "iam:ListRolePolicies",
+        "iam:GetUser",
+        "iam:SimulatePrincipalPolicy",
+        "iam:ListRoles",
+        "cloudwatch:*",
+        "autoscaling:*",
+        "application-autoscaling:*",
+        "ssm:*",
+        "sns:*",
+        "kms:*",
+        "route53:*",
+        "elasticfilesystem:*",
+        "servicediscovery:*",
+        "acm:*",
+        "cloudformation:*",
+        "elasticache:*",
+        "rds:*",
+        "dynamodb:*",
+        "sqs:*",
+        "s3:*",
+        "lambda:*",
+        "apigateway:*",
+        "events:*",
+        "xray:*",
+        "tag:*",
+        "cloudfront:*",
+        "rekognition:CreateCollection",
+        "rekognition:DeleteCollection",
+        "rekognition:DescribeCollection",
+        "rekognition:ListCollections",
+        "rekognition:CompareFaces",
+        "rekognition:DetectFaces",
+        "rekognition:SearchFacesByImage",
+        "rekognition:IndexFaces",
+        "rekognition:DeleteFaces",
+        "rekognition:ListFaces",
+        "sagemaker:CreateModel",
+        "sagemaker:CreateEndpoint",
+        "sagemaker:CreateEndpointConfig",
+        "sagemaker:DeleteModel",
+        "sagemaker:DeleteEndpoint",
+        "sagemaker:DeleteEndpointConfig",
+        "sagemaker:DescribeModel",
+        "sagemaker:DescribeEndpoint",
+        "sagemaker:DescribeEndpointConfig",
+        "sagemaker:ListModels",
+        "sagemaker:ListEndpoints",
+        "sagemaker:ListEndpointConfigs",
+        "sagemaker:InvokeEndpoint",
+        "sagemaker:AddTags",
+        "sagemaker:DeleteTags",
+        "sagemaker:ListTags",
+        "sagemaker:UpdateEndpoint",
+        "sagemaker:UpdateEndpointWeightsAndCapacities"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/elasticloadbalancing.amazonaws.com/AWSServiceRoleForElasticLoadBalancing",
+      "Condition": {
+        "StringLike": {
+          "iam:AWSServiceName": "elasticloadbalancing.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+      "Condition": {
+        "StringLike": {
+          "iam:AWSServiceName": "ecs.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/rekognition.amazonaws.com/AWSServiceRoleForRekognition",
+      "Condition": {
+        "StringLike": {
+          "iam:AWSServiceName": "rekognition.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::*:role/aws-service-role/sagemaker.amazonaws.com/AWSServiceRoleForSageMaker",
+      "Condition": {
+        "StringLike": {
+          "iam:AWSServiceName": "sagemaker.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
