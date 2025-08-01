@@ -36,17 +36,22 @@ jobs:
 
       - name: Deploy credex-core service
         id: deploy
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
         run: |
           echo "🚀 Starting deployment of credex-core service..."
           echo "Branch: ${{ steps.vars.outputs.branch }}"
           echo "Commit: ${{ steps.vars.outputs.commit_sha }}"
           echo "Deployment ID: ${{ steps.vars.outputs.deployment_id }}"
+          echo "GitHub Ref: ${{ github.ref }}"
+          echo "Environment: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}"
+          echo "Deploy Token Length: ${#DEPLOY_TOKEN}"
           
           # Prepare deployment payload
           PAYLOAD=$(cat <<EOF
           {
             "service": "credex-core",
-            "deploy_token": "${{ secrets.DEPLOY_TOKEN }}",
+            "deploy_token": "$DEPLOY_TOKEN",
             "branch": "${{ steps.vars.outputs.branch }}",
             "commit_sha": "${{ steps.vars.outputs.commit_sha }}"
           }
