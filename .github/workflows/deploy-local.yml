@@ -59,6 +59,7 @@ jobs:
           )
           
           echo "📡 Calling deployment API..."
+          echo "Payload (token masked): $(echo "$PAYLOAD" | sed 's/"deploy_token": "[^"]*"/"deploy_token": "[MASKED]"/')"
           
           # Call deployment API with retry logic
           MAX_RETRIES=3

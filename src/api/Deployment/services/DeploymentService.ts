@@ -32,16 +32,15 @@ export class DeploymentService {
   private async initializeDeployTokens(): Promise<void> {
     try {
       const config = await getConfig();
-      // Load deploy tokens from environment variables
-      const coreToken = process.env.CREDEX_CORE_DEPLOY_TOKEN;
-      const chatserverToken = process.env.VIMBISO_CHATSERVER_DEPLOY_TOKEN;
-      const mobileToken = process.env.VIMBISOPAY_DEPLOY_TOKEN;
+      // Load deploy token from environment variable
+      const deployToken = process.env.DEPLOY_TOKEN;
 
-      if (coreToken) this.deployTokens.add(coreToken);
-      if (chatserverToken) this.deployTokens.add(chatserverToken);
-      if (mobileToken) this.deployTokens.add(mobileToken);
-
-      logger.info(`Initialized ${this.deployTokens.size} deployment tokens`);
+      if (deployToken) {
+        this.deployTokens.add(deployToken);
+        logger.info('Initialized deployment token');
+      } else {
+        logger.warn('No DEPLOY_TOKEN environment variable found');
+      }
     } catch (error) {
       logger.error('Failed to initialize deployment tokens:', error);
     }
