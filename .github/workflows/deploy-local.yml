@@ -17,6 +17,7 @@ on:
 jobs:
   deploy-credex-core:
     runs-on: ubuntu-latest
+    environment: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}
     
     steps:
       - name: Checkout code
