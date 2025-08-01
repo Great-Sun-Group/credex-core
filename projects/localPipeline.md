@@ -54,8 +54,7 @@
   - Features: Flutter build, version auto-increment, APK upload, version commit
 
 #### Infrastructure Migration ✅
-- ✅ **Terraform Archive**: Moved `terraform/` to `archived_terraform/`
-- ✅ **Workflow Archive**: Moved AWS workflows to `archived_terraform/workflows/`
+- ✅ **Workflow Archive**: Moved AWS workflows to `terraform/workflows/`
 - ✅ **Documentation**: Created comprehensive local deployment guide
 - ✅ **Security Setup**: Deployment token authentication system ready
 
@@ -68,7 +67,55 @@
 - ✅ **Artifact Management**: Deployment metadata and APK backup storage
 - ✅ **Git Integration**: Automatic version commits with skip CI tags
 
-### 🔄 Next Phase: Testing & Validation (Phase 3)
+### ✅ Phase 3: Documentation Migration - COMPLETED (August 1, 2025)
+
+#### Terraform Documentation Archive ✅
+- ✅ **Archive Directory**: Created `terraform/archived_docs/` for historical reference
+- ✅ **AWS Workflow Documentation**: Moved terraform-related deployment docs to archive
+  - `app_workflow.html` - AWS ECS application deployment workflow
+  - `connectors_workflow.html` - AWS infrastructure setup and management
+  - `databases_workflow.html` - Neo4j database deployment on AWS EC2
+  - `terraform_usage.html` - General Terraform usage guide
+- ✅ **AWS Infrastructure Documentation**: Archived scaling and cost analysis docs
+  - `instance_sizing.html` - AWS instance sizing overview
+  - `instance_sizing_costs.html` - Cost analysis for AWS infrastructure
+  - `instance_sizing_scaling.html` - Scaling strategies for AWS deployments
+  - `instance_sizing_technical.html` - Technical specifications for AWS instances
+  - `storage_configuration.html` - S3 storage structure documentation
+- ✅ **Configuration Files**: Moved AWS-specific configuration files
+  - `credex-core-permissions.json` - AWS IAM permissions configuration
+
+#### Local Deployment Documentation ✅
+- ✅ **Navigation Update**: Updated `docs/components/nav.html` to reflect new structure
+- ✅ **Active Documentation**: Maintained relevant local deployment docs
+  - `local-deployment-guide.html` - Complete local CI/CD pipeline guide
+  - `same_server_production.html` - Same-server production deployment
+  - `neo4j_license.html` - Neo4j license management (still relevant)
+- ✅ **Archive Documentation**: Created comprehensive README for archived files
+- ✅ **Historical Preservation**: All terraform documentation preserved for reference
+
+#### Documentation Structure Migration ✅
+- ✅ **File Structure**: Implemented planned documentation reorganization
+  - Moved AWS/terraform docs to `terraform/archived_docs/`
+  - Kept local deployment docs in `docs/develop/deployment/`
+  - Updated navigation to reflect new local-first approach
+- ✅ **Migration Documentation**: Created detailed archive README explaining changes
+- ✅ **Backward Compatibility**: Maintained links to active local deployment guides
+
+#### Root Directory Cleanup ✅
+- ✅ **Markdown Integration**: Converted relevant markdown files to HTML documentation
+  - `DEV_VERIFICATION_SETUP.md` → `/docs/develop/dev_verification_setup.html`
+  - `VIMBISO_SETUP_SUMMARY.md` → `/docs/develop/vimbiso_dev_setup.html`
+  - `PROD_LOCAL_URLS.md` → `/docs/develop/production_urls.html`
+  - Cloudflare tunnel docs → `/docs/develop/external_access_setup.html`
+- ✅ **Obsolete File Archive**: Moved outdated markdown files to `docs/archived_md/`
+  - Manual deployment guides (replaced by CI/CD workflows)
+  - Historical migration documentation
+  - External access setup files (integrated into HTML)
+- ✅ **Navigation Updates**: Added new HTML documentation to navigation structure
+- ✅ **Clean Root Directory**: Only README.md remains in root (as requested)
+
+### 🔄 Next Phase: Testing & Validation (Phase 4)
 - ⏳ **Setup deployment tokens**: Generate and configure secure tokens
 - ⏳ **Test service deployments**: Verify credex-core and chatserver workflows
 - ⏳ **Test mobile pipeline**: Verify Flutter build and APK upload process
@@ -248,10 +295,10 @@ credex-core/
 ├── vimbisopay_apk/           # New: Mobile app APK storage
 ├── docs/
 │   └── develop/
-│       ├── deployment/    # Updated: Local deployment docs
-│       └── archive/       # New: Archived terraform docs
+│       └── deployment/    # Updated: Local deployment docs
 └── src/api/
     └── deployment/        # New: Deployment API endpoints
+└── terraform/archived_docs  # New: for files moved from docs/
 ```
 
 ## Success Criteria

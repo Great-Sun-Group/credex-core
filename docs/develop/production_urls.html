@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Production Environment URLs</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">Production Environment URLs</h1>
+
+    <p>
+      Quick reference for accessing your production services running locally and externally.
+    </p>
+
+    <h2>🚀 Local Production Services</h2>
+
+    <h3>Credex Core API (Production)</h3>
+    <ul>
+      <li><strong>Main API</strong>: <a href="http://localhost:4000">http://localhost:4000</a></li>
+      <li><strong>API Documentation (Swagger)</strong>: <a href="http://localhost:4000/api-docs">http://localhost:4000/api-docs</a></li>
+      <li><strong>Status</strong>: Production mode with full authentication</li>
+    </ul>
+
+    <h3>Vimbiso ChatServer (Production)</h3>
+    <ul>
+      <li><strong>Main Service</strong>: <a href="http://localhost:9000">http://localhost:9000</a></li>
+      <li><strong>Health Check</strong>: <a href="http://localhost:9000/health/">http://localhost:9000/health/</a></li>
+      <li><strong>Status</strong>: Production WhatsApp integration enabled</li>
+    </ul>
+
+    <h3>Redis State Manager (Production)</h3>
+    <ul>
+      <li><strong>Connection</strong>: <code>localhost:6380</code></li>
+      <li><strong>Status</strong>: Persistent storage enabled</li>
+    </ul>
+
+    <h2>🌐 External Production URLs</h2>
+
+    <h3>Credex Core API (Internet)</h3>
+    <ul>
+      <li><strong>Primary</strong>: <a href="https://mycredex.app">https://mycredex.app</a></li>
+      <li><strong>WWW</strong>: <a href="https://www.mycredex.app">https://www.mycredex.app</a></li>
+      <li><strong>API</strong>: <a href="https://api.mycredex.app">https://api.mycredex.app</a></li>
+      <li><strong>Swagger Docs</strong>: <a href="https://mycredex.app/api-docs">https://mycredex.app/api-docs</a></li>
+    </ul>
+
+    <h3>Vimbiso ChatServer (Internet)</h3>
+    <ul>
+      <li><strong>Primary</strong>: <a href="https://vimbisopay.africa">https://vimbisopay.africa</a></li>
+      <li><strong>WWW</strong>: <a href="https://www.vimbisopay.africa">https://www.vimbisopay.africa</a></li>
+      <li><strong>API</strong>: <a href="https://api.vimbisopay.africa">https://api.vimbisopay.africa</a></li> <!-- Note sure what this is for actually -->
+
+      <!-- whatsapp webhook should probably be here too -->
+       
+    </ul>
+
+    <h2>📊 Monitoring & Management</h2>
+
+    <h3>System Monitor</h3>
+    <ul>
+      <li><strong>Metrics Dashboard</strong>: <a href="http://localhost:9100">http://localhost:9100</a></li>
+      <li><strong>Type</strong>: Prometheus Node Exporter</li>
+      <li><strong>Data</strong>: CPU, Memory, Disk, Network metrics</li>
+    </ul>
+
+    <h3>Backup Service</h3>
+    <ul>
+      <li><strong>Status</strong>: Check with <code>docker logs credex-backup-service</code></li>
+      <li><strong>Schedule</strong>:
+        <ul>
+          <li>Hourly: Every 2 hours</li>
+          <li>Daily: 1 AM UTC</li>
+          <li>Weekly: Sunday 2 AM UTC</li>
+          <li>Maintenance: Midnight UTC</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h2>🔄 Port Mapping Summary</h2>
+
+    <table>
+      <tr>
+        <th>Service</th>
+        <th>Development</th>
+        <th>Production</th>
+      </tr>
+      <tr>
+        <td>Credex Core API</td>
+        <td>3000</td>
+        <td><strong>4000</strong></td>
+      </tr>
+      <tr>
+        <td>Vimbiso ChatServer</td>
+        <td>8000</td>
+        <td><strong>9000</strong></td>
+      </tr>
+      <tr>
+        <td>Neo4j Ledger HTTP</td>
+        <td>7474</td>
+        <td><strong>7476</strong></td>
+      </tr>
+      <tr>
+        <td>Neo4j Ledger Bolt</td>
+        <td>7687</td>
+        <td><strong>7689</strong></td>
+      </tr>
+      <tr>
+        <td>Neo4j Search HTTP</td>
+        <td>7475</td>
+        <td><strong>7477</strong></td>
+      </tr>
+      <tr>
+        <td>Neo4j Search Bolt</td>
+        <td>7688</td>
+        <td><strong>7690</strong></td>
+      </tr>
+      <tr>
+        <td>Redis</td>
+        <td>6379</td>
+        <td><strong>6380</strong></td>
+      </tr>
+      <tr>
+        <td>System Monitor</td>
+        <td>-</td>
+        <td><strong>9100</strong></td>
+      </tr>
+    </table>
+
+    <h2>🛠️ Health Check Commands</h2>
+
+    <h3>Quick Health Checks</h3>
+    <pre><code># Test Credex Core API
+curl http://localhost:4000/api-docs
+
+# Test ChatServer
+curl http://localhost:9000/health/
+
+# Test System Monitor
+curl http://localhost:9100/metrics</code></pre>
+
+    <h3>Service Status</h3>
+    <pre><code># Check all services status
+docker compose -f docker-compose.prod.yml ps
+
+# View service logs
+docker logs credex-core-prod --tail 50
+docker logs vimbiso-chatserver-prod --tail 50</code></pre>
+
+    <h2>📝 Notes</h2>
+
+    <ul>
+      <li><strong>Environment Isolation</strong>: Production runs completely separate from development</li>
+      <li><strong>Data Persistence</strong>: All production data is stored in Docker volumes</li>
+      <li><strong>Backup Protection</strong>: Automated backups protect against data loss</li>
+      <li><strong>Resource Sharing</strong>: Services are configured for shared server deployment</li>
+      <li><strong>Health Monitoring</strong>: All services have health checks and monitoring</li>
+      <li><strong>External Access</strong>: Cloudflare tunnels provide secure internet access</li>
+    </ul>
+
+    <div class="alert alert-info">
+      <strong>Deployment Note:</strong> All deployments are now handled through the automated CI/CD pipeline. 
+      Manual deployment commands have been replaced with GitHub Actions workflows that deploy automatically 
+      on code changes.
+    </div>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for develop subdirectory
+      window.templateLevels = 1;
+    </script>
+    <script src="../js/template.js"></script>
+    <script src="../js/dropdown.js"></script>
+  </body>
+</html>
