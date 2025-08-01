@@ -42,16 +42,21 @@
 
     <h2>Dev Env Setup</h2>
 
-    <h3>Local Development</h3>
+    <h3>Local Development (Windows Server)</h3>
 
+    <h4>✅ Completed Setup Steps</h4>
     <ol>
       <li>
         Clone the repository:
         <pre><code>git clone https://github.com/Great-Sun-Group/credex-core.git
 cd credex-core</code></pre>
       </li>
+      <li>✅ Node.js v22.17.0 installed via winget</li>
+      <li>✅ Dependencies installed (<code>npm install</code> completed)</li>
+      <li>✅ TypeScript compilation successful (<code>npm run build</code>)</li>
+      <li>✅ Neo4j Desktop v1.6.2 installed via winget</li>
       <li>
-        Create a <code>.env</code> file in the root of the project based on
+        ✅ Create a <code>.env</code> file in the root of the project based on
         <code>.env.example</code> and fill in the required environment variables
         (see below).
       </li>
@@ -59,6 +64,15 @@ cd credex-core</code></pre>
         <code>git checkout -b new-branch-name</code> to start local development
       </li>
     </ol>
+
+    <h4>🔄 Next Steps Required</h4>
+    <ol>
+      <li><strong>Configure Neo4j Desktop databases</strong> (see Neo4j section below)</li>
+      <li><strong>Start development server</strong>: <code>npm run dev</code></li>
+      <li><strong>Verify application</strong>: http://localhost:3000/health</li>
+    </ol>
+
+    <h3>Alternative: Cloud Development</h3>
 
     <h4>Using Devcontainers with VS Code</h4>
 
@@ -128,6 +142,7 @@ cd credex-core</code></pre>
 
     <h2>Environment Variables</h2>
 
+    <h3>Neo4j Database Configuration</h3>
     <p>
       <strong>NEO_4J_LEDGER_SPACE_BOLT_URL</strong><br />
       <strong>NEO_4J_LEDGER_SPACE_PASS</strong><br />
@@ -136,6 +151,42 @@ cd credex-core</code></pre>
       <strong>NEO_4J_SEARCH_SPACE_PASS</strong><br />
       <strong>NEO_4J_SEARCH_SPACE_USER</strong>
     </p>
+
+    <h4>Option 1: Local Neo4j Desktop (Recommended for Local Development)</h4>
+    <blockquote>
+      <p><strong>Current Setup</strong>: Neo4j Desktop is installed and ready for configuration</p>
+    </blockquote>
+    <ol>
+      <li>
+        <strong>Launch Neo4j Desktop</strong> from Start Menu
+      </li>
+      <li>
+        <strong>Create Project</strong>: "Credex Development"
+      </li>
+      <li>
+        <strong>Create Ledger Database</strong>:
+        <ul>
+          <li>Name: <code>ledgerSpace</code></li>
+          <li>Password: <code>password</code></li>
+          <li>Port: 7687 (default)</li>
+          <li>URL: <code>bolt://localhost:7687</code></li>
+        </ul>
+      </li>
+      <li>
+        <strong>Create Search Database</strong>:
+        <ul>
+          <li>Name: <code>searchSpace</code></li>
+          <li>Password: <code>password</code></li>
+          <li>Port: 7688 (custom)</li>
+          <li>URL: <code>bolt://localhost:7688</code></li>
+        </ul>
+      </li>
+      <li>
+        <strong>Start both databases</strong> and verify connectivity
+      </li>
+    </ol>
+
+    <h4>Option 2: Neo4j Aura (Cloud)</h4>
     <ul>
       <li>
         To set up Neo4j Aura databases:
@@ -163,6 +214,8 @@ cd credex-core</code></pre>
         SEARCH_SPACE variables to the other.
       </li>
     </ul>
+
+    <h3>Other Required Variables</h3>
 
     <p><strong>OPEN_EXCHANGE_RATES_API</strong></p>
     <ul>
@@ -208,6 +261,51 @@ cd credex-core</code></pre>
       For development environments, the <code>NODE_ENV</code> variable defaults
       to 'development'.
     </p>
+
+    <h2>🔧 Available Development Scripts</h2>
+
+    <pre><code>npm run dev          # Start development server with hot reload
+npm run build        # Build TypeScript to JavaScript  
+npm run start        # Start production server
+npm run test         # Run test suite
+npm run lint         # Run ESLint
+npm run format       # Format code with Prettier</code></pre>
+
+    <h2>🌐 Development Access Points</h2>
+
+    <p>Once the application is running:</p>
+    <ul>
+      <li><strong>API Server</strong>: http://localhost:3000</li>
+      <li><strong>API Documentation</strong>: http://localhost:3000/api-docs</li>
+      <li><strong>Health Check</strong>: http://localhost:3000/health</li>
+      <li><strong>Static Documentation</strong>: http://localhost:3000/</li>
+    </ul>
+
+    <h2>📝 Current Development Status</h2>
+
+    <blockquote>
+      <p><strong>Application Status</strong>: ✅ Running successfully on port 3000</p>
+      <p><strong>Database Status</strong>: ⏳ Waiting for Neo4j Desktop configuration</p>
+      <p><strong>Next Action</strong>: Configure Neo4j Desktop databases as outlined above</p>
+    </blockquote>
+
+    <h2>🐛 Troubleshooting</h2>
+
+    <h3>Neo4j Connection Issues</h3>
+    <ul>
+      <li>Verify both databases are running in Neo4j Desktop</li>
+      <li>Check port configurations (7687 and 7688)</li>
+      <li>Ensure passwords match .env configuration</li>
+      <li>Test connections using Neo4j Browser</li>
+    </ul>
+
+    <h3>Application Issues</h3>
+    <ul>
+      <li>Check Node.js version: <code>node --version</code> (should be v22.17.0)</li>
+      <li>Reinstall dependencies: <code>npm install</code></li>
+      <li>Rebuild application: <code>npm run build</code></li>
+      <li>Check application logs for specific errors</li>
+    </ul>
 
     <!-- Footer Component -->
     <div id="footer-develop"></div>

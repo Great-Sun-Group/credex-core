@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
 import logger from "../../utils/logger";
+import { backupExchangeRateData } from "./BackupIntegration";
 
 const https = require("https");
 
@@ -86,6 +87,17 @@ export async function fetchZwgRate(): Promise<ExchangeRate[]> {
     }
 
     logger.info("ZWG rates fetched successfully", { ratesCount: validRates.length });
+    
+    // Backup exchange rate data immediately after successful fetch
+    try {
+      await backupExchangeRateData(validRates);
+    } catch (error) {
+      logger.error("Failed to backup exchange rate data", {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      // Don't fail the rate fetch if backup fails
+    }
+    
     return validRates;
   } catch (error) {
     if (axios.isAxiosError(error)) {
