@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Local CI/CD Pipeline Deployment Guide</title>
+    <link rel="stylesheet" href="../../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">Local CI/CD Pipeline Deployment Guide</h1>
+
+    <p>
+      This guide covers the new local deployment system that replaced the previous AWS-based infrastructure.
+    </p>
+
+    <h2>Overview</h2>
+
+    <p>
+      The local CI/CD pipeline automatically deploys services to the local production environment using GitHub Actions workflows that call deployment APIs running on the local server.
+    </p>
+
+    <h2>Architecture</h2>
+
+    <h3>Three Repository Structure</h3>
+    <ul>
+      <li><strong>credex-core</strong>: Main API and backend services</li>
+      <li><strong>vimbiso-chatserver</strong>: Chat/messaging service</li>
+      <li><strong>vimbisopay</strong>: Flutter mobile application</li>
+    </ul>
+
+    <h3>Deployment Flow</h3>
+    <pre><code>GitHub Repository → GitHub Actions → Local Deployment API → Docker Compose Services</code></pre>
+
+    <h2>Deployment Endpoints</h2>
+
+    <p>
+      All deployment endpoints are hosted at <code>http://localhost:4000</code> and require authentication via deployment token.
+    </p>
+
+    <h3>Service Deployment</h3>
+    <ul>
+      <li><code>POST /api/deploy-core</code> - Deploy credex-core service</li>
+      <li><code>POST /api/deploy-chatserver</code> - Deploy vimbiso-chatserver service</li>
+    </ul>
+
+    <h3>Mobile App Deployment</h3>
+    <ul>
+      <li><code>POST /api/upload-apk</code> - Upload mobile app APK</li>
+      <li><code>GET /downloads/vimbisopay-{version}.apk</code> - Download APK files</li>
+    </ul>
+
+    <h2>GitHub Actions Workflows</h2>
+
+    <h3>1. credex-core Repository</h3>
+    <ul>
+      <li><strong>File</strong>: <code>.github/workflows/deploy-local.yml</code></li>
+      <li><strong>Trigger</strong>: Automatic on push to <code>prod</code> branch</li>
+      <li><strong>Actions</strong>:
+        <ul>
+          <li>Checkout code</li>
+          <li>Call deployment API with service details</li>
+          <li>Verify deployment success</li>
+          <li>Report status and create artifacts</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>2. vimbiso-chatserver Repository</h3>
+    <ul>
+      <li><strong>File</strong>: <code>.github/workflows/deploy-local.yml</code></li>
+      <li><strong>Trigger</strong>: Automatic on push to <code>prod</code> branch</li>
+      <li><strong>Actions</strong>:
+        <ul>
+          <li>Checkout code</li>
+          <li>Call deployment API with service details</li>
+          <li>Verify deployment success</li>
+          <li>Report status and create artifacts</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>3. vimbisopay Repository</h3>
+    <ul>
+      <li><strong>File</strong>: <code>.github/workflows/deploy-mobile.yml</code></li>
+      <li><strong>Trigger</strong>: Manual workflow dispatch</li>
+      <li><strong>Actions</strong>:
+        <ul>
+          <li>Setup Flutter environment</li>
+          <li>Run tests and build APK</li>
+          <li>Auto-increment version based on update type</li>
+          <li>Upload APK to deployment API</li>
+          <li>Verify availability and commit version update</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h2>Version Management (Mobile App)</h2>
+
+    <h3>Version Increment Logic</h3>
+    <ul>
+      <li><strong>Optional Update</strong> (<code>update_required: false</code>): Increment patch version
+        <ul>
+          <li>Example: <code>1.2.3</code> → <code>1.2.4</code></li>
+        </ul>
+      </li>
+      <li><strong>Required Update</strong> (<code>update_required: true</code>): Increment minor version, reset patch
+        <ul>
+          <li>Example: <code>1.2.3</code> → <code>1.3.0</code></li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>Manual Deployment Process</h3>
+    <ol>
+      <li>Navigate to vimbisopay repository on GitHub</li>
+      <li>Go to Actions → Deploy Mobile App to Local Environment</li>
+      <li>Click "Run workflow"</li>
+      <li>Select update type (required/optional)</li>
+      <li>Enter release notes</li>
+      <li>Click "Run workflow" to start deployment</li>
+    </ol>
+
+    <h2>Security Configuration</h2>
+
+    <h3>Deployment Token Setup</h3>
+    <ol>
+      <li>Generate a secure 32+ character token</li>
+      <li>Add to GitHub repository secrets as <code>DEPLOY_TOKEN</code></li>
+      <li>Configure the same token in local environment variables</li>
+      <li>All three repositories must have access to this secret</li>
+    </ol>
+
+    <h3>Required Secrets</h3>
+    <p>Each repository needs the following GitHub secret:</p>
+    <ul>
+      <li><code>DEPLOY_TOKEN</code>: Secure deployment authentication token</li>
+    </ul>
+
+    <h2>Service URLs</h2>
+
+    <h3>Production Environment</h3>
+    <ul>
+      <li><strong>Credex Core API</strong>: http://localhost:4000</li>
+      <li><strong>API Documentation</strong>: http://localhost:4000/api-docs</li>
+      <li><strong>Vimbiso ChatServer</strong>: http://localhost:9000</li>
+      <li><strong>ChatServer Health</strong>: http://localhost:9000/health/</li>
+    </ul>
+
+    <h3>Mobile App Downloads</h3>
+    <ul>
+      <li><strong>Versioned APK</strong>: http://localhost:4000/downloads/vimbisopay-{version}.apk</li>
+      <li><strong>Latest APK</strong>: http://localhost:4000/downloads/vimbisopay-latest.apk</li>
+    </ul>
+
+    <h2>Troubleshooting</h2>
+
+    <h3>Common Issues</h3>
+
+    <h4>Deployment Authentication Failed</h4>
+    <ul>
+      <li><strong>Cause</strong>: Invalid or missing deployment token</li>
+      <li><strong>Solution</strong>: Verify <code>DEPLOY_TOKEN</code> secret is set correctly in repository settings</li>
+    </ul>
+
+    <h4>API Connection Failed</h4>
+    <ul>
+      <li><strong>Cause</strong>: Local deployment API not running</li>
+      <li><strong>Solution</strong>: Ensure credex-core production environment is running:
+        <pre><code>docker compose -f docker-compose.prod.yml up -d</code></pre>
+      </li>
+    </ul>
+
+    <h4>Mobile App Build Failed</h4>
+    <ul>
+      <li><strong>Cause</strong>: Flutter build errors or missing dependencies</li>
+      <li><strong>Solution</strong>: Check workflow logs for specific Flutter errors</li>
+    </ul>
+
+    <h4>Version Increment Failed</h4>
+    <ul>
+      <li><strong>Cause</strong>: Invalid version format in pubspec.yaml</li>
+      <li><strong>Solution</strong>: Ensure version follows semantic versioning (x.y.z format)</li>
+    </ul>
+
+    <h3>Health Checks</h3>
+
+    <h4>Verify Deployment API</h4>
+    <pre><code>curl http://localhost:4000/api-docs</code></pre>
+
+    <h4>Verify ChatServer</h4>
+    <pre><code>curl http://localhost:9000/health/</code></pre>
+
+    <h4>Check Service Status</h4>
+    <pre><code>docker compose -f docker-compose.prod.yml ps</code></pre>
+
+    <h2>Monitoring</h2>
+
+    <h3>Deployment Artifacts</h3>
+    <p>Each successful deployment creates artifacts containing:</p>
+    <ul>
+      <li>Deployment metadata (timestamps, versions, actors)</li>
+      <li>Service configuration details</li>
+      <li>Download URLs (for mobile deployments)</li>
+      <li>APK files (for mobile deployments)</li>
+    </ul>
+
+    <h3>Logs</h3>
+    <ul>
+      <li><strong>GitHub Actions</strong>: View workflow logs in repository Actions tab</li>
+      <li><strong>Local Services</strong>: Use Docker logs to monitor service deployment
+        <pre><code>docker logs credex-core-prod --tail 50
+docker logs vimbiso-chatserver-prod --tail 50</code></pre>
+      </li>
+    </ul>
+
+    <h2>Migration from AWS</h2>
+
+    <h3>Archived Components</h3>
+    <p>The previous AWS-based infrastructure has been archived:</p>
+    <ul>
+      <li><strong>Terraform configurations</strong>: kept in <code>terraform/</code> for now.</li>
+      <li><strong>AWS workflows</strong>: Moved to <code>terraform/workflows/</code></li>
+      <li><strong>Documentation</strong>: Previous deployment docs preserved for reference</li>
+    </ul>
+
+    <h3>Key Changes</h3>
+    <ul>
+      <li><strong>No cloud infrastructure</strong>: All services run locally</li>
+      <li><strong>Direct deployment</strong>: No container registry or ECS deployments</li>
+      <li><strong>Local file storage</strong>: APK files stored locally instead of S3</li>
+      <li><strong>Simplified authentication</strong>: Single deployment token instead of AWS credentials</li>
+    </ul>
+
+    <h2>Best Practices</h2>
+
+    <h3>Development Workflow</h3>
+    <ol>
+      <li>Develop and test changes locally</li>
+      <li>Push to <code>prod</code> branch for automatic deployment (credex-core, vimbiso-chatserver)</li>
+      <li>Use manual dispatch for mobile app deployments with appropriate update classification</li>
+      <li>Monitor deployment logs and verify service health after deployment</li>
+    </ol>
+
+    <h3>Version Management</h3>
+    <ul>
+      <li>Use semantic versioning for all releases</li>
+      <li>Classify updates appropriately (required vs optional)</li>
+      <li>Include meaningful release notes for mobile deployments</li>
+      <li>Test deployments in development environment first</li>
+    </ul>
+
+    <h3>Security</h3>
+    <ul>
+      <li>Rotate deployment tokens regularly</li>
+      <li>Monitor deployment logs for unauthorized access attempts</li>
+      <li>Keep local production environment secure and updated</li>
+      <li>Use HTTPS in production (configure reverse proxy if needed)</li>
+    </ul>
+
+    <hr>
+
+    <p>
+      <strong>Last Updated</strong>: August 1, 2025<br>
+      <strong>Pipeline Version</strong>: Phase 2 - Local CI/CD Implementation<br>
+      <strong>Status</strong>: ✅ Fully Operational
+    </p>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for deployment subdirectory
+      window.templateLevels = 2;
+    </script>
+    <script src="../../js/template.js"></script>
+    <script src="../../js/dropdown.js"></script>
+  </body>
+</html>

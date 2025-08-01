@@ -24,22 +24,36 @@ export class VerificationProviderFactory {
    * @throws Error if provider type is not supported
    */
   static createProvider(type: VerificationProviderType): IVerificationProvider {
+    const useMockVerification = process.env.USE_MOCK_VERIFICATION === 'true';
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const isTest = process.env.NODE_ENV === 'test';
+    
     logger.info('Creating verification provider', { 
       type,
+      useMockVerification,
+      isDevelopment,
+      isTest,
       hasMockProvider: !!this.mockProvider,
-      mockProviderType: this.mockProvider?.getProviderType(),
-      isTest: process.env.NODE_ENV === 'test'
+      mockProviderType: this.mockProvider?.getProviderType()
     });
     
     switch (type) {
       case VerificationProviderType.WHATSAPP:
-        // Use mock provider if set (for testing)
+        // Use mock provider if explicitly set (for testing)
         if (this.mockProvider) {
-          logger.info('Using mock provider', {
+          logger.info('Using explicitly set mock provider', {
             mockProviderType: this.mockProvider.getProviderType()
           });
           return this.mockProvider;
         }
+        
+        // Use mock provider for development when USE_MOCK_VERIFICATION is true
+        if ((isDevelopment || isTest) && useMockVerification) {
+          logger.info('Using development mock provider with fixed OTP');
+          const { MockWhatsAppProvider } = require('../../../mocks/mockWhatsappProvider');
+          return new MockWhatsAppProvider();
+        }
+        
         logger.info('Using real WhatsApp provider');
         return new WhatsAppProvider();
       

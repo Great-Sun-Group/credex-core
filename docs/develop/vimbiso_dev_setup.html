@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Vimbiso ChatServer Development Setup</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
+  <body>
+    <!-- Header Component -->
+    <div id="header-develop"></div>
+
+    <!-- Navigation Component -->
+    <div id="nav-container"></div>
+
+    <!-- Page Content -->
+    <h1 class="chapter-title">Vimbiso ChatServer Development Setup</h1>
+
+    <p>
+      This guide covers the integrated development environment setup for the vimbiso-chatserver 
+      with the existing credex-core development environment.
+    </p>
+
+    <h2>Overview</h2>
+    <p>
+      The vimbiso-chatserver is successfully integrated with the credex-core development environment. 
+      All services run in a unified Docker Compose setup for seamless development.
+    </p>
+
+    <h2>Services Running</h2>
+
+    <h3>1. Credex Core API (Port 3000)</h3>
+    <ul>
+      <li><strong>Status</strong>: ✅ Running and healthy</li>
+      <li><strong>URL</strong>: <a href="http://localhost:3000">http://localhost:3000</a></li>
+      <li><strong>API Docs</strong>: <a href="http://localhost:3000/api-docs">http://localhost:3000/api-docs</a></li>
+      <li><strong>Database</strong>: Connected to both Neo4j instances (ledger & search)</li>
+    </ul>
+
+    <h3>2. Vimbiso ChatServer (Port 8000)</h3>
+    <ul>
+      <li><strong>Status</strong>: ✅ Running and healthy</li>
+      <li><strong>URL</strong>: <a href="http://localhost:8000">http://localhost:8000</a></li>
+      <li><strong>Health Check</strong>: <a href="http://localhost:8000/health/">http://localhost:8000/health/</a></li>
+      <li><strong>Framework</strong>: Django development server</li>
+      <li><strong>Database</strong>: SQLite with migrations applied</li>
+      <li><strong>State Management</strong>: Redis connection healthy</li>
+    </ul>
+
+    <h3>3. Mock WhatsApp Server (Port 8001)</h3>
+    <ul>
+      <li><strong>Status</strong>: ✅ Running</li>
+      <li><strong>URL</strong>: <a href="http://localhost:8001">http://localhost:8001</a></li>
+      <li><strong>Purpose</strong>: Testing WhatsApp integration without hitting real WhatsApp API</li>
+    </ul>
+
+    <h3>4. Supporting Services</h3>
+    <ul>
+      <li><strong>Redis State Manager</strong>: ✅ Running (Port 6379)</li>
+      <li><strong>Neo4j Ledger Database</strong>: ✅ Running (Ports 7474, 7687)</li>
+      <li><strong>Neo4j Search Database</strong>: ✅ Running (Ports 7475, 7688)</li>
+    </ul>
+
+    <h2>Configuration</h2>
+
+    <h3>Environment Variables</h3>
+    <p>The vimbiso-chatserver uses the following configuration in <code>/vimbiso-chatserver/.env</code>:</p>
+
+    <pre><code>DEBUG=True
+DJANGO_SECRET=dev-django-secret-key-change-in-production
+
+# Credex Core API Configuration
+MYCREDEX_APP_URL=http://credex-core:3000/
+CLIENT_API_KEY=bdgyk83HjdhjtSfhy36msfthf
+MOCK_TEST_KEY=dev-mock-test-key-for-testing
+
+# WhatsApp Integration (using mock for development)
+WHATSAPP_API_URL=http://mock:8001/
+WHATSAPP_ACCESS_TOKEN=dev-mock-access-token
+WHATSAPP_PHONE_NUMBER_ID=dev-mock-phone-id
+WHATSAPP_BUSINESS_ID=dev-mock-business-id</code></pre>
+
+    <h3>Key Integration Points</h3>
+    <ul>
+      <li><strong>vimbiso-chatserver</strong> → <strong>credex-core</strong>: <code>http://credex-core:3000/</code></li>
+      <li><strong>vimbiso-chatserver</strong> → <strong>mock-whatsapp</strong>: <code>http://mock-whatsapp:8001/</code></li>
+      <li><strong>vimbiso-chatserver</strong> → <strong>redis-state</strong>: <code>redis://redis-state:6379/0</code></li>
+    </ul>
+
+    <h3>Shared Configuration</h3>
+    <ul>
+      <li><strong>CLIENT_API_KEY</strong>: <code>bdgyk83HjdhjtSfhy36msfthf</code> (matches between both services)</li>
+      <li><strong>Network</strong>: All services on <code>credex-dev-network</code></li>
+    </ul>
+
+    <h2>Development Commands</h2>
+
+    <h3>Start All Services</h3>
+    <pre><code>docker compose -f docker-compose.dev-local.yml up --build</code></pre>
+
+    <h3>Stop All Services</h3>
+    <pre><code>docker compose -f docker-compose.dev-local.yml down</code></pre>
+
+    <h3>Check Service Status</h3>
+    <pre><code>docker compose -f docker-compose.dev-local.yml ps</code></pre>
+
+    <h3>Test Health Endpoints</h3>
+    <pre><code># Vimbiso ChatServer
+curl http://localhost:8000/health/
+
+# Credex Core
+curl http://localhost:3000/api-docs
+
+# Mock WhatsApp
+curl http://localhost:8001</code></pre>
+
+    <h2>Development Workflow</h2>
+
+    <ol>
+      <li><strong>For Credex Core development</strong>: Work in <code>/credex-core</code> directory</li>
+      <li><strong>For Vimbiso ChatServer development</strong>: Work in <code>/vimbiso-chatserver</code> directory</li>
+      <li><strong>Testing WhatsApp flows</strong>: Use the mock server at <code>http://localhost:8001</code></li>
+      <li><strong>API testing</strong>: Use Swagger docs at <code>http://localhost:3000/api-docs</code></li>
+    </ol>
+
+    <h2>Testing Integration</h2>
+
+    <h3>WhatsApp Integration Testing</h3>
+    <p>Use the mock server to simulate WhatsApp messages without hitting the real WhatsApp API.</p>
+
+    <h3>API Integration Testing</h3>
+    <p>Verify vimbiso-chatserver can successfully call credex-core APIs using the shared CLIENT_API_KEY.</p>
+
+    <h3>End-to-End Testing</h3>
+    <p>Test complete user flows through the chatbot interface.</p>
+
+    <h2>Production Considerations</h2>
+
+    <p>When ready for production deployment:</p>
+    <ul>
+      <li>Replace mock WhatsApp configuration with real WhatsApp API credentials</li>
+      <li>Update Django secret key and other security settings</li>
+      <li>Configure production database settings</li>
+      <li>Use the automated CI/CD pipeline for deployment</li>
+    </ul>
+
+    <h2>Troubleshooting</h2>
+
+    <h3>Common Issues</h3>
+    <ul>
+      <li><strong>Firebase warnings</strong>: These don't affect core functionality</li>
+      <li><strong>Service connectivity</strong>: Ensure all services are on the same Docker network</li>
+      <li><strong>API key mismatches</strong>: Verify CLIENT_API_KEY matches between services</li>
+    </ul>
+
+    <h3>Health Checks</h3>
+    <p>All services have health checks and will automatically restart on failure.</p>
+
+    <h2>Notes</h2>
+    <ul>
+      <li>Development hot-reloading is enabled for both applications</li>
+      <li>All health checks are passing</li>
+      <li>Services automatically restart on failure</li>
+      <li>Firebase integration shows warnings but doesn't affect core functionality</li>
+    </ul>
+
+    <!-- Footer Component -->
+    <div id="footer-develop"></div>
+
+    <!-- Template System JavaScript -->
+    <script>
+      // Hardcode the number of levels for develop subdirectory
+      window.templateLevels = 1;
+    </script>
+    <script src="../js/template.js"></script>
+    <script src="../js/dropdown.js"></script>
+  </body>
+</html>

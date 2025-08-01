@@ -1,7 +1,7 @@
 import { ledgerSpaceDriver, searchSpaceDriver } from "../../../config/neo4j";
 import { LoopFinder } from "./LoopFinder";
 import { performTrustAudit } from "../../audits/trustAudit";
-import { triggerPostMTQBackup } from "./BackupIntegration";
+// import { triggerPostMTQBackup } from "./BackupIntegration"; // DISABLED for Neo4j Aura migration
 import _ from "lodash";
 import logger from "../../utils/logger";
 
@@ -76,7 +76,9 @@ export async function MinuteTransactionQueue(): Promise<boolean> {
       } else {
         logger.info("MTQ processing completed successfully");
         
-        // Trigger post-MTQ backup
+        // Trigger post-MTQ backup - DISABLED for Neo4j Aura migration
+        // TODO: Re-implement application-level backup for Aura environment
+        /*
         try {
           await triggerPostMTQBackup();
         } catch (error) {
@@ -86,6 +88,7 @@ export async function MinuteTransactionQueue(): Promise<boolean> {
           });
           // Don't fail MTQ if backup fails
         }
+        */
       }
       return true;
     } catch (error) {

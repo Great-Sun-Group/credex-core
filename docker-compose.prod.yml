@@ -1,112 +1,6 @@
 version: "3.8"
 
 services:
-  # Neo4j LedgerSpace Database - Production
-  neo4j-ledger-prod:
-    image: neo4j:5.15-enterprise
-    container_name: credex-neo4j-ledger-prod
-    environment:
-      NEO4J_AUTH: neo4j/password
-      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
-      NEO4J_EDITION: enterprise
-      NEO4J_PLUGINS: '["apoc"]'
-      # License from environment variable
-      NEO4J_ENTERPRISE_LICENSE: ${NEO4J_ENTERPRISE_LICENSE}
-      # Disable strict validation to allow enterprise license
-      NEO4J_server_config_strict__validation_enabled: "false"
-      # Memory configuration for production (optimized for shared environment)
-      NEO4J_dbms_memory_heap_initial__size: 1g
-      NEO4J_dbms_memory_heap_max__size: 2g
-      NEO4J_dbms_memory_pagecache_size: 1g
-      # Network configuration
-      NEO4J_dbms_default__listen__address: 0.0.0.0
-      NEO4J_dbms_connector_bolt_listen__address: 0.0.0.0:7687
-      NEO4J_dbms_connector_http_listen__address: 0.0.0.0:7474
-      # Security
-      NEO4J_dbms_security_auth__enabled: true
-      # Backup configuration
-      NEO4J_dbms_backup_enabled: true
-      NEO4J_dbms_backup_listen__address: 0.0.0.0:6362
-    ports:
-      - "7689:7687"  # Bolt protocol (different from dev)
-      - "7476:7474"  # HTTP interface (different from dev)
-      - "6362:6362"  # Backup port
-    volumes:
-      - neo4j-ledger-prod-data:/data
-      - neo4j-ledger-prod-logs:/logs
-      - neo4j-ledger-prod-import:/var/lib/neo4j/import
-      - neo4j-ledger-prod-plugins:/plugins
-      - ./backups/neo4j-ledger:/backups
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 3g
-          cpus: '2.0'
-        reservations:
-          memory: 2g
-          cpus: '1.0'
-    healthcheck:
-      test: ["CMD-SHELL", "cypher-shell -u neo4j -p password 'RETURN 1'"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - credex-prod-network
-
-  # Neo4j SearchSpace Database - Production
-  neo4j-search-prod:
-    image: neo4j:5.15-enterprise
-    container_name: credex-neo4j-search-prod
-    environment:
-      NEO4J_AUTH: neo4j/password
-      NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
-      NEO4J_EDITION: enterprise
-      NEO4J_PLUGINS: '["apoc"]'
-      # License from environment variable
-      NEO4J_ENTERPRISE_LICENSE: ${NEO4J_ENTERPRISE_LICENSE}
-      # Disable strict validation to allow enterprise license
-      NEO4J_server_config_strict__validation_enabled: "false"
-      # Memory configuration for production
-      NEO4J_dbms_memory_heap_initial__size: 1g
-      NEO4J_dbms_memory_heap_max__size: 2g
-      NEO4J_dbms_memory_pagecache_size: 1g
-      # Network configuration
-      NEO4J_dbms_default__listen__address: 0.0.0.0
-      NEO4J_dbms_connector_bolt_listen__address: 0.0.0.0:7687
-      NEO4J_dbms_connector_http_listen__address: 0.0.0.0:7474
-      # Security
-      NEO4J_dbms_security_auth__enabled: true
-      # Backup configuration
-      NEO4J_dbms_backup_enabled: true
-      NEO4J_dbms_backup_listen__address: 0.0.0.0:6362
-    ports:
-      - "7690:7687"  # Bolt protocol (different from dev)
-      - "7477:7474"  # HTTP interface (different from dev)
-      - "6363:6362"  # Backup port
-    volumes:
-      - neo4j-search-prod-data:/data
-      - neo4j-search-prod-logs:/logs
-      - neo4j-search-prod-import:/var/lib/neo4j/import
-      - neo4j-search-prod-plugins:/plugins
-      - ./backups/neo4j-search:/backups
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 3g
-          cpus: '2.0'
-        reservations:
-          memory: 2g
-          cpus: '1.0'
-    healthcheck:
-      test: ["CMD-SHELL", "cypher-shell -u neo4j -p password 'RETURN 1'"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - credex-prod-network
-
   # Credex Core Application - Production
   credex-core-prod:
     build:
@@ -118,18 +12,18 @@ services:
       PORT: 4000
       LOG_LEVEL: info
       
-      # Neo4j Configuration
-      NEO_4J_LEDGER_SPACE_BOLT_URL: bolt://neo4j-ledger-prod:7687
-      NEO_4J_LEDGER_SPACE_USER: neo4j
-      NEO_4J_LEDGER_SPACE_PASS: password
-      NEO_4J_SEARCH_SPACE_BOLT_URL: bolt://neo4j-search-prod:7687
-      NEO_4J_SEARCH_SPACE_USER: neo4j
-      NEO_4J_SEARCH_SPACE_PASS: password
+      # Neo4j Aura Configuration - Using environment variables
+      NEO_4J_LEDGER_SPACE_BOLT_URL: ${NEO_4J_LEDGER_SPACE_BOLT_URL}
+      NEO_4J_LEDGER_SPACE_USER: ${NEO_4J_LEDGER_SPACE_USER}
+      NEO_4J_LEDGER_SPACE_PASS: ${NEO_4J_LEDGER_SPACE_PASS}
+      NEO_4J_SEARCH_SPACE_BOLT_URL: ${NEO_4J_SEARCH_SPACE_BOLT_URL}
+      NEO_4J_SEARCH_SPACE_USER: ${NEO_4J_SEARCH_SPACE_USER}
+      NEO_4J_SEARCH_SPACE_PASS: ${NEO_4J_SEARCH_SPACE_PASS}
       
       # Production Keys (CHANGE THESE!)
-      JWT_SECRET: ${JWT_SECRET_PROD}
-      CLIENT_API_KEY: ${CLIENT_API_KEY_PROD}
-      PASSWORD_PEPPER: ${PASSWORD_PEPPER_PROD}
+      JWT_SECRET: ${JWT_SECRET}
+      CLIENT_API_KEY: ${CLIENT_API_KEY}
+      PASSWORD_PEPPER: ${PASSWORD_PEPPER}
       DEV_ADMIN_KEY: ${DEV_ADMIN_KEY}
       SKIP_RATE_LIMITER_KEY: ${SKIP_RATE_LIMITER_KEY}
       
@@ -148,11 +42,6 @@ services:
     volumes:
       - ./logs/prod:/app/logs
       - ./backups/credex-core:/app/backups
-    depends_on:
-      neo4j-ledger-prod:
-        condition: service_healthy
-      neo4j-search-prod:
-        condition: service_healthy
     restart: unless-stopped
     deploy:
       resources:
@@ -163,7 +52,7 @@ services:
           memory: 512m
           cpus: '0.5'
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:4000/api-docs || exit 1"]
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://0.0.0.0:4000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -177,18 +66,10 @@ services:
       context: ../vimbiso-chatserver
       target: production
     container_name: vimbiso-chatserver-prod
+    env_file:
+      - ../vimbiso-chatserver/.env.prod
     environment:
-      - DJANGO_ENV=production
-      - DEBUG=False
-      - ALLOWED_HOSTS=*
-      - DJANGO_SECRET=${DJANGO_SECRET_PROD}
       - REDIS_URL=redis://redis-state-prod:6379/0
-      - WHATSAPP_API_URL=${WHATSAPP_API_URL}
-      - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN}
-      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID}
-      - WHATSAPP_BUSINESS_ID=${WHATSAPP_BUSINESS_ID}
-      - MYCREDEX_APP_URL=http://credex-core-prod:4000/
-      - CLIENT_API_KEY=${CLIENT_API_KEY_PROD}
       - USE_PROGRESSIVE_FLOW=True
       - PORT=9000
     ports:
@@ -255,8 +136,6 @@ services:
       - ./backups:/backups
       - ./scripts:/scripts
       - ./logs/prod:/app/logs
-      - neo4j-ledger-prod-data:/neo4j-ledger-data:ro
-      - neo4j-search-prod-data:/neo4j-search-data:ro
       - redis-prod-data:/redis-data:ro
       - vimbiso-prod-data:/vimbiso-data:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -266,6 +145,13 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_S3_BACKUP_BUCKET=${AWS_S3_BACKUP_BUCKET}
       - WEBHOOK_URL=${BACKUP_WEBHOOK_URL}
+      # Neo4j Aura connection details for transaction log backups
+      - NEO_4J_LEDGER_SPACE_BOLT_URL=${NEO_4J_LEDGER_SPACE_BOLT_URL}
+      - NEO_4J_LEDGER_SPACE_USER=${NEO_4J_LEDGER_SPACE_USER}
+      - NEO_4J_LEDGER_SPACE_PASS=${NEO_4J_LEDGER_SPACE_PASS}
+      - NEO_4J_SEARCH_SPACE_BOLT_URL=${NEO_4J_SEARCH_SPACE_BOLT_URL}
+      - NEO_4J_SEARCH_SPACE_USER=${NEO_4J_SEARCH_SPACE_USER}
+      - NEO_4J_SEARCH_SPACE_PASS=${NEO_4J_SEARCH_SPACE_PASS}
     command: |
       sh -c "
         apk add --no-cache dcron curl bash tar gzip findutils docker-cli &&
@@ -278,8 +164,6 @@ services:
       "
     restart: unless-stopped
     depends_on:
-      - neo4j-ledger-prod
-      - neo4j-search-prod
       - redis-state-prod
       - credex-core-prod
       - vimbiso-chatserver-prod
@@ -306,14 +190,6 @@ services:
       - credex-prod-network
 
 volumes:
-  neo4j-ledger-prod-data:
-  neo4j-ledger-prod-logs:
-  neo4j-ledger-prod-import:
-  neo4j-ledger-prod-plugins:
-  neo4j-search-prod-data:
-  neo4j-search-prod-logs:
-  neo4j-search-prod-import:
-  neo4j-search-prod-plugins:
   redis-prod-data:
   vimbiso-prod-data:
 
