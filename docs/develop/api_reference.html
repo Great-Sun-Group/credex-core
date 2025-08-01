@@ -10025,10 +10025,10 @@
     "/app/version-check": {
       "post": {
         "tags": [
-          "App"
+          "Deployment"
         ],
         "summary": "Check for app updates",
-        "description": "Checks if an update is available for the app based on the current version.\nReturns update information if an update is available, including whether the update is required.\nThe endpoint uses semantic versioning to compare versions and supports build numbers (e.g., 1.0.0+33).\n",
+        "description": "Checks if an update is available for the mobile app based on the current version.\nThis integrates the existing App module functionality into the Deployment module\nfor a unified mobile app lifecycle management system.\n",
         "security": [
           {
             "clientApiKey": []
@@ -10193,7 +10193,7 @@
                                 "update_url": {
                                   "type": "string",
                                   "description": "URL to download the update",
-                                  "example": "https://downloads.vimbisopay.com/app/vimbisopay-1.1.0.apk"
+                                  "example": "/downloads/vimbisopay-1.1.0.apk"
                                 },
                                 "file_size_bytes": {
                                   "type": "number",
@@ -10222,13 +10222,13 @@
                                     },
                                     "checksum": {
                                       "type": "string",
-                                      "description": "Checksum of the universal APK",
+                                      "description": "Checksum of the APK",
                                       "example": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
                                     },
                                     "checksumUrl": {
                                       "type": "string",
                                       "description": "URL to download the checksums file",
-                                      "example": "https://github.com/Great-Sun-Group/vimbisopay/releases/download/v2.1.0+01/vimbisopay-2.1.0+01-checksums.txt"
+                                      "example": ""
                                     }
                                   }
                                 },
@@ -10282,6 +10282,11 @@
                                       }
                                     }
                                   }
+                                },
+                                "current_version": {
+                                  "type": "string",
+                                  "description": "Current version provided",
+                                  "example": "1.0.0"
                                 }
                               }
                             }
@@ -16824,6 +16829,396 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/deploy-core": {
+      "post": {
+        "tags": [
+          "Deployment"
+        ],
+        "summary": "Deploy credex-core service",
+        "description": "Deploys the credex-core service by pulling latest changes from the repository,\nbuilding the application, and restarting the Docker container.\nRequires a valid deployment token for authentication.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "service",
+                  "deploy_token"
+                ],
+                "properties": {
+                  "service": {
+                    "type": "string",
+                    "enum": [
+                      "credex-core"
+                    ],
+                    "description": "Service to deploy",
+                    "example": "credex-core"
+                  },
+                  "deploy_token": {
+                    "type": "string",
+                    "description": "Deployment authentication token",
+                    "example": "your-secure-deploy-token-here"
+                  },
+                  "branch": {
+                    "type": "string",
+                    "enum": [
+                      "prod",
+                      "main"
+                    ],
+                    "description": "Git branch to deploy (defaults to prod)",
+                    "example": "prod"
+                  },
+                  "commit_sha": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{40}$",
+                    "description": "Specific commit SHA to deploy (optional)",
+                    "example": "a1b2c3d4e5f6789012345678901234567890abcd"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deployment successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "credex-core deployed successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "example": "req-123"
+                            },
+                            "type": {
+                              "type": "string",
+                              "example": "DEPLOY_CORE_SUCCESS"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "deployment-system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "deploymentId": {
+                                  "type": "string",
+                                  "example": "credex-core-1643723400000"
+                                },
+                                "branch": {
+                                  "type": "string",
+                                  "example": "prod"
+                                },
+                                "commitSha": {
+                                  "type": "string",
+                                  "example": "a1b2c3d4e5f6789012345678901234567890abcd"
+                                },
+                                "timestamp": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid deployment token"
+          },
+          "500": {
+            "description": "Deployment failed"
+          }
+        }
+      }
+    },
+    "/api/deploy-chatserver": {
+      "post": {
+        "tags": [
+          "Deployment"
+        ],
+        "summary": "Deploy vimbiso-chatserver service",
+        "description": "Deploys the vimbiso-chatserver service by pulling latest changes from the repository\nand restarting the Docker container.\nRequires a valid deployment token for authentication.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "service",
+                  "deploy_token"
+                ],
+                "properties": {
+                  "service": {
+                    "type": "string",
+                    "enum": [
+                      "vimbiso-chatserver"
+                    ],
+                    "description": "Service to deploy",
+                    "example": "vimbiso-chatserver"
+                  },
+                  "deploy_token": {
+                    "type": "string",
+                    "description": "Deployment authentication token",
+                    "example": "your-secure-deploy-token-here"
+                  },
+                  "branch": {
+                    "type": "string",
+                    "enum": [
+                      "prod",
+                      "main"
+                    ],
+                    "description": "Git branch to deploy (defaults to prod)",
+                    "example": "prod"
+                  },
+                  "commit_sha": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{40}$",
+                    "description": "Specific commit SHA to deploy (optional)",
+                    "example": "a1b2c3d4e5f6789012345678901234567890abcd"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deployment successful"
+          },
+          "401": {
+            "description": "Invalid deployment token"
+          },
+          "500": {
+            "description": "Deployment failed"
+          }
+        }
+      }
+    },
+    "/api/upload-apk": {
+      "post": {
+        "tags": [
+          "Deployment"
+        ],
+        "summary": "Upload mobile app APK",
+        "description": "Uploads a new APK file for the mobile application, stores it locally,\nand updates the app version database with the new version information.\nThe version number is auto-incremented based on whether the update is required.\n",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "apk_file",
+                  "version",
+                  "update_required",
+                  "release_notes",
+                  "deploy_token"
+                ],
+                "properties": {
+                  "apk_file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "APK file to upload"
+                  },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^\\d+\\.\\d+\\.\\d+(\\+\\d+)?$",
+                    "description": "Version number (e.g., 1.2.3 or 1.2.3+45)",
+                    "example": "1.2.3"
+                  },
+                  "update_required": {
+                    "type": "boolean",
+                    "description": "Whether this update is required for users",
+                    "example": false
+                  },
+                  "release_notes": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "description": "Release notes for this version",
+                    "example": "Bug fixes and performance improvements"
+                  },
+                  "deploy_token": {
+                    "type": "string",
+                    "description": "Deployment authentication token",
+                    "example": "your-secure-deploy-token-here"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "APK uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "APK uploaded successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "action": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "example": "req-123"
+                            },
+                            "type": {
+                              "type": "string",
+                              "example": "UPLOAD_APK_SUCCESS"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "actor": {
+                              "type": "string",
+                              "example": "deployment-system"
+                            },
+                            "details": {
+                              "type": "object",
+                              "properties": {
+                                "uploadId": {
+                                  "type": "string",
+                                  "example": "apk-upload-1643723400000"
+                                },
+                                "version": {
+                                  "type": "string",
+                                  "example": "1.2.3"
+                                },
+                                "filename": {
+                                  "type": "string",
+                                  "example": "vimbisopay-1.2.3.apk"
+                                },
+                                "fileSizeBytes": {
+                                  "type": "number",
+                                  "example": 15728640
+                                },
+                                "checksum": {
+                                  "type": "string",
+                                  "example": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+                                },
+                                "downloadUrl": {
+                                  "type": "string",
+                                  "example": "/downloads/vimbisopay-1.2.3.apk"
+                                },
+                                "latestDownloadUrl": {
+                                  "type": "string",
+                                  "example": "/downloads/vimbisopay-latest.apk"
+                                },
+                                "updateRequired": {
+                                  "type": "boolean",
+                                  "example": false
+                                },
+                                "releaseNotes": {
+                                  "type": "string",
+                                  "example": "Bug fixes and performance improvements"
+                                },
+                                "timestamp": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid APK file or missing parameters"
+          },
+          "401": {
+            "description": "Invalid deployment token"
+          },
+          "500": {
+            "description": "Upload failed"
+          }
+        }
+      }
+    },
+    "/downloads/vimbisopay-{version}.apk": {
+      "get": {
+        "tags": [
+          "Deployment"
+        ],
+        "summary": "Download APK file",
+        "description": "Downloads the APK file for a specific version or the latest version.\nThis endpoint serves the APK files that were uploaded via the upload-apk endpoint.\n",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Version number or 'latest' for the most recent version",
+            "example": "1.2.3"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "APK file download",
+            "content": {
+              "application/vnd.android.package-archive": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "description": "Attachment filename",
+                "schema": {
+                  "type": "string",
+                  "example": "attachment; filename=\"vimbisopay-1.2.3.apk\""
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "APK file not found"
           }
         }
       }

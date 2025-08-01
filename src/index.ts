@@ -12,6 +12,7 @@ import InvoiceRoutes from "./api/Invoice/routes";
 import AssetMarkerRoutes from "./api/AssetMarker/routes";
 import appRoutes from "./api/App/routes/appRoutes";
 import appAdminRoutes from "./api/App/routes/appAdminRoutes";
+import deploymentRoutes from "./api/Deployment/routes/deploymentRoutes";
 import logger, {
   addRequestId,
   expressLogger,
@@ -56,6 +57,9 @@ async function initializeApp() {
     // Serve static files from docs directory at both / and /docs paths
     app.use(express.static("docs"));
     app.use("/docs", express.static("docs"));
+    
+    // Serve APK files for download
+    app.use("/downloads", express.static("vimbisopay_apk"));
 
     // Serve docs/index.html at root
     app.get("/", (req: Request, res: Response) => {
@@ -99,6 +103,7 @@ async function initializeApp() {
     app.use('/api', NotificationRoutes);
     app.use('/app', appRoutes());
     app.use('/admin', appAdminRoutes());
+    app.use('/api', deploymentRoutes());
     logger.info("Route handlers applied for production modules");
 
     // Apply route handlers for dev-only routes
