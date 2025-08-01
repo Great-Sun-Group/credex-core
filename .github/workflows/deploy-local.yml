@@ -68,7 +68,7 @@ jobs:
               -H "Content-Type: application/json" \
               -H "X-Request-ID: ${{ steps.vars.outputs.deployment_id }}" \
               -d "$PAYLOAD" \
-              http://localhost:4000/api/deploy-core)
+              https://mycredex.app/api/deploy-core)
             
             HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
             RESPONSE_BODY=$(echo "$RESPONSE" | head -n -1)
@@ -105,7 +105,7 @@ jobs:
           
           # Check API health
           echo "Checking API health..."
-          HEALTH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4000/api-docs || echo "000")
+          HEALTH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" https://mycredex.app/api-docs || echo "000")
           
           if [ "$HEALTH_CHECK" = "200" ]; then
             echo "✅ API health check passed"
@@ -126,8 +126,8 @@ jobs:
             echo "✅ Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
             echo ""
             echo "🔗 Service URLs:"
-            echo "   • API: http://localhost:4000"
-            echo "   • Docs: http://localhost:4000/api-docs"
+            echo "   • API: https://mycredex.app"
+            echo "   • Docs: https://mycredex.app/api-docs"
           else
             echo "❌ Deployment Failed:"
             echo "   • Service: credex-core"
@@ -138,7 +138,7 @@ jobs:
             echo ""
             echo "🔧 Troubleshooting:"
             echo "   • Check deployment token in repository secrets"
-            echo "   • Verify local deployment API is running"
+            echo "   • Verify production deployment API is running at https://mycredex.app"
             echo "   • Review deployment logs above"
           fi
 
