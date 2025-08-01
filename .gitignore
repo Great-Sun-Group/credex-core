@@ -164,3 +164,6 @@ diff.txt
 # PR cleanup script
 cleanup-pr.sh
 .env.dev
+
+# Cloudflared executable
+cloudflared.exe

@@ -34,10 +34,10 @@ jobs:
           cd terraform
           echo "Current environment: ${ENVIRONMENT}"
           terraform init \
-            -backend-config="bucket=credexbuckets6-statebucket-${ENVIRONMENT}" \
+            -backend-config="bucket=credexbuckets5-statebucket-${ENVIRONMENT}" \
             -backend-config="key=terraform.tfstate" \
             -backend-config="region=af-south-1" \
-            -backend-config="dynamodb_table=credexbuckets6-statebucket-lock-${ENVIRONMENT}"
+            -backend-config="dynamodb_table=credexbuckets5-statebucket-lock-${ENVIRONMENT}"
 
       - name: Login to Amazon ECR
         id: login-ecr

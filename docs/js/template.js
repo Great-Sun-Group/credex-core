@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Load components
   loadComponent("header-trust-again", "components/header-trust-again.html");
   loadComponent("header-due-diligence", "components/header-due-diligence.html");
+  loadComponent("header-dd-business", "components/header-dd-business.html");
   loadComponent("header-develop", "components/header-develop.html");
   loadComponent("nav-container", "components/nav.html");
   loadComponent("footer-trust-again", "components/footer-trust-again.html");
