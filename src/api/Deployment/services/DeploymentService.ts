@@ -626,12 +626,29 @@ export class DeploymentService {
             logger.debug('curl also failed:', curlError);
             // Both wget and curl failed, but let's check if the container is responding via docker exec
             try {
-              const dockerExecResult = await execAsync(`docker exec credex-core-prod-new wget -q -O - --timeout=5 http://localhost:4000/health`);
+              // Try to get the container name dynamically from the URL
+              const containerName = url.includes('4001') ? 'credex-core-prod-new' : 'credex-core-prod';
+              const dockerExecResult = await execAsync(`docker exec ${containerName} wget -q -O - --timeout=5 http://localhost:4000/health`);
               stdout = dockerExecResult.stdout;
               healthCheckSuccess = true;
-              logger.info('Health check succeeded via docker exec');
+              logger.info(`Health check succeeded via docker exec on ${containerName}`);
             } catch (dockerExecError) {
               logger.warn('All health check methods failed:', dockerExecError);
+              
+              // If we're checking port 4001 (test container), also check if the app is actually starting
+              if (url.includes('4001')) {
+                try {
+                  const { stdout: containerLogs } = await execAsync('docker logs --tail 5 credex-core-prod-new');
+                  if (containerLogs.includes('Server running') || containerLogs.includes('listening') || containerLogs.includes('started')) {
+                    logger.info('Container appears to be starting based on logs, but health endpoint not ready yet');
+                  } else if (containerLogs.includes('Error') || containerLogs.includes('failed') || containerLogs.includes('EADDRINUSE')) {
+                    logger.error('Container has errors in logs:', containerLogs);
+                    return false; // Fail fast if there are obvious errors
+                  }
+                } catch (logError) {
+                  logger.warn('Could not check container logs:', logError);
+                }
+              }
             }
           }
         }
