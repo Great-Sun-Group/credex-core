@@ -21,6 +21,8 @@ RUN echo $(date) > buildtime && \
 
 # Production stage with minimal image
 FROM node:18.17.1-alpine AS production
+# Install git for deployment operations
+RUN apk add --no-cache git
 WORKDIR /app
 # Copy build output and necessary files
 COPY --from=build /app/build ./build

@@ -13,6 +13,16 @@ on:
         options:
           - prod
           - main
+      force_deploy:
+        description: 'Force deploy current code (ignores commit changes)'
+        required: false
+        default: false
+        type: boolean
+      deployment_reason:
+        description: 'Reason for manual deployment'
+        required: false
+        default: 'Manual deployment'
+        type: string
 
 jobs:
   deploy-credex-core:
@@ -46,6 +56,14 @@ jobs:
           echo "GitHub Ref: ${{ github.ref }}"
           echo "Environment: ${{ (github.ref == 'refs/heads/prod' && 'production') || (github.ref == 'refs/heads/stage' && 'staging') || 'development' }}"
           echo "Deploy Token Length: ${#DEPLOY_TOKEN}"
+          
+          # Show manual deployment info if triggered manually
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "🔧 Manual Deployment Triggered"
+            echo "Reason: ${{ github.event.inputs.deployment_reason || 'Manual deployment' }}"
+            echo "Force Deploy: ${{ github.event.inputs.force_deploy || 'false' }}"
+            echo "Triggered by: ${{ github.actor }}"
+          fi
           
           # Prepare deployment payload
           PAYLOAD=$(cat <<EOF
