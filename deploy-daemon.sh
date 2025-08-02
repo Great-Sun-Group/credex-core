@@ -282,17 +282,52 @@ main() {
     log "Starting Credex Deployment Daemon"
     log "Queue directory: $QUEUE_DIR"
     log "Log file: $LOG_FILE"
+    log "Source directory: $SOURCE_DIR"
+    log "Lock file: $LOCK_FILE"
+    
+    # Check if directories are accessible
+    if [ -d "$QUEUE_DIR" ]; then
+        log "Queue directory exists and is accessible"
+        log "Queue directory contents: $(ls -la "$QUEUE_DIR" 2>/dev/null || echo 'empty or inaccessible')"
+    else
+        log "ERROR: Queue directory does not exist or is not accessible"
+    fi
+    
+    if [ -d "$SOURCE_DIR" ]; then
+        log "Source directory exists and is accessible"
+    else
+        log "ERROR: Source directory does not exist or is not accessible"
+    fi
     
     # Ensure Docker network exists
     docker network create credex-prod-network 2>/dev/null || true
     
+    log "Starting main monitoring loop..."
+    local loop_count=0
+    
     while true; do
+        loop_count=$((loop_count + 1))
+        
+        # Log every 12 iterations (1 minute)
+        if [ $((loop_count % 12)) -eq 0 ]; then
+            log "Daemon heartbeat - loop $loop_count, checking queue..."
+            log "Current queue contents: $(ls -la "$QUEUE_DIR" 2>/dev/null || echo 'empty or error')"
+        fi
+        
         # Process all deployment requests
+        local found_files=false
         for request_file in "$QUEUE_DIR"/*.json; do
             if [ -f "$request_file" ]; then
+                found_files=true
+                log "Found deployment request file: $request_file"
                 process_deployment "$request_file"
             fi
         done
+        
+        # Log if we found files but only occasionally if we didn't
+        if [ "$found_files" = false ] && [ $((loop_count % 60)) -eq 0 ]; then
+            log "No deployment requests found in queue (checked $loop_count times)"
+        fi
         
         # Sleep before next check
         sleep 5
