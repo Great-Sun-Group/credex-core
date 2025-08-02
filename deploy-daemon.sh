@@ -72,73 +72,143 @@ deploy_credex_core() {
     log "Building credex-core image"
     docker build --target production -t credex-core-deployment:latest .
     
-    # Execute deployment
-    log "Executing credex-core deployment"
+    # Execute blue-green deployment
+    log "Executing blue-green credex-core deployment"
     
     # Clean up any existing test containers
     docker stop credex-core-prod-new 2>/dev/null || true
     docker rm credex-core-prod-new 2>/dev/null || true
     
-    # Backup current container if it exists
-    if docker inspect credex-core-prod >/dev/null 2>&1; then
-        log "Backing up current container"
-        docker stop --time=30 credex-core-prod
-        docker rename credex-core-prod credex-core-prod-backup
-    fi
-    
-    # Start new production container
-    log "Starting new production container"
+    # Start new container on test port (4001) for health checking
+    log "Starting new container on test port 4001 for health checking"
     docker run -d \
-        --name credex-core-prod \
+        --name credex-core-prod-new \
         --env-file "$SOURCE_DIR/.env.prod" \
         -e NODE_ENV=production \
         -e PORT=4000 \
         -e LOG_LEVEL=info \
-        -p 4000:4000 \
+        -p 4001:4000 \
         -v "$SOURCE_DIR/logs/prod:/app/logs" \
         -v "$SOURCE_DIR/backups/credex-core:/app/backups" \
         -v "$SOURCE_DIR:/app/source" \
         -v /var/run/docker.sock:/var/run/docker.sock \
         -v "$SOURCE_DIR/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro" \
-        --restart unless-stopped \
         --network credex-prod-network \
         credex-core-deployment:latest
     
     # Wait for container to initialize
-    log "Waiting for container to initialize..."
-    sleep 15
+    log "Waiting for new container to initialize..."
+    sleep 20
     
-    # Health check
-    log "Performing health check"
+    # Check if container is running
+    if ! docker ps --filter "name=credex-core-prod-new" --filter "status=running" | grep -q credex-core-prod-new; then
+        log "New container failed to start, checking logs..."
+        docker logs credex-core-prod-new --tail 20 || true
+        log "Cleaning up failed container"
+        docker stop credex-core-prod-new 2>/dev/null || true
+        docker rm credex-core-prod-new 2>/dev/null || true
+        log "Deployment $deployment_id failed - container startup failed"
+        rm -rf "$deploy_dir"
+        return 1
+    fi
+    
+    # Health check on test port via container network
+    log "Performing health check on test container via Docker network"
     local health_check_passed=false
-    for i in {1..15}; do
-        if curl -f -s http://localhost:4000/health >/dev/null 2>&1; then
+    for i in {1..20}; do
+        if curl -f -s http://credex-core-prod-new:4000/health >/dev/null 2>&1; then
             health_check_passed=true
+            log "Health check passed on attempt $i"
             break
         fi
-        log "Health check attempt $i/15 failed, retrying in 3 seconds..."
+        log "Health check attempt $i/20 failed, retrying in 3 seconds..."
         sleep 3
     done
     
     if [ "$health_check_passed" = true ]; then
-        log "Health check passed, cleaning up backup container"
-        docker stop credex-core-prod-backup 2>/dev/null || true
-        docker rm credex-core-prod-backup 2>/dev/null || true
-        log "Deployment $deployment_id completed successfully"
-    else
-        log "Health check failed, rolling back"
-        # Stop failed container
-        docker stop credex-core-prod 2>/dev/null || true
-        docker rm credex-core-prod 2>/dev/null || true
+        log "Health check passed, switching to production"
         
-        # Restore backup if it exists
-        if docker inspect credex-core-prod-backup >/dev/null 2>&1; then
-            docker rename credex-core-prod-backup credex-core-prod
-            docker start credex-core-prod
-            log "Rollback completed"
+        # Backup current production container if it exists
+        if docker inspect credex-core-prod >/dev/null 2>&1; then
+            log "Stopping and backing up current production container"
+            docker stop --time=30 credex-core-prod
+            docker rename credex-core-prod credex-core-prod-backup
         fi
         
-        log "Deployment $deployment_id failed"
+        # Stop the test container
+        log "Stopping test container"
+        docker stop credex-core-prod-new
+        
+        # Start new production container on production port
+        log "Starting new production container on port 4000"
+        docker run -d \
+            --name credex-core-prod \
+            --env-file "$SOURCE_DIR/.env.prod" \
+            -e NODE_ENV=production \
+            -e PORT=4000 \
+            -e LOG_LEVEL=info \
+            -p 4000:4000 \
+            -v "$SOURCE_DIR/logs/prod:/app/logs" \
+            -v "$SOURCE_DIR/backups/credex-core:/app/backups" \
+            -v "$SOURCE_DIR:/app/source" \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$SOURCE_DIR/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro" \
+            --restart unless-stopped \
+            --network credex-prod-network \
+            credex-core-deployment:latest
+        
+        # Wait for production container to start
+        sleep 10
+        
+        # Final health check on production port via container network
+        log "Final health check on production container via Docker network"
+        local final_health_passed=false
+        for i in {1..10}; do
+            if curl -f -s http://credex-core-prod:4000/health >/dev/null 2>&1; then
+                final_health_passed=true
+                break
+            fi
+            log "Final health check attempt $i/10 failed, retrying in 2 seconds..."
+            sleep 2
+        done
+        
+        if [ "$final_health_passed" = true ]; then
+            log "Production deployment successful, cleaning up"
+            # Clean up test and backup containers
+            docker rm credex-core-prod-new 2>/dev/null || true
+            docker stop credex-core-prod-backup 2>/dev/null || true
+            docker rm credex-core-prod-backup 2>/dev/null || true
+            log "Deployment $deployment_id completed successfully"
+        else
+            log "Production health check failed, rolling back"
+            # Stop failed production container
+            docker stop credex-core-prod 2>/dev/null || true
+            docker rm credex-core-prod 2>/dev/null || true
+            
+            # Restore backup if it exists
+            if docker inspect credex-core-prod-backup >/dev/null 2>&1; then
+                docker rename credex-core-prod-backup credex-core-prod
+                docker start credex-core-prod
+                log "Rollback completed"
+            fi
+            
+            # Clean up test container
+            docker rm credex-core-prod-new 2>/dev/null || true
+            log "Deployment $deployment_id failed - production health check failed"
+            rm -rf "$deploy_dir"
+            return 1
+        fi
+    else
+        log "Health check failed on test container, deployment aborted"
+        # Get container logs for debugging
+        log "Test container logs:"
+        docker logs credex-core-prod-new --tail 20 || true
+        
+        # Clean up test container
+        docker stop credex-core-prod-new 2>/dev/null || true
+        docker rm credex-core-prod-new 2>/dev/null || true
+        log "Deployment $deployment_id failed - health check failed"
+        rm -rf "$deploy_dir"
         return 1
     fi
     
