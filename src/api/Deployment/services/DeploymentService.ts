@@ -294,38 +294,79 @@ export class DeploymentService {
       let composeCommand: string;
       
       if (service === 'credex-core') {
-        // Use the deployment directory if available, otherwise fall back to source
+        // For credex-core, we need to build from the deployment directory but deploy to the main system
+        // Use docker build directly instead of docker-compose to avoid validation issues
         const deploymentDir = process.env.DEPLOYMENT_SOURCE_DIR || '/app/source';
-        // Use docker-compose with --no-deps to avoid dependency validation issues
-        // This prevents docker-compose from trying to validate chatserver env files
-        composeCommand = `cd ${deploymentDir} && docker-compose -f docker-compose.prod.yml up -d --build --force-recreate --no-deps credex-core-prod`;
+        
+        // Build the image from the deployment directory
+        const buildCommand = `cd ${deploymentDir} && docker build --target production -t credex-core-deployment:latest .`;
+        logger.info('Building credex-core image from deployment directory');
+        await execAsync(buildCommand);
+        
+        // Stop the current container
+        logger.info('Stopping current credex-core-prod container');
+        try {
+          await execAsync('docker stop credex-core-prod');
+          await execAsync('docker rm credex-core-prod');
+        } catch (stopError) {
+          logger.warn('Failed to stop/remove existing container (may not exist):', stopError);
+        }
+        
+        // Start new container with the same configuration as docker-compose
+        const runCommand = `docker run -d \
+          --name credex-core-prod \
+          --env-file /app/source/.env.prod \
+          -e NODE_ENV=production \
+          -e PORT=4000 \
+          -e LOG_LEVEL=info \
+          -p 4000:4000 \
+          -v /app/source/logs/prod:/app/logs \
+          -v /app/source/backups/credex-core:/app/backups \
+          -v /app/source:/app/source \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -v /app/source/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro \
+          --restart unless-stopped \
+          --network credex-prod-network \
+          credex-core-deployment:latest`;
+        
+        logger.info('Starting new credex-core-prod container');
+        const { stdout, stderr } = await execAsync(runCommand);
+        
+        logger.info(`Docker deployment completed for ${service}`, { stdout, stderr });
+        
+        // Wait a moment for service to start
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        // Clean up deployment directory after successful deployment
+        if (process.env.DEPLOYMENT_SOURCE_DIR) {
+          try {
+            await execAsync(`rm -rf ${process.env.DEPLOYMENT_SOURCE_DIR}`);
+            delete process.env.DEPLOYMENT_SOURCE_DIR;
+            logger.info('Cleaned up deployment directory');
+          } catch (cleanupError) {
+            logger.warn('Failed to cleanup deployment directory:', cleanupError);
+          }
+        }
+        
+        return { stdout, stderr };
+        
       } else if (service === 'vimbiso-chatserver') {
         // For chatserver, use the unified docker-compose.prod.yml from credex-core directory
         // This now works because both services use the same .env.prod file
         composeCommand = `cd /app/source && docker-compose -f docker-compose.prod.yml up -d --build --force-recreate --no-deps vimbiso-chatserver-prod`;
+        
+        const { stdout, stderr } = await execAsync(composeCommand);
+        
+        logger.info(`Docker deployment completed for ${service}`, { stdout, stderr });
+        
+        // Wait a moment for services to start
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        return { stdout, stderr };
       } else {
         throw new Error(`Unknown service: ${service}`);
       }
       
-      const { stdout, stderr } = await execAsync(composeCommand);
-      
-      logger.info(`Docker deployment completed for ${service}`, { stdout, stderr });
-      
-      // Wait a moment for services to start
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      
-      // Clean up deployment directory after successful deployment
-      if (service === 'credex-core' && process.env.DEPLOYMENT_SOURCE_DIR) {
-        try {
-          await execAsync(`rm -rf ${process.env.DEPLOYMENT_SOURCE_DIR}`);
-          delete process.env.DEPLOYMENT_SOURCE_DIR;
-          logger.info('Cleaned up deployment directory');
-        } catch (cleanupError) {
-          logger.warn('Failed to cleanup deployment directory:', cleanupError);
-        }
-      }
-      
-      return { stdout, stderr };
     } catch (error) {
       logger.error(`Docker deployment failed for ${service}:`, error);
       
