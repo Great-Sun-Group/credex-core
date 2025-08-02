@@ -788,4 +788,53 @@ export class DeploymentService {
       throw error;
     }
   }
+
+  private async cleanupConflictingContainers(containerNames: string[]): Promise<void> {
+    logger.info('Cleaning up potentially conflicting containers', { containerNames });
+    
+    for (const containerName of containerNames) {
+      try {
+        // Check if container exists
+        await execAsync(`docker inspect ${containerName}`);
+        
+        // If it exists, stop and remove it
+        logger.info(`Removing conflicting container: ${containerName}`);
+        await execAsync(`docker stop ${containerName}`);
+        await execAsync(`docker rm ${containerName}`);
+        logger.info(`Successfully removed conflicting container: ${containerName}`);
+      } catch (error) {
+        // Container doesn't exist or already removed, which is fine
+        logger.debug(`Container ${containerName} doesn't exist or already removed`);
+      }
+    }
+  }
+
+  private async safeContainerCleanup(containerName: string): Promise<void> {
+    try {
+      logger.info(`Safely cleaning up container: ${containerName}`);
+      await execAsync(`docker stop ${containerName}`);
+      await execAsync(`docker rm ${containerName}`);
+      logger.info(`Successfully cleaned up container: ${containerName}`);
+    } catch (error) {
+      logger.warn(`Failed to cleanup container ${containerName}:`, error);
+    }
+  }
+
+  private async safeContainerBackup(currentContainerName: string, backupContainerName: string): Promise<boolean> {
+    try {
+      // Check if current container exists
+      await execAsync(`docker inspect ${currentContainerName}`);
+      
+      // Clean up any existing backup container first
+      await this.safeContainerCleanup(backupContainerName);
+      
+      // Rename current container to backup
+      await execAsync(`docker rename ${currentContainerName} ${backupContainerName}`);
+      logger.info(`Successfully backed up container ${currentContainerName} to ${backupContainerName}`);
+      return true;
+    } catch (inspectError) {
+      logger.info(`No existing container ${currentContainerName} to backup`);
+      return false;
+    }
+  }
 }
