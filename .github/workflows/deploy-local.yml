@@ -101,9 +101,13 @@ jobs:
             echo "HTTP Status: $HTTP_CODE"
             echo "Response: $RESPONSE_BODY"
             
-            if [ "$HTTP_CODE" = "200" ]; then
+            if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "202" ]; then
               SUCCESS=true
-              echo "✅ Deployment successful!"
+              if [ "$HTTP_CODE" = "200" ]; then
+                echo "✅ Deployment completed successfully!"
+              else
+                echo "✅ Deployment queued successfully!"
+              fi
               echo "response_body=$RESPONSE_BODY" >> $GITHUB_OUTPUT
               break
             elif [ "$HTTP_CODE" = "401" ]; then

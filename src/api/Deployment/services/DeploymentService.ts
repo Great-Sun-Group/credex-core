@@ -50,6 +50,28 @@ export class DeploymentService {
     return this.deployTokens.has(token);
   }
 
+  public async queueDeployment(service: string, branch: string, requestId: string): Promise<void> {
+    const queueDir = path.join('/app', 'source', 'deploy-queue');
+    
+    // Ensure queue directory exists
+    await fs.mkdir(queueDir, { recursive: true });
+    
+    // Create deployment request
+    const deploymentRequest = {
+      service,
+      branch,
+      requestId,
+      timestamp: new Date().toISOString(),
+      actor: 'api-request'
+    };
+    
+    // Write request to queue
+    const requestFile = path.join(queueDir, `${service}-${requestId}-${Date.now()}.json`);
+    await fs.writeFile(requestFile, JSON.stringify(deploymentRequest, null, 2));
+    
+    logger.info('Deployment request queued', { service, branch, requestId, requestFile });
+  }
+
   public async deployCredexCore(branch: string = 'prod'): Promise<DeploymentResult> {
     const deploymentId = `credex-core-${Date.now()}`;
     logger.info(`Starting credex-core deployment ${deploymentId}`, { branch });
@@ -317,11 +339,10 @@ export class DeploymentService {
 
   private async deployCredexCoreZeroDowntime(): Promise<any> {
     const deploymentDir = process.env.DEPLOYMENT_SOURCE_DIR || '/app/source';
-    const newContainerName = 'credex-core-prod-new';
     const currentContainerName = 'credex-core-prod';
     const backupContainerName = 'credex-core-prod-backup';
     
-    logger.info('Starting Zero-Downtime deployment for credex-core');
+    logger.info('Starting simplified zero-downtime deployment for credex-core');
     
     try {
       // Step 1: Ensure network exists
@@ -338,16 +359,11 @@ export class DeploymentService {
       logger.info('Building credex-core image from deployment directory');
       await execAsync(buildCommand);
       
-      // Step 3: Try Blue-Green deployment first, fallback to simple replacement if it fails
-      try {
-        return await this.attemptBlueGreenDeployment(deploymentDir, newContainerName, currentContainerName, backupContainerName);
-      } catch (blueGreenError) {
-        logger.warn('Blue-Green deployment failed, falling back to simple replacement:', blueGreenError);
-        return await this.attemptSimpleReplacement(deploymentDir, currentContainerName, backupContainerName);
-      }
+      // Step 3: Execute simple replacement deployment
+      return await this.executeSimpleDeployment(deploymentDir, currentContainerName, backupContainerName);
       
     } catch (error) {
-      logger.error('All deployment strategies failed:', error);
+      logger.error('Deployment failed:', error);
       
       // Clean up deployment directory on failure
       if (process.env.DEPLOYMENT_SOURCE_DIR) {
@@ -363,135 +379,34 @@ export class DeploymentService {
     }
   }
 
-  private async attemptBlueGreenDeployment(deploymentDir: string, newContainerName: string, currentContainerName: string, backupContainerName: string): Promise<any> {
-    logger.info('Attempting Blue-Green deployment strategy');
+  private async executeSimpleDeployment(deploymentDir: string, currentContainerName: string, backupContainerName: string): Promise<any> {
+    logger.info('Executing simple zero-downtime deployment');
     
-    // Step 1: Start new container on different port for testing
-    logger.info(`Starting new container for testing: ${newContainerName}`);
-    const testRunCommand = `docker run -d \
-      --name ${newContainerName} \
-      --env-file /app/source/.env.prod \
-      -e NODE_ENV=production \
-      -e PORT=4000 \
-      -e LOG_LEVEL=info \
-      -p 4001:4000 \
-      -v /app/source/logs/prod:/app/logs \
-      -v /app/source/backups/credex-core:/app/backups \
-      -v /app/source:/app/source \
-      -v /var/run/docker.sock:/var/run/docker.sock \
-      -v /app/source/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro \
-      --restart no \
-      --network credex-prod-network \
-      credex-core-deployment:latest`;
-    
-    const { stdout: testStdout, stderr: testStderr } = await execAsync(testRunCommand);
-    logger.info('Test container started', { stdout: testStdout, stderr: testStderr });
-    
-    // Step 2: Wait for new container to be ready and perform health check
-    logger.info('Waiting for new container to be ready...');
-    await new Promise(resolve => setTimeout(resolve, 15000)); // Increased wait time
-    
-    logger.info('Performing health check on new container');
-    const healthCheckPassed = await this.performHealthCheck('http://localhost:4001/health', 45000); // Increased timeout
-    
-    if (!healthCheckPassed) {
-      logger.error('Health check failed for new container, cleaning up');
-      await execAsync(`docker stop ${newContainerName}`);
-      await execAsync(`docker rm ${newContainerName}`);
-      throw new Error('New container failed health check');
-    }
-    
-    logger.info('Health check passed for new container');
-    
-    // Step 3: Stop the test container (we'll start production version)
-    await execAsync(`docker stop ${newContainerName}`);
-    await execAsync(`docker rm ${newContainerName}`);
-    
-    // Step 4: Backup current production container if it exists
-    logger.info('Backing up current production container');
+    // Step 1: Clean up any existing test containers that might be hanging around
     try {
-      // Check if current container exists
-      await execAsync(`docker inspect ${currentContainerName}`);
-      // If it exists, rename it for backup
-      await execAsync(`docker rename ${currentContainerName} ${backupContainerName}`);
-      logger.info('Current container backed up successfully');
-    } catch (inspectError) {
-      logger.info('No existing production container to backup');
-    }
-    
-    // Step 5: Start new production container
-    logger.info('Starting new production container');
-    const prodRunCommand = `docker run -d \
-      --name ${currentContainerName} \
-      --env-file /app/source/.env.prod \
-      -e NODE_ENV=production \
-      -e PORT=4000 \
-      -e LOG_LEVEL=info \
-      -p 4000:4000 \
-      -v /app/source/logs/prod:/app/logs \
-      -v /app/source/backups/credex-core:/app/backups \
-      -v /app/source:/app/source \
-      -v /var/run/docker.sock:/var/run/docker.sock \
-      -v /app/source/docker-compose.prod.yml:/app/docker-compose.prod.yml:ro \
-      --restart unless-stopped \
-      --network credex-prod-network \
-      credex-core-deployment:latest`;
-    
-    const { stdout: prodStdout, stderr: prodStderr } = await execAsync(prodRunCommand);
-    logger.info('Production container started', { stdout: prodStdout, stderr: prodStderr });
-    
-    // Step 6: Final health check on production port
-    logger.info('Performing final health check on production container');
-    await new Promise(resolve => setTimeout(resolve, 10000));
-    const finalHealthCheck = await this.performHealthCheck('http://localhost:4000/health', 45000);
-    
-    if (!finalHealthCheck) {
-      logger.error('Final health check failed, attempting rollback');
-      await this.rollbackZeroDowntimeDeployment(currentContainerName, backupContainerName);
-      throw new Error('Final health check failed, deployment rolled back');
-    }
-    
-    // Step 7: Stop and clean up backup container
-    logger.info('Cleaning up backup container');
-    try {
-      await execAsync(`docker stop ${backupContainerName}`);
-      await execAsync(`docker rm ${backupContainerName}`);
-      logger.info('Backup container cleaned up');
+      await execAsync('docker stop credex-core-prod-new');
+      await execAsync('docker rm credex-core-prod-new');
+      logger.info('Cleaned up any existing test containers');
     } catch (cleanupError) {
-      logger.info('No backup container to cleanup or cleanup failed (this is normal for first deployment)');
+      logger.debug('No existing test containers to clean up');
     }
     
-    // Step 8: Clean up deployment directory
-    if (process.env.DEPLOYMENT_SOURCE_DIR) {
-      try {
-        await execAsync(`rm -rf ${process.env.DEPLOYMENT_SOURCE_DIR}`);
-        delete process.env.DEPLOYMENT_SOURCE_DIR;
-        logger.info('Cleaned up deployment directory');
-      } catch (cleanupError) {
-        logger.warn('Failed to cleanup deployment directory:', cleanupError);
-      }
-    }
-    
-    logger.info('Blue-Green deployment completed successfully');
-    return { stdout: prodStdout, stderr: prodStderr };
-  }
-
-  private async attemptSimpleReplacement(deploymentDir: string, currentContainerName: string, backupContainerName: string): Promise<any> {
-    logger.info('Attempting Simple Replacement deployment strategy');
-    
-    // Step 1: Backup current production container if it exists
+    // Step 2: Backup current production container if it exists
     logger.info('Backing up current production container');
     try {
       // Check if current container exists
       await execAsync(`docker inspect ${currentContainerName}`);
-      // If it exists, rename it for backup
+      // If it exists, stop it with a timeout, then rename it for backup
+      logger.info('Stopping current container with 30 second timeout');
+      await execAsync(`docker stop --time=30 ${currentContainerName}`);
+      logger.info('Container stopped, renaming to backup');
       await execAsync(`docker rename ${currentContainerName} ${backupContainerName}`);
-      logger.info('Current container backed up successfully');
+      logger.info('Current container stopped and backed up successfully');
     } catch (inspectError) {
       logger.info('No existing production container to backup');
     }
     
-    // Step 2: Start new production container directly
+    // Step 3: Start new production container directly
     logger.info('Starting new production container');
     const prodRunCommand = `docker run -d \
       --name ${currentContainerName} \
@@ -512,18 +427,21 @@ export class DeploymentService {
     const { stdout: prodStdout, stderr: prodStderr } = await execAsync(prodRunCommand);
     logger.info('Production container started', { stdout: prodStdout, stderr: prodStderr });
     
-    // Step 3: Health check on production port
-    logger.info('Performing health check on production container');
+    // Step 4: Wait for container to initialize
+    logger.info('Waiting for container to initialize...');
     await new Promise(resolve => setTimeout(resolve, 15000));
-    const healthCheck = await this.performHealthCheck('http://localhost:4000/health', 60000); // Longer timeout for simple replacement
+    
+    // Step 5: Health check on production port
+    logger.info('Performing health check on production container');
+    const healthCheck = await this.performHealthCheck('http://localhost:4000/health', 45000);
     
     if (!healthCheck) {
       logger.error('Health check failed, attempting rollback');
-      await this.rollbackZeroDowntimeDeployment(currentContainerName, backupContainerName);
-      throw new Error('Simple replacement failed health check, deployment rolled back');
+      await this.rollbackSimpleDeployment(currentContainerName, backupContainerName);
+      throw new Error('Deployment failed health check, rolled back to previous version');
     }
     
-    // Step 4: Stop and clean up backup container
+    // Step 6: Stop and clean up backup container
     logger.info('Cleaning up backup container');
     try {
       await execAsync(`docker stop ${backupContainerName}`);
@@ -533,7 +451,7 @@ export class DeploymentService {
       logger.info('No backup container to cleanup or cleanup failed (this is normal for first deployment)');
     }
     
-    // Step 5: Clean up deployment directory
+    // Step 7: Clean up deployment directory
     if (process.env.DEPLOYMENT_SOURCE_DIR) {
       try {
         await execAsync(`rm -rf ${process.env.DEPLOYMENT_SOURCE_DIR}`);
@@ -544,8 +462,36 @@ export class DeploymentService {
       }
     }
     
-    logger.info('Simple Replacement deployment completed successfully');
+    logger.info('Simple deployment completed successfully');
     return { stdout: prodStdout, stderr: prodStderr };
+  }
+
+  private async rollbackSimpleDeployment(currentContainerName: string, backupContainerName: string): Promise<void> {
+    logger.info('Performing simple deployment rollback');
+    
+    try {
+      // Stop current (failed) container
+      try {
+        await execAsync(`docker stop --time=30 ${currentContainerName}`);
+        await execAsync(`docker rm ${currentContainerName}`);
+      } catch (stopError) {
+        logger.warn('Failed to stop current container during rollback:', stopError);
+      }
+      
+      // Restore backup container
+      try {
+        await execAsync(`docker rename ${backupContainerName} ${currentContainerName}`);
+        await execAsync(`docker start ${currentContainerName}`);
+        logger.info('Successfully rolled back to previous container');
+      } catch (rollbackError) {
+        logger.error('Failed to rollback to previous container:', rollbackError);
+        throw rollbackError;
+      }
+      
+    } catch (error) {
+      logger.error('Rollback failed:', error);
+      throw error;
+    }
   }
 
   private async deployChatserverDirect(): Promise<any> {
@@ -681,15 +627,16 @@ export class DeploymentService {
         // Check if container is even running and get debug info
         if (i === 0 || i === 5) { // Check on first attempt and every 5th attempt
           try {
-            const { stdout: containerStatus } = await execAsync('docker ps --filter "name=credex-core-prod-new" --format "{{.Status}}"');
+            const containerName = url.includes('4001') ? 'credex-core-prod-new' : 'credex-core-prod';
+            const { stdout: containerStatus } = await execAsync(`docker ps --filter "name=${containerName}" --format "{{.Status}}"`);
             logger.info(`Container status: ${containerStatus.trim() || 'Not found'}`);
             
             // Check container logs for debugging
-            const { stdout: containerLogs } = await execAsync('docker logs --tail 10 credex-core-prod-new');
+            const { stdout: containerLogs } = await execAsync(`docker logs --tail 10 ${containerName}`);
             logger.info(`Container logs (last 10 lines): ${containerLogs}`);
             
             // Check if the container is actually listening on port 4000
-            const { stdout: portCheck } = await execAsync('docker exec credex-core-prod-new netstat -tlnp | grep :4000 || echo "Port 4000 not found"');
+            const { stdout: portCheck } = await execAsync(`docker exec ${containerName} netstat -tlnp | grep :4000 || echo "Port 4000 not found"`);
             logger.info(`Port check: ${portCheck.trim()}`);
             
           } catch (debugError) {

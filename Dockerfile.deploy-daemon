@@ -1,0 +1,33 @@
+FROM alpine:3.18
+
+# Install required packages
+RUN apk add --no-cache \
+    bash \
+    curl \
+    jq \
+    git \
+    docker-cli \
+    && rm -rf /var/cache/apk/*
+
+# Create app directory
+WORKDIR /app
+
+# Copy daemon script
+COPY deploy-daemon.sh /app/deploy-daemon.sh
+RUN chmod +x /app/deploy-daemon.sh
+
+# Create directories
+RUN mkdir -p /app/logs
+
+# Set environment variables
+ENV QUEUE_DIR=/app/source/deploy-queue
+ENV LOG_FILE=/app/logs/deployment-daemon.log
+ENV SOURCE_DIR=/app/source
+ENV VIMBISO_CHATSERVER_PATH=/app/vimbiso-chatserver
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD test -f /tmp/credex-deploy.lock || exit 0
+
+# Run the daemon
+CMD ["/app/deploy-daemon.sh"]

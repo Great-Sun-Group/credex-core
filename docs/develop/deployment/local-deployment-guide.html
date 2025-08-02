@@ -20,7 +20,7 @@
     <h1 class="chapter-title">Local CI/CD Pipeline Deployment Guide</h1>
 
     <p>
-      This guide cover the new local deployment system that replaced the previous AWS-based infrastructure.
+      This guide covers the new local deployment system that replaced the previous AWS-based infrastructure.
     </p>
 
     <h2>Overview</h2>
@@ -38,8 +38,39 @@
       <li><strong>vimbisopay</strong>: Flutter mobile application</li>
     </ul>
 
-    <h3>Deployment Flow</h3>
-    <pre><code>GitHub Repository → GitHub Actions → Local Deployment API → Docker Compose Services</code></pre>
+    <h3>Queue-Based Deployment System</h3>
+    <p>
+      The deployment system uses a robust queue-based architecture that eliminates circular dependency issues and ensures reliable deployments:
+    </p>
+
+    <pre><code>GitHub Repository → GitHub Actions → Container API → Deployment Queue → Host Daemon → Docker Commands
+                                              ↓
+                                         202 Accepted
+                                      (immediate response)</code></pre>
+
+    <div class="alert alert-success">
+      <strong>Problem Solved:</strong> The original deployment system had a circular dependency where containers tried to replace themselves, causing infinite hangs. The new queue-based system eliminates this by processing deployments outside the containers being deployed.
+    </div>
+
+    <h4>System Components</h4>
+    <ul>
+      <li><strong>Container API</strong>: Validates tokens, queues deployment requests, returns immediate 202 responses</li>
+      <li><strong>Deployment Queue</strong>: File-based queue in <code>/app/source/deploy-queue/</code> with JSON request files</li>
+      <li><strong>Deployment Daemon</strong>: Containerized daemon that monitors queue and executes deployments</li>
+      <li><strong>Blue-Green Deployment</strong>: Safe deployment with health checks and automatic rollback</li>
+    </ul>
+
+    <h4>Deployment Process</h4>
+    <ol>
+      <li><strong>Request</strong>: GitHub Actions calls deployment API</li>
+      <li><strong>Queue</strong>: API creates JSON file in deployment queue and responds immediately</li>
+      <li><strong>Processing</strong>: Daemon detects queue file and starts deployment</li>
+      <li><strong>Build</strong>: New Docker image is built from latest code</li>
+      <li><strong>Test</strong>: New container started on test port for health checking</li>
+      <li><strong>Switch</strong>: After health check passes, production container is replaced</li>
+      <li><strong>Verify</strong>: Final health check on production port</li>
+      <li><strong>Cleanup</strong>: Old containers and temporary files are cleaned up</li>
+    </ol>
 
     <h2>Deployment Endpoints</h2>
 
@@ -164,7 +195,7 @@
 
     <h2>Troubleshooting</h2>
 
-    <h3>Common Issues</h3>
+    <h3>Deployment System Issues</h3>
 
     <h4>Deployment Authentication Failed</h4>
     <ul>
@@ -180,6 +211,47 @@
       </li>
     </ul>
 
+    <h4>Deployment Hangs or Times Out</h4>
+    <ul>
+      <li><strong>Cause</strong>: Deployment daemon not processing queue</li>
+      <li><strong>Solution</strong>: Check daemon status and restart if needed:
+        <pre><code># Check daemon status
+docker logs credex-deploy-daemon --tail 20
+
+# Restart daemon
+docker-compose -f docker-compose.prod.yml restart deploy-daemon</code></pre>
+      </li>
+    </ul>
+
+    <h4>Deployment Fails with Health Check Errors</h4>
+    <ul>
+      <li><strong>Cause</strong>: New container fails to start or respond to health checks</li>
+      <li><strong>Solution</strong>: Check container logs and verify application startup:
+        <pre><code># Check recent deployment logs
+docker logs credex-deploy-daemon --tail 50
+
+# Check if containers are running
+docker ps --filter "name=credex-core"</code></pre>
+      </li>
+    </ul>
+
+    <h4>Queue Files Not Being Processed</h4>
+    <ul>
+      <li><strong>Cause</strong>: Daemon not monitoring queue directory or permission issues</li>
+      <li><strong>Solution</strong>: Verify queue directory and daemon status:
+        <pre><code># Check queue contents
+ls -la deploy-queue/
+
+# Verify daemon is running
+docker ps --filter "name=deploy-daemon"
+
+# Check daemon logs
+docker logs credex-deploy-daemon --follow</code></pre>
+      </li>
+    </ul>
+
+    <h3>Mobile App Issues</h3>
+
     <h4>Mobile App Build Failed</h4>
     <ul>
       <li><strong>Cause</strong>: Flutter build errors or missing dependencies</li>
@@ -191,6 +263,47 @@
       <li><strong>Cause</strong>: Invalid version format in pubspec.yaml</li>
       <li><strong>Solution</strong>: Ensure version follows semantic versioning (x.y.z format)</li>
     </ul>
+
+    <h3>Deployment Daemon Management</h3>
+
+    <h4>Monitor Daemon Status</h4>
+    <pre><code># Check if daemon container is running
+docker ps --filter "name=deploy-daemon"
+
+# View real-time daemon logs
+docker logs credex-deploy-daemon --follow
+
+# Check daemon heartbeat (should show every minute)
+docker logs credex-deploy-daemon --tail 10 | grep "heartbeat"</code></pre>
+
+    <h4>Restart Deployment System</h4>
+    <pre><code># Restart just the daemon
+docker-compose -f docker-compose.prod.yml restart deploy-daemon
+
+# Restart entire production environment
+docker-compose -f docker-compose.prod.yml down
+docker-compose -f docker-compose.prod.yml up -d</code></pre>
+
+    <h4>Manual Deployment Testing</h4>
+    <pre><code># Test deployment API directly
+curl -X POST http://localhost:4000/api/deploy-core \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_DEPLOY_TOKEN" \
+  -d '{"branch": "prod"}'
+
+# Check queue after API call
+ls -la deploy-queue/</code></pre>
+
+    <h4>Emergency Rollback</h4>
+    <p>If a deployment fails and automatic rollback doesn't work:</p>
+    <pre><code># Check for backup containers
+docker ps -a --filter "name=credex-core-prod-backup"
+
+# Manual rollback if backup exists
+docker stop credex-core-prod
+docker rm credex-core-prod
+docker rename credex-core-prod-backup credex-core-prod
+docker start credex-core-prod</code></pre>
 
     <h3>Health Checks</h3>
 
@@ -270,8 +383,8 @@ docker logs vimbiso-chatserver-prod --tail 50</code></pre>
     <hr>
 
     <p>
-      <strong>Last Updated</strong>: August 1, 2025<br>
-      <strong>Pipeline Version</strong>: Phase 2 - Local CI/CD Implementation<br>
+      <strong>Last Updated</strong>: August 2, 2025<br>
+      <strong>Pipeline Version</strong>: Phase 2 - Local CI/CD Implementation with Queue-Based Deployment System<br>
       <strong>Status</strong>: ✅ Fully Operational
     </p>
 
