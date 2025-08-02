@@ -2,7 +2,6 @@ import express from 'express';
 import multer from 'multer';
 import { DeploymentController } from '../controllers/deploymentController';
 import { validateRequest } from '../../../middleware/validateRequest';
-import { rateLimiter } from '../../../middleware/rateLimiter';
 import { 
   deployServiceSchema, 
   uploadApkSchema, 
@@ -120,7 +119,6 @@ export default function deploymentRoutes() {
    */
   router.post(
     '/deploy-core',
-    rateLimiter,
     validateRequest(deployServiceSchema),
     controller.deployCore
   );
@@ -174,7 +172,6 @@ export default function deploymentRoutes() {
    */
   router.post(
     '/deploy-chatserver',
-    rateLimiter,
     validateRequest(deployServiceSchema),
     controller.deployChatserver
   );
@@ -298,7 +295,6 @@ export default function deploymentRoutes() {
   router.post(
     '/upload-apk',
     upload.single('apk_file'),
-    rateLimiter,
     validateRequest(uploadApkSchema),
     controller.uploadApk
   );
