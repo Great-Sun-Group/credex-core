@@ -374,8 +374,10 @@ export class DeploymentService {
     try {
       // Check if current container exists
       await execAsync(`docker inspect ${currentContainerName}`);
-      // If it exists, stop it first, then rename it for backup
-      await execAsync(`docker stop ${currentContainerName}`);
+      // If it exists, stop it with a timeout, then rename it for backup
+      logger.info('Stopping current container with 30 second timeout');
+      await execAsync(`docker stop --time=30 ${currentContainerName}`);
+      logger.info('Container stopped, renaming to backup');
       await execAsync(`docker rename ${currentContainerName} ${backupContainerName}`);
       logger.info('Current container stopped and backed up successfully');
     } catch (inspectError) {
@@ -448,7 +450,7 @@ export class DeploymentService {
     try {
       // Stop current (failed) container
       try {
-        await execAsync(`docker stop ${currentContainerName}`);
+        await execAsync(`docker stop --time=30 ${currentContainerName}`);
         await execAsync(`docker rm ${currentContainerName}`);
       } catch (stopError) {
         logger.warn('Failed to stop current container during rollback:', stopError);
