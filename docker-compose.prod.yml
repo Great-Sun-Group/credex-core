@@ -18,6 +18,12 @@ services:
     volumes:
       - ./logs/prod:/app/logs
       - ./backups/credex-core:/app/backups
+      # Mount source code for deployment operations
+      - .:/app/source:ro
+      # Mount docker socket for deployment operations
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount docker-compose files for deployment
+      - ./docker-compose.prod.yml:/app/docker-compose.prod.yml:ro
     restart: unless-stopped
     deploy:
       resources:

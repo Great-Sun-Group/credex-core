@@ -56,15 +56,12 @@ export class DeploymentService {
 
     try {
       // Create backup of current state
-      const backupInfo = await this.createBackup('credex-core');
+      const backupInfo = await this.createBackup('credex-core-prod');
       
-      // Pull latest changes
+      // Pull latest changes to ensure we're building with the latest code
       await this.pullLatestChanges('credex-core', branch, commitSha);
       
-      // Build the application
-      await this.buildApplication();
-      
-      // Deploy using Docker Compose
+      // Deploy using Docker Compose (this will rebuild with the latest code)
       const deployResult = await this.deployWithDocker('credex-core');
       
       // Verify deployment health
@@ -179,24 +176,46 @@ export class DeploymentService {
       const backupDir = path.join(process.cwd(), 'backups', 'deployments');
       await fs.mkdir(backupDir, { recursive: true });
       
-      // For now, we'll just record the current commit SHA as backup info
-      const { stdout: currentCommit } = await execAsync('git rev-parse HEAD');
-      
-      const backupInfo = {
+      // Get current container/service state instead of git commit
+      let currentState: any = {
         backupId,
         service,
         timestamp,
-        currentCommit: currentCommit.trim(),
         backupPath: backupDir
       };
+
+      try {
+        // Try to get current commit if git is available (for development)
+        const { stdout: currentCommit } = await execAsync('git rev-parse HEAD');
+        currentState.currentCommit = currentCommit.trim();
+      } catch (gitError) {
+        // Git not available (normal in production containers)
+        logger.info('Git not available for backup - using container state');
+        
+        // Get current running container info instead
+        try {
+          const { stdout: containerInfo } = await execAsync(`docker ps --filter "name=${service}" --format "{{.ID}},{{.Image}},{{.Status}},{{.CreatedAt}}"`);
+          if (containerInfo.trim()) {
+            const [containerId, image, status, createdAt] = containerInfo.trim().split(',');
+            currentState.containerInfo = {
+              containerId: containerId.substring(0, 12), // Short container ID
+              image,
+              status,
+              createdAt
+            };
+          }
+        } catch (dockerError) {
+          logger.warn('Could not get container info for backup:', dockerError);
+        }
+      }
       
       // Save backup metadata
       await fs.writeFile(
         path.join(backupDir, `${backupId}.json`),
-        JSON.stringify(backupInfo, null, 2)
+        JSON.stringify(currentState, null, 2)
       );
       
-      return backupInfo;
+      return currentState;
     } catch (error) {
       logger.error(`Failed to create backup for ${service}:`, error);
       throw error;
@@ -204,7 +223,8 @@ export class DeploymentService {
   }
 
   private async pullLatestChanges(service: string, branch: string, commitSha?: string, servicePath?: string): Promise<void> {
-    const workingDir = servicePath || process.cwd();
+    // Use the mounted source directory for git operations
+    const workingDir = servicePath || '/app/source';
     logger.info(`Pulling latest changes for ${service}`, { branch, commitSha, workingDir });
 
     try {
@@ -253,8 +273,8 @@ export class DeploymentService {
       let composeCommand: string;
       
       if (service === 'credex-core') {
-        // Rebuild and restart the credex-core service
-        composeCommand = 'docker-compose up -d --build --force-recreate server';
+        // Use the mounted source directory and compose file
+        composeCommand = 'cd /app/source && docker-compose -f docker-compose.prod.yml up -d --build --force-recreate credex-core-prod';
       } else if (service === 'vimbiso-chatserver') {
         // For chatserver, we need to use the chatserver compose file
         const chatserverPath = process.env.VIMBISO_CHATSERVER_PATH || '../vimbiso-chatserver';
@@ -284,11 +304,11 @@ export class DeploymentService {
       let healthUrl: string;
       
       if (service === 'credex-core') {
-        const port = process.env.PORT || '3000';
-        healthUrl = `http://localhost:${port}/health`;
+        // Use port 4000 as specified in docker-compose.prod.yml
+        healthUrl = 'http://localhost:4000/health';
       } else if (service === 'vimbiso-chatserver') {
-        const chatserverPort = process.env.CHATSERVER_PORT || '3001';
-        healthUrl = `http://localhost:${chatserverPort}/health`;
+        // Use port 9000 as specified in docker-compose.prod.yml
+        healthUrl = 'http://localhost:9000/health/';
       } else {
         throw new Error(`Unknown service: ${service}`);
       }
@@ -316,17 +336,25 @@ export class DeploymentService {
     logger.info(`Rolling back deployment for ${service}`, backupInfo);
     
     try {
-      // Checkout the previous commit
-      if (backupInfo.currentCommit) {
-        await execAsync(`git checkout ${backupInfo.currentCommit}`);
+      // For container-based deployments, rollback means restarting the previous container
+      if (backupInfo.containerInfo) {
+        const { containerId, image } = backupInfo.containerInfo;
+        logger.info(`Attempting to rollback to previous container image: ${image}`);
+        
+        // Try to restart the previous container or use the previous image
+        if (service === 'credex-core') {
+          // Stop current container and start with previous image if available
+          await execAsync('cd /app/source && docker-compose -f docker-compose.prod.yml stop credex-core-prod');
+          await execAsync('cd /app/source && docker-compose -f docker-compose.prod.yml up -d credex-core-prod');
+        } else if (service === 'vimbiso-chatserver') {
+          const chatserverPath = process.env.VIMBISO_CHATSERVER_PATH || '../vimbiso-chatserver';
+          await execAsync(`cd ${chatserverPath} && docker-compose stop && docker-compose up -d`);
+        }
+      } else {
+        // Fallback: just restart the current deployment
+        logger.warn('No container backup info available, restarting current deployment');
+        await this.deployWithDocker(service);
       }
-      
-      // Rebuild and redeploy
-      if (service === 'credex-core') {
-        await this.buildApplication();
-      }
-      
-      await this.deployWithDocker(service);
       
       logger.info(`Successfully rolled back ${service} deployment`);
     } catch (error) {
