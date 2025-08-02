@@ -3,6 +3,8 @@ version: "3.8"
 services:
   # Credex Core Application - Production
   credex-core-prod:
+    env_file:
+      - .env.prod
     build:
       context: .
       target: production
@@ -11,32 +13,6 @@ services:
       NODE_ENV: production
       PORT: 4000
       LOG_LEVEL: info
-      
-      # Neo4j Aura Configuration - Using environment variables
-      NEO_4J_LEDGER_SPACE_BOLT_URL: ${NEO_4J_LEDGER_SPACE_BOLT_URL}
-      NEO_4J_LEDGER_SPACE_USER: ${NEO_4J_LEDGER_SPACE_USER}
-      NEO_4J_LEDGER_SPACE_PASS: ${NEO_4J_LEDGER_SPACE_PASS}
-      NEO_4J_SEARCH_SPACE_BOLT_URL: ${NEO_4J_SEARCH_SPACE_BOLT_URL}
-      NEO_4J_SEARCH_SPACE_USER: ${NEO_4J_SEARCH_SPACE_USER}
-      NEO_4J_SEARCH_SPACE_PASS: ${NEO_4J_SEARCH_SPACE_PASS}
-      
-      # Production Keys (CHANGE THESE!)
-      JWT_SECRET: ${JWT_SECRET}
-      CLIENT_API_KEY: ${CLIENT_API_KEY}
-      PASSWORD_PEPPER: ${PASSWORD_PEPPER}
-      DEV_ADMIN_KEY: ${DEV_ADMIN_KEY}
-      SKIP_RATE_LIMITER_KEY: ${SKIP_RATE_LIMITER_KEY}
-      
-      # External APIs
-      OPEN_EXCHANGE_RATES_API: ${OPEN_EXCHANGE_RATES_API}
-      CREDEX_CORE_WHATSAPP_API_KEY: ${CREDEX_CORE_WHATSAPP_API_KEY}
-      CREDEX_CORE_WHATSAPP_BUSINESS_ID: ${CREDEX_CORE_WHATSAPP_BUSINESS_ID}
-      CREDEX_CORE_WHATSAPP_PHONE_ID: ${CREDEX_CORE_WHATSAPP_PHONE_ID}
-      
-      # Firebase
-      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
-      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
-      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
     ports:
       - "4000:4000"
     volumes:
