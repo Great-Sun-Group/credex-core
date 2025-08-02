@@ -121,19 +121,19 @@ export class DeploymentService {
       }
 
       // Create backup
-      const backupInfo = await this.createBackup('vimbiso-chatserver');
+      const backupInfo = await this.createBackup('vimbiso-chatserver-prod');
       
       // Pull latest changes for chatserver
       await this.pullLatestChanges('vimbiso-chatserver', branch, commitSha, chatserverPath);
       
-      // Deploy chatserver using Docker Compose
+      // Deploy chatserver using Docker Compose from credex-core directory
       const deployResult = await this.deployWithDocker('vimbiso-chatserver');
       
       // Verify deployment health
       const healthCheck = await this.verifyDeploymentHealth('vimbiso-chatserver');
       
       if (!healthCheck.success) {
-        await this.rollbackDeployment('vimbiso-chatserver', backupInfo);
+        await this.rollbackDeployment('vimbiso-chatserver-prod', backupInfo);
         return {
           success: false,
           message: 'Chatserver deployment failed health check, rolled back',
@@ -223,28 +223,52 @@ export class DeploymentService {
   }
 
   private async pullLatestChanges(service: string, branch: string, commitSha?: string, servicePath?: string): Promise<void> {
-    // Use the mounted source directory for git operations
-    const workingDir = servicePath || '/app/source';
-    logger.info(`Pulling latest changes for ${service}`, { branch, commitSha, workingDir });
+    // Create a separate deployment directory to avoid conflicts with development work
+    const deploymentDir = `/app/deployment-${service}-${Date.now()}`;
+    const sourceDir = servicePath || '/app/source';
+    
+    logger.info(`Pulling latest changes for ${service}`, { branch, commitSha, deploymentDir });
 
     try {
-      // Fetch latest changes
-      await execAsync('git fetch origin', { cwd: workingDir });
+      // Create deployment directory
+      await execAsync(`mkdir -p ${deploymentDir}`);
       
-      // Checkout the specified branch
-      await execAsync(`git checkout ${branch}`, { cwd: workingDir });
+      // Clone the repository to the deployment directory
+      logger.info(`Cloning repository to deployment directory: ${deploymentDir}`);
+      await execAsync(`git clone ${sourceDir} ${deploymentDir}`);
       
-      // Pull latest changes
-      await execAsync(`git pull origin ${branch}`, { cwd: workingDir });
+      // Fetch and checkout the specified branch in the deployment directory
+      await execAsync('git fetch origin', { cwd: deploymentDir });
+      await execAsync(`git checkout ${branch}`, { cwd: deploymentDir });
+      await execAsync(`git pull origin ${branch}`, { cwd: deploymentDir });
       
       // If specific commit SHA is provided, checkout that commit
       if (commitSha) {
-        await execAsync(`git checkout ${commitSha}`, { cwd: workingDir });
+        await execAsync(`git checkout ${commitSha}`, { cwd: deploymentDir });
       }
       
-      logger.info(`Successfully pulled latest changes for ${service}`);
+      // Copy environment files that aren't in git
+      if (service === 'credex-core') {
+        try {
+          // Copy .env.prod from the source directory to deployment directory
+          await execAsync(`cp ${sourceDir}/.env.prod ${deploymentDir}/.env.prod`);
+          logger.info('Copied .env.prod to deployment directory');
+        } catch (envError) {
+          logger.warn('Could not copy .env.prod file:', envError);
+        }
+        
+        process.env.DEPLOYMENT_SOURCE_DIR = deploymentDir;
+      }
+      
+      logger.info(`Successfully pulled latest changes for ${service} to ${deploymentDir}`);
     } catch (error) {
       logger.error(`Failed to pull changes for ${service}:`, error);
+      // Clean up deployment directory on failure
+      try {
+        await execAsync(`rm -rf ${deploymentDir}`);
+      } catch (cleanupError) {
+        logger.warn(`Failed to cleanup deployment directory: ${deploymentDir}`, cleanupError);
+      }
       throw error;
     }
   }
@@ -273,12 +297,15 @@ export class DeploymentService {
       let composeCommand: string;
       
       if (service === 'credex-core') {
-        // Use the mounted source directory and compose file
-        composeCommand = 'cd /app/source && docker-compose -f docker-compose.prod.yml up -d --build --force-recreate credex-core-prod';
+        // Use the deployment directory if available, otherwise fall back to source
+        const deploymentDir = process.env.DEPLOYMENT_SOURCE_DIR || '/app/source';
+        // Use docker-compose with --no-deps to avoid dependency validation issues
+        // This prevents docker-compose from trying to validate chatserver env files
+        composeCommand = `cd ${deploymentDir} && docker-compose -f docker-compose.prod.yml up -d --build --force-recreate --no-deps credex-core-prod`;
       } else if (service === 'vimbiso-chatserver') {
-        // For chatserver, we need to use the chatserver compose file
-        const chatserverPath = process.env.VIMBISO_CHATSERVER_PATH || '../vimbiso-chatserver';
-        composeCommand = `cd ${chatserverPath} && docker-compose up -d --build --force-recreate`;
+        // For chatserver, use the unified docker-compose.prod.yml from credex-core directory
+        // This now works because both services use the same .env.prod file
+        composeCommand = `cd /app/source && docker-compose -f docker-compose.prod.yml up -d --build --force-recreate --no-deps vimbiso-chatserver-prod`;
       } else {
         throw new Error(`Unknown service: ${service}`);
       }
@@ -290,9 +317,31 @@ export class DeploymentService {
       // Wait a moment for services to start
       await new Promise(resolve => setTimeout(resolve, 5000));
       
+      // Clean up deployment directory after successful deployment
+      if (service === 'credex-core' && process.env.DEPLOYMENT_SOURCE_DIR) {
+        try {
+          await execAsync(`rm -rf ${process.env.DEPLOYMENT_SOURCE_DIR}`);
+          delete process.env.DEPLOYMENT_SOURCE_DIR;
+          logger.info('Cleaned up deployment directory');
+        } catch (cleanupError) {
+          logger.warn('Failed to cleanup deployment directory:', cleanupError);
+        }
+      }
+      
       return { stdout, stderr };
     } catch (error) {
       logger.error(`Docker deployment failed for ${service}:`, error);
+      
+      // Clean up deployment directory on failure
+      if (service === 'credex-core' && process.env.DEPLOYMENT_SOURCE_DIR) {
+        try {
+          await execAsync(`rm -rf ${process.env.DEPLOYMENT_SOURCE_DIR}`);
+          delete process.env.DEPLOYMENT_SOURCE_DIR;
+        } catch (cleanupError) {
+          logger.warn('Failed to cleanup deployment directory on error:', cleanupError);
+        }
+      }
+      
       throw error;
     }
   }
@@ -346,9 +395,10 @@ export class DeploymentService {
           // Stop current container and start with previous image if available
           await execAsync('cd /app/source && docker-compose -f docker-compose.prod.yml stop credex-core-prod');
           await execAsync('cd /app/source && docker-compose -f docker-compose.prod.yml up -d credex-core-prod');
-        } else if (service === 'vimbiso-chatserver') {
-          const chatserverPath = process.env.VIMBISO_CHATSERVER_PATH || '../vimbiso-chatserver';
-          await execAsync(`cd ${chatserverPath} && docker-compose stop && docker-compose up -d`);
+        } else if (service === 'vimbiso-chatserver-prod') {
+          // Use the unified docker-compose.prod.yml for chatserver rollback as well
+          await execAsync('cd /app/source && docker-compose -f docker-compose.prod.yml stop vimbiso-chatserver-prod');
+          await execAsync('cd /app/source && docker-compose -f docker-compose.prod.yml up -d vimbiso-chatserver-prod');
         }
       } else {
         // Fallback: just restart the current deployment

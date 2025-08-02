@@ -49,7 +49,7 @@ services:
       target: production
     container_name: vimbiso-chatserver-prod
     env_file:
-      - ../vimbiso-chatserver/.env.prod
+      - .env.prod
     environment:
       - REDIS_URL=redis://redis-state-prod:6379/0
       - USE_PROGRESSIVE_FLOW=True

@@ -21,8 +21,8 @@ RUN echo $(date) > buildtime && \
 
 # Production stage with minimal image
 FROM node:18.17.1-alpine AS production
-# Install git and docker CLI for deployment operations
-RUN apk add --no-cache git docker-cli
+# Install git, docker CLI, and docker-compose for deployment operations
+RUN apk add --no-cache git docker-cli docker-compose
 WORKDIR /app
 # Copy build output and necessary files
 COPY --from=build /app/build ./build
