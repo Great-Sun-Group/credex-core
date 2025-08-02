@@ -261,6 +261,16 @@ export const applySecurityMiddleware = (app: Application) => {
 
 export const applyAuthMiddleware = (app: Application) => {
   app.use((req, res, next) => {
+    // Always log deployment requests for debugging
+    if (req.path.includes("/api/deploy")) {
+      logger.info("[DEPLOY_DEBUG] Deployment request received", {
+        path: req.path,
+        method: req.method,
+        headers: Object.keys(req.headers),
+        body: req.body ? Object.keys(req.body) : undefined
+      });
+    }
+    
     if (
       // Skip auth for docs directory
       req.path === "/" ||
@@ -273,16 +283,20 @@ export const applyAuthMiddleware = (app: Application) => {
       req.path.includes("/devadmin/") || // routes are not published in prod
       (req.path.includes("/verify/") && (req.body?.purpose === "PASSWORD_RESET" || req.path.includes("/validateChatbotOtp") || req.path.includes("/checkOtpStatus") || req.method === "OPTIONS")) ||
       req.path === "/resetPassword" ||
-      req.path.includes("/app/version-check") // App version endpoints only need client API key
+      req.path.includes("/app/version-check") || // App version endpoints only need client API key
+      req.path === "/api/deploy-core" || // Deploy core endpoint has its own token validation
+      req.path === "/api/deploy-chatserver" || // Deploy chatserver endpoint has its own token validation
+      req.path === "/api/upload-apk" || // APK upload endpoint has its own token validation
+      req.path.includes("/downloads/") // APK download endpoints
     ) {
-      logger.debug("[SC3] Skipping auth middleware for path", {
+      logger.info("[SC3] Skipping auth middleware for path", {
         path: req.path,
         issuerAccountIDInQuery: req.query.issuerAccountID,
         issuerAccountIDInBody: req.body ? req.body.issuerAccountID : undefined,
       });
       return next();
     }
-    logger.debug("[SC4] Applying auth middleware for path", {
+    logger.info("[SC4] Applying auth middleware for path", {
       path: req.path,
       query: req.query,
       issuerAccountIDInQuery: req.query.issuerAccountID,
