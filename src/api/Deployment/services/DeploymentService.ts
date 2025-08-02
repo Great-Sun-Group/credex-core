@@ -50,6 +50,28 @@ export class DeploymentService {
     return this.deployTokens.has(token);
   }
 
+  public async queueDeployment(service: string, branch: string, requestId: string): Promise<void> {
+    const queueDir = path.join(process.cwd(), 'deploy-queue');
+    
+    // Ensure queue directory exists
+    await fs.mkdir(queueDir, { recursive: true });
+    
+    // Create deployment request
+    const deploymentRequest = {
+      service,
+      branch,
+      requestId,
+      timestamp: new Date().toISOString(),
+      actor: 'api-request'
+    };
+    
+    // Write request to queue
+    const requestFile = path.join(queueDir, `${service}-${requestId}-${Date.now()}.json`);
+    await fs.writeFile(requestFile, JSON.stringify(deploymentRequest, null, 2));
+    
+    logger.info('Deployment request queued', { service, branch, requestId, requestFile });
+  }
+
   public async deployCredexCore(branch: string = 'prod'): Promise<DeploymentResult> {
     const deploymentId = `credex-core-${Date.now()}`;
     logger.info(`Starting credex-core deployment ${deploymentId}`, { branch });

@@ -54,36 +54,23 @@ export class DeploymentController {
         return;
       }
 
-      // Respond immediately to avoid blocking the HTTP connection
+      // Queue deployment request for host daemon
+      await this.deploymentService.queueDeployment('credex-core', branch || 'prod', requestId);
+
+      // Respond immediately - deployment will be handled by host daemon
       res.status(202).json({
-        message: 'Deployment started successfully',
+        message: 'Deployment queued successfully',
         data: {
           action: {
             id: requestId,
-            type: 'DEPLOY_CORE_STARTED',
+            type: 'DEPLOY_CORE_QUEUED',
             timestamp: new Date().toISOString(),
             actor: 'deployment-system',
             details: {
-              branch,
-              status: 'in_progress'
+              branch: branch || 'prod',
+              status: 'queued'
             }
           }
-        }
-      });
-
-      // Start deployment asynchronously (detached from HTTP request)
-      setImmediate(async () => {
-        try {
-          logger.info('Starting detached deployment process', { requestId, branch });
-          const result = await this.deploymentService.deployCredexCore(branch);
-          
-          if (result.success) {
-            logger.info('Deployment completed successfully', { requestId, result });
-          } else {
-            logger.error('Deployment failed', { requestId, result });
-          }
-        } catch (error) {
-          logger.error('Detached deployment process error:', { requestId, error });
         }
       });
 
@@ -139,36 +126,25 @@ export class DeploymentController {
         return;
       }
 
-      // Deploy the service
-      const result = await this.deploymentService.deployChatserver(branch, commit_sha);
+      // Queue deployment request for host daemon
+      await this.deploymentService.queueDeployment('vimbiso-chatserver', branch || 'prod', requestId);
 
-      if (result.success) {
-        res.status(200).json({
-          message: result.message,
-          data: {
-            action: {
-              id: requestId,
-              type: 'DEPLOY_CHATSERVER_SUCCESS',
-              timestamp: new Date().toISOString(),
-              actor: 'deployment-system',
-              details: result.details
+      // Respond immediately - deployment will be handled by host daemon
+      res.status(202).json({
+        message: 'Deployment queued successfully',
+        data: {
+          action: {
+            id: requestId,
+            type: 'DEPLOY_CHATSERVER_QUEUED',
+            timestamp: new Date().toISOString(),
+            actor: 'deployment-system',
+            details: {
+              branch: branch || 'prod',
+              status: 'queued'
             }
           }
-        });
-      } else {
-        res.status(500).json({
-          message: result.message,
-          data: {
-            action: {
-              id: requestId,
-              type: 'DEPLOY_CHATSERVER_ERROR',
-              timestamp: new Date().toISOString(),
-              actor: 'deployment-system',
-              details: result.details
-            }
-          }
-        });
-      }
+        }
+      });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
